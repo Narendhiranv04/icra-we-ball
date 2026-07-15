@@ -1,0 +1,19 @@
+services:
+  kitchen-s1:
+    build:
+      context: .
+      dockerfile: mujoco_scenes/Dockerfile
+    image: mujoco-kitchen-s1:latest
+    environment:
+      DISPLAY: ${DISPLAY}
+      MUJOCO_GL: glfw
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    stdin_open: true
+    tty: true
+    command:
+      - --scene
+      - S1_coffee_missing_mug
+      - --viewer
+      - --camera
+      - front_camera

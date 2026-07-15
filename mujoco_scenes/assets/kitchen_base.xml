@@ -1,0 +1,336 @@
+<mujoco model="kitchen_workstation">
+  <compiler angle="radian" autolimits="true"/>
+
+  <option gravity="0 0 -9.81" timestep="0.002"/>
+
+  <visual>
+    <global offwidth="1920" offheight="1080"/>
+  </visual>
+
+  <default>
+    <joint damping="0.5"/>
+    <geom condim="4" friction="0.8 0.02 0.01"/>
+    <default class="visual">
+      <geom contype="0" conaffinity="0" group="1"/>
+    </default>
+    <default class="collision">
+      <geom group="3"/>
+    </default>
+  </default>
+
+  <asset>
+    <!-- Textures -->
+    <texture name="tex_wood" type="2d" builtin="flat" rgb1="0.65 0.45 0.25" rgb2="0.55 0.35 0.18"
+             width="256" height="256"/>
+    <texture name="tex_counter" type="2d" builtin="flat" rgb1="0.85 0.82 0.78" rgb2="0.80 0.77 0.73"
+             width="256" height="256"/>
+    <texture name="tex_cabinet" type="2d" builtin="flat" rgb1="0.90 0.88 0.84" rgb2="0.85 0.83 0.79"
+             width="256" height="256"/>
+    <texture name="tex_metal" type="2d" builtin="flat" rgb1="0.7 0.7 0.72" rgb2="0.65 0.65 0.68"
+             width="256" height="256"/>
+    <texture name="tex_floor" type="2d" builtin="checker" rgb1="0.9 0.9 0.9" rgb2="0.7 0.7 0.7"
+             width="256" height="256" mark="none"/>
+    <texture name="tex_skybox" type="skybox" builtin="gradient" rgb1="0.4 0.6 0.8" rgb2="0.9 0.9 1.0"
+             width="512" height="512"/>
+
+    <!-- Materials -->
+    <material name="mat_wood" texture="tex_wood"/>
+    <material name="mat_counter" texture="tex_counter" specular="0.3" shininess="0.5"/>
+    <material name="mat_cabinet" texture="tex_cabinet" specular="0.2"/>
+    <material name="mat_metal" texture="tex_metal" specular="0.6" shininess="0.8"/>
+    <material name="mat_floor" texture="tex_floor" texrepeat="8 8"/>
+
+    <!-- Object colors (used by spawned objects) -->
+    <material name="mat_ceramic_white" rgba="0.95 0.93 0.90 1" specular="0.4" shininess="0.6"/>
+    <material name="mat_ceramic_blue" rgba="0.3 0.45 0.7 1" specular="0.4" shininess="0.6"/>
+    <material name="mat_glass_clear" rgba="0.85 0.9 0.92 0.6" specular="0.8" shininess="0.9"/>
+    <material name="mat_steel" rgba="0.75 0.75 0.78 1" specular="0.7" shininess="0.9"/>
+    <material name="mat_plastic_red" rgba="0.8 0.2 0.15 1" specular="0.3"/>
+    <material name="mat_plastic_green" rgba="0.2 0.6 0.3 1" specular="0.3"/>
+    <material name="mat_plastic_yellow" rgba="0.9 0.8 0.2 1" specular="0.3"/>
+    <material name="mat_bread" rgba="0.85 0.7 0.45 1" specular="0.1"/>
+    <material name="mat_butter" rgba="0.95 0.9 0.6 1" specular="0.2"/>
+    <material name="mat_jar_brown" rgba="0.45 0.3 0.15 1" specular="0.3" shininess="0.5"/>
+    <material name="mat_jar_white" rgba="0.92 0.90 0.88 1" specular="0.3" shininess="0.5"/>
+    <material name="mat_cardboard" rgba="0.72 0.58 0.42 1" specular="0.1"/>
+    <material name="mat_serving" rgba="0.22 0.48 0.32 1" specular="0.25"/>
+  </asset>
+
+  <worldbody>
+    <!-- Floor -->
+    <geom name="floor" type="plane" size="2 2 0.01" material="mat_floor" pos="0 0 0"/>
+
+    <!-- ================================================================ -->
+    <!--                     COUNTERTOP / TABLE                           -->
+    <!-- ================================================================ -->
+    <body name="countertop" pos="0 0 0">
+      <!-- Table top -->
+      <geom name="counter_surface" type="box" size="0.6 0.4 0.02"
+            pos="0 0 0.75" material="mat_counter" mass="50"/>
+      <!-- Table legs -->
+      <geom name="leg_fl" type="cylinder" size="0.03 0.365" pos="-0.55 -0.35 0.375" material="mat_wood"/>
+      <geom name="leg_fr" type="cylinder" size="0.03 0.365" pos="0.55 -0.35 0.375" material="mat_wood"/>
+      <geom name="leg_bl" type="cylinder" size="0.03 0.365" pos="-0.55 0.35 0.375" material="mat_wood"/>
+      <geom name="leg_br" type="cylinder" size="0.03 0.365" pos="0.55 0.35 0.375" material="mat_wood"/>
+    </body>
+
+    <!-- ================================================================ -->
+    <!--                    CABINET C1 (Upper Left)                       -->
+    <!--   Hinged door cabinet — typically mugs, glasses, drinkware       -->
+    <!-- ================================================================ -->
+    <body name="cabinet_C1" pos="-0.35 0.35 1.15">
+      <!-- Cabinet shell (back + sides + top + bottom) -->
+      <geom name="C1_back" type="box" size="0.15 0.005 0.15" pos="0 0.12 0"
+            material="mat_cabinet" mass="2"/>
+      <geom name="C1_left" type="box" size="0.005 0.12 0.15" pos="-0.15 0 0"
+            material="mat_cabinet"/>
+      <geom name="C1_right" type="box" size="0.005 0.12 0.15" pos="0.15 0 0"
+            material="mat_cabinet"/>
+      <geom name="C1_top" type="box" size="0.15 0.12 0.005" pos="0 0 0.15"
+            material="mat_cabinet"/>
+      <geom name="C1_bottom" type="box" size="0.15 0.12 0.005" pos="0 0 -0.15"
+            material="mat_cabinet"/>
+      <!-- Shelf inside -->
+      <geom name="C1_shelf" type="box" size="0.14 0.11 0.003" pos="0 0 -0.05"
+            material="mat_wood"/>
+
+      <!-- Door: hinges on left edge -->
+      <body name="C1_door" pos="-0.15 -0.12 0">
+        <joint name="C1_door_joint" type="hinge" axis="0 0 -1"
+               range="0 1.57" pos="0 0 0" damping="0.3"/>
+        <geom name="C1_door_panel" type="box" size="0.15 0.008 0.148"
+              pos="0.15 0 0" material="mat_cabinet"/>
+        <!-- Door handle -->
+        <geom name="C1_handle" type="cylinder" size="0.008 0.03"
+              pos="0.27 -0.02 0" euler="1.57 0 0" material="mat_metal"/>
+      </body>
+
+      <!-- Site for placing objects inside -->
+      <site name="C1_interior" pos="0 0 -0.10" size="0.12 0.10 0.01" type="box"
+            rgba="0 1 0 0.1" group="4"/>
+    </body>
+
+    <!-- ================================================================ -->
+    <!--                   CABINET C2 (Upper Right)                       -->
+    <!--   Hinged door cabinet — plates, bowls, pantry items              -->
+    <!-- ================================================================ -->
+    <body name="cabinet_C2" pos="0.35 0.35 1.15">
+      <!-- Cabinet shell -->
+      <geom name="C2_back" type="box" size="0.15 0.005 0.15" pos="0 0.12 0"
+            material="mat_cabinet" mass="2"/>
+      <geom name="C2_left" type="box" size="0.005 0.12 0.15" pos="-0.15 0 0"
+            material="mat_cabinet"/>
+      <geom name="C2_right" type="box" size="0.005 0.12 0.15" pos="0.15 0 0"
+            material="mat_cabinet"/>
+      <geom name="C2_top" type="box" size="0.15 0.12 0.005" pos="0 0 0.15"
+            material="mat_cabinet"/>
+      <geom name="C2_bottom" type="box" size="0.15 0.12 0.005" pos="0 0 -0.15"
+            material="mat_cabinet"/>
+      <geom name="C2_shelf" type="box" size="0.14 0.11 0.003" pos="0 0 -0.05"
+            material="mat_wood"/>
+
+      <!-- Door: hinges on right edge -->
+      <body name="C2_door" pos="0.15 -0.12 0">
+        <joint name="C2_door_joint" type="hinge" axis="0 0 1"
+               range="0 1.57" pos="0 0 0" damping="0.3"/>
+        <geom name="C2_door_panel" type="box" size="0.15 0.008 0.148"
+              pos="-0.15 0 0" material="mat_cabinet"/>
+        <geom name="C2_handle" type="cylinder" size="0.008 0.03"
+              pos="-0.27 -0.02 0" euler="1.57 0 0" material="mat_metal"/>
+      </body>
+
+      <site name="C2_interior" pos="0 0 -0.10" size="0.12 0.10 0.01" type="box"
+            rgba="0 1 0 0.1" group="4"/>
+    </body>
+
+    <!-- ================================================================ -->
+    <!--                    DRAWER D1 (Lower Left)                        -->
+    <!--   Sliding drawer — utensils: spoons, forks, knives               -->
+    <!-- ================================================================ -->
+    <body name="drawer_D1_frame" pos="-0.35 -0.30 0.55">
+      <!-- Enclosed carcass. The top prevents an overhead camera from seeing
+           drawer contents before the tray has been pulled out. -->
+      <geom name="D1_back" type="box" size="0.15 0.005 0.06" pos="0 0.14 0"
+            material="mat_wood" mass="2"/>
+      <geom name="D1_left" type="box" size="0.005 0.14 0.06" pos="-0.15 0 0"
+            material="mat_wood"/>
+      <geom name="D1_right" type="box" size="0.005 0.14 0.06" pos="0.15 0 0"
+            material="mat_wood"/>
+      <geom name="D1_bottom" type="box" size="0.15 0.14 0.005" pos="0 0 -0.06"
+            material="mat_wood"/>
+      <geom name="D1_top" type="box" size="0.15 0.14 0.008" pos="0 0 0.072"
+            material="mat_wood"/>
+
+      <!-- Sliding tray -->
+      <body name="drawer_D1_tray" pos="0 0 0">
+        <joint name="D1_slide_joint" type="slide" axis="0 -1 0"
+               range="0 0.25" damping="0.5"/>
+        <!-- Tray base -->
+        <geom name="D1_tray_base" type="box" size="0.14 0.13 0.003"
+              pos="0 0 -0.055" material="mat_wood"/>
+        <geom name="D1_tray_left" type="box" size="0.004 0.13 0.03"
+              pos="-0.136 0 -0.025" material="mat_wood"/>
+        <geom name="D1_tray_right" type="box" size="0.004 0.13 0.03"
+              pos="0.136 0 -0.025" material="mat_wood"/>
+        <geom name="D1_tray_back" type="box" size="0.14 0.004 0.03"
+              pos="0 0.126 -0.025" material="mat_wood"/>
+        <!-- Front face -->
+        <geom name="D1_front" type="box" size="0.155 0.008 0.065"
+              pos="0 -0.14 0" material="mat_cabinet"/>
+        <!-- Handle -->
+        <geom name="D1_handle" type="box" size="0.04 0.01 0.008"
+              pos="0 -0.16 0" material="mat_metal"/>
+
+        <site name="D1_interior" pos="0 0 -0.04" size="0.12 0.10 0.01" type="box"
+              rgba="0 0 1 0.1" group="4"/>
+      </body>
+    </body>
+
+    <!-- ================================================================ -->
+    <!--                   DRAWER D2 (Lower Right)                        -->
+    <!--   Sliding drawer — tools: tongs, spatula, misc                   -->
+    <!-- ================================================================ -->
+    <body name="drawer_D2_frame" pos="0.35 -0.30 0.55">
+      <geom name="D2_back" type="box" size="0.15 0.005 0.06" pos="0 0.14 0"
+            material="mat_wood" mass="2"/>
+      <geom name="D2_left" type="box" size="0.005 0.14 0.06" pos="-0.15 0 0"
+            material="mat_wood"/>
+      <geom name="D2_right" type="box" size="0.005 0.14 0.06" pos="0.15 0 0"
+            material="mat_wood"/>
+      <geom name="D2_bottom" type="box" size="0.15 0.14 0.005" pos="0 0 -0.06"
+            material="mat_wood"/>
+      <geom name="D2_top" type="box" size="0.15 0.14 0.008" pos="0 0 0.072"
+            material="mat_wood"/>
+
+      <body name="drawer_D2_tray" pos="0 0 0">
+        <joint name="D2_slide_joint" type="slide" axis="0 -1 0"
+               range="0 0.25" damping="0.5"/>
+        <geom name="D2_tray_base" type="box" size="0.14 0.13 0.003"
+              pos="0 0 -0.055" material="mat_wood"/>
+        <geom name="D2_tray_left" type="box" size="0.004 0.13 0.03"
+              pos="-0.136 0 -0.025" material="mat_wood"/>
+        <geom name="D2_tray_right" type="box" size="0.004 0.13 0.03"
+              pos="0.136 0 -0.025" material="mat_wood"/>
+        <geom name="D2_tray_back" type="box" size="0.14 0.004 0.03"
+              pos="0 0.126 -0.025" material="mat_wood"/>
+        <geom name="D2_front" type="box" size="0.155 0.008 0.065"
+              pos="0 -0.14 0" material="mat_cabinet"/>
+        <geom name="D2_handle" type="box" size="0.04 0.01 0.008"
+              pos="0 -0.16 0" material="mat_metal"/>
+
+        <site name="D2_interior" pos="0 0 -0.04" size="0.12 0.10 0.01" type="box"
+              rgba="0 0 1 0.1" group="4"/>
+      </body>
+    </body>
+
+    <!-- ================================================================ -->
+    <!--                   BOX B1 (Countertop, Far Right)                 -->
+    <!--   Lidded box — tea bags, condiments, small items                 -->
+    <!-- ================================================================ -->
+    <body name="box_B1" pos="0.40 0.0 0.77">
+      <!-- Box base & walls -->
+      <geom name="B1_base" type="box" size="0.10 0.06 0.003" pos="0 0 0"
+            material="mat_cardboard" mass="0.3"/>
+      <geom name="B1_left" type="box" size="0.003 0.06 0.06" pos="-0.10 0 0.06"
+            material="mat_cardboard"/>
+      <geom name="B1_right" type="box" size="0.003 0.06 0.06" pos="0.10 0 0.06"
+            material="mat_cardboard"/>
+      <geom name="B1_back" type="box" size="0.10 0.003 0.06" pos="0 0.06 0.06"
+            material="mat_cardboard"/>
+      <geom name="B1_front_wall" type="box" size="0.10 0.003 0.06" pos="0 -0.06 0.06"
+            material="mat_cardboard"/>
+
+      <!-- Lid: hinges on back edge -->
+      <body name="B1_lid" pos="0 0.06 0.12">
+        <joint name="B1_lid_joint" type="hinge" axis="-1 0 0"
+               range="0 2.0" damping="0.1"/>
+        <geom name="B1_lid_panel" type="box" size="0.103 0.063 0.004"
+              pos="0 -0.06 0" material="mat_cardboard"/>
+      </body>
+
+      <site name="B1_interior" pos="0 0 0.02" size="0.06 0.04 0.01" type="box"
+            rgba="1 1 0 0.1" group="4"/>
+    </body>
+
+    <!-- ================================================================ -->
+    <!--                       SERVING AREA                               -->
+    <!-- ================================================================ -->
+    <body name="serving_area" pos="0.90 0 0">
+      <!-- A physically separate table, rather than a surface coincident with
+           the main countertop. -->
+      <geom name="serving_surface" type="box" size="0.25 0.15 0.01"
+            pos="0 0 0.75" material="mat_serving" mass="5"/>
+      <geom name="serving_leg_fl" type="cylinder" size="0.02 0.365"
+            pos="-0.22 -0.12 0.375" material="mat_wood"/>
+      <geom name="serving_leg_fr" type="cylinder" size="0.02 0.365"
+            pos="0.22 -0.12 0.375" material="mat_wood"/>
+      <geom name="serving_leg_bl" type="cylinder" size="0.02 0.365"
+            pos="-0.22 0.12 0.375" material="mat_wood"/>
+      <geom name="serving_leg_br" type="cylinder" size="0.02 0.365"
+            pos="0.22 0.12 0.375" material="mat_wood"/>
+
+      <site name="serving_spot" pos="0 0 0.765" size="0.20 0.12 0.004" type="box"
+            rgba="0.2 1 0.35 0.25" group="4"/>
+    </body>
+
+    <!-- ================================================================ -->
+    <!--         OBJECT ANCHOR SITES ON COUNTERTOP                        -->
+    <!--   Objects are spawned at these positions via scene configs        -->
+    <!-- ================================================================ -->
+    <site name="counter_spot_1" pos="-0.35 0.10 0.78" size="0.03" type="sphere"
+          rgba="0 0 0 0" group="5"/>
+    <site name="counter_spot_2" pos="-0.15 0.10 0.78" size="0.03" type="sphere"
+          rgba="0 0 0 0" group="5"/>
+    <site name="counter_spot_3" pos="0.05 0.10 0.78" size="0.03" type="sphere"
+          rgba="0 0 0 0" group="5"/>
+    <site name="counter_spot_4" pos="0.20 0.10 0.78" size="0.03" type="sphere"
+          rgba="0 0 0 0" group="5"/>
+    <site name="counter_spot_5" pos="-0.25 -0.05 0.78" size="0.03" type="sphere"
+          rgba="0 0 0 0" group="5"/>
+    <site name="counter_spot_6" pos="0.0 -0.05 0.78" size="0.03" type="sphere"
+          rgba="0 0 0 0" group="5"/>
+
+    <!-- Lighting -->
+    <light name="top_light" pos="0 0 2.5" dir="0 0 -1" diffuse="0.8 0.8 0.8"
+           specular="0.3 0.3 0.3" castshadow="true"/>
+    <light name="fill_light" pos="0 -1.5 1.5" dir="0 0.5 -0.5" diffuse="0.4 0.4 0.45"
+           specular="0.1 0.1 0.1"/>
+
+    <!-- Five task cameras. Shoulder/front cameras track the task-area target.
+         The wrist camera uses a placeholder mount that can later be replaced
+         by the robot wrist body without changing the camera's public name. -->
+    <body name="camera_target" pos="0.20 0 0.78"/>
+    <camera name="left_shoulder_camera" pos="-1.45 -2.20 1.80"
+            mode="targetbody" target="camera_target" fovy="62"/>
+    <camera name="right_shoulder_camera" pos="1.45 -2.20 1.80"
+            mode="targetbody" target="camera_target" fovy="62"/>
+    <camera name="overhead_camera" pos="0.15 -0.25 3.20"
+            xyaxes="1 0 0 0 1 0" fovy="65"/>
+    <camera name="front_camera" pos="0.20 -3.00 1.85"
+            mode="targetbody" target="camera_target" fovy="60"/>
+
+    <body name="wrist_camera_mount" pos="-0.12 -0.62 1.10">
+      <camera name="wrist_camera" pos="0 0.02 0"
+              xyaxes="1 0 0 0 0.55 0.835" fovy="65"/>
+    </body>
+  </worldbody>
+
+  <!-- A mechanism must not collide with its own enclosing frame. These
+       exclusions retain contacts with loose objects and future robot links. -->
+  <contact>
+    <exclude body1="cabinet_C1" body2="C1_door"/>
+    <exclude body1="cabinet_C2" body2="C2_door"/>
+    <exclude body1="drawer_D1_frame" body2="drawer_D1_tray"/>
+    <exclude body1="drawer_D2_frame" body2="drawer_D2_tray"/>
+    <exclude body1="box_B1" body2="B1_lid"/>
+  </contact>
+
+  <!-- Named actuators for container joints -->
+  <actuator>
+    <position name="C1_door_actuator" joint="C1_door_joint" kp="5" ctrlrange="0 1.57"/>
+    <position name="C2_door_actuator" joint="C2_door_joint" kp="5" ctrlrange="0 1.57"/>
+    <position name="D1_slide_actuator" joint="D1_slide_joint" kp="10" ctrlrange="0 0.25"/>
+    <position name="D2_slide_actuator" joint="D2_slide_joint" kp="10" ctrlrange="0 0.25"/>
+    <position name="B1_lid_actuator" joint="B1_lid_joint" kp="10" ctrlrange="0 2.0"/>
+  </actuator>
+</mujoco>

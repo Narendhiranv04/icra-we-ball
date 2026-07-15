@@ -1,0 +1,296 @@
+# ============================================================
+# Scene Configurations for "Reasoning Before Planning" Experiments
+# ============================================================
+# Each scene defines:
+#   - goal: natural language task instruction
+#   - countertop_objects: objects visible on the counter (always visible)
+#   - container_contents: what's inside each closed container (hidden until opened)
+#   - required_objects: what the goal logically requires (for gap detection ground truth)
+#   - substitution_map: acceptable alternatives for required objects
+#   - optimal_search_order: ground-truth optimal container inspection order
+#   - notes: what this scene specifically tests
+# ============================================================
+
+scenes:
+
+  # ========================================
+  # TIER 1: SINGLE MISSING OBJECT
+  # ========================================
+
+  S1_coffee_missing_mug:
+    goal: "Make a cup of coffee and place it in the serving area"
+    countertop_objects:
+      counter_spot_1: kettle
+      counter_spot_2: coffee_jar
+      counter_spot_3: sugar_jar
+      counter_spot_5: spoon
+    container_contents:
+      C1: [mug, glass]
+      C2: [plate, bowl]
+      D1: [fork, knife, stirrer]
+      D2: [tongs, napkin]
+      B1: [tea_box]
+    required_objects: [mug, spoon, coffee_jar, sugar_jar, kettle]
+    substitution_map:
+      mug: [cup, glass]
+    optimal_search_order: [C1]
+    optimal_inspections: 1
+    notes: >
+      Single missing object (mug). Mug is in C1 (most likely commonsense location).
+      Tests: basic gap detection, correct commonsense prior, single-container search.
+
+  S2_coffee_wrong_prior:
+    goal: "Make a cup of coffee and place it in the serving area"
+    countertop_objects:
+      counter_spot_1: kettle
+      counter_spot_2: coffee_jar
+      counter_spot_3: sugar_jar
+      counter_spot_5: spoon
+    container_contents:
+      C1: [glass, bowl]          # Mug is NOT in C1!
+      C2: [mug, plate]           # Mug is in C2 (less expected)
+      D1: [fork, knife, stirrer]
+      D2: [tongs, napkin]
+      B1: [tea_box]
+    required_objects: [mug, spoon, coffee_jar, sugar_jar, kettle]
+    substitution_map:
+      mug: [cup, glass]
+    optimal_search_order: [C1]   # If substitution allowed, glass from C1 works
+    optimal_inspections: 1       # 1 if substitute accepted, 2 if insisting on mug
+    notes: >
+      Mug is NOT in the expected cabinet C1 but IS in C2.
+      However, glass IS in C1 and can substitute for mug.
+      Tests: wrong-prior recovery, substitution-vs-continued-search decision.
+
+  S3_butter_missing_knife:
+    goal: "Spread butter on bread and place it in the serving area"
+    countertop_objects:
+      counter_spot_1: bread
+      counter_spot_2: butter
+    container_contents:
+      C1: [mug, glass]
+      C2: [plate, bowl]
+      D1: [spoon, fork, stirrer, spatula]   # spatula here as substitute
+      D2: [knife, tongs, napkin]            # knife in D2, not D1!
+      B1: [tea_box]
+    required_objects: [knife, bread, butter]
+    substitution_map:
+      knife: [spatula]           # spatula can spread butter
+    optimal_search_order: [D1]   # spatula found in D1 substitutes for knife
+    optimal_inspections: 1       # 1 if substitute accepted, 2 if insisting on knife
+    notes: >
+      Knife is in D2 (less expected for utensils). Spatula (substitute) is in D1.
+      Tests: tool-need reasoning (need a spreading implement, not literally "knife"),
+      functional substitution reasoning.
+
+  # ========================================
+  # TIER 2: MULTI-OBJECT SEARCH OPTIMIZATION
+  # ========================================
+
+  S4_coffee_multi_missing:
+    goal: "Make a cup of coffee with milk and sugar, stir it, and serve in the serving area"
+    countertop_objects:
+      counter_spot_1: kettle
+      counter_spot_2: coffee_jar
+    container_contents:
+      C1: [mug, milk_carton]     # mug + milk co-located
+      C2: [plate, bowl]
+      D1: [spoon, fork, knife, stirrer]
+      D2: [tongs, napkin]
+      B1: [sugar_jar]            # sugar moved into box
+    required_objects: [mug, spoon, sugar_jar, milk_carton, coffee_jar, kettle]
+    substitution_map:
+      mug: [cup, glass]
+      spoon: [stirrer, fork]
+    optimal_search_order: [C1, D1, B1]
+    optimal_inspections: 3
+    notes: >
+      Four missing items in three different containers. Mug+milk co-located in C1.
+      Tests: multi-object gap detection, joint search planning,
+      co-location benefit when opening C1.
+
+  S5_coffee_colocated:
+    goal: "Make a cup of coffee with sugar, stir it, and serve in the serving area"
+    countertop_objects:
+      counter_spot_1: kettle
+      counter_spot_2: coffee_jar
+    container_contents:
+      C1: [mug, sugar_jar]       # BOTH mug and sugar co-located!
+      C2: [plate, bowl]
+      D1: [spoon, fork, knife]
+      D2: [tongs, napkin]
+      B1: [tea_box]
+    required_objects: [mug, spoon, sugar_jar, coffee_jar, kettle]
+    substitution_map:
+      mug: [cup, glass]
+      spoon: [stirrer, fork]
+    optimal_search_order: [C1, D1]
+    optimal_inspections: 2
+    notes: >
+      Mug AND sugar both in C1. Opening C1 resolves 2 of 3 missing items at once.
+      Tests: co-location cross-resolution (finding bonus items during targeted search),
+      live scene-state update that eliminates further search for co-located items.
+
+  S6_breakfast_revisitation:
+    goal: "Prepare toast with butter and jam, serve with coffee in the serving area"
+    countertop_objects:
+      counter_spot_1: bread
+      counter_spot_2: kettle
+      counter_spot_3: coffee_jar
+    container_contents:
+      C1: [mug, butter]          # mug + butter co-located
+      C2: [jam_jar, plate]       # jam here
+      D1: [spoon, fork, knife]   # knife here
+      D2: [tongs, spatula, napkin]
+      B1: [tea_box]
+    required_objects: [mug, knife, jam_jar, butter, bread, kettle, coffee_jar, spoon]
+    substitution_map:
+      mug: [cup, glass]
+      knife: [spatula]
+    optimal_search_order: [C1, C2, D1]
+    optimal_inspections: 3       # C1(mug+butter), C2(jam), D1(knife+spoon)
+    notes: >
+      5 missing items (mug, butter, jam, knife, spoon). Key test: a naive
+      object-by-object search would open C1 for mug,
+      D1 for knife, C2 for jam, then BACK to C1 for butter = 4 inspections (with C1 revisit).
+      Joint planner opens C1 once and gets mug+butter = 3 inspections, no revisits.
+      THE definitive test of region-optimal vs object-specific search.
+
+  # ========================================
+  # TIER 3: SUBSTITUTION-HEAVY
+  # ========================================
+
+  S7_tea_no_mug:
+    goal: "Make a cup of tea and serve it in the serving area"
+    countertop_objects:
+      counter_spot_1: kettle
+      counter_spot_2: sugar_jar
+    container_contents:
+      C1: [glass, cup]           # NO mug anywhere! But cup and glass exist
+      C2: [plate, bowl]
+      D1: [spoon, fork]
+      D2: [tongs, napkin]
+      B1: [tea_box]
+    required_objects: [mug, spoon, tea_box, kettle, sugar_jar]
+    substitution_map:
+      mug: [cup, glass]
+    optimal_search_order: [C1, B1, D1]
+    optimal_inspections: 3
+    notes: >
+      No mug exists in the entire scene. Cup and glass are available substitutes.
+      Tests: search exhaustion for primary object, recognition that cup works for tea,
+      quality of substitute ranking (cup > glass for hot drinks).
+
+  S8_soup_forced_substitute:
+    goal: "Stir the soup and serve it in a bowl in the serving area"
+    countertop_objects:
+      counter_spot_1: pot_with_soup
+    container_contents:
+      C1: [mug, glass]
+      C2: [bowl, plate]          # bowl here
+      D1: [fork, knife]          # NO spoon, NO stirrer anywhere!
+      D2: [tongs, spatula]       # spatula could work
+      B1: [napkin]
+    required_objects: [spoon, bowl, pot_with_soup]
+    substitution_map:
+      spoon: [stirrer, spatula]             # spatula is the safe soup-stirring substitute
+      bowl: [plate]                         # plate is worse but possible
+    optimal_search_order: [C2, D1, D2]      # bowl, failed primary search, then spatula
+    optimal_inspections: 3                  # C2(bowl) + D1(no spoon) + D2(spatula as sub)
+    notes: >
+      No spoon or stirrer in the scene. Must search, fail to find primary,
+      then reason about alternatives. A spatula in D2 is the configured safe substitute;
+      the fork in D1 is deliberately not accepted for stirring hot soup.
+      Tests: exhaustive search → forced substitution after failure,
+      distinction from S7 where substitute found alongside target search.
+
+  # ========================================
+  # TIER 4: LONG-HORIZON INTEGRATION
+  # ========================================
+
+  S9_full_breakfast:
+    goal: >
+      Prepare and serve a complete breakfast: coffee with milk,
+      toast with butter and jam, everything on plates in the serving area
+    countertop_objects:
+      counter_spot_1: kettle
+      counter_spot_2: coffee_jar
+      counter_spot_3: bread
+    container_contents:
+      C1: [mug, milk_carton, glass]
+      C2: [plate, small_plate, jam_jar]
+      D1: [spoon, fork, knife, stirrer]
+      D2: [tongs, spatula, napkin]
+      B1: [butter, tea_box]
+    required_objects: [mug, plate, small_plate, knife, butter, jam_jar, milk_carton, spoon,
+                       bread, kettle, coffee_jar]
+    substitution_map:
+      mug: [cup, glass]
+      plate: [small_plate, bowl]
+      small_plate: [plate, bowl]
+      knife: [spatula]
+      spoon: [stirrer, fork]
+    optimal_search_order: [C1, C2, D1, B1]
+    optimal_inspections: 4       # D2 never needed! Optimal skips D2 entirely
+    notes: >
+      8 missing items across 4 containers, including two serving surfaces. Longest horizon.
+      Tests: large-scale gap detection, joint search optimization,
+      live updates resolving multiple items per inspection,
+      recognition that D2 is NEVER needed (all items elsewhere).
+
+  S10_tea_for_two:
+    goal: >
+      Prepare and serve tea for two people with biscuits.
+      Each person needs a cup of tea and a plate with biscuits in the serving area.
+    countertop_objects:
+      counter_spot_1: kettle
+      counter_spot_2: sugar_jar
+    container_contents:
+      C1: [mug, cup, glass]              # 2+ drinking vessels (mixed types)
+      C2: [plate, small_plate, bowl]     # 2+ plate options
+      D1: [spoon, spoon, fork, knife]    # 2 spoons available (duplicate)
+      D2: [tongs, napkin]
+      B1: [tea_box, biscuits]            # tea + biscuits co-located!
+    required_objects: [mug, cup, plate, small_plate, spoon, spoon,
+                       tea_box, biscuits, kettle, sugar_jar]
+    substitution_map:
+      mug: [cup, glass]
+      cup: [mug, glass]
+      plate: [small_plate, bowl]
+      small_plate: [plate, bowl]
+    optimal_search_order: [B1, C1, C2, D1]
+    optimal_inspections: 4
+    notes: >
+      Quantity reasoning: need 2x drinking vessels, 2x plates, 2x spoons.
+      B1 has highest joint value (tea_box + biscuits = 2 items at once).
+      Tests: quantity awareness, multi-instance requirements,
+      highest-value-first search ordering (B1 first despite being small box).
+
+# ============================================================
+# COMMONSENSE SPATIAL PRIORS (ground truth for FM evaluation)
+# ============================================================
+# These represent the "correct" commonsense about where objects
+# are typically found. Used to evaluate whether the FM's search
+# reasoning matches human spatial intuition.
+
+spatial_priors:
+  mug:          {C1: 0.50, C2: 0.25, D1: 0.02, D2: 0.02, B1: 0.01}
+  cup:          {C1: 0.50, C2: 0.25, D1: 0.02, D2: 0.02, B1: 0.01}
+  glass:        {C1: 0.55, C2: 0.20, D1: 0.02, D2: 0.02, B1: 0.01}
+  plate:        {C2: 0.50, C1: 0.25, D1: 0.02, D2: 0.02, B1: 0.01}
+  small_plate:  {C2: 0.50, C1: 0.25, D1: 0.02, D2: 0.02, B1: 0.01}
+  bowl:         {C2: 0.40, C1: 0.35, D1: 0.02, D2: 0.02, B1: 0.01}
+  spoon:        {D1: 0.65, D2: 0.15, C1: 0.02, C2: 0.02, B1: 0.01}
+  fork:         {D1: 0.65, D2: 0.15, C1: 0.02, C2: 0.02, B1: 0.01}
+  knife:        {D1: 0.60, D2: 0.20, C1: 0.02, C2: 0.02, B1: 0.01}
+  stirrer:      {D1: 0.50, D2: 0.15, B1: 0.10, C1: 0.02, C2: 0.02}
+  spatula:      {D1: 0.40, D2: 0.35, C1: 0.02, C2: 0.02, B1: 0.01}
+  tongs:        {D2: 0.55, D1: 0.25, C1: 0.02, C2: 0.02, B1: 0.01}
+  milk_carton:  {C1: 0.45, C2: 0.20, B1: 0.05, D1: 0.01, D2: 0.01}
+  sugar_jar:    {C2: 0.30, C1: 0.25, B1: 0.20, D1: 0.02, D2: 0.02}
+  tea_box:      {B1: 0.35, C2: 0.25, C1: 0.20, D1: 0.02, D2: 0.02}
+  butter:       {C1: 0.35, C2: 0.25, B1: 0.15, D1: 0.02, D2: 0.02}
+  jam_jar:      {C2: 0.35, B1: 0.25, C1: 0.20, D1: 0.02, D2: 0.02}
+  bread:        {C2: 0.30, B1: 0.20, C1: 0.15, D1: 0.02, D2: 0.02}
+  napkin:       {D2: 0.50, D1: 0.20, B1: 0.10, C1: 0.02, C2: 0.02}
+  biscuits:     {B1: 0.40, C2: 0.25, C1: 0.15, D1: 0.02, D2: 0.02}
