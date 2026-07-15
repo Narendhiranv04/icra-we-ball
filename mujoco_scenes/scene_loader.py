@@ -27,6 +27,7 @@ ASSETS_DIR = ROOT / "assets"
 CONFIGS_DIR = ROOT / "configs"
 KITCHEN_BASE = ASSETS_DIR / "kitchen_base.xml"
 OBJECT_LIB = ASSETS_DIR / "objects" / "object_library.xml"
+OBJECT_MESHES_DIR = ASSETS_DIR / "objects" / "meshes"
 SCENE_CONFIGS = CONFIGS_DIR / "scene_configs.yaml"
 
 
@@ -87,17 +88,27 @@ FETCH_ACTUATORS = (
 # The loader adds the object's lowest-point offset so objects start just above
 # shelves/trays instead of intersecting them.
 OBJECT_SUPPORT_HEIGHT = {
-    "mug": 0.045, "cup": 0.040, "glass": 0.055,
-    "plate": 0.008, "small_plate": 0.006, "bowl": 0.030,
-    "spoon": 0.005, "fork": 0.005, "knife": 0.006,
+    "mug": 0.04065, "cup": 0.03076, "glass": 0.055,
+    "plate": 0.01336, "small_plate": 0.00735, "bowl": 0.02750,
+    "spoon": 0.01045, "fork": 0.00773, "knife": 0.00762,
     "stirrer": 0.003, "spatula": 0.006, "tongs": 0.005,
-    "kettle": 0.070, "coffee_jar": 0.045, "sugar_jar": 0.040,
-    "milk_carton": 0.060, "tea_box": 0.030, "bread": 0.025,
+    "kettle": 0.06817, "coffee_jar": 0.09287, "sugar_jar": 0.06724,
+    "coffee_can": 0.07009, "sugar_box": 0.08802,
+    "milk_carton": 0.060, "tea_box": 0.01944, "bread": 0.025,
     "butter": 0.015, "jam_jar": 0.040, "napkin": 0.003,
     "biscuits": 0.020, "pot_with_soup": 0.050,
+    "gso_canister_distractor": 0.07187,
+    "gso_spatula_distractor": 0.01234,
 }
 
-UTENSIL_OBJECTS = {"spoon", "fork", "knife", "stirrer", "spatula", "tongs"}
+UTENSIL_OBJECTS = {
+    "spoon", "fork", "knife", "stirrer", "spatula", "tongs",
+    "gso_spatula_distractor",
+}
+CENTRED_DRAWER_OBJECTS = {
+    "spoon", "fork", "knife", "stirrer", "tongs",
+    "gso_spatula_distractor",
+}
 
 # Positions are RELATIVE to the container body origin: (x, y, support_z).
 # C1 alternates between its lower floor and shelf. C2 reserves the entire
@@ -106,57 +117,60 @@ CONTAINER_SLOTS = {
     "C1": {
         "parent_body": "cabinet_C1",
         "slots": [
-            (-0.07, 0.0, -0.145),
-            (-0.07, 0.0, -0.047),
-            (0.07, 0.0, -0.047),
-            (0.07, 0.0, -0.145),
+            (-0.10, 0.0, -0.205),
+            (-0.10, 0.0, -0.032),
+            (0.10, 0.0, -0.032),
+            (0.10, 0.0, -0.205),
         ],
     },
     "C2": {
         "parent_body": "cabinet_C2",
         "slots": [
-            (0.0, 0.0, -0.145),
-            (-0.075, 0.0, -0.047),
-            (0.075, 0.0, -0.047),
-            (0.0, -0.04, -0.047),
+            (0.0, 0.0, -0.205),
+            (-0.10, 0.0, -0.032),
+            (0.10, 0.0, -0.032),
+            (0.0, -0.06, -0.032),
         ],
     },
     "D1": {
         "parent_body": "drawer_D1_tray",
         "slots": [
-            (-0.09, 0.085, -0.052),
-            (-0.09, 0.030, -0.052),
-            (-0.09, -0.025, -0.052),
+            (-0.09, 0.070, -0.052),
+            (-0.09, 0.015, -0.052),
+            (-0.09, -0.040, -0.052),
             (-0.09, -0.080, -0.052),
         ],
     },
     "D2": {
         "parent_body": "drawer_D2_tray",
         "slots": [
-            (-0.09, 0.085, -0.052),
-            (-0.09, 0.030, -0.052),
-            (-0.09, -0.025, -0.052),
+            (-0.09, 0.070, -0.052),
+            (-0.09, 0.015, -0.052),
+            (-0.09, -0.040, -0.052),
             (-0.09, -0.080, -0.052),
         ],
     },
     "B1": {
         "parent_body": "box_B1",
         "slots": [
-            (-0.045, 0.0, 0.003),
-            (0.045, 0.0, 0.003),
-            (0.0, 0.025, 0.003),
+            (-0.070, 0.0, 0.003),
+            (0.070, 0.0, 0.003),
+            (0.0, 0.040, 0.003),
         ],
     },
 }
 
 # Countertop spots contain (x, y, support_z) world coordinates.
 COUNTER_SPOTS = {
-    "counter_spot_1": (-0.35, 0.10, 0.770),
-    "counter_spot_2": (-0.15, 0.10, 0.770),
-    "counter_spot_3": (0.05, 0.10, 0.770),
-    "counter_spot_4": (0.20, 0.10, 0.770),
-    "counter_spot_5": (-0.25, -0.05, 0.770),
-    "counter_spot_6": (0.0, -0.05, 0.770),
+    # Negative Y is the Fetch side of the worktop. Keep the primary
+    # ingredients away from the upper cabinets and within an easy frontal
+    # gripper approach corridor.
+    "counter_spot_1": (-0.35, -0.08, 0.770),
+    "counter_spot_2": (-0.15, -0.08, 0.770),
+    "counter_spot_3": (0.05, -0.08, 0.770),
+    "counter_spot_4": (0.20, -0.08, 0.770),
+    "counter_spot_5": (-0.25, -0.22, 0.770),
+    "counter_spot_6": (0.0, -0.22, 0.770),
 }
 
 CAMERAS = (
@@ -226,14 +240,16 @@ def load_all_configs() -> dict[str, SceneConfig]:
     return configs
 
 
-def _parse_object_library() -> dict[str, ET.Element]:
-    """Parse object_library.xml and return a dict of {object_name: body_element}."""
+def _parse_object_library() -> tuple[dict[str, ET.Element], list[ET.Element]]:
+    """Parse reusable object bodies and their visual asset declarations."""
     tree = ET.parse(OBJECT_LIB)
     root = tree.getroot()
     objects = {}
     for body in root.findall("body"):
         objects[body.get("name")] = body
-    return objects
+    asset_root = root.find("asset")
+    assets = list(asset_root) if asset_root is not None else []
+    return objects, assets
 
 
 def _fetch_asset_dir() -> Path:
@@ -420,6 +436,17 @@ def _load_fetch_binary_assets(fetch_dir: Path) -> dict[str, bytes]:
     return assets
 
 
+def _load_object_binary_assets() -> dict[str, bytes]:
+    """Load prepared kitchen OBJ and texture files for in-memory MJCF compile."""
+    supported = {".obj", ".png", ".jpg", ".jpeg"}
+    assets = {}
+    for path in OBJECT_MESHES_DIR.rglob("*"):
+        if path.is_file() and path.suffix.lower() in supported:
+            key = path.relative_to(OBJECT_MESHES_DIR).as_posix()
+            assets[key] = path.read_bytes()
+    return assets
+
+
 def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
     """
     Take kitchen_base.xml, inject objects from the scene config, and return
@@ -428,7 +455,10 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
     tree = ET.parse(KITCHEN_BASE)
     root = tree.getroot()
     worldbody = root.find("worldbody")
-    obj_lib = _parse_object_library()
+    obj_lib, object_assets = _parse_object_library()
+    asset_root = root.find("asset")
+    for element in object_assets:
+        asset_root.append(copy.deepcopy(element))
 
     if include_robot:
         _inject_fetch_robot(root, _fetch_asset_dir())
@@ -446,7 +476,12 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
             return obj_name
         return f"{obj_name}_{count}"
 
-    def _inject_object(obj_name: str, support_pos: tuple):
+    def _inject_object(
+        obj_name: str,
+        support_pos: tuple,
+        quat: str | None = None,
+        support_height_override: float | None = None,
+    ):
         """Add an object body directly to worldbody at the given position."""
         if obj_name not in obj_lib:
             print(f"  [WARNING] Object '{obj_name}' not found in object library, skipping.")
@@ -456,10 +491,16 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
         obj_elem = copy.deepcopy(obj_lib[obj_name])
 
         # Convert a support-surface location into a non-penetrating body centre.
-        support_height = OBJECT_SUPPORT_HEIGHT.get(obj_name, 0.03)
+        support_height = (
+            support_height_override
+            if support_height_override is not None
+            else OBJECT_SUPPORT_HEIGHT.get(obj_name, 0.03)
+        )
         pos = (support_pos[0], support_pos[1],
                support_pos[2] + support_height + 0.002)
         obj_elem.set("pos", f"{pos[0]:.4f} {pos[1]:.4f} {pos[2]:.4f}")
+        if quat is not None:
+            obj_elem.set("quat", quat)
 
         # Rename body and all children to instance name if different
         if instance_name != obj_name:
@@ -520,17 +561,71 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
         parent_body_pos = _get_body_world_pos(cinfo["parent_body"])
         slots = cinfo["slots"]
 
+        # Real-scale drinkware needs size-aware allocation. C1 has roughly
+        # 16 cm below its enlarged shelf, so taller objects go above. C2 stacks
+        # plate-like objects on its lower level and places other items above.
+        if container_id == "C1":
+            lower_slots = [slots[0], slots[3]]
+            shelf_slots = [slots[1], slots[2]]
+            allocated_slots = []
+            for obj_name in objects:
+                is_tall = 2 * OBJECT_SUPPORT_HEIGHT.get(obj_name, 0.03) > 0.15
+                preferred = shelf_slots if is_tall else lower_slots
+                fallback = lower_slots if is_tall else shelf_slots
+                allocated_slots.append((preferred or fallback).pop(0))
+        elif container_id == "C2":
+            plate_objects = {"plate", "small_plate"}
+            nonplate_count = sum(obj not in plate_objects for obj in objects)
+            shelf_x = {
+                0: [],
+                1: [0.0],
+                2: [-0.090, 0.110],
+                3: [-0.120, 0.0, 0.120],
+            }[nonplate_count]
+            plate_stack_support = -0.205
+            shelf_index = 0
+            allocated_slots = []
+            for obj_name in objects:
+                if obj_name in plate_objects:
+                    allocated_slots.append((0.0, 0.0, plate_stack_support))
+                    plate_stack_support += (
+                        2 * OBJECT_SUPPORT_HEIGHT[obj_name] + 0.002
+                    )
+                else:
+                    allocated_slots.append((shelf_x[shelf_index], 0.0, -0.032))
+                    shelf_index += 1
+        else:
+            allocated_slots = slots
+
         for i, obj_name in enumerate(objects):
-            if i >= len(slots):
+            if i >= len(allocated_slots):
                 print(f"  [WARNING] Container {container_id} full, cannot place {obj_name}.")
                 continue
-            slot_rel_pos = np.array(slots[i], dtype=float)
-            # Long utensils are authored from x=0 toward +x and therefore
-            # begin near the tray's left wall. Compact objects are centred.
+            slot_rel_pos = np.array(allocated_slots[i], dtype=float)
+            # Centred scanned utensils use the drawer middle lane; legacy +X
+            # primitives retain the left lane. Compact objects use the right
+            # lane so realistic-width napkins/boxes cannot overlap utensils.
             if container_id in {"D1", "D2"} and obj_name not in UTENSIL_OBJECTS:
+                slot_rel_pos[0] = 0.08
+            elif container_id in {"D1", "D2"} and obj_name in CENTRED_DRAWER_OBJECTS:
                 slot_rel_pos[0] = 0.0
             world_pos = parent_body_pos + np.array(slot_rel_pos)
-            _inject_object(obj_name, world_pos)
+            if container_id == "B1" and obj_name == "coffee_jar":
+                # The coffee jar remains slightly taller than B1's closed
+                # interior. Store it centred on its side along the longer X
+                # dimension. The shorter sugar jar now fits upright in the
+                # enlarged box and is deliberately left upright so it cannot
+                # roll indefinitely on its cylindrical collision proxy.
+                world_pos[0] = parent_body_pos[0]
+                horizontal_radius = 0.03962
+                _inject_object(
+                    obj_name,
+                    world_pos,
+                    quat="0.7071068 0 0.7071068 0",
+                    support_height_override=horizontal_radius,
+                )
+            else:
+                _inject_object(obj_name, world_pos)
 
     return ET.tostring(root, encoding="unicode")
 
@@ -560,9 +655,9 @@ class KitchenScene:
         print(f"[KitchenScene] Building scene: {scene_name}")
         print(f"  Goal: {self.config.goal}")
         xml_str = build_scene_xml(self.config, include_robot=include_robot)
-        model_assets = (
-            _load_fetch_binary_assets(_fetch_asset_dir()) if include_robot else None
-        )
+        model_assets = _load_object_binary_assets()
+        if include_robot:
+            model_assets.update(_load_fetch_binary_assets(_fetch_asset_dir()))
         self.model = mujoco.MjModel.from_xml_string(xml_str, assets=model_assets)
         self.data = mujoco.MjData(self.model)
 
@@ -580,7 +675,9 @@ class KitchenScene:
 
         # Let all free objects settle onto their support surfaces.
         mujoco.mj_forward(self.model, self.data)
-        for _ in range(500):
+        # Thin scanned utensils need roughly two simulated seconds to finish
+        # settling inside the drawer trays without residual jitter.
+        for _ in range(1000):
             mujoco.mj_step(self.model, self.data)
         print(f"  Visible objects: {self.state.visible_objects}")
         print(f"  Hidden objects: {self.state.hidden_objects}")
@@ -671,7 +768,7 @@ class KitchenScene:
         """Return list of container IDs that haven't been inspected yet."""
         return [cid for cid in CONTAINER_SLOTS if cid not in self.state.opened_containers]
 
-    def open_container(self, container_id: str, steps: int = 500) -> list:
+    def open_container(self, container_id: str, steps: int = 1000) -> list:
         """
         Open a container and return the list of newly visible objects.
 

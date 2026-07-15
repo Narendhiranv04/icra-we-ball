@@ -3,99 +3,239 @@
      Naming convention: each body name matches the object identifier.
 -->
 <mujoco>
+  <!-- Textured visual meshes. Physics uses the simple proxy geoms on each body. -->
+  <asset>
+    <mesh name="mesh_ycb_coffee_can" file="ycb/coffee_can/ycb_coffee_can.obj"/>
+    <texture name="tex_ycb_coffee_can" type="2d" file="ycb/coffee_can/ycb_coffee_can.png"/>
+    <material name="mat_ycb_coffee_can" texture="tex_ycb_coffee_can" specular="0.25" shininess="0.35"/>
+    <mesh name="mesh_ycb_sugar_box" file="ycb/sugar_box/ycb_sugar_box.obj"/>
+    <texture name="tex_ycb_sugar_box" type="2d" file="ycb/sugar_box/ycb_sugar_box.png"/>
+    <material name="mat_ycb_sugar_box" texture="tex_ycb_sugar_box" specular="0.15"/>
+    <mesh name="mesh_ycb_tea_box" file="ycb/tea_box/ycb_tea_box.obj"/>
+    <texture name="tex_ycb_tea_box" type="2d" file="ycb/tea_box/ycb_tea_box.png"/>
+    <material name="mat_ycb_tea_box" texture="tex_ycb_tea_box" specular="0.15"/>
+    <mesh name="mesh_ycb_bowl" file="ycb/bowl/ycb_bowl.obj"/>
+    <texture name="tex_ycb_bowl" type="2d" file="ycb/bowl/ycb_bowl.png"/>
+    <material name="mat_ycb_bowl" texture="tex_ycb_bowl" specular="0.3" shininess="0.45"/>
+    <mesh name="mesh_ycb_mug" file="ycb/mug/ycb_mug.obj"/>
+    <texture name="tex_ycb_mug" type="2d" file="ycb/mug/ycb_mug.png"/>
+    <material name="mat_ycb_mug" texture="tex_ycb_mug" specular="0.3" shininess="0.45"/>
+    <mesh name="mesh_ycb_plate" file="ycb/plate/ycb_plate.obj"/>
+    <mesh name="mesh_ycb_small_plate" file="ycb/plate/ycb_plate.obj" scale="0.55 0.55 0.55"/>
+    <texture name="tex_ycb_plate" type="2d" file="ycb/plate/ycb_plate.png"/>
+    <material name="mat_ycb_plate" texture="tex_ycb_plate" specular="0.3" shininess="0.45"/>
+    <mesh name="mesh_ycb_fork" file="ycb/fork/ycb_fork.obj"/>
+    <texture name="tex_ycb_fork" type="2d" file="ycb/fork/ycb_fork.png"/>
+    <material name="mat_ycb_fork" texture="tex_ycb_fork" specular="0.65" shininess="0.8"/>
+    <mesh name="mesh_ycb_spoon" file="ycb/spoon/ycb_spoon.obj"/>
+    <texture name="tex_ycb_spoon" type="2d" file="ycb/spoon/ycb_spoon.png"/>
+    <material name="mat_ycb_spoon" texture="tex_ycb_spoon" specular="0.65" shininess="0.8"/>
+    <mesh name="mesh_ycb_knife" file="ycb/knife/ycb_knife.obj"/>
+    <texture name="tex_ycb_knife" type="2d" file="ycb/knife/ycb_knife.png"/>
+    <material name="mat_ycb_knife" texture="tex_ycb_knife" specular="0.65" shininess="0.8"/>
+    <mesh name="mesh_ycb_cup" file="ycb/cup/ycb_cup.obj"/>
+    <texture name="tex_ycb_cup" type="2d" file="ycb/cup/ycb_cup.png"/>
+    <material name="mat_ycb_cup" texture="tex_ycb_cup" specular="0.25"/>
+
+    <mesh name="mesh_gso_kettle" file="gso/kettle/gso_kettle.obj"/>
+    <texture name="tex_gso_kettle" type="2d" file="gso/kettle/gso_kettle.png"/>
+    <material name="mat_gso_kettle" texture="tex_gso_kettle" specular="0.35" shininess="0.5"/>
+    <mesh name="mesh_gso_coffee_jar" file="gso/coffee_jar/gso_coffee_jar_open.obj"/>
+    <texture name="tex_gso_coffee_jar" type="2d" file="gso/coffee_jar/gso_coffee_jar.png"/>
+    <material name="mat_gso_coffee_jar" texture="tex_gso_coffee_jar" specular="0.25"/>
+    <mesh name="mesh_gso_sugar_jar" file="gso/sugar_jar/gso_sugar_jar.obj"/>
+    <texture name="tex_gso_sugar_jar" type="2d" file="gso/sugar_jar/gso_sugar_jar.png"/>
+    <material name="mat_gso_sugar_jar" texture="tex_gso_sugar_jar" specular="0.25"/>
+    <mesh name="mesh_gso_canister" file="gso/gso_canister_distractor/gso_gso_canister_distractor.obj"/>
+    <texture name="tex_gso_canister" type="2d" file="gso/gso_canister_distractor/gso_gso_canister_distractor.png"/>
+    <material name="mat_gso_canister" texture="tex_gso_canister" specular="0.2"/>
+    <mesh name="mesh_gso_spatula" file="gso/gso_spatula_distractor/gso_gso_spatula_distractor.obj"/>
+    <texture name="tex_gso_spatula" type="2d" file="gso/gso_spatula_distractor/gso_gso_spatula_distractor.png"/>
+    <material name="mat_gso_spatula" texture="tex_gso_spatula" specular="0.25"/>
+    <material name="mat_coffee_powder" rgba="0.22 0.075 0.025 1" specular="0.05"/>
+    <material name="mat_open_jar_rim" rgba="0.12 0.09 0.07 1" specular="0.25"/>
+
+    <mesh name="mesh_custom_stirrer" file="custom/stirrer.obj"/>
+    <mesh name="mesh_custom_napkin" file="custom/folded_napkin.obj"/>
+    <mesh name="mesh_custom_tongs" file="custom/tongs.obj"/>
+  </asset>
+
   <!-- ============================== DRINKWARE ============================== -->
 
-  <!-- Mug: cylindrical with handle -->
+  <!-- YCB 025_mug -->
   <body name="mug" pos="0 0 0">
     <freejoint name="mug_free"/>
-    <geom name="mug_body" type="cylinder" size="0.035 0.045"
-          material="mat_ceramic_blue" mass="0.25"/>
-    <geom name="mug_handle" type="capsule" size="0.006" fromto="0.035 0 -0.02 0.055 0 0.02"
-          material="mat_ceramic_blue"/>
-    <site name="mug_grasp" pos="0 0 0.045" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
+    <geom name="mug_visual" type="mesh" mesh="mesh_ycb_mug" material="mat_ycb_mug"
+          class="visual" mass="0"/>
+    <!-- Hollow collision shell: bottom plus eight overlapping wall segments. -->
+    <geom name="mug_bottom_collision" type="cylinder" size="0.040 0.003"
+          pos="0 0 -0.03765" rgba="0 0 0 0" mass="0.040" group="3"/>
+    <geom name="mug_wall_0" type="box" size="0.004 0.015 0.036" pos="0.036 0 0.003"
+          rgba="0 0 0 0" mass="0.00975" group="3"/>
+    <geom name="mug_wall_1" type="box" size="0.004 0.015 0.036" pos="0.02546 0.02546 0.003" euler="0 0 0.7854"
+          rgba="0 0 0 0" mass="0.00975" group="3"/>
+    <geom name="mug_wall_2" type="box" size="0.004 0.015 0.036" pos="0 0.036 0.003" euler="0 0 1.5708"
+          rgba="0 0 0 0" mass="0.00975" group="3"/>
+    <geom name="mug_wall_3" type="box" size="0.004 0.015 0.036" pos="-0.02546 0.02546 0.003" euler="0 0 2.3562"
+          rgba="0 0 0 0" mass="0.00975" group="3"/>
+    <geom name="mug_wall_4" type="box" size="0.004 0.015 0.036" pos="-0.036 0 0.003" euler="0 0 3.1416"
+          rgba="0 0 0 0" mass="0.00975" group="3"/>
+    <geom name="mug_wall_5" type="box" size="0.004 0.015 0.036" pos="-0.02546 -0.02546 0.003" euler="0 0 3.9270"
+          rgba="0 0 0 0" mass="0.00975" group="3"/>
+    <geom name="mug_wall_6" type="box" size="0.004 0.015 0.036" pos="0 -0.036 0.003" euler="0 0 4.7124"
+          rgba="0 0 0 0" mass="0.00975" group="3"/>
+    <geom name="mug_wall_7" type="box" size="0.004 0.015 0.036" pos="0.02546 -0.02546 0.003" euler="0 0 5.4978"
+          rgba="0 0 0 0" mass="0.00975" group="3"/>
+    <site name="mug_grasp" pos="0 0 0.025" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
   </body>
 
-  <!-- Cup: shorter cylinder, no handle -->
+  <!-- YCB 065-a_cups -->
   <body name="cup" pos="0 0 0">
     <freejoint name="cup_free"/>
-    <geom name="cup_body" type="cylinder" size="0.032 0.04"
-          material="mat_ceramic_white" mass="0.2"/>
-    <site name="cup_grasp" pos="0 0 0.04" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
+    <geom name="cup_visual" type="mesh" mesh="mesh_ycb_cup" material="mat_ycb_cup"
+          class="visual" mass="0"/>
+    <geom name="cup_bottom_collision" type="cylinder" size="0.028 0.003"
+          pos="0 0 -0.02776" rgba="0 0 0 0" mass="0.010" group="3"/>
+    <geom name="cup_wall_0" type="box" size="0.003 0.0105 0.0265" pos="0.025 0 0.0015" rgba="0 0 0 0" mass="0.0025" group="3"/>
+    <geom name="cup_wall_1" type="box" size="0.003 0.0105 0.0265" pos="0.01768 0.01768 0.0015" euler="0 0 0.7854" rgba="0 0 0 0" mass="0.0025" group="3"/>
+    <geom name="cup_wall_2" type="box" size="0.003 0.0105 0.0265" pos="0 0.025 0.0015" euler="0 0 1.5708" rgba="0 0 0 0" mass="0.0025" group="3"/>
+    <geom name="cup_wall_3" type="box" size="0.003 0.0105 0.0265" pos="-0.01768 0.01768 0.0015" euler="0 0 2.3562" rgba="0 0 0 0" mass="0.0025" group="3"/>
+    <geom name="cup_wall_4" type="box" size="0.003 0.0105 0.0265" pos="-0.025 0 0.0015" euler="0 0 3.1416" rgba="0 0 0 0" mass="0.0025" group="3"/>
+    <geom name="cup_wall_5" type="box" size="0.003 0.0105 0.0265" pos="-0.01768 -0.01768 0.0015" euler="0 0 3.9270" rgba="0 0 0 0" mass="0.0025" group="3"/>
+    <geom name="cup_wall_6" type="box" size="0.003 0.0105 0.0265" pos="0 -0.025 0.0015" euler="0 0 4.7124" rgba="0 0 0 0" mass="0.0025" group="3"/>
+    <geom name="cup_wall_7" type="box" size="0.003 0.0105 0.0265" pos="0.01768 -0.01768 0.0015" euler="0 0 5.4978" rgba="0 0 0 0" mass="0.0025" group="3"/>
+    <site name="cup_grasp" pos="0 0 0.015" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
   </body>
 
   <!-- Glass: taller, transparent-ish -->
   <body name="glass" pos="0 0 0">
     <freejoint name="glass_free"/>
-    <geom name="glass_body" type="cylinder" size="0.03 0.055"
-          material="mat_glass_clear" mass="0.2"/>
+    <geom name="glass_visual" type="cylinder" size="0.03 0.055"
+          material="mat_glass_clear" class="visual" mass="0"/>
+    <geom name="glass_bottom_collision" type="cylinder" size="0.030 0.003"
+          pos="0 0 -0.052" rgba="0 0 0 0" mass="0.08" group="3"/>
+    <geom name="glass_wall_0" type="box" size="0.003 0.0112 0.050" pos="0.027 0 0.003" rgba="0 0 0 0" mass="0.015" group="3"/>
+    <geom name="glass_wall_1" type="box" size="0.003 0.0112 0.050" pos="0.01909 0.01909 0.003" euler="0 0 0.7854" rgba="0 0 0 0" mass="0.015" group="3"/>
+    <geom name="glass_wall_2" type="box" size="0.003 0.0112 0.050" pos="0 0.027 0.003" euler="0 0 1.5708" rgba="0 0 0 0" mass="0.015" group="3"/>
+    <geom name="glass_wall_3" type="box" size="0.003 0.0112 0.050" pos="-0.01909 0.01909 0.003" euler="0 0 2.3562" rgba="0 0 0 0" mass="0.015" group="3"/>
+    <geom name="glass_wall_4" type="box" size="0.003 0.0112 0.050" pos="-0.027 0 0.003" euler="0 0 3.1416" rgba="0 0 0 0" mass="0.015" group="3"/>
+    <geom name="glass_wall_5" type="box" size="0.003 0.0112 0.050" pos="-0.01909 -0.01909 0.003" euler="0 0 3.9270" rgba="0 0 0 0" mass="0.015" group="3"/>
+    <geom name="glass_wall_6" type="box" size="0.003 0.0112 0.050" pos="0 -0.027 0.003" euler="0 0 4.7124" rgba="0 0 0 0" mass="0.015" group="3"/>
+    <geom name="glass_wall_7" type="box" size="0.003 0.0112 0.050" pos="0.01909 -0.01909 0.003" euler="0 0 5.4978" rgba="0 0 0 0" mass="0.015" group="3"/>
     <site name="glass_grasp" pos="0 0 0.055" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
   </body>
 
   <!-- ============================== SERVEWARE ============================== -->
 
-  <!-- Plate: flat disc -->
+  <!-- YCB 029_plate -->
   <body name="plate" pos="0 0 0">
     <freejoint name="plate_free"/>
-    <geom name="plate_body" type="cylinder" size="0.09 0.008"
-          material="mat_ceramic_white" mass="0.4"/>
-    <site name="plate_grasp" pos="0 0 0.008" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
+    <geom name="plate_visual" type="mesh" mesh="mesh_ycb_plate" material="mat_ycb_plate"
+          class="visual" mass="0"/>
+    <geom name="plate_bottom_collision" type="cylinder" size="0.110 0.004" pos="0 0 -0.007"
+          rgba="0 0 0 0" mass="0.150" group="3"/>
+    <geom name="plate_rim_0" type="box" size="0.009 0.032 0.008" pos="0.119 0 0.005" rgba="0 0 0 0" mass="0.01075" group="3"/>
+    <geom name="plate_rim_1" type="box" size="0.009 0.032 0.008" pos="0.10306 0.0595 0.005" euler="0 0 0.5236" rgba="0 0 0 0" mass="0.01075" group="3"/>
+    <geom name="plate_rim_2" type="box" size="0.009 0.032 0.008" pos="0.0595 0.10306 0.005" euler="0 0 1.0472" rgba="0 0 0 0" mass="0.01075" group="3"/>
+    <geom name="plate_rim_3" type="box" size="0.009 0.032 0.008" pos="0 0.119 0.005" euler="0 0 1.5708" rgba="0 0 0 0" mass="0.01075" group="3"/>
+    <geom name="plate_rim_4" type="box" size="0.009 0.032 0.008" pos="-0.0595 0.10306 0.005" euler="0 0 2.0944" rgba="0 0 0 0" mass="0.01075" group="3"/>
+    <geom name="plate_rim_5" type="box" size="0.009 0.032 0.008" pos="-0.10306 0.0595 0.005" euler="0 0 2.6180" rgba="0 0 0 0" mass="0.01075" group="3"/>
+    <geom name="plate_rim_6" type="box" size="0.009 0.032 0.008" pos="-0.119 0 0.005" euler="0 0 3.1416" rgba="0 0 0 0" mass="0.01075" group="3"/>
+    <geom name="plate_rim_7" type="box" size="0.009 0.032 0.008" pos="-0.10306 -0.0595 0.005" euler="0 0 3.6652" rgba="0 0 0 0" mass="0.01075" group="3"/>
+    <geom name="plate_rim_8" type="box" size="0.009 0.032 0.008" pos="-0.0595 -0.10306 0.005" euler="0 0 4.1888" rgba="0 0 0 0" mass="0.01075" group="3"/>
+    <geom name="plate_rim_9" type="box" size="0.009 0.032 0.008" pos="0 -0.119 0.005" euler="0 0 4.7124" rgba="0 0 0 0" mass="0.01075" group="3"/>
+    <geom name="plate_rim_10" type="box" size="0.009 0.032 0.008" pos="0.0595 -0.10306 0.005" euler="0 0 5.2360" rgba="0 0 0 0" mass="0.01075" group="3"/>
+    <geom name="plate_rim_11" type="box" size="0.009 0.032 0.008" pos="0.10306 -0.0595 0.005" euler="0 0 5.7596" rgba="0 0 0 0" mass="0.01075" group="3"/>
+    <site name="plate_grasp" pos="0.09 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
   </body>
 
   <!-- Small plate -->
   <body name="small_plate" pos="0 0 0">
     <freejoint name="small_plate_free"/>
-    <geom name="small_plate_body" type="cylinder" size="0.065 0.006"
-          material="mat_ceramic_white" mass="0.25"/>
-    <site name="small_plate_grasp" pos="0 0 0.006" size="0.01" type="sphere"
+    <geom name="small_plate_visual" type="mesh" mesh="mesh_ycb_small_plate" material="mat_ycb_plate"
+          class="visual" mass="0"/>
+    <geom name="small_plate_bottom_collision" type="cylinder" size="0.058 0.0025" pos="0 0 -0.00485"
+          rgba="0 0 0 0" mass="0.060" group="3"/>
+    <geom name="small_plate_rim_0" type="box" size="0.006 0.0172 0.00485" pos="0.064 0 0.0025" rgba="0 0 0 0" mass="0.0075" group="3"/>
+    <geom name="small_plate_rim_1" type="box" size="0.006 0.0172 0.00485" pos="0.05543 0.032 0.0025" euler="0 0 0.5236" rgba="0 0 0 0" mass="0.0075" group="3"/>
+    <geom name="small_plate_rim_2" type="box" size="0.006 0.0172 0.00485" pos="0.032 0.05543 0.0025" euler="0 0 1.0472" rgba="0 0 0 0" mass="0.0075" group="3"/>
+    <geom name="small_plate_rim_3" type="box" size="0.006 0.0172 0.00485" pos="0 0.064 0.0025" euler="0 0 1.5708" rgba="0 0 0 0" mass="0.0075" group="3"/>
+    <geom name="small_plate_rim_4" type="box" size="0.006 0.0172 0.00485" pos="-0.032 0.05543 0.0025" euler="0 0 2.0944" rgba="0 0 0 0" mass="0.0075" group="3"/>
+    <geom name="small_plate_rim_5" type="box" size="0.006 0.0172 0.00485" pos="-0.05543 0.032 0.0025" euler="0 0 2.6180" rgba="0 0 0 0" mass="0.0075" group="3"/>
+    <geom name="small_plate_rim_6" type="box" size="0.006 0.0172 0.00485" pos="-0.064 0 0.0025" euler="0 0 3.1416" rgba="0 0 0 0" mass="0.0075" group="3"/>
+    <geom name="small_plate_rim_7" type="box" size="0.006 0.0172 0.00485" pos="-0.05543 -0.032 0.0025" euler="0 0 3.6652" rgba="0 0 0 0" mass="0.0075" group="3"/>
+    <geom name="small_plate_rim_8" type="box" size="0.006 0.0172 0.00485" pos="-0.032 -0.05543 0.0025" euler="0 0 4.1888" rgba="0 0 0 0" mass="0.0075" group="3"/>
+    <geom name="small_plate_rim_9" type="box" size="0.006 0.0172 0.00485" pos="0 -0.064 0.0025" euler="0 0 4.7124" rgba="0 0 0 0" mass="0.0075" group="3"/>
+    <geom name="small_plate_rim_10" type="box" size="0.006 0.0172 0.00485" pos="0.032 -0.05543 0.0025" euler="0 0 5.2360" rgba="0 0 0 0" mass="0.0075" group="3"/>
+    <geom name="small_plate_rim_11" type="box" size="0.006 0.0172 0.00485" pos="0.05543 -0.032 0.0025" euler="0 0 5.7596" rgba="0 0 0 0" mass="0.0075" group="3"/>
+    <site name="small_plate_grasp" pos="0.05 0 0" size="0.01" type="sphere"
           rgba="0 0 0 0" group="5"/>
   </body>
 
-  <!-- Bowl -->
+  <!-- YCB 024_bowl -->
   <body name="bowl" pos="0 0 0">
     <freejoint name="bowl_free"/>
-    <geom name="bowl_body" type="cylinder" size="0.055 0.03"
-          material="mat_ceramic_white" mass="0.3"/>
-    <site name="bowl_grasp" pos="0 0 0.03" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
+    <geom name="bowl_visual" type="mesh" mesh="mesh_ycb_bowl" material="mat_ycb_bowl"
+          class="visual" mass="0"/>
+    <geom name="bowl_bottom_collision" type="cylinder" size="0.069 0.004" pos="0 0 -0.0235"
+          rgba="0 0 0 0" mass="0.050" group="3"/>
+    <geom name="bowl_wall_0" type="box" size="0.005 0.020 0.0235" pos="0.074 0 0.004" rgba="0 0 0 0" mass="0.008083" group="3"/>
+    <geom name="bowl_wall_1" type="box" size="0.005 0.020 0.0235" pos="0.06409 0.037 0.004" euler="0 0 0.5236" rgba="0 0 0 0" mass="0.008083" group="3"/>
+    <geom name="bowl_wall_2" type="box" size="0.005 0.020 0.0235" pos="0.037 0.06409 0.004" euler="0 0 1.0472" rgba="0 0 0 0" mass="0.008083" group="3"/>
+    <geom name="bowl_wall_3" type="box" size="0.005 0.020 0.0235" pos="0 0.074 0.004" euler="0 0 1.5708" rgba="0 0 0 0" mass="0.008083" group="3"/>
+    <geom name="bowl_wall_4" type="box" size="0.005 0.020 0.0235" pos="-0.037 0.06409 0.004" euler="0 0 2.0944" rgba="0 0 0 0" mass="0.008083" group="3"/>
+    <geom name="bowl_wall_5" type="box" size="0.005 0.020 0.0235" pos="-0.06409 0.037 0.004" euler="0 0 2.6180" rgba="0 0 0 0" mass="0.008083" group="3"/>
+    <geom name="bowl_wall_6" type="box" size="0.005 0.020 0.0235" pos="-0.074 0 0.004" euler="0 0 3.1416" rgba="0 0 0 0" mass="0.008083" group="3"/>
+    <geom name="bowl_wall_7" type="box" size="0.005 0.020 0.0235" pos="-0.06409 -0.037 0.004" euler="0 0 3.6652" rgba="0 0 0 0" mass="0.008083" group="3"/>
+    <geom name="bowl_wall_8" type="box" size="0.005 0.020 0.0235" pos="-0.037 -0.06409 0.004" euler="0 0 4.1888" rgba="0 0 0 0" mass="0.008083" group="3"/>
+    <geom name="bowl_wall_9" type="box" size="0.005 0.020 0.0235" pos="0 -0.074 0.004" euler="0 0 4.7124" rgba="0 0 0 0" mass="0.008083" group="3"/>
+    <geom name="bowl_wall_10" type="box" size="0.005 0.020 0.0235" pos="0.037 -0.06409 0.004" euler="0 0 5.2360" rgba="0 0 0 0" mass="0.008083" group="3"/>
+    <geom name="bowl_wall_11" type="box" size="0.005 0.020 0.0235" pos="0.06409 -0.037 0.004" euler="0 0 5.7596" rgba="0 0 0 0" mass="0.008083" group="3"/>
+    <site name="bowl_grasp" pos="0.055 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
   </body>
 
   <!-- ============================== UTENSILS ============================== -->
 
-  <!-- Spoon -->
+  <!-- YCB 031_spoon -->
   <body name="spoon" pos="0 0 0">
     <freejoint name="spoon_free"/>
-    <geom name="spoon_handle" type="capsule" size="0.005" fromto="0 0 0 0.15 0 0"
-          material="mat_steel" mass="0.05"/>
-    <geom name="spoon_head" type="ellipsoid" size="0.015 0.012 0.004"
-          pos="0.165 0 0" material="mat_steel"/>
-    <site name="spoon_grasp" pos="0.07 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
+    <geom name="spoon_visual" type="mesh" mesh="mesh_ycb_spoon" material="mat_ycb_spoon"
+          class="visual" mass="0"/>
+    <geom name="spoon_collision" type="box" size="0.0975 0.020 0.01045"
+          rgba="0 0 0 0" mass="0.030" group="3"/>
+    <site name="spoon_grasp" pos="-0.045 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
   </body>
 
-  <!-- Fork -->
+  <!-- YCB 030_fork -->
   <body name="fork" pos="0 0 0">
     <freejoint name="fork_free"/>
-    <geom name="fork_handle" type="capsule" size="0.005" fromto="0 0 0 0.13 0 0"
-          material="mat_steel" mass="0.04"/>
-    <geom name="fork_head" type="box" size="0.012 0.01 0.003"
-          pos="0.15 0 0" material="mat_steel"/>
-    <site name="fork_grasp" pos="0.065 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
+    <geom name="fork_visual" type="mesh" mesh="mesh_ycb_fork" material="mat_ycb_fork"
+          class="visual" mass="0"/>
+    <geom name="fork_collision" type="box" size="0.0985 0.0125 0.00773"
+          rgba="0 0 0 0" mass="0.034" group="3"/>
+    <site name="fork_grasp" pos="-0.045 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
   </body>
 
-  <!-- Knife -->
+  <!-- YCB 032_knife -->
   <body name="knife" pos="0 0 0">
     <freejoint name="knife_free"/>
-    <geom name="knife_handle" type="capsule" size="0.006" fromto="0 0 0 0.08 0 0"
-          material="mat_plastic_red" mass="0.04"/>
-    <geom name="knife_blade" type="box" size="0.06 0.012 0.001"
-          pos="0.14 0 0" material="mat_steel"/>
-    <site name="knife_grasp" pos="0.04 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
+    <geom name="knife_visual" type="mesh" mesh="mesh_ycb_knife" material="mat_ycb_knife"
+          class="visual" mass="0"/>
+    <geom name="knife_collision" type="box" size="0.107 0.0095 0.00762"
+          rgba="0 0 0 0" mass="0.031" group="3"/>
+    <site name="knife_grasp" pos="-0.050 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
   </body>
 
-  <!-- Stirrer: thin stick -->
+  <!-- Simple custom wooden stirrer mesh -->
   <body name="stirrer" pos="0 0 0">
     <freejoint name="stirrer_free"/>
-    <geom name="stirrer_body" type="capsule" size="0.003" fromto="0 0 0 0.14 0 0"
-          material="mat_plastic_red" mass="0.01"/>
-    <site name="stirrer_grasp" pos="0.07 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
+    <geom name="stirrer_visual" type="mesh" mesh="mesh_custom_stirrer" pos="-0.0675 0 0"
+          material="mat_wood" class="visual" mass="0"/>
+    <!-- A shallow box matches the flat wooden stick and prevents the old
+         capsule proxy from rolling across the drawer as it accelerates. -->
+    <geom name="stirrer_collision" type="box" size="0.0675 0.004 0.002"
+          rgba="0 0 0 0" mass="0.02" friction="2 0.02 0.01" group="3"/>
+    <site name="stirrer_grasp" pos="-0.02 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
   </body>
 
   <!-- Spatula -->
@@ -109,49 +249,100 @@
           rgba="0 0 0 0" group="5"/>
   </body>
 
-  <!-- Tongs -->
+  <!-- Custom fallback: GSO's catalog has no tong scan. -->
   <body name="tongs" pos="0 0 0">
     <freejoint name="tongs_free"/>
-    <geom name="tongs_arm1" type="capsule" size="0.005" fromto="0 -0.005 0 0.17 -0.005 0"
-          material="mat_steel" mass="0.08"/>
-    <geom name="tongs_arm2" type="capsule" size="0.005" fromto="0 0.005 0 0.17 0.005 0"
-          material="mat_steel"/>
-    <site name="tongs_grasp" pos="0.04 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
+    <geom name="tongs_visual" type="mesh" mesh="mesh_custom_tongs" pos="-0.081 0 0"
+          material="mat_steel" class="visual" mass="0"/>
+    <geom name="tongs_collision_1" type="capsule" size="0.005"
+          fromto="-0.095 -0.006 0 0.095 -0.013 0" rgba="0 0 0 0" mass="0.04" group="3"/>
+    <geom name="tongs_collision_2" type="capsule" size="0.005"
+          fromto="-0.095 0.006 0 0.095 0.013 0" rgba="0 0 0 0" mass="0.04" group="3"/>
+    <site name="tongs_grasp" pos="-0.05 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
   </body>
 
   <!-- ============================== INGREDIENTS / FOOD ============================== -->
 
-  <!-- Kettle -->
+  <!-- GSO Threshold_Porcelain_Teapot_White used as the kettle. -->
   <body name="kettle" pos="0 0 0">
     <freejoint name="kettle_free"/>
-    <geom name="kettle_body" type="cylinder" size="0.05 0.07"
-          material="mat_steel" mass="0.8"/>
-    <geom name="kettle_spout" type="capsule" size="0.008" fromto="0.05 0 0.03 0.08 0 0.06"
-          material="mat_steel"/>
-    <geom name="kettle_handle" type="capsule" size="0.006"
-          fromto="-0.03 0 0.07 0.03 0 0.10" material="mat_plastic_red"/>
-    <site name="kettle_grasp" pos="0 0 0.10" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
+    <geom name="kettle_visual" type="mesh" mesh="mesh_gso_kettle" material="mat_gso_kettle"
+          class="visual" mass="0"/>
+    <geom name="kettle_collision" type="cylinder" size="0.070 0.06817"
+          rgba="0 0 0 0" mass="0.80" group="3"/>
+    <site name="kettle_grasp" pos="0 0 0.045" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
   </body>
 
-  <!-- Coffee jar -->
+  <!-- GSO Nescafe instant-coffee jar. -->
   <body name="coffee_jar" pos="0 0 0">
     <freejoint name="coffee_jar_free"/>
-    <geom name="coffee_jar_body" type="cylinder" size="0.03 0.045"
-          material="mat_jar_brown" mass="0.3"/>
-    <geom name="coffee_jar_lid" type="cylinder" size="0.032 0.005"
-          pos="0 0 0.05" material="mat_plastic_red"/>
-    <site name="coffee_jar_grasp" pos="0 0 0.05" size="0.01" type="sphere"
+    <geom name="coffee_jar_visual" type="mesh" mesh="mesh_gso_coffee_jar" material="mat_gso_coffee_jar"
+          class="visual" mass="0"/>
+    <!-- Exposed powder surface and a dark polygonal rim make the clipped scan visibly open. -->
+    <geom name="coffee_powder_surface" type="cylinder" size="0.036 0.001" pos="0 0 0.055"
+          material="mat_coffee_powder" class="visual" mass="0"/>
+    <geom name="coffee_rim_0" type="box" size="0.003 0.0116 0.002" pos="0.043 0 0.060" material="mat_open_jar_rim" class="visual" mass="0"/>
+    <geom name="coffee_rim_1" type="box" size="0.003 0.0116 0.002" pos="0.03724 0.0215 0.060" euler="0 0 0.5236" material="mat_open_jar_rim" class="visual" mass="0"/>
+    <geom name="coffee_rim_2" type="box" size="0.003 0.0116 0.002" pos="0.0215 0.03724 0.060" euler="0 0 1.0472" material="mat_open_jar_rim" class="visual" mass="0"/>
+    <geom name="coffee_rim_3" type="box" size="0.003 0.0116 0.002" pos="0 0.043 0.060" euler="0 0 1.5708" material="mat_open_jar_rim" class="visual" mass="0"/>
+    <geom name="coffee_rim_4" type="box" size="0.003 0.0116 0.002" pos="-0.0215 0.03724 0.060" euler="0 0 2.0944" material="mat_open_jar_rim" class="visual" mass="0"/>
+    <geom name="coffee_rim_5" type="box" size="0.003 0.0116 0.002" pos="-0.03724 0.0215 0.060" euler="0 0 2.6180" material="mat_open_jar_rim" class="visual" mass="0"/>
+    <geom name="coffee_rim_6" type="box" size="0.003 0.0116 0.002" pos="-0.043 0 0.060" euler="0 0 3.1416" material="mat_open_jar_rim" class="visual" mass="0"/>
+    <geom name="coffee_rim_7" type="box" size="0.003 0.0116 0.002" pos="-0.03724 -0.0215 0.060" euler="0 0 3.6652" material="mat_open_jar_rim" class="visual" mass="0"/>
+    <geom name="coffee_rim_8" type="box" size="0.003 0.0116 0.002" pos="-0.0215 -0.03724 0.060" euler="0 0 4.1888" material="mat_open_jar_rim" class="visual" mass="0"/>
+    <geom name="coffee_rim_9" type="box" size="0.003 0.0116 0.002" pos="0 -0.043 0.060" euler="0 0 4.7124" material="mat_open_jar_rim" class="visual" mass="0"/>
+    <geom name="coffee_rim_10" type="box" size="0.003 0.0116 0.002" pos="0.0215 -0.03724 0.060" euler="0 0 5.2360" material="mat_open_jar_rim" class="visual" mass="0"/>
+    <geom name="coffee_rim_11" type="box" size="0.003 0.0116 0.002" pos="0.03724 -0.0215 0.060" euler="0 0 5.7596" material="mat_open_jar_rim" class="visual" mass="0"/>
+    <!-- Hollow physical shell; the opening is unobstructed above Z=0.060. -->
+    <geom name="coffee_jar_bottom_collision" type="cylinder" size="0.045 0.004" pos="0 0 -0.08886"
+          rgba="0 0 0 0" mass="0.080" group="3"/>
+    <geom name="coffee_jar_wall_0" type="box" size="0.004 0.0116 0.0725" pos="0.043 0 -0.0125" rgba="0 0 0 0" mass="0.018333" group="3"/>
+    <geom name="coffee_jar_wall_1" type="box" size="0.004 0.0116 0.0725" pos="0.03724 0.0215 -0.0125" euler="0 0 0.5236" rgba="0 0 0 0" mass="0.018333" group="3"/>
+    <geom name="coffee_jar_wall_2" type="box" size="0.004 0.0116 0.0725" pos="0.0215 0.03724 -0.0125" euler="0 0 1.0472" rgba="0 0 0 0" mass="0.018333" group="3"/>
+    <geom name="coffee_jar_wall_3" type="box" size="0.004 0.0116 0.0725" pos="0 0.043 -0.0125" euler="0 0 1.5708" rgba="0 0 0 0" mass="0.018333" group="3"/>
+    <geom name="coffee_jar_wall_4" type="box" size="0.004 0.0116 0.0725" pos="-0.0215 0.03724 -0.0125" euler="0 0 2.0944" rgba="0 0 0 0" mass="0.018333" group="3"/>
+    <geom name="coffee_jar_wall_5" type="box" size="0.004 0.0116 0.0725" pos="-0.03724 0.0215 -0.0125" euler="0 0 2.6180" rgba="0 0 0 0" mass="0.018333" group="3"/>
+    <geom name="coffee_jar_wall_6" type="box" size="0.004 0.0116 0.0725" pos="-0.043 0 -0.0125" euler="0 0 3.1416" rgba="0 0 0 0" mass="0.018333" group="3"/>
+    <geom name="coffee_jar_wall_7" type="box" size="0.004 0.0116 0.0725" pos="-0.03724 -0.0215 -0.0125" euler="0 0 3.6652" rgba="0 0 0 0" mass="0.018333" group="3"/>
+    <geom name="coffee_jar_wall_8" type="box" size="0.004 0.0116 0.0725" pos="-0.0215 -0.03724 -0.0125" euler="0 0 4.1888" rgba="0 0 0 0" mass="0.018333" group="3"/>
+    <geom name="coffee_jar_wall_9" type="box" size="0.004 0.0116 0.0725" pos="0 -0.043 -0.0125" euler="0 0 4.7124" rgba="0 0 0 0" mass="0.018333" group="3"/>
+    <geom name="coffee_jar_wall_10" type="box" size="0.004 0.0116 0.0725" pos="0.0215 -0.03724 -0.0125" euler="0 0 5.2360" rgba="0 0 0 0" mass="0.018333" group="3"/>
+    <geom name="coffee_jar_wall_11" type="box" size="0.004 0.0116 0.0725" pos="0.03724 -0.0215 -0.0125" euler="0 0 5.7596" rgba="0 0 0 0" mass="0.018333" group="3"/>
+    <site name="coffee_jar_grasp" pos="0 0 -0.015" size="0.01" type="sphere"
+          rgba="0 0 0 0" group="5"/>
+    <site name="coffee_jar_opening" pos="0 0 0.062" size="0.034 0.002" type="cylinder"
           rgba="0 0 0 0" group="5"/>
   </body>
 
-  <!-- Sugar jar -->
+  <!-- GSO Wilton sugar-sprinkles jar. -->
   <body name="sugar_jar" pos="0 0 0">
     <freejoint name="sugar_jar_free"/>
-    <geom name="sugar_jar_body" type="cylinder" size="0.03 0.04"
-          material="mat_jar_white" mass="0.3"/>
-    <geom name="sugar_jar_lid" type="cylinder" size="0.032 0.005"
-          pos="0 0 0.045" material="mat_plastic_yellow"/>
-    <site name="sugar_jar_grasp" pos="0 0 0.045" size="0.01" type="sphere"
+    <geom name="sugar_jar_visual" type="mesh" mesh="mesh_gso_sugar_jar" material="mat_gso_sugar_jar"
+          class="visual" mass="0"/>
+    <geom name="sugar_jar_collision" type="cylinder" size="0.0225 0.06724"
+          rgba="0 0 0 0" mass="0.25" group="3"/>
+    <site name="sugar_jar_grasp" pos="0 0 0.025" size="0.01" type="sphere"
+          rgba="0 0 0 0" group="5"/>
+  </body>
+
+  <!-- Additional YCB pantry items available as scene distractors. -->
+  <body name="coffee_can" pos="0 0 0">
+    <freejoint name="coffee_can_free"/>
+    <geom name="coffee_can_visual" type="mesh" mesh="mesh_ycb_coffee_can" material="mat_ycb_coffee_can"
+          class="visual" mass="0"/>
+    <geom name="coffee_can_collision" type="cylinder" size="0.050 0.07009"
+          rgba="0 0 0 0" mass="0.414" group="3"/>
+    <site name="coffee_can_grasp" pos="0 0 0.025" size="0.01" type="sphere"
+          rgba="0 0 0 0" group="5"/>
+  </body>
+
+  <body name="sugar_box" pos="0 0 0">
+    <freejoint name="sugar_box_free"/>
+    <geom name="sugar_box_visual" type="mesh" mesh="mesh_ycb_sugar_box" material="mat_ycb_sugar_box"
+          class="visual" mass="0"/>
+    <geom name="sugar_box_collision" type="box" size="0.0223 0.0455 0.08802"
+          rgba="0 0 0 0" mass="0.514" group="3"/>
+    <site name="sugar_box_grasp" pos="0 0 0.025" size="0.01" type="sphere"
           rgba="0 0 0 0" group="5"/>
   </body>
 
@@ -165,12 +356,14 @@
     <site name="milk_grasp" pos="0 0 0.06" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
   </body>
 
-  <!-- Tea box -->
+  <!-- YCB 008_pudding_box used as the tea-box proxy. -->
   <body name="tea_box" pos="0 0 0">
     <freejoint name="tea_box_free"/>
-    <geom name="tea_box_body" type="box" size="0.04 0.025 0.03"
-          material="mat_plastic_green" mass="0.15"/>
-    <site name="tea_box_grasp" pos="0 0 0.03" size="0.01" type="sphere"
+    <geom name="tea_box_visual" type="mesh" mesh="mesh_ycb_tea_box" material="mat_ycb_tea_box"
+          class="visual" mass="0"/>
+    <geom name="tea_box_collision" type="box" size="0.0555 0.0445 0.01944"
+          rgba="0 0 0 0" mass="0.15" group="3"/>
+    <site name="tea_box_grasp" pos="0 0 0" size="0.01" type="sphere"
           rgba="0 0 0 0" group="5"/>
   </body>
 
@@ -201,12 +394,35 @@
           rgba="0 0 0 0" group="5"/>
   </body>
 
-  <!-- Napkin -->
+  <!-- Simple custom twice-folded napkin mesh. -->
   <body name="napkin" pos="0 0 0">
     <freejoint name="napkin_free"/>
-    <geom name="napkin_body" type="box" size="0.06 0.06 0.003"
-          material="mat_ceramic_white" mass="0.02"/>
-    <site name="napkin_grasp" pos="0 0 0.003" size="0.01" type="sphere"
+    <geom name="napkin_visual" type="mesh" mesh="mesh_custom_napkin"
+          material="mat_ceramic_white" class="visual" mass="0"/>
+    <geom name="napkin_collision" type="box" size="0.039 0.039 0.003"
+          rgba="0 0 0 0" mass="0.02" group="3"/>
+    <site name="napkin_grasp" pos="0 0 0" size="0.01" type="sphere"
+          rgba="0 0 0 0" group="5"/>
+  </body>
+
+  <!-- GSO distractors are deliberately semantically unrelated to S1. -->
+  <body name="gso_canister_distractor" pos="0 0 0">
+    <freejoint name="gso_canister_distractor_free"/>
+    <geom name="gso_canister_distractor_visual" type="mesh" mesh="mesh_gso_canister"
+          material="mat_gso_canister" class="visual" mass="0"/>
+    <geom name="gso_canister_distractor_collision" type="cylinder" size="0.031 0.07187"
+          rgba="0 0 0 0" mass="0.30" group="3"/>
+    <site name="gso_canister_distractor_grasp" pos="0 0 0.025" size="0.01" type="sphere"
+          rgba="0 0 0 0" group="5"/>
+  </body>
+
+  <body name="gso_spatula_distractor" pos="0 0 0">
+    <freejoint name="gso_spatula_distractor_free"/>
+    <geom name="gso_spatula_distractor_visual" type="mesh" mesh="mesh_gso_spatula"
+          material="mat_gso_spatula" class="visual" mass="0"/>
+    <geom name="gso_spatula_distractor_collision" type="box" size="0.118 0.032 0.01234"
+          rgba="0 0 0 0" mass="0.06" group="3"/>
+    <site name="gso_spatula_distractor_grasp" pos="-0.05 0 0" size="0.01" type="sphere"
           rgba="0 0 0 0" group="5"/>
   </body>
 

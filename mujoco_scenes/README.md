@@ -3,6 +3,36 @@
 This package builds the `S1_coffee_missing_mug` scene dynamically from the
 shared kitchen XML, object library, and YAML configuration.
 
+## Object meshes
+
+The scene uses textured YCB meshes for the coffee can, sugar box, mug, cup,
+plate, bowl, fork, spoon, knife, and tea-box proxy. Google Scanned Objects
+provide the kettle/teapot, coffee jar, sugar jar, and two S1 distractors.
+Stirrer and folded-napkin meshes are authored locally. Because the GSO catalog
+does not contain a tong scan, `tongs` uses a purpose-built local mesh instead
+of an incorrectly relabelled scanned object.
+
+Prepared OBJ/PNG files are included in the repository and Docker build
+context. To recreate them and refresh the provenance hashes:
+
+```bash
+python mujoco_scenes/scripts/prepare_object_assets.py --force
+```
+
+Visual scans are paired with simple invisible collision proxies. Drinkware,
+plates, bowls, and the coffee jar use segmented hollow shells rather than
+solid cylinders, so utensils can physically enter and rest in them. The
+Nescafe scan is prepared as an open jar with a visible coffee-powder surface;
+its powder is visual-only so later symbolic `pour` actions are not obstructed.
+Exact dataset IDs, URLs, and SHA-256 hashes are recorded in
+`assets/objects/meshes/manifest.json`; licensing and attribution are in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+Drawer contents remain graspable free bodies. Smoother, damped drawer motion
+and a flat high-friction stirrer proxy keep their reset arrangement nearly
+fixed while a drawer opens, without introducing weld constraints that a later
+grasp action would have to disable.
+
 ## Five camera views
 
 - `left_shoulder_camera`
