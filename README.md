@@ -96,5 +96,8 @@ return to the object-in-gripper carry pose. Once an object is held, `Place`
 offers `Serving table` and `Table`. The latter automatically selects the safe
 counter strip nearest the robot's current home, left, or right base pose.
 Placed objects remain selectable for another pick whenever the robot is at
-the base pose corresponding to that strip.
+the base pose corresponding to that strip. At the shared right-side pose,
+`Open` → `Box` approaches B1's handle along +Y with vertical fingers, confirms
+bilateral contact, and carries the real lid joint around its hinge to the
+model's maximum opening angle.
 Pass `--no-actions-panel` to suppress this panel.

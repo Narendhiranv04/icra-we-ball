@@ -709,6 +709,20 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
                         "solref": "0.01 1",
                     },
                 )
+        # Activated only after both fingers contact the box-lid handle. The
+        # live relative pose is filled by the physical open action, allowing
+        # the arm and the real hinge joint to follow one consistent arc.
+        ET.SubElement(
+            equality,
+            "weld",
+            {
+                "name": "robot0:open_weld_B1_lid",
+                "body1": "robot0:gripper_link",
+                "body2": "B1_lid",
+                "active": "false",
+                "solref": "0.01 1",
+            },
+        )
 
     return ET.tostring(root, encoding="unicode")
 

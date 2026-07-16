@@ -457,6 +457,7 @@ def launch_action_viewer(scene, camera: str) -> None:
         TABLE_PICK_SPECS,
         object_reachable_from_location,
     )
+    from mujoco_scenes.open_motion import BoxOpenExecutor
     from mujoco_scenes.place_motion import PlaceExecutor
 
     camera_id = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_CAMERA, camera)
@@ -466,10 +467,11 @@ def launch_action_viewer(scene, camera: str) -> None:
     executor = MobileMoveExecutor(scene.model, scene.data)
     picker = PickExecutor(scene.model, scene.data)
     placer = PlaceExecutor(scene.model, scene.data, picker)
+    opener = BoxOpenExecutor(scene.model, scene.data, picker)
 
     root = tk.Tk()
     root.title("Kitchen Actions")
-    root.geometry("380x790+20+20")
+    root.geometry("380x900+20+20")
     root.minsize(360, 650)
     root.columnconfigure(0, weight=1)
 
@@ -500,7 +502,7 @@ def launch_action_viewer(scene, camera: str) -> None:
         nonlocal ui_error
         ui_error = None
         try:
-            if picker.busy or placer.busy:
+            if picker.busy or placer.busy or opener.busy:
                 raise RuntimeError("Wait for the manipulation action to finish")
             executor.request_move(destination)
             status.set(executor.status)
@@ -536,7 +538,7 @@ def launch_action_viewer(scene, camera: str) -> None:
         status.set(f"Planning pick for {object_name}...")
         root.update_idletasks()
         try:
-            if executor.busy or placer.busy:
+            if executor.busy or placer.busy or opener.busy:
                 raise RuntimeError("Wait for the move action to finish")
             picker.request_pick(
                 object_name, executor.current_physical_location
@@ -580,7 +582,7 @@ def launch_action_viewer(scene, camera: str) -> None:
         status.set(f"Sampling safe point in {label.lower()}...")
         root.update_idletasks()
         try:
-            if executor.busy:
+            if executor.busy or opener.busy:
                 raise RuntimeError("Wait for the move action to finish")
             placer.request_place(region_name, executor.current_physical_location)
             status.set(placer.status)
@@ -603,9 +605,36 @@ def launch_action_viewer(scene, camera: str) -> None:
         row=2, column=0, sticky="w", pady=(8, 0)
     )
 
+    open_open = tk.BooleanVar(value=True)
+    open_toggle = ttk.Checkbutton(actions_body, text="Open", variable=open_open)
+    open_toggle.grid(row=6, column=0, sticky="ew", pady=(4, 0))
+    open_body = ttk.LabelFrame(actions_body, text="Openable container", padding=10)
+    open_body.grid(row=7, column=0, sticky="ew", pady=(4, 10))
+    open_body.columnconfigure(0, weight=1)
+
+    def request_open_box() -> None:
+        nonlocal ui_error
+        ui_error = None
+        status.set("Planning contact-aware box opening...")
+        root.update_idletasks()
+        try:
+            if executor.busy or picker.busy or placer.busy:
+                raise RuntimeError("Wait for the current action to finish")
+            opener.request_open(executor.current_physical_location)
+            status.set(opener.status)
+        except Exception as error:
+            ui_error = f"Open failed: {error}"
+            status.set(ui_error)
+            print(f"[Actions] {ui_error}")
+
+    open_box_button = ttk.Button(
+        open_body, text="Box", command=request_open_box
+    )
+    open_box_button.grid(row=0, column=0, sticky="ew", pady=3)
+
     future = ttk.LabelFrame(actions_body, text="Future actions", padding=8)
-    future.grid(row=6, column=0, sticky="ew")
-    ttk.Label(future, text="Open  ·  Close  ·  Pour", state="disabled").grid()
+    future.grid(row=8, column=0, sticky="ew")
+    ttk.Label(future, text="Close  ·  Pour", state="disabled").grid()
 
     ttk.Separator(root).grid(row=2, column=0, sticky="ew", padx=12, pady=8)
     ttk.Label(root, text="Current symbolic location:").grid(row=3, column=0, sticky="w", padx=12)
@@ -641,10 +670,17 @@ def launch_action_viewer(scene, camera: str) -> None:
         else:
             place_body.grid_remove()
 
+    def toggle_open(*_args) -> None:
+        if open_open.get():
+            open_body.grid()
+        else:
+            open_body.grid_remove()
+
     actions_toggle.configure(command=toggle_actions)
     move_toggle.configure(command=toggle_move)
     pick_toggle.configure(command=toggle_pick)
     place_toggle.configure(command=toggle_place)
+    open_toggle.configure(command=toggle_open)
 
     closed = False
 
@@ -664,7 +700,9 @@ def launch_action_viewer(scene, camera: str) -> None:
             close()
             return
         for _ in range(5):
-            if placer.busy:
+            if opener.busy:
+                opener.update()
+            elif placer.busy:
                 placer.update()
             elif picker.busy:
                 picker.update()
@@ -675,12 +713,16 @@ def launch_action_viewer(scene, camera: str) -> None:
             active_status = ui_error
         elif executor.busy:
             active_status = executor.status
+        elif opener.busy or opener.failure:
+            active_status = opener.status
         elif placer.busy or placer.failure:
             active_status = placer.status
         elif picker.busy or picker.held_object is not None or picker.failure:
             active_status = picker.status
         elif placer.has_run and placer.mode == "complete":
             active_status = placer.status
+        elif opener.mode == "complete":
+            active_status = opener.status
         else:
             active_status = executor.status
         if hasattr(viewer, "set_texts"):
@@ -688,7 +730,7 @@ def launch_action_viewer(scene, camera: str) -> None:
                 (
                     mujoco.mjtFontScale.mjFONTSCALE_150,
                     mujoco.mjtGridPos.mjGRID_TOPLEFT,
-                    "Actions / Move + Pick + Place",
+                    "Actions / Move + Pick + Place + Open",
                     active_status,
                 )
             )
@@ -696,21 +738,24 @@ def launch_action_viewer(scene, camera: str) -> None:
         location.set(executor.current_symbolic_location)
         status.set(active_status)
         progress.set(
-            placer.progress()
+            opener.progress()
+            if opener.busy
+            else placer.progress()
             if placer.busy
             else picker.progress()
             if picker.busy
             else executor.progress()
         )
-        move_state = (
-            "disabled" if executor.busy or picker.busy or placer.busy else "normal"
-        )
+        move_state = "disabled" if (
+            executor.busy or picker.busy or placer.busy or opener.busy
+        ) else "normal"
         for button in move_buttons:
             button.configure(state=move_state)
         can_pick = (
             not executor.busy
             and not picker.busy
             and not placer.busy
+            and not opener.busy
             and picker.held_object is None
         )
         for button, object_name in zip(pick_buttons, TABLE_PICK_SPECS):
@@ -730,6 +775,7 @@ def launch_action_viewer(scene, camera: str) -> None:
             not executor.busy
             and not picker.busy
             and not placer.busy
+            and not opener.busy
             and picker.held_object is not None
         )
         for button, region_name in place_buttons:
@@ -740,6 +786,18 @@ def launch_action_viewer(scene, camera: str) -> None:
             button.configure(
                 state="normal" if can_place and region_available else "disabled"
             )
+        can_open_box = (
+            not executor.busy
+            and not picker.busy
+            and not placer.busy
+            and not opener.busy
+            and picker.held_object is None
+            and executor.current_physical_location == "right_side"
+            and scene.data.qpos[opener.hinge_qpos] < opener.max_angle - 0.05
+        )
+        open_box_button.configure(
+            state="normal" if can_open_box else "disabled"
+        )
         root.after(10, tick)
 
     root.protocol("WM_DELETE_WINDOW", close)

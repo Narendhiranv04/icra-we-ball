@@ -195,6 +195,17 @@ damped upright torque while settling and while the open fingers clear it; the
 jar remains a free translating body throughout and the assistance is removed
 at the end of retreat.
 
+`Actions` → `Open` → `Box` becomes available at the shared `box` / `cupboard2`
+physical pose while the gripper is empty. The arm first moves above B1, drops
+to a horizontal hover `0.075 m` in front of the lid handle, inserts along
+world +Y, and closes only until both finger geoms contact the metal bar. A
+live-pose weld is then enabled without snapping the lid. The arm and the
+actual `B1_lid_joint` advance on one tracking-gated circular trajectory to the
+joint's `2.0 rad` limit; the gripper releases and the lid actuator holds that
+maximum position. Both cupboard handles are mounted evenly near their upper
+door edges, and the cupboard row is recessed to `Y=0.65`, leaving the complete
+box-lid and wrist sweep collision-free.
+
 Robot-mounted sensors:
 
 - `head_camera_rgb`: Fetch head camera.

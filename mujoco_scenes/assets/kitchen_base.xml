@@ -78,7 +78,7 @@
     <!--                    CABINET C1 (Upper Left)                       -->
     <!--   Hinged door cabinet — typically mugs, glasses, drinkware       -->
     <!-- ================================================================ -->
-    <body name="cabinet_C1" pos="-0.35 0.45 0.96">
+    <body name="cabinet_C1" pos="-0.35 0.65 0.96">
       <!-- Cabinet shell (back + sides + top + bottom) -->
       <geom name="C1_back" type="box" size="0.21 0.005 0.21" pos="0 0.16 0"
             material="mat_cabinet" mass="2"/>
@@ -102,7 +102,7 @@
               pos="-0.21 0 0" material="mat_cabinet"/>
         <!-- Door handle -->
         <geom name="C1_handle" type="cylinder" size="0.008 0.03"
-              pos="-0.39 -0.02 0" euler="1.57 0 0" material="mat_metal"/>
+              pos="-0.30 -0.02 0.20" euler="1.57 0 0" material="mat_metal"/>
       </body>
 
       <!-- Site for placing objects inside -->
@@ -114,7 +114,7 @@
     <!--                   CABINET C2 (Upper Right)                       -->
     <!--   Hinged door cabinet — plates, bowls, pantry items              -->
     <!-- ================================================================ -->
-    <body name="cabinet_C2" pos="0.35 0.45 0.96">
+    <body name="cabinet_C2" pos="0.35 0.65 0.96">
       <!-- Cabinet shell -->
       <geom name="C2_back" type="box" size="0.21 0.005 0.21" pos="0 0.16 0"
             material="mat_cabinet" mass="2"/>
@@ -136,7 +136,7 @@
         <geom name="C2_door_panel" type="box" size="0.21 0.008 0.208"
               pos="0.21 0 0" material="mat_cabinet"/>
         <geom name="C2_handle" type="cylinder" size="0.008 0.03"
-              pos="0.39 -0.02 0" euler="1.57 0 0" material="mat_metal"/>
+              pos="0.30 -0.02 0.20" euler="1.57 0 0" material="mat_metal"/>
       </body>
 
       <site name="C2_interior" pos="0 0 -0.12" size="0.18 0.14 0.01" type="box"

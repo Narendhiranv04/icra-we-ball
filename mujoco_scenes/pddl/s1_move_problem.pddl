@@ -6,6 +6,7 @@
     home cupboard1 cupboard2 box - location
     table serving_table - region
     kettle coffee_jar sugar_jar spoon - object
+    B1 - container
   )
 
   (:init
@@ -20,6 +21,9 @@
     (graspable coffee_jar)
     (graspable sugar_jar)
     (graspable spoon)
+    (container-at B1 box)
+    (container-closed B1)
+    (handle-graspable B1)
 
     ;; cupboard2 and box are symbolic aliases for the same right-side pose.
     (connected home cupboard1)
