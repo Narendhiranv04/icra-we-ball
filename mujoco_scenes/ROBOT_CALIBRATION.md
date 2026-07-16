@@ -15,7 +15,9 @@ and repeatable checks.
 | Google navigation | Empty/held collision monitors pass | User validation required |
 | Google S1 sugar-jar pick/carry | Bilateral-contact check passes | User validation required |
 | Google S1 sugar-jar place at `serving_spot` | Position check passes | User validation required |
-| Google coffee jar, kettle, spoon | Gated as uncalibrated | Required after implementation |
+| Google S1 spoon pick/carry | Far-tip contact, vertical hang, and both held routes pass | User validation required |
+| Google spoon place | Gated as uncalibrated | Required after implementation |
+| Google coffee jar and kettle | Gated as uncalibrated | Required after implementation |
 
 Only actions listed as supported are exposed in the Actions panel. Do not add
 an object to a profile merely because IK returns a solution.
@@ -194,9 +196,28 @@ Run the current Google acceptance check:
 The checker fails on IK error, timeout, missing bilateral contact, missing
 grasp constraints, or placement more than 5 cm from the serving-site centre.
 
+Run the main-branch spoon behavior on Google Robot in both navigation
+directions:
+
+```bash
+.venv/bin/python -m mujoco_scenes.calibration_check \
+  --robot google --pick spoon --move-while-holding cupboard1
+.venv/bin/python -m mujoco_scenes.calibration_check \
+  --robot google --pick spoon --move-while-holding cupboard2
+```
+
+The spoon check additionally requires contact on the named handle proxy, a
+passive connect-constraint phase, a bowl-down hang within five degrees, a
+successful handoff back to the transport weld, and collision-free held-object
+rotation. Google uses a 180-degree-equivalent wrist branch to preserve the jaw
+axis without hitting its wrist limit, plus a carry point four centimetres
+closer to the base to clear B1. Spoon placement is deliberately not exposed.
+
 Irregular objects need separate rules. A kettle handle requires alignment to
-the live handle axis. A spoon needs thin-handle contact and controlled hanging
-or pivot behavior. Do not copy a cylindrical-object offset to either one.
+the live handle axis. The spoon implementation demonstrates thin-handle
+contact and controlled hanging around a live pivot; its offsets and wrist
+branch are not suitable for the kettle. Do not copy a cylindrical-object
+offset to either one.
 
 ## 6. Calibrate placing and release
 
@@ -244,6 +265,8 @@ Then verify:
 
 - `Move -> Cupboard 1`, return `Home`, and repeat for the right side.
 - `Pick -> Sugar jar` descends centrally and contacts both sides.
+- `Pick -> Spoon` pinches the far handle tip, releases into a passive pivot,
+  settles bowl-down, and remains vertical during left and right navigation.
 - The jar clears the countertop and remains stable at carry.
 - `Place -> Serving area` releases onto the surface without a snap or tip-over.
 - The gripper retreats without touching the released jar.

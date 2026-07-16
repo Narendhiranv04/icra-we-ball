@@ -92,8 +92,9 @@ MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.scene_loader \
 Set `MUJOCO_MENAGERIE_PATH` when the checkout lives elsewhere. The Google
 backend supports scene loading, cameras, joint targets, collision-checked base
 navigation, and an S1-calibrated vertical sugar-jar pick/place at
-`serving_spot`. Other scene poses plus coffee-jar, kettle, and spoon actions
-remain gated. See
+`serving_spot`. It also ports main's far-tip spoon pick, passive bowl-down
+hang, and secured carry; spoon placement remains gated. Other scene poses plus
+coffee-jar and kettle actions remain gated. See
 [ROBOT_CALIBRATION.md](ROBOT_CALIBRATION.md) for the calibration and acceptance
 process used for this and future robot backends.
 
@@ -136,8 +137,10 @@ spoon handle. Fetch jar picks add a compliant 90-degree in-hand pitch—with the
 rigid weld released and only soft upright/centring assistance—followed by a
 horizontal carry pose.
 Google uses the same navigation controls and exposes its validated sugar-jar
-pick and serving-area place controls. Unsupported objects are deliberately not
-shown as actionable. Google parks on a farther navigation line, automatically
+pick/place plus far-tip spoon pick/carry. The spoon uses a live rotational
+pivot to settle bowl-down before its transport weld is restored; its Place
+control remains disabled. Unsupported objects are deliberately not shown as
+actionable. Google parks on a farther navigation line, automatically
 approaches the S1 manipulation stance for pick/place, and retracts the base and
 arm before enabling another Move. The held-object carry state is included in
 RRT*/rotation collision checks. Google IK additionally validates dense joint

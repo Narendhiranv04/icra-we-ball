@@ -12,6 +12,7 @@ from mujoco_scenes.generic_manipulation import (
     JOINT_WAYPOINT_TOLERANCE,
     MANIPULATION_BASE_LINEAR_DAMPING,
     SELF_COLLISION_MOUNT_ALLOWANCES,
+    SPOON_PIVOT_RELAXATION,
     WAYPOINT_HOLD_TICKS,
 )
 from mujoco_scenes.mobile_motion import (
@@ -85,11 +86,17 @@ class RobotProfileTests(unittest.TestCase):
 
     def test_only_physically_validated_google_object_is_exposed(self):
         profile = manipulation_profile("google")
-        self.assertEqual(profile.supported_objects, ("sugar_jar",))
+        self.assertEqual(profile.supported_objects, ("sugar_jar", "spoon"))
         self.assertIn("sugar_jar", GOOGLE_PICK_SPECS)
+        spoon = GOOGLE_PICK_SPECS["spoon"]
+        self.assertEqual(spoon.required_contact_geoms, ("spoon_handle_collision",))
+        self.assertFalse(spoon.place_supported)
+        self.assertEqual(SPOON_PIVOT_RELAXATION, 0.30)
+        np.testing.assert_allclose(spoon.top_down_rotation[:, 1], (0.0, -1.0, 0.0))
+        self.assertLess(spoon.carry_position[1], profile.carry_position[1])
         self.assertEqual(
             CALIBRATED_SCENE_OBJECTS,
-            {"S1_coffee_missing_mug": ("sugar_jar",)},
+            {"S1_coffee_missing_mug": ("sugar_jar", "spoon")},
         )
 
     def test_unknown_profiles_are_rejected(self):

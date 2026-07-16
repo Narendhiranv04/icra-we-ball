@@ -43,12 +43,19 @@ MANIPULATION_BASE_LINEAR_DAMPING = 2000.0
 SELF_COLLISION_TOLERANCE = 0.003
 ENVIRONMENT_COLLISION_TOLERANCE = 0.002
 COLLISION_GUARD_INTERVAL = 5
+SPOON_PIVOT_RELAXATION = 0.30
+SPOON_PIVOT_DAMPING = 0.002
+SPOON_PIVOT_MAX_TORQUE = 0.02
+SPOON_VERTICAL_TOLERANCE = math.radians(3.0)
+SPOON_SETTLED_ANGULAR_SPEED = 1.0
+SPOON_SETTLE_TICKS = 50
 SELF_COLLISION_MOUNT_ALLOWANCES = {
     # The shoulder rotates inside the base's outer housing by design.  The
     # upstream visual meshes overlap slightly at this mechanical interface;
     # deeper overlap is still rejected, as are all non-mounting link pairs.
     frozenset(("google:base_link", "google:link_shoulder")): -0.050,
 }
+GOOGLE_SPOON_TOP_DOWN_ROTATION = np.diag((1.0, -1.0, -1.0))
 
 
 @dataclass(frozen=True)
@@ -59,16 +66,36 @@ class SimplePickSpec:
     # The Menagerie site's origin is below/above the most useful pad band after
     # rotation.  This is the per-object value refined during visual calibration.
     grasp_z_offset: float = 0.011
+    required_contact_geoms: tuple[str, ...] = ()
+    place_supported: bool = True
+    top_down_rotation: np.ndarray | None = None
+    home_seed: np.ndarray | None = None
+    carry_position: np.ndarray | None = None
 
 
 GOOGLE_PICK_SPECS = {
     "sugar_jar": SimplePickSpec(
         "Sugar jar (vertical)", "sugar_jar_grasp", 0.06724
     ),
+    "spoon": SimplePickSpec(
+        "Spoon (far handle tip)",
+        "spoon_grasp",
+        0.01045,
+        grasp_z_offset=0.020,
+        required_contact_geoms=("spoon_handle_collision",),
+        place_supported=False,
+        # A 180-degree wrist roll preserves the jaw axis across the handle
+        # while avoiding the joint-limit branch used for the centre jar.
+        top_down_rotation=GOOGLE_SPOON_TOP_DOWN_ROTATION,
+        home_seed=np.array((0.230, -0.195, 0.663, 1.732, 0.120, 1.564, -0.687)),
+        # Four centimetres closer to the base keeps the hanging bowl clear of
+        # B1 throughout the right-side yaw sweep.
+        carry_position=np.array((0.0, -0.82, 0.94)),
+    ),
 }
 
 CALIBRATED_SCENE_OBJECTS = {
-    "S1_coffee_missing_mug": ("sugar_jar",),
+    "S1_coffee_missing_mug": ("sugar_jar", "spoon"),
 }
 
 
@@ -351,6 +378,7 @@ class RobotConfigurationCollisionChecker:
 class JointWaypoint:
     joints: np.ndarray
     label: str
+    passive_pivot: bool = False
 
 
 class CalibratedPickPlaceExecutor:
@@ -414,7 +442,10 @@ class CalibratedPickPlaceExecutor:
         self.held_object: str | None = None
         self.target_object: str | None = None
         self.target_body_id = -1
+        self.target_free_dof = -1
         self.grasp_equality_id = -1
+        self.spoon_pivot_equality_id = -1
+        self.spoon_settle_ticks = 0
         self.close_target = self.profile.open_command
         self.contact_ticks = 0
         self.release_ticks = 0
@@ -441,7 +472,11 @@ class CalibratedPickPlaceExecutor:
 
     @property
     def can_place(self) -> bool:
-        return self.mode == "holding" and self.held_object is not None
+        return (
+            self.mode == "holding"
+            and self.held_object is not None
+            and self.pick_specs[self.held_object].place_supported
+        )
 
     @property
     def navigation_safe(self) -> bool:
@@ -515,13 +550,19 @@ class CalibratedPickPlaceExecutor:
         label: str,
         collision_checker: RobotConfigurationCollisionChecker,
         allowed_environment_bodies: frozenset[int],
+        target_rotation: np.ndarray | None = None,
     ) -> tuple[list[JointWaypoint], np.ndarray]:
+        rotation = (
+            self.profile.top_down_rotation
+            if target_rotation is None
+            else target_rotation
+        )
         result = []
         current = seed
         for point in points:
             previous = current
             current, position_error, angle_error = ik.solve(
-                point, previous, self.profile.top_down_rotation
+                point, previous, rotation
             )
             if position_error > 0.012 or angle_error > math.radians(2.0):
                 raise RuntimeError(
@@ -543,13 +584,16 @@ class CalibratedPickPlaceExecutor:
         target: np.ndarray,
         collision_checker: RobotConfigurationCollisionChecker,
         allowed_environment_bodies: frozenset[int],
+        target_rotation: np.ndarray,
+        home_seed: np.ndarray,
+        carry_position: np.ndarray,
     ) -> tuple[list[JointWaypoint], list[JointWaypoint]]:
         ik = ProfiledIK(self.model, self.data, self.profile)
         current = self._current_arm()
         carry, position_error, angle_error = ik.solve(
-            self.profile.carry_position,
-            self.profile.home_seed,
-            self.profile.top_down_rotation,
+            carry_position,
+            home_seed,
+            target_rotation,
         )
         if position_error > 0.012 or angle_error > math.radians(2.0):
             raise RuntimeError(
@@ -572,11 +616,12 @@ class CalibratedPickPlaceExecutor:
         pregrasp = target + np.array((0.0, 0.0, APPROACH_CLEARANCE))
         approach, pregrasp_joints = self._solve_points(
             ik,
-            self._cartesian_points(self.profile.carry_position, pregrasp),
+            self._cartesian_points(carry_position, pregrasp),
             carry,
             "Approaching above object",
             collision_checker,
             allowed_environment_bodies,
+            target_rotation,
         )
         descent, _ = self._solve_points(
             ik,
@@ -585,13 +630,33 @@ class CalibratedPickPlaceExecutor:
             "Descending to grasp",
             collision_checker,
             allowed_environment_bodies,
+            target_rotation,
         )
         waypoints.extend(approach)
         waypoints.extend(descent)
+        passive_spoon = self.target_object == "spoon"
         return waypoints, [
-            JointWaypoint(item.joints.copy(), "Lifting and returning to carry")
+            JointWaypoint(
+                item.joints.copy(),
+                (
+                    "Returning while spoon hangs from handle"
+                    if passive_spoon
+                    else "Lifting and returning to carry"
+                ),
+                passive_pivot=passive_spoon,
+            )
             for item in reversed([*approach, *descent[:-1]])
-        ] + [JointWaypoint(carry.copy(), "Holding at carry pose")]
+        ] + [
+            JointWaypoint(
+                carry.copy(),
+                (
+                    "Spoon hanging vertically in carry pose"
+                    if passive_spoon
+                    else "Holding at carry pose"
+                ),
+                passive_pivot=passive_spoon,
+            )
+        ]
 
     def request_pick(self, object_name: str) -> None:
         if self.busy or self.held_object is not None:
@@ -608,8 +673,17 @@ class CalibratedPickPlaceExecutor:
             raise RuntimeError(f"{object_name} is not present in this scene")
         self.target_object = object_name
         self.target_body_id = body_id
+        free_joint_id = int(self.model.body_jntadr[body_id])
+        if (
+            free_joint_id < 0
+            or self.model.jnt_type[free_joint_id] != mujoco.mjtJoint.mjJNT_FREE
+        ):
+            raise RuntimeError(f"{object_name} does not have a free joint")
+        self.target_free_dof = int(self.model.jnt_dofadr[free_joint_id])
         self.close_target = self.profile.open_command
         self.contact_ticks = 0
+        self.spoon_pivot_equality_id = -1
+        self.spoon_settle_ticks = 0
         self.failure = None
         self.mode = "pick_base_approach"
         self.status = f"Pick {object_name}: approaching the manipulation stance"
@@ -633,6 +707,17 @@ class CalibratedPickPlaceExecutor:
             target,
             self.configuration_checker,
             allowed_bodies,
+            (
+                self.profile.top_down_rotation
+                if spec.top_down_rotation is None
+                else spec.top_down_rotation
+            ),
+            self.profile.home_seed if spec.home_seed is None else spec.home_seed,
+            (
+                self.profile.carry_position
+                if spec.carry_position is None
+                else spec.carry_position
+            ),
         )
         self.waypoint_index = 0
         self.waypoint_ticks = 0
@@ -641,6 +726,11 @@ class CalibratedPickPlaceExecutor:
 
     def request_place(self, site_name: str = "serving_spot") -> None:
         if not self.can_place:
+            if self.held_object is not None:
+                raise RuntimeError(
+                    f"Place is not calibrated for {self.held_object}; "
+                    "carry it or reset the scene"
+                )
             raise RuntimeError("Pick an object before requesting place")
         if not self._near_navigation_home():
             raise RuntimeError("Place requires Move (home) first")
@@ -752,11 +842,21 @@ class CalibratedPickPlaceExecutor:
         return self.waypoint_index >= len(self.waypoints)
 
     def _finger_contact_sides(self) -> set[int]:
+        assert self.target_object is not None
+        required = self.pick_specs[self.target_object].required_contact_geoms
         sides: set[int] = set()
         for contact in self.data.contact:
             body1 = self.model.geom_bodyid[contact.geom1]
             body2 = self.model.geom_bodyid[contact.geom2]
             if self.target_body_id not in {body1, body2}:
+                continue
+            target_geom = (
+                contact.geom1 if body1 == self.target_body_id else contact.geom2
+            )
+            target_name = mujoco.mj_id2name(
+                self.model, mujoco.mjtObj.mjOBJ_GEOM, target_geom
+            ) or ""
+            if required and target_name not in required:
                 continue
             other = contact.geom2 if body1 == self.target_body_id else contact.geom1
             name = mujoco.mj_id2name(
@@ -776,6 +876,18 @@ class CalibratedPickPlaceExecutor:
         )
         if equality_id < 0:
             raise RuntimeError("The composed scene has no calibrated grasp weld")
+        self.grasp_equality_id = equality_id
+        self._set_grasp_weld_world_pose(
+            self.data.xpos[self.target_body_id],
+            self.data.xquat[self.target_body_id],
+        )
+        self.data.eq_active[equality_id] = 1
+
+    def _set_grasp_weld_world_pose(
+        self, object_pos: np.ndarray, object_quat: np.ndarray
+    ) -> None:
+        if self.grasp_equality_id < 0:
+            raise RuntimeError("Cannot configure an inactive grasp weld")
         inverse_pos = np.empty(3)
         inverse_quat = np.empty(4)
         relative_pos = np.empty(3)
@@ -791,16 +903,98 @@ class CalibratedPickPlaceExecutor:
             relative_quat,
             inverse_pos,
             inverse_quat,
+            object_pos,
+            object_quat,
+        )
+        self.model.eq_data[self.grasp_equality_id, 3:6] = relative_pos
+        self.model.eq_data[self.grasp_equality_id, 6:10] = relative_quat
+
+    def _activate_spoon_pivot(self) -> None:
+        """Replace the transport weld with a free-rotation handle pivot."""
+        if self.target_object != "spoon" or self.grasp_equality_id < 0:
+            raise RuntimeError("Spoon pivot requested without a spoon grasp")
+        equality_id = mujoco.mj_name2id(
+            self.model,
+            mujoco.mjtObj.mjOBJ_EQUALITY,
+            f"{self.robot_name}:pick_pivot_spoon",
+        )
+        grasp_site_id = mujoco.mj_name2id(
+            self.model, mujoco.mjtObj.mjOBJ_SITE, "spoon_grasp"
+        )
+        if equality_id < 0 or grasp_site_id < 0:
+            raise RuntimeError("Missing passive spoon pivot constraint")
+
+        world_anchor = self.data.site_xpos[grasp_site_id].copy()
+        gripper_rotation = self.data.xmat[self.gripper_body_id].reshape(3, 3)
+        spoon_rotation = self.data.xmat[self.target_body_id].reshape(3, 3)
+        gripper_anchor = gripper_rotation.T @ (
+            world_anchor - self.data.xpos[self.gripper_body_id]
+        )
+        spoon_anchor = spoon_rotation.T @ (
+            world_anchor - self.data.xpos[self.target_body_id]
+        )
+        self.model.eq_data[equality_id, :3] = gripper_anchor
+        self.model.eq_data[equality_id, 3:6] = spoon_anchor
+        self.data.eq_active[self.grasp_equality_id] = 0
+        self.data.eq_active[equality_id] = 1
+        self.spoon_pivot_equality_id = equality_id
+        self.data.ctrl[self.finger_actuators] = max(
+            self.profile.open_command,
+            self.close_target - SPOON_PIVOT_RELAXATION,
+        )
+
+    @staticmethod
+    def _limited(vector: np.ndarray, maximum: float) -> np.ndarray:
+        norm = float(np.linalg.norm(vector))
+        if norm <= maximum or norm < 1e-12:
+            return vector
+        return vector * (maximum / norm)
+
+    def _damp_spoon_pivot(self) -> tuple[float, float]:
+        """Damp the freely hanging spoon without prescribing its angle."""
+        velocity = np.zeros(6)
+        mujoco.mj_objectVelocity(
+            self.model,
+            self.data,
+            mujoco.mjtObj.mjOBJ_BODY,
+            self.target_body_id,
+            velocity,
+            0,
+        )
+        angular_velocity = velocity[:3]
+        self.data.xfrc_applied[self.target_body_id, 3:] = self._limited(
+            -SPOON_PIVOT_DAMPING * angular_velocity,
+            SPOON_PIVOT_MAX_TORQUE,
+        )
+        spoon_axis = -self.data.xmat[self.target_body_id].reshape(3, 3)[:, 0]
+        bowl_down_angle = math.acos(
+            float(np.clip(spoon_axis @ np.array((0.0, 0.0, -1.0)), -1.0, 1.0))
+        )
+        swing_velocity = angular_velocity - spoon_axis * float(
+            angular_velocity @ spoon_axis
+        )
+        return bowl_down_angle, float(np.linalg.norm(swing_velocity))
+
+    def _finish_spoon_pivot(self) -> None:
+        """Capture the settled live pose in the ordinary transport weld."""
+        if self.spoon_pivot_equality_id < 0 or self.grasp_equality_id < 0:
+            raise RuntimeError("Cannot finish an inactive spoon pivot")
+        self.data.qvel[self.target_free_dof : self.target_free_dof + 6] = 0.0
+        self._set_grasp_weld_world_pose(
             self.data.xpos[self.target_body_id],
             self.data.xquat[self.target_body_id],
         )
-        self.model.eq_data[equality_id, 3:6] = relative_pos
-        self.model.eq_data[equality_id, 6:10] = relative_quat
-        self.data.eq_active[equality_id] = 1
-        self.grasp_equality_id = equality_id
+        self.model.eq_solref[self.grasp_equality_id] = (0.003, 1.0)
+        self.data.eq_active[self.spoon_pivot_equality_id] = 0
+        self.data.eq_active[self.grasp_equality_id] = 1
+        self.data.xfrc_applied[self.target_body_id] = 0.0
 
     def _fail(self, message: str) -> None:
         self._restore_navigation_base_damping()
+        if self.spoon_pivot_equality_id >= 0:
+            self.data.eq_active[self.spoon_pivot_equality_id] = 0
+        if self.target_body_id >= 0:
+            self.data.xfrc_applied[self.target_body_id] = 0.0
         self.mode = "failed"
         self.failure = message
         self.status = f"Manipulation failed: {message}"
@@ -899,12 +1093,51 @@ class CalibratedPickPlaceExecutor:
                 self._fail("gripper closed without bilateral object contact")
             return
         if self.mode == "pick_retreat":
-            if self._advance_waypoints():
-                self.held_object = self.target_object
-                self.mode = "pick_base_retreat"
-                self.status = (
-                    f"Pick {self.held_object}: retreating to navigation home"
+            waypoint = (
+                self.waypoints[self.waypoint_index]
+                if self.waypoint_index < len(self.waypoints)
+                else None
+            )
+            if (
+                waypoint is not None
+                and waypoint.passive_pivot
+                and self.spoon_pivot_equality_id < 0
+            ):
+                try:
+                    self._activate_spoon_pivot()
+                except RuntimeError as error:
+                    self._fail(str(error))
+                    return
+            spoon_angle = spoon_speed = None
+            if self.spoon_pivot_equality_id >= 0:
+                self.data.ctrl[self.finger_actuators] = max(
+                    self.profile.open_command,
+                    self.close_target - SPOON_PIVOT_RELAXATION,
                 )
+                spoon_angle, spoon_speed = self._damp_spoon_pivot()
+            if not self._advance_waypoints():
+                return
+            if self.spoon_pivot_equality_id >= 0:
+                assert spoon_angle is not None and spoon_speed is not None
+                if (
+                    spoon_angle <= SPOON_VERTICAL_TOLERANCE
+                    and spoon_speed <= SPOON_SETTLED_ANGULAR_SPEED
+                ):
+                    self.spoon_settle_ticks += 1
+                else:
+                    self.spoon_settle_ticks = 0
+                if self.spoon_settle_ticks < SPOON_SETTLE_TICKS:
+                    self.status = (
+                        "Pick spoon: settling naturally into vertical hang "
+                        f"({math.degrees(spoon_angle):.1f} deg)"
+                    )
+                    return
+                self._finish_spoon_pivot()
+            self.held_object = self.target_object
+            self.mode = "pick_base_retreat"
+            self.status = (
+                f"Pick {self.held_object}: retreating to navigation home"
+            )
             return
         if self.mode == "pick_base_retreat":
             self._command_base(0.0)

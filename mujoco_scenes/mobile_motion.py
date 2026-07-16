@@ -727,7 +727,7 @@ def launch_action_viewer(scene, camera: str) -> None:
         ttk.Label(
             place_body,
             text=(
-                "S1 calibrated path: sugar jar only"
+                "Place: sugar jar only; spoon supports carry"
                 if pick_specs
                 else "No calibrated pick/place in this scene"
             ),

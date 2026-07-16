@@ -84,7 +84,9 @@ MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.scene_loader \
 Use `--robot fetch`, `--robot google`, or `--robot none`. Google Robot supports
 scene loading, free/fixed/head/wrist cameras, joint targets, collision-checked
 Actions-panel navigation, and an S1-calibrated vertical sugar-jar pick/place at
-the serving area. Other scenes and Google grasps remain gated until they pass the process in
+the serving area. It also supports the main-branch far-tip spoon pick and
+gravity-settled vertical carry; spoon placement remains gated. Other scenes
+and Google grasps remain gated until they pass the process in
 [ROBOT_CALIBRATION.md](mujoco_scenes/ROBOT_CALIBRATION.md).
 
 ## Running the Scene Locally
@@ -109,8 +111,8 @@ The launch also opens an `Actions` panel. Under `Move`, select `Home`,
 `Cupboard 1`, `Cupboard 2`, or `Box`; each button executes the corresponding
 collision-checked mobile-base trajectory. `Cupboard 2` and `Box` share one
 physical right-side pose. Fetch exposes its kettle, jar, and spoon picks.
-Google currently exposes only the physically checked sugar-jar pick plus
-`Place` at the serving area. Its navigation home is farther from the serving
-table; pick/place automatically approach the work stance and return to a
-collision-checked compact navigation state before Move is enabled. Pass
+Google exposes the physically checked sugar-jar pick/place and spoon
+pick/carry. Its navigation home is farther from the serving table; manipulation
+actions automatically approach the work stance and return to a collision-checked
+compact navigation state before Move is enabled. Pass
 `--no-actions-panel` to suppress this panel.

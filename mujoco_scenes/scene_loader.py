@@ -1039,7 +1039,7 @@ def build_scene_xml(
         else:
             equality_prefix = "google"
             gripper_body_name = "google:link_gripper"
-            supported_objects = {"coffee_jar", "sugar_jar"}
+            supported_objects = {"coffee_jar", "sugar_jar", "spoon"}
         for obj_name in dict.fromkeys(config.countertop_objects.values()):
             if obj_name not in supported_objects:
                 continue
@@ -1054,7 +1054,7 @@ def build_scene_xml(
                     "solref": "0.01 1",
                 },
             )
-            if robot_name == ROBOT_FETCH and obj_name == "spoon":
+            if obj_name == "spoon":
                 # Activated after the initial vertical lift. Unlike the
                 # transport weld, a connect equality fixes only the handle
                 # pinch point and leaves all three rotational DOFs free, so
@@ -1063,8 +1063,8 @@ def build_scene_xml(
                     equality,
                     "connect",
                     {
-                        "name": "robot0:pick_pivot_spoon",
-                        "body1": "robot0:gripper_link",
+                        "name": f"{equality_prefix}:pick_pivot_spoon",
+                        "body1": gripper_body_name,
                         "body2": "spoon",
                         "anchor": "0 0 0",
                         "active": "false",

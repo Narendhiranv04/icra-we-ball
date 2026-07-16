@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import math
 
 import mujoco
 import numpy as np
@@ -67,6 +68,30 @@ def _run_monitored_move(scene, executor, destination: str, max_steps: int) -> in
     )
 
 
+def _validate_spoon_carry(scene, executor) -> None:
+    spoon_rotation = scene.data.xmat[executor.target_body_id].reshape(3, 3)
+    bowl_axis = -spoon_rotation[:, 0]
+    angle = math.acos(
+        float(np.clip(bowl_axis @ np.array((0.0, 0.0, -1.0)), -1.0, 1.0))
+    )
+    if angle > math.radians(5.0):
+        raise RuntimeError(
+            f"Spoon carry is {math.degrees(angle):.1f} degrees from vertical"
+        )
+    if executor.spoon_pivot_equality_id < 0:
+        raise RuntimeError("Spoon pick never activated its passive pivot")
+    if scene.data.eq_active[executor.spoon_pivot_equality_id]:
+        raise RuntimeError("Spoon pivot remained active after carry stabilization")
+    if not scene.data.eq_active[executor.grasp_equality_id]:
+        raise RuntimeError("Spoon transport weld is inactive after stabilization")
+    if executor.can_place:
+        raise RuntimeError("Uncalibrated spoon placement was exposed")
+    print(
+        f"[PASS] Google spoon hangs bowl-down within "
+        f"{math.degrees(angle):.1f} degrees and is secured for carry"
+    )
+
+
 def _run_pick_place(
     scene,
     object_name: str,
@@ -83,6 +108,8 @@ def _run_pick_place(
     if executor.mode == "failed":
         raise RuntimeError(executor.status)
     print(f"[PASS] {executor.status}; simulation steps={pick_steps}")
+    if object_name == "spoon" and scene.robot_name == "google":
+        _validate_spoon_carry(scene, executor)
     if held_move:
         mobile = MobileMoveExecutor(scene.model, scene.data, scene.robot_name)
         outbound_steps = _run_monitored_move(

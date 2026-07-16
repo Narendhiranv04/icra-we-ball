@@ -143,9 +143,9 @@ MANIPULATION_PROFILES = {
         # Menagerie's zero configuration folds the arm vertically inside the
         # base footprint and is the required empty-gripper navigation state.
         navigation_joints=np.zeros(7),
-        # Start with regular cylindrical objects.  Irregular handles require
-        # separate visual/contact calibration before they are exposed in UI.
-        supported_objects=("sugar_jar",),
+        # Sugar-jar placement and the main-branch far-tip spoon carry have
+        # passed the Google-specific contact and collision checks.
+        supported_objects=("sugar_jar", "spoon"),
     ),
 }
 
