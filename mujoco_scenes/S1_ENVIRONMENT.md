@@ -13,11 +13,11 @@
 |---|---|---|---|
 | Navigation floor | In front of the workstation | Fetch starts at approximately `(0, -1.10, 0)`, behind the serving table | Home manipulation pose plus symmetric left/right routes |
 | Countertop | `X=[-0.70,0.70]`, `Y=[-0.40,0.40]`, top at `Z=0.58` | kettle, coffee jar, sugar jar, spoon | Always visible work surface |
-| C1 | Upper-left cabinet, centered near `(-0.35,0.35,0.96)`; usable opening about `0.40 m` wide by `0.41 m` high and `0.31 m` deep | mug, glass | Enlarged hinged-door cabinet; primary S1 search region |
-| C2 | Upper-right cabinet, centered near `(0.35,0.35,0.96)`; same enlarged opening as C1 | plate, bowl, scanned canister distractor | Enlarged hinged-door cabinet |
+| C1 | Upper-left cabinet, centered near `(-0.35,0.45,0.96)`; usable opening about `0.40 m` wide by `0.41 m` high and `0.31 m` deep | mug, glass | Enlarged hinged-door cabinet; primary S1 search region |
+| C2 | Upper-right cabinet, centered near `(0.35,0.45,0.96)`; same enlarged opening as C1 | plate, bowl, scanned canister distractor | Enlarged hinged-door cabinet |
 | D1 | Lower-left drawer, centered near `(-0.44,-0.30,0.36)`; usable tray about `0.332 m` wide | fork, knife, stirrer | Wide tray; damped slide beside the serving table |
 | D2 | Lower-right drawer, centered near `(0.44,-0.30,0.36)`; usable tray about `0.332 m` wide | tongs, napkin, scanned spatula distractor | Wide tray; damped slide beside the serving table |
-| B1 | Lidded box at the far-right edge of the countertop, centered near `(0.52,0.06,0.58)`; inner footprint about `0.344 x 0.174 m` | tea box | Requires a rightward base reposition before manipulation |
+| B1 | Lidded box at the far-right edge of the countertop, centered near `(0.52,0.18,0.58)`; inner footprint about `0.344 x 0.174 m` | tea box | Set rearward for carried-object clearance; requires a rightward base reposition |
 | Serving area | Green table centered near `(0,-0.56,0.56)` with top at `Z=0.58`; its `0.50 m` width fits between the drawer fronts | empty | Goal destination and central navigation obstacle |
 
 Opening a container reveals and catalogs all objects in that region. An
@@ -94,10 +94,10 @@ position actuators. The base is holonomic at this stage: it represents a
 mobile-manipulator planning pose, not differential wheel dynamics. Wheel-level
 drive dynamics can be introduced later without changing the scene regions.
 
-## PDDL-style `move` and `pick` actions
+## PDDL-style `move`, `pick`, and `place` actions
 
 The symbolic actions are declared in `pddl/mobile_move_domain.pddl`. PDDL is
-used only for the move/pick preconditions and effects; it does not generate
+used only for the action preconditions and effects; it does not generate
 continuous trajectories. `mobile_motion.py` resolves the
 named destination, plans collision-checked planar segments with RRT*, and
 commands the three base position actuators.
@@ -136,7 +136,8 @@ PDDL as a continuous planner:
 6. For either jar, release the rigid transport weld and pitch the end effector
    exactly 90 degrees around the unchanged finger-contact axis. A compliant
    centring/upright controller permits small natural translation and wobble.
-7. Carry a jar with the gripper horizontal to roughly `(0.00,-0.75,0.74)`.
+7. Carry every jar with the gripper horizontal at the base-relative equivalent
+   of roughly `(0.00,-0.75,0.74)` at home.
    Kettle and spoon picks retain the vertical overhead arm return route; the
    spoon itself passively swings into a bowl-down vertical hang.
 
@@ -154,13 +155,45 @@ transport.
 The spoon is pinched near the far tip of its handle and uses separate
 handle/bowl collision proxies. After the initial lift clears the table, its
 rigid transport weld is replaced by a live, free-rotation point constraint at
-the handle grasp. A small finger clearance and light rotational damping let
-gravity swing the heavier bowl naturally downward; the action completes only
-after the spoon has settled within three degrees of vertical. At the final
+the handle grasp. At the `0.16 m` high hover, the arm pauses briefly while the
+finger width blends gradually into a close passive pinch, avoiding a visible
+contact jump. Transverse damping remains light so gravity swings the heavier
+bowl naturally downward, while implicit damping only around the local handle
+axis suppresses uncontrolled spin. The action completes only after the spoon
+has settled within three degrees of vertical. At the final
 carry pose, that live vertical grasp is captured by the transport weld so the
-spoon cannot continue spinning around its handle. Non-jar arm carry returns to
-roughly `(0.00,-0.82,0.95)`. Tabletop picking currently requires the `home`
-base pose and an empty gripper.
+spoon cannot continue spinning around its handle. It first rises to `0.16 m`
+above its grasp point before any carry translation. Non-jar arm carry returns
+to the base-relative equivalent of roughly `(0.00,-0.82,0.95)` at home.
+Picking uses each object's live grasp site and is enabled whenever its centre
+lies in the table region associated with the current home, left, or right base
+pose. Thus an object placed in `table_sub_2` or `table_sub_3` can be picked
+again from the matching side pose. Every jar pick first lifts vertically, then
+moves into a base-relative reorientation corridor, performs the same compliant
+90-degree slip, and finishes in horizontal carry regardless of base location.
+
+`Actions` → `Place` is enabled while an object is held. Its two public regions
+are resolved to these world-frame rectangles:
+
+| UI region | Active base pose | Internal region | Rectangle `(min X, max X, min Y, max Y)` |
+|---|---|---|---:|
+| `Serving table` | `home` | `serving_table` | `(-0.25, 0.25, -0.71, -0.41)` |
+| `Table` | `home` | `table_sub_1` | `(-0.36, 0.36, -0.37, -0.14)` |
+| `Table` | `cupboard1` | `table_sub_2` | `(-0.68, -0.36, -0.34, 0.22)` |
+| `Table` | `cupboard2` / `box` | `table_sub_3` | `(0.36, 0.68, -0.37, -0.12)` |
+
+The sampler shrinks the selected rectangle by a `0.025 m` edge buffer and by
+the held object's full collision footprint. It rejects points overlapping
+other free objects, so the reported sample keeps the complete object away
+from support edges and clutter. The arm follows one smooth trajectory from
+carry to a hover `0.08 m` above release, descends to a nominal `0.025 m`
+clearance, opens the gripper, lets physics settle the object, retreats through
+the hover, and returns the empty gripper to its original carry pose. Side-pose
+jar releases use a directly reachable `0.025 m` hover, allow extra release
+height for actuator compliance, and use a short,
+damped upright torque while settling and while the open fingers clear it; the
+jar remains a free translating body throughout and the assistance is removed
+at the end of retreat.
 
 Robot-mounted sensors:
 

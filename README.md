@@ -92,5 +92,9 @@ The launch also opens an `Actions` panel. Under `Move`, select `Home`,
 collision-checked mobile-base trajectory. `Cupboard 2` and `Box` share one
 physical right-side pose. Under `Pick`, select the kettle, coffee jar, sugar
 jar, or spoon to run a vertical pre-grasp, contact-aware close, lift, and
-return to the object-in-gripper carry pose. Pass `--no-actions-panel` to
-suppress this panel.
+return to the object-in-gripper carry pose. Once an object is held, `Place`
+offers `Serving table` and `Table`. The latter automatically selects the safe
+counter strip nearest the robot's current home, left, or right base pose.
+Placed objects remain selectable for another pick whenever the robot is at
+the base pose corresponding to that strip.
+Pass `--no-actions-panel` to suppress this panel.

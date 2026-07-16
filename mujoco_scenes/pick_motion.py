@@ -31,12 +31,16 @@ FINGER_GEOMS = {
 
 APPROACH_CLEARANCE = 0.08
 LIFT_CLEARANCE = APPROACH_CLEARANCE
+SPOON_POST_GRASP_CLEARANCE = 0.16
 OPEN_WIDTH = 0.05
-SPOON_PIVOT_WIDTH = 0.008
-SPOON_PIVOT_DAMPING = 0.002
-SPOON_PIVOT_MAX_TORQUE = 0.02
+SPOON_PIVOT_WIDTH = 0.0065
+SPOON_PIVOT_BLEND_TICKS = 120
+SPOON_PIVOT_PAUSE_WAYPOINTS = 8
+SPOON_SWING_DAMPING = 0.0015
+SPOON_AXIAL_DOF_DAMPING = 0.02
+SPOON_PIVOT_MAX_TORQUE = 0.01
 SPOON_VERTICAL_TOLERANCE = math.radians(3.0)
-SPOON_SETTLED_ANGULAR_SPEED = 1.0
+SPOON_SETTLED_ANGULAR_SPEED = 0.6
 SPOON_SETTLE_TICKS = 50
 CARRY_POSITION = np.array((0.0, -0.82, 0.95))
 HORIZONTAL_CARRY_POSITION = np.array((0.0, -0.75, 0.74))
@@ -62,12 +66,69 @@ PIVOT_ORIENTATION_GAINS = {
 # selecting a different (and sometimes unreachable) IK branch.
 HOME_ARM_SEED = np.array((1.32, 1.40, -0.20, 1.72, 0.0, 1.66, 0.0))
 
+HOME_BASE_POSE = (0.0, -1.10, 0.0)
+PICK_BASE_POSES = {
+    "home": HOME_BASE_POSE,
+    "cupboard1": (-1.025, -0.10, -math.pi / 2),
+    "right_side": (1.025, -0.10, math.pi / 2),
+}
+PICK_LOCATION_REGIONS = {
+    "home": (
+        (-0.36, 0.36, -0.37, -0.14),
+        (-0.25, 0.25, -0.71, -0.41),
+    ),
+    "cupboard1": ((-0.68, -0.36, -0.34, 0.22),),
+    "right_side": ((0.36, 0.68, -0.37, -0.12),),
+}
+
 # The Fetch gripper approaches along its local +X axis. The matrix columns are
 # local X/Y/Z in world coordinates: approach down, fingers close along world Y,
 # and the remaining gripper axis lies along world X.
 TOP_DOWN_ROTATION = np.array(
     ((0.0, 0.0, 1.0), (0.0, 1.0, 0.0), (-1.0, 0.0, 0.0))
 )
+
+
+def _yaw_rotation(yaw: float) -> np.ndarray:
+    cosine = math.cos(yaw)
+    sine = math.sin(yaw)
+    return np.array(
+        ((cosine, -sine, 0.0), (sine, cosine, 0.0), (0.0, 0.0, 1.0))
+    )
+
+
+def carry_position_at(
+    canonical_position: np.ndarray, physical_location: str
+) -> np.ndarray:
+    """Transform a home-frame carry point with the current named base pose."""
+    try:
+        base_x, base_y, yaw = PICK_BASE_POSES[physical_location]
+    except KeyError as error:
+        raise ValueError(f"Unknown pick base pose: {physical_location}") from error
+    home_x, home_y, _ = HOME_BASE_POSE
+    relative = canonical_position.copy()
+    relative[:2] -= (home_x, home_y)
+    return np.array((base_x, base_y, 0.0)) + _yaw_rotation(yaw) @ relative
+
+
+def object_reachable_from_location(
+    model: mujoco.MjModel,
+    data: mujoco.MjData,
+    object_name: str,
+    physical_location: str,
+) -> bool:
+    """Return whether an object's live centre lies in this base pose's region."""
+    body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, object_name)
+    if body_id < 0 or physical_location not in PICK_LOCATION_REGIONS:
+        return False
+    mujoco.mj_forward(model, data)
+    x, y = data.xpos[body_id, :2]
+    tolerance = 0.025
+    return any(
+        min_x - tolerance <= x <= max_x + tolerance
+        and min_y - tolerance <= y <= max_y + tolerance
+        for min_x, max_x, min_y, max_y in PICK_LOCATION_REGIONS[physical_location]
+    )
 
 # Cylindrical jars may be pinched on any horizontal diameter. A diagonal
 # closing axis gives both table locations a continuous IK route. Pitching
@@ -293,15 +354,23 @@ class PickExecutor:
         self.trajectory_segment = 0
         self.mode = "idle"
         self.target_object: str | None = None
+        self.physical_location = "home"
         self.target_body_id = -1
         self.target_free_dof = -1
         self.held_object: str | None = None
+        # Exact final joint command shared with the subsequent place action.
+        # Using the live, gravity-sagged qpos here would create a second,
+        # visibly different "place carry" pose.
+        self.carry_goal_joints: np.ndarray | None = None
         self.close_target = OPEN_WIDTH
         self.close_ticks = 0
         self.contact_ticks = 0
         self.grasp_equality_id = -1
         self.spoon_pivot_equality_id = -1
         self.spoon_settle_ticks = 0
+        self.spoon_pivot_ticks = 0
+        self.spoon_pivot_start_width = SPOON_PIVOT_WIDTH
+        self.spoon_original_axial_damping = 0.0
         self.gripper_body_id = mujoco.mj_name2id(
             model, mujoco.mjtObj.mjOBJ_BODY, "robot0:gripper_link"
         )
@@ -325,7 +394,7 @@ class PickExecutor:
 
     @staticmethod
     def _pchip_derivatives(points: np.ndarray, times: np.ndarray) -> np.ndarray:
-        """C1 knot velocities without overshoot or intermediate full stops."""
+        """C1 path tangents without artificial stops at dense IK knots."""
         derivatives = np.zeros_like(points)
         if len(points) <= 2:
             return derivatives
@@ -333,19 +402,33 @@ class PickExecutor:
         intervals = np.diff(times)
         slopes = np.diff(points, axis=0) / intervals[:, None]
         for index in range(1, len(points) - 1):
+            previous_interval = intervals[index - 1]
+            following_interval = intervals[index]
             previous = slopes[index - 1]
             following = slopes[index]
             monotonic = previous * following > 0.0
-            weight_previous = 2.0 * intervals[index] + intervals[index - 1]
-            weight_following = intervals[index] + 2.0 * intervals[index - 1]
-            harmonic = np.zeros(points.shape[1])
-            harmonic[monotonic] = (
+            weight_previous = 2.0 * following_interval + previous_interval
+            weight_following = following_interval + 2.0 * previous_interval
+            derivatives[index, monotonic] = (
                 weight_previous + weight_following
             ) / (
                 weight_previous / previous[monotonic]
                 + weight_following / following[monotonic]
             )
-            derivatives[index] = harmonic
+            # Ignore tiny numerical reversals in otherwise smooth IK paths;
+            # braking these low-motion joints at every dense knot is what
+            # produced the visible accelerate-stop pattern. Large, genuine
+            # reversals retain a zero tangent and cannot overshoot.
+            reversal = previous * following < 0.0
+            magnitude = np.maximum(np.abs(previous), np.abs(following))
+            minor = reversal & (
+                np.minimum(np.abs(previous), np.abs(following))
+                < 0.12 * np.maximum(magnitude, 1e-12)
+            )
+            derivatives[index, minor] = (
+                following_interval * previous[minor]
+                + previous_interval * following[minor]
+            ) / (previous_interval + following_interval)
         # Starting and finishing at rest keeps action boundaries smooth; only
         # genuine joint reversals stop at an internal knot.
         return derivatives
@@ -446,6 +529,9 @@ class PickExecutor:
         seed: np.ndarray,
         label: str,
         target_rotation: np.ndarray,
+        *,
+        position_tolerance: float = 0.012,
+        angle_tolerance: float = math.radians(2.0),
     ) -> tuple[list[ArmWaypoint], np.ndarray]:
         output = []
         current = seed
@@ -453,7 +539,7 @@ class PickExecutor:
             current, pos_error, angle_error = ik.solve(
                 point, current, target_rotation
             )
-            if pos_error > 0.012 or angle_error > math.radians(2.0):
+            if pos_error > position_tolerance or angle_error > angle_tolerance:
                 raise RuntimeError(
                     f"vertical IK misses {label} by {pos_error * 100:.1f} cm "
                     f"with {math.degrees(angle_error):.1f} deg tilt"
@@ -461,7 +547,9 @@ class PickExecutor:
             output.append(ArmWaypoint(current.copy(), label))
         return output, current
 
-    def request_pick(self, object_name: str) -> None:
+    def request_pick(
+        self, object_name: str, physical_location: str = "home"
+    ) -> None:
         if self.busy:
             raise RuntimeError("A pick action is already running")
         if self.held_object is not None:
@@ -477,16 +565,37 @@ class PickExecutor:
         )
         if site_id < 0 or body_id < 0:
             raise RuntimeError(f"{object_name} is not present in this scene")
+        if not object_reachable_from_location(
+            self.model, self.data, object_name, physical_location
+        ):
+            raise RuntimeError(
+                f"{object_name} is not in the table region reachable from "
+                f"{physical_location}"
+            )
 
         mujoco.mj_forward(self.model, self.data)
+        _, _, base_yaw = PICK_BASE_POSES[physical_location]
+        base_rotation = _yaw_rotation(base_yaw)
+        carry_position = carry_position_at(CARRY_POSITION, physical_location)
+        horizontal_carry_position = carry_position_at(
+            HORIZONTAL_CARRY_POSITION, physical_location
+        )
         grasp = self.data.site_xpos[site_id].copy()
         grasp[2] += spec.grasp_z_offset
+        if spec.reorient_horizontal and physical_location != "home":
+            # A side release can leave a jar tilted while the hand retreats,
+            # which displaces its body-fixed top site away from the visible
+            # centre. Re-pick the live body centre and enter its side-wall
+            # band instead of closing over that displaced site or the rim.
+            grasp[:2] = self.data.xpos[body_id, :2]
+            grasp[2] = self.data.xpos[body_id, 2] + 0.025
         pregrasp = grasp + np.array((0.0, 0.0, APPROACH_CLEARANCE))
-        target_rotation = (
-            JAR_TOP_DOWN_ROTATION
-            if spec.reorient_horizontal
-            else TOP_DOWN_ROTATION
-        )
+        if spec.reorient_horizontal:
+            # Jar grasp/carry orientation is base-relative at every location,
+            # so every jar pick ends with the same horizontal gripper state.
+            target_rotation = base_rotation @ JAR_TOP_DOWN_ROTATION
+        else:
+            target_rotation = base_rotation @ TOP_DOWN_ROTATION
         if spec.align_to_body:
             target_rotation = top_down_rotation_for_body(
                 self.data.xmat[body_id].reshape(3, 3),
@@ -499,11 +608,13 @@ class PickExecutor:
         # of freedom avoids an equivalent IK branch that winds several arm
         # rolls toward their limits and can self-collide on the way to carry.
         carry_seed = HOME_ARM_SEED.copy()
+        local_target_rotation = base_rotation.T @ target_rotation
         carry_seed[-1] += math.atan2(
-            float(target_rotation[0, 1]), float(target_rotation[1, 1])
+            float(local_target_rotation[0, 1]),
+            float(local_target_rotation[1, 1]),
         )
         carry_joints, carry_error, carry_angle = ik.solve(
-            CARRY_POSITION, carry_seed, target_rotation
+            carry_position, carry_seed, target_rotation
         )
         if carry_error > 0.006 or carry_angle > math.radians(1.0):
             raise RuntimeError("Could not reach the vertical carry pose")
@@ -514,7 +625,7 @@ class PickExecutor:
             for q in self._joint_interpolation(current, carry_joints)
         )
         approach_points = self._cartesian_points(
-            CARRY_POSITION, pregrasp, 0.035
+            carry_position, pregrasp, 0.035
         )
         approach, pregrasp_joints = self._solve_path(
             ik, approach_points, carry_joints, "pre-grasp", target_rotation
@@ -539,9 +650,37 @@ class PickExecutor:
             # axis. The grip-site origin is above the actual finger contact, so
             # it must travel around that contact rather than rotate in place.
             # Otherwise a short jar is geometrically swept out of the pads.
+            pivot_joints = pregrasp_joints.copy()
+            pivot_grip_position = pregrasp.copy()
             lifted_body_position = self.data.xpos[body_id] + (pregrasp - grasp)
+            if physical_location != "home":
+                # Recreate the known-good home pivot geometry in the current
+                # base frame. The jar remains vertical while moving from the
+                # side table strip into this clear corridor, then performs the
+                # identical 90-degree compliant slip near the robot centreline.
+                canonical_pivot = np.array((0.0, -0.30, pregrasp[2]))
+                side_pivot = carry_position_at(
+                    canonical_pivot, physical_location
+                )
+                corridor_points = self._cartesian_points(
+                    pregrasp, side_pivot, 0.025
+                )
+                corridor_path, pivot_joints = self._solve_path(
+                    ik,
+                    corridor_points,
+                    pivot_joints,
+                    "Moving vertical jar into reorientation corridor",
+                    target_rotation,
+                    position_tolerance=0.018,
+                    angle_tolerance=math.radians(3.0),
+                )
+                post_grasp.extend(corridor_path)
+                pivot_grip_position = side_pivot
+                lifted_body_position = self.data.xpos[body_id] + (
+                    side_pivot - grasp
+                )
             contact_offset_local = target_rotation.T @ (
-                lifted_body_position - pregrasp
+                lifted_body_position - pivot_grip_position
             )
             if object_name == "coffee_jar":
                 # Its broad upper shell surrounds the gripper origin's contact
@@ -549,8 +688,6 @@ class PickExecutor:
                 # the pads across the polygonal rim. The narrow sugar jar is
                 # pinched at the pad tips and needs the offset pivot above.
                 contact_offset_local[:] = 0.0
-            pivot_joints = pregrasp_joints.copy()
-            pivot_grip_position = pregrasp.copy()
             for angle in np.linspace(0.0, math.pi / 2.0, 19)[1:]:
                 cosine = math.cos(float(angle))
                 sine = math.sin(float(angle))
@@ -561,7 +698,7 @@ class PickExecutor:
                         (-sine, 0.0, cosine),
                     )
                 )
-                pivot_rotation = JAR_TOP_DOWN_ROTATION @ local_pitch
+                pivot_rotation = target_rotation @ local_pitch
                 pivot_grip_position = (
                     lifted_body_position
                     - pivot_rotation @ contact_offset_local
@@ -571,9 +708,16 @@ class PickExecutor:
                     pivot_joints,
                     pivot_rotation,
                 )
-                if pos_error > 0.012 or angle_error > math.radians(2.0):
+                pivot_position_tolerance = 0.012
+                pivot_angle_tolerance = math.radians(2.0)
+                if (
+                    pos_error > pivot_position_tolerance
+                    or angle_error > pivot_angle_tolerance
+                ):
                     raise RuntimeError(
-                        "Could not keep the jar near its pivot during reorientation"
+                        "Could not keep the jar near its pivot during "
+                        f"reorientation ({pos_error * 100:.1f} cm, "
+                        f"{math.degrees(angle_error):.1f} deg)"
                     )
                 post_grasp.append(
                     ArmWaypoint(
@@ -584,14 +728,15 @@ class PickExecutor:
                 )
 
             horizontal_points = self._cartesian_points(
-                pivot_grip_position, HORIZONTAL_CARRY_POSITION, 0.020
+                pivot_grip_position, horizontal_carry_position, 0.020
             )
+            horizontal_rotation = target_rotation @ _PITCH_90_LOCAL_Y
             horizontal_return, horizontal_carry_joints = self._solve_path(
                 ik,
                 horizontal_points,
                 pivot_joints,
                 "Returning horizontally to carry pose",
-                JAR_HORIZONTAL_ROTATION,
+                horizontal_rotation,
             )
             # Keep the same compliant world-orientation spring active while
             # translating away from the pivot. Its positional anchor follows
@@ -614,21 +759,58 @@ class PickExecutor:
                 )
             )
         else:
-            # Other objects preserve their vertical grasp attitude and retrace
-            # the collision-checked overhead approach corridor.
             passive_spoon = object_name == "spoon"
-            post_grasp.extend(
-                ArmWaypoint(
-                    w.joints.copy(),
-                    (
-                        "Returning while spoon hangs from handle"
-                        if passive_spoon
-                        else "Returning to carry pose"
-                    ),
-                    passive_pivot=passive_spoon,
+            if passive_spoon:
+                # Lift twice the ordinary clearance before beginning any
+                # lateral carry motion, keeping the long spoon clear of the
+                # tabletop while it transitions into its passive hang.
+                high_hover = grasp + np.array(
+                    (0.0, 0.0, SPOON_POST_GRASP_CLEARANCE)
                 )
-                for w in reversed(approach[:-1])
-            )
+                extra_lift_points = self._cartesian_points(
+                    pregrasp, high_hover, 0.012
+                )
+                extra_lift, high_hover_joints = self._solve_path(
+                    ik,
+                    extra_lift_points,
+                    pregrasp_joints,
+                    "Raising spoon to high post-grasp hover",
+                    target_rotation,
+                )
+                post_grasp.extend(extra_lift)
+                post_grasp.extend(
+                    ArmWaypoint(
+                        high_hover_joints.copy(),
+                        "Blending spoon grasp into passive pivot",
+                        passive_pivot=True,
+                    )
+                    for _ in range(SPOON_PIVOT_PAUSE_WAYPOINTS)
+                )
+                return_points = self._cartesian_points(
+                    high_hover, carry_position, 0.035
+                )
+                return_path, _ = self._solve_path(
+                    ik,
+                    return_points,
+                    high_hover_joints,
+                    "Returning while spoon hangs from handle",
+                    target_rotation,
+                )
+                post_grasp.extend(
+                    ArmWaypoint(
+                        waypoint.joints.copy(),
+                        waypoint.label,
+                        passive_pivot=True,
+                    )
+                    for waypoint in return_path
+                )
+            else:
+                # Preserve the vertical grasp attitude and retrace the
+                # collision-checked overhead approach corridor.
+                post_grasp.extend(
+                    ArmWaypoint(w.joints.copy(), "Returning to carry pose")
+                    for w in reversed(approach[:-1])
+                )
             post_grasp.append(
                 ArmWaypoint(
                     carry_joints.copy(),
@@ -642,7 +824,9 @@ class PickExecutor:
             )
 
         self.post_grasp_waypoints = post_grasp
+        self.carry_goal_joints = post_grasp[-1].joints.copy()
         self.target_object = object_name
+        self.physical_location = physical_location
         self.target_body_id = body_id
         free_joint_id = int(self.model.body_jntadr[body_id])
         if (
@@ -658,6 +842,9 @@ class PickExecutor:
         self.grasp_equality_id = -1
         self.spoon_pivot_equality_id = -1
         self.spoon_settle_ticks = 0
+        self.spoon_pivot_ticks = 0
+        self.spoon_pivot_start_width = SPOON_PIVOT_WIDTH
+        self.spoon_original_axial_damping = 0.0
         self.pivot_anchor_pos = None
         self.pivot_anchor_rotation = None
         self.pivot_anchor_gripper_pos = None
@@ -764,7 +951,15 @@ class PickExecutor:
         self.data.eq_active[self.grasp_equality_id] = 0
         self.data.eq_active[equality_id] = 1
         self.spoon_pivot_equality_id = equality_id
-        self.data.ctrl[self.finger_actuators] = SPOON_PIVOT_WIDTH
+        self.spoon_pivot_ticks = 0
+        self.spoon_pivot_start_width = float(
+            np.mean(self.data.qpos[self.finger_qpos])
+        )
+        self.spoon_original_axial_damping = float(
+            self.model.dof_damping[self.target_free_dof]
+        )
+        self.model.dof_damping[self.target_free_dof] = SPOON_AXIAL_DOF_DAMPING
+        self.data.ctrl[self.finger_actuators] = self.spoon_pivot_start_width
 
     def _damp_spoon_pivot(self) -> tuple[float, float]:
         """Damp the freely hanging spoon without prescribing its angle."""
@@ -777,22 +972,21 @@ class PickExecutor:
             velocity,
             0,
         )
-        angular_velocity = velocity[:3]
-        torque = self._limited(
-            -SPOON_PIVOT_DAMPING * angular_velocity,
-            SPOON_PIVOT_MAX_TORQUE,
-        )
-        self.data.xfrc_applied[self.target_body_id, 3:] = torque
         # The visible bowl is on the object's local -X end; the grasp is now
         # on the opposite +X red-handle tip.
         spoon_axis = -self.data.xmat[self.target_body_id].reshape(3, 3)[:, 0]
+        angular_velocity = velocity[:3]
+        axial_velocity = spoon_axis * float(angular_velocity @ spoon_axis)
+        swing_velocity = angular_velocity - axial_velocity
+        torque = self._limited(
+            -SPOON_SWING_DAMPING * swing_velocity,
+            SPOON_PIVOT_MAX_TORQUE,
+        )
+        self.data.xfrc_applied[self.target_body_id, 3:] = torque
         bowl_down_angle = math.acos(
             float(np.clip(spoon_axis @ np.array((0.0, 0.0, -1.0)), -1.0, 1.0))
         )
-        swing_velocity = angular_velocity - spoon_axis * float(
-            angular_velocity @ spoon_axis
-        )
-        return bowl_down_angle, float(np.linalg.norm(swing_velocity))
+        return bowl_down_angle, float(np.linalg.norm(angular_velocity))
 
     def _finish_spoon_pivot(self) -> None:
         """Capture the settled live pose so the carried spoon cannot spin."""
@@ -812,6 +1006,9 @@ class PickExecutor:
         self.model.eq_solref[self.grasp_equality_id] = (0.003, 1.0)
         self.data.eq_active[self.spoon_pivot_equality_id] = 0
         self.data.eq_active[self.grasp_equality_id] = 1
+        self.model.dof_damping[
+            self.target_free_dof
+        ] = self.spoon_original_axial_damping
         self.data.xfrc_applied[self.target_body_id] = 0.0
 
     @staticmethod
@@ -981,8 +1178,16 @@ class PickExecutor:
             return
 
         if self.mode == "returning":
+            return_tolerance = (
+                0.080
+                if self.target_object in {"coffee_jar", "sugar_jar"}
+                and self.physical_location != "home"
+                else 0.003
+                if self.target_object == "spoon"
+                else 0.012
+            )
             finished, waypoint = self._advance_trajectory(
-                final_tolerance=0.003 if self.target_object == "spoon" else 0.012
+                final_tolerance=return_tolerance
             )
             if waypoint.passive_pivot and self.spoon_pivot_equality_id < 0:
                 try:
@@ -991,9 +1196,19 @@ class PickExecutor:
                     self._fail(str(error))
                     return
             if self.spoon_pivot_equality_id >= 0:
-                # Relax only enough to remove pad friction around the handle;
-                # the live connect anchor keeps the grasp point between them.
-                self.data.ctrl[self.finger_actuators] = SPOON_PIVOT_WIDTH
+                # Blend the pad opening while stationary at high hover. This
+                # preserves visible handle contact as the weld becomes a live
+                # point pivot instead of abruptly loosening the fingers.
+                self.spoon_pivot_ticks += 1
+                phase = min(
+                    1.0,
+                    self.spoon_pivot_ticks / SPOON_PIVOT_BLEND_TICKS,
+                )
+                pivot_width = (
+                    (1.0 - phase) * self.spoon_pivot_start_width
+                    + phase * SPOON_PIVOT_WIDTH
+                )
+                self.data.ctrl[self.finger_actuators] = pivot_width
                 spoon_angle, spoon_speed = self._damp_spoon_pivot()
             if waypoint.stabilize_object:
                 if not self.pivot_active:

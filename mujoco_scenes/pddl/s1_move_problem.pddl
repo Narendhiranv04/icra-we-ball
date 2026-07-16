@@ -4,6 +4,7 @@
   (:objects
     fetch - robot
     home cupboard1 cupboard2 box - location
+    table serving_table - region
     kettle coffee_jar sugar_jar spoon - object
   )
 

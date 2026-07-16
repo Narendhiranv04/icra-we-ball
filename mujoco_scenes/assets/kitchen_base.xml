@@ -78,7 +78,7 @@
     <!--                    CABINET C1 (Upper Left)                       -->
     <!--   Hinged door cabinet — typically mugs, glasses, drinkware       -->
     <!-- ================================================================ -->
-    <body name="cabinet_C1" pos="-0.35 0.35 0.96">
+    <body name="cabinet_C1" pos="-0.35 0.45 0.96">
       <!-- Cabinet shell (back + sides + top + bottom) -->
       <geom name="C1_back" type="box" size="0.21 0.005 0.21" pos="0 0.16 0"
             material="mat_cabinet" mass="2"/>
@@ -114,7 +114,7 @@
     <!--                   CABINET C2 (Upper Right)                       -->
     <!--   Hinged door cabinet — plates, bowls, pantry items              -->
     <!-- ================================================================ -->
-    <body name="cabinet_C2" pos="0.35 0.35 0.96">
+    <body name="cabinet_C2" pos="0.35 0.45 0.96">
       <!-- Cabinet shell -->
       <geom name="C2_back" type="box" size="0.21 0.005 0.21" pos="0 0.16 0"
             material="mat_cabinet" mass="2"/>
@@ -227,7 +227,7 @@
     <!--                   BOX B1 (Countertop, Far Right)                 -->
     <!--   Lidded box — tea bags, condiments, small items                 -->
     <!-- ================================================================ -->
-    <body name="box_B1" pos="0.52 0.06 0.58">
+    <body name="box_B1" pos="0.52 0.18 0.58">
       <!-- Box base & walls -->
       <geom name="B1_base" type="box" size="0.175 0.09 0.003" pos="0 0 0"
             material="mat_cardboard" mass="0.3"/>

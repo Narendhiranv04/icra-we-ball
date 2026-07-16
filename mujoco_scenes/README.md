@@ -89,7 +89,14 @@ aliases of the same right-side pose. `Actions` → `Pick` provides staged
 vertical grasps for the kettle handle, both jar upper bodies, and the spoon
 handle. Jar picks add a compliant 90-degree in-hand pitch—with the rigid weld
 released and only soft upright/centring assistance—followed by a horizontal
-carry pose.
+carry pose. Objects placed in a left/right table strip can be selected and
+picked again from the matching base pose. Side-picked jars first move into a
+base-relative clear corridor, then perform the same compliant 90-degree slip,
+so every jar pick ends horizontal. `Actions` → `Place` samples
+an object-aware buffered point on the
+serving table or on the counter strip facing the robot, moves through hover
+and release poses, lets physics settle the object, and returns the empty hand
+to its carry pose.
 Add `--no-actions-panel` for the original viewer without the companion controls.
 
 ## Render without opening a GUI

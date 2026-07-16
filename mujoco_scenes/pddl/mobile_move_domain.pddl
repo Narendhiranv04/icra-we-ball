@@ -2,7 +2,7 @@
   (:requirements :strips :typing)
 
   (:types
-    robot location object
+    robot location object region
   )
 
   (:predicates
@@ -13,6 +13,7 @@
     (graspable ?object - object)
     (hand-empty ?robot - robot)
     (holding ?robot - robot ?object - object)
+    (object-in-region ?object - object ?region - region)
   )
 
   ;; This schema defines action semantics only. The continuous trajectory is
@@ -44,6 +45,20 @@
       (not (object-at ?object ?location))
       (not (hand-empty ?robot))
       (holding ?robot ?object)
+    )
+  )
+
+  ;; Python samples a buffered, collision-free point inside the named region,
+  ;; executes hover/descent IK, releases above the support, and retreats.
+  (:action place
+    :parameters (?robot - robot ?object - object ?region - region)
+    :precondition (and
+      (holding ?robot ?object)
+    )
+    :effect (and
+      (not (holding ?robot ?object))
+      (hand-empty ?robot)
+      (object-in-region ?object ?region)
     )
   )
 )

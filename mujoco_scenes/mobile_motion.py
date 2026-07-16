@@ -452,7 +452,12 @@ def launch_action_viewer(scene, camera: str) -> None:
     import tkinter as tk
     from tkinter import ttk
 
-    from mujoco_scenes.pick_motion import PickExecutor, TABLE_PICK_SPECS
+    from mujoco_scenes.pick_motion import (
+        PickExecutor,
+        TABLE_PICK_SPECS,
+        object_reachable_from_location,
+    )
+    from mujoco_scenes.place_motion import PlaceExecutor
 
     camera_id = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_CAMERA, camera)
     viewer = mujoco.viewer.launch_passive(scene.model, scene.data)
@@ -460,17 +465,19 @@ def launch_action_viewer(scene, camera: str) -> None:
     viewer.cam.fixedcamid = camera_id
     executor = MobileMoveExecutor(scene.model, scene.data)
     picker = PickExecutor(scene.model, scene.data)
+    placer = PlaceExecutor(scene.model, scene.data, picker)
 
     root = tk.Tk()
     root.title("Kitchen Actions")
-    root.geometry("380x680+20+20")
-    root.minsize(360, 560)
+    root.geometry("380x790+20+20")
+    root.minsize(360, 650)
     root.columnconfigure(0, weight=1)
 
     status = tk.StringVar(value=executor.status)
     location = tk.StringVar(value="home")
     progress = tk.DoubleVar(value=0.0)
     selected_pick = tk.StringVar(value="Selected: none")
+    selected_place = tk.StringVar(value="Selected: none")
     ui_error: str | None = None
 
     actions_open = tk.BooleanVar(value=True)
@@ -493,8 +500,8 @@ def launch_action_viewer(scene, camera: str) -> None:
         nonlocal ui_error
         ui_error = None
         try:
-            if picker.busy:
-                raise RuntimeError("Wait for the pick action to finish")
+            if picker.busy or placer.busy:
+                raise RuntimeError("Wait for the manipulation action to finish")
             executor.request_move(destination)
             status.set(executor.status)
         except Exception as error:  # surfaced in the panel instead of killing the viewer
@@ -517,7 +524,7 @@ def launch_action_viewer(scene, camera: str) -> None:
     pick_open = tk.BooleanVar(value=True)
     pick_toggle = ttk.Checkbutton(actions_body, text="Pick", variable=pick_open)
     pick_toggle.grid(row=2, column=0, sticky="ew", pady=(4, 0))
-    pick_body = ttk.LabelFrame(actions_body, text="Table object", padding=10)
+    pick_body = ttk.LabelFrame(actions_body, text="Reachable object", padding=10)
     pick_body.grid(row=3, column=0, sticky="ew", pady=(4, 10))
     pick_body.columnconfigure(0, weight=1)
     pick_buttons: list[ttk.Button] = []
@@ -529,11 +536,11 @@ def launch_action_viewer(scene, camera: str) -> None:
         status.set(f"Planning pick for {object_name}...")
         root.update_idletasks()
         try:
-            if executor.busy:
+            if executor.busy or placer.busy:
                 raise RuntimeError("Wait for the move action to finish")
-            if executor.current_physical_location != "home":
-                raise RuntimeError("Tabletop picks require Move (home) first")
-            picker.request_pick(object_name)
+            picker.request_pick(
+                object_name, executor.current_physical_location
+            )
             status.set(picker.status)
         except Exception as error:
             ui_error = f"Pick failed: {error}"
@@ -557,9 +564,48 @@ def launch_action_viewer(scene, camera: str) -> None:
         row=len(TABLE_PICK_SPECS), column=0, sticky="w", pady=(8, 0)
     )
 
+    place_open = tk.BooleanVar(value=True)
+    place_toggle = ttk.Checkbutton(actions_body, text="Place", variable=place_open)
+    place_toggle.grid(row=4, column=0, sticky="ew", pady=(4, 0))
+    place_body = ttk.LabelFrame(actions_body, text="Placement region", padding=10)
+    place_body.grid(row=5, column=0, sticky="ew", pady=(4, 10))
+    place_body.columnconfigure(0, weight=1)
+    place_buttons: list[tuple[ttk.Button, str]] = []
+
+    def request_place(region_name: str) -> None:
+        nonlocal ui_error
+        ui_error = None
+        label = "Serving table" if region_name == "serving_table" else "Table"
+        selected_place.set(f"Selected: {label}")
+        status.set(f"Sampling safe point in {label.lower()}...")
+        root.update_idletasks()
+        try:
+            if executor.busy:
+                raise RuntimeError("Wait for the move action to finish")
+            placer.request_place(region_name, executor.current_physical_location)
+            status.set(placer.status)
+        except Exception as error:
+            ui_error = f"Place failed: {error}"
+            status.set(ui_error)
+            print(f"[Actions] {ui_error}")
+
+    for row, (label, region_name) in enumerate(
+        (("Serving table", "serving_table"), ("Table", "table"))
+    ):
+        button = ttk.Button(
+            place_body,
+            text=label,
+            command=lambda name=region_name: request_place(name),
+        )
+        button.grid(row=row, column=0, sticky="ew", pady=3)
+        place_buttons.append((button, region_name))
+    ttk.Label(place_body, textvariable=selected_place).grid(
+        row=2, column=0, sticky="w", pady=(8, 0)
+    )
+
     future = ttk.LabelFrame(actions_body, text="Future actions", padding=8)
-    future.grid(row=4, column=0, sticky="ew")
-    ttk.Label(future, text="Place  ·  Open  ·  Close  ·  Pour", state="disabled").grid()
+    future.grid(row=6, column=0, sticky="ew")
+    ttk.Label(future, text="Open  ·  Close  ·  Pour", state="disabled").grid()
 
     ttk.Separator(root).grid(row=2, column=0, sticky="ew", padx=12, pady=8)
     ttk.Label(root, text="Current symbolic location:").grid(row=3, column=0, sticky="w", padx=12)
@@ -589,9 +635,16 @@ def launch_action_viewer(scene, camera: str) -> None:
         else:
             pick_body.grid_remove()
 
+    def toggle_place(*_args) -> None:
+        if place_open.get():
+            place_body.grid()
+        else:
+            place_body.grid_remove()
+
     actions_toggle.configure(command=toggle_actions)
     move_toggle.configure(command=toggle_move)
     pick_toggle.configure(command=toggle_pick)
+    place_toggle.configure(command=toggle_place)
 
     closed = False
 
@@ -611,43 +664,82 @@ def launch_action_viewer(scene, camera: str) -> None:
             close()
             return
         for _ in range(5):
-            if picker.busy:
+            if placer.busy:
+                placer.update()
+            elif picker.busy:
                 picker.update()
             else:
                 executor.update()
             mujoco.mj_step(scene.model, scene.data)
-        active_status = ui_error or (
-            picker.status
-            if picker.busy or picker.held_object is not None or picker.failure
-            else executor.status
-        )
+        if ui_error:
+            active_status = ui_error
+        elif executor.busy:
+            active_status = executor.status
+        elif placer.busy or placer.failure:
+            active_status = placer.status
+        elif picker.busy or picker.held_object is not None or picker.failure:
+            active_status = picker.status
+        elif placer.has_run and placer.mode == "complete":
+            active_status = placer.status
+        else:
+            active_status = executor.status
         if hasattr(viewer, "set_texts"):
             viewer.set_texts(
                 (
                     mujoco.mjtFontScale.mjFONTSCALE_150,
                     mujoco.mjtGridPos.mjGRID_TOPLEFT,
-                    "Actions / Move + Pick",
+                    "Actions / Move + Pick + Place",
                     active_status,
                 )
             )
         viewer.sync()
         location.set(executor.current_symbolic_location)
         status.set(active_status)
-        progress.set(picker.progress() if picker.busy else executor.progress())
-        move_state = "disabled" if executor.busy or picker.busy else "normal"
+        progress.set(
+            placer.progress()
+            if placer.busy
+            else picker.progress()
+            if picker.busy
+            else executor.progress()
+        )
+        move_state = (
+            "disabled" if executor.busy or picker.busy or placer.busy else "normal"
+        )
         for button in move_buttons:
             button.configure(state=move_state)
         can_pick = (
             not executor.busy
             and not picker.busy
+            and not placer.busy
             and picker.held_object is None
-            and executor.current_physical_location == "home"
         )
         for button, object_name in zip(pick_buttons, TABLE_PICK_SPECS):
             present = mujoco.mj_name2id(
                 scene.model, mujoco.mjtObj.mjOBJ_BODY, object_name
             ) >= 0
-            button.configure(state="normal" if can_pick and present else "disabled")
+            reachable = present and object_reachable_from_location(
+                scene.model,
+                scene.data,
+                object_name,
+                executor.current_physical_location,
+            )
+            button.configure(
+                state="normal" if can_pick and reachable else "disabled"
+            )
+        can_place = (
+            not executor.busy
+            and not picker.busy
+            and not placer.busy
+            and picker.held_object is not None
+        )
+        for button, region_name in place_buttons:
+            region_available = (
+                region_name == "table"
+                or executor.current_physical_location == "home"
+            )
+            button.configure(
+                state="normal" if can_place and region_available else "disabled"
+            )
         root.after(10, tick)
 
     root.protocol("WM_DELETE_WINDOW", close)
