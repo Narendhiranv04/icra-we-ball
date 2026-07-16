@@ -201,9 +201,13 @@
     <freejoint name="spoon_free"/>
     <geom name="spoon_visual" type="mesh" mesh="mesh_ycb_spoon" material="mat_ycb_spoon"
           class="visual" mass="0"/>
-    <geom name="spoon_collision" type="box" size="0.0975 0.020 0.01045"
-          rgba="0 0 0 0" mass="0.030" group="3"/>
-    <site name="spoon_grasp" pos="-0.045 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
+    <!-- Separate proxies ensure a top-down grasp at spoon_grasp contacts the
+         handle rather than an oversized box surrounding the bowl. -->
+    <geom name="spoon_handle_collision" type="capsule" size="0.006"
+          fromto="-0.095 0 0.006 0.020 0 0.006" rgba="0 0 0 0" mass="0.012" group="3"/>
+    <geom name="spoon_bowl_collision" type="ellipsoid" size="0.038 0.020 0.01045"
+          pos="0.058 0 0" rgba="0 0 0 0" mass="0.018" group="3"/>
+    <site name="spoon_grasp" pos="-0.045 0 0.006" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
   </body>
 
   <!-- YCB 030_fork -->
@@ -268,9 +272,18 @@
     <freejoint name="kettle_free"/>
     <geom name="kettle_visual" type="mesh" mesh="mesh_gso_kettle" material="mat_gso_kettle"
           class="visual" mass="0"/>
-    <geom name="kettle_collision" type="cylinder" size="0.070 0.06817"
-          rgba="0 0 0 0" mass="0.80" group="3"/>
-    <site name="kettle_grasp" pos="0 0 0.045" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
+    <!-- A tapered body keeps the handle opening clear. The hidden flat foot
+         prevents the round kettle from rolling over while it settles. -->
+    <geom name="kettle_collision" type="ellipsoid" size="0.070 0.075 0.064"
+          pos="0 0 0.00417" rgba="0 0 0 0" mass="0.70" group="3"/>
+    <geom name="kettle_bottom_collision" type="cylinder" size="0.055 0.006"
+          pos="0 0 -0.06217" rgba="0 0 0 0" mass="0.10" group="3"/>
+    <!-- The scanned mesh's handle plane points along local (+X,-Y), not a
+         principal axis. This capsule follows its visible upper crossbar. -->
+    <geom name="kettle_handle_collision" type="capsule" size="0.009"
+          fromto="0.03536 -0.03536 0.055 0.04950 -0.04950 0.055"
+          rgba="0 0 0 0" mass="0.025" group="3"/>
+    <site name="kettle_grasp" pos="0.04243 -0.04243 0.055" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
   </body>
 
   <!-- GSO Nescafe instant-coffee jar. -->
@@ -297,18 +310,20 @@
     <geom name="coffee_jar_bottom_collision" type="cylinder" size="0.045 0.004" pos="0 0 -0.08886"
           rgba="0 0 0 0" mass="0.080" group="3"/>
     <geom name="coffee_jar_wall_0" type="box" size="0.004 0.0116 0.0725" pos="0.043 0 -0.0125" rgba="0 0 0 0" mass="0.018333" group="3"/>
-    <geom name="coffee_jar_wall_1" type="box" size="0.004 0.0116 0.0725" pos="0.03724 0.0215 -0.0125" euler="0 0 0.5236" rgba="0 0 0 0" mass="0.018333" group="3"/>
-    <geom name="coffee_jar_wall_2" type="box" size="0.004 0.0116 0.0725" pos="0.0215 0.03724 -0.0125" euler="0 0 1.0472" rgba="0 0 0 0" mass="0.018333" group="3"/>
-    <geom name="coffee_jar_wall_3" type="box" size="0.004 0.0116 0.0725" pos="0 0.043 -0.0125" euler="0 0 1.5708" rgba="0 0 0 0" mass="0.018333" group="3"/>
-    <geom name="coffee_jar_wall_4" type="box" size="0.004 0.0116 0.0725" pos="-0.0215 0.03724 -0.0125" euler="0 0 2.0944" rgba="0 0 0 0" mass="0.018333" group="3"/>
-    <geom name="coffee_jar_wall_5" type="box" size="0.004 0.0116 0.0725" pos="-0.03724 0.0215 -0.0125" euler="0 0 2.6180" rgba="0 0 0 0" mass="0.018333" group="3"/>
+    <geom name="coffee_jar_wall_1" type="box" size="0.004 0.0116 0.0725" pos="0.03724 0.0185 -0.0125" euler="0 0 0.5236" rgba="0 0 0 0" mass="0.018333" group="3"/>
+    <geom name="coffee_jar_wall_2" type="box" size="0.004 0.0116 0.0725" pos="0.0215 0.03204 -0.0125" euler="0 0 1.0472" rgba="0 0 0 0" mass="0.018333" group="3"/>
+    <geom name="coffee_jar_wall_3" type="box" size="0.004 0.0116 0.0725" pos="0 0.037 -0.0125" euler="0 0 1.5708" rgba="0 0 0 0" mass="0.018333" group="3"/>
+    <geom name="coffee_jar_wall_4" type="box" size="0.004 0.0116 0.0725" pos="-0.0215 0.03204 -0.0125" euler="0 0 2.0944" rgba="0 0 0 0" mass="0.018333" group="3"/>
+    <geom name="coffee_jar_wall_5" type="box" size="0.004 0.0116 0.0725" pos="-0.03724 0.0185 -0.0125" euler="0 0 2.6180" rgba="0 0 0 0" mass="0.018333" group="3"/>
     <geom name="coffee_jar_wall_6" type="box" size="0.004 0.0116 0.0725" pos="-0.043 0 -0.0125" euler="0 0 3.1416" rgba="0 0 0 0" mass="0.018333" group="3"/>
-    <geom name="coffee_jar_wall_7" type="box" size="0.004 0.0116 0.0725" pos="-0.03724 -0.0215 -0.0125" euler="0 0 3.6652" rgba="0 0 0 0" mass="0.018333" group="3"/>
-    <geom name="coffee_jar_wall_8" type="box" size="0.004 0.0116 0.0725" pos="-0.0215 -0.03724 -0.0125" euler="0 0 4.1888" rgba="0 0 0 0" mass="0.018333" group="3"/>
-    <geom name="coffee_jar_wall_9" type="box" size="0.004 0.0116 0.0725" pos="0 -0.043 -0.0125" euler="0 0 4.7124" rgba="0 0 0 0" mass="0.018333" group="3"/>
-    <geom name="coffee_jar_wall_10" type="box" size="0.004 0.0116 0.0725" pos="0.0215 -0.03724 -0.0125" euler="0 0 5.2360" rgba="0 0 0 0" mass="0.018333" group="3"/>
-    <geom name="coffee_jar_wall_11" type="box" size="0.004 0.0116 0.0725" pos="0.03724 -0.0215 -0.0125" euler="0 0 5.7596" rgba="0 0 0 0" mass="0.018333" group="3"/>
-    <site name="coffee_jar_grasp" pos="0 0 -0.015" size="0.01" type="sphere"
+    <geom name="coffee_jar_wall_7" type="box" size="0.004 0.0116 0.0725" pos="-0.03724 -0.0185 -0.0125" euler="0 0 3.6652" rgba="0 0 0 0" mass="0.018333" group="3"/>
+    <geom name="coffee_jar_wall_8" type="box" size="0.004 0.0116 0.0725" pos="-0.0215 -0.03204 -0.0125" euler="0 0 4.1888" rgba="0 0 0 0" mass="0.018333" group="3"/>
+    <geom name="coffee_jar_wall_9" type="box" size="0.004 0.0116 0.0725" pos="0 -0.037 -0.0125" euler="0 0 4.7124" rgba="0 0 0 0" mass="0.018333" group="3"/>
+    <geom name="coffee_jar_wall_10" type="box" size="0.004 0.0116 0.0725" pos="0.0215 -0.03204 -0.0125" euler="0 0 5.2360" rgba="0 0 0 0" mass="0.018333" group="3"/>
+    <geom name="coffee_jar_wall_11" type="box" size="0.004 0.0116 0.0725" pos="0.03724 -0.0185 -0.0125" euler="0 0 5.7596" rgba="0 0 0 0" mass="0.018333" group="3"/>
+    <!-- Upper-body grasp: keeps the jar below the palm during the later
+         contact-axis pivot instead of burying it deeply between the fingers. -->
+    <site name="coffee_jar_grasp" pos="0 0 0.040" size="0.01" type="sphere"
           rgba="0 0 0 0" group="5"/>
     <site name="coffee_jar_opening" pos="0 0 0.062" size="0.034 0.002" type="cylinder"
           rgba="0 0 0 0" group="5"/>
@@ -321,7 +336,7 @@
           class="visual" mass="0"/>
     <geom name="sugar_jar_collision" type="cylinder" size="0.0225 0.06724"
           rgba="0 0 0 0" mass="0.25" group="3"/>
-    <site name="sugar_jar_grasp" pos="0 0 0.025" size="0.01" type="sphere"
+    <site name="sugar_jar_grasp" pos="0 0 0.040" size="0.01" type="sphere"
           rgba="0 0 0 0" group="5"/>
   </body>
 

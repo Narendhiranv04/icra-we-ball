@@ -65,20 +65,20 @@
     <!-- ================================================================ -->
     <body name="countertop" pos="0 0 0">
       <!-- Table top -->
-      <geom name="counter_surface" type="box" size="0.6 0.4 0.02"
-            pos="0 0 0.75" material="mat_counter" mass="50"/>
+      <geom name="counter_surface" type="box" size="0.70 0.4 0.02"
+            pos="0 0 0.56" material="mat_counter" mass="50"/>
       <!-- Table legs -->
-      <geom name="leg_fl" type="cylinder" size="0.03 0.365" pos="-0.55 -0.35 0.375" material="mat_wood"/>
-      <geom name="leg_fr" type="cylinder" size="0.03 0.365" pos="0.55 -0.35 0.375" material="mat_wood"/>
-      <geom name="leg_bl" type="cylinder" size="0.03 0.365" pos="-0.55 0.35 0.375" material="mat_wood"/>
-      <geom name="leg_br" type="cylinder" size="0.03 0.365" pos="0.55 0.35 0.375" material="mat_wood"/>
+      <geom name="leg_fl" type="cylinder" size="0.03 0.27" pos="-0.65 -0.35 0.27" material="mat_wood"/>
+      <geom name="leg_fr" type="cylinder" size="0.03 0.27" pos="0.65 -0.35 0.27" material="mat_wood"/>
+      <geom name="leg_bl" type="cylinder" size="0.03 0.27" pos="-0.65 0.35 0.27" material="mat_wood"/>
+      <geom name="leg_br" type="cylinder" size="0.03 0.27" pos="0.65 0.35 0.27" material="mat_wood"/>
     </body>
 
     <!-- ================================================================ -->
     <!--                    CABINET C1 (Upper Left)                       -->
     <!--   Hinged door cabinet — typically mugs, glasses, drinkware       -->
     <!-- ================================================================ -->
-    <body name="cabinet_C1" pos="-0.35 0.35 1.15">
+    <body name="cabinet_C1" pos="-0.35 0.35 0.96">
       <!-- Cabinet shell (back + sides + top + bottom) -->
       <geom name="C1_back" type="box" size="0.21 0.005 0.21" pos="0 0.16 0"
             material="mat_cabinet" mass="2"/>
@@ -94,15 +94,15 @@
       <geom name="C1_shelf" type="box" size="0.20 0.15 0.003" pos="0 0 -0.035"
             material="mat_wood"/>
 
-      <!-- Door: hinges on left edge -->
-      <body name="C1_door" pos="-0.21 -0.16 0">
-        <joint name="C1_door_joint" type="hinge" axis="0 0 -1"
+      <!-- Door: hinges on right edge so C1 is approached from the left -->
+      <body name="C1_door" pos="0.21 -0.16 0">
+        <joint name="C1_door_joint" type="hinge" axis="0 0 1"
                range="0 1.57" pos="0 0 0" damping="0.3"/>
         <geom name="C1_door_panel" type="box" size="0.21 0.008 0.208"
-              pos="0.21 0 0" material="mat_cabinet"/>
+              pos="-0.21 0 0" material="mat_cabinet"/>
         <!-- Door handle -->
         <geom name="C1_handle" type="cylinder" size="0.008 0.03"
-              pos="0.39 -0.02 0" euler="1.57 0 0" material="mat_metal"/>
+              pos="-0.39 -0.02 0" euler="1.57 0 0" material="mat_metal"/>
       </body>
 
       <!-- Site for placing objects inside -->
@@ -114,7 +114,7 @@
     <!--                   CABINET C2 (Upper Right)                       -->
     <!--   Hinged door cabinet — plates, bowls, pantry items              -->
     <!-- ================================================================ -->
-    <body name="cabinet_C2" pos="0.35 0.35 1.15">
+    <body name="cabinet_C2" pos="0.35 0.35 0.96">
       <!-- Cabinet shell -->
       <geom name="C2_back" type="box" size="0.21 0.005 0.21" pos="0 0.16 0"
             material="mat_cabinet" mass="2"/>
@@ -129,14 +129,14 @@
       <geom name="C2_shelf" type="box" size="0.20 0.15 0.003" pos="0 0 -0.035"
             material="mat_wood"/>
 
-      <!-- Door: hinges on right edge -->
-      <body name="C2_door" pos="0.21 -0.16 0">
-        <joint name="C2_door_joint" type="hinge" axis="0 0 1"
+      <!-- Door: hinges on left edge so C2 is approached from the right -->
+      <body name="C2_door" pos="-0.21 -0.16 0">
+        <joint name="C2_door_joint" type="hinge" axis="0 0 -1"
                range="0 1.57" pos="0 0 0" damping="0.3"/>
         <geom name="C2_door_panel" type="box" size="0.21 0.008 0.208"
-              pos="-0.21 0 0" material="mat_cabinet"/>
+              pos="0.21 0 0" material="mat_cabinet"/>
         <geom name="C2_handle" type="cylinder" size="0.008 0.03"
-              pos="-0.39 -0.02 0" euler="1.57 0 0" material="mat_metal"/>
+              pos="0.39 -0.02 0" euler="1.57 0 0" material="mat_metal"/>
       </body>
 
       <site name="C2_interior" pos="0 0 -0.12" size="0.18 0.14 0.01" type="box"
@@ -147,7 +147,7 @@
     <!--                    DRAWER D1 (Lower Left)                        -->
     <!--   Sliding drawer — utensils: spoons, forks, knives               -->
     <!-- ================================================================ -->
-    <body name="drawer_D1_frame" pos="-0.35 -0.30 0.55">
+    <body name="drawer_D1_frame" pos="-0.44 -0.30 0.36">
       <!-- Enclosed carcass. The top prevents an overhead camera from seeing
            drawer contents before the tray has been pulled out. -->
       <geom name="D1_back" type="box" size="0.18 0.005 0.06" pos="0 0.14 0"
@@ -190,7 +190,7 @@
     <!--                   DRAWER D2 (Lower Right)                        -->
     <!--   Sliding drawer — tools: tongs, spatula, misc                   -->
     <!-- ================================================================ -->
-    <body name="drawer_D2_frame" pos="0.35 -0.30 0.55">
+    <body name="drawer_D2_frame" pos="0.44 -0.30 0.36">
       <geom name="D2_back" type="box" size="0.18 0.005 0.06" pos="0 0.14 0"
             material="mat_wood" mass="2"/>
       <geom name="D2_left" type="box" size="0.005 0.14 0.06" pos="-0.18 0 0"
@@ -227,7 +227,7 @@
     <!--                   BOX B1 (Countertop, Far Right)                 -->
     <!--   Lidded box — tea bags, condiments, small items                 -->
     <!-- ================================================================ -->
-    <body name="box_B1" pos="0.44 0.01 0.77">
+    <body name="box_B1" pos="0.52 0.06 0.58">
       <!-- Box base & walls -->
       <geom name="B1_base" type="box" size="0.175 0.09 0.003" pos="0 0 0"
             material="mat_cardboard" mass="0.3"/>
@@ -270,21 +270,21 @@
     <!-- ================================================================ -->
     <!--                       SERVING AREA                               -->
     <!-- ================================================================ -->
-    <body name="serving_area" pos="0.90 0 0">
-      <!-- A physically separate table, rather than a surface coincident with
-           the main countertop. -->
-      <geom name="serving_surface" type="box" size="0.25 0.15 0.01"
-            pos="0 0 0.75" material="mat_serving" mass="5"/>
-      <geom name="serving_leg_fl" type="cylinder" size="0.02 0.365"
-            pos="-0.22 -0.12 0.375" material="mat_wood"/>
-      <geom name="serving_leg_fr" type="cylinder" size="0.02 0.365"
-            pos="0.22 -0.12 0.375" material="mat_wood"/>
-      <geom name="serving_leg_bl" type="cylinder" size="0.02 0.365"
-            pos="-0.22 0.12 0.375" material="mat_wood"/>
-      <geom name="serving_leg_br" type="cylinder" size="0.02 0.365"
-            pos="0.22 0.12 0.375" material="mat_wood"/>
+    <body name="serving_area" pos="0 -0.56 0">
+      <!-- Centered between Fetch and the main countertop. The longitudinal
+           gaps keep both left- and right-side navigation routes equivalent. -->
+      <geom name="serving_surface" type="box" size="0.25 0.15 0.02"
+            pos="0 0 0.56" material="mat_serving" mass="5"/>
+      <geom name="serving_leg_fl" type="cylinder" size="0.02 0.27"
+            pos="-0.22 -0.12 0.27" material="mat_wood"/>
+      <geom name="serving_leg_fr" type="cylinder" size="0.02 0.27"
+            pos="0.22 -0.12 0.27" material="mat_wood"/>
+      <geom name="serving_leg_bl" type="cylinder" size="0.02 0.27"
+            pos="-0.22 0.12 0.27" material="mat_wood"/>
+      <geom name="serving_leg_br" type="cylinder" size="0.02 0.27"
+            pos="0.22 0.12 0.27" material="mat_wood"/>
 
-      <site name="serving_spot" pos="0 0 0.765" size="0.20 0.12 0.004" type="box"
+      <site name="serving_spot" pos="0 0 0.585" size="0.20 0.12 0.004" type="box"
             rgba="0.2 1 0.35 0.25" group="4"/>
     </body>
 
@@ -292,17 +292,17 @@
     <!--         OBJECT ANCHOR SITES ON COUNTERTOP                        -->
     <!--   Objects are spawned at these positions via scene configs        -->
     <!-- ================================================================ -->
-    <site name="counter_spot_1" pos="-0.35 0.10 0.78" size="0.03" type="sphere"
+    <site name="counter_spot_1" pos="-0.35 -0.32 0.59" size="0.03" type="sphere"
           rgba="0 0 0 0" group="5"/>
-    <site name="counter_spot_2" pos="-0.15 0.10 0.78" size="0.03" type="sphere"
+    <site name="counter_spot_2" pos="-0.15 -0.30 0.59" size="0.03" type="sphere"
           rgba="0 0 0 0" group="5"/>
-    <site name="counter_spot_3" pos="0.05 0.10 0.78" size="0.03" type="sphere"
+    <site name="counter_spot_3" pos="0.05 -0.30 0.59" size="0.03" type="sphere"
           rgba="0 0 0 0" group="5"/>
-    <site name="counter_spot_4" pos="0.20 0.10 0.78" size="0.03" type="sphere"
+    <site name="counter_spot_4" pos="0.20 -0.30 0.59" size="0.03" type="sphere"
           rgba="0 0 0 0" group="5"/>
-    <site name="counter_spot_5" pos="-0.25 -0.05 0.78" size="0.03" type="sphere"
+    <site name="counter_spot_5" pos="0.25 -0.34 0.59" size="0.03" type="sphere"
           rgba="0 0 0 0" group="5"/>
-    <site name="counter_spot_6" pos="0.0 -0.05 0.78" size="0.03" type="sphere"
+    <site name="counter_spot_6" pos="0.0 -0.22 0.59" size="0.03" type="sphere"
           rgba="0 0 0 0" group="5"/>
 
     <!-- Lighting -->
@@ -311,16 +311,19 @@
     <light name="fill_light" pos="0 -1.5 1.5" dir="0 0.5 -0.5" diffuse="0.4 0.4 0.45"
            specular="0.1 0.1 0.1"/>
 
-    <!-- Five task cameras. Shoulder/front cameras track the task-area target.
+    <!-- Six task cameras. Shoulder/front cameras track the task-area target.
          The wrist camera uses a placeholder mount that can later be replaced
          by the robot wrist body without changing the camera's public name. -->
-    <body name="camera_target" pos="0.20 0 0.78"/>
+    <body name="camera_target" pos="0.20 0 0.59"/>
     <camera name="left_shoulder_camera" pos="-1.45 -2.20 1.80"
             mode="targetbody" target="camera_target" fovy="62"/>
     <camera name="right_shoulder_camera" pos="1.45 -2.20 1.80"
             mode="targetbody" target="camera_target" fovy="62"/>
     <camera name="overhead_camera" pos="0.15 -0.25 3.20"
             xyaxes="1 0 0 0 1 0" fovy="65"/>
+    <body name="side_camera_target" pos="0 -0.35 0.65"/>
+    <camera name="side_camera" pos="-2.60 -0.35 1.15"
+            mode="targetbody" target="side_camera_target" fovy="58"/>
     <camera name="front_camera" pos="0.20 -3.00 1.85"
             mode="targetbody" target="camera_target" fovy="60"/>
 

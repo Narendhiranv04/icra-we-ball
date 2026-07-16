@@ -38,7 +38,9 @@ SCENE_CONFIGS = CONFIGS_DIR / "scene_configs.yaml"
 FETCH_PACKAGE = "gymnasium_robotics"
 FETCH_ASSET_SUBDIR = Path("envs") / "assets" / "fetch"
 FETCH_BASE_POSE = {
-    "pos": "0 -1.05 0",
+    # Start behind the centered serving table with symmetric left/right routes
+    # to the workstation manipulation poses.
+    "pos": "0 -1.10 0",
     # Fetch's local +X (arm-forward direction) faces world +Y toward the table.
     "quat": "0.7071068 0 0 0.7071068",
 }
@@ -50,14 +52,14 @@ FETCH_HOME_QPOS = {
     "robot0:torso_lift_joint": 0.20,
     "robot0:head_pan_joint": 0.0,
     "robot0:head_tilt_joint": 0.35,
-    # Navigation/search pose: arm tucked to the side so the head camera has
-    # an unobstructed view of the work surface and closed containers.
-    "robot0:shoulder_pan_joint": 1.15,
-    "robot0:shoulder_lift_joint": 0.75,
+    # Relaxed navigation pose: the arm is compactly tucked against the torso,
+    # leaving the head camera and both side-navigation corridors unobstructed.
+    "robot0:shoulder_pan_joint": 1.32,
+    "robot0:shoulder_lift_joint": 1.40,
     "robot0:upperarm_roll_joint": -0.20,
-    "robot0:elbow_flex_joint": -1.35,
+    "robot0:elbow_flex_joint": 1.72,
     "robot0:forearm_roll_joint": 0.0,
-    "robot0:wrist_flex_joint": -0.50,
+    "robot0:wrist_flex_joint": 1.66,
     "robot0:wrist_roll_joint": 0.0,
     "robot0:r_gripper_finger_joint": 0.035,
     "robot0:l_gripper_finger_joint": 0.035,
@@ -66,7 +68,7 @@ FETCH_HOME_QPOS = {
 FETCH_ACTUATORS = (
     # name, joint, kp, ctrl_min, ctrl_max
     ("robot0:base_forward_actuator", "robot0:base_forward_joint", 6000, -1.0, 1.0),
-    ("robot0:base_lateral_actuator", "robot0:base_lateral_joint", 6000, -1.0, 1.0),
+    ("robot0:base_lateral_actuator", "robot0:base_lateral_joint", 6000, -1.5, 1.5),
     ("robot0:base_yaw_actuator", "robot0:base_yaw_joint", 3500, -3.14, 3.14),
     ("robot0:torso_lift_actuator", "robot0:torso_lift_joint", 3000, 0.0386, 0.3861),
     ("robot0:head_pan_actuator", "robot0:head_pan_joint", 100, -1.57, 1.57),
@@ -165,18 +167,26 @@ COUNTER_SPOTS = {
     # Negative Y is the Fetch side of the worktop. Keep the primary
     # ingredients away from the upper cabinets and within an easy frontal
     # gripper approach corridor.
-    "counter_spot_1": (-0.35, -0.08, 0.770),
-    "counter_spot_2": (-0.15, -0.08, 0.770),
-    "counter_spot_3": (0.05, -0.08, 0.770),
-    "counter_spot_4": (0.20, -0.08, 0.770),
-    "counter_spot_5": (-0.25, -0.22, 0.770),
-    "counter_spot_6": (0.0, -0.22, 0.770),
+    "counter_spot_1": (-0.35, -0.32, 0.580),
+    "counter_spot_2": (-0.15, -0.30, 0.580),
+    "counter_spot_3": (0.05, -0.30, 0.580),
+    "counter_spot_4": (0.20, -0.30, 0.580),
+    "counter_spot_5": (0.25, -0.34, 0.580),
+    "counter_spot_6": (0.0, -0.22, 0.580),
+}
+
+# The kettle handle is deliberately grasped rather than approximating a pick
+# through the pot centre. Bring that handle into the arm's exact vertical-IK
+# workspace while preserving a clear gap to the coffee jar beside it.
+COUNTERTOP_OBJECT_OFFSETS = {
+    "kettle": (0.06, 0.0, 0.0),
 }
 
 CAMERAS = (
     "left_shoulder_camera",
     "right_shoulder_camera",
     "overhead_camera",
+    "side_camera",
     "wrist_camera",
     "front_camera",
 )
@@ -344,7 +354,7 @@ def _inject_fetch_robot(root: ET.Element, fetch_dir: Path) -> None:
         raise RuntimeError("Unexpected Fetch base joint layout")
     joint_specs = (
         ("robot0:base_forward_joint", "slide", "1 0 0", "-1 1", "500"),
-        ("robot0:base_lateral_joint", "slide", "0 1 0", "-1 1", "500"),
+        ("robot0:base_lateral_joint", "slide", "0 1 0", "-1.5 1.5", "500"),
         ("robot0:base_yaw_joint", "hinge", "0 0 1", "-3.14 3.14", "100"),
     )
     for joint, (name, joint_type, axis, joint_range, damping) in zip(base_joints, joint_specs):
@@ -371,6 +381,37 @@ def _inject_fetch_robot(root: ET.Element, fetch_dir: Path) -> None:
             break
     if gripper_body is None:
         raise RuntimeError("Fetch gripper body missing from robot.xml")
+
+    # Keep the stock finger boxes as visuals, but use collision fingertips
+    # that end 10 mm beyond robot0:grip instead of 18.5 mm. The original long
+    # collision boxes make a vertical pinch of a flat utensil mathematically
+    # require penetrating the tabletop.
+    for side, lateral in (("r", -0.008), ("l", 0.008)):
+        finger_name = f"robot0:{side}_gripper_finger_link"
+        finger_body = next(
+            body for body in gripper_body.iter("body")
+            if body.get("name") == finger_name
+        )
+        visual = finger_body.find(f"geom[@name='{finger_name}']")
+        if visual is None:
+            raise RuntimeError(f"Fetch finger geometry missing: {finger_name}")
+        visual.set("name", f"{finger_name}_visual")
+        visual.set("contype", "0")
+        visual.set("conaffinity", "0")
+        ET.SubElement(
+            finger_body,
+            "geom",
+            {
+                "name": finger_name,
+                "type": "box",
+                "pos": f"-0.00425 {lateral} 0",
+                "size": "0.03425 0.007 0.0135",
+                "condim": "4",
+                "friction": "1 0.05 0.01",
+                "rgba": "0 0 0 0",
+                "group": "3",
+            },
+        )
     ET.SubElement(
         gripper_body,
         "camera",
@@ -546,7 +587,9 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
     # ── Place countertop objects ──────────────────────────────────────────
     for spot, obj_name in config.countertop_objects.items():
         if spot in COUNTER_SPOTS:
-            pos = COUNTER_SPOTS[spot]
+            pos = np.asarray(COUNTER_SPOTS[spot]) + np.asarray(
+                COUNTERTOP_OBJECT_OFFSETS.get(obj_name, (0.0, 0.0, 0.0))
+            )
             _inject_object(obj_name, pos)
         else:
             print(f"  [WARNING] Unknown counter spot '{spot}', skipping {obj_name}.")
@@ -626,6 +669,29 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
                 )
             else:
                 _inject_object(obj_name, world_pos)
+
+    # Contact-confirmed pick actions can enable one of these initially
+    # inactive welds after both gripper fingers touch a countertop object.
+    # The relative pose is filled from the live state when the grasp occurs,
+    # so enabling a weld never snaps an object to a pre-recorded pose.
+    if include_robot:
+        equality = root.find("equality")
+        if equality is None:
+            equality = ET.SubElement(root, "equality")
+        for obj_name in dict.fromkeys(config.countertop_objects.values()):
+            if obj_name not in {"kettle", "coffee_jar", "sugar_jar", "spoon"}:
+                continue
+            ET.SubElement(
+                equality,
+                "weld",
+                {
+                    "name": f"robot0:pick_weld_{obj_name}",
+                    "body1": "robot0:gripper_link",
+                    "body2": obj_name,
+                    "active": "false",
+                    "solref": "0.01 1",
+                },
+            )
 
     return ET.tostring(root, encoding="unicode")
 
@@ -864,8 +930,8 @@ class KitchenScene:
             "task_resolvable": self.is_task_resolvable(),
         }
 
-    def launch_viewer(self, camera: str = "front_camera"):
-        """Launch an interactive, continuously stepping MuJoCo viewer."""
+    def launch_viewer(self, camera: str = "front_camera", actions_panel: bool = True):
+        """Launch the MuJoCo viewer and, by default, its Actions panel."""
         if camera not in CAMERA_CHOICES:
             raise ValueError(
                 f"Unknown camera '{camera}'. Choose from: {', '.join(CAMERA_CHOICES)}"
@@ -876,6 +942,10 @@ class KitchenScene:
         print(f"  Starting from camera: {camera}")
         print(f"  Use the viewer camera menu to switch among: {', '.join(CAMERA_CHOICES)}")
         print(f"  Close viewer window to return to script.\n")
+        if self.has_robot and actions_panel:
+            from mujoco_scenes.mobile_motion import launch_action_viewer
+            launch_action_viewer(self, camera)
+            return
         cam_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_CAMERA, camera)
         with mujoco.viewer.launch_passive(self.model, self.data) as viewer:
             viewer.cam.type = mujoco.mjtCamera.mjCAMERA_FIXED
@@ -927,6 +997,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--viewer", action="store_true",
         help="Launch interactive MuJoCo viewer"
+    )
+    parser.add_argument(
+        "--no-actions-panel", action="store_true",
+        help="Launch the viewer without the companion Actions panel"
     )
     parser.add_argument(
         "--no-robot", action="store_true",
@@ -1006,4 +1080,7 @@ if __name__ == "__main__":
         print(f"  Saved {frame.shape[1]}x{frame.shape[0]} frame.")
 
     if args.viewer:
-        scene.launch_viewer(camera=args.camera)
+        scene.launch_viewer(
+            camera=args.camera,
+            actions_panel=not args.no_actions_panel,
+        )

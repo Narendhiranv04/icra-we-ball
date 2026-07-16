@@ -11,14 +11,14 @@
 
 | Region | Position / extent | Initial S1 contents | Interaction |
 |---|---|---|---|
-| Navigation floor | In front of the workstation | Fetch starts at approximately `(0, -1.05, 0)` | Planar base motion |
-| Countertop | `X=[-0.60,0.60]`, `Y=[-0.40,0.40]`, top at `Z=0.77` | kettle, coffee jar, sugar jar, spoon | Always visible work surface |
-| C1 | Upper-left cabinet, centered near `(-0.35,0.35,1.15)`; usable opening about `0.40 m` wide by `0.41 m` high and `0.31 m` deep | mug, glass | Enlarged hinged-door cabinet; primary S1 search region |
-| C2 | Upper-right cabinet, centered near `(0.35,0.35,1.15)`; same enlarged opening as C1 | plate, bowl, scanned canister distractor | Enlarged hinged-door cabinet |
-| D1 | Lower-left drawer, centered near `(-0.35,-0.30,0.55)`; usable tray about `0.332 m` wide | fork, knife, stirrer | Wide tray; damped slide toward the robot |
-| D2 | Lower-right drawer, centered near `(0.35,-0.30,0.55)`; usable tray about `0.332 m` wide | tongs, napkin, scanned spatula distractor | Wide tray; damped slide toward the robot |
-| B1 | Lidded box on the right of the countertop, centered near `(0.44,0.01,0.77)`; inner footprint about `0.344 x 0.174 m` | tea box | Enlarged hinged lid and gripper-accessible opening |
-| Serving area | Separate green table centered near `(0.90,0,0.75)` | empty | Goal destination |
+| Navigation floor | In front of the workstation | Fetch starts at approximately `(0, -1.10, 0)`, behind the serving table | Home manipulation pose plus symmetric left/right routes |
+| Countertop | `X=[-0.70,0.70]`, `Y=[-0.40,0.40]`, top at `Z=0.58` | kettle, coffee jar, sugar jar, spoon | Always visible work surface |
+| C1 | Upper-left cabinet, centered near `(-0.35,0.35,0.96)`; usable opening about `0.40 m` wide by `0.41 m` high and `0.31 m` deep | mug, glass | Enlarged hinged-door cabinet; primary S1 search region |
+| C2 | Upper-right cabinet, centered near `(0.35,0.35,0.96)`; same enlarged opening as C1 | plate, bowl, scanned canister distractor | Enlarged hinged-door cabinet |
+| D1 | Lower-left drawer, centered near `(-0.44,-0.30,0.36)`; usable tray about `0.332 m` wide | fork, knife, stirrer | Wide tray; damped slide beside the serving table |
+| D2 | Lower-right drawer, centered near `(0.44,-0.30,0.36)`; usable tray about `0.332 m` wide | tongs, napkin, scanned spatula distractor | Wide tray; damped slide beside the serving table |
+| B1 | Lidded box at the far-right edge of the countertop, centered near `(0.52,0.06,0.58)`; inner footprint about `0.344 x 0.174 m` | tea box | Requires a rightward base reposition before manipulation |
+| Serving area | Green table centered near `(0,-0.56,0.56)` with top at `Z=0.58`; its `0.50 m` width fits between the drawer fronts | empty | Goal destination and central navigation obstacle |
 
 Opening a container reveals and catalogs all objects in that region. An
 already-inspected region remains known even if it is later closed.
@@ -27,10 +27,10 @@ already-inspected region remains known even if it is later closed.
 
 | Object | Initial location | Role |
 |---|---|---|
-| kettle | `counter_spot_1`, near `(-0.35,-0.08)` | Hot-water appliance |
-| coffee jar | `counter_spot_2`, near `(-0.15,-0.08)` | Coffee ingredient |
-| sugar jar | `counter_spot_3`, near `(0.05,-0.08)` | Optional coffee ingredient |
-| spoon | `counter_spot_5`, near `(-0.25,-0.22)` | Stirring utensil |
+| kettle | `counter_spot_1`, near `(-0.35,-0.32)` | Hot-water appliance; picked by its handle |
+| coffee jar | `counter_spot_2`, near `(-0.15,-0.30)` | Coffee ingredient |
+| sugar jar | `counter_spot_3`, near `(0.05,-0.30)` | Optional coffee ingredient |
+| spoon | `counter_spot_5`, near `(0.25,-0.34)` | Stirring utensil; picked at the handle center |
 
 The mug is the only unresolved required object at reset. C1 contains the exact
 required mug and a glass that can act as a configured substitute.
@@ -94,6 +94,67 @@ position actuators. The base is holonomic at this stage: it represents a
 mobile-manipulator planning pose, not differential wheel dynamics. Wheel-level
 drive dynamics can be introduced later without changing the scene regions.
 
+## PDDL-style `move` and `pick` actions
+
+The symbolic actions are declared in `pddl/mobile_move_domain.pddl`. PDDL is
+used only for the move/pick preconditions and effects; it does not generate
+continuous trajectories. `mobile_motion.py` resolves the
+named destination, plans collision-checked planar segments with RRT*, and
+commands the three base position actuators.
+
+The four UI destinations map to three physical poses:
+
+| UI destination | World base pose `(X,Y,yaw)` | Physical pose |
+|---|---:|---|
+| `home` | `(0.00,-1.10,0°)` | centered behind the serving table |
+| `cupboard1` | `(-1.025,-0.10,-90°)` | left of the workstation, facing inward |
+| `cupboard2` | `(1.025,-0.10,90°)` | right of the workstation, facing inward |
+| `box` | `(1.025,-0.10,90°)` | alias of `cupboard2` |
+
+Outbound moves keep yaw at zero while Fetch first travels laterally to
+`X=±1.35`, advances beside the table, closes inward to the `X=±1.025`
+manipulation pose, and only then rotates 90 degrees. On departure it reverses
+that last step—backing out to `X=±1.35` before rotating—so a carried object
+does not sweep through the workstation. Moves between opposite sides return
+through the home corridor.
+
+Running the viewer with the robot opens a companion `Actions` panel. Expand
+`Actions`, then `Move`, and press `Home`, `Cupboard 1`, `Cupboard 2`, or `Box`.
+Buttons are disabled while an action is executing. Use
+`--no-actions-panel` when only the standard MuJoCo viewer is desired.
+
+The same window contains `Actions` → `Pick` for the four objects initially on
+the table. `pick_motion.py` executes these staged motions rather than using
+PDDL as a continuous planner:
+
+1. Open the gripper and move from the tucked rest pose to an overhead corridor.
+2. Reach a pre-grasp exactly `0.08 m` above the object's grasp point.
+3. Descend vertically through that fixed `0.08 m` distance.
+4. Close gradually until both finger collision geoms contact the selected object.
+5. Apply a live-pose grasp constraint only after bilateral contact and lift
+   vertically to clear the table.
+6. For either jar, release the rigid transport weld and pitch the end effector
+   exactly 90 degrees around the unchanged finger-contact axis. A compliant
+   centring/upright controller permits small natural translation and wobble.
+7. Carry a jar with the gripper horizontal to roughly `(0.00,-0.75,0.74)`.
+   Kettle and spoon picks retain the vertical overhead return route.
+
+The kettle site lies on the visible upper-handle centreline and includes a
+matching handle collision proxy. Its gripper yaw is recomputed from the live
+kettle body orientation so the fingers straddle the handle before closing;
+only bilateral finger contact with that handle can confirm the grasp. Coffee
+and sugar jars are grasped higher on their upper bodies (`Z=0.040` in each
+object frame), preventing the containers from sitting too deeply inside the
+gripper. During their in-hand pitch, the fingers remain squeezed while a soft
+force/torque correction keeps the freely simulated jar near its pivot and
+within a few degrees of vertical. The rigid weld is disabled throughout this
+slip and is recreated from the resulting live grasp only before horizontal
+transport.
+The spoon uses the centre of its handle and separate handle/bowl collision
+proxies. Non-jar carry preserves the vertical pickup orientation at roughly
+`(0.00,-0.82,0.95)`. Tabletop picking currently requires the `home` base pose
+and an empty gripper.
+
 Robot-mounted sensors:
 
 - `head_camera_rgb`: Fetch head camera.
@@ -104,6 +165,7 @@ Environment cameras remain:
 - `left_shoulder_camera`
 - `right_shoulder_camera`
 - `overhead_camera`
+- `side_camera`
 - `front_camera`
 
 ## Intended S1 episode

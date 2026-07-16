@@ -33,11 +33,12 @@ and a flat high-friction stirrer proxy keep their reset arrangement nearly
 fixed while a drawer opens, without introducing weld constraints that a later
 grasp action would have to disable.
 
-## Five camera views
+## Six camera views
 
 - `left_shoulder_camera`
 - `right_shoulder_camera`
 - `overhead_camera`
+- `side_camera`
 - `wrist_camera`
 - `front_camera`
 
@@ -76,10 +77,20 @@ xhost +local:docker
 docker compose up --build kitchen-s1
 ```
 
-Use the MuJoCo viewer's camera selector to switch between all five cameras.
+Use the MuJoCo viewer's camera selector to switch between all six cameras.
 To start with C1 already open, append `--open-container C1` to the `docker run`
 command. The actuator controls in the viewer UI can also move every door,
 drawer, and the box lid.
+
+With Fetch enabled, `--viewer` also opens the companion `Actions` panel.
+Choose `Actions` → `Move` → `Home`, `Cupboard 1`, `Cupboard 2`, or `Box` to run
+one collision-checked RRT* base motion. `Cupboard 2` and `Box` are symbolic
+aliases of the same right-side pose. `Actions` → `Pick` provides staged
+vertical grasps for the kettle handle, both jar upper bodies, and the spoon
+handle. Jar picks add a compliant 90-degree in-hand pitch—with the rigid weld
+released and only soft upright/centring assistance—followed by a horizontal
+carry pose.
+Add `--no-actions-panel` for the original viewer without the companion controls.
 
 ## Render without opening a GUI
 

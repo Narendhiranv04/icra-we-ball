@@ -50,13 +50,14 @@ The complete region definitions, object layout, and usage guide are available in
 
 ## Cameras
 
-### Existing Scene Cameras
+### Scene Cameras
 
-The original five cameras remain available:
+The original five cameras remain available, with an additional lateral view:
 
 * `left_shoulder_camera`
 * `right_shoulder_camera`
 * `overhead_camera`
+* `side_camera`
 * `front_camera`
 * `wrist_camera`
 
@@ -85,3 +86,11 @@ MUJOCO_GL=glfw /home/naren/miniconda3/bin/python \
   --viewer \
   --camera front_camera
 ```
+
+The launch also opens an `Actions` panel. Under `Move`, select `Home`,
+`Cupboard 1`, `Cupboard 2`, or `Box`; each button executes the corresponding
+collision-checked mobile-base trajectory. `Cupboard 2` and `Box` share one
+physical right-side pose. Under `Pick`, select the kettle, coffee jar, sugar
+jar, or spoon to run a vertical pre-grasp, contact-aware close, lift, and
+return to the object-in-gripper carry pose. Pass `--no-actions-panel` to
+suppress this panel.
