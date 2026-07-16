@@ -100,9 +100,16 @@
                range="0 1.57" pos="0 0 0" damping="0.3"/>
         <geom name="C1_door_panel" type="box" size="0.21 0.008 0.208"
               pos="-0.21 0 0" material="mat_cabinet"/>
-        <!-- Door handle -->
-        <geom name="C1_handle" type="cylinder" size="0.008 0.03"
-              pos="-0.30 -0.02 0.20" euler="1.57 0 0" material="mat_metal"/>
+        <!-- Compact robot-facing U handle, matching the box-lid handle. -->
+        <geom name="C1_handle_left" type="capsule" size="0.007"
+              fromto="-0.355 -0.012 0.13 -0.355 -0.062 0.13"
+              material="mat_metal"/>
+        <geom name="C1_handle_right" type="capsule" size="0.007"
+              fromto="-0.265 -0.012 0.13 -0.265 -0.062 0.13"
+              material="mat_metal"/>
+        <geom name="C1_handle_bar" type="capsule" size="0.008"
+              fromto="-0.355 -0.062 0.13 -0.265 -0.062 0.13"
+              material="mat_metal"/>
       </body>
 
       <!-- Site for placing objects inside -->
@@ -135,8 +142,15 @@
                range="0 1.57" pos="0 0 0" damping="0.3"/>
         <geom name="C2_door_panel" type="box" size="0.21 0.008 0.208"
               pos="0.21 0 0" material="mat_cabinet"/>
-        <geom name="C2_handle" type="cylinder" size="0.008 0.03"
-              pos="0.30 -0.02 0.20" euler="1.57 0 0" material="mat_metal"/>
+        <geom name="C2_handle_left" type="capsule" size="0.007"
+              fromto="0.265 -0.012 0.13 0.265 -0.062 0.13"
+              material="mat_metal"/>
+        <geom name="C2_handle_right" type="capsule" size="0.007"
+              fromto="0.355 -0.012 0.13 0.355 -0.062 0.13"
+              material="mat_metal"/>
+        <geom name="C2_handle_bar" type="capsule" size="0.008"
+              fromto="0.265 -0.062 0.13 0.355 -0.062 0.13"
+              material="mat_metal"/>
       </body>
 
       <site name="C2_interior" pos="0 0 -0.12" size="0.18 0.14 0.01" type="box"
@@ -349,6 +363,6 @@
     <position name="C2_door_actuator" joint="C2_door_joint" kp="5" ctrlrange="0 1.57"/>
     <position name="D1_slide_actuator" joint="D1_slide_joint" kp="5" ctrlrange="0 0.25"/>
     <position name="D2_slide_actuator" joint="D2_slide_joint" kp="5" ctrlrange="0 0.25"/>
-    <position name="B1_lid_actuator" joint="B1_lid_joint" kp="10" ctrlrange="0 2.0"/>
+    <position name="B1_lid_actuator" joint="B1_lid_joint" kp="30" ctrlrange="0 2.0"/>
   </actuator>
 </mujoco>

@@ -8,11 +8,15 @@ import mujoco
 import numpy as np
 
 from mujoco_scenes.pick_motion import (
+    CARRY_POSITION,
     FINGER_GEOMS,
     OPEN_WIDTH,
+    PICK_BASE_POSES,
+    TOP_DOWN_ROTATION,
     ArmWaypoint,
     PickExecutor,
     VerticalIK,
+    carry_position_at,
 )
 
 
@@ -35,6 +39,11 @@ BOX_RELEASE_TICKS = 90
 BOX_FINAL_TOLERANCE = 0.025
 BOX_ARM_TRACKING_COMPENSATION = 2.5
 BOX_OPEN_TRACKING_WINDOW = 0.055
+BOX_HANDLE_ARRIVAL_TOLERANCE = 0.055
+BOX_APPROACH_GRACE_TICKS = 1000
+BOX_OPEN_ANGLE = math.radians(100.0)
+BOX_VERTICAL_RETREAT = 0.12
+BOX_RETREAT_RESOLUTION = 0.020
 
 # Matrix columns are the gripper's local axes in the world frame.  Its +X
 # approach axis points into the handle along world +Y, while the finger closing
@@ -61,6 +70,23 @@ def _axis_angle_rotation(axis: np.ndarray, angle: float) -> np.ndarray:
     )
 
 
+def _interpolate_rotation(
+    start: np.ndarray, goal: np.ndarray, fraction: float
+) -> np.ndarray:
+    """Interpolate along the shortest world-frame rotation from start to goal."""
+    relative = goal @ start.T
+    quaternion = np.empty(4)
+    mujoco.mju_mat2Quat(quaternion, relative.ravel())
+    if quaternion[0] < 0.0:
+        quaternion = -quaternion
+    vector_norm = float(np.linalg.norm(quaternion[1:]))
+    if vector_norm < 1e-10:
+        return start.copy()
+    axis = quaternion[1:] / vector_norm
+    angle = 2.0 * math.atan2(vector_norm, float(quaternion[0]))
+    return _axis_angle_rotation(axis, fraction * angle) @ start
+
+
 class BoxOpenExecutor:
     """Open B1 by grasping its real handle and following its hinge arc."""
 
@@ -79,8 +105,10 @@ class BoxOpenExecutor:
         self.close_target = OPEN_WIDTH
         self.close_ticks = 0
         self.contact_ticks = 0
+        self.approach_wait_ticks = 0
         self.release_ticks = 0
         self.open_angles = np.zeros(0)
+        self.retreat_waypoints: list[ArmWaypoint] = []
         self.lid_body_id = mujoco.mj_name2id(
             model, mujoco.mjtObj.mjOBJ_BODY, "B1_lid"
         )
@@ -97,7 +125,10 @@ class BoxOpenExecutor:
         self.grasp_equality_id = mujoco.mj_name2id(
             model, mujoco.mjtObj.mjOBJ_EQUALITY, "robot0:open_weld_B1_lid"
         )
-        self.max_angle = float(model.jnt_range[self.hinge_joint_id, 1])
+        self.mechanical_max_angle = float(
+            model.jnt_range[self.hinge_joint_id, 1]
+        )
+        self.max_angle = min(BOX_OPEN_ANGLE, self.mechanical_max_angle)
 
     @property
     def busy(self) -> bool:
@@ -207,7 +238,7 @@ class BoxOpenExecutor:
             raise RuntimeError("The gripper must be empty before opening B1")
         if self.data.qpos[self.hinge_qpos] >= self.max_angle - 0.05:
             self.mode = "complete"
-            self.status = "Open complete: box lid is already at its limit"
+            self.status = "Open complete: box lid is already at 100 degrees"
             return
 
         mujoco.mj_forward(self.model, self.data)
@@ -261,6 +292,7 @@ class BoxOpenExecutor:
         self.close_target = OPEN_WIDTH
         self.close_ticks = 0
         self.contact_ticks = 0
+        self.approach_wait_ticks = 0
         self.release_ticks = 0
         self.open_angles = np.zeros(0)
         self.failure = None
@@ -300,6 +332,73 @@ class BoxOpenExecutor:
             angles = [angles[0]] * (len(self.picker.waypoints) - len(angles)) + angles
         self.open_angles = np.asarray(angles)
 
+    def _plan_post_release_retreat(self) -> None:
+        """Rise clear of the open lid, then return to the side carry hover."""
+        mujoco.mj_forward(self.model, self.data)
+        ik = VerticalIK(self.model, self.data)
+        current_joints = self.picker._current_arm()
+        current_position = self.data.site_xpos[self.picker.grip_site_id].copy()
+        current_rotation = self.data.site_xmat[
+            self.picker.grip_site_id
+        ].reshape(3, 3).copy()
+        carry_position = carry_position_at(CARRY_POSITION, "right_side")
+        _, _, base_yaw = PICK_BASE_POSES["right_side"]
+        cosine, sine = math.cos(base_yaw), math.sin(base_yaw)
+        base_rotation = np.array(
+            ((cosine, -sine, 0.0), (sine, cosine, 0.0), (0.0, 0.0, 1.0))
+        )
+        carry_rotation = base_rotation @ TOP_DOWN_ROTATION
+        vertical_hover = current_position + np.array(
+            (0.0, 0.0, BOX_VERTICAL_RETREAT)
+        )
+        vertical_points = self.picker._cartesian_points(
+            current_position, vertical_hover, BOX_RETREAT_RESOLUTION
+        )
+        vertical_path: list[ArmWaypoint] = []
+        seed = current_joints
+        point_count = len(vertical_points)
+        for index, point in enumerate(vertical_points, start=1):
+            # The Cartesian position rises strictly vertically. Relaxing the
+            # wrist toward its normal carry attitude during that rise avoids
+            # holding the final hinge rotation against a wrist limit.
+            rotation = _interpolate_rotation(
+                current_rotation, carry_rotation, index / point_count
+            )
+            seed, pos_error, angle_error = ik.solve(point, seed, rotation)
+            if pos_error > 0.020 or angle_error > math.radians(4.0):
+                raise RuntimeError(
+                    "Could not reach the vertical post-release hover "
+                    f"({pos_error * 100:.1f} cm, "
+                    f"{math.degrees(angle_error):.1f} deg)"
+                )
+            vertical_path.append(
+                ArmWaypoint(seed.copy(), "Retreating vertically above open lid")
+            )
+
+        carry_points = self.picker._cartesian_points(
+            vertical_hover, carry_position, BOX_RETREAT_RESOLUTION
+        )
+        carry_path: list[ArmWaypoint] = []
+        for point in carry_points:
+            rotation = carry_rotation
+            seed, pos_error, angle_error = ik.solve(point, seed, rotation)
+            if pos_error > 0.020 or angle_error > math.radians(4.0):
+                raise RuntimeError(
+                    "Could not return from the open box to carry hover "
+                    f"({pos_error * 100:.1f} cm, "
+                    f"{math.degrees(angle_error):.1f} deg)"
+                )
+            carry_path.append(
+                ArmWaypoint(seed.copy(), "Returning to empty carry hover")
+            )
+
+        waypoints = [ArmWaypoint(current_joints, "Beginning vertical retreat")]
+        waypoints.extend(vertical_path)
+        waypoints.extend(carry_path)
+        self.data.ctrl[self.picker.arm_actuators] = current_joints
+        self.picker._start_trajectory(waypoints)
+        self.retreat_waypoints = waypoints
+
     def update(self) -> None:
         if self.mode in {"idle", "complete", "failed"}:
             return
@@ -322,12 +421,20 @@ class BoxOpenExecutor:
                     self.data.site_xpos[self.handle_site_id]
                     - BOX_GRIP_ORIGIN_OFFSET * BOX_GRASP_ROTATION[:, 0]
                 )
-                finished = (
+                live_distance = float(
                     np.linalg.norm(
                         self.data.site_xpos[self.picker.grip_site_id] - live_target
                     )
-                    < 0.035
                 )
+                finished = live_distance < BOX_HANDLE_ARRIVAL_TOLERANCE
+                if not finished:
+                    self.approach_wait_ticks += 1
+                    if self.approach_wait_ticks >= BOX_APPROACH_GRACE_TICKS:
+                        self._fail(
+                            "arm could not settle within finger-pad reach of "
+                            f"the box handle ({live_distance * 100:.1f} cm)"
+                        )
+                        return
             if finished:
                 self.mode = "closing"
                 self.status = "Open box: closing until both fingers touch handle"
@@ -389,12 +496,16 @@ class BoxOpenExecutor:
             trajectory_ended = (
                 self.picker.trajectory_time >= self.picker.trajectory_times[-1]
             )
-            if trajectory_ended and self.data.qpos[self.hinge_qpos] > self.max_angle - 0.12:
+            if (
+                trajectory_ended
+                and self.data.qpos[self.hinge_qpos]
+                > self.max_angle - math.radians(6.0)
+            ):
                 self.data.eq_active[self.grasp_equality_id] = 0
                 self.data.ctrl[self.hinge_actuator] = self.max_angle
                 self.mode = "releasing"
                 self.release_ticks = 0
-                self.status = "Open box: releasing handle at maximum hinge angle"
+                self.status = "Open box: releasing handle at 100 degrees"
             return
 
         if self.mode == "releasing":
@@ -402,8 +513,29 @@ class BoxOpenExecutor:
             self.data.ctrl[self.hinge_actuator] = self.max_angle
             self.data.ctrl[self.picker.finger_actuators] = OPEN_WIDTH
             if self.release_ticks >= BOX_RELEASE_TICKS:
+                try:
+                    self._plan_post_release_retreat()
+                except RuntimeError as error:
+                    self._fail(str(error))
+                    return
+                self.mode = "retreating"
+                self.status = "Open box: handle released, retreating vertically"
+            return
+
+        if self.mode == "retreating":
+            finished, waypoint = self.picker._advance_trajectory(0.080)
+            self.data.ctrl[self.hinge_actuator] = self.max_angle
+            self.data.ctrl[self.picker.finger_actuators] = OPEN_WIDTH
+            self.status = f"Open box: {waypoint.label}"
+            trajectory_ended = (
+                self.picker.trajectory_time >= self.picker.trajectory_times[-1]
+            )
+            if finished or trajectory_ended:
                 self.mode = "complete"
-                self.status = "Open complete: box lid is at its maximum hinge position"
+                self.status = (
+                    "Open complete: lid held at 100 degrees and gripper at "
+                    "carry hover"
+                )
 
     def progress(self) -> float:
         if self.mode == "approach":
@@ -413,11 +545,15 @@ class BoxOpenExecutor:
         if self.mode == "closing":
             return 0.40
         if self.mode == "opening":
-            return 0.45 + 0.50 * self.picker.trajectory_time / max(
+            return 0.45 + 0.30 * self.picker.trajectory_time / max(
                 1e-9, self.picker.trajectory_times[-1]
             )
         if self.mode == "releasing":
-            return 0.95 + 0.05 * min(1.0, self.release_ticks / BOX_RELEASE_TICKS)
+            return 0.75 + 0.05 * min(1.0, self.release_ticks / BOX_RELEASE_TICKS)
+        if self.mode == "retreating":
+            return 0.80 + 0.20 * self.picker.trajectory_time / max(
+                1e-9, self.picker.trajectory_times[-1]
+            )
         if self.mode == "complete":
             return 1.0
         return 0.0

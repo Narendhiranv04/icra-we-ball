@@ -201,10 +201,12 @@ to a horizontal hover `0.075 m` in front of the lid handle, inserts along
 world +Y, and closes only until both finger geoms contact the metal bar. A
 live-pose weld is then enabled without snapping the lid. The arm and the
 actual `B1_lid_joint` advance on one tracking-gated circular trajectory to the
-joint's `2.0 rad` limit; the gripper releases and the lid actuator holds that
-maximum position. Both cupboard handles are mounted evenly near their upper
-door edges, and the cupboard row is recessed to `Y=0.65`, leaving the complete
-box-lid and wrist sweep collision-free.
+intentional 100-degree open position (inside the joint's `2.0 rad` mechanical
+limit). The gripper then opens, rises vertically by `0.12 m`, and returns to
+the empty side carry-hover pose while the lid actuator holds 100 degrees. Both
+cupboard doors use compact three-piece U-handles at `Z=0.13`, matching the box
+handle without placing them at the cupboard top. The cupboard row remains
+recessed at `Y=0.65`, leaving the 100-degree box-lid and retreat sweep clear.
 
 Robot-mounted sensors:
 

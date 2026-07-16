@@ -99,5 +99,6 @@ Placed objects remain selectable for another pick whenever the robot is at
 the base pose corresponding to that strip. At the shared right-side pose,
 `Open` → `Box` approaches B1's handle along +Y with vertical fingers, confirms
 bilateral contact, and carries the real lid joint around its hinge to the
-model's maximum opening angle.
+intentional 100-degree open position. It then opens the gripper, retreats
+vertically above the lid, and returns to the empty carry-hover pose.
 Pass `--no-actions-panel` to suppress this panel.
