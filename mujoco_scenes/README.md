@@ -45,13 +45,57 @@ grasp action would have to disable.
 Fetch also contributes `head_camera_rgb`. It is available from the same
 `--camera` CLI option whenever the robot is enabled.
 
-With the Fetch robot enabled, `wrist_camera` is attached to its gripper link.
+The interactive viewer starts with MuJoCo's free camera by default. Pass an
+explicit `--camera NAME` to start from one of the fixed or robot-mounted
+cameras instead.
+
+With Fetch or Google Robot enabled, `wrist_camera` is attached to its gripper
+link and `head_camera_rgb` is robot-mounted.
 The kitchen-only `--no-robot` mode uses a fixed placeholder with the same name.
 
-The Fetch MJCF and mesh assets are supplied at runtime by the MIT-licensed
-`gymnasium-robotics` package. Its Fetch model is based on Fetch Robotics assets
-and was adapted by OpenAI/Farama. See [S1_ENVIRONMENT.md](S1_ENVIRONMENT.md) for
-the region map, robot controls, and intended S1 episode.
+Fetch assets are supplied by `gymnasium-robotics`. Google Robot assets are
+loaded from an external MuJoCo Menagerie checkout. See
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for attribution and licenses.
+
+## Run natively with uv
+
+Create the Python environment from the repository root:
+
+```bash
+uv venv --python 3.11
+uv pip install -r mujoco_scenes/requirements.txt
+```
+
+Fetch remains the default robot:
+
+```bash
+MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.scene_loader \
+  --scene S1_coffee_missing_mug --robot fetch --viewer
+```
+
+For Google Robot, sparse-clone its official Menagerie directory beside `V1`:
+
+```bash
+git clone --depth 1 --filter=blob:none --sparse \
+  https://github.com/google-deepmind/mujoco_menagerie.git \
+  ../third_party/mujoco_menagerie
+git -C ../third_party/mujoco_menagerie sparse-checkout set google_robot
+```
+
+Then launch the same scene with the alternative backend:
+
+```bash
+MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.scene_loader \
+  --scene S1_coffee_missing_mug --robot google --viewer
+```
+
+Set `MUJOCO_MENAGERIE_PATH` when the checkout lives elsewhere. The Google
+backend supports scene loading, cameras, joint targets, collision-checked base
+navigation, and an S1-calibrated vertical sugar-jar pick/place at
+`serving_spot`. Other scene poses plus coffee-jar, kettle, and spoon actions
+remain gated. See
+[ROBOT_CALIBRATION.md](ROBOT_CALIBRATION.md) for the calibration and acceptance
+process used for this and future robot backends.
 
 ## Run the interactive viewer in Docker (Linux/X11)
 
@@ -82,14 +126,25 @@ To start with C1 already open, append `--open-container C1` to the `docker run`
 command. The actuator controls in the viewer UI can also move every door,
 drawer, and the box lid.
 
-With Fetch enabled, `--viewer` also opens the companion `Actions` panel.
+With Fetch or Google Robot enabled, `--viewer` also opens the companion
+`Actions` panel.
 Choose `Actions` → `Move` → `Home`, `Cupboard 1`, `Cupboard 2`, or `Box` to run
 one collision-checked RRT* base motion. `Cupboard 2` and `Box` are symbolic
-aliases of the same right-side pose. `Actions` → `Pick` provides staged
-vertical grasps for the kettle handle, both jar upper bodies, and the spoon
-handle. Jar picks add a compliant 90-degree in-hand pitch—with the rigid weld
-released and only soft upright/centring assistance—followed by a horizontal
-carry pose.
+aliases of the same right-side pose. For Fetch, `Actions` → `Pick` provides
+staged vertical grasps for the kettle handle, both jar upper bodies, and the
+spoon handle. Fetch jar picks add a compliant 90-degree in-hand pitch—with the
+rigid weld released and only soft upright/centring assistance—followed by a
+horizontal carry pose.
+Google uses the same navigation controls and exposes its validated sugar-jar
+pick and serving-area place controls. Unsupported objects are deliberately not
+shown as actionable. Google parks on a farther navigation line, automatically
+approaches the S1 manipulation stance for pick/place, and retracts the base and
+arm before enabling another Move. The held-object carry state is included in
+RRT*/rotation collision checks. Google IK additionally validates dense joint
+segments using signed visual-geometry distances, catching arm/body clipping
+that MuJoCo's filtered contact solver does not expose, with a live execution
+guard for tracking deviations. Arm, base, and gripper targets are slew-limited
+to avoid abrupt position-control commands and reduce visible wobble.
 Add `--no-actions-panel` for the original viewer without the companion controls.
 
 ## Render without opening a GUI

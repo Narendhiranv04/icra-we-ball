@@ -11,17 +11,18 @@ import mujoco
 import mujoco.viewer
 import numpy as np
 
+from mujoco_scenes.robot_profiles import MobileRobotProfile, mobile_profile
 
-BASE_JOINTS = (
-    "robot0:base_forward_joint",
-    "robot0:base_lateral_joint",
-    "robot0:base_yaw_joint",
-)
-BASE_ACTUATORS = (
-    "robot0:base_forward_actuator",
-    "robot0:base_lateral_actuator",
-    "robot0:base_yaw_actuator",
-)
+
+BASE_LINEAR_COMMAND_SPEED = 0.25
+BASE_YAW_COMMAND_SPEED = 0.60
+BASE_FINAL_POSITION_TOLERANCE = 0.002
+BASE_FINAL_YAW_TOLERANCE = math.radians(0.2)
+BASE_COMMAND_TOLERANCE = 0.002
+BASE_YAW_COMMAND_TOLERANCE = math.radians(0.25)
+BASE_SETTLE_LINEAR_SPEED = 0.003
+BASE_SETTLE_YAW_SPEED = 0.01
+BASE_SETTLE_TICKS = 50
 
 
 @dataclass(frozen=True)
@@ -230,15 +231,23 @@ class RRTStarPlanner:
 class MuJoCoBaseCollisionChecker:
     """Collision checker that evaluates candidate base poses in spare MjData."""
 
-    def __init__(self, model: mujoco.MjModel, reference_data: mujoco.MjData):
+    def __init__(
+        self,
+        model: mujoco.MjModel,
+        reference_data: mujoco.MjData,
+        profile: MobileRobotProfile,
+    ):
         self.model = model
         self.data = mujoco.MjData(model)
         self.reference_qpos = reference_data.qpos.copy()
         self.data.eq_active[:] = reference_data.eq_active
         self.qpos_addresses = tuple(
             model.jnt_qposadr[mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, name)]
-            for name in BASE_JOINTS
+            for name in profile.base_joints
         )
+        self.body_prefix = profile.body_prefix
+        self.home_y = profile.home_y
+        self.forward_limits = profile.forward_limits
         self.attached_body_ids: set[int] = set()
         for equality_id in range(model.neq):
             if not reference_data.eq_active[equality_id]:
@@ -253,9 +262,13 @@ class MuJoCoBaseCollisionChecker:
             second_name = mujoco.mj_id2name(
                 model, mujoco.mjtObj.mjOBJ_BODY, second_body
             ) or ""
-            if first_name.startswith("robot0:") and not second_name.startswith("robot0:"):
+            if first_name.startswith(self.body_prefix) and not second_name.startswith(
+                self.body_prefix
+            ):
                 self.attached_body_ids.add(second_body)
-            elif second_name.startswith("robot0:") and not first_name.startswith("robot0:"):
+            elif second_name.startswith(self.body_prefix) and not first_name.startswith(
+                self.body_prefix
+            ):
                 self.attached_body_ids.add(first_body)
         self.reference_base = self.reference_qpos[list(self.qpos_addresses)].copy()
         self.attached_free_qpos: list[int] = []
@@ -266,33 +279,68 @@ class MuJoCoBaseCollisionChecker:
             if model.jnt_type[joint_address] != mujoco.mjtJoint.mjJNT_FREE:
                 continue
             self.attached_free_qpos.append(int(model.jnt_qposadr[joint_address]))
-        self.cache: dict[tuple[int, int], bool] = {}
+        self.cache: dict[tuple[int, int, int], bool] = {}
 
     def __call__(self, x: float, y: float) -> bool:
-        key = (round(x * 1000), round(y * 1000))
+        return self.is_pose_valid(x, y, 0.0)
+
+    def _geom_is_robot(self, geom_id: int) -> bool:
+        geom_name = mujoco.mj_id2name(
+            self.model, mujoco.mjtObj.mjOBJ_GEOM, geom_id
+        ) or ""
+        body_id = int(self.model.geom_bodyid[geom_id])
+        body_name = mujoco.mj_id2name(
+            self.model, mujoco.mjtObj.mjOBJ_BODY, body_id
+        ) or ""
+        return (
+            geom_name.startswith(self.body_prefix)
+            or body_name.startswith(self.body_prefix)
+            or body_id in self.attached_body_ids
+        )
+
+    def is_pose_valid(self, x: float, y: float, yaw: float) -> bool:
+        key = (round(x * 1000), round(y * 1000), round(yaw * 1000))
         if key in self.cache:
             return self.cache[key]
-        forward = y - HOME_POSE.y
+        forward = y - self.home_y
         lateral = -x
-        if not (-1.0 <= forward <= 1.0 and -1.5 <= lateral <= 1.5):
+        if not (
+            self.forward_limits[0] <= forward <= self.forward_limits[1]
+            and -1.5 <= lateral <= 1.5
+        ):
             self.cache[key] = False
             return False
         self.data.qpos[:] = self.reference_qpos
-        self.data.qpos[list(self.qpos_addresses)] = (forward, lateral, 0.0)
+        self.data.qpos[list(self.qpos_addresses)] = (forward, lateral, yaw)
         if self.attached_free_qpos:
             ref_forward, ref_lateral, ref_yaw = self.reference_base
-            reference_xy = np.array((-ref_lateral, HOME_POSE.y + ref_forward))
+            reference_xy = np.array((-ref_lateral, self.home_y + ref_forward))
             candidate_xy = np.array((x, y))
             cosine, sine = math.cos(-ref_yaw), math.sin(-ref_yaw)
             inverse_rotation = np.array(((cosine, -sine), (sine, cosine)))
+            candidate_cosine, candidate_sine = math.cos(yaw), math.sin(yaw)
+            candidate_rotation = np.array(
+                (
+                    (candidate_cosine, -candidate_sine),
+                    (candidate_sine, candidate_cosine),
+                )
+            )
+            delta_yaw = yaw - ref_yaw
             delta_quat = np.array(
-                (math.cos(-ref_yaw / 2), 0.0, 0.0, math.sin(-ref_yaw / 2))
+                (
+                    math.cos(delta_yaw / 2),
+                    0.0,
+                    0.0,
+                    math.sin(delta_yaw / 2),
+                )
             )
             for qpos_address in self.attached_free_qpos:
                 relative_xy = inverse_rotation @ (
                     self.reference_qpos[qpos_address:qpos_address + 2] - reference_xy
                 )
-                self.data.qpos[qpos_address:qpos_address + 2] = candidate_xy + relative_xy
+                self.data.qpos[qpos_address:qpos_address + 2] = (
+                    candidate_xy + candidate_rotation @ relative_xy
+                )
                 rotated_quat = np.empty(4)
                 mujoco.mju_mulQuat(
                     rotated_quat,
@@ -310,14 +358,8 @@ class MuJoCoBaseCollisionChecker:
             second = mujoco.mj_id2name(
                 self.model, mujoco.mjtObj.mjOBJ_GEOM, contact.geom2
             ) or ""
-            first_robot = (
-                first.startswith("robot0:")
-                or self.model.geom_bodyid[contact.geom1] in self.attached_body_ids
-            )
-            second_robot = (
-                second.startswith("robot0:")
-                or self.model.geom_bodyid[contact.geom2] in self.attached_body_ids
-            )
+            first_robot = self._geom_is_robot(contact.geom1)
+            second_robot = self._geom_is_robot(contact.geom2)
             if first_robot == second_robot:
                 continue
             other = second if first_robot else first
@@ -335,16 +377,40 @@ def _angle_delta(target: float, current: float) -> float:
 class MobileMoveExecutor:
     """Plans and incrementally executes one named mobile move action."""
 
-    def __init__(self, model: mujoco.MjModel, data: mujoco.MjData):
+    def __init__(
+        self, model: mujoco.MjModel, data: mujoco.MjData, robot_name: str = "fetch"
+    ):
         self.model = model
         self.data = data
+        self.profile = mobile_profile(robot_name)
+        self.home_pose = BasePose(0.0, self.profile.home_y, 0.0)
+        self.left_pose = LEFT_POSE
+        self.right_pose = RIGHT_POSE
+        self.physical_poses = {
+            "home": self.home_pose,
+            "cupboard1": self.left_pose,
+            "right_side": self.right_pose,
+        }
+        self.route_anchors = {
+            "home": self.home_pose,
+            "left_staging": BasePose(-1.35, self.home_pose.y, 0.0),
+            "left_clearance": BasePose(-1.35, self.left_pose.y, 0.0),
+            "cupboard1": BasePose(self.left_pose.x, self.left_pose.y, 0.0),
+            "right_staging": BasePose(1.35, self.home_pose.y, 0.0),
+            "right_clearance": BasePose(1.35, self.right_pose.y, 0.0),
+            "right_side": BasePose(self.right_pose.x, self.right_pose.y, 0.0),
+        }
         self.joint_addresses = tuple(
             model.jnt_qposadr[mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, name)]
-            for name in BASE_JOINTS
+            for name in self.profile.base_joints
+        )
+        self.joint_velocity_addresses = tuple(
+            model.jnt_dofadr[mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, name)]
+            for name in self.profile.base_joints
         )
         self.actuator_ids = tuple(
             mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, name)
-            for name in BASE_ACTUATORS
+            for name in self.profile.base_actuators
         )
         self.current_physical_location = "home"
         self.current_symbolic_location = "home"
@@ -353,6 +419,7 @@ class MobileMoveExecutor:
         self.target_index = 0
         self.status = "Idle at home"
         self.started_at = 0.0
+        self.settle_ticks = 0
 
     @property
     def busy(self) -> bool:
@@ -360,7 +427,9 @@ class MobileMoveExecutor:
 
     def _current_world_pose(self) -> BasePose:
         forward, lateral, yaw = self.data.qpos[list(self.joint_addresses)]
-        return BasePose(float(-lateral), float(HOME_POSE.y + forward), float(yaw))
+        return BasePose(
+            float(-lateral), float(self.home_pose.y + forward), float(yaw)
+        )
 
     @staticmethod
     def _rotation_targets(x: float, y: float, start: float, goal: float) -> list[tuple[float, float, float]]:
@@ -382,10 +451,10 @@ class MobileMoveExecutor:
 
         current = self._current_world_pose()
         route = anchor_route(self.current_physical_location, destination_physical)
-        checker = MuJoCoBaseCollisionChecker(self.model, self.data)
+        checker = MuJoCoBaseCollisionChecker(self.model, self.data, self.profile)
         planner = RRTStarPlanner(
             checker,
-            bounds=((-1.42, 1.42), (HOME_POSE.y, LEFT_POSE.y)),
+            bounds=((-1.42, 1.42), (self.home_pose.y, self.left_pose.y)),
         )
         targets: list[tuple[float, float, float]] = []
         if abs(current.yaw) > math.radians(1):
@@ -393,13 +462,13 @@ class MobileMoveExecutor:
             # the table before rotating. This protects a carried object and
             # the extended carry arm from the cabinet/table during the turn.
             if len(route) > 1 and route[1].endswith("_clearance"):
-                retreat = ROUTE_ANCHORS[route[1]]
+                retreat = self.route_anchors[route[1]]
                 targets.append((retreat.x, retreat.y, current.yaw))
                 current = BasePose(retreat.x, retreat.y, current.yaw)
                 route = route[1:]
             targets.extend(self._rotation_targets(current.x, current.y, current.yaw, 0.0))
 
-        source_anchor = ROUTE_ANCHORS[route[0]]
+        source_anchor = self.route_anchors[route[0]]
         if _distance(
             np.array((current.x, current.y)),
             np.array((source_anchor.x, source_anchor.y)),
@@ -409,15 +478,25 @@ class MobileMoveExecutor:
             targets.append((source_anchor.x, source_anchor.y, 0.0))
         cursor = (source_anchor.x, source_anchor.y)
         for anchor_name in route[1:]:
-            anchor = ROUTE_ANCHORS[anchor_name]
+            anchor = self.route_anchors[anchor_name]
             segment = planner.plan(cursor, (anchor.x, anchor.y))
             targets.extend((x, y, 0.0) for x, y in segment[1:])
             cursor = (anchor.x, anchor.y)
 
-        final_pose = PHYSICAL_POSES[destination_physical]
-        targets.extend(self._rotation_targets(cursor[0], cursor[1], 0.0, final_pose.yaw))
+        final_pose = self.physical_poses[destination_physical]
+        rotation_targets = self._rotation_targets(
+            cursor[0], cursor[1], 0.0, final_pose.yaw
+        )
+        for x, y, yaw in rotation_targets:
+            if not checker.is_pose_valid(x, y, yaw):
+                raise RuntimeError(
+                    "Final base rotation is in collision; move the arm to its "
+                    "compact navigation pose before moving"
+                )
+        targets.extend(rotation_targets)
         self.targets = targets
         self.target_index = 0
+        self.settle_ticks = 0
         self.requested_location = destination
         self.status = f"Moving to {destination}: RRT* path has {len(targets)} waypoints"
         self.started_at = time.monotonic()
@@ -426,20 +505,63 @@ class MobileMoveExecutor:
         if not self.busy:
             return
         x, y, yaw = self.targets[self.target_index]
-        joint_target = np.array((y - HOME_POSE.y, -x, yaw))
-        for actuator_id, value in zip(self.actuator_ids, joint_target):
-            self.data.ctrl[actuator_id] = value
+        joint_target = np.array((y - self.home_pose.y, -x, yaw))
+        current_command = self.data.ctrl[list(self.actuator_ids)]
+        max_step = self.model.opt.timestep * np.array(
+            (
+                BASE_LINEAR_COMMAND_SPEED,
+                BASE_LINEAR_COMMAND_SPEED,
+                BASE_YAW_COMMAND_SPEED,
+            )
+        )
+        self.data.ctrl[list(self.actuator_ids)] = current_command + np.clip(
+            joint_target - current_command, -max_step, max_step
+        )
         current = self.data.qpos[list(self.joint_addresses)]
+        velocity = self.data.qvel[list(self.joint_velocity_addresses)]
         position_error = float(np.linalg.norm(current[:2] - joint_target[:2]))
         yaw_error = abs(_angle_delta(float(joint_target[2]), float(current[2])))
-        if position_error < 0.018 and yaw_error < math.radians(1.2):
+        is_final = self.target_index == len(self.targets) - 1
+        position_tolerance = BASE_FINAL_POSITION_TOLERANCE if is_final else 0.018
+        yaw_tolerance = BASE_FINAL_YAW_TOLERANCE if is_final else math.radians(1.2)
+        if position_error >= position_tolerance or yaw_error >= yaw_tolerance:
+            self.settle_ticks = 0
+            return
+        if not is_final:
             self.target_index += 1
-            if not self.busy:
-                assert self.requested_location is not None
-                self.current_symbolic_location = self.requested_location
-                self.current_physical_location = physical_location(self.requested_location)
-                elapsed = time.monotonic() - self.started_at
-                self.status = f"Move complete: {self.requested_location} ({elapsed:.1f} s)"
+            self.settle_ticks = 0
+            return
+
+        command_error = joint_target - self.data.ctrl[list(self.actuator_ids)]
+        command_error[2] = _angle_delta(
+            float(joint_target[2]),
+            float(self.data.ctrl[self.actuator_ids[2]]),
+        )
+        command_settled = (
+            float(np.max(np.abs(command_error[:2]))) < BASE_COMMAND_TOLERANCE
+            and abs(float(command_error[2])) < BASE_YAW_COMMAND_TOLERANCE
+        )
+        velocity_settled = (
+            float(np.max(np.abs(velocity[:2]))) < BASE_SETTLE_LINEAR_SPEED
+            and abs(float(velocity[2])) < BASE_SETTLE_YAW_SPEED
+        )
+        if not command_settled or not velocity_settled:
+            self.settle_ticks = 0
+            self.status = f"Moving to {self.requested_location}: settling at destination"
+            return
+        self.settle_ticks += 1
+        if self.settle_ticks < BASE_SETTLE_TICKS:
+            return
+
+        # Remove the final sub-tolerance control residual before handing the
+        # base back to an idle Actions panel.
+        self.data.ctrl[list(self.actuator_ids)] = joint_target
+        self.target_index += 1
+        assert self.requested_location is not None
+        self.current_symbolic_location = self.requested_location
+        self.current_physical_location = physical_location(self.requested_location)
+        elapsed = time.monotonic() - self.started_at
+        self.status = f"Move complete: {self.requested_location} ({elapsed:.1f} s)"
 
     def progress(self) -> float:
         if not self.targets:
@@ -452,14 +574,29 @@ def launch_action_viewer(scene, camera: str) -> None:
     import tkinter as tk
     from tkinter import ttk
 
-    from mujoco_scenes.pick_motion import PickExecutor, TABLE_PICK_SPECS
+    if scene.robot_name == "google":
+        from mujoco_scenes.generic_manipulation import CalibratedPickPlaceExecutor
 
-    camera_id = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_CAMERA, camera)
+        picker = CalibratedPickPlaceExecutor(
+            scene.model, scene.data, "google", scene.scene_name
+        )
+        pick_specs = picker.pick_specs
+    else:
+        from mujoco_scenes.pick_motion import PickExecutor, TABLE_PICK_SPECS
+
+        picker = PickExecutor(scene.model, scene.data)
+        pick_specs = TABLE_PICK_SPECS
+
     viewer = mujoco.viewer.launch_passive(scene.model, scene.data)
-    viewer.cam.type = mujoco.mjtCamera.mjCAMERA_FIXED
-    viewer.cam.fixedcamid = camera_id
-    executor = MobileMoveExecutor(scene.model, scene.data)
-    picker = PickExecutor(scene.model, scene.data)
+    if camera == "free":
+        mujoco.mjv_defaultFreeCamera(scene.model, viewer.cam)
+    else:
+        camera_id = mujoco.mj_name2id(
+            scene.model, mujoco.mjtObj.mjOBJ_CAMERA, camera
+        )
+        viewer.cam.type = mujoco.mjtCamera.mjCAMERA_FIXED
+        viewer.cam.fixedcamid = camera_id
+    executor = MobileMoveExecutor(scene.model, scene.data, scene.robot_name)
 
     root = tk.Tk()
     root.title("Kitchen Actions")
@@ -495,6 +632,10 @@ def launch_action_viewer(scene, camera: str) -> None:
         try:
             if picker.busy:
                 raise RuntimeError("Wait for the pick action to finish")
+            if not getattr(picker, "navigation_safe", True):
+                raise RuntimeError(
+                    "Arm is not in a collision-safe navigation configuration"
+                )
             executor.request_move(destination)
             status.set(executor.status)
         except Exception as error:  # surfaced in the panel instead of killing the viewer
@@ -525,7 +666,7 @@ def launch_action_viewer(scene, camera: str) -> None:
     def request_pick(object_name: str) -> None:
         nonlocal ui_error
         ui_error = None
-        selected_pick.set(f"Selected: {TABLE_PICK_SPECS[object_name].label}")
+        selected_pick.set(f"Selected: {pick_specs[object_name].label}")
         status.set(f"Planning pick for {object_name}...")
         root.update_idletasks()
         try:
@@ -540,7 +681,7 @@ def launch_action_viewer(scene, camera: str) -> None:
             status.set(ui_error)
             print(f"[Actions] {ui_error}")
 
-    for row, (object_name, spec) in enumerate(TABLE_PICK_SPECS.items()):
+    for row, (object_name, spec) in enumerate(pick_specs.items()):
         present = mujoco.mj_name2id(
             scene.model, mujoco.mjtObj.mjOBJ_BODY, object_name
         ) >= 0
@@ -554,12 +695,48 @@ def launch_action_viewer(scene, camera: str) -> None:
             button.configure(state="disabled")
         pick_buttons.append(button)
     ttk.Label(pick_body, textvariable=selected_pick).grid(
-        row=len(TABLE_PICK_SPECS), column=0, sticky="w", pady=(8, 0)
+        row=len(pick_specs), column=0, sticky="w", pady=(8, 0)
     )
 
-    future = ttk.LabelFrame(actions_body, text="Future actions", padding=8)
-    future.grid(row=4, column=0, sticky="ew")
-    ttk.Label(future, text="Place  ·  Open  ·  Close  ·  Pour", state="disabled").grid()
+    place_body = ttk.LabelFrame(actions_body, text="Place", padding=8)
+    place_body.grid(row=4, column=0, sticky="ew")
+    place_body.columnconfigure(0, weight=1)
+
+    def request_place() -> None:
+        nonlocal ui_error
+        ui_error = None
+        try:
+            if scene.robot_name != "google":
+                raise RuntimeError("Place is not calibrated for Fetch")
+            if executor.busy:
+                raise RuntimeError("Wait for the move action to finish")
+            if executor.current_physical_location != "home":
+                raise RuntimeError("Serving-area placement requires Move (home) first")
+            picker.request_place("serving_spot")
+            status.set(picker.status)
+        except Exception as error:
+            ui_error = f"Place failed: {error}"
+            status.set(ui_error)
+            print(f"[Actions] {ui_error}")
+
+    place_button = ttk.Button(
+        place_body, text="Serving area", command=request_place
+    )
+    place_button.grid(row=0, column=0, sticky="ew", pady=3)
+    if scene.robot_name == "google":
+        ttk.Label(
+            place_body,
+            text=(
+                "S1 calibrated path: sugar jar only"
+                if pick_specs
+                else "No calibrated pick/place in this scene"
+            ),
+            state="disabled",
+        ).grid(row=1, column=0, sticky="w", pady=(5, 0))
+    else:
+        ttk.Label(place_body, text="Not calibrated for Fetch", state="disabled").grid(
+            row=1, column=0, sticky="w", pady=(5, 0)
+        )
 
     ttk.Separator(root).grid(row=2, column=0, sticky="ew", padx=12, pady=8)
     ttk.Label(root, text="Current symbolic location:").grid(row=3, column=0, sticky="w", padx=12)
@@ -626,7 +803,7 @@ def launch_action_viewer(scene, camera: str) -> None:
                 (
                     mujoco.mjtFontScale.mjFONTSCALE_150,
                     mujoco.mjtGridPos.mjGRID_TOPLEFT,
-                    "Actions / Move + Pick",
+                    "Actions / Move + Pick + Place",
                     active_status,
                 )
             )
@@ -634,7 +811,13 @@ def launch_action_viewer(scene, camera: str) -> None:
         location.set(executor.current_symbolic_location)
         status.set(active_status)
         progress.set(picker.progress() if picker.busy else executor.progress())
-        move_state = "disabled" if executor.busy or picker.busy else "normal"
+        move_state = (
+            "disabled"
+            if executor.busy
+            or picker.busy
+            or not getattr(picker, "navigation_safe", True)
+            else "normal"
+        )
         for button in move_buttons:
             button.configure(state=move_state)
         can_pick = (
@@ -643,11 +826,19 @@ def launch_action_viewer(scene, camera: str) -> None:
             and picker.held_object is None
             and executor.current_physical_location == "home"
         )
-        for button, object_name in zip(pick_buttons, TABLE_PICK_SPECS):
+        for button, object_name in zip(pick_buttons, pick_specs):
             present = mujoco.mj_name2id(
                 scene.model, mujoco.mjtObj.mjOBJ_BODY, object_name
             ) >= 0
             button.configure(state="normal" if can_pick and present else "disabled")
+        can_place = (
+            scene.robot_name == "google"
+            and not executor.busy
+            and not picker.busy
+            and getattr(picker, "can_place", False)
+            and executor.current_physical_location == "home"
+        )
+        place_button.configure(state="normal" if can_place else "disabled")
         root.after(10, tick)
 
     root.protocol("WM_DELETE_WINDOW", close)

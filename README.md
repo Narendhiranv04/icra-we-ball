@@ -69,6 +69,24 @@ Fetch additionally provides:
 
 * `head_camera_rgb`
 
+## Robot Backends
+
+Fetch remains the default. The same kitchen can also load Menagerie's Google
+Robot from the workspace-level `third_party/mujoco_menagerie` checkout:
+
+```bash
+MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.scene_loader \
+  --scene S1_coffee_missing_mug \
+  --robot google \
+  --viewer
+```
+
+Use `--robot fetch`, `--robot google`, or `--robot none`. Google Robot supports
+scene loading, free/fixed/head/wrist cameras, joint targets, collision-checked
+Actions-panel navigation, and an S1-calibrated vertical sugar-jar pick/place at
+the serving area. Other scenes and Google grasps remain gated until they pass the process in
+[ROBOT_CALIBRATION.md](mujoco_scenes/ROBOT_CALIBRATION.md).
+
 ## Running the Scene Locally
 
 Navigate to the project directory:
@@ -90,7 +108,9 @@ MUJOCO_GL=glfw /home/naren/miniconda3/bin/python \
 The launch also opens an `Actions` panel. Under `Move`, select `Home`,
 `Cupboard 1`, `Cupboard 2`, or `Box`; each button executes the corresponding
 collision-checked mobile-base trajectory. `Cupboard 2` and `Box` share one
-physical right-side pose. Under `Pick`, select the kettle, coffee jar, sugar
-jar, or spoon to run a vertical pre-grasp, contact-aware close, lift, and
-return to the object-in-gripper carry pose. Pass `--no-actions-panel` to
-suppress this panel.
+physical right-side pose. Fetch exposes its kettle, jar, and spoon picks.
+Google currently exposes only the physically checked sugar-jar pick plus
+`Place` at the serving area. Its navigation home is farther from the serving
+table; pick/place automatically approach the work stance and return to a
+collision-checked compact navigation state before Move is enabled. Pass
+`--no-actions-panel` to suppress this panel.

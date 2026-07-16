@@ -12,6 +12,19 @@ The assets are not copied into this repository. They are installed as the
 pinned Python dependency `gymnasium-robotics==1.4.2` in the Docker image and
 composed into the kitchen model at runtime.
 
+## Google Robot from MuJoCo Menagerie
+
+The optional Google Robot backend loads the `google_robot` MJCF and mesh assets
+from an external MuJoCo Menagerie checkout. The model describes the mobile
+manipulator developed by Google and is distributed under Apache-2.0:
+
+- Model: https://github.com/google-deepmind/mujoco_menagerie/tree/main/google_robot
+- License: https://github.com/google-deepmind/mujoco_menagerie/blob/main/google_robot/LICENSE
+
+The assets are not copied into this repository. At runtime, the kitchen
+adapter namespaces the model, adds ideal planar base joints and robot-mounted
+cameras, and composes it with the shared scene.
+
 ## YCB Object and Model Set
 
 This repository contains normalized and texture-downsampled models derived

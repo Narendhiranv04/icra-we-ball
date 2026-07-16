@@ -8,6 +8,7 @@ an API for opening/closing containers and querying visibility.
 
 import yaml
 import copy
+import os
 import time
 import xml.etree.ElementTree as ET
 from collections import Counter
@@ -29,6 +30,11 @@ KITCHEN_BASE = ASSETS_DIR / "kitchen_base.xml"
 OBJECT_LIB = ASSETS_DIR / "objects" / "object_library.xml"
 OBJECT_MESHES_DIR = ASSETS_DIR / "objects" / "meshes"
 SCENE_CONFIGS = CONFIGS_DIR / "scene_configs.yaml"
+
+ROBOT_FETCH = "fetch"
+ROBOT_GOOGLE = "google"
+ROBOT_NONE = "none"
+ROBOT_CHOICES = (ROBOT_FETCH, ROBOT_GOOGLE, ROBOT_NONE)
 
 
 # ── Fetch mobile manipulator ─────────────────────────────────────────────
@@ -83,6 +89,87 @@ FETCH_ACTUATORS = (
     ("robot0:r_gripper_finger_actuator", "robot0:r_gripper_finger_joint", 1000, 0.0, 0.05),
     ("robot0:l_gripper_finger_actuator", "robot0:l_gripper_finger_joint", 1000, 0.0, 0.05),
 )
+
+
+# ── Google Robot mobile manipulator ─────────────────────────────────────
+# The kinematic tree and meshes come from MuJoCo Menagerie. Its published
+# model fixes the base, so the kitchen adapter adds the same ideal planar
+# planning joints used by Fetch. Menagerie itself remains outside this Git
+# repository and is located through MUJOCO_MENAGERIE_PATH or the workspace's
+# default third_party checkout.
+GOOGLE_BASE_POSE = {
+    "pos": "0 -1.25 0.06205",
+    # Google Robot's local +X faces world +Y toward the workstation.
+    "quat": "0.7071068 0 0 0.7071068",
+}
+
+GOOGLE_HOME_QPOS = {
+    "google:base_forward_joint": 0.0,
+    "google:base_lateral_joint": 0.0,
+    "google:base_yaw_joint": 0.0,
+    # The zero arm configuration is a compact, upright navigation pose.
+    "google:joint_torso": 0.0,
+    "google:joint_shoulder": 0.0,
+    "google:joint_bicep": 0.0,
+    "google:joint_elbow": 0.0,
+    "google:joint_forearm": 0.0,
+    "google:joint_wrist": 0.0,
+    "google:joint_gripper": 0.0,
+    "google:joint_finger_right": 0.35,
+    "google:joint_finger_left": 0.35,
+}
+
+GOOGLE_ACTUATORS = (
+    # name, joint, kp, ctrl_min, ctrl_max
+    ("google:base_forward_actuator", "google:base_forward_joint", 6000, -1.0, 1.25),
+    ("google:base_lateral_actuator", "google:base_lateral_joint", 6000, -1.5, 1.5),
+    ("google:base_yaw_actuator", "google:base_yaw_joint", 3500, -3.14, 3.14),
+    # The upstream gains are intended for free-space model demonstration.
+    # Kitchen contact tasks need tighter tracking so a commanded bilateral
+    # grasp does not settle centimetres off-centre under arm and finger load.
+    ("google:joint_torso_actuator", "google:joint_torso", 120, -4.49, 1.35),
+    ("google:joint_shoulder_actuator", "google:joint_shoulder", 120, -2.66, 3.18),
+    ("google:joint_bicep_actuator", "google:joint_bicep", 100, -2.13, 3.71),
+    ("google:joint_elbow_actuator", "google:joint_elbow", 100, -2.05, 3.79),
+    ("google:joint_forearm_actuator", "google:joint_forearm", 80, -2.92, 2.92),
+    ("google:joint_wrist_actuator", "google:joint_wrist", 80, -1.79, 1.79),
+    ("google:joint_gripper_actuator", "google:joint_gripper", 60, -4.49, 1.35),
+    ("google:joint_finger_right_actuator", "google:joint_finger_right", 60, 0.01, 1.3),
+    ("google:joint_finger_left_actuator", "google:joint_finger_left", 60, 0.01, 1.3),
+)
+
+GOOGLE_FORCE_RANGES = {
+    "google:joint_torso": "-150 150",
+    "google:joint_shoulder": "-150 150",
+    "google:joint_bicep": "-30 30",
+    "google:joint_elbow": "-30 30",
+    "google:joint_forearm": "-30 30",
+    "google:joint_wrist": "-30 30",
+    "google:joint_gripper": "-30 30",
+    "google:joint_finger_right": "-30 30",
+    "google:joint_finger_left": "-30 30",
+}
+
+ROBOT_HOME_QPOS = {
+    ROBOT_FETCH: FETCH_HOME_QPOS,
+    ROBOT_GOOGLE: GOOGLE_HOME_QPOS,
+}
+ROBOT_ACTUATORS = {
+    ROBOT_FETCH: FETCH_ACTUATORS,
+    ROBOT_GOOGLE: GOOGLE_ACTUATORS,
+}
+ROBOT_BASE_JOINTS = {
+    ROBOT_FETCH: (
+        "robot0:base_forward_joint",
+        "robot0:base_lateral_joint",
+        "robot0:base_yaw_joint",
+    ),
+    ROBOT_GOOGLE: (
+        "google:base_forward_joint",
+        "google:base_lateral_joint",
+        "google:base_yaw_joint",
+    ),
+}
 
 
 # ── physically supported object placement ────────────────────────────────
@@ -192,6 +279,8 @@ CAMERAS = (
 )
 ROBOT_CAMERAS = ("head_camera_rgb",)
 CAMERA_CHOICES = CAMERAS + ROBOT_CAMERAS
+FREE_CAMERA = "free"
+VIEW_CAMERA_CHOICES = (FREE_CAMERA,) + CAMERA_CHOICES
 
 # Joint/actuator names for each container
 CONTAINER_JOINTS = {
@@ -277,6 +366,42 @@ def _fetch_asset_dir() -> Path:
     if not all(path.exists() for path in required):
         raise RuntimeError(f"Incomplete Fetch model installation at: {asset_dir}")
     return asset_dir
+
+
+def _selected_robot(include_robot: bool, robot: str | None) -> str:
+    """Resolve the new robot selector while preserving the legacy boolean."""
+    selected = robot if robot is not None else (
+        ROBOT_FETCH if include_robot else ROBOT_NONE
+    )
+    if selected not in ROBOT_CHOICES:
+        choices = ", ".join(ROBOT_CHOICES)
+        raise ValueError(f"Unknown robot '{selected}'. Choose from: {choices}")
+    return selected
+
+
+def _google_robot_dir() -> Path:
+    """Return the external MuJoCo Menagerie Google Robot directory."""
+    configured = os.environ.get("MUJOCO_MENAGERIE_PATH")
+    if configured:
+        candidate = Path(configured).expanduser().resolve()
+        if candidate.name != "google_robot":
+            candidate = candidate / "google_robot"
+    else:
+        candidate = (
+            ROOT.parent.parent
+            / "third_party"
+            / "mujoco_menagerie"
+            / "google_robot"
+        ).resolve()
+
+    required = (candidate / "robot.xml", candidate / "assets")
+    if not all(path.exists() for path in required):
+        raise RuntimeError(
+            "Google Robot assets are unavailable. Sparse-clone MuJoCo "
+            "Menagerie into `../third_party/mujoco_menagerie` or set "
+            "MUJOCO_MENAGERIE_PATH to the Menagerie checkout."
+        )
+    return candidate
 
 
 def _remove_named_body(parent: ET.Element, body_name: str) -> None:
@@ -463,6 +588,218 @@ def _inject_fetch_robot(root: ET.Element, fetch_dir: Path) -> None:
         )
 
 
+def _prefix_google_robot(robot_root: ET.Element) -> None:
+    """Namespace Menagerie identifiers and default classes in-place."""
+    class_names = {
+        "robot": "google_robot",
+        "visual": "google_visual",
+        "collision": "google_collision",
+        "finger_base": "google_finger_base",
+        "finger_tip": "google_finger_tip",
+    }
+    for element in robot_root.iter():
+        for attribute in ("class", "childclass"):
+            value = element.get(attribute)
+            if value in class_names:
+                element.set(attribute, class_names[value])
+
+    asset = robot_root.find("asset")
+    mesh_names = {}
+    texture_names = {}
+    material_names = {}
+    if asset is not None:
+        for element in asset:
+            if element.tag == "mesh":
+                old_name = element.get("name") or Path(element.get("file")).stem
+                new_name = f"google:{old_name}"
+                mesh_names[old_name] = new_name
+                element.set("name", new_name)
+            elif element.tag == "texture":
+                old_name = element.get("name")
+                new_name = f"google:{old_name}"
+                texture_names[old_name] = new_name
+                element.set("name", new_name)
+            elif element.tag == "material":
+                old_name = element.get("name")
+                new_name = f"google:{old_name}"
+                material_names[old_name] = new_name
+                element.set("name", new_name)
+
+        for material in asset.findall("material"):
+            texture = material.get("texture")
+            if texture in texture_names:
+                material.set("texture", texture_names[texture])
+
+    for element in robot_root.iter():
+        if element.tag in {"body", "joint", "site"}:
+            name = element.get("name")
+            if name:
+                element.set("name", f"google:{name}")
+        elif element.tag == "geom":
+            name = element.get("name")
+            if name:
+                element.set("name", f"google:{name}")
+
+        mesh = element.get("mesh")
+        if mesh in mesh_names:
+            element.set("mesh", mesh_names[mesh])
+        material = element.get("material")
+        if material in material_names:
+            element.set("material", material_names[material])
+
+
+def _inject_google_robot(root: ET.Element, google_dir: Path) -> None:
+    """Merge and adapt Menagerie's Google Robot into the kitchen model."""
+    robot_root = ET.parse(google_dir / "robot.xml").getroot()
+    _prefix_google_robot(robot_root)
+
+    asset = root.find("asset")
+    default = root.find("default")
+    worldbody = root.find("worldbody")
+    actuator = root.find("actuator")
+
+    for element in robot_root.findall("asset/*"):
+        asset.append(copy.deepcopy(element))
+    for element in robot_root.findall("default/default"):
+        default.append(copy.deepcopy(element))
+
+    robot_body = robot_root.find("worldbody/body[@name='google:base_link']")
+    if robot_body is None:
+        raise RuntimeError("Menagerie Google Robot base_link body is missing")
+    robot_body = copy.deepcopy(robot_body)
+    robot_body.set("pos", GOOGLE_BASE_POSE["pos"])
+    robot_body.set("quat", GOOGLE_BASE_POSE["quat"])
+
+    joint_specs = (
+        ("google:base_forward_joint", "slide", "1 0 0", "-1 1.25", "750"),
+        ("google:base_lateral_joint", "slide", "0 1 0", "-1.5 1.5", "750"),
+        ("google:base_yaw_joint", "hinge", "0 0 1", "-3.14 3.14", "100"),
+    )
+    for index, (name, joint_type, axis, joint_range, damping) in enumerate(
+        joint_specs
+    ):
+        robot_body.insert(
+            index,
+            ET.Element(
+                "joint",
+                {
+                    "name": name,
+                    "type": joint_type,
+                    "axis": axis,
+                    "range": joint_range,
+                    "limited": "true",
+                    "damping": damping,
+                    "armature": "0.1",
+                },
+            ),
+        )
+
+    # Detailed base and wheel meshes are visual-only in the ideal holonomic
+    # abstraction. A smooth proxy prevents artificial wheel/floor drag while
+    # retaining collision checks against the workstation and serving table.
+    for geom in robot_body.findall("geom"):
+        if geom.get("class") == "google_collision":
+            geom.set("contype", "0")
+            geom.set("conaffinity", "0")
+            geom.set("rgba", "0 0 0 0")
+    ET.SubElement(
+        robot_body,
+        "geom",
+        {
+            "name": "google:base_collision_proxy",
+            "type": "cylinder",
+            "size": "0.27 0.15",
+            "pos": "0 0 0.15",
+            "condim": "1",
+            "priority": "2",
+            "friction": "0 0 0",
+            "contype": "1",
+            "conaffinity": "1",
+            "rgba": "0 0 0 0",
+            "group": "3",
+        },
+    )
+
+    ET.SubElement(
+        robot_body,
+        "camera",
+        {
+            "name": "head_camera_rgb",
+            # Sit ahead of the fixed head shell rather than inside its mesh.
+            "pos": "0.22 0 1.30",
+            # Look along local +X and 15 degrees down toward the worktop.
+            "xyaxes": "0 -1 0 0.258819 0 0.965926",
+            "fovy": "65",
+        },
+    )
+    gripper_body = next(
+        (
+            body
+            for body in robot_body.iter("body")
+            if body.get("name") == "google:link_gripper"
+        ),
+        None,
+    )
+    if gripper_body is None:
+        raise RuntimeError("Menagerie Google Robot gripper body is missing")
+
+    # Menagerie's fingertip collision geoms are intentionally anonymous.  The
+    # kitchen picker needs stable left/right names so it can require bilateral
+    # object contact instead of treating palm or table contact as a grasp.
+    for side in ("right", "left"):
+        tip_body = next(
+            (
+                body
+                for body in gripper_body.iter("body")
+                if body.get("name") == f"google:link_finger_tip_{side}"
+            ),
+            None,
+        )
+        if tip_body is None:
+            raise RuntimeError(f"Menagerie Google Robot {side} fingertip is missing")
+        collision_geoms = [
+            geom
+            for geom in tip_body.findall("geom")
+            if geom.get("class") != "google_visual"
+        ]
+        if len(collision_geoms) != 6:
+            raise RuntimeError(
+                f"Expected 6 Google {side} fingertip collision geoms, "
+                f"found {len(collision_geoms)}"
+            )
+        for index, geom in enumerate(collision_geoms):
+            geom.set("name", f"google:{side}_finger_pad_{index}")
+
+    ET.SubElement(
+        gripper_body,
+        "camera",
+        {
+            "name": "wrist_camera",
+            "pos": "0 0 0.16",
+            # The gripper and its public site extend along local +Z.
+            "xyaxes": "1 0 0 0 -1 0",
+            "fovy": "65",
+        },
+    )
+
+    _remove_named_body(worldbody, "wrist_camera_mount")
+    worldbody.append(robot_body)
+
+    for name, joint, kp, ctrl_min, ctrl_max in GOOGLE_ACTUATORS:
+        attributes = {
+            "name": name,
+            "joint": joint,
+            "kp": str(kp),
+            "ctrllimited": "true",
+            "ctrlrange": f"{ctrl_min} {ctrl_max}",
+        }
+        force_range = GOOGLE_FORCE_RANGES.get(joint)
+        if force_range:
+            attributes["forcelimited"] = "true"
+            attributes["forcerange"] = force_range
+        ET.SubElement(actuator, "position", attributes)
+
+
 def _load_fetch_binary_assets(fetch_dir: Path) -> dict[str, bytes]:
     """Load mesh/texture bytes for MjModel.from_xml_string()."""
     supported = {".stl", ".obj", ".png", ".jpg", ".jpeg"}
@@ -477,6 +814,16 @@ def _load_fetch_binary_assets(fetch_dir: Path) -> dict[str, bytes]:
     return assets
 
 
+def _load_google_binary_assets(google_dir: Path) -> dict[str, bytes]:
+    """Load Menagerie Google Robot meshes and textures for MJCF compile."""
+    supported = {".stl", ".obj", ".png", ".jpg", ".jpeg"}
+    assets = {}
+    for path in (google_dir / "assets").iterdir():
+        if path.is_file() and path.suffix.lower() in supported:
+            assets[path.name] = path.read_bytes()
+    return assets
+
+
 def _load_object_binary_assets() -> dict[str, bytes]:
     """Load prepared kitchen OBJ and texture files for in-memory MJCF compile."""
     supported = {".obj", ".png", ".jpg", ".jpeg"}
@@ -488,11 +835,16 @@ def _load_object_binary_assets() -> dict[str, bytes]:
     return assets
 
 
-def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
+def build_scene_xml(
+    config: SceneConfig,
+    include_robot: bool = True,
+    robot: str | None = None,
+) -> str:
     """
     Take kitchen_base.xml, inject objects from the scene config, and return
     the complete XML string ready for mujoco.MjModel.from_xml_string().
     """
+    robot_name = _selected_robot(include_robot, robot)
     tree = ET.parse(KITCHEN_BASE)
     root = tree.getroot()
     worldbody = root.find("worldbody")
@@ -501,8 +853,10 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
     for element in object_assets:
         asset_root.append(copy.deepcopy(element))
 
-    if include_robot:
+    if robot_name == ROBOT_FETCH:
         _inject_fetch_robot(root, _fetch_asset_dir())
+    elif robot_name == ROBOT_GOOGLE:
+        _inject_google_robot(root, _google_robot_dir())
 
     # Track unique instance counters for duplicates
     instance_count = {}
@@ -674,25 +1028,33 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
     # inactive welds after both gripper fingers touch a countertop object.
     # The relative pose is filled from the live state when the grasp occurs,
     # so enabling a weld never snaps an object to a pre-recorded pose.
-    if include_robot:
+    if robot_name in {ROBOT_FETCH, ROBOT_GOOGLE}:
         equality = root.find("equality")
         if equality is None:
             equality = ET.SubElement(root, "equality")
+        if robot_name == ROBOT_FETCH:
+            equality_prefix = "robot0"
+            gripper_body_name = "robot0:gripper_link"
+            supported_objects = {"kettle", "coffee_jar", "sugar_jar", "spoon"}
+        else:
+            equality_prefix = "google"
+            gripper_body_name = "google:link_gripper"
+            supported_objects = {"coffee_jar", "sugar_jar"}
         for obj_name in dict.fromkeys(config.countertop_objects.values()):
-            if obj_name not in {"kettle", "coffee_jar", "sugar_jar", "spoon"}:
+            if obj_name not in supported_objects:
                 continue
             ET.SubElement(
                 equality,
                 "weld",
                 {
-                    "name": f"robot0:pick_weld_{obj_name}",
-                    "body1": "robot0:gripper_link",
+                    "name": f"{equality_prefix}:pick_weld_{obj_name}",
+                    "body1": gripper_body_name,
                     "body2": obj_name,
                     "active": "false",
                     "solref": "0.01 1",
                 },
             )
-            if obj_name == "spoon":
+            if robot_name == ROBOT_FETCH and obj_name == "spoon":
                 # Activated after the initial vertical lift. Unlike the
                 # transport weld, a connect equality fixes only the handle
                 # pinch point and leaves all three rotational DOFs free, so
@@ -724,7 +1086,12 @@ class KitchenScene:
      - Ground-truth state for evaluation metrics
     """
 
-    def __init__(self, scene_name: str, include_robot: bool = True):
+    def __init__(
+        self,
+        scene_name: str,
+        include_robot: bool = True,
+        robot: str | None = None,
+    ):
         configs = load_all_configs()
         if scene_name not in configs:
             available = ", ".join(configs.keys())
@@ -732,20 +1099,25 @@ class KitchenScene:
 
         self.config = configs[scene_name]
         self.scene_name = scene_name
-        self.has_robot = include_robot
+        self.robot_name = _selected_robot(include_robot, robot)
+        self.has_robot = self.robot_name != ROBOT_NONE
+        self.robot_home_qpos = ROBOT_HOME_QPOS.get(self.robot_name, {})
+        self.robot_actuators = ROBOT_ACTUATORS.get(self.robot_name, ())
 
         # Build XML and load model
         print(f"[KitchenScene] Building scene: {scene_name}")
         print(f"  Goal: {self.config.goal}")
-        xml_str = build_scene_xml(self.config, include_robot=include_robot)
+        xml_str = build_scene_xml(self.config, robot=self.robot_name)
         model_assets = _load_object_binary_assets()
-        if include_robot:
+        if self.robot_name == ROBOT_FETCH:
             model_assets.update(_load_fetch_binary_assets(_fetch_asset_dir()))
+        elif self.robot_name == ROBOT_GOOGLE:
+            model_assets.update(_load_google_binary_assets(_google_robot_dir()))
         self.model = mujoco.MjModel.from_xml_string(xml_str, assets=model_assets)
         self.data = mujoco.MjData(self.model)
 
-        if include_robot:
-            self._set_fetch_home_pose()
+        if self.has_robot:
+            self._set_robot_home_pose()
 
         # Initialize state tracking
         self.state = SceneState()
@@ -765,34 +1137,42 @@ class KitchenScene:
         print(f"  Visible objects: {self.state.visible_objects}")
         print(f"  Hidden objects: {self.state.hidden_objects}")
         print(f"  Required objects: {self.config.required_objects}")
-        print(f"  Fetch robot: {'enabled' if self.has_robot else 'disabled'}")
+        print(f"  Robot: {self.robot_name}")
         print(f"  Scene ready.\n")
 
-    def _set_fetch_home_pose(self):
-        """Apply deterministic Fetch joint positions and controller targets."""
-        for joint_name, value in FETCH_HOME_QPOS.items():
+    def _set_robot_home_pose(self):
+        """Apply deterministic robot joint positions and controller targets."""
+        for joint_name, value in self.robot_home_qpos.items():
             joint_id = mujoco.mj_name2id(
                 self.model, mujoco.mjtObj.mjOBJ_JOINT, joint_name
             )
             if joint_id < 0:
-                raise RuntimeError(f"Fetch joint missing from composed model: {joint_name}")
+                raise RuntimeError(
+                    f"{self.robot_name} joint missing from composed model: "
+                    f"{joint_name}"
+                )
             qpos_adr = self.model.jnt_qposadr[joint_id]
             self.data.qpos[qpos_adr] = value
 
-        for actuator_name, joint_name, _kp, _lo, _hi in FETCH_ACTUATORS:
+        for actuator_name, joint_name, _kp, _lo, _hi in self.robot_actuators:
             actuator_id = mujoco.mj_name2id(
                 self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, actuator_name
             )
-            self.data.ctrl[actuator_id] = FETCH_HOME_QPOS[joint_name]
+            if actuator_id < 0:
+                raise RuntimeError(
+                    f"{self.robot_name} actuator missing from composed model: "
+                    f"{actuator_name}"
+                )
+            self.data.ctrl[actuator_id] = self.robot_home_qpos[joint_name]
 
         mujoco.mj_forward(self.model, self.data)
 
     def get_robot_joint_positions(self) -> dict[str, float]:
-        """Return the current Fetch base, torso, arm, head and gripper joints."""
+        """Return the current selected robot's controlled joint positions."""
         if not self.has_robot:
             return {}
         positions = {}
-        for joint_name in FETCH_HOME_QPOS:
+        for joint_name in self.robot_home_qpos:
             joint_id = mujoco.mj_name2id(
                 self.model, mujoco.mjtObj.mjOBJ_JOINT, joint_name
             )
@@ -802,16 +1182,18 @@ class KitchenScene:
         return positions
 
     def set_robot_joint_targets(self, targets: dict[str, float], steps: int = 500):
-        """Command named Fetch position actuators and advance the simulation."""
+        """Command named robot position actuators and advance the simulation."""
         if not self.has_robot:
-            raise RuntimeError("This scene was created without the Fetch robot")
+            raise RuntimeError("This scene was created without a robot")
         actuator_by_joint = {
             joint: (name, lo, hi)
-            for name, joint, _kp, lo, hi in FETCH_ACTUATORS
+            for name, joint, _kp, lo, hi in self.robot_actuators
         }
         for joint_name, target in targets.items():
             if joint_name not in actuator_by_joint:
-                raise ValueError(f"Unknown or unactuated Fetch joint: {joint_name}")
+                raise ValueError(
+                    f"Unknown or unactuated {self.robot_name} joint: {joint_name}"
+                )
             actuator_name, lower, upper = actuator_by_joint[joint_name]
             if not lower <= target <= upper:
                 raise ValueError(
@@ -828,12 +1210,17 @@ class KitchenScene:
     def set_mobile_base_target(
         self, forward: float, lateral: float, yaw: float, steps: int = 750
     ):
-        """Command the Fetch planar base relative to its initial floor pose."""
+        """Command the selected robot's planar base from its initial pose."""
+        if not self.has_robot:
+            raise RuntimeError("This scene was created without a robot")
+        forward_joint, lateral_joint, yaw_joint = ROBOT_BASE_JOINTS[
+            self.robot_name
+        ]
         self.set_robot_joint_targets(
             {
-                "robot0:base_forward_joint": forward,
-                "robot0:base_lateral_joint": lateral,
-                "robot0:base_yaw_joint": yaw,
+                forward_joint: forward,
+                lateral_joint: lateral,
+                yaw_joint: yaw,
             },
             steps=steps,
         )
@@ -947,26 +1334,37 @@ class KitchenScene:
             "task_resolvable": self.is_task_resolvable(),
         }
 
-    def launch_viewer(self, camera: str = "front_camera", actions_panel: bool = True):
+    def launch_viewer(
+        self, camera: str = FREE_CAMERA, actions_panel: bool = True
+    ):
         """Launch the MuJoCo viewer and, by default, its Actions panel."""
-        if camera not in CAMERA_CHOICES:
+        if camera not in VIEW_CAMERA_CHOICES:
             raise ValueError(
-                f"Unknown camera '{camera}'. Choose from: {', '.join(CAMERA_CHOICES)}"
+                f"Unknown camera '{camera}'. Choose from: "
+                f"{', '.join(VIEW_CAMERA_CHOICES)}"
             )
         if camera in ROBOT_CAMERAS and not self.has_robot:
-            raise ValueError(f"Camera '{camera}' requires the Fetch robot")
+            raise ValueError(f"Camera '{camera}' requires a robot")
         print(f"[KitchenScene] Launching viewer for: {self.scene_name}")
         print(f"  Starting from camera: {camera}")
-        print(f"  Use the viewer camera menu to switch among: {', '.join(CAMERA_CHOICES)}")
+        print(
+            "  Use the viewer camera menu to switch among: "
+            f"{', '.join(VIEW_CAMERA_CHOICES)}"
+        )
         print(f"  Close viewer window to return to script.\n")
         if self.has_robot and actions_panel:
             from mujoco_scenes.mobile_motion import launch_action_viewer
             launch_action_viewer(self, camera)
             return
-        cam_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_CAMERA, camera)
         with mujoco.viewer.launch_passive(self.model, self.data) as viewer:
-            viewer.cam.type = mujoco.mjtCamera.mjCAMERA_FIXED
-            viewer.cam.fixedcamid = cam_id
+            if camera == FREE_CAMERA:
+                mujoco.mjv_defaultFreeCamera(self.model, viewer.cam)
+            else:
+                cam_id = mujoco.mj_name2id(
+                    self.model, mujoco.mjtObj.mjOBJ_CAMERA, camera
+                )
+                viewer.cam.type = mujoco.mjtCamera.mjCAMERA_FIXED
+                viewer.cam.fixedcamid = cam_id
             while viewer.is_running():
                 step_start = time.time()
                 mujoco.mj_step(self.model, self.data)
@@ -1021,11 +1419,15 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--no-robot", action="store_true",
-        help="Load only the kitchen (useful for environment-only debugging)"
+        help="Deprecated alias for --robot none"
     )
     parser.add_argument(
-        "--camera", choices=CAMERA_CHOICES, default="front_camera",
-        help="Fixed camera used for rendering or as the viewer's starting view"
+        "--robot", choices=ROBOT_CHOICES, default=ROBOT_FETCH,
+        help="Robot backend to compose into the kitchen"
+    )
+    parser.add_argument(
+        "--camera", choices=VIEW_CAMERA_CHOICES, default=FREE_CAMERA,
+        help="Camera used for rendering or as the viewer's starting view"
     )
     parser.add_argument(
         "--open-container", action="append", choices=CONTAINER_JOINTS,
@@ -1060,7 +1462,8 @@ if __name__ == "__main__":
         exit(0)
 
     # Load scene
-    scene = KitchenScene(args.scene, include_robot=not args.no_robot)
+    selected_robot = ROBOT_NONE if args.no_robot else args.robot
+    scene = KitchenScene(args.scene, robot=selected_robot)
     scene.print_scene_summary()
 
     for container in args.open_container or []:
