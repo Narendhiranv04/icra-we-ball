@@ -32,6 +32,12 @@ FINGER_GEOMS = {
 APPROACH_CLEARANCE = 0.08
 LIFT_CLEARANCE = APPROACH_CLEARANCE
 OPEN_WIDTH = 0.05
+SPOON_PIVOT_WIDTH = 0.008
+SPOON_PIVOT_DAMPING = 0.002
+SPOON_PIVOT_MAX_TORQUE = 0.02
+SPOON_VERTICAL_TOLERANCE = math.radians(3.0)
+SPOON_SETTLED_ANGULAR_SPEED = 1.0
+SPOON_SETTLE_TICKS = 50
 CARRY_POSITION = np.array((0.0, -0.82, 0.95))
 HORIZONTAL_CARRY_POSITION = np.array((0.0, -0.75, 0.74))
 # Joint-space knots are traversed on one continuous clock.  Segment duration is
@@ -132,6 +138,7 @@ class ArmWaypoint:
     joints: np.ndarray
     label: str
     stabilize_object: bool = False
+    passive_pivot: bool = False
 
 
 def _rotation_vector(matrix: np.ndarray) -> np.ndarray:
@@ -293,6 +300,8 @@ class PickExecutor:
         self.close_ticks = 0
         self.contact_ticks = 0
         self.grasp_equality_id = -1
+        self.spoon_pivot_equality_id = -1
+        self.spoon_settle_ticks = 0
         self.gripper_body_id = mujoco.mj_name2id(
             model, mujoco.mjtObj.mjOBJ_BODY, "robot0:gripper_link"
         )
@@ -607,12 +616,29 @@ class PickExecutor:
         else:
             # Other objects preserve their vertical grasp attitude and retrace
             # the collision-checked overhead approach corridor.
+            passive_spoon = object_name == "spoon"
             post_grasp.extend(
-                ArmWaypoint(w.joints.copy(), "Returning to carry pose")
+                ArmWaypoint(
+                    w.joints.copy(),
+                    (
+                        "Returning while spoon hangs from handle"
+                        if passive_spoon
+                        else "Returning to carry pose"
+                    ),
+                    passive_pivot=passive_spoon,
+                )
                 for w in reversed(approach[:-1])
             )
             post_grasp.append(
-                ArmWaypoint(carry_joints.copy(), "Object secured in carry pose")
+                ArmWaypoint(
+                    carry_joints.copy(),
+                    (
+                        "Spoon hanging vertically in carry pose"
+                        if passive_spoon
+                        else "Object secured in carry pose"
+                    ),
+                    passive_pivot=passive_spoon,
+                )
             )
 
         self.post_grasp_waypoints = post_grasp
@@ -630,6 +656,8 @@ class PickExecutor:
         self.close_ticks = 0
         self.contact_ticks = 0
         self.grasp_equality_id = -1
+        self.spoon_pivot_equality_id = -1
+        self.spoon_settle_ticks = 0
         self.pivot_anchor_pos = None
         self.pivot_anchor_rotation = None
         self.pivot_anchor_gripper_pos = None
@@ -704,6 +732,87 @@ class PickExecutor:
         )
         self.model.eq_data[self.grasp_equality_id, 3:6] = relative_pos
         self.model.eq_data[self.grasp_equality_id, 6:10] = relative_quat
+
+    def _activate_spoon_pivot(self) -> None:
+        """Replace the transport weld with a free-rotation handle pivot."""
+        if self.target_object != "spoon" or self.grasp_equality_id < 0:
+            raise RuntimeError("Spoon pivot requested without a spoon grasp")
+        equality_id = mujoco.mj_name2id(
+            self.model,
+            mujoco.mjtObj.mjOBJ_EQUALITY,
+            "robot0:pick_pivot_spoon",
+        )
+        grasp_site_id = mujoco.mj_name2id(
+            self.model, mujoco.mjtObj.mjOBJ_SITE, "spoon_grasp"
+        )
+        if equality_id < 0 or grasp_site_id < 0:
+            raise RuntimeError("Missing passive spoon pivot constraint")
+
+        # Both local anchors are calculated from one live world point, so the
+        # constraint activates without snapping either the hand or the spoon.
+        world_anchor = self.data.site_xpos[grasp_site_id].copy()
+        gripper_rotation = self.data.xmat[self.gripper_body_id].reshape(3, 3)
+        spoon_rotation = self.data.xmat[self.target_body_id].reshape(3, 3)
+        gripper_anchor = gripper_rotation.T @ (
+            world_anchor - self.data.xpos[self.gripper_body_id]
+        )
+        spoon_anchor = spoon_rotation.T @ (
+            world_anchor - self.data.xpos[self.target_body_id]
+        )
+        self.model.eq_data[equality_id, :3] = gripper_anchor
+        self.model.eq_data[equality_id, 3:6] = spoon_anchor
+        self.data.eq_active[self.grasp_equality_id] = 0
+        self.data.eq_active[equality_id] = 1
+        self.spoon_pivot_equality_id = equality_id
+        self.data.ctrl[self.finger_actuators] = SPOON_PIVOT_WIDTH
+
+    def _damp_spoon_pivot(self) -> tuple[float, float]:
+        """Damp the freely hanging spoon without prescribing its angle."""
+        velocity = np.zeros(6)
+        mujoco.mj_objectVelocity(
+            self.model,
+            self.data,
+            mujoco.mjtObj.mjOBJ_BODY,
+            self.target_body_id,
+            velocity,
+            0,
+        )
+        angular_velocity = velocity[:3]
+        torque = self._limited(
+            -SPOON_PIVOT_DAMPING * angular_velocity,
+            SPOON_PIVOT_MAX_TORQUE,
+        )
+        self.data.xfrc_applied[self.target_body_id, 3:] = torque
+        # The visible bowl is on the object's local -X end; the grasp is now
+        # on the opposite +X red-handle tip.
+        spoon_axis = -self.data.xmat[self.target_body_id].reshape(3, 3)[:, 0]
+        bowl_down_angle = math.acos(
+            float(np.clip(spoon_axis @ np.array((0.0, 0.0, -1.0)), -1.0, 1.0))
+        )
+        swing_velocity = angular_velocity - spoon_axis * float(
+            angular_velocity @ spoon_axis
+        )
+        return bowl_down_angle, float(np.linalg.norm(swing_velocity))
+
+    def _finish_spoon_pivot(self) -> None:
+        """Capture the settled live pose so the carried spoon cannot spin."""
+        if self.spoon_pivot_equality_id < 0 or self.grasp_equality_id < 0:
+            raise RuntimeError("Cannot finish an inactive spoon pivot")
+        # Transverse swing is already settled here, but the nearly symmetric
+        # handle can retain a fast, visually obvious axial spin. Remove that
+        # residual momentum exactly at the transition to the final grasp.
+        self.data.qvel[self.target_free_dof : self.target_free_dof + 6] = 0.0
+        self._set_grasp_weld_world_pose(
+            self.data.xpos[self.target_body_id],
+            self.data.xquat[self.target_body_id],
+        )
+        # The ordinary transport weld is intentionally a little compliant.
+        # Tighten it only for the settled spoon so gravity cannot leave a
+        # visible residual twist around the very thin handle.
+        self.model.eq_solref[self.grasp_equality_id] = (0.003, 1.0)
+        self.data.eq_active[self.spoon_pivot_equality_id] = 0
+        self.data.eq_active[self.grasp_equality_id] = 1
+        self.data.xfrc_applied[self.target_body_id] = 0.0
 
     @staticmethod
     def _limited(vector: np.ndarray, maximum: float) -> np.ndarray:
@@ -831,7 +940,9 @@ class PickExecutor:
         if self.mode == "approach":
             # Only the final contact pose settles tightly. Intermediate IK
             # knots remain a single uninterrupted trajectory.
-            finished, waypoint = self._advance_trajectory(final_tolerance=0.003)
+            finished, waypoint = self._advance_trajectory(
+                final_tolerance=0.001 if self.target_object == "spoon" else 0.003
+            )
             self.data.ctrl[self.finger_actuators] = OPEN_WIDTH
             finger_error = float(
                 np.max(np.abs(self.data.qpos[self.finger_qpos] - OPEN_WIDTH))
@@ -870,7 +981,20 @@ class PickExecutor:
             return
 
         if self.mode == "returning":
-            finished, waypoint = self._advance_trajectory()
+            finished, waypoint = self._advance_trajectory(
+                final_tolerance=0.003 if self.target_object == "spoon" else 0.012
+            )
+            if waypoint.passive_pivot and self.spoon_pivot_equality_id < 0:
+                try:
+                    self._activate_spoon_pivot()
+                except RuntimeError as error:
+                    self._fail(str(error))
+                    return
+            if self.spoon_pivot_equality_id >= 0:
+                # Relax only enough to remove pad friction around the handle;
+                # the live connect anchor keeps the grasp point between them.
+                self.data.ctrl[self.finger_actuators] = SPOON_PIVOT_WIDTH
+                spoon_angle, spoon_speed = self._damp_spoon_pivot()
             if waypoint.stabilize_object:
                 if not self.pivot_active:
                     self._begin_compliant_pivot()
@@ -884,8 +1008,24 @@ class PickExecutor:
                 self._finish_compliant_pivot()
             self.status = f"Pick {self.target_object}: {waypoint.label}"
             if finished:
+                if self.spoon_pivot_equality_id >= 0:
+                    if (
+                        spoon_angle <= SPOON_VERTICAL_TOLERANCE
+                        and spoon_speed <= SPOON_SETTLED_ANGULAR_SPEED
+                    ):
+                        self.spoon_settle_ticks += 1
+                    else:
+                        self.spoon_settle_ticks = 0
+                    if self.spoon_settle_ticks < SPOON_SETTLE_TICKS:
+                        self.status = (
+                            "Pick spoon: settling naturally into vertical hang "
+                            f"({math.degrees(spoon_angle):.1f} deg)"
+                        )
+                        return
                 if self.pivot_active:
                     self._finish_compliant_pivot()
+                if self.spoon_pivot_equality_id >= 0:
+                    self._finish_spoon_pivot()
                 self.held_object = self.target_object
                 self.mode = "holding"
                 self.status = f"Pick complete: holding {self.held_object} in carry pose"

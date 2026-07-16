@@ -204,10 +204,13 @@
     <!-- Separate proxies ensure a top-down grasp at spoon_grasp contacts the
          handle rather than an oversized box surrounding the bowl. -->
     <geom name="spoon_handle_collision" type="capsule" size="0.006"
-          fromto="-0.095 0 0.006 0.020 0 0.006" rgba="0 0 0 0" mass="0.012" group="3"/>
+          fromto="-0.020 0 0.006 0.095 0 0.006" rgba="0 0 0 0" mass="0.012" group="3"/>
     <geom name="spoon_bowl_collision" type="ellipsoid" size="0.038 0.020 0.01045"
-          pos="0.058 0 0" rgba="0 0 0 0" mass="0.018" group="3"/>
-    <site name="spoon_grasp" pos="-0.045 0 0.006" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
+          pos="-0.058 0 0" rgba="0 0 0 0" mass="0.018" group="3"/>
+    <!-- Pinch near the far handle tip.  Leaving roughly 15 mm of handle beyond
+         the grasp keeps both pads on the capsule while giving the bowl a long
+         enough moment arm to hang vertically after lift. -->
+    <site name="spoon_grasp" pos="0.080 0 0.006" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
   </body>
 
   <!-- YCB 030_fork -->

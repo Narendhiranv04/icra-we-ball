@@ -692,6 +692,23 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
                     "solref": "0.01 1",
                 },
             )
+            if obj_name == "spoon":
+                # Activated after the initial vertical lift. Unlike the
+                # transport weld, a connect equality fixes only the handle
+                # pinch point and leaves all three rotational DOFs free, so
+                # gravity can swing the bowl naturally below the gripper.
+                ET.SubElement(
+                    equality,
+                    "connect",
+                    {
+                        "name": "robot0:pick_pivot_spoon",
+                        "body1": "robot0:gripper_link",
+                        "body2": "spoon",
+                        "anchor": "0 0 0",
+                        "active": "false",
+                        "solref": "0.01 1",
+                    },
+                )
 
     return ET.tostring(root, encoding="unicode")
 

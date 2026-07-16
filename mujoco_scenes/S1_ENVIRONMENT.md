@@ -30,7 +30,7 @@ already-inspected region remains known even if it is later closed.
 | kettle | `counter_spot_1`, near `(-0.35,-0.32)` | Hot-water appliance; picked by its handle |
 | coffee jar | `counter_spot_2`, near `(-0.15,-0.30)` | Coffee ingredient |
 | sugar jar | `counter_spot_3`, near `(0.05,-0.30)` | Optional coffee ingredient |
-| spoon | `counter_spot_5`, near `(0.25,-0.34)` | Stirring utensil; picked at the handle center |
+| spoon | `counter_spot_5`, near `(0.25,-0.34)` | Stirring utensil; picked near the far handle tip |
 
 The mug is the only unresolved required object at reset. C1 contains the exact
 required mug and a glass that can act as a configured substitute.
@@ -137,7 +137,8 @@ PDDL as a continuous planner:
    exactly 90 degrees around the unchanged finger-contact axis. A compliant
    centring/upright controller permits small natural translation and wobble.
 7. Carry a jar with the gripper horizontal to roughly `(0.00,-0.75,0.74)`.
-   Kettle and spoon picks retain the vertical overhead return route.
+   Kettle and spoon picks retain the vertical overhead arm return route; the
+   spoon itself passively swings into a bowl-down vertical hang.
 
 The kettle site lies on the visible upper-handle centreline and includes a
 matching handle collision proxy. Its gripper yaw is recomputed from the live
@@ -150,10 +151,16 @@ force/torque correction keeps the freely simulated jar near its pivot and
 within a few degrees of vertical. The rigid weld is disabled throughout this
 slip and is recreated from the resulting live grasp only before horizontal
 transport.
-The spoon uses the centre of its handle and separate handle/bowl collision
-proxies. Non-jar carry preserves the vertical pickup orientation at roughly
-`(0.00,-0.82,0.95)`. Tabletop picking currently requires the `home` base pose
-and an empty gripper.
+The spoon is pinched near the far tip of its handle and uses separate
+handle/bowl collision proxies. After the initial lift clears the table, its
+rigid transport weld is replaced by a live, free-rotation point constraint at
+the handle grasp. A small finger clearance and light rotational damping let
+gravity swing the heavier bowl naturally downward; the action completes only
+after the spoon has settled within three degrees of vertical. At the final
+carry pose, that live vertical grasp is captured by the transport weld so the
+spoon cannot continue spinning around its handle. Non-jar arm carry returns to
+roughly `(0.00,-0.82,0.95)`. Tabletop picking currently requires the `home`
+base pose and an empty gripper.
 
 Robot-mounted sensors:
 
