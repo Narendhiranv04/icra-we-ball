@@ -49,6 +49,9 @@ SPOON_PIVOT_MAX_TORQUE = 0.02
 SPOON_VERTICAL_TOLERANCE = math.radians(3.0)
 SPOON_SETTLED_ANGULAR_SPEED = 1.0
 SPOON_SETTLE_TICKS = 50
+SPOON_REGRASP_SQUEEZE = 0.015
+SPOON_REGRASP_TIMEOUT_TICKS = 600
+CALIBRATION_ATTEMPT_TIMEOUT_TICKS = 20000
 SELF_COLLISION_MOUNT_ALLOWANCES = {
     # The shoulder rotates inside the base's outer housing by design.  The
     # upstream visual meshes overlap slightly at this mechanical interface;
@@ -91,6 +94,28 @@ GOOGLE_PICK_SPECS = {
         # Four centimetres closer to the base keeps the hanging bowl clear of
         # B1 throughout the right-side yaw sweep.
         carry_position=np.array((0.0, -0.82, 0.94)),
+    ),
+}
+
+# Candidate definitions are deliberately excluded from normal execution.  They
+# provide a measurable starting point in ``--calibration-mode``: IK, collision,
+# and bilateral-contact failures remain hard failures and must be tuned before
+# moving an object into ``GOOGLE_PICK_SPECS``/the supported-object profile.
+GOOGLE_CALIBRATION_PICK_SPECS = {
+    "coffee_jar": SimplePickSpec(
+        "Coffee jar (candidate upper-body pinch)",
+        "coffee_jar_grasp",
+        0.09287,
+        grasp_z_offset=0.011,
+        place_supported=False,
+    ),
+    "kettle": SimplePickSpec(
+        "Kettle (candidate handle pinch)",
+        "kettle_grasp",
+        0.06817,
+        grasp_z_offset=0.008,
+        required_contact_geoms=("kettle_handle_collision",),
+        place_supported=False,
     ),
 }
 
@@ -390,22 +415,33 @@ class CalibratedPickPlaceExecutor:
         data: mujoco.MjData,
         robot_name: str,
         scene_name: str | None = None,
+        calibration_mode: bool = False,
     ):
         self.model = model
         self.data = data
         self.robot_name = robot_name
         self.profile = manipulation_profile(robot_name)
         self.mobile_profile = mobile_profile(robot_name)
+        self.calibration_mode = calibration_mode
         scene_objects = CALIBRATED_SCENE_OBJECTS.get(scene_name, ())
         supported_objects = (
             self.profile.supported_objects if scene_name is None else scene_objects
         )
-        self.pick_specs = {
+        calibrated_specs = {
             name: GOOGLE_PICK_SPECS[name]
             for name in supported_objects
             if name in self.profile.supported_objects
             if name in GOOGLE_PICK_SPECS
         }
+        self.calibrated_objects = frozenset(calibrated_specs)
+        self.all_pick_specs = {
+            **GOOGLE_CALIBRATION_PICK_SPECS,
+            **calibrated_specs,
+        }
+        self.pick_specs = (
+            self.all_pick_specs if calibration_mode else calibrated_specs
+        )
+        self.calibration_attempt_ticks = 0
         self.arm_joint_ids = self._ids(
             mujoco.mjtObj.mjOBJ_JOINT, self.profile.arm_joints
         )
@@ -446,6 +482,10 @@ class CalibratedPickPlaceExecutor:
         self.grasp_equality_id = -1
         self.spoon_pivot_equality_id = -1
         self.spoon_settle_ticks = 0
+        self.spoon_regrasp_command = self.profile.open_command
+        self.spoon_regrasp_target = self.profile.open_command
+        self.spoon_regrasp_ticks = 0
+        self.spoon_regrasp_elapsed_ticks = 0
         self.close_target = self.profile.open_command
         self.contact_ticks = 0
         self.release_ticks = 0
@@ -684,7 +724,12 @@ class CalibratedPickPlaceExecutor:
         self.contact_ticks = 0
         self.spoon_pivot_equality_id = -1
         self.spoon_settle_ticks = 0
+        self.spoon_regrasp_command = self.profile.open_command
+        self.spoon_regrasp_target = self.profile.open_command
+        self.spoon_regrasp_ticks = 0
+        self.spoon_regrasp_elapsed_ticks = 0
         self.failure = None
+        self.calibration_attempt_ticks = 0
         self.mode = "pick_base_approach"
         self.status = f"Pick {object_name}: approaching the manipulation stance"
 
@@ -976,7 +1021,7 @@ class CalibratedPickPlaceExecutor:
         return bowl_down_angle, float(np.linalg.norm(swing_velocity))
 
     def _finish_spoon_pivot(self) -> None:
-        """Capture the settled live pose in the ordinary transport weld."""
+        """Capture the settled pose and prepare a physical handle re-grasp."""
         if self.spoon_pivot_equality_id < 0 or self.grasp_equality_id < 0:
             raise RuntimeError("Cannot finish an inactive spoon pivot")
         self.data.qvel[self.target_free_dof : self.target_free_dof + 6] = 0.0
@@ -988,6 +1033,16 @@ class CalibratedPickPlaceExecutor:
         self.data.eq_active[self.spoon_pivot_equality_id] = 0
         self.data.eq_active[self.grasp_equality_id] = 1
         self.data.xfrc_applied[self.target_body_id] = 0.0
+        self.spoon_regrasp_command = max(
+            self.profile.open_command,
+            self.close_target - SPOON_PIVOT_RELAXATION,
+        )
+        self.spoon_regrasp_target = min(
+            self.profile.closed_command,
+            self.close_target + SPOON_REGRASP_SQUEEZE,
+        )
+        self.spoon_regrasp_ticks = 0
+        self.spoon_regrasp_elapsed_ticks = 0
 
     def _fail(self, message: str) -> None:
         self._restore_navigation_base_damping()
@@ -1009,6 +1064,7 @@ class CalibratedPickPlaceExecutor:
             "pick_approach",
             "closing",
             "pick_retreat",
+            "spoon_regrasp",
             "pick_base_retreat",
             "place_base_approach",
             "place_approach",
@@ -1030,10 +1086,20 @@ class CalibratedPickPlaceExecutor:
     def update(self) -> None:
         if self.mode in {"idle", "holding", "failed"}:
             return
+        if (
+            self.calibration_mode
+            and self.target_object not in self.calibrated_objects
+        ):
+            self.calibration_attempt_ticks += 1
+            if self.calibration_attempt_ticks >= CALIBRATION_ATTEMPT_TIMEOUT_TICKS:
+                active_status = self.status
+                self._fail(f"candidate attempt timed out while: {active_status}")
+                return
         guarded_modes = {
             "pick_approach",
             "closing",
             "pick_retreat",
+            "spoon_regrasp",
             "pick_base_retreat",
             "place_base_approach",
             "place_approach",
@@ -1133,11 +1199,33 @@ class CalibratedPickPlaceExecutor:
                     )
                     return
                 self._finish_spoon_pivot()
+                self.mode = "spoon_regrasp"
+                self.status = "Pick spoon: closing fingers around the settled handle"
+                return
             self.held_object = self.target_object
             self.mode = "pick_base_retreat"
             self.status = (
                 f"Pick {self.held_object}: retreating to navigation home"
             )
+            return
+        if self.mode == "spoon_regrasp":
+            self.spoon_regrasp_elapsed_ticks += 1
+            self.spoon_regrasp_command = min(
+                self.spoon_regrasp_target,
+                self.spoon_regrasp_command + self.profile.close_step,
+            )
+            self.data.ctrl[self.finger_actuators] = self.spoon_regrasp_command
+            if self._finger_contact_sides() == {0, 1}:
+                self.spoon_regrasp_ticks += 1
+            else:
+                self.spoon_regrasp_ticks = 0
+            if self.spoon_regrasp_ticks >= CONTACT_CONFIRM_TICKS:
+                self.held_object = self.target_object
+                self.mode = "pick_base_retreat"
+                self.status = "Pick spoon: bilateral handle re-grasp confirmed"
+                return
+            if self.spoon_regrasp_elapsed_ticks >= SPOON_REGRASP_TIMEOUT_TICKS:
+                self._fail("spoon handle re-grasp did not recover bilateral contact")
             return
         if self.mode == "pick_base_retreat":
             self._command_base(0.0)
@@ -1182,7 +1270,7 @@ class CalibratedPickPlaceExecutor:
             self.status = f"Place complete: released {placed}"
 
     def progress(self) -> float:
-        if self.mode in {"closing", "releasing"}:
+        if self.mode in {"closing", "spoon_regrasp", "releasing"}:
             return 0.55
         if self.mode in {
             "pick_retreat",

@@ -569,22 +569,36 @@ class MobileMoveExecutor:
         return min(1.0, self.target_index / len(self.targets))
 
 
-def launch_action_viewer(scene, camera: str) -> None:
+def launch_action_viewer(
+    scene, camera: str, calibration_mode: bool = False
+) -> None:
     """Launch MuJoCo plus a companion hierarchical Actions panel."""
     import tkinter as tk
     from tkinter import ttk
 
+    def make_picker():
+        if scene.robot_name == "google":
+            from mujoco_scenes.generic_manipulation import (
+                CalibratedPickPlaceExecutor,
+            )
+
+            return CalibratedPickPlaceExecutor(
+                scene.model,
+                scene.data,
+                "google",
+                scene.scene_name,
+                calibration_mode=calibration_mode,
+            )
+        from mujoco_scenes.pick_motion import PickExecutor
+
+        return PickExecutor(scene.model, scene.data)
+
+    picker = make_picker()
     if scene.robot_name == "google":
-        from mujoco_scenes.generic_manipulation import CalibratedPickPlaceExecutor
-
-        picker = CalibratedPickPlaceExecutor(
-            scene.model, scene.data, "google", scene.scene_name
-        )
-        pick_specs = picker.pick_specs
+        pick_specs = picker.all_pick_specs
     else:
-        from mujoco_scenes.pick_motion import PickExecutor, TABLE_PICK_SPECS
+        from mujoco_scenes.pick_motion import TABLE_PICK_SPECS
 
-        picker = PickExecutor(scene.model, scene.data)
         pick_specs = TABLE_PICK_SPECS
 
     viewer = mujoco.viewer.launch_passive(scene.model, scene.data)
@@ -599,8 +613,8 @@ def launch_action_viewer(scene, camera: str) -> None:
     executor = MobileMoveExecutor(scene.model, scene.data, scene.robot_name)
 
     root = tk.Tk()
-    root.title("Kitchen Actions")
-    root.geometry("380x680+20+20")
+    root.title("Kitchen Calibration" if calibration_mode else "Kitchen Actions")
+    root.geometry(("430x790+20+20" if calibration_mode else "400x720+20+20"))
     root.minsize(360, 560)
     root.columnconfigure(0, weight=1)
 
@@ -663,10 +677,23 @@ def launch_action_viewer(scene, camera: str) -> None:
     pick_body.columnconfigure(0, weight=1)
     pick_buttons: list[ttk.Button] = []
 
+    def pick_is_calibrated(object_name: str) -> bool:
+        return (
+            scene.robot_name != "google"
+            or object_name in picker.calibrated_objects
+        )
+
+    def pick_is_enabled_for_mode(object_name: str) -> bool:
+        return (
+            scene.robot_name != "google"
+            or object_name in picker.pick_specs
+        )
+
     def request_pick(object_name: str) -> None:
         nonlocal ui_error
         ui_error = None
-        selected_pick.set(f"Selected: {pick_specs[object_name].label}")
+        kind = "calibrated" if pick_is_calibrated(object_name) else "candidate"
+        selected_pick.set(f"Selected: {pick_specs[object_name].label} [{kind}]")
         status.set(f"Planning pick for {object_name}...")
         root.update_idletasks()
         try:
@@ -687,11 +714,15 @@ def launch_action_viewer(scene, camera: str) -> None:
         ) >= 0
         button = ttk.Button(
             pick_body,
-            text=spec.label,
+            text=(
+                f"{spec.label}  [calibrated]"
+                if pick_is_calibrated(object_name)
+                else f"{spec.label}  [candidate]"
+            ),
             command=lambda name=object_name: request_pick(name),
         )
         button.grid(row=row, column=0, sticky="ew", pady=3)
-        if not present:
+        if not present or not pick_is_enabled_for_mode(object_name):
             button.configure(state="disabled")
         pick_buttons.append(button)
     ttk.Label(pick_body, textvariable=selected_pick).grid(
@@ -737,6 +768,46 @@ def launch_action_viewer(scene, camera: str) -> None:
         ttk.Label(place_body, text="Not calibrated for Fetch", state="disabled").grid(
             row=1, column=0, sticky="w", pady=(5, 0)
         )
+
+    reset_button = None
+    if calibration_mode:
+        calibration_body = ttk.LabelFrame(
+            actions_body, text="Calibration controls", padding=8
+        )
+        calibration_body.grid(row=5, column=0, sticky="ew", pady=(10, 0))
+        calibration_body.columnconfigure(0, weight=1)
+        ttk.Label(
+            calibration_body,
+            text=(
+                "Candidate attempts use provisional offsets and remain subject "
+                "to IK, collision, and bilateral-contact guards. Reset after "
+                "each failed or completed attempt."
+            ),
+            wraplength=370,
+        ).grid(row=0, column=0, sticky="ew", pady=(0, 6))
+
+        def reset_attempt() -> None:
+            nonlocal picker, executor, ui_error
+            if picker.busy or executor.busy:
+                ui_error = "Reset blocked: wait for the active motion to finish"
+                status.set(ui_error)
+                return
+            mujoco.mj_resetData(scene.model, scene.data)
+            mujoco.mj_forward(scene.model, scene.data)
+            picker = make_picker()
+            executor = MobileMoveExecutor(
+                scene.model, scene.data, scene.robot_name
+            )
+            ui_error = None
+            selected_pick.set("Selected: none")
+            location.set("home")
+            progress.set(0.0)
+            status.set("Calibration attempt reset: choose an action")
+
+        reset_button = ttk.Button(
+            calibration_body, text="Reset simulation attempt", command=reset_attempt
+        )
+        reset_button.grid(row=1, column=0, sticky="ew")
 
     ttk.Separator(root).grid(row=2, column=0, sticky="ew", padx=12, pady=8)
     ttk.Label(root, text="Current symbolic location:").grid(row=3, column=0, sticky="w", padx=12)
@@ -825,12 +896,16 @@ def launch_action_viewer(scene, camera: str) -> None:
             and not picker.busy
             and picker.held_object is None
             and executor.current_physical_location == "home"
+            and (not calibration_mode or picker.mode == "idle")
         )
         for button, object_name in zip(pick_buttons, pick_specs):
             present = mujoco.mj_name2id(
                 scene.model, mujoco.mjtObj.mjOBJ_BODY, object_name
             ) >= 0
-            button.configure(state="normal" if can_pick and present else "disabled")
+            allowed = pick_is_enabled_for_mode(object_name)
+            button.configure(
+                state="normal" if can_pick and present and allowed else "disabled"
+            )
         can_place = (
             scene.robot_name == "google"
             and not executor.busy
@@ -839,6 +914,10 @@ def launch_action_viewer(scene, camera: str) -> None:
             and executor.current_physical_location == "home"
         )
         place_button.configure(state="normal" if can_place else "disabled")
+        if reset_button is not None:
+            reset_button.configure(
+                state="disabled" if picker.busy or executor.busy else "normal"
+            )
         root.after(10, tick)
 
     root.protocol("WM_DELETE_WINDOW", close)

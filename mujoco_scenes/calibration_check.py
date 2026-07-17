@@ -84,11 +84,17 @@ def _validate_spoon_carry(scene, executor) -> None:
         raise RuntimeError("Spoon pivot remained active after carry stabilization")
     if not scene.data.eq_active[executor.grasp_equality_id]:
         raise RuntimeError("Spoon transport weld is inactive after stabilization")
+    contact_sides = executor._finger_contact_sides()
+    if contact_sides != {0, 1}:
+        raise RuntimeError(
+            "Spoon carry lacks bilateral physical handle contact; "
+            f"contact sides={sorted(contact_sides)}"
+        )
     if executor.can_place:
         raise RuntimeError("Uncalibrated spoon placement was exposed")
     print(
         f"[PASS] Google spoon hangs bowl-down within "
-        f"{math.degrees(angle):.1f} degrees and is secured for carry"
+        f"{math.degrees(angle):.1f} degrees with bilateral handle contact"
     )
 
 
@@ -99,9 +105,14 @@ def _run_pick_place(
     held_move: str | None,
     move_after_place: str | None,
     max_steps: int,
+    calibration_mode: bool = False,
 ) -> None:
     executor = CalibratedPickPlaceExecutor(
-        scene.model, scene.data, scene.robot_name, scene.scene_name
+        scene.model,
+        scene.data,
+        scene.robot_name,
+        scene.scene_name,
+        calibration_mode=calibration_mode,
     )
     executor.request_pick(object_name)
     pick_steps = _run_until(scene, executor, {"holding", "failed"}, max_steps)
@@ -172,6 +183,11 @@ def main() -> None:
         "--pick", help="Run a calibrated pick for this countertop object"
     )
     parser.add_argument(
+        "--calibration-mode",
+        action="store_true",
+        help="Allow a provisional Google Robot candidate pick to run through guards",
+    )
+    parser.add_argument(
         "--place",
         action="store_true",
         help="After --pick, place the held object at serving_spot",
@@ -194,6 +210,10 @@ def main() -> None:
         parser.error("--move-while-holding requires --pick")
     if args.move_after_place and not args.place:
         parser.error("--move-after-place requires --place")
+    if args.calibration_mode and args.robot != "google":
+        parser.error("--calibration-mode currently requires --robot google")
+    if args.calibration_mode and not args.pick:
+        parser.error("--calibration-mode requires --pick")
     if not args.move and not args.pick:
         parser.error("select at least one of --move or --pick")
 
@@ -208,6 +228,7 @@ def main() -> None:
             args.move_while_holding,
             args.move_after_place,
             args.max_steps,
+            args.calibration_mode,
         )
 
 

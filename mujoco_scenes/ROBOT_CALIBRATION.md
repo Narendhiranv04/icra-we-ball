@@ -10,17 +10,74 @@ and repeatable checks.
 | Robot/action | Automated status | Human visual status |
 |---|---|---|
 | Fetch navigation | Supported | Recheck after scene geometry changes |
-| Fetch object-specific pick/carry | Supported | Recheck after object/robot changes |
+| Fetch coffee jar, sugar jar, and spoon pick/carry | Current S1 headless picks pass | Recheck after object/robot changes |
+| Fetch kettle pick/carry | Exposed, but current S1 bilateral-contact check fails | Calibration repair required |
 | Fetch place | Not implemented | Not applicable |
 | Google navigation | Empty/held collision monitors pass | User validation required |
 | Google S1 sugar-jar pick/carry | Bilateral-contact check passes | User validation required |
 | Google S1 sugar-jar place at `serving_spot` | Position check passes | User validation required |
-| Google S1 spoon pick/carry | Far-tip contact, vertical hang, and both held routes pass | User validation required |
+| Google S1 spoon pick/carry | Far-tip contact, vertical hang, final bilateral re-grasp, and both held routes pass | User validation required |
 | Google spoon place | Gated as uncalibrated | Required after implementation |
-| Google coffee jar and kettle | Gated as uncalibrated | Required after implementation |
+| Google coffee jar and kettle | Guarded calibration candidates; current attempts fail | Required after calibration |
 
 Only actions listed as supported are exposed in the Actions panel. Do not add
 an object to a profile merely because IK returns a solution.
+
+### Current action and interaction surface
+
+| Interaction | Fetch | Google Robot | How it is exposed |
+|---|---|---|---|
+| Move to home, cupboard 1, cupboard 2, or box | Supported | Supported | Actions panel |
+| Pick/carry sugar jar | Supported; rotates jar horizontal | Supported; vertical carry | Actions panel |
+| Place sugar jar at serving area | Not implemented | Supported | Actions panel |
+| Pick/carry spoon | Supported | Supported | Actions panel |
+| Place spoon | Not implemented | Not implemented | Gated |
+| Pick/carry coffee jar | Supported; rotates jar horizontal | Candidate; provisional IK currently fails | Calibration mode only |
+| Pick/carry kettle by handle | Exposed, but current S1 check fails | Candidate; provisional return does not settle | Calibration mode only |
+| Place coffee jar or kettle | Not implemented | Not implemented | Gated |
+| Open/close cupboards and drawers | Scene actuator helper only | Scene actuator helper only | Python API / CLI, not a robot manipulation |
+| Pour, stir, or complete the coffee task | Not implemented | Not implemented | Not exposed |
+
+An object being visible, included in the task description, or having a grasp
+constraint in the composed MJCF does not mean its interaction has been
+calibrated. This table describes executable behavior, not scene contents.
+
+### Interactive candidate calibration
+
+The ordinary Actions window executes validated actions. It shows Google
+coffee-jar and kettle candidates as disabled so their absence is explicit, but
+it will not run them. The serving-area Place button remains disabled until the
+robot is holding a place-calibrated object, currently only the sugar jar.
+Launch the opt-in calibration window with `uv`:
+
+```bash
+uv run python -m mujoco_scenes.scene_loader \
+  --scene S1_coffee_missing_mug --robot google --viewer --calibration-mode
+```
+
+This labels each pick as `[calibrated]` or `[candidate]`, enables present
+candidate objects, displays planning/contact/collision failures in the status
+area and terminal, and provides **Reset simulation attempt**. Candidate motion
+still passes through the normal IK path checks, self/environment collision
+guards, bilateral-contact requirement, and a bounded attempt timeout.
+
+For repeatable measurements without the viewer, run one candidate headlessly:
+
+```bash
+uv run python -m mujoco_scenes.calibration_check \
+  --robot google --calibration-mode --pick coffee_jar
+uv run python -m mujoco_scenes.calibration_check \
+  --robot google --calibration-mode --pick kettle
+```
+
+Tune provisional definitions in `GOOGLE_CALIBRATION_PICK_SPECS` in
+`generic_manipulation.py`, restart the scene, and repeat. The current starting
+coffee-jar definition stops at an inaccurate IK approach, while the starting
+kettle definition reaches its return trajectory but does not settle. These are
+diagnostics, not supported grasps. After a candidate passes the full checklist
+in section 5, move its definition into `GOOGLE_PICK_SPECS`, add it to the
+robot/scene supported-object declarations, and add a regression check. The UI
+does not automatically promote a candidate or weaken a failed guard.
 
 ## Where calibration lives
 
@@ -208,10 +265,14 @@ directions:
 
 The spoon check additionally requires contact on the named handle proxy, a
 passive connect-constraint phase, a bowl-down hang within five degrees, a
-successful handoff back to the transport weld, and collision-free held-object
-rotation. Google uses a 180-degree-equivalent wrist branch to preserve the jaw
-axis without hitting its wrist limit, plus a carry point four centimetres
-closer to the base to clear B1. Spoon placement is deliberately not exposed.
+successful handoff back to the transport weld, a final physical re-grasp with
+both fingers, and collision-free held-object rotation. The pivot temporarily
+relaxes the fingers so gravity can orient the spoon; after the weld handoff,
+the controller closes them gradually and does not report success until named
+handle contact persists on both sides. Google uses a 180-degree-equivalent
+wrist branch to preserve the jaw axis without hitting its wrist limit, plus a
+carry point four centimetres closer to the base to clear B1. Spoon placement is
+deliberately not exposed.
 
 Irregular objects need separate rules. A kettle handle requires alignment to
 the live handle axis. The spoon implementation demonstrates thin-handle

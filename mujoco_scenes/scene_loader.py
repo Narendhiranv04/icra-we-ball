@@ -1039,7 +1039,10 @@ def build_scene_xml(
         else:
             equality_prefix = "google"
             gripper_body_name = "google:link_gripper"
-            supported_objects = {"coffee_jar", "sugar_jar", "spoon"}
+            # Candidate constraints stay inactive until a contact-confirmed
+            # calibration attempt enables one.  Their presence does not expose
+            # the action in normal mode.
+            supported_objects = {"kettle", "coffee_jar", "sugar_jar", "spoon"}
         for obj_name in dict.fromkeys(config.countertop_objects.values()):
             if obj_name not in supported_objects:
                 continue
@@ -1335,7 +1338,10 @@ class KitchenScene:
         }
 
     def launch_viewer(
-        self, camera: str = FREE_CAMERA, actions_panel: bool = True
+        self,
+        camera: str = FREE_CAMERA,
+        actions_panel: bool = True,
+        calibration_mode: bool = False,
     ):
         """Launch the MuJoCo viewer and, by default, its Actions panel."""
         if camera not in VIEW_CAMERA_CHOICES:
@@ -1354,7 +1360,7 @@ class KitchenScene:
         print(f"  Close viewer window to return to script.\n")
         if self.has_robot and actions_panel:
             from mujoco_scenes.mobile_motion import launch_action_viewer
-            launch_action_viewer(self, camera)
+            launch_action_viewer(self, camera, calibration_mode=calibration_mode)
             return
         with mujoco.viewer.launch_passive(self.model, self.data) as viewer:
             if camera == FREE_CAMERA:
@@ -1418,6 +1424,13 @@ if __name__ == "__main__":
         help="Launch the viewer without the companion Actions panel"
     )
     parser.add_argument(
+        "--calibration-mode", action="store_true",
+        help=(
+            "Show and enable provisional Google Robot pick candidates in the "
+            "Actions panel; failures remain guarded and diagnostic"
+        ),
+    )
+    parser.add_argument(
         "--no-robot", action="store_true",
         help="Deprecated alias for --robot none"
     )
@@ -1446,6 +1459,13 @@ if __name__ == "__main__":
         help="List all available scene configurations"
     )
     args = parser.parse_args()
+
+    if args.calibration_mode and not args.viewer:
+        parser.error("--calibration-mode requires --viewer")
+    if args.calibration_mode and args.robot != ROBOT_GOOGLE:
+        parser.error("--calibration-mode currently requires --robot google")
+    if args.calibration_mode and args.no_actions_panel:
+        parser.error("--calibration-mode requires the Actions panel")
 
     if args.list_scenes:
         configs = load_all_configs()
@@ -1503,4 +1523,5 @@ if __name__ == "__main__":
         scene.launch_viewer(
             camera=args.camera,
             actions_panel=not args.no_actions_panel,
+            calibration_mode=args.calibration_mode,
         )

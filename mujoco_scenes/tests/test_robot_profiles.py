@@ -7,12 +7,14 @@ from mujoco_scenes.generic_manipulation import (
     BASE_LINEAR_COMMAND_SPEED as MANIPULATION_BASE_LINEAR_COMMAND_SPEED,
     BASE_YAW_COMMAND_SPEED as MANIPULATION_BASE_YAW_COMMAND_SPEED,
     CALIBRATED_SCENE_OBJECTS,
+    GOOGLE_CALIBRATION_PICK_SPECS,
     GOOGLE_PICK_SPECS,
     INTERMEDIATE_TRACKING_TOLERANCE,
     JOINT_WAYPOINT_TOLERANCE,
     MANIPULATION_BASE_LINEAR_DAMPING,
     SELF_COLLISION_MOUNT_ALLOWANCES,
     SPOON_PIVOT_RELAXATION,
+    SPOON_REGRASP_SQUEEZE,
     WAYPOINT_HOLD_TICKS,
 )
 from mujoco_scenes.mobile_motion import (
@@ -92,12 +94,32 @@ class RobotProfileTests(unittest.TestCase):
         self.assertEqual(spoon.required_contact_geoms, ("spoon_handle_collision",))
         self.assertFalse(spoon.place_supported)
         self.assertEqual(SPOON_PIVOT_RELAXATION, 0.30)
+        self.assertGreater(SPOON_REGRASP_SQUEEZE, 0.0)
+        self.assertLess(SPOON_REGRASP_SQUEEZE, SPOON_PIVOT_RELAXATION)
         np.testing.assert_allclose(spoon.top_down_rotation[:, 1], (0.0, -1.0, 0.0))
         self.assertLess(spoon.carry_position[1], profile.carry_position[1])
         self.assertEqual(
             CALIBRATED_SCENE_OBJECTS,
             {"S1_coffee_missing_mug": ("sugar_jar", "spoon")},
         )
+
+    def test_uncalibrated_google_candidates_are_declared_separately(self):
+        self.assertEqual(
+            set(GOOGLE_CALIBRATION_PICK_SPECS), {"coffee_jar", "kettle"}
+        )
+        self.assertTrue(
+            set(GOOGLE_CALIBRATION_PICK_SPECS).isdisjoint(
+                manipulation_profile("google").supported_objects
+            )
+        )
+        self.assertFalse(
+            GOOGLE_CALIBRATION_PICK_SPECS["coffee_jar"].place_supported
+        )
+        kettle = GOOGLE_CALIBRATION_PICK_SPECS["kettle"]
+        self.assertEqual(
+            kettle.required_contact_geoms, ("kettle_handle_collision",)
+        )
+        self.assertFalse(kettle.place_supported)
 
     def test_unknown_profiles_are_rejected(self):
         with self.assertRaisesRegex(ValueError, "no mobile-motion profile"):
