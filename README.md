@@ -46,7 +46,17 @@ In a later version, the Fetch gripper will physically open the same door joint t
 
 The complete region definitions, object layout, and usage guide are available in:
 
-[S1_ENVIRONMENT.md](S1_ENVIRONMENT.md)
+[S1_ENVIRONMENT.md](mujoco_scenes/S1_ENVIRONMENT.md)
+
+The separate rigid-only Google Robot living room—with an L-shaped couch,
+fixed coffee table, rigid tabletop objects, a wall-mounted TV, book-ledge and
+two-drawer storage, remote-controlled TV power, and guarded TV dusting—is documented in
+[LIVING_ROOM_ENVIRONMENT.md](mujoco_scenes/LIVING_ROOM_ENVIRONMENT.md). Launch
+it natively with the uv environment from this repository root:
+
+```bash
+MUJOCO_GL=glfw uv run python -m mujoco_scenes.living_room_scene --viewer
+```
 
 ## Cameras
 
