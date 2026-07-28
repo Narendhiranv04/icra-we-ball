@@ -112,6 +112,16 @@ CENTRED_DRAWER_OBJECTS = {
     "gso_spatula_distractor",
 }
 
+ACTION_PICK_OBJECTS = {
+    "kettle", "coffee_jar", "sugar_jar", "spoon",
+    "fork", "knife", "stirrer", "spatula", "tongs", "napkin",
+    "gso_spatula_distractor",
+}
+PASSIVE_HANDLE_OBJECTS = {
+    "spoon", "fork", "knife", "stirrer", "spatula", "tongs",
+    "gso_spatula_distractor",
+}
+
 # Positions are RELATIVE to the container body origin: (x, y, support_z).
 # C1 alternates between its lower floor and shelf. C2 reserves the entire
 # lower level for a large plate and puts smaller objects on the shelf.
@@ -137,19 +147,19 @@ CONTAINER_SLOTS = {
     "D1": {
         "parent_body": "drawer_D1_tray",
         "slots": [
-            (-0.09, 0.070, -0.052),
-            (-0.09, 0.015, -0.052),
-            (-0.09, -0.040, -0.052),
-            (-0.09, -0.080, -0.052),
+            (-0.09, 0.030, -0.052),
+            (-0.09, -0.030, -0.052),
+            (-0.09, -0.090, -0.052),
+            (-0.09, 0.075, -0.052),
         ],
     },
     "D2": {
         "parent_body": "drawer_D2_tray",
         "slots": [
-            (-0.09, 0.070, -0.052),
-            (-0.09, 0.015, -0.052),
-            (-0.09, -0.040, -0.052),
-            (-0.09, -0.080, -0.052),
+            (-0.09, 0.030, -0.052),
+            (-0.09, -0.030, -0.052),
+            (-0.09, -0.090, -0.052),
+            (-0.09, 0.075, -0.052),
         ],
     },
     "B1": {
@@ -197,8 +207,8 @@ CAMERA_CHOICES = CAMERAS + ROBOT_CAMERAS
 CONTAINER_JOINTS = {
     "C1": {"joint": "C1_door_joint", "actuator": "C1_door_actuator", "open_val": 1.4},
     "C2": {"joint": "C2_door_joint", "actuator": "C2_door_actuator", "open_val": 1.4},
-    "D1": {"joint": "D1_slide_joint", "actuator": "D1_slide_actuator", "open_val": 0.24},
-    "D2": {"joint": "D2_slide_joint", "actuator": "D2_slide_actuator", "open_val": 0.24},
+    "D1": {"joint": "D1_slide_joint", "actuator": "D1_slide_actuator", "open_val": 0.25},
+    "D2": {"joint": "D2_slide_joint", "actuator": "D2_slide_actuator", "open_val": 0.25},
     "B1": {"joint": "B1_lid_joint", "actuator": "B1_lid_actuator", "open_val": 1.8},
 }
 
@@ -226,6 +236,7 @@ class SceneState:
     hidden_objects: dict = field(default_factory=dict)      # {container: [objects]} - ground truth
     found_in: dict = field(default_factory=dict)            # {object: container_found_in}
     object_positions: dict = field(default_factory=dict)    # {object: (x, y, z)}
+    container_open_state: dict = field(default_factory=dict)
 
 
 def load_all_configs() -> dict[str, SceneConfig]:
@@ -506,6 +517,7 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
 
     # Track unique instance counters for duplicates
     instance_count = {}
+    object_instances: list[tuple[str, str]] = []
 
     def _get_instance_name(obj_name: str) -> str:
         """Generate unique name for duplicate objects (e.g., spoon → spoon_2)."""
@@ -555,6 +567,8 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
                         child.set(attr, val.replace(old_name, new_name))
 
         worldbody.append(obj_elem)
+        object_instances.append((instance_name, obj_name))
+        return instance_name
 
     def _get_body_world_pos(body_name: str) -> np.ndarray:
         """Trace path from target body up to worldbody to get absolute world position."""
@@ -651,7 +665,12 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
             if container_id in {"D1", "D2"} and obj_name not in UTENSIL_OBJECTS:
                 slot_rel_pos[0] = 0.08
             elif container_id in {"D1", "D2"} and obj_name in CENTRED_DRAWER_OBJECTS:
-                slot_rel_pos[0] = 0.0
+                # The low vertical IK corridor is centred around X=±0.39.
+                # Bias each mirrored utensil lane three centimetres outward;
+                # after D1's 180-degree yaw this puts both logical handle ends
+                # on those symmetric reachable lines while preserving wall
+                # clearance for the longest scanned tool.
+                slot_rel_pos[0] = -0.03 if container_id == "D1" else 0.03
             world_pos = parent_body_pos + np.array(slot_rel_pos)
             if container_id == "B1" and obj_name == "coffee_jar":
                 # The coffee jar remains slightly taller than B1's closed
@@ -667,43 +686,65 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
                     quat="0.7071068 0 0.7071068 0",
                     support_height_override=horizontal_radius,
                 )
+            elif container_id == "D1" and obj_name in UTENSIL_OBJECTS:
+                # Point the logical handle end toward the robot centreline.
+                # D2's default -X handle direction already points inward; D1
+                # is its mirror and therefore needs a 180-degree yaw. This
+                # keeps the requested end grasp inside the accurate central
+                # IK workspace instead of reaching past the drawer's far wall.
+                _inject_object(obj_name, world_pos, quat="0 0 0 1")
             else:
                 _inject_object(obj_name, world_pos)
 
     # Contact-confirmed pick actions can enable one of these initially
-    # inactive welds after both gripper fingers touch a countertop object.
+    # inactive welds after both gripper fingers touch a supported object.
     # The relative pose is filled from the live state when the grasp occurs,
     # so enabling a weld never snaps an object to a pre-recorded pose.
     if include_robot:
+        contact = root.find("contact")
+        if contact is None:
+            contact = ET.SubElement(root, "contact")
+        # The imported Fetch collision hulls overlap slightly at this
+        # articulated shoulder/torso interface even in the valid home pose.
+        # Treat it as the connected mechanism it represents; otherwise that
+        # persistent proxy contact blocks the arm's centred D1 front grasp.
+        ET.SubElement(
+            contact,
+            "exclude",
+            {
+                "body1": "robot0:torso_lift_link",
+                "body2": "robot0:shoulder_lift_link",
+            },
+        )
         equality = root.find("equality")
         if equality is None:
             equality = ET.SubElement(root, "equality")
-        for obj_name in dict.fromkeys(config.countertop_objects.values()):
-            if obj_name not in {"kettle", "coffee_jar", "sugar_jar", "spoon"}:
+        for instance_name, object_kind in object_instances:
+            if object_kind not in ACTION_PICK_OBJECTS:
                 continue
             ET.SubElement(
                 equality,
                 "weld",
                 {
-                    "name": f"robot0:pick_weld_{obj_name}",
+                    "name": f"robot0:pick_weld_{instance_name}",
                     "body1": "robot0:gripper_link",
-                    "body2": obj_name,
+                    "body2": instance_name,
                     "active": "false",
                     "solref": "0.01 1",
                 },
             )
-            if obj_name == "spoon":
+            if object_kind in PASSIVE_HANDLE_OBJECTS:
                 # Activated after the initial vertical lift. Unlike the
                 # transport weld, a connect equality fixes only the handle
                 # pinch point and leaves all three rotational DOFs free, so
-                # gravity can swing the bowl naturally below the gripper.
+                # gravity can swing the working end naturally below the hand.
                 ET.SubElement(
                     equality,
                     "connect",
                     {
-                        "name": "robot0:pick_pivot_spoon",
+                        "name": f"robot0:pick_pivot_{instance_name}",
                         "body1": "robot0:gripper_link",
-                        "body2": "spoon",
+                        "body2": instance_name,
                         "anchor": "0 0 0",
                         "active": "false",
                         "solref": "0.01 1",
@@ -723,6 +764,22 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
                 "solref": "0.01 1",
             },
         )
+        for drawer_name in ("D1", "D2"):
+            # A live point constraint preserves the finger-confirmed handle
+            # contact while allowing the wrist to yaw naturally during the
+            # straight drawer pull.
+            ET.SubElement(
+                equality,
+                "connect",
+                {
+                    "name": f"robot0:open_connect_{drawer_name}",
+                    "body1": "robot0:gripper_link",
+                    "body2": f"drawer_{drawer_name}_tray",
+                    "anchor": "0 0 0",
+                    "active": "false",
+                    "solref": "0.01 1",
+                },
+            )
 
     return ET.tostring(root, encoding="unicode")
 
@@ -757,6 +814,7 @@ class KitchenScene:
             model_assets.update(_load_fetch_binary_assets(_fetch_asset_dir()))
         self.model = mujoco.MjModel.from_xml_string(xml_str, assets=model_assets)
         self.data = mujoco.MjData(self.model)
+        self._object_instance_records = self._discover_object_instances()
 
         if include_robot:
             self._set_fetch_home_pose()
@@ -765,6 +823,9 @@ class KitchenScene:
         self.state = SceneState()
         self.state.hidden_objects = {
             cid: list(objs) for cid, objs in self.config.container_contents.items()
+        }
+        self.state.container_open_state = {
+            container_id: False for container_id in CONTAINER_JOINTS
         }
         # Countertop objects are always visible
         self.state.visible_objects = set(self.config.countertop_objects.values())
@@ -781,6 +842,28 @@ class KitchenScene:
         print(f"  Required objects: {self.config.required_objects}")
         print(f"  Fetch robot: {'enabled' if self.has_robot else 'disabled'}")
         print(f"  Scene ready.\n")
+
+    def _discover_object_instances(self) -> list[tuple[str, str, str | None]]:
+        """Return (instance body, object kind, containing region) records."""
+        counts: Counter = Counter()
+        records = []
+
+        def add(object_kind: str, region: str | None) -> None:
+            counts[object_kind] += 1
+            suffix = "" if counts[object_kind] == 1 else f"_{counts[object_kind]}"
+            instance_name = f"{object_kind}{suffix}"
+            body_id = mujoco.mj_name2id(
+                self.model, mujoco.mjtObj.mjOBJ_BODY, instance_name
+            )
+            if body_id >= 0:
+                records.append((instance_name, object_kind, region))
+
+        for object_kind in self.config.countertop_objects.values():
+            add(object_kind, None)
+        for container_id, object_kinds in self.config.container_contents.items():
+            for object_kind in object_kinds:
+                add(object_kind, container_id)
+        return records
 
     def _set_fetch_home_pose(self):
         """Apply deterministic Fetch joint positions and controller targets."""
@@ -856,6 +939,36 @@ class KitchenScene:
         """Return the set of objects currently visible to the agent."""
         return set(self.state.visible_objects)
 
+    def get_visible_object_instances(self) -> list[tuple[str, str]]:
+        """Return actual visible MuJoCo body names paired with semantic kinds."""
+        return [
+            (instance_name, object_kind)
+            for instance_name, object_kind, container_id in self._object_instance_records
+            if container_id is None or container_id in self.state.opened_containers
+        ]
+
+    def get_instance_source_region(self, instance_name: str) -> str | None:
+        """Return the controller-known source after an instance is observable."""
+        for known_name, _object_kind, container_id in self._object_instance_records:
+            if known_name == instance_name:
+                if container_id is None:
+                    return "countertop"
+                if container_id in self.state.opened_containers:
+                    return container_id
+                return None
+        return None
+
+    def get_region_observation_states(self) -> dict[str, dict]:
+        """Return opening/inspection state without exposing hidden contents."""
+        return {
+            container_id: {
+                "region_id": container_id,
+                "open": bool(self.state.container_open_state[container_id]),
+                "inspected": container_id in self.state.opened_containers,
+            }
+            for container_id in CONTAINER_JOINTS
+        }
+
     def get_missing_objects(self) -> list:
         """Return missing required instances, preserving duplicate quantities."""
         required = Counter(self.config.required_objects)
@@ -875,7 +988,7 @@ class KitchenScene:
         if container_id not in CONTAINER_JOINTS:
             raise ValueError(f"Unknown container: {container_id}")
 
-        if container_id in self.state.opened_containers:
+        if self.state.container_open_state[container_id]:
             print(f"  [INFO] {container_id} already open.")
             return []
 
@@ -891,17 +1004,44 @@ class KitchenScene:
         for _ in range(steps):
             mujoco.mj_step(self.model, self.data)
 
-        # Mark as opened and reveal contents
+        return self.record_container_opened(container_id)
+
+    def record_container_opened(self, container_id: str) -> list:
+        """Update visibility after an API- or motion-driven physical opening."""
+        if container_id not in CONTAINER_JOINTS:
+            raise ValueError(f"Unknown container: {container_id}")
+        self.state.container_open_state[container_id] = True
+        if container_id in self.state.opened_containers:
+            return []
         self.state.opened_containers.add(container_id)
         newly_visible = self.state.hidden_objects.get(container_id, [])
-
         for obj in newly_visible:
             self.state.visible_objects.add(obj)
             self.state.visible_object_counts[obj] += 1
             self.state.found_in[obj] = container_id
-
         print(f"  [OPENED] {container_id} → Found: {newly_visible}")
         return newly_visible
+
+    def set_all_containers_open_snapshot(self) -> None:
+        """Load a deterministic all-open perception snapshot without settling.
+
+        C2 and B1 overlap along their full dynamic opening arcs in this compact
+        scene. Setting joint coordinates directly is intentional for the
+        geometry benchmark: it exposes every region in one reproducible frame
+        without asking the contact solver to choose which mechanism may open.
+        """
+        for container_id, cinfo in CONTAINER_JOINTS.items():
+            joint_id = mujoco.mj_name2id(
+                self.model, mujoco.mjtObj.mjOBJ_JOINT, cinfo["joint"]
+            )
+            actuator_id = mujoco.mj_name2id(
+                self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, cinfo["actuator"]
+            )
+            self.data.qpos[self.model.jnt_qposadr[joint_id]] = cinfo["open_val"]
+            self.data.qvel[self.model.jnt_dofadr[joint_id]] = 0.0
+            self.data.ctrl[actuator_id] = cinfo["open_val"]
+            self.record_container_opened(container_id)
+        mujoco.mj_forward(self.model, self.data)
 
     def close_container(self, container_id: str, steps: int = 1000):
         """Close a previously opened container."""
@@ -916,6 +1056,7 @@ class KitchenScene:
 
         for _ in range(steps):
             mujoco.mj_step(self.model, self.data)
+        self.state.container_open_state[container_id] = False
 
     def is_task_resolvable(self) -> bool:
         """
@@ -1046,6 +1187,41 @@ if __name__ == "__main__":
         help="Open a container before rendering/viewing; may be repeated"
     )
     parser.add_argument(
+        "--open-all", action="store_true",
+        help="Start with both cupboards, both drawers, and the box open"
+    )
+    parser.add_argument(
+        "--inspect-sequence", nargs="+", metavar="REGION",
+        help=(
+            "Observe the closed scene, then move/open and save one observed-state "
+            "stage per region (available: C1 C2 D1 D2 B1)"
+        ),
+    )
+    parser.add_argument(
+        "--runs-root", type=str, default="runs",
+        help="Root directory for persistent observed-state runs"
+    )
+    parser.add_argument(
+        "--run-id", type=str, default=None,
+        help="Optional deterministic output name for --inspect-sequence"
+    )
+    parser.add_argument(
+        "--point-cloud", type=str, default=None, metavar="OUTPUT_DIR",
+        help="Run five-view RGB-D fusion and write per-object PLY clouds"
+    )
+    parser.add_argument(
+        "--point-cloud-width", type=int, default=640,
+        help="Width of each point-cloud RGB-D observation (default: 640)"
+    )
+    parser.add_argument(
+        "--point-cloud-height", type=int, default=480,
+        help="Height of each point-cloud RGB-D observation (default: 480)"
+    )
+    parser.add_argument(
+        "--point-cloud-voxel", type=float, default=0.003,
+        help="World-frame fusion voxel size in metres; 0 disables downsampling"
+    )
+    parser.add_argument(
         "--render", type=str, default=None,
         help="Render a frame to the specified output path (e.g., frame.png)"
     )
@@ -1058,6 +1234,11 @@ if __name__ == "__main__":
         help="List all available scene configurations"
     )
     args = parser.parse_args()
+    if args.inspect_sequence and (args.open_all or args.open_container):
+        parser.error(
+            "--inspect-sequence requires the closed reset state; do not combine "
+            "it with --open-all or --open-container"
+        )
 
     if args.list_scenes:
         configs = load_all_configs()
@@ -1077,8 +1258,37 @@ if __name__ == "__main__":
     scene = KitchenScene(args.scene, include_robot=not args.no_robot)
     scene.print_scene_summary()
 
-    for container in args.open_container or []:
-        scene.open_container(container)
+    if args.inspect_sequence:
+        from mujoco_scenes.sequential_inspection import run_sequential_inspection
+
+        run_sequential_inspection(
+            scene,
+            args.inspect_sequence,
+            runs_root=args.runs_root,
+            run_id=args.run_id,
+            width=args.point_cloud_width,
+            height=args.point_cloud_height,
+            voxel_size=args.point_cloud_voxel,
+        )
+
+    containers_to_open = list(args.open_container or [])
+    if args.open_all:
+        scene.set_all_containers_open_snapshot()
+    else:
+        for container in containers_to_open:
+            scene.open_container(container)
+
+    if args.point_cloud:
+        from mujoco_scenes.geometry_checker import GeometryChecker, print_run_summary
+
+        checker = GeometryChecker(
+            scene,
+            width=args.point_cloud_width,
+            height=args.point_cloud_height,
+            voxel_size=args.point_cloud_voxel,
+        )
+        point_cloud_run = checker.run(args.point_cloud)
+        print_run_summary(point_cloud_run)
 
     if args.demo_search:
         print("\n[DEMO] Running sequential container search...\n")

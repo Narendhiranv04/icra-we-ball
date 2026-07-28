@@ -10,6 +10,7 @@ import numpy as np
 
 from mujoco_scenes.pick_motion import (
     OPEN_WIDTH,
+    PICK_SPECS,
     ArmWaypoint,
     PickExecutor,
     VerticalIK,
@@ -62,15 +63,43 @@ TABLE_SUBREGIONS = {
     ),
 }
 
+DRAWER_REGIONS = {
+    "drawer_D1": PlacementRegion(
+        "drawer_D1", (-0.606, -0.274, -0.682, -0.424), "D1_tray_base", 0.408, 0.008
+    ),
+    "drawer_D2": PlacementRegion(
+        "drawer_D2", (0.274, 0.606, -0.682, -0.424), "D2_tray_base", 0.408, 0.008
+    ),
+}
+
+HANGING_OBJECT_SETTLED_X = {
+    "spoon": (-0.105, 0.105),
+    "fork": (-0.100, 0.100),
+    "knife": (-0.108, 0.108),
+    "stirrer": (-0.070, 0.070),
+    # The simple spatula body origin is at its handle end. Its +X working end
+    # hangs downward and the deliberate release lean lays it toward world -X.
+    "spatula": (-0.190, 0.020),
+    "tongs": (-0.100, 0.100),
+    "gso_spatula_distractor": (-0.120, 0.120),
+}
+
 
 def resolve_place_region(name: str, physical_location: str) -> PlacementRegion:
-    """Resolve the two public aliases to the correct physical rectangle."""
+    """Resolve public aliases to the current support rectangle."""
     if name == "serving_table":
         if physical_location != "home":
             raise RuntimeError("Serving-table placement requires Move (home) first")
         return SERVING_REGION
+    if name in DRAWER_REGIONS:
+        if physical_location != "home":
+            raise RuntimeError("Drawer placement requires Move (home) first")
+        return DRAWER_REGIONS[name]
     if name != "table":
-        raise ValueError("Place region must be 'serving_table' or 'table'")
+        raise ValueError(
+            "Place region must be 'serving_table', 'table', 'drawer_D1', or "
+            "'drawer_D2'"
+        )
     try:
         return TABLE_SUBREGIONS[physical_location]
     except KeyError as error:
@@ -203,17 +232,19 @@ class PlaceExecutor:
 
     @staticmethod
     def _gripper_overlaps_obstacle(
-        grip_xy: np.ndarray, obstacles: list[np.ndarray]
+        grip_xy: np.ndarray,
+        obstacles: list[np.ndarray],
+        clearance: float = GRIPPER_OBSTACLE_CLEARANCE,
     ) -> bool:
         """Reserve room for the hand/wrist, not only the held object."""
         for obstacle in obstacles:
             if (
-                obstacle[0, 0] - GRIPPER_OBSTACLE_CLEARANCE
+                obstacle[0, 0] - clearance
                 <= grip_xy[0]
-                <= obstacle[1, 0] + GRIPPER_OBSTACLE_CLEARANCE
-                and obstacle[0, 1] - GRIPPER_OBSTACLE_CLEARANCE
+                <= obstacle[1, 0] + clearance
+                and obstacle[0, 1] - clearance
                 <= grip_xy[1]
-                <= obstacle[1, 1] + GRIPPER_OBSTACLE_CLEARANCE
+                <= obstacle[1, 1] + clearance
             ):
                 return True
         return False
@@ -303,14 +334,28 @@ class PlaceExecutor:
         return False
 
     def _candidate_points(
-        self, bounds: tuple[float, float, float, float], count: int = 96
+        self,
+        bounds: tuple[float, float, float, float],
+        count: int = 96,
+        preferred: np.ndarray | None = None,
     ) -> list[np.ndarray]:
         min_x, max_x, min_y, max_y = bounds
         centre = np.array(((min_x + max_x) / 2, (min_y + max_y) / 2))
         random_points = self.rng.uniform(
             (min_x, min_y), (max_x, max_y), size=(count - 1, 2)
         )
-        return [centre, *(point for point in random_points)]
+        points = [centre]
+        if preferred is not None:
+            points.insert(
+                0,
+                np.clip(
+                    np.asarray(preferred, dtype=float),
+                    (min_x, min_y),
+                    (max_x, max_y),
+                ),
+            )
+        points.extend(point for point in random_points)
+        return points
 
     def _plan_trajectory(
         self,
@@ -416,17 +461,44 @@ class PlaceExecutor:
 
         mujoco.mj_forward(self.model, self.data)
         region = resolve_place_region(region_name, physical_location)
+        if region_name in DRAWER_REGIONS:
+            drawer_name = region_name.removeprefix("drawer_")
+            joint_id = mujoco.mj_name2id(
+                self.model,
+                mujoco.mjtObj.mjOBJ_JOINT,
+                f"{drawer_name}_slide_joint",
+            )
+            if joint_id < 0:
+                raise RuntimeError(f"Missing slide joint for {drawer_name}")
+            qpos_address = int(self.model.jnt_qposadr[joint_id])
+            if (
+                self.data.qpos[qpos_address]
+                < self.model.jnt_range[joint_id, 1] - 0.015
+            ):
+                raise RuntimeError(f"{drawer_name} must be fully open before placement")
         self.target_object = self.picker.held_object
         body_id = self.picker.target_body_id
         body_position = self.data.xpos[body_id].copy()
         body_quaternion = self.data.xquat[body_id].copy()
         body_bounds = self._body_world_bounds(body_id)
         offsets = body_bounds - body_position
-        # A vertically hanging spoon will topple after release, so reserve its
-        # full length instead of only its narrow current horizontal projection.
-        if self.target_object == "spoon":
-            offsets[0, :2] = np.minimum(offsets[0, :2], -0.105)
-            offsets[1, :2] = np.maximum(offsets[1, :2], 0.105)
+        spec = PICK_SPECS[self.target_object]
+        passive_hang = self.target_object == "spoon" or spec.passive_hang
+        # A vertically hanging utensil topples along world X after release.
+        # Reserve its full settled length in that direction. Counter/serving
+        # placement keeps the older conservative all-direction allowance;
+        # the narrow drawer uses the intentional X fall direction so a long
+        # utensil still fits safely between its front and back walls.
+        if passive_hang:
+            settled_min_x, settled_max_x = HANGING_OBJECT_SETTLED_X[
+                self.target_object
+            ]
+            offsets[0, 0] = min(offsets[0, 0], settled_min_x)
+            offsets[1, 0] = max(offsets[1, 0], settled_max_x)
+            if region_name not in DRAWER_REGIONS:
+                half_length = max(abs(settled_min_x), abs(settled_max_x))
+                offsets[0, 1] = min(offsets[0, 1], -half_length)
+                offsets[1, 1] = max(offsets[1, 1], half_length)
         centre_bounds = buffered_center_bounds(
             region,
             (offsets[0, 0], offsets[1, 0], offsets[0, 1], offsets[1, 1]),
@@ -441,7 +513,7 @@ class PlaceExecutor:
             self.picker.grip_site_id
         ].reshape(3, 3).copy()
         grip_offset = carry_grip - body_position
-        if self.target_object == "spoon":
+        if passive_hang:
             # A perfectly vertical spoon can topple toward the serving
             # table's short Y edge. Lean the whole live grasp slightly around
             # world Y so gravity still performs the placement but the bowl
@@ -468,8 +540,28 @@ class PlaceExecutor:
             and self.target_object in {"coffee_jar", "sugar_jar"}
             else PLACE_DROP_CLEARANCE
         )
-        for point in self._candidate_points(centre_bounds):
-            if self._overlaps_obstacle(point, offsets, obstacles):
+        preferred_point = (
+            self.picker.pick_source_position[:2]
+            if region_name in DRAWER_REGIONS
+            and self.picker.pick_source_position is not None
+            else None
+        )
+        for candidate_index, point in enumerate(
+            self._candidate_points(centre_bounds, preferred=preferred_point)
+        ):
+            restores_vacated_drawer_slot = (
+                preferred_point is not None
+                and candidate_index == 0
+            )
+            # The exact source pose is a previously stable, now-vacated slot.
+            # Preserve it as the first deterministic drawer sample even when
+            # conservative AABBs of adjacent long tools overlap slightly.
+            if (
+                not restores_vacated_drawer_slot
+                and self._overlaps_obstacle(point, offsets, obstacles)
+            ):
+                if last_error is None:
+                    last_error = RuntimeError("sample overlaps another free object")
                 continue
             desired_body = np.array(
                 (
@@ -481,9 +573,20 @@ class PlaceExecutor:
             if self._candidate_has_contact(
                 desired_body, body_quaternion, region.surface_geom
             ):
+                if last_error is None:
+                    last_error = RuntimeError("released object would contact a wall")
                 continue
             release_grip = desired_body + grip_offset
-            if self._gripper_overlaps_obstacle(release_grip[:2], obstacles):
+            gripper_clearance = (
+                0.030 if region_name in DRAWER_REGIONS else GRIPPER_OBSTACLE_CLEARANCE
+            )
+            if not restores_vacated_drawer_slot and self._gripper_overlaps_obstacle(
+                release_grip[:2], obstacles, gripper_clearance
+            ):
+                if last_error is None:
+                    last_error = RuntimeError(
+                        "gripper lacks clearance from another object"
+                    )
                 continue
             try:
                 chosen_waypoints = self._plan_trajectory(
@@ -497,11 +600,15 @@ class PlaceExecutor:
             except RuntimeError as error:
                 last_error = error
                 continue
-            if region.name == "table_sub_1" and self._planned_robot_has_contact(
+            if region.name in {"table_sub_1", *DRAWER_REGIONS} and self._planned_robot_has_contact(
                 chosen_waypoints[0][-1].joints,
                 desired_body,
                 body_quaternion,
             ):
+                if last_error is None:
+                    last_error = RuntimeError(
+                        "planned release pose contacts the furniture"
+                    )
                 continue
             chosen_point = point
             break
@@ -695,6 +802,7 @@ class PlaceExecutor:
                 placed_region = self.public_region
                 self.picker.held_object = None
                 self.picker.target_object = None
+                self.picker.pick_source_position = None
                 self.picker.target_body_id = -1
                 self.picker.target_free_dof = -1
                 self.picker.grasp_equality_id = -1

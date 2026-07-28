@@ -453,11 +453,14 @@ def launch_action_viewer(scene, camera: str) -> None:
     from tkinter import ttk
 
     from mujoco_scenes.pick_motion import (
+        PICK_SPECS,
         PickExecutor,
-        TABLE_PICK_SPECS,
         object_reachable_from_location,
     )
     from mujoco_scenes.open_motion import BoxOpenExecutor
+    from mujoco_scenes.drawer_motion import DrawerOpenExecutor
+    from mujoco_scenes.geometry_checker import print_run_summary
+    from mujoco_scenes.observed_state import ObservedStateRun
     from mujoco_scenes.place_motion import PlaceExecutor
 
     camera_id = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_CAMERA, camera)
@@ -468,11 +471,26 @@ def launch_action_viewer(scene, camera: str) -> None:
     picker = PickExecutor(scene.model, scene.data)
     placer = PlaceExecutor(scene.model, scene.data, picker)
     opener = BoxOpenExecutor(scene.model, scene.data, picker)
+    drawer_opener = DrawerOpenExecutor(scene.model, scene.data, picker)
+    observed_run = ObservedStateRun.create_for_scene(
+        scene,
+        runs_root="runs",
+        run_config={
+            "mode": "interactive_actions",
+            "resolution": [640, 480],
+        },
+    )
+    initial_cloud_run, initial_stage_dir = observed_run.observe_scene(
+        scene,
+        stage_label="initial",
+    )
+    print_run_summary(initial_cloud_run)
+    print(f"  Persistent observed state: {initial_stage_dir}")
 
     root = tk.Tk()
     root.title("Kitchen Actions")
-    root.geometry("380x900+20+20")
-    root.minsize(360, 650)
+    root.geometry("540x1040+20+20")
+    root.minsize(500, 650)
     root.columnconfigure(0, weight=1)
 
     status = tk.StringVar(value=executor.status)
@@ -502,7 +520,7 @@ def launch_action_viewer(scene, camera: str) -> None:
         nonlocal ui_error
         ui_error = None
         try:
-            if picker.busy or placer.busy or opener.busy:
+            if picker.busy or placer.busy or opener.busy or drawer_opener.busy:
                 raise RuntimeError("Wait for the manipulation action to finish")
             executor.request_move(destination)
             status.set(executor.status)
@@ -526,19 +544,22 @@ def launch_action_viewer(scene, camera: str) -> None:
     pick_open = tk.BooleanVar(value=True)
     pick_toggle = ttk.Checkbutton(actions_body, text="Pick", variable=pick_open)
     pick_toggle.grid(row=2, column=0, sticky="ew", pady=(4, 0))
-    pick_body = ttk.LabelFrame(actions_body, text="Reachable object", padding=10)
+    pick_body = ttk.LabelFrame(
+        actions_body, text="Reachable table / open-drawer object", padding=10
+    )
     pick_body.grid(row=3, column=0, sticky="ew", pady=(4, 10))
     pick_body.columnconfigure(0, weight=1)
-    pick_buttons: list[ttk.Button] = []
+    pick_body.columnconfigure(1, weight=1)
+    pick_buttons: list[tuple[ttk.Button, str]] = []
 
     def request_pick(object_name: str) -> None:
         nonlocal ui_error
         ui_error = None
-        selected_pick.set(f"Selected: {TABLE_PICK_SPECS[object_name].label}")
+        selected_pick.set(f"Selected: {PICK_SPECS[object_name].label}")
         status.set(f"Planning pick for {object_name}...")
         root.update_idletasks()
         try:
-            if executor.busy or placer.busy or opener.busy:
+            if executor.busy or placer.busy or opener.busy or drawer_opener.busy:
                 raise RuntimeError("Wait for the move action to finish")
             picker.request_pick(
                 object_name, executor.current_physical_location
@@ -549,7 +570,7 @@ def launch_action_viewer(scene, camera: str) -> None:
             status.set(ui_error)
             print(f"[Actions] {ui_error}")
 
-    for row, (object_name, spec) in enumerate(TABLE_PICK_SPECS.items()):
+    for index, (object_name, spec) in enumerate(PICK_SPECS.items()):
         present = mujoco.mj_name2id(
             scene.model, mujoco.mjtObj.mjOBJ_BODY, object_name
         ) >= 0
@@ -558,12 +579,22 @@ def launch_action_viewer(scene, camera: str) -> None:
             text=spec.label,
             command=lambda name=object_name: request_pick(name),
         )
-        button.grid(row=row, column=0, sticky="ew", pady=3)
+        button.grid(
+            row=index // 2,
+            column=index % 2,
+            sticky="ew",
+            padx=(0, 3) if index % 2 == 0 else (3, 0),
+            pady=3,
+        )
         if not present:
             button.configure(state="disabled")
-        pick_buttons.append(button)
+        pick_buttons.append((button, object_name))
     ttk.Label(pick_body, textvariable=selected_pick).grid(
-        row=len(TABLE_PICK_SPECS), column=0, sticky="w", pady=(8, 0)
+        row=(len(PICK_SPECS) + 1) // 2,
+        column=0,
+        columnspan=2,
+        sticky="w",
+        pady=(8, 0),
     )
 
     place_open = tk.BooleanVar(value=True)
@@ -577,12 +608,17 @@ def launch_action_viewer(scene, camera: str) -> None:
     def request_place(region_name: str) -> None:
         nonlocal ui_error
         ui_error = None
-        label = "Serving table" if region_name == "serving_table" else "Table"
+        label = {
+            "serving_table": "Serving table",
+            "table": "Table",
+            "drawer_D1": "Drawer 1",
+            "drawer_D2": "Drawer 2",
+        }[region_name]
         selected_place.set(f"Selected: {label}")
         status.set(f"Sampling safe point in {label.lower()}...")
         root.update_idletasks()
         try:
-            if executor.busy or opener.busy:
+            if executor.busy or opener.busy or drawer_opener.busy:
                 raise RuntimeError("Wait for the move action to finish")
             placer.request_place(region_name, executor.current_physical_location)
             status.set(placer.status)
@@ -592,7 +628,12 @@ def launch_action_viewer(scene, camera: str) -> None:
             print(f"[Actions] {ui_error}")
 
     for row, (label, region_name) in enumerate(
-        (("Serving table", "serving_table"), ("Table", "table"))
+        (
+            ("Serving table", "serving_table"),
+            ("Table", "table"),
+            ("Drawer 1", "drawer_D1"),
+            ("Drawer 2", "drawer_D2"),
+        )
     ):
         button = ttk.Button(
             place_body,
@@ -602,7 +643,7 @@ def launch_action_viewer(scene, camera: str) -> None:
         button.grid(row=row, column=0, sticky="ew", pady=3)
         place_buttons.append((button, region_name))
     ttk.Label(place_body, textvariable=selected_place).grid(
-        row=2, column=0, sticky="w", pady=(8, 0)
+        row=4, column=0, sticky="w", pady=(8, 0)
     )
 
     open_open = tk.BooleanVar(value=True)
@@ -612,13 +653,62 @@ def launch_action_viewer(scene, camera: str) -> None:
     open_body.grid(row=7, column=0, sticky="ew", pady=(4, 10))
     open_body.columnconfigure(0, weight=1)
 
+    def run_geometry(
+        reason: str = "manual", region_opened: str | None = None
+    ) -> None:
+        nonlocal ui_error
+        status.set("Capturing five RGB-D views and fusing object clouds...")
+        root.update_idletasks()
+        try:
+            run, stage_dir = observed_run.observe_scene(
+                scene,
+                stage_label=reason,
+                region_opened=region_opened,
+            )
+            print_run_summary(run)
+            print(f"  Persistent observed state: {stage_dir}")
+            status.set(
+                f"Geometry complete: {run.total_points:,} points in "
+                f"{run.timings_seconds['total']:.3f} s"
+            )
+        except Exception as error:
+            ui_error = f"Geometry failed: {error}"
+            status.set(ui_error)
+            print(f"[Actions] {ui_error}")
+
+    def request_open_cupboard(container_id: str) -> None:
+        nonlocal ui_error
+        required_location = "cupboard1" if container_id == "C1" else "right_side"
+        if executor.current_physical_location != required_location:
+            ui_error = (
+                f"Open failed: move to {'Cupboard 1' if container_id == 'C1' else 'Cupboard 2'} first"
+            )
+            status.set(ui_error)
+            return
+        try:
+            scene.open_container(container_id)
+            run_geometry(f"after_{container_id}", region_opened=container_id)
+        except Exception as error:
+            ui_error = f"Open failed: {error}"
+            status.set(ui_error)
+            print(f"[Actions] {ui_error}")
+
+    open_cupboard1_button = ttk.Button(
+        open_body, text="Cupboard 1", command=lambda: request_open_cupboard("C1")
+    )
+    open_cupboard1_button.grid(row=0, column=0, sticky="ew", pady=3)
+    open_cupboard2_button = ttk.Button(
+        open_body, text="Cupboard 2", command=lambda: request_open_cupboard("C2")
+    )
+    open_cupboard2_button.grid(row=1, column=0, sticky="ew", pady=3)
+
     def request_open_box() -> None:
         nonlocal ui_error
         ui_error = None
         status.set("Planning contact-aware box opening...")
         root.update_idletasks()
         try:
-            if executor.busy or picker.busy or placer.busy:
+            if executor.busy or picker.busy or placer.busy or drawer_opener.busy:
                 raise RuntimeError("Wait for the current action to finish")
             opener.request_open(executor.current_physical_location)
             status.set(opener.status)
@@ -630,10 +720,47 @@ def launch_action_viewer(scene, camera: str) -> None:
     open_box_button = ttk.Button(
         open_body, text="Box", command=request_open_box
     )
-    open_box_button.grid(row=0, column=0, sticky="ew", pady=3)
+    open_box_button.grid(row=2, column=0, sticky="ew", pady=3)
+
+    def request_open_drawer(drawer_name: str) -> None:
+        nonlocal ui_error
+        ui_error = None
+        label = "Drawer 1" if drawer_name == "D1" else "Drawer 2"
+        status.set(f"Planning contact-aware {label} opening...")
+        root.update_idletasks()
+        try:
+            if executor.busy or picker.busy or placer.busy or opener.busy:
+                raise RuntimeError("Wait for the current action to finish")
+            drawer_opener.request_open(
+                drawer_name, executor.current_physical_location
+            )
+            status.set(drawer_opener.status)
+        except Exception as error:
+            ui_error = f"Open failed: {error}"
+            status.set(ui_error)
+            print(f"[Actions] {ui_error}")
+
+    open_drawer1_button = ttk.Button(
+        open_body, text="Drawer 1", command=lambda: request_open_drawer("D1")
+    )
+    open_drawer1_button.grid(row=3, column=0, sticky="ew", pady=3)
+    open_drawer2_button = ttk.Button(
+        open_body, text="Drawer 2", command=lambda: request_open_drawer("D2")
+    )
+    open_drawer2_button.grid(row=4, column=0, sticky="ew", pady=3)
+
+    geometry = ttk.LabelFrame(actions_body, text="Geometry", padding=8)
+    geometry.grid(row=8, column=0, sticky="ew", pady=(0, 10))
+    geometry.columnconfigure(0, weight=1)
+    geometry_button = ttk.Button(
+        geometry,
+        text="Build visible object point clouds now",
+        command=run_geometry,
+    )
+    geometry_button.grid(row=0, column=0, sticky="ew")
 
     future = ttk.LabelFrame(actions_body, text="Future actions", padding=8)
-    future.grid(row=8, column=0, sticky="ew")
+    future.grid(row=9, column=0, sticky="ew")
     ttk.Label(future, text="Close  ·  Pour", state="disabled").grid()
 
     ttk.Separator(root).grid(row=2, column=0, sticky="ew", padx=12, pady=8)
@@ -683,6 +810,7 @@ def launch_action_viewer(scene, camera: str) -> None:
     open_toggle.configure(command=toggle_open)
 
     closed = False
+    processed_motion_opens = set(scene.state.opened_containers)
 
     def close() -> None:
         nonlocal closed
@@ -702,6 +830,8 @@ def launch_action_viewer(scene, camera: str) -> None:
         for _ in range(5):
             if opener.busy:
                 opener.update()
+            elif drawer_opener.busy:
+                drawer_opener.update()
             elif placer.busy:
                 placer.update()
             elif picker.busy:
@@ -709,12 +839,29 @@ def launch_action_viewer(scene, camera: str) -> None:
             else:
                 executor.update()
             mujoco.mj_step(scene.model, scene.data)
+        if opener.mode == "complete" and "B1" not in processed_motion_opens:
+            processed_motion_opens.add("B1")
+            scene.record_container_opened("B1")
+            run_geometry("after_B1", region_opened="B1")
+        if (
+            drawer_opener.mode == "complete"
+            and drawer_opener.target
+            and drawer_opener.target not in processed_motion_opens
+        ):
+            processed_motion_opens.add(drawer_opener.target)
+            scene.record_container_opened(drawer_opener.target)
+            run_geometry(
+                f"after_{drawer_opener.target}",
+                region_opened=drawer_opener.target,
+            )
         if ui_error:
             active_status = ui_error
         elif executor.busy:
             active_status = executor.status
         elif opener.busy or opener.failure:
             active_status = opener.status
+        elif drawer_opener.busy or drawer_opener.failure:
+            active_status = drawer_opener.status
         elif placer.busy or placer.failure:
             active_status = placer.status
         elif picker.busy or picker.held_object is not None or picker.failure:
@@ -723,6 +870,8 @@ def launch_action_viewer(scene, camera: str) -> None:
             active_status = placer.status
         elif opener.mode == "complete":
             active_status = opener.status
+        elif drawer_opener.mode == "complete":
+            active_status = drawer_opener.status
         else:
             active_status = executor.status
         if hasattr(viewer, "set_texts"):
@@ -740,6 +889,8 @@ def launch_action_viewer(scene, camera: str) -> None:
         progress.set(
             opener.progress()
             if opener.busy
+            else drawer_opener.progress()
+            if drawer_opener.busy
             else placer.progress()
             if placer.busy
             else picker.progress()
@@ -748,6 +899,7 @@ def launch_action_viewer(scene, camera: str) -> None:
         )
         move_state = "disabled" if (
             executor.busy or picker.busy or placer.busy or opener.busy
+            or drawer_opener.busy
         ) else "normal"
         for button in move_buttons:
             button.configure(state=move_state)
@@ -756,9 +908,10 @@ def launch_action_viewer(scene, camera: str) -> None:
             and not picker.busy
             and not placer.busy
             and not opener.busy
+            and not drawer_opener.busy
             and picker.held_object is None
         )
-        for button, object_name in zip(pick_buttons, TABLE_PICK_SPECS):
+        for button, object_name in pick_buttons:
             present = mujoco.mj_name2id(
                 scene.model, mujoco.mjtObj.mjOBJ_BODY, object_name
             ) >= 0
@@ -776,12 +929,21 @@ def launch_action_viewer(scene, camera: str) -> None:
             and not picker.busy
             and not placer.busy
             and not opener.busy
+            and not drawer_opener.busy
             and picker.held_object is not None
         )
         for button, region_name in place_buttons:
-            region_available = (
-                region_name == "table"
-                or executor.current_physical_location == "home"
+            at_home = executor.current_physical_location == "home"
+            region_available = region_name == "table" or (
+                region_name == "serving_table" and at_home
+            ) or (
+                region_name == "drawer_D1"
+                and at_home
+                and drawer_opener.is_fully_open("D1")
+            ) or (
+                region_name == "drawer_D2"
+                and at_home
+                and drawer_opener.is_fully_open("D2")
             )
             button.configure(
                 state="normal" if can_place and region_available else "disabled"
@@ -791,12 +953,69 @@ def launch_action_viewer(scene, camera: str) -> None:
             and not picker.busy
             and not placer.busy
             and not opener.busy
+            and not drawer_opener.busy
             and picker.held_object is None
             and executor.current_physical_location == "right_side"
             and scene.data.qpos[opener.hinge_qpos] < opener.max_angle - 0.05
         )
         open_box_button.configure(
             state="normal" if can_open_box else "disabled"
+        )
+        can_open_container = (
+            not executor.busy
+            and not picker.busy
+            and not placer.busy
+            and not opener.busy
+            and not drawer_opener.busy
+            and picker.held_object is None
+        )
+        can_open_drawer = (
+            can_open_container and executor.current_physical_location == "home"
+        )
+        open_cupboard1_button.configure(
+            state=(
+                "normal"
+                if can_open_container
+                and executor.current_physical_location == "cupboard1"
+                and "C1" not in scene.state.opened_containers
+                else "disabled"
+            )
+        )
+        open_cupboard2_button.configure(
+            state=(
+                "normal"
+                if can_open_container
+                and executor.current_physical_location == "right_side"
+                and "C2" not in scene.state.opened_containers
+                else "disabled"
+            )
+        )
+        open_drawer1_button.configure(
+            state=(
+                "normal"
+                if can_open_drawer and not drawer_opener.is_fully_open("D1")
+                else "disabled"
+            )
+        )
+        open_drawer2_button.configure(
+            state=(
+                "normal"
+                if can_open_drawer and not drawer_opener.is_fully_open("D2")
+                else "disabled"
+            )
+        )
+        geometry_button.configure(
+            state=(
+                "normal"
+                if not (
+                    executor.busy
+                    or picker.busy
+                    or placer.busy
+                    or opener.busy
+                    or drawer_opener.busy
+                )
+                else "disabled"
+            )
         )
         root.after(10, tick)
 

@@ -10,6 +10,8 @@ from mujoco_scenes.pick_motion import (
     JAR_HORIZONTAL_ROTATION,
     JAR_TOP_DOWN_ROTATION,
     LIFT_CLEARANCE,
+    DRAWER_PICK_SPECS,
+    PICK_SPECS,
     SPOON_POST_GRASP_CLEARANCE,
     PickExecutor,
     TABLE_PICK_SPECS,
@@ -34,6 +36,33 @@ class PickMotionTests(unittest.TestCase):
         self.assertEqual(TABLE_PICK_SPECS["spoon"].grasp_site, "spoon_grasp")
         self.assertTrue(TABLE_PICK_SPECS["coffee_jar"].reorient_horizontal)
         self.assertTrue(TABLE_PICK_SPECS["sugar_jar"].reorient_horizontal)
+
+    def test_drawer_objects_use_end_hangs_except_centre_pinched_tissue(self):
+        self.assertEqual(
+            set(DRAWER_PICK_SPECS),
+            {
+                "fork",
+                "knife",
+                "stirrer",
+                "spatula",
+                "tongs",
+                "napkin",
+                "gso_spatula_distractor",
+            },
+        )
+        for name, spec in DRAWER_PICK_SPECS.items():
+            self.assertTrue(spec.align_to_body)
+            if name == "napkin":
+                self.assertFalse(spec.passive_hang)
+                self.assertTrue(spec.centre_pinch_assist)
+                self.assertEqual(spec.grasp_site, "napkin_grasp")
+            else:
+                self.assertTrue(spec.passive_hang)
+                self.assertTrue(spec.handle_pinch_assist)
+                self.assertEqual(spec.hang_axis_local, (1.0, 0.0, 0.0))
+        self.assertEqual(
+            set(PICK_SPECS), set(TABLE_PICK_SPECS) | set(DRAWER_PICK_SPECS)
+        )
 
     def test_vertical_approach_and_lift_use_one_constant_distance(self):
         self.assertAlmostEqual(APPROACH_CLEARANCE, 0.08)

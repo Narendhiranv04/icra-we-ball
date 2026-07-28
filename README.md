@@ -90,15 +90,29 @@ MUJOCO_GL=glfw /home/naren/miniconda3/bin/python \
 The launch also opens an `Actions` panel. Under `Move`, select `Home`,
 `Cupboard 1`, `Cupboard 2`, or `Box`; each button executes the corresponding
 collision-checked mobile-base trajectory. `Cupboard 2` and `Box` share one
-physical right-side pose. Under `Pick`, select the kettle, coffee jar, sugar
-jar, or spoon to run a vertical pre-grasp, contact-aware close, lift, and
-return to the object-in-gripper carry pose. Once an object is held, `Place`
-offers `Serving table` and `Table`. The latter automatically selects the safe
-counter strip nearest the robot's current home, left, or right base pose.
+physical right-side pose. Under `Pick`, select a reachable table object or an
+object exposed in a fully open drawer to run its vertical pre-grasp,
+contact-aware close, lift, and return to the object-in-gripper carry pose.
+Once an object is held, `Place` offers `Serving table`, `Table`, `Drawer 1`,
+and `Drawer 2` when their physical preconditions are satisfied. `Table`
+automatically selects the safe counter strip nearest the robot's current
+home, left, or right base pose.
 Placed objects remain selectable for another pick whenever the robot is at
 the base pose corresponding to that strip. At the shared right-side pose,
 `Open` → `Box` approaches B1's handle along +Y with vertical fingers, confirms
 bilateral contact, and carries the real lid joint around its hinge to the
 intentional 100-degree open position. It then opens the gripper, retreats
 vertically above the lid, and returns to the empty carry-hover pose.
+At Home, `Open` → `Drawer 1` and `Drawer 2` use mirrored front grasps on
+identical, level U-handles. The gripper reaches each handle through a safe
+high corridor, approaches along +Y, confirms bilateral contact, and pulls the
+physical slide straight back along -Y to its full `0.25 m` limit. It then
+releases, retreats horizontally from the opened handle, and returns to the
+same empty carry pose.
+Once open, D1/D2 contents become selectable under `Pick`. Utensils use
+vertical handle-end grasps and a smooth, compliant working-end-down transition;
+the D2 tissue uses a vertical centre pinch. `Place` also exposes `Drawer 1`
+and `Drawer 2` while fully open. Both execute a vertical hover/descent/release
+and vertical retreat, preferring the object's vacated stable tray slot before
+sampling another buffered point.
 Pass `--no-actions-panel` to suppress this panel.

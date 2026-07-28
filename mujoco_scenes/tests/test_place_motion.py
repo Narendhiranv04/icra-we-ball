@@ -1,6 +1,7 @@
 import unittest
 
 from mujoco_scenes.place_motion import (
+    DRAWER_REGIONS,
     SERVING_REGION,
     TABLE_SUBREGIONS,
     buffered_center_bounds,
@@ -41,6 +42,18 @@ class PlaceMotionTests(unittest.TestCase):
             self.assertLessEqual(max_x, 0.70)
             self.assertGreaterEqual(min_y, -0.40)
             self.assertLessEqual(max_y, 0.40)
+
+    def test_drawer_regions_are_home_only_and_mirrored(self):
+        d1 = resolve_place_region("drawer_D1", "home")
+        d2 = resolve_place_region("drawer_D2", "home")
+        self.assertIs(d1, DRAWER_REGIONS["drawer_D1"])
+        self.assertIs(d2, DRAWER_REGIONS["drawer_D2"])
+        self.assertAlmostEqual(d1.bounds[0], -d2.bounds[1])
+        self.assertAlmostEqual(d1.bounds[1], -d2.bounds[0])
+        self.assertEqual(d1.surface_geom, "D1_tray_base")
+        self.assertEqual(d2.surface_geom, "D2_tray_base")
+        with self.assertRaises(RuntimeError):
+            resolve_place_region("drawer_D1", "right_side")
 
 
 if __name__ == "__main__":

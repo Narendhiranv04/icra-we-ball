@@ -220,7 +220,9 @@
           class="visual" mass="0"/>
     <geom name="fork_collision" type="box" size="0.0985 0.0125 0.00773"
           rgba="0 0 0 0" mass="0.034" group="3"/>
-    <site name="fork_grasp" pos="-0.045 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
+    <!-- Pinch the utensil at the far handle end, leaving enough material
+         beyond both finger pads for a stable passive vertical hang. -->
+    <site name="fork_grasp" pos="-0.080 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
   </body>
 
   <!-- YCB 032_knife -->
@@ -230,7 +232,7 @@
           class="visual" mass="0"/>
     <geom name="knife_collision" type="box" size="0.107 0.0095 0.00762"
           rgba="0 0 0 0" mass="0.031" group="3"/>
-    <site name="knife_grasp" pos="-0.050 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
+    <site name="knife_grasp" pos="-0.088 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
   </body>
 
   <!-- Simple custom wooden stirrer mesh -->
@@ -240,9 +242,9 @@
           material="mat_wood" class="visual" mass="0"/>
     <!-- A shallow box matches the flat wooden stick and prevents the old
          capsule proxy from rolling across the drawer as it accelerates. -->
-    <geom name="stirrer_collision" type="box" size="0.0675 0.004 0.002"
+    <geom name="stirrer_collision" type="box" size="0.0675 0.006 0.002"
           rgba="0 0 0 0" mass="0.02" friction="2 0.02 0.01" group="3"/>
-    <site name="stirrer_grasp" pos="-0.02 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
+    <site name="stirrer_grasp" pos="-0.055 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
   </body>
 
   <!-- Spatula -->
@@ -252,7 +254,7 @@
           material="mat_plastic_green" mass="0.06"/>
     <geom name="spatula_head" type="box" size="0.03 0.025 0.002"
           pos="0.155 0 0" material="mat_plastic_green"/>
-    <site name="spatula_grasp" pos="0.06 0 0" size="0.01" type="sphere"
+    <site name="spatula_grasp" pos="0.015 0 0" size="0.01" type="sphere"
           rgba="0 0 0 0" group="5"/>
   </body>
 
@@ -265,7 +267,7 @@
           fromto="-0.095 -0.006 0 0.095 -0.013 0" rgba="0 0 0 0" mass="0.04" group="3"/>
     <geom name="tongs_collision_2" type="capsule" size="0.005"
           fromto="-0.095 0.006 0 0.095 0.013 0" rgba="0 0 0 0" mass="0.04" group="3"/>
-    <site name="tongs_grasp" pos="-0.05 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
+    <site name="tongs_grasp" pos="-0.080 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
   </body>
 
   <!-- ============================== INGREDIENTS / FOOD ============================== -->
@@ -417,7 +419,10 @@
     <freejoint name="napkin_free"/>
     <geom name="napkin_visual" type="mesh" mesh="mesh_custom_napkin"
           material="mat_ceramic_white" class="visual" mass="0"/>
-    <geom name="napkin_collision" type="box" size="0.039 0.039 0.003"
+    <!-- A 4 mm pad around the folded cloth lets both symmetric finger pads
+         establish the centre pinch before either one can sweep the light
+         tissue across the drawer. -->
+    <geom name="napkin_collision" type="box" size="0.043 0.043 0.003"
           rgba="0 0 0 0" mass="0.02" group="3"/>
     <site name="napkin_grasp" pos="0 0 0" size="0.01" type="sphere"
           rgba="0 0 0 0" group="5"/>
@@ -440,7 +445,7 @@
           material="mat_gso_spatula" class="visual" mass="0"/>
     <geom name="gso_spatula_distractor_collision" type="box" size="0.118 0.032 0.01234"
           rgba="0 0 0 0" mass="0.06" group="3"/>
-    <site name="gso_spatula_distractor_grasp" pos="-0.05 0 0" size="0.01" type="sphere"
+    <site name="gso_spatula_distractor_grasp" pos="-0.090 0 0" size="0.01" type="sphere"
           rgba="0 0 0 0" group="5"/>
   </body>
 

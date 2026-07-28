@@ -15,8 +15,8 @@
 | Countertop | `X=[-0.70,0.70]`, `Y=[-0.40,0.40]`, top at `Z=0.58` | kettle, coffee jar, sugar jar, spoon | Always visible work surface |
 | C1 | Upper-left cabinet, centered near `(-0.35,0.45,0.96)`; usable opening about `0.40 m` wide by `0.41 m` high and `0.31 m` deep | mug, glass | Enlarged hinged-door cabinet; primary S1 search region |
 | C2 | Upper-right cabinet, centered near `(0.35,0.45,0.96)`; same enlarged opening as C1 | plate, bowl, scanned canister distractor | Enlarged hinged-door cabinet |
-| D1 | Lower-left drawer, centered near `(-0.44,-0.30,0.36)`; usable tray about `0.332 m` wide | fork, knife, stirrer | Wide tray; damped slide beside the serving table |
-| D2 | Lower-right drawer, centered near `(0.44,-0.30,0.36)`; usable tray about `0.332 m` wide | tongs, napkin, scanned spatula distractor | Wide tray; damped slide beside the serving table |
+| D1 | Lower-left drawer, mounted beneath the tabletop near `(-0.44,-0.30,0.46)`; usable tray about `0.332 m` wide | fork, knife, stirrer | Centered level U-handle; front grasp from Home |
+| D2 | Lower-right drawer, mounted beneath the tabletop near `(0.44,-0.30,0.46)`; usable tray about `0.332 m` wide | tongs, napkin, scanned spatula distractor | Mirrored centered U-handle and identical front-grasp motion |
 | B1 | Lidded box at the far-right edge of the countertop, centered near `(0.52,0.18,0.58)`; inner footprint about `0.344 x 0.174 m` | tea box | Set rearward for carried-object clearance; requires a rightward base reposition |
 | Serving area | Green table centered near `(0,-0.56,0.56)` with top at `Z=0.58`; its `0.50 m` width fits between the drawer fronts | empty | Goal destination and central navigation obstacle |
 
@@ -51,8 +51,8 @@ The thick front edge of the B1 lid has a collidable U-shaped metal handle
 projecting toward the robot. Its crossbar runs horizontally along `X`, and the
 named `B1_lid_handle_grasp` site supports a later frontal grasp-and-lift motion.
 
-The drawer slides use lower-gain position control and additional damping to
-avoid jerking loose objects when opened. The flat stirrer also has a matching
+The drawer slides use damped, synchronized position control to keep the arm
+and physical tray together during the pull. The flat stirrer also has a matching
 flat, high-friction collision proxy instead of its former rolling capsule.
 The contents remain ordinary free bodies—not welded fixtures—so a gripper can
 still pick them up. In the S1 opening test, the stirrer moves about `0.1 mm`
@@ -124,13 +124,16 @@ Buttons are disabled while an action is executing. Use
 `--no-actions-panel` when only the standard MuJoCo viewer is desired.
 
 The same window contains `Actions` → `Pick` for the four objects initially on
-the table. `pick_motion.py` executes these staged motions rather than using
-PDDL as a continuous planner:
+the table and for every object exposed by an open D1/D2 drawer.
+`pick_motion.py` executes these staged motions rather than using PDDL as a
+continuous planner:
 
 1. Open the gripper and move from the tucked rest pose to an overhead corridor.
 2. Reach a pre-grasp exactly `0.08 m` above the object's grasp point.
 3. Descend vertically through that fixed `0.08 m` distance.
-4. Close gradually until both finger collision geoms contact the selected object.
+4. Close gradually around the selected grasp site. Ordinary objects require
+   bilateral contact; the light tissue uses a centre-pinch proximity/contact
+   confirmation before it can slide away from one pad.
 5. Apply a live-pose grasp constraint only after bilateral contact and lift
    vertically to clear the table.
 6. For either jar, release the rigid transport weld and pitch the end effector
@@ -171,9 +174,18 @@ pose. Thus an object placed in `table_sub_2` or `table_sub_3` can be picked
 again from the matching side pose. Every jar pick first lifts vertically, then
 moves into a base-relative reorientation corridor, performs the same compliant
 90-degree slip, and finishes in horizontal carry regardless of base location.
+Drawer picks are available only at Home and only after the corresponding
+slide has reached its full-open limit. D1's fork, knife, and stirrer and D2's
+tongs and scanned spatula are pinched near the logical handle end. Each rises
+vertically to a `0.20–0.22 m` clear hover, changes from its transport weld to
+a compliant point pivot, and swings working-end-down under gravity with light
+damping and a weak upright spring. The final live vertical pose is captured
+for carry; no object pose is teleported or frozen during the transition. The
+D2 tissue/napkin instead uses its body-centre site and stays flat in a vertical
+approach, lift, and carry trajectory.
 
-`Actions` → `Place` is enabled while an object is held. Its two public regions
-are resolved to these world-frame rectangles:
+`Actions` → `Place` is enabled while an object is held. Its public regions are
+resolved to these world-frame rectangles:
 
 | UI region | Active base pose | Internal region | Rectangle `(min X, max X, min Y, max Y)` |
 |---|---|---|---:|
@@ -181,6 +193,8 @@ are resolved to these world-frame rectangles:
 | `Table` | `home` | `table_sub_1` | `(-0.36, 0.36, -0.37, -0.14)` |
 | `Table` | `cupboard1` | `table_sub_2` | `(-0.68, -0.36, -0.34, 0.22)` |
 | `Table` | `cupboard2` / `box` | `table_sub_3` | `(0.36, 0.68, -0.37, -0.12)` |
+| `Drawer 1` | `home` | `drawer_D1` | `(-0.606, -0.274, -0.682, -0.424)` |
+| `Drawer 2` | `home` | `drawer_D2` | `(0.274, 0.606, -0.682, -0.424)` |
 
 The sampler shrinks the selected rectangle by a `0.025 m` edge buffer and by
 the held object's full collision footprint. It rejects points overlapping
@@ -194,6 +208,14 @@ height for actuator compliance, and use a short,
 damped upright torque while settling and while the open fingers clear it; the
 jar remains a free translating body throughout and the assistance is removed
 at the end of retreat.
+Drawer placement is enabled only when that drawer is fully open. It uses the
+same vertical hover, descent, low release, vertical retreat, and shared carry
+pose. The sampler first tries the stable slot vacated by the current object,
+then searches the buffered tray interior; this preserves clearance in the
+crowded D2 layout while still allowing a different valid sample when space is
+available. Handle-grasped utensils enter vertically and topple along the wide
+drawer X axis after release, while the tissue is released flat at its sampled
+centre point.
 
 `Actions` → `Open` → `Box` becomes available at the shared `box` / `cupboard2`
 physical pose while the gripper is empty. The arm first moves above B1, drops
@@ -207,6 +229,15 @@ the empty side carry-hover pose while the lid actuator holds 100 degrees. Both
 cupboard doors use compact three-piece U-handles at `Z=0.13`, matching the box
 handle without placing them at the cupboard top. The cupboard row remains
 recessed at `Y=0.65`, leaving the 100-degree box-lid and retreat sweep clear.
+
+`Actions` → `Open` → `Drawer 1` or `Drawer 2` becomes available at Home while
+the gripper is empty. Both drawers have identical, level front-facing
+U-handles. The arm uses a safe high corridor before facing the selected
+handle, descends to its front hover, inserts horizontally along +Y, and closes
+until both fingers make physical contact. It then pulls the real slide joint
+straight back along -Y to the full shared `0.25 m` limit. After release, the arm
+retreats horizontally beyond the serving-table edge and returns to the
+shared empty carry pose.
 
 Robot-mounted sensors:
 
