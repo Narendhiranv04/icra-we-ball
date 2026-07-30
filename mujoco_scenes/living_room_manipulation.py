@@ -101,6 +101,12 @@ INITIAL_OBJECT_LOCATIONS = {
     "rigid_duster": "duster",
 }
 
+STORAGE_NAVIGATION_LOCATIONS = {
+    "media_console_left_drawer": "drawer_left",
+    "media_console_right_drawer": "drawer_right",
+    "media_shelf": "bookshelf",
+}
+
 LIVING_ROOM_ARM_COMMAND_SPEED = 1.55
 LIVING_ROOM_INTERMEDIATE_TRACKING_TOLERANCE = 0.085
 
@@ -172,7 +178,8 @@ class LivingRoomManipulationExecutor:
     def required_pick_location(self, object_name: str) -> str:
         if object_name not in self.object_locations:
             raise ValueError(f"Unknown living-room object: {object_name}")
-        return self.object_locations[object_name]
+        location = self.object_locations[object_name]
+        return STORAGE_NAVIGATION_LOCATIONS.get(location, location)
 
     def _placement_target(self) -> tuple[str, str]:
         if self.held_object is None:
@@ -226,6 +233,8 @@ class LivingRoomManipulationExecutor:
             "duster": 0.0,
             "bookshelf": 0.10,
             "drawer": 0.08,
+            "drawer_left": 0.08,
+            "drawer_right": 0.08,
         }.get(location, 0.15)
 
     def _specs_for_stance(
@@ -333,9 +342,27 @@ class LivingRoomManipulationExecutor:
         if self.executor is None or self.held_object is None:
             raise RuntimeError("Pick a living-room object before placing")
         required_location, place_site = self._placement_target()
+        self.request_place_at(
+            current_location,
+            required_location,
+            place_site,
+        )
+
+    def request_place_at(
+        self,
+        current_location: str,
+        destination: str,
+        place_site: str,
+    ) -> None:
+        if self.executor is None or self.held_object is None:
+            raise RuntimeError("Pick a living-room object before placing")
+        required_location = STORAGE_NAVIGATION_LOCATIONS.get(
+            destination, destination
+        )
         if current_location != required_location:
             raise RuntimeError(
-                f"Place {self.held_object} requires Move ({required_location}) first"
+                f"Place {self.held_object} requires Move "
+                f"({required_location}) first"
             )
         base_stance = self._base_qpos()
         approach_distance = self._approach_distance(current_location)
@@ -343,7 +370,7 @@ class LivingRoomManipulationExecutor:
         self.executor.base_manipulation_target = base_stance + np.array(
             (approach_distance, 0.0, 0.0)
         )
-        self.pending_place_location = current_location
+        self.pending_place_location = destination
         self.pending_place_object = self.held_object
         self.executor.request_place(place_site)
         self.status = self.executor.status

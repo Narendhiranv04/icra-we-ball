@@ -124,19 +124,19 @@
             pos="0.39 -0.21 0.23" material="table_metal" mass="1.2"/>
       <site name="coffee_table_frame" pos="0 0 0.49" size="0.01"
             rgba="0 0 0 0" group="5"/>
-      <site name="table_place_remote" pos="-0.18 0.02 0.487" size="0.045 0.035 0.003"
+      <site name="table_place_remote" pos="-0.25 0.02 0.487" size="0.045 0.035 0.003"
             type="box" material="target_marker" group="4"/>
       <site name="table_place_mug" pos="0.17 -0.01 0.487" size="0.055 0.055 0.003"
             type="box" material="target_marker" group="4"/>
-      <site name="table_place_book" pos="0.02 0.05 0.487" size="0.13 0.08 0.003"
+      <site name="table_place_book" pos="-0.08 -0.14 0.487" size="0.13 0.08 0.003"
             type="box" material="target_marker" group="4"/>
-      <site name="table_place_controller" pos="0.30 0.03 0.487"
+      <site name="table_place_controller" pos="0.34 -0.14 0.487"
             size="0.095 0.075 0.003" type="box"
             material="target_marker" group="4"/>
     </body>
 
     <!-- Independent rigid clutter rests on the moving tabletop through contact. -->
-    <body name="remote_control" pos="-0.18 -0.33 0.502">
+    <body name="remote_control" pos="-0.25 -0.33 0.502">
       <freejoint name="remote_control_free"/>
       <geom name="remote_control_collision" type="box" size="0.070 0.027 0.012"
             material="remote" mass="0.18" friction="1.1 0.04 0.01"/>
@@ -158,7 +158,7 @@
             rgba="0 0 0 0" group="5"/>
     </body>
 
-    <body name="hardback_book" pos="0.02 -0.30 0.507">
+    <body name="hardback_book" pos="-0.08 -0.49 0.507">
       <freejoint name="hardback_book_free"/>
       <geom name="hardback_book_collision" type="box" size="0.125 0.080 0.018"
             material="book" mass="0.22" friction="1.0 0.04 0.01"/>
@@ -168,13 +168,13 @@
             rgba="0 0 0 0" group="5"/>
     </body>
 
-    <body name="coaster_left" pos="-0.31 -0.48 0.502">
+    <body name="coaster_left" pos="-0.37 -0.58 0.502">
       <freejoint name="coaster_left_free"/>
       <geom name="coaster_left_collision" type="cylinder" size="0.050 0.008"
             material="coaster" mass="0.08" friction="1.2 0.04 0.01"
             margin="0.0045" solref="0.004 1" solimp="0.99 0.999 0.001"/>
     </body>
-    <body name="coaster_right" pos="0.30 -0.47 0.502">
+    <body name="coaster_right" pos="0.18 -0.59 0.502">
       <freejoint name="coaster_right_free"/>
       <geom name="coaster_right_collision" type="cylinder" size="0.050 0.008"
             material="coaster" mass="0.45" friction="3.0 0.04 0.01"
@@ -184,7 +184,7 @@
             material="target_marker" group="4"/>
     </body>
 
-    <body name="game_controller" pos="0.30 -0.32 0.515">
+    <body name="game_controller" pos="0.34 -0.49 0.515">
       <freejoint name="game_controller_free"/>
       <geom name="game_controller_core" type="ellipsoid" size="0.078 0.047 0.022"
             material="controller" mass="0.18" friction="1.0 0.03 0.01"/>
@@ -232,6 +232,9 @@
       <site name="media_shelf_book_place" type="box"
             size="0.13 0.08 0.003" pos="-1.00 1.14 0.781"
             material="target_marker" group="4"/>
+      <site name="media_shelf_controller_place" type="box"
+            size="0.10 0.08 0.003" pos="-1.00 1.14 0.781"
+            material="target_marker" group="4"/>
     </body>
 
     <!-- Low media console with two independent south-opening rigid drawers. -->
@@ -269,6 +272,9 @@
         <geom name="media_console_left_drawer_handle" type="capsule" size="0.010"
               fromto="-0.09 -0.183 0.035 0.09 -0.183 0.035"
               material="brass" mass="0.08"/>
+        <site name="left_drawer_place_controller" type="box"
+              size="0.10 0.08 0.002" pos="0 0 -0.018"
+              material="target_marker" group="4"/>
       </body>
       <body name="media_console_right_drawer" pos="0.34 1.25 0.27">
         <joint name="media_console_right_drawer_slide" type="slide" axis="0 -1 0"
@@ -309,11 +315,23 @@
       <geom name="tv_power_led" class="visual" type="sphere" size="0.008"
             pos="0.545 -0.038 -0.335" rgba="0.34 0.04 0.03 1"/>
 
-      <!-- Coverage remains a guarded 15-cell measurement, but the visual
-           dust is one continuous non-colliding film with animated opacity. -->
-      <geom name="dust_screen_film" class="visual" type="box"
-            size="0.565 0.001 0.315" pos="0 -0.041 0"
-            material="dust_film"/>
+      <!-- Fifteen seamless visual tiles form one continuous layer at reset.
+           Each tile fades independently only after its cell is verified. -->
+      <geom name="dust_cell_visual_0" class="visual" type="plane" size="0.114 0.1067 0.001" pos="-0.456 -0.041 0.2133" euler="1.5708 0 0" material="dust_film"/>
+      <geom name="dust_cell_visual_1" class="visual" type="plane" size="0.114 0.1067 0.001" pos="-0.228 -0.041 0.2133" euler="1.5708 0 0" material="dust_film"/>
+      <geom name="dust_cell_visual_2" class="visual" type="plane" size="0.114 0.1067 0.001" pos="0 -0.041 0.2133" euler="1.5708 0 0" material="dust_film"/>
+      <geom name="dust_cell_visual_3" class="visual" type="plane" size="0.114 0.1067 0.001" pos="0.228 -0.041 0.2133" euler="1.5708 0 0" material="dust_film"/>
+      <geom name="dust_cell_visual_4" class="visual" type="plane" size="0.114 0.1067 0.001" pos="0.456 -0.041 0.2133" euler="1.5708 0 0" material="dust_film"/>
+      <geom name="dust_cell_visual_5" class="visual" type="plane" size="0.114 0.1067 0.001" pos="-0.456 -0.041 0" euler="1.5708 0 0" material="dust_film"/>
+      <geom name="dust_cell_visual_6" class="visual" type="plane" size="0.114 0.1067 0.001" pos="-0.228 -0.041 0" euler="1.5708 0 0" material="dust_film"/>
+      <geom name="dust_cell_visual_7" class="visual" type="plane" size="0.114 0.1067 0.001" pos="0 -0.041 0" euler="1.5708 0 0" material="dust_film"/>
+      <geom name="dust_cell_visual_8" class="visual" type="plane" size="0.114 0.1067 0.001" pos="0.228 -0.041 0" euler="1.5708 0 0" material="dust_film"/>
+      <geom name="dust_cell_visual_9" class="visual" type="plane" size="0.114 0.1067 0.001" pos="0.456 -0.041 0" euler="1.5708 0 0" material="dust_film"/>
+      <geom name="dust_cell_visual_10" class="visual" type="plane" size="0.114 0.1067 0.001" pos="-0.456 -0.041 -0.2133" euler="1.5708 0 0" material="dust_film"/>
+      <geom name="dust_cell_visual_11" class="visual" type="plane" size="0.114 0.1067 0.001" pos="-0.228 -0.041 -0.2133" euler="1.5708 0 0" material="dust_film"/>
+      <geom name="dust_cell_visual_12" class="visual" type="plane" size="0.114 0.1067 0.001" pos="0 -0.041 -0.2133" euler="1.5708 0 0" material="dust_film"/>
+      <geom name="dust_cell_visual_13" class="visual" type="plane" size="0.114 0.1067 0.001" pos="0.228 -0.041 -0.2133" euler="1.5708 0 0" material="dust_film"/>
+      <geom name="dust_cell_visual_14" class="visual" type="plane" size="0.114 0.1067 0.001" pos="0.456 -0.041 -0.2133" euler="1.5708 0 0" material="dust_film"/>
 
       <site name="tv_cell_0" pos="-0.32 -0.060 0.20" size="0.012" rgba="0 0 0 0" group="5"/>
       <site name="tv_cell_1" pos="-0.16 -0.060 0.20" size="0.012" rgba="0 0 0 0" group="5"/>

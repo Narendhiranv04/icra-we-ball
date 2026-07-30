@@ -72,7 +72,7 @@ class MediaConsoleDrawerExecutor:
             )
         if action not in DRAWER_ACTIONS:
             raise ValueError(f"Choose a drawer action from: {DRAWER_ACTIONS}")
-        if current_location != "drawer":
+        if current_location not in {"drawer", "drawer_left", "drawer_right"}:
             raise RuntimeError(
                 "Move to Media-console drawer before opening or closing it"
             )

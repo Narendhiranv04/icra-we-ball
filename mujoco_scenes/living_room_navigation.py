@@ -35,6 +35,8 @@ LIVING_ROOM_DESTINATIONS = (
     "table_west",
     "bookshelf",
     "drawer",
+    "drawer_left",
+    "drawer_right",
     "couch",
     "tv",
     "duster",
@@ -99,6 +101,8 @@ class LivingRoomLayout:
             ),
             "bookshelf": BasePose(-0.80, 0.48, 0.0),
             "drawer": BasePose(0.34, 0.34, 0.0),
+            "drawer_left": BasePose(-0.34, 0.34, 0.0),
+            "drawer_right": BasePose(0.34, 0.34, 0.0),
             "couch": BasePose(-0.70, -0.85, math.pi),
             # A held duster extends beyond the compact arm envelope.  Stop
             # far enough from the console for RRT* to include the attached

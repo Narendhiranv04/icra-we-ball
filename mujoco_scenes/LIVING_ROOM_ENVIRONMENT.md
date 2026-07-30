@@ -100,6 +100,10 @@ The tabletop initially carries:
 - two rigid coasters; and
 - a rigid game controller.
 
+These objects use a staggered multi-row layout rather than a single line. The
+four pickable tabletop objects start at least 20 cm apart by centre distance,
+with the coasters separated along the south row of the table.
+
 The remote, mug, book, coasters, and controller are independent free bodies.
 They move through ordinary contact and friction and are not welded to the
 tabletop. The duster is also a single free rigid body, with a capsule handle
@@ -124,6 +128,23 @@ motion, an extended arm, or a held object remain disabled. Status text and the
 progress bar report planning, contact confirmation, settling, completion, or
 the guard that stopped a failed attempt.
 
+The **Functional task** group also exposes **Store game controller**. It sends
+only visible storage candidates to the configured foundation-model server,
+then executes and verifies the selected alternative. The right drawer, left
+drawer, and wall shelf are supported targets. Use `TAMP_FM_BACKEND=fixed` for
+an offline integration smoke test; see
+[TAMP_PIPELINE.md](TAMP_PIPELINE.md) for the full data flow.
+
+The **Grounded action file** runs exact symbolic actions for testing without
+foundation-model selection. Edit `configs/living_room_actions.txt`, placing
+one action on each line, then press **Reload and run**. Examples include
+`move drawer_left`, `open left`, `pick game_controller`, and
+`place media_console_left_drawer`. The runner waits for each action to finish.
+`state observed` prints the executive's bounded observation; `gt` prints the
+simulator's symbolic ground truth. These commands still execute through the
+guarded physical controllers. Set `LIVING_ROOM_ACTION_FILE` to select another
+text file.
+
 ### Move
 
 The named destinations are:
@@ -134,8 +155,9 @@ The named destinations are:
 - **Table north**: the opposite side of the table, facing south;
 - **Table east** and **Table west**: side views and routes around the table;
 - **Book shelf**: the wall-ledged book placement/retrieval stance;
-- **Media-console drawer**: both drawer controls and the right-drawer
-  controller-storage stance;
+- **Media-console drawer**: the original shared console stance;
+- **Media console - left drawer** and **right drawer**: aligned storage
+  stances used by autonomous placement;
 - **Couch**: a navigation pose near the L-shaped couch;
 - **TV**: the dusting stance in front of the screen; and
 - **Duster rack**: the pickup/return stance beside the duster rest.
@@ -203,7 +225,7 @@ physically picked and carried rigid body.
 Powering on changes the otherwise near-black screen to an emissive blue panel
 and changes the small lower-frame status LED from dim red to green. It does
 not play a video, load media, or simulate television content. If dust remains,
-the translucent dust film is still rendered over either powered state.
+the translucent dust layer is still rendered over either powered state.
 
 ### Store a book on the shelf
 
@@ -223,13 +245,12 @@ command. Each drawer is an independent rigid body on a bounded 27 cm slide
 joint. A slow position actuator drives each one; completion requires both
 position and velocity settling.
 
-The right drawer is the calibrated controller-storage target. Pick the
-controller at Home, move to the console, open the right drawer, and select
-**Store controller in drawer**. Close it after the arm has returned to compact
-carry. To retrieve the controller, reopen the right drawer, pick it there,
-move Home, and select **Return controller to table**. Controller pick/place
-buttons remain disabled while the right drawer is closed. The left drawer is
-currently empty but can be opened and closed independently.
+The manual controller workflow continues to use the right drawer. The
+functional task can instead choose either drawer or the wall shelf. It opens a
+selected drawer before placement and closes it after the arm returns to
+compact carry. Closed-drawer occupancy is treated as unknown until inspection,
+and a newly discovered occupied target causes the executive to try the next
+ranked alternative.
 
 ### Dust the TV
 
@@ -242,12 +263,12 @@ of 15 invisible coverage cells. Cell-center X coordinates run from -0.32 m to
 obstacle.
 The arm supplies the calibrated row height and tool orientation while the
 holonomic base moves laterally through three serpentine horizontal passes. The
-nominal head-to-screen gap is 15 mm. The visible dust is a single thin,
-translucent screen-wide film rather than fifteen tiles. Each newly verified
-cell lowers the film's target opacity, and the film eases smoothly toward that
-opacity while the robot continues its sweep. A cell contributes only after
-the live rigid head satisfies every coverage check for eight consecutive
-simulation ticks:
+nominal head-to-screen gap is 15 mm. The visible dust uses fifteen
+zero-thickness, edge-aligned regions that form one seamless translucent layer
+at reset. No grid is visible before cleaning. When a cell is newly verified,
+only its matching region eases smoothly to transparent while the other dust
+remains. A cell contributes only after the live rigid head satisfies every
+coverage check for eight consecutive simulation ticks:
 
 - head-position error no greater than 3 cm;
 - head-orientation error no greater than 6 degrees;
@@ -275,7 +296,7 @@ during a sweep. Handle, gripper, arm, TV-frame, console, and
 self-collisions remain failures. Coverage is retained until **Reset living
 room** is used. Reset restores the robot, fixed furniture, drawer, TV power,
 clutter, equality constraints, cleaned-cell set, and the original dust-film
-opacity.
+opacity in every region.
 
 ## Calibration workflow
 
@@ -356,8 +377,8 @@ For TV dusting:
 - The duster head remains aligned with the screen and within its allowed gap;
   deep penetration is rejected.
 - No handle, gripper, arm, frame, console, or self-collision occurs.
-- The arm retracts to compact carry, and reset restores the continuous dust
-  film.
+- The arm retracts to compact carry, and reset restores the seamless dust
+  layer.
 
 Run the fast headless structural and guard checks with:
 

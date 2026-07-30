@@ -1,0 +1,29 @@
+services:
+  vllm:
+    image: vllm/vllm-openai:v0.23.0
+    gpus: all
+    ipc: host
+    restart: unless-stopped
+    ports:
+      - "${VLLM_PORT:-8000}:8000"
+    environment:
+      HF_TOKEN: "${HF_TOKEN:-}"
+    volumes:
+      - "${HF_CACHE_DIR:-./cache}:/root/.cache/huggingface"
+      - "${MODEL_DIR:-./models}:/models:ro"
+    command:
+      - --model
+      - "${VLLM_MODEL:?Set VLLM_MODEL in .env}"
+      - --served-model-name
+      - "${VLLM_SERVED_MODEL_NAME:-tamp-ranker}"
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+      - --api-key
+      - "${VLLM_API_KEY:?Set VLLM_API_KEY in .env}"
+      - --tensor-parallel-size
+      - "${VLLM_TENSOR_PARALLEL_SIZE:-1}"
+      - --enable-prefix-caching
+      - --generation-config
+      - vllm

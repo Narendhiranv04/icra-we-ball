@@ -58,6 +58,20 @@ it natively with the uv environment from this repository root:
 MUJOCO_GL=glfw uv run python -m mujoco_scenes.living_room_scene --viewer
 ```
 
+Remote functional-alternative ranking through either vLLM or SGLang is
+documented in
+[FOUNDATION_MODEL.md](mujoco_scenes/FOUNDATION_MODEL.md). Both servers use the
+same small OpenAI-compatible client; no inference package is installed in the
+MuJoCo environment.
+
+The complete observe-assess-plan-execute-verify loop, living-room storage
+alternatives, offline smoke-test mode, and extension points are documented in
+[TAMP_PIPELINE.md](mujoco_scenes/TAMP_PIPELINE.md).
+
+The separate [inference_server](inference_server/README.md) workspace contains
+the pinned vLLM server setup for a remote GPU machine and can be pulled with a
+Git sparse checkout.
+
 ## Cameras
 
 ### Scene Cameras

@@ -122,18 +122,26 @@ class LivingRoomScene:
         self._initial_mat_emission = self.model.mat_emission.copy()
         self._initial_eq_data = self.model.eq_data.copy()
         self._initial_eq_solref = self.model.eq_solref.copy()
-        self._dust_film_geom_id = mujoco.mj_name2id(
-            self.model, mujoco.mjtObj.mjOBJ_GEOM, "dust_screen_film"
+        self._dust_visual_geom_ids = tuple(
+            mujoco.mj_name2id(
+                self.model,
+                mujoco.mjtObj.mjOBJ_GEOM,
+                f"dust_cell_visual_{index}",
+            )
+            for index in range(TV_CELL_COUNT)
         )
         self._tv_power_led_geom_id = mujoco.mj_name2id(
             self.model, mujoco.mjtObj.mjOBJ_GEOM, "tv_power_led"
         )
-        if self._dust_film_geom_id < 0 or self._tv_power_led_geom_id < 0:
+        if (
+            any(geom_id < 0 for geom_id in self._dust_visual_geom_ids)
+            or self._tv_power_led_geom_id < 0
+        ):
             raise RuntimeError("Living-room TV visual interface is incomplete")
-        self._dust_initial_alpha = float(
-            self.model.geom_rgba[self._dust_film_geom_id, 3]
-        )
-        self._dust_target_alpha = self._dust_initial_alpha
+        self._dust_initial_alphas = self.model.geom_rgba[
+            list(self._dust_visual_geom_ids), 3
+        ].copy()
+        self._dust_target_alphas = self._dust_initial_alphas.copy()
         self.reset()
         print(f"  Robot: {self.robot_name}")
         print(f"  Rigid scene objects: {', '.join(LIVING_ROOM_OBJECTS)}")
@@ -167,7 +175,7 @@ class LivingRoomScene:
         self.model.eq_solref[:] = self._initial_eq_solref
         self.data.eq_active[:] = self.model.eq_active0
         self.cleaned_cells.clear()
-        self._dust_target_alpha = self._dust_initial_alpha
+        self._dust_target_alphas = self._dust_initial_alphas.copy()
         self.tv_power_on = False
         self._set_robot_home_pose()
         mujoco.mj_forward(self.model, self.data)
@@ -204,27 +212,36 @@ class LivingRoomScene:
 
     @property
     def dust_opacity(self) -> float:
-        return float(self.model.geom_rgba[self._dust_film_geom_id, 3])
+        return float(np.mean(self.dust_cell_opacities))
+
+    @property
+    def dust_cell_opacities(self) -> np.ndarray:
+        return self.model.geom_rgba[
+            list(self._dust_visual_geom_ids), 3
+        ].copy()
 
     def mark_tv_cell_clean(self, index: int) -> None:
         if not 0 <= index < TV_CELL_COUNT:
             raise ValueError(f"TV cell must be in [0, {TV_CELL_COUNT - 1}]")
         self.cleaned_cells.add(index)
-        self._dust_target_alpha = self._dust_initial_alpha * (
-            1.0 - self.dust_coverage
-        )
+        self._dust_target_alphas[index] = 0.0
 
     def update_visual_effects(self, steps: int = 1) -> None:
         """Ease the visible dust film toward verified coverage state."""
         if steps < 1:
             raise ValueError("Visual-effect steps must be positive")
-        current = self.dust_opacity
+        current = self.dust_cell_opacities
         elapsed = float(self.model.opt.timestep) * steps
         blend = 1.0 - float(np.exp(-DUST_FADE_RESPONSE * elapsed))
-        updated = current + (self._dust_target_alpha - current) * blend
-        if abs(updated - self._dust_target_alpha) < 1e-5:
-            updated = self._dust_target_alpha
-        self.model.geom_rgba[self._dust_film_geom_id, 3] = updated
+        updated = current + (self._dust_target_alphas - current) * blend
+        updated = np.where(
+            np.abs(updated - self._dust_target_alphas) < 1e-5,
+            self._dust_target_alphas,
+            updated,
+        )
+        self.model.geom_rgba[
+            list(self._dust_visual_geom_ids), 3
+        ] = updated
 
     def set_tv_power(self, enabled: bool) -> None:
         """Update the visible TV screen state without changing collision."""

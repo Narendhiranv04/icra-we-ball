@@ -211,6 +211,8 @@ class LivingRoomSceneTests(unittest.TestCase):
             )
         for site in (
             "media_shelf_book_place",
+            "media_shelf_controller_place",
+            "left_drawer_place_controller",
             "drawer_place_controller",
             "game_controller_grasp",
         ):
@@ -252,14 +254,19 @@ class LivingRoomSceneTests(unittest.TestCase):
 
     def test_dust_alpha_and_coverage_are_restored_by_reset(self):
         model = self.scene.model
-        film_id = _named_id(
-            model, mujoco.mjtObj.mjOBJ_GEOM, "dust_screen_film"
-        )
-        initial_alpha = float(model.geom_rgba[film_id, 3])
-        self.assertGreater(initial_alpha, 0.0)
+        visual_ids = [
+            _named_id(
+                model,
+                mujoco.mjtObj.mjOBJ_GEOM,
+                f"dust_cell_visual_{index}",
+            )
+            for index in range(TV_CELL_COUNT)
+        ]
+        initial_alphas = model.geom_rgba[visual_ids, 3].copy()
+        self.assertTrue(np.all(initial_alphas > 0.0))
         self.assertEqual(
             mujoco.mj_name2id(
-                model, mujoco.mjtObj.mjOBJ_GEOM, "dust_patch_0"
+                model, mujoco.mjtObj.mjOBJ_GEOM, "dust_screen_film"
             ),
             -1,
         )
@@ -268,26 +275,55 @@ class LivingRoomSceneTests(unittest.TestCase):
         self.scene.mark_tv_cell_clean(11)
         self.assertEqual(self.scene.cleaned_cells, {2, 11})
         self.assertAlmostEqual(self.scene.dust_coverage, 2 / TV_CELL_COUNT)
-        self.assertAlmostEqual(self.scene.dust_opacity, initial_alpha)
+        np.testing.assert_allclose(
+            self.scene.dust_cell_opacities, initial_alphas
+        )
         for _ in range(1000):
             self.scene.update_visual_effects()
-        self.assertAlmostEqual(
-            self.scene.dust_opacity,
-            initial_alpha * (1.0 - 2 / TV_CELL_COUNT),
-            places=4,
-        )
+        faded = self.scene.dust_cell_opacities
+        self.assertAlmostEqual(float(faded[2]), 0.0, places=4)
+        self.assertAlmostEqual(float(faded[11]), 0.0, places=4)
+        untouched = [index for index in range(TV_CELL_COUNT) if index not in {2, 11}]
+        np.testing.assert_allclose(faded[untouched], initial_alphas[untouched])
 
         for index in range(TV_CELL_COUNT):
             self.scene.mark_tv_cell_clean(index)
         for _ in range(1500):
             self.scene.update_visual_effects()
-        self.assertAlmostEqual(self.scene.dust_opacity, 0.0, places=4)
+        np.testing.assert_allclose(
+            self.scene.dust_cell_opacities,
+            np.zeros(TV_CELL_COUNT),
+            atol=1e-4,
+        )
 
         self.scene.reset(settle_steps=0)
 
         self.assertEqual(self.scene.cleaned_cells, set())
         self.assertEqual(self.scene.dust_coverage, 0.0)
-        self.assertAlmostEqual(self.scene.dust_opacity, initial_alpha)
+        np.testing.assert_allclose(
+            self.scene.dust_cell_opacities, initial_alphas
+        )
+
+    def test_tabletop_pickables_use_a_spaced_staggered_layout(self):
+        positions = {
+            name: self.scene.data.xpos[self.scene.body_id(name), :2].copy()
+            for name in (
+                "remote_control",
+                "living_room_mug",
+                "hardback_book",
+                "game_controller",
+            )
+        }
+        unique_y = {round(float(position[1]), 2) for position in positions.values()}
+        self.assertGreaterEqual(len(unique_y), 3)
+        names = tuple(positions)
+        for first_index, first in enumerate(names):
+            for second in names[first_index + 1 :]:
+                self.assertGreater(
+                    float(np.linalg.norm(positions[first] - positions[second])),
+                    0.20,
+                    msg=f"{first} and {second} are still crowded",
+                )
 
     def test_tv_power_visual_state_is_reset(self):
         scene = self.scene
@@ -389,6 +425,8 @@ class LivingRoomSceneTests(unittest.TestCase):
             "table_west",
             "bookshelf",
             "drawer",
+            "drawer_left",
+            "drawer_right",
         ):
             pose = navigation.layout.destination_pose(scene, destination)
             self.assertTrue(
