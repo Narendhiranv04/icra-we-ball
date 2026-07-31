@@ -2,8 +2,7 @@ FROM python:3.11-slim-bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
-    MUJOCO_GL=glfw \
-    MUJOCO_SEMANTIC_PROCESS_ISOLATION=1
+    MUJOCO_GL=glfw
 
 # GLFW/X11 enables the interactive viewer. EGL/OSMesa also make the same
 # image usable for offscreen rendering on machines without an X display.
@@ -28,6 +27,8 @@ COPY mujoco_scenes/requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 COPY mujoco_scenes/ /workspace/mujoco_scenes/
+
+ENV MUJOCO_SEMANTIC_PROCESS_ISOLATION=1
 
 ENTRYPOINT ["python", "-m", "mujoco_scenes.scene_loader"]
 CMD ["--scene", "S1_coffee_missing_mug", "--viewer", "--camera", "front_camera"]
