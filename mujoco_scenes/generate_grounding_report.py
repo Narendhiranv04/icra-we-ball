@@ -772,9 +772,13 @@ stage-local point cloud, growing graph, and individual camera overlays.</p>
 <li>Semantic and geometric namespaces remain separate.</li>
 <li>The production joint run stopped at D2; C2, B1, and C1 remained unopened.</li>
 </ul></section></main></body></html>"""
-    (output_dir / "ablation_report.html").write_text(
-        html_report, encoding="utf-8"
-    )
+    for report_name in (
+        "presentation_report.html",
+        "ablation_report.html",
+    ):
+        (output_dir / report_name).write_text(
+            html_report, encoding="utf-8"
+        )
 
     markdown = [
         "# Joint semantic–geometric grounding report",
@@ -909,6 +913,9 @@ def main() -> None:
             {
                 "report_directory": str(destination),
                 "html": str(destination / "ablation_report.html"),
+                "presentation_html": str(
+                    destination / "presentation_report.html"
+                ),
                 "markdown": str(destination / "ablation_report.md"),
                 "comparison": str(
                     destination / "ablation_comparison.png"

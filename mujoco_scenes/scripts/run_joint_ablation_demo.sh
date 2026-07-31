@@ -72,5 +72,5 @@ docker run --rm \
 echo
 echo "Complete."
 echo "Run evidence: $repository_root/runs/$run_id"
-echo "Visual report: $repository_root/reports/$run_id/ablation_report.html"
-echo "Open with: xdg-open \"$repository_root/reports/$run_id/ablation_report.html\""
+echo "Visual report: $repository_root/reports/$run_id/presentation_report.html"
+echo "Open with: xdg-open \"$repository_root/reports/$run_id/presentation_report.html\""

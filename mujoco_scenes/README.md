@@ -537,12 +537,13 @@ with the host UID/GID so the reports remain writable from the host.
 Open the generated interactive report:
 
 ```bash
-xdg-open reports/my_joint_report/ablation_report.html
+xdg-open reports/my_joint_report/presentation_report.html
 ```
 
 The report directory contains:
 
 ```text
+presentation_report.html
 ablation_report.html
 ablation_report.md
 ablation_comparison.png
