@@ -5,10 +5,14 @@ property_extraction:
   minimum_extent_m: 0.001
 
 open_cavity:
-  extractor_version: open_receptacle_geometry_v2
+  extractor_version: open_cavity_structure_v3
   minimum_point_count: 120
   minimum_contributing_camera_count: 2
-  minimum_vertical_extent_m: 0.025
+  # These are sensor-resolution gates, not definitions of what a cavity is.
+  # Evidence below them is UNKNOWN rather than FALSE.
+  minimum_resolvable_vertical_extent_m: 0.006
+  minimum_resolvable_opening_m: 0.009
+  minimum_resolvable_depth_m: 0.006
   minimum_rim_points: 24
   minimum_interior_points: 16
   minimum_interior_points_per_camera: 3
@@ -28,15 +32,14 @@ open_cavity:
   minimum_filled_top_central_points: 20
   maximum_filled_top_height_spread_m: 0.002
   inner_radius_fraction: 0.62
-  minimum_depth_m: 0.010
-  minimum_opening_m: 0.025
   planar_rejection_score: 0.94
   planar_rejection_max_extent_m: 0.030
   maximum_outlier_fraction: 0.30
 
 elongated_object:
-  minimum_length_m: 0.075
-  minimum_elongation_ratio: 2.4
+  # Scale-independent unary definition: one principal extent must dominate
+  # the next-largest extent. Absolute length belongs in task relations.
+  minimum_dominant_axis_ratio: 2.4
 
 planar_support:
   minimum_planarity_score: 0.72

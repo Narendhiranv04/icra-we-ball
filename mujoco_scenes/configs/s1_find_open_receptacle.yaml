@@ -6,14 +6,6 @@ roles:
     geometric_requirements:
       - predicate: OPEN_CAVITY
         required_status: TRUE
-      - property: opening_width_m
-        minimum: 0.050
-        unit: m
-        allowed_statuses: [MEASURED]
-      - property: cavity_depth_m
-        minimum: 0.015
-        unit: m
-        allowed_statuses: [MEASURED]
 
 constraints:
   distinct_objects: true

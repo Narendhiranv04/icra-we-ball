@@ -255,15 +255,22 @@ predicate schema. It includes
 robust OBB dimensions, length and cross-section, extent ratios, planarity,
 support area/thickness/normal, and conservative visible rim/opening/cavity
 measurements. Structural predicates are `OPEN_CAVITY`, `ELONGATED_OBJECT`, and
-`PLANAR_SUPPORT`. Their thresholds and relation margins are in
+`PLANAR_SUPPORT`. `ELONGATED_OBJECT` is scale-independent: it checks whether
+the largest robust principal extent dominates the next-largest extent and
+does not impose an absolute length. `OPEN_CAVITY` checks the structural
+conjunction of an enclosed rim, an open centre, and observed interior surfaces
+below the rim. Absolute resolution floors yield `UNKNOWN`; they do not define
+a small resolved object as `FALSE`. Their thresholds and relation margins are in
 `configs/geometry_inference.yaml`; the file contains no category mappings.
 Unavailable evidence remains `UNKNOWN`.
 Every record also carries `source_stage`, `source_region`,
 `measurement_cloud_path`, contributing camera IDs, point count, method,
 extractor version, and the `MEASUREMENT_EVIDENCE` purpose marker.
 
-Task roles declare explicit geometric predicate and numeric-property
-requirements. The graph records `SATISFIES_GEOMETRY` edges with the complete
+Task roles declare qualitative unary predicates and task-specific numeric or
+relational requirements. Absolute tool/container suitability is expressed by
+binary relations rather than folded into `ELONGATED_OBJECT` or `OPEN_CAVITY`.
+The graph records `SATISFIES_GEOMETRY` edges with the complete
 measurement evidence. `INSERTABLE_IN` and `REACHES_BOTTOM` use generic
 cross-section, opening, usable-length, and cavity-depth measurements. The
 solver returns `COMPLETE` only for a globally distinct assignment whose role
@@ -342,7 +349,7 @@ bowl.” Its declarative, FM-ready manual specification is
 
 | Role | Semantic gate | Unary geometry | Relations |
 |---|---|---|---|
-| `mixing_container` | bowl, rank 1 | `OPEN_CAVITY`, opening ≥ 0.05 m, cavity ≥ 0.015 m | relation target |
+| `mixing_container` | bowl, rank 1 | `OPEN_CAVITY` | relation target |
 | `mixing_tool` | spoon rank 1; fork rank 2; spatula rank 3 | `ELONGATED_OBJECT` | `INSERTABLE_IN` and `REACHES_BOTTOM` |
 
 The resolver enumerates distinct role assignments. It first rejects any

@@ -13,14 +13,6 @@ roles:
     unary_geometry:
       - predicate: OPEN_CAVITY
         expected: true
-      - property: opening_width_m
-        operator: ">="
-        value: 0.05
-        unit: m
-      - property: cavity_depth_m
-        operator: ">="
-        value: 0.015
-        unit: m
 
   mixing_tool:
     count: 1

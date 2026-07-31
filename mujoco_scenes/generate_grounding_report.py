@@ -377,23 +377,37 @@ def _make_mode_visualizations(
         mp4_path = mode_dir / f"{mode.replace('-', '_')}.mp4"
         ffmpeg = shutil.which("ffmpeg")
         if ffmpeg:
+            concat_path = mode_dir / "mp4_frames.txt"
+            concat_lines = []
+            for frame_path in frame_paths:
+                concat_lines.append(f"file '{frame_path.name}'")
+                concat_lines.append("duration 2.0")
+            # FFmpeg's concat demuxer needs the final image repeated for its
+            # declared duration to be retained, especially for a one-frame
+            # geometry-only ablation.
+            concat_lines.append(f"file '{frame_paths[-1].name}'")
+            concat_path.write_text(
+                "\n".join(concat_lines) + "\n",
+                encoding="utf-8",
+            )
             subprocess.run(
                 [
                     ffmpeg,
                     "-y",
                     "-loglevel",
                     "error",
-                    "-framerate",
-                    "1/2",
+                    "-f",
+                    "concat",
+                    "-safe",
+                    "0",
                     "-i",
-                    str(mode_dir / "stage_%03d.png"),
+                    concat_path.name,
                     "-vf",
-                    "format=yuv420p",
-                    "-r",
-                    "30",
-                    str(mp4_path),
+                    "fps=30,format=yuv420p",
+                    mp4_path.name,
                 ],
                 check=False,
+                cwd=mode_dir,
             )
         visualizations[mode] = {
             "terminal_stage": terminal_stage,

@@ -107,6 +107,48 @@ class GeometryPropertyTests(unittest.TestCase):
         )
         self.assertLess(dimensions["width"]["value"], 0.05)
 
+    def test_elongated_is_scale_independent_axis_dominance(self):
+        rng = np.random.default_rng(44)
+        tiny_elongated = rng.uniform(
+            (-0.010, -0.001, -0.0005),
+            (0.010, 0.001, 0.0005),
+            (600, 3),
+        )
+        predicate = self.measure(tiny_elongated)[
+            "geometric_predicates"
+        ]["ELONGATED_OBJECT"]
+        self.assertEqual(predicate["status"], "TRUE")
+        self.assertFalse(
+            predicate["evidence"]["absolute_length_used_for_decision"]
+        )
+        self.assertGreater(
+            predicate["evidence"]["dominant_axis_ratio"],
+            predicate["evidence"]["minimum_dominant_axis_ratio"],
+        )
+
+    def test_open_cavity_structure_is_scale_independent_when_resolved(self):
+        predicate = self.measure(cavity_cloud() * 0.2)[
+            "geometric_predicates"
+        ]["OPEN_CAVITY"]
+        self.assertEqual(predicate["status"], "TRUE")
+        self.assertEqual(
+            predicate["evidence"]["structural_components"],
+            {
+                "ENCLOSED_RIM": "TRUE",
+                "OPEN_CENTRE": "TRUE",
+                "INTERIOR_BELOW_RIM": "TRUE",
+            },
+        )
+
+    def test_unresolved_small_cavity_is_unknown_not_false(self):
+        predicate = self.measure(cavity_cloud() * 0.05)[
+            "geometric_predicates"
+        ]["OPEN_CAVITY"]
+        self.assertEqual(predicate["status"], "UNKNOWN")
+        self.assertEqual(
+            predicate["reason"], "UNRESOLVED_VERTICAL_STRUCTURE"
+        )
+
     def test_every_object_has_identical_universal_keys(self):
         points = np.linspace((0, 0, 0), (0.2, 0.02, 0.01), 100)
         first = self.measure(points)

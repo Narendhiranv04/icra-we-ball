@@ -21,7 +21,7 @@ CONFIG_PATH = (
 )
 SUPPORTED_STATUSES = {"MEASURED", "DERIVED", "UNKNOWN"}
 EXTRACTOR_VERSION = "geometry_properties_v3"
-OPEN_RECEPTACLE_EXTRACTOR_VERSION = "open_receptacle_geometry_v2"
+OPEN_RECEPTACLE_EXTRACTOR_VERSION = "open_cavity_structure_v3"
 GEOMETRIC_PROPERTY_KEYS = (
     "total_length_m",
     "usable_length_m",
@@ -311,6 +311,14 @@ def _estimate_open_cavity(
         "contributing_camera_count": len(
             measurement_evidence.contributing_camera_ids
         ),
+        "definition": (
+            "enclosed_rim AND open_centre AND observed_interior_below_rim"
+        ),
+        "structural_components": {
+            "ENCLOSED_RIM": "UNKNOWN",
+            "OPEN_CENTRE": "UNKNOWN",
+            "INTERIOR_BELOW_RIM": "UNKNOWN",
+        },
     }
     minimum_points = int(cavity.get("minimum_point_count", 120))
     minimum_cameras = int(
@@ -343,17 +351,6 @@ def _estimate_open_cavity(
     )
     vertical_extent = float(vertical_upper - vertical_lower)
     diagnostics["vertical_extent_m"] = vertical_extent
-    minimum_vertical_extent = float(
-        cavity.get("minimum_vertical_extent_m", 0.025)
-    )
-    if vertical_extent < minimum_vertical_extent:
-        return unknown_properties, geometric_predicate(
-            "FALSE",
-            method=method,
-            evidence=diagnostics,
-            reason="INADEQUATE_VERTICAL_EXTENT",
-        )
-
     eigenvalues = measured_geometry["eigenvalues"]
     planarity_score = float(
         1.0
@@ -371,6 +368,23 @@ def _estimate_open_cavity(
             method=method,
             evidence=diagnostics,
             reason="PREDOMINANTLY_PLANAR_EVIDENCE",
+        )
+
+    minimum_vertical_extent = float(
+        cavity.get(
+            "minimum_resolvable_vertical_extent_m",
+            cavity.get("minimum_vertical_extent_m", 0.006),
+        )
+    )
+    diagnostics[
+        "minimum_resolvable_vertical_extent_m"
+    ] = minimum_vertical_extent
+    if vertical_extent < minimum_vertical_extent:
+        return unknown_properties, geometric_predicate(
+            "UNKNOWN",
+            method=method,
+            evidence=diagnostics,
+            reason="UNRESOLVED_VERTICAL_STRUCTURE",
         )
 
     rim_percentile = float(cavity.get("rim_percentile_z", 86.0))
@@ -452,13 +466,19 @@ def _estimate_open_cavity(
     opening_width = float(opening_extents[1])
     diagnostics["estimated_opening_length_m"] = opening_length
     diagnostics["estimated_opening_width_m"] = opening_width
-    minimum_opening = float(cavity.get("minimum_opening_m", 0.025))
+    minimum_opening = float(
+        cavity.get(
+            "minimum_resolvable_opening_m",
+            cavity.get("minimum_opening_m", 0.009),
+        )
+    )
+    diagnostics["minimum_resolvable_opening_m"] = minimum_opening
     if not np.isfinite(opening_width) or opening_width < minimum_opening:
         return unknown_properties, geometric_predicate(
-            "FALSE",
+            "UNKNOWN",
             method=method,
             evidence=diagnostics,
-            reason="OPENING_TOO_SMALL_FOR_RECEPTACLE",
+            reason="UNRESOLVED_OPENING",
         )
 
     normalized_rim = all_normalized[rim_mask]
@@ -507,12 +527,14 @@ def _estimate_open_cavity(
         <= float(cavity.get("maximum_filled_top_height_spread_m", 0.002))
     )
     if central_top_fraction > maximum_central_top or filled_coplanar_top:
+        diagnostics["structural_components"]["OPEN_CENTRE"] = "FALSE"
         return unknown_properties, geometric_predicate(
             "FALSE",
             method=method,
             evidence=diagnostics,
             reason="FILLED_TOP_SURFACE",
         )
+    diagnostics["structural_components"]["OPEN_CENTRE"] = "TRUE"
     if (
         enclosure_ratio
         < float(cavity.get("minimum_rim_enclosure_ratio", 0.75))
@@ -525,8 +547,15 @@ def _estimate_open_cavity(
             evidence=diagnostics,
             reason="INSUFFICIENT_RIM_ENCLOSURE",
         )
+    diagnostics["structural_components"]["ENCLOSED_RIM"] = "TRUE"
 
-    minimum_depth = float(cavity.get("minimum_depth_m", 0.010))
+    minimum_depth = float(
+        cavity.get(
+            "minimum_resolvable_depth_m",
+            cavity.get("minimum_depth_m", 0.006),
+        )
+    )
+    diagnostics["minimum_resolvable_depth_m"] = minimum_depth
     inner_fraction = float(cavity.get("inner_radius_fraction", 0.62))
     rim_height = float(np.median(rim[:, 2]))
     interior_mask = (
@@ -583,6 +612,9 @@ def _estimate_open_cavity(
             evidence=diagnostics,
             reason="INSUFFICIENT_OBSERVED_INTERIOR",
         )
+    diagnostics["structural_components"][
+        "INTERIOR_BELOW_RIM"
+    ] = "TRUE"
 
     cavity_depth = float(
         rim_height - np.percentile(interior[:, 2], 10.0)
@@ -593,7 +625,7 @@ def _estimate_open_cavity(
             "UNKNOWN",
             method=method,
             evidence=diagnostics,
-            reason="INSUFFICIENT_VISIBLE_DEPTH",
+            reason="UNRESOLVED_INTERIOR_DEPTH",
         )
     removed_outliers = int(
         measurement_evidence.measurement_quality.get(
@@ -820,17 +852,26 @@ def extract_object_properties(
             )
 
         elongated = config.get("elongated_object", {})
+        minimum_dominance = float(
+            elongated.get(
+                "minimum_dominant_axis_ratio",
+                elongated.get("minimum_elongation_ratio", 2.4),
+            )
+        )
         elongated_true = (
-            length >= float(elongated.get("minimum_length_m", 0.075))
-            and elongation
-            >= float(elongated.get("minimum_elongation_ratio", 2.4))
+            elongation >= minimum_dominance
         )
         predicates["ELONGATED_OBJECT"] = geometric_predicate(
             "TRUE" if elongated_true else "FALSE",
-            method="robust_obb_extent_ratio",
+            method="scale_independent_principal_axis_dominance_v2",
             evidence={
                 "total_length_m": length,
-                "elongation_ratio": elongation,
+                "dominant_axis_ratio": elongation,
+                "minimum_dominant_axis_ratio": minimum_dominance,
+                "absolute_length_used_for_decision": False,
+                "definition": (
+                    "largest robust extent dominates middle robust extent"
+                ),
             },
         )
 
