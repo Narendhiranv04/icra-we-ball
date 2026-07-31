@@ -509,6 +509,61 @@ usable tool length minus the configured grip allowance and measured cavity
 depth. Positive margins pass (zero also passes for reach), negative margins
 fail, and unavailable operands produce `UNKNOWN` with a null margin.
 
+### One-command scene, ablations, and visual report
+
+Build the current image once:
+
+```bash
+docker build -t mujoco-kitchen-s1 -f mujoco_scenes/Dockerfile .
+```
+
+Then run the complete primary experiment and report workflow:
+
+```bash
+./mujoco_scenes/scripts/run_joint_ablation_demo.sh
+```
+
+An optional first argument supplies a stable run ID:
+
+```bash
+./mujoco_scenes/scripts/run_joint_ablation_demo.sh my_joint_report
+```
+
+The script runs the actual MuJoCo scene once in production joint mode. It then
+evaluates geometry-only, semantic-only, and joint acceptance from the exact
+same saved observations; the ablations do not rerender the scene. Docker runs
+with the host UID/GID so the reports remain writable from the host.
+
+Open the generated interactive report:
+
+```bash
+xdg-open reports/my_joint_report/ablation_report.html
+```
+
+The report directory contains:
+
+```text
+ablation_report.html
+ablation_report.md
+ablation_comparison.png
+offline_ablation_evaluation.json
+report_data.json
+ablations/
+  geometry_only/geometry_only.gif
+  semantic_only/semantic_only.gif
+  joint/joint.gif
+stages/
+  000_initial/
+  001_after_D1/
+  002_after_D2/
+```
+
+Each ablation animation includes the rendered multi-view scene, RGB detections,
+the cumulative point-cloud/graph overview, current stage, assignment, status,
+and reason. The HTML report also includes measured object geometry, signed
+pairwise margins, detector provenance, stage point clouds, graph snapshots,
+and the evidence-isolation safeguards.
+
 The synthetic RGB detector is not perfect: individual views can call a fork
 or spoon a knife, so the fused result requires independent multi-view support
 and a winning-label margin. The documented 1280×960 capture is required for

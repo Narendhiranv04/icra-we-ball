@@ -58,6 +58,7 @@ def evaluate_saved_run(
     *,
     evaluation_config: str | Path = DEFAULT_EVALUATION_CONFIG,
     output_name: str = "offline_ablation_evaluation.json",
+    output_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Compare saved ablations with annotations without entering inference."""
     run_path = Path(run_dir).resolve()
@@ -242,7 +243,12 @@ def evaluate_saved_run(
             for record in modes_report.values()
         ),
     }
-    _atomic_json(run_path / output_name, report)
+    destination = (
+        Path(output_path).resolve()
+        if output_path is not None
+        else run_path / output_name
+    )
+    _atomic_json(destination, report)
     return report
 
 
@@ -256,16 +262,24 @@ def main() -> None:
         type=Path,
         default=DEFAULT_EVALUATION_CONFIG,
     )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        help="Write outside the run directory (useful for Docker-owned runs)",
+    )
     arguments = parser.parse_args()
     report = evaluate_saved_run(
         arguments.run_dir,
         evaluation_config=arguments.evaluation_config,
+        output_path=arguments.output,
     )
     print(
         json.dumps(
             {
                 "output": str(
-                    arguments.run_dir
+                    arguments.output
+                    if arguments.output is not None
+                    else arguments.run_dir
                     / "offline_ablation_evaluation.json"
                 ),
                 "all_expected_results_matched": report[

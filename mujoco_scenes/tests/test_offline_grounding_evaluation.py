@@ -102,10 +102,15 @@ def test_offline_report_separates_expected_ablation_from_ground_truth(
         )
     )
 
+    external_output = tmp_path / "reports" / "offline.json"
     report = evaluate_saved_run(
-        run_dir, evaluation_config=evaluation_path
+        run_dir,
+        evaluation_config=evaluation_path,
+        output_path=external_output,
     )
 
+    assert external_output.exists()
+    assert not (run_dir / "offline_ablation_evaluation.json").exists()
     assert report["all_expected_results_matched"]
     assert report["modes"]["joint"][
         "matches_evaluation_ground_truth"
