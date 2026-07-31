@@ -562,7 +562,11 @@ Each ablation animation includes the rendered multi-view scene, RGB detections,
 the cumulative point-cloud/graph overview, current stage, assignment, status,
 and reason. The HTML report also includes measured object geometry, signed
 pairwise margins, detector provenance, stage point clouds, graph snapshots,
-and the evidence-isolation safeguards.
+all five individual camera overlays per stage, and the evidence-isolation
+safeguards. The presentation HTML embeds every image, GIF, and MP4 as a data
+URI, so it remains viewable as one self-contained local file even when browser
+local-file access rules would otherwise block relative assets. Separate media
+files remain beside it for presentation software and direct playback.
 
 The synthetic RGB detector is not perfect: individual views can call a fork
 or spoon a knife, so the fused result requires independent multi-view support
