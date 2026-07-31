@@ -254,6 +254,9 @@ def run_sequential_inspection(
         "confidence_threshold": getattr(
             semantic_detector, "confidence_threshold", None
         ),
+        "process_isolation": getattr(
+            semantic_detector, "process_isolation", False
+        ),
     }
     if (
         loaded_task.get("_task_schema") == "JOINT_ROLE_GROUNDING"

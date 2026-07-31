@@ -7,10 +7,14 @@ generic persistent IDs used by the observed-state registry.
 
 from __future__ import annotations
 
+import atexit
 import importlib.metadata
 import json
 import math
+import multiprocessing
+import os
 import time
+import traceback
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Any, Protocol, Sequence
@@ -99,6 +103,89 @@ class NullSemanticDetector:
         return ()
 
 
+def _yolo_world_worker(
+    connection,
+    *,
+    checkpoint: str,
+    confidence_threshold: float,
+    inference_size: int,
+    device: str,
+    max_detections: int,
+) -> None:
+    """Run YOLO-World in a clean process, isolated from MuJoCo's GL stack."""
+    try:
+        from ultralytics import YOLOWorld
+
+        model = YOLOWorld(checkpoint)
+        active_vocabulary: tuple[str, ...] | None = None
+        connection.send({"status": "READY"})
+        while True:
+            request = connection.recv()
+            if request.get("command") == "CLOSE":
+                break
+            if request.get("command") != "DETECT":
+                raise ValueError(
+                    f"Unsupported semantic worker command: {request!r}"
+                )
+            rgb = np.asarray(request["image"])
+            prompts = tuple(request["vocabulary"])
+            if prompts != active_vocabulary:
+                model.set_classes(list(prompts))
+                active_vocabulary = prompts
+            results = model.predict(
+                source=Image.fromarray(rgb, mode="RGB"),
+                conf=confidence_threshold,
+                imgsz=inference_size,
+                device=device,
+                max_det=max_detections,
+                verbose=False,
+            )
+            records: list[dict[str, Any]] = []
+            if results:
+                result = results[0]
+                boxes = result.boxes
+                if boxes is not None and len(boxes):
+                    xyxy = boxes.xyxy.detach().cpu().numpy()
+                    confidences = boxes.conf.detach().cpu().numpy()
+                    classes = boxes.cls.detach().cpu().numpy().astype(int)
+                    for box, confidence, class_id in zip(
+                        xyxy, confidences, classes
+                    ):
+                        records.append(
+                            {
+                                "raw_label": str(
+                                    result.names[int(class_id)]
+                                ),
+                                "confidence": float(confidence),
+                                "bbox_xyxy": tuple(
+                                    float(value) for value in box
+                                ),
+                            }
+                        )
+            connection.send({"status": "OK", "detections": records})
+    except EOFError:
+        pass
+    except BaseException:
+        try:
+            connection.send(
+                {
+                    "status": "ERROR",
+                    "traceback": traceback.format_exc(),
+                }
+            )
+        except (BrokenPipeError, EOFError, OSError):
+            pass
+    finally:
+        connection.close()
+
+
+def _process_isolation_requested() -> bool:
+    value = os.environ.get(
+        "MUJOCO_SEMANTIC_PROCESS_ISOLATION", "0"
+    ).strip().lower()
+    return value in {"1", "true", "yes", "on"}
+
+
 class YOLOWorldSemanticDetector:
     """Ultralytics YOLO-World adapter with configurable open vocabulary."""
 
@@ -112,22 +199,108 @@ class YOLOWorldSemanticDetector:
         inference_size: int,
         device: str,
         max_detections: int,
+        process_isolation: bool | None = None,
     ):
-        try:
-            from ultralytics import YOLOWorld
-        except ImportError as error:
-            raise RuntimeError(
-                "YOLO-World semantic grounding requires the pinned "
-                "`ultralytics` dependency"
-            ) from error
         self.checkpoint = checkpoint
         self.confidence_threshold = float(confidence_threshold)
         self.inference_size = int(inference_size)
         self.device = str(device)
         self.max_detections = int(max_detections)
         self.version = importlib.metadata.version("ultralytics")
-        self._model = YOLOWorld(checkpoint)
+        self.process_isolation = (
+            _process_isolation_requested()
+            if process_isolation is None
+            else bool(process_isolation)
+        )
         self._active_vocabulary: tuple[str, ...] | None = None
+        self._model = None
+        self._worker = None
+        self._worker_connection = None
+        if self.process_isolation:
+            self._start_worker()
+        else:
+            try:
+                from ultralytics import YOLOWorld
+            except ImportError as error:
+                raise RuntimeError(
+                    "YOLO-World semantic grounding requires the pinned "
+                    "`ultralytics` dependency"
+                ) from error
+            self._model = YOLOWorld(checkpoint)
+
+    def _start_worker(self) -> None:
+        context = multiprocessing.get_context("spawn")
+        parent, child = context.Pipe()
+        worker = context.Process(
+            target=_yolo_world_worker,
+            kwargs={
+                "connection": child,
+                "checkpoint": self.checkpoint,
+                "confidence_threshold": self.confidence_threshold,
+                "inference_size": self.inference_size,
+                "device": self.device,
+                "max_detections": self.max_detections,
+            },
+            name="yolo-world-semantic-worker",
+            daemon=True,
+        )
+        worker.start()
+        child.close()
+        self._worker = worker
+        self._worker_connection = parent
+        response = self._receive_worker_response("initialization")
+        if response.get("status") != "READY":
+            self.close()
+            raise RuntimeError(
+                "YOLO-World semantic worker failed to initialize:\n"
+                + str(response.get("traceback", response))
+            )
+        atexit.register(self.close)
+
+    def _receive_worker_response(self, operation: str) -> dict[str, Any]:
+        connection = self._worker_connection
+        worker = self._worker
+        if connection is None or worker is None:
+            raise RuntimeError("YOLO-World semantic worker is not available")
+        if not connection.poll(300.0):
+            self.close()
+            raise TimeoutError(
+                f"YOLO-World semantic worker {operation} timed out"
+            )
+        try:
+            response = connection.recv()
+        except EOFError as error:
+            exit_code = worker.exitcode
+            self.close()
+            raise RuntimeError(
+                "YOLO-World semantic worker exited unexpectedly during "
+                f"{operation} (exit code {exit_code})"
+            ) from error
+        if response.get("status") == "ERROR":
+            self.close()
+            raise RuntimeError(
+                f"YOLO-World semantic worker failed during {operation}:\n"
+                + str(response.get("traceback", response))
+            )
+        return response
+
+    def close(self) -> None:
+        connection = self._worker_connection
+        worker = self._worker
+        self._worker_connection = None
+        self._worker = None
+        if connection is not None:
+            try:
+                if worker is not None and worker.is_alive():
+                    connection.send({"command": "CLOSE"})
+            except (BrokenPipeError, EOFError, OSError):
+                pass
+            connection.close()
+        if worker is not None:
+            worker.join(timeout=5.0)
+            if worker.is_alive():
+                worker.terminate()
+                worker.join(timeout=5.0)
 
     def detect(
         self,
@@ -140,6 +313,34 @@ class YOLOWorldSemanticDetector:
         prompts = tuple(str(label) for label in vocabulary)
         if not prompts:
             return ()
+        height, width = rgb.shape[:2]
+        if self.process_isolation:
+            connection = self._worker_connection
+            if connection is None:
+                raise RuntimeError(
+                    "YOLO-World semantic worker has already been closed"
+                )
+            connection.send(
+                {
+                    "command": "DETECT",
+                    "image": rgb,
+                    "vocabulary": prompts,
+                }
+            )
+            response = self._receive_worker_response("inference")
+            return tuple(
+                Detection(
+                    raw_label=record["raw_label"],
+                    canonical_label=record["raw_label"].strip().lower(),
+                    confidence=float(record["confidence"]),
+                    bbox_xyxy=tuple(record["bbox_xyxy"]),
+                    detector_name=self.name,
+                    checkpoint=self.checkpoint,
+                    detector_version=self.version,
+                    inference_resolution=(width, height),
+                )
+                for record in response["detections"]
+            )
         if prompts != self._active_vocabulary:
             self._model.set_classes(list(prompts))
             self._active_vocabulary = prompts
@@ -162,7 +363,6 @@ class YOLOWorldSemanticDetector:
         xyxy = boxes.xyxy.detach().cpu().numpy()
         confidences = boxes.conf.detach().cpu().numpy()
         classes = boxes.cls.detach().cpu().numpy().astype(int)
-        height, width = rgb.shape[:2]
         detections = []
         for box, confidence, class_id in zip(xyxy, confidences, classes):
             raw_label = str(result.names[int(class_id)])

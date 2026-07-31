@@ -404,6 +404,15 @@ MUJOCO_GL=egl .venv/bin/python -m mujoco_scenes.scene_loader \
   --save-semantic-overlays
 ```
 
+The image sets `MUJOCO_SEMANTIC_PROCESS_ISOLATION=1`. YOLO-World therefore
+runs in one persistent clean worker process while MuJoCo rendering remains in
+the main process. This avoids native OpenGL/PyTorch conflicts observed as
+container exit code 139 on some Mesa hosts, without reloading the detector for
+each view or changing the captured evidence. The execution mode is recorded as
+`semantic_detector.process_isolation` in `run_config.json`. It can be disabled
+for diagnosis with
+`-e MUJOCO_SEMANTIC_PROCESS_ISOLATION=0`.
+
 Build the image from the repository root:
 
 ```bash

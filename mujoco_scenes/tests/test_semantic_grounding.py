@@ -4,6 +4,7 @@ import numpy as np
 
 from mujoco_scenes.semantic_grounding import (
     Detection,
+    _process_isolation_requested,
     associate_detections_to_masks,
     detector_vocabulary,
     fuse_semantic_observations,
@@ -54,6 +55,15 @@ def _accepted_observation(
         "metrics": {"visible_mask_pixels": visible_pixels},
         "detection": detection,
     }
+
+
+def test_semantic_process_isolation_environment_is_explicit(monkeypatch):
+    monkeypatch.delenv("MUJOCO_SEMANTIC_PROCESS_ISOLATION", raising=False)
+    assert not _process_isolation_requested()
+    monkeypatch.setenv("MUJOCO_SEMANTIC_PROCESS_ISOLATION", "1")
+    assert _process_isolation_requested()
+    monkeypatch.setenv("MUJOCO_SEMANTIC_PROCESS_ISOLATION", "false")
+    assert not _process_isolation_requested()
 
 
 def test_detector_vocabulary_is_configurable_and_broader_than_roles():

@@ -2,7 +2,8 @@ FROM python:3.11-slim-bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
-    MUJOCO_GL=glfw
+    MUJOCO_GL=glfw \
+    MUJOCO_SEMANTIC_PROCESS_ISOLATION=1
 
 # GLFW/X11 enables the interactive viewer. EGL/OSMesa also make the same
 # image usable for offscreen rendering on machines without an X display.
