@@ -11,3 +11,10 @@ MUJOCO_LOG.TXT
 point_cloud_runs/
 runs/
 graph_growth.mp4
+
+# Downloaded pretrained semantic-model caches (prepared reproducibly by
+# mujoco_scenes/scripts/prepare_semantic_models.py).
+semantic_model_cache/
+weights/
+mujoco_scenes/weights/
+*.pt

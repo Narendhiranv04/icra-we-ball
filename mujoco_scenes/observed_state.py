@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import math
 import re
+import shutil
+import subprocess
+from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable
@@ -13,22 +17,37 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 from mujoco_scenes.geometry_checker import (
+    CUMULATIVE_VISUALIZATION_PURPOSE,
     GeometryChecker,
+    MeasurementEvidence,
     PointCloudRun,
     read_ply,
     voxel_downsample,
     write_ply,
 )
 from mujoco_scenes.geometry_properties import (
-    candidate_functions,
-    category_family,
     extract_object_properties,
-    load_semantics_config,
-    pairwise_relation_status,
+    load_geometry_config,
+    pairwise_relation_evaluation,
+)
+from mujoco_scenes.task_witness import (
+    DEFAULT_TASK_REQUIREMENTS_PATH,
+    evaluate_geometric_requirements,
+    evaluate_joint_task_witness,
+    evaluate_semantic_compatibility,
+    evaluate_task_witness,
+    load_task_requirements,
+    resolve_task_requirements_path,
+)
+from mujoco_scenes.semantic_grounding import (
+    NullSemanticDetector,
+    SemanticDetector,
+    load_semantic_config,
+    run_semantic_inspection,
 )
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 3
 STATUS_COLORS = {
     "previous": (61, 116, 184),
     "new": (45, 166, 85),
@@ -38,9 +57,18 @@ RELATION_COLORS = {
     "TRUE": (45, 166, 85),
     "FALSE": (210, 62, 62),
     "UNKNOWN": (135, 135, 135),
-    "SEMANTIC": (125, 84, 170),
     "OBSERVED": (45, 85, 140),
 }
+EVIDENCE_COLORS = (
+    (49, 103, 189),
+    (230, 126, 34),
+    (45, 166, 85),
+    (139, 92, 246),
+    (14, 148, 160),
+    (205, 66, 82),
+    (126, 132, 36),
+    (190, 74, 161),
+)
 
 
 def _font(size: int, bold: bool = False):
@@ -49,6 +77,13 @@ def _font(size: int, bold: bool = False):
         return ImageFont.truetype(name, size=size)
     except OSError:
         return ImageFont.load_default()
+
+
+def _evidence_color(object_id: str) -> tuple[int, int, int]:
+    """Return a stable, visibly distinct colour for a generic object ID."""
+    match = re.search(r"(\d+)$", object_id)
+    index = int(match.group(1)) - 1 if match else 0
+    return EVIDENCE_COLORS[index % len(EVIDENCE_COLORS)]
 
 
 def _atomic_json(path: Path, payload: Any) -> None:
@@ -93,6 +128,33 @@ def _dimension_values(record: dict[str, Any]) -> list[float | None]:
     ]
 
 
+def _semantic_quality_key(record: dict[str, Any] | None) -> tuple:
+    """Deterministically rank cached semantic observations."""
+    if not isinstance(record, dict):
+        return (0, 0, -1.0, -1.0)
+    quality = record.get("quality", {})
+    return (
+        1 if record.get("status") == "SUPPORTED" else 0,
+        int(quality.get("supporting_view_count") or 0),
+        float(quality.get("mean_confidence") or -1.0),
+        float(quality.get("winning_label_margin") or -1.0),
+    )
+
+
+def _select_validated_semantic(
+    previous: dict[str, Any] | None,
+    observation: dict[str, Any],
+) -> tuple[dict[str, Any] | None, bool]:
+    """Retain a stronger cached semantic result after weak re-observation."""
+    if (
+        observation.get("status") == "SUPPORTED"
+        and _semantic_quality_key(observation)
+        >= _semantic_quality_key(previous)
+    ):
+        return deepcopy(observation), True
+    return deepcopy(previous), False
+
+
 class ObservedStateRun:
     """One persistent registry and growing graph across observation stages."""
 
@@ -103,7 +165,12 @@ class ObservedStateRun:
         scene_name: str,
         region_ids: Iterable[str],
         voxel_size: float = 0.003,
-        semantics_config: str | Path | None = None,
+        geometry_config: str | Path | None = None,
+        task_requirements: str | Path | dict[str, Any] | None = None,
+        semantic_detector: SemanticDetector | None = None,
+        semantic_config: str | Path | dict[str, Any] | None = None,
+        grounding_mode: str = "geometry-only",
+        save_semantic_overlays: bool = False,
         run_config: dict[str, Any] | None = None,
     ):
         self.run_dir = Path(run_dir).resolve()
@@ -111,11 +178,39 @@ class ObservedStateRun:
         self.run_id = self.run_dir.name
         self.scene_name = scene_name
         self.voxel_size = voxel_size
-        self.config = load_semantics_config(
-            semantics_config
-        ) if semantics_config else load_semantics_config()
+        self.config = (
+            load_geometry_config(geometry_config)
+            if geometry_config
+            else load_geometry_config()
+        )
+        self.task_requirements = load_task_requirements(task_requirements)
+        self.grounding_mode = grounding_mode
+        self.semantic_detector = semantic_detector or NullSemanticDetector()
+        self.semantic_enabled = not isinstance(
+            self.semantic_detector, NullSemanticDetector
+        )
+        if isinstance(semantic_config, dict):
+            self.semantic_config = deepcopy(semantic_config)
+        else:
+            self.semantic_config = load_semantic_config(
+                semantic_config
+                if semantic_config is not None
+                else Path(__file__).resolve().parent
+                / "configs"
+                / "semantic_grounding.yaml"
+            )
+        self.save_semantic_overlays = bool(save_semantic_overlays)
+        if isinstance(task_requirements, dict):
+            task_source = "inline"
+        else:
+            task_source = str(
+                resolve_task_requirements_path(
+                    task_requirements or DEFAULT_TASK_REQUIREMENTS_PATH
+                )
+            )
         self.registry_path = self.run_dir / "object_registry.json"
         self.graph_path = self.run_dir / "observed_graph.json"
+        self.latest_witness_path = self.run_dir / "latest_witness.json"
         self.events_path = self.run_dir / "events.jsonl"
         self.stages_dir = self.run_dir / "stages"
         self.stages_dir.mkdir(exist_ok=True)
@@ -123,6 +218,12 @@ class ObservedStateRun:
 
         if self.registry_path.exists():
             self.registry = json.loads(self.registry_path.read_text())
+            if self.registry.get("schema_version") != SCHEMA_VERSION:
+                raise RuntimeError(
+                    f"Run {self.run_dir} uses observed-state schema "
+                    f"{self.registry.get('schema_version')}; region-evidence "
+                    f"schema {SCHEMA_VERSION} requires a new --run-id"
+                )
         else:
             self.registry = {
                 "schema_version": SCHEMA_VERSION,
@@ -134,6 +235,11 @@ class ObservedStateRun:
                 "objects": {},
             }
         self.next_stage = int(self.registry.get("current_stage", -1)) + 1
+        self.latest_witness = (
+            json.loads(self.latest_witness_path.read_text())
+            if self.latest_witness_path.exists()
+            else None
+        )
         config_payload = {
             "schema_version": SCHEMA_VERSION,
             "run_id": self.run_id,
@@ -141,11 +247,25 @@ class ObservedStateRun:
             "created_at": datetime.now().astimezone().isoformat(),
             "voxel_size_m": voxel_size,
             "regions": ["countertop", *self.region_ids],
-            "semantic_config": str(
-                Path(semantics_config).resolve()
-                if semantics_config
-                else "configs/observed_state_semantics.yaml"
+            "geometry_config": str(
+                Path(geometry_config).resolve()
+                if geometry_config
+                else "configs/geometry_inference.yaml"
             ),
+            "inspection_rig_config": "configs/inspection_rigs.yaml",
+            "property_measurement_source": (
+                "STAGE_LOCAL_REGION_GATED_MEASUREMENT_EVIDENCE"
+            ),
+            "cumulative_cloud_purpose": (
+                CUMULATIVE_VISUALIZATION_PURPOSE
+            ),
+            "inference_basis": (
+                grounding_mode.upper().replace("-", "_")
+            ),
+            "grounding_mode": grounding_mode,
+            "semantic_detector_enabled": self.semantic_enabled,
+            "task_requirements": task_source,
+            "task_id": self.task_requirements["task_id"],
             **(run_config or {}),
         }
         if not (self.run_dir / "run_config.json").exists():
@@ -159,6 +279,12 @@ class ObservedStateRun:
         runs_root: str | Path = "runs",
         run_id: str | None = None,
         voxel_size: float = 0.003,
+        geometry_config: str | Path | None = None,
+        task_requirements: str | Path | dict[str, Any] | None = None,
+        semantic_detector: SemanticDetector | None = None,
+        semantic_config: str | Path | dict[str, Any] | None = None,
+        grounding_mode: str = "geometry-only",
+        save_semantic_overlays: bool = False,
         run_config: dict[str, Any] | None = None,
     ) -> "ObservedStateRun":
         if run_id is None:
@@ -173,6 +299,12 @@ class ObservedStateRun:
             scene_name=scene.scene_name,
             region_ids=region_ids,
             voxel_size=voxel_size,
+            geometry_config=geometry_config,
+            task_requirements=task_requirements,
+            semantic_detector=semantic_detector,
+            semantic_config=semantic_config,
+            grounding_mode=grounding_mode,
+            save_semantic_overlays=save_semantic_overlays,
             run_config=run_config,
         )
 
@@ -185,14 +317,24 @@ class ObservedStateRun:
         width: int = 640,
         height: int = 480,
     ) -> tuple[PointCloudRun, Path]:
-        """Run five-view reconstruction and update every persistent output."""
+        """Capture fresh region evidence and update every persistent output."""
+        stage = self.next_stage
+        safe_label = _safe_run_id(stage_label)
+        stage_dir = self.stages_dir / f"{stage:03d}_{safe_label}"
+        if stage_dir.exists():
+            raise RuntimeError(f"Stage output already exists: {stage_dir}")
+        stage_dir.mkdir(parents=True)
+        inspection_region = region_opened or "INITIAL"
         cloud_run = GeometryChecker(
             scene,
             width=width,
             height=height,
             voxel_size=self.voxel_size,
-        ).run()
-        stage_dir = self.update_from_point_cloud_run(
+        ).run_region_inspection(
+            inspection_region,
+            stage_output_dir=stage_dir,
+        )
+        stage_dir = self.update_from_inspection_run(
             scene,
             cloud_run,
             stage_label=stage_label,
@@ -222,14 +364,16 @@ class ObservedStateRun:
             for region_id in self.region_ids
         }
 
-    def _new_object_id(self, category: str) -> str:
-        existing = sum(
-            record.get("category") == category
-            for record in self.registry["objects"].values()
-        )
-        return f"{category}_{existing + 1:02d}"
+    def _new_object_id(self) -> str:
+        """Allocate an identifier that contains no semantic category."""
+        return f"object_{len(self.registry['objects']) + 1:04d}"
 
-    def _load_cumulative(
+    def _association_token(self, instance_id: str) -> str:
+        """Hash the simulator identifier so persisted state exposes no label."""
+        payload = f"{self.scene_name}:{instance_id}".encode("utf-8")
+        return hashlib.sha256(payload).hexdigest()[:24]
+
+    def _load_cumulative_visualization(
         self, record: dict[str, Any] | None
     ) -> tuple[np.ndarray, np.ndarray]:
         if not record:
@@ -237,13 +381,25 @@ class ObservedStateRun:
                 np.empty((0, 3), dtype=np.float32),
                 np.empty((0, 3), dtype=np.uint8),
             )
-        path = self.run_dir / record["cumulative_cloud_path"]
+        relative_path = record.get(
+            "cumulative_visualization_cloud_path",
+            record.get("cumulative_cloud_path"),
+        )
+        if relative_path is None:
+            return (
+                np.empty((0, 3), dtype=np.float32),
+                np.empty((0, 3), dtype=np.uint8),
+            )
+        path = self.run_dir / relative_path
         if not path.exists():
             return (
                 np.empty((0, 3), dtype=np.float32),
                 np.empty((0, 3), dtype=np.uint8),
             )
         return read_ply(path)
+
+    # Compatibility for visualization helpers; never use this in extraction.
+    _load_cumulative = _load_cumulative_visualization
 
     def update_from_point_cloud_run(
         self,
@@ -253,13 +409,39 @@ class ObservedStateRun:
         stage_label: str,
         region_opened: str | None = None,
     ) -> Path:
-        """Merge one observation into the registry, graph, and stage history."""
+        """Compatibility entry point with a strict stage-evidence guard."""
+        return self.update_from_inspection_run(
+            scene,
+            cloud_run,
+            stage_label=stage_label,
+            region_opened=region_opened,
+        )
+
+    def update_from_inspection_run(
+        self,
+        scene,
+        cloud_run: PointCloudRun,
+        *,
+        stage_label: str,
+        region_opened: str | None = None,
+    ) -> Path:
+        """Cache valid stage measurements and separately grow visualization."""
+        if cloud_run.inspection is None:
+            raise TypeError(
+                "Observed-state property updates require a region-local "
+                "inspection run; scene-wide and combined clouds are rejected"
+            )
+        inspection = cloud_run.inspection
+        expected_region = region_opened or "INITIAL"
+        if inspection.region_id != expected_region:
+            raise ValueError(
+                f"Inspection region {inspection.region_id} does not match "
+                f"stage source {expected_region}"
+            )
         stage = self.next_stage
         safe_label = _safe_run_id(stage_label)
         stage_dir = self.stages_dir / f"{stage:03d}_{safe_label}"
-        if stage_dir.exists():
-            raise RuntimeError(f"Stage output already exists: {stage_dir}")
-        stage_dir.mkdir(parents=True)
+        stage_dir.mkdir(parents=True, exist_ok=True)
 
         events: list[dict[str, Any]] = []
         if region_opened is not None:
@@ -270,81 +452,224 @@ class ObservedStateRun:
                     "region_id": region_opened,
                 }
             )
+        events.extend(
+            [
+                {
+                    "stage": stage,
+                    "event": "SETTLE_COMPLETED",
+                    "region_id": expected_region,
+                    "settle_steps": inspection.metadata["settle_steps"],
+                },
+                {
+                    "stage": stage,
+                    "event": "VIRTUAL_INSPECTION_RIG_POSITIONED",
+                    "region_id": expected_region,
+                },
+                {
+                    "stage": stage,
+                    "event": "INSPECTION_CAPTURED",
+                    "region_id": expected_region,
+                    "valid_camera_count": inspection.quality[
+                        "valid_camera_count"
+                    ],
+                },
+            ]
+        )
 
         stage_changes = {
             object_id: "previous"
             for object_id in self.registry["objects"]
         }
-        for instance_id, cloud in cloud_run.clouds.items():
-            object_id = self.registry["instance_index"].get(instance_id)
+        stage_evidence: dict[str, MeasurementEvidence] = {}
+        accepted_instance_to_object_id: dict[str, str] = {}
+        accepted_metadata: list[dict[str, Any]] = []
+        rejected_metadata: list[dict[str, Any]] = []
+        for instance_id, evidence in inspection.evidence_clouds.items():
+            instance_token = self._association_token(instance_id)
+            object_id = self.registry["instance_index"].get(instance_token)
             existing = (
                 self.registry["objects"].get(object_id)
                 if object_id is not None
                 else None
             )
             is_new = existing is None
-            has_visible_samples = len(cloud.points) > 0 or any(
-                count > 0 for count in cloud.pixels_by_camera.values()
-            )
-            if not is_new and not has_visible_samples:
-                # The symbolic catalogue retains previously inspected objects
-                # after a region closes. Persistence belongs in the registry;
-                # a zero-pixel mask is not a new observation of that instance.
-                continue
             if is_new:
-                object_id = self._new_object_id(cloud.object_kind)
-                self.registry["instance_index"][instance_id] = object_id
+                object_id = self._new_object_id()
+                self.registry["instance_index"][instance_token] = object_id
                 events.append(
                     {
                         "stage": stage,
                         "event": "OBJECT_DISCOVERED",
                         "object_id": object_id,
-                        "instance_id": instance_id,
+                        "instance_token": instance_token,
                     }
                 )
+            relative_evidence_path = (
+                stage_dir.relative_to(self.run_dir)
+                / "evidence"
+                / object_id
+                / "fused.ply"
+            )
+            evidenced = evidence.with_provenance(
+                source_stage=stage,
+                measurement_cloud_path=relative_evidence_path.as_posix(),
+            )
+            stage_evidence[object_id] = evidenced
+            accepted_instance_to_object_id[instance_id] = object_id
+            _atomic_ply(
+                self.run_dir / relative_evidence_path,
+                evidenced.measurement_points,
+                evidenced.measurement_colors,
+            )
+            _atomic_json(
+                self.run_dir
+                / relative_evidence_path.parent
+                / "quality.json",
+                evidenced.measurement_quality,
+            )
+            stage_measurement = extract_object_properties(
+                evidenced,
+                config=self.config,
+            )
+            _atomic_json(
+                self.run_dir
+                / relative_evidence_path.parent
+                / "properties.json",
+                stage_measurement,
+            )
 
-            previous_points, previous_colors = self._load_cumulative(existing)
-            merged_points = np.concatenate((previous_points, cloud.points))
-            merged_colors = np.concatenate((previous_colors, cloud.colors))
+            previous_points, previous_colors = (
+                self._load_cumulative_visualization(existing)
+            )
+            merged_points = np.concatenate(
+                (previous_points, evidenced.measurement_points)
+            )
+            merged_colors = np.concatenate(
+                (previous_colors, evidenced.measurement_colors)
+            )
             merged_points, merged_colors = voxel_downsample(
                 merged_points, merged_colors, self.voxel_size
             )
-            relative_cloud_path = (
-                Path("objects") / object_id / "cumulative.ply"
+            relative_visualization_path = (
+                Path("objects")
+                / object_id
+                / "cumulative_visualization.ply"
             )
             _atomic_ply(
-                self.run_dir / relative_cloud_path,
+                self.run_dir / relative_visualization_path,
                 merged_points,
                 merged_colors,
             )
-
-            camera_count = sum(
-                count > 0 for count in cloud.pixels_by_camera.values()
+            # Preserve the original output name as a marked visualization-only
+            # compatibility artifact. Neither path enters the extractor.
+            compatibility_cumulative_path = (
+                Path("objects") / object_id / "cumulative.ply"
             )
-            measured = extract_object_properties(
+            _atomic_ply(
+                self.run_dir / compatibility_cumulative_path,
                 merged_points,
-                category=cloud.object_kind,
-                contributing_camera_count=camera_count,
-                config=self.config,
+                merged_colors,
             )
             source_region = (
                 self._source_region(scene, instance_id)
                 if is_new
                 else existing["source_region"]
             )
+            quality_is_valid = bool(
+                evidenced.measurement_quality.get(
+                    "quality_is_valid", False
+                )
+            )
+            measurement_keys = (
+                "centroid_world_m",
+                "dimensions_m",
+                "principal_axis_world",
+                "property_status",
+                "point_count",
+                "contributing_camera_count",
+                "geometric_properties",
+                "geometric_predicates",
+                "measurement_quality",
+                "measurement_cloud_path",
+            )
+            if existing is not None and not quality_is_valid:
+                measured = {
+                    key: deepcopy(existing[key])
+                    for key in measurement_keys
+                    if key in existing
+                }
+                last_property_update_stage = existing.get(
+                    "last_property_update_stage"
+                )
+                last_property_source_region = existing.get(
+                    "last_property_source_region"
+                )
+            else:
+                measured = stage_measurement
+                last_property_update_stage = (
+                    stage if quality_is_valid else None
+                )
+                last_property_source_region = (
+                    expected_region if quality_is_valid else None
+                )
             record = {
                 "object_id": object_id,
-                "instance_id": instance_id,
-                "category": cloud.object_kind,
-                "object_family": category_family(cloud.object_kind, self.config),
+                "instance_token": instance_token,
+                "inference_basis": (
+                    self.grounding_mode.upper().replace("-", "_")
+                ),
                 "source_region": source_region,
                 "first_seen_stage": stage if is_new else existing["first_seen_stage"],
                 "last_seen_stage": stage,
                 "observation_count": (
                     1 if is_new else int(existing["observation_count"]) + 1
                 ),
-                "cumulative_cloud_path": relative_cloud_path.as_posix(),
+                "last_evidence_stage": stage,
+                "last_evidence_source_region": expected_region,
+                "last_property_update_stage": last_property_update_stage,
+                "last_property_source_region": last_property_source_region,
+                "cumulative_visualization_cloud_path": (
+                    relative_visualization_path.as_posix()
+                ),
+                "cumulative_cloud_path": (
+                    compatibility_cumulative_path.as_posix()
+                ),
+                "cumulative_cloud_purpose": (
+                    CUMULATIVE_VISUALIZATION_PURPOSE
+                ),
+                "cumulative_visualization_point_count": len(merged_points),
+                "semantics": deepcopy(
+                    existing.get("semantics", {})
+                    if existing is not None
+                    else {}
+                ),
+                "functional_role_evaluations": deepcopy(
+                    existing.get("functional_role_evaluations", {})
+                    if existing is not None
+                    else {}
+                ),
                 **measured,
+            }
+            record["geometry"] = {
+                "centroid_world_m": deepcopy(
+                    record.get("centroid_world_m", {})
+                ),
+                "dimensions_m": deepcopy(record.get("dimensions_m", {})),
+                "principal_axis_world": deepcopy(
+                    record.get("principal_axis_world", {})
+                ),
+                "properties": deepcopy(
+                    record.get("geometric_properties", {})
+                ),
+                "predicates": deepcopy(
+                    record.get("geometric_predicates", {})
+                ),
+                "measurement_quality": deepcopy(
+                    record.get("measurement_quality", {})
+                ),
+                "measurement_cloud_path": record.get(
+                    "measurement_cloud_path"
+                ),
             }
             self.registry["objects"][object_id] = record
             _atomic_json(
@@ -355,27 +680,615 @@ class ObservedStateRun:
             events.append(
                 {
                     "stage": stage,
-                    "event": "PROPERTY_UPDATED",
+                    "event": "OBJECT_EVIDENCE_ACCEPTED",
+                    "region_id": expected_region,
                     "object_id": object_id,
-                    "point_count": len(merged_points),
+                    "point_count": len(evidenced.measurement_points),
+                }
+            )
+            if quality_is_valid:
+                events.append(
+                    {
+                        "stage": stage,
+                        "event": "PROPERTY_UPDATED",
+                        "object_id": object_id,
+                        "property": "OPEN_CAVITY",
+                        "value": stage_measurement.get(
+                            "geometric_predicates", {}
+                        )
+                        .get("OPEN_CAVITY", {})
+                        .get("value"),
+                        "source_region": expected_region,
+                        "measurement_cloud_path": (
+                            relative_evidence_path.as_posix()
+                        ),
+                    }
+                )
+            else:
+                events.append(
+                    {
+                        "stage": stage,
+                        "event": "OBJECT_EVIDENCE_INADEQUATE",
+                        "region_id": expected_region,
+                        "object_id": object_id,
+                        "reasons": evidenced.measurement_quality.get(
+                            "reasons", []
+                        ),
+                    }
+                )
+            accepted_metadata.append(
+                {
+                    "object_id": object_id,
+                    "point_count": len(evidenced.measurement_points),
+                    "quality_is_valid": quality_is_valid,
+                    "measurement_cloud_path": (
+                        relative_evidence_path.as_posix()
+                    ),
                 }
             )
 
+        for instance_id, rejected in inspection.rejected_clouds.items():
+            instance_token = self._association_token(instance_id)
+            object_id = self.registry["instance_index"].get(instance_token)
+            reasons = (
+                inspection.quality.get(
+                    "_rejected_instance_reasons", {}
+                ).get(instance_id, ["OUTSIDE_INSPECTION_VOLUME"])
+            )
+            inside_count = int(sum(rejected.pixels_by_camera.values()))
+            event = {
+                "stage": stage,
+                "event": "OBJECT_OUTSIDE_INSPECTION_VOLUME",
+                "region_id": expected_region,
+                "instance_token": instance_token,
+                "point_count_inside": inside_count,
+                "raw_visible_point_count": len(rejected.points),
+                "reasons": reasons,
+            }
+            metadata_record = {
+                "instance_token": instance_token,
+                "point_count_inside": inside_count,
+                "raw_visible_point_count": len(rejected.points),
+                "reasons": reasons,
+            }
+            if object_id is not None:
+                event["object_id"] = object_id
+                metadata_record["object_id"] = object_id
+            events.append(event)
+            rejected_metadata.append(metadata_record)
+
+        semantic_stage_result = None
+        if self.semantic_enabled:
+            role_rank_by_label = {
+                role: {
+                    preference["canonical_label"]: int(
+                        preference["rank"]
+                    )
+                    for preference in role_config.get(
+                        "semantic_preferences", []
+                    )
+                }
+                for role, role_config in self.task_requirements.get(
+                    "roles", {}
+                ).items()
+            }
+            semantic_stage_result = run_semantic_inspection(
+                inspection,
+                accepted_instance_to_object_id=(
+                    accepted_instance_to_object_id
+                ),
+                detector=self.semantic_detector,
+                config=self.semantic_config,
+                stage=stage,
+                region_id=expected_region,
+                stage_dir=stage_dir,
+                save_overlays=self.save_semantic_overlays,
+                role_rank_by_label=role_rank_by_label,
+            )
+            stage_prefix = stage_dir.relative_to(self.run_dir)
+            for summary in semantic_stage_result["camera_summaries"]:
+                events.append(
+                    {
+                        "stage": stage,
+                        "event": "SEMANTIC_DETECTION_COMPLETED",
+                        "camera_id": summary["camera_id"],
+                        "detection_count": summary["detection_count"],
+                        "detector": semantic_stage_result["detector"][
+                            "name"
+                        ],
+                    }
+                )
+            for camera_associations in semantic_stage_result[
+                "associations"
+            ]:
+                for association in camera_associations["accepted"]:
+                    detection = association["detection"]
+                    events.append(
+                        {
+                            "stage": stage,
+                            "event": "SEMANTIC_EVIDENCE_ASSOCIATED",
+                            "camera_id": camera_associations[
+                                "camera_id"
+                            ],
+                            "object_id": association["object_id"],
+                            "label": detection["canonical_label"],
+                            "confidence": detection["confidence"],
+                            "association_score": association[
+                                "association_score"
+                            ],
+                        }
+                    )
+            for object_id, observation in semantic_stage_result[
+                "semantic_records"
+            ].items():
+                observation = deepcopy(observation)
+                if observation.get("semantic_record_path"):
+                    observation["semantic_record_path"] = (
+                        stage_prefix
+                        / observation["semantic_record_path"]
+                    ).as_posix()
+                observation["semantic_evidence_paths"] = [
+                    (stage_prefix / path).as_posix()
+                    for path in observation.get(
+                        "semantic_evidence_paths", []
+                    )
+                ]
+                record = self.registry["objects"][object_id]
+                namespace = deepcopy(record.get("semantics", {}))
+                history = list(namespace.get("observations", []))
+                history.append(observation)
+                previous_validated = namespace.get("validated")
+                validated, replaced = _select_validated_semantic(
+                    previous_validated, observation
+                )
+                if replaced:
+                    namespace["last_validated_stage"] = stage
+                    namespace["last_validated_source_region"] = (
+                        expected_region
+                    )
+                if validated is not None:
+                    namespace["validated"] = validated
+                namespace["latest_observation"] = observation
+                namespace["observations"] = history
+                record["semantics"] = namespace
+                _atomic_json(
+                    self.run_dir
+                    / observation["semantic_record_path"],
+                    observation,
+                )
+                _atomic_json(
+                    self.run_dir
+                    / "objects"
+                    / object_id
+                    / "properties.json",
+                    record,
+                )
+
         region_states = self._region_states(scene)
         graph = self._build_graph(region_states, stage_changes)
+        previous_witness_status = (
+            self.latest_witness.get("status")
+            if self.latest_witness is not None
+            else None
+        )
+        if (
+            self.task_requirements.get("_task_schema")
+            == "JOINT_ROLE_GROUNDING"
+        ):
+            witness = evaluate_joint_task_witness(
+                graph,
+                self.task_requirements,
+                stage=stage,
+                grounding_mode=self.grounding_mode,
+            )
+        else:
+            witness = evaluate_task_witness(
+                graph,
+                self.task_requirements,
+                stage=stage,
+            )
+        _atomic_json(
+            stage_dir / "candidate_evaluations.json",
+            {
+                "task_id": witness["task_id"],
+                "stage": stage,
+                "grounding_mode": self.grounding_mode,
+                "candidate_evaluations": witness.get(
+                    "candidate_evaluations", []
+                ),
+                "assignment_evaluations": witness.get(
+                    "assignment_evaluations", []
+                ),
+            },
+        )
+        for candidate in witness.get("candidate_evaluations", []):
+            decision = candidate.get("decision")
+            if decision == "REJECTED_SEMANTIC":
+                events.append(
+                    {
+                        "stage": stage,
+                        "event": "CANDIDATE_REJECTED_SEMANTIC",
+                        "object_id": candidate["object_id"],
+                        "role": candidate["role"],
+                    }
+                )
+            elif decision == "REJECTED_GEOMETRY":
+                events.append(
+                    {
+                        "stage": stage,
+                        "event": "CANDIDATE_REJECTED_GEOMETRY",
+                        "object_id": candidate["object_id"],
+                        "role": candidate["role"],
+                    }
+                )
+        # Unary candidate checks cannot expose relation failures because
+        # relations are evaluated only after a distinct multi-role assignment
+        # is assembled. Emit the required relation-level rejection trace from
+        # those assignment evaluations and deterministically de-duplicate
+        # equivalent failures.
+        emitted_relation_rejections: set[
+            tuple[str, str, str, str]
+        ] = set()
+        for assignment in witness.get("assignment_evaluations", []):
+            if assignment.get("decision") != "REJECTED_GEOMETRY":
+                continue
+            for relation in assignment.get("relation_checks", []):
+                if relation.get("status") != "FALSE":
+                    continue
+                key = (
+                    str(relation.get("from_object")),
+                    str(relation.get("from_role")),
+                    str(relation.get("relation")),
+                    str(relation.get("to_object")),
+                )
+                if key in emitted_relation_rejections:
+                    continue
+                emitted_relation_rejections.add(key)
+                events.append(
+                    {
+                        "stage": stage,
+                        "event": "CANDIDATE_REJECTED_GEOMETRY",
+                        "object_id": relation["from_object"],
+                        "role": relation["from_role"],
+                        "failed_relation": relation["relation"],
+                        "related_object_id": relation["to_object"],
+                        "related_role": relation["to_role"],
+                    }
+                )
+
+        for candidate in witness.get("candidate_evaluations", []):
+            record = self.registry["objects"][candidate["object_id"]]
+            evaluations = deepcopy(
+                record.get("functional_role_evaluations", {})
+            )
+            evaluations[candidate["role"]] = deepcopy(candidate)
+            record["functional_role_evaluations"] = evaluations
+        for node in graph["nodes"]:
+            if node.get("type") != "object":
+                continue
+            object_id = node["attributes"]["object_id"]
+            node["attributes"]["functional_role_evaluations"] = deepcopy(
+                self.registry["objects"][object_id].get(
+                    "functional_role_evaluations", {}
+                )
+            )
+
+        mode_witnesses = {}
+        if (
+            self.task_requirements.get("_task_schema")
+            == "JOINT_ROLE_GROUNDING"
+        ):
+            mode_witnesses = {
+                mode: evaluate_joint_task_witness(
+                    graph,
+                    self.task_requirements,
+                    stage=stage,
+                    grounding_mode=mode,
+                )
+                for mode in ("joint", "geometry-only", "semantic-only")
+            }
+            _atomic_json(
+                stage_dir / "grounding_mode_comparison.json",
+                {
+                    "stage": stage,
+                    "same_observation_evidence": True,
+                    "measurement_cloud_paths": sorted(
+                        evidence.measurement_cloud_path
+                        for evidence in stage_evidence.values()
+                        if evidence.measurement_cloud_path
+                    ),
+                    "semantic_record_paths": sorted(
+                        record.get("semantics", {})
+                        .get("latest_observation", {})
+                        .get("semantic_record_path")
+                        for record in self.registry["objects"].values()
+                        if record.get("semantics", {})
+                        .get("latest_observation", {})
+                        .get("semantic_record_path")
+                    ),
+                    "modes": mode_witnesses,
+                },
+            )
+            ablation_path = self.run_dir / "ablation_summary.json"
+            ablation_summary = (
+                json.loads(ablation_path.read_text())
+                if ablation_path.exists()
+                else {
+                    "task_id": witness["task_id"],
+                    "diagnostic_only": True,
+                    "shared_observation_evidence": True,
+                    "stages": [],
+                }
+            )
+            ablation_summary["stages"] = [
+                record
+                for record in ablation_summary["stages"]
+                if int(record["stage"]) != stage
+            ]
+            ablation_summary["stages"].append(
+                {
+                    "stage": stage,
+                    "region_id": expected_region,
+                    "modes": {
+                        mode: {
+                            "status": result["status"],
+                            "selected_witness": result[
+                                "selected_witness"
+                            ],
+                            "selected_candidate_edges": result[
+                                "selected_candidate_edges"
+                            ],
+                            "reason_codes": result["reason_codes"],
+                        }
+                        for mode, result in mode_witnesses.items()
+                    },
+                }
+            )
+            ablation_summary["stages"].sort(
+                key=lambda record: record["stage"]
+            )
+            _atomic_json(ablation_path, ablation_summary)
+
+        for selected in witness.get("selected_candidate_edges", []):
+            graph["edges"].append(
+                {
+                    "source": f"object:{selected['object_id']}",
+                    "target": f"role:{selected['role']}",
+                    "relation": "ASSIGNED_TO_ROLE",
+                    "status": "TRUE",
+                    "evidence": deepcopy(selected),
+                }
+            )
+        _atomic_json(
+            self.run_dir / "candidate_evaluations.json",
+            {
+                "task_id": witness["task_id"],
+                "stage": stage,
+                "grounding_mode": self.grounding_mode,
+                "candidate_evaluations": witness.get(
+                    "candidate_evaluations", []
+                ),
+                "assignment_evaluations": witness.get(
+                    "assignment_evaluations", []
+                ),
+            },
+        )
+
+        self.latest_witness = witness
+        events.append(
+            {
+                "stage": stage,
+                "event": "WITNESS_EVALUATED",
+                "task_id": witness["task_id"],
+                "status": witness["status"],
+            }
+        )
+        if (
+            witness["status"] == "COMPLETE"
+            and previous_witness_status != "COMPLETE"
+        ):
+            events.append(
+                {
+                    "stage": stage,
+                    "event": "COMPLETE_WITNESS_FOUND",
+                    "task_id": witness["task_id"],
+                }
+            )
+            if self.grounding_mode == "joint":
+                selected_records = []
+                evidence_paths = set()
+                for selected in witness.get(
+                    "selected_candidate_edges", []
+                ):
+                    object_id = selected["object_id"]
+                    role = selected["role"]
+                    candidate = next(
+                        candidate
+                        for candidate in witness[
+                            "candidate_evaluations"
+                        ]
+                        if candidate["object_id"] == object_id
+                        and candidate["role"] == role
+                    )
+                    object_record = self.registry["objects"][object_id]
+                    measurement_path = object_record.get(
+                        "measurement_cloud_path"
+                    )
+                    if measurement_path:
+                        evidence_paths.add(measurement_path)
+                    semantic = object_record.get("semantics", {}).get(
+                        "validated", {}
+                    )
+                    if semantic.get("semantic_record_path"):
+                        evidence_paths.add(
+                            semantic["semantic_record_path"]
+                        )
+                    evidence_paths.update(
+                        semantic.get("semantic_evidence_paths", [])
+                    )
+                    selected_records.append(
+                        {
+                            "role": role,
+                            "object_id": object_id,
+                            "semantic_rank": selected.get(
+                                "semantic_rank"
+                            ),
+                            "semantic": candidate["semantic"],
+                            "unary_geometry": candidate[
+                                "unary_geometry"
+                            ],
+                            "measurement_cloud_path": measurement_path,
+                        }
+                    )
+                handoff = {
+                    "schema_version": 1,
+                    "task_id": witness["task_id"],
+                    "grounding_mode": "joint",
+                    "role_assignments": witness["selected_witness"],
+                    "selected_roles": selected_records,
+                    "relational_geometry": witness[
+                        "selected_pairwise_relations"
+                    ],
+                    "completion_stage": stage,
+                    "completion_region": expected_region,
+                    "evidence_paths": sorted(
+                        {
+                            *evidence_paths,
+                            (
+                                stage_dir.relative_to(self.run_dir)
+                                / "candidate_evaluations.json"
+                            ).as_posix(),
+                            (
+                                stage_dir.relative_to(self.run_dir)
+                                / "witness.json"
+                            ).as_posix(),
+                        }
+                    ),
+                    "verified": True,
+                    "ready_for_tamp": True,
+                    "tamp_executed": False,
+                }
+                _atomic_json(
+                    self.run_dir / "verified_task_handoff.json",
+                    handoff,
+                )
+                tool_selections = [
+                    selected
+                    for selected in witness.get(
+                        "selected_candidate_edges", []
+                    )
+                    if selected["role"] == "mixing_tool"
+                ]
+                if (
+                    tool_selections
+                    and int(
+                        tool_selections[0].get("semantic_rank") or 1
+                    )
+                    > 1
+                ):
+                    events.append(
+                        {
+                            "stage": stage,
+                            "event": (
+                                "ALTERNATIVE_CANDIDATE_SELECTED"
+                            ),
+                            **tool_selections[0],
+                        }
+                    )
+                events.append(
+                    {
+                        "stage": stage,
+                        "event": (
+                            "VERIFIED_TASK_WITNESS_COMPLETE"
+                        ),
+                        "task_id": witness["task_id"],
+                        "ready_for_tamp": True,
+                    }
+                )
         self.registry["current_stage"] = stage
+        for object_id, record in self.registry["objects"].items():
+            _atomic_json(
+                self.run_dir
+                / "objects"
+                / object_id
+                / "properties.json",
+                record,
+            )
         _atomic_json(self.registry_path, self.registry)
         _atomic_json(self.graph_path, graph)
+        _atomic_json(self.latest_witness_path, witness)
         _atomic_json(stage_dir / "properties.json", self.registry)
         _atomic_json(stage_dir / "graph.json", graph)
+        _atomic_json(stage_dir / "witness.json", witness)
 
         all_points, all_colors = self._all_cumulative_clouds()
         _atomic_ply(stage_dir / "combined_cloud.ply", all_points, all_colors)
+        region_points = [
+            evidence.measurement_points
+            for evidence in stage_evidence.values()
+            if len(evidence.measurement_points)
+        ]
+        region_colors = [
+            evidence.measurement_colors
+            for evidence in stage_evidence.values()
+            if len(evidence.measurement_points)
+        ]
+        _atomic_ply(
+            stage_dir / "region_combined_cloud.ply",
+            (
+                np.concatenate(region_points)
+                if region_points
+                else np.empty((0, 3), dtype=np.float32)
+            ),
+            (
+                np.concatenate(region_colors)
+                if region_colors
+                else np.empty((0, 3), dtype=np.uint8)
+            ),
+        )
+        inspection_metadata = deepcopy(inspection.metadata)
+        inspection_metadata.update(
+            {
+                "stage": stage,
+                "objects_accepted_inside_region": accepted_metadata,
+                "objects_rejected_as_outside_region": rejected_metadata,
+            }
+        )
+        inspection_quality = {
+            key: deepcopy(value)
+            for key, value in inspection.quality.items()
+            if not key.startswith("_")
+        }
+        inspection_quality["accepted_objects"] = accepted_metadata
+        inspection_quality["rejected_objects"] = rejected_metadata
+        _atomic_json(
+            stage_dir / "inspection_metadata.json",
+            inspection_metadata,
+        )
+        _atomic_json(
+            stage_dir / "inspection_quality.json",
+            inspection_quality,
+        )
         self._append_events(events)
-        self._render_stage(stage_dir, graph, stage_changes)
+        self._render_stage(
+            stage_dir,
+            graph,
+            witness,
+            stage_changes,
+            inspection=inspection,
+            stage_evidence=stage_evidence,
+        )
         self._update_growth_gif()
         self.next_stage += 1
         return stage_dir
+
+    def append_event(self, event: dict[str, Any]) -> None:
+        """Append one run-level event without modifying prior history."""
+        payload = dict(event)
+        payload.setdefault(
+            "stage", int(self.registry.get("current_stage", -1))
+        )
+        self._append_events([payload])
 
     def _append_events(self, events: list[dict[str, Any]]) -> None:
         if not events:
@@ -407,6 +1320,7 @@ class ObservedStateRun:
         region_states: dict[str, dict[str, Any]],
         stage_changes: dict[str, str],
     ) -> dict[str, Any]:
+        """Build independent semantic, geometric, and relational evidence."""
         nodes, edges = [], []
         all_regions = {
             "countertop": {
@@ -436,9 +1350,30 @@ class ObservedStateRun:
                 }
             )
 
-        function_ids = set()
-        for object_id, record in self.registry["objects"].items():
-            functions = candidate_functions(record["category"], self.config)
+        role_evaluations: dict[
+            tuple[str, str], dict[str, Any]
+        ] = {}
+        roles = self.task_requirements["roles"]
+        for role_name in sorted(roles):
+            nodes.append(
+                {
+                    "id": f"role:{role_name}",
+                    "type": "functional_role",
+                    "attributes": {
+                        "role_id": role_name,
+                        "geometric_requirements": roles[role_name][
+                            "geometric_requirements"
+                        ],
+                        "semantic_preferences": deepcopy(
+                            roles[role_name].get(
+                                "semantic_preferences", []
+                            )
+                        ),
+                    },
+                }
+            )
+
+        for object_id, record in sorted(self.registry["objects"].items()):
             dimensions = _dimension_values(record)
             centroid_record = record.get("centroid_world_m", {})
             nodes.append(
@@ -447,12 +1382,37 @@ class ObservedStateRun:
                     "type": "object",
                     "attributes": {
                         "object_id": object_id,
-                        "instance_id": record["instance_id"],
-                        "category": record["category"],
-                        "object_family": record["object_family"],
+                        "inference_basis": (
+                            self.grounding_mode.upper().replace("-", "_")
+                        ),
+                        "source_region": record.get("source_region"),
+                        "first_seen_stage": record.get("first_seen_stage"),
+                        "last_seen_stage": record.get("last_seen_stage"),
+                        "last_property_update_stage": record.get(
+                            "last_property_update_stage"
+                        ),
+                        "last_property_source_region": record.get(
+                            "last_property_source_region"
+                        ),
+                        "measurement_cloud_path": record.get(
+                            "measurement_cloud_path"
+                        ),
+                        "measurement_quality": record.get(
+                            "measurement_quality", {}
+                        ),
                         "centroid_world_m": centroid_record.get("value"),
                         "dimensions_m": dimensions,
-                        "candidate_functions": functions,
+                        "geometric_properties": record.get(
+                            "geometric_properties", {}
+                        ),
+                        "geometric_predicates": record.get(
+                            "geometric_predicates", {}
+                        ),
+                        "geometry": record.get("geometry", {}),
+                        "semantics": record.get("semantics", {}),
+                        "functional_role_evaluations": record.get(
+                            "functional_role_evaluations", {}
+                        ),
                         "stage_state": stage_changes.get(object_id, "previous"),
                     },
                 }
@@ -465,53 +1425,89 @@ class ObservedStateRun:
                     "status": "OBSERVED",
                 }
             )
-            for function in functions:
-                function_ids.add(function)
+            for role_name in sorted(roles):
+                evaluation = evaluate_geometric_requirements(
+                    record,
+                    roles[role_name]["geometric_requirements"],
+                )
+                role_evaluations[(object_id, role_name)] = evaluation
                 edges.append(
                     {
                         "source": f"object:{object_id}",
-                        "target": f"function:{function}",
-                        "relation": "CANDIDATE_FOR",
-                        "status": "SEMANTIC",
+                        "target": f"role:{role_name}",
+                        "relation": "SATISFIES_GEOMETRY",
+                        "status": evaluation["status"],
+                        "evidence": {
+                            "inference_basis": "GEOMETRY_ONLY",
+                            "checks": evaluation["checks"],
+                        },
                     }
                 )
-        for function in sorted(function_ids):
-            nodes.append(
-                {
-                    "id": f"function:{function}",
-                    "type": "function",
-                    "attributes": {"function_id": function},
-                }
-            )
-
-        utensils = [
-            (object_id, record)
-            for object_id, record in self.registry["objects"].items()
-            if record["object_family"] == "utensil"
-        ]
-        receptacles = [
-            (object_id, record)
-            for object_id, record in self.registry["objects"].items()
-            if record["object_family"] == "receptacle"
-        ]
-        for utensil_id, utensil in utensils:
-            for receptacle_id, receptacle in receptacles:
-                for relation in ("INSERTABLE_IN", "REACHES_BOTTOM"):
+                if roles[role_name].get("semantic_preferences"):
+                    semantic = evaluate_semantic_compatibility(
+                        {
+                            "semantics": record.get("semantics", {})
+                        },
+                        roles[role_name],
+                    )
                     edges.append(
                         {
-                            "source": f"object:{utensil_id}",
-                            "target": f"object:{receptacle_id}",
-                            "relation": relation,
-                            "status": pairwise_relation_status(
-                                relation,
-                                utensil,
-                                receptacle,
-                                self.config,
+                            "source": f"object:{object_id}",
+                            "target": f"role:{role_name}",
+                            "relation": (
+                                "SEMANTICALLY_COMPATIBLE_WITH"
                             ),
+                            "status": semantic["status"],
+                            "evidence": semantic,
+                        }
+                    )
+
+        pairwise_edges = set()
+        for constraint in self.task_requirements["constraints"]["pairwise"]:
+            source_role = constraint["from_role"]
+            target_role = constraint["to_role"]
+            relation = constraint["relation"]
+            sources = [
+                object_id
+                for object_id in sorted(self.registry["objects"])
+                if role_evaluations[(object_id, source_role)]["status"]
+                == "TRUE"
+            ]
+            targets = [
+                object_id
+                for object_id in sorted(self.registry["objects"])
+                if role_evaluations[(object_id, target_role)]["status"]
+                == "TRUE"
+            ]
+            for source_id in sources:
+                for target_id in targets:
+                    if source_id == target_id:
+                        continue
+                    edge_key = (relation, source_id, target_id)
+                    if edge_key in pairwise_edges:
+                        continue
+                    pairwise_edges.add(edge_key)
+                    evaluation = pairwise_relation_evaluation(
+                        relation,
+                        self.registry["objects"][source_id],
+                        self.registry["objects"][target_id],
+                        self.config,
+                    )
+                    edges.append(
+                        {
+                            "source": f"object:{source_id}",
+                            "target": f"object:{target_id}",
+                            "relation": relation,
+                            "status": evaluation["status"],
+                            "evidence": evaluation,
                         }
                     )
         return {
             "schema_version": SCHEMA_VERSION,
+            "inference_basis": (
+                self.grounding_mode.upper().replace("-", "_")
+            ),
+            "grounding_mode": self.grounding_mode,
             "run_id": self.run_id,
             "stage": self.next_stage,
             "nodes": nodes,
@@ -522,68 +1518,177 @@ class ObservedStateRun:
         self,
         stage_dir: Path,
         graph: dict[str, Any],
+        witness: dict[str, Any],
         stage_changes: dict[str, str],
+        *,
+        inspection,
+        stage_evidence: dict[str, MeasurementEvidence],
     ) -> None:
-        pointcloud_image = self._render_pointcloud(stage_changes)
-        graph_image = self._render_graph(graph)
+        pointcloud_image = self._render_pointcloud(
+            stage_changes,
+            inspection=inspection,
+            stage_evidence=stage_evidence,
+        )
+        graph_image = self._render_graph(graph, witness)
         pointcloud_image.save(stage_dir / "pointcloud.png")
         graph_image.save(stage_dir / "graph.png")
 
         panel_height = max(pointcloud_image.height, graph_image.height)
+        summary_height = 205
+        total_width = pointcloud_image.width + graph_image.width
         overview = Image.new(
             "RGB",
-            (pointcloud_image.width + graph_image.width, panel_height + 70),
+            (total_width, panel_height + summary_height),
             "white",
         )
         draw = ImageDraw.Draw(overview)
+        status = witness["status"]
+        status_color = {
+            "COMPLETE": (32, 145, 72),
+            "INCOMPLETE": (195, 52, 52),
+            "INDETERMINATE": (215, 126, 25),
+        }[status]
         draw.text(
             (24, 18),
             f"Observed-state growth · {self.scene_name} · stage {self.next_stage:03d}",
             fill=(25, 35, 50),
             font=_font(28, bold=True),
         )
-        overview.paste(pointcloud_image, (0, 70))
-        overview.paste(graph_image, (pointcloud_image.width, 70))
+        draw.rounded_rectangle(
+            (24, 62, total_width - 24, summary_height - 18),
+            radius=14,
+            fill=(248, 250, 252),
+            outline=status_color,
+            width=4,
+        )
+        draw.text(
+            (48, 78),
+            f"Task: {witness['task_id']}",
+            fill=(30, 38, 48),
+            font=_font(22, bold=True),
+        )
+        draw.text(
+            (total_width - 48, 78),
+            status,
+            anchor="ra",
+            fill=status_color,
+            font=_font(25, bold=True),
+        )
+        requirements = witness["role_requirements"]
+        satisfied = witness.get("satisfied_candidate_counts")
+        if satisfied is None:
+            selected_witness = witness.get("selected_witness") or {}
+            satisfied = {
+                role: len(selected_witness.get(role, []))
+                for role in requirements
+            }
+        satisfied_label = " · ".join(
+            f"{role} {satisfied.get(role, 0)}/{requirements[role]}"
+            for role in sorted(requirements)
+        )
+        missing = witness.get("missing_counts", {})
+        missing_label = (
+            ", ".join(
+                f"{role} ×{count}" for role, count in sorted(missing.items())
+            )
+            or "none"
+        )
+        draw.text(
+            (48, 116),
+            f"Satisfied role counts: {satisfied_label}",
+            fill=(55, 62, 72),
+            font=_font(16),
+        )
+        draw.text(
+            (48, 146),
+            f"Missing role counts: {missing_label}",
+            fill=(55, 62, 72),
+            font=_font(16),
+        )
+        draw.text(
+            (total_width - 48, 146),
+            "Indeterminate candidates/assignments: "
+            f"{sum(candidate.get('status') == 'UNKNOWN' for candidate in witness.get('candidate_evaluations', [])) + witness.get('indeterminate_assignment_count', 0)}",
+            anchor="ra",
+            fill=(55, 62, 72),
+            font=_font(16),
+        )
+        overview.paste(pointcloud_image, (0, summary_height))
+        overview.paste(graph_image, (pointcloud_image.width, summary_height))
         overview.save(stage_dir / "overview.png")
 
     def _render_pointcloud(
-        self, stage_changes: dict[str, str]
+        self,
+        stage_changes: dict[str, str],
+        *,
+        inspection,
+        stage_evidence: dict[str, MeasurementEvidence],
     ) -> Image.Image:
         width, height = 850, 1100
         image = Image.new("RGB", (width, height), (248, 250, 252))
         draw = ImageDraw.Draw(image)
         draw.text(
             (28, 24),
-            "Cumulative observed object clouds",
+            f"Stage-local evidence · {inspection.region_id}",
             fill=(25, 35, 50),
             font=_font(25, bold=True),
         )
-        clouds = []
-        for object_id, record in self.registry["objects"].items():
-            points, _colors = self._load_cumulative(record)
-            if len(points):
-                clouds.append((object_id, points))
-        if not clouds:
-            draw.text(
-                (width // 2, height // 2),
-                "No finite observed points",
-                anchor="mm",
-                fill=(100, 100, 100),
-                font=_font(22),
-            )
-            return image
 
-        projected_sets = []
-        for object_id, points in clouds:
-            finite = points[np.all(np.isfinite(points), axis=1)]
-            projected = np.column_stack(
+        def project(points: np.ndarray) -> np.ndarray:
+            finite = np.asarray(points, dtype=np.float64).reshape((-1, 3))
+            return np.column_stack(
                 (
                     0.866 * (finite[:, 0] - finite[:, 1]),
-                    0.46 * (finite[:, 0] + finite[:, 1]) - 1.15 * finite[:, 2],
+                    0.46 * (finite[:, 0] + finite[:, 1])
+                    - 1.15 * finite[:, 2],
                 )
             )
-            projected_sets.append((object_id, projected))
-        combined = np.concatenate([projected for _, projected in projected_sets])
+
+        volume = inspection.metadata["inspection_volume"]
+        minimum = np.asarray(volume["minimum_world_m"], dtype=float)
+        maximum = np.asarray(volume["maximum_world_m"], dtype=float)
+        volume_corners = np.asarray(
+            [
+                [x, y, z]
+                for x in (minimum[0], maximum[0])
+                for y in (minimum[1], maximum[1])
+                for z in (minimum[2], maximum[2])
+            ]
+        )
+        camera_positions = np.asarray(
+            [
+                capture.position_world_m
+                for capture in inspection.cameras.values()
+            ]
+        )
+        target_positions = np.asarray(
+            [
+                capture.target_world_m
+                for capture in inspection.cameras.values()
+            ]
+        )
+        projected_sets = [
+            (
+                object_id,
+                project(evidence.measurement_points),
+                _evidence_color(object_id),
+            )
+            for object_id, evidence in stage_evidence.items()
+            if len(evidence.measurement_points)
+        ]
+        rejected_sets = [
+            project(cloud.points)
+            for cloud in inspection.rejected_clouds.values()
+            if len(cloud.points)
+        ]
+        bounds_sets = [
+            project(volume_corners),
+            project(camera_positions),
+            project(target_positions),
+            *[projected for _object_id, projected, _color in projected_sets],
+            *rejected_sets,
+        ]
+        combined = np.concatenate(bounds_sets)
         lower = np.percentile(combined, 1.0, axis=0)
         upper = np.percentile(combined, 99.0, axis=0)
         span = np.maximum(upper - lower, 1e-6)
@@ -592,34 +1697,116 @@ class ObservedStateRun:
             (width - 2 * margin) / span[0],
             (height - 190) / span[1],
         )
-        for object_id, projected in projected_sets:
+
+        def pixels(projected: np.ndarray) -> np.ndarray:
+            result = (projected - lower) * scale
+            result[:, 0] += margin
+            result[:, 1] += 105
+            result[:, 1] = height - 85 - result[:, 1]
+            return result
+
+        corner_pixels = pixels(project(volume_corners))
+        corner_by_bits = {
+            (ix, iy, iz): corner_pixels[index]
+            for index, (ix, iy, iz) in enumerate(
+                [
+                    (ix, iy, iz)
+                    for ix in (0, 1)
+                    for iy in (0, 1)
+                    for iz in (0, 1)
+                ]
+            )
+        }
+        for bits, start in corner_by_bits.items():
+            for axis in range(3):
+                if bits[axis] != 0:
+                    continue
+                other = list(bits)
+                other[axis] = 1
+                end = corner_by_bits[tuple(other)]
+                self._dashed_line(
+                    draw,
+                    tuple(start),
+                    tuple(end),
+                    fill=(58, 122, 84),
+                    width=2,
+                    dash=7,
+                )
+
+        camera_pixels = pixels(project(camera_positions))
+        target_pixels = pixels(project(target_positions))
+        for index, (camera_id, capture) in enumerate(
+            inspection.cameras.items()
+        ):
+            camera_pixel = camera_pixels[index]
+            target_pixel = target_pixels[index]
+            usable = bool(capture.validation.get("usable", False))
+            color = (40, 90, 160) if usable else (190, 65, 65)
+            draw.line(
+                (*camera_pixel, *target_pixel),
+                fill=color,
+                width=2,
+            )
+            x, y = camera_pixel
+            draw.polygon(
+                ((x, y - 7), (x - 7, y + 6), (x + 7, y + 6)),
+                fill=color,
+            )
+            draw.text(
+                (x + 9, y - 7),
+                camera_id.removeprefix("inspection_"),
+                fill=color,
+                font=_font(11),
+            )
+
+        for projected in rejected_sets:
+            for x, y in pixels(projected):
+                if 4 <= x < width - 4 and 80 <= y < height - 80:
+                    draw.ellipse(
+                        (x - 1, y - 1, x + 1, y + 1),
+                        fill=(175, 175, 175),
+                    )
+
+        for object_id, projected, color in projected_sets:
             if len(projected) > 5000:
                 projected = projected[:: math.ceil(len(projected) / 5000)]
-            pixels = (projected - lower) * scale
-            pixels[:, 0] += margin
-            pixels[:, 1] += 105
-            pixels[:, 1] = height - 85 - pixels[:, 1]
-            color = STATUS_COLORS[stage_changes.get(object_id, "previous")]
-            for x, y in pixels:
+            for x, y in pixels(projected):
                 if 4 <= x < width - 4 and 80 <= y < height - 80:
                     draw.ellipse((x - 1, y - 1, x + 1, y + 1), fill=color)
 
-        legend = (
-            ("Previously observed", "previous"),
-            ("Newly discovered", "new"),
-            ("Measurements updated", "updated"),
+        valid_cameras = inspection.quality["valid_camera_count"]
+        draw.text(
+            (28, 62),
+            f"{len(stage_evidence)} accepted objects · "
+            f"{len(inspection.rejected_clouds)} rejected · "
+            f"{valid_cameras}/5 valid cameras",
+            fill=(65, 70, 80),
+            font=_font(15),
         )
-        for index, (label, status) in enumerate(legend):
-            x = 28 + index * 260
+        legend = [
+            (object_id, color)
+            for object_id, _projected, color in projected_sets
+        ]
+        legend.extend(
+            (
+                ("rejected/outside", (175, 175, 175)),
+                ("inspection volume", (58, 122, 84)),
+            )
+        )
+        for index, (label, color) in enumerate(legend):
+            column = index % 3
+            row = index // 3
+            x = 22 + column * 275
+            y = height - 66 + row * 25
             draw.rectangle(
-                (x, height - 46, x + 18, height - 28),
-                fill=STATUS_COLORS[status],
+                (x, y, x + 17, y + 17),
+                fill=color,
             )
             draw.text(
-                (x + 26, height - 49),
+                (x + 25, y - 2),
                 label,
                 fill=(45, 50, 58),
-                font=_font(14),
+                font=_font(13),
             )
         return image
 
@@ -654,14 +1841,20 @@ class ObservedStateRun:
             )
             position += 2 * dash
 
-    def _render_graph(self, graph: dict[str, Any]) -> Image.Image:
+    def _render_graph(
+        self,
+        graph: dict[str, Any],
+        witness: dict[str, Any],
+    ) -> Image.Image:
         object_nodes = [node for node in graph["nodes"] if node["type"] == "object"]
         region_nodes = [node for node in graph["nodes"] if node["type"] == "region"]
-        function_nodes = [
-            node for node in graph["nodes"] if node["type"] == "function"
+        role_nodes = [
+            node
+            for node in graph["nodes"]
+            if node["type"] in {"geometric_role", "functional_role"}
         ]
         rows = max(6, math.ceil(len(object_nodes) / 2))
-        width, height = 1750, max(1100, 180 + rows * 145)
+        width, height = 1750, max(1100, 180 + rows * 160)
         image = Image.new("RGB", (width, height), "white")
         draw = ImageDraw.Draw(image)
         draw.text(
@@ -670,6 +1863,83 @@ class ObservedStateRun:
             fill=(25, 35, 50),
             font=_font(25, bold=True),
         )
+        selected_candidate_edges = {
+            (
+                record["object_id"],
+                record["role"],
+            )
+            for record in witness.get("selected_candidate_edges", [])
+        }
+        selected_pairwise_edges = {
+            (
+                record["relation"],
+                record["from_object"],
+                record["to_object"],
+            )
+            for record in witness.get("selected_pairwise_relations", [])
+        }
+        selected_objects = {
+            object_id
+            for selected in (witness.get("selected_witness") or {}).values()
+            for object_id in selected
+        }
+        selected_roles = {
+            role for _object_id, role in selected_candidate_edges
+        }
+        assignment_role_outcomes: dict[
+            tuple[str, str], dict[str, Any]
+        ] = {}
+        for assignment in witness.get("assignment_evaluations", []):
+            decision = assignment.get("decision")
+            selected = assignment.get("selected_objects", {})
+            if decision == "VALID":
+                for role, object_ids in selected.items():
+                    for object_id in object_ids:
+                        assignment_role_outcomes[(object_id, role)] = {
+                            "decision": "VALID",
+                            "failed_relations": [],
+                        }
+                continue
+            if decision not in {
+                "REJECTED_GEOMETRY",
+                "INDETERMINATE",
+            }:
+                continue
+            relation_status = (
+                "FALSE"
+                if decision == "REJECTED_GEOMETRY"
+                else "UNKNOWN"
+            )
+            for relation in assignment.get("relation_checks", []):
+                if relation.get("status") != relation_status:
+                    continue
+                key = (
+                    relation["from_object"],
+                    relation["from_role"],
+                )
+                if (
+                    assignment_role_outcomes.get(key, {}).get(
+                        "decision"
+                    )
+                    == "VALID"
+                ):
+                    continue
+                outcome = assignment_role_outcomes.setdefault(
+                    key,
+                    {
+                        "decision": decision,
+                        "failed_relations": [],
+                    },
+                )
+                if relation["relation"] not in outcome[
+                    "failed_relations"
+                ]:
+                    outcome["failed_relations"].append(
+                        relation["relation"]
+                    )
+        object_attributes = {
+            node["id"]: node["attributes"] for node in object_nodes
+        }
 
         positions: dict[str, tuple[float, float]] = {}
         for index, node in enumerate(region_nodes):
@@ -678,21 +1948,184 @@ class ObservedStateRun:
         for index, node in enumerate(object_nodes):
             column = index % 2
             row = index // 2
-            positions[node["id"]] = (560 + column * 470, 125 + row * 145)
-        for index, node in enumerate(function_nodes):
-            y = 125 + index * (height - 270) / max(1, len(function_nodes) - 1)
+            positions[node["id"]] = (560 + column * 470, 125 + row * 160)
+        for index, node in enumerate(role_nodes):
+            y = 125 + index * (height - 270) / max(1, len(role_nodes) - 1)
             positions[node["id"]] = (1540, y)
 
-        # Draw edges first so node labels remain readable.
+        # Draw containment and relevant pairwise geometry first. Candidate
+        # role links are rendered once below from the combined semantic and
+        # unary-geometry decision. Drawing the three underlying graph edges
+        # separately made even a four-object graph unreadable; the complete
+        # edge records remain available in graph.json.
         for edge in graph["edges"]:
             if edge["source"] not in positions or edge["target"] not in positions:
                 continue
+            relation = edge["relation"]
+            if relation in {
+                "SATISFIES_GEOMETRY",
+                "SEMANTICALLY_COMPATIBLE_WITH",
+                "ASSIGNED_TO_ROLE",
+                "CANDIDATE_FOR",
+            }:
+                continue
+            if relation in {"INSERTABLE_IN", "REACHES_BOTTOM"}:
+                source_evaluations = object_attributes.get(
+                    edge["source"], {}
+                ).get("functional_role_evaluations", {})
+                target_evaluations = object_attributes.get(
+                    edge["target"], {}
+                ).get("functional_role_evaluations", {})
+                source_tool = source_evaluations.get("mixing_tool", {})
+                target_container = target_evaluations.get(
+                    "mixing_container", {}
+                )
+                if (
+                    source_tool.get("geometry_gate_status") != "TRUE"
+                    or target_container.get("geometry_gate_status") != "TRUE"
+                ):
+                    continue
             start, end = positions[edge["source"]], positions[edge["target"]]
             color = RELATION_COLORS.get(edge["status"], (120, 120, 120))
-            if edge["status"] == "UNKNOWN" or edge["relation"] == "REACHES_BOTTOM":
+            source_object = edge["source"].removeprefix("object:")
+            target_object = edge["target"].removeprefix("object:")
+            selected_edge = (
+                (
+                    relation,
+                    source_object,
+                    target_object,
+                )
+                in selected_pairwise_edges
+            )
+            # Offset the two relations for one object pair so both remain
+            # visible and can carry a short label.
+            if relation in {"INSERTABLE_IN", "REACHES_BOTTOM"}:
+                vector = np.asarray(end) - np.asarray(start)
+                length = max(float(np.linalg.norm(vector)), 1.0)
+                normal = np.asarray((-vector[1], vector[0])) / length
+                offset = normal * (
+                    -7.0 if relation == "INSERTABLE_IN" else 7.0
+                )
+                start = tuple(np.asarray(start) + offset)
+                end = tuple(np.asarray(end) + offset)
+            if selected_edge:
+                draw.line(
+                    (start, end),
+                    fill=RELATION_COLORS["TRUE"],
+                    width=6,
+                )
+            elif edge["status"] == "UNKNOWN":
                 self._dashed_line(draw, start, end, fill=color, width=1, dash=6)
             else:
                 draw.line((start, end), fill=color, width=2)
+            if relation in {"INSERTABLE_IN", "REACHES_BOTTOM"}:
+                midpoint = (
+                    (start[0] + end[0]) / 2,
+                    (start[1] + end[1]) / 2,
+                )
+                relation_label = (
+                    "fits" if relation == "INSERTABLE_IN" else "reaches"
+                )
+                label = f"{relation_label}: {edge['status'][0]}"
+                font = _font(10, bold=True)
+                text_box = draw.textbbox(
+                    midpoint, label, anchor="mm", font=font
+                )
+                padded = (
+                    text_box[0] - 3,
+                    text_box[1] - 2,
+                    text_box[2] + 3,
+                    text_box[3] + 2,
+                )
+                draw.rounded_rectangle(
+                    padded,
+                    radius=3,
+                    fill="white",
+                    outline=color,
+                    width=1,
+                )
+                draw.text(
+                    midpoint,
+                    label,
+                    anchor="mm",
+                    fill=color,
+                    font=font,
+                )
+
+        # One composite role link per relevant object/role conveys the actual
+        # gate decision without visually equating a semantic match with a
+        # verified assignment.
+        for node in object_nodes:
+            object_id = node["attributes"]["object_id"]
+            evaluations = node["attributes"].get(
+                "functional_role_evaluations", {}
+            )
+            for role, evaluation in sorted(evaluations.items()):
+                role_node_id = f"role:{role}"
+                if role_node_id not in positions:
+                    continue
+                semantic_status = evaluation.get(
+                    "semantic_gate_status", "UNKNOWN"
+                )
+                geometry_status = evaluation.get(
+                    "geometry_gate_status", "UNKNOWN"
+                )
+                selected_edge = (object_id, role) in selected_candidate_edges
+                relevant = (
+                    selected_edge
+                    or semantic_status == "TRUE"
+                    or geometry_status == "TRUE"
+                )
+                if not relevant:
+                    continue
+                decision = evaluation.get("decision", "INDETERMINATE")
+                assignment_outcome = assignment_role_outcomes.get(
+                    (object_id, role)
+                )
+                if selected_edge:
+                    color, width, dashed = (
+                        RELATION_COLORS["TRUE"],
+                        6,
+                        False,
+                    )
+                elif (
+                    assignment_outcome is not None
+                    and assignment_outcome["decision"]
+                    == "REJECTED_GEOMETRY"
+                ) or decision in {
+                    "REJECTED_SEMANTIC",
+                    "REJECTED_GEOMETRY",
+                }:
+                    color, width, dashed = (
+                        RELATION_COLORS["FALSE"],
+                        2,
+                        False,
+                    )
+                elif (
+                    assignment_outcome is not None
+                    and assignment_outcome["decision"]
+                    == "INDETERMINATE"
+                ) or decision == "INDETERMINATE":
+                    color, width, dashed = (
+                        RELATION_COLORS["UNKNOWN"],
+                        2,
+                        True,
+                    )
+                else:
+                    color, width, dashed = ((88, 92, 150), 2, False)
+                start = positions[node["id"]]
+                end = positions[role_node_id]
+                if dashed:
+                    self._dashed_line(
+                        draw,
+                        start,
+                        end,
+                        fill=color,
+                        width=width,
+                        dash=7,
+                    )
+                else:
+                    draw.line((start, end), fill=color, width=width)
 
         for node in region_nodes:
             x, y = positions[node["id"]]
@@ -746,10 +2179,19 @@ class ObservedStateRun:
             x, y = positions[node["id"]]
             attrs = node["attributes"]
             state = attrs.get("stage_state", "previous")
-            fill = STATUS_COLORS[state]
-            box = (x - 185, y - 59, x + 185, y + 59)
+            is_selected = attrs["object_id"] in selected_objects
+            fill = (
+                RELATION_COLORS["TRUE"]
+                if is_selected
+                else STATUS_COLORS[state]
+            )
+            box = (x - 185, y - 68, x + 185, y + 68)
             draw.rounded_rectangle(
-                box, radius=10, fill=(250, 250, 250), outline=fill, width=5
+                box,
+                radius=10,
+                fill=(235, 250, 239) if is_selected else (250, 250, 250),
+                outline=fill,
+                width=7 if is_selected else 5,
             )
             dimensions = attrs["dimensions_m"]
             dimension_label = (
@@ -759,38 +2201,97 @@ class ObservedStateRun:
                 )
                 + " m"
             )
-            functions = ", ".join(attrs["candidate_functions"]) or "none"
+            predicates = attrs.get("geometric_predicates", {})
+            predicate_label = " · ".join(
+                f"{name.lower()}:{predicates.get(name, {}).get('status', 'UNKNOWN')[0]}"
+                for name in ("OPEN_CAVITY", "ELONGATED_OBJECT", "PLANAR_SUPPORT")
+            )
+            semantic = attrs.get("semantics", {}).get("validated", {})
+            semantic_label = semantic.get("canonical_label") or "UNKNOWN"
+            semantic_status = semantic.get("status", "UNKNOWN")
+            evaluations = attrs.get(
+                "functional_role_evaluations", {}
+            )
+            relevant_evaluations = [
+                (role, evaluation)
+                for role, evaluation in sorted(evaluations.items())
+                if (
+                    (attrs["object_id"], role) in selected_candidate_edges
+                    or evaluation.get("semantic_gate_status") == "TRUE"
+                    or evaluation.get("geometry_gate_status") == "TRUE"
+                )
+            ]
+            if relevant_evaluations:
+                role, evaluation = relevant_evaluations[0]
+                short_role = {
+                    "mixing_container": "container",
+                    "mixing_tool": "tool",
+                }.get(role, role)
+                selected_role = (
+                    attrs["object_id"], role
+                ) in selected_candidate_edges
+                assignment_outcome = assignment_role_outcomes.get(
+                    (attrs["object_id"], role)
+                )
+                if selected_role:
+                    decision_text = "selected witness"
+                elif (
+                    assignment_outcome is not None
+                    and assignment_outcome["decision"]
+                    == "REJECTED_GEOMETRY"
+                ):
+                    failed = "/".join(
+                        assignment_outcome["failed_relations"]
+                    )
+                    decision_text = f"rejected geometry ({failed})"
+                elif assignment_outcome is not None:
+                    decision_text = assignment_outcome[
+                        "decision"
+                    ].lower()
+                else:
+                    decision_text = evaluation.get(
+                        "decision", "?"
+                    ).lower()
+                decision_label = f"{short_role}: {decision_text}"
+            else:
+                decision_label = "role: no compatible candidate"
             lines = [
                 attrs["object_id"],
-                f"category: {attrs['category']}",
                 dimension_label,
-                f"functions: {functions}",
+                predicate_label,
+                f"RGB: {semantic_label} ({semantic_status})",
+                decision_label,
             ]
-            for offset, line in zip((-39, -14, 11, 36), lines):
+            for offset, line in zip((-49, -25, -1, 23, 47), lines):
                 draw.text(
                     (x, y + offset),
                     line,
                     anchor="mm",
                     fill=(30, 35, 42),
-                    font=_font(12, bold=offset == -39),
+                    font=_font(12, bold=offset == -49),
                 )
 
-        for node in function_nodes:
+        for node in role_nodes:
             x, y = positions[node["id"]]
-            function_id = node["attributes"]["function_id"]
+            role_id = node["attributes"]["role_id"]
             box = (x - 145, y - 33, x + 145, y + 33)
+            is_selected = role_id in selected_roles
             draw.rounded_rectangle(
                 box,
                 radius=24,
-                fill=(239, 230, 247),
-                outline=RELATION_COLORS["SEMANTIC"],
-                width=3,
+                fill=(231, 248, 235) if is_selected else (239, 230, 247),
+                outline=(
+                    RELATION_COLORS["TRUE"]
+                    if is_selected
+                    else (88, 92, 150)
+                ),
+                width=5 if is_selected else 3,
             )
             draw.text(
                 (x, y),
-                function_id,
+                role_id,
                 anchor="mm",
-                fill=(65, 40, 85),
+                fill=(45, 48, 88),
                 font=_font(16, bold=True),
             )
 
@@ -799,13 +2300,16 @@ class ObservedStateRun:
             ("TRUE", "solid"),
             ("FALSE", "solid"),
             ("UNKNOWN", "dashed"),
-            ("candidate function", "semantic"),
+            ("valid role candidate", "geometric"),
+            ("selected witness", "selected"),
         ]
         for index, (label, style) in enumerate(legend):
-            x = 390 + index * 290
+            x = 190 + index * 300
             color = (
-                RELATION_COLORS["SEMANTIC"]
-                if style == "semantic"
+                (88, 92, 150)
+                if style == "geometric"
+                else RELATION_COLORS["TRUE"]
+                if style == "selected"
                 else RELATION_COLORS[label]
             )
             if style == "dashed":
@@ -837,10 +2341,41 @@ class ObservedStateRun:
                 frames.append(canvas)
         if not frames:
             return
+        gif_path = self.run_dir / "graph_growth.gif"
         frames[0].save(
-            self.run_dir / "graph_growth.gif",
+            gif_path,
             save_all=True,
             append_images=frames[1:],
             duration=1100,
             loop=0,
         )
+        ffmpeg = shutil.which("ffmpeg")
+        if ffmpeg is None:
+            return
+        video_path = self.run_dir / "graph_growth.mp4"
+        try:
+            subprocess.run(
+                [
+                    ffmpeg,
+                    "-y",
+                    "-loglevel",
+                    "error",
+                    "-i",
+                    str(gif_path),
+                    "-vf",
+                    "fps=10,scale=1600:900",
+                    "-pix_fmt",
+                    "yuv420p",
+                    "-movflags",
+                    "+faststart",
+                    str(video_path),
+                ],
+                check=True,
+                capture_output=True,
+                timeout=60,
+            )
+        except (OSError, subprocess.SubprocessError):
+            # Animation is a best-effort convenience. The immutable stage
+            # images, registry, graph, and GIF remain the authoritative run
+            # outputs if FFmpeg is unavailable or has no suitable encoder.
+            video_path.unlink(missing_ok=True)

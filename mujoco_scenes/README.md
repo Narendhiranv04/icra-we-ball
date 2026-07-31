@@ -141,16 +141,19 @@ object, and the number of contributing pixels from each camera.
 its own PLY. Open these files in MeshLab, CloudCompare, or Open3D.
 
 The interactive `Actions` panel has a `Geometry` button for benchmarking at
-the robot's current pose. A reconstruction is also run automatically after a
-physical box or drawer opening. The cupboard buttons use the scene's direct
-actuator-based search/debug opening and likewise reconstruct immediately.
+the initial region-facing pose. A fresh region-facing reconstruction is also
+run automatically after a physical box, drawer, or cupboard opening.
 Interactive persistent observed-state outputs are written under `runs/`.
+The legacy `--open-all --point-cloud` benchmark above remains scene-wide and
+does not feed the property or task evaluator.
 
-## Persistent registry and growing observed graph
+## Persistent registry, observed graph, and task witness
 
-Sequential inspection begins with a five-view observation while every region
-is closed, then moves and opens exactly one requested region before each later
-observation:
+Sequential inspection begins with a fresh virtual five-camera observation
+while every region is closed. It then directly actuates exactly one requested
+container, settles the scene, positions the virtual rig toward that open
+interior, validates all views, and captures fresh evidence. It does not load a
+robot model or execute base, gripper, IK, navigation, or manipulation motion:
 
 ```bash
 mkdir -p runs
@@ -159,48 +162,311 @@ docker run --rm \
   -v "$PWD/runs:/output" \
   mujoco-kitchen-s1 \
   --scene S1_coffee_missing_mug \
+  --no-robot \
+  --task-requirements configs/s1_find_open_receptacle.yaml \
   --inspect-sequence D1 D2 C2 B1 C1 \
+  --stop-on-complete \
   --runs-root /output \
-  --run-id s1_observed_demo
+  --run-id open_receptacle_region_evidence_demo \
+  --point-cloud-width 320 \
+  --point-cloud-height 240
 ```
 
-The robot-enabled command reuses the existing deterministic mobile-base move
-executor and the scene controller's opening action. Add `--no-robot` for a
-faster perception-only smoke run that skips base movement while retaining the
-same closed/open observation stages.
+The fixed default order is `D1 → D2 → C2 → B1 → C1`. With
+`--stop-on-complete`, both `INCOMPLETE` and `INDETERMINATE` continue;
+`COMPLETE` stops immediately. Completion searches the cached validated
+properties of every object in the global registry. A valid object measured at
+stage 0 may therefore complete the task; the match is not required to be new
+or to come from the most recently opened region.
 
-Each run contains an atomically updated `object_registry.json`, an
-`observed_graph.json`, append-only `events.jsonl`, cumulative per-object PLY
-clouds and properties, and one immutable directory per observation:
+The pipeline intentionally keeps three point-cloud concepts separate:
+
+- `MeasurementEvidence`: fresh, region-gated points fused from only the
+  current five views. This is the sole property-extractor input.
+- Global object memory: all generic object IDs legitimately observed so far,
+  with the most recent validated property record cached per ID.
+- `cumulative_visualization.ply`: historical points retained only for display
+  and debugging. Its purpose marker is
+  `CUMULATIVE_VISUALIZATION_NOT_MEASUREMENT`.
+
+`MeasurementEvidence` is a required typed API input. Raw arrays and paths
+named `cumulative.ply`, `cumulative_visualization.ply`,
+`combined_cloud.ply`, or `all_visible_objects.ply` are explicitly rejected.
+Objects visible outside the current region volume are saved as rejected debug
+evidence but are not discovered, counted, merged, or re-measured in that
+stage.
+
+Each run contains atomically updated current state, append-only events,
+historical visualization clouds, and one immutable directory per observation:
 
 ```text
-runs/s1_observed_demo/
+runs/open_receptacle_region_evidence_demo/
 ├── run_config.json
 ├── events.jsonl
 ├── object_registry.json
 ├── observed_graph.json
+├── latest_witness.json
 ├── graph_growth.gif
-├── objects/<object_id>/{cumulative.ply,properties.json}
+├── graph_growth.mp4                  # when FFmpeg is available
+├── objects/<object_id>/
+│   ├── cumulative_visualization.ply  # never measurement input
+│   ├── cumulative.ply                # compatibility alias, same restriction
+│   └── properties.json
 └── stages/
     ├── 000_initial/
-    │   ├── combined_cloud.ply
+    │   ├── inspection_metadata.json
+    │   ├── inspection_quality.json
+    │   ├── region_combined_cloud.ply # stage-local accepted evidence
+    │   ├── combined_cloud.ply        # cumulative visualization snapshot
+    │   ├── evidence/<object_id>/
+    │   │   ├── fused.ply             # valid measurement input
+    │   │   ├── properties.json
+    │   │   └── quality.json
+    │   ├── cameras/<camera_id>/
+    │   │   ├── rgb.png
+    │   │   ├── depth.png             # uint16 millimetres
+    │   │   ├── segmentation.png
+    │   │   ├── cloud.ply
+    │   │   └── camera_metadata.json
     │   ├── properties.json
     │   ├── graph.json
+    │   ├── witness.json
     │   ├── pointcloud.png
     │   ├── graph.png
     │   └── overview.png
     └── 001_after_D1/ ...
 ```
 
-Geometric values come only from fused observed points. Dimensions use a
-2nd–98th percentile PCA-oriented bounding box and retain explicit measurement
-status and method provenance. Unavailable geometry remains `UNKNOWN`.
-Category-to-family and category-to-function mappings, plus relation margins,
-are configured in `configs/observed_state_semantics.yaml`.
+`configs/inspection_rigs.yaml` defines `INITIAL`, `D1`, `D2`, `C2`, `B1`,
+and `C1` target/rig poses, five deterministic relative views, near/far depth,
+inspection AABB and margin, settle steps, view-quality thresholds, erosion,
+depth-edge rejection, voxel/outlier filtering, and evidence acceptance.
+`inspection_metadata.json` records the resolved camera poses, intrinsics,
+capture resolution, volume, and accepted/rejected camera/object diagnostics.
+
+For geometry-only task documents, witness inference remains strictly
+geometry-only. Simulator categories, object families, semantic function
+tables, and category-bearing instance names are absent from that inference
+path. Persistent IDs are generic (`object_0001`, ...), and raw simulator
+instance names are stored only as one-way association hashes.
+
+Every valid stage-local evidence cloud receives the same property and
+predicate schema. It includes
+robust OBB dimensions, length and cross-section, extent ratios, planarity,
+support area/thickness/normal, and conservative visible rim/opening/cavity
+measurements. Structural predicates are `OPEN_CAVITY`, `ELONGATED_OBJECT`, and
+`PLANAR_SUPPORT`. Their thresholds and relation margins are in
+`configs/geometry_inference.yaml`; the file contains no category mappings.
+Unavailable evidence remains `UNKNOWN`.
+Every record also carries `source_stage`, `source_region`,
+`measurement_cloud_path`, contributing camera IDs, point count, method,
+extractor version, and the `MEASUREMENT_EVIDENCE` purpose marker.
+
+Task roles declare explicit geometric predicate and numeric-property
+requirements. The graph records `SATISFIES_GEOMETRY` edges with the complete
+measurement evidence. `INSERTABLE_IN` and `REACHES_BOTTOM` use generic
+cross-section, opening, usable-length, and cavity-depth measurements. The
+solver returns `COMPLETE` only for a globally distinct assignment whose role
+checks and pairwise checks are all `TRUE`. A possible assignment containing
+any unknown geometric evidence is `INDETERMINATE`.
+
+The universal `geometric_properties` keys are:
+
+```text
+total_length_m             usable_length_m
+maximum_cross_section_m    elongation_ratio
+flatness_ratio             dominant_plane_normal_world
+planarity_score            support_length_m
+support_width_m            support_thickness_m
+support_area_m2            opening_width_m
+opening_length_m           cavity_depth_m
+```
+
+A role requirement contains no class name:
+
+```yaml
+roles:
+  planar_support:
+    count: 1
+    geometric_requirements:
+      - predicate: PLANAR_SUPPORT
+        required_status: TRUE
+      - property: support_area_m2
+        minimum: 0.008
+        unit: m2
+        allowed_statuses: [DERIVED]
+```
+
+A reliable scene-level geometry-only early-stop demonstration searches for a
+horizontal planar support:
+
+```bash
+docker run --rm \
+  -e MUJOCO_GL=osmesa \
+  -v "$PWD/runs:/output" \
+  mujoco-kitchen-s1 \
+  --scene S1_coffee_missing_mug \
+  --no-robot \
+  --task-requirements configs/s1_find_planar_support.yaml \
+  --inspect-sequence D1 D2 C2 B1 C1 \
+  --stop-on-complete \
+  --runs-root /output \
+  --run-id s1_geometry_planar_support
+```
+
+At 320×240 or the default 640×480 resolution, the C2 support object satisfies
+the configured measured planarity, upward-normal, thickness, and area checks;
+the run becomes `COMPLETE` after C2 and leaves B1/C1 unopened.
+
+`configs/s1_find_open_receptacle.yaml` demonstrates conservative cavity
+reasoning. `OPEN_CAVITY=TRUE` requires adequate multi-view support, vertical
+extent, a gravity-aligned and mostly enclosed upper rim, low central top
+occupancy, observed interior points below the rim from multiple cameras,
+positive cavity depth, and planarity/noise rejection. Missing central depth
+alone is never an opening. If these observations are inadequate, the result is
+`UNKNOWN` even when a simulator-private asset name would identify the object.
+No semantic label is allowed to rescue that geometry-only result.
+
+## Joint RGB semantic and point-cloud geometric grounding
+
+The joint-grounding milestone adds an independent RGB detector path without
+changing the measurement-evidence guarantees above. YOLO-World processes only
+rendered RGB pixels and the configurable open vocabulary. MuJoCo instance
+masks are used only after detection to associate boxes with generic persistent
+object IDs. Body, geom, mesh, asset, scene-instance, and simulator category
+names are never supplied to the detector.
+
+The primary task is “find a suitable tool for stirring the contents of the
+bowl.” Its declarative, FM-ready manual specification is
+`configs/stir_contents_joint.yaml`:
+
+| Role | Semantic gate | Unary geometry | Relations |
+|---|---|---|---|
+| `mixing_container` | bowl, rank 1 | `OPEN_CAVITY`, opening ≥ 0.05 m, cavity ≥ 0.015 m | relation target |
+| `mixing_tool` | spoon rank 1; fork rank 2; spatula rank 3 | `ELONGATED_OBJECT` | `INSERTABLE_IN` and `REACHES_BOTTOM` |
+
+The resolver enumerates distinct role assignments. It first rejects any
+assignment with a false/unknown required semantic, unary, or relational check.
+Only complete valid assignments are ranked: semantic rank, then detector
+confidence within the same rank, then persistent object ID. It stops at the
+highest-ranked currently observed valid assignment; it does not search for a
+hypothetical unseen higher-ranked object.
+
+Three separate scene variants make the claims measurable:
+
+| Scene | Initial counter | D1 | D2 | Expected joint result |
+|---|---|---|---|---|
+| `S1_joint_stir_counterexamples` | mixing bowl + YCB marker | physically oversized YCB spoon | normal YCB fork | reject marker semantically, reject spoon geometrically, select fork at D2 |
+| `S1_joint_stir_initial_preference` | mixing bowl + normal spoon + normal fork | distractor | distractor | both tools valid; select rank-1 spoon at stage 0 and open nothing |
+| `S1_joint_stir_exhaustion` | mixing bowl + YCB marker | oversized spoon | knife | inspect the complete fixed order and emit exhaustion |
+
+The oversized spoon is a visibly anisotropically scaled YCB mesh. No runtime
+code reads that scale: its observed cross-section naturally exceeds the
+measured bowl opening. Likewise, the marker and fork relations come solely
+from their fresh fused evidence clouds.
+
+The pinned detector is Ultralytics `8.4.112` with
+`yolov8m-worldv2.pt`. The medium 55 MB checkpoint remains CPU-capable and is
+more reliable on thin synthetic utensils than the small checkpoint. Its CLIP
+text encoder is pinned to Ultralytics CLIP commit
+`c4b6ea0932a2c0f39a0fa528af5ec4982ff15cab`. Download and checksum both
+artifacts once:
+
+```bash
+python mujoco_scenes/scripts/prepare_semantic_models.py \
+  --output semantic_model_cache
+```
+
+Build the image from the repository root:
+
+```bash
+docker build -t mujoco-kitchen-s1 \
+  -f mujoco_scenes/Dockerfile .
+```
+
+Run the primary actual-detector demonstration:
+
+```bash
+mkdir -p runs
+docker run --rm \
+  -e MUJOCO_GL=osmesa \
+  -v "$PWD/runs:/output" \
+  -v "$PWD/semantic_model_cache/yolov8m-worldv2.pt:/models/yolov8m-worldv2.pt:ro" \
+  -v "$PWD/semantic_model_cache/weights:/workspace/weights:ro" \
+  mujoco-kitchen-s1 \
+  --scene S1_joint_stir_counterexamples \
+  --no-robot \
+  --task-requirements configs/stir_contents_joint.yaml \
+  --inspect-sequence D1 D2 C2 B1 C1 \
+  --stop-on-complete \
+  --runs-root /output \
+  --run-id joint_stir_counterexamples \
+  --point-cloud-width 1280 \
+  --point-cloud-height 960 \
+  --semantic-detector yolo_world \
+  --semantic-model /models/yolov8m-worldv2.pt \
+  --semantic-vocabulary mujoco_scenes/configs/semantic_vocabulary.yaml \
+  --grounding-mode joint \
+  --semantic-confidence-threshold 0.03 \
+  --semantic-min-supporting-views 2 \
+  --save-semantic-overlays
+```
+
+`auto` is the CLI grounding default: it selects production `joint` evaluation
+for joint-role task documents and preserves `geometry-only` evaluation for
+legacy geometric task documents. Explicit `geometry-only` and `semantic-only`
+are diagnostic ablations. Every joint stage evaluates all three modes from
+the exact same saved graph, point-cloud evidence, and semantic evidence in
+`grounding_mode_comparison.json`; no capture is repeated.
+
+Ground-truth annotations live only in the offline evaluation configuration.
+Runtime detector, registry, graph, and resolver modules never import it. To
+produce the machine-readable comparison:
+
+```bash
+docker run --rm \
+  -v "$PWD/runs:/output" \
+  --entrypoint python \
+  mujoco-kitchen-s1 \
+  -m mujoco_scenes.evaluate_joint_grounding_run \
+  /output/joint_stir_counterexamples \
+  --evaluation-config \
+  /workspace/mujoco_scenes/configs/joint_grounding_evaluation.yaml
+```
+
+Joint runs add:
+
+```text
+verified_task_handoff.json
+candidate_evaluations.json
+ablation_summary.json
+offline_ablation_evaluation.json       # after the offline command
+stages/<stage>/semantic_overview.png
+stages/<stage>/semantics/detections.json
+stages/<stage>/semantics/associations.json
+stages/<stage>/semantics/<object_id>/semantic_evidence.json
+stages/<stage>/semantics/cameras/<camera_id>/overlay.png
+```
+
+Semantic records preserve alternative labels, multi-view support, raw
+confidence, association quality, detector/checkpoint/version, RGB/crop paths,
+stage, and region. Multi-view fusion selects the label supported by the most
+independent views, uses weighted detector confidence only to break equal-view
+support, and returns `UNKNOWN` for inadequate or ambiguous evidence. A weak
+re-observation is recorded but cannot overwrite a stronger validated cached
+semantic result.
+
+`verified_task_handoff.json` is emitted only for production joint completion.
+It contains the role-to-object assignment, semantic rank and provenance,
+unary and relational geometric evidence, stage-local evidence paths,
+`verified: true`, and `ready_for_tamp: true`. This milestone does not execute
+TAMP, robot motion, navigation, IK, manipulation, adaptive search, a
+foundation model, training, or fine-tuning.
 
 The Actions panel creates `000_initial` automatically. Every automatic
 post-opening capture and the manual `Geometry` button update that same
-persistent run. Mount the interactive output directory with:
+persistent run and re-evaluates the configured witness. Mount the interactive
+output directory with:
 
 ```bash
 -v "$PWD/runs:/workspace/runs"

@@ -1,0 +1,39 @@
+schema_version: 1
+task_id: stir_contents_geometry_diagnostic
+specification_source: manual_geometry_diagnostic_v1
+
+roles:
+  mixing_container:
+    count: 1
+    geometric_requirements:
+      - predicate: OPEN_CAVITY
+        required_status: TRUE
+      - property: opening_width_m
+        minimum: 0.05
+        unit: m
+      - property: cavity_depth_m
+        minimum: 0.015
+        unit: m
+
+  mixing_tool:
+    count: 1
+    geometric_requirements:
+      - predicate: ELONGATED_OBJECT
+        required_status: TRUE
+
+constraints:
+  distinct_objects: true
+  pairwise:
+    - relation: INSERTABLE_IN
+      from_role: mixing_tool
+      to_role: mixing_container
+      required_status: TRUE
+      apply_to: all_selected_targets
+    - relation: REACHES_BOTTOM
+      from_role: mixing_tool
+      to_role: mixing_container
+      required_status: TRUE
+      apply_to: all_selected_targets
+
+diagnostics:
+  max_representative_rejections: 20

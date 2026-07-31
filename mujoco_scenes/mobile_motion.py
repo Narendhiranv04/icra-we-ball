@@ -447,7 +447,12 @@ class MobileMoveExecutor:
         return min(1.0, self.target_index / len(self.targets))
 
 
-def launch_action_viewer(scene, camera: str) -> None:
+def launch_action_viewer(
+    scene,
+    camera: str,
+    *,
+    task_requirements=None,
+) -> None:
     """Launch MuJoCo plus a companion hierarchical Actions panel."""
     import tkinter as tk
     from tkinter import ttk
@@ -475,6 +480,7 @@ def launch_action_viewer(scene, camera: str) -> None:
     observed_run = ObservedStateRun.create_for_scene(
         scene,
         runs_root="runs",
+        task_requirements=task_requirements,
         run_config={
             "mode": "interactive_actions",
             "resolution": [640, 480],

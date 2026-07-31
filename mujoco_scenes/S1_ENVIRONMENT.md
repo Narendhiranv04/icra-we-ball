@@ -269,6 +269,62 @@ useful for search-state experiments. Once manipulation planning is connected,
 the Fetch gripper should physically operate the same door, drawer, and lid
 joints; the direct API then serves as an oracle/debug action.
 
+## Observed-resource witness boundary
+
+The observed-state pipeline can now check counted task roles and measured
+pairwise compatibility after every closed/open observation stage. It uses only
+the persistent visible-object graph: unopened contents never become candidates.
+`COMPLETE` is an assignment certificate, not task execution, retrieval, motion
+refinement, PDDLStream invocation, or ROBUSTTAMP invocation.
+
+Witness inference does not use the scene's semantic object names. Each stable
+instance name is hashed for association, objects are exported as
+`object_0001`-style IDs, every cloud receives the same geometry schema, and
+roles are satisfied only through configured measured predicates and numeric
+thresholds. A missing rim or interior measurement remains `INDETERMINATE`.
+
+`configs/s1_find_planar_support.yaml` is the deterministic early-stop fixture.
+With order `D1 D2 C2 B1 C1`, the measured planar support in C2 completes the
+task and leaves B1/C1 closed. `configs/s1_find_open_receptacle.yaml` is the
+conservative cavity fixture. At the documented 320×240 region-facing setup,
+the validated C2 evidence contains a mostly enclosed rim and interior points
+below it, so the task completes at C2; inadequate coverage in another scene
+still remains `INDETERMINATE`.
+
+Sequential observed-state inspection is intentionally no-robot. Each direct
+container actuator action is followed by the configured settle interval and a
+fresh virtual five-camera rig pose from `configs/inspection_rigs.yaml`. Only
+points inside that stage's region volume can update the registry. Properties
+are extracted from `stages/<stage>/evidence/<object_id>/fused.ply`, never from
+the cumulative visualization or combined scene clouds.
+
+## Joint-grounding scene variants
+
+The original S1 distributions above are unchanged. Three additional
+evaluation scenes reuse the workstation and deterministic no-robot inspection
+path:
+
+| Scene | Counter placement | Closed-region placement |
+|---|---|---|
+| `S1_joint_stir_counterexamples` | `counter_spot_2`: mixing bowl; `counter_spot_4`: YCB marker | D1: oversized YCB spoon; D2: normal YCB fork; C2/B1/C1: ordinary distractors |
+| `S1_joint_stir_initial_preference` | `counter_spot_1`: mixing bowl; `counter_spot_3`: normal YCB spoon; `counter_spot_5`: normal YCB fork | ordinary distractors |
+| `S1_joint_stir_exhaustion` | `counter_spot_2`: mixing bowl; `counter_spot_4`: YCB marker | D1: oversized spoon; D2: knife; no valid later alternative |
+
+The initial-preference fork is rotated 90 degrees in the physical scene so
+its tines remain visible beside the spoon. The D1 spoon uses the same
+recognizable YCB spoon mesh with a deliberately obvious anisotropic scale;
+while D1 is closed it is held to the drawer by a scene-construction weld and
+released after opening/settling so it cannot be ejected by contact. Neither
+the transform, scale, weld, body name, nor region assignment enters semantic
+or geometric inference.
+
+`configs/stir_contents_joint.yaml` requires a bowl-like RGB detection plus
+measured open-cavity geometry for `mixing_container`, and a ranked
+spoon/fork/spatula RGB detection plus measured elongation, insertion, and
+reach relations for `mixing_tool`. Detection uses rendered RGB only; point
+cloud measurement remains category-free. See `README.md` for the exact
+pretrained-model cache and Docker commands.
+
 ## Run
 
 ```bash
@@ -278,7 +334,8 @@ MUJOCO_GL=glfw /home/naren/miniconda3/bin/python \
   --viewer --camera front_camera
 ```
 
-Use `--no-robot` only when debugging the kitchen by itself.
+Use `--no-robot` for the virtual sequential-inspection milestone. The viewer
+can still include Fetch for the separate interactive manipulation demos.
 
 To start directly in Fetch's head-camera view, replace `front_camera` with
 `head_camera_rgb`.

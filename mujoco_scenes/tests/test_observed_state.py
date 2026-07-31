@@ -2,25 +2,48 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
 
-from mujoco_scenes.geometry_checker import ObjectPointCloud, PointCloudRun
-from mujoco_scenes.observed_state import ObservedStateRun
+from mujoco_scenes.geometry_checker import (
+    InspectionCameraCapture,
+    MeasurementEvidence,
+    ObjectPointCloud,
+    PointCloudRun,
+    RegionInspection,
+)
+from mujoco_scenes.geometry_properties import extract_object_properties
+from mujoco_scenes.observed_state import (
+    ObservedStateRun,
+    _select_validated_semantic,
+)
+
+
+CAMERAS = (
+    "inspection_left",
+    "inspection_right",
+    "inspection_top",
+    "inspection_front",
+    "inspection_close",
+)
 
 
 class FakeScene:
     scene_name = "synthetic_scene"
+    has_robot = False
 
     def __init__(self):
         self.region_states = {
             region: {"open": False, "inspected": False}
-            for region in ("C1", "D1")
+            for region in ("C1", "C2", "D1")
         }
         self.instance_source_regions = {
             "kettle_instance": "countertop",
             "spoon_instance": "countertop",
             "fork_instance": "D1",
+            "plate_instance": "C2",
+            "bowl_instance": "C2",
             "mug_instance": "C1",
         }
 
@@ -38,31 +61,154 @@ class FakeScene:
         return self.instance_source_regions[instance_id]
 
 
-def synthetic_cloud(instance_name, category, offset=(0, 0, 0)):
+def synthetic_points(instance_name, offset=(0, 0, 0)):
     rng = np.random.default_rng(sum(map(ord, instance_name)))
     points = rng.uniform(
         low=(-0.08, -0.02, -0.01),
         high=(0.08, 0.02, 0.01),
-        size=(120, 3),
+        size=(160, 3),
     ).astype(np.float32)
-    points += np.asarray(offset, dtype=np.float32)
+    return points + np.asarray(offset, dtype=np.float32)
+
+
+def cavity_points():
+    angles = np.linspace(0, 2 * np.pi, 160, endpoint=False)
+    rim = np.column_stack(
+        (
+            0.05 * np.cos(angles),
+            0.04 * np.sin(angles),
+            np.full(len(angles), 0.10),
+        )
+    )
+    heights = np.linspace(0.02, 0.09, 5)
+    aa, zz = np.meshgrid(angles, heights)
+    wall = np.column_stack(
+        (
+            0.05 * np.cos(aa.ravel()),
+            0.04 * np.sin(aa.ravel()),
+            zz.ravel(),
+        )
+    )
+    x, y = np.meshgrid(
+        np.linspace(-0.018, 0.018, 12),
+        np.linspace(-0.012, 0.012, 10),
+    )
+    interior = np.column_stack(
+        (x.ravel(), y.ravel(), np.full(x.size, 0.015))
+    )
+    return np.vstack((rim, wall, interior)).astype(np.float32)
+
+
+def make_evidence(
+    instance_name,
+    points,
+    region,
+    *,
+    valid=True,
+    object_kind="ignored_label",
+):
+    del object_kind
+    points = np.asarray(points, dtype=np.float32)
     colors = np.tile(np.array([[80, 140, 210]], dtype=np.uint8), (len(points), 1))
-    return ObjectPointCloud(
+    cameras = CAMERAS if valid else CAMERAS[:1]
+    return MeasurementEvidence(
         instance_name=instance_name,
-        object_kind=category,
-        points=points,
-        colors=colors,
-        pixels_by_camera={"cam1": 60, "cam2": 60},
+        measurement_points=points,
+        measurement_colors=colors,
+        contributing_camera_ids=tuple(cameras),
+        points_by_camera={camera: points.copy() for camera in cameras},
+        source_stage=None,
+        source_region=region,
+        measurement_cloud_path=None,
+        measurement_quality={
+            "quality_is_valid": valid,
+            "status": "VALID" if valid else "INVALID",
+            "reasons": [] if valid else ["INSUFFICIENT_OBJECT_CAMERA_COVERAGE"],
+            "point_count": len(points),
+            "raw_inside_point_count": len(points),
+            "inside_fraction": 1.0,
+            "contributing_camera_count": len(cameras),
+            "outlier_points_removed": 0,
+        },
     )
 
 
-def point_cloud_run(*clouds):
+def fake_capture(camera_id):
+    return InspectionCameraCapture(
+        camera_id=camera_id,
+        model_camera_name=f"model_{camera_id}",
+        position_world_m=np.array([0.0, -1.0, 1.0]),
+        rotation_world_from_camera=np.eye(3),
+        target_world_m=np.array([0.0, 0.0, 0.5]),
+        intrinsics=np.eye(3),
+        fovy_degrees=60.0,
+        rgb=np.zeros((2, 2, 3), dtype=np.uint8),
+        depth_m=np.ones((2, 2), dtype=np.float32),
+        segmentation=np.zeros((2, 2, 2), dtype=np.int32),
+        validation={"usable": True, "reasons": []},
+    )
+
+
+def inspection_run(region, accepted, rejected=()):
+    evidence_clouds = {
+        item.instance_name: item for item in accepted
+    }
+    clouds = {
+        item.instance_name: ObjectPointCloud(
+            instance_name=item.instance_name,
+            object_kind="ignored",
+            points=item.measurement_points,
+            colors=item.measurement_colors,
+            pixels_by_camera={
+                camera: len(item.measurement_points)
+                for camera in item.contributing_camera_ids
+            },
+        )
+        for item in accepted
+    }
+    rejected_clouds = {
+        name: ObjectPointCloud(
+            instance_name=name,
+            object_kind="ignored",
+            points=points,
+            colors=np.zeros((len(points), 3), dtype=np.uint8),
+            pixels_by_camera={camera: 0 for camera in CAMERAS},
+        )
+        for name, points in rejected
+    }
+    cameras = {camera: fake_capture(camera) for camera in CAMERAS}
+    inspection = RegionInspection(
+        region_id=region,
+        rig_config={},
+        cameras=cameras,
+        evidence_clouds=evidence_clouds,
+        rejected_clouds=rejected_clouds,
+        metadata={
+            "region_id": region,
+            "region_open": True,
+            "settle_steps": 10,
+            "inspection_volume": {
+                "minimum_world_m": [-1.0, -1.0, -1.0],
+                "maximum_world_m": [1.0, 1.0, 1.0],
+                "boundary_margin_m": 0.01,
+            },
+        },
+        quality={
+            "valid_camera_count": 5,
+            "capture_quality_is_valid": True,
+            "_rejected_instance_reasons": {
+                name: ["SOURCE_REGION_MISMATCH"]
+                for name, _points in rejected
+            },
+        },
+    )
     return PointCloudRun(
-        clouds={cloud.instance_name: cloud for cloud in clouds},
-        cameras=("cam1", "cam2"),
+        clouds=clouds,
+        cameras=CAMERAS,
         width=64,
         height=48,
         timings_seconds={"total": 0.01},
+        inspection=inspection,
     )
 
 
@@ -76,101 +222,242 @@ class ObservedStateTests(unittest.TestCase):
             scene_name=self.scene.scene_name,
             region_ids=self.scene.region_states,
         )
-        self.kettle = synthetic_cloud("kettle_instance", "kettle")
-        self.spoon = synthetic_cloud("spoon_instance", "spoon", (0.3, 0, 0))
+        self.kettle = make_evidence(
+            "kettle_instance",
+            synthetic_points("kettle_instance"),
+            "INITIAL",
+        )
+        self.spoon = make_evidence(
+            "spoon_instance",
+            synthetic_points("spoon_instance", (0.3, 0, 0)),
+            "INITIAL",
+        )
 
     def tearDown(self):
         self.temporary.cleanup()
 
     def _initial(self):
-        return self.session.update_from_point_cloud_run(
+        return self.session.update_from_inspection_run(
             self.scene,
-            point_cloud_run(self.kettle, self.spoon),
+            inspection_run("INITIAL", (self.kettle, self.spoon)),
             stage_label="initial",
         )
 
-    def test_initial_visible_objects_are_added_but_hidden_object_is_absent(self):
+    def test_initial_objects_use_initial_stage_evidence_and_hidden_is_absent(self):
         self._initial()
         objects = self.session.registry["objects"]
-        self.assertEqual(
-            {record["category"] for record in objects.values()},
-            {"kettle", "spoon"},
-        )
-        self.assertNotIn(
-            "mug_instance", self.session.registry["instance_index"]
-        )
-        graph = json.loads((self.run_dir / "observed_graph.json").read_text())
-        graph_instances = {
-            node["attributes"].get("instance_id")
-            for node in graph["nodes"]
-            if node["type"] == "object"
-        }
-        self.assertNotIn("mug_instance", graph_instances)
+        self.assertEqual(set(objects), {"object_0001", "object_0002"})
+        self.assertNotIn("mug_instance", json.dumps(self.session.registry))
+        for record in objects.values():
+            self.assertEqual(record["last_property_update_stage"], 0)
+            self.assertEqual(record["last_property_source_region"], "INITIAL")
+            self.assertIn("/evidence/", record["measurement_cloud_path"])
+            self.assertTrue(record["measurement_cloud_path"].endswith("fused.ply"))
+            self.assertNotIn("cumulative", record["measurement_cloud_path"])
 
-    def test_opening_one_region_adds_only_new_visible_objects_and_keeps_old(self):
+    def test_c2_updates_only_region_evidence_and_preserves_tabletop_cache(self):
+        self._initial()
+        tabletop_before = deepcopy_json(
+            self.session.registry["objects"]["object_0001"]
+        )
+        self.scene.region_states["C2"] = {"open": True, "inspected": True}
+        bowl = make_evidence("bowl_instance", cavity_points(), "C2")
+        self.session.update_from_inspection_run(
+            self.scene,
+            inspection_run(
+                "C2",
+                (bowl,),
+                rejected=(
+                    (
+                        "kettle_instance",
+                        synthetic_points("kettle_instance"),
+                    ),
+                ),
+            ),
+            stage_label="after_C2",
+            region_opened="C2",
+        )
+        objects = self.session.registry["objects"]
+        self.assertEqual(len(objects), 3)
+        tabletop_after = objects["object_0001"]
+        self.assertEqual(
+            tabletop_after["last_property_update_stage"],
+            tabletop_before["last_property_update_stage"],
+        )
+        self.assertEqual(
+            tabletop_after["observation_count"],
+            tabletop_before["observation_count"],
+        )
+        self.assertEqual(
+            tabletop_after["measurement_cloud_path"],
+            tabletop_before["measurement_cloud_path"],
+        )
+        new_record = objects["object_0003"]
+        self.assertEqual(new_record["source_region"], "C2")
+        self.assertEqual(new_record["first_seen_stage"], 1)
+
+    def test_reinspection_updates_same_instance_without_duplicate(self):
         self._initial()
         self.scene.region_states["D1"] = {"open": True, "inspected": True}
-        fork = synthetic_cloud("fork_instance", "fork", (-0.3, 0, 0))
-        self.session.update_from_point_cloud_run(
+        fork = make_evidence(
+            "fork_instance", synthetic_points("fork_instance"), "D1"
+        )
+        self.session.update_from_inspection_run(
             self.scene,
-            point_cloud_run(self.kettle, self.spoon, fork),
+            inspection_run("D1", (fork,)),
             stage_label="after_D1",
             region_opened="D1",
         )
-        objects = self.session.registry["objects"]
-        self.assertEqual(
-            {record["category"] for record in objects.values()},
-            {"kettle", "spoon", "fork"},
-        )
-        self.assertNotIn("mug_instance", self.session.registry["instance_index"])
-        self.assertIn("spoon_instance", self.session.registry["instance_index"])
-        graph = json.loads((self.run_dir / "observed_graph.json").read_text())
-        object_nodes = [node for node in graph["nodes"] if node["type"] == "object"]
-        self.assertEqual(len(object_nodes), 3)
-
-    def test_reobserving_instance_updates_without_duplicate(self):
-        self._initial()
-        spoon_id = self.session.registry["instance_index"]["spoon_instance"]
-        self.scene.region_states["D1"] = {"open": True, "inspected": True}
-        self.session.update_from_point_cloud_run(
+        self.session.update_from_inspection_run(
             self.scene,
-            point_cloud_run(self.kettle, self.spoon),
-            stage_label="manual",
-        )
-        self.assertEqual(
-            self.session.registry["instance_index"]["spoon_instance"], spoon_id
-        )
-        spoon_records = [
-            record
-            for record in self.session.registry["objects"].values()
-            if record["instance_id"] == "spoon_instance"
-        ]
-        self.assertEqual(len(spoon_records), 1)
-        self.assertEqual(spoon_records[0]["observation_count"], 2)
-        self.assertEqual(spoon_records[0]["first_seen_stage"], 0)
-        self.assertEqual(spoon_records[0]["last_seen_stage"], 1)
-
-    def test_snapshot_is_saved_for_initial_and_every_opening(self):
-        initial_dir = self._initial()
-        self.scene.region_states["D1"] = {"open": True, "inspected": True}
-        fork = synthetic_cloud("fork_instance", "fork")
-        opened_dir = self.session.update_from_point_cloud_run(
-            self.scene,
-            point_cloud_run(self.kettle, self.spoon, fork),
-            stage_label="after_D1",
+            inspection_run("D1", (fork,)),
+            stage_label="reinspect_D1",
             region_opened="D1",
         )
+        self.assertEqual(len(self.session.registry["objects"]), 3)
+        record = self.session.registry["objects"]["object_0003"]
+        self.assertEqual(record["observation_count"], 2)
+        self.assertEqual(record["first_seen_stage"], 1)
+        self.assertEqual(record["last_property_update_stage"], 2)
+
+    def test_invalid_reinspection_keeps_previous_cached_properties(self):
+        self._initial()
+        before = deepcopy_json(self.session.registry["objects"]["object_0001"])
+        invalid = make_evidence(
+            "kettle_instance",
+            synthetic_points("kettle_instance", (0.1, 0, 0)),
+            "INITIAL",
+            valid=False,
+        )
+        self.session.update_from_inspection_run(
+            self.scene,
+            inspection_run("INITIAL", (invalid,)),
+            stage_label="invalid_reinspection",
+        )
+        after = self.session.registry["objects"]["object_0001"]
+        self.assertEqual(
+            after["last_property_update_stage"],
+            before["last_property_update_stage"],
+        )
+        self.assertEqual(
+            after["measurement_cloud_path"],
+            before["measurement_cloud_path"],
+        )
+        self.assertEqual(
+            after["geometric_properties"],
+            before["geometric_properties"],
+        )
+
+    def test_extractor_receives_only_fused_measurement_evidence(self):
+        with patch(
+            "mujoco_scenes.observed_state.extract_object_properties",
+            wraps=extract_object_properties,
+        ) as spy:
+            self._initial()
+        self.assertGreater(spy.call_count, 0)
+        for call in spy.call_args_list:
+            supplied = call.args[0]
+            self.assertIsInstance(supplied, MeasurementEvidence)
+            self.assertEqual(
+                supplied.cloud_purpose, "MEASUREMENT_EVIDENCE"
+            )
+            self.assertTrue(supplied.measurement_cloud_path.endswith("fused.ply"))
+            self.assertNotIn("cumulative", supplied.measurement_cloud_path)
+            self.assertNotIn("combined_cloud", supplied.measurement_cloud_path)
+
+    def test_scene_wide_point_cloud_run_is_rejected(self):
+        plain = PointCloudRun(
+            clouds={},
+            cameras=(),
+            width=64,
+            height=48,
+            timings_seconds={},
+        )
+        with self.assertRaises(TypeError):
+            self.session.update_from_point_cloud_run(
+                self.scene, plain, stage_label="initial"
+            )
+
+    def test_snapshot_contains_inspection_debug_and_visualization_outputs(self):
+        stage = self._initial()
         required = {
             "combined_cloud.ply",
+            "region_combined_cloud.ply",
+            "inspection_metadata.json",
+            "inspection_quality.json",
             "properties.json",
             "graph.json",
+            "witness.json",
             "pointcloud.png",
             "graph.png",
             "overview.png",
         }
-        self.assertTrue(required.issubset({path.name for path in initial_dir.iterdir()}))
-        self.assertTrue(required.issubset({path.name for path in opened_dir.iterdir()}))
+        self.assertTrue(required.issubset({path.name for path in stage.iterdir()}))
         self.assertTrue((self.run_dir / "graph_growth.gif").exists())
+        for object_id in ("object_0001", "object_0002"):
+            self.assertTrue(
+                (stage / "evidence" / object_id / "fused.ply").exists()
+            )
+            self.assertTrue(
+                (
+                    self.run_dir
+                    / "objects"
+                    / object_id
+                    / "cumulative_visualization.ply"
+                ).exists()
+            )
+
+    def test_valid_initial_object_can_complete_global_task(self):
+        task = Path(__file__).parents[1] / "configs" / "s1_find_open_receptacle.yaml"
+        session = ObservedStateRun(
+            Path(self.temporary.name) / "global",
+            scene_name=self.scene.scene_name,
+            region_ids=self.scene.region_states,
+            task_requirements=task,
+        )
+        initial_receptacle = make_evidence(
+            "kettle_instance", cavity_points(), "INITIAL"
+        )
+        session.update_from_inspection_run(
+            self.scene,
+            inspection_run("INITIAL", (initial_receptacle,)),
+            stage_label="initial",
+        )
+        self.assertEqual(session.latest_witness["status"], "COMPLETE")
+        self.assertEqual(
+            session.latest_witness["selected_witness"],
+            {"open_receptacle": ["object_0001"]},
+        )
+
+    def test_weak_reobservation_does_not_replace_validated_semantics(self):
+        strong = {
+            "status": "SUPPORTED",
+            "canonical_label": "fork",
+            "source_stage": 2,
+            "quality": {
+                "supporting_view_count": 4,
+                "mean_confidence": 0.75,
+                "winning_label_margin": 2.0,
+            },
+        }
+        weak = {
+            "status": "UNKNOWN",
+            "canonical_label": None,
+            "source_stage": 3,
+            "quality": {
+                "supporting_view_count": 1,
+                "mean_confidence": 0.20,
+                "winning_label_margin": 0.0,
+            },
+        }
+        selected, replaced = _select_validated_semantic(strong, weak)
+        self.assertFalse(replaced)
+        self.assertEqual(selected, strong)
+        self.assertIsNot(selected, strong)
+
+
+def deepcopy_json(value):
+    return json.loads(json.dumps(value))
 
 
 if __name__ == "__main__":

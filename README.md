@@ -116,3 +116,41 @@ and `Drawer 2` while fully open. Both execute a vertical hover/descent/release
 and vertical retreat, preferring the object's vacated stable tray slot before
 sampling another buffered point.
 Pass `--no-actions-panel` to suppress this panel.
+
+## Fixed-order observed-resource witness
+
+The five-view persistent object graph is evaluated using point-cloud geometry
+only. Categories and semantic function mappings do not participate in
+property extraction, graph candidates, witness selection, or stopping.
+This command observes the fully closed scene first, follows only the supplied
+fixed inspection order, and stops only when a globally distinct all-`TRUE`
+geometric witness is found:
+
+```bash
+docker run --rm \
+  -e MUJOCO_GL=osmesa \
+  -v "$PWD/runs:/output" \
+  mujoco-kitchen-s1 \
+  --scene S1_coffee_missing_mug \
+  --no-robot \
+  --task-requirements configs/s1_find_open_receptacle.yaml \
+  --inspect-sequence D1 D2 C2 B1 C1 \
+  --stop-on-complete \
+  --runs-root /output \
+  --run-id open_receptacle_region_evidence_demo \
+  --point-cloud-width 320 \
+  --point-cloud-height 240
+```
+
+This mode contains no robot or mobile-navigation action. Every stage saves
+fresh, region-gated per-object measurement evidence and `witness.json`;
+`latest_witness.json`, the global registry, and graph are atomically replaced
+at run level. Historical cumulative clouds remain visualization-only and are
+guarded from property extraction. See
+[mujoco_scenes/README.md](mujoco_scenes/README.md) for the evidence layout,
+camera/volume configuration, universal geometry schema and provenance,
+geometry-only task documents, and the joint RGB semantic + point-cloud
+geometry counterexample experiments. The joint experiment uses actual
+YOLO-World RGB detections, generic mask-associated object IDs, measured
+relations, and emits a verified role-assignment handoff without executing
+robot motion or TAMP.

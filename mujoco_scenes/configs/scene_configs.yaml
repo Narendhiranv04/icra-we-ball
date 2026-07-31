@@ -14,6 +14,70 @@
 scenes:
 
   # ========================================
+  # JOINT SEMANTIC–GEOMETRIC GROUNDING
+  # ========================================
+
+  S1_joint_stir_counterexamples:
+    goal: "Find a suitable tool for stirring the contents of the bowl"
+    countertop_objects:
+      counter_spot_2: mixing_bowl
+      counter_spot_4: marker
+    container_contents:
+      D1: [oversized_spoon]
+      D2: [fork]
+      C2: [plate, gso_canister_distractor]
+      B1: [tea_box]
+      C1: [mug, glass]
+    required_objects: []
+    substitution_map: {}
+    optimal_search_order: [D1, D2]
+    optimal_inspections: 2
+    notes: >
+      Joint-grounding primary scene. The initially visible marker is a
+      geometry-only false positive. The D1 spoon is a semantic-only false
+      positive because its measured cross-section is too large for the bowl.
+      The normal D2 fork is the intended lower-ranked valid alternative.
+
+  S1_joint_stir_initial_preference:
+    goal: "Find a suitable tool for stirring the contents of the bowl"
+    countertop_objects:
+      counter_spot_1: mixing_bowl
+      counter_spot_3: spoon
+      counter_spot_5: fork
+    container_contents:
+      D1: [knife]
+      D2: [tongs]
+      C2: [plate, gso_canister_distractor]
+      B1: [tea_box]
+      C1: [mug, glass]
+    required_objects: []
+    substitution_map: {}
+    optimal_search_order: []
+    optimal_inspections: 0
+    notes: >
+      Both initially visible tools are geometrically valid. Ranked joint
+      grounding must select the spoon and open no region.
+
+  S1_joint_stir_exhaustion:
+    goal: "Find a suitable tool for stirring the contents of the bowl"
+    countertop_objects:
+      counter_spot_2: mixing_bowl
+      counter_spot_4: marker
+    container_contents:
+      D1: [oversized_spoon]
+      D2: [knife]
+      C2: [plate, gso_canister_distractor]
+      B1: [tea_box]
+      C1: [mug, glass]
+    required_objects: []
+    substitution_map: {}
+    optimal_search_order: [D1, D2, C2, B1, C1]
+    optimal_inspections: 5
+    notes: >
+      Evaluation-only exhaustion variant. No object jointly satisfies the
+      mixing-tool role, so the complete fixed sequence must be inspected.
+
+  # ========================================
   # TIER 1: SINGLE MISSING OBJECT
   # ========================================
 

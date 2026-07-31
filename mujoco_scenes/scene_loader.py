@@ -91,8 +91,10 @@ FETCH_ACTUATORS = (
 # shelves/trays instead of intersecting them.
 OBJECT_SUPPORT_HEIGHT = {
     "mug": 0.04065, "cup": 0.03076, "glass": 0.055,
-    "plate": 0.01336, "small_plate": 0.00735, "bowl": 0.02750,
-    "spoon": 0.01045, "fork": 0.00773, "knife": 0.00762,
+    "plate": 0.01336, "small_plate": 0.00735,
+    "bowl": 0.02750, "mixing_bowl": 0.02750,
+    "spoon": 0.01045, "oversized_spoon": 0.01463,
+    "fork": 0.00773, "knife": 0.00762, "marker": 0.00945,
     "stirrer": 0.003, "spatula": 0.006, "tongs": 0.005,
     "kettle": 0.06817, "coffee_jar": 0.09287, "sugar_jar": 0.06724,
     "coffee_can": 0.07009, "sugar_box": 0.08802,
@@ -104,11 +106,11 @@ OBJECT_SUPPORT_HEIGHT = {
 }
 
 UTENSIL_OBJECTS = {
-    "spoon", "fork", "knife", "stirrer", "spatula", "tongs",
+    "spoon", "oversized_spoon", "fork", "knife", "stirrer", "spatula", "tongs",
     "gso_spatula_distractor",
 }
 CENTRED_DRAWER_OBJECTS = {
-    "spoon", "fork", "knife", "stirrer", "tongs",
+    "spoon", "oversized_spoon", "fork", "knife", "stirrer", "tongs",
     "gso_spatula_distractor",
 }
 
@@ -120,6 +122,13 @@ ACTION_PICK_OBJECTS = {
 PASSIVE_HANDLE_OBJECTS = {
     "spoon", "fork", "knife", "stirrer", "spatula", "tongs",
     "gso_spatula_distractor",
+}
+
+# Scene-construction fixtures keep unusually large counterexample objects
+# physically stored while a container moves. They are released immediately
+# after direct opening and before the inspection rig captures evidence.
+STORAGE_FIXTURE_EQUALITIES = {
+    "D1": "storage_fixture_D1_oversized_spoon",
 }
 
 # Positions are RELATIVE to the container body origin: (x, y, support_z).
@@ -604,7 +613,16 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
             pos = np.asarray(COUNTER_SPOTS[spot]) + np.asarray(
                 COUNTERTOP_OBJECT_OFFSETS.get(obj_name, (0.0, 0.0, 0.0))
             )
-            _inject_object(obj_name, pos)
+            countertop_quat = None
+            if (
+                config.name == "S1_joint_stir_initial_preference"
+                and obj_name == "fork"
+            ):
+                # Present the normal fork orthogonally to the neighbouring
+                # spoon so its tines remain separable in the initial RGB
+                # views. This is scene construction, never runtime inference.
+                countertop_quat = "0.7071068 0 0 0.7071068"
+            _inject_object(obj_name, pos, quat=countertop_quat)
         else:
             print(f"  [WARNING] Unknown counter spot '{spot}', skipping {obj_name}.")
 
@@ -664,6 +682,11 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
             # lane so realistic-width napkins/boxes cannot overlap utensils.
             if container_id in {"D1", "D2"} and obj_name not in UTENSIL_OBJECTS:
                 slot_rel_pos[0] = 0.08
+            elif container_id == "D1" and obj_name == "oversized_spoon":
+                # Centre the deliberately long counterexample across D1's
+                # usable width. This is physical scene placement only; no
+                # runtime inference consumes the configured offset.
+                slot_rel_pos[0] = -0.06
             elif container_id in {"D1", "D2"} and obj_name in CENTRED_DRAWER_OBJECTS:
                 # The low vertical IK corridor is centred around X=±0.39.
                 # Bias each mirrored utensil lane three centimetres outward;
@@ -700,6 +723,30 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
     # inactive welds after both gripper fingers touch a supported object.
     # The relative pose is filled from the live state when the grasp occurs,
     # so enabling a weld never snaps an object to a pre-recorded pose.
+    if any(
+        object_kind == "oversized_spoon"
+        for _instance_name, object_kind in object_instances
+    ):
+        equality = root.find("equality")
+        if equality is None:
+            equality = ET.SubElement(root, "equality")
+        oversized_instance = next(
+            instance_name
+            for instance_name, object_kind in object_instances
+            if object_kind == "oversized_spoon"
+        )
+        ET.SubElement(
+            equality,
+            "weld",
+            {
+                "name": STORAGE_FIXTURE_EQUALITIES["D1"],
+                "body1": "drawer_D1_tray",
+                "body2": oversized_instance,
+                "active": "true",
+                "solref": "0.002 1",
+            },
+        )
+
     if include_robot:
         contact = root.find("contact")
         if contact is None:
@@ -982,8 +1029,8 @@ class KitchenScene:
         """
         Open a container and return the list of newly visible objects.
 
-        This simulates the robot opening the container (setting actuator target)
-        and then perceiving what's inside.
+        This directly sets the container actuator target and then advances the
+        scene controller. It does not imply a robot or manipulation trajectory.
         """
         if container_id not in CONTAINER_JOINTS:
             raise ValueError(f"Unknown container: {container_id}")
@@ -1005,6 +1052,20 @@ class KitchenScene:
             mujoco.mj_step(self.model, self.data)
 
         return self.record_container_opened(container_id)
+
+    def release_storage_fixture(self, container_id: str) -> bool:
+        """Release a scene-construction fixture before visual inspection."""
+        equality_name = STORAGE_FIXTURE_EQUALITIES.get(container_id)
+        if equality_name is None:
+            return False
+        equality_id = mujoco.mj_name2id(
+            self.model, mujoco.mjtObj.mjOBJ_EQUALITY, equality_name
+        )
+        if equality_id < 0:
+            return False
+        self.data.eq_active[equality_id] = 0
+        mujoco.mj_forward(self.model, self.data)
+        return True
 
     def record_container_opened(self, container_id: str) -> list:
         """Update visibility after an API- or motion-driven physical opening."""
@@ -1102,7 +1163,12 @@ class KitchenScene:
             "task_resolvable": self.is_task_resolvable(),
         }
 
-    def launch_viewer(self, camera: str = "front_camera", actions_panel: bool = True):
+    def launch_viewer(
+        self,
+        camera: str = "front_camera",
+        actions_panel: bool = True,
+        task_requirements: str | Path | None = None,
+    ):
         """Launch the MuJoCo viewer and, by default, its Actions panel."""
         if camera not in CAMERA_CHOICES:
             raise ValueError(
@@ -1116,7 +1182,11 @@ class KitchenScene:
         print(f"  Close viewer window to return to script.\n")
         if self.has_robot and actions_panel:
             from mujoco_scenes.mobile_motion import launch_action_viewer
-            launch_action_viewer(self, camera)
+            launch_action_viewer(
+                self,
+                camera,
+                task_requirements=task_requirements,
+            )
             return
         cam_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_CAMERA, camera)
         with mujoco.viewer.launch_passive(self.model, self.data) as viewer:
@@ -1176,7 +1246,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--no-robot", action="store_true",
-        help="Load only the kitchen (useful for environment-only debugging)"
+        help=(
+            "Load only the kitchen; required by virtual sequential inspection"
+        )
     )
     parser.add_argument(
         "--camera", choices=CAMERA_CHOICES, default="front_camera",
@@ -1191,10 +1263,76 @@ if __name__ == "__main__":
         help="Start with both cupboards, both drawers, and the box open"
     )
     parser.add_argument(
-        "--inspect-sequence", nargs="+", metavar="REGION",
+        "--inspect-sequence", nargs="*", metavar="REGION",
         help=(
-            "Observe the closed scene, then move/open and save one observed-state "
-            "stage per region (available: C1 C2 D1 D2 B1)"
+            "Observe the closed scene, then directly open, virtually face, "
+            "and save one evidence stage per region. Requires --no-robot. "
+            "With no regions, use D1 D2 C2 B1 C1"
+        ),
+    )
+    parser.add_argument(
+        "--task-requirements", type=str, default=None, metavar="YAML",
+        help=(
+            "Declarative geometry or joint task-role requirements; defaults to "
+            "configs/serve_two_person_breakfast.yaml"
+        ),
+    )
+    parser.add_argument(
+        "--semantic-detector",
+        choices=("none", "yolo_world"),
+        default="none",
+        help="RGB semantic detector backend (default: none)",
+    )
+    parser.add_argument(
+        "--semantic-model",
+        default=None,
+        metavar="CHECKPOINT",
+        help="Pretrained detector checkpoint; defaults to semantic config",
+    )
+    parser.add_argument(
+        "--semantic-config",
+        default=None,
+        metavar="YAML",
+        help="Semantic detection, association, and fusion configuration",
+    )
+    parser.add_argument(
+        "--semantic-vocabulary",
+        default=None,
+        metavar="YAML",
+        help="Independent open-vocabulary detector label configuration",
+    )
+    parser.add_argument(
+        "--grounding-mode",
+        choices=("auto", "joint", "geometry-only", "semantic-only"),
+        default="auto",
+        help=(
+            "Grounding logic: auto selects production joint grounding for "
+            "joint-role tasks and geometry-only for legacy geometry tasks; "
+            "geometry-only/semantic-only are diagnostic ablations"
+        ),
+    )
+    parser.add_argument(
+        "--semantic-confidence-threshold",
+        type=float,
+        default=None,
+        help="Detector confidence gate override",
+    )
+    parser.add_argument(
+        "--semantic-min-supporting-views",
+        type=int,
+        default=None,
+        help="Multi-view semantic support count override",
+    )
+    parser.add_argument(
+        "--save-semantic-overlays",
+        action="store_true",
+        help="Save detector boxes, mask boundaries, and associations",
+    )
+    parser.add_argument(
+        "--stop-on-complete", action="store_true",
+        help=(
+            "During --inspect-sequence, stop immediately after a COMPLETE "
+            "task witness"
         ),
     )
     parser.add_argument(
@@ -1234,11 +1372,17 @@ if __name__ == "__main__":
         help="List all available scene configurations"
     )
     args = parser.parse_args()
-    if args.inspect_sequence and (args.open_all or args.open_container):
+    if args.inspect_sequence is not None and (
+        args.open_all or args.open_container
+    ):
         parser.error(
             "--inspect-sequence requires the closed reset state; do not combine "
             "it with --open-all or --open-container"
         )
+    if args.stop_on_complete and args.inspect_sequence is None:
+        parser.error("--stop-on-complete requires --inspect-sequence")
+    if args.inspect_sequence is not None and not args.no_robot:
+        parser.error("--inspect-sequence requires --no-robot")
 
     if args.list_scenes:
         configs = load_all_configs()
@@ -1258,17 +1402,34 @@ if __name__ == "__main__":
     scene = KitchenScene(args.scene, include_robot=not args.no_robot)
     scene.print_scene_summary()
 
-    if args.inspect_sequence:
-        from mujoco_scenes.sequential_inspection import run_sequential_inspection
+    if args.inspect_sequence is not None:
+        from mujoco_scenes.sequential_inspection import (
+            DEFAULT_INSPECTION_ORDER,
+            run_sequential_inspection,
+        )
 
         run_sequential_inspection(
             scene,
-            args.inspect_sequence,
+            args.inspect_sequence or DEFAULT_INSPECTION_ORDER,
             runs_root=args.runs_root,
             run_id=args.run_id,
             width=args.point_cloud_width,
             height=args.point_cloud_height,
             voxel_size=args.point_cloud_voxel,
+            task_requirements=args.task_requirements,
+            stop_on_complete=args.stop_on_complete,
+            semantic_backend=args.semantic_detector,
+            semantic_model=args.semantic_model,
+            semantic_config_path=args.semantic_config,
+            semantic_vocabulary_path=args.semantic_vocabulary,
+            semantic_confidence_threshold=(
+                args.semantic_confidence_threshold
+            ),
+            semantic_min_supporting_views=(
+                args.semantic_min_supporting_views
+            ),
+            grounding_mode=args.grounding_mode,
+            save_semantic_overlays=args.save_semantic_overlays,
         )
 
     containers_to_open = list(args.open_container or [])
@@ -1324,4 +1485,5 @@ if __name__ == "__main__":
         scene.launch_viewer(
             camera=args.camera,
             actions_panel=not args.no_actions_panel,
+            task_requirements=args.task_requirements,
         )

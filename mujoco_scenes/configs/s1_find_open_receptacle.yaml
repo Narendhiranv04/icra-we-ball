@@ -1,0 +1,23 @@
+task_id: find_one_open_receptacle_from_geometry
+
+roles:
+  open_receptacle:
+    count: 1
+    geometric_requirements:
+      - predicate: OPEN_CAVITY
+        required_status: TRUE
+      - property: opening_width_m
+        minimum: 0.050
+        unit: m
+        allowed_statuses: [MEASURED]
+      - property: cavity_depth_m
+        minimum: 0.015
+        unit: m
+        allowed_statuses: [MEASURED]
+
+constraints:
+  distinct_objects: true
+  pairwise: []
+
+diagnostics:
+  max_representative_rejections: 5

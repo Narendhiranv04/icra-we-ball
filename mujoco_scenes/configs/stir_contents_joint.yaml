@@ -1,0 +1,60 @@
+schema_version: 1
+task_id: stir_contents
+specification_source: manual_v1
+
+roles:
+  mixing_container:
+    count: 1
+    assignment_order: 0
+    semantic_preferences:
+      - rank: 1
+        canonical_label: bowl
+        detector_aliases: [bowl, mixing bowl]
+    unary_geometry:
+      - predicate: OPEN_CAVITY
+        expected: true
+      - property: opening_width_m
+        operator: ">="
+        value: 0.05
+        unit: m
+      - property: cavity_depth_m
+        operator: ">="
+        value: 0.015
+        unit: m
+
+  mixing_tool:
+    count: 1
+    assignment_order: 1
+    semantic_preferences:
+      - rank: 1
+        canonical_label: spoon
+        detector_aliases: [spoon, teaspoon, tablespoon]
+      - rank: 2
+        canonical_label: fork
+        detector_aliases: [fork, dinner fork]
+      - rank: 3
+        canonical_label: spatula
+        detector_aliases: [spatula, turner]
+    unary_geometry:
+      - predicate: ELONGATED_OBJECT
+        expected: true
+
+relations:
+  - predicate: INSERTABLE_IN
+    subject_role: mixing_tool
+    object_role: mixing_container
+    expected: true
+  - predicate: REACHES_BOTTOM
+    subject_role: mixing_tool
+    object_role: mixing_container
+    expected: true
+
+constraints:
+  distinct_role_assignments: true
+
+selection:
+  policy: ranked_valid_candidate
+  semantic_confidence_is_only_a_gate: true
+
+diagnostics:
+  max_representative_rejections: 50

@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libxinerama1 \
         libxi6 \
         libxrandr2 \
+        ffmpeg \
         tk \
     && rm -rf /var/lib/apt/lists/*
 

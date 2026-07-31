@@ -7,6 +7,10 @@ import numpy as np
 from mujoco_scenes.geometry_checker import (
     backproject_masked_depth,
     camera_intrinsics,
+    gate_points_to_volume,
+    load_inspection_rig_config,
+    look_at_camera_rotation,
+    scale_intrinsics,
     voxel_downsample,
     write_ply,
 )
@@ -36,6 +40,76 @@ class GeometryCheckerTests(unittest.TestCase):
         self.assertAlmostEqual(intrinsics[1, 1], 240.0)
         self.assertAlmostEqual(intrinsics[0, 2], 320.0)
         self.assertAlmostEqual(intrinsics[1, 2], 240.0)
+
+    def test_intrinsics_scale_correctly_to_320_by_240(self):
+        source = camera_intrinsics(60.0, width=640, height=480)
+        scaled = scale_intrinsics(
+            source,
+            source_width=640,
+            source_height=480,
+            target_width=320,
+            target_height=240,
+        )
+        direct = camera_intrinsics(60.0, width=320, height=240)
+        np.testing.assert_allclose(scaled, direct)
+
+    def test_known_multiview_camera_transforms_align(self):
+        world_point = np.array([0.1, 0.2, 0.6])
+        intrinsics = np.array(
+            [[100.0, 0.0, 1.0], [0.0, 100.0, 1.0], [0.0, 0.0, 1.0]]
+        )
+        reconstructed = []
+        for position in (
+            np.array([0.1, -0.8, 0.6]),
+            np.array([-0.9, 0.2, 0.6]),
+        ):
+            rotation = look_at_camera_rotation(
+                position, world_point, np.array([0.0, 0.0, 1.0])
+            )
+            local = rotation.T @ (world_point - position)
+            depth = -local[2]
+            column = intrinsics[0, 0] * local[0] / depth + intrinsics[0, 2]
+            row = intrinsics[1, 2] - intrinsics[1, 1] * local[1] / depth
+            self.assertAlmostEqual(column, 1.0)
+            self.assertAlmostEqual(row, 1.0)
+            depth_image = np.full((3, 3), np.nan, dtype=np.float32)
+            depth_image[1, 1] = depth
+            mask = np.zeros((3, 3), dtype=bool)
+            mask[1, 1] = True
+            points, _pixels = backproject_masked_depth(
+                depth_image,
+                mask,
+                intrinsics,
+                position,
+                rotation,
+                max_depth=2.0,
+            )
+            reconstructed.append(points[0])
+        np.testing.assert_allclose(reconstructed, [world_point, world_point])
+
+    def test_region_gate_rejects_tabletop_points_for_c2(self):
+        points = np.array(
+            [
+                [0.35, 0.65, 0.95],
+                [-0.15, -0.30, 0.68],
+            ]
+        )
+        inside = gate_points_to_volume(
+            points,
+            minimum_world_m=np.array([0.12, 0.43, 0.72]),
+            maximum_world_m=np.array([0.58, 0.84, 1.19]),
+            boundary_margin_m=0.02,
+        )
+        np.testing.assert_array_equal(inside, [True, False])
+
+    def test_every_region_has_five_distinct_facing_views(self):
+        config = load_inspection_rig_config()
+        self.assertEqual(
+            set(config["regions"]),
+            {"INITIAL", "D1", "D2", "C2", "B1", "C1"},
+        )
+        for region in config["regions"].values():
+            self.assertEqual(len(region["cameras"]), 5)
 
     def test_voxel_fusion_removes_duplicate_samples(self):
         points = np.array(
