@@ -409,6 +409,7 @@ def _make_mode_visualizations(
                 check=False,
                 cwd=mode_dir,
             )
+            concat_path.unlink(missing_ok=True)
         visualizations[mode] = {
             "terminal_stage": terminal_stage,
             "frames": [
@@ -797,9 +798,12 @@ stage-local point cloud, growing graph, and individual camera overlays.</p>
     markdown = [
         "# Joint semantic–geometric grounding report",
         "",
+        "[Download the self-contained presentation](presentation_report.html) "
+        "· [Machine-readable evaluation](offline_ablation_evaluation.json)",
+        "",
         f"- Scene: `{run_config.get('scene_name')}`",
         f"- Task: `{run_config.get('task_id')}`",
-        f"- Source run: `{run_dir}`",
+        f"- Source run ID: `{run_dir.name}`",
         "- Same saved observation evidence used by all modes: `true`",
         f"- All expected outcomes matched: `{offline['all_expected_results_matched']}`",
         "",
@@ -835,17 +839,47 @@ stage-local point cloud, growing graph, and individual camera overlays.</p>
             "",
             f"![{mode}]({visualizations[mode]['gif']})",
             "",
+            (
+                f"[Open the {mode} MP4]({visualizations[mode]['mp4']})"
+                if visualizations[mode]["mp4"]
+                else "MP4 unavailable; use the GIF above."
+            ),
+            "",
         ]
+    markdown += ["## Captured scene stages", ""]
+    for stage in stage_components:
+        semantic_path = stage["paths"].get("semantic_overview.png")
+        overview_path = stage["paths"].get("overview.png")
+        markdown.append(f"### Stage {stage['stage']:03d}: {stage['name']}")
+        markdown.append("")
+        if semantic_path:
+            markdown.append(
+                f"![Stage {stage['stage']:03d} rendered scene]"
+                f"({semantic_path})"
+            )
+            markdown.append("")
+        if overview_path:
+            markdown.append(
+                f"[Open point-cloud and graph overview]({overview_path})"
+            )
+            markdown.append("")
     markdown += [
         "## Machine-readable evidence",
         "",
-        "- `offline_ablation_evaluation.json`",
-        "- `report_data.json`",
-        f"- Original run: `{run_dir}`",
+        "- [Offline ablation evaluation](offline_ablation_evaluation.json)",
+        "- [Complete report data](report_data.json)",
+        "- Raw point-cloud run artifacts are intentionally not committed in "
+        "this presentation package.",
         "",
     ]
+    markdown_text = "\n".join(markdown)
     (output_dir / "ablation_report.md").write_text(
-        "\n".join(markdown), encoding="utf-8"
+        markdown_text, encoding="utf-8"
+    )
+    # GitHub renders README.md automatically when the report directory is
+    # browsed, while the self-contained HTML remains available for download.
+    (output_dir / "README.md").write_text(
+        markdown_text, encoding="utf-8"
     )
 
 

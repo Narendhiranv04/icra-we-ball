@@ -1,0 +1,3198 @@
+{
+  "comparison": "ablation_comparison.png",
+  "objects": [
+    {
+      "camera_count": 5,
+      "cavity_depth_m": 0.04506539106369023,
+      "confidence": 0.8132529109716415,
+      "cross_section_m": 0.0967552708491227,
+      "elongated": false,
+      "label": "bowl",
+      "length_m": 0.09687105368624395,
+      "measurement_path": "stages/000_initial/evidence/object_0001/fused.ply",
+      "object_id": "object_0001",
+      "open_cavity": true,
+      "opening_width_m": 0.10793740027929766,
+      "point_count": 2898,
+      "quality": "VALID",
+      "semantic_status": "SUPPORTED",
+      "source_region": "INITIAL",
+      "source_stage": 0
+    },
+    {
+      "camera_count": 5,
+      "cavity_depth_m": null,
+      "confidence": 0.613935673236847,
+      "cross_section_m": 0.017500673097263678,
+      "elongated": true,
+      "label": "pen",
+      "length_m": 0.11091293440838906,
+      "measurement_path": "stages/000_initial/evidence/object_0002/fused.ply",
+      "object_id": "object_0002",
+      "open_cavity": null,
+      "opening_width_m": null,
+      "point_count": 631,
+      "quality": "VALID",
+      "semantic_status": "SUPPORTED",
+      "source_region": "INITIAL",
+      "source_stage": 0
+    },
+    {
+      "camera_count": 5,
+      "cavity_depth_m": null,
+      "confidence": 0.5160278379917145,
+      "cross_section_m": 0.11710390960833264,
+      "elongated": true,
+      "label": "spoon",
+      "length_m": 0.3258880621359259,
+      "measurement_path": "stages/001_after_D1/evidence/object_0003/fused.ply",
+      "object_id": "object_0003",
+      "open_cavity": false,
+      "opening_width_m": null,
+      "point_count": 3950,
+      "quality": "VALID",
+      "semantic_status": "SUPPORTED",
+      "source_region": "D1",
+      "source_stage": 1
+    },
+    {
+      "camera_count": 5,
+      "cavity_depth_m": null,
+      "confidence": 0.7052681744098663,
+      "cross_section_m": 0.02052217381309432,
+      "elongated": true,
+      "label": "fork",
+      "length_m": 0.18090092052891074,
+      "measurement_path": "stages/002_after_D2/evidence/object_0004/fused.ply",
+      "object_id": "object_0004",
+      "open_cavity": null,
+      "opening_width_m": null,
+      "point_count": 729,
+      "quality": "VALID",
+      "semantic_status": "SUPPORTED",
+      "source_region": "D2",
+      "source_stage": 2
+    }
+  ],
+  "offline_evaluation": {
+    "all_expected_results_matched": true,
+    "evaluation_config": "/home/naren/RA_iiith/mujoco_scenes/configs/joint_grounding_evaluation.yaml",
+    "modes": {
+      "geometry-only": {
+        "actual_status": "COMPLETE",
+        "completion_stage": 0,
+        "diagnostic_ablation": true,
+        "evaluation_ground_truth": {
+          "incorrect_selection_reasons": {
+            "geometry-only": "The marker-like object is geometrically compatible but is not a semantically acceptable mixing tool.",
+            "semantic-only": "The oversized spoon has the preferred label but its measured cross-section fails INSERTABLE_IN for the measured bowl opening."
+          },
+          "selected_labels": {
+            "mixing_container": "bowl",
+            "mixing_tool": "fork"
+          },
+          "status": "COMPLETE"
+        },
+        "evidence_artifact": "stages/000_initial/grounding_mode_comparison.json",
+        "expected": {
+          "completion_stage": 0,
+          "selected_labels": {
+            "mixing_container": "bowl",
+            "mixing_tool": "pen"
+          }
+        },
+        "failure_reason": "The marker-like object is geometrically compatible but is not a semantically acceptable mixing tool.",
+        "geometric_decisions": [
+          {
+            "checks": [
+              {
+                "evidence": {
+                  "angular_bin_count": 12,
+                  "central_top_occupancy_fraction": 0.0,
+                  "central_top_point_count": 0,
+                  "contributing_camera_count": 5,
+                  "definition": "enclosed_rim AND open_centre AND observed_interior_below_rim",
+                  "estimated_cavity_depth_m": 0.04506539106369023,
+                  "estimated_opening_length_m": 0.10889179184431277,
+                  "estimated_opening_width_m": 0.10793740027929766,
+                  "interior_camera_count": 5,
+                  "interior_camera_ids": [
+                    "inspection_left",
+                    "inspection_right",
+                    "inspection_top",
+                    "inspection_front",
+                    "inspection_close"
+                  ],
+                  "interior_point_count": 312,
+                  "minimum_resolvable_depth_m": 0.006,
+                  "minimum_resolvable_opening_m": 0.009,
+                  "minimum_resolvable_vertical_extent_m": 0.006,
+                  "occupied_angular_bins": 12,
+                  "outlier_fraction": 0.0,
+                  "planarity_score": 0.7713346608089917,
+                  "point_count": 2898,
+                  "rim_enclosure_ratio": 1.0,
+                  "rim_normal_alignment": 0.9998675964367806,
+                  "rim_normal_world": [
+                    0.00027284796060797744,
+                    0.01627006913708808,
+                    0.9998675964367806
+                  ],
+                  "rim_point_count": 406,
+                  "rim_shell_fraction": 1.0,
+                  "structural_components": {
+                    "ENCLOSED_RIM": "TRUE",
+                    "INTERIOR_BELOW_RIM": "TRUE",
+                    "OPEN_CENTRE": "TRUE"
+                  },
+                  "top_candidate_point_count": 406,
+                  "top_height_spread_m": 0.003455430269241333,
+                  "vertical_extent_m": 0.04585325956344599
+                },
+                "kind": "predicate",
+                "method": "open_cavity_structure_v3",
+                "name": "OPEN_CAVITY",
+                "reason": null,
+                "required_status": "TRUE",
+                "status": "TRUE"
+              }
+            ],
+            "object_id": "object_0001",
+            "role": "mixing_container",
+            "status": "TRUE"
+          },
+          {
+            "checks": [
+              {
+                "evidence": {
+                  "contributing_camera_count": 5,
+                  "definition": "enclosed_rim AND open_centre AND observed_interior_below_rim",
+                  "estimated_opening_length_m": 0.11262046166924555,
+                  "estimated_opening_width_m": 0.005786047819257645,
+                  "minimum_resolvable_opening_m": 0.009,
+                  "minimum_resolvable_vertical_extent_m": 0.006,
+                  "planarity_score": 0.6297996049016737,
+                  "point_count": 631,
+                  "rim_normal_alignment": 0.9997670324702227,
+                  "rim_normal_world": [
+                    0.02143121342570468,
+                    0.002565906620877745,
+                    0.9997670324702227
+                  ],
+                  "rim_point_count": 32,
+                  "structural_components": {
+                    "ENCLOSED_RIM": "UNKNOWN",
+                    "INTERIOR_BELOW_RIM": "UNKNOWN",
+                    "OPEN_CENTRE": "UNKNOWN"
+                  },
+                  "top_candidate_point_count": 89,
+                  "vertical_extent_m": 0.014777469635009699
+                },
+                "kind": "predicate",
+                "method": "open_cavity_structure_v3",
+                "name": "OPEN_CAVITY",
+                "reason": "UNRESOLVED_OPENING",
+                "required_status": "TRUE",
+                "status": "UNKNOWN"
+              }
+            ],
+            "object_id": "object_0002",
+            "role": "mixing_container",
+            "status": "UNKNOWN"
+          },
+          {
+            "checks": [
+              {
+                "evidence": {
+                  "absolute_length_used_for_decision": false,
+                  "definition": "largest robust extent dominates middle robust extent",
+                  "dominant_axis_ratio": 1.001196656637981,
+                  "minimum_dominant_axis_ratio": 2.4,
+                  "total_length_m": 0.09687105368624395
+                },
+                "kind": "predicate",
+                "method": "scale_independent_principal_axis_dominance_v2",
+                "name": "ELONGATED_OBJECT",
+                "reason": null,
+                "required_status": "TRUE",
+                "status": "FALSE"
+              }
+            ],
+            "object_id": "object_0001",
+            "role": "mixing_tool",
+            "status": "FALSE"
+          },
+          {
+            "checks": [
+              {
+                "evidence": {
+                  "absolute_length_used_for_decision": false,
+                  "definition": "largest robust extent dominates middle robust extent",
+                  "dominant_axis_ratio": 6.337638203511777,
+                  "minimum_dominant_axis_ratio": 2.4,
+                  "total_length_m": 0.11091293440838906
+                },
+                "kind": "predicate",
+                "method": "scale_independent_principal_axis_dominance_v2",
+                "name": "ELONGATED_OBJECT",
+                "reason": null,
+                "required_status": "TRUE",
+                "status": "TRUE"
+              }
+            ],
+            "object_id": "object_0002",
+            "role": "mixing_tool",
+            "status": "TRUE"
+          }
+        ],
+        "matches_evaluation_ground_truth": false,
+        "matches_expected_runtime_result": true,
+        "mode": "geometry-only",
+        "regions_opened": [],
+        "relation_decisions": [
+          {
+            "evidence": {
+              "clearance_margin_m": 0.005,
+              "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+              "inference_basis": "GEOMETRY_ONLY",
+              "maximum_cross_section_m": 0.017500673097263678,
+              "method": "cross_section_clearance_vs_opening_v1",
+              "opening_width_m": 0.10793740027929766,
+              "pass_margin_m": 0.08543672718203398,
+              "reason": null,
+              "source_measurement_cloud_path": "stages/000_initial/evidence/object_0002/fused.ply",
+              "status": "TRUE",
+              "target_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply"
+            },
+            "from_object": "object_0002",
+            "from_role": "mixing_tool",
+            "measured_status": "TRUE",
+            "relation": "INSERTABLE_IN",
+            "required_status": "TRUE",
+            "status": "TRUE",
+            "to_object": "object_0001",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {
+              "cavity_depth_m": 0.04506539106369023,
+              "evaluated_inequality": "usable_length_m - grip_allowance_m >= cavity_depth_m",
+              "grip_allowance_m": 0.03,
+              "inference_basis": "GEOMETRY_ONLY",
+              "method": "usable_length_after_grip_vs_cavity_v1",
+              "pass_margin_m": 0.035847543344698835,
+              "reason": null,
+              "source_measurement_cloud_path": "stages/000_initial/evidence/object_0002/fused.ply",
+              "status": "TRUE",
+              "target_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply",
+              "usable_length_m": 0.11091293440838906
+            },
+            "from_object": "object_0002",
+            "from_role": "mixing_tool",
+            "measured_status": "TRUE",
+            "relation": "REACHES_BOTTOM",
+            "required_status": "TRUE",
+            "status": "TRUE",
+            "to_object": "object_0001",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {},
+            "from_object": "object_0001",
+            "from_role": "mixing_tool",
+            "measured_status": "UNKNOWN",
+            "relation": "INSERTABLE_IN",
+            "required_status": "TRUE",
+            "status": "UNKNOWN",
+            "to_object": "object_0002",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {},
+            "from_object": "object_0001",
+            "from_role": "mixing_tool",
+            "measured_status": "UNKNOWN",
+            "relation": "REACHES_BOTTOM",
+            "required_status": "TRUE",
+            "status": "UNKNOWN",
+            "to_object": "object_0002",
+            "to_role": "mixing_container"
+          }
+        ],
+        "runtime_mismatch_reason": null,
+        "selected_labels": {
+          "mixing_container": "bowl",
+          "mixing_tool": "pen"
+        },
+        "selected_role_assignments": {
+          "mixing_container": [
+            "object_0001"
+          ],
+          "mixing_tool": [
+            "object_0002"
+          ]
+        },
+        "semantic_decisions": [
+          {
+            "canonical_label": "bowl",
+            "confidence": 0.8132529109716415,
+            "object_id": "object_0001",
+            "preference": {
+              "canonical_label": "bowl",
+              "detector_aliases": [
+                "bowl",
+                "mixing bowl"
+              ],
+              "rank": 1
+            },
+            "provenance": {
+              "alternatives": [
+                {
+                  "camera_ids": [
+                    "inspection_close",
+                    "inspection_front",
+                    "inspection_left",
+                    "inspection_right"
+                  ],
+                  "label": "bowl",
+                  "mean_confidence": 0.8132529109716415,
+                  "score": 12.120941521181845,
+                  "supporting_view_count": 4
+                },
+                {
+                  "camera_ids": [
+                    "inspection_top"
+                  ],
+                  "label": "cup",
+                  "mean_confidence": 0.253964900970459,
+                  "score": 0.7908561091479756,
+                  "supporting_view_count": 1
+                }
+              ],
+              "association_method": "mask_box_overlap_v1",
+              "canonical_label": "bowl",
+              "checkpoint": "/models/yolov8m-worldv2.pt",
+              "contributing_camera_ids": [
+                "inspection_close",
+                "inspection_front",
+                "inspection_left",
+                "inspection_right"
+              ],
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "mean_confidence": 0.8132529109716415,
+              "observation_source": "RGB_DETECTOR",
+              "quality": {
+                "mean_confidence": 0.8132529109716415,
+                "supporting_view_count": 4,
+                "supporting_view_margin": 3,
+                "validated": true,
+                "weighted_score_margin": 11.330085412033869,
+                "winner_policy": "supporting_views_then_weighted_score",
+                "winning_label_margin": 3.0,
+                "winning_label_margin_kind": "supporting_view_count"
+              },
+              "reason_codes": [],
+              "semantic_evidence_paths": [
+                "stages/000_initial/cameras/inspection_close/rgb.png",
+                "stages/000_initial/cameras/inspection_front/rgb.png",
+                "stages/000_initial/cameras/inspection_left/rgb.png",
+                "stages/000_initial/cameras/inspection_right/rgb.png",
+                "stages/000_initial/cameras/inspection_top/rgb.png"
+              ],
+              "semantic_record_path": "stages/000_initial/semantics/object_0001/semantic_evidence.json",
+              "source_region": "INITIAL",
+              "source_stage": 0,
+              "status": "SUPPORTED",
+              "supporting_view_count": 4,
+              "supporting_view_margin": 3,
+              "weighted_score_margin": 11.330085412033869,
+              "winner_policy": "supporting_views_then_weighted_score",
+              "winning_label_margin": 3.0,
+              "winning_label_margin_kind": "supporting_view_count"
+            },
+            "reason": "SUPPORTED_ACCEPTABLE_LABEL",
+            "role": "mixing_container",
+            "semantic_rank": 1,
+            "status": "TRUE"
+          },
+          {
+            "acceptable_labels": [
+              "bowl"
+            ],
+            "canonical_label": "pen",
+            "confidence": 0.613935673236847,
+            "object_id": "object_0002",
+            "provenance": {
+              "alternatives": [
+                {
+                  "camera_ids": [
+                    "inspection_close",
+                    "inspection_front",
+                    "inspection_left",
+                    "inspection_right",
+                    "inspection_top"
+                  ],
+                  "label": "pen",
+                  "mean_confidence": 0.613935673236847,
+                  "score": 8.20389426907899,
+                  "supporting_view_count": 5
+                }
+              ],
+              "association_method": "mask_box_overlap_v1",
+              "canonical_label": "pen",
+              "checkpoint": "/models/yolov8m-worldv2.pt",
+              "contributing_camera_ids": [
+                "inspection_close",
+                "inspection_front",
+                "inspection_left",
+                "inspection_right",
+                "inspection_top"
+              ],
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "mean_confidence": 0.613935673236847,
+              "observation_source": "RGB_DETECTOR",
+              "quality": {
+                "mean_confidence": 0.613935673236847,
+                "supporting_view_count": 5,
+                "supporting_view_margin": 5,
+                "validated": true,
+                "weighted_score_margin": 8.20389426907899,
+                "winner_policy": "supporting_views_then_weighted_score",
+                "winning_label_margin": 5.0,
+                "winning_label_margin_kind": "supporting_view_count"
+              },
+              "reason_codes": [],
+              "semantic_evidence_paths": [
+                "stages/000_initial/cameras/inspection_close/rgb.png",
+                "stages/000_initial/cameras/inspection_front/rgb.png",
+                "stages/000_initial/cameras/inspection_left/rgb.png",
+                "stages/000_initial/cameras/inspection_right/rgb.png",
+                "stages/000_initial/cameras/inspection_top/rgb.png"
+              ],
+              "semantic_record_path": "stages/000_initial/semantics/object_0002/semantic_evidence.json",
+              "source_region": "INITIAL",
+              "source_stage": 0,
+              "status": "SUPPORTED",
+              "supporting_view_count": 5,
+              "supporting_view_margin": 5,
+              "weighted_score_margin": 8.20389426907899,
+              "winner_policy": "supporting_views_then_weighted_score",
+              "winning_label_margin": 5.0,
+              "winning_label_margin_kind": "supporting_view_count"
+            },
+            "reason": "SUPPORTED_EXCLUDED_LABEL",
+            "role": "mixing_container",
+            "semantic_rank": null,
+            "status": "FALSE"
+          },
+          {
+            "acceptable_labels": [
+              "spoon",
+              "fork",
+              "spatula"
+            ],
+            "canonical_label": "bowl",
+            "confidence": 0.8132529109716415,
+            "object_id": "object_0001",
+            "provenance": {
+              "alternatives": [
+                {
+                  "camera_ids": [
+                    "inspection_close",
+                    "inspection_front",
+                    "inspection_left",
+                    "inspection_right"
+                  ],
+                  "label": "bowl",
+                  "mean_confidence": 0.8132529109716415,
+                  "score": 12.120941521181845,
+                  "supporting_view_count": 4
+                },
+                {
+                  "camera_ids": [
+                    "inspection_top"
+                  ],
+                  "label": "cup",
+                  "mean_confidence": 0.253964900970459,
+                  "score": 0.7908561091479756,
+                  "supporting_view_count": 1
+                }
+              ],
+              "association_method": "mask_box_overlap_v1",
+              "canonical_label": "bowl",
+              "checkpoint": "/models/yolov8m-worldv2.pt",
+              "contributing_camera_ids": [
+                "inspection_close",
+                "inspection_front",
+                "inspection_left",
+                "inspection_right"
+              ],
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "mean_confidence": 0.8132529109716415,
+              "observation_source": "RGB_DETECTOR",
+              "quality": {
+                "mean_confidence": 0.8132529109716415,
+                "supporting_view_count": 4,
+                "supporting_view_margin": 3,
+                "validated": true,
+                "weighted_score_margin": 11.330085412033869,
+                "winner_policy": "supporting_views_then_weighted_score",
+                "winning_label_margin": 3.0,
+                "winning_label_margin_kind": "supporting_view_count"
+              },
+              "reason_codes": [],
+              "semantic_evidence_paths": [
+                "stages/000_initial/cameras/inspection_close/rgb.png",
+                "stages/000_initial/cameras/inspection_front/rgb.png",
+                "stages/000_initial/cameras/inspection_left/rgb.png",
+                "stages/000_initial/cameras/inspection_right/rgb.png",
+                "stages/000_initial/cameras/inspection_top/rgb.png"
+              ],
+              "semantic_record_path": "stages/000_initial/semantics/object_0001/semantic_evidence.json",
+              "source_region": "INITIAL",
+              "source_stage": 0,
+              "status": "SUPPORTED",
+              "supporting_view_count": 4,
+              "supporting_view_margin": 3,
+              "weighted_score_margin": 11.330085412033869,
+              "winner_policy": "supporting_views_then_weighted_score",
+              "winning_label_margin": 3.0,
+              "winning_label_margin_kind": "supporting_view_count"
+            },
+            "reason": "SUPPORTED_EXCLUDED_LABEL",
+            "role": "mixing_tool",
+            "semantic_rank": null,
+            "status": "FALSE"
+          },
+          {
+            "acceptable_labels": [
+              "spoon",
+              "fork",
+              "spatula"
+            ],
+            "canonical_label": "pen",
+            "confidence": 0.613935673236847,
+            "object_id": "object_0002",
+            "provenance": {
+              "alternatives": [
+                {
+                  "camera_ids": [
+                    "inspection_close",
+                    "inspection_front",
+                    "inspection_left",
+                    "inspection_right",
+                    "inspection_top"
+                  ],
+                  "label": "pen",
+                  "mean_confidence": 0.613935673236847,
+                  "score": 8.20389426907899,
+                  "supporting_view_count": 5
+                }
+              ],
+              "association_method": "mask_box_overlap_v1",
+              "canonical_label": "pen",
+              "checkpoint": "/models/yolov8m-worldv2.pt",
+              "contributing_camera_ids": [
+                "inspection_close",
+                "inspection_front",
+                "inspection_left",
+                "inspection_right",
+                "inspection_top"
+              ],
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "mean_confidence": 0.613935673236847,
+              "observation_source": "RGB_DETECTOR",
+              "quality": {
+                "mean_confidence": 0.613935673236847,
+                "supporting_view_count": 5,
+                "supporting_view_margin": 5,
+                "validated": true,
+                "weighted_score_margin": 8.20389426907899,
+                "winner_policy": "supporting_views_then_weighted_score",
+                "winning_label_margin": 5.0,
+                "winning_label_margin_kind": "supporting_view_count"
+              },
+              "reason_codes": [],
+              "semantic_evidence_paths": [
+                "stages/000_initial/cameras/inspection_close/rgb.png",
+                "stages/000_initial/cameras/inspection_front/rgb.png",
+                "stages/000_initial/cameras/inspection_left/rgb.png",
+                "stages/000_initial/cameras/inspection_right/rgb.png",
+                "stages/000_initial/cameras/inspection_top/rgb.png"
+              ],
+              "semantic_record_path": "stages/000_initial/semantics/object_0002/semantic_evidence.json",
+              "source_region": "INITIAL",
+              "source_stage": 0,
+              "status": "SUPPORTED",
+              "supporting_view_count": 5,
+              "supporting_view_margin": 5,
+              "weighted_score_margin": 8.20389426907899,
+              "winner_policy": "supporting_views_then_weighted_score",
+              "winning_label_margin": 5.0,
+              "winning_label_margin_kind": "supporting_view_count"
+            },
+            "reason": "SUPPORTED_EXCLUDED_LABEL",
+            "role": "mixing_tool",
+            "semantic_rank": null,
+            "status": "FALSE"
+          }
+        ]
+      },
+      "joint": {
+        "actual_status": "COMPLETE",
+        "completion_stage": 2,
+        "diagnostic_ablation": false,
+        "evaluation_ground_truth": {
+          "incorrect_selection_reasons": {
+            "geometry-only": "The marker-like object is geometrically compatible but is not a semantically acceptable mixing tool.",
+            "semantic-only": "The oversized spoon has the preferred label but its measured cross-section fails INSERTABLE_IN for the measured bowl opening."
+          },
+          "selected_labels": {
+            "mixing_container": "bowl",
+            "mixing_tool": "fork"
+          },
+          "status": "COMPLETE"
+        },
+        "evidence_artifact": "stages/002_after_D2/grounding_mode_comparison.json",
+        "expected": {
+          "completion_stage": 2,
+          "selected_labels": {
+            "mixing_container": "bowl",
+            "mixing_tool": "fork"
+          }
+        },
+        "failure_reason": null,
+        "geometric_decisions": [
+          {
+            "checks": [
+              {
+                "evidence": {
+                  "angular_bin_count": 12,
+                  "central_top_occupancy_fraction": 0.0,
+                  "central_top_point_count": 0,
+                  "contributing_camera_count": 5,
+                  "definition": "enclosed_rim AND open_centre AND observed_interior_below_rim",
+                  "estimated_cavity_depth_m": 0.04506539106369023,
+                  "estimated_opening_length_m": 0.10889179184431277,
+                  "estimated_opening_width_m": 0.10793740027929766,
+                  "interior_camera_count": 5,
+                  "interior_camera_ids": [
+                    "inspection_left",
+                    "inspection_right",
+                    "inspection_top",
+                    "inspection_front",
+                    "inspection_close"
+                  ],
+                  "interior_point_count": 312,
+                  "minimum_resolvable_depth_m": 0.006,
+                  "minimum_resolvable_opening_m": 0.009,
+                  "minimum_resolvable_vertical_extent_m": 0.006,
+                  "occupied_angular_bins": 12,
+                  "outlier_fraction": 0.0,
+                  "planarity_score": 0.7713346608089917,
+                  "point_count": 2898,
+                  "rim_enclosure_ratio": 1.0,
+                  "rim_normal_alignment": 0.9998675964367806,
+                  "rim_normal_world": [
+                    0.00027284796060797744,
+                    0.01627006913708808,
+                    0.9998675964367806
+                  ],
+                  "rim_point_count": 406,
+                  "rim_shell_fraction": 1.0,
+                  "structural_components": {
+                    "ENCLOSED_RIM": "TRUE",
+                    "INTERIOR_BELOW_RIM": "TRUE",
+                    "OPEN_CENTRE": "TRUE"
+                  },
+                  "top_candidate_point_count": 406,
+                  "top_height_spread_m": 0.003455430269241333,
+                  "vertical_extent_m": 0.04585325956344599
+                },
+                "kind": "predicate",
+                "method": "open_cavity_structure_v3",
+                "name": "OPEN_CAVITY",
+                "reason": null,
+                "required_status": "TRUE",
+                "status": "TRUE"
+              }
+            ],
+            "object_id": "object_0001",
+            "role": "mixing_container",
+            "status": "TRUE"
+          },
+          {
+            "checks": [
+              {
+                "evidence": {
+                  "contributing_camera_count": 5,
+                  "definition": "enclosed_rim AND open_centre AND observed_interior_below_rim",
+                  "estimated_opening_length_m": 0.11262046166924555,
+                  "estimated_opening_width_m": 0.005786047819257645,
+                  "minimum_resolvable_opening_m": 0.009,
+                  "minimum_resolvable_vertical_extent_m": 0.006,
+                  "planarity_score": 0.6297996049016737,
+                  "point_count": 631,
+                  "rim_normal_alignment": 0.9997670324702227,
+                  "rim_normal_world": [
+                    0.02143121342570468,
+                    0.002565906620877745,
+                    0.9997670324702227
+                  ],
+                  "rim_point_count": 32,
+                  "structural_components": {
+                    "ENCLOSED_RIM": "UNKNOWN",
+                    "INTERIOR_BELOW_RIM": "UNKNOWN",
+                    "OPEN_CENTRE": "UNKNOWN"
+                  },
+                  "top_candidate_point_count": 89,
+                  "vertical_extent_m": 0.014777469635009699
+                },
+                "kind": "predicate",
+                "method": "open_cavity_structure_v3",
+                "name": "OPEN_CAVITY",
+                "reason": "UNRESOLVED_OPENING",
+                "required_status": "TRUE",
+                "status": "UNKNOWN"
+              }
+            ],
+            "object_id": "object_0002",
+            "role": "mixing_container",
+            "status": "UNKNOWN"
+          },
+          {
+            "checks": [
+              {
+                "evidence": {
+                  "contributing_camera_count": 5,
+                  "definition": "enclosed_rim AND open_centre AND observed_interior_below_rim",
+                  "planarity_score": 0.9786851317400065,
+                  "point_count": 3950,
+                  "structural_components": {
+                    "ENCLOSED_RIM": "UNKNOWN",
+                    "INTERIOR_BELOW_RIM": "UNKNOWN",
+                    "OPEN_CENTRE": "UNKNOWN"
+                  },
+                  "vertical_extent_m": 0.021016767024993888
+                },
+                "kind": "predicate",
+                "method": "open_cavity_structure_v3",
+                "name": "OPEN_CAVITY",
+                "reason": "PREDOMINANTLY_PLANAR_EVIDENCE",
+                "required_status": "TRUE",
+                "status": "FALSE"
+              }
+            ],
+            "object_id": "object_0003",
+            "role": "mixing_container",
+            "status": "FALSE"
+          },
+          {
+            "checks": [
+              {
+                "evidence": {
+                  "angular_bin_count": 12,
+                  "central_top_occupancy_fraction": 0.17647058823529413,
+                  "central_top_point_count": 18,
+                  "contributing_camera_count": 5,
+                  "definition": "enclosed_rim AND open_centre AND observed_interior_below_rim",
+                  "estimated_opening_length_m": 0.15699651370047346,
+                  "estimated_opening_width_m": 0.016683559901351824,
+                  "minimum_resolvable_opening_m": 0.009,
+                  "minimum_resolvable_vertical_extent_m": 0.006,
+                  "occupied_angular_bins": 5,
+                  "planarity_score": 0.817325681009711,
+                  "point_count": 729,
+                  "rim_enclosure_ratio": 0.4166666666666667,
+                  "rim_normal_alignment": 0.9988823304677327,
+                  "rim_normal_world": [
+                    -0.0039593566438090085,
+                    0.047100035820777236,
+                    0.9988823304677327
+                  ],
+                  "rim_point_count": 69,
+                  "rim_shell_fraction": 0.6764705882352942,
+                  "structural_components": {
+                    "ENCLOSED_RIM": "UNKNOWN",
+                    "INTERIOR_BELOW_RIM": "UNKNOWN",
+                    "OPEN_CENTRE": "TRUE"
+                  },
+                  "top_candidate_point_count": 102,
+                  "top_height_spread_m": 0.0012091144919395558,
+                  "vertical_extent_m": 0.010190207958221453
+                },
+                "kind": "predicate",
+                "method": "open_cavity_structure_v3",
+                "name": "OPEN_CAVITY",
+                "reason": "INSUFFICIENT_RIM_ENCLOSURE",
+                "required_status": "TRUE",
+                "status": "UNKNOWN"
+              }
+            ],
+            "object_id": "object_0004",
+            "role": "mixing_container",
+            "status": "UNKNOWN"
+          },
+          {
+            "checks": [
+              {
+                "evidence": {
+                  "absolute_length_used_for_decision": false,
+                  "definition": "largest robust extent dominates middle robust extent",
+                  "dominant_axis_ratio": 1.001196656637981,
+                  "minimum_dominant_axis_ratio": 2.4,
+                  "total_length_m": 0.09687105368624395
+                },
+                "kind": "predicate",
+                "method": "scale_independent_principal_axis_dominance_v2",
+                "name": "ELONGATED_OBJECT",
+                "reason": null,
+                "required_status": "TRUE",
+                "status": "FALSE"
+              }
+            ],
+            "object_id": "object_0001",
+            "role": "mixing_tool",
+            "status": "FALSE"
+          },
+          {
+            "checks": [
+              {
+                "evidence": {
+                  "absolute_length_used_for_decision": false,
+                  "definition": "largest robust extent dominates middle robust extent",
+                  "dominant_axis_ratio": 6.337638203511777,
+                  "minimum_dominant_axis_ratio": 2.4,
+                  "total_length_m": 0.11091293440838906
+                },
+                "kind": "predicate",
+                "method": "scale_independent_principal_axis_dominance_v2",
+                "name": "ELONGATED_OBJECT",
+                "reason": null,
+                "required_status": "TRUE",
+                "status": "TRUE"
+              }
+            ],
+            "object_id": "object_0002",
+            "role": "mixing_tool",
+            "status": "TRUE"
+          },
+          {
+            "checks": [
+              {
+                "evidence": {
+                  "absolute_length_used_for_decision": false,
+                  "definition": "largest robust extent dominates middle robust extent",
+                  "dominant_axis_ratio": 2.782896516656836,
+                  "minimum_dominant_axis_ratio": 2.4,
+                  "total_length_m": 0.3258880621359259
+                },
+                "kind": "predicate",
+                "method": "scale_independent_principal_axis_dominance_v2",
+                "name": "ELONGATED_OBJECT",
+                "reason": null,
+                "required_status": "TRUE",
+                "status": "TRUE"
+              }
+            ],
+            "object_id": "object_0003",
+            "role": "mixing_tool",
+            "status": "TRUE"
+          },
+          {
+            "checks": [
+              {
+                "evidence": {
+                  "absolute_length_used_for_decision": false,
+                  "definition": "largest robust extent dominates middle robust extent",
+                  "dominant_axis_ratio": 8.814900515728292,
+                  "minimum_dominant_axis_ratio": 2.4,
+                  "total_length_m": 0.18090092052891074
+                },
+                "kind": "predicate",
+                "method": "scale_independent_principal_axis_dominance_v2",
+                "name": "ELONGATED_OBJECT",
+                "reason": null,
+                "required_status": "TRUE",
+                "status": "TRUE"
+              }
+            ],
+            "object_id": "object_0004",
+            "role": "mixing_tool",
+            "status": "TRUE"
+          }
+        ],
+        "matches_evaluation_ground_truth": true,
+        "matches_expected_runtime_result": true,
+        "mode": "joint",
+        "regions_opened": [
+          "D1",
+          "D2"
+        ],
+        "relation_decisions": [
+          {
+            "evidence": {
+              "clearance_margin_m": 0.005,
+              "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+              "inference_basis": "GEOMETRY_ONLY",
+              "maximum_cross_section_m": 0.017500673097263678,
+              "method": "cross_section_clearance_vs_opening_v1",
+              "opening_width_m": 0.10793740027929766,
+              "pass_margin_m": 0.08543672718203398,
+              "reason": null,
+              "source_measurement_cloud_path": "stages/000_initial/evidence/object_0002/fused.ply",
+              "status": "TRUE",
+              "target_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply"
+            },
+            "from_object": "object_0002",
+            "from_role": "mixing_tool",
+            "measured_status": "TRUE",
+            "relation": "INSERTABLE_IN",
+            "required_status": "TRUE",
+            "status": "TRUE",
+            "to_object": "object_0001",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {
+              "cavity_depth_m": 0.04506539106369023,
+              "evaluated_inequality": "usable_length_m - grip_allowance_m >= cavity_depth_m",
+              "grip_allowance_m": 0.03,
+              "inference_basis": "GEOMETRY_ONLY",
+              "method": "usable_length_after_grip_vs_cavity_v1",
+              "pass_margin_m": 0.035847543344698835,
+              "reason": null,
+              "source_measurement_cloud_path": "stages/000_initial/evidence/object_0002/fused.ply",
+              "status": "TRUE",
+              "target_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply",
+              "usable_length_m": 0.11091293440838906
+            },
+            "from_object": "object_0002",
+            "from_role": "mixing_tool",
+            "measured_status": "TRUE",
+            "relation": "REACHES_BOTTOM",
+            "required_status": "TRUE",
+            "status": "TRUE",
+            "to_object": "object_0001",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {
+              "clearance_margin_m": 0.005,
+              "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+              "inference_basis": "GEOMETRY_ONLY",
+              "maximum_cross_section_m": 0.11710390960833264,
+              "method": "cross_section_clearance_vs_opening_v1",
+              "opening_width_m": 0.10793740027929766,
+              "pass_margin_m": -0.014166509329034987,
+              "reason": null,
+              "source_measurement_cloud_path": "stages/001_after_D1/evidence/object_0003/fused.ply",
+              "status": "FALSE",
+              "target_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply"
+            },
+            "from_object": "object_0003",
+            "from_role": "mixing_tool",
+            "measured_status": "FALSE",
+            "relation": "INSERTABLE_IN",
+            "required_status": "TRUE",
+            "status": "FALSE",
+            "to_object": "object_0001",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {
+              "cavity_depth_m": 0.04506539106369023,
+              "evaluated_inequality": "usable_length_m - grip_allowance_m >= cavity_depth_m",
+              "grip_allowance_m": 0.03,
+              "inference_basis": "GEOMETRY_ONLY",
+              "method": "usable_length_after_grip_vs_cavity_v1",
+              "pass_margin_m": 0.25082267107223566,
+              "reason": null,
+              "source_measurement_cloud_path": "stages/001_after_D1/evidence/object_0003/fused.ply",
+              "status": "TRUE",
+              "target_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply",
+              "usable_length_m": 0.3258880621359259
+            },
+            "from_object": "object_0003",
+            "from_role": "mixing_tool",
+            "measured_status": "TRUE",
+            "relation": "REACHES_BOTTOM",
+            "required_status": "TRUE",
+            "status": "TRUE",
+            "to_object": "object_0001",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {
+              "clearance_margin_m": 0.005,
+              "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+              "inference_basis": "GEOMETRY_ONLY",
+              "maximum_cross_section_m": 0.02052217381309432,
+              "method": "cross_section_clearance_vs_opening_v1",
+              "opening_width_m": 0.10793740027929766,
+              "pass_margin_m": 0.08241522646620333,
+              "reason": null,
+              "source_measurement_cloud_path": "stages/002_after_D2/evidence/object_0004/fused.ply",
+              "status": "TRUE",
+              "target_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply"
+            },
+            "from_object": "object_0004",
+            "from_role": "mixing_tool",
+            "measured_status": "TRUE",
+            "relation": "INSERTABLE_IN",
+            "required_status": "TRUE",
+            "status": "TRUE",
+            "to_object": "object_0001",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {
+              "cavity_depth_m": 0.04506539106369023,
+              "evaluated_inequality": "usable_length_m - grip_allowance_m >= cavity_depth_m",
+              "grip_allowance_m": 0.03,
+              "inference_basis": "GEOMETRY_ONLY",
+              "method": "usable_length_after_grip_vs_cavity_v1",
+              "pass_margin_m": 0.10583552946522051,
+              "reason": null,
+              "source_measurement_cloud_path": "stages/002_after_D2/evidence/object_0004/fused.ply",
+              "status": "TRUE",
+              "target_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply",
+              "usable_length_m": 0.18090092052891074
+            },
+            "from_object": "object_0004",
+            "from_role": "mixing_tool",
+            "measured_status": "TRUE",
+            "relation": "REACHES_BOTTOM",
+            "required_status": "TRUE",
+            "status": "TRUE",
+            "to_object": "object_0001",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {},
+            "from_object": "object_0001",
+            "from_role": "mixing_tool",
+            "measured_status": "UNKNOWN",
+            "relation": "INSERTABLE_IN",
+            "required_status": "TRUE",
+            "status": "UNKNOWN",
+            "to_object": "object_0002",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {},
+            "from_object": "object_0001",
+            "from_role": "mixing_tool",
+            "measured_status": "UNKNOWN",
+            "relation": "REACHES_BOTTOM",
+            "required_status": "TRUE",
+            "status": "UNKNOWN",
+            "to_object": "object_0002",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {},
+            "from_object": "object_0003",
+            "from_role": "mixing_tool",
+            "measured_status": "UNKNOWN",
+            "relation": "INSERTABLE_IN",
+            "required_status": "TRUE",
+            "status": "UNKNOWN",
+            "to_object": "object_0002",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {},
+            "from_object": "object_0003",
+            "from_role": "mixing_tool",
+            "measured_status": "UNKNOWN",
+            "relation": "REACHES_BOTTOM",
+            "required_status": "TRUE",
+            "status": "UNKNOWN",
+            "to_object": "object_0002",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {},
+            "from_object": "object_0004",
+            "from_role": "mixing_tool",
+            "measured_status": "UNKNOWN",
+            "relation": "INSERTABLE_IN",
+            "required_status": "TRUE",
+            "status": "UNKNOWN",
+            "to_object": "object_0002",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {},
+            "from_object": "object_0004",
+            "from_role": "mixing_tool",
+            "measured_status": "UNKNOWN",
+            "relation": "REACHES_BOTTOM",
+            "required_status": "TRUE",
+            "status": "UNKNOWN",
+            "to_object": "object_0002",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {},
+            "from_object": "object_0001",
+            "from_role": "mixing_tool",
+            "measured_status": "UNKNOWN",
+            "relation": "INSERTABLE_IN",
+            "required_status": "TRUE",
+            "status": "UNKNOWN",
+            "to_object": "object_0003",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {},
+            "from_object": "object_0001",
+            "from_role": "mixing_tool",
+            "measured_status": "UNKNOWN",
+            "relation": "REACHES_BOTTOM",
+            "required_status": "TRUE",
+            "status": "UNKNOWN",
+            "to_object": "object_0003",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {},
+            "from_object": "object_0002",
+            "from_role": "mixing_tool",
+            "measured_status": "UNKNOWN",
+            "relation": "INSERTABLE_IN",
+            "required_status": "TRUE",
+            "status": "UNKNOWN",
+            "to_object": "object_0003",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {},
+            "from_object": "object_0002",
+            "from_role": "mixing_tool",
+            "measured_status": "UNKNOWN",
+            "relation": "REACHES_BOTTOM",
+            "required_status": "TRUE",
+            "status": "UNKNOWN",
+            "to_object": "object_0003",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {},
+            "from_object": "object_0004",
+            "from_role": "mixing_tool",
+            "measured_status": "UNKNOWN",
+            "relation": "INSERTABLE_IN",
+            "required_status": "TRUE",
+            "status": "UNKNOWN",
+            "to_object": "object_0003",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {},
+            "from_object": "object_0004",
+            "from_role": "mixing_tool",
+            "measured_status": "UNKNOWN",
+            "relation": "REACHES_BOTTOM",
+            "required_status": "TRUE",
+            "status": "UNKNOWN",
+            "to_object": "object_0003",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {},
+            "from_object": "object_0001",
+            "from_role": "mixing_tool",
+            "measured_status": "UNKNOWN",
+            "relation": "INSERTABLE_IN",
+            "required_status": "TRUE",
+            "status": "UNKNOWN",
+            "to_object": "object_0004",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {},
+            "from_object": "object_0001",
+            "from_role": "mixing_tool",
+            "measured_status": "UNKNOWN",
+            "relation": "REACHES_BOTTOM",
+            "required_status": "TRUE",
+            "status": "UNKNOWN",
+            "to_object": "object_0004",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {},
+            "from_object": "object_0002",
+            "from_role": "mixing_tool",
+            "measured_status": "UNKNOWN",
+            "relation": "INSERTABLE_IN",
+            "required_status": "TRUE",
+            "status": "UNKNOWN",
+            "to_object": "object_0004",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {},
+            "from_object": "object_0002",
+            "from_role": "mixing_tool",
+            "measured_status": "UNKNOWN",
+            "relation": "REACHES_BOTTOM",
+            "required_status": "TRUE",
+            "status": "UNKNOWN",
+            "to_object": "object_0004",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {},
+            "from_object": "object_0003",
+            "from_role": "mixing_tool",
+            "measured_status": "UNKNOWN",
+            "relation": "INSERTABLE_IN",
+            "required_status": "TRUE",
+            "status": "UNKNOWN",
+            "to_object": "object_0004",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {},
+            "from_object": "object_0003",
+            "from_role": "mixing_tool",
+            "measured_status": "UNKNOWN",
+            "relation": "REACHES_BOTTOM",
+            "required_status": "TRUE",
+            "status": "UNKNOWN",
+            "to_object": "object_0004",
+            "to_role": "mixing_container"
+          }
+        ],
+        "runtime_mismatch_reason": null,
+        "selected_labels": {
+          "mixing_container": "bowl",
+          "mixing_tool": "fork"
+        },
+        "selected_role_assignments": {
+          "mixing_container": [
+            "object_0001"
+          ],
+          "mixing_tool": [
+            "object_0004"
+          ]
+        },
+        "semantic_decisions": [
+          {
+            "canonical_label": "bowl",
+            "confidence": 0.8132529109716415,
+            "object_id": "object_0001",
+            "preference": {
+              "canonical_label": "bowl",
+              "detector_aliases": [
+                "bowl",
+                "mixing bowl"
+              ],
+              "rank": 1
+            },
+            "provenance": {
+              "alternatives": [
+                {
+                  "camera_ids": [
+                    "inspection_close",
+                    "inspection_front",
+                    "inspection_left",
+                    "inspection_right"
+                  ],
+                  "label": "bowl",
+                  "mean_confidence": 0.8132529109716415,
+                  "score": 12.120941521181845,
+                  "supporting_view_count": 4
+                },
+                {
+                  "camera_ids": [
+                    "inspection_top"
+                  ],
+                  "label": "cup",
+                  "mean_confidence": 0.253964900970459,
+                  "score": 0.7908561091479756,
+                  "supporting_view_count": 1
+                }
+              ],
+              "association_method": "mask_box_overlap_v1",
+              "canonical_label": "bowl",
+              "checkpoint": "/models/yolov8m-worldv2.pt",
+              "contributing_camera_ids": [
+                "inspection_close",
+                "inspection_front",
+                "inspection_left",
+                "inspection_right"
+              ],
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "mean_confidence": 0.8132529109716415,
+              "observation_source": "RGB_DETECTOR",
+              "quality": {
+                "mean_confidence": 0.8132529109716415,
+                "supporting_view_count": 4,
+                "supporting_view_margin": 3,
+                "validated": true,
+                "weighted_score_margin": 11.330085412033869,
+                "winner_policy": "supporting_views_then_weighted_score",
+                "winning_label_margin": 3.0,
+                "winning_label_margin_kind": "supporting_view_count"
+              },
+              "reason_codes": [],
+              "semantic_evidence_paths": [
+                "stages/000_initial/cameras/inspection_close/rgb.png",
+                "stages/000_initial/cameras/inspection_front/rgb.png",
+                "stages/000_initial/cameras/inspection_left/rgb.png",
+                "stages/000_initial/cameras/inspection_right/rgb.png",
+                "stages/000_initial/cameras/inspection_top/rgb.png"
+              ],
+              "semantic_record_path": "stages/000_initial/semantics/object_0001/semantic_evidence.json",
+              "source_region": "INITIAL",
+              "source_stage": 0,
+              "status": "SUPPORTED",
+              "supporting_view_count": 4,
+              "supporting_view_margin": 3,
+              "weighted_score_margin": 11.330085412033869,
+              "winner_policy": "supporting_views_then_weighted_score",
+              "winning_label_margin": 3.0,
+              "winning_label_margin_kind": "supporting_view_count"
+            },
+            "reason": "SUPPORTED_ACCEPTABLE_LABEL",
+            "role": "mixing_container",
+            "semantic_rank": 1,
+            "status": "TRUE"
+          },
+          {
+            "acceptable_labels": [
+              "bowl"
+            ],
+            "canonical_label": "pen",
+            "confidence": 0.613935673236847,
+            "object_id": "object_0002",
+            "provenance": {
+              "alternatives": [
+                {
+                  "camera_ids": [
+                    "inspection_close",
+                    "inspection_front",
+                    "inspection_left",
+                    "inspection_right",
+                    "inspection_top"
+                  ],
+                  "label": "pen",
+                  "mean_confidence": 0.613935673236847,
+                  "score": 8.20389426907899,
+                  "supporting_view_count": 5
+                }
+              ],
+              "association_method": "mask_box_overlap_v1",
+              "canonical_label": "pen",
+              "checkpoint": "/models/yolov8m-worldv2.pt",
+              "contributing_camera_ids": [
+                "inspection_close",
+                "inspection_front",
+                "inspection_left",
+                "inspection_right",
+                "inspection_top"
+              ],
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "mean_confidence": 0.613935673236847,
+              "observation_source": "RGB_DETECTOR",
+              "quality": {
+                "mean_confidence": 0.613935673236847,
+                "supporting_view_count": 5,
+                "supporting_view_margin": 5,
+                "validated": true,
+                "weighted_score_margin": 8.20389426907899,
+                "winner_policy": "supporting_views_then_weighted_score",
+                "winning_label_margin": 5.0,
+                "winning_label_margin_kind": "supporting_view_count"
+              },
+              "reason_codes": [],
+              "semantic_evidence_paths": [
+                "stages/000_initial/cameras/inspection_close/rgb.png",
+                "stages/000_initial/cameras/inspection_front/rgb.png",
+                "stages/000_initial/cameras/inspection_left/rgb.png",
+                "stages/000_initial/cameras/inspection_right/rgb.png",
+                "stages/000_initial/cameras/inspection_top/rgb.png"
+              ],
+              "semantic_record_path": "stages/000_initial/semantics/object_0002/semantic_evidence.json",
+              "source_region": "INITIAL",
+              "source_stage": 0,
+              "status": "SUPPORTED",
+              "supporting_view_count": 5,
+              "supporting_view_margin": 5,
+              "weighted_score_margin": 8.20389426907899,
+              "winner_policy": "supporting_views_then_weighted_score",
+              "winning_label_margin": 5.0,
+              "winning_label_margin_kind": "supporting_view_count"
+            },
+            "reason": "SUPPORTED_EXCLUDED_LABEL",
+            "role": "mixing_container",
+            "semantic_rank": null,
+            "status": "FALSE"
+          },
+          {
+            "acceptable_labels": [
+              "bowl"
+            ],
+            "canonical_label": "spoon",
+            "confidence": 0.5160278379917145,
+            "object_id": "object_0003",
+            "provenance": {
+              "alternatives": [
+                {
+                  "camera_ids": [
+                    "inspection_close",
+                    "inspection_top"
+                  ],
+                  "label": "spoon",
+                  "mean_confidence": 0.5160278379917145,
+                  "score": 4.133604927540571,
+                  "supporting_view_count": 2
+                },
+                {
+                  "camera_ids": [
+                    "inspection_front",
+                    "inspection_left"
+                  ],
+                  "label": "knife",
+                  "mean_confidence": 0.21145512908697128,
+                  "score": 1.669098033295131,
+                  "supporting_view_count": 2
+                },
+                {
+                  "camera_ids": [
+                    "inspection_right"
+                  ],
+                  "label": "bowl",
+                  "mean_confidence": 0.15665975213050842,
+                  "score": 0.6122000997765334,
+                  "supporting_view_count": 1
+                }
+              ],
+              "association_method": "mask_box_overlap_v1",
+              "canonical_label": "spoon",
+              "checkpoint": "/models/yolov8m-worldv2.pt",
+              "contributing_camera_ids": [
+                "inspection_close",
+                "inspection_top"
+              ],
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "mean_confidence": 0.5160278379917145,
+              "observation_source": "RGB_DETECTOR",
+              "quality": {
+                "mean_confidence": 0.5160278379917145,
+                "supporting_view_count": 2,
+                "supporting_view_margin": 0,
+                "validated": true,
+                "weighted_score_margin": 2.4645068942454396,
+                "winner_policy": "supporting_views_then_weighted_score",
+                "winning_label_margin": 2.4645068942454396,
+                "winning_label_margin_kind": "weighted_score"
+              },
+              "reason_codes": [],
+              "semantic_evidence_paths": [
+                "stages/001_after_D1/cameras/inspection_close/rgb.png",
+                "stages/001_after_D1/cameras/inspection_right/rgb.png",
+                "stages/001_after_D1/cameras/inspection_top/rgb.png",
+                "stages/001_after_D1/semantics/cameras/inspection_front/crops/000_object_0003.png",
+                "stages/001_after_D1/semantics/cameras/inspection_left/crops/000_object_0003.png"
+              ],
+              "semantic_record_path": "stages/001_after_D1/semantics/object_0003/semantic_evidence.json",
+              "source_region": "D1",
+              "source_stage": 1,
+              "status": "SUPPORTED",
+              "supporting_view_count": 2,
+              "supporting_view_margin": 0,
+              "weighted_score_margin": 2.4645068942454396,
+              "winner_policy": "supporting_views_then_weighted_score",
+              "winning_label_margin": 2.4645068942454396,
+              "winning_label_margin_kind": "weighted_score"
+            },
+            "reason": "SUPPORTED_EXCLUDED_LABEL",
+            "role": "mixing_container",
+            "semantic_rank": null,
+            "status": "FALSE"
+          },
+          {
+            "acceptable_labels": [
+              "bowl"
+            ],
+            "canonical_label": "fork",
+            "confidence": 0.7052681744098663,
+            "object_id": "object_0004",
+            "provenance": {
+              "alternatives": [
+                {
+                  "camera_ids": [
+                    "inspection_close",
+                    "inspection_top"
+                  ],
+                  "label": "fork",
+                  "mean_confidence": 0.7052681744098663,
+                  "score": 4.139384041684964,
+                  "supporting_view_count": 2
+                },
+                {
+                  "camera_ids": [
+                    "inspection_front",
+                    "inspection_right"
+                  ],
+                  "label": "knife",
+                  "mean_confidence": 0.34517616033554077,
+                  "score": 1.9625367829622602,
+                  "supporting_view_count": 2
+                },
+                {
+                  "camera_ids": [
+                    "inspection_left"
+                  ],
+                  "label": "pen",
+                  "mean_confidence": 0.3027869462966919,
+                  "score": 0.8493214833759,
+                  "supporting_view_count": 1
+                }
+              ],
+              "association_method": "mask_box_overlap_v1",
+              "canonical_label": "fork",
+              "checkpoint": "/models/yolov8m-worldv2.pt",
+              "contributing_camera_ids": [
+                "inspection_close",
+                "inspection_top"
+              ],
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "mean_confidence": 0.7052681744098663,
+              "observation_source": "RGB_DETECTOR",
+              "quality": {
+                "mean_confidence": 0.7052681744098663,
+                "supporting_view_count": 2,
+                "supporting_view_margin": 0,
+                "validated": true,
+                "weighted_score_margin": 2.1768472587227032,
+                "winner_policy": "supporting_views_then_weighted_score",
+                "winning_label_margin": 2.1768472587227032,
+                "winning_label_margin_kind": "weighted_score"
+              },
+              "reason_codes": [],
+              "semantic_evidence_paths": [
+                "stages/002_after_D2/cameras/inspection_close/rgb.png",
+                "stages/002_after_D2/cameras/inspection_left/rgb.png",
+                "stages/002_after_D2/cameras/inspection_top/rgb.png",
+                "stages/002_after_D2/semantics/cameras/inspection_front/crops/000_object_0004.png",
+                "stages/002_after_D2/semantics/cameras/inspection_right/crops/000_object_0004.png"
+              ],
+              "semantic_record_path": "stages/002_after_D2/semantics/object_0004/semantic_evidence.json",
+              "source_region": "D2",
+              "source_stage": 2,
+              "status": "SUPPORTED",
+              "supporting_view_count": 2,
+              "supporting_view_margin": 0,
+              "weighted_score_margin": 2.1768472587227032,
+              "winner_policy": "supporting_views_then_weighted_score",
+              "winning_label_margin": 2.1768472587227032,
+              "winning_label_margin_kind": "weighted_score"
+            },
+            "reason": "SUPPORTED_EXCLUDED_LABEL",
+            "role": "mixing_container",
+            "semantic_rank": null,
+            "status": "FALSE"
+          },
+          {
+            "acceptable_labels": [
+              "spoon",
+              "fork",
+              "spatula"
+            ],
+            "canonical_label": "bowl",
+            "confidence": 0.8132529109716415,
+            "object_id": "object_0001",
+            "provenance": {
+              "alternatives": [
+                {
+                  "camera_ids": [
+                    "inspection_close",
+                    "inspection_front",
+                    "inspection_left",
+                    "inspection_right"
+                  ],
+                  "label": "bowl",
+                  "mean_confidence": 0.8132529109716415,
+                  "score": 12.120941521181845,
+                  "supporting_view_count": 4
+                },
+                {
+                  "camera_ids": [
+                    "inspection_top"
+                  ],
+                  "label": "cup",
+                  "mean_confidence": 0.253964900970459,
+                  "score": 0.7908561091479756,
+                  "supporting_view_count": 1
+                }
+              ],
+              "association_method": "mask_box_overlap_v1",
+              "canonical_label": "bowl",
+              "checkpoint": "/models/yolov8m-worldv2.pt",
+              "contributing_camera_ids": [
+                "inspection_close",
+                "inspection_front",
+                "inspection_left",
+                "inspection_right"
+              ],
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "mean_confidence": 0.8132529109716415,
+              "observation_source": "RGB_DETECTOR",
+              "quality": {
+                "mean_confidence": 0.8132529109716415,
+                "supporting_view_count": 4,
+                "supporting_view_margin": 3,
+                "validated": true,
+                "weighted_score_margin": 11.330085412033869,
+                "winner_policy": "supporting_views_then_weighted_score",
+                "winning_label_margin": 3.0,
+                "winning_label_margin_kind": "supporting_view_count"
+              },
+              "reason_codes": [],
+              "semantic_evidence_paths": [
+                "stages/000_initial/cameras/inspection_close/rgb.png",
+                "stages/000_initial/cameras/inspection_front/rgb.png",
+                "stages/000_initial/cameras/inspection_left/rgb.png",
+                "stages/000_initial/cameras/inspection_right/rgb.png",
+                "stages/000_initial/cameras/inspection_top/rgb.png"
+              ],
+              "semantic_record_path": "stages/000_initial/semantics/object_0001/semantic_evidence.json",
+              "source_region": "INITIAL",
+              "source_stage": 0,
+              "status": "SUPPORTED",
+              "supporting_view_count": 4,
+              "supporting_view_margin": 3,
+              "weighted_score_margin": 11.330085412033869,
+              "winner_policy": "supporting_views_then_weighted_score",
+              "winning_label_margin": 3.0,
+              "winning_label_margin_kind": "supporting_view_count"
+            },
+            "reason": "SUPPORTED_EXCLUDED_LABEL",
+            "role": "mixing_tool",
+            "semantic_rank": null,
+            "status": "FALSE"
+          },
+          {
+            "acceptable_labels": [
+              "spoon",
+              "fork",
+              "spatula"
+            ],
+            "canonical_label": "pen",
+            "confidence": 0.613935673236847,
+            "object_id": "object_0002",
+            "provenance": {
+              "alternatives": [
+                {
+                  "camera_ids": [
+                    "inspection_close",
+                    "inspection_front",
+                    "inspection_left",
+                    "inspection_right",
+                    "inspection_top"
+                  ],
+                  "label": "pen",
+                  "mean_confidence": 0.613935673236847,
+                  "score": 8.20389426907899,
+                  "supporting_view_count": 5
+                }
+              ],
+              "association_method": "mask_box_overlap_v1",
+              "canonical_label": "pen",
+              "checkpoint": "/models/yolov8m-worldv2.pt",
+              "contributing_camera_ids": [
+                "inspection_close",
+                "inspection_front",
+                "inspection_left",
+                "inspection_right",
+                "inspection_top"
+              ],
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "mean_confidence": 0.613935673236847,
+              "observation_source": "RGB_DETECTOR",
+              "quality": {
+                "mean_confidence": 0.613935673236847,
+                "supporting_view_count": 5,
+                "supporting_view_margin": 5,
+                "validated": true,
+                "weighted_score_margin": 8.20389426907899,
+                "winner_policy": "supporting_views_then_weighted_score",
+                "winning_label_margin": 5.0,
+                "winning_label_margin_kind": "supporting_view_count"
+              },
+              "reason_codes": [],
+              "semantic_evidence_paths": [
+                "stages/000_initial/cameras/inspection_close/rgb.png",
+                "stages/000_initial/cameras/inspection_front/rgb.png",
+                "stages/000_initial/cameras/inspection_left/rgb.png",
+                "stages/000_initial/cameras/inspection_right/rgb.png",
+                "stages/000_initial/cameras/inspection_top/rgb.png"
+              ],
+              "semantic_record_path": "stages/000_initial/semantics/object_0002/semantic_evidence.json",
+              "source_region": "INITIAL",
+              "source_stage": 0,
+              "status": "SUPPORTED",
+              "supporting_view_count": 5,
+              "supporting_view_margin": 5,
+              "weighted_score_margin": 8.20389426907899,
+              "winner_policy": "supporting_views_then_weighted_score",
+              "winning_label_margin": 5.0,
+              "winning_label_margin_kind": "supporting_view_count"
+            },
+            "reason": "SUPPORTED_EXCLUDED_LABEL",
+            "role": "mixing_tool",
+            "semantic_rank": null,
+            "status": "FALSE"
+          },
+          {
+            "canonical_label": "spoon",
+            "confidence": 0.5160278379917145,
+            "object_id": "object_0003",
+            "preference": {
+              "canonical_label": "spoon",
+              "detector_aliases": [
+                "spoon",
+                "tablespoon",
+                "teaspoon"
+              ],
+              "rank": 1
+            },
+            "provenance": {
+              "alternatives": [
+                {
+                  "camera_ids": [
+                    "inspection_close",
+                    "inspection_top"
+                  ],
+                  "label": "spoon",
+                  "mean_confidence": 0.5160278379917145,
+                  "score": 4.133604927540571,
+                  "supporting_view_count": 2
+                },
+                {
+                  "camera_ids": [
+                    "inspection_front",
+                    "inspection_left"
+                  ],
+                  "label": "knife",
+                  "mean_confidence": 0.21145512908697128,
+                  "score": 1.669098033295131,
+                  "supporting_view_count": 2
+                },
+                {
+                  "camera_ids": [
+                    "inspection_right"
+                  ],
+                  "label": "bowl",
+                  "mean_confidence": 0.15665975213050842,
+                  "score": 0.6122000997765334,
+                  "supporting_view_count": 1
+                }
+              ],
+              "association_method": "mask_box_overlap_v1",
+              "canonical_label": "spoon",
+              "checkpoint": "/models/yolov8m-worldv2.pt",
+              "contributing_camera_ids": [
+                "inspection_close",
+                "inspection_top"
+              ],
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "mean_confidence": 0.5160278379917145,
+              "observation_source": "RGB_DETECTOR",
+              "quality": {
+                "mean_confidence": 0.5160278379917145,
+                "supporting_view_count": 2,
+                "supporting_view_margin": 0,
+                "validated": true,
+                "weighted_score_margin": 2.4645068942454396,
+                "winner_policy": "supporting_views_then_weighted_score",
+                "winning_label_margin": 2.4645068942454396,
+                "winning_label_margin_kind": "weighted_score"
+              },
+              "reason_codes": [],
+              "semantic_evidence_paths": [
+                "stages/001_after_D1/cameras/inspection_close/rgb.png",
+                "stages/001_after_D1/cameras/inspection_right/rgb.png",
+                "stages/001_after_D1/cameras/inspection_top/rgb.png",
+                "stages/001_after_D1/semantics/cameras/inspection_front/crops/000_object_0003.png",
+                "stages/001_after_D1/semantics/cameras/inspection_left/crops/000_object_0003.png"
+              ],
+              "semantic_record_path": "stages/001_after_D1/semantics/object_0003/semantic_evidence.json",
+              "source_region": "D1",
+              "source_stage": 1,
+              "status": "SUPPORTED",
+              "supporting_view_count": 2,
+              "supporting_view_margin": 0,
+              "weighted_score_margin": 2.4645068942454396,
+              "winner_policy": "supporting_views_then_weighted_score",
+              "winning_label_margin": 2.4645068942454396,
+              "winning_label_margin_kind": "weighted_score"
+            },
+            "reason": "SUPPORTED_ACCEPTABLE_LABEL",
+            "role": "mixing_tool",
+            "semantic_rank": 1,
+            "status": "TRUE"
+          },
+          {
+            "canonical_label": "fork",
+            "confidence": 0.7052681744098663,
+            "object_id": "object_0004",
+            "preference": {
+              "canonical_label": "fork",
+              "detector_aliases": [
+                "dinner fork",
+                "fork"
+              ],
+              "rank": 2
+            },
+            "provenance": {
+              "alternatives": [
+                {
+                  "camera_ids": [
+                    "inspection_close",
+                    "inspection_top"
+                  ],
+                  "label": "fork",
+                  "mean_confidence": 0.7052681744098663,
+                  "score": 4.139384041684964,
+                  "supporting_view_count": 2
+                },
+                {
+                  "camera_ids": [
+                    "inspection_front",
+                    "inspection_right"
+                  ],
+                  "label": "knife",
+                  "mean_confidence": 0.34517616033554077,
+                  "score": 1.9625367829622602,
+                  "supporting_view_count": 2
+                },
+                {
+                  "camera_ids": [
+                    "inspection_left"
+                  ],
+                  "label": "pen",
+                  "mean_confidence": 0.3027869462966919,
+                  "score": 0.8493214833759,
+                  "supporting_view_count": 1
+                }
+              ],
+              "association_method": "mask_box_overlap_v1",
+              "canonical_label": "fork",
+              "checkpoint": "/models/yolov8m-worldv2.pt",
+              "contributing_camera_ids": [
+                "inspection_close",
+                "inspection_top"
+              ],
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "mean_confidence": 0.7052681744098663,
+              "observation_source": "RGB_DETECTOR",
+              "quality": {
+                "mean_confidence": 0.7052681744098663,
+                "supporting_view_count": 2,
+                "supporting_view_margin": 0,
+                "validated": true,
+                "weighted_score_margin": 2.1768472587227032,
+                "winner_policy": "supporting_views_then_weighted_score",
+                "winning_label_margin": 2.1768472587227032,
+                "winning_label_margin_kind": "weighted_score"
+              },
+              "reason_codes": [],
+              "semantic_evidence_paths": [
+                "stages/002_after_D2/cameras/inspection_close/rgb.png",
+                "stages/002_after_D2/cameras/inspection_left/rgb.png",
+                "stages/002_after_D2/cameras/inspection_top/rgb.png",
+                "stages/002_after_D2/semantics/cameras/inspection_front/crops/000_object_0004.png",
+                "stages/002_after_D2/semantics/cameras/inspection_right/crops/000_object_0004.png"
+              ],
+              "semantic_record_path": "stages/002_after_D2/semantics/object_0004/semantic_evidence.json",
+              "source_region": "D2",
+              "source_stage": 2,
+              "status": "SUPPORTED",
+              "supporting_view_count": 2,
+              "supporting_view_margin": 0,
+              "weighted_score_margin": 2.1768472587227032,
+              "winner_policy": "supporting_views_then_weighted_score",
+              "winning_label_margin": 2.1768472587227032,
+              "winning_label_margin_kind": "weighted_score"
+            },
+            "reason": "SUPPORTED_ACCEPTABLE_LABEL",
+            "role": "mixing_tool",
+            "semantic_rank": 2,
+            "status": "TRUE"
+          }
+        ]
+      },
+      "semantic-only": {
+        "actual_status": "COMPLETE",
+        "completion_stage": 1,
+        "diagnostic_ablation": true,
+        "evaluation_ground_truth": {
+          "incorrect_selection_reasons": {
+            "geometry-only": "The marker-like object is geometrically compatible but is not a semantically acceptable mixing tool.",
+            "semantic-only": "The oversized spoon has the preferred label but its measured cross-section fails INSERTABLE_IN for the measured bowl opening."
+          },
+          "selected_labels": {
+            "mixing_container": "bowl",
+            "mixing_tool": "fork"
+          },
+          "status": "COMPLETE"
+        },
+        "evidence_artifact": "stages/001_after_D1/grounding_mode_comparison.json",
+        "expected": {
+          "completion_stage": 1,
+          "selected_labels": {
+            "mixing_container": "bowl",
+            "mixing_tool": "spoon"
+          }
+        },
+        "failure_reason": "The oversized spoon has the preferred label but its measured cross-section fails INSERTABLE_IN for the measured bowl opening.",
+        "geometric_decisions": [
+          {
+            "checks": [
+              {
+                "evidence": {
+                  "angular_bin_count": 12,
+                  "central_top_occupancy_fraction": 0.0,
+                  "central_top_point_count": 0,
+                  "contributing_camera_count": 5,
+                  "definition": "enclosed_rim AND open_centre AND observed_interior_below_rim",
+                  "estimated_cavity_depth_m": 0.04506539106369023,
+                  "estimated_opening_length_m": 0.10889179184431277,
+                  "estimated_opening_width_m": 0.10793740027929766,
+                  "interior_camera_count": 5,
+                  "interior_camera_ids": [
+                    "inspection_left",
+                    "inspection_right",
+                    "inspection_top",
+                    "inspection_front",
+                    "inspection_close"
+                  ],
+                  "interior_point_count": 312,
+                  "minimum_resolvable_depth_m": 0.006,
+                  "minimum_resolvable_opening_m": 0.009,
+                  "minimum_resolvable_vertical_extent_m": 0.006,
+                  "occupied_angular_bins": 12,
+                  "outlier_fraction": 0.0,
+                  "planarity_score": 0.7713346608089917,
+                  "point_count": 2898,
+                  "rim_enclosure_ratio": 1.0,
+                  "rim_normal_alignment": 0.9998675964367806,
+                  "rim_normal_world": [
+                    0.00027284796060797744,
+                    0.01627006913708808,
+                    0.9998675964367806
+                  ],
+                  "rim_point_count": 406,
+                  "rim_shell_fraction": 1.0,
+                  "structural_components": {
+                    "ENCLOSED_RIM": "TRUE",
+                    "INTERIOR_BELOW_RIM": "TRUE",
+                    "OPEN_CENTRE": "TRUE"
+                  },
+                  "top_candidate_point_count": 406,
+                  "top_height_spread_m": 0.003455430269241333,
+                  "vertical_extent_m": 0.04585325956344599
+                },
+                "kind": "predicate",
+                "method": "open_cavity_structure_v3",
+                "name": "OPEN_CAVITY",
+                "reason": null,
+                "required_status": "TRUE",
+                "status": "TRUE"
+              }
+            ],
+            "object_id": "object_0001",
+            "role": "mixing_container",
+            "status": "TRUE"
+          },
+          {
+            "checks": [
+              {
+                "evidence": {
+                  "contributing_camera_count": 5,
+                  "definition": "enclosed_rim AND open_centre AND observed_interior_below_rim",
+                  "estimated_opening_length_m": 0.11262046166924555,
+                  "estimated_opening_width_m": 0.005786047819257645,
+                  "minimum_resolvable_opening_m": 0.009,
+                  "minimum_resolvable_vertical_extent_m": 0.006,
+                  "planarity_score": 0.6297996049016737,
+                  "point_count": 631,
+                  "rim_normal_alignment": 0.9997670324702227,
+                  "rim_normal_world": [
+                    0.02143121342570468,
+                    0.002565906620877745,
+                    0.9997670324702227
+                  ],
+                  "rim_point_count": 32,
+                  "structural_components": {
+                    "ENCLOSED_RIM": "UNKNOWN",
+                    "INTERIOR_BELOW_RIM": "UNKNOWN",
+                    "OPEN_CENTRE": "UNKNOWN"
+                  },
+                  "top_candidate_point_count": 89,
+                  "vertical_extent_m": 0.014777469635009699
+                },
+                "kind": "predicate",
+                "method": "open_cavity_structure_v3",
+                "name": "OPEN_CAVITY",
+                "reason": "UNRESOLVED_OPENING",
+                "required_status": "TRUE",
+                "status": "UNKNOWN"
+              }
+            ],
+            "object_id": "object_0002",
+            "role": "mixing_container",
+            "status": "UNKNOWN"
+          },
+          {
+            "checks": [
+              {
+                "evidence": {
+                  "contributing_camera_count": 5,
+                  "definition": "enclosed_rim AND open_centre AND observed_interior_below_rim",
+                  "planarity_score": 0.9786851317400065,
+                  "point_count": 3950,
+                  "structural_components": {
+                    "ENCLOSED_RIM": "UNKNOWN",
+                    "INTERIOR_BELOW_RIM": "UNKNOWN",
+                    "OPEN_CENTRE": "UNKNOWN"
+                  },
+                  "vertical_extent_m": 0.021016767024993888
+                },
+                "kind": "predicate",
+                "method": "open_cavity_structure_v3",
+                "name": "OPEN_CAVITY",
+                "reason": "PREDOMINANTLY_PLANAR_EVIDENCE",
+                "required_status": "TRUE",
+                "status": "FALSE"
+              }
+            ],
+            "object_id": "object_0003",
+            "role": "mixing_container",
+            "status": "FALSE"
+          },
+          {
+            "checks": [
+              {
+                "evidence": {
+                  "absolute_length_used_for_decision": false,
+                  "definition": "largest robust extent dominates middle robust extent",
+                  "dominant_axis_ratio": 1.001196656637981,
+                  "minimum_dominant_axis_ratio": 2.4,
+                  "total_length_m": 0.09687105368624395
+                },
+                "kind": "predicate",
+                "method": "scale_independent_principal_axis_dominance_v2",
+                "name": "ELONGATED_OBJECT",
+                "reason": null,
+                "required_status": "TRUE",
+                "status": "FALSE"
+              }
+            ],
+            "object_id": "object_0001",
+            "role": "mixing_tool",
+            "status": "FALSE"
+          },
+          {
+            "checks": [
+              {
+                "evidence": {
+                  "absolute_length_used_for_decision": false,
+                  "definition": "largest robust extent dominates middle robust extent",
+                  "dominant_axis_ratio": 6.337638203511777,
+                  "minimum_dominant_axis_ratio": 2.4,
+                  "total_length_m": 0.11091293440838906
+                },
+                "kind": "predicate",
+                "method": "scale_independent_principal_axis_dominance_v2",
+                "name": "ELONGATED_OBJECT",
+                "reason": null,
+                "required_status": "TRUE",
+                "status": "TRUE"
+              }
+            ],
+            "object_id": "object_0002",
+            "role": "mixing_tool",
+            "status": "TRUE"
+          },
+          {
+            "checks": [
+              {
+                "evidence": {
+                  "absolute_length_used_for_decision": false,
+                  "definition": "largest robust extent dominates middle robust extent",
+                  "dominant_axis_ratio": 2.782896516656836,
+                  "minimum_dominant_axis_ratio": 2.4,
+                  "total_length_m": 0.3258880621359259
+                },
+                "kind": "predicate",
+                "method": "scale_independent_principal_axis_dominance_v2",
+                "name": "ELONGATED_OBJECT",
+                "reason": null,
+                "required_status": "TRUE",
+                "status": "TRUE"
+              }
+            ],
+            "object_id": "object_0003",
+            "role": "mixing_tool",
+            "status": "TRUE"
+          }
+        ],
+        "matches_evaluation_ground_truth": false,
+        "matches_expected_runtime_result": true,
+        "mode": "semantic-only",
+        "regions_opened": [
+          "D1"
+        ],
+        "relation_decisions": [
+          {
+            "evidence": {
+              "clearance_margin_m": 0.005,
+              "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+              "inference_basis": "GEOMETRY_ONLY",
+              "maximum_cross_section_m": 0.017500673097263678,
+              "method": "cross_section_clearance_vs_opening_v1",
+              "opening_width_m": 0.10793740027929766,
+              "pass_margin_m": 0.08543672718203398,
+              "reason": null,
+              "source_measurement_cloud_path": "stages/000_initial/evidence/object_0002/fused.ply",
+              "status": "TRUE",
+              "target_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply"
+            },
+            "from_object": "object_0002",
+            "from_role": "mixing_tool",
+            "measured_status": "TRUE",
+            "relation": "INSERTABLE_IN",
+            "required_status": "TRUE",
+            "status": "TRUE",
+            "to_object": "object_0001",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {
+              "cavity_depth_m": 0.04506539106369023,
+              "evaluated_inequality": "usable_length_m - grip_allowance_m >= cavity_depth_m",
+              "grip_allowance_m": 0.03,
+              "inference_basis": "GEOMETRY_ONLY",
+              "method": "usable_length_after_grip_vs_cavity_v1",
+              "pass_margin_m": 0.035847543344698835,
+              "reason": null,
+              "source_measurement_cloud_path": "stages/000_initial/evidence/object_0002/fused.ply",
+              "status": "TRUE",
+              "target_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply",
+              "usable_length_m": 0.11091293440838906
+            },
+            "from_object": "object_0002",
+            "from_role": "mixing_tool",
+            "measured_status": "TRUE",
+            "relation": "REACHES_BOTTOM",
+            "required_status": "TRUE",
+            "status": "TRUE",
+            "to_object": "object_0001",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {
+              "clearance_margin_m": 0.005,
+              "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+              "inference_basis": "GEOMETRY_ONLY",
+              "maximum_cross_section_m": 0.11710390960833264,
+              "method": "cross_section_clearance_vs_opening_v1",
+              "opening_width_m": 0.10793740027929766,
+              "pass_margin_m": -0.014166509329034987,
+              "reason": null,
+              "source_measurement_cloud_path": "stages/001_after_D1/evidence/object_0003/fused.ply",
+              "status": "FALSE",
+              "target_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply"
+            },
+            "from_object": "object_0003",
+            "from_role": "mixing_tool",
+            "measured_status": "FALSE",
+            "relation": "INSERTABLE_IN",
+            "required_status": "TRUE",
+            "status": "TRUE",
+            "to_object": "object_0001",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {
+              "cavity_depth_m": 0.04506539106369023,
+              "evaluated_inequality": "usable_length_m - grip_allowance_m >= cavity_depth_m",
+              "grip_allowance_m": 0.03,
+              "inference_basis": "GEOMETRY_ONLY",
+              "method": "usable_length_after_grip_vs_cavity_v1",
+              "pass_margin_m": 0.25082267107223566,
+              "reason": null,
+              "source_measurement_cloud_path": "stages/001_after_D1/evidence/object_0003/fused.ply",
+              "status": "TRUE",
+              "target_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply",
+              "usable_length_m": 0.3258880621359259
+            },
+            "from_object": "object_0003",
+            "from_role": "mixing_tool",
+            "measured_status": "TRUE",
+            "relation": "REACHES_BOTTOM",
+            "required_status": "TRUE",
+            "status": "TRUE",
+            "to_object": "object_0001",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {},
+            "from_object": "object_0001",
+            "from_role": "mixing_tool",
+            "measured_status": "UNKNOWN",
+            "relation": "INSERTABLE_IN",
+            "required_status": "TRUE",
+            "status": "TRUE",
+            "to_object": "object_0002",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {},
+            "from_object": "object_0001",
+            "from_role": "mixing_tool",
+            "measured_status": "UNKNOWN",
+            "relation": "REACHES_BOTTOM",
+            "required_status": "TRUE",
+            "status": "TRUE",
+            "to_object": "object_0002",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {},
+            "from_object": "object_0003",
+            "from_role": "mixing_tool",
+            "measured_status": "UNKNOWN",
+            "relation": "INSERTABLE_IN",
+            "required_status": "TRUE",
+            "status": "TRUE",
+            "to_object": "object_0002",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {},
+            "from_object": "object_0003",
+            "from_role": "mixing_tool",
+            "measured_status": "UNKNOWN",
+            "relation": "REACHES_BOTTOM",
+            "required_status": "TRUE",
+            "status": "TRUE",
+            "to_object": "object_0002",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {},
+            "from_object": "object_0001",
+            "from_role": "mixing_tool",
+            "measured_status": "UNKNOWN",
+            "relation": "INSERTABLE_IN",
+            "required_status": "TRUE",
+            "status": "TRUE",
+            "to_object": "object_0003",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {},
+            "from_object": "object_0001",
+            "from_role": "mixing_tool",
+            "measured_status": "UNKNOWN",
+            "relation": "REACHES_BOTTOM",
+            "required_status": "TRUE",
+            "status": "TRUE",
+            "to_object": "object_0003",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {},
+            "from_object": "object_0002",
+            "from_role": "mixing_tool",
+            "measured_status": "UNKNOWN",
+            "relation": "INSERTABLE_IN",
+            "required_status": "TRUE",
+            "status": "TRUE",
+            "to_object": "object_0003",
+            "to_role": "mixing_container"
+          },
+          {
+            "evidence": {},
+            "from_object": "object_0002",
+            "from_role": "mixing_tool",
+            "measured_status": "UNKNOWN",
+            "relation": "REACHES_BOTTOM",
+            "required_status": "TRUE",
+            "status": "TRUE",
+            "to_object": "object_0003",
+            "to_role": "mixing_container"
+          }
+        ],
+        "runtime_mismatch_reason": null,
+        "selected_labels": {
+          "mixing_container": "bowl",
+          "mixing_tool": "spoon"
+        },
+        "selected_role_assignments": {
+          "mixing_container": [
+            "object_0001"
+          ],
+          "mixing_tool": [
+            "object_0003"
+          ]
+        },
+        "semantic_decisions": [
+          {
+            "canonical_label": "bowl",
+            "confidence": 0.8132529109716415,
+            "object_id": "object_0001",
+            "preference": {
+              "canonical_label": "bowl",
+              "detector_aliases": [
+                "bowl",
+                "mixing bowl"
+              ],
+              "rank": 1
+            },
+            "provenance": {
+              "alternatives": [
+                {
+                  "camera_ids": [
+                    "inspection_close",
+                    "inspection_front",
+                    "inspection_left",
+                    "inspection_right"
+                  ],
+                  "label": "bowl",
+                  "mean_confidence": 0.8132529109716415,
+                  "score": 12.120941521181845,
+                  "supporting_view_count": 4
+                },
+                {
+                  "camera_ids": [
+                    "inspection_top"
+                  ],
+                  "label": "cup",
+                  "mean_confidence": 0.253964900970459,
+                  "score": 0.7908561091479756,
+                  "supporting_view_count": 1
+                }
+              ],
+              "association_method": "mask_box_overlap_v1",
+              "canonical_label": "bowl",
+              "checkpoint": "/models/yolov8m-worldv2.pt",
+              "contributing_camera_ids": [
+                "inspection_close",
+                "inspection_front",
+                "inspection_left",
+                "inspection_right"
+              ],
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "mean_confidence": 0.8132529109716415,
+              "observation_source": "RGB_DETECTOR",
+              "quality": {
+                "mean_confidence": 0.8132529109716415,
+                "supporting_view_count": 4,
+                "supporting_view_margin": 3,
+                "validated": true,
+                "weighted_score_margin": 11.330085412033869,
+                "winner_policy": "supporting_views_then_weighted_score",
+                "winning_label_margin": 3.0,
+                "winning_label_margin_kind": "supporting_view_count"
+              },
+              "reason_codes": [],
+              "semantic_evidence_paths": [
+                "stages/000_initial/cameras/inspection_close/rgb.png",
+                "stages/000_initial/cameras/inspection_front/rgb.png",
+                "stages/000_initial/cameras/inspection_left/rgb.png",
+                "stages/000_initial/cameras/inspection_right/rgb.png",
+                "stages/000_initial/cameras/inspection_top/rgb.png"
+              ],
+              "semantic_record_path": "stages/000_initial/semantics/object_0001/semantic_evidence.json",
+              "source_region": "INITIAL",
+              "source_stage": 0,
+              "status": "SUPPORTED",
+              "supporting_view_count": 4,
+              "supporting_view_margin": 3,
+              "weighted_score_margin": 11.330085412033869,
+              "winner_policy": "supporting_views_then_weighted_score",
+              "winning_label_margin": 3.0,
+              "winning_label_margin_kind": "supporting_view_count"
+            },
+            "reason": "SUPPORTED_ACCEPTABLE_LABEL",
+            "role": "mixing_container",
+            "semantic_rank": 1,
+            "status": "TRUE"
+          },
+          {
+            "acceptable_labels": [
+              "bowl"
+            ],
+            "canonical_label": "pen",
+            "confidence": 0.613935673236847,
+            "object_id": "object_0002",
+            "provenance": {
+              "alternatives": [
+                {
+                  "camera_ids": [
+                    "inspection_close",
+                    "inspection_front",
+                    "inspection_left",
+                    "inspection_right",
+                    "inspection_top"
+                  ],
+                  "label": "pen",
+                  "mean_confidence": 0.613935673236847,
+                  "score": 8.20389426907899,
+                  "supporting_view_count": 5
+                }
+              ],
+              "association_method": "mask_box_overlap_v1",
+              "canonical_label": "pen",
+              "checkpoint": "/models/yolov8m-worldv2.pt",
+              "contributing_camera_ids": [
+                "inspection_close",
+                "inspection_front",
+                "inspection_left",
+                "inspection_right",
+                "inspection_top"
+              ],
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "mean_confidence": 0.613935673236847,
+              "observation_source": "RGB_DETECTOR",
+              "quality": {
+                "mean_confidence": 0.613935673236847,
+                "supporting_view_count": 5,
+                "supporting_view_margin": 5,
+                "validated": true,
+                "weighted_score_margin": 8.20389426907899,
+                "winner_policy": "supporting_views_then_weighted_score",
+                "winning_label_margin": 5.0,
+                "winning_label_margin_kind": "supporting_view_count"
+              },
+              "reason_codes": [],
+              "semantic_evidence_paths": [
+                "stages/000_initial/cameras/inspection_close/rgb.png",
+                "stages/000_initial/cameras/inspection_front/rgb.png",
+                "stages/000_initial/cameras/inspection_left/rgb.png",
+                "stages/000_initial/cameras/inspection_right/rgb.png",
+                "stages/000_initial/cameras/inspection_top/rgb.png"
+              ],
+              "semantic_record_path": "stages/000_initial/semantics/object_0002/semantic_evidence.json",
+              "source_region": "INITIAL",
+              "source_stage": 0,
+              "status": "SUPPORTED",
+              "supporting_view_count": 5,
+              "supporting_view_margin": 5,
+              "weighted_score_margin": 8.20389426907899,
+              "winner_policy": "supporting_views_then_weighted_score",
+              "winning_label_margin": 5.0,
+              "winning_label_margin_kind": "supporting_view_count"
+            },
+            "reason": "SUPPORTED_EXCLUDED_LABEL",
+            "role": "mixing_container",
+            "semantic_rank": null,
+            "status": "FALSE"
+          },
+          {
+            "acceptable_labels": [
+              "bowl"
+            ],
+            "canonical_label": "spoon",
+            "confidence": 0.5160278379917145,
+            "object_id": "object_0003",
+            "provenance": {
+              "alternatives": [
+                {
+                  "camera_ids": [
+                    "inspection_close",
+                    "inspection_top"
+                  ],
+                  "label": "spoon",
+                  "mean_confidence": 0.5160278379917145,
+                  "score": 4.133604927540571,
+                  "supporting_view_count": 2
+                },
+                {
+                  "camera_ids": [
+                    "inspection_front",
+                    "inspection_left"
+                  ],
+                  "label": "knife",
+                  "mean_confidence": 0.21145512908697128,
+                  "score": 1.669098033295131,
+                  "supporting_view_count": 2
+                },
+                {
+                  "camera_ids": [
+                    "inspection_right"
+                  ],
+                  "label": "bowl",
+                  "mean_confidence": 0.15665975213050842,
+                  "score": 0.6122000997765334,
+                  "supporting_view_count": 1
+                }
+              ],
+              "association_method": "mask_box_overlap_v1",
+              "canonical_label": "spoon",
+              "checkpoint": "/models/yolov8m-worldv2.pt",
+              "contributing_camera_ids": [
+                "inspection_close",
+                "inspection_top"
+              ],
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "mean_confidence": 0.5160278379917145,
+              "observation_source": "RGB_DETECTOR",
+              "quality": {
+                "mean_confidence": 0.5160278379917145,
+                "supporting_view_count": 2,
+                "supporting_view_margin": 0,
+                "validated": true,
+                "weighted_score_margin": 2.4645068942454396,
+                "winner_policy": "supporting_views_then_weighted_score",
+                "winning_label_margin": 2.4645068942454396,
+                "winning_label_margin_kind": "weighted_score"
+              },
+              "reason_codes": [],
+              "semantic_evidence_paths": [
+                "stages/001_after_D1/cameras/inspection_close/rgb.png",
+                "stages/001_after_D1/cameras/inspection_right/rgb.png",
+                "stages/001_after_D1/cameras/inspection_top/rgb.png",
+                "stages/001_after_D1/semantics/cameras/inspection_front/crops/000_object_0003.png",
+                "stages/001_after_D1/semantics/cameras/inspection_left/crops/000_object_0003.png"
+              ],
+              "semantic_record_path": "stages/001_after_D1/semantics/object_0003/semantic_evidence.json",
+              "source_region": "D1",
+              "source_stage": 1,
+              "status": "SUPPORTED",
+              "supporting_view_count": 2,
+              "supporting_view_margin": 0,
+              "weighted_score_margin": 2.4645068942454396,
+              "winner_policy": "supporting_views_then_weighted_score",
+              "winning_label_margin": 2.4645068942454396,
+              "winning_label_margin_kind": "weighted_score"
+            },
+            "reason": "SUPPORTED_EXCLUDED_LABEL",
+            "role": "mixing_container",
+            "semantic_rank": null,
+            "status": "FALSE"
+          },
+          {
+            "acceptable_labels": [
+              "spoon",
+              "fork",
+              "spatula"
+            ],
+            "canonical_label": "bowl",
+            "confidence": 0.8132529109716415,
+            "object_id": "object_0001",
+            "provenance": {
+              "alternatives": [
+                {
+                  "camera_ids": [
+                    "inspection_close",
+                    "inspection_front",
+                    "inspection_left",
+                    "inspection_right"
+                  ],
+                  "label": "bowl",
+                  "mean_confidence": 0.8132529109716415,
+                  "score": 12.120941521181845,
+                  "supporting_view_count": 4
+                },
+                {
+                  "camera_ids": [
+                    "inspection_top"
+                  ],
+                  "label": "cup",
+                  "mean_confidence": 0.253964900970459,
+                  "score": 0.7908561091479756,
+                  "supporting_view_count": 1
+                }
+              ],
+              "association_method": "mask_box_overlap_v1",
+              "canonical_label": "bowl",
+              "checkpoint": "/models/yolov8m-worldv2.pt",
+              "contributing_camera_ids": [
+                "inspection_close",
+                "inspection_front",
+                "inspection_left",
+                "inspection_right"
+              ],
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "mean_confidence": 0.8132529109716415,
+              "observation_source": "RGB_DETECTOR",
+              "quality": {
+                "mean_confidence": 0.8132529109716415,
+                "supporting_view_count": 4,
+                "supporting_view_margin": 3,
+                "validated": true,
+                "weighted_score_margin": 11.330085412033869,
+                "winner_policy": "supporting_views_then_weighted_score",
+                "winning_label_margin": 3.0,
+                "winning_label_margin_kind": "supporting_view_count"
+              },
+              "reason_codes": [],
+              "semantic_evidence_paths": [
+                "stages/000_initial/cameras/inspection_close/rgb.png",
+                "stages/000_initial/cameras/inspection_front/rgb.png",
+                "stages/000_initial/cameras/inspection_left/rgb.png",
+                "stages/000_initial/cameras/inspection_right/rgb.png",
+                "stages/000_initial/cameras/inspection_top/rgb.png"
+              ],
+              "semantic_record_path": "stages/000_initial/semantics/object_0001/semantic_evidence.json",
+              "source_region": "INITIAL",
+              "source_stage": 0,
+              "status": "SUPPORTED",
+              "supporting_view_count": 4,
+              "supporting_view_margin": 3,
+              "weighted_score_margin": 11.330085412033869,
+              "winner_policy": "supporting_views_then_weighted_score",
+              "winning_label_margin": 3.0,
+              "winning_label_margin_kind": "supporting_view_count"
+            },
+            "reason": "SUPPORTED_EXCLUDED_LABEL",
+            "role": "mixing_tool",
+            "semantic_rank": null,
+            "status": "FALSE"
+          },
+          {
+            "acceptable_labels": [
+              "spoon",
+              "fork",
+              "spatula"
+            ],
+            "canonical_label": "pen",
+            "confidence": 0.613935673236847,
+            "object_id": "object_0002",
+            "provenance": {
+              "alternatives": [
+                {
+                  "camera_ids": [
+                    "inspection_close",
+                    "inspection_front",
+                    "inspection_left",
+                    "inspection_right",
+                    "inspection_top"
+                  ],
+                  "label": "pen",
+                  "mean_confidence": 0.613935673236847,
+                  "score": 8.20389426907899,
+                  "supporting_view_count": 5
+                }
+              ],
+              "association_method": "mask_box_overlap_v1",
+              "canonical_label": "pen",
+              "checkpoint": "/models/yolov8m-worldv2.pt",
+              "contributing_camera_ids": [
+                "inspection_close",
+                "inspection_front",
+                "inspection_left",
+                "inspection_right",
+                "inspection_top"
+              ],
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "mean_confidence": 0.613935673236847,
+              "observation_source": "RGB_DETECTOR",
+              "quality": {
+                "mean_confidence": 0.613935673236847,
+                "supporting_view_count": 5,
+                "supporting_view_margin": 5,
+                "validated": true,
+                "weighted_score_margin": 8.20389426907899,
+                "winner_policy": "supporting_views_then_weighted_score",
+                "winning_label_margin": 5.0,
+                "winning_label_margin_kind": "supporting_view_count"
+              },
+              "reason_codes": [],
+              "semantic_evidence_paths": [
+                "stages/000_initial/cameras/inspection_close/rgb.png",
+                "stages/000_initial/cameras/inspection_front/rgb.png",
+                "stages/000_initial/cameras/inspection_left/rgb.png",
+                "stages/000_initial/cameras/inspection_right/rgb.png",
+                "stages/000_initial/cameras/inspection_top/rgb.png"
+              ],
+              "semantic_record_path": "stages/000_initial/semantics/object_0002/semantic_evidence.json",
+              "source_region": "INITIAL",
+              "source_stage": 0,
+              "status": "SUPPORTED",
+              "supporting_view_count": 5,
+              "supporting_view_margin": 5,
+              "weighted_score_margin": 8.20389426907899,
+              "winner_policy": "supporting_views_then_weighted_score",
+              "winning_label_margin": 5.0,
+              "winning_label_margin_kind": "supporting_view_count"
+            },
+            "reason": "SUPPORTED_EXCLUDED_LABEL",
+            "role": "mixing_tool",
+            "semantic_rank": null,
+            "status": "FALSE"
+          },
+          {
+            "canonical_label": "spoon",
+            "confidence": 0.5160278379917145,
+            "object_id": "object_0003",
+            "preference": {
+              "canonical_label": "spoon",
+              "detector_aliases": [
+                "spoon",
+                "tablespoon",
+                "teaspoon"
+              ],
+              "rank": 1
+            },
+            "provenance": {
+              "alternatives": [
+                {
+                  "camera_ids": [
+                    "inspection_close",
+                    "inspection_top"
+                  ],
+                  "label": "spoon",
+                  "mean_confidence": 0.5160278379917145,
+                  "score": 4.133604927540571,
+                  "supporting_view_count": 2
+                },
+                {
+                  "camera_ids": [
+                    "inspection_front",
+                    "inspection_left"
+                  ],
+                  "label": "knife",
+                  "mean_confidence": 0.21145512908697128,
+                  "score": 1.669098033295131,
+                  "supporting_view_count": 2
+                },
+                {
+                  "camera_ids": [
+                    "inspection_right"
+                  ],
+                  "label": "bowl",
+                  "mean_confidence": 0.15665975213050842,
+                  "score": 0.6122000997765334,
+                  "supporting_view_count": 1
+                }
+              ],
+              "association_method": "mask_box_overlap_v1",
+              "canonical_label": "spoon",
+              "checkpoint": "/models/yolov8m-worldv2.pt",
+              "contributing_camera_ids": [
+                "inspection_close",
+                "inspection_top"
+              ],
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "mean_confidence": 0.5160278379917145,
+              "observation_source": "RGB_DETECTOR",
+              "quality": {
+                "mean_confidence": 0.5160278379917145,
+                "supporting_view_count": 2,
+                "supporting_view_margin": 0,
+                "validated": true,
+                "weighted_score_margin": 2.4645068942454396,
+                "winner_policy": "supporting_views_then_weighted_score",
+                "winning_label_margin": 2.4645068942454396,
+                "winning_label_margin_kind": "weighted_score"
+              },
+              "reason_codes": [],
+              "semantic_evidence_paths": [
+                "stages/001_after_D1/cameras/inspection_close/rgb.png",
+                "stages/001_after_D1/cameras/inspection_right/rgb.png",
+                "stages/001_after_D1/cameras/inspection_top/rgb.png",
+                "stages/001_after_D1/semantics/cameras/inspection_front/crops/000_object_0003.png",
+                "stages/001_after_D1/semantics/cameras/inspection_left/crops/000_object_0003.png"
+              ],
+              "semantic_record_path": "stages/001_after_D1/semantics/object_0003/semantic_evidence.json",
+              "source_region": "D1",
+              "source_stage": 1,
+              "status": "SUPPORTED",
+              "supporting_view_count": 2,
+              "supporting_view_margin": 0,
+              "weighted_score_margin": 2.4645068942454396,
+              "winner_policy": "supporting_views_then_weighted_score",
+              "winning_label_margin": 2.4645068942454396,
+              "winning_label_margin_kind": "weighted_score"
+            },
+            "reason": "SUPPORTED_ACCEPTABLE_LABEL",
+            "role": "mixing_tool",
+            "semantic_rank": 1,
+            "status": "TRUE"
+          }
+        ]
+      }
+    },
+    "purpose": "OFFLINE_EVALUATION_ONLY",
+    "runtime_inference_used_evaluation_annotations": false,
+    "scene_name": "S1_joint_stir_counterexamples",
+    "schema_version": 1,
+    "shared_observation_evidence": true,
+    "task_id": "stir_contents"
+  },
+  "relations": [
+    {
+      "container": "object_0001",
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.017500673097263678,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.10793740027929766,
+        "pass_margin_m": 0.08543672718203398,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/000_initial/evidence/object_0002/fused.ply",
+        "status": "TRUE",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply"
+      },
+      "pass_margin_m": 0.08543672718203398,
+      "relation": "INSERTABLE_IN",
+      "stage": 0,
+      "status": "TRUE",
+      "tool": "object_0002"
+    },
+    {
+      "container": "object_0001",
+      "evidence": {
+        "cavity_depth_m": 0.04506539106369023,
+        "evaluated_inequality": "usable_length_m - grip_allowance_m >= cavity_depth_m",
+        "grip_allowance_m": 0.03,
+        "inference_basis": "GEOMETRY_ONLY",
+        "method": "usable_length_after_grip_vs_cavity_v1",
+        "pass_margin_m": 0.035847543344698835,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/000_initial/evidence/object_0002/fused.ply",
+        "status": "TRUE",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply",
+        "usable_length_m": 0.11091293440838906
+      },
+      "pass_margin_m": 0.035847543344698835,
+      "relation": "REACHES_BOTTOM",
+      "stage": 0,
+      "status": "TRUE",
+      "tool": "object_0002"
+    },
+    {
+      "container": "object_0002",
+      "evidence": {},
+      "pass_margin_m": null,
+      "relation": "INSERTABLE_IN",
+      "stage": 0,
+      "status": "UNKNOWN",
+      "tool": "object_0001"
+    },
+    {
+      "container": "object_0002",
+      "evidence": {},
+      "pass_margin_m": null,
+      "relation": "REACHES_BOTTOM",
+      "stage": 0,
+      "status": "UNKNOWN",
+      "tool": "object_0001"
+    },
+    {
+      "container": "object_0001",
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.11710390960833264,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.10793740027929766,
+        "pass_margin_m": -0.014166509329034987,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/001_after_D1/evidence/object_0003/fused.ply",
+        "status": "FALSE",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply"
+      },
+      "pass_margin_m": -0.014166509329034987,
+      "relation": "INSERTABLE_IN",
+      "stage": 1,
+      "status": "FALSE",
+      "tool": "object_0003"
+    },
+    {
+      "container": "object_0001",
+      "evidence": {
+        "cavity_depth_m": 0.04506539106369023,
+        "evaluated_inequality": "usable_length_m - grip_allowance_m >= cavity_depth_m",
+        "grip_allowance_m": 0.03,
+        "inference_basis": "GEOMETRY_ONLY",
+        "method": "usable_length_after_grip_vs_cavity_v1",
+        "pass_margin_m": 0.25082267107223566,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/001_after_D1/evidence/object_0003/fused.ply",
+        "status": "TRUE",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply",
+        "usable_length_m": 0.3258880621359259
+      },
+      "pass_margin_m": 0.25082267107223566,
+      "relation": "REACHES_BOTTOM",
+      "stage": 1,
+      "status": "TRUE",
+      "tool": "object_0003"
+    },
+    {
+      "container": "object_0001",
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.02052217381309432,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.10793740027929766,
+        "pass_margin_m": 0.08241522646620333,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/002_after_D2/evidence/object_0004/fused.ply",
+        "status": "TRUE",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply"
+      },
+      "pass_margin_m": 0.08241522646620333,
+      "relation": "INSERTABLE_IN",
+      "stage": 2,
+      "status": "TRUE",
+      "tool": "object_0004"
+    },
+    {
+      "container": "object_0001",
+      "evidence": {
+        "cavity_depth_m": 0.04506539106369023,
+        "evaluated_inequality": "usable_length_m - grip_allowance_m >= cavity_depth_m",
+        "grip_allowance_m": 0.03,
+        "inference_basis": "GEOMETRY_ONLY",
+        "method": "usable_length_after_grip_vs_cavity_v1",
+        "pass_margin_m": 0.10583552946522051,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/002_after_D2/evidence/object_0004/fused.ply",
+        "status": "TRUE",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply",
+        "usable_length_m": 0.18090092052891074
+      },
+      "pass_margin_m": 0.10583552946522051,
+      "relation": "REACHES_BOTTOM",
+      "stage": 2,
+      "status": "TRUE",
+      "tool": "object_0004"
+    }
+  ],
+  "run_config": {
+    "created_at": "2026-07-31T20:24:03.219191+00:00",
+    "cumulative_cloud_purpose": "CUMULATIVE_VISUALIZATION_NOT_MEASUREMENT",
+    "geometry_config": "configs/geometry_inference.yaml",
+    "grounding_mode": "joint",
+    "inference_basis": "JOINT",
+    "inspection_rig_config": "configs/inspection_rigs.yaml",
+    "inspection_sequence": [
+      "D1",
+      "D2",
+      "C2",
+      "B1",
+      "C1"
+    ],
+    "mode": "sequential_inspection",
+    "opening_actuation_steps": 200,
+    "opening_adapter": "KitchenScene.open_container",
+    "property_measurement_source": "STAGE_LOCAL_REGION_GATED_MEASUREMENT_EVIDENCE",
+    "regions": [
+      "countertop",
+      "C1",
+      "C2",
+      "D1",
+      "D2",
+      "B1"
+    ],
+    "requested_grounding_mode": "joint",
+    "resolution": [
+      1280,
+      960
+    ],
+    "run_id": "qualitative_unary_demo",
+    "runtime_dependency_versions": {
+      "Pillow": "11.3.0",
+      "clip": "1.0",
+      "mujoco": "3.3.5",
+      "numpy": "2.2.6",
+      "python": "3.11.15",
+      "torch": "2.13.0",
+      "ultralytics": "8.4.112"
+    },
+    "save_semantic_overlays": true,
+    "scene_name": "S1_joint_stir_counterexamples",
+    "schema_version": 3,
+    "semantic_backend": "yolo_world",
+    "semantic_confidence_threshold": 0.03,
+    "semantic_detector": {
+      "checkpoint": "/models/yolov8m-worldv2.pt",
+      "confidence_threshold": 0.03,
+      "device": "cpu",
+      "inference_size": 640,
+      "name": "ultralytics_yolo_world",
+      "process_isolation": true,
+      "version": "8.4.112"
+    },
+    "semantic_detector_enabled": true,
+    "semantic_min_supporting_views": 2,
+    "semantic_model": "/models/yolov8m-worldv2.pt",
+    "stop_on_complete": true,
+    "task_id": "stir_contents",
+    "task_requirements": "inline",
+    "uses_mobile_base": false,
+    "uses_robot": false,
+    "uses_virtual_inspection_rig": true,
+    "voxel_size_m": 0.003
+  },
+  "schema_version": 1,
+  "shared_observation_evidence": true,
+  "source_run": "/home/naren/RA_iiith/runs/qualitative_unary_demo",
+  "stage_components": [
+    {
+      "camera_overlays": [
+        {
+          "camera_id": "inspection_close",
+          "path": "stages/000_initial/cameras/inspection_close_overlay.png"
+        },
+        {
+          "camera_id": "inspection_front",
+          "path": "stages/000_initial/cameras/inspection_front_overlay.png"
+        },
+        {
+          "camera_id": "inspection_left",
+          "path": "stages/000_initial/cameras/inspection_left_overlay.png"
+        },
+        {
+          "camera_id": "inspection_right",
+          "path": "stages/000_initial/cameras/inspection_right_overlay.png"
+        },
+        {
+          "camera_id": "inspection_top",
+          "path": "stages/000_initial/cameras/inspection_top_overlay.png"
+        }
+      ],
+      "name": "000_initial",
+      "paths": {
+        "graph.png": "stages/000_initial/graph.png",
+        "overview.png": "stages/000_initial/overview.png",
+        "pointcloud.png": "stages/000_initial/pointcloud.png",
+        "semantic_overview.png": "stages/000_initial/semantic_overview.png"
+      },
+      "source": "stages/000_initial",
+      "stage": 0
+    },
+    {
+      "camera_overlays": [
+        {
+          "camera_id": "inspection_close",
+          "path": "stages/001_after_D1/cameras/inspection_close_overlay.png"
+        },
+        {
+          "camera_id": "inspection_front",
+          "path": "stages/001_after_D1/cameras/inspection_front_overlay.png"
+        },
+        {
+          "camera_id": "inspection_left",
+          "path": "stages/001_after_D1/cameras/inspection_left_overlay.png"
+        },
+        {
+          "camera_id": "inspection_right",
+          "path": "stages/001_after_D1/cameras/inspection_right_overlay.png"
+        },
+        {
+          "camera_id": "inspection_top",
+          "path": "stages/001_after_D1/cameras/inspection_top_overlay.png"
+        }
+      ],
+      "name": "001_after_D1",
+      "paths": {
+        "graph.png": "stages/001_after_D1/graph.png",
+        "overview.png": "stages/001_after_D1/overview.png",
+        "pointcloud.png": "stages/001_after_D1/pointcloud.png",
+        "semantic_overview.png": "stages/001_after_D1/semantic_overview.png"
+      },
+      "source": "stages/001_after_D1",
+      "stage": 1
+    },
+    {
+      "camera_overlays": [
+        {
+          "camera_id": "inspection_close",
+          "path": "stages/002_after_D2/cameras/inspection_close_overlay.png"
+        },
+        {
+          "camera_id": "inspection_front",
+          "path": "stages/002_after_D2/cameras/inspection_front_overlay.png"
+        },
+        {
+          "camera_id": "inspection_left",
+          "path": "stages/002_after_D2/cameras/inspection_left_overlay.png"
+        },
+        {
+          "camera_id": "inspection_right",
+          "path": "stages/002_after_D2/cameras/inspection_right_overlay.png"
+        },
+        {
+          "camera_id": "inspection_top",
+          "path": "stages/002_after_D2/cameras/inspection_top_overlay.png"
+        }
+      ],
+      "name": "002_after_D2",
+      "paths": {
+        "graph.png": "stages/002_after_D2/graph.png",
+        "overview.png": "stages/002_after_D2/overview.png",
+        "pointcloud.png": "stages/002_after_D2/pointcloud.png",
+        "semantic_overview.png": "stages/002_after_D2/semantic_overview.png"
+      },
+      "source": "stages/002_after_D2",
+      "stage": 2
+    }
+  ],
+  "visualizations": {
+    "geometry-only": {
+      "frames": [
+        "ablations/geometry_only/stage_000.png"
+      ],
+      "gif": "ablations/geometry_only/geometry_only.gif",
+      "mp4": "ablations/geometry_only/geometry_only.mp4",
+      "terminal_stage": 0
+    },
+    "joint": {
+      "frames": [
+        "ablations/joint/stage_000.png",
+        "ablations/joint/stage_001.png",
+        "ablations/joint/stage_002.png"
+      ],
+      "gif": "ablations/joint/joint.gif",
+      "mp4": "ablations/joint/joint.mp4",
+      "terminal_stage": 2
+    },
+    "semantic-only": {
+      "frames": [
+        "ablations/semantic_only/stage_000.png",
+        "ablations/semantic_only/stage_001.png"
+      ],
+      "gif": "ablations/semantic_only/semantic_only.gif",
+      "mp4": "ablations/semantic_only/semantic_only.mp4",
+      "terminal_stage": 1
+    }
+  }
+}
