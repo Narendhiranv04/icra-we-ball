@@ -68,7 +68,10 @@ def _relation_edge(source, target, relation, status):
         "target": f"object:{target}",
         "relation": relation,
         "status": status,
-        "evidence": {"source": "stage_local_measurement"},
+        "evidence": {
+            "source": "stage_local_measurement",
+            "pass_margin_m": 0.012,
+        },
     }
 
 
@@ -248,6 +251,14 @@ def test_relation_direction_is_subject_tool_to_object_container():
         )
     )
     assert _evaluate(graph)["status"] == "INDETERMINATE"
+
+
+def test_selected_relation_preserves_numeric_evidence_for_handoff():
+    result = _evaluate(_primary_graph())
+    assert {
+        relation["evidence"]["pass_margin_m"]
+        for relation in result["selected_pairwise_relations"]
+    } == {0.012}
 
 
 def test_role_assignments_are_distinct():

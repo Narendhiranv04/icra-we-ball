@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import importlib.metadata
+import platform
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
@@ -28,6 +30,26 @@ INTERFERING_OPEN_REGIONS = {"C2": "B1", "B1": "C2"}
 # 1000-step default unnecessarily ejects light drawer contents before the
 # explicitly configured post-opening settle phase begins.
 DIRECT_ACTUATION_STEPS = 200
+
+
+def _runtime_dependency_versions() -> dict[str, str | None]:
+    """Record the concrete perception environment without importing models."""
+    versions: dict[str, str | None] = {
+        "python": platform.python_version(),
+    }
+    for distribution in (
+        "mujoco",
+        "numpy",
+        "Pillow",
+        "torch",
+        "ultralytics",
+        "clip",
+    ):
+        try:
+            versions[distribution] = importlib.metadata.version(distribution)
+        except importlib.metadata.PackageNotFoundError:
+            versions[distribution] = None
+    return versions
 
 
 def resolve_grounding_mode(
@@ -270,6 +292,9 @@ def run_sequential_inspection(
             # override. This remains complete when the checkpoint came from
             # semantic_grounding.yaml.
             "semantic_detector": detector_runtime,
+            "runtime_dependency_versions": (
+                _runtime_dependency_versions()
+            ),
             "semantic_model": detector_runtime["checkpoint"],
             "semantic_confidence_threshold": (
                 detector_runtime["confidence_threshold"]

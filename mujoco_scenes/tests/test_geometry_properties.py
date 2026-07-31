@@ -294,8 +294,27 @@ class GeometryPropertyTests(unittest.TestCase):
         self.assertIn("maximum_cross_section_m", insertable)
         self.assertIn("opening_width_m", insertable)
         self.assertIn("clearance_margin_m", insertable)
+        self.assertAlmostEqual(
+            insertable["pass_margin_m"],
+            (
+                insertable["opening_width_m"]
+                - insertable["maximum_cross_section_m"]
+                - insertable["clearance_margin_m"]
+            ),
+        )
         self.assertEqual(
             insertable["inference_basis"], "GEOMETRY_ONLY"
+        )
+        reaches = pairwise_relation_evaluation(
+            "REACHES_BOTTOM", tool, receptacle, self.config
+        )
+        self.assertAlmostEqual(
+            reaches["pass_margin_m"],
+            (
+                reaches["usable_length_m"]
+                - reaches["grip_allowance_m"]
+                - reaches["cavity_depth_m"]
+            ),
         )
 
     def test_missing_target_geometry_makes_pairwise_unknown(self):

@@ -16,7 +16,7 @@
     <material name="mat_ycb_tea_box" texture="tex_ycb_tea_box" specular="0.15"/>
     <mesh name="mesh_ycb_bowl" file="ycb/bowl/ycb_bowl.obj"/>
     <mesh name="mesh_ycb_mixing_bowl" file="ycb/bowl/ycb_bowl.obj"
-          scale="0.77 0.77 1.0"/>
+          scale="0.70 0.70 1.0"/>
     <texture name="tex_ycb_bowl" type="2d" file="ycb/bowl/ycb_bowl.png"/>
     <material name="mat_ycb_bowl" texture="tex_ycb_bowl" specular="0.3" shininess="0.45"/>
     <mesh name="mesh_ycb_mug" file="ycb/mug/ycb_mug.obj"/>
@@ -210,39 +210,47 @@
     <site name="bowl_grasp" pos="0.055 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
   </body>
 
-  <!-- Same textured YCB bowl at 77% horizontal scale. It remains visually a
+  <!-- Same textured YCB bowl at 70% horizontal scale. It remains visually a
        bowl while creating a robust measured clearance boundary between the
        normal fork/marker and the deliberately widened spoon. -->
   <body name="mixing_bowl" pos="0 0 0">
     <freejoint name="mixing_bowl_free"/>
     <geom name="mixing_bowl_visual" type="mesh" mesh="mesh_ycb_mixing_bowl"
           material="mat_ycb_bowl" class="visual" mass="0"/>
+    <!-- The scanned shell is open through its centre in some OpenGL
+         backends. Render a bowl-owned interior floor so RGB-D evidence
+         contains a real surface below the rim instead of missing depth or
+         countertop pixels. This is visible evidence only; inference never
+         reads this geom or its dimensions. -->
+    <geom name="mixing_bowl_interior_visual" type="cylinder"
+          size="0.041 0.0015" pos="0 0 -0.0205"
+          material="mat_ycb_bowl" class="visual" mass="0"/>
     <geom name="mixing_bowl_bottom_collision" type="cylinder"
-          size="0.0532 0.004" pos="0 0 -0.0235"
+          size="0.0484 0.004" pos="0 0 -0.0235"
           rgba="0 0 0 0" mass="0.050" group="3"/>
     <geom name="mixing_bowl_wall_0" type="box"
-          size="0.00385 0.0154 0.0235" pos="0.0570 0 0.004"
+          size="0.0035 0.0140 0.0235" pos="0.0518 0 0.004"
           rgba="0 0 0 0" mass="0.0121" group="3"/>
     <geom name="mixing_bowl_wall_1" type="box"
-          size="0.00385 0.0154 0.0235" pos="0.0403 0.0403 0.004"
+          size="0.0035 0.0140 0.0235" pos="0.0366 0.0366 0.004"
           euler="0 0 0.7854" rgba="0 0 0 0" mass="0.0121" group="3"/>
     <geom name="mixing_bowl_wall_2" type="box"
-          size="0.00385 0.0154 0.0235" pos="0 0.0570 0.004"
+          size="0.0035 0.0140 0.0235" pos="0 0.0518 0.004"
           euler="0 0 1.5708" rgba="0 0 0 0" mass="0.0121" group="3"/>
     <geom name="mixing_bowl_wall_3" type="box"
-          size="0.00385 0.0154 0.0235" pos="-0.0403 0.0403 0.004"
+          size="0.0035 0.0140 0.0235" pos="-0.0366 0.0366 0.004"
           euler="0 0 2.3562" rgba="0 0 0 0" mass="0.0121" group="3"/>
     <geom name="mixing_bowl_wall_4" type="box"
-          size="0.00385 0.0154 0.0235" pos="-0.0570 0 0.004"
+          size="0.0035 0.0140 0.0235" pos="-0.0518 0 0.004"
           euler="0 0 3.1416" rgba="0 0 0 0" mass="0.0121" group="3"/>
     <geom name="mixing_bowl_wall_5" type="box"
-          size="0.00385 0.0154 0.0235" pos="-0.0403 -0.0403 0.004"
+          size="0.0035 0.0140 0.0235" pos="-0.0366 -0.0366 0.004"
           euler="0 0 3.9270" rgba="0 0 0 0" mass="0.0121" group="3"/>
     <geom name="mixing_bowl_wall_6" type="box"
-          size="0.00385 0.0154 0.0235" pos="0 -0.0570 0.004"
+          size="0.0035 0.0140 0.0235" pos="0 -0.0518 0.004"
           euler="0 0 4.7124" rgba="0 0 0 0" mass="0.0121" group="3"/>
     <geom name="mixing_bowl_wall_7" type="box"
-          size="0.00385 0.0154 0.0235" pos="0.0403 -0.0403 0.004"
+          size="0.0035 0.0140 0.0235" pos="0.0366 -0.0366 0.004"
           euler="0 0 5.4978" rgba="0 0 0 0" mass="0.0121" group="3"/>
   </body>
 

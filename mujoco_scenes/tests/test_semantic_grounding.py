@@ -310,7 +310,7 @@ def test_detector_receives_only_rgb_and_vocabulary_not_simulator_names(tmp_path)
     config = _config()
     config["mask_crop"]["enabled"] = False
     config["fusion"]["minimum_supporting_views"] = 1
-    run_semantic_inspection(
+    result = run_semantic_inspection(
         inspection,
         accepted_instance_to_object_id={
             "secret_simulator_body_name": "object_0001"
@@ -329,3 +329,9 @@ def test_detector_receives_only_rgb_and_vocabulary_not_simulator_names(tmp_path)
     serialized = (tmp_path / "semantics" / "detections.json").read_text()
     assert "secret_simulator_body_name" not in serialized
     assert (tmp_path / "semantic_overview.png").exists()
+    camera_summary = result["camera_summaries"][0]
+    assert camera_summary["camera_id"] == "inspection_left"
+    assert camera_summary["inference_seconds"] >= 0.0
+    assert camera_summary["full_frame_inference_seconds"] >= 0.0
+    assert camera_summary["crop_inference_seconds"] == 0.0
+    assert camera_summary["crop_inference_count"] == 0

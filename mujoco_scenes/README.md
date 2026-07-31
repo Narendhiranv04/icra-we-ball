@@ -377,6 +377,33 @@ python mujoco_scenes/scripts/prepare_semantic_models.py \
   --output semantic_model_cache
 ```
 
+For a local (non-Docker) run, create an ignored virtual environment and put
+the same checksum-verified cache in the repository paths used by Ultralytics:
+
+```bash
+python -m venv --system-site-packages .venv
+.venv/bin/python -m pip install -r mujoco_scenes/requirements.txt pytest
+.venv/bin/python mujoco_scenes/scripts/prepare_semantic_models.py --output .
+
+MUJOCO_GL=egl .venv/bin/python -m mujoco_scenes.scene_loader \
+  --scene S1_joint_stir_counterexamples \
+  --no-robot \
+  --task-requirements mujoco_scenes/configs/stir_contents_joint.yaml \
+  --inspect-sequence D1 D2 C2 B1 C1 \
+  --stop-on-complete \
+  --runs-root runs \
+  --run-id joint_stir_counterexamples_local \
+  --point-cloud-width 1280 \
+  --point-cloud-height 960 \
+  --semantic-detector yolo_world \
+  --semantic-model yolov8m-worldv2.pt \
+  --semantic-vocabulary mujoco_scenes/configs/semantic_vocabulary.yaml \
+  --grounding-mode joint \
+  --semantic-confidence-threshold 0.03 \
+  --semantic-min-supporting-views 2 \
+  --save-semantic-overlays
+```
+
 Build the image from the repository root:
 
 ```bash
@@ -450,11 +477,14 @@ stages/<stage>/semantics/cameras/<camera_id>/overlay.png
 
 Semantic records preserve alternative labels, multi-view support, raw
 confidence, association quality, detector/checkpoint/version, RGB/crop paths,
-stage, and region. Multi-view fusion selects the label supported by the most
-independent views, uses weighted detector confidence only to break equal-view
-support, and returns `UNKNOWN` for inadequate or ambiguous evidence. A weak
-re-observation is recorded but cannot overwrite a stronger validated cached
-semantic result.
+stage, and region. `run_config.json` records the Python, MuJoCo, NumPy,
+Pillow, Torch, Ultralytics, and CLIP versions. Each camera summary in
+`detections.json` records full-frame, crop, and total detector inference time,
+while the file-level `inference_seconds` records the stage total. Multi-view
+fusion selects the label supported by the most independent views, uses
+weighted detector confidence only to break equal-view support, and returns
+`UNKNOWN` for inadequate or ambiguous evidence. A weak re-observation is
+recorded but cannot overwrite a stronger validated cached semantic result.
 
 `verified_task_handoff.json` is emitted only for production joint completion.
 It contains the role-to-object assignment, semantic rank and provenance,
@@ -462,6 +492,20 @@ unary and relational geometric evidence, stage-local evidence paths,
 `verified: true`, and `ready_for_tamp: true`. This milestone does not execute
 TAMP, robot motion, navigation, IK, manipulation, adaptive search, a
 foundation model, training, or fine-tuning.
+
+Each selected pairwise relation records its measured operands and signed
+`pass_margin_m`. For `INSERTABLE_IN` this is the measured opening width minus
+the tool cross-section and configured clearance; for `REACHES_BOTTOM` it is
+usable tool length minus the configured grip allowance and measured cavity
+depth. Positive margins pass (zero also passes for reach), negative margins
+fail, and unavailable operands produce `UNKNOWN` with a null margin.
+
+The synthetic RGB detector is not perfect: individual views can call a fork
+or spoon a knife, so the fused result requires independent multi-view support
+and a winning-label margin. The documented 1280×960 capture is required for
+the counterexample demonstrations; 640×480 can lose thin-fork evidence and is
+not the validated semantic setting. `READY_FOR_TAMP` is a handoff artifact
+only and does not execute planning or manipulation.
 
 The Actions panel creates `000_initial` automatically. Every automatic
 post-opening capture and the manual `Geometry` button update that same

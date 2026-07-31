@@ -782,7 +782,7 @@ def _render_overlay(
     detections: Sequence[Detection],
     associations: dict[str, Any],
 ) -> Image.Image:
-    image = Image.fromarray(np.asarray(rgb, np.uint8), mode="RGB")
+    image = Image.fromarray(np.asarray(rgb, np.uint8))
     pixels = np.asarray(image).copy()
     colors = (
         (41, 128, 185),
@@ -868,6 +868,10 @@ def run_semantic_inspection(
     for camera_id, capture in inspection.cameras.items():
         if not capture.validation.get("usable", False):
             continue
+        camera_inference_seconds = 0.0
+        full_frame_inference_seconds = 0.0
+        crop_inference_seconds = 0.0
+        crop_inference_count = 0
         object_masks = {
             object_id: capture.instance_masks[instance_name]
             for instance_name, object_id in accepted_instance_to_object_id.items()
@@ -878,7 +882,10 @@ def run_semantic_inspection(
         camera_rgb_path = f"cameras/{camera_id}/rgb.png"
         started = time.perf_counter()
         raw = detector.detect(capture.rgb, vocabulary)
-        inference_seconds += time.perf_counter() - started
+        elapsed = time.perf_counter() - started
+        full_frame_inference_seconds += elapsed
+        camera_inference_seconds += elapsed
+        inference_seconds += elapsed
         for local_index, detection in enumerate(raw):
             normalized = canonicalize_detection(detection, config)
             detections.append(
@@ -921,7 +928,11 @@ def run_semantic_inspection(
                 Image.fromarray(crop).save(crop_path)
                 started = time.perf_counter()
                 raw_crop = detector.detect(crop, vocabulary)
-                inference_seconds += time.perf_counter() - started
+                elapsed = time.perf_counter() - started
+                crop_inference_seconds += elapsed
+                camera_inference_seconds += elapsed
+                inference_seconds += elapsed
+                crop_inference_count += 1
                 relative_crop_path = crop_path.relative_to(stage_dir).as_posix()
                 for local_index, detection in enumerate(raw_crop):
                     normalized = canonicalize_detection(detection, config)
@@ -967,6 +978,12 @@ def run_semantic_inspection(
                 "unmatched_visible_object_ids": associations[
                     "unmatched_object_ids"
                 ],
+                "inference_seconds": camera_inference_seconds,
+                "full_frame_inference_seconds": (
+                    full_frame_inference_seconds
+                ),
+                "crop_inference_seconds": crop_inference_seconds,
+                "crop_inference_count": crop_inference_count,
             }
         )
         if save_overlays:

@@ -945,10 +945,12 @@ def pairwise_relation_evaluation(
         if cross_section is None or opening_width is None:
             status = "UNKNOWN"
             reason = "REQUIRED_MEASUREMENT_MISSING"
+            pass_margin = None
         else:
+            pass_margin = opening_width - (cross_section + clearance)
             status = (
                 "TRUE"
-                if cross_section + clearance < opening_width
+                if pass_margin > 0.0
                 else "FALSE"
             )
             reason = None
@@ -959,6 +961,7 @@ def pairwise_relation_evaluation(
             "maximum_cross_section_m": cross_section,
             "clearance_margin_m": clearance,
             "opening_width_m": opening_width,
+            "pass_margin_m": pass_margin,
             "evaluated_inequality": (
                 "maximum_cross_section_m + clearance_margin_m "
                 "< opening_width_m"
@@ -972,10 +975,12 @@ def pairwise_relation_evaluation(
         if usable_length is None or cavity_depth is None:
             status = "UNKNOWN"
             reason = "REQUIRED_MEASUREMENT_MISSING"
+            pass_margin = None
         else:
+            pass_margin = usable_length - grip - cavity_depth
             status = (
                 "TRUE"
-                if usable_length - grip >= cavity_depth
+                if pass_margin >= 0.0
                 else "FALSE"
             )
             reason = None
@@ -986,6 +991,7 @@ def pairwise_relation_evaluation(
             "usable_length_m": usable_length,
             "grip_allowance_m": grip,
             "cavity_depth_m": cavity_depth,
+            "pass_margin_m": pass_margin,
             "evaluated_inequality": (
                 "usable_length_m - grip_allowance_m >= cavity_depth_m"
             ),
