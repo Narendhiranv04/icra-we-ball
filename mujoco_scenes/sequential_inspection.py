@@ -61,7 +61,11 @@ def resolve_grounding_mode(
         return requested_mode
     return (
         "joint"
-        if loaded_task.get("_task_schema") == "JOINT_ROLE_GROUNDING"
+        if loaded_task.get("_task_schema")
+        in {
+            "JOINT_ROLE_GROUNDING",
+            "JOINT_USAGE_POLICY_GROUNDING",
+        }
         else "geometry-only"
     )
 
@@ -167,15 +171,22 @@ def run_fixed_order_inspection(
             return session
 
     if stop_on_complete and _witness_status(session) != "COMPLETE":
+        final_witness_status = _witness_status(session)
         session.append_event(
             {
                 "event": "INSPECTION_ORDER_EXHAUSTED",
-                "final_witness_status": _witness_status(session),
+                "terminal_status": "EXHAUSTED",
+                "final_witness_status": final_witness_status,
             }
         )
+        if hasattr(session, "mark_inspection_exhausted"):
+            session.mark_inspection_exhausted(
+                sequence=list(sequence),
+                final_witness_status=final_witness_status,
+            )
         print(
-            "[OBSERVED STATE] Fixed inspection order exhausted with "
-            f"witness status {_witness_status(session)}."
+            "[OBSERVED STATE] Fixed inspection order exhausted; terminal "
+            f"status EXHAUSTED (witness {final_witness_status})."
         )
     return session
 
@@ -259,7 +270,11 @@ def run_sequential_inspection(
         ),
     }
     if (
-        loaded_task.get("_task_schema") == "JOINT_ROLE_GROUNDING"
+        loaded_task.get("_task_schema")
+        in {
+            "JOINT_ROLE_GROUNDING",
+            "JOINT_USAGE_POLICY_GROUNDING",
+        }
         and grounding_mode in {"joint", "semantic-only"}
         and semantic_backend in {"none", "disabled"}
         and semantic_detector.__class__.__name__ == "NullSemanticDetector"

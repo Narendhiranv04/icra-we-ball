@@ -43,9 +43,16 @@ class FakeSession:
         self.registry = {"objects": {}, "current_stage": -1}
         self.next_stage = 0
         self.root = Path(root)
+        self.exhaustion = None
 
     def append_event(self, event):
         self.events.append(dict(event))
+
+    def mark_inspection_exhausted(self, *, sequence, final_witness_status):
+        self.exhaustion = {
+            "sequence": list(sequence),
+            "final_witness_status": final_witness_status,
+        }
 
     def observe(self, label, region):
         status = next(self.statuses)
@@ -113,6 +120,14 @@ class SequentialWitnessTests(unittest.TestCase):
             session.events[-1],
             {
                 "event": "INSPECTION_ORDER_EXHAUSTED",
+                "terminal_status": "EXHAUSTED",
+                "final_witness_status": "INCOMPLETE",
+            },
+        )
+        self.assertEqual(
+            session.exhaustion,
+            {
+                "sequence": ["D1", "D2", "C2"],
                 "final_witness_status": "INCOMPLETE",
             },
         )
@@ -174,6 +189,17 @@ class SequentialWitnessTests(unittest.TestCase):
         self.assertEqual(
             resolve_grounding_mode(
                 {"_task_schema": "JOINT_ROLE_GROUNDING"}, "auto"
+            ),
+            "joint",
+        )
+        self.assertEqual(
+            resolve_grounding_mode(
+                {
+                    "_task_schema": (
+                        "JOINT_USAGE_POLICY_GROUNDING"
+                    )
+                },
+                "auto",
             ),
             "joint",
         )

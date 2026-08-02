@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from itertools import product
+from itertools import combinations, product
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +18,15 @@ WITNESS_SCHEMA_VERSION = 2
 RELATION_STATUSES = {"TRUE", "FALSE", "UNKNOWN"}
 PROPERTY_STATUSES = {"MEASURED", "DERIVED", "UNKNOWN"}
 GROUNDING_MODES = {"joint", "geometry-only", "semantic-only"}
+USAGE_POLICY_MODES = {
+    "function-aware",
+    "always-reusable",
+    "always-distinct",
+}
+DECLARED_USAGE_POLICIES = {
+    "sequential_reuse_allowed",
+    "dedicated_per_target",
+}
 
 
 def resolve_task_requirements_path(path: str | Path) -> Path:
@@ -231,6 +240,125 @@ def _validate_joint_task_requirements(
     constraints["distinct_role_assignments"] = distinct
     constraints["distinct_objects"] = distinct
     constraints["pairwise"] = normalized_pairwise
+
+    operation_groups = config.get("operation_groups")
+    if operation_groups is not None:
+        if not isinstance(operation_groups, dict) or not operation_groups:
+            raise ValueError("operation_groups must be a non-empty mapping")
+        normalized_groups: dict[str, dict[str, Any]] = {}
+        pairwise_index = {
+            (
+                relation["relation"],
+                relation["from_role"],
+                relation["to_role"],
+            )
+            for relation in normalized_pairwise
+        }
+        for group_id, group in operation_groups.items():
+            if not isinstance(group_id, str) or not group_id.strip():
+                raise ValueError("operation group IDs must be non-empty")
+            if not isinstance(group, dict):
+                raise ValueError(
+                    f"Operation group '{group_id}' must be a mapping"
+                )
+            function_name = group.get("function")
+            tool_role = group.get("tool_role")
+            target_role = group.get("target_role")
+            target_count = group.get("required_target_count")
+            if not isinstance(function_name, str) or not function_name.strip():
+                raise ValueError(
+                    f"Operation group '{group_id}' needs a function"
+                )
+            if tool_role not in roles or target_role not in roles:
+                raise ValueError(
+                    f"Operation group '{group_id}' references an unknown role"
+                )
+            if tool_role == target_role:
+                raise ValueError(
+                    f"Operation group '{group_id}' tool and target roles "
+                    "must differ"
+                )
+            if (
+                isinstance(target_count, bool)
+                or not isinstance(target_count, int)
+                or target_count < 1
+            ):
+                raise ValueError(
+                    f"Operation group '{group_id}' required_target_count "
+                    "must be positive"
+                )
+            if roles[target_role]["count"] != target_count:
+                raise ValueError(
+                    f"Operation group '{group_id}' target count must match "
+                    f"role '{target_role}' count"
+                )
+            usage_policy = group.get("usage_policy")
+            if not isinstance(usage_policy, dict):
+                raise ValueError(
+                    f"Operation group '{group_id}' needs usage_policy"
+                )
+            policy_mode = usage_policy.get("mode")
+            if policy_mode not in DECLARED_USAGE_POLICIES:
+                raise ValueError(
+                    f"Operation group '{group_id}' usage policy must be one "
+                    f"of {sorted(DECLARED_USAGE_POLICIES)}"
+                )
+            expected_distinct = policy_mode == "dedicated_per_target"
+            declared_distinct = usage_policy.get(
+                "distinct_within_group", expected_distinct
+            )
+            if not isinstance(declared_distinct, bool):
+                raise ValueError("distinct_within_group must be boolean")
+            if declared_distinct != expected_distinct:
+                raise ValueError(
+                    f"Operation group '{group_id}' has a contradictory "
+                    "usage policy declaration"
+                )
+            relation_names = group.get("relations")
+            if not isinstance(relation_names, list) or not relation_names:
+                raise ValueError(
+                    f"Operation group '{group_id}' needs relations"
+                )
+            normalized_relation_names = []
+            for relation_name in relation_names:
+                if not isinstance(relation_name, str) or not relation_name:
+                    raise ValueError(
+                        f"Operation group '{group_id}' relation names must "
+                        "be non-empty strings"
+                    )
+                if (
+                    relation_name,
+                    tool_role,
+                    target_role,
+                ) not in pairwise_index:
+                    raise ValueError(
+                        f"Operation group '{group_id}' relation "
+                        f"'{relation_name}' must be declared directionally "
+                        f"from '{tool_role}' to '{target_role}'"
+                    )
+                normalized_relation_names.append(relation_name)
+            normalized_groups[group_id] = {
+                "function": function_name.strip(),
+                "tool_role": tool_role,
+                "target_role": target_role,
+                "required_target_count": target_count,
+                "usage_policy": {
+                    "mode": policy_mode,
+                    "distinct_within_group": expected_distinct,
+                },
+                "relations": normalized_relation_names,
+            }
+        cross_group = config.setdefault(
+            "cross_group_reuse", {"allowed": True}
+        )
+        if not isinstance(cross_group, dict) or not isinstance(
+            cross_group.get("allowed"), bool
+        ):
+            raise ValueError("cross_group_reuse.allowed must be boolean")
+        config["operation_groups"] = normalized_groups
+        config["_task_schema"] = "JOINT_USAGE_POLICY_GROUNDING"
+    else:
+        config["_task_schema"] = "JOINT_ROLE_GROUNDING"
     selection = config.setdefault("selection", {})
     if selection.setdefault("policy", "ranked_valid_candidate") != (
         "ranked_valid_candidate"
@@ -239,7 +367,6 @@ def _validate_joint_task_requirements(
     selection.setdefault("semantic_confidence_is_only_a_gate", True)
     diagnostics = config.setdefault("diagnostics", {})
     diagnostics.setdefault("max_representative_rejections", 50)
-    config["_task_schema"] = "JOINT_ROLE_GROUNDING"
     return config
 
 
@@ -1196,4 +1323,771 @@ def evaluate_joint_task_witness(
         ),
         "reason_codes": reason_codes,
         "selection_policy": config["selection"],
+    }
+
+
+def evaluate_usage_policy_task_witness(
+    graph: dict[str, Any],
+    requirements: dict[str, Any] | str | Path,
+    *,
+    stage: int | None = None,
+    usage_policy_mode: str = "function-aware",
+) -> dict[str, Any]:
+    """Resolve target-specific function assignments under a reuse policy.
+
+    Perception eligibility remains the production joint semantic/geometric
+    gate.  The policy mode changes only assignment cardinality and
+    distinctness; every mode consumes the same graph evidence.
+    """
+    if usage_policy_mode not in USAGE_POLICY_MODES:
+        raise ValueError(
+            f"usage_policy_mode must be one of "
+            f"{sorted(USAGE_POLICY_MODES)}"
+        )
+    config = load_task_requirements(requirements)
+    if config.get("_task_schema") != "JOINT_USAGE_POLICY_GROUNDING":
+        raise ValueError(
+            "Usage-policy evaluation requires operation_groups"
+        )
+    if stage is None:
+        stage = int(graph.get("stage", -1))
+    objects, geometry_edges, relation_edges = _joint_graph_index(graph)
+    relevant_roles = sorted(
+        {
+            role_name
+            for group in config["operation_groups"].values()
+            for role_name in (group["tool_role"], group["target_role"])
+        },
+        key=lambda role_name: (
+            config["roles"][role_name]["assignment_order"],
+            role_name,
+        ),
+    )
+
+    candidate_index: dict[tuple[str, str], dict[str, Any]] = {}
+    candidate_evaluations: list[dict[str, Any]] = []
+    for role_name in relevant_roles:
+        role = config["roles"][role_name]
+        for object_id, attributes in sorted(objects.items()):
+            semantic = evaluate_semantic_compatibility(attributes, role)
+            geometry_edge = geometry_edges.get((object_id, role_name), {})
+            geometry = {
+                "status": geometry_edge.get("status", "UNKNOWN"),
+                "checks": geometry_edge.get("evidence", {}).get(
+                    "checks", []
+                ),
+            }
+            status = _combined_required_status(
+                [semantic["status"], geometry["status"]]
+            )
+            if semantic["status"] == "FALSE":
+                decision = "REJECTED_SEMANTIC"
+            elif geometry["status"] == "FALSE":
+                decision = "REJECTED_GEOMETRY"
+            elif status == "UNKNOWN":
+                decision = "INDETERMINATE"
+            else:
+                decision = "ROLE_CANDIDATE"
+            evaluation = {
+                "object_id": object_id,
+                "role": role_name,
+                "grounding_mode": "joint",
+                "semantic": semantic,
+                "unary_geometry": geometry,
+                "semantic_gate_status": semantic["status"],
+                "geometry_gate_status": geometry["status"],
+                "status": status,
+                "decision": decision,
+            }
+            candidate_index[(role_name, object_id)] = evaluation
+            candidate_evaluations.append(evaluation)
+
+    def candidate_key(role_name: str, object_id: str) -> tuple:
+        semantic = candidate_index[(role_name, object_id)]["semantic"]
+        rank = semantic.get("semantic_rank")
+        confidence = _finite_number(semantic.get("confidence"))
+        return (
+            int(rank) if rank is not None else 10**6,
+            -(confidence if confidence is not None else 0.0),
+            object_id,
+        )
+
+    group_work: dict[str, dict[str, Any]] = {}
+    for group_id, group in sorted(config["operation_groups"].items()):
+        tool_role = group["tool_role"]
+        target_role = group["target_role"]
+        required_count = int(group["required_target_count"])
+        target_true = sorted(
+            (
+                object_id
+                for object_id in objects
+                if candidate_index[(target_role, object_id)]["status"]
+                == "TRUE"
+            ),
+            key=lambda object_id: candidate_key(target_role, object_id),
+        )
+        target_unknown = sorted(
+            object_id
+            for object_id in objects
+            if candidate_index[(target_role, object_id)]["status"]
+            == "UNKNOWN"
+        )
+        # Once the required number of validated target objects is available,
+        # unrelated objects with an unknown target-role classification cannot
+        # change target satisfaction. Retaining them as unresolved would make
+        # a completed target set spuriously INDETERMINATE when later regions
+        # reveal an unclassified distractor.
+        unresolved_target_ids = (
+            target_unknown
+            if len(target_true) < required_count
+            else []
+        )
+        tool_semantic_true = sorted(
+            object_id
+            for object_id in objects
+            if candidate_index[(tool_role, object_id)][
+                "semantic_gate_status"
+            ]
+            == "TRUE"
+        )
+        tool_geometry_true = sorted(
+            object_id
+            for object_id in tool_semantic_true
+            if candidate_index[(tool_role, object_id)][
+                "geometry_gate_status"
+            ]
+            == "TRUE"
+        )
+        tool_unknown = sorted(
+            object_id
+            for object_id in objects
+            if candidate_index[(tool_role, object_id)]["status"]
+            == "UNKNOWN"
+        )
+        accepted_labels = {
+            alias
+            for preference in config["roles"][tool_role][
+                "semantic_preferences"
+            ]
+            for alias in (
+                preference["canonical_label"],
+                *preference.get("detector_aliases", []),
+            )
+        }
+        known_excluded = {
+            str(label).strip().lower()
+            for label in config["roles"][tool_role].get(
+                "known_excluded_labels", []
+            )
+        }
+        utensil_labels = accepted_labels | known_excluded
+        raw_utensils = sorted(
+            object_id
+            for object_id, attributes in objects.items()
+            if attributes.get("semantics", {})
+            .get("validated", {})
+            .get("canonical_label")
+            in utensil_labels
+        )
+
+        edge_index: dict[tuple[str, str], dict[str, Any]] = {}
+        for tool_id in sorted(objects):
+            for target_id in sorted(objects):
+                tool_candidate = candidate_index[(tool_role, tool_id)]
+                target_candidate = candidate_index[(target_role, target_id)]
+                relation_checks = []
+                for relation_name in group["relations"]:
+                    relation_edge = relation_edges.get(
+                        (relation_name, tool_id, target_id), {}
+                    )
+                    relation_checks.append(
+                        {
+                            "relation": relation_name,
+                            "from_role": tool_role,
+                            "to_role": target_role,
+                            "from_object": tool_id,
+                            "to_object": target_id,
+                            "measured_status": relation_edge.get(
+                                "status", "UNKNOWN"
+                            ),
+                            "status": relation_edge.get(
+                                "status", "UNKNOWN"
+                            ),
+                            "required_status": "TRUE",
+                            "evidence": deepcopy(
+                                relation_edge.get("evidence", {})
+                            ),
+                        }
+                    )
+                status = _combined_required_status(
+                    [
+                        tool_candidate["status"],
+                        target_candidate["status"],
+                        *(
+                            check["status"]
+                            for check in relation_checks
+                        ),
+                    ]
+                )
+                if tool_candidate["semantic_gate_status"] == "FALSE":
+                    reason = "SEMANTICALLY_INELIGIBLE_TOOL"
+                elif tool_candidate["geometry_gate_status"] == "FALSE":
+                    reason = "UNARY_GEOMETRY_FAILED"
+                elif target_candidate["status"] == "FALSE":
+                    reason = "TARGET_ROLE_INELIGIBLE"
+                elif any(
+                    check["status"] == "FALSE"
+                    for check in relation_checks
+                ):
+                    reason = "TARGET_RELATION_FAILED"
+                elif status == "UNKNOWN":
+                    reason = "REQUIRED_EVIDENCE_UNKNOWN"
+                else:
+                    reason = None
+                edge_index[(tool_id, target_id)] = {
+                    "function_group_id": group_id,
+                    "function": group["function"],
+                    "tool_role": tool_role,
+                    "target_role": target_role,
+                    "utensil_object_id": tool_id,
+                    "target_object_id": target_id,
+                    "status": status,
+                    "reason": reason,
+                    "semantic": deepcopy(tool_candidate["semantic"]),
+                    "unary_geometry": deepcopy(
+                        tool_candidate["unary_geometry"]
+                    ),
+                    "relation_checks": relation_checks,
+                    "semantic_evidence_path": (
+                        objects[tool_id]
+                        .get("semantics", {})
+                        .get("validated", {})
+                        .get("semantic_record_path")
+                    ),
+                    "geometry_evidence_path": objects[tool_id].get(
+                        "measurement_cloud_path"
+                    ),
+                    "target_geometry_evidence_path": objects[
+                        target_id
+                    ].get("measurement_cloud_path"),
+                    "evaluation_stage": stage,
+                    "source_stage": objects[tool_id].get(
+                        "last_property_update_stage", stage
+                    ),
+                    "source_region": objects[tool_id].get(
+                        "last_property_source_region",
+                        objects[tool_id].get("source_region"),
+                    ),
+                    "target_source_stage": objects[target_id].get(
+                        "last_property_update_stage", stage
+                    ),
+                    "target_source_region": objects[target_id].get(
+                        "last_property_source_region",
+                        objects[target_id].get("source_region"),
+                    ),
+                }
+
+        functionally_assignable = sorted(
+            tool_id
+            for tool_id in tool_geometry_true
+            if any(
+                edge_index[(tool_id, target_id)]["status"] == "TRUE"
+                for target_id in target_true
+            )
+        )
+        target_sets = list(combinations(target_true, required_count))
+        if not target_sets:
+            partial_targets = tuple(target_true[:required_count])
+            target_sets_for_partial = [partial_targets]
+        else:
+            target_sets_for_partial = target_sets
+
+        if usage_policy_mode == "always-reusable":
+            distinct_within_group = False
+            effective_policy = "always_reusable"
+        elif usage_policy_mode == "always-distinct":
+            distinct_within_group = True
+            effective_policy = "always_distinct"
+        else:
+            distinct_within_group = bool(
+                group["usage_policy"]["distinct_within_group"]
+            )
+            effective_policy = group["usage_policy"]["mode"]
+
+        def make_assignment_option(
+            target_ids: tuple[str, ...],
+            tool_choices: tuple[str | None, ...],
+        ) -> dict[str, Any] | None:
+            assigned_pairs = [
+                (tool_id, target_id)
+                for target_id, tool_id in zip(target_ids, tool_choices)
+                if tool_id is not None
+            ]
+            if distinct_within_group:
+                used = [tool_id for tool_id, _target in assigned_pairs]
+                if len(used) != len(set(used)):
+                    return None
+            if any(
+                edge_index[(tool_id, target_id)]["status"] != "TRUE"
+                for tool_id, target_id in assigned_pairs
+            ):
+                return None
+            occurrence_count: dict[str, int] = {}
+            assignments = []
+            for tool_id, target_id in assigned_pairs:
+                occurrence_count[tool_id] = (
+                    occurrence_count.get(tool_id, 0) + 1
+                )
+                edge = edge_index[(tool_id, target_id)]
+                assignments.append(
+                    {
+                        **deepcopy(edge),
+                        "usage_policy_mode": usage_policy_mode,
+                        "effective_usage_policy": effective_policy,
+                        "reused_assignment": (
+                            occurrence_count[tool_id] > 1
+                        ),
+                        "cross_group_reused_assignment": False,
+                        "dedicated_assignment": distinct_within_group,
+                        "assignment_status": "TRUE",
+                        "rejection_reason": None,
+                    }
+                )
+            distinct_tools = sorted(
+                {tool_id for tool_id, _target in assigned_pairs}
+            )
+            return {
+                "target_object_ids": list(target_ids),
+                "tool_choices": list(tool_choices),
+                "assignments": assignments,
+                "satisfied_target_slots": len(assignments),
+                "distinct_tool_object_ids": distinct_tools,
+                "distinct_assigned_physical_objects": len(distinct_tools),
+            }
+
+        full_options: list[dict[str, Any]] = []
+        for target_ids in target_sets:
+            for tool_choices in product(
+                functionally_assignable, repeat=required_count
+            ):
+                option = make_assignment_option(
+                    target_ids, tool_choices
+                )
+                if option is not None:
+                    full_options.append(option)
+
+        partial_options: list[dict[str, Any]] = []
+        for target_ids in target_sets_for_partial:
+            choices = [None, *functionally_assignable]
+            for tool_choices in product(choices, repeat=len(target_ids)):
+                option = make_assignment_option(
+                    target_ids, tool_choices
+                )
+                if option is not None:
+                    partial_options.append(option)
+
+        def option_key(option: dict[str, Any]) -> tuple:
+            tool_ids = [
+                tool_id
+                for tool_id in option["tool_choices"]
+                if tool_id is not None
+            ]
+            return (
+                -int(option["satisfied_target_slots"]),
+                int(option["distinct_assigned_physical_objects"]),
+                *(
+                    candidate_key(tool_role, tool_id)
+                    for tool_id in tool_ids
+                ),
+                tuple(option["target_object_ids"]),
+                tuple(tool_ids),
+            )
+
+        full_options.sort(key=option_key)
+        partial_options.sort(key=option_key)
+        best_partial = partial_options[0] if partial_options else {
+            "target_object_ids": list(target_true[:required_count]),
+            "tool_choices": [],
+            "assignments": [],
+            "satisfied_target_slots": 0,
+            "distinct_tool_object_ids": [],
+            "distinct_assigned_physical_objects": 0,
+        }
+        unknown_possible = bool(
+            unresolved_target_ids
+            or tool_unknown
+            or any(
+                edge["status"] == "UNKNOWN"
+                for edge in edge_index.values()
+                if edge["utensil_object_id"] in (
+                    tool_semantic_true + tool_unknown
+                )
+                and edge["target_object_id"] in (
+                    target_true + unresolved_target_ids
+                )
+            )
+        )
+        group_work[group_id] = {
+            "group": group,
+            "edge_index": edge_index,
+            "full_options": full_options,
+            "best_partial": best_partial,
+            "unknown_possible": unknown_possible,
+            "counts": {
+                "raw_observed_utensils": len(raw_utensils),
+                "semantically_eligible_utensils": len(
+                    tool_semantic_true
+                ),
+                "geometrically_eligible_utensils": len(
+                    tool_geometry_true
+                ),
+                "functionally_assignable_utensils": len(
+                    functionally_assignable
+                ),
+                "distinct_assigned_physical_objects": (
+                    best_partial[
+                        "distinct_assigned_physical_objects"
+                    ]
+                ),
+                "satisfied_target_slots": best_partial[
+                    "satisfied_target_slots"
+                ],
+                "required_target_slots": required_count,
+            },
+            "raw_utensil_object_ids": raw_utensils,
+            "semantically_eligible_object_ids": tool_semantic_true,
+            "geometrically_eligible_object_ids": tool_geometry_true,
+            "functionally_assignable_object_ids": (
+                functionally_assignable
+            ),
+            "eligible_target_object_ids": target_true,
+            "unknown_target_object_ids": unresolved_target_ids,
+        }
+
+    group_ids = sorted(group_work)
+    global_options = []
+    if all(group_work[group_id]["full_options"] for group_id in group_ids):
+        for group_choices in product(
+            *(
+                group_work[group_id]["full_options"]
+                for group_id in group_ids
+            )
+        ):
+            all_tool_slots = [
+                tool_id
+                for option in group_choices
+                for tool_id in option["tool_choices"]
+                if tool_id is not None
+            ]
+            require_global_distinct = (
+                usage_policy_mode == "always-distinct"
+                or (
+                    usage_policy_mode == "function-aware"
+                    and not config["cross_group_reuse"]["allowed"]
+                )
+            )
+            if (
+                require_global_distinct
+                and len(all_tool_slots) != len(set(all_tool_slots))
+            ):
+                continue
+            global_options.append(
+                {
+                    "groups": dict(zip(group_ids, group_choices)),
+                    "distinct_tool_object_ids": sorted(
+                        set(all_tool_slots)
+                    ),
+                    "distinct_physical_tool_count": len(
+                        set(all_tool_slots)
+                    ),
+                }
+            )
+
+    def global_key(option: dict[str, Any]) -> tuple:
+        assignments = [
+            assignment
+            for group_id in group_ids
+            for assignment in option["groups"][group_id]["assignments"]
+        ]
+        return (
+            option["distinct_physical_tool_count"],
+            *(
+                candidate_key(
+                    assignment["tool_role"],
+                    assignment["utensil_object_id"],
+                )
+                for assignment in assignments
+            ),
+            tuple(option["distinct_tool_object_ids"]),
+        )
+
+    global_options.sort(key=global_key)
+    selected_global = global_options[0] if global_options else None
+    if selected_global is not None:
+        tool_groups: dict[str, set[str]] = {}
+        for group_id, option in selected_global["groups"].items():
+            for assignment in option["assignments"]:
+                tool_groups.setdefault(
+                    assignment["utensil_object_id"], set()
+                ).add(group_id)
+        for option in selected_global["groups"].values():
+            for assignment in option["assignments"]:
+                assignment["cross_group_reused_assignment"] = (
+                    len(
+                        tool_groups[
+                            assignment["utensil_object_id"]
+                        ]
+                    )
+                    > 1
+                )
+    any_unknown = any(
+        work["unknown_possible"] for work in group_work.values()
+    )
+    status = (
+        "COMPLETE"
+        if selected_global is not None
+        else "INDETERMINATE"
+        if any_unknown
+        else "INCOMPLETE"
+    )
+
+    function_group_evaluations = []
+    operation_assignments = []
+    for group_id in group_ids:
+        work = group_work[group_id]
+        option = (
+            selected_global["groups"][group_id]
+            if selected_global is not None
+            else work["best_partial"]
+        )
+        counts = deepcopy(work["counts"])
+        counts["distinct_assigned_physical_objects"] = option[
+            "distinct_assigned_physical_objects"
+        ]
+        counts["satisfied_target_slots"] = option[
+            "satisfied_target_slots"
+        ]
+        counts["required_distinct_physical_objects"] = (
+            counts["required_target_slots"]
+            if (
+                usage_policy_mode == "always-distinct"
+                or (
+                    usage_policy_mode == "function-aware"
+                    and work["group"]["usage_policy"][
+                        "distinct_within_group"
+                    ]
+                )
+            )
+            else 1
+        )
+        local_complete = bool(work["full_options"])
+        group_status = (
+            "COMPLETE"
+            if local_complete
+            else "INDETERMINATE"
+            if work["unknown_possible"]
+            else "INCOMPLETE"
+        )
+        evaluation = {
+            "function_group_id": group_id,
+            "function": work["group"]["function"],
+            "tool_role": work["group"]["tool_role"],
+            "target_role": work["group"]["target_role"],
+            "declared_usage_policy": deepcopy(
+                work["group"]["usage_policy"]
+            ),
+            "evaluated_usage_policy_mode": usage_policy_mode,
+            "cross_group_reuse_allowed": config[
+                "cross_group_reuse"
+            ]["allowed"],
+            "status": group_status,
+            "counts": counts,
+            "raw_utensil_object_ids": work[
+                "raw_utensil_object_ids"
+            ],
+            "semantically_eligible_object_ids": work[
+                "semantically_eligible_object_ids"
+            ],
+            "geometrically_eligible_object_ids": work[
+                "geometrically_eligible_object_ids"
+            ],
+            "functionally_assignable_object_ids": work[
+                "functionally_assignable_object_ids"
+            ],
+            "eligible_target_object_ids": work[
+                "eligible_target_object_ids"
+            ],
+            "unknown_target_object_ids": work[
+                "unknown_target_object_ids"
+            ],
+            "selected_assignments": deepcopy(option["assignments"]),
+            "candidate_target_evaluations": [
+                deepcopy(edge)
+                for edge in work["edge_index"].values()
+                if edge["utensil_object_id"]
+                in {
+                    *work["raw_utensil_object_ids"],
+                    *work["semantically_eligible_object_ids"],
+                }
+                and edge["target_object_id"]
+                in {
+                    *work["eligible_target_object_ids"],
+                    *work["unknown_target_object_ids"],
+                }
+            ],
+            "reason": (
+                "ALL_TARGET_SLOTS_ASSIGNED"
+                if local_complete
+                else "REQUIRED_EVIDENCE_UNKNOWN"
+                if work["unknown_possible"]
+                else "INSUFFICIENT_VALID_ASSIGNMENTS"
+            ),
+        }
+        function_group_evaluations.append(evaluation)
+        operation_assignments.extend(evaluation["selected_assignments"])
+
+    selected_role_objects: dict[str, set[str]] = {
+        role_name: set() for role_name in relevant_roles
+    }
+    for assignment in operation_assignments:
+        selected_role_objects[assignment["tool_role"]].add(
+            assignment["utensil_object_id"]
+        )
+        selected_role_objects[assignment["target_role"]].add(
+            assignment["target_object_id"]
+        )
+    selected_witness = (
+        {
+            role_name: sorted(object_ids)
+            for role_name, object_ids in selected_role_objects.items()
+            if object_ids
+        }
+        if selected_global is not None
+        else None
+    )
+    selected_candidate_edges = []
+    seen_candidates = set()
+    for assignment in operation_assignments:
+        for role_name, object_id in (
+            (assignment["tool_role"], assignment["utensil_object_id"]),
+            (assignment["target_role"], assignment["target_object_id"]),
+        ):
+            key = (role_name, object_id)
+            if key in seen_candidates:
+                continue
+            seen_candidates.add(key)
+            semantic = candidate_index[key]["semantic"]
+            selected_candidate_edges.append(
+                {
+                    "object_id": object_id,
+                    "role": role_name,
+                    "semantic_rank": semantic.get("semantic_rank"),
+                    "canonical_label": semantic.get("canonical_label"),
+                    "confidence": semantic.get("confidence"),
+                }
+            )
+    selected_pairwise_relations = [
+        deepcopy(relation)
+        for assignment in operation_assignments
+        for relation in assignment["relation_checks"]
+    ]
+    if status == "COMPLETE":
+        reason_codes = ["COMPLETE_FUNCTION_AWARE_USAGE_WITNESS"]
+        if usage_policy_mode != "function-aware":
+            reason_codes = [
+                "COMPLETE_DIAGNOSTIC_USAGE_POLICY_ABLATION"
+            ]
+    elif (
+        usage_policy_mode == "always-distinct"
+        and all(work["full_options"] for work in group_work.values())
+    ):
+        reason_codes = ["GLOBAL_DISTINCTNESS_BLOCKS_ASSIGNMENT"]
+    elif status == "INDETERMINATE":
+        reason_codes = ["REQUIRED_EVIDENCE_UNKNOWN"]
+    else:
+        reason_codes = ["INSUFFICIENT_VALID_FUNCTION_ASSIGNMENTS"]
+
+    group_distinct_requirements = [
+        group["counts"]["required_distinct_physical_objects"]
+        for group in function_group_evaluations
+    ]
+    if usage_policy_mode == "always-distinct":
+        policy_distinct_requirement = sum(group_distinct_requirements)
+    elif usage_policy_mode == "always-reusable":
+        policy_distinct_requirement = 1
+    elif config["cross_group_reuse"]["allowed"]:
+        policy_distinct_requirement = max(
+            group_distinct_requirements, default=0
+        )
+    else:
+        policy_distinct_requirement = sum(group_distinct_requirements)
+
+    return {
+        "schema_version": WITNESS_SCHEMA_VERSION + 2,
+        "inference_basis": "JOINT_SEMANTIC_GEOMETRIC_USAGE_POLICY",
+        "grounding_mode": "joint",
+        "usage_policy_mode": usage_policy_mode,
+        "diagnostic_ablation": usage_policy_mode != "function-aware",
+        "task_id": config["task_id"],
+        "specification_source": config.get("specification_source"),
+        "stage": stage,
+        "status": status,
+        "selected_witness": selected_witness,
+        "selected_candidate_edges": selected_candidate_edges,
+        "selected_pairwise_relations": selected_pairwise_relations,
+        "role_requirements": {
+            role_name: config["roles"][role_name]["count"]
+            for role_name in relevant_roles
+        },
+        "operation_assignments": operation_assignments,
+        "function_group_evaluations": function_group_evaluations,
+        "usage_policy_evaluations": function_group_evaluations,
+        "candidate_evaluations": candidate_evaluations,
+        "assignment_evaluations": [
+            {
+                "usage_policy_mode": usage_policy_mode,
+                "status": status,
+                "selected_witness": selected_witness,
+                "distinct_physical_tool_count": (
+                    selected_global["distinct_physical_tool_count"]
+                    if selected_global is not None
+                    else 0
+                ),
+                "reason_codes": reason_codes,
+            }
+        ],
+        "valid_assignment_count": len(global_options),
+        "indeterminate_assignment_count": (
+            1 if status == "INDETERMINATE" else 0
+        ),
+        "distinct_physical_tool_count": (
+            selected_global["distinct_physical_tool_count"]
+            if selected_global is not None
+            else len(
+                {
+                    assignment["utensil_object_id"]
+                    for assignment in operation_assignments
+                }
+            )
+        ),
+        "policy_required_distinct_physical_tool_count": (
+            policy_distinct_requirement
+        ),
+        "satisfied_target_slot_count": sum(
+            group["counts"]["satisfied_target_slots"]
+            for group in function_group_evaluations
+        ),
+        "required_target_slot_count": sum(
+            group["counts"]["required_target_slots"]
+            for group in function_group_evaluations
+        ),
+        "cross_group_reuse": deepcopy(config["cross_group_reuse"]),
+        "reason_codes": reason_codes,
+        "selection_policy": {
+            "candidate_gate": "joint_semantic_and_geometry",
+            "target_edge_gate": "all_required_relations_true",
+            "assignment_order": (
+                "fewest_distinct_then_semantic_rank_confidence_id"
+            ),
+        },
     }

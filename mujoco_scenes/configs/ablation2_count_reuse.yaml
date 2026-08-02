@@ -1,0 +1,102 @@
+schema_version: 2
+task_id: prepare_two_coffees_and_soups
+specification_source: manual_ablation2_v1
+
+roles:
+  coffee_cup:
+    count: 2
+    assignment_order: 0
+    semantic_preferences:
+      - rank: 1
+        canonical_label: cup
+        detector_aliases: [coffee cup, mug, coffee mug]
+    unary_geometry:
+      - predicate: OPEN_CAVITY
+        expected: true
+
+  soup_bowl:
+    count: 2
+    assignment_order: 1
+    semantic_preferences:
+      - rank: 1
+        canonical_label: bowl
+        detector_aliases: [soup bowl, mixing bowl]
+    unary_geometry:
+      - predicate: OPEN_CAVITY
+        expected: true
+
+  coffee_stirrer:
+    count: 1
+    assignment_order: 2
+    semantic_preferences:
+      - rank: 1
+        canonical_label: spoon
+        detector_aliases: [teaspoon, tablespoon]
+    known_excluded_labels: [fork]
+    unary_geometry:
+      - predicate: ELONGATED_OBJECT
+        expected: true
+
+  soup_spoon:
+    count: 1
+    assignment_order: 3
+    semantic_preferences:
+      - rank: 1
+        canonical_label: spoon
+        detector_aliases: [teaspoon, tablespoon]
+    known_excluded_labels: [fork]
+    unary_geometry:
+      - predicate: ELONGATED_OBJECT
+        expected: true
+
+relations:
+  - predicate: INSERTABLE_IN
+    subject_role: coffee_stirrer
+    object_role: coffee_cup
+    expected: true
+  - predicate: REACHES_BOTTOM
+    subject_role: coffee_stirrer
+    object_role: coffee_cup
+    expected: true
+  - predicate: INSERTABLE_IN
+    subject_role: soup_spoon
+    object_role: soup_bowl
+    expected: true
+  - predicate: REACHES_BOTTOM
+    subject_role: soup_spoon
+    object_role: soup_bowl
+    expected: true
+
+operation_groups:
+  coffee_stirring:
+    function: STIR_COFFEE
+    tool_role: coffee_stirrer
+    target_role: coffee_cup
+    required_target_count: 2
+    usage_policy:
+      mode: sequential_reuse_allowed
+      distinct_within_group: false
+    relations: [INSERTABLE_IN, REACHES_BOTTOM]
+
+  soup_serving:
+    function: SERVE_SOUP
+    tool_role: soup_spoon
+    target_role: soup_bowl
+    required_target_count: 2
+    usage_policy:
+      mode: dedicated_per_target
+      distinct_within_group: true
+    relations: [INSERTABLE_IN, REACHES_BOTTOM]
+
+cross_group_reuse:
+  allowed: true
+
+constraints:
+  distinct_role_assignments: false
+
+selection:
+  policy: ranked_valid_candidate
+  semantic_confidence_is_only_a_gate: true
+
+diagnostics:
+  max_representative_rejections: 100

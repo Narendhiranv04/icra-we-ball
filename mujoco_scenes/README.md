@@ -591,3 +591,251 @@ output directory with:
 ```bash
 -v "$PWD/runs:/workspace/runs"
 ```
+
+## Ablation 2: function-aware cardinality and utensil reuse
+
+Ablation 2 tests a separate claim from the semantic-versus-geometry
+counterexample above: a raw count of detected utensils does not determine
+whether a multi-target task is feasible. The number of required physical
+objects depends on the usage policy of the function being performed.
+
+The manually declared integrated task is:
+
+> Prepare coffee and soup for two people. Stir both coffees using a reusable
+> stirring spoon, and provide one dedicated spoon for each soup serving.
+
+No foundation model generates this requirement. No global
+`REUSABLE_OBJECT` property is inferred. Reuse belongs to the operation group:
+
+| Function group | Targets | Policy | Distinct spoons required |
+|---|---:|---|---:|
+| `coffee_stirring` | two cups | `sequential_reuse_allowed` | 1 |
+| `soup_serving` | two bowls | `dedicated_per_target` | 2 |
+
+Cross-group reuse is allowed. The spoon used for coffee may later be assigned
+to one soup bowl, so the integrated requirement derives a total of two valid
+physical spoons rather than three. The task file contains no scene instance
+IDs, region names, or stage-specific conditions.
+
+Candidate eligibility is still production joint grounding:
+
+```text
+RGB semantic compatibility
+AND ELONGATED_OBJECT from fresh point-cloud evidence
+AND target-specific INSERTABLE_IN
+AND target-specific REACHES_BOTTOM
+AND operation-group assignment policy
+```
+
+Counts are recorded separately for raw observed utensils, semantically
+eligible utensils, geometrically eligible utensils, functionally assignable
+utensils, satisfied target slots, and distinct assigned physical objects. A
+fork is not counted for a spoon-only role. A spoon detected by YOLO-World is
+not counted if its point-cloud geometry fails. A single persistent instance
+cannot appear twice in a dedicated-per-target matching.
+
+### Scene family
+
+| Scene | Purpose | Expected production result |
+|---|---|---|
+| `S1_ablation2_count_reuse_primary` | Integrated coffee and soup task | Complete after D2 with two physical spoons |
+| `S1_ablation2_coffee_reuse` | Sequential-reuse isolation | Complete at INITIAL with one spoon assigned to two cups |
+| `S1_ablation2_soup_dedicated` | Dedicated-per-target isolation | Complete after D2 with two different spoon IDs |
+| `S1_ablation2_count_reuse_exhaustion` | No second valid spoon | Inspect full order and terminate `EXHAUSTED` without a verified handoff |
+
+The primary scene initially shows two separate cups, two separate bowls, one
+normal spoon, and one fork. D1 contains an oversized spoon that is recognized
+semantically but rejected by measured insertability. D2 contains a second
+normal spoon. The production progression is:
+
+```text
+INITIAL: coffee 2/2 by reuse; soup 1/2; INCOMPLETE
+D1:      oversized spoon excluded by geometry; INCOMPLETE
+D2:      second valid spoon supplies the second dedicated assignment; COMPLETE
+```
+
+C2, B1, and C1 remain closed in the production early-stop run.
+
+### Task schema
+
+The operation-group extension is represented in
+`configs/ablation2_count_reuse.yaml`:
+
+```yaml
+operation_groups:
+  coffee_stirring:
+    function: STIR_COFFEE
+    tool_role: coffee_stirrer
+    target_role: coffee_cup
+    required_target_count: 2
+    usage_policy:
+      mode: sequential_reuse_allowed
+      distinct_within_group: false
+    relations: [INSERTABLE_IN, REACHES_BOTTOM]
+
+  soup_serving:
+    function: SERVE_SOUP
+    tool_role: soup_spoon
+    target_role: soup_bowl
+    required_target_count: 2
+    usage_policy:
+      mode: dedicated_per_target
+      distinct_within_group: true
+
+cross_group_reuse:
+  allowed: true
+```
+
+The solver first resolves target objects, evaluates semantic/unary/pairwise
+compatibility for every tool-target pair, builds the compatibility graph, and
+then applies reuse or one-to-one matching. It does not infer feasibility from
+`valid_spoon_count >= target_count`.
+
+### Same-evidence policy modes
+
+All three policy modes are evaluated from the same saved RGB, detections,
+associations, point clouds, properties, and persistent registry:
+
+| Mode | Integrated outcome | Interpretation |
+|---|---|---|
+| `always-reusable` | Incorrect COMPLETE at INITIAL using one spoon | False positive: ignores dedicated soup utensils |
+| `always-distinct` | Incorrect EXHAUSTED while requiring four spoons | False negative: ignores valid sequential coffee reuse |
+| `function-aware` | Correct COMPLETE at D2 using two spoons | Applies the declared policy of each function group |
+
+Diagnostic modes never control production early stopping and never rerender
+the scene. Only assignment constraints change.
+
+### Local actual-detector run
+
+The validated detector setting remains YOLO-World
+`yolov8m-worldv2.pt`, Ultralytics `8.4.112`, 1280×960 rendered RGB, and
+multi-view process isolation:
+
+```bash
+MUJOCO_GL=egl \
+PYOPENGL_PLATFORM=egl \
+YOLO_CONFIG_DIR=/tmp \
+MUJOCO_SEMANTIC_PROCESS_ISOLATION=1 \
+.venv/bin/python -m mujoco_scenes.scene_loader \
+  --scene S1_ablation2_count_reuse_primary \
+  --no-robot \
+  --task-requirements mujoco_scenes/configs/ablation2_count_reuse.yaml \
+  --inspect-sequence D1 D2 C2 B1 C1 \
+  --stop-on-complete \
+  --runs-root runs \
+  --run-id ablation2_count_reuse_local \
+  --point-cloud-width 1280 \
+  --point-cloud-height 960 \
+  --semantic-detector yolo_world \
+  --semantic-model semantic_model_cache/yolov8m-worldv2.pt \
+  --semantic-vocabulary \
+    mujoco_scenes/configs/ablation2_semantic_vocabulary.yaml \
+  --grounding-mode joint \
+  --semantic-confidence-threshold 0.03 \
+  --semantic-min-supporting-views 2 \
+  --save-semantic-overlays
+```
+
+### Docker production run
+
+Prepare the persistent model cache once:
+
+```bash
+python mujoco_scenes/scripts/prepare_semantic_models.py \
+  --output semantic_model_cache
+```
+
+Build and run with the host UID/GID so generated files remain writable:
+
+```bash
+docker build -t mujoco-kitchen-s1 -f mujoco_scenes/Dockerfile .
+
+mkdir -p runs
+docker run --rm \
+  --user "$(id -u):$(id -g)" \
+  -e HOME=/tmp \
+  -e MUJOCO_GL=egl \
+  -e PYOPENGL_PLATFORM=egl \
+  -e YOLO_CONFIG_DIR=/tmp \
+  -e MUJOCO_SEMANTIC_PROCESS_ISOLATION=1 \
+  -e OMP_NUM_THREADS=2 \
+  -e MKL_NUM_THREADS=2 \
+  -e OPENBLAS_NUM_THREADS=2 \
+  -e MALLOC_ARENA_MAX=2 \
+  -v "$PWD/runs:/output" \
+  -v "$PWD/semantic_model_cache/yolov8m-worldv2.pt:/models/yolov8m-worldv2.pt:ro" \
+  -v "$PWD/semantic_model_cache/weights:/workspace/weights:ro" \
+  mujoco-kitchen-s1 \
+  --scene S1_ablation2_count_reuse_primary \
+  --no-robot \
+  --task-requirements configs/ablation2_count_reuse.yaml \
+  --inspect-sequence D1 D2 C2 B1 C1 \
+  --stop-on-complete \
+  --runs-root /output \
+  --run-id ablation2_count_reuse_docker \
+  --point-cloud-width 1280 \
+  --point-cloud-height 960 \
+  --semantic-detector yolo_world \
+  --semantic-model /models/yolov8m-worldv2.pt \
+  --semantic-vocabulary \
+    mujoco_scenes/configs/ablation2_semantic_vocabulary.yaml \
+  --grounding-mode joint \
+  --semantic-confidence-threshold 0.03 \
+  --semantic-min-supporting-views 2 \
+  --save-semantic-overlays
+```
+
+The cache is mounted read-only and reused between runs; neither checkpoint is
+downloaded inside the demonstration container.
+
+### One-command shared-evidence report
+
+The presentation workflow deliberately runs the primary scene through the
+full fixed order once. This supplies later evidence needed to demonstrate the
+`always-distinct` exhaustion diagnostic. The production function-aware
+first-completion stage remains D2.
+
+```bash
+./mujoco_scenes/scripts/run_ablation2_count_reuse_demo.sh \
+  ablation2_count_reuse_demo
+```
+
+Open:
+
+```bash
+xdg-open \
+  reports/ablation2_count_reuse_demo/presentation_report.html
+```
+
+The report package includes:
+
+```text
+presentation_report.html
+ablation_report.html
+ablation_report.md
+README.md
+report_data.json
+offline_policy_ablation_evaluation.json
+policy_ablation_comparison.png
+ablations/
+  always_reusable/always_reusable.gif
+  always_reusable/always_reusable.mp4
+  always_distinct/always_distinct.gif
+  always_distinct/always_distinct.mp4
+  function_aware/function_aware.gif
+  function_aware/function_aware.mp4
+stages/<stage>/
+  semantic_overview.png
+  pointcloud.png
+  graph.png
+  overview.png
+```
+
+The report contains the rendered scene, detector overlays, generic persistent
+IDs, candidate counts, target assignments, numeric relation margins,
+point-cloud views, graph growth, and per-policy timelines. Ground-truth
+expectations in `ablation2_count_reuse_evaluation.yaml` are marked
+offline-only and are never imported by runtime perception or assignment.
+
+This milestone performs no FM/LLM/VLM requirement generation, no adaptive
+search, no robot operation, and no TAMP action execution.

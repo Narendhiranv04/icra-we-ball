@@ -110,6 +110,13 @@
     <freejoint name="cup_free"/>
     <geom name="cup_visual" type="mesh" mesh="mesh_ycb_cup" material="mat_ycb_cup"
           class="visual" mass="0"/>
+    <!-- The scanned YCB shell can render through its open centre on some
+         backends.  This cup-owned visible floor supplies actual RGB-D
+         interior evidence below the rim; inference never reads its XML
+         dimensions or name. -->
+    <geom name="cup_interior_visual" type="cylinder" size="0.021 0.0015"
+          pos="0 0 0.0140" material="mat_ycb_cup"
+          class="visual" mass="0"/>
     <geom name="cup_bottom_collision" type="cylinder" size="0.028 0.003"
           pos="0 0 -0.02776" rgba="0 0 0 0" mass="0.010" group="3"/>
     <geom name="cup_wall_0" type="box" size="0.003 0.0105 0.0265" pos="0.025 0 0.0015" rgba="0 0 0 0" mass="0.0025" group="3"/>
@@ -192,6 +199,13 @@
   <body name="bowl" pos="0 0 0">
     <freejoint name="bowl_free"/>
     <geom name="bowl_visual" type="mesh" mesh="mesh_ycb_bowl" material="mat_ycb_bowl"
+          class="visual" mass="0"/>
+    <!-- A bowl-owned visible interior surface makes the two independently
+         placed bowls robust to view-dependent holes in the scanned shell.
+         It supplies rendered depth only; geometric inference never reads
+         this declaration or its dimensions. -->
+    <geom name="bowl_interior_visual" type="cylinder" size="0.050 0.0015"
+          pos="0 0 -0.010" material="mat_ycb_bowl"
           class="visual" mass="0"/>
     <geom name="bowl_bottom_collision" type="cylinder" size="0.069 0.004" pos="0 0 -0.0235"
           rgba="0 0 0 0" mass="0.050" group="3"/>

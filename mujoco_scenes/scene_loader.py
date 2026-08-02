@@ -192,6 +192,14 @@ COUNTER_SPOTS = {
     "counter_spot_4": (0.20, -0.30, 0.580),
     "counter_spot_5": (0.25, -0.34, 0.580),
     "counter_spot_6": (0.0, -0.22, 0.580),
+    # Ablation 2 uses a wider two-row layout so repeated cup, bowl, and
+    # utensil instances remain visually separable in all five RGB views.
+    "counter_spot_7": (-0.50, -0.34, 0.580),
+    "counter_spot_8": (-0.34, -0.34, 0.580),
+    "counter_spot_9": (-0.13, -0.28, 0.580),
+    "counter_spot_10": (0.08, -0.28, 0.580),
+    "counter_spot_11": (0.26, -0.11, 0.580),
+    "counter_spot_12": (0.31, -0.34, 0.580),
 }
 
 # The kettle handle is deliberately grasped rather than approximating a pick
@@ -568,12 +576,17 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
         if instance_name != obj_name:
             old_name = obj_name
             new_name = instance_name
-            obj_elem.set("name", new_name)
             for child in obj_elem.iter():
+                if child is obj_elem:
+                    continue
                 for attr in ["name", "joint"]:
                     val = child.get(attr)
                     if val and old_name in val:
                         child.set(attr, val.replace(old_name, new_name))
+            # Rename the root exactly once. Iterating over the already-renamed
+            # root used to turn the second instance into ``cup_2_2`` while
+            # persistent discovery correctly looked for ``cup_2``.
+            obj_elem.set("name", new_name)
 
         worldbody.append(obj_elem)
         object_instances.append((instance_name, obj_name))
@@ -621,6 +634,13 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
                 # Present the normal fork orthogonally to the neighbouring
                 # spoon so its tines remain separable in the initial RGB
                 # views. This is scene construction, never runtime inference.
+                countertop_quat = "0.7071068 0 0 0.7071068"
+            elif (
+                config.name.startswith("S1_ablation2_")
+                and obj_name == "fork"
+            ):
+                # Separate the fork tines from the neighbouring spoon in RGB
+                # without changing any runtime semantic input.
                 countertop_quat = "0.7071068 0 0 0.7071068"
             _inject_object(obj_name, pos, quat=countertop_quat)
         else:
@@ -742,6 +762,35 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
                 "name": STORAGE_FIXTURE_EQUALITIES["D1"],
                 "body1": "drawer_D1_tray",
                 "body2": oversized_instance,
+                "active": "true",
+                "solref": "0.002 1",
+            },
+        )
+
+    if (
+        config.name.startswith("S1_ablation2_")
+        and "spoon" in config.container_contents.get("D2", [])
+    ):
+        # A light free spoon otherwise slides beneath D2 while the directly
+        # actuated drawer accelerates. Keep the staged object at its rendered
+        # drawer pose for this no-manipulation inspection benchmark. The weld
+        # supplies no label or dimensions to either inference path; RGB-D
+        # still measures the visible object after opening.
+        equality = root.find("equality")
+        if equality is None:
+            equality = ET.SubElement(root, "equality")
+        d2_spoon_instance = next(
+            instance_name
+            for instance_name, object_kind in reversed(object_instances)
+            if object_kind == "spoon"
+        )
+        ET.SubElement(
+            equality,
+            "weld",
+            {
+                "name": "ablation2_storage_fixture_D2_spoon",
+                "body1": "drawer_D2_tray",
+                "body2": d2_spoon_instance,
                 "active": "true",
                 "solref": "0.002 1",
             },

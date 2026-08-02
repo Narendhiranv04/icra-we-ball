@@ -69,9 +69,12 @@ regions:
         look_at_offset_m: [0.12, 0.00, 0.00]
         fovy_degrees: 58.0
       inspection_close:
-        position_offset_m: [0.30, 0.00, 0.08]
+        # A distinct closer left-oblique view.  This must not duplicate the
+        # right camera: independent viewpoint support is what makes the
+        # five-view semantic and geometric fusion meaningful.
+        position_offset_m: [-0.10, 0.08, 0.22]
         look_at_offset_m: [0.12, 0.00, 0.00]
-        fovy_degrees: 58.0
+        fovy_degrees: 62.0
 
   D1:
     target_world_m: [-0.47, -0.54, 0.42]

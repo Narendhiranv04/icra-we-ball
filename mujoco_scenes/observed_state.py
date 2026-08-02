@@ -36,6 +36,7 @@ from mujoco_scenes.task_witness import (
     evaluate_joint_task_witness,
     evaluate_semantic_compatibility,
     evaluate_task_witness,
+    evaluate_usage_policy_task_witness,
     load_task_requirements,
     resolve_task_requirements_path,
 )
@@ -648,6 +649,11 @@ class ObservedStateRun:
                     if existing is not None
                     else {}
                 ),
+                "functional_usage_evaluations": deepcopy(
+                    existing.get("functional_usage_evaluations", {})
+                    if existing is not None
+                    else {}
+                ),
                 **measured,
             }
             record["geometry"] = {
@@ -761,11 +767,13 @@ class ObservedStateRun:
         if self.semantic_enabled:
             role_rank_by_label = {
                 role: {
-                    preference["canonical_label"]: int(
-                        preference["rank"]
-                    )
+                    str(label).strip().lower(): int(preference["rank"])
                     for preference in role_config.get(
                         "semantic_preferences", []
+                    )
+                    for label in (
+                        preference["canonical_label"],
+                        *preference.get("detector_aliases", []),
                     )
                 }
                 for role, role_config in self.task_requirements.get(
@@ -871,10 +879,15 @@ class ObservedStateRun:
             if self.latest_witness is not None
             else None
         )
-        if (
-            self.task_requirements.get("_task_schema")
-            == "JOINT_ROLE_GROUNDING"
-        ):
+        task_schema = self.task_requirements.get("_task_schema")
+        if task_schema == "JOINT_USAGE_POLICY_GROUNDING":
+            witness = evaluate_usage_policy_task_witness(
+                graph,
+                self.task_requirements,
+                stage=stage,
+                usage_policy_mode="function-aware",
+            )
+        elif task_schema == "JOINT_ROLE_GROUNDING":
             witness = evaluate_joint_task_witness(
                 graph,
                 self.task_requirements,
@@ -963,6 +976,44 @@ class ObservedStateRun:
             )
             evaluations[candidate["role"]] = deepcopy(candidate)
             record["functional_role_evaluations"] = evaluations
+        if task_schema == "JOINT_USAGE_POLICY_GROUNDING":
+            for group in witness.get(
+                "function_group_evaluations", []
+            ):
+                group_id = group["function_group_id"]
+                involved_ids = {
+                    *group.get("raw_utensil_object_ids", []),
+                    *group.get("eligible_target_object_ids", []),
+                    *group.get("unknown_target_object_ids", []),
+                }
+                for object_id in involved_ids:
+                    if object_id not in self.registry["objects"]:
+                        continue
+                    record = self.registry["objects"][object_id]
+                    usage = deepcopy(
+                        record.get("functional_usage_evaluations", {})
+                    )
+                    usage[group_id] = {
+                        "stage": stage,
+                        "function": group["function"],
+                        "evaluated_usage_policy_mode": (
+                            group["evaluated_usage_policy_mode"]
+                        ),
+                        "status": group["status"],
+                        "counts": deepcopy(group["counts"]),
+                        "assignments": [
+                            deepcopy(assignment)
+                            for assignment in group.get(
+                                "selected_assignments", []
+                            )
+                            if object_id
+                            in {
+                                assignment["utensil_object_id"],
+                                assignment["target_object_id"],
+                            }
+                        ],
+                    }
+                    record["functional_usage_evaluations"] = usage
         for node in graph["nodes"]:
             if node.get("type") != "object":
                 continue
@@ -972,12 +1023,145 @@ class ObservedStateRun:
                     "functional_role_evaluations", {}
                 )
             )
+            node["attributes"]["functional_usage_evaluations"] = deepcopy(
+                self.registry["objects"][object_id].get(
+                    "functional_usage_evaluations", {}
+                )
+            )
 
         mode_witnesses = {}
-        if (
-            self.task_requirements.get("_task_schema")
-            == "JOINT_ROLE_GROUNDING"
-        ):
+        if task_schema == "JOINT_USAGE_POLICY_GROUNDING":
+            policy_witnesses = {
+                mode: evaluate_usage_policy_task_witness(
+                    graph,
+                    self.task_requirements,
+                    stage=stage,
+                    usage_policy_mode=mode,
+                )
+                for mode in (
+                    "function-aware",
+                    "always-reusable",
+                    "always-distinct",
+                )
+            }
+            comparison = {
+                "stage": stage,
+                "same_observation_evidence": True,
+                "production_mode": "function-aware",
+                "measurement_cloud_paths": sorted(
+                    evidence.measurement_cloud_path
+                    for evidence in stage_evidence.values()
+                    if evidence.measurement_cloud_path
+                ),
+                "semantic_record_paths": sorted(
+                    record.get("semantics", {})
+                    .get("latest_observation", {})
+                    .get("semantic_record_path")
+                    for record in self.registry["objects"].values()
+                    if record.get("semantics", {})
+                    .get("latest_observation", {})
+                    .get("semantic_record_path")
+                ),
+                "modes": policy_witnesses,
+            }
+            _atomic_json(
+                stage_dir / "policy_mode_comparison.json", comparison
+            )
+            _atomic_json(
+                stage_dir / "usage_policy_evaluations.json",
+                {
+                    "task_id": witness["task_id"],
+                    "stage": stage,
+                    "production_mode": "function-aware",
+                    "function_groups": witness[
+                        "function_group_evaluations"
+                    ],
+                },
+            )
+            _atomic_json(
+                stage_dir / "operation_assignments.json",
+                {
+                    "task_id": witness["task_id"],
+                    "stage": stage,
+                    "usage_policy_mode": "function-aware",
+                    "assignments": witness["operation_assignments"],
+                },
+            )
+            _atomic_json(
+                self.run_dir / "usage_policy_evaluations.json",
+                {
+                    "task_id": witness["task_id"],
+                    "stage": stage,
+                    "production_mode": "function-aware",
+                    "function_groups": witness[
+                        "function_group_evaluations"
+                    ],
+                },
+            )
+            _atomic_json(
+                self.run_dir / "operation_assignments.json",
+                {
+                    "task_id": witness["task_id"],
+                    "stage": stage,
+                    "usage_policy_mode": "function-aware",
+                    "assignments": witness["operation_assignments"],
+                },
+            )
+            policy_path = self.run_dir / "policy_ablation_summary.json"
+            policy_summary = (
+                json.loads(policy_path.read_text())
+                if policy_path.exists()
+                else {
+                    "task_id": witness["task_id"],
+                    "production_mode": "function-aware",
+                    "diagnostic_modes": [
+                        "always-reusable",
+                        "always-distinct",
+                    ],
+                    "shared_observation_evidence": True,
+                    "stages": [],
+                }
+            )
+            policy_summary["stages"] = [
+                item
+                for item in policy_summary["stages"]
+                if int(item["stage"]) != stage
+            ]
+            policy_summary["stages"].append(
+                {
+                    "stage": stage,
+                    "region_id": expected_region,
+                    "modes": {
+                        mode: {
+                            "status": result["status"],
+                            "distinct_physical_tool_count": result[
+                                "distinct_physical_tool_count"
+                            ],
+                            "policy_required_distinct_physical_tool_count": (
+                                result[
+                                    "policy_required_distinct_physical_tool_count"
+                                ]
+                            ),
+                            "satisfied_target_slot_count": result[
+                                "satisfied_target_slot_count"
+                            ],
+                            "required_target_slot_count": result[
+                                "required_target_slot_count"
+                            ],
+                            "operation_assignments": result[
+                                "operation_assignments"
+                            ],
+                            "reason_codes": result["reason_codes"],
+                        }
+                        for mode, result in policy_witnesses.items()
+                    },
+                }
+            )
+            policy_summary["stages"].sort(
+                key=lambda item: item["stage"]
+            )
+            _atomic_json(policy_path, policy_summary)
+        elif task_schema == "JOINT_ROLE_GROUNDING":
             mode_witnesses = {
                 mode: evaluate_joint_task_witness(
                     graph,
@@ -1048,6 +1232,184 @@ class ObservedStateRun:
                 key=lambda record: record["stage"]
             )
             _atomic_json(ablation_path, ablation_summary)
+
+        if task_schema == "JOINT_USAGE_POLICY_GROUNDING":
+            for group in witness.get(
+                "function_group_evaluations", []
+            ):
+                events.append(
+                    {
+                        "stage": stage,
+                        "region_id": expected_region,
+                        "event": "FUNCTION_GROUP_EVALUATED",
+                        "function_group": group[
+                            "function_group_id"
+                        ],
+                        "function": group["function"],
+                        "policy_mode": "function-aware",
+                        "status": group["status"],
+                        "counts": group["counts"],
+                    }
+                )
+                events.append(
+                    {
+                        "stage": stage,
+                        "region_id": expected_region,
+                        "event": "USAGE_POLICY_EVALUATED",
+                        "function_group": group[
+                            "function_group_id"
+                        ],
+                        "policy_mode": "function-aware",
+                        "declared_usage_policy": group[
+                            "declared_usage_policy"
+                        ],
+                        "status": group["status"],
+                        "counts": group["counts"],
+                    }
+                )
+                events.append(
+                    {
+                        "stage": stage,
+                        "region_id": expected_region,
+                        "event": (
+                            "FUNCTION_GROUP_COMPLETE"
+                            if group["status"] == "COMPLETE"
+                            else "FUNCTION_GROUP_INCOMPLETE"
+                        ),
+                        "function_group": group[
+                            "function_group_id"
+                        ],
+                        "policy_mode": "function-aware",
+                        "counts": group["counts"],
+                        "reason": group["reason"],
+                    }
+                )
+                count_event = (
+                    "COUNT_REQUIREMENT_SATISFIED"
+                    if group["counts"]["satisfied_target_slots"]
+                    == group["counts"]["required_target_slots"]
+                    else "COUNT_REQUIREMENT_UNSATISFIED"
+                )
+                events.append(
+                    {
+                        "stage": stage,
+                        "region_id": expected_region,
+                        "event": count_event,
+                        "function_group": group[
+                            "function_group_id"
+                        ],
+                        "policy_mode": "function-aware",
+                        "counts": group["counts"],
+                    }
+                )
+                for assignment in group.get(
+                    "selected_assignments", []
+                ):
+                    events.append(
+                        {
+                            "stage": stage,
+                            "region_id": expected_region,
+                            "event": "TARGET_ASSIGNMENT_CREATED",
+                            "function_group": group[
+                                "function_group_id"
+                            ],
+                            "policy_mode": "function-aware",
+                            "utensil_object_id": assignment[
+                                "utensil_object_id"
+                            ],
+                            "target_object_id": assignment[
+                                "target_object_id"
+                            ],
+                            "reused_assignment": assignment[
+                                "reused_assignment"
+                            ],
+                            "dedicated_assignment": assignment[
+                                "dedicated_assignment"
+                            ],
+                        }
+                    )
+                    if assignment["reused_assignment"]:
+                        events.append(
+                            {
+                                "stage": stage,
+                                "region_id": expected_region,
+                                "event": "OBJECT_REUSED_FOR_TARGET",
+                                "function_group": group[
+                                    "function_group_id"
+                                ],
+                                "policy_mode": "function-aware",
+                                "object_id": assignment[
+                                    "utensil_object_id"
+                                ],
+                                "target_object_id": assignment[
+                                    "target_object_id"
+                                ],
+                            }
+                        )
+                    if assignment["dedicated_assignment"]:
+                        events.append(
+                            {
+                                "stage": stage,
+                                "region_id": expected_region,
+                                "event": "DEDICATED_ASSIGNMENT_CREATED",
+                                "function_group": group[
+                                    "function_group_id"
+                                ],
+                                "policy_mode": "function-aware",
+                                "object_id": assignment[
+                                    "utensil_object_id"
+                                ],
+                                "target_object_id": assignment[
+                                    "target_object_id"
+                                ],
+                            }
+                        )
+                for edge in group.get(
+                    "candidate_target_evaluations", []
+                ):
+                    if edge["status"] == "TRUE":
+                        continue
+                    events.append(
+                        {
+                            "stage": stage,
+                            "region_id": expected_region,
+                            "event": "CANDIDATE_EXCLUDED_FROM_COUNT",
+                            "function_group": group[
+                                "function_group_id"
+                            ],
+                            "policy_mode": "function-aware",
+                            "object_id": edge[
+                                "utensil_object_id"
+                            ],
+                            "target_object_id": edge[
+                                "target_object_id"
+                            ],
+                            "status": edge["status"],
+                            "reason": edge["reason"],
+                        }
+                    )
+            for assignment in witness.get(
+                "operation_assignments", []
+            ):
+                graph["edges"].append(
+                    {
+                        "source": (
+                            f"object:{assignment['utensil_object_id']}"
+                        ),
+                        "target": (
+                            f"object:{assignment['target_object_id']}"
+                        ),
+                        "relation": (
+                            "DEDICATED_TO_TARGET"
+                            if assignment["dedicated_assignment"]
+                            else "REUSED_FOR_TARGET"
+                            if assignment["reused_assignment"]
+                            else "ASSIGNED_TO_TARGET"
+                        ),
+                        "status": "TRUE",
+                        "evidence": deepcopy(assignment),
+                    }
+                )
 
         for selected in witness.get("selected_candidate_edges", []):
             graph["edges"].append(
@@ -1168,6 +1530,38 @@ class ObservedStateRun:
                     "ready_for_tamp": True,
                     "tamp_executed": False,
                 }
+                if task_schema == "JOINT_USAGE_POLICY_GROUNDING":
+                    handoff.update(
+                        {
+                            "schema_version": 2,
+                            "function_groups": deepcopy(
+                                witness[
+                                    "function_group_evaluations"
+                                ]
+                            ),
+                            "operation_assignments": deepcopy(
+                                witness["operation_assignments"]
+                            ),
+                            "distinct_physical_tool_count": witness[
+                                "distinct_physical_tool_count"
+                            ],
+                            "policy_required_distinct_physical_tool_count": (
+                                witness[
+                                    "policy_required_distinct_physical_tool_count"
+                                ]
+                            ),
+                            "satisfied_target_slot_count": witness[
+                                "satisfied_target_slot_count"
+                            ],
+                            "required_target_slot_count": witness[
+                                "required_target_slot_count"
+                            ],
+                            "cross_group_reuse": deepcopy(
+                                witness["cross_group_reuse"]
+                            ),
+                            "usage_policy_mode": "function-aware",
+                        }
+                    )
                 _atomic_json(
                     self.run_dir / "verified_task_handoff.json",
                     handoff,
@@ -1290,6 +1684,45 @@ class ObservedStateRun:
         )
         self._append_events([payload])
 
+    def mark_inspection_exhausted(
+        self, *, sequence: list[str], final_witness_status: str
+    ) -> None:
+        """Persist a terminal run outcome without falsifying witness truth.
+
+        ``latest_witness.status`` remains the evidence-level task result
+        (normally INCOMPLETE or INDETERMINATE).  EXHAUSTED describes control
+        flow: every configured region was inspected without finding a complete
+        witness.
+        """
+        stage = int(self.registry.get("current_stage", -1))
+        outcome = {
+            "schema_version": 1,
+            "task_id": self.task_requirements["task_id"],
+            "terminal_status": "EXHAUSTED",
+            "final_witness_status": final_witness_status,
+            "completion_stage": None,
+            "completion_region": None,
+            "final_stage": stage,
+            "inspection_sequence": list(sequence),
+            "verified": False,
+            "ready_for_tamp": False,
+            "tamp_executed": False,
+        }
+        _atomic_json(self.run_dir / "run_outcome.json", outcome)
+        if self.latest_witness is not None:
+            self.latest_witness = {
+                **self.latest_witness,
+                "terminal_status": "EXHAUSTED",
+                "inspection_sequence_exhausted": True,
+            }
+            _atomic_json(self.latest_witness_path, self.latest_witness)
+            stage_dirs = sorted(self.stages_dir.glob(f"{stage:03d}_*"))
+            if stage_dirs:
+                _atomic_json(
+                    stage_dirs[-1] / "witness.json",
+                    self.latest_witness,
+                )
+
     def _append_events(self, events: list[dict[str, Any]]) -> None:
         if not events:
             return
@@ -1372,6 +1805,27 @@ class ObservedStateRun:
                     },
                 }
             )
+        for group_id, group in sorted(
+            self.task_requirements.get("operation_groups", {}).items()
+        ):
+            nodes.append(
+                {
+                    "id": f"function_group:{group_id}",
+                    "type": "function_group",
+                    "attributes": {
+                        "function_group_id": group_id,
+                        "function": group["function"],
+                        "tool_role": group["tool_role"],
+                        "target_role": group["target_role"],
+                        "required_target_count": group[
+                            "required_target_count"
+                        ],
+                        "usage_policy": deepcopy(
+                            group["usage_policy"]
+                        ),
+                    },
+                }
+            )
 
         for object_id, record in sorted(self.registry["objects"].items()):
             dimensions = _dimension_values(record)
@@ -1412,6 +1866,9 @@ class ObservedStateRun:
                         "semantics": record.get("semantics", {}),
                         "functional_role_evaluations": record.get(
                             "functional_role_evaluations", {}
+                        ),
+                        "functional_usage_evaluations": record.get(
+                            "functional_usage_evaluations", {}
                         ),
                         "stage_state": stage_changes.get(object_id, "previous"),
                     },
@@ -1574,37 +2031,67 @@ class ObservedStateRun:
             fill=status_color,
             font=_font(25, bold=True),
         )
-        requirements = witness["role_requirements"]
-        satisfied = witness.get("satisfied_candidate_counts")
-        if satisfied is None:
-            selected_witness = witness.get("selected_witness") or {}
-            satisfied = {
-                role: len(selected_witness.get(role, []))
-                for role in requirements
-            }
-        satisfied_label = " · ".join(
-            f"{role} {satisfied.get(role, 0)}/{requirements[role]}"
-            for role in sorted(requirements)
-        )
-        missing = witness.get("missing_counts", {})
-        missing_label = (
-            ", ".join(
-                f"{role} ×{count}" for role, count in sorted(missing.items())
+        function_groups = witness.get("function_group_evaluations", [])
+        if function_groups:
+            group_label = " · ".join(
+                f"{group['function_group_id']} "
+                f"{group['counts']['satisfied_target_slots']}/"
+                f"{group['counts']['required_target_slots']} "
+                f"({group['status']})"
+                for group in function_groups
             )
-            or "none"
-        )
-        draw.text(
-            (48, 116),
-            f"Satisfied role counts: {satisfied_label}",
-            fill=(55, 62, 72),
-            font=_font(16),
-        )
-        draw.text(
-            (48, 146),
-            f"Missing role counts: {missing_label}",
-            fill=(55, 62, 72),
-            font=_font(16),
-        )
+            distinct_label = " · ".join(
+                f"{group['function_group_id']}: "
+                f"{group['counts']['distinct_assigned_physical_objects']}/"
+                f"{group['counts']['required_distinct_physical_objects']} "
+                "distinct tools"
+                for group in function_groups
+            )
+            draw.text(
+                (48, 116),
+                f"Function target slots: {group_label}",
+                fill=(55, 62, 72),
+                font=_font(16),
+            )
+            draw.text(
+                (48, 146),
+                f"Usage-policy counts: {distinct_label}",
+                fill=(55, 62, 72),
+                font=_font(16),
+            )
+        else:
+            requirements = witness["role_requirements"]
+            satisfied = witness.get("satisfied_candidate_counts")
+            if satisfied is None:
+                selected_witness = witness.get("selected_witness") or {}
+                satisfied = {
+                    role: len(selected_witness.get(role, []))
+                    for role in requirements
+                }
+            satisfied_label = " · ".join(
+                f"{role} {satisfied.get(role, 0)}/{requirements[role]}"
+                for role in sorted(requirements)
+            )
+            missing = witness.get("missing_counts", {})
+            missing_label = (
+                ", ".join(
+                    f"{role} ×{count}"
+                    for role, count in sorted(missing.items())
+                )
+                or "none"
+            )
+            draw.text(
+                (48, 116),
+                f"Satisfied role counts: {satisfied_label}",
+                fill=(55, 62, 72),
+                font=_font(16),
+            )
+            draw.text(
+                (48, 146),
+                f"Missing role counts: {missing_label}",
+                fill=(55, 62, 72),
+                font=_font(16),
+            )
         draw.text(
             (total_width - 48, 146),
             "Indeterminate candidates/assignments: "
@@ -1681,16 +2168,19 @@ class ObservedStateRun:
             for cloud in inspection.rejected_clouds.values()
             if len(cloud.points)
         ]
+        # Accepted measurement evidence and the configured inspection geometry
+        # define the plot.  Rejected scene points can greatly outnumber a thin
+        # accepted utensil; including them in percentile bounds can clip the
+        # only valid evidence completely out of the rendered frame.
         bounds_sets = [
             project(volume_corners),
             project(camera_positions),
             project(target_positions),
             *[projected for _object_id, projected, _color in projected_sets],
-            *rejected_sets,
         ]
         combined = np.concatenate(bounds_sets)
-        lower = np.percentile(combined, 1.0, axis=0)
-        upper = np.percentile(combined, 99.0, axis=0)
+        lower = np.min(combined, axis=0)
+        upper = np.max(combined, axis=0)
         span = np.maximum(upper - lower, 1e-6)
         margin = 65
         scale = min(
@@ -1772,7 +2262,7 @@ class ObservedStateRun:
                 projected = projected[:: math.ceil(len(projected) / 5000)]
             for x, y in pixels(projected):
                 if 4 <= x < width - 4 and 80 <= y < height - 80:
-                    draw.ellipse((x - 1, y - 1, x + 1, y + 1), fill=color)
+                    draw.ellipse((x - 2, y - 2, x + 2, y + 2), fill=color)
 
         valid_cameras = inspection.quality["valid_camera_count"]
         draw.text(

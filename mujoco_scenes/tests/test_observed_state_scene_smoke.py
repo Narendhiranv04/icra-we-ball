@@ -10,6 +10,24 @@ from mujoco_scenes.sequential_inspection import run_sequential_inspection
 
 
 class ObservedStateSceneSmokeTests(unittest.TestCase):
+    def test_ablation2_repeated_categories_have_distinct_instances(self):
+        scene = KitchenScene(
+            "S1_ablation2_count_reuse_primary",
+            include_robot=False,
+        )
+        visible = scene.get_visible_object_instances()
+        names = [name for name, _kind in visible]
+        kinds = [kind for _name, kind in visible]
+        self.assertEqual(len(names), len(set(names)))
+        self.assertEqual(kinds.count("cup"), 2)
+        self.assertEqual(kinds.count("mixing_bowl"), 2)
+        self.assertEqual(kinds.count("spoon"), 1)
+        self.assertEqual(kinds.count("fork"), 1)
+        self.assertEqual(
+            sorted(name for name, kind in visible if kind == "cup"),
+            ["cup", "cup_2"],
+        )
+
     def test_closed_s1_initial_witness_uses_only_visible_evidence(self):
         scene = KitchenScene("S1_coffee_missing_mug", include_robot=False)
         with tempfile.TemporaryDirectory() as directory:

@@ -10,7 +10,11 @@ MUJOCO_LOG.TXT
 # Generated perception runs and visualization exports
 point_cloud_runs/
 runs/
-reports/
+reports/*
+!reports/qualitative_unary_demo/
+!reports/qualitative_unary_demo/**
+!reports/ablation2_count_reuse_demo/
+!reports/ablation2_count_reuse_demo/**
 graph_growth.mp4
 
 # Downloaded pretrained semantic-model caches (prepared reproducibly by
