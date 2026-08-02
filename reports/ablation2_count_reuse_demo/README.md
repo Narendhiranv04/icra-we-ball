@@ -3,9 +3,9 @@
 This report demonstrates that raw utensil count is not sufficient. Reuse is
 declared per function group:
 
-- coffee: one spoon may be reused across two target cups;
-- soup: each of two bowls requires a different spoon;
-- cross-group reuse: the coffee spoon may also serve one soup bowl.
+- coffee: one valid spoon or fork may be reused across two target cups;
+- soup: each bowl requires a different valid spoon-or-fork object ID;
+- cross-group reuse: the coffee utensil may also serve one soup bowl.
 
 All policy modes use identical saved perception evidence.
 

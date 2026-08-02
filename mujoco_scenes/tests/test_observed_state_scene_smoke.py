@@ -22,7 +22,11 @@ class ObservedStateSceneSmokeTests(unittest.TestCase):
         self.assertEqual(kinds.count("cup"), 2)
         self.assertEqual(kinds.count("mixing_bowl"), 2)
         self.assertEqual(kinds.count("spoon"), 1)
-        self.assertEqual(kinds.count("fork"), 1)
+        self.assertEqual(kinds.count("fork"), 0)
+        self.assertEqual(
+            scene.config.container_contents["D2"],
+            ["fork"],
+        )
         self.assertEqual(
             sorted(name for name, kind in visible if kind == "cup"),
             ["cup", "cup_2"],

@@ -20,7 +20,9 @@ roles:
       - rank: 1
         canonical_label: spoon
         detector_aliases: [teaspoon, tablespoon]
-    known_excluded_labels: [fork]
+      - rank: 2
+        canonical_label: fork
+        detector_aliases: [table fork, dinner fork, metal fork, fork utensil]
     unary_geometry:
       - predicate: ELONGATED_OBJECT
         expected: true

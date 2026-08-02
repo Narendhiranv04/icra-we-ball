@@ -46,20 +46,21 @@ MODE_COLORS = {
 }
 MODE_EXPLANATIONS = {
     "always-reusable": (
-        "Incorrectly lets one valid spoon fill both coffee slots and both "
+        "Incorrectly lets one valid utensil fill both coffee slots and both "
         "dedicated soup slots. It is a false positive because it discards "
         "the soup function's dedicated-per-target constraint."
     ),
     "always-distinct": (
-        "Incorrectly requires a different physical spoon for all four target "
+        "Incorrectly requires a different physical utensil for all four target "
         "slots. It is a false negative because it discards valid sequential "
         "reuse for coffee and allowed reuse across operation groups."
     ),
     "function-aware": (
-        "Reuses one spoon across both coffee cups, requires two different "
-        "spoon IDs across the soup bowls, and allows the coffee spoon to be "
-        "one of those two soup spoons. The requirement is derived as two "
-        "physical spoons rather than hard-coded."
+        "Reuses one valid utensil across both coffee cups, requires two "
+        "different utensil IDs across the soup bowls, and allows the coffee "
+        "utensil to be one of those two soup utensils. The final witness uses "
+        "the initial spoon plus the D2 fork, so the requirement is derived as "
+        "two physical objects rather than hard-coded by category."
     ),
 }
 
@@ -317,9 +318,9 @@ def _comparison_image(
         fill="#111827",
     )
     summaries = {
-        "always-reusable": "False positive · one spoon at INITIAL",
-        "always-distinct": "False negative · assumes four spoons",
-        "function-aware": "Correct · two spoons after D2",
+        "always-reusable": "False positive · one utensil at INITIAL",
+        "always-distinct": "False negative · assumes four utensils",
+        "function-aware": "Correct · spoon + fork after D2",
     }
     for index, mode in enumerate(MODES):
         x = 35 + index * 630
@@ -578,21 +579,22 @@ code{background:#eef2ff;padding:2px 5px;border-radius:4px}.small{font-size:13px;
 </nav><main>
 <section id="summary"><div class="small">PRESENTATION REPORT · ABLATION 2</div>
 <h1>Function-aware utensil cardinality and reuse</h1>
-<p class="lede">Raw object count is not functional satisfaction. One spoon
-can be reused sequentially across two coffee cups, while two soup bowls need
-two dedicated spoon IDs. Reuse belongs to the operation group—not permanently
-to the spoon.</p>
+<p class="lede">Raw object count is not functional satisfaction. One valid
+utensil can be reused sequentially across two coffee cups, while two soup
+bowls need two dedicated utensil IDs. Spoon and fork are both acceptable
+after semantic and geometric validation. Reuse belongs to the operation
+group—not permanently to an object category.</p>
 <span class="pill">Scene: {html.escape(run_config['scene_name'])}</span>
 <span class="pill">Run: {html.escape(run_dir.name)}</span>
 <span class="pill ok">Expected results matched:
 {offline['all_expected_results_matched']}</span>
 <img class="hero" src="{_data_uri(output_dir, comparison)}">
 <div class="claim"><div class="card"><b>Always reusable</b><br>
-False positive at INITIAL: one spoon is illegally duplicated across dedicated
+False positive at INITIAL: one utensil is illegally duplicated across dedicated
 soup slots.</div><div class="card"><b>Always distinct</b><br>
-False negative: four different spoons are demanded even though coffee permits
+False negative: four different utensils are demanded even though coffee permits
 sequential reuse.</div><div class="card"><b>Function-aware</b><br>
-Correct at D2: four target slots are covered using two physical spoons.</div>
+Correct at D2: four target slots are covered using one spoon and one fork.</div>
 </div></section>
 <section><h2>Outcome matrix</h2>
 {_table(['Mode','Outcome','Completion stage','Policy requires distinct','Assigned distinct','Expected matched'], outcome_rows)}
@@ -642,9 +644,9 @@ annotations were not imported by runtime inference.</p></section>
 This report demonstrates that raw utensil count is not sufficient. Reuse is
 declared per function group:
 
-- coffee: one spoon may be reused across two target cups;
-- soup: each of two bowls requires a different spoon;
-- cross-group reuse: the coffee spoon may also serve one soup bowl.
+- coffee: one valid spoon or fork may be reused across two target cups;
+- soup: each bowl requires a different valid spoon-or-fork object ID;
+- cross-group reuse: the coffee utensil may also serve one soup bowl.
 
 All policy modes use identical saved perception evidence.
 

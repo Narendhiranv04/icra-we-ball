@@ -18,17 +18,16 @@ scenes:
   # ========================================
 
   S1_ablation2_count_reuse_primary:
-    goal: "Prepare coffee and soup for two people with function-aware spoon reuse"
+    goal: "Prepare coffee and soup for two people with function-aware utensil reuse"
     countertop_objects:
       counter_spot_7: cup
       counter_spot_8: cup
       counter_spot_9: mixing_bowl
       counter_spot_10: mixing_bowl
       counter_spot_11: spoon
-      counter_spot_12: fork
     container_contents:
       D1: [oversized_spoon]
-      D2: [spoon]
+      D2: [fork]
       C2: [plate, gso_canister_distractor]
       B1: [tea_box]
       C1: [mug, glass]
@@ -37,18 +36,17 @@ scenes:
     optimal_search_order: [D1, D2]
     optimal_inspections: 2
     notes: >
-      Ablation 2 primary scene. One spoon can sequentially stir both cups,
-      while the two bowls require two distinct compatible spoons. The D1
+      Ablation 2 primary scene. One utensil can sequentially stir both cups,
+      while the two bowls require two distinct compatible utensils. The D1
       oversized spoon is semantically eligible but geometrically invalid;
-      the D2 spoon completes the dedicated matching.
+      the D2 fork completes the dedicated matching.
 
   S1_ablation2_coffee_reuse:
-    goal: "Stir two coffees using a sequentially reusable spoon"
+    goal: "Stir two coffees using one sequentially reusable utensil"
     countertop_objects:
       counter_spot_7: cup
       counter_spot_8: cup
       counter_spot_11: spoon
-      counter_spot_12: fork
     container_contents:
       D1: [knife]
       D2: [tongs]
@@ -60,19 +58,18 @@ scenes:
     optimal_search_order: []
     optimal_inspections: 0
     notes: >
-      One valid spoon must cover two coffee target slots at INITIAL.
-      Requiring a distinct spoon per slot is the diagnostic false negative.
+      One valid utensil must cover two coffee target slots at INITIAL.
+      Requiring a distinct utensil per slot is the diagnostic false negative.
 
   S1_ablation2_soup_dedicated:
-    goal: "Provide one dedicated valid spoon for each of two soup bowls"
+    goal: "Provide one dedicated valid utensil for each of two soup bowls"
     countertop_objects:
       counter_spot_9: mixing_bowl
       counter_spot_10: mixing_bowl
       counter_spot_11: spoon
-      counter_spot_12: fork
     container_contents:
       D1: [oversized_spoon]
-      D2: [spoon]
+      D2: [fork]
       C2: [plate, gso_canister_distractor]
       B1: [tea_box]
       C1: [mug, glass]
@@ -82,20 +79,19 @@ scenes:
     optimal_inspections: 2
     notes: >
       Unrestricted reuse is a false positive at INITIAL. Production requires
-      the separately observed D2 spoon and completes only after D2.
+      the separately observed D2 fork and completes only after D2.
 
   S1_ablation2_count_reuse_exhaustion:
-    goal: "Prepare coffee and soup for two people with no second valid spoon"
+    goal: "Prepare coffee and soup for two people with no second valid utensil"
     countertop_objects:
       counter_spot_7: cup
       counter_spot_8: cup
       counter_spot_9: mixing_bowl
       counter_spot_10: mixing_bowl
       counter_spot_11: spoon
-      counter_spot_12: fork
     container_contents:
       D1: [oversized_spoon]
-      D2: [knife]
+      D2: [napkin]
       C2: [plate, gso_canister_distractor]
       B1: [tea_box]
       C1: [mug, glass]
@@ -104,7 +100,7 @@ scenes:
     optimal_search_order: [D1, D2, C2, B1, C1]
     optimal_inspections: 5
     notes: >
-      Only one valid spoon exists. Coffee reuse can succeed, but the soup
+      Only one valid utensil exists. Coffee reuse can succeed, but the soup
       dedicated-per-target requirement exhausts the fixed inspection order.
 
   # ========================================

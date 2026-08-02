@@ -602,20 +602,22 @@ objects depends on the usage policy of the function being performed.
 The manually declared integrated task is:
 
 > Prepare coffee and soup for two people. Stir both coffees using a reusable
-> stirring spoon, and provide one dedicated spoon for each soup serving.
+> stirring utensil, and provide one dedicated utensil for each soup serving.
 
 No foundation model generates this requirement. No global
 `REUSABLE_OBJECT` property is inferred. Reuse belongs to the operation group:
 
-| Function group | Targets | Policy | Distinct spoons required |
-|---|---:|---|---:|
-| `coffee_stirring` | two cups | `sequential_reuse_allowed` | 1 |
-| `soup_serving` | two bowls | `dedicated_per_target` | 2 |
+| Function group | Accepted tools | Targets | Policy | Distinct tools required |
+|---|---|---:|---|---:|
+| `coffee_stirring` | spoon or fork | two cups | `sequential_reuse_allowed` | 1 |
+| `soup_serving` | spoon or fork | two bowls | `dedicated_per_target` | 2 |
 
-Cross-group reuse is allowed. The spoon used for coffee may later be assigned
-to one soup bowl, so the integrated requirement derives a total of two valid
-physical spoons rather than three. The task file contains no scene instance
-IDs, region names, or stage-specific conditions.
+Cross-group reuse is allowed. The utensil used for coffee may later be
+assigned to one soup bowl, so the integrated requirement derives a total of
+two valid physical objects rather than three. The validated witness uses the
+initial spoon for coffee and one soup bowl, then the D2 fork for the other
+soup bowl. The task file contains no scene instance IDs, region names, or
+stage-specific conditions.
 
 Candidate eligibility is still production joint grounding:
 
@@ -630,7 +632,8 @@ AND operation-group assignment policy
 Counts are recorded separately for raw observed utensils, semantically
 eligible utensils, geometrically eligible utensils, functionally assignable
 utensils, satisfied target slots, and distinct assigned physical objects. A
-fork is not counted for a spoon-only role. A spoon detected by YOLO-World is
+spoon or fork is counted only after it passes the selected function's
+semantic, unary, and target-specific geometric checks. A detected utensil is
 not counted if its point-cloud geometry fails. A single persistent instance
 cannot appear twice in a dedicated-per-target matching.
 
@@ -638,20 +641,20 @@ cannot appear twice in a dedicated-per-target matching.
 
 | Scene | Purpose | Expected production result |
 |---|---|---|
-| `S1_ablation2_count_reuse_primary` | Integrated coffee and soup task | Complete after D2 with two physical spoons |
-| `S1_ablation2_coffee_reuse` | Sequential-reuse isolation | Complete at INITIAL with one spoon assigned to two cups |
-| `S1_ablation2_soup_dedicated` | Dedicated-per-target isolation | Complete after D2 with two different spoon IDs |
-| `S1_ablation2_count_reuse_exhaustion` | No second valid spoon | Inspect full order and terminate `EXHAUSTED` without a verified handoff |
+| `S1_ablation2_count_reuse_primary` | Integrated coffee and soup task | Complete after D2 with one spoon and one fork |
+| `S1_ablation2_coffee_reuse` | Sequential-reuse isolation | Complete at INITIAL with one utensil assigned to two cups |
+| `S1_ablation2_soup_dedicated` | Dedicated-per-target isolation | Complete after D2 with distinct spoon and fork IDs |
+| `S1_ablation2_count_reuse_exhaustion` | No second valid utensil | Inspect full order and terminate `EXHAUSTED` without a verified handoff |
 
 The primary scene initially shows two separate cups, two separate bowls, one
-normal spoon, and one fork. D1 contains an oversized spoon that is recognized
-semantically but rejected by measured insertability. D2 contains a second
-normal spoon. The production progression is:
+normal spoon, and no second valid utensil. D1 contains an oversized spoon that
+is recognized semantically but rejected by measured insertability. D2
+contains a normal fork. The production progression is:
 
 ```text
 INITIAL: coffee 2/2 by reuse; soup 1/2; INCOMPLETE
 D1:      oversized spoon excluded by geometry; INCOMPLETE
-D2:      second valid spoon supplies the second dedicated assignment; COMPLETE
+D2:      valid fork supplies the second dedicated assignment; COMPLETE
 ```
 
 C2, B1, and C1 remain closed in the production early-stop run.
@@ -675,7 +678,7 @@ operation_groups:
 
   soup_serving:
     function: SERVE_SOUP
-    tool_role: soup_spoon
+    tool_role: soup_utensil
     target_role: soup_bowl
     required_target_count: 2
     usage_policy:
@@ -689,7 +692,8 @@ cross_group_reuse:
 The solver first resolves target objects, evaluates semantic/unary/pairwise
 compatibility for every tool-target pair, builds the compatibility graph, and
 then applies reuse or one-to-one matching. It does not infer feasibility from
-`valid_spoon_count >= target_count`.
+`valid_utensil_count >= target_count`, because compatibility is
+target-specific and distinctness is policy-specific.
 
 ### Same-evidence policy modes
 
@@ -698,9 +702,9 @@ associations, point clouds, properties, and persistent registry:
 
 | Mode | Integrated outcome | Interpretation |
 |---|---|---|
-| `always-reusable` | Incorrect COMPLETE at INITIAL using one spoon | False positive: ignores dedicated soup utensils |
-| `always-distinct` | Incorrect EXHAUSTED while requiring four spoons | False negative: ignores valid sequential coffee reuse |
-| `function-aware` | Correct COMPLETE at D2 using two spoons | Applies the declared policy of each function group |
+| `always-reusable` | Incorrect COMPLETE at INITIAL using one utensil | False positive: ignores dedicated soup utensils |
+| `always-distinct` | Incorrect EXHAUSTED while requiring four utensils | False negative: ignores valid sequential coffee reuse |
+| `function-aware` | Correct COMPLETE at D2 using a spoon and fork | Applies the declared policy of each function group |
 
 Diagnostic modes never control production early stopping and never rerender
 the scene. Only assignment constraints change.

@@ -635,13 +635,6 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
                 # spoon so its tines remain separable in the initial RGB
                 # views. This is scene construction, never runtime inference.
                 countertop_quat = "0.7071068 0 0 0.7071068"
-            elif (
-                config.name.startswith("S1_ablation2_")
-                and obj_name == "fork"
-            ):
-                # Separate the fork tines from the neighbouring spoon in RGB
-                # without changing any runtime semantic input.
-                countertop_quat = "0.7071068 0 0 0.7071068"
             _inject_object(obj_name, pos, quat=countertop_quat)
         else:
             print(f"  [WARNING] Unknown counter spot '{spot}', skipping {obj_name}.")
@@ -762,35 +755,6 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
                 "name": STORAGE_FIXTURE_EQUALITIES["D1"],
                 "body1": "drawer_D1_tray",
                 "body2": oversized_instance,
-                "active": "true",
-                "solref": "0.002 1",
-            },
-        )
-
-    if (
-        config.name.startswith("S1_ablation2_")
-        and "spoon" in config.container_contents.get("D2", [])
-    ):
-        # A light free spoon otherwise slides beneath D2 while the directly
-        # actuated drawer accelerates. Keep the staged object at its rendered
-        # drawer pose for this no-manipulation inspection benchmark. The weld
-        # supplies no label or dimensions to either inference path; RGB-D
-        # still measures the visible object after opening.
-        equality = root.find("equality")
-        if equality is None:
-            equality = ET.SubElement(root, "equality")
-        d2_spoon_instance = next(
-            instance_name
-            for instance_name, object_kind in reversed(object_instances)
-            if object_kind == "spoon"
-        )
-        ET.SubElement(
-            equality,
-            "weld",
-            {
-                "name": "ablation2_storage_fixture_D2_spoon",
-                "body1": "drawer_D2_tray",
-                "body2": d2_spoon_instance,
                 "active": "true",
                 "solref": "0.002 1",
             },

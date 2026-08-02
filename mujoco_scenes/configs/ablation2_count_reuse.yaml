@@ -32,19 +32,23 @@ roles:
       - rank: 1
         canonical_label: spoon
         detector_aliases: [teaspoon, tablespoon]
-    known_excluded_labels: [fork]
+      - rank: 2
+        canonical_label: fork
+        detector_aliases: [table fork, dinner fork, metal fork, fork utensil]
     unary_geometry:
       - predicate: ELONGATED_OBJECT
         expected: true
 
-  soup_spoon:
+  soup_utensil:
     count: 1
     assignment_order: 3
     semantic_preferences:
       - rank: 1
         canonical_label: spoon
         detector_aliases: [teaspoon, tablespoon]
-    known_excluded_labels: [fork]
+      - rank: 2
+        canonical_label: fork
+        detector_aliases: [table fork, dinner fork, metal fork, fork utensil]
     unary_geometry:
       - predicate: ELONGATED_OBJECT
         expected: true
@@ -59,11 +63,11 @@ relations:
     object_role: coffee_cup
     expected: true
   - predicate: INSERTABLE_IN
-    subject_role: soup_spoon
+    subject_role: soup_utensil
     object_role: soup_bowl
     expected: true
   - predicate: REACHES_BOTTOM
-    subject_role: soup_spoon
+    subject_role: soup_utensil
     object_role: soup_bowl
     expected: true
 
@@ -80,7 +84,7 @@ operation_groups:
 
   soup_serving:
     function: SERVE_SOUP
-    tool_role: soup_spoon
+    tool_role: soup_utensil
     target_role: soup_bowl
     required_target_count: 2
     usage_policy:
