@@ -27,6 +27,8 @@
     <texture name="tex_ycb_plate" type="2d" file="ycb/plate/ycb_plate.png"/>
     <material name="mat_ycb_plate" texture="tex_ycb_plate" specular="0.3" shininess="0.45"/>
     <mesh name="mesh_ycb_fork" file="ycb/fork/ycb_fork.obj"/>
+    <mesh name="mesh_ab3_long_narrow_fork"
+          file="ycb/fork/ycb_fork.obj" scale="1.50 1.0 1.0"/>
     <texture name="tex_ycb_fork" type="2d" file="ycb/fork/ycb_fork.png"/>
     <material name="mat_ycb_fork" texture="tex_ycb_fork" specular="0.65" shininess="0.8"/>
     <!-- The original scan texture makes the dark tines merge visually at
@@ -36,6 +38,18 @@
     <material name="mat_ycb_fork_inspection" rgba="0.68 0.70 0.72 1"
               specular="0.85" shininess="0.9"/>
     <mesh name="mesh_ycb_spoon" file="ycb/spoon/ycb_spoon.obj"/>
+    <!-- Ablation 3 controlled visible variants. Runtime inference measures
+         these from RGB-D and never reads their declared construction scale. -->
+    <mesh name="mesh_ab3_short_narrow_spoon"
+          file="ycb/spoon/ycb_spoon.obj" scale="0.72 0.70 1.0"/>
+    <mesh name="mesh_ab3_medium_spoon"
+          file="ycb/spoon/ycb_spoon.obj" scale="0.95 2.60 1.0"/>
+    <mesh name="mesh_ab3_long_wide_spoon"
+          file="ycb/spoon/ycb_spoon.obj" scale="1.35 3.20 1.20"/>
+    <mesh name="mesh_ab3_long_narrow_spoon"
+          file="ycb/spoon/ycb_spoon.obj" scale="1.45 1.70 1.0"/>
+    <mesh name="mesh_ab3_partial_spoon"
+          file="ycb/spoon/ycb_spoon.obj" scale="0.70 1.65 1.0"/>
     <!-- Scene-specific physical counterexample: the same recognizable YCB
          spoon scan is enlarged anisotropically. Runtime inference never reads
          this declaration; dimensions must still be recovered from RGB-D. -->
@@ -47,6 +61,14 @@
     <texture name="tex_ycb_knife" type="2d" file="ycb/knife/ycb_knife.png"/>
     <material name="mat_ycb_knife" texture="tex_ycb_knife" specular="0.65" shininess="0.8"/>
     <mesh name="mesh_ycb_cup" file="ycb/cup/ycb_cup.obj"/>
+    <mesh name="mesh_ab3_narrow_deep_cup"
+          file="ycb/cup/ycb_cup.obj" scale="1.34 1.34 2.10"/>
+    <mesh name="mesh_ab3_medium_deep_mug"
+          file="ycb/mug/ycb_mug.obj" scale="1.0 1.0 1.80"/>
+    <mesh name="mesh_ab3_shallow_bowl"
+          file="ycb/bowl/ycb_bowl.obj"/>
+    <mesh name="mesh_ab3_deep_bowl"
+          file="ycb/bowl/ycb_bowl.obj" scale="1.0 1.0 2.10"/>
     <texture name="tex_ycb_cup" type="2d" file="ycb/cup/ycb_cup.png"/>
     <material name="mat_ycb_cup" texture="tex_ycb_cup" specular="0.25"/>
     <mesh name="mesh_ycb_marker" file="ycb/marker/ycb_marker.obj"/>

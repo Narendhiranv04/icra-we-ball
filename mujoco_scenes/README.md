@@ -843,3 +843,225 @@ offline-only and are never imported by runtime perception or assignment.
 
 This milestone performs no FM/LLM/VLM requirement generation, no adaptive
 search, no robot operation, and no TAMP action execution.
+
+## Ablation 3: multi-target semantic–geometric assignment
+
+Ablation 3 tests a stricter claim: an object that is individually plausible
+for a function is not necessarily compatible with every target of that
+function. The production predicate is therefore:
+
+```text
+VALID_FOR(tool, function, target)
+```
+
+and not a global `VALID_TOOL(tool)` flag. For every observed utensil–container
+pair the runtime records semantic compatibility, scale-independent unary
+geometry, `INSERTABLE_IN`, `REACHES_BOTTOM`, both numeric operands, signed
+margins, source stages, and stage-local evidence paths. The assignment solver
+then applies task-level reuse and distinctness to that measured compatibility
+graph.
+
+### Function-scoped reuse—not an object property
+
+Reuse is declared on each task's functional requirement. It is neither a
+property of the word `spoon` nor a permanent property of the abstract
+function:
+
+| Function group | Tool semantics | Targets | Usage constraint |
+|---|---|---:|---|
+| `coffee_stirring` | spoon | cup + mug | `sequential_reuse_allowed`; the same physical ID must pass both targets |
+| `soup_serving` | spoon | two bowls | `dedicated_per_target`; different physical IDs are required |
+
+`cross_group_reuse.allowed: true` means a coffee spoon may also occupy one
+soup slot, but the two soup assignments must still be distinct. The solver
+derives the required physical-object count from these constraints. It does
+not attach a Boolean `reusable` property to a spoon or fork, and it does not
+hard-code a final count.
+
+Both functions use manually declared spoon semantics in this ablation. The
+same schema could accept a broader vocabulary in another task; usage-policy
+logic is independent of object category.
+
+The declaration is in `configs/ablation3_multi_target.yaml`. It contains no
+object IDs, source regions, stage names, simulator names, hidden poses, or
+asset dimensions. No FM generated it.
+
+### Separate scene family
+
+| Scene | Purpose | Expected production result |
+|---|---|---|
+| `S1_ablation3_multi_target_primary` | Four targets and target-specific counterexamples | INCOMPLETE at INITIAL and D1; COMPLETE after D2 |
+| `S1_ablation3_multi_target_initial_complete` | Long narrow spoon visible initially | COMPLETE at INITIAL; no region opened |
+| `S1_ablation3_multi_target_exhaustion` | Many useful spoons but none covers both coffee targets | Full order exhausted; no verified handoff |
+
+The primary scene initially presents a narrow deep cup, a medium deep mug, a
+shallow bowl, a deep bowl, a short spoon, a medium spoon, a long wide spoon,
+and a long narrow fork. D1 adds another useful-but-partial spoon. D2 adds the
+first long narrow spoon compatible with both coffee targets. C2, B1, and C1
+remain closed in the early-stop production run.
+
+Scene construction uses visibly scaled YCB meshes to obtain controlled,
+noise-robust measurements. Runtime inference never reads those scale values,
+body names, asset names, or hidden dimensions. It receives rendered RGB,
+metric depth, visible instance masks, and camera calibration only.
+
+### Complete compatibility matrix and assignment
+
+For every tool–target cell the saved matrix contains:
+
+```text
+tool and target persistent IDs
+fused RGB labels and tri-state semantic statuses
+ELONGATED_OBJECT and OPEN_CAVITY statuses
+maximum_cross_section_m and usable_length_m
+opening_width_m and cavity_depth_m
+clearance and grip margins
+INSERTABLE_IN and REACHES_BOTTOM signed pass margins/statuses
+final target-specific tri-state compatibility
+source stages, regions, semantic records, and MeasurementEvidence paths
+```
+
+Coffee's `same_tool_must_cover_all_targets: true` rule accepts only an
+assignment in which one persistent spoon ID has a `TRUE` edge to both the cup
+and mug. Two partial spoons cannot be combined to fake reusable coverage.
+Soup uses deterministic one-to-one matching: two spoon IDs compatible only
+with the same bowl do not satisfy two bowl targets. Required `UNKNOWN`
+evidence never becomes a compatibility edge.
+
+### Four same-evidence modes
+
+Perception runs exactly once. Every mode consumes the same saved RGB, YOLO
+detections, mask associations, semantic fusion, point clouds, object
+properties, relation measurements, and generic IDs. Only the acceptance and
+assignment logic changes:
+
+| Mode | Primary outcome | Why |
+|---|---|---|
+| `semantic-only` | Incorrect COMPLETE at INITIAL | Ignores unary and pairwise geometry |
+| `geometry-only` | Incorrect COMPLETE at INITIAL using the fork | Retains target semantics/geometry but removes utensil-category semantics |
+| `joint-target-agnostic-count` | Incorrect COMPLETE at INITIAL | Counts candidates valid somewhere without proving full target coverage |
+| `joint-target-specific` | Correct COMPLETE after D2 | Requires every selected edge and declared usage constraint |
+
+Diagnostic modes never control opening or stopping. Only
+`joint-target-specific` may emit `verified_task_handoff.json`.
+
+### Local actual-detector command
+
+The validated configuration uses actual Ultralytics YOLO-World,
+`yolov8m-worldv2.pt`, Ultralytics 8.4.112, CPU execution, an isolated detector
+worker, and 1280×960 rendered RGB:
+
+```bash
+MUJOCO_GL=egl \
+PYOPENGL_PLATFORM=egl \
+YOLO_CONFIG_DIR=/tmp \
+MUJOCO_SEMANTIC_PROCESS_ISOLATION=1 \
+.venv/bin/python -m mujoco_scenes.scene_loader \
+  --scene S1_ablation3_multi_target_primary \
+  --no-robot \
+  --task-requirements mujoco_scenes/configs/ablation3_multi_target.yaml \
+  --inspect-sequence D1 D2 C2 B1 C1 \
+  --stop-on-complete \
+  --runs-root runs \
+  --run-id ablation3_multi_target_local \
+  --point-cloud-width 1280 \
+  --point-cloud-height 960 \
+  --semantic-detector yolo_world \
+  --semantic-model semantic_model_cache/yolov8m-worldv2.pt \
+  --semantic-vocabulary \
+    mujoco_scenes/configs/ablation3_semantic_vocabulary.yaml \
+  --grounding-mode joint \
+  --semantic-confidence-threshold 0.03 \
+  --semantic-min-supporting-views 2 \
+  --save-semantic-overlays
+```
+
+### Docker build and execution
+
+Prepare the persistent model cache once and build the pinned image:
+
+```bash
+python mujoco_scenes/scripts/prepare_semantic_models.py \
+  --output semantic_model_cache
+docker build -t mujoco-kitchen-s1 -f mujoco_scenes/Dockerfile .
+```
+
+Then run headless perception as the host UID/GID:
+
+```bash
+mkdir -p runs
+docker run --rm \
+  --user "$(id -u):$(id -g)" \
+  -e HOME=/tmp \
+  -e MUJOCO_GL=egl \
+  -e PYOPENGL_PLATFORM=egl \
+  -e YOLO_CONFIG_DIR=/tmp \
+  -e MUJOCO_SEMANTIC_PROCESS_ISOLATION=1 \
+  -e OMP_NUM_THREADS=2 \
+  -e MKL_NUM_THREADS=2 \
+  -e OPENBLAS_NUM_THREADS=2 \
+  -e MALLOC_ARENA_MAX=2 \
+  -v "$PWD/runs:/output" \
+  -v "$PWD/semantic_model_cache/yolov8m-worldv2.pt:/models/yolov8m-worldv2.pt:ro" \
+  -v "$PWD/semantic_model_cache/weights:/workspace/weights:ro" \
+  mujoco-kitchen-s1 \
+  --scene S1_ablation3_multi_target_primary \
+  --no-robot \
+  --task-requirements configs/ablation3_multi_target.yaml \
+  --inspect-sequence D1 D2 C2 B1 C1 \
+  --stop-on-complete \
+  --runs-root /output \
+  --run-id ablation3_multi_target_docker \
+  --point-cloud-width 1280 \
+  --point-cloud-height 960 \
+  --semantic-detector yolo_world \
+  --semantic-model /models/yolov8m-worldv2.pt \
+  --semantic-vocabulary mujoco_scenes/configs/ablation3_semantic_vocabulary.yaml \
+  --grounding-mode joint \
+  --semantic-confidence-threshold 0.03 \
+  --semantic-min-supporting-views 2 \
+  --save-semantic-overlays
+```
+
+Both checkpoints are mounted read-only and are not downloaded per run.
+
+### One-command presentation package
+
+```bash
+./mujoco_scenes/scripts/run_ablation3_multi_target_demo.sh \
+  ablation3_multi_target_demo
+xdg-open \
+  reports/ablation3_multi_target_demo/presentation_report.html
+```
+
+The published package contains:
+
+```text
+presentation_report.html       # self-contained images/GIFs/MP4s
+ablation_report.html
+README.md
+report_data.json
+offline_assignment_ablation_evaluation.json
+assignment_ablation_comparison.png
+compatibility_matrix.png
+ablations/<mode>/<mode>.gif
+ablations/<mode>/<mode>.mp4
+ablations/<mode>/stage_<n>.png
+stages/<stage>/semantic_overview.png
+stages/<stage>/overview.png
+stages/<stage>/pointcloud.png
+stages/<stage>/graph.png
+stages/<stage>/cameras/*_overlay.png
+```
+
+The run directory separately preserves `compatibility_matrix.json/.csv`,
+`assignment_evaluations.json`, `assignment_ablation_summary.json`,
+`verified_task_handoff.json`, `candidate_evaluations.json`, graph snapshots,
+events, stage-local clouds, semantic records, and all RGB-D observations.
+
+This milestone performs no FM/LLM/VLM task generation, no adaptive search,
+no robot or navigation, no IK, no grasping, no task planning, and no TAMP
+execution. `ready_for_tamp` is only a verified grounding handoff. The
+reconstruction is complete only with respect to visible five-view evidence;
+genuinely occluded surfaces remain unobserved, and detector reliability still
+depends on visible scale, pose, lighting, vocabulary, and multi-view support.

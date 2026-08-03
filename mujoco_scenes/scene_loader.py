@@ -103,15 +103,80 @@ OBJECT_SUPPORT_HEIGHT = {
     "biscuits": 0.020, "pot_with_soup": 0.050,
     "gso_canister_distractor": 0.07187,
     "gso_spatula_distractor": 0.01234,
+    "ab3_narrow_deep_cup": 0.06460,
+    "ab3_medium_deep_mug": 0.07317,
+    "ab3_shallow_bowl": 0.02750,
+    "ab3_deep_bowl": 0.05775,
+    "ab3_short_narrow_spoon": 0.01045,
+    "ab3_medium_spoon": 0.01045,
+    "ab3_long_wide_spoon": 0.01463,
+    "ab3_long_narrow_spoon": 0.01045,
+    "ab3_partial_spoon": 0.01045,
+    "ab3_long_narrow_fork": 0.00773,
+}
+
+# Controlled visible-geometry variants for Ablation 3.  These declarations
+# are consumed only while constructing the rendered scene; runtime semantic
+# and geometric inference receives RGB-D, masks, and calibration—not this
+# mapping, its scale factors, or the source object names.
+SCENE_OBJECT_VARIANTS = {
+    "ab3_narrow_deep_cup": {
+        "base": "cup", "scale": (1.34, 1.34, 2.10),
+        "mesh": "mesh_ab3_narrow_deep_cup",
+    },
+    "ab3_medium_deep_mug": {
+        "base": "mug", "scale": (1.0, 1.0, 1.80),
+        "mesh": "mesh_ab3_medium_deep_mug",
+    },
+    "ab3_shallow_bowl": {
+        "base": "bowl", "scale": (1.0, 1.0, 1.0),
+        "mesh": "mesh_ab3_shallow_bowl",
+    },
+    "ab3_deep_bowl": {
+        "base": "bowl", "scale": (1.0, 1.0, 2.10),
+        "mesh": "mesh_ab3_deep_bowl",
+    },
+    "ab3_short_narrow_spoon": {
+        "base": "spoon", "scale": (0.72, 0.70, 1.0),
+        "mesh": "mesh_ab3_short_narrow_spoon",
+    },
+    "ab3_medium_spoon": {
+        "base": "spoon", "scale": (0.95, 2.60, 1.0),
+        "mesh": "mesh_ab3_medium_spoon",
+    },
+    "ab3_long_wide_spoon": {
+        "base": "spoon", "scale": (1.35, 3.20, 1.20),
+        "mesh": "mesh_ab3_long_wide_spoon",
+    },
+    "ab3_long_narrow_spoon": {
+        "base": "spoon", "scale": (1.45, 1.70, 1.0),
+        "mesh": "mesh_ab3_long_narrow_spoon",
+    },
+    "ab3_partial_spoon": {
+        "base": "spoon", "scale": (0.70, 1.65, 1.0),
+        "mesh": "mesh_ab3_partial_spoon",
+    },
+    "ab3_long_narrow_fork": {
+        "base": "fork", "scale": (1.50, 1.0, 1.0),
+        "mesh": "mesh_ab3_long_narrow_fork",
+    },
 }
 
 UTENSIL_OBJECTS = {
     "spoon", "oversized_spoon", "fork", "knife", "stirrer", "spatula", "tongs",
     "gso_spatula_distractor",
+    "ab3_short_narrow_spoon", "ab3_medium_spoon",
+    "ab3_long_wide_spoon", "ab3_long_narrow_spoon",
+    "ab3_partial_spoon",
+    "ab3_long_narrow_fork",
 }
 CENTRED_DRAWER_OBJECTS = {
     "spoon", "oversized_spoon", "fork", "knife", "stirrer", "tongs",
     "gso_spatula_distractor",
+    "ab3_short_narrow_spoon", "ab3_medium_spoon",
+    "ab3_long_wide_spoon", "ab3_long_narrow_spoon",
+    "ab3_partial_spoon",
+    "ab3_long_narrow_fork",
 }
 
 ACTION_PICK_OBJECTS = {
@@ -129,6 +194,12 @@ PASSIVE_HANDLE_OBJECTS = {
 # after direct opening and before the inspection rig captures evidence.
 STORAGE_FIXTURE_EQUALITIES = {
     "D1": "storage_fixture_D1_oversized_spoon",
+    "D2": "storage_fixture_D2_ablation3_utensil",
+}
+
+STORAGE_FIXTURE_OBJECTS = {
+    "D1": {"oversized_spoon", "ab3_partial_spoon"},
+    "D2": {"ab3_long_narrow_spoon", "ab3_medium_spoon"},
 }
 
 # Positions are RELATIVE to the container body origin: (x, y, support_z).
@@ -200,6 +271,17 @@ COUNTER_SPOTS = {
     "counter_spot_10": (0.08, -0.28, 0.580),
     "counter_spot_11": (0.26, -0.11, 0.580),
     "counter_spot_12": (0.31, -0.34, 0.580),
+    # Ablation 3 separates four containers (back row) from four candidate
+    # utensils (front row) while keeping every instance inside INITIAL's
+    # calibrated inspection volume.
+    "counter_spot_13": (-0.55, -0.34, 0.580),
+    "counter_spot_14": (-0.35, -0.34, 0.580),
+    "counter_spot_15": (-0.10, -0.32, 0.580),
+    "counter_spot_16": (0.16, -0.32, 0.580),
+    "counter_spot_17": (-0.52, -0.10, 0.580),
+    "counter_spot_18": (-0.25, -0.10, 0.580),
+    "counter_spot_19": (0.02, -0.10, 0.580),
+    "counter_spot_20": (0.29, -0.10, 0.580),
 }
 
 # The kettle handle is deliberately grasped rather than approximating a pick
@@ -536,6 +618,63 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
     instance_count = {}
     object_instances: list[tuple[str, str]] = []
 
+    def _scale_variant_body(
+        body: ET.Element,
+        scale: tuple[float, float, float],
+        mesh_name: str,
+    ) -> None:
+        """Scale rendered/proxy geometry for scene construction only."""
+
+        scale_vector = np.asarray(scale, dtype=float)
+
+        def scaled_values(text: str, factors: np.ndarray) -> str:
+            values = np.fromstring(text, sep=" ")
+            if len(values) != len(factors):
+                return text
+            return " ".join(
+                f"{value:.8g}" for value in values * factors
+            )
+
+        for element in body.iter():
+            if element.get("pos"):
+                element.set(
+                    "pos",
+                    scaled_values(element.get("pos"), scale_vector),
+                )
+            if element.tag != "geom":
+                continue
+            geom_type = element.get("type", "sphere")
+            if geom_type == "mesh":
+                element.set("mesh", mesh_name)
+                continue
+            if element.get("fromto"):
+                element.set(
+                    "fromto",
+                    scaled_values(
+                        element.get("fromto"),
+                        np.concatenate((scale_vector, scale_vector)),
+                    ),
+                )
+            if not element.get("size"):
+                continue
+            values = np.fromstring(element.get("size"), sep=" ")
+            if geom_type in {"box", "ellipsoid"} and len(values) == 3:
+                factors = scale_vector
+            elif geom_type in {"cylinder", "capsule"} and len(values) == 2:
+                factors = np.asarray(
+                    [max(scale_vector[:2]), scale_vector[2]]
+                )
+            elif geom_type in {"sphere", "capsule"} and len(values) == 1:
+                factors = np.asarray([max(scale_vector[1:])])
+            else:
+                continue
+            element.set(
+                "size",
+                " ".join(
+                    f"{value:.8g}" for value in values * factors
+                ),
+            )
+
     def _get_instance_name(obj_name: str) -> str:
         """Generate unique name for duplicate objects (e.g., spoon → spoon_2)."""
         if obj_name not in instance_count:
@@ -553,12 +692,20 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
         support_height_override: float | None = None,
     ):
         """Add an object body directly to worldbody at the given position."""
-        if obj_name not in obj_lib:
+        variant = SCENE_OBJECT_VARIANTS.get(obj_name)
+        library_name = variant["base"] if variant else obj_name
+        if library_name not in obj_lib:
             print(f"  [WARNING] Object '{obj_name}' not found in object library, skipping.")
             return
 
         instance_name = _get_instance_name(obj_name)
-        obj_elem = copy.deepcopy(obj_lib[obj_name])
+        obj_elem = copy.deepcopy(obj_lib[library_name])
+        if variant:
+            _scale_variant_body(
+                obj_elem,
+                variant["scale"],
+                variant["mesh"],
+            )
 
         # Convert a support-surface location into a non-penetrating body centre.
         support_height = (
@@ -573,8 +720,8 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
             obj_elem.set("quat", quat)
 
         # Rename body and all children to instance name if different
-        if instance_name != obj_name:
-            old_name = obj_name
+        if instance_name != library_name:
+            old_name = library_name
             new_name = instance_name
             for child in obj_elem.iter():
                 if child is obj_elem:
@@ -629,17 +776,25 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
             countertop_quat = None
             if (
                 config.name == "S1_joint_stir_initial_preference"
-                and obj_name == "fork"
+                and obj_name in {"fork", "ab3_long_narrow_fork"}
             ):
                 # Present the normal fork orthogonally to the neighbouring
                 # spoon so its tines remain separable in the initial RGB
                 # views. This is scene construction, never runtime inference.
+                countertop_quat = "0.7071068 0 0 0.7071068"
+            elif (
+                config.name.startswith("S1_ablation3_multi_target")
+                and obj_name == "fork"
+            ):
+                # Expose the fork tines crosswise so the open-vocabulary RGB
+                # detector can distinguish them from a spoon silhouette.
                 countertop_quat = "0.7071068 0 0 0.7071068"
             _inject_object(obj_name, pos, quat=countertop_quat)
         else:
             print(f"  [WARNING] Unknown counter spot '{spot}', skipping {obj_name}.")
 
     # ── Place container objects ───────────────────────────────────────────
+    storage_fixture_instances: dict[str, str] = {}
     for container_id, objects in config.container_contents.items():
         if container_id not in CONTAINER_SLOTS:
             print(f"  [WARNING] Unknown container '{container_id}', skipping.")
@@ -716,7 +871,7 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
                 # roll indefinitely on its cylindrical collision proxy.
                 world_pos[0] = parent_body_pos[0]
                 horizontal_radius = 0.03962
-                _inject_object(
+                injected_instance = _inject_object(
                     obj_name,
                     world_pos,
                     quat="0.7071068 0 0.7071068 0",
@@ -728,37 +883,40 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
                 # is its mirror and therefore needs a 180-degree yaw. This
                 # keeps the requested end grasp inside the accurate central
                 # IK workspace instead of reaching past the drawer's far wall.
-                _inject_object(obj_name, world_pos, quat="0 0 0 1")
+                injected_instance = _inject_object(
+                    obj_name, world_pos, quat="0 0 0 1"
+                )
             else:
-                _inject_object(obj_name, world_pos)
+                injected_instance = _inject_object(obj_name, world_pos)
+            if (
+                injected_instance is not None
+                and obj_name
+                in STORAGE_FIXTURE_OBJECTS.get(container_id, set())
+            ):
+                storage_fixture_instances[container_id] = injected_instance
 
     # Contact-confirmed pick actions can enable one of these initially
     # inactive welds after both gripper fingers touch a supported object.
     # The relative pose is filled from the live state when the grasp occurs,
     # so enabling a weld never snaps an object to a pre-recorded pose.
-    if any(
-        object_kind == "oversized_spoon"
-        for _instance_name, object_kind in object_instances
-    ):
+    if storage_fixture_instances:
         equality = root.find("equality")
         if equality is None:
             equality = ET.SubElement(root, "equality")
-        oversized_instance = next(
-            instance_name
-            for instance_name, object_kind in object_instances
-            if object_kind == "oversized_spoon"
-        )
-        ET.SubElement(
-            equality,
-            "weld",
-            {
-                "name": STORAGE_FIXTURE_EQUALITIES["D1"],
-                "body1": "drawer_D1_tray",
-                "body2": oversized_instance,
-                "active": "true",
-                "solref": "0.002 1",
-            },
-        )
+        for region_id, instance_name in sorted(
+            storage_fixture_instances.items()
+        ):
+            ET.SubElement(
+                equality,
+                "weld",
+                {
+                    "name": STORAGE_FIXTURE_EQUALITIES[region_id],
+                    "body1": CONTAINER_SLOTS[region_id]["parent_body"],
+                    "body2": instance_name,
+                    "active": "true",
+                    "solref": "0.002 1",
+                },
+            )
 
     if include_robot:
         contact = root.find("contact")

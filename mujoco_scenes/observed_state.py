@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import hashlib
+import csv
 import math
 import re
 import shutil
@@ -37,6 +38,7 @@ from mujoco_scenes.task_witness import (
     evaluate_semantic_compatibility,
     evaluate_task_witness,
     evaluate_usage_policy_task_witness,
+    build_target_compatibility_matrix,
     load_task_requirements,
     resolve_task_requirements_path,
 )
@@ -97,6 +99,21 @@ def _atomic_json(path: Path, payload: Any) -> None:
     temporary.replace(path)
 
 
+def _atomic_compatibility_csv(path: Path, matrix: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.tmp")
+    cells = matrix.get("cells", [])
+    fieldnames = sorted(
+        {key for cell in cells for key in cell}
+    )
+    with temporary.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        for cell in cells:
+            writer.writerow(cell)
+    temporary.replace(path)
+
+
 def _atomic_ply(path: Path, points: np.ndarray, colors: np.ndarray) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(f".{path.name}.tmp")
@@ -127,6 +144,14 @@ def _dimension_values(record: dict[str, Any]) -> list[float | None]:
         _property_number(dimensions.get(name))
         for name in ("length", "width", "height")
     ]
+
+
+def _combined_candidate_status(*statuses: str) -> str:
+    if "FALSE" in statuses:
+        return "FALSE"
+    if "UNKNOWN" in statuses:
+        return "UNKNOWN"
+    return "TRUE"
 
 
 def _semantic_quality_key(record: dict[str, Any] | None) -> tuple:
@@ -654,6 +679,11 @@ class ObservedStateRun:
                     if existing is not None
                     else {}
                 ),
+                "target_assignment_evaluations": deepcopy(
+                    existing.get("target_assignment_evaluations", {})
+                    if existing is not None
+                    else {}
+                ),
                 **measured,
             }
             record["geometry"] = {
@@ -886,6 +916,13 @@ class ObservedStateRun:
                 self.task_requirements,
                 stage=stage,
                 usage_policy_mode="function-aware",
+                target_assignment_mode=(
+                    "joint-target-specific"
+                    if self.task_requirements.get(
+                        "target_assignment_ablation", False
+                    )
+                    else None
+                ),
             )
         elif task_schema == "JOINT_ROLE_GROUNDING":
             witness = evaluate_joint_task_witness(
@@ -900,6 +937,13 @@ class ObservedStateRun:
                 self.task_requirements,
                 stage=stage,
             )
+        matrix = (
+            build_target_compatibility_matrix(witness)
+            if self.task_requirements.get(
+                "target_assignment_ablation", False
+            )
+            else None
+        )
         _atomic_json(
             stage_dir / "candidate_evaluations.json",
             {
@@ -977,6 +1021,140 @@ class ObservedStateRun:
             evaluations[candidate["role"]] = deepcopy(candidate)
             record["functional_role_evaluations"] = evaluations
         if task_schema == "JOINT_USAGE_POLICY_GROUNDING":
+            if self.task_requirements.get(
+                "target_assignment_ablation", False
+            ):
+                function_candidate_edges: set[tuple[str, str]] = set()
+                for cell in matrix["cells"]:
+                    status = cell[
+                        "target_specific_compatibility_status"
+                    ]
+                    rejection = cell["rejection_reason"]
+                    event = "TARGET_COMPATIBILITY_EVALUATED"
+                    if status == "TRUE":
+                        event = "TARGET_COMPATIBILITY_ACCEPTED"
+                    elif rejection == "SEMANTIC_REJECTION":
+                        event = (
+                            "TARGET_COMPATIBILITY_REJECTED_SEMANTIC"
+                        )
+                    elif rejection == "INSERTION_REJECTION":
+                        event = (
+                            "TARGET_COMPATIBILITY_REJECTED_INSERTION"
+                        )
+                    elif rejection == "REACH_REJECTION":
+                        event = "TARGET_COMPATIBILITY_REJECTED_REACH"
+                    compatibility_event = {
+                            "stage": stage,
+                            "region_id": expected_region,
+                            "function_group": cell[
+                                "function_group_id"
+                            ],
+                            "tool_object_id": cell["tool_object_id"],
+                            "target_object_id": cell[
+                                "target_object_id"
+                            ],
+                            "semantic_status": cell[
+                                "tool_semantic_status"
+                            ],
+                            "elongated_object_status": cell[
+                                "elongated_object_status"
+                            ],
+                            "insertable_in_status": cell[
+                                "insertable_in_status"
+                            ],
+                            "insertable_in_pass_margin_m": cell[
+                                "insertable_in_pass_margin_m"
+                            ],
+                            "reaches_bottom_status": cell[
+                                "reaches_bottom_status"
+                            ],
+                            "reaches_bottom_pass_margin_m": cell[
+                                "reaches_bottom_pass_margin_m"
+                            ],
+                            "status": status,
+                            "rejection_reason": rejection,
+                    }
+                    events.append(
+                        {
+                            **compatibility_event,
+                            "event": "TARGET_COMPATIBILITY_EVALUATED",
+                        }
+                    )
+                    if event != "TARGET_COMPATIBILITY_EVALUATED":
+                        events.append(
+                            {**compatibility_event, "event": event}
+                        )
+                    graph["edges"].append(
+                        {
+                            "source": f"object:{cell['tool_object_id']}",
+                            "target": f"object:{cell['target_object_id']}",
+                            "relation": (
+                                "COMPATIBLE_WITH_TARGET"
+                                if status == "TRUE"
+                                else "INCOMPATIBLE_WITH_TARGET"
+                            ),
+                            "status": status,
+                            "function_group": cell[
+                                "function_group_id"
+                            ],
+                            "evidence": deepcopy(cell),
+                        }
+                    )
+                    candidate_key = (
+                        cell["tool_object_id"],
+                        cell["function_group_id"],
+                    )
+                    if candidate_key not in function_candidate_edges:
+                        function_candidate_edges.add(candidate_key)
+                        graph["edges"].append(
+                            {
+                                "source": (
+                                    f"object:{cell['tool_object_id']}"
+                                ),
+                                "target": (
+                                    "function_group:"
+                                    f"{cell['function_group_id']}"
+                                ),
+                                "relation": "CANDIDATE_FOR_FUNCTION",
+                                "status": _combined_candidate_status(
+                                    cell["tool_semantic_status"],
+                                    cell["elongated_object_status"],
+                                ),
+                            }
+                        )
+                    for object_id in (
+                        cell["tool_object_id"],
+                        cell["target_object_id"],
+                    ):
+                        record = self.registry["objects"].get(object_id)
+                        if record is None:
+                            continue
+                        namespace = deepcopy(
+                            record.get(
+                                "target_assignment_evaluations", {}
+                            )
+                        )
+                        namespace[
+                            f"{cell['function_group_id']}:"
+                            f"{cell['tool_object_id']}:"
+                            f"{cell['target_object_id']}"
+                        ] = deepcopy(cell)
+                        record["target_assignment_evaluations"] = (
+                            namespace
+                        )
+                events.append(
+                    {
+                        "stage": stage,
+                        "region_id": expected_region,
+                        "event": (
+                            "TARGET_ASSIGNMENT_COMPLETE"
+                            if witness["status"] == "COMPLETE"
+                            else "NO_COMPLETE_TARGET_MATCHING"
+                        ),
+                        "task_id": witness["task_id"],
+                        "reason_codes": witness["reason_codes"],
+                    }
+                )
             for group in witness.get(
                 "function_group_evaluations", []
             ):
@@ -1028,9 +1206,144 @@ class ObservedStateRun:
                     "functional_usage_evaluations", {}
                 )
             )
+            node["attributes"]["target_assignment_evaluations"] = deepcopy(
+                self.registry["objects"][object_id].get(
+                    "target_assignment_evaluations", {}
+                )
+            )
 
         mode_witnesses = {}
         if task_schema == "JOINT_USAGE_POLICY_GROUNDING":
+            if self.task_requirements.get(
+                "target_assignment_ablation", False
+            ):
+                assignment_modes = (
+                    "semantic-only",
+                    "geometry-only",
+                    "joint-target-agnostic-count",
+                    "joint-target-specific",
+                )
+                assignment_witnesses = {
+                    mode: evaluate_usage_policy_task_witness(
+                        graph,
+                        self.task_requirements,
+                        stage=stage,
+                        usage_policy_mode="function-aware",
+                        target_assignment_mode=mode,
+                    )
+                    for mode in assignment_modes
+                }
+                matrix = build_target_compatibility_matrix(
+                    assignment_witnesses["joint-target-specific"]
+                )
+                evidence_manifest = {
+                    "measurement_cloud_paths": sorted(
+                        evidence.measurement_cloud_path
+                        for evidence in stage_evidence.values()
+                        if evidence.measurement_cloud_path
+                    ),
+                    "semantic_record_paths": sorted(
+                        record.get("semantics", {})
+                        .get("latest_observation", {})
+                        .get("semantic_record_path")
+                        for record in self.registry["objects"].values()
+                        if record.get("semantics", {})
+                        .get("latest_observation", {})
+                        .get("semantic_record_path")
+                    ),
+                }
+                assignment_comparison = {
+                    "stage": stage,
+                    "region_id": expected_region,
+                    "same_observation_evidence": True,
+                    "perception_rerun_per_mode": False,
+                    "production_mode": "joint-target-specific",
+                    **evidence_manifest,
+                    "modes": assignment_witnesses,
+                }
+                _atomic_json(
+                    stage_dir / "assignment_mode_comparison.json",
+                    assignment_comparison,
+                )
+                _atomic_json(
+                    stage_dir / "assignment_evaluations.json",
+                    {
+                        "task_id": witness["task_id"],
+                        "stage": stage,
+                        "production_mode": "joint-target-specific",
+                        "modes": assignment_witnesses,
+                    },
+                )
+                _atomic_json(
+                    stage_dir / "compatibility_matrix.json", matrix
+                )
+                _atomic_compatibility_csv(
+                    stage_dir / "compatibility_matrix.csv", matrix
+                )
+                _atomic_json(
+                    self.run_dir / "compatibility_matrix.json", matrix
+                )
+                _atomic_compatibility_csv(
+                    self.run_dir / "compatibility_matrix.csv", matrix
+                )
+                _atomic_json(
+                    self.run_dir / "assignment_evaluations.json",
+                    {
+                        "task_id": witness["task_id"],
+                        "stage": stage,
+                        "production_mode": "joint-target-specific",
+                        "modes": assignment_witnesses,
+                    },
+                )
+                assignment_summary_path = (
+                    self.run_dir / "assignment_ablation_summary.json"
+                )
+                assignment_summary = (
+                    json.loads(assignment_summary_path.read_text())
+                    if assignment_summary_path.exists()
+                    else {
+                        "task_id": witness["task_id"],
+                        "production_mode": "joint-target-specific",
+                        "diagnostic_modes": list(assignment_modes[:-1]),
+                        "shared_observation_evidence": True,
+                        "stages": [],
+                    }
+                )
+                assignment_summary["stages"] = [
+                    item
+                    for item in assignment_summary["stages"]
+                    if int(item["stage"]) != stage
+                ]
+                assignment_summary["stages"].append(
+                    {
+                        "stage": stage,
+                        "region_id": expected_region,
+                        "evidence": evidence_manifest,
+                        "compatibility_matrix_path": (
+                            stage_dir.relative_to(self.run_dir)
+                            / "compatibility_matrix.json"
+                        ).as_posix(),
+                        "modes": {
+                            mode: {
+                                "status": result["status"],
+                                "selected_witness": result[
+                                    "selected_witness"
+                                ],
+                                "operation_assignments": result[
+                                    "operation_assignments"
+                                ],
+                                "reason_codes": result["reason_codes"],
+                            }
+                            for mode, result in assignment_witnesses.items()
+                        },
+                    }
+                )
+                assignment_summary["stages"].sort(
+                    key=lambda item: item["stage"]
+                )
+                _atomic_json(
+                    assignment_summary_path, assignment_summary
+                )
             policy_witnesses = {
                 mode: evaluate_usage_policy_task_witness(
                     graph,
@@ -1302,6 +1615,49 @@ class ObservedStateRun:
                         "counts": group["counts"],
                     }
                 )
+                if (
+                    self.task_requirements.get(
+                        "target_assignment_ablation", False
+                    )
+                    and group["status"] == "COMPLETE"
+                ):
+                    policy = group["declared_usage_policy"]["mode"]
+                    events.append(
+                        {
+                            "stage": stage,
+                            "region_id": expected_region,
+                            "event": (
+                                "REUSABLE_MULTI_TARGET_ASSIGNMENT_CREATED"
+                                if policy == "sequential_reuse_allowed"
+                                else "DEDICATED_TARGET_MATCHING_CREATED"
+                            ),
+                            "function_group": group[
+                                "function_group_id"
+                            ],
+                            "assignments": deepcopy(
+                                group.get("selected_assignments", [])
+                            ),
+                        }
+                    )
+                    for tool_id in sorted(
+                        {
+                            item["utensil_object_id"]
+                            for item in group.get(
+                                "selected_assignments", []
+                            )
+                        }
+                    ):
+                        graph["edges"].append(
+                            {
+                                "source": f"object:{tool_id}",
+                                "target": (
+                                    "function_group:"
+                                    f"{group['function_group_id']}"
+                                ),
+                                "relation": "SATISFIES_FUNCTION_GROUP",
+                                "status": "TRUE",
+                            }
+                        )
                 for assignment in group.get(
                     "selected_assignments", []
                 ):
@@ -1562,6 +1918,21 @@ class ObservedStateRun:
                             "usage_policy_mode": "function-aware",
                         }
                     )
+                    if self.task_requirements.get(
+                        "target_assignment_ablation", False
+                    ):
+                        handoff.update(
+                            {
+                                "schema_version": 3,
+                                "target_assignment_mode": (
+                                    "joint-target-specific"
+                                ),
+                                "compatibility_matrix_reference": (
+                                    "compatibility_matrix.json"
+                                ),
+                                "complete_target_coverage": True,
+                            }
+                        )
                 _atomic_json(
                     self.run_dir / "verified_task_handoff.json",
                     handoff,
@@ -1869,6 +2240,9 @@ class ObservedStateRun:
                         ),
                         "functional_usage_evaluations": record.get(
                             "functional_usage_evaluations", {}
+                        ),
+                        "target_assignment_evaluations": record.get(
+                            "target_assignment_evaluations", {}
                         ),
                         "stage_state": stage_changes.get(object_id, "previous"),
                     },

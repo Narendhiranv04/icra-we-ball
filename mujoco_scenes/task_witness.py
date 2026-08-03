@@ -23,6 +23,12 @@ USAGE_POLICY_MODES = {
     "always-reusable",
     "always-distinct",
 }
+TARGET_ASSIGNMENT_MODES = {
+    "semantic-only",
+    "geometry-only",
+    "joint-target-agnostic-count",
+    "joint-target-specific",
+}
 DECLARED_USAGE_POLICIES = {
     "sequential_reuse_allowed",
     "dedicated_per_target",
@@ -314,6 +320,21 @@ def _validate_joint_task_requirements(
                     f"Operation group '{group_id}' has a contradictory "
                     "usage policy declaration"
                 )
+            same_tool_must_cover_all_targets = usage_policy.get(
+                "same_tool_must_cover_all_targets", False
+            )
+            if not isinstance(same_tool_must_cover_all_targets, bool):
+                raise ValueError(
+                    "same_tool_must_cover_all_targets must be boolean"
+                )
+            if (
+                same_tool_must_cover_all_targets
+                and policy_mode != "sequential_reuse_allowed"
+            ):
+                raise ValueError(
+                    "same_tool_must_cover_all_targets is only valid for "
+                    "sequential_reuse_allowed"
+                )
             relation_names = group.get("relations")
             if not isinstance(relation_names, list) or not relation_names:
                 raise ValueError(
@@ -345,6 +366,9 @@ def _validate_joint_task_requirements(
                 "usage_policy": {
                     "mode": policy_mode,
                     "distinct_within_group": expected_distinct,
+                    "same_tool_must_cover_all_targets": (
+                        same_tool_must_cover_all_targets
+                    ),
                 },
                 "relations": normalized_relation_names,
             }
@@ -356,6 +380,12 @@ def _validate_joint_task_requirements(
         ):
             raise ValueError("cross_group_reuse.allowed must be boolean")
         config["operation_groups"] = normalized_groups
+        assignment_ablation = config.get(
+            "target_assignment_ablation", False
+        )
+        if not isinstance(assignment_ablation, bool):
+            raise ValueError("target_assignment_ablation must be boolean")
+        config["target_assignment_ablation"] = assignment_ablation
         config["_task_schema"] = "JOINT_USAGE_POLICY_GROUNDING"
     else:
         config["_task_schema"] = "JOINT_ROLE_GROUNDING"
@@ -1332,6 +1362,7 @@ def evaluate_usage_policy_task_witness(
     *,
     stage: int | None = None,
     usage_policy_mode: str = "function-aware",
+    target_assignment_mode: str | None = None,
 ) -> dict[str, Any]:
     """Resolve target-specific function assignments under a reuse policy.
 
@@ -1344,6 +1375,29 @@ def evaluate_usage_policy_task_witness(
             f"usage_policy_mode must be one of "
             f"{sorted(USAGE_POLICY_MODES)}"
         )
+    if target_assignment_mode is not None:
+        if target_assignment_mode not in TARGET_ASSIGNMENT_MODES:
+            raise ValueError(
+                "target_assignment_mode must be one of "
+                f"{sorted(TARGET_ASSIGNMENT_MODES)}"
+            )
+        if usage_policy_mode != "function-aware":
+            raise ValueError(
+                "Target-assignment ablations use the declared "
+                "function-aware usage policies"
+            )
+    effective_assignment_mode = (
+        target_assignment_mode or "joint-target-specific"
+    )
+    evidence_mode = {
+        "semantic-only": "semantic-only",
+        "geometry-only": "geometry-only",
+        "joint-target-agnostic-count": "joint",
+        "joint-target-specific": "joint",
+    }[effective_assignment_mode]
+    target_agnostic_count = (
+        effective_assignment_mode == "joint-target-agnostic-count"
+    )
     config = load_task_requirements(requirements)
     if config.get("_task_schema") != "JOINT_USAGE_POLICY_GROUNDING":
         raise ValueError(
@@ -1363,6 +1417,10 @@ def evaluate_usage_policy_task_witness(
             role_name,
         ),
     )
+    target_role_names = {
+        group["target_role"]
+        for group in config["operation_groups"].values()
+    }
 
     candidate_index: dict[tuple[str, str], dict[str, Any]] = {}
     candidate_evaluations: list[dict[str, Any]] = []
@@ -1377,12 +1435,36 @@ def evaluate_usage_policy_task_witness(
                     "checks", []
                 ),
             }
-            status = _combined_required_status(
-                [semantic["status"], geometry["status"]]
-            )
-            if semantic["status"] == "FALSE":
+            if evidence_mode == "semantic-only":
+                status = semantic["status"]
+            elif evidence_mode == "geometry-only":
+                # This diagnostic removes *tool-category* grounding to expose
+                # the fork counterexample. Target identity remains semantic:
+                # otherwise any open bowl could silently fill a coffee-cup
+                # slot, which would conflate two independent ablations.
+                status = (
+                    _combined_required_status(
+                        [semantic["status"], geometry["status"]]
+                    )
+                    if role_name in target_role_names
+                    else geometry["status"]
+                )
+            else:
+                status = _combined_required_status(
+                    [semantic["status"], geometry["status"]]
+                )
+            if (
+                (
+                    evidence_mode != "geometry-only"
+                    or role_name in target_role_names
+                )
+                and semantic["status"] == "FALSE"
+            ):
                 decision = "REJECTED_SEMANTIC"
-            elif geometry["status"] == "FALSE":
+            elif (
+                evidence_mode != "semantic-only"
+                and geometry["status"] == "FALSE"
+            ):
                 decision = "REJECTED_GEOMETRY"
             elif status == "UNKNOWN":
                 decision = "INDETERMINATE"
@@ -1391,7 +1473,8 @@ def evaluate_usage_policy_task_witness(
             evaluation = {
                 "object_id": object_id,
                 "role": role_name,
-                "grounding_mode": "joint",
+                "grounding_mode": evidence_mode,
+                "target_assignment_mode": effective_assignment_mode,
                 "semantic": semantic,
                 "unary_geometry": geometry,
                 "semantic_gate_status": semantic["status"],
@@ -1452,11 +1535,16 @@ def evaluate_usage_policy_task_witness(
         )
         tool_geometry_true = sorted(
             object_id
-            for object_id in tool_semantic_true
+            for object_id in objects
             if candidate_index[(tool_role, object_id)][
                 "geometry_gate_status"
             ]
             == "TRUE"
+        )
+        grounding_eligible_tools = sorted(
+            object_id
+            for object_id in objects
+            if candidate_index[(tool_role, object_id)]["status"] == "TRUE"
         )
         tool_unknown = sorted(
             object_id
@@ -1500,6 +1588,14 @@ def evaluate_usage_policy_task_witness(
                     relation_edge = relation_edges.get(
                         (relation_name, tool_id, target_id), {}
                     )
+                    measured_status = relation_edge.get(
+                        "status", "UNKNOWN"
+                    )
+                    used_status = (
+                        "TRUE"
+                        if evidence_mode == "semantic-only"
+                        else measured_status
+                    )
                     relation_checks.append(
                         {
                             "relation": relation_name,
@@ -1507,11 +1603,10 @@ def evaluate_usage_policy_task_witness(
                             "to_role": target_role,
                             "from_object": tool_id,
                             "to_object": target_id,
-                            "measured_status": relation_edge.get(
-                                "status", "UNKNOWN"
-                            ),
-                            "status": relation_edge.get(
-                                "status", "UNKNOWN"
+                            "measured_status": measured_status,
+                            "status": used_status,
+                            "used_for_decision": (
+                                evidence_mode != "semantic-only"
                             ),
                             "required_status": "TRUE",
                             "evidence": deepcopy(
@@ -1529,9 +1624,15 @@ def evaluate_usage_policy_task_witness(
                         ),
                     ]
                 )
-                if tool_candidate["semantic_gate_status"] == "FALSE":
+                if (
+                    evidence_mode != "geometry-only"
+                    and tool_candidate["semantic_gate_status"] == "FALSE"
+                ):
                     reason = "SEMANTICALLY_INELIGIBLE_TOOL"
-                elif tool_candidate["geometry_gate_status"] == "FALSE":
+                elif (
+                    evidence_mode != "semantic-only"
+                    and tool_candidate["geometry_gate_status"] == "FALSE"
+                ):
                     reason = "UNARY_GEOMETRY_FAILED"
                 elif target_candidate["status"] == "FALSE":
                     reason = "TARGET_ROLE_INELIGIBLE"
@@ -1549,6 +1650,8 @@ def evaluate_usage_policy_task_witness(
                     "function": group["function"],
                     "tool_role": tool_role,
                     "target_role": target_role,
+                    "grounding_evidence_mode": evidence_mode,
+                    "target_assignment_mode": effective_assignment_mode,
                     "utensil_object_id": tool_id,
                     "target_object_id": target_id,
                     "status": status,
@@ -1556,6 +1659,12 @@ def evaluate_usage_policy_task_witness(
                     "semantic": deepcopy(tool_candidate["semantic"]),
                     "unary_geometry": deepcopy(
                         tool_candidate["unary_geometry"]
+                    ),
+                    "target_semantic": deepcopy(
+                        target_candidate["semantic"]
+                    ),
+                    "target_unary_geometry": deepcopy(
+                        target_candidate["unary_geometry"]
                     ),
                     "relation_checks": relation_checks,
                     "semantic_evidence_path": (
@@ -1589,7 +1698,7 @@ def evaluate_usage_policy_task_witness(
 
         functionally_assignable = sorted(
             tool_id
-            for tool_id in tool_geometry_true
+            for tool_id in grounding_eligible_tools
             if any(
                 edge_index[(tool_id, target_id)]["status"] == "TRUE"
                 for target_id in target_true
@@ -1627,9 +1736,22 @@ def evaluate_usage_policy_task_witness(
                 used = [tool_id for tool_id, _target in assigned_pairs]
                 if len(used) != len(set(used)):
                     return None
-            if any(
-                edge_index[(tool_id, target_id)]["status"] != "TRUE"
-                for tool_id, target_id in assigned_pairs
+            same_tool_required = bool(
+                group["usage_policy"].get(
+                    "same_tool_must_cover_all_targets", False
+                )
+            )
+            if (
+                same_tool_required
+                and len({tool_id for tool_id, _target in assigned_pairs}) > 1
+            ):
+                return None
+            if (
+                not target_agnostic_count
+                and any(
+                    edge_index[(tool_id, target_id)]["status"] != "TRUE"
+                    for tool_id, target_id in assigned_pairs
+                )
             ):
                 return None
             occurrence_count: dict[str, int] = {}
@@ -1639,6 +1761,12 @@ def evaluate_usage_policy_task_witness(
                     occurrence_count.get(tool_id, 0) + 1
                 )
                 edge = edge_index[(tool_id, target_id)]
+                assignment_status = (
+                    "TRUE_TARGET_AGNOSTIC_COUNT_DIAGNOSTIC"
+                    if target_agnostic_count
+                    and edge["status"] != "TRUE"
+                    else "TRUE"
+                )
                 assignments.append(
                     {
                         **deepcopy(edge),
@@ -1649,7 +1777,13 @@ def evaluate_usage_policy_task_witness(
                         ),
                         "cross_group_reused_assignment": False,
                         "dedicated_assignment": distinct_within_group,
-                        "assignment_status": "TRUE",
+                        "target_specific_compatibility_status": edge[
+                            "status"
+                        ],
+                        "assignment_status": assignment_status,
+                        "target_agnostic_count_diagnostic": (
+                            target_agnostic_count
+                        ),
                         "rejection_reason": None,
                     }
                 )
@@ -1741,6 +1875,9 @@ def evaluate_usage_policy_task_witness(
                 "geometrically_eligible_utensils": len(
                     tool_geometry_true
                 ),
+                "grounding_eligible_utensils": len(
+                    grounding_eligible_tools
+                ),
                 "functionally_assignable_utensils": len(
                     functionally_assignable
                 ),
@@ -1757,6 +1894,7 @@ def evaluate_usage_policy_task_witness(
             "raw_utensil_object_ids": raw_utensils,
             "semantically_eligible_object_ids": tool_semantic_true,
             "geometrically_eligible_object_ids": tool_geometry_true,
+            "grounding_eligible_object_ids": grounding_eligible_tools,
             "functionally_assignable_object_ids": (
                 functionally_assignable
             ),
@@ -1897,6 +2035,8 @@ def evaluate_usage_policy_task_witness(
                 work["group"]["usage_policy"]
             ),
             "evaluated_usage_policy_mode": usage_policy_mode,
+            "target_assignment_mode": effective_assignment_mode,
+            "grounding_evidence_mode": evidence_mode,
             "cross_group_reuse_allowed": config[
                 "cross_group_reuse"
             ]["allowed"],
@@ -1997,6 +2137,10 @@ def evaluate_usage_policy_task_witness(
             reason_codes = [
                 "COMPLETE_DIAGNOSTIC_USAGE_POLICY_ABLATION"
             ]
+        elif effective_assignment_mode != "joint-target-specific":
+            reason_codes = [
+                "COMPLETE_DIAGNOSTIC_TARGET_ASSIGNMENT_ABLATION"
+            ]
     elif (
         usage_policy_mode == "always-distinct"
         and all(work["full_options"] for work in group_work.values())
@@ -2005,7 +2149,11 @@ def evaluate_usage_policy_task_witness(
     elif status == "INDETERMINATE":
         reason_codes = ["REQUIRED_EVIDENCE_UNKNOWN"]
     else:
-        reason_codes = ["INSUFFICIENT_VALID_FUNCTION_ASSIGNMENTS"]
+        reason_codes = [
+            "NO_COMPLETE_TARGET_MATCHING"
+            if effective_assignment_mode == "joint-target-specific"
+            else "INSUFFICIENT_VALID_FUNCTION_ASSIGNMENTS"
+        ]
 
     group_distinct_requirements = [
         group["counts"]["required_distinct_physical_objects"]
@@ -2027,7 +2175,13 @@ def evaluate_usage_policy_task_witness(
         "inference_basis": "JOINT_SEMANTIC_GEOMETRIC_USAGE_POLICY",
         "grounding_mode": "joint",
         "usage_policy_mode": usage_policy_mode,
-        "diagnostic_ablation": usage_policy_mode != "function-aware",
+        "target_assignment_mode": effective_assignment_mode,
+        "grounding_evidence_mode": evidence_mode,
+        "target_specific_assignment": not target_agnostic_count,
+        "diagnostic_ablation": (
+            usage_policy_mode != "function-aware"
+            or effective_assignment_mode != "joint-target-specific"
+        ),
         "task_id": config["task_id"],
         "specification_source": config.get("specification_source"),
         "stage": stage,
@@ -2046,6 +2200,7 @@ def evaluate_usage_policy_task_witness(
         "assignment_evaluations": [
             {
                 "usage_policy_mode": usage_policy_mode,
+                "target_assignment_mode": effective_assignment_mode,
                 "status": status,
                 "selected_witness": selected_witness,
                 "distinct_physical_tool_count": (
@@ -2090,4 +2245,166 @@ def evaluate_usage_policy_task_witness(
                 "fewest_distinct_then_semantic_rank_confidence_id"
             ),
         },
+    }
+
+
+def build_target_compatibility_matrix(
+    witness: dict[str, Any],
+) -> dict[str, Any]:
+    """Serialize complete, target-specific evidence from a production witness.
+
+    The matrix is a projection of already evaluated graph evidence.  It does
+    not rerun perception, geometry, or semantics and therefore remains safe
+    for same-evidence diagnostic comparisons.
+    """
+
+    cells: list[dict[str, Any]] = []
+    tool_ids: set[str] = set()
+    target_ids: set[str] = set()
+    for group in witness.get("function_group_evaluations", []):
+        for edge in group.get("candidate_target_evaluations", []):
+            tool_id = edge["utensil_object_id"]
+            target_id = edge["target_object_id"]
+            tool_ids.add(tool_id)
+            target_ids.add(target_id)
+            relations = {
+                check["relation"]: check
+                for check in edge.get("relation_checks", [])
+            }
+            insertion = relations.get("INSERTABLE_IN", {})
+            reach = relations.get("REACHES_BOTTOM", {})
+            insertion_evidence = insertion.get("evidence", {})
+            reach_evidence = reach.get("evidence", {})
+            semantic_status = edge.get("semantic", {}).get(
+                "status", "UNKNOWN"
+            )
+            unary_status = edge.get("unary_geometry", {}).get(
+                "status", "UNKNOWN"
+            )
+            target_semantic_status = edge.get(
+                "target_semantic", {}
+            ).get("status", "UNKNOWN")
+            target_geometry_status = edge.get(
+                "target_unary_geometry", {}
+            ).get("status", "UNKNOWN")
+            insertion_status = insertion.get(
+                "measured_status", insertion.get("status", "UNKNOWN")
+            )
+            reach_status = reach.get(
+                "measured_status", reach.get("status", "UNKNOWN")
+            )
+            required_statuses = (
+                semantic_status,
+                unary_status,
+                target_semantic_status,
+                target_geometry_status,
+                insertion_status,
+                reach_status,
+            )
+            if semantic_status == "FALSE":
+                rejection_reason = "SEMANTIC_REJECTION"
+            elif unary_status == "FALSE":
+                rejection_reason = "UNARY_GEOMETRY_REJECTION"
+            elif target_semantic_status == "FALSE":
+                rejection_reason = "TARGET_SEMANTIC_REJECTION"
+            elif target_geometry_status == "FALSE":
+                rejection_reason = "TARGET_GEOMETRY_REJECTION"
+            elif insertion_status == "FALSE":
+                rejection_reason = "INSERTION_REJECTION"
+            elif reach_status == "FALSE":
+                rejection_reason = "REACH_REJECTION"
+            elif "UNKNOWN" in required_statuses:
+                rejection_reason = "REQUIRED_EVIDENCE_UNKNOWN"
+            else:
+                rejection_reason = None
+            cells.append(
+                {
+                    "function_group_id": group["function_group_id"],
+                    "function": group["function"],
+                    "tool_role": group["tool_role"],
+                    "target_role": group["target_role"],
+                    "tool_object_id": tool_id,
+                    "target_object_id": target_id,
+                    "tool_semantic_label": edge.get("semantic", {}).get(
+                        "canonical_label"
+                    ),
+                    "tool_fused_semantic_label": edge.get(
+                        "semantic", {}
+                    ).get("canonical_label"),
+                    "target_semantic_label": edge.get(
+                        "target_semantic", {}
+                    ).get("canonical_label"),
+                    "target_fused_semantic_label": edge.get(
+                        "target_semantic", {}
+                    ).get("canonical_label"),
+                    "tool_semantic_status": semantic_status,
+                    "target_semantic_status": target_semantic_status,
+                    "elongated_object_status": unary_status,
+                    "open_cavity_status": target_geometry_status,
+                    "maximum_cross_section_m": insertion_evidence.get(
+                        "maximum_cross_section_m"
+                    ),
+                    "usable_length_m": reach_evidence.get(
+                        "usable_length_m"
+                    ),
+                    "opening_width_m": insertion_evidence.get(
+                        "opening_width_m"
+                    ),
+                    "cavity_depth_m": reach_evidence.get(
+                        "cavity_depth_m"
+                    ),
+                    "clearance_margin_m": insertion_evidence.get(
+                        "clearance_margin_m"
+                    ),
+                    "insertable_in_pass_margin_m": insertion_evidence.get(
+                        "pass_margin_m"
+                    ),
+                    "insertable_in_status": insertion_status,
+                    "grip_allowance_m": reach_evidence.get(
+                        "grip_allowance_m"
+                    ),
+                    "reaches_bottom_pass_margin_m": reach_evidence.get(
+                        "pass_margin_m"
+                    ),
+                    "reaches_bottom_status": reach_status,
+                    "target_specific_compatibility_status": edge.get(
+                        "status", "UNKNOWN"
+                    ),
+                    "rejection_reason": rejection_reason,
+                    "tool_geometry_evidence_path": edge.get(
+                        "geometry_evidence_path"
+                    ),
+                    "target_geometry_evidence_path": edge.get(
+                        "target_geometry_evidence_path"
+                    ),
+                    "tool_semantic_evidence_path": edge.get(
+                        "semantic_evidence_path"
+                    ),
+                    "tool_source_stage": edge.get("source_stage"),
+                    "tool_source_region": edge.get("source_region"),
+                    "target_source_stage": edge.get(
+                        "target_source_stage"
+                    ),
+                    "target_source_region": edge.get(
+                        "target_source_region"
+                    ),
+                }
+            )
+    cells.sort(
+        key=lambda cell: (
+            cell["tool_object_id"],
+            cell["target_object_id"],
+            cell["function_group_id"],
+        )
+    )
+    return {
+        "schema_version": 1,
+        "task_id": witness.get("task_id"),
+        "stage": witness.get("stage"),
+        "production_mode": "joint-target-specific",
+        "same_observation_evidence": True,
+        "tool_object_ids": sorted(tool_ids),
+        "target_object_ids": sorted(target_ids),
+        "cell_count": len(cells),
+        "cells": cells,
     }

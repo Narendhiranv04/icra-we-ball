@@ -154,3 +154,18 @@ geometry counterexample experiments. The joint experiment uses actual
 YOLO-World RGB detections, generic mask-associated object IDs, measured
 relations, and emits a verified role-assignment handoff without executing
 robot motion or TAMP.
+
+The repository also includes Ablation 3, which builds a complete measured
+tool–target compatibility matrix and applies reuse/distinctness on task-level
+function groups. Run its actual-detector demonstration and presentation with:
+
+```bash
+./mujoco_scenes/scripts/run_ablation3_multi_target_demo.sh \
+  ablation3_multi_target_demo
+xdg-open reports/ablation3_multi_target_demo/presentation_report.html
+```
+
+See the Ablation 3 section in
+[mujoco_scenes/README.md](mujoco_scenes/README.md) for the four same-evidence
+diagnostics, exact Docker command, measured matrix, scene variants, and output
+layout.
