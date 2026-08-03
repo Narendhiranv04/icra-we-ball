@@ -97,7 +97,13 @@ def _relation(tool, target, relation, status):
     }
 
 
-def _graph(*, include_partial=False, include_long=False, unknown=False):
+def _graph(
+    *,
+    include_partial=False,
+    include_long=False,
+    unknown=False,
+    pairing_strategy="exhaustive_all_pairs",
+):
     labels = {
         "cup": "cup",
         "mug": "mug",
@@ -143,6 +149,7 @@ def _graph(*, include_partial=False, include_long=False, unknown=False):
                 edges.append(_relation(tool, target, relation, status))
     return {
         "stage": 2 if include_long else 1 if include_partial else 0,
+        "pairing": {"strategy": pairing_strategy},
         "nodes": nodes,
         "edges": edges,
     }
@@ -269,6 +276,93 @@ def test_complete_compatibility_matrix_preserves_margins_and_paths():
     ]
 
 
+def test_every_observed_object_is_checked_before_role_binding():
+    graph = _graph(include_long=True)
+    witness = _evaluate(graph)
+    object_ids = {
+        node["attributes"]["object_id"]
+        for node in graph["nodes"]
+    }
+    role_count = 4
+    group_count = 2
+    assert len(witness["candidate_evaluations"]) == (
+        len(object_ids) * role_count
+    )
+    assert witness["selection_policy"]["pairing_scope"] == (
+        "ALL_OBSERVED_ORDERED_OBJECT_PAIRS"
+    )
+    assert witness["selection_policy"]["role_binding_phase"] == (
+        "AFTER_PAIRWISE_GEOMETRY"
+    )
+    matrix = build_target_compatibility_matrix(witness)
+    assert set(matrix["observed_object_ids"]) == object_ids
+    assert matrix["ordered_distinct_object_pair_count"] == (
+        len(object_ids) * (len(object_ids) - 1)
+    )
+    assert matrix["cell_count"] == (
+        group_count * len(object_ids) * (len(object_ids) - 1)
+    )
+    for group in witness["function_group_evaluations"]:
+        pairs = {
+            (edge["utensil_object_id"], edge["target_object_id"])
+            for edge in group["candidate_target_evaluations"]
+        }
+        assert pairs == {
+            (source, target)
+            for source in object_ids
+            for target in object_ids
+            if source != target
+        }
+
+
+def test_semantic_first_pairing_keeps_all_unary_checks_but_prunes_pairs():
+    graph = _graph(
+        include_long=True,
+        pairing_strategy="semantic_role_scoped",
+    )
+    witness = _evaluate(graph)
+    object_ids = {
+        node["attributes"]["object_id"] for node in graph["nodes"]
+    }
+    assert len(witness["candidate_evaluations"]) == len(object_ids) * 4
+    assert witness["selection_policy"]["unary_geometry_scope"] == (
+        "ALL_OBSERVED_OBJECTS"
+    )
+    assert witness["selection_policy"]["pairing_scope"] == (
+        "SEMANTIC_ROLE_SCOPED_OBJECT_PAIRS"
+    )
+    matrix = build_target_compatibility_matrix(witness)
+    # Fork is semantically excluded and containers cannot be tool subjects.
+    assert not any(
+        cell["tool_object_id"] == "fork" for cell in matrix["cells"]
+    )
+    assert all(
+        cell["tool_semantic_status"] == "TRUE"
+        and cell["target_semantic_status"] == "TRUE"
+        for cell in matrix["cells"]
+    )
+    assert matrix["function_pair_evaluation_count"] < (
+        2 * len(object_ids) * (len(object_ids) - 1)
+    )
+    assert matrix["pruned_function_pair_count"] > 0
+
+
+def test_relation_schema_allows_same_role_pairing_for_future_nesting():
+    task = load_task_requirements(TASK)
+    task["relations"].append(
+        {
+            "predicate": "NESTABLE_IN",
+            "subject_role": "soup_container",
+            "object_role": "soup_container",
+            "expected": True,
+        }
+    )
+    normalized = load_task_requirements(task)
+    relation = normalized["constraints"]["pairwise"][-1]
+    assert relation["from_role"] == "soup_container"
+    assert relation["to_role"] == "soup_container"
+
+
 @pytest.mark.parametrize(
     "mode,expected",
     [
@@ -284,22 +378,31 @@ def test_required_same_evidence_ablation_outcomes(mode, expected):
     assert result["target_assignment_mode"] == mode
 
 
-def test_geometry_only_false_positive_uses_semantically_rejected_fork():
+def test_geometry_only_evaluates_semantically_rejected_objects_by_geometry():
     result = _evaluate(_graph(), "geometry-only")
     assert result["status"] == "COMPLETE"
-    assert "fork" in {
-        assignment["utensil_object_id"]
-        for assignment in result["operation_assignments"]
-    }
+    fork_tool_evaluations = [
+        item
+        for item in result["candidate_evaluations"]
+        if item["object_id"] == "fork"
+        and item["role"] in {"coffee_stirrer", "soup_spoon"}
+    ]
+    assert fork_tool_evaluations
+    assert all(
+        item["semantic_gate_status"] == "FALSE"
+        and item["geometry_gate_status"] == "TRUE"
+        and item["status"] == "TRUE"
+        for item in fork_tool_evaluations
+    )
 
 
-def test_geometry_only_keeps_semantic_target_identity():
+def test_geometry_only_does_not_use_semantics_to_preassign_targets():
     result = _evaluate(_graph(), "geometry-only")
     coffee = _group(result, "coffee_stirring")
-    assert {
-        assignment["target_object_id"]
-        for assignment in coffee["selected_assignments"]
-    } == {"cup", "mug"}
+    assert set(coffee["eligible_target_object_ids"]) == set(TARGETS)
+    assert result["selection_policy"]["candidate_gate"] == (
+        "geometry_after_pairing"
+    )
 
 
 def test_target_order_and_object_order_do_not_change_assignment():

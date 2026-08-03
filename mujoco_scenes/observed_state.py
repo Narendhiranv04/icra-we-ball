@@ -12,6 +12,7 @@ import subprocess
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
+from time import perf_counter
 from typing import Any, Iterable
 
 import numpy as np
@@ -40,6 +41,7 @@ from mujoco_scenes.task_witness import (
     evaluate_usage_policy_task_witness,
     build_target_compatibility_matrix,
     load_task_requirements,
+    PAIRING_STRATEGIES,
     resolve_task_requirements_path,
 )
 from mujoco_scenes.semantic_grounding import (
@@ -196,6 +198,7 @@ class ObservedStateRun:
         semantic_detector: SemanticDetector | None = None,
         semantic_config: str | Path | dict[str, Any] | None = None,
         grounding_mode: str = "geometry-only",
+        pairing_strategy: str | None = None,
         save_semantic_overlays: bool = False,
         run_config: dict[str, Any] | None = None,
     ):
@@ -210,11 +213,33 @@ class ObservedStateRun:
             else load_geometry_config()
         )
         self.task_requirements = load_task_requirements(task_requirements)
+        joint_task = self.task_requirements.get("_task_schema") in {
+            "JOINT_ROLE_GROUNDING",
+            "JOINT_USAGE_POLICY_GROUNDING",
+        }
+        configured_pairing_strategy = self.task_requirements.get(
+            "pairing", {}
+        ).get(
+            "strategy",
+            "semantic_role_scoped" if joint_task else "exhaustive_all_pairs",
+        )
+        self.pairing_strategy = (
+            pairing_strategy or configured_pairing_strategy
+        ).replace("-", "_")
+        if self.pairing_strategy not in PAIRING_STRATEGIES:
+            raise ValueError(
+                "pairing_strategy must be one of "
+                f"{sorted(PAIRING_STRATEGIES)}"
+            )
         self.grounding_mode = grounding_mode
         self.semantic_detector = semantic_detector or NullSemanticDetector()
         self.semantic_enabled = not isinstance(
             self.semantic_detector, NullSemanticDetector
         )
+        if pairing_strategy is None and not self.semantic_enabled:
+            # Semantic scoping is impossible without semantic evidence.
+            # Geometry-only diagnostics therefore retain exhaustive pairing.
+            self.pairing_strategy = "exhaustive_all_pairs"
         if isinstance(semantic_config, dict):
             self.semantic_config = deepcopy(semantic_config)
         else:
@@ -289,6 +314,7 @@ class ObservedStateRun:
                 grounding_mode.upper().replace("-", "_")
             ),
             "grounding_mode": grounding_mode,
+            "pairing_strategy": self.pairing_strategy,
             "semantic_detector_enabled": self.semantic_enabled,
             "task_requirements": task_source,
             "task_id": self.task_requirements["task_id"],
@@ -310,6 +336,7 @@ class ObservedStateRun:
         semantic_detector: SemanticDetector | None = None,
         semantic_config: str | Path | dict[str, Any] | None = None,
         grounding_mode: str = "geometry-only",
+        pairing_strategy: str | None = None,
         save_semantic_overlays: bool = False,
         run_config: dict[str, Any] | None = None,
     ) -> "ObservedStateRun":
@@ -330,6 +357,7 @@ class ObservedStateRun:
             semantic_detector=semantic_detector,
             semantic_config=semantic_config,
             grounding_mode=grounding_mode,
+            pairing_strategy=pairing_strategy,
             save_semantic_overlays=save_semantic_overlays,
             run_config=run_config,
         )
@@ -904,6 +932,117 @@ class ObservedStateRun:
 
         region_states = self._region_states(scene)
         graph = self._build_graph(region_states, stage_changes)
+        pair_relation_names = {
+            constraint["relation"]
+            for constraint in self.task_requirements["constraints"][
+                "pairwise"
+            ]
+        }
+        pair_relations = [
+            {
+                "source_object_id": edge["source"].removeprefix(
+                    "object:"
+                ),
+                "target_object_id": edge["target"].removeprefix(
+                    "object:"
+                ),
+                "relation": edge["relation"],
+                "status": edge["status"],
+                "evidence": deepcopy(edge.get("evidence", {})),
+                "applicable_role_pairs": deepcopy(
+                    edge.get("applicable_role_pairs", [])
+                ),
+                "role_projection_eligible": bool(
+                    edge.get("role_projection_eligible", False)
+                ),
+            }
+            for edge in graph["edges"]
+            if edge.get("relation") in pair_relation_names
+            and edge.get("pairing_scope")
+            in {
+                "ALL_OBSERVED_ORDERED_OBJECT_PAIRS",
+                "SEMANTIC_ROLE_SCOPED_OBJECT_PAIRS",
+            }
+        ]
+        pairing_metadata = deepcopy(graph.get("pairing", {}))
+        pair_payload = {
+            "schema_version": 1,
+            "task_id": self.task_requirements["task_id"],
+            "stage": stage,
+            "region_id": expected_region,
+            "pairing_strategy": self.pairing_strategy,
+            "pairing_scope": pairing_metadata.get("scope"),
+            "role_binding_phase": (
+                "AFTER_PAIRWISE_GEOMETRY"
+                if self.pairing_strategy == "exhaustive_all_pairs"
+                else "AFTER_SEMANTIC_GATING_AND_PAIRWISE_GEOMETRY"
+            ),
+            "unary_geometry_scope": "ALL_OBSERVED_OBJECTS",
+            "observed_object_ids": sorted(
+                self.registry["objects"]
+            ),
+            "ordered_distinct_object_pair_count": (
+                len(self.registry["objects"])
+                * max(0, len(self.registry["objects"]) - 1)
+            ),
+            "relation_names": sorted(pair_relation_names),
+            "relation_evaluation_count": len(pair_relations),
+            "skipped_relation_pair_count": pairing_metadata.get(
+                "skipped_relation_pair_count", 0
+            ),
+            "elapsed_seconds": pairing_metadata.get(
+                "elapsed_seconds", 0.0
+            ),
+            "relations": pair_relations,
+        }
+        _atomic_json(
+            stage_dir / "pair_relation_evaluations.json",
+            pair_payload,
+        )
+        _atomic_json(
+            self.run_dir / "pair_relation_evaluations.json",
+            pair_payload,
+        )
+        # Preserve the exhaustive-ablation artifact name for existing reports.
+        if self.pairing_strategy == "exhaustive_all_pairs":
+            _atomic_json(
+                stage_dir / "all_observed_pair_relations.json",
+                pair_payload,
+            )
+            _atomic_json(
+                self.run_dir / "all_observed_pair_relations.json",
+                pair_payload,
+            )
+        events.append(
+            {
+                "stage": stage,
+                "region_id": expected_region,
+                "event": (
+                    "ALL_OBSERVED_OBJECT_PAIRS_EVALUATED"
+                    if self.pairing_strategy == "exhaustive_all_pairs"
+                    else "SEMANTIC_ROLE_SCOPED_PAIRS_EVALUATED"
+                ),
+                "pairing_strategy": self.pairing_strategy,
+                "observed_object_count": len(
+                    self.registry["objects"]
+                ),
+                "ordered_distinct_object_pair_count": (
+                    pair_payload[
+                        "ordered_distinct_object_pair_count"
+                    ]
+                ),
+                "relation_evaluation_count": len(
+                    pair_relations
+                ),
+                "skipped_relation_pair_count": pair_payload[
+                    "skipped_relation_pair_count"
+                ],
+                "elapsed_seconds": pair_payload["elapsed_seconds"],
+                "role_binding_phase": (
+                    pair_payload["role_binding_phase"]
+                ),
+            }
+        )
         previous_witness_status = (
             self.latest_witness.get("status")
             if self.latest_witness is not None
@@ -1092,6 +1231,8 @@ class ObservedStateRun:
                                 "COMPATIBLE_WITH_TARGET"
                                 if status == "TRUE"
                                 else "INCOMPATIBLE_WITH_TARGET"
+                                if status == "FALSE"
+                                else "UNRESOLVED_WITH_TARGET"
                             ),
                             "status": status,
                             "function_group": cell[
@@ -2157,6 +2298,9 @@ class ObservedStateRun:
         role_evaluations: dict[
             tuple[str, str], dict[str, Any]
         ] = {}
+        semantic_evaluations: dict[
+            tuple[str, str], dict[str, Any]
+        ] = {}
         roles = self.task_requirements["roles"]
         for role_name in sorted(roles):
             nodes.append(
@@ -2281,6 +2425,7 @@ class ObservedStateRun:
                         },
                         roles[role_name],
                     )
+                    semantic_evaluations[(object_id, role_name)] = semantic
                     edges.append(
                         {
                             "source": f"object:{object_id}",
@@ -2293,36 +2438,69 @@ class ObservedStateRun:
                         }
                     )
 
-        pairwise_edges = set()
+        # Unary geometry is deliberately computed for every object and role.
+        # Binary geometry has two explicit strategies. The exhaustive
+        # ablation evaluates every ordered pair. Production first uses RGB
+        # semantics to select the role-compatible subject/object domains,
+        # then evaluates only relation directions declared by the task.
+        # Same-role declarations naturally support future relations such as
+        # NESTABLE_IN(container, container).
+        constraints_by_relation: dict[str, list[dict[str, str]]] = {}
         for constraint in self.task_requirements["constraints"]["pairwise"]:
-            source_role = constraint["from_role"]
-            target_role = constraint["to_role"]
-            relation = constraint["relation"]
-            sources = [
-                object_id
-                for object_id in sorted(self.registry["objects"])
-                if role_evaluations[(object_id, source_role)]["status"]
-                == "TRUE"
-            ]
-            targets = [
-                object_id
-                for object_id in sorted(self.registry["objects"])
-                if role_evaluations[(object_id, target_role)]["status"]
-                == "TRUE"
-            ]
-            for source_id in sources:
-                for target_id in targets:
+            constraints_by_relation.setdefault(
+                constraint["relation"], []
+            ).append(
+                {
+                    "from_role": constraint["from_role"],
+                    "to_role": constraint["to_role"],
+                }
+            )
+        object_ids = sorted(self.registry["objects"])
+        exhaustive = self.pairing_strategy == "exhaustive_all_pairs"
+        evaluated_pair_count = 0
+        skipped_pair_count = 0
+        relation_evaluation_count = 0
+        pairwise_started = perf_counter()
+        for relation, role_pairs in sorted(
+            constraints_by_relation.items()
+        ):
+            for source_id in object_ids:
+                for target_id in object_ids:
                     if source_id == target_id:
                         continue
-                    edge_key = (relation, source_id, target_id)
-                    if edge_key in pairwise_edges:
+                    semantically_applicable_role_pairs = [
+                        pair
+                        for pair in role_pairs
+                        if semantic_evaluations.get(
+                            (source_id, pair["from_role"]), {}
+                        ).get("status")
+                        == "TRUE"
+                        and semantic_evaluations.get(
+                            (target_id, pair["to_role"]), {}
+                        ).get("status")
+                        == "TRUE"
+                    ]
+                    if not exhaustive and not semantically_applicable_role_pairs:
+                        skipped_pair_count += 1
                         continue
-                    pairwise_edges.add(edge_key)
                     evaluation = pairwise_relation_evaluation(
                         relation,
                         self.registry["objects"][source_id],
                         self.registry["objects"][target_id],
                         self.config,
+                    )
+                    relation_evaluation_count += 1
+                    evaluated_pair_count += 1
+                    role_projection_eligible = any(
+                        role_evaluations[(source_id, pair["from_role"])][
+                            "status"
+                        ]
+                        == "TRUE"
+                        and role_evaluations[(target_id, pair["to_role"])][
+                            "status"
+                        ]
+                        == "TRUE"
+                        for pair in role_pairs
                     )
                     edges.append(
                         {
@@ -2331,14 +2509,52 @@ class ObservedStateRun:
                             "relation": relation,
                             "status": evaluation["status"],
                             "evidence": evaluation,
+                            "pairing_scope": (
+                                "ALL_OBSERVED_ORDERED_OBJECT_PAIRS"
+                                if exhaustive
+                                else "SEMANTIC_ROLE_SCOPED_OBJECT_PAIRS"
+                            ),
+                            "role_binding_phase": (
+                                "AFTER_PAIRWISE_GEOMETRY"
+                                if exhaustive
+                                else "AFTER_SEMANTIC_GATING_AND_PAIRWISE_GEOMETRY"
+                            ),
+                            "applicable_role_pairs": deepcopy(role_pairs),
+                            "semantically_applicable_role_pairs": deepcopy(
+                                semantically_applicable_role_pairs
+                            ),
+                            "role_projection_eligible": (
+                                role_projection_eligible
+                            ),
                         }
                     )
+        pairwise_elapsed_seconds = perf_counter() - pairwise_started
         return {
             "schema_version": SCHEMA_VERSION,
             "inference_basis": (
                 self.grounding_mode.upper().replace("-", "_")
             ),
             "grounding_mode": self.grounding_mode,
+            "pairing": {
+                "strategy": self.pairing_strategy,
+                "scope": (
+                    "ALL_OBSERVED_ORDERED_OBJECT_PAIRS"
+                    if exhaustive
+                    else "SEMANTIC_ROLE_SCOPED_OBJECT_PAIRS"
+                ),
+                "unary_geometry_scope": "ALL_OBSERVED_OBJECTS",
+                "semantic_unknown_policy": (
+                    "DEFER_RELATION_EVALUATION"
+                ),
+                "observed_object_count": len(object_ids),
+                "possible_ordered_pair_count": (
+                    len(object_ids) * max(0, len(object_ids) - 1)
+                ),
+                "evaluated_relation_pair_count": evaluated_pair_count,
+                "skipped_relation_pair_count": skipped_pair_count,
+                "relation_evaluation_count": relation_evaluation_count,
+                "elapsed_seconds": pairwise_elapsed_seconds,
+            },
             "run_id": self.run_id,
             "stage": self.next_stage,
             "nodes": nodes,

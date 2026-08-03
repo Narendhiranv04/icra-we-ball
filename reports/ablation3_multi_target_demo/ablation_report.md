@@ -2,6 +2,8 @@
 
 Compatibility is evaluated as `VALID_FOR(tool, function, target)`, not as a global `VALID_TOOL(tool)` flag. Reuse/distinctness belongs to each task-level function group.
 
+Every observed object is checked against every unary role requirement and every distinct ordered object pair is checked geometrically before any function role is assigned. The matrix PNG is the readable role-relevant projection; the HTML table and machine-readable JSON/CSV retain the complete all-object function-pair evaluation.
+
 ![Same-evidence comparison](assignment_ablation_comparison.png)
 
 | Mode | Outcome | Completion stage | Scientifically correct? | Expected matched? |
@@ -12,6 +14,8 @@ Compatibility is evaluated as `VALID_FOR(tool, function, target)`, not as a glob
 | Joint target-specific production | COMPLETE | 2 | Yes | Yes |
 
 ![Compatibility matrix](compatibility_matrix.png)
+
+![Binary relation evaluations](pair_relation_evaluations.png)
 
 ## Animations
 

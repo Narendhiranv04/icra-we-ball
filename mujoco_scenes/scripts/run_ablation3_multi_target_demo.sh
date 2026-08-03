@@ -2,6 +2,7 @@
 set -eu
 
 run_id="${1:-ablation3_multi_target_demo}"
+pairing_strategy="${2:-exhaustive-all-pairs}"
 image="${MUJOCO_KITCHEN_IMAGE:-mujoco-kitchen-s1}"
 repository_root="$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)"
 
@@ -53,6 +54,7 @@ docker run --rm \
     --semantic-model /models/yolov8m-worldv2.pt \
     --semantic-vocabulary mujoco_scenes/configs/ablation3_semantic_vocabulary.yaml \
     --grounding-mode joint \
+    --pairing-strategy "$pairing_strategy" \
     --semantic-confidence-threshold 0.03 \
     --semantic-min-supporting-views 2 \
     --save-semantic-overlays

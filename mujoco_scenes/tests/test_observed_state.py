@@ -388,6 +388,7 @@ class ObservedStateTests(unittest.TestCase):
             "properties.json",
             "graph.json",
             "witness.json",
+            "all_observed_pair_relations.json",
             "pointcloud.png",
             "graph.png",
             "overview.png",
@@ -406,6 +407,91 @@ class ObservedStateTests(unittest.TestCase):
                     / "cumulative_visualization.ply"
                 ).exists()
             )
+
+    def test_all_observed_objects_are_paired_before_role_binding(self):
+        stage = self._initial()
+        payload = json.loads(
+            (stage / "all_observed_pair_relations.json").read_text()
+        )
+        self.assertEqual(
+            payload["pairing_scope"],
+            "ALL_OBSERVED_ORDERED_OBJECT_PAIRS",
+        )
+        self.assertEqual(
+            payload["role_binding_phase"],
+            "AFTER_PAIRWISE_GEOMETRY",
+        )
+        self.assertEqual(payload["observed_object_ids"], [
+            "object_0001", "object_0002"
+        ])
+        self.assertEqual(
+            payload["ordered_distinct_object_pair_count"], 2
+        )
+        self.assertEqual(payload["relation_evaluation_count"], 4)
+        self.assertEqual(
+            {
+                (
+                    item["source_object_id"],
+                    item["target_object_id"],
+                )
+                for item in payload["relations"]
+            },
+            {
+                ("object_0001", "object_0002"),
+                ("object_0002", "object_0001"),
+            },
+        )
+
+    def test_semantic_role_scoping_skips_irrelevant_binary_geometry(self):
+        self._initial()
+        task = (
+            Path(__file__).parents[1]
+            / "configs"
+            / "ablation3_multi_target.yaml"
+        )
+        session = ObservedStateRun(
+            Path(self.temporary.name) / "semantic_scoped",
+            scene_name=self.scene.scene_name,
+            region_ids=self.scene.region_states,
+            task_requirements=task,
+            pairing_strategy="semantic_role_scoped",
+        )
+        template = deepcopy_json(
+            self.session.registry["objects"]["object_0001"]
+        )
+        session.registry["objects"] = {}
+        for index, label in enumerate(("spoon", "cup", "marker"), 1):
+            record = deepcopy_json(template)
+            object_id = f"object_{index:04d}"
+            record["object_id"] = object_id
+            record["semantics"] = {
+                "validated": {
+                    "status": "SUPPORTED",
+                    "canonical_label": label,
+                    "mean_confidence": 0.9,
+                }
+            }
+            session.registry["objects"][object_id] = record
+        result = {"status": "TRUE", "pass_margin_m": 0.01}
+        with patch(
+            "mujoco_scenes.observed_state.pairwise_relation_evaluation",
+            return_value=result,
+        ) as evaluator:
+            graph = session._build_graph(
+                self.scene.get_region_observation_states(), {}
+            )
+        # Only spoon -> cup is semantically compatible; it is evaluated for
+        # INSERTABLE_IN and REACHES_BOTTOM. Marker and reverse pairs are pruned.
+        self.assertEqual(evaluator.call_count, 2)
+        self.assertEqual(
+            graph["pairing"]["possible_ordered_pair_count"], 6
+        )
+        self.assertEqual(
+            graph["pairing"]["relation_evaluation_count"], 2
+        )
+        self.assertEqual(
+            graph["pairing"]["skipped_relation_pair_count"], 10
+        )
 
     def test_valid_initial_object_can_complete_global_task(self):
         task = Path(__file__).parents[1] / "configs" / "s1_find_open_receptacle.yaml"

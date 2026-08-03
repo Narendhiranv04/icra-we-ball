@@ -1,0 +1,59 @@
+{
+  "comparison": {
+    "binary_evaluation_speedup": 3.017452221148439,
+    "relation_check_reduction_count": 340,
+    "relation_check_reduction_percent": 77.98165137614679
+  },
+  "comparison_basis": "same_scene_task_detector_configuration_separate_deterministic_runs",
+  "exhaustive": {
+    "elapsed_seconds": 0.0031773500086274,
+    "relation_evaluation_count": 436,
+    "skipped_relation_pair_count": 0,
+    "stage_count": 3,
+    "strategy": "exhaustive_all_pairs"
+  },
+  "schema_version": 1,
+  "semantic_first": {
+    "elapsed_seconds": 0.0010529909923207015,
+    "relation_evaluation_count": 96,
+    "skipped_relation_pair_count": 340,
+    "stage_count": 3,
+    "strategy": "semantic_role_scoped"
+  },
+  "stages": [
+    {
+      "exhaustive_elapsed_seconds": 0.0007928550039650872,
+      "exhaustive_relation_checks": 112,
+      "observed_object_count": 8,
+      "possible_ordered_pair_count": 56,
+      "region_id": "INITIAL",
+      "semantic_first_elapsed_seconds": 0.00027038599364459515,
+      "semantic_first_pruned_checks": 88,
+      "semantic_first_relation_checks": 24,
+      "stage": 0
+    },
+    {
+      "exhaustive_elapsed_seconds": 0.001127712006564252,
+      "exhaustive_relation_checks": 144,
+      "observed_object_count": 9,
+      "possible_ordered_pair_count": 72,
+      "region_id": "D1",
+      "semantic_first_elapsed_seconds": 0.00035242000012658536,
+      "semantic_first_pruned_checks": 112,
+      "semantic_first_relation_checks": 32,
+      "stage": 1
+    },
+    {
+      "exhaustive_elapsed_seconds": 0.0012567829980980605,
+      "exhaustive_relation_checks": 180,
+      "observed_object_count": 10,
+      "possible_ordered_pair_count": 90,
+      "region_id": "D2",
+      "semantic_first_elapsed_seconds": 0.00043018499854952097,
+      "semantic_first_pruned_checks": 140,
+      "semantic_first_relation_checks": 40,
+      "stage": 2
+    }
+  ],
+  "unary_geometry_scope": "ALL_OBSERVED_OBJECTS"
+}

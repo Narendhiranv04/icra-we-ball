@@ -210,6 +210,7 @@ def run_sequential_inspection(
     semantic_confidence_threshold: float | None = None,
     semantic_min_supporting_views: int | None = None,
     grounding_mode: str = "auto",
+    pairing_strategy: str | None = None,
     save_semantic_overlays: bool = False,
 ) -> ObservedStateRun:
     """Observe closed reset, then inspect and persist one region at a time."""
@@ -225,10 +226,21 @@ def run_sequential_inspection(
             "Sequential inspection requires a fresh scene with every region closed"
         )
     loaded_task = load_task_requirements(task_requirements)
+    requested_pairing_strategy = pairing_strategy
     requested_grounding_mode = grounding_mode
     grounding_mode = resolve_grounding_mode(
         loaded_task, grounding_mode
     )
+    pairing_strategy = (
+        requested_pairing_strategy
+        or (
+            "exhaustive_all_pairs"
+            if grounding_mode == "geometry-only"
+            else loaded_task.get("pairing", {}).get(
+                "strategy", "semantic_role_scoped"
+            )
+        )
+    ).replace("-", "_")
     semantic_config = load_semantic_config(
         semantic_config_path
         if semantic_config_path is not None
@@ -292,6 +304,7 @@ def run_sequential_inspection(
         semantic_detector=semantic_detector,
         semantic_config=semantic_config,
         grounding_mode=grounding_mode,
+        pairing_strategy=pairing_strategy,
         save_semantic_overlays=save_semantic_overlays,
         run_config={
             "mode": "sequential_inspection",
@@ -305,6 +318,7 @@ def run_sequential_inspection(
             "opening_actuation_steps": DIRECT_ACTUATION_STEPS,
             "grounding_mode": grounding_mode,
             "requested_grounding_mode": requested_grounding_mode,
+            "pairing_strategy": pairing_strategy,
             "semantic_backend": semantic_backend,
             # Record the resolved adapter state, not only an optional CLI
             # override. This remains complete when the checkpoint came from

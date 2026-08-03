@@ -1483,6 +1483,15 @@ if __name__ == "__main__":
         ),
     )
     parser.add_argument(
+        "--pairing-strategy",
+        choices=("semantic-role-scoped", "exhaustive-all-pairs"),
+        default=None,
+        help=(
+            "Binary geometry scope: production semantic role gating or the "
+            "exhaustive all-pairs timing ablation; defaults to task config"
+        ),
+    )
+    parser.add_argument(
         "--semantic-confidence-threshold",
         type=float,
         default=None,
@@ -1600,6 +1609,7 @@ if __name__ == "__main__":
                 args.semantic_min_supporting_views
             ),
             grounding_mode=args.grounding_mode,
+            pairing_strategy=args.pairing_strategy,
             save_semantic_overlays=args.save_semantic_overlays,
         )
 

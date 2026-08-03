@@ -47,9 +47,9 @@ MODE_EXPLANATIONS = {
         "assigned spoon fits or reaches each particular container."
     ),
     "geometry-only": (
-        "False positive: target identity and all pairwise measurements are "
-        "retained, but utensil-category semantics are removed, so a fork can "
-        "fill the missing spoon slot."
+        "False positive: all unary and pairwise geometry is retained, but "
+        "geometry alone cannot establish which elongated objects and open "
+        "cavities should occupy the task's functional roles."
     ),
     "joint-target-agnostic-count": (
         "False positive: candidates valid somewhere are counted without "
@@ -113,16 +113,30 @@ def _cell_color(status: str) -> str:
 
 
 def _matrix_axes(matrix: dict[str, Any]) -> tuple[list[str], list[str]]:
-    tools = sorted({cell["tool_object_id"] for cell in matrix["cells"]})
-    targets = sorted({cell["target_object_id"] for cell in matrix["cells"]})
+    projected = [
+        cell
+        for cell in matrix["cells"]
+        if cell.get("role_relevant_projection", True)
+    ]
+    tools = list(matrix.get("tool_object_ids", [])) or sorted(
+        {cell["tool_object_id"] for cell in projected}
+    )
+    targets = list(matrix.get("target_object_ids", [])) or sorted(
+        {cell["target_object_id"] for cell in projected}
+    )
     return tools, targets
 
 
 def _draw_matrix(matrix: dict[str, Any], destination: Path) -> None:
     tools, targets = _matrix_axes(matrix)
+    projected_cells = [
+        cell
+        for cell in matrix["cells"]
+        if cell.get("role_relevant_projection", True)
+    ]
     index = {
         (cell["tool_object_id"], cell["target_object_id"]): cell
-        for cell in matrix["cells"]
+        for cell in projected_cells
     }
     width = 470 + 305 * max(1, len(targets))
     height = 190 + 92 * max(1, len(tools))
@@ -130,20 +144,22 @@ def _draw_matrix(matrix: dict[str, Any], destination: Path) -> None:
     draw = ImageDraw.Draw(canvas)
     draw.text(
         (24, 18),
-        "Measured tool–target compatibility matrix",
+        "Role-relevant view of all-object compatibility",
         font=_font(30, bold=True),
         fill="#111827",
     )
     draw.text(
         (24, 61),
-        "Each cell is independently grounded from saved target-specific evidence",
+        "All observed pairs are evaluated first; this view shows pairs relevant after role grounding",
         font=_font(17),
         fill="#475569",
     )
     for column, target in enumerate(targets):
         x = 450 + column * 305
         sample = next(
-            cell for cell in matrix["cells"] if cell["target_object_id"] == target
+            cell
+            for cell in projected_cells
+            if cell["target_object_id"] == target
         )
         label = (
             sample.get("target_fused_semantic_label")
@@ -156,7 +172,9 @@ def _draw_matrix(matrix: dict[str, Any], destination: Path) -> None:
     for row, tool in enumerate(tools):
         y = 184 + row * 92
         sample = next(
-            cell for cell in matrix["cells"] if cell["tool_object_id"] == tool
+            cell
+            for cell in projected_cells
+            if cell["tool_object_id"] == tool
         )
         label = (
             sample.get("tool_fused_semantic_label")
@@ -195,6 +213,105 @@ def _draw_matrix(matrix: dict[str, Any], destination: Path) -> None:
                     (x + 9, y + 12 + line_index * 27),
                     line,
                     font=_font(14, bold=line_index == 0),
+                    fill="#111827",
+                )
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    canvas.save(destination)
+
+
+def _draw_all_object_pairs(
+    payload: dict[str, Any],
+    registry: dict[str, Any],
+    destination: Path,
+) -> None:
+    """Render the role-agnostic directed relation graph as square grids."""
+    object_ids = payload["observed_object_ids"]
+    relations = payload["relation_names"]
+    cell = 52
+    label_width = 205
+    panel_width = label_width + cell * len(object_ids) + 28
+    width = 28 + panel_width * max(1, len(relations))
+    height = 155 + cell * len(object_ids) + 55
+    canvas = Image.new("RGB", (width, height), "#f8fafc")
+    draw = ImageDraw.Draw(canvas)
+    draw.text(
+        (24, 16),
+        (
+            "Binary geometric relation evaluations · before final role binding"
+        ),
+        font=_font(29, bold=True),
+        fill="#111827",
+    )
+    draw.text(
+        (24, 57),
+        "Rows are subjects; columns are objects. T/F/? are measured states; · means semantically pruned.",
+        font=_font(16),
+        fill="#475569",
+    )
+    relation_index = {
+        (
+            record["relation"],
+            record["source_object_id"],
+            record["target_object_id"],
+        ): record["status"]
+        for record in payload["relations"]
+    }
+    for panel, relation in enumerate(relations):
+        x0 = 24 + panel * panel_width
+        y0 = 142
+        draw.text(
+            (x0, 96), relation, font=_font(20, bold=True), fill="#1e3a8a"
+        )
+        for column, object_id in enumerate(object_ids):
+            short = object_id.replace("object_", "o")
+            draw.text(
+                (x0 + label_width + column * cell + cell / 2, y0 - 8),
+                short,
+                anchor="ms",
+                font=_font(12, bold=True),
+                fill="#334155",
+            )
+        for row, source_id in enumerate(object_ids):
+            record = registry["objects"][source_id]
+            semantic = record.get("semantics", {}).get("validated") or {}
+            label = semantic.get("canonical_label") or "UNKNOWN"
+            y = y0 + row * cell
+            draw.text(
+                (x0, y + cell / 2),
+                f"{source_id} · {label}",
+                anchor="lm",
+                font=_font(13, bold=True),
+                fill="#111827",
+            )
+            for column, target_id in enumerate(object_ids):
+                x = x0 + label_width + column * cell
+                if source_id == target_id:
+                    status = "N/A"
+                    fill = "#cbd5e1"
+                    glyph = "—"
+                else:
+                    status = relation_index.get(
+                        (relation, source_id, target_id)
+                    )
+                    if status is None:
+                        fill = "#ffffff"
+                        glyph = "·"
+                    else:
+                        fill = _cell_color(status)
+                        glyph = {
+                            "TRUE": "T",
+                            "FALSE": "F",
+                        }.get(status, "?")
+                draw.rectangle(
+                    (x, y, x + cell - 3, y + cell - 3),
+                    fill=fill,
+                    outline="#94a3b8",
+                )
+                draw.text(
+                    (x + (cell - 3) / 2, y + (cell - 3) / 2),
+                    glyph,
+                    anchor="mm",
+                    font=_font(15, bold=True),
                     fill="#111827",
                 )
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -370,11 +487,18 @@ def _matrix_rows(matrix: dict[str, Any]) -> list[list[str]]:
             cell.get("target_fused_semantic_label")
             or cell.get("target_semantic_label")
             or "UNKNOWN",
+            cell.get("tool_semantic_status", "UNKNOWN"),
+            cell.get("elongated_object_status", "UNKNOWN"),
+            cell.get("target_semantic_status", "UNKNOWN"),
+            cell.get("open_cavity_status", "UNKNOWN"),
             _fmt(cell.get("maximum_cross_section_m")), _fmt(cell.get("usable_length_m")),
             _fmt(cell.get("opening_width_m")), _fmt(cell.get("cavity_depth_m")),
             _fmt(cell.get("insertable_in_pass_margin_m")), cell["insertable_in_status"],
             _fmt(cell.get("reaches_bottom_pass_margin_m")), cell["reaches_bottom_status"],
-            cell["target_specific_compatibility_status"], cell.get("rejection_reason") or "—",
+            cell.get("pair_geometry_status", "UNKNOWN"),
+            cell["target_specific_compatibility_status"],
+            "YES" if cell.get("role_relevant_projection") else "NO",
+            cell.get("rejection_reason") or "—",
         ]
         for cell in matrix["cells"]
     ]
@@ -407,6 +531,7 @@ def _target_rows(matrix: dict[str, Any]) -> list[list[str]]:
             item
             for item in matrix["cells"]
             if item["target_object_id"] == target_id
+            and item.get("role_relevant_projection", True)
         )
         rows.append(
             [
@@ -433,6 +558,7 @@ def _tool_rows(matrix: dict[str, Any]) -> list[list[str]]:
             item
             for item in matrix["cells"]
             if item["tool_object_id"] == tool_id
+            and item.get("role_relevant_projection", True)
         )
         rows.append(
             [
@@ -463,10 +589,22 @@ def _write_report(
     run_config = _load(run_dir / "run_config.json")
     registry = _load(run_dir / "object_registry.json")
     matrix = _load(run_dir / "compatibility_matrix.json")
+    pair_source = run_dir / "pair_relation_evaluations.json"
+    if not pair_source.exists():
+        pair_source = run_dir / "all_observed_pair_relations.json"
+    all_pairs = _load(pair_source)
     stages = _stages(run_dir)
     witness = _load(run_dir / "latest_witness.json")
     matrix_png = "compatibility_matrix.png"
     _draw_matrix(matrix, output_dir / matrix_png)
+    all_pairs_png = "pair_relation_evaluations.png"
+    _draw_all_object_pairs(
+        all_pairs, registry, output_dir / all_pairs_png
+    )
+    shutil.copy2(
+        pair_source,
+        output_dir / "pair_relation_evaluations.json",
+    )
     outcome_rows = [
         [
             MODE_TITLES[mode], offline["modes"][mode]["actual_status"],
@@ -531,15 +669,16 @@ def _write_report(
     detector = run_config["semantic_detector"]
     css = """*{box-sizing:border-box}body{margin:0;background:#eef2f7;color:#111827;font-family:Inter,system-ui,sans-serif;line-height:1.5}nav{position:sticky;top:0;z-index:5;background:#0f172a;padding:12px 22px}nav a{color:white;margin-right:20px;text-decoration:none;font-weight:800}main{max-width:1560px;margin:auto;padding:24px}section,.mode{background:white;border-radius:17px;padding:27px;margin:20px 0;box-shadow:0 4px 17px #0f172a14}.mode{border-left:8px solid var(--accent)}h1{font-size:42px}.lede{font-size:20px;color:#334155}.wide{width:100%;height:auto;border:1px solid #dbe3ef;border-radius:10px;display:block}video{width:100%;border-radius:10px;background:#111}table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid #dbe3ef;padding:8px;text-align:left;vertical-align:top}th{background:#e9eef5;position:sticky;top:44px}details{border:1px solid #dbe3ef;border-radius:10px;margin:12px 0;overflow:hidden}summary{padding:13px;background:#f8fafc;font-weight:800;cursor:pointer}.inside{padding:14px}.grid{display:grid;grid-template-columns:2fr 1fr;gap:14px}.cams{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.pill{display:inline-block;padding:6px 11px;background:#dcfce7;color:#166534;border-radius:999px;font-weight:800;margin:4px}@media(max-width:900px){.grid,.cams{grid-template-columns:1fr}main{padding:12px}h1{font-size:32px}}"""
     document = f'''<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ablation 3 · multi-target assignment</title><style>{css}</style></head><body><nav><a href="#summary">Summary</a><a href="#modes">Modes</a><a href="#matrix">Matrix</a><a href="#objects">Evidence</a><a href="#stages">Scene</a></nav><main>
-<section id="summary"><small>PRESENTATION REPORT · ABLATION 3</small><h1>Target-specific semantic–geometric assignment</h1><p class="lede">A utensil is not globally valid. It is valid for a declared function and a specific target only when semantic compatibility, scale-independent unary geometry, and both measured pairwise relations pass. Reuse and distinctness are constraints on each task-level function group.</p><span class="pill">Scene: {html.escape(run_config['scene_name'])}</span><span class="pill">Same perception for all modes</span><span class="pill">Expected results matched: {offline['all_expected_results_matched']}</span><img class="wide" src="{_uri(output_dir, comparison)}"></section>
-<section><h2>Headline outcomes</h2>{_table(['Mode','Outcome','Completion stage','Scientifically correct?','Expected matched?'],outcome_rows)}<p>Semantic-only, geometry-only, and target-agnostic count are intentional diagnostic false positives. Only joint target-specific assignment controls runtime stopping and the verified handoff.</p></section>
+<section id="summary"><small>PRESENTATION REPORT · ABLATION 3</small><h1>Target-specific semantic–geometric assignment</h1><p class="lede">Every observed object is first checked against every unary role requirement, and every distinct ordered object pair is checked for the required directional geometric relations. Only after that evidence graph exists does the solver bind objects to function roles. A binding is valid for a declared function and a specific target only when its semantic, unary, pairwise, reuse, and distinctness constraints pass.</p><span class="pill">Scene: {html.escape(run_config['scene_name'])}</span><span class="pill">All {len(matrix.get('observed_object_ids', []))} observed objects paired</span><span class="pill">{matrix.get('function_pair_evaluation_count', len(matrix['cells']))} function-pair evaluations</span><span class="pill">Same perception for all modes</span><span class="pill">Expected results matched: {offline['all_expected_results_matched']}</span><img class="wide" src="{_uri(output_dir, comparison)}"></section>
+<section><h2>Headline outcomes</h2>{_table(['Mode','Outcome','Completion stage','Scientifically correct?','Expected matched?'],outcome_rows)}<p>Semantic-only, geometry-only, and target-agnostic count are intentional diagnostic false positives. Geometry-only has no semantic basis for assigning tool/container functions; it does not assume a fork is inherently wrong. Only joint target-specific assignment controls runtime stopping and the verified handoff.</p></section>
 <section><h2>Stage progression</h2>{_table(['Stage','Region',*[MODE_TITLES[mode] for mode in ASSIGNMENT_MODES]],stage_rows)}<p>Only the production column controls inspection. It remains incomplete at INITIAL and D1, becomes complete at D2, and stops before C2, B1, or C1.</p></section>
 <section><h2>Where reusability is attached</h2><p><code>coffee_stirring</code> declares sequential reuse and requires the same physical spoon to pass both cup/mug target edges. <code>soup_serving</code> declares dedicated-per-target matching, so the two bowl assignments must use distinct persistent IDs. Cross-group reuse is separately allowed. These are task-level function constraints, not permanent properties of spoons or forks.</p></section>
 <section id="modes"><h2>Four individual ablation visualizations</h2>{mode_html}</section>
 <section><h2>Selected production assignment</h2>{_table(['Function group','Tool ID','Target ID','Reused in group','Dedicated','Cross-group reused','Selected relation evidence'],assignment_rows)}</section>
 <section><h2>Target-container measurements</h2>{_table(['Target ID','RGB label','Role','Opening width m','Cavity depth m','Open cavity','Stage','Region','MeasurementEvidence path'],_target_rows(matrix))}</section>
 <section><h2>Utensil measurements</h2>{_table(['Tool ID','RGB label','Cross-section m','Usable length m','Elongated','Stage','Region','MeasurementEvidence path','Semantic evidence path'],_tool_rows(matrix))}</section>
-<section id="matrix"><h2>Complete compatibility matrix</h2><img class="wide" src="{_uri(output_dir,matrix_png)}">{_table(['Group','Tool','Tool label','Target','Target label','Cross-section m','Usable length m','Opening m','Depth m','Insert margin','Insert','Reach margin','Reach','Final','Reason'],_matrix_rows(matrix))}</section>
+<section><h2>Binary geometry pairing</h2><p>Strategy: <code>{html.escape(str(all_pairs.get('pairing_strategy', 'exhaustive_all_pairs')))}</code>. Unary geometry still covers every observed object. Of {all_pairs['ordered_distinct_object_pair_count']} possible directed pairs, {all_pairs['relation_evaluation_count']} relation checks were executed and {all_pairs.get('skipped_relation_pair_count', 0)} were pruned. A dot means the pair was not evaluated; <code>?</code> means evaluated but geometrically UNKNOWN. Function binding happens afterward.</p><img class="wide" src="{_uri(output_dir,all_pairs_png)}"></section>
+<section id="matrix"><h2>All-observed-object function-pair evaluation</h2><p>The image is the readable role-relevant projection. The table below contains every distinct ordered object pair for every function group; role binding occurs only after these pair measurements exist.</p><img class="wide" src="{_uri(output_dir,matrix_png)}">{_table(['Group','Subject','Subject label','Object','Object label','Subject semantic','Subject unary','Object semantic','Object unary','Cross-section m','Usable length m','Opening m','Depth m','Insert margin','Insert','Reach margin','Reach','Pair geometry','Function binding','In role projection','Reason'],_matrix_rows(matrix))}</section>
 <section id="objects"><h2>Measured stage-local object evidence</h2>{_table(['Object','YOLO label','Confidence','Views','Region','Points','Usable L','Cross-section','Opening','Depth','Elongated','Open cavity','MeasurementEvidence path'],_object_rows(registry))}</section>
 <section id="stages"><h2>Rendered scene and component audit</h2>{stage_html}</section>
 <section><h2>Provenance and boundary</h2><p>Detector: {html.escape(str(detector['name']))}; checkpoint: {html.escape(str(detector['checkpoint']))}; version: {html.escape(str(detector['version']))}; device: {html.escape(str(detector['device']))}; input size: {html.escape(str(detector['inference_size']))}; isolated process: {html.escape(str(detector['process_isolation']))}.</p><p>Geometry consumed typed stage-local MeasurementEvidence only. Cumulative and combined clouds were visualization-only. Requirements were manually authored; no FM, TAMP, robot, navigation, IK, grasping, or execution was used. Evaluation annotations were offline-only.</p></section></main></body></html>'''
@@ -554,6 +693,8 @@ def _write_report(
 
 Compatibility is evaluated as `VALID_FOR(tool, function, target)`, not as a global `VALID_TOOL(tool)` flag. Reuse/distinctness belongs to each task-level function group.
 
+Every observed object is checked against every unary role requirement and every distinct ordered object pair is checked geometrically before any function role is assigned. The matrix PNG is the readable role-relevant projection; the HTML table and machine-readable JSON/CSV retain the complete all-object function-pair evaluation.
+
 ![Same-evidence comparison]({comparison})
 
 | Mode | Outcome | Completion stage | Scientifically correct? | Expected matched? |
@@ -561,6 +702,8 @@ Compatibility is evaluated as `VALID_FOR(tool, function, target)`, not as a glob
 {markdown_rows}
 
 ![Compatibility matrix]({matrix_png})
+
+![Binary relation evaluations]({all_pairs_png})
 
 ## Animations
 

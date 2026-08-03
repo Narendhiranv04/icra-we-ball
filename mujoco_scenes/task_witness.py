@@ -33,6 +33,10 @@ DECLARED_USAGE_POLICIES = {
     "sequential_reuse_allowed",
     "dedicated_per_target",
 }
+PAIRING_STRATEGIES = {
+    "exhaustive_all_pairs",
+    "semantic_role_scoped",
+}
 
 
 def resolve_task_requirements_path(path: str | Path) -> Path:
@@ -279,11 +283,6 @@ def _validate_joint_task_requirements(
                 raise ValueError(
                     f"Operation group '{group_id}' references an unknown role"
                 )
-            if tool_role == target_role:
-                raise ValueError(
-                    f"Operation group '{group_id}' tool and target roles "
-                    "must differ"
-                )
             if (
                 isinstance(target_count, bool)
                 or not isinstance(target_count, int)
@@ -397,6 +396,17 @@ def _validate_joint_task_requirements(
     selection.setdefault("semantic_confidence_is_only_a_gate", True)
     diagnostics = config.setdefault("diagnostics", {})
     diagnostics.setdefault("max_representative_rejections", 50)
+    pairing = config.setdefault("pairing", {})
+    if not isinstance(pairing, dict):
+        raise ValueError("pairing must be a mapping")
+    strategy = pairing.setdefault("strategy", "semantic_role_scoped")
+    if strategy not in PAIRING_STRATEGIES:
+        raise ValueError(
+            "pairing.strategy must be one of "
+            f"{sorted(PAIRING_STRATEGIES)}"
+        )
+    pairing["semantic_unknown_policy"] = "defer_relation_evaluation"
+    pairing["unary_geometry_scope"] = "all_observed_objects"
     return config
 
 
@@ -1406,6 +1416,13 @@ def evaluate_usage_policy_task_witness(
     if stage is None:
         stage = int(graph.get("stage", -1))
     objects, geometry_edges, relation_edges = _joint_graph_index(graph)
+    pairing_strategy = graph.get("pairing", {}).get(
+        "strategy",
+        config.get("pairing", {}).get(
+            "strategy", "semantic_role_scoped"
+        ),
+    )
+    exhaustive_pairing = pairing_strategy == "exhaustive_all_pairs"
     relevant_roles = sorted(
         {
             role_name
@@ -1417,11 +1434,6 @@ def evaluate_usage_policy_task_witness(
             role_name,
         ),
     )
-    target_role_names = {
-        group["target_role"]
-        for group in config["operation_groups"].values()
-    }
-
     candidate_index: dict[tuple[str, str], dict[str, Any]] = {}
     candidate_evaluations: list[dict[str, Any]] = []
     for role_name in relevant_roles:
@@ -1438,26 +1450,17 @@ def evaluate_usage_policy_task_witness(
             if evidence_mode == "semantic-only":
                 status = semantic["status"]
             elif evidence_mode == "geometry-only":
-                # This diagnostic removes *tool-category* grounding to expose
-                # the fork counterexample. Target identity remains semantic:
-                # otherwise any open bowl could silently fill a coffee-cup
-                # slot, which would conflate two independent ablations.
-                status = (
-                    _combined_required_status(
-                        [semantic["status"], geometry["status"]]
-                    )
-                    if role_name in target_role_names
-                    else geometry["status"]
-                )
+                # Pure geometry does not know which objects are tools or
+                # targets. Every object is evaluated against every role's
+                # unary requirements; semantic role evidence is deliberately
+                # ignored until the joint modes.
+                status = geometry["status"]
             else:
                 status = _combined_required_status(
                     [semantic["status"], geometry["status"]]
                 )
             if (
-                (
-                    evidence_mode != "geometry-only"
-                    or role_name in target_role_names
-                )
+                evidence_mode != "geometry-only"
                 and semantic["status"] == "FALSE"
             ):
                 decision = "REJECTED_SEMANTIC"
@@ -1486,6 +1489,8 @@ def evaluate_usage_policy_task_witness(
             candidate_evaluations.append(evaluation)
 
     def candidate_key(role_name: str, object_id: str) -> tuple:
+        if evidence_mode == "geometry-only":
+            return (object_id,)
         semantic = candidate_index[(role_name, object_id)]["semantic"]
         rank = semantic.get("semantic_rank")
         confidence = _finite_number(semantic.get("confidence"))
@@ -1579,8 +1584,25 @@ def evaluate_usage_policy_task_witness(
         )
 
         edge_index: dict[tuple[str, str], dict[str, Any]] = {}
-        for tool_id in sorted(objects):
-            for target_id in sorted(objects):
+        pair_tool_ids = (
+            sorted(objects) if exhaustive_pairing else tool_semantic_true
+        )
+        pair_target_ids = (
+            sorted(objects)
+            if exhaustive_pairing
+            else sorted(
+                object_id
+                for object_id in objects
+                if candidate_index[(target_role, object_id)][
+                    "semantic_gate_status"
+                ]
+                == "TRUE"
+            )
+        )
+        for tool_id in pair_tool_ids:
+            for target_id in pair_target_ids:
+                if tool_id == target_id:
+                    continue
                 tool_candidate = candidate_index[(tool_role, tool_id)]
                 target_candidate = candidate_index[(target_role, target_id)]
                 relation_checks = []
@@ -1624,6 +1646,16 @@ def evaluate_usage_policy_task_witness(
                         ),
                     ]
                 )
+                pair_geometry_status = _combined_required_status(
+                    [
+                        tool_candidate["geometry_gate_status"],
+                        target_candidate["geometry_gate_status"],
+                        *(
+                            check["measured_status"]
+                            for check in relation_checks
+                        ),
+                    ]
+                )
                 if (
                     evidence_mode != "geometry-only"
                     and tool_candidate["semantic_gate_status"] == "FALSE"
@@ -1655,7 +1687,34 @@ def evaluate_usage_policy_task_witness(
                     "utensil_object_id": tool_id,
                     "target_object_id": target_id,
                     "status": status,
+                    "pair_geometry_status": pair_geometry_status,
                     "reason": reason,
+                    "pairing_scope": (
+                        "ALL_OBSERVED_ORDERED_OBJECT_PAIRS"
+                        if exhaustive_pairing
+                        else "SEMANTIC_ROLE_SCOPED_OBJECT_PAIRS"
+                    ),
+                    "role_binding_phase": (
+                        "AFTER_PAIRWISE_GEOMETRY"
+                        if exhaustive_pairing
+                        else "AFTER_SEMANTIC_GATING_AND_PAIRWISE_GEOMETRY"
+                    ),
+                    "role_relevant_projection": (
+                        not exhaustive_pairing
+                        or (
+                            tool_id
+                            in {
+                                *raw_utensils,
+                                *tool_semantic_true,
+                                *tool_unknown,
+                            }
+                            and target_id
+                            in {
+                                *target_true,
+                                *unresolved_target_ids,
+                            }
+                        )
+                    ),
                     "semantic": deepcopy(tool_candidate["semantic"]),
                     "unary_geometry": deepcopy(
                         tool_candidate["unary_geometry"]
@@ -1700,7 +1759,8 @@ def evaluate_usage_policy_task_witness(
             tool_id
             for tool_id in grounding_eligible_tools
             if any(
-                edge_index[(tool_id, target_id)]["status"] == "TRUE"
+                edge_index.get((tool_id, target_id), {}).get("status")
+                == "TRUE"
                 for target_id in target_true
             )
         )
@@ -1732,6 +1792,8 @@ def evaluate_usage_policy_task_witness(
                 for target_id, tool_id in zip(target_ids, tool_choices)
                 if tool_id is not None
             ]
+            if any(pair not in edge_index for pair in assigned_pairs):
+                return None
             if distinct_within_group:
                 used = [tool_id for tool_id, _target in assigned_pairs]
                 if len(used) != len(set(used)):
@@ -2064,16 +2126,6 @@ def evaluate_usage_policy_task_witness(
             "candidate_target_evaluations": [
                 deepcopy(edge)
                 for edge in work["edge_index"].values()
-                if edge["utensil_object_id"]
-                in {
-                    *work["raw_utensil_object_ids"],
-                    *work["semantically_eligible_object_ids"],
-                }
-                and edge["target_object_id"]
-                in {
-                    *work["eligible_target_object_ids"],
-                    *work["unknown_target_object_ids"],
-                }
             ],
             "reason": (
                 "ALL_TARGET_SLOTS_ASSIGNED"
@@ -2239,7 +2291,28 @@ def evaluate_usage_policy_task_witness(
         "cross_group_reuse": deepcopy(config["cross_group_reuse"]),
         "reason_codes": reason_codes,
         "selection_policy": {
-            "candidate_gate": "joint_semantic_and_geometry",
+            "evaluation_order": (
+                "all_objects_unary_then_all_ordered_pairs_then_role_binding"
+                if exhaustive_pairing
+                else "all_objects_unary_then_semantic_role_gating_then_scoped_pairs_then_role_binding"
+            ),
+            "pairing_strategy": pairing_strategy,
+            "pairing_scope": (
+                "ALL_OBSERVED_ORDERED_OBJECT_PAIRS"
+                if exhaustive_pairing
+                else "SEMANTIC_ROLE_SCOPED_OBJECT_PAIRS"
+            ),
+            "role_binding_phase": (
+                "AFTER_PAIRWISE_GEOMETRY"
+                if exhaustive_pairing
+                else "AFTER_SEMANTIC_GATING_AND_PAIRWISE_GEOMETRY"
+            ),
+            "unary_geometry_scope": "ALL_OBSERVED_OBJECTS",
+            "candidate_gate": {
+                "semantic-only": "semantic_after_pairing",
+                "geometry-only": "geometry_after_pairing",
+                "joint": "joint_semantic_and_geometry_after_pairing",
+            }[evidence_mode],
             "target_edge_gate": "all_required_relations_true",
             "assignment_order": (
                 "fewest_distinct_then_semantic_rank_confidence_id"
@@ -2259,14 +2332,20 @@ def build_target_compatibility_matrix(
     """
 
     cells: list[dict[str, Any]] = []
-    tool_ids: set[str] = set()
-    target_ids: set[str] = set()
+    observed_ids: set[str] = set()
+    projected_tool_ids: set[str] = set()
+    projected_target_ids: set[str] = set()
     for group in witness.get("function_group_evaluations", []):
         for edge in group.get("candidate_target_evaluations", []):
             tool_id = edge["utensil_object_id"]
             target_id = edge["target_object_id"]
-            tool_ids.add(tool_id)
-            target_ids.add(target_id)
+            observed_ids.update((tool_id, target_id))
+            role_relevant_projection = bool(
+                edge.get("role_relevant_projection", False)
+            )
+            if role_relevant_projection:
+                projected_tool_ids.add(tool_id)
+                projected_target_ids.add(target_id)
             relations = {
                 check["relation"]: check
                 for check in edge.get("relation_checks", [])
@@ -2323,6 +2402,17 @@ def build_target_compatibility_matrix(
                     "function": group["function"],
                     "tool_role": group["tool_role"],
                     "target_role": group["target_role"],
+                    "pairing_scope": edge.get(
+                        "pairing_scope",
+                        "ALL_OBSERVED_ORDERED_OBJECT_PAIRS",
+                    ),
+                    "role_binding_phase": edge.get(
+                        "role_binding_phase",
+                        "AFTER_PAIRWISE_GEOMETRY",
+                    ),
+                    "role_relevant_projection": (
+                        role_relevant_projection
+                    ),
                     "tool_object_id": tool_id,
                     "target_object_id": target_id,
                     "tool_semantic_label": edge.get("semantic", {}).get(
@@ -2367,8 +2457,14 @@ def build_target_compatibility_matrix(
                         "pass_margin_m"
                     ),
                     "reaches_bottom_status": reach_status,
+                    "pair_geometry_status": edge.get(
+                        "pair_geometry_status", "UNKNOWN"
+                    ),
                     "target_specific_compatibility_status": edge.get(
                         "status", "UNKNOWN"
+                    ),
+                    "function_assignment_eligible": (
+                        edge.get("status") == "TRUE"
                     ),
                     "rejection_reason": rejection_reason,
                     "tool_geometry_evidence_path": edge.get(
@@ -2397,14 +2493,44 @@ def build_target_compatibility_matrix(
             cell["function_group_id"],
         )
     )
+    selection_policy = witness.get("selection_policy", {})
+    pairing_scope = selection_policy.get(
+        "pairing_scope", "ALL_OBSERVED_ORDERED_OBJECT_PAIRS"
+    )
     return {
         "schema_version": 1,
         "task_id": witness.get("task_id"),
         "stage": witness.get("stage"),
         "production_mode": "joint-target-specific",
         "same_observation_evidence": True,
-        "tool_object_ids": sorted(tool_ids),
-        "target_object_ids": sorted(target_ids),
+        "pairing_strategy": selection_policy.get(
+            "pairing_strategy", "exhaustive_all_pairs"
+        ),
+        "pairing_scope": pairing_scope,
+        "role_binding_phase": selection_policy.get(
+            "role_binding_phase", "AFTER_PAIRWISE_GEOMETRY"
+        ),
+        "unary_geometry_scope": "ALL_OBSERVED_OBJECTS",
+        "observed_object_ids": sorted(observed_ids),
+        "ordered_distinct_object_pair_count": (
+            len(observed_ids) * max(0, len(observed_ids) - 1)
+        ),
+        "function_pair_evaluation_count": len(cells),
+        "pruned_function_pair_count": max(
+            0,
+            len(witness.get("function_group_evaluations", []))
+            * len(observed_ids)
+            * max(0, len(observed_ids) - 1)
+            - len(cells),
+        ),
+        # Retain the historical axes as a compact, role-relevant report
+        # projection. The complete all-object evaluation remains in cells.
+        "tool_object_ids": sorted(projected_tool_ids),
+        "target_object_ids": sorted(projected_target_ids),
+        "role_relevant_cell_count": sum(
+            bool(cell["role_relevant_projection"])
+            for cell in cells
+        ),
         "cell_count": len(cells),
         "cells": cells,
     }

@@ -3,6 +3,13 @@ task_id: prepare_coffee_and_soup_multi_target
 specification_source: manual_ablation3_v1
 target_assignment_ablation: true
 
+# Production architecture: unary geometry is measured for every observed
+# object, but directional binary geometry is evaluated only after both ends
+# are semantically compatible with the roles declared by each relation.
+# Override with --pairing-strategy exhaustive-all-pairs for the timing ablation.
+pairing:
+  strategy: semantic_role_scoped
+
 roles:
   coffee_container:
     count: 2

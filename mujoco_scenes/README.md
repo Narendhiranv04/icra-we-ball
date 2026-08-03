@@ -882,6 +882,44 @@ Both functions use manually declared spoon semantics in this ablation. The
 same schema could accept a broader vocabulary in another task; usage-policy
 logic is independent of object category.
 
+### Semantic-first production pairing and exhaustive ablation
+
+Unary geometry is always computed for every legitimately observed object.
+Binary geometry has two explicit strategies.
+
+Production (`semantic_role_scoped`) performs:
+
+```text
+all observed objects
+→ evaluate every unary role requirement for every object
+→ evaluate semantic compatibility with every declared role
+→ for each relation, form only the semantically compatible subject-role ×
+  object-role pairs declared in the task
+→ evaluate binary geometry for those pairs
+→ bind objects to functions/roles
+→ solve reuse, distinctness, and target coverage
+```
+
+For example, the configuration declares `INSERTABLE_IN` from
+`coffee_stirrer` to `coffee_container`. Only objects with reliable semantic
+support for those respective roles enter that directional relation check.
+A future `NESTABLE_IN` declaration may use the same role at both ends, such as
+`container` to `container`; the pairing engine does not hard-code a
+tool/target distinction. Self-pairs are always forbidden. Semantic `UNKNOWN`
+defers the binary check rather than treating the object as FALSE.
+
+The timing ablation (`exhaustive_all_pairs`) retains the previous behavior:
+semantic and unary checks still cover every object, and each required binary
+relation is evaluated over all `N × (N - 1)` directed non-self pairs. Select
+it with `--pairing-strategy exhaustive-all-pairs`. Production can be selected
+explicitly with `--pairing-strategy semantic-role-scoped`; it is also the
+default in this task configuration.
+
+Every stage saves `pair_relation_evaluations.json` with strategy, possible
+pair count, executed relation count, pruned count, and binary-geometry elapsed
+time. Exhaustive runs additionally retain the compatibility artifact
+`all_observed_pair_relations.json` for the existing ablation report.
+
 The declaration is in `configs/ablation3_multi_target.yaml`. It contains no
 object IDs, source regions, stage names, simulator names, hidden poses, or
 asset dimensions. No FM generated it.
@@ -938,7 +976,7 @@ assignment logic changes:
 | Mode | Primary outcome | Why |
 |---|---|---|
 | `semantic-only` | Incorrect COMPLETE at INITIAL | Ignores unary and pairwise geometry |
-| `geometry-only` | Incorrect COMPLETE at INITIAL using the fork | Retains target semantics/geometry but removes utensil-category semantics |
+| `geometry-only` | Incorrect COMPLETE at INITIAL | Evaluates every object and pair geometrically but cannot establish task-specific tool/container roles |
 | `joint-target-agnostic-count` | Incorrect COMPLETE at INITIAL | Counts candidates valid somewhere without proving full target coverage |
 | `joint-target-specific` | Correct COMPLETE after D2 | Requires every selected edge and declared usage constraint |
 
@@ -971,6 +1009,7 @@ MUJOCO_SEMANTIC_PROCESS_ISOLATION=1 \
   --semantic-vocabulary \
     mujoco_scenes/configs/ablation3_semantic_vocabulary.yaml \
   --grounding-mode joint \
+  --pairing-strategy semantic-role-scoped \
   --semantic-confidence-threshold 0.03 \
   --semantic-min-supporting-views 2 \
   --save-semantic-overlays
@@ -1018,6 +1057,7 @@ docker run --rm \
   --semantic-model /models/yolov8m-worldv2.pt \
   --semantic-vocabulary mujoco_scenes/configs/ablation3_semantic_vocabulary.yaml \
   --grounding-mode joint \
+  --pairing-strategy semantic-role-scoped \
   --semantic-confidence-threshold 0.03 \
   --semantic-min-supporting-views 2 \
   --save-semantic-overlays
@@ -1025,11 +1065,38 @@ docker run --rm \
 
 Both checkpoints are mounted read-only and are not downloaded per run.
 
+For a controlled pairing-cost ablation, run the same command twice with fresh
+run IDs and change only this option:
+
+```bash
+# Actual architecture
+--pairing-strategy semantic-role-scoped --run-id pairing_semantic_first
+
+# Exhaustive diagnostic baseline
+--pairing-strategy exhaustive-all-pairs --run-id pairing_exhaustive
+```
+
+Compare `pair_relation_evaluations.json` in the two run roots. Its
+`relation_evaluation_count`, `skipped_relation_pair_count`, and
+`elapsed_seconds` fields isolate binary geometric relation work; the detector,
+unary point-cloud measurements, task, and fixed inspection order are otherwise
+unchanged.
+
+Generate a compact timing/count report after the two runs:
+
+```bash
+python -m mujoco_scenes.generate_pairing_strategy_report \
+  runs/pairing_exhaustive \
+  runs/pairing_semantic_first \
+  reports/pairing_strategy_ablation
+xdg-open reports/pairing_strategy_ablation/pairing_strategy_ablation.html
+```
+
 ### One-command presentation package
 
 ```bash
 ./mujoco_scenes/scripts/run_ablation3_multi_target_demo.sh \
-  ablation3_multi_target_demo
+  ablation3_multi_target_demo exhaustive-all-pairs
 xdg-open \
   reports/ablation3_multi_target_demo/presentation_report.html
 ```
@@ -1055,6 +1122,7 @@ stages/<stage>/cameras/*_overlay.png
 ```
 
 The run directory separately preserves `compatibility_matrix.json/.csv`,
+`all_observed_pair_relations.json`,
 `assignment_evaluations.json`, `assignment_ablation_summary.json`,
 `verified_task_handoff.json`, `candidate_evaluations.json`, graph snapshots,
 events, stage-local clouds, semantic records, and all RGB-D observations.
