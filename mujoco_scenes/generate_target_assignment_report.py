@@ -142,15 +142,28 @@ def _draw_matrix(matrix: dict[str, Any], destination: Path) -> None:
     height = 190 + 92 * max(1, len(tools))
     canvas = Image.new("RGB", (width, height), "#f8fafc")
     draw = ImageDraw.Draw(canvas)
+    exhaustive = matrix.get("pairing_scope") == (
+        "ALL_OBSERVED_ORDERED_OBJECT_PAIRS"
+    )
+    title = (
+        "Role-relevant projection of exhaustive pairing"
+        if exhaustive
+        else "Semantic-first role-scoped compatibility"
+    )
+    subtitle = (
+        "All directed object pairs were measured; this projection shows function-relevant cells"
+        if exhaustive
+        else "Only semantically compatible subject-role to object-role pairs received binary geometry"
+    )
     draw.text(
         (24, 18),
-        "Role-relevant view of all-object compatibility",
+        title,
         font=_font(30, bold=True),
         fill="#111827",
     )
     draw.text(
         (24, 61),
-        "All observed pairs are evaluated first; this view shows pairs relevant after role grounding",
+        subtitle,
         font=_font(17),
         fill="#475569",
     )
