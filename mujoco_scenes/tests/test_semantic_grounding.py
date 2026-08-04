@@ -20,7 +20,13 @@ def _config():
     return config
 
 
-def _detection(label, box, confidence=0.8, camera="inspection_left"):
+def _detection(
+    label,
+    box,
+    confidence=0.8,
+    camera="inspection_left",
+    input_kind="FULL_FRAME",
+):
     return Detection(
         raw_label=label,
         canonical_label=label,
@@ -32,6 +38,7 @@ def _detection(label, box, confidence=0.8, camera="inspection_left"):
         detector_version="1",
         inference_resolution=(100, 100),
         input_image_path=f"cameras/{camera}/rgb.png",
+        input_kind=input_kind,
     )
 
 
@@ -135,6 +142,30 @@ def test_multiple_same_category_detections_are_not_collapsed():
     assert {
         record["object_id"] for record in result["accepted"]
     } == {"object_0001", "object_0002"}
+
+
+def test_mask_crop_preference_resolves_close_same_mask_proposals():
+    mask = np.zeros((100, 100), bool)
+    mask[20:50, 30:60] = True
+    config = _config()
+    config["mask_crop"]["association_preference_multiplier"] = 1.5
+    result = associate_detections_to_masks(
+        [
+            _detection("fork", (29, 19, 61, 51), confidence=0.45),
+            _detection(
+                "spoon",
+                (29, 19, 61, 51),
+                confidence=0.35,
+                input_kind="MASK_BOUNDED_RGB_CROP",
+            ),
+        ],
+        {"object_0001": mask},
+        config,
+    )
+    assert len(result["accepted"]) == 1
+    accepted = result["accepted"][0]
+    assert accepted["detection"]["canonical_label"] == "spoon"
+    assert accepted["input_kind_multiplier"] == 1.5
 
 
 def test_no_detection_fuses_to_unknown_not_false():

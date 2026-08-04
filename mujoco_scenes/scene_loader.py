@@ -113,6 +113,13 @@ OBJECT_SUPPORT_HEIGHT = {
     "ab3_long_narrow_spoon": 0.01045,
     "ab3_partial_spoon": 0.01045,
     "ab3_long_narrow_fork": 0.00773,
+    "s1i_wide_shallow_cup": 0.03384,
+    "s1i_narrow_deep_bowl": 0.05500,
+    "s1i_soup_spoon": 0.01045,
+    "s1i_coffee_near_miss_spoon": 0.01463,
+    "s1i_final_long_narrow_spoon": 0.01045,
+    "s1i_oversized_spoon": 0.01463,
+    "s1i_c2_soup_spoon": 0.01463,
 }
 
 # Controlled visible-geometry variants for Ablation 3.  These declarations
@@ -160,6 +167,41 @@ SCENE_OBJECT_VARIANTS = {
         "base": "fork", "scale": (1.50, 1.0, 1.0),
         "mesh": "mesh_ab3_long_narrow_fork",
     },
+    # Integrated Scene 1 variants reuse the same source meshes while keeping
+    # the scene-design namespace independent from Ablation 3. These scales
+    # affect rendered evidence only and are never visible to inference.
+    "s1i_wide_shallow_cup": {
+        "base": "cup", "scale": (1.62, 1.62, 1.10),
+        "mesh": "mesh_s1i_wide_shallow_cup",
+    },
+    "s1i_narrow_deep_bowl": {
+        "base": "bowl", "scale": (0.90, 0.90, 2.00),
+        "mesh": "mesh_s1i_narrow_deep_bowl",
+    },
+    "s1i_soup_spoon": {
+        "base": "spoon", "scale": (0.85, 1.55, 1.0),
+        "mesh": "mesh_s1i_soup_spoon",
+    },
+    "s1i_coffee_near_miss_spoon": {
+        "base": "spoon", "scale": (1.34, 3.00, 1.15),
+        "mesh": "mesh_s1i_coffee_near_miss_spoon",
+        "material": "mat_s1i_spoon_inspection",
+    },
+    "s1i_final_long_narrow_spoon": {
+        "base": "spoon", "scale": (1.48, 2.00, 1.0),
+        "mesh": "mesh_s1i_final_long_narrow_spoon",
+        "material": "mat_s1i_spoon_inspection",
+    },
+    "s1i_oversized_spoon": {
+        "base": "spoon", "scale": (1.80, 5.00, 1.40),
+        "mesh": "mesh_s1i_oversized_spoon",
+        "material": "mat_s1i_spoon_inspection",
+    },
+    "s1i_c2_soup_spoon": {
+        "base": "spoon", "scale": (1.80, 3.60, 1.40),
+        "mesh": "mesh_s1i_c2_soup_spoon",
+        "material": "mat_s1i_spoon_inspection",
+    },
 }
 
 UTENSIL_OBJECTS = {
@@ -169,6 +211,10 @@ UTENSIL_OBJECTS = {
     "ab3_long_wide_spoon", "ab3_long_narrow_spoon",
     "ab3_partial_spoon",
     "ab3_long_narrow_fork",
+    "s1i_soup_spoon", "s1i_coffee_near_miss_spoon",
+    "s1i_final_long_narrow_spoon",
+    "s1i_oversized_spoon",
+    "s1i_c2_soup_spoon",
 }
 CENTRED_DRAWER_OBJECTS = {
     "spoon", "oversized_spoon", "fork", "knife", "stirrer", "tongs",
@@ -177,6 +223,10 @@ CENTRED_DRAWER_OBJECTS = {
     "ab3_long_wide_spoon", "ab3_long_narrow_spoon",
     "ab3_partial_spoon",
     "ab3_long_narrow_fork",
+    "s1i_soup_spoon", "s1i_coffee_near_miss_spoon",
+    "s1i_final_long_narrow_spoon",
+    "s1i_oversized_spoon",
+    "s1i_c2_soup_spoon",
 }
 
 ACTION_PICK_OBJECTS = {
@@ -198,8 +248,14 @@ STORAGE_FIXTURE_EQUALITIES = {
 }
 
 STORAGE_FIXTURE_OBJECTS = {
-    "D1": {"oversized_spoon", "ab3_partial_spoon"},
-    "D2": {"ab3_long_narrow_spoon", "ab3_medium_spoon"},
+    "D1": {
+        "oversized_spoon", "ab3_partial_spoon",
+        "s1i_oversized_spoon",
+    },
+    "D2": {
+        "ab3_long_narrow_spoon", "ab3_medium_spoon",
+        "ab3_partial_spoon",
+    },
 }
 
 # Positions are RELATIVE to the container body origin: (x, y, support_z).
@@ -282,6 +338,27 @@ COUNTER_SPOTS = {
     "counter_spot_18": (-0.25, -0.10, 0.580),
     "counter_spot_19": (0.02, -0.10, 0.580),
     "counter_spot_20": (0.29, -0.10, 0.580),
+    # Integrated stress-test layout. Six target vessels occupy the rear two
+    # rows; flat candidates and compact clutter use the front row. All points
+    # remain inside INITIAL's calibrated region gate.
+    "counter_spot_21": (-0.52, -0.39, 0.580),
+    "counter_spot_22": (-0.34, -0.39, 0.580),
+    "counter_spot_23": (-0.08, -0.39, 0.580),
+    "counter_spot_24": (-0.48, -0.23, 0.580),
+    "counter_spot_25": (-0.20, -0.23, 0.580),
+    "counter_spot_26": (0.08, -0.23, 0.580),
+    "counter_spot_27": (-0.32, -0.22, 0.580),
+    "counter_spot_28": (-0.07, -0.21, 0.580),
+    "counter_spot_29": (0.18, -0.21, 0.580),
+    "counter_spot_30": (0.36, -0.21, 0.580),
+    "counter_spot_31": (-0.57, -0.075, 0.580),
+    "counter_spot_32": (-0.35, -0.075, 0.580),
+    "counter_spot_33": (-0.13, -0.075, 0.580),
+    "counter_spot_34": (0.09, -0.075, 0.580),
+    "counter_spot_35": (0.31, -0.075, 0.580),
+    # Isolated semantic-counterexample location at the far left of INITIAL's
+    # calibrated volume. It keeps a thin marker clear of vessel silhouettes.
+    "counter_spot_36": (-0.67, -0.10, 0.580),
 }
 
 # The kettle handle is deliberately grasped rather than approximating a pick
@@ -622,6 +699,7 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
         body: ET.Element,
         scale: tuple[float, float, float],
         mesh_name: str,
+        material_name: str | None = None,
     ) -> None:
         """Scale rendered/proxy geometry for scene construction only."""
 
@@ -646,6 +724,8 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
             geom_type = element.get("type", "sphere")
             if geom_type == "mesh":
                 element.set("mesh", mesh_name)
+                if material_name is not None:
+                    element.set("material", material_name)
                 continue
             if element.get("fromto"):
                 element.set(
@@ -705,6 +785,7 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
                 obj_elem,
                 variant["scale"],
                 variant["mesh"],
+                variant.get("material"),
             )
 
         # Convert a support-surface location into a non-penetrating body centre.
@@ -783,8 +864,13 @@ def build_scene_xml(config: SceneConfig, include_robot: bool = True) -> str:
                 # views. This is scene construction, never runtime inference.
                 countertop_quat = "0.7071068 0 0 0.7071068"
             elif (
-                config.name.startswith("S1_ablation3_multi_target")
-                and obj_name == "fork"
+                (
+                    config.name.startswith("S1_ablation3_multi_target")
+                    or config.name.startswith(
+                        "S1_integrated_kitchen_object_function"
+                    )
+                )
+                and obj_name in {"fork", "ab3_long_narrow_fork"}
             ):
                 # Expose the fork tines crosswise so the open-vocabulary RGB
                 # detector can distinguish them from a spoon silhouette.

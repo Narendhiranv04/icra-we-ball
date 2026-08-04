@@ -1,0 +1,43 @@
+schema_version: 1
+detector:
+  backend: yolo_world
+  checkpoint: yolov8m-worldv2.pt
+  inference_size: 640
+  device: cpu
+  confidence_threshold: 0.03
+  max_detections: 100
+vocabulary:
+  canonical_labels: {}
+association:
+  method: mask_box_overlap_v1
+  minimum_visible_mask_pixels: 16
+  minimum_box_mask_intersection_pixels: 8
+  minimum_mask_fraction_inside_box: 0.20
+  minimum_box_iou: 0.02
+  minimum_association_score: 0.22
+  ambiguity_margin: 0.04
+  weights:
+    mask_fraction_inside_box: 0.50
+    box_mask_iou: 0.25
+    box_fraction_on_mask: 0.15
+    center_consistency: 0.10
+mask_crop:
+  enabled: true
+  padding_fraction: 0.20
+  minimum_crop_size_pixels: 32
+  # The integrated scene contains a dark cabinet shelf around the C2 spoon.
+  # Neutralizing pixels outside its visible instance mask prevents shelf edges
+  # from dominating the RGB-only crop classifier. The mask still serves only
+  # association/cropping; its simulator identity is never semantic input.
+  neutralize_background: true
+  # Prefer an object-isolated RGB crop only modestly over an overlapping
+  # full-frame proposal. Strong full-frame evidence still wins; this merely
+  # prevents cabinet/background context from dominating close label ties.
+  association_preference_multiplier: 1.5
+fusion:
+  winner_policy: supporting_views_then_weighted_score
+  minimum_supporting_views: 2
+  minimum_mean_confidence: 0.03
+  minimum_winning_label_margin: 0.08
+  association_quality_power: 1.0
+  visible_area_weight_power: 0.15

@@ -581,7 +581,20 @@ def associate_detections_to_masks(
             # Spatial quality determines whether an association is valid.
             # Detector confidence is used only to break competition between
             # overlapping label proposals for the same physical object.
-            matching_score = score * float(detection.confidence)
+            input_kind_multiplier = (
+                float(
+                    config.get("mask_crop", {}).get(
+                        "association_preference_multiplier", 1.0
+                    )
+                )
+                if detection.input_kind == "MASK_BOUNDED_RGB_CROP"
+                else 1.0
+            )
+            matching_score = (
+                score
+                * float(detection.confidence)
+                * input_kind_multiplier
+            )
             weak = (
                 metrics["intersection_pixels"] < minimum_intersection
                 or (
@@ -596,6 +609,7 @@ def associate_detections_to_masks(
                     "object_id": object_id,
                     "association_score": float(score),
                     "matching_score": float(matching_score),
+                    "input_kind_multiplier": input_kind_multiplier,
                     "metrics": metrics,
                     "weak": bool(weak),
                 }

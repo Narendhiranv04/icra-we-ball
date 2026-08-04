@@ -1133,3 +1133,134 @@ execution. `ready_for_tamp` is only a verified grounding handoff. The
 reconstruction is complete only with respect to visible five-view evidence;
 genuinely occluded surfaces remain unobserved, and detector reliability still
 depends on visible scale, pose, lighting, vocabulary, and multi-view support.
+
+## Integrated Scene 1 kitchen object–function benchmark
+
+This benchmark is an integrated stress test of the capabilities isolated by
+Ablations 1–3; it is not “Ablation 4.” It runs a deterministic no-robot
+perception and grounding horizon and stops at a verified assignment for future
+planning. It performs no navigation, IK, grasping, stirring, serving, action
+sequencing, or TAMP execution.
+
+The exact stored goal is:
+
+> Prepare and serve coffee and soup for three people using the available
+> kitchenware. Stir all three coffees and provide each soup bowl with a
+> suitable utensil. Search the closed kitchen storage for anything still
+> required.
+
+The goal is not parsed by an FM. The manual specification is
+`configs/s1_integrated_kitchen_object_function.yaml`: three cup/mug targets
+need one persistent spoon that independently fits and reaches all three
+(`sequential_reuse_allowed`), while three bowl targets need a one-to-one
+matching with three distinct compatible spoon IDs (`dedicated_per_target`).
+Cross-group reuse is enabled, so the reusable coffee spoon may also occupy one
+soup slot. Forks, markers, tongs, and arbitrary objects are not admitted to the
+spoon roles merely because their geometry fits.
+
+### Scene family and validated progression
+
+| Scene | Purpose | Result |
+|---|---|---|
+| `S1_integrated_kitchen_object_function_primary` | Full stress test | INITIAL, D1, D2 incomplete; soup complete at C2; B1 globally incomplete; global COMPLETE at C1 |
+| `S1_integrated_kitchen_object_function_initial_complete` | Early-stop guard | COMPLETE at INITIAL; zero storage regions opened |
+| `S1_integrated_kitchen_object_function_exhaustion` | No all-coffee spoon | All five regions inspected; EXHAUSTED; no verified handoff |
+
+The validated primary run registered 20 persistent objects. Its final
+assignment uses one C1 spoon for all three coffees and one soup bowl, plus two
+other distinct spoons for the remaining bowls: three physical spoon IDs
+overall, derived by the allocator rather than hard-coded.
+
+Unary geometry is extracted for every accepted object from typed,
+stage-local, region-gated `MeasurementEvidence`. Production evaluates binary
+geometry only across reliable semantic role domains. The run also rebuilds
+exhaustive pairing from identical cached evidence. At the validated final
+stage, exhaustive pairing executed 760 relation checks and semantic-first
+pairing executed 96, pruning 664 (87.4%); both produced the same required-edge
+matrix, status, and selected assignments. These timings cover cached binary
+relation evaluation only—not rendering, YOLO, reconstruction, or unary
+extraction.
+
+### Local actual-detector run
+
+```bash
+MUJOCO_GL=egl \
+PYOPENGL_PLATFORM=egl \
+YOLO_CONFIG_DIR=/tmp \
+MUJOCO_SEMANTIC_PROCESS_ISOLATION=1 \
+OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 \
+MALLOC_ARENA_MAX=2 \
+.venv/bin/python -m mujoco_scenes.scene_loader \
+  --scene S1_integrated_kitchen_object_function_primary \
+  --no-robot \
+  --task-requirements \
+    mujoco_scenes/configs/s1_integrated_kitchen_object_function.yaml \
+  --inspect-sequence D1 D2 C2 B1 C1 \
+  --stop-on-complete \
+  --runs-root runs \
+  --run-id s1_integrated_kitchen_local \
+  --point-cloud-width 1280 \
+  --point-cloud-height 960 \
+  --semantic-detector yolo_world \
+  --semantic-model semantic_model_cache/yolov8m-worldv2.pt \
+  --semantic-config \
+    mujoco_scenes/configs/s1_integrated_semantic_grounding.yaml \
+  --semantic-vocabulary \
+    mujoco_scenes/configs/s1_integrated_semantic_vocabulary.yaml \
+  --grounding-mode joint \
+  --pairing-strategy semantic-role-scoped \
+  --semantic-confidence-threshold 0.03 \
+  --semantic-min-supporting-views 2 \
+  --save-semantic-overlays
+```
+
+Generate the self-contained report from that one evidence stream:
+
+```bash
+.venv/bin/python -m mujoco_scenes.generate_target_assignment_report \
+  runs/s1_integrated_kitchen_local \
+  reports/s1_integrated_kitchen_local \
+  --evaluation-config \
+    mujoco_scenes/configs/s1_integrated_kitchen_object_function_evaluation.yaml
+xdg-open reports/s1_integrated_kitchen_local/presentation_report.html
+```
+
+### Docker and one-command demonstration
+
+```bash
+python mujoco_scenes/scripts/prepare_semantic_models.py \
+  --output semantic_model_cache
+docker build -t mujoco-kitchen-s1 -f mujoco_scenes/Dockerfile .
+./mujoco_scenes/scripts/run_s1_integrated_kitchen_demo.sh \
+  s1_integrated_kitchen_demo
+xdg-open reports/s1_integrated_kitchen_demo/presentation_report.html
+```
+
+The wrapper runs Docker as the host UID/GID, mounts the YOLO-World and CLIP
+caches read-only, uses detector process isolation, captures every region
+through C1 once, evaluates all diagnostics and both pairing strategies from
+that saved evidence, validates expected outcomes, and generates matrices,
+GIFs, MP4s, HTML, and README. It refuses to overwrite an existing run ID.
+
+### Outputs and limits
+
+The run root includes `goal_instruction.json`, `task_requirements.json`,
+`object_registry.json`, `observed_graph.json`, `events.jsonl`,
+`compatibility_matrix.json/.csv`, `function_assignments.json`,
+`assignment_evaluations.json`, `usage_policy_evaluations.json`,
+`pair_relation_evaluations.json`, `pairing_strategy_comparison.json`,
+`diagnostic_summary.json`, and, only after verified production completion,
+`verified_task_handoff.json`. Each stage retains five RGB/depth/segmentation
+captures, semantic detections and associations, per-object fused evidence,
+properties, pair evaluations, graph/point-cloud views, and an overview.
+
+`reports/s1_integrated_kitchen_demo/presentation_report.html` embeds stage
+progression, detector overlays, point clouds, graph evolution, four
+same-evidence diagnostic animations, measurements, signed margins, assignment
+matrices, the pairing-strategy comparison, GIFs, and MP4s.
+
+Functional requirements and semantic vocabulary remain manually authored;
+the broad goal is not converted into predicates by an FM; region order is
+fixed; geometry covers only visible five-view evidence; detector reliability
+depends on appearance and framing; and `ready_for_tamp` is a data handoff, not
+executed manipulation.

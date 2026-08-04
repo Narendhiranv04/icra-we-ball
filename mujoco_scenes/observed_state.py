@@ -322,6 +322,27 @@ class ObservedStateRun:
         }
         if not (self.run_dir / "run_config.json").exists():
             _atomic_json(self.run_dir / "run_config.json", config_payload)
+        goal_instruction = self.task_requirements.get("goal_instruction")
+        if goal_instruction:
+            _atomic_json(
+                self.run_dir / "goal_instruction.json",
+                {
+                    "task_id": self.task_requirements["task_id"],
+                    "goal_instruction": goal_instruction,
+                    "specification_source": self.task_requirements.get(
+                        "specification_source"
+                    ),
+                    "generated_from_foundation_model": False,
+                },
+            )
+        _atomic_json(
+            self.run_dir / "task_requirements.json",
+            {
+                key: deepcopy(value)
+                for key, value in self.task_requirements.items()
+                if not key.startswith("_")
+            },
+        )
 
     @classmethod
     def create_for_scene(
@@ -1108,6 +1129,28 @@ class ObservedStateRun:
                         "role": candidate["role"],
                     }
                 )
+                if self.task_requirements.get(
+                    "target_assignment_ablation", False
+                ):
+                    events.append(
+                        {
+                            "stage": stage,
+                            "region_id": expected_region,
+                            "event": (
+                                "TARGET_COMPATIBILITY_REJECTED_SEMANTIC"
+                            ),
+                            "tool_object_id": candidate["object_id"],
+                            "role": candidate["role"],
+                            "target_object_id": None,
+                            "status": "FALSE",
+                            "rejection_reason": (
+                                "SEMANTIC_ROLE_GATE_FAILED_BEFORE_PAIRING"
+                            ),
+                            "semantic_evidence": deepcopy(
+                                candidate.get("semantic")
+                            ),
+                        }
+                    )
             elif decision == "REJECTED_GEOMETRY":
                 events.append(
                     {
@@ -1377,6 +1420,143 @@ class ObservedStateRun:
                 matrix = build_target_compatibility_matrix(
                     assignment_witnesses["joint-target-specific"]
                 )
+                # Pairing-strategy diagnostics reuse this exact registry and
+                # cached stage-local measurements. They rebuild only the
+                # binary relation layer; RGB-D, semantics, and unary geometry
+                # are never rerun. The production strategy still controls the
+                # persisted graph and inspection stopping decision.
+                alternate_strategy = (
+                    "exhaustive_all_pairs"
+                    if self.pairing_strategy
+                    == "semantic_role_scoped"
+                    else "semantic_role_scoped"
+                )
+                production_strategy = self.pairing_strategy
+                try:
+                    self.pairing_strategy = alternate_strategy
+                    alternate_graph = self._build_graph(
+                        region_states, stage_changes
+                    )
+                finally:
+                    self.pairing_strategy = production_strategy
+                alternate_witness = evaluate_usage_policy_task_witness(
+                    alternate_graph,
+                    self.task_requirements,
+                    stage=stage,
+                    usage_policy_mode="function-aware",
+                    target_assignment_mode="joint-target-specific",
+                )
+                alternate_matrix = build_target_compatibility_matrix(
+                    alternate_witness
+                )
+
+                def _production_cells(payload):
+                    return {
+                        (
+                            cell["function_group_id"],
+                            cell["tool_object_id"],
+                            cell["target_object_id"],
+                        ): cell["target_specific_compatibility_status"]
+                        for cell in payload.get("cells", [])
+                        if cell.get("role_relevant_projection", True)
+                        and cell.get("tool_semantic_status") == "TRUE"
+                        and cell.get("target_semantic_status") == "TRUE"
+                        and cell.get("elongated_object_status") == "TRUE"
+                        and cell.get("open_cavity_status") == "TRUE"
+                    }
+
+                strategy_graphs = {
+                    production_strategy: graph,
+                    alternate_strategy: alternate_graph,
+                }
+                strategy_witnesses = {
+                    production_strategy: witness,
+                    alternate_strategy: alternate_witness,
+                }
+                strategy_matrices = {
+                    production_strategy: matrix,
+                    alternate_strategy: alternate_matrix,
+                }
+                scoped_cells = _production_cells(
+                    strategy_matrices["semantic_role_scoped"]
+                )
+                exhaustive_cells = _production_cells(
+                    strategy_matrices["exhaustive_all_pairs"]
+                )
+                strategy_comparison = {
+                    "schema_version": 1,
+                    "stage": stage,
+                    "region_id": expected_region,
+                    "same_saved_observation_evidence": True,
+                    "perception_rerun_per_strategy": False,
+                    "unary_geometry_rerun_per_strategy": False,
+                    "strategies": {
+                        strategy: {
+                            "status": strategy_witnesses[strategy][
+                                "status"
+                            ],
+                            "selected_witness": strategy_witnesses[
+                                strategy
+                            ]["selected_witness"],
+                            "operation_assignments": strategy_witnesses[
+                                strategy
+                            ]["operation_assignments"],
+                            "compatibility_matrix": strategy_matrices[
+                                strategy
+                            ],
+                            **deepcopy(
+                                strategy_graphs[strategy].get(
+                                    "pairing", {}
+                                )
+                            ),
+                        }
+                        for strategy in (
+                            "exhaustive_all_pairs",
+                            "semantic_role_scoped",
+                        )
+                    },
+                    "required_production_edge_matrices_identical": (
+                        scoped_cells == exhaustive_cells
+                    ),
+                    "final_status_identical": (
+                        strategy_witnesses["semantic_role_scoped"][
+                            "status"
+                        ]
+                        == strategy_witnesses["exhaustive_all_pairs"][
+                            "status"
+                        ]
+                    ),
+                    "selected_assignments_identical": (
+                        sorted(
+                            (
+                                item["function_group_id"],
+                                item["utensil_object_id"],
+                                item["target_object_id"],
+                            )
+                            for item in strategy_witnesses[
+                                "semantic_role_scoped"
+                            ]["operation_assignments"]
+                        )
+                        == sorted(
+                            (
+                                item["function_group_id"],
+                                item["utensil_object_id"],
+                                item["target_object_id"],
+                            )
+                            for item in strategy_witnesses[
+                                "exhaustive_all_pairs"
+                            ]["operation_assignments"]
+                        )
+                    ),
+                }
+                _atomic_json(
+                    stage_dir / "pairing_strategy_comparison.json",
+                    strategy_comparison,
+                )
+                _atomic_json(
+                    self.run_dir / "pairing_strategy_comparison.json",
+                    strategy_comparison,
+                )
                 evidence_manifest = {
                     "measurement_cloud_paths": sorted(
                         evidence.measurement_cloud_path
@@ -1542,6 +1722,18 @@ class ObservedStateRun:
                 },
             )
             _atomic_json(
+                stage_dir / "function_assignments.json",
+                {
+                    "task_id": witness["task_id"],
+                    "stage": stage,
+                    "usage_policy_mode": "function-aware",
+                    "assignments": witness["operation_assignments"],
+                    "function_groups": witness[
+                        "function_group_evaluations"
+                    ],
+                },
+            )
+            _atomic_json(
                 self.run_dir / "usage_policy_evaluations.json",
                 {
                     "task_id": witness["task_id"],
@@ -1559,6 +1751,18 @@ class ObservedStateRun:
                     "stage": stage,
                     "usage_policy_mode": "function-aware",
                     "assignments": witness["operation_assignments"],
+                },
+            )
+            _atomic_json(
+                self.run_dir / "function_assignments.json",
+                {
+                    "task_id": witness["task_id"],
+                    "stage": stage,
+                    "usage_policy_mode": "function-aware",
+                    "assignments": witness["operation_assignments"],
+                    "function_groups": witness[
+                        "function_group_evaluations"
+                    ],
                 },
             )
             policy_path = self.run_dir / "policy_ablation_summary.json"
@@ -1615,6 +1819,45 @@ class ObservedStateRun:
                 key=lambda item: item["stage"]
             )
             _atomic_json(policy_path, policy_summary)
+            diagnostic_payload = {
+                "schema_version": 1,
+                "task_id": witness["task_id"],
+                "stage": stage,
+                "region_id": expected_region,
+                "same_observation_evidence": True,
+                "production_status": witness["status"],
+                "usage_policy_modes": {
+                    mode: {
+                        "status": result["status"],
+                        "distinct_physical_tool_count": result[
+                            "distinct_physical_tool_count"
+                        ],
+                    }
+                    for mode, result in policy_witnesses.items()
+                },
+            }
+            strategy_path = (
+                stage_dir / "pairing_strategy_comparison.json"
+            )
+            if strategy_path.exists():
+                diagnostic_payload["pairing_strategies"] = json.loads(
+                    strategy_path.read_text(encoding="utf-8")
+                )
+            assignment_path = (
+                stage_dir / "assignment_mode_comparison.json"
+            )
+            if assignment_path.exists():
+                diagnostic_payload["grounding_modes"] = json.loads(
+                    assignment_path.read_text(encoding="utf-8")
+                )["modes"]
+            _atomic_json(
+                stage_dir / "diagnostic_summary.json",
+                diagnostic_payload,
+            )
+            _atomic_json(
+                self.run_dir / "diagnostic_summary.json",
+                diagnostic_payload,
+            )
         elif task_schema == "JOINT_ROLE_GROUNDING":
             mode_witnesses = {
                 mode: evaluate_joint_task_witness(
@@ -1738,6 +1981,39 @@ class ObservedStateRun:
                         "reason": group["reason"],
                     }
                 )
+                if (
+                    self.task_requirements.get(
+                        "target_assignment_ablation", False
+                    )
+                    and group["status"] != "COMPLETE"
+                ):
+                    usage_mode = group["declared_usage_policy"].get(
+                        "mode"
+                    )
+                    if usage_mode == "sequential_reuse_allowed":
+                        diagnostic_event = (
+                            "NO_ALL_TARGET_REUSABLE_CANDIDATE"
+                        )
+                    elif usage_mode == "dedicated_per_target":
+                        diagnostic_event = (
+                            "NO_COMPLETE_DEDICATED_MATCHING"
+                        )
+                    else:
+                        diagnostic_event = None
+                    if diagnostic_event is not None:
+                        events.append(
+                            {
+                                "stage": stage,
+                                "region_id": expected_region,
+                                "event": diagnostic_event,
+                                "function_group": group[
+                                    "function_group_id"
+                                ],
+                                "policy_mode": usage_mode,
+                                "counts": group["counts"],
+                                "reason": group["reason"],
+                            }
+                        )
                 count_event = (
                     "COUNT_REQUIREMENT_SATISFIED"
                     if group["counts"]["satisfied_target_slots"]
@@ -2002,6 +2278,12 @@ class ObservedStateRun:
                 handoff = {
                     "schema_version": 1,
                     "task_id": witness["task_id"],
+                    "goal_instruction": self.task_requirements.get(
+                        "goal_instruction"
+                    ),
+                    "manual_requirement_specification": self.task_requirements.get(
+                        "specification_source"
+                    ),
                     "grounding_mode": "joint",
                     "role_assignments": witness["selected_witness"],
                     "selected_roles": selected_records,
@@ -2062,6 +2344,44 @@ class ObservedStateRun:
                     if self.task_requirements.get(
                         "target_assignment_ablation", False
                     ):
+                        operation_assignments = witness[
+                            "operation_assignments"
+                        ]
+                        target_ids = sorted(
+                            {
+                                assignment["target_object_id"]
+                                for assignment in operation_assignments
+                            }
+                        )
+                        spoon_ids = sorted(
+                            {
+                                assignment["utensil_object_id"]
+                                for assignment in operation_assignments
+                            }
+                        )
+                        assignments_by_group = {
+                            group["function_group_id"]: [
+                                deepcopy(assignment)
+                                for assignment in operation_assignments
+                                if assignment["function_group_id"]
+                                == group["function_group_id"]
+                            ]
+                            for group in witness[
+                                "function_group_evaluations"
+                            ]
+                        }
+                        group_tool_sets = [
+                            {
+                                assignment["utensil_object_id"]
+                                for assignment in assignments
+                            }
+                            for assignments in assignments_by_group.values()
+                        ]
+                        reused_across_groups = sorted(
+                            set.intersection(*group_tool_sets)
+                            if len(group_tool_sets) > 1
+                            else set()
+                        )
                         handoff.update(
                             {
                                 "schema_version": 3,
@@ -2072,6 +2392,17 @@ class ObservedStateRun:
                                     "compatibility_matrix.json"
                                 ),
                                 "complete_target_coverage": True,
+                                "target_object_ids": target_ids,
+                                "selected_spoon_object_ids": spoon_ids,
+                                "assignments_by_function_group": (
+                                    assignments_by_group
+                                ),
+                                "cross_group_reused_object_ids": (
+                                    reused_across_groups
+                                ),
+                                "total_distinct_physical_spoon_count": len(
+                                    spoon_ids
+                                ),
                             }
                         )
                 _atomic_json(

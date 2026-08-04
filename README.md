@@ -169,3 +169,21 @@ See the Ablation 3 section in
 [mujoco_scenes/README.md](mujoco_scenes/README.md) for the four same-evidence
 diagnostics, exact Docker command, measured matrix, scene variants, and output
 layout.
+
+The final integrated Scene 1 stress test combines persistent discovery,
+semantic and unary grounding, target-specific binary geometry, exact
+multi-target assignment, function-scoped reuse/distinctness, and
+semantic-first relation pruning across six visible containers and the full
+`INITIAL → D1 → D2 → C2 → B1 → C1` inspection horizon:
+
+```bash
+./mujoco_scenes/scripts/run_s1_integrated_kitchen_demo.sh \
+  s1_integrated_kitchen_demo
+xdg-open reports/s1_integrated_kitchen_demo/presentation_report.html
+```
+
+The broad goal and functional requirements are still manually connected; no
+FM parsing, robot manipulation, action planning, or TAMP execution occurs.
+See the integrated benchmark section in
+[mujoco_scenes/README.md](mujoco_scenes/README.md) for exact local/Docker
+commands, scene variants, measured progression, outputs, and limitations.

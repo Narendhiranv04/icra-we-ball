@@ -13,6 +13,95 @@
 
 scenes:
 
+  # ========================================================
+  # INTEGRATED SCENE 1: KITCHEN OBJECT-FUNCTION STRESS TEST
+  # ========================================================
+
+  S1_integrated_kitchen_object_function_primary:
+    goal: "Prepare and serve coffee and soup for three people using the available kitchenware. Stir all three coffees and provide each soup bowl with a suitable utensil. Search the closed kitchen storage for anything still required."
+    countertop_objects:
+      counter_spot_21: ab3_narrow_deep_cup
+      counter_spot_22: ab3_medium_deep_mug
+      counter_spot_23: s1i_wide_shallow_cup
+      counter_spot_24: ab3_shallow_bowl
+      counter_spot_25: ab3_deep_bowl
+      counter_spot_26: s1i_narrow_deep_bowl
+      counter_spot_17: ab3_medium_spoon
+      counter_spot_18: ab3_short_narrow_spoon
+      counter_spot_36: marker
+      counter_spot_12: ab3_long_wide_spoon
+      counter_spot_20: ab3_long_narrow_fork
+    container_contents:
+      D1: [s1i_oversized_spoon, napkin]
+      D2: [ab3_partial_spoon, tongs]
+      C2: [plate, s1i_c2_soup_spoon, sugar_jar]
+      B1: [s1i_coffee_near_miss_spoon, tea_box]
+      C1: [s1i_final_long_narrow_spoon, tea_box]
+    required_objects: []
+    substitution_map: {}
+    optimal_search_order: [D1, D2, C2, B1, C1]
+    optimal_inspections: 5
+    notes: >
+      Integrated stress test combining joint semantic-geometric grounding,
+      target-specific compatibility, function-aware tool reuse, and persistent
+      discovery. Production is designed to complete only after C1.
+
+  S1_integrated_kitchen_object_function_initial_complete:
+    goal: "Prepare and serve coffee and soup for three people using the available kitchenware. Stir all three coffees and provide each soup bowl with a suitable utensil. Search the closed kitchen storage for anything still required."
+    countertop_objects:
+      counter_spot_21: ab3_narrow_deep_cup
+      counter_spot_22: ab3_medium_deep_mug
+      counter_spot_23: s1i_wide_shallow_cup
+      counter_spot_24: ab3_shallow_bowl
+      counter_spot_25: ab3_deep_bowl
+      counter_spot_26: s1i_narrow_deep_bowl
+      counter_spot_17: s1i_final_long_narrow_spoon
+      counter_spot_18: s1i_final_long_narrow_spoon
+      counter_spot_12: ab3_long_wide_spoon
+      counter_spot_19: ab3_medium_spoon
+      counter_spot_20: s1i_final_long_narrow_spoon
+    container_contents:
+      D1: [s1i_oversized_spoon, napkin]
+      D2: [ab3_partial_spoon, tongs]
+      C2: [sugar_jar]
+      B1: [tea_box]
+      C1: [glass]
+    required_objects: []
+    substitution_map: {}
+    optimal_search_order: []
+    optimal_inspections: 0
+    notes: >
+      The globally compatible coffee spoon and three soup-compatible spoons
+      are visible initially, validating stage-zero completion.
+
+  S1_integrated_kitchen_object_function_exhaustion:
+    goal: "Prepare and serve coffee and soup for three people using the available kitchenware. Stir all three coffees and provide each soup bowl with a suitable utensil. Search the closed kitchen storage for anything still required."
+    countertop_objects:
+      counter_spot_21: ab3_narrow_deep_cup
+      counter_spot_22: ab3_medium_deep_mug
+      counter_spot_23: s1i_wide_shallow_cup
+      counter_spot_24: ab3_shallow_bowl
+      counter_spot_25: ab3_deep_bowl
+      counter_spot_26: s1i_narrow_deep_bowl
+      counter_spot_17: ab3_medium_spoon
+      counter_spot_18: ab3_short_narrow_spoon
+      counter_spot_36: marker
+      counter_spot_12: ab3_long_wide_spoon
+      counter_spot_20: ab3_long_narrow_fork
+    container_contents:
+      D1: [s1i_oversized_spoon, napkin]
+      D2: [ab3_partial_spoon, tongs]
+      C2: [plate, s1i_c2_soup_spoon, sugar_jar]
+      B1: [s1i_coffee_near_miss_spoon, tea_box]
+      C1: [ab3_medium_spoon, tea_box]
+    required_objects: []
+    substitution_map: {}
+    optimal_search_order: [D1, D2, C2, B1, C1]
+    optimal_inspections: 5
+    notes: >
+      Many spoon candidates and valid local edges exist, but no persistent
+      spoon covers all three coffee targets; inspection must exhaust safely.
+
   # ========================================
   # ABLATION 3: TARGET-SPECIFIC ASSIGNMENT
   # ========================================
