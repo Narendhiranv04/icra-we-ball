@@ -498,6 +498,26 @@
     "schema_version": 1,
     "task_id": "l2_place_refreshment_tray_region_grounding"
   },
+  "mode_animations": {
+    "geometry_only": {
+      "ffmpeg_error": null,
+      "ffmpeg_returncode": 0,
+      "gif": "geometry_only_progression.gif",
+      "mp4": "geometry_only_progression.mp4"
+    },
+    "joint": {
+      "ffmpeg_error": null,
+      "ffmpeg_returncode": 0,
+      "gif": "joint_progression.gif",
+      "mp4": "joint_progression.mp4"
+    },
+    "semantic_only": {
+      "ffmpeg_error": null,
+      "ffmpeg_returncode": 0,
+      "gif": "semantic_only_progression.gif",
+      "mp4": "semantic_only_progression.mp4"
+    }
+  },
   "report_directory": "/home/naren/RA_iiith/reports/l2_living_room_region_ablation1_demo",
   "run_config": {
     "capture_resolution": [
@@ -535,6 +555,33 @@
   "run_directory": "/home/naren/RA_iiith/runs/l2_region_no_name_primary_20260805",
   "stage_assets": [
     {
+      "camera_overlays": [
+        {
+          "camera_id": "inspection_close",
+          "consensus": "stages/000_initial_RUG_PATCH/cameras/inspection_close/consensus_overlay.png",
+          "raw": "stages/000_initial_RUG_PATCH/cameras/inspection_close/overlay.png"
+        },
+        {
+          "camera_id": "inspection_front",
+          "consensus": "stages/000_initial_RUG_PATCH/cameras/inspection_front/consensus_overlay.png",
+          "raw": "stages/000_initial_RUG_PATCH/cameras/inspection_front/overlay.png"
+        },
+        {
+          "camera_id": "inspection_left",
+          "consensus": "stages/000_initial_RUG_PATCH/cameras/inspection_left/consensus_overlay.png",
+          "raw": "stages/000_initial_RUG_PATCH/cameras/inspection_left/overlay.png"
+        },
+        {
+          "camera_id": "inspection_right",
+          "consensus": "stages/000_initial_RUG_PATCH/cameras/inspection_right/consensus_overlay.png",
+          "raw": "stages/000_initial_RUG_PATCH/cameras/inspection_right/overlay.png"
+        },
+        {
+          "camera_id": "inspection_top",
+          "consensus": "stages/000_initial_RUG_PATCH/cameras/inspection_top/consensus_overlay.png",
+          "raw": "stages/000_initial_RUG_PATCH/cameras/inspection_top/overlay.png"
+        }
+      ],
       "graph": "stages/000_initial_RUG_PATCH/graph.png",
       "mask": "stages/000_initial_RUG_PATCH/evidence_masks.png",
       "overview": "stages/000_initial_RUG_PATCH/overview.png",
@@ -543,6 +590,33 @@
       "title": "Stage 000: rug"
     },
     {
+      "camera_overlays": [
+        {
+          "camera_id": "inspection_close",
+          "consensus": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_close/consensus_overlay.png",
+          "raw": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_close/overlay.png"
+        },
+        {
+          "camera_id": "inspection_front",
+          "consensus": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_front/consensus_overlay.png",
+          "raw": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_front/overlay.png"
+        },
+        {
+          "camera_id": "inspection_left",
+          "consensus": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_left/consensus_overlay.png",
+          "raw": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_left/overlay.png"
+        },
+        {
+          "camera_id": "inspection_right",
+          "consensus": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_right/consensus_overlay.png",
+          "raw": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_right/overlay.png"
+        },
+        {
+          "camera_id": "inspection_top",
+          "consensus": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_top/consensus_overlay.png",
+          "raw": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_top/overlay.png"
+        }
+      ],
       "graph": "stages/001_after_SMALL_SIDE_TABLE/graph.png",
       "mask": "stages/001_after_SMALL_SIDE_TABLE/evidence_masks.png",
       "overview": "stages/001_after_SMALL_SIDE_TABLE/overview.png",
@@ -551,6 +625,33 @@
       "title": "Stage 001: side_table"
     },
     {
+      "camera_overlays": [
+        {
+          "camera_id": "inspection_close",
+          "consensus": "stages/002_after_COFFEE_TABLE/cameras/inspection_close/consensus_overlay.png",
+          "raw": "stages/002_after_COFFEE_TABLE/cameras/inspection_close/overlay.png"
+        },
+        {
+          "camera_id": "inspection_front",
+          "consensus": "stages/002_after_COFFEE_TABLE/cameras/inspection_front/consensus_overlay.png",
+          "raw": "stages/002_after_COFFEE_TABLE/cameras/inspection_front/overlay.png"
+        },
+        {
+          "camera_id": "inspection_left",
+          "consensus": "stages/002_after_COFFEE_TABLE/cameras/inspection_left/consensus_overlay.png",
+          "raw": "stages/002_after_COFFEE_TABLE/cameras/inspection_left/overlay.png"
+        },
+        {
+          "camera_id": "inspection_right",
+          "consensus": "stages/002_after_COFFEE_TABLE/cameras/inspection_right/consensus_overlay.png",
+          "raw": "stages/002_after_COFFEE_TABLE/cameras/inspection_right/overlay.png"
+        },
+        {
+          "camera_id": "inspection_top",
+          "consensus": "stages/002_after_COFFEE_TABLE/cameras/inspection_top/consensus_overlay.png",
+          "raw": "stages/002_after_COFFEE_TABLE/cameras/inspection_top/overlay.png"
+        }
+      ],
       "graph": "stages/002_after_COFFEE_TABLE/graph.png",
       "mask": "stages/002_after_COFFEE_TABLE/evidence_masks.png",
       "overview": "stages/002_after_COFFEE_TABLE/overview.png",

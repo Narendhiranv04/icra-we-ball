@@ -36,6 +36,7 @@ from mujoco_scenes.region_grounding import (
     semantic_region_role_status,
 )
 from mujoco_scenes.semantic_grounding import Detection, load_semantic_config
+from mujoco_scenes.generate_region_ablation_report import _write_html
 
 
 TASK = load_region_task(DEFAULT_TASK_CONFIG)
@@ -478,3 +479,117 @@ def test_same_evidence_modes_select_expected_counterexamples(tmp_path):
     assert summary["modes"]["semantic_only"]["selected_region_id"] == "region_0002"
     assert summary["modes"]["joint"]["selected_region_id"] == "region_0003"
     assert summary["rerendered_for_diagnostics"] is False
+
+
+def test_living_room_presentation_report_exposes_complete_component_audit(
+    tmp_path,
+):
+    row = {
+        "region_id": "region_0001",
+        "parent_semantic_label": "coffee_table",
+        "semantic_confidence": 0.8,
+        "semantic_supporting_views": 5,
+        "support_length_m": 0.7,
+        "support_width_m": 0.5,
+        "fit_margin_m": 0.1,
+        "semantic_role_status": "TRUE",
+        "PLANAR_SUPPORT": "TRUE",
+        "FITS_ON": "TRUE",
+        "NEAR_SEATING_AREA": "TRUE",
+        "geometry_only_status": "TRUE",
+        "semantic_only_status": "TRUE",
+        "joint_status": "TRUE",
+        "rejection_reason": None,
+        "discovery_stage": 0,
+    }
+    modes = {
+        mode: {
+            "status": "COMPLETE",
+            "selected_region_id": "region_0001",
+            "completion_stage": 0,
+        }
+        for mode in ("geometry_only", "semantic_only", "joint")
+    }
+    region = {
+        "geometric_properties": {
+            "support_area_m2": {"value": 0.35},
+            "planarity_score": {"value": 0.99},
+        },
+        "provenance": {
+            "point_count": 1000,
+            "contributing_camera_ids": ["inspection_front"],
+            "measurement_cloud_path": "stages/000/region_evidence/fused.ply",
+        },
+        "functional_evaluations": {
+            "NEAR_SEATING_AREA": {"measured_distance_m": 1.0}
+        },
+    }
+    payload = {
+        "identity": {"object_id": "object_0001"},
+        "semantic_context": {"canonical_label": "serving_tray"},
+        "geometric_properties": {
+            "footprint_length_m": {"value": 0.4},
+            "footprint_width_m": {"value": 0.28},
+            "footprint_area_m2": {"value": 0.112},
+            "measurement_quality": {
+                "point_count": 500,
+                "contributing_camera_count": 5,
+            },
+        },
+        "provenance": {
+            "measurement_cloud_path": "stages/000/payload_evidence/fused.ply"
+        },
+    }
+    stage = {
+        "title": "Stage 000: coffee_table",
+        "overview": "stages/000/overview.png",
+        "semantic": "stages/000/semantic_overview.png",
+        "pointcloud": "stages/000/region_pointcloud.png",
+        "graph": "stages/000/graph.png",
+        "mask": "stages/000/evidence_masks.png",
+        "camera_overlays": [
+            {
+                "camera_id": f"inspection_{name}",
+                "consensus": f"stages/000/cameras/{name}/consensus.png",
+                "raw": f"stages/000/cameras/{name}/overlay.png",
+            }
+            for name in ("left", "right", "top", "front", "close")
+        ],
+    }
+    animations = {
+        mode: {
+            "gif": f"{mode}.gif",
+            "mp4": f"{mode}.mp4",
+        }
+        for mode in modes
+    }
+    _write_html(
+        report_dir=tmp_path,
+        run_config={
+            "scene_name": "living_room_test",
+            "natural_language_goal": "Place the tray.",
+            "capture_resolution": [1280, 960],
+            "detector": {
+                "name": "yolo_world",
+                "checkpoint": "weights.pt",
+                "version": "test",
+                "device": "cpu",
+            },
+        },
+        summary={"modes": modes},
+        rows=[row],
+        stage_assets=[stage],
+        region_registry={"regions": {"region_0001": region}},
+        payload_registry={"objects": {"object_0001": payload}},
+        handoff=None,
+        mode_animations=animations,
+    )
+    report = (tmp_path / "presentation_report.html").read_text()
+    redirect = (tmp_path / "ablation_report.html").read_text()
+    assert "Three individual policy ablations" in report
+    assert "How the geometric checks are defined" in report
+    assert "Rendered scene and component audit" in report
+    assert "five RGB detections" in report
+    assert report.count("detector overlay") == 5
+    assert "RegionMeasurementEvidence" in report
+    assert "presentation_report.html" in redirect
