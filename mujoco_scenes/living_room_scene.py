@@ -11,6 +11,13 @@ import mujoco
 import mujoco.viewer
 import numpy as np
 
+from mujoco_scenes.living_room_cameras import (
+    FOOT_CAMERA_MOUNTS,
+    SOFA_CAMERAS,
+    TOP_CAMERA_MOUNTS,
+    TOP_CAMERAS,
+    camera_xyaxes,
+)
 from mujoco_scenes.scene_loader import (
     FREE_CAMERA,
     GOOGLE_ACTUATORS,
@@ -31,7 +38,8 @@ LIVING_ROOM_CAMERAS = (
     "tv_camera",
     "table_camera",
     "wrist_camera",
-    "head_camera_rgb",
+    *SOFA_CAMERAS,
+    *TOP_CAMERAS,
 )
 LIVING_ROOM_VIEW_CAMERAS = (FREE_CAMERA,) + LIVING_ROOM_CAMERAS
 LIVING_ROOM_OBJECTS = (
@@ -53,15 +61,79 @@ PICKABLE_OBJECTS = (
 TV_CELL_COUNT = 15
 DUST_FADE_RESPONSE = 5.0
 LIVING_ROOM_FORWARD_LIMITS = (-1.0, 2.10)
+LIVING_ROOM_SCENARIOS = ("standard", "lost_remote")
+LOST_REMOTE_POSITION = (-0.78, -1.29, 0.018)
 
 
-def build_living_room_xml(robot: str = ROBOT_GOOGLE) -> str:
+def build_living_room_xml(
+    robot: str = ROBOT_GOOGLE,
+    scenario: str = "standard",
+) -> str:
     """Compose the rigid living room with Google Robot or no robot."""
     if robot not in {ROBOT_GOOGLE, ROBOT_NONE}:
         raise ValueError("Living room currently supports --robot google or none")
+    if scenario not in LIVING_ROOM_SCENARIOS:
+        raise ValueError(
+            f"Unknown living-room scenario {scenario!r}. Choose: "
+            f"{', '.join(LIVING_ROOM_SCENARIOS)}"
+        )
     root = ET.parse(LIVING_ROOM_BASE).getroot()
+    if scenario == "lost_remote":
+        remote = next(
+            body
+            for body in root.iter("body")
+            if body.get("name") == "remote_control"
+        )
+        remote.set("pos", " ".join(str(value) for value in LOST_REMOTE_POSITION))
     if robot == ROBOT_GOOGLE:
         _inject_google_robot(root, _google_robot_dir())
+        robot_body = next(
+            body
+            for body in root.iter("body")
+            if body.get("name") == "google:base_link"
+        )
+        # The mobile robot has no articulated feet. These two low cameras are
+        # mounted on the lower front corners of its base and serve the same
+        # under-furniture sensing role. Their optical axes point 27 degrees
+        # below local forward so the couch gap is visible from the couch pose.
+        for camera_name, lateral, yaw_degrees in FOOT_CAMERA_MOUNTS:
+            ET.SubElement(
+                robot_body,
+                "camera",
+                {
+                    "name": camera_name,
+                    "pos": f"0.24 {lateral} 0.12",
+                    "xyaxes": camera_xyaxes(yaw_degrees, 27.0),
+                    "fovy": "70",
+                },
+            )
+        # A separate five-camera rig sits above the fixed head shell. Ninety-
+        # degree fields of view at 72-degree intervals provide overlapping
+        # full-surround coverage while the robot navigates between regions.
+        existing_head_camera = next(
+            camera
+            for camera in robot_body.findall("camera")
+            if camera.get("name") == "head_camera_rgb"
+        )
+        for index, (camera_name, yaw_degrees) in enumerate(TOP_CAMERA_MOUNTS):
+            yaw = np.deg2rad(yaw_degrees)
+            camera = (
+                existing_head_camera
+                if index == 0
+                else ET.SubElement(robot_body, "camera")
+            )
+            camera.attrib.clear()
+            camera.attrib.update(
+                {
+                    "name": camera_name,
+                    "pos": (
+                        f"{0.10 * np.cos(yaw):.6f} "
+                        f"{0.10 * np.sin(yaw):.6f} 1.95"
+                    ),
+                    "xyaxes": camera_xyaxes(yaw_degrees, 30.0),
+                    "fovy": "90",
+                }
+            )
         forward_joint = next(
             joint
             for joint in root.iter("joint")
@@ -94,20 +166,35 @@ def build_living_room_xml(robot: str = ROBOT_GOOGLE) -> str:
 class LivingRoomScene:
     """Compiled living room plus resettable interaction state."""
 
-    scene_name = "L1_living_room"
-    goal = (
-        "Navigate the living room, organize rigid tabletop objects, and "
-        "dust the flat-screen TV"
-    )
-
-    def __init__(self, robot: str = ROBOT_GOOGLE):
+    def __init__(
+        self,
+        robot: str = ROBOT_GOOGLE,
+        scenario: str = "standard",
+    ):
         if robot not in {ROBOT_GOOGLE, ROBOT_NONE}:
             raise ValueError("Living room currently supports google or none")
+        if scenario not in LIVING_ROOM_SCENARIOS:
+            raise ValueError(
+                f"Unknown living-room scenario {scenario!r}. Choose: "
+                f"{', '.join(LIVING_ROOM_SCENARIOS)}"
+            )
         self.robot_name = robot
         self.has_robot = robot == ROBOT_GOOGLE
+        self.scenario = scenario
+        self.scene_name = (
+            "L2_lost_remote" if scenario == "lost_remote" else "L1_living_room"
+        )
+        self.goal = (
+            "Find the remote beneath the sofa using base-mounted foot cameras"
+            if scenario == "lost_remote"
+            else (
+                "Navigate the living room, organize rigid tabletop objects, "
+                "and dust the flat-screen TV"
+            )
+        )
         print("[LivingRoomScene] Building rigid living room")
         print(f"  Goal: {self.goal}")
-        xml = build_living_room_xml(robot)
+        xml = build_living_room_xml(robot, scenario)
         assets = (
             _load_google_binary_assets(_google_robot_dir())
             if self.has_robot
@@ -117,6 +204,9 @@ class LivingRoomScene:
         self.data = mujoco.MjData(self.model)
         self.cleaned_cells: set[int] = set()
         self.tv_power_on = False
+        self.under_sofa_inspected = False
+        self.lost_remote_detected = False
+        self.lost_remote_extracted = False
         self._initial_geom_rgba = self.model.geom_rgba.copy()
         self._initial_mat_rgba = self.model.mat_rgba.copy()
         self._initial_mat_emission = self.model.mat_emission.copy()
@@ -177,6 +267,9 @@ class LivingRoomScene:
         self.cleaned_cells.clear()
         self._dust_target_alphas = self._dust_initial_alphas.copy()
         self.tv_power_on = False
+        self.under_sofa_inspected = False
+        self.lost_remote_detected = False
+        self.lost_remote_extracted = False
         self._set_robot_home_pose()
         mujoco.mj_forward(self.model, self.data)
         for _ in range(settle_steps):
@@ -277,7 +370,11 @@ class LivingRoomScene:
     ) -> np.ndarray:
         if camera not in LIVING_ROOM_CAMERAS:
             raise ValueError(f"Choose a fixed camera from: {LIVING_ROOM_CAMERAS}")
-        if not self.has_robot and camera in {"wrist_camera", "head_camera_rgb"}:
+        if not self.has_robot and camera in {
+            "wrist_camera",
+            *SOFA_CAMERAS,
+            *TOP_CAMERAS,
+        }:
             raise ValueError(f"Camera {camera} requires Google Robot")
         renderer = mujoco.Renderer(self.model, height=height, width=width)
         mujoco.mj_forward(self.model, self.data)
@@ -291,16 +388,26 @@ class LivingRoomScene:
         camera: str = FREE_CAMERA,
         actions_panel: bool = True,
         calibration_mode: bool = False,
+        sofa_perception: str = "oracle",
+        robot_debug_view: bool = False,
     ) -> None:
         if camera not in LIVING_ROOM_VIEW_CAMERAS:
             raise ValueError(f"Unknown living-room camera: {camera}")
-        if not self.has_robot and camera in {"wrist_camera", "head_camera_rgb"}:
+        if not self.has_robot and camera in {
+            "wrist_camera",
+            *SOFA_CAMERAS,
+            *TOP_CAMERAS,
+        }:
             raise ValueError(f"Camera {camera} requires Google Robot")
         if self.has_robot and actions_panel:
             from mujoco_scenes.living_room_actions import launch_living_room_actions
 
             launch_living_room_actions(
-                self, camera=camera, calibration_mode=calibration_mode
+                self,
+                camera=camera,
+                calibration_mode=calibration_mode,
+                sofa_perception=sofa_perception,
+                robot_debug_view=robot_debug_view,
             )
             return
         with mujoco.viewer.launch_passive(self.model, self.data) as viewer:
@@ -323,15 +430,31 @@ class LivingRoomScene:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Google Robot living room")
     parser.add_argument("--robot", choices=(ROBOT_GOOGLE, ROBOT_NONE), default=ROBOT_GOOGLE)
+    parser.add_argument(
+        "--scenario", choices=LIVING_ROOM_SCENARIOS, default="standard"
+    )
     parser.add_argument("--viewer", action="store_true")
     parser.add_argument("--no-actions-panel", action="store_true")
     parser.add_argument("--calibration-mode", action="store_true")
     parser.add_argument("--camera", choices=LIVING_ROOM_VIEW_CAMERAS, default=FREE_CAMERA)
     parser.add_argument("--render", help="Save one rendered PNG frame")
+    parser.add_argument(
+        "--sofa-perception",
+        choices=("oracle", "sam3"),
+        default="oracle",
+        help="mask backend used by the under-sofa inspection action",
+    )
+    parser.add_argument(
+        "--robot-debug-view",
+        "--sofa-debug-view",
+        dest="robot_debug_view",
+        action="store_true",
+        help="open a live grid containing the two foot and five top cameras",
+    )
     args = parser.parse_args()
     if args.calibration_mode and (not args.viewer or args.no_actions_panel):
         parser.error("--calibration-mode requires --viewer and the Actions panel")
-    scene = LivingRoomScene(robot=args.robot)
+    scene = LivingRoomScene(robot=args.robot, scenario=args.scenario)
     if args.render:
         from PIL import Image
 
@@ -345,6 +468,8 @@ def main() -> None:
             camera=args.camera,
             actions_panel=not args.no_actions_panel,
             calibration_mode=args.calibration_mode,
+            sofa_perception=args.sofa_perception,
+            robot_debug_view=args.robot_debug_view,
         )
 
 

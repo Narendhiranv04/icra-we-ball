@@ -28,6 +28,7 @@ class _Manipulation:
         }
         self.held_object = None
         self.navigation_safe = True
+        self.scene = SimpleNamespace(lost_remote_detected=False)
 
 
 class LivingRoomTampTests(unittest.TestCase):
@@ -93,6 +94,17 @@ class LivingRoomTampTests(unittest.TestCase):
         )
         self.assertFalse(
             remembered.objects["remote_control"].visible
+        )
+
+    def test_under_sofa_object_requires_positive_visual_observation(self):
+        self.manipulation.object_locations["remote_control"] = "under_sofa"
+        self.assertFalse(self.observer().objects["remote_control"].visible)
+
+        self.manipulation.scene.lost_remote_detected = True
+        observed = self.observer()
+        self.assertTrue(observed.objects["remote_control"].visible)
+        self.assertEqual(
+            observed.objects["remote_control"].location, "under_sofa"
         )
 
     def test_storage_plan_moves_picks_opens_places_and_closes(self):

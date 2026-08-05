@@ -1,0 +1,53 @@
+property_extraction:
+  robust_lower_percentile: 2.0
+  robust_upper_percentile: 98.0
+  minimum_point_count: 8
+  minimum_extent_m: 0.001
+
+open_cavity:
+  extractor_version: open_cavity_structure_v3
+  minimum_point_count: 120
+  minimum_contributing_camera_count: 2
+  # These are sensor-resolution gates, not definitions of what a cavity is.
+  # Evidence below them is UNKNOWN rather than FALSE.
+  minimum_resolvable_vertical_extent_m: 0.006
+  minimum_resolvable_opening_m: 0.009
+  minimum_resolvable_depth_m: 0.006
+  minimum_rim_points: 24
+  minimum_interior_points: 16
+  minimum_interior_points_per_camera: 3
+  minimum_interior_camera_count: 2
+  rim_percentile_z: 86.0
+  # Twelve 30-degree sectors are stable at the 3 mm voxel resolution used by
+  # both MuJoCo 3.3 and newer renderers. Requiring 75% still demands visible
+  # rim support in at least nine sectors; changing renderer sampling by one or
+  # two boundary voxels no longer flips an otherwise supported cavity.
+  angular_bin_count: 12
+  minimum_rim_enclosure_ratio: 0.75
+  minimum_rim_normal_alignment: 0.88
+  rim_shell_minimum_radius: 0.70
+  minimum_rim_shell_fraction: 0.45
+  central_top_radius_fraction: 0.52
+  maximum_central_top_occupancy_fraction: 0.22
+  minimum_filled_top_central_points: 20
+  maximum_filled_top_height_spread_m: 0.002
+  inner_radius_fraction: 0.62
+  planar_rejection_score: 0.94
+  planar_rejection_max_extent_m: 0.030
+  maximum_outlier_fraction: 0.30
+
+elongated_object:
+  # Scale-independent unary definition: one principal extent must dominate
+  # the next-largest extent. Absolute length belongs in task relations.
+  minimum_dominant_axis_ratio: 2.4
+
+planar_support:
+  minimum_planarity_score: 0.72
+  minimum_upward_alignment: 0.70
+  minimum_length_m: 0.070
+  minimum_width_m: 0.050
+  maximum_thickness_m: 0.035
+
+pairwise_relations:
+  clearance_margin_m: 0.005
+  grip_allowance_m: 0.030

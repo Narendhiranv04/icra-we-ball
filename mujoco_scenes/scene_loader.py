@@ -315,6 +315,7 @@ class SceneState:
     hidden_objects: dict = field(default_factory=dict)      # {container: [objects]} - ground truth
     found_in: dict = field(default_factory=dict)            # {object: container_found_in}
     object_positions: dict = field(default_factory=dict)    # {object: (x, y, z)}
+    container_open_state: dict = field(default_factory=dict)
 
 
 def load_all_configs() -> dict[str, SceneConfig]:
@@ -1094,6 +1095,7 @@ class KitchenScene:
         scene_name: str,
         include_robot: bool = True,
         robot: str | None = None,
+        ground_truth_debug: bool = False,
     ):
         configs = load_all_configs()
         if scene_name not in configs:
@@ -1106,6 +1108,7 @@ class KitchenScene:
         self.has_robot = self.robot_name != ROBOT_NONE
         self.robot_home_qpos = ROBOT_HOME_QPOS.get(self.robot_name, {})
         self.robot_actuators = ROBOT_ACTUATORS.get(self.robot_name, ())
+        self.ground_truth_debug = ground_truth_debug
 
         # Build XML and load model
         print(f"[KitchenScene] Building scene: {scene_name}")
@@ -1118,6 +1121,7 @@ class KitchenScene:
             model_assets.update(_load_google_binary_assets(_google_robot_dir()))
         self.model = mujoco.MjModel.from_xml_string(xml_str, assets=model_assets)
         self.data = mujoco.MjData(self.model)
+        self._object_instance_records = self._discover_object_instances()
 
         if self.has_robot:
             self._set_robot_home_pose()
@@ -1126,6 +1130,9 @@ class KitchenScene:
         self.state = SceneState()
         self.state.hidden_objects = {
             cid: list(objs) for cid, objs in self.config.container_contents.items()
+        }
+        self.state.container_open_state = {
+            container_id: False for container_id in CONTAINER_JOINTS
         }
         # Countertop objects are always visible
         self.state.visible_objects = set(self.config.countertop_objects.values())
@@ -1137,11 +1144,36 @@ class KitchenScene:
         # settling inside the drawer trays without residual jitter.
         for _ in range(1000):
             mujoco.mj_step(self.model, self.data)
-        print(f"  Visible objects: {self.state.visible_objects}")
-        print(f"  Hidden objects: {self.state.hidden_objects}")
-        print(f"  Required objects: {self.config.required_objects}")
+        if self.ground_truth_debug:
+            print(f"  Visible objects: {self.state.visible_objects}")
+            print(f"  Hidden objects: {self.state.hidden_objects}")
+            print(f"  Required objects: {self.config.required_objects}")
+        else:
+            print(f"  Search regions: {sorted(self.state.hidden_objects)}")
         print(f"  Robot: {self.robot_name}")
         print(f"  Scene ready.\n")
+
+    def _discover_object_instances(self) -> list[tuple[str, str, str | None]]:
+        """Index configured object bodies for the explicit oracle backend."""
+        counts: Counter = Counter()
+        records: list[tuple[str, str, str | None]] = []
+
+        def add(object_kind: str, region: str | None) -> None:
+            counts[object_kind] += 1
+            suffix = "" if counts[object_kind] == 1 else f"_{counts[object_kind]}"
+            instance_name = f"{object_kind}{suffix}"
+            body_id = mujoco.mj_name2id(
+                self.model, mujoco.mjtObj.mjOBJ_BODY, instance_name
+            )
+            if body_id >= 0:
+                records.append((instance_name, object_kind, region))
+
+        for object_kind in self.config.countertop_objects.values():
+            add(object_kind, None)
+        for region, object_kinds in self.config.container_contents.items():
+            for object_kind in object_kinds:
+                add(object_kind, region)
+        return records
 
     def _set_robot_home_pose(self):
         """Apply deterministic robot joint positions and controller targets."""
@@ -1232,6 +1264,35 @@ class KitchenScene:
         """Return the set of objects currently visible to the agent."""
         return set(self.state.visible_objects)
 
+    def get_visible_object_instances(self) -> list[tuple[str, str]]:
+        """Return visible simulator instances for oracle perception only."""
+        return [
+            (instance_name, object_kind)
+            for instance_name, object_kind, region in self._object_instance_records
+            if region is None or region in self.state.opened_containers
+        ]
+
+    def get_instance_source_region(self, instance_name: str) -> str | None:
+        """Return an observable source region for oracle evaluation only."""
+        for known_name, _object_kind, region in self._object_instance_records:
+            if known_name != instance_name:
+                continue
+            if region is None:
+                return "countertop"
+            return region if region in self.state.opened_containers else None
+        return None
+
+    def get_region_observation_states(self) -> dict[str, dict]:
+        """Expose region status without revealing configured contents."""
+        return {
+            region: {
+                "region_id": region,
+                "open": bool(self.state.container_open_state[region]),
+                "inspected": region in self.state.opened_containers,
+            }
+            for region in CONTAINER_JOINTS
+        }
+
     def get_missing_objects(self) -> list:
         """Return missing required instances, preserving duplicate quantities."""
         required = Counter(self.config.required_objects)
@@ -1251,7 +1312,7 @@ class KitchenScene:
         if container_id not in CONTAINER_JOINTS:
             raise ValueError(f"Unknown container: {container_id}")
 
-        if container_id in self.state.opened_containers:
+        if self.state.container_open_state[container_id]:
             print(f"  [INFO] {container_id} already open.")
             return []
 
@@ -1267,7 +1328,8 @@ class KitchenScene:
         for _ in range(steps):
             mujoco.mj_step(self.model, self.data)
 
-        # Mark as opened and reveal contents
+        self.state.container_open_state[container_id] = True
+        # Mark as inspected and reveal contents to the legacy oracle state.
         self.state.opened_containers.add(container_id)
         newly_visible = self.state.hidden_objects.get(container_id, [])
 
@@ -1276,7 +1338,10 @@ class KitchenScene:
             self.state.visible_object_counts[obj] += 1
             self.state.found_in[obj] = container_id
 
-        print(f"  [OPENED] {container_id} → Found: {newly_visible}")
+        if self.ground_truth_debug:
+            print(f"  [OPENED] {container_id} → Found: {newly_visible}")
+        else:
+            print(f"  [OPENED] {container_id} → ready for visual inspection")
         return newly_visible
 
     def close_container(self, container_id: str, steps: int = 1000):
@@ -1292,6 +1357,7 @@ class KitchenScene:
 
         for _ in range(steps):
             mujoco.mj_step(self.model, self.data)
+        self.state.container_open_state[container_id] = False
 
     def is_task_resolvable(self) -> bool:
         """

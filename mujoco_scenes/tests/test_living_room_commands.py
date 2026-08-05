@@ -15,6 +15,7 @@ class LivingRoomCommandTests(unittest.TestCase):
             "move drawer-left": LivingRoomCommand(
                 "move", ("drawer_left",)
             ),
+            "inspect sofa": LivingRoomCommand("inspect", ("sofa",)),
             "open LEFT": LivingRoomCommand("open", ("left",)),
             "pick game_controller": LivingRoomCommand(
                 "pick", ("game_controller",)

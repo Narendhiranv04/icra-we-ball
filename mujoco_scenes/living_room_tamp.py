@@ -145,14 +145,20 @@ class LivingRoomObserver:
             location = self.manipulation.object_locations[object_id]
             semantic_location = semantic_storage_location(location)
             stored_region = regions.get(semantic_location)
-            visible = bool(
-                object_id == held_object
-                or stored_region is None
-                or (
-                    stored_region.inspected
-                    and stored_region.open is not False
+            if semantic_location == "under_sofa":
+                visible = bool(
+                    object_id == held_object
+                    or self.manipulation.scene.lost_remote_detected
                 )
-            )
+            else:
+                visible = bool(
+                    object_id == held_object
+                    or stored_region is None
+                    or (
+                        stored_region.inspected
+                        and stored_region.open is not False
+                    )
+                )
             objects[object_id] = ObjectObservation(
                 object_id,
                 category,

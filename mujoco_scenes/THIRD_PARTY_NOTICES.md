@@ -25,6 +25,16 @@ The assets are not copied into this repository. At runtime, the kitchen
 adapter namespaces the model, adds ideal planar base joints and robot-mounted
 cameras, and composes it with the shared scene.
 
+## Mink
+
+Profile-driven inverse kinematics uses Mink, distributed under Apache-2.0:
+
+- Project: https://github.com/kevinzakka/mink
+- License: https://github.com/kevinzakka/mink/blob/main/LICENSE
+
+Mink is installed as the pinned Python dependency `mink==1.0.0`. The original
+project code is not copied into this repository.
+
 ## YCB Object and Model Set
 
 This repository contains normalized and texture-downsampled models derived

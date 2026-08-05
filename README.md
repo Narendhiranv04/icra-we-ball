@@ -58,6 +58,16 @@ it natively with the uv environment from this repository root:
 MUJOCO_GL=glfw uv run python -m mujoco_scenes.living_room_scene --viewer
 ```
 
+The compact `lost_remote` variant uses two RGB-D cameras mounted on the lower
+front of the Google mobile base to inspect beneath the raised rigid sofa. A
+separate five-camera rig above the robot head provides full-surround room views:
+
+```bash
+MUJOCO_GL=glfw uv run python -m mujoco_scenes.living_room_scene \
+  --scenario lost_remote --sofa-perception oracle \
+  --robot-debug-view --viewer
+```
+
 Remote functional-alternative ranking through either vLLM or SGLang is
 documented in
 [FOUNDATION_MODEL.md](mujoco_scenes/FOUNDATION_MODEL.md). Both servers use the
@@ -71,6 +81,10 @@ alternatives, offline smoke-test mode, and extension points are documented in
 The separate [inference_server](inference_server/README.md) workspace contains
 the pinned vLLM server setup for a remote GPU machine and can be pulled with a
 Git sparse checkout.
+
+The separate [perception_server](perception_server/README.md) workspace runs
+SAM 3.1 on a GPU server. The simulator sends it RGB images and text prompts,
+then performs depth back-projection and cross-camera association locally.
 
 ## Cameras
 

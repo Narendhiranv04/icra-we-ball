@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 COMMAND_HELP = (
-    "move DESTINATION | open SIDE | close SIDE | pick OBJECT | "
+    "move DESTINATION | inspect sofa | open SIDE | close SIDE | pick OBJECT | "
     "place [STORAGE_TARGET] | task store_game_controller | "
     "state [observed|ground_truth] | help"
 )
@@ -40,6 +40,7 @@ def parse_living_room_command(text: str) -> LivingRoomCommand:
 
     arities = {
         "move": {1},
+        "inspect": {1},
         "open": {1},
         "close": {1},
         "pick": {1},

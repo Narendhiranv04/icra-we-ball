@@ -66,6 +66,17 @@ uv venv --python 3.11
 uv pip install -r mujoco_scenes/requirements.txt
 ```
 
+The requirements install Mink as the default profile-driven IK backend.
+`MUJOCO_IK_BACKEND=legacy` selects the original damped least-squares solver
+for regression comparisons; `auto` is the default and falls back only when
+Mink is unavailable.
+
+Five-view point-cloud inspection and category-free geometric checks are
+documented in [POINT_CLOUD_PERCEPTION.md](POINT_CLOUD_PERCEPTION.md). The
+Google Robot remains in the scene; MuJoCo instance segmentation is available
+only through an explicit oracle mode, while learned mask backends use the same
+RGB-D reconstruction path.
+
 Fetch remains the default robot:
 
 ```bash

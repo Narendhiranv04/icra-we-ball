@@ -121,6 +121,8 @@ class LivingRoomManipulationExecutor:
         self.status = "Living-room manipulation idle"
         self._last_failure: str | None = None
         self.object_locations = dict(INITIAL_OBJECT_LOCATIONS)
+        if scene.scenario == "lost_remote":
+            self.object_locations["remote_control"] = "under_sofa"
         self.pick_source_location: str | None = None
         self.pending_place_location: str | None = None
         self.pending_place_object: str | None = None
@@ -179,6 +181,8 @@ class LivingRoomManipulationExecutor:
         if object_name not in self.object_locations:
             raise ValueError(f"Unknown living-room object: {object_name}")
         location = self.object_locations[object_name]
+        if location == "under_sofa":
+            return "under_sofa_unavailable"
         return STORAGE_NAVIGATION_LOCATIONS.get(location, location)
 
     def _placement_target(self) -> tuple[str, str]:

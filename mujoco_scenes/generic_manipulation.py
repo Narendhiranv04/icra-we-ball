@@ -14,6 +14,7 @@ from dataclasses import dataclass
 import mujoco
 import numpy as np
 
+from mujoco_scenes.ik import ProfiledIK
 from mujoco_scenes.robot_profiles import (
     ManipulationProfile,
     manipulation_profile,
@@ -125,99 +126,6 @@ GOOGLE_CALIBRATION_PICK_SPECS = {
 CALIBRATED_SCENE_OBJECTS = {
     "S1_coffee_missing_mug": ("sugar_jar", "spoon"),
 }
-
-
-def _rotation_vector(matrix: np.ndarray) -> np.ndarray:
-    quat = np.empty(4)
-    mujoco.mju_mat2Quat(quat, matrix.ravel())
-    if quat[0] < 0:
-        quat = -quat
-    norm = float(np.linalg.norm(quat[1:]))
-    if norm < 1e-10:
-        return np.zeros(3)
-    return quat[1:] / norm * (2.0 * math.atan2(norm, float(quat[0])))
-
-
-class ProfiledIK:
-    """Damped least-squares pose IK over a profile's declared arm joints."""
-
-    def __init__(
-        self,
-        model: mujoco.MjModel,
-        reference: mujoco.MjData,
-        profile: ManipulationProfile,
-    ):
-        self.model = model
-        self.profile = profile
-        self.data = mujoco.MjData(model)
-        self.data.qpos[:] = reference.qpos
-        self.site_id = mujoco.mj_name2id(
-            model, mujoco.mjtObj.mjOBJ_SITE, profile.grip_site
-        )
-        self.joint_ids = np.array(
-            [
-                mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, name)
-                for name in profile.arm_joints
-            ]
-        )
-        if self.site_id < 0 or np.any(self.joint_ids < 0):
-            raise RuntimeError("Manipulation profile does not match the composed model")
-        self.qpos_addresses = model.jnt_qposadr[self.joint_ids]
-        self.dof_addresses = model.jnt_dofadr[self.joint_ids]
-        limits = model.jnt_range[self.joint_ids]
-        limited = model.jnt_limited[self.joint_ids].astype(bool)
-        self.lower = np.where(limited, limits[:, 0] + 0.015, -math.pi)
-        self.upper = np.where(limited, limits[:, 1] - 0.015, math.pi)
-
-    def solve(
-        self,
-        target: np.ndarray,
-        seed: np.ndarray,
-        target_rotation: np.ndarray,
-    ) -> tuple[np.ndarray, float, float]:
-        self.data.qpos[self.qpos_addresses] = np.clip(seed, self.lower, self.upper)
-        self.data.qvel[:] = 0
-        for _ in range(1200):
-            mujoco.mj_forward(self.model, self.data)
-            rotation = self.data.site_xmat[self.site_id].reshape(3, 3)
-            position_error = target - self.data.site_xpos[self.site_id]
-            rotation_error = _rotation_vector(target_rotation @ rotation.T)
-            error = np.concatenate((position_error, 0.30 * rotation_error))
-            if (
-                np.linalg.norm(position_error) < 0.0008
-                and np.linalg.norm(rotation_error) < math.radians(0.7)
-            ):
-                break
-
-            jac_pos = np.zeros((3, self.model.nv))
-            jac_rot = np.zeros((3, self.model.nv))
-            mujoco.mj_jacSite(
-                self.model, self.data, jac_pos, jac_rot, self.site_id
-            )
-            jacobian = np.vstack(
-                (
-                    jac_pos[:, self.dof_addresses],
-                    0.30 * jac_rot[:, self.dof_addresses],
-                )
-            )
-            damping = 0.0025
-            delta = jacobian.T @ np.linalg.solve(
-                jacobian @ jacobian.T + damping * np.eye(6), error
-            )
-            current = self.data.qpos[self.qpos_addresses]
-            self.data.qpos[self.qpos_addresses] = np.clip(
-                current + np.clip(delta, -0.055, 0.055),
-                self.lower,
-                self.upper,
-            )
-
-        mujoco.mj_forward(self.model, self.data)
-        rotation = self.data.site_xmat[self.site_id].reshape(3, 3)
-        return (
-            self.data.qpos[self.qpos_addresses].copy(),
-            float(np.linalg.norm(target - self.data.site_xpos[self.site_id])),
-            float(np.linalg.norm(_rotation_vector(target_rotation @ rotation.T))),
-        )
 
 
 class RobotConfigurationCollisionChecker:

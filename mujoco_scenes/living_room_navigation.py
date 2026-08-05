@@ -103,7 +103,10 @@ class LivingRoomLayout:
             "drawer": BasePose(0.34, 0.34, 0.0),
             "drawer_left": BasePose(-0.34, 0.34, 0.0),
             "drawer_right": BasePose(0.34, 0.34, 0.0),
-            "couch": BasePose(-0.70, -0.85, math.pi),
+            # Approach the open east end of the sofa and face west. This keeps
+            # the base outside both furniture envelopes while the low
+            # cameras look laterally through the under-seat clearance.
+            "couch": BasePose(0.10, -1.15, math.pi / 2),
             # A held duster extends beyond the compact arm envelope.  Stop
             # far enough from the console for RRT* to include the attached
             # rigid tool while leaving the screen within arm reach.
@@ -191,6 +194,13 @@ class LivingRoomNavigationExecutor:
         half_x, half_y = TABLE_NAVIGATION_HALF_EXTENTS
         return abs(local_x) >= half_x or abs(local_y) >= half_y
 
+    @staticmethod
+    def _outside_couch_keepout(x: float, y: float) -> bool:
+        """Keep RRT* away from contact-only boundaries around the L sofa."""
+        inside_west_section = -1.95 < x < -0.83 and -1.42 < y < 0.85
+        inside_south_section = -1.47 < x < -0.18 and -1.98 < y < -0.83
+        return not (inside_west_section or inside_south_section)
+
     def request_move(self, destination: str) -> None:
         if self.busy:
             raise RuntimeError("A living-room move is already running")
@@ -205,6 +215,7 @@ class LivingRoomNavigationExecutor:
             return bool(
                 self.checker(x, y)
                 and self._outside_table_keepout(x, y, table_pose)
+                and self._outside_couch_keepout(x, y)
             )
 
         targets: list[tuple[float, float, float]] = []

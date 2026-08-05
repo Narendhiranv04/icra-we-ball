@@ -29,6 +29,7 @@ from mujoco_scenes.living_room_navigation import (
 )
 from mujoco_scenes.living_room_scene import FREE_CAMERA, TV_CELL_COUNT
 from mujoco_scenes.living_room_remote import RemoteTVExecutor
+from mujoco_scenes.living_room_sofa import SofaInspectionExecutor
 from mujoco_scenes.living_room_tamp import (
     STORAGE_TARGETS,
     LivingRoomTampController,
@@ -143,6 +144,8 @@ def launch_living_room_actions(
     scene,
     camera: str = FREE_CAMERA,
     calibration_mode: bool = False,
+    sofa_perception: str = "oracle",
+    robot_debug_view: bool = False,
 ) -> None:
     """Launch MuJoCo with the living-room action and calibration panel."""
     if scene.robot_name != "google":
@@ -163,6 +166,9 @@ def launch_living_room_actions(
     )
     tamp = LivingRoomTampController(
         navigation, manipulation, left_drawer, right_drawer
+    )
+    sofa = SofaInspectionExecutor(
+        scene, perception_mode=sofa_perception
     )
 
     viewer = mujoco.viewer.launch_passive(scene.model, scene.data)
@@ -186,6 +192,17 @@ def launch_living_room_actions(
     root.minsize(430, 650)
     root.columnconfigure(0, weight=1)
     root.rowconfigure(1, weight=1)
+
+    debug_view = None
+
+    def open_debug_view() -> None:
+        nonlocal debug_view
+        if debug_view is not None and not debug_view.closed:
+            debug_view.focus()
+            return
+        from mujoco_scenes.living_room_camera_debug import RobotCameraDebugView
+
+        debug_view = RobotCameraDebugView(root, scene)
 
     status = tk.StringVar(value=navigation.status)
     location = tk.StringVar(value=navigation.current_location)
@@ -267,16 +284,22 @@ def launch_living_room_actions(
     action_file_body.columnconfigure(0, weight=1)
     action_file_body.columnconfigure(1, weight=1)
 
+    sofa_body = ttk.LabelFrame(
+        actions_body, text="Under-sofa inspection", padding=8
+    )
+    sofa_body.grid(row=6, column=0, sticky="ew", pady=(0, 8))
+    sofa_body.columnconfigure(0, weight=1)
+
     remote_body = ttk.LabelFrame(actions_body, text="TV remote", padding=8)
-    remote_body.grid(row=6, column=0, sticky="ew", pady=(0, 8))
+    remote_body.grid(row=7, column=0, sticky="ew", pady=(0, 8))
     remote_body.columnconfigure(0, weight=1)
 
     dust_body = ttk.LabelFrame(actions_body, text="Dust TV", padding=8)
-    dust_body.grid(row=7, column=0, sticky="ew", pady=(0, 8))
+    dust_body.grid(row=8, column=0, sticky="ew", pady=(0, 8))
     dust_body.columnconfigure(0, weight=1)
 
     controls_body = ttk.LabelFrame(actions_body, text="Simulation", padding=8)
-    controls_body.grid(row=8, column=0, sticky="ew")
+    controls_body.grid(row=9, column=0, sticky="ew")
     controls_body.columnconfigure(0, weight=1)
 
     def controllers_busy() -> bool:
@@ -286,6 +309,7 @@ def launch_living_room_actions(
             or left_drawer.busy
             or right_drawer.busy
             or remote.busy
+            or sofa.busy
             or tamp.busy
             or (dusting is not None and _value(dusting, "busy", False))
         )
@@ -306,6 +330,7 @@ def launch_living_room_actions(
             and left_drawer.navigation_safe
             and right_drawer.navigation_safe
             and remote.navigation_safe
+            and sofa.navigation_safe
             and dust_safe
         )
 
@@ -569,6 +594,13 @@ def launch_living_room_actions(
                     "left": left_drawer.is_open,
                     "right": right_drawer.is_open,
                 },
+                "under_sofa": {
+                    "inspected": scene.under_sofa_inspected,
+                    "remote_present": (
+                        scene.scenario == "lost_remote"
+                        and not scene.lost_remote_extracted
+                    ),
+                },
             }
         state = tamp.observer()
         return {
@@ -579,6 +611,10 @@ def launch_living_room_actions(
                 for object_id, observation in state.objects.items()
                 if observation.visible
             ],
+            "under_sofa": {
+                "inspected": scene.under_sofa_inspected,
+                "remote_observed": scene.lost_remote_detected,
+            },
             "regions": {
                 region_id: {
                     "open": region.open,
@@ -603,6 +639,10 @@ def launch_living_room_actions(
                     + ", ".join(LIVING_ROOM_DESTINATIONS)
                 )
             request_move(str(argument))
+        elif command.verb == "inspect":
+            if argument != "sofa":
+                raise ValueError("Available inspection region: sofa")
+            request_sofa_inspection()
         elif command.verb in {"open", "close"}:
             if argument not in {"left", "right"}:
                 raise ValueError("Drawer side must be left or right")
@@ -705,6 +745,41 @@ def launch_living_room_actions(
         wraplength=430,
     ).grid(row=3, column=0, columnspan=2, sticky="w", pady=(5, 0))
 
+    def request_sofa_inspection() -> None:
+        nonlocal ui_error, last_controller
+        ui_error = None
+        try:
+            if controllers_busy():
+                raise RuntimeError("Wait for the active action to finish")
+            sofa.request_inspect(navigation.current_location)
+            last_controller = sofa
+            status.set(sofa.status)
+            tamp.observer()
+        except Exception as error:
+            present_error("Under-sofa inspection", error)
+
+    sofa_button = ttk.Button(
+        sofa_body,
+        text="Inspect beneath sofa with foot cameras",
+        command=request_sofa_inspection,
+    )
+    sofa_button.grid(row=0, column=0, sticky="ew", pady=3)
+    debug_view_button = ttk.Button(
+        sofa_body,
+        text="Open live robot-camera view",
+        command=open_debug_view,
+    )
+    debug_view_button.grid(row=1, column=0, sticky="ew", pady=3)
+    sofa_state = ttk.Label(
+        sofa_body,
+        text=(
+            f"Perception: {sofa_perception}. Requires Move (Couch)."
+        ),
+        state="disabled",
+        wraplength=430,
+    )
+    sofa_state.grid(row=2, column=0, sticky="w", pady=(4, 0))
+
     def request_remote_toggle() -> None:
         nonlocal ui_error, last_controller
         ui_error = None
@@ -767,7 +842,7 @@ def launch_living_room_actions(
 
     def reset_simulation() -> None:
         nonlocal navigation, manipulation, left_drawer, right_drawer, remote
-        nonlocal tamp
+        nonlocal tamp, sofa
         nonlocal dusting, dust_unavailable_reason, ui_error, last_controller
         if controllers_busy() or action_script_running:
             ui_error = "Reset blocked: wait for the active action to finish"
@@ -787,6 +862,9 @@ def launch_living_room_actions(
         tamp.close()
         tamp = LivingRoomTampController(
             navigation, manipulation, left_drawer, right_drawer
+        )
+        sofa = SofaInspectionExecutor(
+            scene, perception_mode=sofa_perception
         )
         ui_error = None
         last_controller = navigation
@@ -859,6 +937,9 @@ def launch_living_room_actions(
 
     closed = False
 
+    if robot_debug_view:
+        open_debug_view()
+
     def close() -> None:
         nonlocal closed
         if closed:
@@ -868,6 +949,8 @@ def launch_living_room_actions(
         canvas.unbind_all("<Button-4>")
         canvas.unbind_all("<Button-5>")
         tamp.close()
+        if debug_view is not None and not debug_view.closed:
+            debug_view.close()
         if viewer.is_running():
             viewer.close()
         root.destroy()
@@ -875,6 +958,8 @@ def launch_living_room_actions(
     def active_controller() -> Any | None:
         if tamp.busy:
             return tamp
+        if sofa.busy:
+            return sofa
         if dusting is not None and _value(dusting, "busy", False):
             return dusting
         if remote.busy:
@@ -944,6 +1029,8 @@ def launch_living_room_actions(
                 )
             )
         viewer.sync()
+        if debug_view is not None and not debug_view.closed:
+            debug_view.refresh(sofa.last_evidence, sofa.status)
 
         location.set(navigation.current_location)
         held.set(manipulation.held_object or "none")
@@ -1062,6 +1149,16 @@ def launch_living_room_actions(
         )
         tamp_button.configure(
             state="normal" if idle and safe else "disabled"
+        )
+        sofa_button.configure(
+            state=(
+                "normal"
+                if idle
+                and safe
+                and scene.scenario == "lost_remote"
+                and navigation.current_location == "couch"
+                else "disabled"
+            )
         )
         run_action_file_button.configure(
             state=(

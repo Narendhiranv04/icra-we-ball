@@ -65,6 +65,49 @@ MUJOCO_GL=osmesa uv run python -m mujoco_scenes.living_room_scene \
 The static room can be inspected without a robot using `--robot none`. The
 default is `--robot google`; Fetch is not currently composed into this scene.
 
+### Lost-remote scenario
+
+The compact lost-remote variant places the remote inside the sofa's real
+under-seat clearance:
+
+```bash
+MUJOCO_GL=glfw uv run python -m mujoco_scenes.living_room_scene \
+  --scenario lost_remote \
+  --sofa-perception oracle \
+  --robot-debug-view \
+  --viewer
+```
+
+Select **Move → Couch**, then **Inspect beneath sofa with foot cameras**. The
+remote is absent from observed state before this action. Oracle mode is an
+explicit ground-truth testing backend; it still saves the same two low-camera
+images and bounded RGB-D evidence used by the learned path. Detection requires
+support from both views.
+
+`--robot-debug-view` opens the two ground-camera and five top-camera RGB streams
+in one grid. `--sofa-debug-view` remains a compatible alias. The same window can
+also be opened at any time with **Open live robot-camera view** in the Actions
+panel. Enable **Show latest inspection masks** to display the exact masks from
+the most recent ground-camera inspection while the five top feeds remain live.
+This does not repeatedly call SAM 3 while the live RGB feeds are running.
+
+For SAM 3.1, start the separate perception server, set `SAM3_BASE_URL`, and
+replace the perception option:
+
+```bash
+MUJOCO_GL=glfw uv run python -m mujoco_scenes.living_room_scene \
+  --scenario lost_remote \
+  --sofa-perception sam3 \
+  --viewer
+```
+
+The SAM service receives the two ground-camera RGB frames and the prompt
+`remote control`.
+Depth, camera poses, sofa bounds, and MuJoCo IDs stay local. Results are saved
+under `runs/living_room_sofa/<mode>/`, including each RGB frame, mask overlay,
+and `inspection.json`. Physical extraction is a separate tool-use action; the
+ordinary top-down pick remains disabled while the remote is beneath the sofa.
+
 ## Layout and rigid contents
 
 ```text
@@ -116,10 +159,23 @@ Available starting cameras are:
 - `room_corner_camera`;
 - `tv_camera`;
 - `table_camera`;
-- `wrist_camera`; and
-- `head_camera_rgb`.
+- `wrist_camera`;
+- `left_foot_camera`;
+- `right_foot_camera`;
+- `top_front_camera`;
+- `top_front_left_camera`;
+- `top_rear_left_camera`;
+- `top_rear_right_camera`; and
+- `top_front_right_camera`.
 
-`wrist_camera` and `head_camera_rgb` require `--robot google`.
+The wrist, two foot, and five top cameras require `--robot google`. The Google
+model has a mobile base rather than articulated feet, so the foot cameras sit
+on its lower front corners and look into the real clearance beneath the raised
+rigid sofa. The five-camera upper rig is mounted above the fixed head shell,
+independent of the arm. Its overlapping 90-degree views span 360 degrees so the
+robot can observe room regions while navigating to them. The wrist camera is
+retained for close manipulation views but is not part of the region-observation
+rig.
 
 ## Actions window
 

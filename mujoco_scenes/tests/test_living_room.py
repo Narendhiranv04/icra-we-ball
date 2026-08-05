@@ -6,6 +6,7 @@ import mujoco
 import numpy as np
 
 from mujoco_scenes.living_room_dusting import DUST_ROWS, TVDustExecutor
+from mujoco_scenes.living_room_cameras import SOFA_CAMERAS, TOP_CAMERAS
 from mujoco_scenes.living_room_drawer import MediaConsoleDrawerExecutor
 from mujoco_scenes.living_room_manipulation import (
     CALIBRATED_LIVING_ROOM_OBJECTS,
@@ -82,7 +83,7 @@ class LivingRoomSceneTests(unittest.TestCase):
         robot_free = SimpleNamespace(has_robot=False)
         with self.assertRaisesRegex(ValueError, "requires Google Robot"):
             LivingRoomScene.render_frame(
-                robot_free, camera="head_camera_rgb"
+                robot_free, camera="top_front_camera"
             )
 
     def test_scene_compiles_with_google_robot(self):
@@ -95,6 +96,29 @@ class LivingRoomSceneTests(unittest.TestCase):
         )
         self.assertGreater(model.nu, 0)
         self.assertEqual(model.neq, len(PICKABLE_OBJECTS))
+        self.assertEqual(len(SOFA_CAMERAS), 2)
+        self.assertEqual(len(TOP_CAMERAS), 5)
+        for camera_name in SOFA_CAMERAS + TOP_CAMERAS:
+            self.assertGreaterEqual(
+                mujoco.mj_name2id(
+                    model, mujoco.mjtObj.mjOBJ_CAMERA, camera_name
+                ),
+                0,
+            )
+
+    def test_lost_remote_starts_inside_real_sofa_clearance(self):
+        scene = LivingRoomScene(ROBOT_GOOGLE, scenario="lost_remote")
+        remote = scene.data.xpos[scene.body_id("remote_control")]
+        self.assertLess(float(remote[1]), -1.22)
+        self.assertLess(float(remote[2]), 0.05)
+        base_id = _named_id(
+            scene.model, mujoco.mjtObj.mjOBJ_GEOM, "couch_south_base"
+        )
+        base_bottom = (
+            scene.model.geom_pos[base_id, 2]
+            - scene.model.geom_size[base_id, 2]
+        )
+        self.assertGreater(float(base_bottom), 0.20)
 
     def test_coffee_table_is_fixed_and_unactuated(self):
         model = self.robot_free_model

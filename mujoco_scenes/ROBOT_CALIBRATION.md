@@ -167,6 +167,16 @@ Simulation gains are not approved real-hardware gains.
 
 ## 4a. Validate the whole robot, not only the end effector
 
+Profile-driven Google Robot manipulation uses Mink differential IK by default.
+Mink freezes every non-arm degree of freedom, enforces the model's joint
+limits, and retains the calibrated seed as a weak posture preference. The
+original damped least-squares implementation remains available with
+`MUJOCO_IK_BACKEND=legacy` for regression comparison.
+
+IK still solves only a target pose. Mink output therefore passes through the
+same dense self/environment segment checker and live collision guard as the
+legacy output. Do not interpret successful IK as a safe arm trajectory.
+
 Pose IK is not collision avoidance. Every accepted trajectory must check:
 
 - every non-adjacent robot visual-geometry pair for self-clipping;

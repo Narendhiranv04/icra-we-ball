@@ -83,15 +83,25 @@
             size="1.00 0.83 0.005" pos="0 -0.35 0.012"
             material="rug"/>
     </body>
-    <!-- One continuous rigid L-shaped couch.  A square corner module joins
-         west and south extensions at exact, non-overlapping seams. -->
+    <!-- One continuous rigid L-shaped couch. The recessed support frame
+         leaves a real 24 cm inspection gap below the seat while preserving
+         the exact, non-overlapping seams of the visible L. -->
     <body name="living_room_couch">
-      <geom name="couch_corner_base" type="box" size="0.30 0.30 0.18"
-            pos="-1.45 -1.45 0.22" material="couch_frame"/>
-      <geom name="couch_west_base" type="box" size="0.30 0.90 0.18"
-            pos="-1.45 -0.25 0.22" material="couch_frame"/>
-      <geom name="couch_south_base" type="box" size="0.325 0.30 0.18"
-            pos="-0.825 -1.45 0.22" material="couch_frame"/>
+      <geom name="couch_corner_base" type="box" size="0.25 0.25 0.06"
+            pos="-1.47 -1.47 0.30" material="couch_frame"/>
+      <geom name="couch_west_base" type="box" size="0.25 0.95 0.06"
+            pos="-1.47 -0.27 0.30" material="couch_frame"/>
+      <geom name="couch_south_base" type="box" size="0.375 0.25 0.06"
+            pos="-0.845 -1.47 0.30" material="couch_frame"/>
+
+      <geom name="couch_leg_corner" type="box" size="0.045 0.045 0.12"
+            pos="-1.47 -1.47 0.12" material="couch_frame"/>
+      <geom name="couch_leg_west_north" type="box" size="0.045 0.045 0.12"
+            pos="-1.47 0.63 0.12" material="couch_frame"/>
+      <geom name="couch_leg_west_middle" type="box" size="0.045 0.045 0.12"
+            pos="-1.47 -0.42 0.12" material="couch_frame"/>
+      <geom name="couch_leg_south_east" type="box" size="0.045 0.045 0.12"
+            pos="-0.47 -1.47 0.12" material="couch_frame"/>
 
       <geom name="couch_corner_seat" type="box" size="0.28 0.28 0.09"
             pos="-1.43 -1.43 0.45" material="couch_fabric"/>
