@@ -35,7 +35,7 @@ class RobotProfileTests(unittest.TestCase):
         self.assertEqual(profile.body_prefix, "google:")
         self.assertEqual(profile.base_joints[0], "google:base_forward_joint")
         self.assertEqual(profile.base_actuators[2], "google:base_yaw_actuator")
-        self.assertLess(profile.home_y, mobile_profile("fetch").home_y)
+        self.assertEqual(profile.home_y, -1.25)
         self.assertGreaterEqual(profile.forward_limits[1], 1.25)
 
     def test_google_top_down_frame_is_right_handed_and_points_local_z_down(self):

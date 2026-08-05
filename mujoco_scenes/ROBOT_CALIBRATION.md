@@ -7,12 +7,10 @@ and repeatable checks.
 
 ## Current calibration status
 
+Google Robot is the only production backend on the integration branch.
+
 | Robot/action | Automated status | Human visual status |
 |---|---|---|
-| Fetch navigation | Supported | Recheck after scene geometry changes |
-| Fetch coffee jar, sugar jar, and spoon pick/carry | Current S1 headless picks pass | Recheck after object/robot changes |
-| Fetch kettle pick/carry | Exposed, but current S1 bilateral-contact check fails | Calibration repair required |
-| Fetch place | Not implemented | Not applicable |
 | Google navigation | Empty/held collision monitors pass | User validation required |
 | Google S1 sugar-jar pick/carry | Bilateral-contact check passes | User validation required |
 | Google S1 sugar-jar place at `serving_spot` | Position check passes | User validation required |
@@ -25,18 +23,18 @@ an object to a profile merely because IK returns a solution.
 
 ### Current action and interaction surface
 
-| Interaction | Fetch | Google Robot | How it is exposed |
-|---|---|---|---|
-| Move to home, cupboard 1, cupboard 2, or box | Supported | Supported | Actions panel |
-| Pick/carry sugar jar | Supported; rotates jar horizontal | Supported; vertical carry | Actions panel |
-| Place sugar jar at serving area | Not implemented | Supported | Actions panel |
-| Pick/carry spoon | Supported | Supported | Actions panel |
-| Place spoon | Not implemented | Not implemented | Gated |
-| Pick/carry coffee jar | Supported; rotates jar horizontal | Candidate; provisional IK currently fails | Calibration mode only |
-| Pick/carry kettle by handle | Exposed, but current S1 check fails | Candidate; provisional return does not settle | Calibration mode only |
-| Place coffee jar or kettle | Not implemented | Not implemented | Gated |
-| Open/close cupboards and drawers | Scene actuator helper only | Scene actuator helper only | Python API / CLI, not a robot manipulation |
-| Pour, stir, or complete the coffee task | Not implemented | Not implemented | Not exposed |
+| Interaction | Google Robot | How it is exposed |
+|---|---|---|
+| Move to home, cupboard 1, cupboard 2, or box | Supported | Actions panel |
+| Pick/carry sugar jar | Supported; vertical carry | Actions panel |
+| Place sugar jar at serving area | Supported | Actions panel |
+| Pick/carry spoon | Supported | Actions panel |
+| Place spoon | Not implemented | Gated |
+| Pick/carry coffee jar | Candidate; provisional IK currently fails | Calibration mode only |
+| Pick/carry kettle by handle | Candidate; provisional return does not settle | Calibration mode only |
+| Place coffee jar or kettle | Not implemented | Gated |
+| Open/close cupboards and drawers | Scene actuator helper only | Python API / CLI / inspection panel |
+| Pour, stir, or complete the coffee task | Not implemented | Not exposed |
 
 An object being visible, included in the task description, or having a grasp
 constraint in the composed MJCF does not mean its interaction has been

@@ -15,7 +15,6 @@ from collections import Counter
 from importlib.util import find_spec
 from pathlib import Path
 from dataclasses import dataclass, field
-from typing import Optional
 
 import mujoco
 import mujoco.viewer
@@ -34,7 +33,11 @@ SCENE_CONFIGS = CONFIGS_DIR / "scene_configs.yaml"
 ROBOT_FETCH = "fetch"
 ROBOT_GOOGLE = "google"
 ROBOT_NONE = "none"
-ROBOT_CHOICES = (ROBOT_FETCH, ROBOT_GOOGLE, ROBOT_NONE)
+# Google Robot is the sole interactive robot backend on the integration
+# branch.  Fetch composition remains internal temporarily so historical
+# motion tests and old saved experiments can still be audited, but it is not
+# exposed by the production CLI or selected by default.
+ROBOT_CHOICES = (ROBOT_GOOGLE, ROBOT_NONE)
 
 
 # ── Fetch mobile manipulator ─────────────────────────────────────────────
@@ -178,8 +181,10 @@ ROBOT_BASE_JOINTS = {
 # shelves/trays instead of intersecting them.
 OBJECT_SUPPORT_HEIGHT = {
     "mug": 0.04065, "cup": 0.03076, "glass": 0.055,
-    "plate": 0.01336, "small_plate": 0.00735, "bowl": 0.02750,
-    "spoon": 0.01045, "fork": 0.00773, "knife": 0.00762,
+    "plate": 0.01336, "small_plate": 0.00735,
+    "bowl": 0.02750, "mixing_bowl": 0.02750,
+    "spoon": 0.01045, "oversized_spoon": 0.01463,
+    "fork": 0.00773, "knife": 0.00762, "marker": 0.00945,
     "stirrer": 0.003, "spatula": 0.006, "tongs": 0.005,
     "kettle": 0.06817, "coffee_jar": 0.09287, "sugar_jar": 0.06724,
     "coffee_can": 0.07009, "sugar_box": 0.08802,
@@ -188,15 +193,159 @@ OBJECT_SUPPORT_HEIGHT = {
     "biscuits": 0.020, "pot_with_soup": 0.050,
     "gso_canister_distractor": 0.07187,
     "gso_spatula_distractor": 0.01234,
+    "ab3_narrow_deep_cup": 0.06460,
+    "ab3_medium_deep_mug": 0.07317,
+    "ab3_shallow_bowl": 0.02750,
+    "ab3_deep_bowl": 0.05775,
+    "ab3_short_narrow_spoon": 0.01045,
+    "ab3_medium_spoon": 0.01045,
+    "ab3_long_wide_spoon": 0.01463,
+    "ab3_long_narrow_spoon": 0.01045,
+    "ab3_partial_spoon": 0.01045,
+    "ab3_long_narrow_fork": 0.00773,
+    "s1i_wide_shallow_cup": 0.03384,
+    "s1i_narrow_deep_bowl": 0.05500,
+    "s1i_soup_spoon": 0.01045,
+    "s1i_coffee_near_miss_spoon": 0.01463,
+    "s1i_final_long_narrow_spoon": 0.01045,
+    "s1i_oversized_spoon": 0.01463,
+    "s1i_c2_soup_spoon": 0.01463,
+}
+
+# Controlled visible-geometry variants for Ablation 3.  These declarations
+# are consumed only while constructing the rendered scene; runtime semantic
+# and geometric inference receives RGB-D, masks, and calibration—not this
+# mapping, its scale factors, or the source object names.
+SCENE_OBJECT_VARIANTS = {
+    "ab3_narrow_deep_cup": {
+        "base": "cup", "scale": (1.34, 1.34, 2.10),
+        "mesh": "mesh_ab3_narrow_deep_cup",
+    },
+    "ab3_medium_deep_mug": {
+        "base": "mug", "scale": (1.0, 1.0, 1.80),
+        "mesh": "mesh_ab3_medium_deep_mug",
+    },
+    "ab3_shallow_bowl": {
+        "base": "bowl", "scale": (1.0, 1.0, 1.0),
+        "mesh": "mesh_ab3_shallow_bowl",
+    },
+    "ab3_deep_bowl": {
+        "base": "bowl", "scale": (1.0, 1.0, 2.10),
+        "mesh": "mesh_ab3_deep_bowl",
+    },
+    "ab3_short_narrow_spoon": {
+        "base": "spoon", "scale": (0.72, 0.70, 1.0),
+        "mesh": "mesh_ab3_short_narrow_spoon",
+    },
+    "ab3_medium_spoon": {
+        "base": "spoon", "scale": (0.95, 2.60, 1.0),
+        "mesh": "mesh_ab3_medium_spoon",
+    },
+    "ab3_long_wide_spoon": {
+        "base": "spoon", "scale": (1.35, 3.20, 1.20),
+        "mesh": "mesh_ab3_long_wide_spoon",
+    },
+    "ab3_long_narrow_spoon": {
+        "base": "spoon", "scale": (1.45, 1.70, 1.0),
+        "mesh": "mesh_ab3_long_narrow_spoon",
+    },
+    "ab3_partial_spoon": {
+        "base": "spoon", "scale": (0.70, 1.65, 1.0),
+        "mesh": "mesh_ab3_partial_spoon",
+    },
+    "ab3_long_narrow_fork": {
+        "base": "fork", "scale": (1.50, 1.0, 1.0),
+        "mesh": "mesh_ab3_long_narrow_fork",
+    },
+    # Integrated Scene 1 variants reuse the same source meshes while keeping
+    # the scene-design namespace independent from Ablation 3. These scales
+    # affect rendered evidence only and are never visible to inference.
+    "s1i_wide_shallow_cup": {
+        "base": "cup", "scale": (1.62, 1.62, 1.10),
+        "mesh": "mesh_s1i_wide_shallow_cup",
+    },
+    "s1i_narrow_deep_bowl": {
+        "base": "bowl", "scale": (0.90, 0.90, 2.00),
+        "mesh": "mesh_s1i_narrow_deep_bowl",
+    },
+    "s1i_soup_spoon": {
+        "base": "spoon", "scale": (0.85, 1.55, 1.0),
+        "mesh": "mesh_s1i_soup_spoon",
+    },
+    "s1i_coffee_near_miss_spoon": {
+        "base": "spoon", "scale": (1.34, 3.00, 1.15),
+        "mesh": "mesh_s1i_coffee_near_miss_spoon",
+        "material": "mat_s1i_spoon_inspection",
+    },
+    "s1i_final_long_narrow_spoon": {
+        "base": "spoon", "scale": (1.48, 2.00, 1.0),
+        "mesh": "mesh_s1i_final_long_narrow_spoon",
+        "material": "mat_s1i_spoon_inspection",
+    },
+    "s1i_oversized_spoon": {
+        "base": "spoon", "scale": (1.80, 5.00, 1.40),
+        "mesh": "mesh_s1i_oversized_spoon",
+        "material": "mat_s1i_spoon_inspection",
+    },
+    "s1i_c2_soup_spoon": {
+        "base": "spoon", "scale": (1.80, 3.60, 1.40),
+        "mesh": "mesh_s1i_c2_soup_spoon",
+        "material": "mat_s1i_spoon_inspection",
+    },
 }
 
 UTENSIL_OBJECTS = {
+    "spoon", "oversized_spoon", "fork", "knife", "stirrer", "spatula", "tongs",
+    "gso_spatula_distractor",
+    "ab3_short_narrow_spoon", "ab3_medium_spoon",
+    "ab3_long_wide_spoon", "ab3_long_narrow_spoon",
+    "ab3_partial_spoon",
+    "ab3_long_narrow_fork",
+    "s1i_soup_spoon", "s1i_coffee_near_miss_spoon",
+    "s1i_final_long_narrow_spoon",
+    "s1i_oversized_spoon",
+    "s1i_c2_soup_spoon",
+}
+CENTRED_DRAWER_OBJECTS = {
+    "spoon", "oversized_spoon", "fork", "knife", "stirrer", "tongs",
+    "gso_spatula_distractor",
+    "ab3_short_narrow_spoon", "ab3_medium_spoon",
+    "ab3_long_wide_spoon", "ab3_long_narrow_spoon",
+    "ab3_partial_spoon",
+    "ab3_long_narrow_fork",
+    "s1i_soup_spoon", "s1i_coffee_near_miss_spoon",
+    "s1i_final_long_narrow_spoon",
+    "s1i_oversized_spoon",
+    "s1i_c2_soup_spoon",
+}
+
+ACTION_PICK_OBJECTS = {
+    "kettle", "coffee_jar", "sugar_jar", "spoon",
+    "fork", "knife", "stirrer", "spatula", "tongs", "napkin",
+    "gso_spatula_distractor",
+}
+PASSIVE_HANDLE_OBJECTS = {
     "spoon", "fork", "knife", "stirrer", "spatula", "tongs",
     "gso_spatula_distractor",
 }
-CENTRED_DRAWER_OBJECTS = {
-    "spoon", "fork", "knife", "stirrer", "tongs",
-    "gso_spatula_distractor",
+
+# Scene-construction fixtures keep unusually large counterexample objects
+# physically stored while a container moves. They are released immediately
+# after direct opening and before the inspection rig captures evidence.
+STORAGE_FIXTURE_EQUALITIES = {
+    "D1": "storage_fixture_D1_oversized_spoon",
+    "D2": "storage_fixture_D2_ablation3_utensil",
+}
+
+STORAGE_FIXTURE_OBJECTS = {
+    "D1": {
+        "oversized_spoon", "ab3_partial_spoon",
+        "s1i_oversized_spoon",
+    },
+    "D2": {
+        "ab3_long_narrow_spoon", "ab3_medium_spoon",
+        "ab3_partial_spoon",
+    },
 }
 
 # Positions are RELATIVE to the container body origin: (x, y, support_z).
@@ -224,19 +373,19 @@ CONTAINER_SLOTS = {
     "D1": {
         "parent_body": "drawer_D1_tray",
         "slots": [
-            (-0.09, 0.070, -0.052),
-            (-0.09, 0.015, -0.052),
-            (-0.09, -0.040, -0.052),
-            (-0.09, -0.080, -0.052),
+            (-0.09, 0.030, -0.052),
+            (-0.09, -0.030, -0.052),
+            (-0.09, -0.090, -0.052),
+            (-0.09, 0.075, -0.052),
         ],
     },
     "D2": {
         "parent_body": "drawer_D2_tray",
         "slots": [
-            (-0.09, 0.070, -0.052),
-            (-0.09, 0.015, -0.052),
-            (-0.09, -0.040, -0.052),
-            (-0.09, -0.080, -0.052),
+            (-0.09, 0.030, -0.052),
+            (-0.09, -0.030, -0.052),
+            (-0.09, -0.090, -0.052),
+            (-0.09, 0.075, -0.052),
         ],
     },
     "B1": {
@@ -260,6 +409,46 @@ COUNTER_SPOTS = {
     "counter_spot_4": (0.20, -0.30, 0.580),
     "counter_spot_5": (0.25, -0.34, 0.580),
     "counter_spot_6": (0.0, -0.22, 0.580),
+    # Ablation 2 uses a wider two-row layout so repeated cup, bowl, and
+    # utensil instances remain visually separable in all five RGB views.
+    "counter_spot_7": (-0.50, -0.34, 0.580),
+    "counter_spot_8": (-0.34, -0.34, 0.580),
+    "counter_spot_9": (-0.13, -0.28, 0.580),
+    "counter_spot_10": (0.08, -0.28, 0.580),
+    "counter_spot_11": (0.26, -0.11, 0.580),
+    "counter_spot_12": (0.31, -0.34, 0.580),
+    # Ablation 3 separates four containers (back row) from four candidate
+    # utensils (front row) while keeping every instance inside INITIAL's
+    # calibrated inspection volume.
+    "counter_spot_13": (-0.55, -0.34, 0.580),
+    "counter_spot_14": (-0.35, -0.34, 0.580),
+    "counter_spot_15": (-0.10, -0.32, 0.580),
+    "counter_spot_16": (0.16, -0.32, 0.580),
+    "counter_spot_17": (-0.52, -0.10, 0.580),
+    "counter_spot_18": (-0.25, -0.10, 0.580),
+    "counter_spot_19": (0.02, -0.10, 0.580),
+    "counter_spot_20": (0.29, -0.10, 0.580),
+    # Integrated stress-test layout. Six target vessels occupy the rear two
+    # rows; flat candidates and compact clutter use the front row. All points
+    # remain inside INITIAL's calibrated region gate.
+    "counter_spot_21": (-0.52, -0.39, 0.580),
+    "counter_spot_22": (-0.34, -0.39, 0.580),
+    "counter_spot_23": (-0.08, -0.39, 0.580),
+    "counter_spot_24": (-0.48, -0.23, 0.580),
+    "counter_spot_25": (-0.20, -0.23, 0.580),
+    "counter_spot_26": (0.08, -0.23, 0.580),
+    "counter_spot_27": (-0.32, -0.22, 0.580),
+    "counter_spot_28": (-0.07, -0.21, 0.580),
+    "counter_spot_29": (0.18, -0.21, 0.580),
+    "counter_spot_30": (0.36, -0.21, 0.580),
+    "counter_spot_31": (-0.57, -0.075, 0.580),
+    "counter_spot_32": (-0.35, -0.075, 0.580),
+    "counter_spot_33": (-0.13, -0.075, 0.580),
+    "counter_spot_34": (0.09, -0.075, 0.580),
+    "counter_spot_35": (0.31, -0.075, 0.580),
+    # Isolated semantic-counterexample location at the far left of INITIAL's
+    # calibrated volume. It keeps a thin marker clear of vessel silhouettes.
+    "counter_spot_36": (-0.67, -0.10, 0.580),
 }
 
 # The kettle handle is deliberately grasped rather than approximating a pick
@@ -286,8 +475,8 @@ VIEW_CAMERA_CHOICES = (FREE_CAMERA,) + CAMERA_CHOICES
 CONTAINER_JOINTS = {
     "C1": {"joint": "C1_door_joint", "actuator": "C1_door_actuator", "open_val": 1.4},
     "C2": {"joint": "C2_door_joint", "actuator": "C2_door_actuator", "open_val": 1.4},
-    "D1": {"joint": "D1_slide_joint", "actuator": "D1_slide_actuator", "open_val": 0.24},
-    "D2": {"joint": "D2_slide_joint", "actuator": "D2_slide_actuator", "open_val": 0.24},
+    "D1": {"joint": "D1_slide_joint", "actuator": "D1_slide_actuator", "open_val": 0.25},
+    "D2": {"joint": "D2_slide_joint", "actuator": "D2_slide_actuator", "open_val": 0.25},
     "B1": {"joint": "B1_lid_joint", "actuator": "B1_lid_actuator", "open_val": 1.8},
 }
 
@@ -315,6 +504,7 @@ class SceneState:
     hidden_objects: dict = field(default_factory=dict)      # {container: [objects]} - ground truth
     found_in: dict = field(default_factory=dict)            # {object: container_found_in}
     object_positions: dict = field(default_factory=dict)    # {object: (x, y, z)}
+    container_open_state: dict = field(default_factory=dict)
 
 
 def load_all_configs() -> dict[str, SceneConfig]:
@@ -369,9 +559,9 @@ def _fetch_asset_dir() -> Path:
 
 
 def _selected_robot(include_robot: bool, robot: str | None) -> str:
-    """Resolve the new robot selector while preserving the legacy boolean."""
+    """Resolve the Google/no-robot selector while preserving legacy loading."""
     selected = robot if robot is not None else (
-        ROBOT_FETCH if include_robot else ROBOT_NONE
+        ROBOT_GOOGLE if include_robot else ROBOT_NONE
     )
     if selected not in ROBOT_CHOICES:
         choices = ", ".join(ROBOT_CHOICES)
@@ -860,6 +1050,67 @@ def build_scene_xml(
 
     # Track unique instance counters for duplicates
     instance_count = {}
+    object_instances: list[tuple[str, str]] = []
+
+    def _scale_variant_body(
+        body: ET.Element,
+        scale: tuple[float, float, float],
+        mesh_name: str,
+        material_name: str | None = None,
+    ) -> None:
+        """Scale rendered/proxy geometry for scene construction only."""
+
+        scale_vector = np.asarray(scale, dtype=float)
+
+        def scaled_values(text: str, factors: np.ndarray) -> str:
+            values = np.fromstring(text, sep=" ")
+            if len(values) != len(factors):
+                return text
+            return " ".join(
+                f"{value:.8g}" for value in values * factors
+            )
+
+        for element in body.iter():
+            if element.get("pos"):
+                element.set(
+                    "pos",
+                    scaled_values(element.get("pos"), scale_vector),
+                )
+            if element.tag != "geom":
+                continue
+            geom_type = element.get("type", "sphere")
+            if geom_type == "mesh":
+                element.set("mesh", mesh_name)
+                if material_name is not None:
+                    element.set("material", material_name)
+                continue
+            if element.get("fromto"):
+                element.set(
+                    "fromto",
+                    scaled_values(
+                        element.get("fromto"),
+                        np.concatenate((scale_vector, scale_vector)),
+                    ),
+                )
+            if not element.get("size"):
+                continue
+            values = np.fromstring(element.get("size"), sep=" ")
+            if geom_type in {"box", "ellipsoid"} and len(values) == 3:
+                factors = scale_vector
+            elif geom_type in {"cylinder", "capsule"} and len(values) == 2:
+                factors = np.asarray(
+                    [max(scale_vector[:2]), scale_vector[2]]
+                )
+            elif geom_type in {"sphere", "capsule"} and len(values) == 1:
+                factors = np.asarray([max(scale_vector[1:])])
+            else:
+                continue
+            element.set(
+                "size",
+                " ".join(
+                    f"{value:.8g}" for value in values * factors
+                ),
+            )
 
     def _get_instance_name(obj_name: str) -> str:
         """Generate unique name for duplicate objects (e.g., spoon → spoon_2)."""
@@ -878,12 +1129,21 @@ def build_scene_xml(
         support_height_override: float | None = None,
     ):
         """Add an object body directly to worldbody at the given position."""
-        if obj_name not in obj_lib:
+        variant = SCENE_OBJECT_VARIANTS.get(obj_name)
+        library_name = variant["base"] if variant else obj_name
+        if library_name not in obj_lib:
             print(f"  [WARNING] Object '{obj_name}' not found in object library, skipping.")
             return
 
         instance_name = _get_instance_name(obj_name)
-        obj_elem = copy.deepcopy(obj_lib[obj_name])
+        obj_elem = copy.deepcopy(obj_lib[library_name])
+        if variant:
+            _scale_variant_body(
+                obj_elem,
+                variant["scale"],
+                variant["mesh"],
+                variant.get("material"),
+            )
 
         # Convert a support-surface location into a non-penetrating body centre.
         support_height = (
@@ -898,17 +1158,24 @@ def build_scene_xml(
             obj_elem.set("quat", quat)
 
         # Rename body and all children to instance name if different
-        if instance_name != obj_name:
-            old_name = obj_name
+        if instance_name != library_name:
+            old_name = library_name
             new_name = instance_name
-            obj_elem.set("name", new_name)
             for child in obj_elem.iter():
+                if child is obj_elem:
+                    continue
                 for attr in ["name", "joint"]:
                     val = child.get(attr)
                     if val and old_name in val:
                         child.set(attr, val.replace(old_name, new_name))
+            # Rename the root exactly once. Iterating over the already-renamed
+            # root used to turn the second instance into ``cup_2_2`` while
+            # persistent discovery correctly looked for ``cup_2``.
+            obj_elem.set("name", new_name)
 
         worldbody.append(obj_elem)
+        object_instances.append((instance_name, obj_name))
+        return instance_name
 
     def _get_body_world_pos(body_name: str) -> np.ndarray:
         """Trace path from target body up to worldbody to get absolute world position."""
@@ -944,11 +1211,33 @@ def build_scene_xml(
             pos = np.asarray(COUNTER_SPOTS[spot]) + np.asarray(
                 COUNTERTOP_OBJECT_OFFSETS.get(obj_name, (0.0, 0.0, 0.0))
             )
-            _inject_object(obj_name, pos)
+            countertop_quat = None
+            if (
+                config.name == "S1_joint_stir_initial_preference"
+                and obj_name in {"fork", "ab3_long_narrow_fork"}
+            ):
+                # Present the normal fork orthogonally to the neighbouring
+                # spoon so its tines remain separable in the initial RGB
+                # views. This is scene construction, never runtime inference.
+                countertop_quat = "0.7071068 0 0 0.7071068"
+            elif (
+                (
+                    config.name.startswith("S1_ablation3_multi_target")
+                    or config.name.startswith(
+                        "S1_integrated_kitchen_object_function"
+                    )
+                )
+                and obj_name in {"fork", "ab3_long_narrow_fork"}
+            ):
+                # Expose the fork tines crosswise so the open-vocabulary RGB
+                # detector can distinguish them from a spoon silhouette.
+                countertop_quat = "0.7071068 0 0 0.7071068"
+            _inject_object(obj_name, pos, quat=countertop_quat)
         else:
             print(f"  [WARNING] Unknown counter spot '{spot}', skipping {obj_name}.")
 
     # ── Place container objects ───────────────────────────────────────────
+    storage_fixture_instances: dict[str, str] = {}
     for container_id, objects in config.container_contents.items():
         if container_id not in CONTAINER_SLOTS:
             print(f"  [WARNING] Unknown container '{container_id}', skipping.")
@@ -1004,8 +1293,18 @@ def build_scene_xml(
             # lane so realistic-width napkins/boxes cannot overlap utensils.
             if container_id in {"D1", "D2"} and obj_name not in UTENSIL_OBJECTS:
                 slot_rel_pos[0] = 0.08
+            elif container_id == "D1" and obj_name == "oversized_spoon":
+                # Centre the deliberately long counterexample across D1's
+                # usable width. This is physical scene placement only; no
+                # runtime inference consumes the configured offset.
+                slot_rel_pos[0] = -0.06
             elif container_id in {"D1", "D2"} and obj_name in CENTRED_DRAWER_OBJECTS:
-                slot_rel_pos[0] = 0.0
+                # The low vertical IK corridor is centred around X=±0.39.
+                # Bias each mirrored utensil lane three centimetres outward;
+                # after D1's 180-degree yaw this puts both logical handle ends
+                # on those symmetric reachable lines while preserving wall
+                # clearance for the longest scanned tool.
+                slot_rel_pos[0] = -0.03 if container_id == "D1" else 0.03
             world_pos = parent_body_pos + np.array(slot_rel_pos)
             if container_id == "B1" and obj_name == "coffee_jar":
                 # The coffee jar remains slightly taller than B1's closed
@@ -1015,65 +1314,140 @@ def build_scene_xml(
                 # roll indefinitely on its cylindrical collision proxy.
                 world_pos[0] = parent_body_pos[0]
                 horizontal_radius = 0.03962
-                _inject_object(
+                injected_instance = _inject_object(
                     obj_name,
                     world_pos,
                     quat="0.7071068 0 0.7071068 0",
                     support_height_override=horizontal_radius,
                 )
+            elif container_id == "D1" and obj_name in UTENSIL_OBJECTS:
+                # Point the logical handle end toward the robot centreline.
+                # D2's default -X handle direction already points inward; D1
+                # is its mirror and therefore needs a 180-degree yaw. This
+                # keeps the requested end grasp inside the accurate central
+                # IK workspace instead of reaching past the drawer's far wall.
+                injected_instance = _inject_object(
+                    obj_name, world_pos, quat="0 0 0 1"
+                )
             else:
-                _inject_object(obj_name, world_pos)
+                injected_instance = _inject_object(obj_name, world_pos)
+            if (
+                injected_instance is not None
+                and obj_name
+                in STORAGE_FIXTURE_OBJECTS.get(container_id, set())
+            ):
+                storage_fixture_instances[container_id] = injected_instance
 
     # Contact-confirmed pick actions can enable one of these initially
-    # inactive welds after both gripper fingers touch a countertop object.
+    # inactive welds after both gripper fingers touch a supported object.
     # The relative pose is filled from the live state when the grasp occurs,
     # so enabling a weld never snaps an object to a pre-recorded pose.
+    if storage_fixture_instances:
+        equality = root.find("equality")
+        if equality is None:
+            equality = ET.SubElement(root, "equality")
+        for region_id, instance_name in sorted(
+            storage_fixture_instances.items()
+        ):
+            ET.SubElement(
+                equality,
+                "weld",
+                {
+                    "name": STORAGE_FIXTURE_EQUALITIES[region_id],
+                    "body1": CONTAINER_SLOTS[region_id]["parent_body"],
+                    "body2": instance_name,
+                    "active": "true",
+                    "solref": "0.002 1",
+                },
+            )
+
     if robot_name in {ROBOT_FETCH, ROBOT_GOOGLE}:
         equality = root.find("equality")
         if equality is None:
             equality = ET.SubElement(root, "equality")
-        if robot_name == ROBOT_FETCH:
-            equality_prefix = "robot0"
-            gripper_body_name = "robot0:gripper_link"
-            supported_objects = {"kettle", "coffee_jar", "sugar_jar", "spoon"}
-        else:
-            equality_prefix = "google"
-            gripper_body_name = "google:link_gripper"
-            # Candidate constraints stay inactive until a contact-confirmed
-            # calibration attempt enables one.  Their presence does not expose
-            # the action in normal mode.
-            supported_objects = {"kettle", "coffee_jar", "sugar_jar", "spoon"}
-        for obj_name in dict.fromkeys(config.countertop_objects.values()):
-            if obj_name not in supported_objects:
+        equality_prefix = "google" if robot_name == ROBOT_GOOGLE else "robot0"
+        gripper_body_name = (
+            "google:link_gripper"
+            if robot_name == ROBOT_GOOGLE
+            else "robot0:gripper_link"
+        )
+        supported_objects = {"kettle", "coffee_jar", "sugar_jar", "spoon"}
+        for instance_name, object_kind in object_instances:
+            if object_kind not in supported_objects:
                 continue
             ET.SubElement(
                 equality,
                 "weld",
                 {
-                    "name": f"{equality_prefix}:pick_weld_{obj_name}",
+                    "name": f"{equality_prefix}:pick_weld_{instance_name}",
                     "body1": gripper_body_name,
-                    "body2": obj_name,
+                    "body2": instance_name,
                     "active": "false",
                     "solref": "0.01 1",
                 },
             )
-            if obj_name == "spoon":
+            if object_kind in PASSIVE_HANDLE_OBJECTS:
                 # Activated after the initial vertical lift. Unlike the
                 # transport weld, a connect equality fixes only the handle
                 # pinch point and leaves all three rotational DOFs free, so
-                # gravity can swing the bowl naturally below the gripper.
+                # gravity can swing the working end naturally below the hand.
                 ET.SubElement(
                     equality,
                     "connect",
                     {
-                        "name": f"{equality_prefix}:pick_pivot_spoon",
+                        "name": f"{equality_prefix}:pick_pivot_{instance_name}",
                         "body1": gripper_body_name,
-                        "body2": "spoon",
+                        "body2": instance_name,
                         "anchor": "0 0 0",
                         "active": "false",
                         "solref": "0.01 1",
                     },
                 )
+    if robot_name == ROBOT_FETCH:
+        contact = root.find("contact")
+        if contact is None:
+            contact = ET.SubElement(root, "contact")
+        ET.SubElement(
+            contact,
+            "exclude",
+            {
+                "body1": "robot0:torso_lift_link",
+                "body2": "robot0:shoulder_lift_link",
+            },
+        )
+        equality = root.find("equality")
+        if equality is None:
+            equality = ET.SubElement(root, "equality")
+        # Activated only after both fingers contact the box-lid handle. The
+        # live relative pose is filled by the physical open action, allowing
+        # the arm and the real hinge joint to follow one consistent arc.
+        ET.SubElement(
+            equality,
+            "weld",
+            {
+                "name": "robot0:open_weld_B1_lid",
+                "body1": "robot0:gripper_link",
+                "body2": "B1_lid",
+                "active": "false",
+                "solref": "0.01 1",
+            },
+        )
+        for drawer_name in ("D1", "D2"):
+            # A live point constraint preserves the finger-confirmed handle
+            # contact while allowing the wrist to yaw naturally during the
+            # straight drawer pull.
+            ET.SubElement(
+                equality,
+                "connect",
+                {
+                    "name": f"robot0:open_connect_{drawer_name}",
+                    "body1": "robot0:gripper_link",
+                    "body2": f"drawer_{drawer_name}_tray",
+                    "anchor": "0 0 0",
+                    "active": "false",
+                    "solref": "0.01 1",
+                },
+            )
 
     return ET.tostring(root, encoding="unicode")
 
@@ -1118,6 +1492,7 @@ class KitchenScene:
             model_assets.update(_load_google_binary_assets(_google_robot_dir()))
         self.model = mujoco.MjModel.from_xml_string(xml_str, assets=model_assets)
         self.data = mujoco.MjData(self.model)
+        self._object_instance_records = self._discover_object_instances()
 
         if self.has_robot:
             self._set_robot_home_pose()
@@ -1126,6 +1501,9 @@ class KitchenScene:
         self.state = SceneState()
         self.state.hidden_objects = {
             cid: list(objs) for cid, objs in self.config.container_contents.items()
+        }
+        self.state.container_open_state = {
+            container_id: False for container_id in CONTAINER_JOINTS
         }
         # Countertop objects are always visible
         self.state.visible_objects = set(self.config.countertop_objects.values())
@@ -1141,7 +1519,29 @@ class KitchenScene:
         print(f"  Hidden objects: {self.state.hidden_objects}")
         print(f"  Required objects: {self.config.required_objects}")
         print(f"  Robot: {self.robot_name}")
-        print(f"  Scene ready.\n")
+        print("  Scene ready.\n")
+
+    def _discover_object_instances(self) -> list[tuple[str, str, str | None]]:
+        """Return (instance body, object kind, containing region) records."""
+        counts: Counter = Counter()
+        records = []
+
+        def add(object_kind: str, region: str | None) -> None:
+            counts[object_kind] += 1
+            suffix = "" if counts[object_kind] == 1 else f"_{counts[object_kind]}"
+            instance_name = f"{object_kind}{suffix}"
+            body_id = mujoco.mj_name2id(
+                self.model, mujoco.mjtObj.mjOBJ_BODY, instance_name
+            )
+            if body_id >= 0:
+                records.append((instance_name, object_kind, region))
+
+        for object_kind in self.config.countertop_objects.values():
+            add(object_kind, None)
+        for container_id, object_kinds in self.config.container_contents.items():
+            for object_kind in object_kinds:
+                add(object_kind, container_id)
+        return records
 
     def _set_robot_home_pose(self):
         """Apply deterministic robot joint positions and controller targets."""
@@ -1232,6 +1632,36 @@ class KitchenScene:
         """Return the set of objects currently visible to the agent."""
         return set(self.state.visible_objects)
 
+    def get_visible_object_instances(self) -> list[tuple[str, str]]:
+        """Return actual visible MuJoCo body names paired with semantic kinds."""
+        return [
+            (instance_name, object_kind)
+            for instance_name, object_kind, container_id in self._object_instance_records
+            if container_id is None or container_id in self.state.opened_containers
+        ]
+
+    def get_instance_source_region(self, instance_name: str) -> str | None:
+        """Return the controller-known source after an instance is observable."""
+        for known_name, _object_kind, container_id in self._object_instance_records:
+            if known_name == instance_name:
+                if container_id is None:
+                    return "countertop"
+                if container_id in self.state.opened_containers:
+                    return container_id
+                return None
+        return None
+
+    def get_region_observation_states(self) -> dict[str, dict]:
+        """Return opening/inspection state without exposing hidden contents."""
+        return {
+            container_id: {
+                "region_id": container_id,
+                "open": bool(self.state.container_open_state[container_id]),
+                "inspected": container_id in self.state.opened_containers,
+            }
+            for container_id in CONTAINER_JOINTS
+        }
+
     def get_missing_objects(self) -> list:
         """Return missing required instances, preserving duplicate quantities."""
         required = Counter(self.config.required_objects)
@@ -1245,13 +1675,13 @@ class KitchenScene:
         """
         Open a container and return the list of newly visible objects.
 
-        This simulates the robot opening the container (setting actuator target)
-        and then perceiving what's inside.
+        This directly sets the container actuator target and then advances the
+        scene controller. It does not imply a robot or manipulation trajectory.
         """
         if container_id not in CONTAINER_JOINTS:
             raise ValueError(f"Unknown container: {container_id}")
 
-        if container_id in self.state.opened_containers:
+        if self.state.container_open_state[container_id]:
             print(f"  [INFO] {container_id} already open.")
             return []
 
@@ -1267,17 +1697,58 @@ class KitchenScene:
         for _ in range(steps):
             mujoco.mj_step(self.model, self.data)
 
-        # Mark as opened and reveal contents
+        return self.record_container_opened(container_id)
+
+    def release_storage_fixture(self, container_id: str) -> bool:
+        """Release a scene-construction fixture before visual inspection."""
+        equality_name = STORAGE_FIXTURE_EQUALITIES.get(container_id)
+        if equality_name is None:
+            return False
+        equality_id = mujoco.mj_name2id(
+            self.model, mujoco.mjtObj.mjOBJ_EQUALITY, equality_name
+        )
+        if equality_id < 0:
+            return False
+        self.data.eq_active[equality_id] = 0
+        mujoco.mj_forward(self.model, self.data)
+        return True
+
+    def record_container_opened(self, container_id: str) -> list:
+        """Update visibility after an API- or motion-driven physical opening."""
+        if container_id not in CONTAINER_JOINTS:
+            raise ValueError(f"Unknown container: {container_id}")
+        self.state.container_open_state[container_id] = True
+        if container_id in self.state.opened_containers:
+            return []
         self.state.opened_containers.add(container_id)
         newly_visible = self.state.hidden_objects.get(container_id, [])
-
         for obj in newly_visible:
             self.state.visible_objects.add(obj)
             self.state.visible_object_counts[obj] += 1
             self.state.found_in[obj] = container_id
-
         print(f"  [OPENED] {container_id} → Found: {newly_visible}")
         return newly_visible
+
+    def set_all_containers_open_snapshot(self) -> None:
+        """Load a deterministic all-open perception snapshot without settling.
+
+        C2 and B1 overlap along their full dynamic opening arcs in this compact
+        scene. Setting joint coordinates directly is intentional for the
+        geometry benchmark: it exposes every region in one reproducible frame
+        without asking the contact solver to choose which mechanism may open.
+        """
+        for container_id, cinfo in CONTAINER_JOINTS.items():
+            joint_id = mujoco.mj_name2id(
+                self.model, mujoco.mjtObj.mjOBJ_JOINT, cinfo["joint"]
+            )
+            actuator_id = mujoco.mj_name2id(
+                self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, cinfo["actuator"]
+            )
+            self.data.qpos[self.model.jnt_qposadr[joint_id]] = cinfo["open_val"]
+            self.data.qvel[self.model.jnt_dofadr[joint_id]] = 0.0
+            self.data.ctrl[actuator_id] = cinfo["open_val"]
+            self.record_container_opened(container_id)
+        mujoco.mj_forward(self.model, self.data)
 
     def close_container(self, container_id: str, steps: int = 1000):
         """Close a previously opened container."""
@@ -1292,6 +1763,7 @@ class KitchenScene:
 
         for _ in range(steps):
             mujoco.mj_step(self.model, self.data)
+        self.state.container_open_state[container_id] = False
 
     def is_task_resolvable(self) -> bool:
         """
@@ -1342,6 +1814,7 @@ class KitchenScene:
         camera: str = FREE_CAMERA,
         actions_panel: bool = True,
         calibration_mode: bool = False,
+        task_requirements: str | Path | None = None,
     ):
         """Launch the MuJoCo viewer and, by default, its Actions panel."""
         if camera not in VIEW_CAMERA_CHOICES:
@@ -1357,10 +1830,15 @@ class KitchenScene:
             "  Use the viewer camera menu to switch among: "
             f"{', '.join(VIEW_CAMERA_CHOICES)}"
         )
-        print(f"  Close viewer window to return to script.\n")
+        print("  Close viewer window to return to script.\n")
         if self.has_robot and actions_panel:
             from mujoco_scenes.mobile_motion import launch_action_viewer
-            launch_action_viewer(self, camera, calibration_mode=calibration_mode)
+            launch_action_viewer(
+                self,
+                camera,
+                calibration_mode=calibration_mode,
+                task_requirements=task_requirements,
+            )
             return
         with mujoco.viewer.launch_passive(self.model, self.data) as viewer:
             if camera == FREE_CAMERA:
@@ -1432,10 +1910,10 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--no-robot", action="store_true",
-        help="Deprecated alias for --robot none"
+        help="Load the scene without a robot for virtual inspection"
     )
     parser.add_argument(
-        "--robot", choices=ROBOT_CHOICES, default=ROBOT_FETCH,
+        "--robot", choices=ROBOT_CHOICES, default=ROBOT_GOOGLE,
         help="Robot backend to compose into the kitchen"
     )
     parser.add_argument(
@@ -1445,6 +1923,116 @@ if __name__ == "__main__":
     parser.add_argument(
         "--open-container", action="append", choices=CONTAINER_JOINTS,
         help="Open a container before rendering/viewing; may be repeated"
+    )
+    parser.add_argument(
+        "--open-all", action="store_true",
+        help="Start with both cupboards, both drawers, and the box open"
+    )
+    parser.add_argument(
+        "--inspect-sequence", nargs="*", metavar="REGION",
+        help=(
+            "Observe the closed scene, then directly open, virtually face, "
+            "and save one evidence stage per region. Requires --no-robot. "
+            "With no regions, use D1 D2 C2 B1 C1"
+        ),
+    )
+    parser.add_argument(
+        "--task-requirements", type=str, default=None, metavar="YAML",
+        help=(
+            "Declarative geometry or joint task-role requirements; defaults to "
+            "configs/serve_two_person_breakfast.yaml"
+        ),
+    )
+    parser.add_argument(
+        "--semantic-detector",
+        choices=("none", "yolo_world"),
+        default="none",
+        help="RGB semantic detector backend (default: none)",
+    )
+    parser.add_argument(
+        "--semantic-model",
+        default=None,
+        metavar="CHECKPOINT",
+        help="Pretrained detector checkpoint; defaults to semantic config",
+    )
+    parser.add_argument(
+        "--semantic-config",
+        default=None,
+        metavar="YAML",
+        help="Semantic detection, association, and fusion configuration",
+    )
+    parser.add_argument(
+        "--semantic-vocabulary",
+        default=None,
+        metavar="YAML",
+        help="Independent open-vocabulary detector label configuration",
+    )
+    parser.add_argument(
+        "--grounding-mode",
+        choices=("auto", "joint", "geometry-only", "semantic-only"),
+        default="auto",
+        help=(
+            "Grounding logic: auto selects production joint grounding for "
+            "joint-role tasks and geometry-only for legacy geometry tasks; "
+            "geometry-only/semantic-only are diagnostic ablations"
+        ),
+    )
+    parser.add_argument(
+        "--pairing-strategy",
+        choices=("semantic-role-scoped", "exhaustive-all-pairs"),
+        default=None,
+        help=(
+            "Binary geometry scope: production semantic role gating or the "
+            "exhaustive all-pairs timing ablation; defaults to task config"
+        ),
+    )
+    parser.add_argument(
+        "--semantic-confidence-threshold",
+        type=float,
+        default=None,
+        help="Detector confidence gate override",
+    )
+    parser.add_argument(
+        "--semantic-min-supporting-views",
+        type=int,
+        default=None,
+        help="Multi-view semantic support count override",
+    )
+    parser.add_argument(
+        "--save-semantic-overlays",
+        action="store_true",
+        help="Save detector boxes, mask boundaries, and associations",
+    )
+    parser.add_argument(
+        "--stop-on-complete", action="store_true",
+        help=(
+            "During --inspect-sequence, stop immediately after a COMPLETE "
+            "task witness"
+        ),
+    )
+    parser.add_argument(
+        "--runs-root", type=str, default="runs",
+        help="Root directory for persistent observed-state runs"
+    )
+    parser.add_argument(
+        "--run-id", type=str, default=None,
+        help="Optional deterministic output name for --inspect-sequence"
+    )
+    parser.add_argument(
+        "--point-cloud", type=str, default=None, metavar="OUTPUT_DIR",
+        help="Run five-view RGB-D fusion and write per-object PLY clouds"
+    )
+    parser.add_argument(
+        "--point-cloud-width", type=int, default=640,
+        help="Width of each point-cloud RGB-D observation (default: 640)"
+    )
+    parser.add_argument(
+        "--point-cloud-height", type=int, default=480,
+        help="Height of each point-cloud RGB-D observation (default: 480)"
+    )
+    parser.add_argument(
+        "--point-cloud-voxel", type=float, default=0.003,
+        help="World-frame fusion voxel size in metres; 0 disables downsampling"
     )
     parser.add_argument(
         "--render", type=str, default=None,
@@ -1459,6 +2047,17 @@ if __name__ == "__main__":
         help="List all available scene configurations"
     )
     args = parser.parse_args()
+    if args.inspect_sequence is not None and (
+        args.open_all or args.open_container
+    ):
+        parser.error(
+            "--inspect-sequence requires the closed reset state; do not combine "
+            "it with --open-all or --open-container"
+        )
+    if args.stop_on_complete and args.inspect_sequence is None:
+        parser.error("--stop-on-complete requires --inspect-sequence")
+    if args.inspect_sequence is not None and not args.no_robot:
+        parser.error("--inspect-sequence requires --no-robot")
 
     if args.calibration_mode and not args.viewer:
         parser.error("--calibration-mode requires --viewer")
@@ -1486,8 +2085,55 @@ if __name__ == "__main__":
     scene = KitchenScene(args.scene, robot=selected_robot)
     scene.print_scene_summary()
 
-    for container in args.open_container or []:
-        scene.open_container(container)
+    if args.inspect_sequence is not None:
+        from mujoco_scenes.sequential_inspection import (
+            DEFAULT_INSPECTION_ORDER,
+            run_sequential_inspection,
+        )
+
+        run_sequential_inspection(
+            scene,
+            args.inspect_sequence or DEFAULT_INSPECTION_ORDER,
+            runs_root=args.runs_root,
+            run_id=args.run_id,
+            width=args.point_cloud_width,
+            height=args.point_cloud_height,
+            voxel_size=args.point_cloud_voxel,
+            task_requirements=args.task_requirements,
+            stop_on_complete=args.stop_on_complete,
+            semantic_backend=args.semantic_detector,
+            semantic_model=args.semantic_model,
+            semantic_config_path=args.semantic_config,
+            semantic_vocabulary_path=args.semantic_vocabulary,
+            semantic_confidence_threshold=(
+                args.semantic_confidence_threshold
+            ),
+            semantic_min_supporting_views=(
+                args.semantic_min_supporting_views
+            ),
+            grounding_mode=args.grounding_mode,
+            pairing_strategy=args.pairing_strategy,
+            save_semantic_overlays=args.save_semantic_overlays,
+        )
+
+    containers_to_open = list(args.open_container or [])
+    if args.open_all:
+        scene.set_all_containers_open_snapshot()
+    else:
+        for container in containers_to_open:
+            scene.open_container(container)
+
+    if args.point_cloud:
+        from mujoco_scenes.geometry_checker import GeometryChecker, print_run_summary
+
+        checker = GeometryChecker(
+            scene,
+            width=args.point_cloud_width,
+            height=args.point_cloud_height,
+            voxel_size=args.point_cloud_voxel,
+        )
+        point_cloud_run = checker.run(args.point_cloud)
+        print_run_summary(point_cloud_run)
 
     if args.demo_search:
         print("\n[DEMO] Running sequential container search...\n")
@@ -1505,7 +2151,7 @@ if __name__ == "__main__":
             print(f"    Still missing: {still_missing}")
 
             if scene.is_task_resolvable():
-                print(f"\n  ✓ All required objects (or substitutes) found!")
+                print("\n  ✓ All required objects (or substitutes) found!")
                 break
             print()
 
@@ -1524,4 +2170,5 @@ if __name__ == "__main__":
             camera=args.camera,
             actions_panel=not args.no_actions_panel,
             calibration_mode=args.calibration_mode,
+            task_requirements=args.task_requirements,
         )

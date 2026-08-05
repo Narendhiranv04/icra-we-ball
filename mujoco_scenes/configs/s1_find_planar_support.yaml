@@ -1,0 +1,19 @@
+task_id: find_one_planar_support_from_geometry
+
+roles:
+  planar_support:
+    count: 1
+    geometric_requirements:
+      - predicate: PLANAR_SUPPORT
+        required_status: TRUE
+      - property: support_area_m2
+        minimum: 0.008
+        unit: m2
+        allowed_statuses: [DERIVED]
+
+constraints:
+  distinct_objects: true
+  pairwise: []
+
+diagnostics:
+  max_representative_rejections: 5

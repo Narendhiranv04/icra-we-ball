@@ -13,6 +13,331 @@
 
 scenes:
 
+  # ========================================================
+  # INTEGRATED SCENE 1: KITCHEN OBJECT-FUNCTION STRESS TEST
+  # ========================================================
+
+  S1_integrated_kitchen_object_function_primary:
+    goal: "Prepare and serve coffee and soup for three people using the available kitchenware. Stir all three coffees and provide each soup bowl with a suitable utensil. Search the closed kitchen storage for anything still required."
+    countertop_objects:
+      counter_spot_21: ab3_narrow_deep_cup
+      counter_spot_22: ab3_medium_deep_mug
+      counter_spot_23: s1i_wide_shallow_cup
+      counter_spot_24: ab3_shallow_bowl
+      counter_spot_25: ab3_deep_bowl
+      counter_spot_26: s1i_narrow_deep_bowl
+      counter_spot_17: ab3_medium_spoon
+      counter_spot_18: ab3_short_narrow_spoon
+      counter_spot_36: marker
+      counter_spot_12: ab3_long_wide_spoon
+      counter_spot_20: ab3_long_narrow_fork
+    container_contents:
+      D1: [s1i_oversized_spoon, napkin]
+      D2: [ab3_partial_spoon, tongs]
+      C2: [plate, s1i_c2_soup_spoon, sugar_jar]
+      B1: [s1i_coffee_near_miss_spoon, tea_box]
+      C1: [s1i_final_long_narrow_spoon, tea_box]
+    required_objects: []
+    substitution_map: {}
+    optimal_search_order: [D1, D2, C2, B1, C1]
+    optimal_inspections: 5
+    notes: >
+      Integrated stress test combining joint semantic-geometric grounding,
+      target-specific compatibility, function-aware tool reuse, and persistent
+      discovery. Production is designed to complete only after C1.
+
+  S1_integrated_kitchen_object_function_initial_complete:
+    goal: "Prepare and serve coffee and soup for three people using the available kitchenware. Stir all three coffees and provide each soup bowl with a suitable utensil. Search the closed kitchen storage for anything still required."
+    countertop_objects:
+      counter_spot_21: ab3_narrow_deep_cup
+      counter_spot_22: ab3_medium_deep_mug
+      counter_spot_23: s1i_wide_shallow_cup
+      counter_spot_24: ab3_shallow_bowl
+      counter_spot_25: ab3_deep_bowl
+      counter_spot_26: s1i_narrow_deep_bowl
+      counter_spot_17: s1i_final_long_narrow_spoon
+      counter_spot_18: s1i_final_long_narrow_spoon
+      counter_spot_12: ab3_long_wide_spoon
+      counter_spot_19: ab3_medium_spoon
+      counter_spot_20: s1i_final_long_narrow_spoon
+    container_contents:
+      D1: [s1i_oversized_spoon, napkin]
+      D2: [ab3_partial_spoon, tongs]
+      C2: [sugar_jar]
+      B1: [tea_box]
+      C1: [glass]
+    required_objects: []
+    substitution_map: {}
+    optimal_search_order: []
+    optimal_inspections: 0
+    notes: >
+      The globally compatible coffee spoon and three soup-compatible spoons
+      are visible initially, validating stage-zero completion.
+
+  S1_integrated_kitchen_object_function_exhaustion:
+    goal: "Prepare and serve coffee and soup for three people using the available kitchenware. Stir all three coffees and provide each soup bowl with a suitable utensil. Search the closed kitchen storage for anything still required."
+    countertop_objects:
+      counter_spot_21: ab3_narrow_deep_cup
+      counter_spot_22: ab3_medium_deep_mug
+      counter_spot_23: s1i_wide_shallow_cup
+      counter_spot_24: ab3_shallow_bowl
+      counter_spot_25: ab3_deep_bowl
+      counter_spot_26: s1i_narrow_deep_bowl
+      counter_spot_17: ab3_medium_spoon
+      counter_spot_18: ab3_short_narrow_spoon
+      counter_spot_36: marker
+      counter_spot_12: ab3_long_wide_spoon
+      counter_spot_20: ab3_long_narrow_fork
+    container_contents:
+      D1: [s1i_oversized_spoon, napkin]
+      D2: [ab3_partial_spoon, tongs]
+      C2: [plate, s1i_c2_soup_spoon, sugar_jar]
+      B1: [s1i_coffee_near_miss_spoon, tea_box]
+      C1: [ab3_medium_spoon, tea_box]
+    required_objects: []
+    substitution_map: {}
+    optimal_search_order: [D1, D2, C2, B1, C1]
+    optimal_inspections: 5
+    notes: >
+      Many spoon candidates and valid local edges exist, but no persistent
+      spoon covers all three coffee targets; inspection must exhaust safely.
+
+  # ========================================
+  # ABLATION 3: TARGET-SPECIFIC ASSIGNMENT
+  # ========================================
+
+  S1_ablation3_multi_target_primary:
+    goal: "Prepare coffee and soup for two people with target-specific spoon assignment"
+    countertop_objects:
+      counter_spot_13: ab3_narrow_deep_cup
+      counter_spot_14: ab3_medium_deep_mug
+      counter_spot_15: ab3_shallow_bowl
+      counter_spot_16: ab3_deep_bowl
+      counter_spot_17: ab3_medium_spoon
+      counter_spot_18: ab3_short_narrow_spoon
+      counter_spot_19: ab3_long_wide_spoon
+      counter_spot_20: ab3_long_narrow_fork
+    container_contents:
+      D1: [ab3_partial_spoon]
+      D2: [ab3_long_narrow_spoon]
+      C2: [plate, gso_canister_distractor]
+      B1: [tea_box]
+      C1: [glass]
+    required_objects: []
+    substitution_map: {}
+    optimal_search_order: [D1, D2]
+    optimal_inspections: 2
+    notes: >
+      Four target containers and four initial tools create a target-specific
+      compatibility counterexample. More spoon labels appear in D1, but the
+      first spoon that independently covers both coffee targets is observed
+      only after D2.
+
+  S1_ablation3_multi_target_initial_complete:
+    goal: "Prepare coffee and soup for two people with target-specific spoon assignment"
+    countertop_objects:
+      counter_spot_13: ab3_narrow_deep_cup
+      counter_spot_14: ab3_medium_deep_mug
+      counter_spot_15: ab3_shallow_bowl
+      counter_spot_16: ab3_deep_bowl
+      counter_spot_17: ab3_medium_spoon
+      counter_spot_18: ab3_short_narrow_spoon
+      counter_spot_19: ab3_long_wide_spoon
+      counter_spot_20: ab3_long_narrow_spoon
+    container_contents:
+      D1: [ab3_partial_spoon]
+      D2: [napkin]
+      C2: [plate, gso_canister_distractor]
+      B1: [tea_box]
+      C1: [glass]
+    required_objects: []
+    substitution_map: {}
+    optimal_search_order: []
+    optimal_inspections: 0
+    notes: >
+      The long narrow spoon is visible initially, so production must complete
+      at stage zero without opening a region.
+
+  S1_ablation3_multi_target_exhaustion:
+    goal: "Prepare coffee and soup for two people without a globally compatible coffee spoon"
+    countertop_objects:
+      counter_spot_13: ab3_narrow_deep_cup
+      counter_spot_14: ab3_medium_deep_mug
+      counter_spot_15: ab3_shallow_bowl
+      counter_spot_16: ab3_deep_bowl
+      counter_spot_17: ab3_medium_spoon
+      counter_spot_18: ab3_short_narrow_spoon
+      counter_spot_19: ab3_long_wide_spoon
+      counter_spot_20: ab3_long_narrow_fork
+    container_contents:
+      D1: [ab3_partial_spoon]
+      D2: [ab3_medium_spoon]
+      C2: [plate, gso_canister_distractor]
+      B1: [tea_box]
+      C1: [glass]
+    required_objects: []
+    substitution_map: {}
+    optimal_search_order: [D1, D2, C2, B1, C1]
+    optimal_inspections: 5
+    notes: >
+      Several spoons are individually useful, but no spoon covers both coffee
+      targets. The complete fixed inspection order must be exhausted without
+      a fabricated witness.
+
+  # ========================================
+  # ABLATION 2: FUNCTION-SCOPED TOOL REUSE
+  # ========================================
+
+  S1_ablation2_count_reuse_primary:
+    goal: "Prepare coffee and soup for two people with function-aware utensil reuse"
+    countertop_objects:
+      counter_spot_7: cup
+      counter_spot_8: cup
+      counter_spot_9: mixing_bowl
+      counter_spot_10: mixing_bowl
+      counter_spot_11: spoon
+    container_contents:
+      D1: [oversized_spoon]
+      D2: [fork]
+      C2: [plate, gso_canister_distractor]
+      B1: [tea_box]
+      C1: [mug, glass]
+    required_objects: []
+    substitution_map: {}
+    optimal_search_order: [D1, D2]
+    optimal_inspections: 2
+    notes: >
+      Ablation 2 primary scene. One utensil can sequentially stir both cups,
+      while the two bowls require two distinct compatible utensils. The D1
+      oversized spoon is semantically eligible but geometrically invalid;
+      the D2 fork completes the dedicated matching.
+
+  S1_ablation2_coffee_reuse:
+    goal: "Stir two coffees using one sequentially reusable utensil"
+    countertop_objects:
+      counter_spot_7: cup
+      counter_spot_8: cup
+      counter_spot_11: spoon
+    container_contents:
+      D1: [knife]
+      D2: [tongs]
+      C2: [plate, gso_canister_distractor]
+      B1: [tea_box]
+      C1: [mug, glass]
+    required_objects: []
+    substitution_map: {}
+    optimal_search_order: []
+    optimal_inspections: 0
+    notes: >
+      One valid utensil must cover two coffee target slots at INITIAL.
+      Requiring a distinct utensil per slot is the diagnostic false negative.
+
+  S1_ablation2_soup_dedicated:
+    goal: "Provide one dedicated valid utensil for each of two soup bowls"
+    countertop_objects:
+      counter_spot_9: mixing_bowl
+      counter_spot_10: mixing_bowl
+      counter_spot_11: spoon
+    container_contents:
+      D1: [oversized_spoon]
+      D2: [fork]
+      C2: [plate, gso_canister_distractor]
+      B1: [tea_box]
+      C1: [mug, glass]
+    required_objects: []
+    substitution_map: {}
+    optimal_search_order: [D1, D2]
+    optimal_inspections: 2
+    notes: >
+      Unrestricted reuse is a false positive at INITIAL. Production requires
+      the separately observed D2 fork and completes only after D2.
+
+  S1_ablation2_count_reuse_exhaustion:
+    goal: "Prepare coffee and soup for two people with no second valid utensil"
+    countertop_objects:
+      counter_spot_7: cup
+      counter_spot_8: cup
+      counter_spot_9: mixing_bowl
+      counter_spot_10: mixing_bowl
+      counter_spot_11: spoon
+    container_contents:
+      D1: [oversized_spoon]
+      D2: [napkin]
+      C2: [plate, gso_canister_distractor]
+      B1: [tea_box]
+      C1: [mug, glass]
+    required_objects: []
+    substitution_map: {}
+    optimal_search_order: [D1, D2, C2, B1, C1]
+    optimal_inspections: 5
+    notes: >
+      Only one valid utensil exists. Coffee reuse can succeed, but the soup
+      dedicated-per-target requirement exhausts the fixed inspection order.
+
+  # ========================================
+  # JOINT SEMANTIC–GEOMETRIC GROUNDING
+  # ========================================
+
+  S1_joint_stir_counterexamples:
+    goal: "Find a suitable tool for stirring the contents of the bowl"
+    countertop_objects:
+      counter_spot_2: mixing_bowl
+      counter_spot_4: marker
+    container_contents:
+      D1: [oversized_spoon]
+      D2: [fork]
+      C2: [plate, gso_canister_distractor]
+      B1: [tea_box]
+      C1: [mug, glass]
+    required_objects: []
+    substitution_map: {}
+    optimal_search_order: [D1, D2]
+    optimal_inspections: 2
+    notes: >
+      Joint-grounding primary scene. The initially visible marker is a
+      geometry-only false positive. The D1 spoon is a semantic-only false
+      positive because its measured cross-section is too large for the bowl.
+      The normal D2 fork is the intended lower-ranked valid alternative.
+
+  S1_joint_stir_initial_preference:
+    goal: "Find a suitable tool for stirring the contents of the bowl"
+    countertop_objects:
+      counter_spot_1: mixing_bowl
+      counter_spot_3: spoon
+      counter_spot_5: fork
+    container_contents:
+      D1: [knife]
+      D2: [tongs]
+      C2: [plate, gso_canister_distractor]
+      B1: [tea_box]
+      C1: [mug, glass]
+    required_objects: []
+    substitution_map: {}
+    optimal_search_order: []
+    optimal_inspections: 0
+    notes: >
+      Both initially visible tools are geometrically valid. Ranked joint
+      grounding must select the spoon and open no region.
+
+  S1_joint_stir_exhaustion:
+    goal: "Find a suitable tool for stirring the contents of the bowl"
+    countertop_objects:
+      counter_spot_2: mixing_bowl
+      counter_spot_4: marker
+    container_contents:
+      D1: [oversized_spoon]
+      D2: [knife]
+      C2: [plate, gso_canister_distractor]
+      B1: [tea_box]
+      C1: [mug, glass]
+    required_objects: []
+    substitution_map: {}
+    optimal_search_order: [D1, D2, C2, B1, C1]
+    optimal_inspections: 5
+    notes: >
+      Evaluation-only exhaustion variant. No object jointly satisfies the
+      mixing-tool role, so the complete fixed sequence must be inspected.
+
   # ========================================
   # TIER 1: SINGLE MISSING OBJECT
   # ========================================

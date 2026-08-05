@@ -78,7 +78,7 @@
     <!--                    CABINET C1 (Upper Left)                       -->
     <!--   Hinged door cabinet — typically mugs, glasses, drinkware       -->
     <!-- ================================================================ -->
-    <body name="cabinet_C1" pos="-0.35 0.35 0.96">
+    <body name="cabinet_C1" pos="-0.35 0.65 0.96">
       <!-- Cabinet shell (back + sides + top + bottom) -->
       <geom name="C1_back" type="box" size="0.21 0.005 0.21" pos="0 0.16 0"
             material="mat_cabinet" mass="2"/>
@@ -100,9 +100,16 @@
                range="0 1.57" pos="0 0 0" damping="0.3"/>
         <geom name="C1_door_panel" type="box" size="0.21 0.008 0.208"
               pos="-0.21 0 0" material="mat_cabinet"/>
-        <!-- Door handle -->
-        <geom name="C1_handle" type="cylinder" size="0.008 0.03"
-              pos="-0.39 -0.02 0" euler="1.57 0 0" material="mat_metal"/>
+        <!-- Compact robot-facing U handle, matching the box-lid handle. -->
+        <geom name="C1_handle_left" type="capsule" size="0.007"
+              fromto="-0.355 -0.012 0.13 -0.355 -0.062 0.13"
+              material="mat_metal"/>
+        <geom name="C1_handle_right" type="capsule" size="0.007"
+              fromto="-0.265 -0.012 0.13 -0.265 -0.062 0.13"
+              material="mat_metal"/>
+        <geom name="C1_handle_bar" type="capsule" size="0.008"
+              fromto="-0.355 -0.062 0.13 -0.265 -0.062 0.13"
+              material="mat_metal"/>
       </body>
 
       <!-- Site for placing objects inside -->
@@ -114,7 +121,7 @@
     <!--                   CABINET C2 (Upper Right)                       -->
     <!--   Hinged door cabinet — plates, bowls, pantry items              -->
     <!-- ================================================================ -->
-    <body name="cabinet_C2" pos="0.35 0.35 0.96">
+    <body name="cabinet_C2" pos="0.35 0.65 0.96">
       <!-- Cabinet shell -->
       <geom name="C2_back" type="box" size="0.21 0.005 0.21" pos="0 0.16 0"
             material="mat_cabinet" mass="2"/>
@@ -135,8 +142,15 @@
                range="0 1.57" pos="0 0 0" damping="0.3"/>
         <geom name="C2_door_panel" type="box" size="0.21 0.008 0.208"
               pos="0.21 0 0" material="mat_cabinet"/>
-        <geom name="C2_handle" type="cylinder" size="0.008 0.03"
-              pos="0.39 -0.02 0" euler="1.57 0 0" material="mat_metal"/>
+        <geom name="C2_handle_left" type="capsule" size="0.007"
+              fromto="0.265 -0.012 0.13 0.265 -0.062 0.13"
+              material="mat_metal"/>
+        <geom name="C2_handle_right" type="capsule" size="0.007"
+              fromto="0.355 -0.012 0.13 0.355 -0.062 0.13"
+              material="mat_metal"/>
+        <geom name="C2_handle_bar" type="capsule" size="0.008"
+              fromto="0.265 -0.062 0.13 0.355 -0.062 0.13"
+              material="mat_metal"/>
       </body>
 
       <site name="C2_interior" pos="0 0 -0.12" size="0.18 0.14 0.01" type="box"
@@ -147,7 +161,7 @@
     <!--                    DRAWER D1 (Lower Left)                        -->
     <!--   Sliding drawer — utensils: spoons, forks, knives               -->
     <!-- ================================================================ -->
-    <body name="drawer_D1_frame" pos="-0.44 -0.30 0.36">
+    <body name="drawer_D1_frame" pos="-0.44 -0.30 0.46">
       <!-- Enclosed carcass. The top prevents an overhead camera from seeing
            drawer contents before the tray has been pulled out. -->
       <geom name="D1_back" type="box" size="0.18 0.005 0.06" pos="0 0.14 0"
@@ -177,9 +191,15 @@
         <!-- Front face -->
         <geom name="D1_front" type="box" size="0.185 0.008 0.065"
               pos="0 -0.14 0" material="mat_cabinet"/>
-        <!-- Handle -->
-        <geom name="D1_handle" type="box" size="0.04 0.01 0.008"
-              pos="0 -0.16 0" material="mat_metal"/>
+        <!-- Centered, level U-handle facing the robot at Home. -->
+        <geom name="D1_handle_left" type="capsule" size="0.007"
+              fromto="-0.075 -0.148 0 -0.075 -0.205 0" material="mat_metal"/>
+        <geom name="D1_handle_right" type="capsule" size="0.007"
+              fromto="0.075 -0.148 0 0.075 -0.205 0" material="mat_metal"/>
+        <geom name="D1_handle_bar" type="capsule" size="0.008"
+              fromto="-0.075 -0.205 0 0.075 -0.205 0" material="mat_metal"/>
+        <site name="D1_handle_grasp" pos="0 -0.205 0"
+              size="0.012" rgba="0 0 0 0" group="5"/>
 
         <site name="D1_interior" pos="0 0 -0.04" size="0.15 0.10 0.01" type="box"
               rgba="0 0 1 0.1" group="4"/>
@@ -190,7 +210,7 @@
     <!--                   DRAWER D2 (Lower Right)                        -->
     <!--   Sliding drawer — tools: tongs, spatula, misc                   -->
     <!-- ================================================================ -->
-    <body name="drawer_D2_frame" pos="0.44 -0.30 0.36">
+    <body name="drawer_D2_frame" pos="0.44 -0.30 0.46">
       <geom name="D2_back" type="box" size="0.18 0.005 0.06" pos="0 0.14 0"
             material="mat_wood" mass="2"/>
       <geom name="D2_left" type="box" size="0.005 0.14 0.06" pos="-0.18 0 0"
@@ -215,8 +235,15 @@
               pos="0 0.126 -0.025" material="mat_wood"/>
         <geom name="D2_front" type="box" size="0.185 0.008 0.065"
               pos="0 -0.14 0" material="mat_cabinet"/>
-        <geom name="D2_handle" type="box" size="0.04 0.01 0.008"
-              pos="0 -0.16 0" material="mat_metal"/>
+        <!-- Identical centered, level U-handle facing the robot at Home. -->
+        <geom name="D2_handle_left" type="capsule" size="0.007"
+              fromto="-0.075 -0.148 0 -0.075 -0.205 0" material="mat_metal"/>
+        <geom name="D2_handle_right" type="capsule" size="0.007"
+              fromto="0.075 -0.148 0 0.075 -0.205 0" material="mat_metal"/>
+        <geom name="D2_handle_bar" type="capsule" size="0.008"
+              fromto="-0.075 -0.205 0 0.075 -0.205 0" material="mat_metal"/>
+        <site name="D2_handle_grasp" pos="0 -0.205 0"
+              size="0.012" rgba="0 0 0 0" group="5"/>
 
         <site name="D2_interior" pos="0 0 -0.04" size="0.15 0.10 0.01" type="box"
               rgba="0 0 1 0.1" group="4"/>
@@ -227,7 +254,7 @@
     <!--                   BOX B1 (Countertop, Far Right)                 -->
     <!--   Lidded box — tea bags, condiments, small items                 -->
     <!-- ================================================================ -->
-    <body name="box_B1" pos="0.52 0.06 0.58">
+    <body name="box_B1" pos="0.52 0.18 0.58">
       <!-- Box base & walls -->
       <geom name="B1_base" type="box" size="0.175 0.09 0.003" pos="0 0 0"
             material="mat_cardboard" mass="0.3"/>
@@ -347,8 +374,8 @@
   <actuator>
     <position name="C1_door_actuator" joint="C1_door_joint" kp="5" ctrlrange="0 1.57"/>
     <position name="C2_door_actuator" joint="C2_door_joint" kp="5" ctrlrange="0 1.57"/>
-    <position name="D1_slide_actuator" joint="D1_slide_joint" kp="5" ctrlrange="0 0.25"/>
-    <position name="D2_slide_actuator" joint="D2_slide_joint" kp="5" ctrlrange="0 0.25"/>
-    <position name="B1_lid_actuator" joint="B1_lid_joint" kp="10" ctrlrange="0 2.0"/>
+    <position name="D1_slide_actuator" joint="D1_slide_joint" kp="10000" ctrlrange="0 0.25"/>
+    <position name="D2_slide_actuator" joint="D2_slide_joint" kp="10000" ctrlrange="0 0.25"/>
+    <position name="B1_lid_actuator" joint="B1_lid_joint" kp="30" ctrlrange="0 2.0"/>
   </actuator>
 </mujoco>

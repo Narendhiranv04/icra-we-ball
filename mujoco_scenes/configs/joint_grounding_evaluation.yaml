@@ -1,0 +1,57 @@
+schema_version: 1
+purpose: OFFLINE_EVALUATION_ONLY
+runtime_import_forbidden: true
+
+scenes:
+  S1_joint_stir_counterexamples:
+    ground_truth:
+      status: COMPLETE
+      selected_labels:
+        mixing_container: bowl
+        mixing_tool: fork
+      incorrect_selection_reasons:
+        geometry-only: >-
+          The marker-like object is geometrically compatible but is not a
+          semantically acceptable mixing tool.
+        semantic-only: >-
+          The oversized spoon has the preferred label but its measured
+          cross-section fails INSERTABLE_IN for the measured bowl opening.
+    expected:
+      joint:
+        completion_stage: 2
+        selected_labels:
+          mixing_container: bowl
+          mixing_tool: fork
+      geometry-only:
+        completion_stage: 0
+        selected_labels:
+          mixing_container: bowl
+          # The physical asset is YCB 040_large_marker; the pretrained
+          # detector consistently calls its rendered appearance "pen".
+          mixing_tool: pen
+      semantic-only:
+        completion_stage: 1
+        selected_labels:
+          mixing_container: bowl
+          mixing_tool: spoon
+
+  S1_joint_stir_initial_preference:
+    ground_truth:
+      status: COMPLETE
+      selected_labels:
+        mixing_container: bowl
+        mixing_tool: spoon
+    expected:
+      joint:
+        completion_stage: 0
+        selected_labels:
+          mixing_container: bowl
+          mixing_tool: spoon
+
+  S1_joint_stir_exhaustion:
+    ground_truth:
+      status: EXHAUSTED
+      selected_labels: {}
+    expected:
+      joint:
+        status: EXHAUSTED

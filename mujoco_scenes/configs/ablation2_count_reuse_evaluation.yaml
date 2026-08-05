@@ -1,0 +1,27 @@
+schema_version: 1
+purpose: OFFLINE_EVALUATION_ONLY
+runtime_import_forbidden: true
+task_id: prepare_two_coffees_and_soups
+scene_name: S1_ablation2_count_reuse_primary
+expected:
+  function-aware:
+    status: COMPLETE
+    completion_stage: 2
+    completion_region: D2
+    distinct_physical_tool_count: 2
+  always-reusable:
+    status: COMPLETE
+    completion_stage: 0
+    intentionally_incorrect: true
+    failure_kind: false_positive
+  always-distinct:
+    status: EXHAUSTED
+    policy_required_distinct_physical_tool_count: 4
+    intentionally_incorrect: true
+    failure_kind: false_negative
+ground_truth:
+  correct_mode: function-aware
+  completion_stage: 2
+  completion_region: D2
+  distinct_physical_tool_count: 2
+ground_truth_scope: offline_evaluation_only

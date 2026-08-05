@@ -42,21 +42,6 @@ class ManipulationProfile:
 
 
 MOBILE_PROFILES = {
-    "fetch": MobileRobotProfile(
-        base_joints=(
-            "robot0:base_forward_joint",
-            "robot0:base_lateral_joint",
-            "robot0:base_yaw_joint",
-        ),
-        base_actuators=(
-            "robot0:base_forward_actuator",
-            "robot0:base_lateral_actuator",
-            "robot0:base_yaw_actuator",
-        ),
-        body_prefix="robot0:",
-        home_y=-1.10,
-        forward_limits=(-1.0, 1.0),
-    ),
     "google": MobileRobotProfile(
         base_joints=(
             "google:base_forward_joint",
