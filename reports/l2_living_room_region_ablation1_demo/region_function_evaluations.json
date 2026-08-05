@@ -1,0 +1,254 @@
+{
+  "region_0001": {
+    "FITS_ON": {
+      "edge_clearance_margin_m": 0.02,
+      "method": "region_payload_relations_v1",
+      "payload_length_m": 0.4155231733198542,
+      "payload_width_m": 0.2892059034208371,
+      "region_usable_length_m": 1.47208770446565,
+      "region_usable_width_m": 0.9759304430968281,
+      "relation": "FITS_ON",
+      "selected_orientation_degrees": 0,
+      "signed_fit_margin_m": 0.646724539675991,
+      "status": "TRUE",
+      "tested_orientations": [
+        {
+          "fits": true,
+          "length_margin_m": 1.0165645311457956,
+          "orientation_degrees": 0,
+          "signed_fit_margin_m": 0.646724539675991,
+          "width_margin_m": 0.646724539675991
+        },
+        {
+          "fits": true,
+          "length_margin_m": 1.1428818010448127,
+          "orientation_degrees": 90,
+          "signed_fit_margin_m": 0.5204072697769738,
+          "width_margin_m": 0.5204072697769738
+        }
+      ],
+      "value": true
+    },
+    "NEAR_SEATING_AREA": {
+      "maximum_distance_m": 1.65,
+      "measured_distance_m": 1.1437429705251887,
+      "method": "region_payload_relations_v1",
+      "point_count": 285565,
+      "region_centroid_world_m": [
+        -0.16890375316143036,
+        -0.17183271050453186,
+        0.02585052140057087
+      ],
+      "relation": "NEAR_SEATING_AREA",
+      "seating_centroid_world_m": [
+        -0.6253087520599365,
+        0.8769010305404663,
+        0.7036037445068359
+      ],
+      "signed_margin_m": 0.5062570294748112,
+      "status": "TRUE",
+      "value": true
+    },
+    "PLANAR_SUPPORT": {
+      "contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "extractor_version": "region_support_geometry_v1",
+      "measurement_cloud_path": "stages/000_initial_RUG_PATCH/region_evidence/fused.ply",
+      "method": "region_support_geometry_v1",
+      "point_count": 167865,
+      "source_region": "RUG_PATCH",
+      "source_stage": 0,
+      "status": "DERIVED",
+      "tri_state": "TRUE",
+      "value": true
+    },
+    "geometry_only_status": "TRUE",
+    "joint_status": "FALSE",
+    "rejection_reason": "REGION_REJECTED_SEMANTIC",
+    "seating_semantics": {
+      "canonical_label": "sofa",
+      "status": "TRUE",
+      "value": true
+    },
+    "semantic_only_status": "FALSE",
+    "semantic_role": {
+      "canonical_label": "rug",
+      "reason": "EXCLUDED_PARENT_CATEGORY",
+      "status": "FALSE",
+      "value": false
+    }
+  },
+  "region_0002": {
+    "FITS_ON": {
+      "edge_clearance_margin_m": 0.02,
+      "method": "region_payload_relations_v1",
+      "payload_length_m": 0.4155231733198542,
+      "payload_width_m": 0.2892059034208371,
+      "region_usable_length_m": 0.3036252402950103,
+      "region_usable_width_m": 0.26435127868427777,
+      "relation": "FITS_ON",
+      "selected_orientation_degrees": 0,
+      "signed_fit_margin_m": -0.15189793302484392,
+      "status": "FALSE",
+      "tested_orientations": [
+        {
+          "fits": false,
+          "length_margin_m": -0.15189793302484392,
+          "orientation_degrees": 0,
+          "signed_fit_margin_m": -0.15189793302484392,
+          "width_margin_m": -0.06485462473655931
+        },
+        {
+          "fits": false,
+          "length_margin_m": -0.025580663125826762,
+          "orientation_degrees": 90,
+          "signed_fit_margin_m": -0.19117189463557646,
+          "width_margin_m": -0.19117189463557646
+        }
+      ],
+      "value": false
+    },
+    "NEAR_SEATING_AREA": {
+      "maximum_distance_m": 1.65,
+      "measured_distance_m": 1.0338660807334261,
+      "method": "region_payload_relations_v1",
+      "point_count": 480087,
+      "region_centroid_world_m": [
+        -1.2793793082237244,
+        0.1925514116883278,
+        0.6064956188201904
+      ],
+      "relation": "NEAR_SEATING_AREA",
+      "seating_centroid_world_m": [
+        -0.6101183295249939,
+        0.9805671572685242,
+        0.7717553377151489
+      ],
+      "signed_margin_m": 0.6161339192665738,
+      "status": "TRUE",
+      "value": true
+    },
+    "PLANAR_SUPPORT": {
+      "contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "extractor_version": "region_support_geometry_v1",
+      "measurement_cloud_path": "stages/001_after_SMALL_SIDE_TABLE/region_evidence/fused.ply",
+      "method": "region_support_geometry_v1",
+      "point_count": 10076,
+      "source_region": "SMALL_SIDE_TABLE",
+      "source_stage": 1,
+      "status": "DERIVED",
+      "tri_state": "TRUE",
+      "value": true
+    },
+    "geometry_only_status": "FALSE",
+    "joint_status": "FALSE",
+    "rejection_reason": "REGION_REJECTED_FIT",
+    "seating_semantics": {
+      "canonical_label": "sofa",
+      "status": "TRUE",
+      "value": true
+    },
+    "semantic_only_status": "TRUE",
+    "semantic_role": {
+      "canonical_label": "side_table",
+      "semantic_rank": 2,
+      "status": "TRUE",
+      "value": true
+    }
+  },
+  "region_0003": {
+    "FITS_ON": {
+      "edge_clearance_margin_m": 0.02,
+      "method": "region_payload_relations_v1",
+      "payload_length_m": 0.4155231733198542,
+      "payload_width_m": 0.2892059034208371,
+      "region_usable_length_m": 0.6990467763490513,
+      "region_usable_width_m": 0.540652195029224,
+      "relation": "FITS_ON",
+      "selected_orientation_degrees": 0,
+      "signed_fit_margin_m": 0.21144629160838693,
+      "status": "TRUE",
+      "tested_orientations": [
+        {
+          "fits": true,
+          "length_margin_m": 0.2435236030291971,
+          "orientation_degrees": 0,
+          "signed_fit_margin_m": 0.21144629160838693,
+          "width_margin_m": 0.21144629160838693
+        },
+        {
+          "fits": true,
+          "length_margin_m": 0.36984087292821427,
+          "orientation_degrees": 90,
+          "signed_fit_margin_m": 0.08512902170936978,
+          "width_margin_m": 0.08512902170936978
+        }
+      ],
+      "value": true
+    },
+    "NEAR_SEATING_AREA": {
+      "maximum_distance_m": 1.65,
+      "measured_distance_m": 1.206224436313378,
+      "method": "region_payload_relations_v1",
+      "point_count": 344492,
+      "region_centroid_world_m": [
+        0.425124928355217,
+        0.19378558546304703,
+        0.5216467380523682
+      ],
+      "relation": "NEAR_SEATING_AREA",
+      "seating_centroid_world_m": [
+        -0.5184408724308014,
+        0.9452248513698578,
+        0.7089325189590454
+      ],
+      "signed_margin_m": 0.44377556368662185,
+      "status": "TRUE",
+      "value": true
+    },
+    "PLANAR_SUPPORT": {
+      "contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "extractor_version": "region_support_geometry_v1",
+      "measurement_cloud_path": "stages/002_after_COFFEE_TABLE/region_evidence/fused.ply",
+      "method": "region_support_geometry_v1",
+      "point_count": 45090,
+      "source_region": "COFFEE_TABLE",
+      "source_stage": 2,
+      "status": "DERIVED",
+      "tri_state": "TRUE",
+      "value": true
+    },
+    "geometry_only_status": "TRUE",
+    "joint_status": "TRUE",
+    "rejection_reason": null,
+    "seating_semantics": {
+      "canonical_label": "sofa",
+      "status": "TRUE",
+      "value": true
+    },
+    "semantic_only_status": "TRUE",
+    "semantic_role": {
+      "canonical_label": "coffee_table",
+      "semantic_rank": 1,
+      "status": "TRUE",
+      "value": true
+    }
+  }
+}

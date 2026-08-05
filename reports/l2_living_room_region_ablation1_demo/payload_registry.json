@@ -1,0 +1,185 @@
+{
+  "objects": {
+    "object_0001": {
+      "geometric_properties": {
+        "footprint_area_m2": {
+          "contributing_camera_ids": [
+            "inspection_close",
+            "inspection_front",
+            "inspection_left",
+            "inspection_right",
+            "inspection_top"
+          ],
+          "extractor_version": "payload_robust_horizontal_obb_v1",
+          "measurement_cloud_path": "stages/000_initial_RUG_PATCH/payload_evidence/fused.ply",
+          "method": "payload_robust_horizontal_obb_v1",
+          "point_count": 19444,
+          "source_stage": 0,
+          "status": "DERIVED",
+          "unit": "m2",
+          "value": 0.12017175473226151
+        },
+        "footprint_length_m": {
+          "contributing_camera_ids": [
+            "inspection_close",
+            "inspection_front",
+            "inspection_left",
+            "inspection_right",
+            "inspection_top"
+          ],
+          "extractor_version": "payload_robust_horizontal_obb_v1",
+          "measurement_cloud_path": "stages/000_initial_RUG_PATCH/payload_evidence/fused.ply",
+          "method": "payload_robust_horizontal_obb_v1",
+          "point_count": 19444,
+          "source_stage": 0,
+          "status": "MEASURED",
+          "unit": "m",
+          "value": 0.4155231733198542
+        },
+        "footprint_width_m": {
+          "contributing_camera_ids": [
+            "inspection_close",
+            "inspection_front",
+            "inspection_left",
+            "inspection_right",
+            "inspection_top"
+          ],
+          "extractor_version": "payload_robust_horizontal_obb_v1",
+          "measurement_cloud_path": "stages/000_initial_RUG_PATCH/payload_evidence/fused.ply",
+          "method": "payload_robust_horizontal_obb_v1",
+          "point_count": 19444,
+          "source_stage": 0,
+          "status": "MEASURED",
+          "unit": "m",
+          "value": 0.2892059034208371
+        },
+        "measurement_quality": {
+          "cloud_purpose": "PAYLOAD_MEASUREMENT_EVIDENCE",
+          "contributing_camera_count": 5,
+          "point_count": 19444,
+          "quality_is_valid": true
+        },
+        "principal_orientation_world": {
+          "contributing_camera_ids": [
+            "inspection_close",
+            "inspection_front",
+            "inspection_left",
+            "inspection_right",
+            "inspection_top"
+          ],
+          "extractor_version": "payload_robust_horizontal_obb_v1",
+          "measurement_cloud_path": "stages/000_initial_RUG_PATCH/payload_evidence/fused.ply",
+          "method": "payload_robust_horizontal_obb_v1",
+          "point_count": 19444,
+          "source_stage": 0,
+          "status": "MEASURED",
+          "value": [
+            -0.9965062176531646,
+            -0.0835186097740122,
+            0.0
+          ]
+        },
+        "property_status": "MEASURED"
+      },
+      "identity": {
+        "discovery_stage": 0,
+        "entity_type": "payload",
+        "object_id": "object_0001"
+      },
+      "provenance": {
+        "measurement_cloud_path": "stages/000_initial_RUG_PATCH/payload_evidence/fused.ply",
+        "measurement_purpose": "PAYLOAD_MEASUREMENT_EVIDENCE"
+      },
+      "semantic_context": {
+        "alternatives": [
+          {
+            "camera_ids": [
+              "inspection_front",
+              "inspection_right"
+            ],
+            "label": "serving_tray",
+            "mean_confidence": 0.04092917591333389,
+            "supporting_view_count": 2,
+            "weighted_score": 0.07420994839221988
+          }
+        ],
+        "canonical_label": "serving_tray",
+        "confidence": 0.04092917591333389,
+        "observations": [
+          {
+            "association_metrics": {
+              "box_fraction": 0.8234735993168556,
+              "intersection_pixels": 69432,
+              "mask_fraction": 1.0,
+              "score": 0.9382157597608994
+            },
+            "detection": {
+              "bbox_xyxy": [
+                852.1327514648438,
+                763.5157470703125,
+                1280.0,
+                960.0
+              ],
+              "canonical_label": "serving_tray",
+              "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.041675616055727005,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "serving tray",
+              "source_camera": "inspection_right"
+            },
+            "target": "payload",
+            "weighted_score": 0.03910071978122745
+          },
+          {
+            "association_metrics": {
+              "box_fraction": 0.6392546583850932,
+              "intersection_pixels": 23157,
+              "mask_fraction": 1.0,
+              "score": 0.8737391304347826
+            },
+            "detection": {
+              "bbox_xyxy": [
+                1119.718505859375,
+                735.87109375,
+                1280.0,
+                959.6912841796875
+              ],
+              "canonical_label": "serving_tray",
+              "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.04018273577094078,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "serving tray",
+              "source_camera": "inspection_front"
+            },
+            "target": "payload",
+            "weighted_score": 0.03510922861099243
+          }
+        ],
+        "status": "SUPPORTED",
+        "supporting_view_count": 2,
+        "weighted_score_margin": 0.07420994839221988
+      }
+    }
+  },
+  "schema_version": 1
+}

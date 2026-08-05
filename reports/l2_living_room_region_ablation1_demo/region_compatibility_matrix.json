@@ -1,0 +1,153 @@
+{
+  "rows": [
+    {
+      "FITS_ON": "TRUE",
+      "NEAR_SEATING_AREA": "TRUE",
+      "PLANAR_SUPPORT": "TRUE",
+      "candidate_rank": 1,
+      "discovery_stage": 0,
+      "fit_margin_m": 0.646724539675991,
+      "geometry_only_status": "TRUE",
+      "joint_status": "FALSE",
+      "near_sofa_margin_m": 0.5062570294748112,
+      "parent_semantic_label": "rug",
+      "payload_length_m": 0.4155231733198542,
+      "payload_width_m": 0.2892059034208371,
+      "planarity_score": 0.9912591494393416,
+      "region_evidence_path": "stages/000_initial_RUG_PATCH/region_evidence/fused.ply",
+      "region_id": "region_0001",
+      "rejection_reason": "REGION_REJECTED_SEMANTIC",
+      "selected_orientation_degrees": 0,
+      "semantic_confidence": 0.8825575828552246,
+      "semantic_evidence_path": "stages/000_initial_RUG_PATCH/semantic_overview.png",
+      "semantic_only_status": "FALSE",
+      "semantic_role_status": "FALSE",
+      "semantic_supporting_views": 5,
+      "sofa_distance_m": 1.1437429705251887,
+      "support_area_m2": 1.4366552056965542,
+      "support_length_m": 1.47208770446565,
+      "support_normal_world": [
+        -0.000331932789383084,
+        0.0010438183987447024,
+        0.999999400131707
+      ],
+      "support_width_m": 0.9759304430968281,
+      "tested_orientations": [
+        {
+          "fits": true,
+          "length_margin_m": 1.0165645311457956,
+          "orientation_degrees": 0,
+          "signed_fit_margin_m": 0.646724539675991,
+          "width_margin_m": 0.646724539675991
+        },
+        {
+          "fits": true,
+          "length_margin_m": 1.1428818010448127,
+          "orientation_degrees": 90,
+          "signed_fit_margin_m": 0.5204072697769738,
+          "width_margin_m": 0.5204072697769738
+        }
+      ]
+    },
+    {
+      "FITS_ON": "FALSE",
+      "NEAR_SEATING_AREA": "TRUE",
+      "PLANAR_SUPPORT": "TRUE",
+      "candidate_rank": 2,
+      "discovery_stage": 1,
+      "fit_margin_m": -0.15189793302484392,
+      "geometry_only_status": "FALSE",
+      "joint_status": "FALSE",
+      "near_sofa_margin_m": 0.6161339192665738,
+      "parent_semantic_label": "side_table",
+      "payload_length_m": 0.4155231733198542,
+      "payload_width_m": 0.2892059034208371,
+      "planarity_score": 0.9769751538906002,
+      "region_evidence_path": "stages/001_after_SMALL_SIDE_TABLE/region_evidence/fused.ply",
+      "region_id": "region_0002",
+      "rejection_reason": "REGION_REJECTED_FIT",
+      "selected_orientation_degrees": 0,
+      "semantic_confidence": 0.6259363114833831,
+      "semantic_evidence_path": "stages/001_after_SMALL_SIDE_TABLE/semantic_overview.png",
+      "semantic_only_status": "TRUE",
+      "semantic_role_status": "TRUE",
+      "semantic_supporting_views": 5,
+      "sofa_distance_m": 1.0338660807334261,
+      "support_area_m2": 0.08026372051280707,
+      "support_length_m": 0.3036252402950103,
+      "support_normal_world": [
+        0.001020396783634702,
+        -0.004874141345896366,
+        0.9999876006914005
+      ],
+      "support_width_m": 0.26435127868427777,
+      "tested_orientations": [
+        {
+          "fits": false,
+          "length_margin_m": -0.15189793302484392,
+          "orientation_degrees": 0,
+          "signed_fit_margin_m": -0.15189793302484392,
+          "width_margin_m": -0.06485462473655931
+        },
+        {
+          "fits": false,
+          "length_margin_m": -0.025580663125826762,
+          "orientation_degrees": 90,
+          "signed_fit_margin_m": -0.19117189463557646,
+          "width_margin_m": -0.19117189463557646
+        }
+      ]
+    },
+    {
+      "FITS_ON": "TRUE",
+      "NEAR_SEATING_AREA": "TRUE",
+      "PLANAR_SUPPORT": "TRUE",
+      "candidate_rank": 3,
+      "discovery_stage": 2,
+      "fit_margin_m": 0.21144629160838693,
+      "geometry_only_status": "TRUE",
+      "joint_status": "TRUE",
+      "near_sofa_margin_m": 0.44377556368662185,
+      "parent_semantic_label": "coffee_table",
+      "payload_length_m": 0.4155231733198542,
+      "payload_width_m": 0.2892059034208371,
+      "planarity_score": 0.998806375117612,
+      "region_evidence_path": "stages/002_after_COFFEE_TABLE/region_evidence/fused.ply",
+      "region_id": "region_0003",
+      "rejection_reason": null,
+      "selected_orientation_degrees": 0,
+      "semantic_confidence": 0.7534128278493881,
+      "semantic_evidence_path": "stages/002_after_COFFEE_TABLE/semantic_overview.png",
+      "semantic_only_status": "TRUE",
+      "semantic_role_status": "TRUE",
+      "semantic_supporting_views": 4,
+      "sofa_distance_m": 1.206224436313378,
+      "support_area_m2": 0.37794117406121763,
+      "support_length_m": 0.6990467763490513,
+      "support_normal_world": [
+        0.00010392292434123861,
+        -0.0015296076825168457,
+        0.9999988247494911
+      ],
+      "support_width_m": 0.540652195029224,
+      "tested_orientations": [
+        {
+          "fits": true,
+          "length_margin_m": 0.2435236030291971,
+          "orientation_degrees": 0,
+          "signed_fit_margin_m": 0.21144629160838693,
+          "width_margin_m": 0.21144629160838693
+        },
+        {
+          "fits": true,
+          "length_margin_m": 0.36984087292821427,
+          "orientation_degrees": 90,
+          "signed_fit_margin_m": 0.08512902170936978,
+          "width_margin_m": 0.08512902170936978
+        }
+      ]
+    }
+  ],
+  "schema_version": 1,
+  "task_id": "l2_place_refreshment_tray_region_grounding"
+}

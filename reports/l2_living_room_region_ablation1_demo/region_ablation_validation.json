@@ -1,0 +1,37 @@
+{
+  "checks": [
+    {
+      "expected_completion_stage": 0,
+      "expected_inspection_label": "RUG_PATCH",
+      "expected_status": "COMPLETE",
+      "mode": "geometry_only",
+      "observed_completion_stage": 0,
+      "observed_inspection_label": "RUG_PATCH",
+      "observed_status": "COMPLETE",
+      "passed": true
+    },
+    {
+      "expected_completion_stage": 1,
+      "expected_inspection_label": "SMALL_SIDE_TABLE",
+      "expected_status": "COMPLETE",
+      "mode": "semantic_only",
+      "observed_completion_stage": 1,
+      "observed_inspection_label": "SMALL_SIDE_TABLE",
+      "observed_status": "COMPLETE",
+      "passed": true
+    },
+    {
+      "expected_completion_stage": 2,
+      "expected_inspection_label": "COFFEE_TABLE",
+      "expected_status": "COMPLETE",
+      "mode": "joint",
+      "observed_completion_stage": 2,
+      "observed_inspection_label": "COFFEE_TABLE",
+      "observed_status": "COMPLETE",
+      "passed": true
+    }
+  ],
+  "passed": true,
+  "scene_name": "L2_living_room_region_ablation1_primary",
+  "schema_version": 1
+}

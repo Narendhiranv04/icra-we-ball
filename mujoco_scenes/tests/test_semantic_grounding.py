@@ -4,6 +4,7 @@ import numpy as np
 
 from mujoco_scenes.semantic_grounding import (
     Detection,
+    _largest_mask_component,
     _process_isolation_requested,
     associate_detections_to_masks,
     detector_vocabulary,
@@ -144,6 +145,27 @@ def test_multiple_same_category_detections_are_not_collapsed():
     } == {"object_0001", "object_0002"}
 
 
+def test_duplicate_proposal_cannot_fall_through_to_neighbouring_mask():
+    target = np.zeros((100, 100), bool)
+    neighbour = np.zeros((100, 100), bool)
+    target[20:50, 20:50] = True
+    neighbour[20:50, 45:75] = True
+    result = associate_detections_to_masks(
+        [
+            _detection("mug", (18, 18, 52, 52), confidence=0.9),
+            _detection("mug", (19, 19, 53, 53), confidence=0.8),
+        ],
+        {
+            "object_0001": target,
+            "object_0002": neighbour,
+        },
+        _config(),
+    )
+    assert len(result["accepted"]) == 1
+    assert result["accepted"][0]["object_id"] == "object_0001"
+    assert "object_0002" in result["unmatched_object_ids"]
+
+
 def test_mask_crop_preference_resolves_close_same_mask_proposals():
     mask = np.zeros((100, 100), bool)
     mask[20:50, 30:60] = True
@@ -166,6 +188,50 @@ def test_mask_crop_preference_resolves_close_same_mask_proposals():
     accepted = result["accepted"][0]
     assert accepted["detection"]["canonical_label"] == "spoon"
     assert accepted["input_kind_multiplier"] == 1.5
+
+
+def test_mask_crop_detection_cannot_be_reassigned_to_neighbouring_object():
+    source_mask = np.zeros((100, 100), bool)
+    neighbour_mask = np.zeros((100, 100), bool)
+    source_mask[20:50, 20:50] = True
+    neighbour_mask[20:50, 45:75] = True
+    detection = Detection(
+        raw_label="mug",
+        canonical_label="mug",
+        confidence=0.9,
+        bbox_xyxy=(44, 19, 76, 51),
+        source_camera="inspection_left",
+        input_kind="MASK_BOUNDED_RGB_CROP",
+        crop_source_object_id="object_0001",
+    )
+    result = associate_detections_to_masks(
+        [detection],
+        {
+            "object_0001": source_mask,
+            "object_0002": neighbour_mask,
+        },
+        _config(),
+    )
+    assert all(
+        record["object_id"] != "object_0002"
+        for record in result["accepted"]
+    )
+    assert all(
+        record["object_id"] != "object_0002"
+        for record in result["rejected"]
+    )
+
+
+def test_semantic_mask_cleanup_removes_disconnected_segmentation_speckles():
+    mask = np.zeros((80, 100), bool)
+    mask[20:40, 30:60] = True
+    mask[2, 95] = True
+    mask[70, 3:6] = True
+    cleaned = _largest_mask_component(mask)
+    assert np.count_nonzero(cleaned) == 600
+    assert cleaned[20:40, 30:60].all()
+    assert not cleaned[2, 95]
+    assert not cleaned[70, 3]
 
 
 def test_no_detection_fuses_to_unknown_not_false():

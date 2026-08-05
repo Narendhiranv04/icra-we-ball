@@ -205,3 +205,24 @@ FM parsing, robot manipulation, action planning, or TAMP execution occurs.
 See the integrated benchmark section in
 [mujoco_scenes/README.md](mujoco_scenes/README.md) for exact local/Docker
 commands, scene variants, measured progression, outputs, and limitations.
+
+## Living-room region-functional grounding
+
+The separate L2 benchmark grounds a destination region for the exact goal
+“Place the refreshment tray on a suitable living-room surface within easy
+reach of the sofa.” It demonstrates, from one shared RGB-D + YOLO-World
+observation stream, that geometry-only incorrectly selects a rug,
+semantic-only incorrectly selects an undersized side table, and joint
+semantic–geometric verification selects the coffee table.
+
+Run the complete benchmark and presentation package with:
+
+```bash
+./mujoco_scenes/scripts/run_l2_region_ablation1_demo.sh \
+  l2_living_room_region_ablation1_demo
+xdg-open reports/l2_living_room_region_ablation1_demo/presentation_report.html
+```
+
+See [LIVING_ROOM_ENVIRONMENT.md](mujoco_scenes/LIVING_ROOM_ENVIRONMENT.md)
+for scene variants, evidence guarantees, exact local and Docker commands,
+region registry, predicates, relations, outputs, and limitations.

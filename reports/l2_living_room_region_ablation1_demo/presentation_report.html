@@ -1,0 +1,54 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>L2 Region Ablation 1</title>
+<style>
+body{margin:0;background:#eef1f5;color:#192132;font:16px/1.5 Arial,sans-serif}
+main{max-width:1500px;margin:auto;padding:30px} .hero{background:#17233b;color:white;
+padding:34px;border-radius:18px} .card{background:white;margin:22px 0;padding:26px;
+border-radius:16px;box-shadow:0 4px 18px #17233b18} img{max-width:100%;
+height:auto;border:1px solid #dbe0e8;border-radius:10px} table{width:100%;
+border-collapse:collapse;font-size:14px} th,td{padding:10px;border-bottom:1px solid #ddd;
+text-align:left} th{background:#edf1f7;position:sticky;top:0} .grid{display:grid;
+grid-template-columns:1fr 1fr;gap:18px} .links a{display:inline-block;margin:10px 12px 0 0}
+code{background:#eef1f5;padding:2px 5px;border-radius:4px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+</style></head><body><main>
+<section class="hero"><h1>Living-room Region Ablation 1</h1>
+<p><strong>Place the refreshment tray on a suitable living-room surface within easy reach of the sofa.</strong></p>
+<p>This benchmark grounds a functional destination region. It does not execute
+placement, planning, TAMP, an FM, LLM, or VLM.</p></section>
+<section class="card"><h2>What the ablation demonstrates</h2>
+<ol><li>A large planar rug passes geometry but is semantically inappropriate.</li>
+<li>A side table is semantically suitable but too small for the measured tray.</li>
+<li>Only the coffee table passes semantics, planar support, tray fit, and sofa context.</li>
+<li>Candidate ranking proposes an inspection order; it never overrides verification.</li>
+<li>All three modes read exactly the same saved RGB-D, detections, masks, and clouds.</li></ol>
+<table><thead><tr><th>Mode</th><th>Selected generic region</th>
+<th>Completion stage</th><th>Correct?</th></tr></thead>
+<tbody><tr><td>Geometry-only</td><td>region_0001</td><td>0</td><td>No — diagnostic false result</td></tr><tr><td>Semantic-only</td><td>region_0002</td><td>1</td><td>No — diagnostic false result</td></tr><tr><td>Joint semantic–geometric</td><td>region_0003</td><td>2</td><td>Yes</td></tr></tbody></table></section>
+<section class="card"><h2>Compatibility matrix</h2>
+<img src="region_compatibility_matrix.png" alt="compatibility matrix"></section>
+<section class="grid"><section class="card"><h2>Ablation progression</h2>
+<img src="region_ablation_comparison.png" alt="ablation comparison"></section>
+<section class="card"><h2>Observed graph</h2>
+<img src="region_assignment_graph.png" alt="assignment graph"></section></section>
+<section class="card"><h2>Measured evidence table</h2><div style="overflow:auto">
+<table><thead><tr><th>ID</th><th>RGB parent</th><th>confidence</th><th>views</th>
+<th>support L×W (m)</th><th>fit margin (m)</th><th>semantics</th><th>planar</th>
+<th>fits</th><th>near</th><th>joint</th><th>rejection</th></tr></thead>
+<tbody><tr><td>region_0001</td><td>rug</td><td>0.883</td><td>5</td><td>1.472 × 0.976</td><td>+0.647</td><td>FALSE</td><td>TRUE</td><td>TRUE</td><td>TRUE</td><td>FALSE</td><td>REGION_REJECTED_SEMANTIC</td></tr>
+<tr><td>region_0002</td><td>side_table</td><td>0.626</td><td>5</td><td>0.304 × 0.264</td><td>-0.152</td><td>TRUE</td><td>TRUE</td><td>FALSE</td><td>TRUE</td><td>FALSE</td><td>REGION_REJECTED_FIT</td></tr>
+<tr><td>region_0003</td><td>coffee_table</td><td>0.753</td><td>4</td><td>0.699 × 0.541</td><td>+0.211</td><td>TRUE</td><td>TRUE</td><td>TRUE</td><td>TRUE</td><td>TRUE</td><td>None</td></tr></tbody></table></div></section>
+<section class="card"><h2>Progression animation</h2>
+<video controls loop muted style="max-width:100%" src="region_progression.mp4"></video>
+<p><a href="region_progression.gif">Open GIF</a> ·
+<a href="offline_region_ablation_evaluation.json">Offline evaluation JSON</a> ·
+<a href="region_compatibility_matrix.csv">Matrix CSV</a></p></section>
+<h2>Stage and component audit</h2><section class='card'><h3>Stage 000: rug</h3><img src='stages/000_initial_RUG_PATCH/overview.png' alt='stage overview'><div class='links'><a href='stages/000_initial_RUG_PATCH/semantic_overview.png'>semantic overlay</a><a href='stages/000_initial_RUG_PATCH/region_pointcloud.png'>point cloud</a><a href='stages/000_initial_RUG_PATCH/graph.png'>graph</a><a href='stages/000_initial_RUG_PATCH/evidence_masks.png'>region mask</a></div></section><section class='card'><h3>Stage 001: side_table</h3><img src='stages/001_after_SMALL_SIDE_TABLE/overview.png' alt='stage overview'><div class='links'><a href='stages/001_after_SMALL_SIDE_TABLE/semantic_overview.png'>semantic overlay</a><a href='stages/001_after_SMALL_SIDE_TABLE/region_pointcloud.png'>point cloud</a><a href='stages/001_after_SMALL_SIDE_TABLE/graph.png'>graph</a><a href='stages/001_after_SMALL_SIDE_TABLE/evidence_masks.png'>region mask</a></div></section><section class='card'><h3>Stage 002: coffee_table</h3><img src='stages/002_after_COFFEE_TABLE/overview.png' alt='stage overview'><div class='links'><a href='stages/002_after_COFFEE_TABLE/semantic_overview.png'>semantic overlay</a><a href='stages/002_after_COFFEE_TABLE/region_pointcloud.png'>point cloud</a><a href='stages/002_after_COFFEE_TABLE/graph.png'>graph</a><a href='stages/002_after_COFFEE_TABLE/evidence_masks.png'>region mask</a></div></section>
+<section class="card"><h2>Evidence boundary</h2>
+<p>Geometry uses typed fresh <code>RegionMeasurementEvidence</code> and
+<code>PayloadMeasurementEvidence</code>. Cumulative, full-room, configured-size,
+and hidden simulator geometry are rejected as measurement inputs. RGB semantics
+come from YOLO-World and are associated through visible projected evidence.</p>
+</section></main></body></html>

@@ -1305,6 +1305,13 @@ def build_scene_xml(
                 # on those symmetric reachable lines while preserving wall
                 # clearance for the longest scanned tool.
                 slot_rel_pos[0] = -0.03 if container_id == "D1" else 0.03
+                if container_id == "D2" and obj_name == "tongs":
+                    # Keep the two-pronged tongs clear of a co-located
+                    # fixture-held scanned utensil.  Their previous adjacent
+                    # lane could begin in contact after D2 opened, eventually
+                    # driving the free joint unstable and invalidating the
+                    # following C2 RGB-D capture.
+                    slot_rel_pos[1] = -0.09
             world_pos = parent_body_pos + np.array(slot_rel_pos)
             if container_id == "B1" and obj_name == "coffee_jar":
                 # The coffee jar remains slightly taller than B1's closed
@@ -1897,13 +1904,13 @@ if __name__ == "__main__":
         default="auto",
         help=(
             "Environment family. 'auto' selects living-room for "
-            "--scene L1_living_room and kitchen otherwise"
+            "--scene L1_living_room or L2_living_room_* and kitchen otherwise"
         ),
     )
     parser.add_argument(
         "--scene", type=str, default="S1_coffee_missing_mug",
         help=(
-            "Kitchen scene name from scene_configs.yaml, or L1_living_room"
+            "Kitchen scene name, L1_living_room, or an L2_living_room_* scene"
         ),
     )
     parser.add_argument(
@@ -2099,35 +2106,57 @@ if __name__ == "__main__":
         print("  L1_living_room")
         print("    Goal: Navigate, organize rigid objects, and dust the TV")
         print("    Inspection regions: LEFT_DRAWER, RIGHT_DRAWER")
+        from mujoco_scenes.living_room_region_scene import L2_SCENES
+        for scene_name in L2_SCENES:
+            print(f"  {scene_name}")
+            print("    Goal: Ground a refreshment-tray destination region")
         exit(0)
 
+    is_l2_region_scene = args.scene.startswith(
+        "L2_living_room_region_ablation1_"
+    )
     environment = args.environment
     if environment == "auto":
         environment = (
             "living-room"
-            if args.scene == "L1_living_room"
+            if args.scene == "L1_living_room" or is_l2_region_scene
             else "kitchen"
         )
-    if environment == "living-room" and args.scene not in {
-        "S1_coffee_missing_mug",
-        "L1_living_room",
-    }:
+    if (
+        environment == "living-room"
+        and args.scene not in {"S1_coffee_missing_mug", "L1_living_room"}
+        and not is_l2_region_scene
+    ):
         parser.error(
-            "--environment living-room supports --scene L1_living_room only"
+            "--environment living-room requires L1_living_room or an L2 scene"
         )
-    if environment == "kitchen" and args.scene == "L1_living_room":
-        parser.error("L1_living_room requires --environment living-room or auto")
+    if environment == "kitchen" and (
+        args.scene == "L1_living_room" or is_l2_region_scene
+    ):
+        parser.error("Living-room scenes require --environment living-room or auto")
 
     selected_robot = ROBOT_NONE if args.no_robot else args.robot
     if environment == "living-room":
-        from mujoco_scenes.living_room_scene import LivingRoomScene
-
-        scene = LivingRoomScene(robot=selected_robot)
+        if is_l2_region_scene:
+            from mujoco_scenes.living_room_region_scene import (
+                L2LivingRoomRegionScene,
+            )
+            scene = L2LivingRoomRegionScene(
+                args.scene, robot=selected_robot
+            )
+        else:
+            from mujoco_scenes.living_room_scene import LivingRoomScene
+            scene = LivingRoomScene(robot=selected_robot)
     else:
         scene = KitchenScene(args.scene, robot=selected_robot)
     scene.print_scene_summary()
 
     if args.inspect_sequence is not None:
+        if is_l2_region_scene:
+            parser.error(
+                "Use python -m mujoco_scenes.run_l2_region_ablation for "
+                "L2 candidate-region inspection"
+            )
         from mujoco_scenes.sequential_inspection import (
             run_sequential_inspection,
         )
@@ -2210,6 +2239,9 @@ if __name__ == "__main__":
         print(f"  Saved {frame.shape[1]}x{frame.shape[0]} frame.")
 
     if args.viewer:
+        if is_l2_region_scene:
+            scene.launch_viewer(camera=args.camera)
+            exit(0)
         viewer_options = {
             "camera": args.camera,
             "actions_panel": not args.no_actions_panel,

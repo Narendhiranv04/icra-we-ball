@@ -62,6 +62,10 @@ class Detection:
     input_kind: str = "FULL_FRAME"
     input_image_path: str | None = None
     input_crop_box_xyxy: tuple[int, int, int, int] | None = None
+    # A mask-bounded crop is evidence for the instance whose visible mask
+    # produced that crop.  Keeping this provenance prevents a detection from
+    # an overlapping/padded crop being reassigned to a neighbouring object.
+    crop_source_object_id: str | None = None
     detection_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
@@ -571,6 +575,12 @@ def associate_detections_to_masks(
     candidates: list[dict[str, Any]] = []
     for detection_index, detection in enumerate(detections):
         for object_id, mask in sorted(object_masks.items()):
+            if (
+                detection.input_kind == "MASK_BOUNDED_RGB_CROP"
+                and detection.crop_source_object_id is not None
+                and detection.crop_source_object_id != object_id
+            ):
+                continue
             metrics = _association_metrics(detection, np.asarray(mask, bool))
             if metrics is None or metrics["visible_mask_pixels"] < minimum_mask:
                 continue
@@ -643,7 +653,31 @@ def associate_detections_to_masks(
         if not candidate["weak"]
         and candidate["detection_index"] not in ambiguous_detection_indices
     ]
-    valid.sort(
+    # A detector proposal is allowed to compete only for its best spatial
+    # instance.  Previously all lower-ranked instance candidates remained in
+    # the global greedy list.  When synonymous proposals covered one object,
+    # the first proposal claimed the correct mask and a duplicate could then
+    # fall through to a neighbouring mask.  That produced visually plausible
+    # overlap but semantically impossible assignments (for example, a second
+    # "mug" proposal attached to a nearby game controller).
+    best_candidate_by_detection: dict[int, dict[str, Any]] = {}
+    for candidate in valid:
+        detection_index = candidate["detection_index"]
+        current = best_candidate_by_detection.get(detection_index)
+        if (
+            current is None
+            or float(candidate["association_score"])
+            > float(current["association_score"])
+            or (
+                float(candidate["association_score"])
+                == float(current["association_score"])
+                and candidate["object_id"] < current["object_id"]
+            )
+        ):
+            best_candidate_by_detection[detection_index] = candidate
+
+    preferred = list(best_candidate_by_detection.values())
+    preferred.sort(
         key=lambda record: (
             -record["matching_score"],
             -record["association_score"],
@@ -654,7 +688,7 @@ def associate_detections_to_masks(
     matched_detections: set[int] = set()
     matched_objects: set[str] = set()
     accepted = []
-    for candidate in valid:
+    for candidate in preferred:
         detection_index = candidate["detection_index"]
         object_id = candidate["object_id"]
         if detection_index in matched_detections or object_id in matched_objects:
@@ -957,6 +991,7 @@ def _translated_detection(
     input_kind: str,
     input_image_path: str,
     crop_box: tuple[int, int, int, int] | None = None,
+    crop_source_object_id: str | None = None,
 ) -> Detection:
     if crop_box is None:
         box = detection.bbox_xyxy
@@ -974,6 +1009,7 @@ def _translated_detection(
         input_kind=input_kind,
         input_image_path=input_image_path,
         input_crop_box_xyxy=crop_box,
+        crop_source_object_id=crop_source_object_id,
         detection_id=detection_id,
     )
 
@@ -990,11 +1026,47 @@ def _mask_boundary(mask: np.ndarray) -> np.ndarray:
     return mask & ~interior
 
 
+def _largest_mask_component(mask: np.ndarray) -> np.ndarray:
+    """Remove disconnected segmentation speckles from an association mask.
+
+    MuJoCo's ID-colour render can contain a few isolated edge pixels carrying
+    an object's geom ID.  Those pixels are harmless for point-cloud filtering
+    but make a mask-bounded RGB crop span most of the image.  Semantic
+    association uses only the largest 8-connected visible component; geometry
+    evidence remains untouched.
+    """
+    remaining = np.asarray(mask, bool).copy()
+    best: list[tuple[int, int]] = []
+    height, width = remaining.shape
+    while np.any(remaining):
+        seed_y, seed_x = np.argwhere(remaining)[0]
+        stack = [(int(seed_y), int(seed_x))]
+        remaining[seed_y, seed_x] = False
+        component: list[tuple[int, int]] = []
+        while stack:
+            y, x = stack.pop()
+            component.append((y, x))
+            for next_y in range(max(0, y - 1), min(height, y + 2)):
+                for next_x in range(max(0, x - 1), min(width, x + 2)):
+                    if remaining[next_y, next_x]:
+                        remaining[next_y, next_x] = False
+                        stack.append((next_y, next_x))
+        if len(component) > len(best):
+            best = component
+    cleaned = np.zeros_like(mask, dtype=bool)
+    if best:
+        y, x = np.asarray(best).T
+        cleaned[y, x] = True
+    return cleaned
+
+
 def _render_overlay(
     rgb: np.ndarray,
     object_masks: dict[str, np.ndarray],
     detections: Sequence[Detection],
     associations: dict[str, Any],
+    *,
+    fused_label_by_object: dict[str, str] | None = None,
 ) -> Image.Image:
     image = Image.fromarray(np.asarray(rgb, np.uint8))
     pixels = np.asarray(image).copy()
@@ -1015,11 +1087,21 @@ def _render_overlay(
     }
     for index, detection in enumerate(detections):
         accepted = accepted_by_detection.get(index)
-        color = (35, 166, 89) if accepted else (210, 55, 55)
+        # The complete raw proposal set remains available in detections.json.
+        # Presentation overlays show validated associations only, avoiding
+        # dozens of low-confidence synonym proposals obscuring the scene.
+        if accepted is None:
+            continue
+        if fused_label_by_object is not None:
+            fused_label = fused_label_by_object.get(accepted["object_id"])
+            if (
+                fused_label is None
+                or detection.canonical_label != fused_label
+            ):
+                continue
+        color = (35, 166, 89)
         draw.rectangle(detection.bbox_xyxy, outline=color, width=2)
-        association_label = (
-            accepted["object_id"] if accepted else "unmatched"
-        )
+        association_label = accepted["object_id"]
         label = (
             f"{detection.raw_label} {detection.confidence:.2f} · "
             f"{association_label}"
@@ -1076,7 +1158,15 @@ def run_semantic_inspection(
         for object_id in accepted_instance_to_object_id.values()
     }
     camera_summaries = []
-    overlay_images: list[tuple[str, Image.Image]] = []
+    overlay_payloads: list[
+        tuple[
+            str,
+            np.ndarray,
+            dict[str, np.ndarray],
+            list[Detection],
+            dict[str, Any],
+        ]
+    ] = []
     inference_seconds = 0.0
 
     for camera_id, capture in inspection.cameras.items():
@@ -1087,7 +1177,9 @@ def run_semantic_inspection(
         crop_inference_seconds = 0.0
         crop_inference_count = 0
         object_masks = {
-            object_id: capture.instance_masks[instance_name]
+            object_id: _largest_mask_component(
+                capture.instance_masks[instance_name]
+            )
             for instance_name, object_id in accepted_instance_to_object_id.items()
             if instance_name in capture.instance_masks
             and np.count_nonzero(capture.instance_masks[instance_name])
@@ -1161,6 +1253,7 @@ def run_semantic_inspection(
                             input_kind="MASK_BOUNDED_RGB_CROP",
                             input_image_path=relative_crop_path,
                             crop_box=crop_box,
+                            crop_source_object_id=object_id,
                         )
                     )
 
@@ -1201,15 +1294,15 @@ def run_semantic_inspection(
             }
         )
         if save_overlays:
-            overlay = _render_overlay(
-                capture.rgb, object_masks, detections, associations
+            overlay_payloads.append(
+                (
+                    camera_id,
+                    capture.rgb,
+                    object_masks,
+                    detections,
+                    associations,
+                )
             )
-            overlay_path = (
-                semantics_dir / "cameras" / camera_id / "overlay.png"
-            )
-            overlay_path.parent.mkdir(parents=True, exist_ok=True)
-            overlay.save(overlay_path)
-            overlay_images.append((camera_id, overlay))
 
     semantic_records = {}
     for object_id in sorted(observations_by_object):
@@ -1262,6 +1355,44 @@ def run_semantic_inspection(
         + "\n",
         encoding="utf-8",
     )
+
+    overlay_images: list[tuple[str, Image.Image]] = []
+    if save_overlays:
+        fused_label_by_object = {
+            object_id: record["canonical_label"]
+            for object_id, record in semantic_records.items()
+            if record.get("status") == "SUPPORTED"
+            and record.get("canonical_label") is not None
+        }
+        for (
+            camera_id,
+            rgb,
+            object_masks,
+            detections,
+            associations,
+        ) in overlay_payloads:
+            association_overlay = _render_overlay(
+                rgb,
+                object_masks,
+                detections,
+                associations,
+            )
+            overlay = _render_overlay(
+                rgb,
+                object_masks,
+                detections,
+                associations,
+                fused_label_by_object=fused_label_by_object,
+            )
+            overlay_path = (
+                semantics_dir / "cameras" / camera_id / "overlay.png"
+            )
+            overlay_path.parent.mkdir(parents=True, exist_ok=True)
+            association_overlay.save(
+                overlay_path.with_name("association_overlay.png")
+            )
+            overlay.save(overlay_path)
+            overlay_images.append((camera_id, overlay))
 
     if save_overlays and overlay_images:
         columns = 2

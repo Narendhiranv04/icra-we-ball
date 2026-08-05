@@ -144,6 +144,26 @@
             pos="-0.025 0 0.014" material="dust"/>
       <geom name="remote_button_2" class="visual" type="cylinder" size="0.006 0.002"
             pos="0 0 0.014" material="dust"/>
+      <!-- A visible keypad makes the primitive-based prop read as a remote
+           control to an RGB detector instead of as a plain dark book. -->
+      <geom name="remote_power_button" class="visual" type="cylinder"
+            size="0.005 0.002" pos="-0.050 0 0.014" rgba="0.82 0.16 0.12 1"/>
+      <geom name="remote_key_1" class="visual" type="cylinder"
+            size="0.004 0.002" pos="-0.012 -0.013 0.014" rgba="0.72 0.72 0.70 1"/>
+      <geom name="remote_key_2" class="visual" type="cylinder"
+            size="0.004 0.002" pos="-0.012 0.013 0.014" rgba="0.72 0.72 0.70 1"/>
+      <geom name="remote_key_3" class="visual" type="cylinder"
+            size="0.004 0.002" pos="0.006 -0.013 0.014" rgba="0.72 0.72 0.70 1"/>
+      <geom name="remote_key_4" class="visual" type="cylinder"
+            size="0.004 0.002" pos="0.006 0.013 0.014" rgba="0.72 0.72 0.70 1"/>
+      <geom name="remote_key_5" class="visual" type="cylinder"
+            size="0.004 0.002" pos="0.024 -0.013 0.014" rgba="0.72 0.72 0.70 1"/>
+      <geom name="remote_key_6" class="visual" type="cylinder"
+            size="0.004 0.002" pos="0.024 0.013 0.014" rgba="0.72 0.72 0.70 1"/>
+      <geom name="remote_key_7" class="visual" type="cylinder"
+            size="0.004 0.002" pos="0.042 -0.013 0.014" rgba="0.72 0.72 0.70 1"/>
+      <geom name="remote_key_8" class="visual" type="cylinder"
+            size="0.004 0.002" pos="0.042 0.013 0.014" rgba="0.72 0.72 0.70 1"/>
       <site name="remote_control_grasp" pos="0 0 0.010" size="0.01"
             rgba="0 0 0 0" group="5"/>
     </body>

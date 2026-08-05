@@ -1,0 +1,80 @@
+{
+  "candidate_ranking": {
+    "candidates": [
+      {
+        "inspection_label": "RUG_PATCH",
+        "rank": 1
+      },
+      {
+        "inspection_label": "SMALL_SIDE_TABLE",
+        "rank": 2
+      },
+      {
+        "inspection_label": "COFFEE_TABLE",
+        "rank": 3
+      }
+    ],
+    "source": "manual_future_fm_contract"
+  },
+  "function": {
+    "function_id": "PLACE_REFRESHMENT_TRAY",
+    "payload_role": "refreshment_tray",
+    "region_role": "refreshment_serving_region",
+    "required_region_count": 1
+  },
+  "generated_from_foundation_model": false,
+  "geometric_requirements": {
+    "context": {
+      "maximum_centroid_distance_m": 1.65,
+      "relation": "NEAR_SEATING_AREA"
+    },
+    "payload_region": {
+      "allowed_orientations_degrees": [
+        0,
+        90
+      ],
+      "edge_clearance_margin_m": 0.02,
+      "relation": "FITS_ON"
+    },
+    "unary_region": {
+      "maximum_normal_angle_degrees": 12.0,
+      "minimum_planarity_score": 0.92,
+      "minimum_usable_area_m2": 0.06,
+      "predicate": "PLANAR_SUPPORT"
+    }
+  },
+  "natural_language_goal": "Place the refreshment tray on a suitable living-room surface within easy reach of the sofa.",
+  "production_mode": "joint",
+  "schema_version": 1,
+  "semantic_requirements": {
+    "accepted_parent_categories": {
+      "coffee_table": 1,
+      "end_table": 2,
+      "serving_table": 2,
+      "side_table": 2
+    },
+    "minimum_mean_confidence": 0.08,
+    "minimum_payload_mean_confidence": 0.03,
+    "minimum_supporting_views": 2,
+    "minimum_winning_score_margin": 0.05,
+    "payload_categories": [
+      "serving_tray",
+      "tray"
+    ],
+    "rejected_parent_categories": [
+      "rug",
+      "carpet",
+      "floor",
+      "media_console",
+      "bookshelf",
+      "sofa",
+      "couch"
+    ],
+    "seating_categories": [
+      "sofa",
+      "couch"
+    ]
+  },
+  "specification_source": "manual_future_fm_contract",
+  "task_id": "l2_place_refreshment_tray_region_grounding"
+}

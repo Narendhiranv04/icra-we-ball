@@ -1,0 +1,25 @@
+schema_version: 1
+evaluation_only: true
+scenes:
+  L2_living_room_region_ablation1_primary:
+    expected:
+      geometry_only:
+        inspection_label: RUG_PATCH
+        completion_stage: 0
+      semantic_only:
+        inspection_label: SMALL_SIDE_TABLE
+        completion_stage: 1
+      joint:
+        inspection_label: COFFEE_TABLE
+        completion_stage: 2
+  L2_living_room_region_ablation1_initial_complete:
+    ranking: [COFFEE_TABLE, SMALL_SIDE_TABLE, RUG_PATCH]
+    expected:
+      joint:
+        inspection_label: COFFEE_TABLE
+        completion_stage: 0
+  L2_living_room_region_ablation1_exhaustion:
+    expected:
+      joint:
+        inspection_label: null
+        terminal_status: EXHAUSTED

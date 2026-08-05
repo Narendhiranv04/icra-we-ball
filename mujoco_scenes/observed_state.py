@@ -1864,9 +1864,31 @@ class ObservedStateRun:
                 diagnostic_payload,
             )
         elif task_schema == "JOINT_ROLE_GROUNDING":
+            # Production uses semantic-role-scoped binary checks to avoid
+            # spending relation work on semantically irrelevant pairs.  The
+            # geometry-only ablation has deliberately removed that semantic
+            # gate, so evaluating it on the production graph would leave
+            # those pruned pairs UNKNOWN. Rebuild only the binary relation
+            # layer from the same cached stage-local measurements; RGB-D,
+            # semantic inference, and unary extraction are not repeated.
+            geometry_ablation_graph = graph
+            if self.pairing_strategy != "exhaustive_all_pairs":
+                production_strategy = self.pairing_strategy
+                try:
+                    self.pairing_strategy = "exhaustive_all_pairs"
+                    geometry_ablation_graph = self._build_graph(
+                        region_states, stage_changes
+                    )
+                finally:
+                    self.pairing_strategy = production_strategy
+            mode_graphs = {
+                "joint": graph,
+                "geometry-only": geometry_ablation_graph,
+                "semantic-only": graph,
+            }
             mode_witnesses = {
                 mode: evaluate_joint_task_witness(
-                    graph,
+                    mode_graphs[mode],
                     self.task_requirements,
                     stage=stage,
                     grounding_mode=mode,
@@ -1878,6 +1900,14 @@ class ObservedStateRun:
                 {
                     "stage": stage,
                     "same_observation_evidence": True,
+                    "perception_rerun_per_mode": False,
+                    "unary_geometry_rerun_per_mode": False,
+                    "binary_pairing_strategy_by_mode": {
+                        mode: mode_graphs[mode]
+                        .get("pairing", {})
+                        .get("strategy")
+                        for mode in mode_graphs
+                    },
                     "measurement_cloud_paths": sorted(
                         evidence.measurement_cloud_path
                         for evidence in stage_evidence.values()

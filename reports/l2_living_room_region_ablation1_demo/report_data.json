@@ -1,0 +1,562 @@
+{
+  "ablation_summary": {
+    "modes": {
+      "geometry_only": {
+        "completion_stage": 0,
+        "production_authoritative": false,
+        "selected_inspection_label": "RUG_PATCH",
+        "selected_region_id": "region_0001",
+        "status": "COMPLETE"
+      },
+      "joint": {
+        "completion_stage": 2,
+        "production_authoritative": true,
+        "selected_inspection_label": "COFFEE_TABLE",
+        "selected_region_id": "region_0003",
+        "status": "COMPLETE"
+      },
+      "semantic_only": {
+        "completion_stage": 1,
+        "production_authoritative": false,
+        "selected_inspection_label": "SMALL_SIDE_TABLE",
+        "selected_region_id": "region_0002",
+        "status": "COMPLETE"
+      }
+    },
+    "production_status": "COMPLETE",
+    "rerendered_for_diagnostics": false,
+    "same_evidence_manifest": [
+      {
+        "path": "stages/000_initial_RUG_PATCH/cameras/inspection_close/depth.png",
+        "sha256": "d4493fef906d4cea778beb4b3e4d873c1c1f89eddd0b6263050eb4f12038496b"
+      },
+      {
+        "path": "stages/000_initial_RUG_PATCH/cameras/inspection_close/evidence_masks.png",
+        "sha256": "2aba44d7fe44801baecc88c97115c938a73f6abd2cef1e25519e90e0d3816b44"
+      },
+      {
+        "path": "stages/000_initial_RUG_PATCH/cameras/inspection_close/rgb.png",
+        "sha256": "0d9a294f37e6af033f5428a98c8a82c77e2539ca4f1d01879b95545f67229699"
+      },
+      {
+        "path": "stages/000_initial_RUG_PATCH/cameras/inspection_close/segmentation.png",
+        "sha256": "544fcc8e3b89e319042ed04445809a48f1c2696bcc8dc89337e75287f54be09f"
+      },
+      {
+        "path": "stages/000_initial_RUG_PATCH/cameras/inspection_front/depth.png",
+        "sha256": "f11bc344c49da83d3643debccdd22e566f4f95bd0d041ee94f99f53595e35240"
+      },
+      {
+        "path": "stages/000_initial_RUG_PATCH/cameras/inspection_front/evidence_masks.png",
+        "sha256": "2c7ecec7909dfbce062a3145f7918737ef6d5bcf489ca3dcf0b5e3f1d6de2466"
+      },
+      {
+        "path": "stages/000_initial_RUG_PATCH/cameras/inspection_front/rgb.png",
+        "sha256": "55dbd17e1893b4e09cafac91adca245fa7c73ebfaed1a0912c2e7985aa904c3b"
+      },
+      {
+        "path": "stages/000_initial_RUG_PATCH/cameras/inspection_front/segmentation.png",
+        "sha256": "8a559423be22ae3040b051975884efae724281d7040750d7a22fa8956ad32568"
+      },
+      {
+        "path": "stages/000_initial_RUG_PATCH/cameras/inspection_left/depth.png",
+        "sha256": "47aedae03a524a2cc1d1e32ed94144a335e8f9e24af0f833f4baa4168ec86350"
+      },
+      {
+        "path": "stages/000_initial_RUG_PATCH/cameras/inspection_left/evidence_masks.png",
+        "sha256": "c9bcbcd00ecdfae6a77a111f4d2ca9107daa2098a7694ea73bd6676301aad396"
+      },
+      {
+        "path": "stages/000_initial_RUG_PATCH/cameras/inspection_left/rgb.png",
+        "sha256": "1a83d182220dd920ff0c2f26d0ac957f4252ede44807153ac0d472ae86556cf1"
+      },
+      {
+        "path": "stages/000_initial_RUG_PATCH/cameras/inspection_left/segmentation.png",
+        "sha256": "3f762e2a4a033275a9d5805ee3328791e0527a43e7911231d8a27318980170bf"
+      },
+      {
+        "path": "stages/000_initial_RUG_PATCH/cameras/inspection_right/depth.png",
+        "sha256": "ea1d0323c7a800f54fab065141021af36058f916f4ff0b3625bb8588185a55f9"
+      },
+      {
+        "path": "stages/000_initial_RUG_PATCH/cameras/inspection_right/evidence_masks.png",
+        "sha256": "e46877d5c9069c4a4a6c14515f249967b2f97311ab75e06d56f1eb6971644844"
+      },
+      {
+        "path": "stages/000_initial_RUG_PATCH/cameras/inspection_right/rgb.png",
+        "sha256": "9f957d34c1be1b7021004d25bbde5696d0ede115378c03bab0ff6490791d5dd3"
+      },
+      {
+        "path": "stages/000_initial_RUG_PATCH/cameras/inspection_right/segmentation.png",
+        "sha256": "acf4332a85359c60421b3300c70269d80dbfa755f345144e28bb619053612834"
+      },
+      {
+        "path": "stages/000_initial_RUG_PATCH/cameras/inspection_top/depth.png",
+        "sha256": "70aaddae4813606134c2211ad66da7900a734224425edde4b3fd90db1671491d"
+      },
+      {
+        "path": "stages/000_initial_RUG_PATCH/cameras/inspection_top/evidence_masks.png",
+        "sha256": "861fd8e81edbe2030b7c624a0ef3f4c1eb3f4540b53c44294e456799d51bf722"
+      },
+      {
+        "path": "stages/000_initial_RUG_PATCH/cameras/inspection_top/rgb.png",
+        "sha256": "78b696d57213fbf7a2535b51d7922104e7dce31d1c30d6c0c2e26e95e70a9ac0"
+      },
+      {
+        "path": "stages/000_initial_RUG_PATCH/cameras/inspection_top/segmentation.png",
+        "sha256": "2ae980f0c92625a75d3439cd70f4d5fd876e5885700045cd18b371aa56913771"
+      },
+      {
+        "path": "stages/000_initial_RUG_PATCH/payload_evidence/fused.ply",
+        "sha256": "d693e9682dc8c78b6c0373ae77103203f8aba66d15fee13362d4b79f8fdaf252"
+      },
+      {
+        "path": "stages/000_initial_RUG_PATCH/region_evidence/fused.ply",
+        "sha256": "8cb88149b0ab83681183d36519ec4ae086bde5430638310ddb9fef1b71040c1a"
+      },
+      {
+        "path": "stages/000_initial_RUG_PATCH/seating_context/observed_points.ply",
+        "sha256": "a16a4d4b0ea6eb5371cb6316a0bd711760b7a3d09e7b0a41ec73d41303f7f1f0"
+      },
+      {
+        "path": "stages/000_initial_RUG_PATCH/semantics/associations.json",
+        "sha256": "32cf6e13d67062eff298f1e8d275d951a54945e73b2cd335fe2dc04b51f0e374"
+      },
+      {
+        "path": "stages/000_initial_RUG_PATCH/semantics/detections.json",
+        "sha256": "a448cff30b2d47a3a03e9525d339e509ece031a83027ca73140eef825113306e"
+      },
+      {
+        "path": "stages/000_initial_RUG_PATCH/semantics/fused_semantics.json",
+        "sha256": "26393b596981d75a7b49575ad3b66770fb70734aca495256a56e60d7f8530371"
+      },
+      {
+        "path": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_close/depth.png",
+        "sha256": "aca74f0f32fb44e9458f8c0248ca2e002fdce6a0c69ea9ca5c786f2dac23c306"
+      },
+      {
+        "path": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_close/evidence_masks.png",
+        "sha256": "5d7ec556154ea3a883a29b3070c56c119aedf940f70784cda1ecf32816f609d6"
+      },
+      {
+        "path": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_close/rgb.png",
+        "sha256": "d9a482a76058ca58bffdb2334a76d5259274e68d31a52eb03a52bd936d9dde5e"
+      },
+      {
+        "path": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_close/segmentation.png",
+        "sha256": "51684b9f5f02fb0d23e54c2971a659dad8b5f851c4844550d6b4f0f06e184e36"
+      },
+      {
+        "path": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_front/depth.png",
+        "sha256": "fe7620cd707ab1447b78e0427a3deb70743cd238589b225ef4d936a1eaecf97e"
+      },
+      {
+        "path": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_front/evidence_masks.png",
+        "sha256": "9721b9967b06cf6d4fe531023a94770e145791bb889def264ae5ae986a707993"
+      },
+      {
+        "path": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_front/rgb.png",
+        "sha256": "0fa8e6aa62347bcbe636636ba7f4ab581e854bac95925b76489530de2e704266"
+      },
+      {
+        "path": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_front/segmentation.png",
+        "sha256": "fff437025c206b5d58379603de4e7f6c810faf85d36737982532bff5ee6742f1"
+      },
+      {
+        "path": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_left/depth.png",
+        "sha256": "34b31b24a9ed0a3d7cf4b1bcf50575b8a583113993a19f655649ac5c3f29a480"
+      },
+      {
+        "path": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_left/evidence_masks.png",
+        "sha256": "f083bc863440f0f576a407643080a855a6bd587012d49aedae21741baf556864"
+      },
+      {
+        "path": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_left/rgb.png",
+        "sha256": "5ef44b41c10720e16847707e2b6353d4fc8729a6802e6b5b24f04a4ffdbfa933"
+      },
+      {
+        "path": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_left/segmentation.png",
+        "sha256": "7819ea70648c59d465834c2eff927fbf9acfddd271ce54ccaa73dda13a4cd217"
+      },
+      {
+        "path": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_right/depth.png",
+        "sha256": "9bf67e3dca2225133e63e5716faa7351b4d3315690236dbff96f74842166f840"
+      },
+      {
+        "path": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_right/evidence_masks.png",
+        "sha256": "07f3e585d2a4b72947233f3f29b5312aed25fd59aff2e129ae2983696b6b2b23"
+      },
+      {
+        "path": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_right/rgb.png",
+        "sha256": "920b9a535ee167e3f7102d2d7e462059840cdd90b5afc40908c13882343b76e1"
+      },
+      {
+        "path": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_right/segmentation.png",
+        "sha256": "768ec21923f6872b54eec1d33f65ea30ea8e180f58ece12d61666e6472506277"
+      },
+      {
+        "path": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_top/depth.png",
+        "sha256": "4eff7f8db7f5715f7b61747f856a6800d8895b1b23860a7c125357e8b553b1e8"
+      },
+      {
+        "path": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_top/evidence_masks.png",
+        "sha256": "07926a27ce69e26078a6eb38b2c85de1adf6f0c53062c05624bc6c3a6e4ebdcb"
+      },
+      {
+        "path": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_top/rgb.png",
+        "sha256": "a4f03247061680ea1e6959d67d9a77b706de8f857c728f1c1e3271f505eedaf7"
+      },
+      {
+        "path": "stages/001_after_SMALL_SIDE_TABLE/cameras/inspection_top/segmentation.png",
+        "sha256": "5449c29b1efdbc5f61899eb6116157c2ab668688343fdded3946ab4ce5e4076f"
+      },
+      {
+        "path": "stages/001_after_SMALL_SIDE_TABLE/region_evidence/fused.ply",
+        "sha256": "2f2a50adf2e1db82cc47a033345255bb106324c94731f78695df19aa976aad50"
+      },
+      {
+        "path": "stages/001_after_SMALL_SIDE_TABLE/seating_context/observed_points.ply",
+        "sha256": "f760c69c1a5bd4b0365d856a33d4a3d973eb4294d0135658b295df47f6f2a94c"
+      },
+      {
+        "path": "stages/001_after_SMALL_SIDE_TABLE/semantics/associations.json",
+        "sha256": "91ef8f9e9b9724c28d5fc4954611b6a6bb6912a41fe4cc5bc8040e2608f467e0"
+      },
+      {
+        "path": "stages/001_after_SMALL_SIDE_TABLE/semantics/detections.json",
+        "sha256": "f84592f38b3865b9659fa11500b899ed5e6af531cee9bc7f48afdd0ec87e96a5"
+      },
+      {
+        "path": "stages/001_after_SMALL_SIDE_TABLE/semantics/fused_semantics.json",
+        "sha256": "c66330a7d06ad5567851e403a5d72011e96bea3062404127b3a5fbe833c227e2"
+      },
+      {
+        "path": "stages/002_after_COFFEE_TABLE/cameras/inspection_close/depth.png",
+        "sha256": "518d1ccf2c92bf92c43a57cb678e0284be82f459bf39774c4ab3b0d0c08dd504"
+      },
+      {
+        "path": "stages/002_after_COFFEE_TABLE/cameras/inspection_close/evidence_masks.png",
+        "sha256": "146d422970c03ce5d6d3b70d6c6da45f9ba4a3b383b81232a83b54cd44cd70e1"
+      },
+      {
+        "path": "stages/002_after_COFFEE_TABLE/cameras/inspection_close/rgb.png",
+        "sha256": "d891c679dc83dbab48f65bfcf4ce535ff0b10c3fa163aa3a628a89bc85161b25"
+      },
+      {
+        "path": "stages/002_after_COFFEE_TABLE/cameras/inspection_close/segmentation.png",
+        "sha256": "e268ed3fe3f27256f3e482443b5ba4bcd3a1c27b8411c21cdaa7562c3b1a9ef9"
+      },
+      {
+        "path": "stages/002_after_COFFEE_TABLE/cameras/inspection_front/depth.png",
+        "sha256": "f54db99d07aca41afa37d5f53a720321ea96b1ee331ef2904809bd6d8923d13a"
+      },
+      {
+        "path": "stages/002_after_COFFEE_TABLE/cameras/inspection_front/evidence_masks.png",
+        "sha256": "b214f88d68f7fab58398e42a400c71547876debbea2c435e67cf5ecd1e5ffe6e"
+      },
+      {
+        "path": "stages/002_after_COFFEE_TABLE/cameras/inspection_front/rgb.png",
+        "sha256": "4768a6300b88f853e316f54ffa82be44e6cc9bab969d8a98df3c9af04e7b4cea"
+      },
+      {
+        "path": "stages/002_after_COFFEE_TABLE/cameras/inspection_front/segmentation.png",
+        "sha256": "32e4eed396c5082a85c1fe3e442fe40bf26b701d969a60800f690f38b7f764d2"
+      },
+      {
+        "path": "stages/002_after_COFFEE_TABLE/cameras/inspection_left/depth.png",
+        "sha256": "2f9130b4fe64b93aa19abc1d53b1cd4e45335a2163e92d43df5ed22cc8361198"
+      },
+      {
+        "path": "stages/002_after_COFFEE_TABLE/cameras/inspection_left/evidence_masks.png",
+        "sha256": "f8fbb650eeb7372ae6af403e6bbaff46f11ea211e7017534a20d87df826aa1b4"
+      },
+      {
+        "path": "stages/002_after_COFFEE_TABLE/cameras/inspection_left/rgb.png",
+        "sha256": "c27705f699753d591e2d3228c483029efcc579a176113f7e99f72846689ad323"
+      },
+      {
+        "path": "stages/002_after_COFFEE_TABLE/cameras/inspection_left/segmentation.png",
+        "sha256": "3fc0b4af5f41ea4555a30356291438a396976f5fc65be8cc75010d2c7544dd8d"
+      },
+      {
+        "path": "stages/002_after_COFFEE_TABLE/cameras/inspection_right/depth.png",
+        "sha256": "7d0de5019baa13c489453f0c4a97d99d3d9dcc7c68b2f7c8d572c429a998729a"
+      },
+      {
+        "path": "stages/002_after_COFFEE_TABLE/cameras/inspection_right/evidence_masks.png",
+        "sha256": "41f1ce794522c8884708242acb9e4f47c3894994bf6bd39b9b10f71e2f20b23d"
+      },
+      {
+        "path": "stages/002_after_COFFEE_TABLE/cameras/inspection_right/rgb.png",
+        "sha256": "14b18673d9e3a534b7943bf1cef177347f8abeb800a73cb1c44c41c4b4cec58c"
+      },
+      {
+        "path": "stages/002_after_COFFEE_TABLE/cameras/inspection_right/segmentation.png",
+        "sha256": "c16ad3cb686f3cf5047f4e9b2b96a5ec6c692e1af55b777c495e0fd082fa56f8"
+      },
+      {
+        "path": "stages/002_after_COFFEE_TABLE/cameras/inspection_top/depth.png",
+        "sha256": "dde2b61915911f4e3467ae08fd579c09094b6a05ec8da46625a239b04dce72c7"
+      },
+      {
+        "path": "stages/002_after_COFFEE_TABLE/cameras/inspection_top/evidence_masks.png",
+        "sha256": "4544fa718c5462ea4d694e1c8fc8d7af50d8b2af859d44e045e4f97d1f6d5a5f"
+      },
+      {
+        "path": "stages/002_after_COFFEE_TABLE/cameras/inspection_top/rgb.png",
+        "sha256": "bf003773a11fd509850d338dfb82882bce1b3d6f46bc36a6a902544ab793c2e4"
+      },
+      {
+        "path": "stages/002_after_COFFEE_TABLE/cameras/inspection_top/segmentation.png",
+        "sha256": "77b94803d8eec2f893fb4e21bcf09e68ce54b2e7505473f0b5acb46ab0e6102c"
+      },
+      {
+        "path": "stages/002_after_COFFEE_TABLE/payload_evidence/fused.ply",
+        "sha256": "4c05d551ef25f5119b087ea6ec2519bc335723ca6b224d7cbf5d54a478426704"
+      },
+      {
+        "path": "stages/002_after_COFFEE_TABLE/region_evidence/fused.ply",
+        "sha256": "4e6bf63ecc0e2f686be201b79dc2096a862ef345f7f80a373e13d59c5ef067fb"
+      },
+      {
+        "path": "stages/002_after_COFFEE_TABLE/seating_context/observed_points.ply",
+        "sha256": "ef27156806e086fe6275cfc5ebdbc1cbbe010a9efed4d0c95bbc63e0fbbad59d"
+      },
+      {
+        "path": "stages/002_after_COFFEE_TABLE/semantics/associations.json",
+        "sha256": "006b44e4b5ddce435752088da7d2ddbf35117a4d2b30b3693c67347e9f58a688"
+      },
+      {
+        "path": "stages/002_after_COFFEE_TABLE/semantics/detections.json",
+        "sha256": "6f303e3cb7d8fe425591505a0b01c9909849749ae3322bbb72ceb64d0a341b2f"
+      },
+      {
+        "path": "stages/002_after_COFFEE_TABLE/semantics/fused_semantics.json",
+        "sha256": "0ec9c17994f1ff7a5937355617ab0701bad070a3fb55266bccbc08d9810d7077"
+      }
+    ],
+    "scene_name": "L2_living_room_region_ablation1_primary",
+    "schema_version": 1,
+    "task_id": "l2_place_refreshment_tray_region_grounding"
+  },
+  "animation": {
+    "ffmpeg_error": null,
+    "ffmpeg_returncode": 0,
+    "gif": "/home/naren/RA_iiith/reports/l2_living_room_region_ablation1_demo/region_progression.gif",
+    "mp4": "/home/naren/RA_iiith/reports/l2_living_room_region_ablation1_demo/region_progression.mp4"
+  },
+  "compatibility_matrix": {
+    "rows": [
+      {
+        "FITS_ON": "TRUE",
+        "NEAR_SEATING_AREA": "TRUE",
+        "PLANAR_SUPPORT": "TRUE",
+        "candidate_rank": 1,
+        "discovery_stage": 0,
+        "fit_margin_m": 0.646724539675991,
+        "geometry_only_status": "TRUE",
+        "joint_status": "FALSE",
+        "near_sofa_margin_m": 0.5062570294748112,
+        "parent_semantic_label": "rug",
+        "payload_length_m": 0.4155231733198542,
+        "payload_width_m": 0.2892059034208371,
+        "planarity_score": 0.9912591494393416,
+        "region_evidence_path": "stages/000_initial_RUG_PATCH/region_evidence/fused.ply",
+        "region_id": "region_0001",
+        "rejection_reason": "REGION_REJECTED_SEMANTIC",
+        "selected_orientation_degrees": 0,
+        "semantic_confidence": 0.8825575828552246,
+        "semantic_evidence_path": "stages/000_initial_RUG_PATCH/semantic_overview.png",
+        "semantic_only_status": "FALSE",
+        "semantic_role_status": "FALSE",
+        "semantic_supporting_views": 5,
+        "sofa_distance_m": 1.1437429705251887,
+        "support_area_m2": 1.4366552056965542,
+        "support_length_m": 1.47208770446565,
+        "support_normal_world": [
+          -0.000331932789383084,
+          0.0010438183987447024,
+          0.999999400131707
+        ],
+        "support_width_m": 0.9759304430968281,
+        "tested_orientations": [
+          {
+            "fits": true,
+            "length_margin_m": 1.0165645311457956,
+            "orientation_degrees": 0,
+            "signed_fit_margin_m": 0.646724539675991,
+            "width_margin_m": 0.646724539675991
+          },
+          {
+            "fits": true,
+            "length_margin_m": 1.1428818010448127,
+            "orientation_degrees": 90,
+            "signed_fit_margin_m": 0.5204072697769738,
+            "width_margin_m": 0.5204072697769738
+          }
+        ]
+      },
+      {
+        "FITS_ON": "FALSE",
+        "NEAR_SEATING_AREA": "TRUE",
+        "PLANAR_SUPPORT": "TRUE",
+        "candidate_rank": 2,
+        "discovery_stage": 1,
+        "fit_margin_m": -0.15189793302484392,
+        "geometry_only_status": "FALSE",
+        "joint_status": "FALSE",
+        "near_sofa_margin_m": 0.6161339192665738,
+        "parent_semantic_label": "side_table",
+        "payload_length_m": 0.4155231733198542,
+        "payload_width_m": 0.2892059034208371,
+        "planarity_score": 0.9769751538906002,
+        "region_evidence_path": "stages/001_after_SMALL_SIDE_TABLE/region_evidence/fused.ply",
+        "region_id": "region_0002",
+        "rejection_reason": "REGION_REJECTED_FIT",
+        "selected_orientation_degrees": 0,
+        "semantic_confidence": 0.6259363114833831,
+        "semantic_evidence_path": "stages/001_after_SMALL_SIDE_TABLE/semantic_overview.png",
+        "semantic_only_status": "TRUE",
+        "semantic_role_status": "TRUE",
+        "semantic_supporting_views": 5,
+        "sofa_distance_m": 1.0338660807334261,
+        "support_area_m2": 0.08026372051280707,
+        "support_length_m": 0.3036252402950103,
+        "support_normal_world": [
+          0.001020396783634702,
+          -0.004874141345896366,
+          0.9999876006914005
+        ],
+        "support_width_m": 0.26435127868427777,
+        "tested_orientations": [
+          {
+            "fits": false,
+            "length_margin_m": -0.15189793302484392,
+            "orientation_degrees": 0,
+            "signed_fit_margin_m": -0.15189793302484392,
+            "width_margin_m": -0.06485462473655931
+          },
+          {
+            "fits": false,
+            "length_margin_m": -0.025580663125826762,
+            "orientation_degrees": 90,
+            "signed_fit_margin_m": -0.19117189463557646,
+            "width_margin_m": -0.19117189463557646
+          }
+        ]
+      },
+      {
+        "FITS_ON": "TRUE",
+        "NEAR_SEATING_AREA": "TRUE",
+        "PLANAR_SUPPORT": "TRUE",
+        "candidate_rank": 3,
+        "discovery_stage": 2,
+        "fit_margin_m": 0.21144629160838693,
+        "geometry_only_status": "TRUE",
+        "joint_status": "TRUE",
+        "near_sofa_margin_m": 0.44377556368662185,
+        "parent_semantic_label": "coffee_table",
+        "payload_length_m": 0.4155231733198542,
+        "payload_width_m": 0.2892059034208371,
+        "planarity_score": 0.998806375117612,
+        "region_evidence_path": "stages/002_after_COFFEE_TABLE/region_evidence/fused.ply",
+        "region_id": "region_0003",
+        "rejection_reason": null,
+        "selected_orientation_degrees": 0,
+        "semantic_confidence": 0.7534128278493881,
+        "semantic_evidence_path": "stages/002_after_COFFEE_TABLE/semantic_overview.png",
+        "semantic_only_status": "TRUE",
+        "semantic_role_status": "TRUE",
+        "semantic_supporting_views": 4,
+        "sofa_distance_m": 1.206224436313378,
+        "support_area_m2": 0.37794117406121763,
+        "support_length_m": 0.6990467763490513,
+        "support_normal_world": [
+          0.00010392292434123861,
+          -0.0015296076825168457,
+          0.9999988247494911
+        ],
+        "support_width_m": 0.540652195029224,
+        "tested_orientations": [
+          {
+            "fits": true,
+            "length_margin_m": 0.2435236030291971,
+            "orientation_degrees": 0,
+            "signed_fit_margin_m": 0.21144629160838693,
+            "width_margin_m": 0.21144629160838693
+          },
+          {
+            "fits": true,
+            "length_margin_m": 0.36984087292821427,
+            "orientation_degrees": 90,
+            "signed_fit_margin_m": 0.08512902170936978,
+            "width_margin_m": 0.08512902170936978
+          }
+        ]
+      }
+    ],
+    "schema_version": 1,
+    "task_id": "l2_place_refreshment_tray_region_grounding"
+  },
+  "report_directory": "/home/naren/RA_iiith/reports/l2_living_room_region_ablation1_demo",
+  "run_config": {
+    "capture_resolution": [
+      1280,
+      960
+    ],
+    "created_at": "2026-08-05T17:32:59.725412+05:30",
+    "detector": {
+      "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+      "device": "cpu",
+      "name": "ultralytics_yolo_world",
+      "version": "8.4.112"
+    },
+    "function": {
+      "function_id": "PLACE_REFRESHMENT_TRAY",
+      "payload_role": "refreshment_tray",
+      "region_role": "refreshment_serving_region",
+      "required_region_count": 1
+    },
+    "natural_language_goal": "Place the refreshment tray on a suitable living-room surface within easy reach of the sofa.",
+    "production_mode": "joint",
+    "same_evidence_ablations": [
+      "geometry_only",
+      "semantic_only",
+      "joint"
+    ],
+    "scene_name": "L2_living_room_region_ablation1_primary",
+    "schema_version": 1,
+    "task_id": "l2_place_refreshment_tray_region_grounding",
+    "uses_foundation_model": false,
+    "uses_placement_execution": false,
+    "uses_robot": false,
+    "uses_tamp": false
+  },
+  "run_directory": "/home/naren/RA_iiith/runs/l2_living_room_region_ablation1_demo",
+  "stage_assets": [
+    {
+      "graph": "stages/000_initial_RUG_PATCH/graph.png",
+      "mask": "stages/000_initial_RUG_PATCH/evidence_masks.png",
+      "overview": "stages/000_initial_RUG_PATCH/overview.png",
+      "pointcloud": "stages/000_initial_RUG_PATCH/region_pointcloud.png",
+      "semantic": "stages/000_initial_RUG_PATCH/semantic_overview.png",
+      "title": "Stage 000: rug"
+    },
+    {
+      "graph": "stages/001_after_SMALL_SIDE_TABLE/graph.png",
+      "mask": "stages/001_after_SMALL_SIDE_TABLE/evidence_masks.png",
+      "overview": "stages/001_after_SMALL_SIDE_TABLE/overview.png",
+      "pointcloud": "stages/001_after_SMALL_SIDE_TABLE/region_pointcloud.png",
+      "semantic": "stages/001_after_SMALL_SIDE_TABLE/semantic_overview.png",
+      "title": "Stage 001: side_table"
+    },
+    {
+      "graph": "stages/002_after_COFFEE_TABLE/graph.png",
+      "mask": "stages/002_after_COFFEE_TABLE/evidence_masks.png",
+      "overview": "stages/002_after_COFFEE_TABLE/overview.png",
+      "pointcloud": "stages/002_after_COFFEE_TABLE/region_pointcloud.png",
+      "semantic": "stages/002_after_COFFEE_TABLE/semantic_overview.png",
+      "title": "Stage 002: coffee_table"
+    }
+  ]
+}

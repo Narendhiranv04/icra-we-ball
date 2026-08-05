@@ -50,7 +50,11 @@ mask_crop:
   enabled: true
   padding_fraction: 0.30
   minimum_crop_size_pixels: 32
-  neutralize_background: false
+  # Remove neighbouring tabletop objects from the object-specific detector
+  # crop. The visible instance mask is used only for association/cropping;
+  # labels still come exclusively from the rendered RGB pixels retained
+  # inside that mask.
+  neutralize_background: true
 
 fusion:
   # Independent-view consensus is the primary label selector. Detector

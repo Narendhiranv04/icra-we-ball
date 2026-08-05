@@ -1303,3 +1303,36 @@ the broad goal is not converted into predicates by an FM; region order is
 fixed; geometry covers only visible five-view evidence; detector reliability
 depends on appearance and framing; and `ready_for_tamp` is a data handoff, not
 executed manipulation.
+
+## L2 living-room Region Ablation 1
+
+Kitchen grounding selects functional objects. L2 selects a functional spatial
+region for:
+
+> Place the refreshment tray on a suitable living-room surface within easy
+> reach of the sofa.
+
+The three candidates intentionally separate the evidence:
+
+- the rug passes `PLANAR_SUPPORT`, `FITS_ON`, and
+  `NEAR_SEATING_AREA`, but fails serving-region semantics;
+- the side table passes semantics and planar/context checks, but the measured
+  tray footprint does not fit;
+- the coffee table passes semantic compatibility and all measured geometry.
+
+Perception is captured once, and geometry-only, semantic-only, and joint modes
+reuse a SHA-256 manifest of the same RGB, depth, segmentation, masks,
+detections, associations, and stage-local point clouds. Only joint mode is
+authoritative.
+
+```bash
+docker build -f mujoco_scenes/Dockerfile -t mujoco-kitchen-s1 .
+./mujoco_scenes/scripts/run_l2_region_ablation1_demo.sh \
+  l2_living_room_region_ablation1_demo
+xdg-open reports/l2_living_room_region_ablation1_demo/presentation_report.html
+```
+
+The new scene family, exact local/Docker commands, typed region evidence,
+persistent generic region registry, full output layout, and limitations are
+documented in
+[LIVING_ROOM_ENVIRONMENT.md](LIVING_ROOM_ENVIRONMENT.md#l2-region-functional-grounding-region-ablation-1).

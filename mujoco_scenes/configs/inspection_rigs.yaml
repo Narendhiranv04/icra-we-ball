@@ -172,9 +172,11 @@ regions:
         look_at_offset_m: [-0.05, 0.03, -0.04]
         fovy_degrees: 56.0
       inspection_close:
-        position_offset_m: [0.10, 0.13, -0.06]
-        look_at_offset_m: [0.05, 0.04, -0.02]
-        fovy_degrees: 56.0
+        # A second elevated oblique view exposes thin utensil bowls and
+        # handles that become nearly edge-on in the frontal C2 views.
+        position_offset_m: [0.12, 0.05, 0.25]
+        look_at_offset_m: [0.05, 0.02, -0.05]
+        fovy_degrees: 60.0
 
   B1:
     target_world_m: [0.45, 0.18, 0.61]
