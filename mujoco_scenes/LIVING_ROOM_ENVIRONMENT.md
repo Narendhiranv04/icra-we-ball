@@ -769,7 +769,7 @@ One-command Docker demonstration:
 ```bash
 docker build -f mujoco_scenes/Dockerfile -t mujoco-kitchen-s1 .
 ./mujoco_scenes/scripts/run_l2_region_ablation3_demo.sh \
-  l2_living_room_region_ablation3_demo
+  "l2_living_room_region_ablation3_demo_$(date +%Y%m%d_%H%M%S)"
 ```
 
 Open the self-contained report at

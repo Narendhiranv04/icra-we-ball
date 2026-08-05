@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-base="${1:-l2_living_room_region_ablation3_demo}"
+base="${1:-l2_living_room_region_ablation3_demo_$(date +%Y%m%d_%H%M%S)}"
 image="${MUJOCO_KITCHEN_IMAGE:-mujoco-kitchen-s1}"
 root="$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)"
 cd "$root"
