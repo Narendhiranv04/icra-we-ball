@@ -78,12 +78,20 @@ class SequentialInspectionAdapter:
 
     def inspect(self, region_id: str) -> None:
         """Directly open one region; never command a robot or mobile base."""
-        if region_id not in REGION_DESTINATIONS:
-            available = ", ".join(REGION_DESTINATIONS)
+        available_regions = (
+            tuple(self.scene.get_region_observation_states().keys())
+            if hasattr(self.scene, "get_region_observation_states")
+            else tuple(REGION_DESTINATIONS)
+        )
+        if region_id not in available_regions:
+            available = ", ".join(available_regions)
             raise ValueError(
                 f"Unknown inspection region '{region_id}'. Available: {available}"
             )
-        conflicting = INTERFERING_OPEN_REGIONS.get(region_id)
+        interference = getattr(
+            self.scene, "inspection_interference", INTERFERING_OPEN_REGIONS
+        )
+        conflicting = interference.get(region_id)
         if (
             conflicting is not None
             and self.scene.state.container_open_state.get(conflicting, False)
@@ -214,12 +222,16 @@ def run_sequential_inspection(
     save_semantic_overlays: bool = False,
 ) -> ObservedStateRun:
     """Observe closed reset, then inspect and persist one region at a time."""
-    sequence = tuple(sequence or DEFAULT_INSPECTION_ORDER)
-    unknown = [region for region in sequence if region not in REGION_DESTINATIONS]
+    available_regions = tuple(scene.get_region_observation_states().keys())
+    default_sequence = tuple(
+        getattr(scene, "default_inspection_order", DEFAULT_INSPECTION_ORDER)
+    )
+    sequence = tuple(sequence or default_sequence)
+    unknown = [region for region in sequence if region not in available_regions]
     if unknown:
         raise ValueError(
             f"Unknown inspection region(s): {', '.join(unknown)}; "
-            f"available: {', '.join(REGION_DESTINATIONS)}"
+            f"available: {', '.join(available_regions)}"
         )
     if scene.state.opened_containers:
         raise RuntimeError(
@@ -314,7 +326,7 @@ def run_sequential_inspection(
             "uses_robot": False,
             "uses_mobile_base": False,
             "uses_virtual_inspection_rig": True,
-            "opening_adapter": "KitchenScene.open_container",
+            "opening_adapter": f"{scene.__class__.__name__}.open_container",
             "opening_actuation_steps": DIRECT_ACTUATION_STEPS,
             "grounding_mode": grounding_mode,
             "requested_grounding_mode": requested_grounding_mode,

@@ -192,6 +192,7 @@ class ObservedStateRun:
         *,
         scene_name: str,
         region_ids: Iterable[str],
+        initial_region_id: str = "countertop",
         voxel_size: float = 0.003,
         geometry_config: str | Path | None = None,
         task_requirements: str | Path | dict[str, Any] | None = None,
@@ -206,6 +207,7 @@ class ObservedStateRun:
         self.run_dir.mkdir(parents=True, exist_ok=True)
         self.run_id = self.run_dir.name
         self.scene_name = scene_name
+        self.initial_region_id = initial_region_id
         self.voxel_size = voxel_size
         self.config = (
             load_geometry_config(geometry_config)
@@ -297,7 +299,7 @@ class ObservedStateRun:
             "scene_name": scene_name,
             "created_at": datetime.now().astimezone().isoformat(),
             "voxel_size_m": voxel_size,
-            "regions": ["countertop", *self.region_ids],
+            "regions": [self.initial_region_id, *self.region_ids],
             "geometry_config": str(
                 Path(geometry_config).resolve()
                 if geometry_config
@@ -372,6 +374,9 @@ class ObservedStateRun:
             Path(runs_root) / run_id,
             scene_name=scene.scene_name,
             region_ids=region_ids,
+            initial_region_id=getattr(
+                scene, "initial_observation_region", "countertop"
+            ),
             voxel_size=voxel_size,
             geometry_config=geometry_config,
             task_requirements=task_requirements,
@@ -420,9 +425,9 @@ class ObservedStateRun:
     def _source_region(self, scene, instance_id: str) -> str:
         if hasattr(scene, "get_instance_source_region"):
             source = scene.get_instance_source_region(instance_id)
-            return source if source is not None else "countertop"
+            return source if source is not None else self.initial_region_id
         sources = getattr(scene, "instance_source_regions", {})
-        return sources.get(instance_id, "countertop")
+        return sources.get(instance_id, self.initial_region_id)
 
     def _region_states(self, scene) -> dict[str, dict[str, Any]]:
         if hasattr(scene, "get_region_observation_states"):
@@ -2599,8 +2604,8 @@ class ObservedStateRun:
         """Build independent semantic, geometric, and relational evidence."""
         nodes, edges = [], []
         all_regions = {
-            "countertop": {
-                "region_id": "countertop",
+            self.initial_region_id: {
+                "region_id": self.initial_region_id,
                 "open": True,
                 "inspected": True,
             },

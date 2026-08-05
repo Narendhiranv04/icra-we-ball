@@ -171,7 +171,10 @@ def load_inspection_rig_config(
         config.get("regions"), dict
     ):
         raise ValueError("Inspection-rig configuration must define regions")
-    required_regions = {"INITIAL", "D1", "D2", "C2", "B1", "C1"}
+    configured_sequence = config.get("inspection_sequence", ())
+    if not isinstance(configured_sequence, (list, tuple)):
+        raise ValueError("inspection_sequence must be a list when provided")
+    required_regions = {"INITIAL", *configured_sequence}
     missing = required_regions - set(config["regions"])
     if missing:
         raise ValueError(
@@ -601,7 +604,7 @@ class GeometryChecker:
         self,
         scene,
         *,
-        cameras: Iterable[str] = DEFAULT_FUSION_CAMERAS,
+        cameras: Iterable[str] | None = None,
         width: int = 640,
         height: int = 480,
         max_depth: float = 5.0,
@@ -612,7 +615,11 @@ class GeometryChecker:
         self.scene = scene
         self.model = scene.model
         self.data = scene.data
-        self.cameras = tuple(cameras)
+        self.cameras = tuple(
+            cameras
+            if cameras is not None
+            else getattr(scene, "point_cloud_cameras", DEFAULT_FUSION_CAMERAS)
+        )
         self.width = width
         self.height = height
         self.max_depth = max_depth
@@ -787,7 +794,14 @@ class GeometryChecker:
         configuration = (
             load_inspection_rig_config(rig_config)
             if isinstance(rig_config, (str, Path))
-            else rig_config or load_inspection_rig_config()
+            else rig_config
+            or load_inspection_rig_config(
+                getattr(
+                    self.scene,
+                    "inspection_rig_config_path",
+                    INSPECTION_RIG_CONFIG_PATH,
+                )
+            )
         )
         if region_id not in configuration["regions"]:
             raise ValueError(f"No inspection rig configured for {region_id}")
@@ -1128,16 +1142,22 @@ class GeometryChecker:
                 if len(points_by_camera[instance_name].get(camera_id, ())) > 0
             )
             rejection_reasons = []
-            expected_source_region = (
-                "countertop" if region_id == "INITIAL" else region_id
-            )
+            if hasattr(self.scene, "inspection_source_region"):
+                expected_source_region = self.scene.inspection_source_region(
+                    region_id
+                )
+            else:
+                expected_source_region = (
+                    "countertop" if region_id == "INITIAL" else region_id
+                )
             controller_source_region = None
             if hasattr(self.scene, "get_instance_source_region"):
                 controller_source_region = (
                     self.scene.get_instance_source_region(instance_name)
                 )
             if (
-                controller_source_region is not None
+                expected_source_region is not None
+                and controller_source_region is not None
                 and controller_source_region != expected_source_region
             ):
                 rejection_reasons.append("SOURCE_REGION_MISMATCH")

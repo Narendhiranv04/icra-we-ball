@@ -48,7 +48,22 @@ the current search path deliberately uses the deterministic container actuator.
 
 The complete region definitions, object layout, and usage guide are available in:
 
-[S1_ENVIRONMENT.md](S1_ENVIRONMENT.md)
+[S1_ENVIRONMENT.md](mujoco_scenes/S1_ENVIRONMENT.md)
+
+The separate rigid-only Google Robot living room—with an L-shaped couch,
+fixed coffee table, rigid tabletop objects, a wall-mounted TV, book-ledge and
+two-drawer storage, remote-controlled TV power, and guarded TV dusting—is documented in
+[LIVING_ROOM_ENVIRONMENT.md](mujoco_scenes/LIVING_ROOM_ENVIRONMENT.md). Both
+environment families now use the same entry point and independently select
+Google Robot or the robot-free virtual-observation mode:
+
+```bash
+MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.scene_loader \
+  --environment living-room --robot google --viewer
+
+MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.scene_loader \
+  --environment kitchen --scene S1_coffee_missing_mug --no-robot --viewer
+```
 
 ## Cameras
 

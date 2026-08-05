@@ -1,0 +1,388 @@
+<mujoco model="google_robot_living_room">
+  <compiler angle="radian" autolimits="true"/>
+  <option gravity="0 0 -9.81" timestep="0.002"/>
+
+  <visual>
+    <global offwidth="1920" offheight="1080"/>
+    <quality shadowsize="4096"/>
+    <headlight ambient="0.24 0.25 0.27" diffuse="0.55 0.56 0.58"
+               specular="0.12 0.12 0.12"/>
+  </visual>
+
+  <default>
+    <joint damping="0.8"/>
+    <geom condim="4" friction="0.9 0.03 0.01"/>
+    <default class="visual">
+      <geom contype="0" conaffinity="0" group="1"/>
+    </default>
+    <default class="collision">
+      <geom group="3"/>
+    </default>
+  </default>
+
+  <asset>
+    <texture name="living_sky" type="skybox" builtin="gradient"
+             rgb1="0.72 0.82 0.94" rgb2="0.20 0.29 0.43"
+             width="512" height="3072"/>
+    <texture name="living_floor_tex" type="2d" builtin="checker"
+             rgb1="0.56 0.39 0.25" rgb2="0.48 0.32 0.20"
+             width="256" height="256" mark="none"/>
+    <material name="living_floor" texture="living_floor_tex" texrepeat="8 6"/>
+    <material name="media_wall" rgba="0.78 0.82 0.84 1" roughness="0.92"/>
+    <material name="rug" rgba="0.66 0.36 0.22 1" roughness="0.95"/>
+    <material name="rug_border" rgba="0.74 0.61 0.43 1" roughness="0.95"/>
+    <material name="couch_fabric" rgba="0.20 0.40 0.49 1" roughness="0.86"/>
+    <material name="couch_frame" rgba="0.11 0.23 0.29 1"/>
+    <material name="table_wood" rgba="0.49 0.27 0.12 1" roughness="0.60"/>
+    <material name="table_metal" rgba="0.12 0.13 0.14 1" specular="0.45"/>
+    <material name="console_wood" rgba="0.38 0.21 0.12 1" roughness="0.58"/>
+    <material name="console_face" rgba="0.46 0.27 0.16 1" roughness="0.62"/>
+    <material name="brass" rgba="0.72 0.52 0.22 1" specular="0.5" roughness="0.32"/>
+    <material name="tv_frame" rgba="0.025 0.028 0.032 1" specular="0.5"/>
+    <material name="tv_screen" rgba="0.055 0.075 0.095 1" specular="0.8"/>
+    <material name="dust" rgba="0.62 0.62 0.58 0.42"/>
+    <material name="dust_film" rgba="0.58 0.55 0.48 0.24" roughness="1"/>
+    <material name="remote" rgba="0.08 0.08 0.09 1"/>
+    <material name="book" rgba="0.52 0.12 0.09 1"/>
+    <material name="ceramic" rgba="0.88 0.87 0.82 1" specular="0.35"/>
+    <material name="coaster" rgba="0.24 0.12 0.055 1"/>
+    <material name="controller" rgba="0.16 0.16 0.19 1"/>
+    <material name="duster_handle" rgba="0.18 0.18 0.20 1"/>
+    <material name="duster_head" rgba="0.84 0.68 0.18 1"/>
+    <material name="target_marker" rgba="0.18 0.65 0.30 0.16"/>
+  </asset>
+
+  <worldbody>
+    <light name="ceiling_light" pos="0 -0.45 3.25" dir="0 0 -1"
+           diffuse="0.92 0.82 0.70" specular="0.20 0.18 0.16"
+           castshadow="true"/>
+    <light name="window_fill" pos="1.7 -0.9 2.35" dir="-0.65 0.35 -0.68"
+           diffuse="0.48 0.62 0.78" specular="0.12 0.15 0.18"/>
+    <light name="media_wall_wash" pos="-1.15 0.65 2.15" dir="0.35 0.55 -0.75"
+           diffuse="0.42 0.34 0.27" specular="0.08 0.07 0.06"/>
+
+    <geom name="floor" type="plane" size="2.2 1.85 0.02"
+          pos="0 -0.20 0" material="living_floor"/>
+    <!-- Full-height north and west walls form the visible room corner.  The
+         north wall is set behind the closed drawer backs so storage remains
+         collision-free. -->
+    <body name="media_feature_wall">
+      <geom name="media_feature_wall_panel" type="box" size="2.05 0.035 1.35"
+            pos="0 1.48 1.35" material="media_wall"/>
+      <geom name="west_feature_wall_panel" type="box" size="0.035 1.75 1.35"
+            pos="-2.05 -0.27 1.35" material="media_wall"/>
+    </body>
+
+    <!-- A flat, non-colliding area rug lifts the seating group visually
+         without changing navigation or manipulation contact. -->
+    <body name="living_room_rug">
+      <geom name="living_room_rug_border" class="visual" type="box"
+            size="1.08 0.91 0.004" pos="0 -0.35 0.007"
+            material="rug_border"/>
+      <geom name="living_room_rug_field" class="visual" type="box"
+            size="1.00 0.83 0.005" pos="0 -0.35 0.012"
+            material="rug"/>
+    </body>
+    <!-- One continuous rigid L-shaped couch.  A square corner module joins
+         west and south extensions at exact, non-overlapping seams. -->
+    <body name="living_room_couch">
+      <geom name="couch_corner_base" type="box" size="0.30 0.30 0.18"
+            pos="-1.45 -1.45 0.22" material="couch_frame"/>
+      <geom name="couch_west_base" type="box" size="0.30 0.90 0.18"
+            pos="-1.45 -0.25 0.22" material="couch_frame"/>
+      <geom name="couch_south_base" type="box" size="0.325 0.30 0.18"
+            pos="-0.825 -1.45 0.22" material="couch_frame"/>
+
+      <geom name="couch_corner_seat" type="box" size="0.28 0.28 0.09"
+            pos="-1.43 -1.43 0.45" material="couch_fabric"/>
+      <geom name="couch_west_seat" type="box" size="0.28 0.86 0.09"
+            pos="-1.43 -0.29 0.45" material="couch_fabric"/>
+      <geom name="couch_south_seat" type="box" size="0.325 0.28 0.09"
+            pos="-0.825 -1.43 0.45" material="couch_fabric"/>
+
+      <geom name="couch_west_back" type="box" size="0.08 1.20 0.42"
+            pos="-1.74 -0.55 0.72" material="couch_fabric"/>
+      <geom name="couch_south_back" type="box" size="0.66 0.08 0.42"
+            pos="-1.00 -1.74 0.72" material="couch_fabric"/>
+      <geom name="couch_north_arm" type="box" size="0.30 0.08 0.28"
+            pos="-1.45 0.73 0.50" material="couch_fabric"/>
+      <geom name="couch_east_arm" type="box" size="0.08 0.30 0.28"
+            pos="-0.42 -1.45 0.50" material="couch_fabric"/>
+    </body>
+
+    <!-- Fixed rigid coffee table. -->
+    <body name="coffee_table" pos="0 -0.35 0">
+      <geom name="coffee_table_top" type="box" size="0.46 0.28 0.025"
+            pos="0 0 0.46" material="table_wood"/>
+      <geom name="coffee_table_leg_nw" type="box" size="0.035 0.035 0.205"
+            pos="-0.39 0.21 0.23" material="table_metal" mass="1.2"/>
+      <geom name="coffee_table_leg_ne" type="box" size="0.035 0.035 0.205"
+            pos="0.39 0.21 0.23" material="table_metal" mass="1.2"/>
+      <geom name="coffee_table_leg_sw" type="box" size="0.035 0.035 0.205"
+            pos="-0.39 -0.21 0.23" material="table_metal" mass="1.2"/>
+      <geom name="coffee_table_leg_se" type="box" size="0.035 0.035 0.205"
+            pos="0.39 -0.21 0.23" material="table_metal" mass="1.2"/>
+      <site name="coffee_table_frame" pos="0 0 0.49" size="0.01"
+            rgba="0 0 0 0" group="5"/>
+      <site name="table_place_remote" pos="-0.18 0.02 0.487" size="0.045 0.035 0.003"
+            type="box" material="target_marker" group="4"/>
+      <site name="table_place_mug" pos="0.17 -0.01 0.487" size="0.055 0.055 0.003"
+            type="box" material="target_marker" group="4"/>
+      <site name="table_place_book" pos="0.02 0.05 0.487" size="0.13 0.08 0.003"
+            type="box" material="target_marker" group="4"/>
+      <site name="table_place_controller" pos="0.30 0.03 0.487"
+            size="0.095 0.075 0.003" type="box"
+            material="target_marker" group="4"/>
+    </body>
+
+    <!-- Independent rigid clutter rests on the moving tabletop through contact. -->
+    <body name="remote_control" pos="-0.18 -0.33 0.502">
+      <freejoint name="remote_control_free"/>
+      <geom name="remote_control_collision" type="box" size="0.070 0.027 0.012"
+            material="remote" mass="0.18" friction="1.1 0.04 0.01"/>
+      <geom name="remote_button_1" class="visual" type="cylinder" size="0.006 0.002"
+            pos="-0.025 0 0.014" material="dust"/>
+      <geom name="remote_button_2" class="visual" type="cylinder" size="0.006 0.002"
+            pos="0 0 0.014" material="dust"/>
+      <site name="remote_control_grasp" pos="0 0 0.010" size="0.01"
+            rgba="0 0 0 0" group="5"/>
+    </body>
+
+    <body name="living_room_mug" pos="0.17 -0.36 0.545">
+      <freejoint name="living_room_mug_free"/>
+      <geom name="living_room_mug_collision" type="cylinder" size="0.043 0.055"
+            material="ceramic" mass="0.34" friction="1.0 0.03 0.01"/>
+      <geom name="living_room_mug_handle" type="capsule" size="0.010"
+            fromto="0.040 0 0.020 0.075 0 0.020" material="ceramic" mass="0.03"/>
+      <site name="living_room_mug_grasp" pos="0 0 0.025" size="0.01"
+            rgba="0 0 0 0" group="5"/>
+    </body>
+
+    <body name="hardback_book" pos="0.02 -0.30 0.507">
+      <freejoint name="hardback_book_free"/>
+      <geom name="hardback_book_collision" type="box" size="0.125 0.080 0.018"
+            material="book" mass="0.22" friction="1.0 0.04 0.01"/>
+      <geom name="hardback_pages" class="visual" type="box" size="0.117 0.076 0.014"
+            pos="0.004 0 0" material="ceramic"/>
+      <site name="hardback_book_grasp" pos="0.065 0 0.020" size="0.01"
+            rgba="0 0 0 0" group="5"/>
+    </body>
+
+    <body name="coaster_left" pos="-0.31 -0.48 0.502">
+      <freejoint name="coaster_left_free"/>
+      <geom name="coaster_left_collision" type="cylinder" size="0.050 0.008"
+            material="coaster" mass="0.08" friction="1.2 0.04 0.01"
+            margin="0.0045" solref="0.004 1" solimp="0.99 0.999 0.001"/>
+    </body>
+    <body name="coaster_right" pos="0.30 -0.47 0.502">
+      <freejoint name="coaster_right_free"/>
+      <geom name="coaster_right_collision" type="cylinder" size="0.050 0.008"
+            material="coaster" mass="0.45" friction="3.0 0.04 0.01"
+            margin="0.0045" solref="0.002 1" solimp="0.995 0.9995 0.001"/>
+      <site name="coaster_right_mug_place" type="cylinder"
+            size="0.034 0.001" pos="0 0 0.009"
+            material="target_marker" group="4"/>
+    </body>
+
+    <body name="game_controller" pos="0.30 -0.32 0.515">
+      <freejoint name="game_controller_free"/>
+      <geom name="game_controller_core" type="ellipsoid" size="0.078 0.047 0.022"
+            material="controller" mass="0.18" friction="1.0 0.03 0.01"/>
+      <geom name="game_controller_left_grip" type="capsule" size="0.018"
+            fromto="-0.048 -0.018 0 -0.078 -0.070 -0.006"
+            material="controller" mass="0.05"/>
+      <geom name="game_controller_right_grip" type="capsule" size="0.018"
+            fromto="0.048 -0.018 0 0.078 -0.070 -0.006"
+            material="controller" mass="0.05"/>
+      <geom name="game_controller_dpad_h" class="visual" type="box"
+            size="0.022 0.007 0.004" pos="-0.033 0.003 0.024"
+            rgba="0.05 0.05 0.06 1"/>
+      <geom name="game_controller_dpad_v" class="visual" type="box"
+            size="0.007 0.022 0.004" pos="-0.033 0.003 0.024"
+            rgba="0.05 0.05 0.06 1"/>
+      <geom name="game_controller_stick_left" class="visual" type="cylinder"
+            size="0.010 0.006" pos="-0.018 -0.022 0.024"
+            rgba="0.04 0.04 0.05 1"/>
+      <geom name="game_controller_stick_right" class="visual" type="cylinder"
+            size="0.010 0.006" pos="0.018 -0.022 0.024"
+            rgba="0.04 0.04 0.05 1"/>
+      <geom name="game_controller_button_n" class="visual" type="cylinder"
+            size="0.005 0.004" pos="0.040 0.018 0.024" rgba="0.25 0.70 0.34 1"/>
+      <geom name="game_controller_button_e" class="visual" type="cylinder"
+            size="0.005 0.004" pos="0.052 0.006 0.024" rgba="0.72 0.24 0.22 1"/>
+      <geom name="game_controller_button_s" class="visual" type="cylinder"
+            size="0.005 0.004" pos="0.040 -0.006 0.024" rgba="0.28 0.48 0.82 1"/>
+      <geom name="game_controller_button_w" class="visual" type="cylinder"
+            size="0.005 0.004" pos="0.028 0.006 0.024" rgba="0.86 0.70 0.20 1"/>
+      <site name="game_controller_grasp" pos="0 0 0.022" size="0.010"
+            rgba="0 0 0 0" group="5"/>
+    </body>
+
+    <!-- A clean wall-mounted ledge beside the TV.  The shallow overlap with
+         the feature wall makes it read as attached rather than floating. -->
+    <body name="media_book_shelf">
+      <geom name="media_book_shelf_plank" type="box" size="0.33 0.175 0.03"
+            pos="-1.00 1.27 0.75" material="console_face"/>
+      <geom name="media_book_shelf_bracket_left" class="visual" type="box"
+            size="0.018 0.06 0.09" pos="-1.22 1.385 0.66"
+            material="brass"/>
+      <geom name="media_book_shelf_bracket_right" class="visual" type="box"
+            size="0.018 0.06 0.09" pos="-0.78 1.385 0.66"
+            material="brass"/>
+      <site name="media_shelf_book_place" type="box"
+            size="0.13 0.08 0.003" pos="-1.00 1.14 0.781"
+            material="target_marker" group="4"/>
+    </body>
+
+    <!-- Low media console with two independent south-opening rigid drawers. -->
+    <body name="media_console">
+      <geom name="media_console_top" type="box" size="0.72 0.15 0.04"
+            pos="0 1.25 0.48" material="console_wood"/>
+      <geom name="media_console_bottom" type="box" size="0.72 0.15 0.04"
+            pos="0 1.25 0.06" material="console_wood"/>
+      <geom name="media_console_left_side" type="box" size="0.05 0.15 0.21"
+            pos="-0.67 1.25 0.27" material="console_wood"/>
+      <geom name="media_console_right_side" type="box" size="0.05 0.15 0.21"
+            pos="0.67 1.25 0.27" material="console_wood"/>
+      <geom name="media_console_divider" type="box" size="0.035 0.15 0.21"
+            pos="0 1.25 0.27" material="console_wood"/>
+      <geom name="media_console_back" type="box" size="0.62 0.025 0.17"
+            pos="0 1.375 0.27" material="console_wood"/>
+      <body name="media_console_left_drawer" pos="-0.34 1.25 0.27">
+        <joint name="media_console_left_drawer_slide" type="slide" axis="0 -1 0"
+               range="0 0.27" damping="8" frictionloss="0.5" armature="0.5"/>
+        <geom name="media_console_left_drawer_bottom" type="box"
+              size="0.26 0.14 0.02" pos="0 0 -0.04"
+              material="console_wood" mass="2.2"/>
+        <geom name="media_console_left_drawer_left" type="box"
+              size="0.02 0.14 0.04" pos="-0.25 0 0.02"
+              material="console_wood" mass="0.25"/>
+        <geom name="media_console_left_drawer_right" type="box"
+              size="0.02 0.14 0.04" pos="0.25 0 0.02"
+              material="console_wood" mass="0.25"/>
+        <geom name="media_console_left_drawer_front" type="box"
+              size="0.28 0.025 0.07" pos="0 -0.155 0.02"
+              material="console_face" mass="0.5"/>
+        <geom name="media_console_left_drawer_back" type="box"
+              size="0.26 0.02 0.04" pos="0 0.15 0.02"
+              material="console_wood" mass="0.25"/>
+        <geom name="media_console_left_drawer_handle" type="capsule" size="0.010"
+              fromto="-0.09 -0.183 0.035 0.09 -0.183 0.035"
+              material="brass" mass="0.08"/>
+      </body>
+      <body name="media_console_right_drawer" pos="0.34 1.25 0.27">
+        <joint name="media_console_right_drawer_slide" type="slide" axis="0 -1 0"
+               range="0 0.27" damping="8" frictionloss="0.5" armature="0.5"/>
+        <geom name="media_console_right_drawer_bottom" type="box"
+              size="0.26 0.14 0.02" pos="0 0 -0.04"
+              material="console_wood" mass="2.2"/>
+        <geom name="media_console_right_drawer_left" type="box"
+              size="0.02 0.14 0.04" pos="-0.25 0 0.02"
+              material="console_wood" mass="0.25"/>
+        <geom name="media_console_right_drawer_right" type="box"
+              size="0.02 0.14 0.04" pos="0.25 0 0.02"
+              material="console_wood" mass="0.25"/>
+        <geom name="media_console_right_drawer_front" type="box"
+              size="0.28 0.025 0.07" pos="0 -0.155 0.02"
+              material="console_face" mass="0.5"/>
+        <geom name="media_console_right_drawer_back" type="box"
+              size="0.26 0.02 0.04" pos="0 0.15 0.02"
+              material="console_wood" mass="0.25"/>
+        <geom name="media_console_right_drawer_handle" type="capsule" size="0.010"
+              fromto="-0.09 -0.183 0.035 0.09 -0.183 0.035"
+              material="brass" mass="0.08"/>
+        <site name="drawer_place_controller" type="box"
+              size="0.10 0.08 0.002" pos="0 0 -0.018"
+              material="target_marker" group="4"/>
+      </body>
+    </body>
+
+    <!-- Wall-mounted TV.  Its calibrated screen pose is unchanged; deleting
+         the old post and foot removes the console interpenetration. -->
+    <body name="flat_screen_tv" pos="0 1.25 1.08">
+      <geom name="tv_frame_collision" type="box" size="0.61 0.030 0.36"
+            material="tv_frame"/>
+      <geom name="tv_screen_collision" type="box" size="0.57 0.005 0.32"
+            pos="0 -0.033 0" material="tv_screen"/>
+      <geom name="tv_wall_mount" type="box" size="0.16 0.065 0.12"
+            pos="0 0.130 0" material="table_metal"/>
+      <geom name="tv_power_led" class="visual" type="sphere" size="0.008"
+            pos="0.545 -0.038 -0.335" rgba="0.34 0.04 0.03 1"/>
+
+      <!-- Coverage remains a guarded 15-cell measurement, but the visual
+           dust is one continuous non-colliding film with animated opacity. -->
+      <geom name="dust_screen_film" class="visual" type="box"
+            size="0.565 0.001 0.315" pos="0 -0.041 0"
+            material="dust_film"/>
+
+      <site name="tv_cell_0" pos="-0.32 -0.060 0.20" size="0.012" rgba="0 0 0 0" group="5"/>
+      <site name="tv_cell_1" pos="-0.16 -0.060 0.20" size="0.012" rgba="0 0 0 0" group="5"/>
+      <site name="tv_cell_2" pos="0 -0.060 0.20" size="0.012" rgba="0 0 0 0" group="5"/>
+      <site name="tv_cell_3" pos="0.16 -0.060 0.20" size="0.012" rgba="0 0 0 0" group="5"/>
+      <site name="tv_cell_4" pos="0.32 -0.060 0.20" size="0.012" rgba="0 0 0 0" group="5"/>
+      <site name="tv_cell_5" pos="-0.32 -0.060 0" size="0.012" rgba="0 0 0 0" group="5"/>
+      <site name="tv_cell_6" pos="-0.16 -0.060 0" size="0.012" rgba="0 0 0 0" group="5"/>
+      <site name="tv_cell_7" pos="0 -0.060 0" size="0.012" rgba="0 0 0 0" group="5"/>
+      <site name="tv_cell_8" pos="0.16 -0.060 0" size="0.012" rgba="0 0 0 0" group="5"/>
+      <site name="tv_cell_9" pos="0.32 -0.060 0" size="0.012" rgba="0 0 0 0" group="5"/>
+      <site name="tv_cell_10" pos="-0.32 -0.060 -0.20" size="0.012" rgba="0 0 0 0" group="5"/>
+      <site name="tv_cell_11" pos="-0.16 -0.060 -0.20" size="0.012" rgba="0 0 0 0" group="5"/>
+      <site name="tv_cell_12" pos="0 -0.060 -0.20" size="0.012" rgba="0 0 0 0" group="5"/>
+      <site name="tv_cell_13" pos="0.16 -0.060 -0.20" size="0.012" rgba="0 0 0 0" group="5"/>
+      <site name="tv_cell_14" pos="0.32 -0.060 -0.20" size="0.012" rgba="0 0 0 0" group="5"/>
+    </body>
+
+    <body name="duster_rest">
+      <geom name="duster_rest_top" type="box" size="0.34 0.17 0.025"
+            pos="1.45 1.02 0.55" material="console_wood"/>
+      <geom name="duster_rest_leg" type="box" size="0.05 0.05 0.27"
+            pos="1.45 1.02 0.27" material="console_wood"/>
+      <site name="duster_return_site" type="box" size="0.25 0.10 0.004"
+            pos="1.45 1.02 0.58" rgba="0.18 0.65 0.30 0.12" group="4"/>
+    </body>
+
+    <body name="rigid_duster" pos="1.43 1.00 0.602">
+      <freejoint name="rigid_duster_free"/>
+      <geom name="rigid_duster_handle_collision" type="capsule" size="0.018"
+            fromto="-0.20 0 0 0.14 0 0" material="duster_handle" mass="0.28"/>
+      <geom name="rigid_duster_head_collision" type="box" size="0.085 0.038 0.025"
+            pos="0.22 0 0" material="duster_head" mass="0.18"/>
+      <site name="rigid_duster_grasp" pos="-0.09 0 0" size="0.012"
+            rgba="0 0 0 0" group="5"/>
+      <site name="rigid_duster_head" pos="0.22 0 0" size="0.012"
+            rgba="0 0 0 0" group="5"/>
+    </body>
+
+    <body name="wrist_camera_mount" pos="0 -1.0 0.9">
+      <camera name="wrist_camera" pos="0 0 0" xyaxes="1 0 0 0 1 0"/>
+    </body>
+    <camera name="overhead_camera" pos="0 -0.45 4.2" xyaxes="1 0 0 0 1 0" fovy="58"/>
+    <camera name="room_corner_camera" pos="1.72 -1.68 2.25" xyaxes="0.72 0.69 0 -0.39 0.41 0.82" fovy="64"/>
+    <camera name="tv_camera" pos="0 0.15 1.20" xyaxes="-1 0 0 0 0 1" fovy="54"/>
+    <camera name="table_camera" pos="1.45 -1.15 1.35" xyaxes="0.67 0.74 0 -0.43 0.39 0.81" fovy="58"/>
+    <!-- Scene-owned fifth RGB-D view; virtual inspection temporarily
+         repositions all five fixed room cameras and restores them afterward. -->
+    <camera name="inspection_oblique_camera" pos="-1.35 -1.20 1.45"
+            xyaxes="0.72 -0.69 0 0.42 0.44 0.79" fovy="60"/>
+  </worldbody>
+
+  <contact>
+    <exclude body1="media_console" body2="media_console_left_drawer"/>
+    <exclude body1="media_console" body2="media_console_right_drawer"/>
+    <pair name="mug_coaster_support"
+          geom1="living_room_mug_collision"
+          geom2="coaster_right_collision"
+          condim="4" friction="3.0 3.0 0.04 0.01 0.01"
+          margin="0.0012" solref="0.004 1"
+          solimp="0.99 0.999 0.001"/>
+  </contact>
+  <equality/>
+  <actuator>
+    <position name="media_console_left_drawer_actuator"
+              joint="media_console_left_drawer_slide" kp="350"
+              ctrlrange="0 0.27" forcerange="-240 240"/>
+    <position name="media_console_right_drawer_actuator"
+              joint="media_console_right_drawer_slide" kp="350"
+              ctrlrange="0 0.27" forcerange="-240 240"/>
+  </actuator>
+</mujoco>

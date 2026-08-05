@@ -1,0 +1,135 @@
+schema_version: 1
+inspection_sequence: [LEFT_DRAWER, RIGHT_DRAWER]
+
+camera_slots:
+  inspection_left: room_corner_camera
+  inspection_right: table_camera
+  inspection_top: overhead_camera
+  inspection_front: tv_camera
+  inspection_close: inspection_oblique_camera
+
+view_validation:
+  minimum_valid_rig_cameras: 5
+  minimum_object_camera_count: 2
+  maximum_target_angle_degrees: 8.0
+  minimum_valid_depth_pixels: 200
+
+processing:
+  mask_erosion_pixels: 0
+  depth_discontinuity_m: 0.060
+  depth_discontinuity_radius_pixels: 1
+  voxel_size_m: 0.003
+  outlier_removal:
+    enabled: true
+    voxel_radius_m: 0.012
+    minimum_neighbours: 2
+    minimum_input_points: 40
+  primary_component_filter:
+    enabled: false
+    minimum_component_fraction: 0.60
+
+evidence_acceptance:
+  minimum_object_points: 20
+  minimum_inside_fraction: 0.55
+
+# These volumes select fresh evidence only. They are never used to infer an
+# object's geometry. All coordinates are MuJoCo world-frame metres.
+regions:
+  INITIAL:
+    target_world_m: [0.0, -0.35, 0.56]
+    rig_position_world_m: [0.0, -1.30, 1.18]
+    up_world: [0.0, 0.0, 1.0]
+    near_depth_m: 0.20
+    far_depth_m: 2.20
+    settle_steps: 50
+    boundary_margin_m: 0.020
+    inspection_volume:
+      minimum_world_m: [-0.55, -0.66, 0.47]
+      maximum_world_m: [0.55, -0.08, 0.72]
+    cameras:
+      inspection_left:
+        position_offset_m: [-0.34, 0.00, 0.10]
+        look_at_offset_m: [-0.15, 0.00, 0.00]
+        fovy_degrees: 60.0
+      inspection_right:
+        position_offset_m: [0.34, 0.00, 0.10]
+        look_at_offset_m: [0.15, 0.00, 0.00]
+        fovy_degrees: 60.0
+      inspection_top:
+        position_offset_m: [0.00, 0.18, 0.52]
+        look_at_offset_m: [0.00, 0.00, -0.04]
+        fovy_degrees: 64.0
+      inspection_front:
+        position_offset_m: [-0.18, 0.10, 0.22]
+        look_at_offset_m: [0.08, 0.00, 0.00]
+        fovy_degrees: 60.0
+      inspection_close:
+        position_offset_m: [0.18, 0.16, 0.28]
+        look_at_offset_m: [-0.08, 0.00, 0.00]
+        fovy_degrees: 62.0
+
+  LEFT_DRAWER:
+    target_world_m: [-0.34, 1.03, 0.27]
+    rig_position_world_m: [-0.34, 0.25, 0.72]
+    up_world: [0.0, 0.0, 1.0]
+    near_depth_m: 0.16
+    far_depth_m: 1.60
+    settle_steps: 80
+    boundary_margin_m: 0.025
+    inspection_volume:
+      minimum_world_m: [-0.65, 0.75, 0.16]
+      maximum_world_m: [-0.03, 1.38, 0.43]
+    cameras:
+      inspection_left:
+        position_offset_m: [-0.22, 0.00, 0.08]
+        look_at_offset_m: [-0.08, 0.00, 0.00]
+        fovy_degrees: 58.0
+      inspection_right:
+        position_offset_m: [0.22, 0.00, 0.08]
+        look_at_offset_m: [0.08, 0.00, 0.00]
+        fovy_degrees: 58.0
+      inspection_top:
+        position_offset_m: [0.00, 0.15, 0.35]
+        look_at_offset_m: [0.00, 0.00, -0.03]
+        fovy_degrees: 60.0
+      inspection_front:
+        position_offset_m: [-0.10, -0.06, -0.05]
+        look_at_offset_m: [-0.04, 0.00, 0.00]
+        fovy_degrees: 58.0
+      inspection_close:
+        position_offset_m: [0.10, 0.10, 0.02]
+        look_at_offset_m: [0.04, 0.00, 0.00]
+        fovy_degrees: 58.0
+
+  RIGHT_DRAWER:
+    target_world_m: [0.34, 1.03, 0.27]
+    rig_position_world_m: [0.34, 0.25, 0.72]
+    up_world: [0.0, 0.0, 1.0]
+    near_depth_m: 0.16
+    far_depth_m: 1.60
+    settle_steps: 80
+    boundary_margin_m: 0.025
+    inspection_volume:
+      minimum_world_m: [0.03, 0.75, 0.16]
+      maximum_world_m: [0.65, 1.38, 0.43]
+    cameras:
+      inspection_left:
+        position_offset_m: [-0.22, 0.00, 0.08]
+        look_at_offset_m: [-0.08, 0.00, 0.00]
+        fovy_degrees: 58.0
+      inspection_right:
+        position_offset_m: [0.22, 0.00, 0.08]
+        look_at_offset_m: [0.08, 0.00, 0.00]
+        fovy_degrees: 58.0
+      inspection_top:
+        position_offset_m: [0.00, 0.15, 0.35]
+        look_at_offset_m: [0.00, 0.00, -0.03]
+        fovy_degrees: 60.0
+      inspection_front:
+        position_offset_m: [-0.10, -0.06, -0.05]
+        look_at_offset_m: [-0.04, 0.00, 0.00]
+        fovy_degrees: 58.0
+      inspection_close:
+        position_offset_m: [0.10, 0.10, 0.02]
+        look_at_offset_m: [0.04, 0.00, 0.00]
+        fovy_degrees: 58.0

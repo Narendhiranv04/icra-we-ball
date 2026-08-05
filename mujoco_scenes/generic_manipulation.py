@@ -41,6 +41,7 @@ BASE_COMMAND_TOLERANCE = 0.002
 BASE_SETTLE_SPEED = 0.01
 MANIPULATION_BASE_LINEAR_DAMPING = 2000.0
 SELF_COLLISION_TOLERANCE = 0.003
+SELF_COLLISION_COMPARISON_EPSILON = 0.0002
 ENVIRONMENT_COLLISION_TOLERANCE = 0.002
 COLLISION_GUARD_INTERVAL = 5
 SPOON_PIVOT_RELAXATION = 0.30
@@ -74,6 +75,8 @@ class SimplePickSpec:
     top_down_rotation: np.ndarray | None = None
     home_seed: np.ndarray | None = None
     carry_position: np.ndarray | None = None
+    final_tracking_tolerance: float = JOINT_WAYPOINT_TOLERANCE
+    carry_grip_relaxation: float = 0.0
 
 
 GOOGLE_PICK_SPECS = {
@@ -337,7 +340,7 @@ class RobotConfigurationCollisionChecker:
                 SELF_COLLISION_TOLERANCE,
                 None,
             )
-            if distance < minimum_distance:
+            if distance < minimum_distance - SELF_COLLISION_COMPARISON_EPSILON:
                 first_body = int(self.model.geom_bodyid[first_geom])
                 second_body = int(self.model.geom_bodyid[second_geom])
                 first_name = mujoco.mj_id2name(
@@ -416,6 +419,13 @@ class CalibratedPickPlaceExecutor:
         robot_name: str,
         scene_name: str | None = None,
         calibration_mode: bool = False,
+        pick_specs_override: dict[str, SimplePickSpec] | None = None,
+        calibrated_objects_override: tuple[str, ...] | None = None,
+        base_stance: np.ndarray | None = None,
+        base_approach_forward: float = MANIPULATION_BASE_FORWARD,
+        base_approach_delta: np.ndarray | None = None,
+        arm_command_speed: float = ARM_COMMAND_SPEED,
+        intermediate_tracking_tolerance: float = INTERMEDIATE_TRACKING_TOLERANCE,
     ):
         self.model = model
         self.data = data
@@ -423,21 +433,45 @@ class CalibratedPickPlaceExecutor:
         self.profile = manipulation_profile(robot_name)
         self.mobile_profile = mobile_profile(robot_name)
         self.calibration_mode = calibration_mode
-        scene_objects = CALIBRATED_SCENE_OBJECTS.get(scene_name, ())
-        supported_objects = (
-            self.profile.supported_objects if scene_name is None else scene_objects
+        if arm_command_speed <= 0.0:
+            raise ValueError("arm_command_speed must be positive")
+        self.arm_command_speed = float(arm_command_speed)
+        if intermediate_tracking_tolerance <= 0.0:
+            raise ValueError("intermediate_tracking_tolerance must be positive")
+        self.intermediate_tracking_tolerance = float(
+            intermediate_tracking_tolerance
         )
-        calibrated_specs = {
-            name: GOOGLE_PICK_SPECS[name]
-            for name in supported_objects
-            if name in self.profile.supported_objects
-            if name in GOOGLE_PICK_SPECS
-        }
+        if pick_specs_override is None:
+            scene_objects = CALIBRATED_SCENE_OBJECTS.get(scene_name, ())
+            supported_objects = (
+                self.profile.supported_objects
+                if scene_name is None
+                else scene_objects
+            )
+            calibrated_specs = {
+                name: GOOGLE_PICK_SPECS[name]
+                for name in supported_objects
+                if name in self.profile.supported_objects
+                if name in GOOGLE_PICK_SPECS
+            }
+            all_pick_specs = {
+                **GOOGLE_CALIBRATION_PICK_SPECS,
+                **calibrated_specs,
+            }
+        else:
+            all_pick_specs = dict(pick_specs_override)
+            calibrated_names = (
+                tuple(all_pick_specs)
+                if calibrated_objects_override is None
+                else calibrated_objects_override
+            )
+            calibrated_specs = {
+                name: all_pick_specs[name]
+                for name in calibrated_names
+                if name in all_pick_specs
+            }
         self.calibrated_objects = frozenset(calibrated_specs)
-        self.all_pick_specs = {
-            **GOOGLE_CALIBRATION_PICK_SPECS,
-            **calibrated_specs,
-        }
+        self.all_pick_specs = all_pick_specs
         self.pick_specs = (
             self.all_pick_specs if calibration_mode else calibrated_specs
         )
@@ -471,6 +505,23 @@ class CalibratedPickPlaceExecutor:
         self.base_actuators = self._ids(
             mujoco.mjtObj.mjOBJ_ACTUATOR, self.mobile_profile.base_actuators
         )
+        self.base_stance = (
+            np.zeros(3)
+            if base_stance is None
+            else np.asarray(base_stance, dtype=float).copy()
+        )
+        if self.base_stance.shape != (3,):
+            raise ValueError("base_stance must contain forward, lateral, and yaw")
+        approach_delta = (
+            np.array((base_approach_forward, 0.0, 0.0))
+            if base_approach_delta is None
+            else np.asarray(base_approach_delta, dtype=float).copy()
+        )
+        if approach_delta.shape != (3,):
+            raise ValueError(
+                "base_approach_delta must contain forward, lateral, and yaw"
+            )
+        self.base_manipulation_target = self.base_stance + approach_delta
         self.base_forward_qpos = int(self.base_qpos[0])
         self.mode = "idle"
         self.status = "Manipulation idle: gripper empty"
@@ -524,14 +575,13 @@ class CalibratedPickPlaceExecutor:
         # compact robot at a cupboard must still be allowed to Move home.
         return self.mode in {"idle", "holding"}
 
-    def _command_base(self, forward: float) -> None:
+    def _command_base(self, target: np.ndarray) -> None:
         # The short table approach benefits from stronger damping than a long
         # navigation route. Restore the composed-model values as soon as the
         # approach or retreat has settled.
         self.model.dof_damping[self.base_dofs[:2]] = (
             MANIPULATION_BASE_LINEAR_DAMPING
         )
-        target = np.array((forward, 0.0, 0.0))
         current = self.data.ctrl[self.base_actuators]
         max_step = self.model.opt.timestep * np.array(
             (
@@ -547,8 +597,7 @@ class CalibratedPickPlaceExecutor:
     def _restore_navigation_base_damping(self) -> None:
         self.model.dof_damping[self.base_dofs] = self.navigation_base_damping
 
-    def _base_at_target(self, forward: float) -> bool:
-        target = np.array((forward, 0.0, 0.0))
+    def _base_at_target(self, target: np.ndarray) -> bool:
         error = self.data.qpos[self.base_qpos] - target
         error[2] = math.atan2(math.sin(error[2]), math.cos(error[2]))
         command_error = self.data.ctrl[self.base_actuators] - target
@@ -563,7 +612,7 @@ class CalibratedPickPlaceExecutor:
         )
 
     def _near_navigation_home(self) -> bool:
-        error = self.data.qpos[self.base_qpos].copy()
+        error = self.data.qpos[self.base_qpos] - self.base_stance
         error[2] = math.atan2(math.sin(error[2]), math.cos(error[2]))
         return float(np.max(np.abs(error))) < BASE_HOME_REQUEST_TOLERANCE
 
@@ -781,6 +830,7 @@ class CalibratedPickPlaceExecutor:
             raise RuntimeError("Place requires Move (home) first")
         self.pending_place_site = site_name
         self.failure = None
+        self.calibration_attempt_ticks = 0
         self.mode = "place_base_approach"
         self.status = f"Place {self.held_object}: approaching manipulation stance"
 
@@ -856,7 +906,7 @@ class CalibratedPickPlaceExecutor:
             return True
         waypoint = self.waypoints[self.waypoint_index]
         current_command = self.data.ctrl[self.arm_actuators]
-        max_command_step = ARM_COMMAND_SPEED * self.model.opt.timestep
+        max_command_step = self.arm_command_speed * self.model.opt.timestep
         next_command = current_command + np.clip(
             waypoint.joints - current_command,
             -max_command_step,
@@ -870,9 +920,13 @@ class CalibratedPickPlaceExecutor:
         self.status = waypoint.label
         is_final = self.waypoint_index == len(self.waypoints) - 1
         tracking_tolerance = (
-            JOINT_WAYPOINT_TOLERANCE
+            (
+                self.pick_specs[self.target_object].final_tracking_tolerance
+                if self.target_object in self.pick_specs
+                else JOINT_WAYPOINT_TOLERANCE
+            )
             if is_final
-            else INTERMEDIATE_TRACKING_TOLERANCE
+            else self.intermediate_tracking_tolerance
         )
         if (
             command_error < ARM_COMMAND_TOLERANCE
@@ -1112,8 +1166,8 @@ class CalibratedPickPlaceExecutor:
         if self.mode == "pick_base_approach":
             self.data.ctrl[self.arm_actuators] = self.profile.navigation_joints
             self.data.ctrl[self.finger_actuators] = self.profile.open_command
-            self._command_base(MANIPULATION_BASE_FORWARD)
-            if self._base_at_target(MANIPULATION_BASE_FORWARD):
+            self._command_base(self.base_manipulation_target)
+            if self._base_at_target(self.base_manipulation_target):
                 self._restore_navigation_base_damping()
                 try:
                     self._begin_pick_plan()
@@ -1121,8 +1175,8 @@ class CalibratedPickPlaceExecutor:
                     self._fail(str(error))
             return
         if self.mode == "place_base_approach":
-            self._command_base(MANIPULATION_BASE_FORWARD)
-            if self._base_at_target(MANIPULATION_BASE_FORWARD):
+            self._command_base(self.base_manipulation_target)
+            if self._base_at_target(self.base_manipulation_target):
                 self._restore_navigation_base_damping()
                 try:
                     self._begin_place_plan()
@@ -1149,6 +1203,17 @@ class CalibratedPickPlaceExecutor:
                     except RuntimeError as error:
                         self._fail(str(error))
                         return
+                    relaxation = self.pick_specs[
+                        self.target_object
+                    ].carry_grip_relaxation
+                    if relaxation > 0.0:
+                        self.close_target = max(
+                            self.profile.open_command,
+                            self.close_target - relaxation,
+                        )
+                        self.data.ctrl[
+                            self.finger_actuators
+                        ] = self.close_target
                     self.waypoints = self.retreat_waypoints
                     self.waypoint_index = 0
                     self.waypoint_ticks = 0
@@ -1228,8 +1293,8 @@ class CalibratedPickPlaceExecutor:
                 self._fail("spoon handle re-grasp did not recover bilateral contact")
             return
         if self.mode == "pick_base_retreat":
-            self._command_base(0.0)
-            if self._base_at_target(0.0):
+            self._command_base(self.base_stance)
+            if self._base_at_target(self.base_stance):
                 self._restore_navigation_base_damping()
                 self.mode = "holding"
                 self.status = (
@@ -1257,8 +1322,8 @@ class CalibratedPickPlaceExecutor:
             self.status = "Place complete: retreating to navigation home"
             return
         if self.mode == "place_base_retreat":
-            self._command_base(0.0)
-            if not self._base_at_target(0.0):
+            self._command_base(self.base_stance)
+            if not self._base_at_target(self.base_stance):
                 return
             self._restore_navigation_base_damping()
             placed = self.held_object

@@ -14,6 +14,9 @@ from mujoco_scenes.geometry_checker import (
     voxel_downsample,
     write_ply,
 )
+from mujoco_scenes.living_room_scene import (
+    LIVING_ROOM_INSPECTION_RIG_CONFIG,
+)
 
 
 class GeometryCheckerTests(unittest.TestCase):
@@ -107,6 +110,21 @@ class GeometryCheckerTests(unittest.TestCase):
         self.assertEqual(
             set(config["regions"]),
             {"INITIAL", "D1", "D2", "C2", "B1", "C1"},
+        )
+        for region in config["regions"].values():
+            self.assertEqual(len(region["cameras"]), 5)
+
+    def test_living_room_has_scene_specific_five_view_rigs(self):
+        config = load_inspection_rig_config(
+            LIVING_ROOM_INSPECTION_RIG_CONFIG
+        )
+        self.assertEqual(
+            config["inspection_sequence"],
+            ["LEFT_DRAWER", "RIGHT_DRAWER"],
+        )
+        self.assertEqual(
+            set(config["regions"]),
+            {"INITIAL", "LEFT_DRAWER", "RIGHT_DRAWER"},
         )
         for region in config["regions"].values():
             self.assertEqual(len(region["cameras"]), 5)

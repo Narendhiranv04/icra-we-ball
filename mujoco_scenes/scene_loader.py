@@ -1888,10 +1888,23 @@ class KitchenScene:
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Kitchen Scene Loader")
+    parser = argparse.ArgumentParser(
+        description="MuJoCo kitchen/living-room scene loader"
+    )
+    parser.add_argument(
+        "--environment",
+        choices=("auto", "kitchen", "living-room"),
+        default="auto",
+        help=(
+            "Environment family. 'auto' selects living-room for "
+            "--scene L1_living_room and kitchen otherwise"
+        ),
+    )
     parser.add_argument(
         "--scene", type=str, default="S1_coffee_missing_mug",
-        help="Scene name from scene_configs.yaml"
+        help=(
+            "Kitchen scene name from scene_configs.yaml, or L1_living_room"
+        ),
     )
     parser.add_argument(
         "--viewer", action="store_true",
@@ -1917,12 +1930,15 @@ if __name__ == "__main__":
         help="Robot backend to compose into the kitchen"
     )
     parser.add_argument(
-        "--camera", choices=VIEW_CAMERA_CHOICES, default=FREE_CAMERA,
-        help="Camera used for rendering or as the viewer's starting view"
+        "--camera", default=FREE_CAMERA,
+        help="Environment camera used for rendering or viewer startup"
     )
     parser.add_argument(
-        "--open-container", action="append", choices=CONTAINER_JOINTS,
-        help="Open a container before rendering/viewing; may be repeated"
+        "--open-container", action="append",
+        help=(
+            "Open a kitchen container or living-room drawer before output; "
+            "may be repeated"
+        )
     )
     parser.add_argument(
         "--open-all", action="store_true",
@@ -2061,7 +2077,9 @@ if __name__ == "__main__":
 
     if args.calibration_mode and not args.viewer:
         parser.error("--calibration-mode requires --viewer")
-    if args.calibration_mode and args.robot != ROBOT_GOOGLE:
+    if args.calibration_mode and (
+        args.robot != ROBOT_GOOGLE or args.no_robot
+    ):
         parser.error("--calibration-mode currently requires --robot google")
     if args.calibration_mode and args.no_actions_panel:
         parser.error("--calibration-mode requires the Actions panel")
@@ -2078,22 +2096,46 @@ if __name__ == "__main__":
             print(f"    Missing items: {missing}")
             print(f"    Optimal inspections: {cfg.optimal_inspections}")
             print()
+        print("  L1_living_room")
+        print("    Goal: Navigate, organize rigid objects, and dust the TV")
+        print("    Inspection regions: LEFT_DRAWER, RIGHT_DRAWER")
         exit(0)
 
-    # Load scene
+    environment = args.environment
+    if environment == "auto":
+        environment = (
+            "living-room"
+            if args.scene == "L1_living_room"
+            else "kitchen"
+        )
+    if environment == "living-room" and args.scene not in {
+        "S1_coffee_missing_mug",
+        "L1_living_room",
+    }:
+        parser.error(
+            "--environment living-room supports --scene L1_living_room only"
+        )
+    if environment == "kitchen" and args.scene == "L1_living_room":
+        parser.error("L1_living_room requires --environment living-room or auto")
+
     selected_robot = ROBOT_NONE if args.no_robot else args.robot
-    scene = KitchenScene(args.scene, robot=selected_robot)
+    if environment == "living-room":
+        from mujoco_scenes.living_room_scene import LivingRoomScene
+
+        scene = LivingRoomScene(robot=selected_robot)
+    else:
+        scene = KitchenScene(args.scene, robot=selected_robot)
     scene.print_scene_summary()
 
     if args.inspect_sequence is not None:
         from mujoco_scenes.sequential_inspection import (
-            DEFAULT_INSPECTION_ORDER,
             run_sequential_inspection,
         )
 
         run_sequential_inspection(
             scene,
-            args.inspect_sequence or DEFAULT_INSPECTION_ORDER,
+            args.inspect_sequence
+            or getattr(scene, "default_inspection_order", None),
             runs_root=args.runs_root,
             run_id=args.run_id,
             width=args.point_cloud_width,
@@ -2136,6 +2178,8 @@ if __name__ == "__main__":
         print_run_summary(point_cloud_run)
 
     if args.demo_search:
+        if environment != "kitchen":
+            parser.error("--demo-search is currently a kitchen-only workflow")
         print("\n[DEMO] Running sequential container search...\n")
         missing = scene.get_missing_objects()
         print(f"  Missing objects to find: {missing}\n")
@@ -2166,9 +2210,11 @@ if __name__ == "__main__":
         print(f"  Saved {frame.shape[1]}x{frame.shape[0]} frame.")
 
     if args.viewer:
-        scene.launch_viewer(
-            camera=args.camera,
-            actions_panel=not args.no_actions_panel,
-            calibration_mode=args.calibration_mode,
-            task_requirements=args.task_requirements,
-        )
+        viewer_options = {
+            "camera": args.camera,
+            "actions_panel": not args.no_actions_panel,
+            "calibration_mode": args.calibration_mode,
+        }
+        if environment == "kitchen":
+            viewer_options["task_requirements"] = args.task_requirements
+        scene.launch_viewer(**viewer_options)
