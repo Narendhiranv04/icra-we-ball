@@ -461,6 +461,11 @@ extracts its upper support plane. The property extractor accepts only typed
 `RegionMeasurementEvidence`. Inspection volumes select evidence; their
 configured extents never become measured support dimensions.
 
+The fixed payload is associated as the scene's single independently movable
+rigid segmentation instance. Runtime capture does not look up a tray body,
+geom, material, or asset name; its footprint is measured only from the
+selected current-view RGB-D points.
+
 Observed patches receive generic IDs such as `region_0001`. Identity is
 maintained using measured 3-D location, footprint overlap, size consistency,
 and independently detected semantic context. Public inference uses separate

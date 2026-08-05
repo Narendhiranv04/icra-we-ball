@@ -185,10 +185,28 @@ def require_payload_measurement_evidence(
         )
 
 
-def _body_geom_ids(model: mujoco.MjModel, body_name: str) -> np.ndarray:
-    root = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, body_name)
-    if root < 0:
-        raise ValueError(f"MuJoCo body not found: {body_name}")
+def _single_free_rigid_instance_geom_ids(
+    model: mujoco.MjModel,
+) -> np.ndarray:
+    """Return segmentation geom IDs for the benchmark's fixed payload.
+
+    The L2 task contract contains exactly one independently movable rigid
+    payload. Identify that visible instance from kinematic topology and
+    segmentation IDs, never from a body/geom/asset name or intended size.
+    Its dimensions are still measured exclusively from current RGB-D points.
+    """
+    roots = {
+        int(model.jnt_bodyid[joint_id])
+        for joint_id in range(model.njnt)
+        if int(model.jnt_type[joint_id])
+        == int(mujoco.mjtJoint.mjJNT_FREE)
+    }
+    if len(roots) != 1:
+        raise ValueError(
+            "Region benchmark requires exactly one free rigid payload "
+            f"instance; observed {len(roots)}"
+        )
+    root = next(iter(roots))
     ids = []
     for geom_id, body_id in enumerate(model.geom_bodyid):
         cursor = int(body_id)
@@ -997,9 +1015,7 @@ class L2RegionEvidenceCapture:
             mujoco.mj_step(self.model, self.data)
         mujoco.mj_forward(self.model, self.data)
         camera_slots = self.config["camera_slots"]
-        payload_geom_ids = _body_geom_ids(
-            self.model, self.scene.payload_instance_name
-        )
+        payload_geom_ids = _single_free_rigid_instance_geom_ids(self.model)
         configured = {}
         original = {}
         target_base = np.asarray(region["target_world_m"], float)

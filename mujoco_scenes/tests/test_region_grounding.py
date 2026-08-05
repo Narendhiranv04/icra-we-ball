@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 from pathlib import Path
 
 import mujoco
@@ -20,9 +21,11 @@ from mujoco_scenes.region_grounding import (
     REGION_MEASUREMENT_PURPOSE,
     REGION_VISUALIZATION_PURPOSE,
     PayloadMeasurementEvidence,
+    L2RegionEvidenceCapture,
     RegionCameraCapture,
     RegionMeasurementEvidence,
     RegionStageCapture,
+    _single_free_rigid_instance_geom_ids,
     evaluate_fits_on,
     evaluate_near_seating_area,
     extract_payload_properties,
@@ -366,6 +369,23 @@ def test_l2_variants_compile_without_robot(scene_name):
         )
         >= 0
     )
+
+
+@pytest.mark.parametrize("robot", ("none", "google"))
+def test_payload_segmentation_instance_is_selected_without_a_body_name(robot):
+    scene = L2LivingRoomRegionScene(L2_SCENES[0], robot=robot)
+    geom_ids = _single_free_rigid_instance_geom_ids(scene.model)
+    assert len(geom_ids) == 5
+    owning_bodies = {
+        int(scene.model.geom_bodyid[geom_id]) for geom_id in geom_ids
+    }
+    assert len(owning_bodies) == 1
+
+
+def test_runtime_payload_capture_does_not_consume_simulator_names():
+    source = inspect.getsource(L2RegionEvidenceCapture.capture)
+    assert "payload_instance_name" not in source
+    assert "mjOBJ_BODY" not in source
 
 
 def test_l2_primary_compiles_with_google_robot():
