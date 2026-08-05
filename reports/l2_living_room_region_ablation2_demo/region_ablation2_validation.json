@@ -1,0 +1,37 @@
+{
+  "checks": [
+    {
+      "expected_classification": "FALSE_POSITIVE",
+      "expected_status": "COMPLETE",
+      "expected_validity": "INVALID",
+      "observed_classification": "FALSE_POSITIVE_INVALID_COMPLETE",
+      "observed_status": "COMPLETE",
+      "observed_validity": "INVALID",
+      "passed": true,
+      "policy": "always_shared"
+    },
+    {
+      "expected_classification": "FALSE_NEGATIVE",
+      "expected_status": "EXHAUSTED",
+      "expected_validity": "INVALID",
+      "observed_classification": "FALSE_NEGATIVE",
+      "observed_status": "EXHAUSTED",
+      "observed_validity": "INVALID",
+      "passed": true,
+      "policy": "always_distinct"
+    },
+    {
+      "expected_classification": "CORRECT",
+      "expected_status": "COMPLETE",
+      "expected_validity": "VALID",
+      "observed_classification": "CORRECT",
+      "observed_status": "COMPLETE",
+      "observed_validity": "VALID",
+      "passed": true,
+      "policy": "function_aware"
+    }
+  ],
+  "passed": true,
+  "scene_name": "L2_living_room_region_ablation2_primary",
+  "schema_version": 1
+}

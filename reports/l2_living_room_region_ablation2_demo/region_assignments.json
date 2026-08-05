@@ -1,0 +1,87 @@
+{
+  "always_distinct": [],
+  "always_shared": [
+    {
+      "candidate_rank": 3,
+      "function_group": "personal_drinks",
+      "function_id": "PLACE_PERSONAL_DRINK",
+      "payload_id": "object_0001",
+      "region_id": "region_0004",
+      "signed_margin_m": 0.13537980975778807,
+      "slot_id": "drink_slot_1",
+      "target_id": "seating_0001"
+    },
+    {
+      "candidate_rank": 3,
+      "function_group": "personal_drinks",
+      "function_id": "PLACE_PERSONAL_DRINK",
+      "payload_id": "object_0002",
+      "region_id": "region_0004",
+      "signed_margin_m": 0.1398006181785283,
+      "slot_id": "drink_slot_2",
+      "target_id": "seating_0002"
+    },
+    {
+      "candidate_rank": 4,
+      "function_group": "shared_controls",
+      "function_id": "PLACE_SHARED_CONTROLS",
+      "payload_id": "object_0003",
+      "region_id": "region_0002",
+      "signed_margin_m": 0.10191526774762694,
+      "slot_id": "object_0003",
+      "target_id": "common_viewing_area"
+    },
+    {
+      "candidate_rank": 4,
+      "function_group": "shared_controls",
+      "function_id": "PLACE_SHARED_CONTROLS",
+      "payload_id": "object_0004",
+      "region_id": "region_0002",
+      "signed_margin_m": 0.10191526774762694,
+      "slot_id": "object_0004",
+      "target_id": "common_viewing_area"
+    }
+  ],
+  "function_aware": [
+    {
+      "candidate_rank": 1,
+      "function_group": "personal_drinks",
+      "function_id": "PLACE_PERSONAL_DRINK",
+      "payload_id": "object_0001",
+      "region_id": "region_0001",
+      "signed_margin_m": 0.2704975949594802,
+      "slot_id": "drink_slot_1",
+      "target_id": "seating_0001"
+    },
+    {
+      "candidate_rank": 2,
+      "function_group": "personal_drinks",
+      "function_id": "PLACE_PERSONAL_DRINK",
+      "payload_id": "object_0002",
+      "region_id": "region_0005",
+      "signed_margin_m": 0.2691869536621797,
+      "slot_id": "drink_slot_2",
+      "target_id": "seating_0002"
+    },
+    {
+      "candidate_rank": 4,
+      "function_group": "shared_controls",
+      "function_id": "PLACE_SHARED_CONTROLS",
+      "payload_id": "object_0003",
+      "region_id": "region_0002",
+      "signed_margin_m": 0.10191526774762694,
+      "slot_id": "object_0003",
+      "target_id": "common_viewing_area"
+    },
+    {
+      "candidate_rank": 4,
+      "function_group": "shared_controls",
+      "function_id": "PLACE_SHARED_CONTROLS",
+      "payload_id": "object_0004",
+      "region_id": "region_0002",
+      "signed_margin_m": 0.10191526774762694,
+      "slot_id": "object_0004",
+      "target_id": "common_viewing_area"
+    }
+  ]
+}

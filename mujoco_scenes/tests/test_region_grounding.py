@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 from mujoco_scenes.living_room_region_scene import (
+    L2_ABLATION1_SCENES,
     L2_SCENES,
     L2LivingRoomRegionScene,
     build_l2_region_xml,
@@ -364,12 +365,18 @@ def test_l2_variants_compile_without_robot(scene_name):
         build_l2_region_xml(scene_name, "none")
     )
     assert model.ncam >= 5
-    assert (
-        mujoco.mj_name2id(
-            model, mujoco.mjtObj.mjOBJ_BODY, "l2_refreshment_tray"
+    if scene_name in L2_ABLATION1_SCENES:
+        assert (
+            mujoco.mj_name2id(
+                model, mujoco.mjtObj.mjOBJ_BODY, "l2_refreshment_tray"
+            )
+            >= 0
         )
-        >= 0
-    )
+    else:
+        assert sum(
+            model.jnt_type[joint_id] == mujoco.mjtJoint.mjJNT_FREE
+            for joint_id in range(model.njnt)
+        ) == 4
 
 
 @pytest.mark.parametrize("robot", ("none", "google"))

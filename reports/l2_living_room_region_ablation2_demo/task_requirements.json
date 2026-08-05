@@ -1,0 +1,147 @@
+{
+  "active_function_groups": [
+    "personal_drinks",
+    "shared_controls"
+  ],
+  "allocation": {
+    "deterministic_tie_break": [
+      "total_candidate_rank",
+      "total_signed_margin_descending",
+      "persistent_region_ids"
+    ],
+    "policy_modes": [
+      "always_shared",
+      "always_distinct",
+      "function_aware"
+    ],
+    "production_policy": "function_aware"
+  },
+  "allow_cross_function_region_sharing": false,
+  "function_groups": {
+    "personal_drinks": {
+      "function_id": "PLACE_PERSONAL_DRINK",
+      "payload_semantic_roles": [
+        "drink",
+        "drink"
+      ],
+      "region_role": "personal_drink_region",
+      "required_relations": [
+        "PLANAR_SUPPORT",
+        "FITS_ON",
+        "NEAR_SEAT"
+      ],
+      "target_role": "seating_target",
+      "usage_policy": "DEDICATED_REGION_PER_TARGET"
+    },
+    "shared_controls": {
+      "function_id": "PLACE_SHARED_CONTROLS",
+      "payload_semantic_roles": [
+        "tv_remote",
+        "game_controller"
+      ],
+      "region_role": "shared_control_region",
+      "required_relations": [
+        "PLANAR_SUPPORT",
+        "FITS_SET_ON",
+        "ACCESSIBLE_FROM_VIEWING_AREA"
+      ],
+      "target_role": "common_viewing_area",
+      "usage_policy": "SHARED_REGION_REQUIRED"
+    }
+  },
+  "generated_from_foundation_model": false,
+  "geometric_requirements": {
+    "control_context": {
+      "maximum_distance_to_each_seat_m": 1.65,
+      "relation": "ACCESSIBLE_FROM_VIEWING_AREA"
+    },
+    "payload_region": {
+      "allowed_orientations_degrees": [
+        0,
+        90
+      ],
+      "edge_clearance_margin_m": 0.015,
+      "relation": "FITS_ON"
+    },
+    "payload_set_region": {
+      "allowed_orientations_degrees": [
+        0,
+        90
+      ],
+      "arrangements": [
+        "ALONG_LENGTH",
+        "ALONG_WIDTH"
+      ],
+      "edge_clearance_margin_m": 0.02,
+      "inter_payload_clearance_m": 0.025,
+      "relation": "FITS_SET_ON"
+    },
+    "personal_context": {
+      "maximum_centroid_distance_m": 1.15,
+      "relation": "NEAR_SEAT"
+    },
+    "unary_region": {
+      "maximum_normal_angle_degrees": 12.0,
+      "minimum_planarity_score": 0.9,
+      "minimum_usable_area_m2": 0.045,
+      "predicate": "PLANAR_SUPPORT"
+    }
+  },
+  "natural_language_goal": "Set up the living room for two people watching television. Place one drink in a separate accessible region beside each seating position, and keep the TV remote and game controller together in one shared accessible region.",
+  "schema_version": 1,
+  "semantic_requirements": {
+    "minimum_mean_confidence": 0.03,
+    "minimum_supporting_views": 2,
+    "minimum_winning_score_margin": 0.015,
+    "payload_roles": {
+      "drink": [
+        "mug",
+        "cup"
+      ],
+      "game_controller": [
+        "game_controller",
+        "controller"
+      ],
+      "tv_remote": [
+        "remote_control"
+      ]
+    },
+    "region_roles": {
+      "personal_drink_region": {
+        "accepted_categories": {
+          "side_table": 1
+        },
+        "rejected_categories": {
+          "armchair": 1,
+          "chair": 1,
+          "coffee_table": 1,
+          "floor": 1,
+          "media_console": 1,
+          "rug": 1,
+          "sofa": 1
+        }
+      },
+      "shared_control_region": {
+        "accepted_categories": {
+          "coffee_table": 1
+        },
+        "rejected_categories": {
+          "armchair": 1,
+          "chair": 1,
+          "floor": 1,
+          "media_console": 1,
+          "rug": 1,
+          "side_table": 1,
+          "sofa": 1
+        }
+      }
+    },
+    "seating_categories": [
+      "armchair",
+      "chair",
+      "sofa"
+    ]
+  },
+  "specification_source": "manual_future_fm_contract",
+  "task_id": "l2_two_person_viewing_region_allocation"
+}

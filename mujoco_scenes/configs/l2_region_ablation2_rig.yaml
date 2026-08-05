@@ -1,0 +1,89 @@
+schema_version: 1
+camera_slots:
+  inspection_left: l2_camera_left
+  inspection_right: l2_camera_right
+  inspection_top: l2_camera_top
+  inspection_front: l2_camera_front
+  inspection_close: l2_camera_close
+
+capture:
+  target_world_m: [0.0, 0.05, 0.55]
+  up_world: [0.0, 0.0, 1.0]
+  near_depth_m: 0.15
+  far_depth_m: 5.0
+  settle_steps: 500
+  cameras:
+    inspection_left:
+      position_world_m: [-2.25, -2.35, 1.85]
+      look_at_world_m: [-0.20, 0.10, 0.55]
+      fovy_degrees: 78.0
+    inspection_right:
+      position_world_m: [2.25, -2.35, 1.85]
+      look_at_world_m: [0.20, 0.10, 0.55]
+      fovy_degrees: 78.0
+    inspection_top:
+      position_world_m: [0.0, -0.25, 3.80]
+      look_at_world_m: [0.0, 0.10, 0.30]
+      fovy_degrees: 82.0
+    inspection_front:
+      position_world_m: [0.0, -2.85, 1.55]
+      look_at_world_m: [0.0, 0.12, 0.58]
+      fovy_degrees: 76.0
+    inspection_close:
+      position_world_m: [0.0, -2.05, 1.22]
+      look_at_world_m: [0.0, 0.02, 0.55]
+      fovy_degrees: 82.0
+
+view_validation:
+  minimum_valid_rig_cameras: 4
+  minimum_entity_camera_count: 2
+  minimum_valid_depth_pixels: 500
+  maximum_target_angle_degrees: 12.0
+
+processing:
+  voxel_size_m: 0.003
+  plane_band_m: 0.009
+  minimum_region_points: 250
+  minimum_payload_points: 80
+  minimum_seating_points: 300
+  payload_primary_component_radius_m: 0.25
+  robust_percentiles: [2.0, 98.0]
+
+# Opaque selectors calibrate evidence gates only. They do not provide labels,
+# sizes, roles, or allocation results.
+region_selectors:
+  surface_01:
+    candidate_rank: 1
+    volume:
+      minimum_world_m: [-1.78, 0.35, 0.52]
+      maximum_world_m: [-1.18, 0.86, 0.65]
+  surface_02:
+    candidate_rank: 2
+    volume:
+      minimum_world_m: [1.18, 0.35, 0.52]
+      maximum_world_m: [1.78, 0.86, 0.65]
+  surface_03:
+    candidate_rank: 3
+    volume:
+      minimum_world_m: [-0.44, 0.43, 0.49]
+      maximum_world_m: [0.44, 1.00, 0.63]
+  surface_04:
+    candidate_rank: 4
+    volume:
+      minimum_world_m: [-0.62, -0.45, 0.43]
+      maximum_world_m: [0.62, 0.36, 0.58]
+  surface_05:
+    candidate_rank: 5
+    volume:
+      minimum_world_m: [-0.82, -1.18, -0.005]
+      maximum_world_m: [0.82, -0.45, 0.05]
+
+seating_selectors:
+  target_01:
+    volume:
+      minimum_world_m: [-1.40, 0.63, 0.15]
+      maximum_world_m: [-0.40, 1.60, 1.42]
+  target_02:
+    volume:
+      minimum_world_m: [0.40, 0.63, 0.15]
+      maximum_world_m: [1.40, 1.60, 1.42]

@@ -1,0 +1,225 @@
+<mujoco model="L2 living room region allocation ablation">
+  <compiler angle="radian"/>
+  <option timestep="0.002" gravity="0 0 -9.81" integrator="implicitfast"/>
+  <visual>
+    <global offwidth="1280" offheight="960"/>
+    <quality shadowsize="4096"/>
+    <map znear="0.01" zfar="9"/>
+  </visual>
+  <default>
+    <geom condim="4" friction="1.0 0.03 0.01"/>
+    <joint damping="1"/>
+  </default>
+  <asset>
+    <texture name="a2_floor_tex" type="2d" builtin="checker"
+             rgb1="0.56 0.47 0.37" rgb2="0.45 0.36 0.28"
+             width="512" height="512"/>
+    <material name="a2_floor" texture="a2_floor_tex" texrepeat="9 8"
+              reflectance="0.04"/>
+    <texture name="a2_rug_tex" type="2d" builtin="checker"
+             rgb1="0.12 0.31 0.58" rgb2="0.90 0.74 0.24"
+             width="512" height="512"/>
+    <material name="a2_rug" texture="a2_rug_tex" texrepeat="7 4"/>
+    <material name="a2_wall" rgba="0.88 0.90 0.92 1"/>
+    <material name="a2_wood" rgba="0.42 0.17 0.055 1"/>
+    <material name="a2_wood_light" rgba="0.78 0.48 0.18 1"/>
+    <material name="a2_coffee" rgba="0.66 0.34 0.10 1"/>
+    <material name="a2_seat_a" rgba="0.10 0.37 0.66 1"/>
+    <material name="a2_seat_b" rgba="0.12 0.55 0.42 1"/>
+    <material name="a2_mug_a" rgba="0.92 0.20 0.16 1"/>
+    <material name="a2_mug_b" rgba="0.98 0.82 0.16 1"/>
+    <material name="a2_remote" rgba="0.08 0.09 0.12 1"/>
+    <material name="a2_controller" rgba="0.18 0.20 0.25 1"/>
+    <material name="a2_staging" rgba="0.78 0.80 0.82 1"/>
+    <material name="a2_tv" rgba="0.02 0.025 0.035 1"/>
+  </asset>
+  <worldbody>
+    <light name="a2_key" pos="-1.8 -2.0 4.0" dir="0.3 0.4 -1"
+           directional="true" diffuse="0.92 0.88 0.82"/>
+    <light name="a2_fill" pos="2.0 -0.8 3.2" dir="-0.4 0.2 -1"
+           directional="true" diffuse="0.64 0.72 0.86"/>
+    <light name="a2_back" pos="0 1.6 3.0" dir="0 -0.5 -1"
+           diffuse="0.52 0.50 0.46"/>
+
+    <geom name="a2_floor" type="plane" size="2.6 2.2 0.05"
+          material="a2_floor"/>
+    <geom name="a2_north_wall" type="box" pos="0 1.75 1.4"
+          size="2.55 0.04 1.4" material="a2_wall"/>
+    <geom name="a2_west_wall" type="box" pos="-2.40 0 1.4"
+          size="0.04 1.75 1.4" material="a2_wall"/>
+    <geom name="a2_east_wall" type="box" pos="2.40 0 1.4"
+          size="0.04 1.75 1.4" material="a2_wall"/>
+
+    <!-- Two visible and spatially distinct seating targets. -->
+    <body name="a2_seat_left">
+      <geom name="a2_seat_left_base" type="box" pos="-0.90 1.12 0.25"
+            size="0.38 0.34 0.25" material="a2_seat_a"/>
+      <geom name="a2_seat_left_cushion" type="box" pos="-0.90 1.00 0.53"
+            size="0.34 0.28 0.08" rgba="0.18 0.55 0.88 1"/>
+      <geom name="a2_seat_left_back" type="box" pos="-0.90 1.39 0.92"
+            size="0.38 0.10 0.46" material="a2_seat_a"/>
+      <geom name="a2_seat_left_arm_l" type="box" pos="-1.31 1.07 0.63"
+            size="0.07 0.30 0.30" material="a2_seat_a"/>
+      <geom name="a2_seat_left_arm_r" type="box" pos="-0.49 1.07 0.63"
+            size="0.07 0.30 0.30" material="a2_seat_a"/>
+    </body>
+    <body name="a2_seat_right">
+      <geom name="a2_seat_right_base" type="box" pos="0.90 1.12 0.25"
+            size="0.38 0.34 0.25" material="a2_seat_b"/>
+      <geom name="a2_seat_right_cushion" type="box" pos="0.90 1.00 0.53"
+            size="0.34 0.28 0.08" rgba="0.20 0.72 0.52 1"/>
+      <geom name="a2_seat_right_back" type="box" pos="0.90 1.39 0.92"
+            size="0.38 0.10 0.46" material="a2_seat_b"/>
+      <geom name="a2_seat_right_arm_l" type="box" pos="0.49 1.07 0.63"
+            size="0.07 0.30 0.30" material="a2_seat_b"/>
+      <geom name="a2_seat_right_arm_r" type="box" pos="1.31 1.07 0.63"
+            size="0.07 0.30 0.30" material="a2_seat_b"/>
+    </body>
+
+    <!-- Dedicated personal drink supports. -->
+    <body name="a2_personal_left">
+      <geom name="a2_personal_left_top" type="box"
+            pos="-1.48 0.60 0.59" size="0.25 0.21 0.035"
+            material="a2_wood_light"/>
+      <geom name="a2_personal_left_leg" type="cylinder"
+            pos="-1.48 0.60 0.30" size="0.055 0.255"
+            material="a2_wood"/>
+      <geom name="a2_personal_left_foot" type="box"
+            pos="-1.48 0.60 0.035" size="0.16 0.14 0.025"
+            material="a2_wood"/>
+    </body>
+    <body name="a2_personal_right">
+      <geom name="a2_personal_right_top" type="box"
+            pos="1.48 0.60 0.59" size="0.25 0.21 0.035"
+            material="a2_wood_light"/>
+      <geom name="a2_personal_right_leg" type="cylinder"
+            pos="1.48 0.60 0.30" size="0.055 0.255"
+            material="a2_wood"/>
+      <geom name="a2_personal_right_foot" type="box"
+            pos="1.48 0.60 0.035" size="0.16 0.14 0.025"
+            material="a2_wood"/>
+    </body>
+
+    <!-- Always-shared drink trap: compatible with both seats but one region. -->
+    <body name="a2_shared_drink_trap">
+      <geom name="a2_shared_drink_top" type="box" pos="0 0.72 0.56"
+            size="0.37 0.22 0.035" material="a2_wood_light"/>
+      <geom name="a2_shared_drink_leg" type="cylinder" pos="0 0.72 0.28"
+            size="0.060 0.245" material="a2_wood"/>
+      <geom name="a2_shared_drink_foot" type="box" pos="0 0.72 0.035"
+            size="0.20 0.14 0.025" material="a2_wood"/>
+    </body>
+
+    <!-- Only robust shared-controls solution. -->
+    <body name="a2_control_table">
+      <geom name="a2_control_table_top" type="box" pos="0 -0.05 0.50"
+            size="0.50 0.34 0.040" material="a2_coffee"/>
+      <geom name="a2_control_leg_fl" type="box" pos="-0.40 -0.29 0.24"
+            size="0.04 0.04 0.24" material="a2_wood"/>
+      <geom name="a2_control_leg_fr" type="box" pos="0.40 -0.29 0.24"
+            size="0.04 0.04 0.24" material="a2_wood"/>
+      <geom name="a2_control_leg_bl" type="box" pos="-0.40 0.19 0.24"
+            size="0.04 0.04 0.24" material="a2_wood"/>
+      <geom name="a2_control_leg_br" type="box" pos="0.40 0.19 0.24"
+            size="0.04 0.04 0.24" material="a2_wood"/>
+    </body>
+
+    <!-- Coherent geometric distractor. -->
+    <body name="a2_rug">
+      <geom name="a2_rug_surface" type="box" pos="0 -0.82 0.012"
+            size="0.72 0.30 0.012" material="a2_rug"
+            contype="0" conaffinity="0"/>
+      <geom name="a2_rug_border" type="box" pos="0 -0.82 0.008"
+            size="0.76 0.34 0.008" rgba="0.88 0.69 0.22 1"
+            contype="0" conaffinity="0"/>
+    </body>
+
+    <body name="a2_media_wall">
+      <geom name="a2_media_console" type="box" pos="0 1.62 0.34"
+            size="0.62 0.12 0.30" material="a2_wood"/>
+      <geom name="a2_tv" type="box" pos="0 1.68 1.15"
+            size="0.62 0.025 0.36" material="a2_tv"/>
+    </body>
+
+    <!-- Staging surface is outside every destination-region volume. -->
+    <body name="a2_staging">
+      <geom name="a2_staging_top" type="box" pos="0 -1.34 0.58"
+            size="1.18 0.25 0.035" material="a2_staging"/>
+      <geom name="a2_staging_leg_l" type="box" pos="-0.95 -1.34 0.28"
+            size="0.04 0.18 0.28" material="a2_staging"/>
+      <geom name="a2_staging_leg_r" type="box" pos="0.95 -1.34 0.28"
+            size="0.04 0.18 0.28" material="a2_staging"/>
+    </body>
+
+    <!-- Four fixed-role payload instances, discovered generically from free bodies. -->
+    <body name="a2_drink_left" pos="-0.78 -1.34 0.685">
+      <freejoint name="a2_drink_left_free"/>
+      <geom name="a2_drink_left_cup" type="cylinder" size="0.055 0.070"
+            material="a2_mug_a" mass="0.34"/>
+      <geom name="a2_drink_left_handle" type="capsule" size="0.012"
+            fromto="0.050 0 0.015 0.092 0 0.015"
+            material="a2_mug_a" mass="0.04"/>
+    </body>
+    <body name="a2_drink_right" pos="-0.28 -1.34 0.685">
+      <freejoint name="a2_drink_right_free"/>
+      <geom name="a2_drink_right_cup" type="cylinder" size="0.055 0.070"
+            material="a2_mug_b" mass="0.34"/>
+      <geom name="a2_drink_right_handle" type="capsule" size="0.012"
+            fromto="0.050 0 0.015 0.092 0 0.015"
+            material="a2_mug_b" mass="0.04"/>
+    </body>
+    <body name="a2_remote_payload" pos="0.32 -1.34 0.635">
+      <freejoint name="a2_remote_payload_free"/>
+      <geom name="a2_remote_body" type="box" size="0.105 0.038 0.016"
+            material="a2_remote" mass="0.20"/>
+      <geom name="a2_remote_power" type="cylinder" size="0.007 0.004"
+            pos="-0.070 0 0.020" rgba="0.86 0.15 0.12 1" mass="0.002"/>
+      <geom name="a2_remote_key1" type="cylinder" size="0.006 0.004"
+            pos="-0.020 -0.017 0.020" rgba="0.72 0.72 0.72 1" mass="0.002"/>
+      <geom name="a2_remote_key2" type="cylinder" size="0.006 0.004"
+            pos="-0.020 0.017 0.020" rgba="0.72 0.72 0.72 1" mass="0.002"/>
+      <geom name="a2_remote_key3" type="cylinder" size="0.006 0.004"
+            pos="0.020 -0.017 0.020" rgba="0.72 0.72 0.72 1" mass="0.002"/>
+      <geom name="a2_remote_key4" type="cylinder" size="0.006 0.004"
+            pos="0.020 0.017 0.020" rgba="0.72 0.72 0.72 1" mass="0.002"/>
+      <geom name="a2_remote_key5" type="cylinder" size="0.006 0.004"
+            pos="0.060 -0.017 0.020" rgba="0.72 0.72 0.72 1" mass="0.002"/>
+      <geom name="a2_remote_key6" type="cylinder" size="0.006 0.004"
+            pos="0.060 0.017 0.020" rgba="0.72 0.72 0.72 1" mass="0.002"/>
+    </body>
+    <body name="a2_controller_payload" pos="0.82 -1.32 0.650">
+      <freejoint name="a2_controller_payload_free"/>
+      <geom name="a2_controller_core" type="ellipsoid"
+            size="0.105 0.060 0.026" material="a2_controller" mass="0.22"/>
+      <geom name="a2_controller_left_grip" type="capsule" size="0.022"
+            fromto="-0.060 -0.020 0 -0.100 -0.085 -0.006"
+            material="a2_controller" mass="0.05"/>
+      <geom name="a2_controller_right_grip" type="capsule" size="0.022"
+            fromto="0.060 -0.020 0 0.100 -0.085 -0.006"
+            material="a2_controller" mass="0.05"/>
+      <geom name="a2_controller_dpad_h" type="box" size="0.025 0.007 0.005"
+            pos="-0.042 0.005 0.030" rgba="0.04 0.04 0.05 1" mass="0.002"/>
+      <geom name="a2_controller_dpad_v" type="box" size="0.007 0.025 0.005"
+            pos="-0.042 0.005 0.030" rgba="0.04 0.04 0.05 1" mass="0.002"/>
+      <geom name="a2_controller_button1" type="cylinder" size="0.007 0.005"
+            pos="0.050 0.020 0.030" rgba="0.25 0.72 0.34 1" mass="0.002"/>
+      <geom name="a2_controller_button2" type="cylinder" size="0.007 0.005"
+            pos="0.065 0.005 0.030" rgba="0.75 0.22 0.20 1" mass="0.002"/>
+      <geom name="a2_controller_button3" type="cylinder" size="0.007 0.005"
+            pos="0.050 -0.010 0.030" rgba="0.25 0.48 0.85 1" mass="0.002"/>
+    </body>
+
+    <!-- Repositioned once to one fixed five-view rig before capture. -->
+    <camera name="l2_camera_left" pos="-2.2 -2.3 1.8"
+            xyaxes="0.8 -0.6 0 0.3 0.4 0.86" fovy="72"/>
+    <camera name="l2_camera_right" pos="2.2 -2.3 1.8"
+            xyaxes="0.8 0.6 0 -0.3 0.4 0.86" fovy="72"/>
+    <camera name="l2_camera_top" pos="0 -0.2 3.7"
+            xyaxes="1 0 0 0 1 0" fovy="76"/>
+    <camera name="l2_camera_front" pos="0 -2.8 1.5"
+            xyaxes="1 0 0 0 0.5 0.866" fovy="74"/>
+    <camera name="l2_camera_close" pos="0 -2.0 1.2"
+            xyaxes="1 0 0 0 0.45 0.89" fovy="78"/>
+  </worldbody>
+  <actuator/>
+</mujoco>

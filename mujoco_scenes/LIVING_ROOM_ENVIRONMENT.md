@@ -592,3 +592,132 @@ arbitrary free-space decomposition are outside this first controlled
 benchmark. No FM parsing, mobile navigation, manipulation, placement action,
 planning, or TAMP execution occurs. The output is a verified
 destination-region handoff only.
+
+## Region Ablation 2: function-dependent sharing
+
+Region Ablation 2 asks:
+
+> Set up the living room for two people watching television. Place one drink
+> in a separate accessible region beside each seating position, and keep the
+> TV remote and game controller together in one shared accessible region.
+
+Unlike Ablation 1, this is not a region-discovery sequence. The primary scene
+shows four fixed payloads, five candidate destination regions, and two
+seating targets in one initial five-view RGB-D observation. YOLO-World runs
+once on those five RGB images. Depth, segmentation, associations, measured
+payload/region clouds, generic persistent IDs, and semantic evidence are
+hashed and reused unchanged by all three allocation policies.
+
+The manually specified future-FM contract contains two function groups:
+
+| Function | Usage policy | Verification |
+|---|---|---|
+| `PLACE_PERSONAL_DRINK` | `DEDICATED_REGION_PER_TARGET` | accepted side-table semantics AND `PLANAR_SUPPORT` AND `FITS_ON(drink, region)` AND target-specific `NEAR_SEAT` |
+| `PLACE_SHARED_CONTROLS` | `SHARED_REGION_REQUIRED` | accepted coffee-table semantics AND `PLANAR_SUPPORT` AND `FITS_SET_ON({remote, controller}, region)` AND viewing-area accessibility |
+
+Cross-function region sharing is disabled by the task specification. The
+correct physical count is consequently derived as two distinct personal
+drink regions plus one common controls region. The solver does not contain a
+hard-coded count or persistent region ID.
+
+`FITS_SET_ON` uses measured oriented payload and support footprints. It tests
+0°/90° rotations independently for each payload, arrangements along both
+support axes, region-edge clearance, inter-payload clearance, and
+non-overlap. It saves every tested packing, the selected arrangement, and
+signed length/width/clearance margins. A region with enough total area but an
+incompatible shape fails.
+
+### Policy outcomes
+
+| Policy | Personal drinks | Controls | Primary result |
+|---|---|---|---|
+| Always shared | incorrectly permits one region for both seats | one shared region | `COMPLETE`, 2 regions, false positive |
+| Always distinct | two distinct regions | incorrectly forces remote/controller apart | `EXHAUSTED`, false negative |
+| Function-aware | two target-specific distinct regions | one jointly packed shared region | `COMPLETE`, 3 regions, correct |
+
+Only the function-aware policy emits
+`verified_region_allocation_handoff.json`. No robot motion, search, placement,
+task ordering, FM call, manipulation, or TAMP execution is performed.
+
+### Scenes and configurations
+
+- `L2_living_room_region_ablation2_primary`: both functional groups and both
+  policy counterexamples.
+- `L2_living_room_region_ablation2_drinks_dedicated`: focused personal-drink
+  distinctness.
+- `L2_living_room_region_ablation2_controls_shared`: focused control
+  co-location.
+- `L2_living_room_region_ablation2_exhaustion`: visible candidates but no
+  valid global set packing.
+- `L2_living_room_region_ablation2_permuted`: changed drink layout and
+  free-instance creation order, with the same functional solution.
+
+The task, focused tasks, evaluation expectations, five-camera calibration,
+selection volumes, and semantic vocabulary are in
+`configs/l2_region_ablation2_*.yaml`. Selection volumes gate the saved
+observation only; their configured dimensions never become geometric
+measurements. Every scene compiles with `--robot none` and `--robot google`;
+the authoritative perception benchmark uses no robot.
+
+### Local commands
+
+Run the primary actual-detector experiment:
+
+```bash
+MUJOCO_GL=egl \
+PYOPENGL_PLATFORM=egl \
+YOLO_CONFIG_DIR=/tmp \
+MUJOCO_SEMANTIC_PROCESS_ISOLATION=1 \
+OMP_NUM_THREADS=2 \
+MKL_NUM_THREADS=2 \
+OPENBLAS_NUM_THREADS=2 \
+MALLOC_ARENA_MAX=2 \
+python -m mujoco_scenes.run_l2_region_ablation2 \
+  --scene L2_living_room_region_ablation2_primary \
+  --no-robot \
+  --runs-root runs \
+  --run-id l2_living_room_region_ablation2_demo \
+  --width 1280 \
+  --height 960 \
+  --semantic-detector yolo_world \
+  --semantic-model semantic_model_cache/yolov8m-worldv2.pt \
+  --semantic-vocabulary mujoco_scenes/configs/l2_region_ablation2_semantic_vocabulary.yaml \
+  --semantic-confidence-threshold 0.03
+
+python -m mujoco_scenes.generate_region_ablation2_report \
+  runs/l2_living_room_region_ablation2_demo \
+  --report-dir reports/l2_living_room_region_ablation2_demo
+
+xdg-open reports/l2_living_room_region_ablation2_demo/presentation_report.html
+```
+
+The presentation HTML embeds its important PNGs and animated GIF as data
+URIs, so it opens correctly as one portable file. The report directory also
+contains a downloadable MP4, policy graphs, semantic overlays, point-cloud
+renders, compatibility matrices, CSVs, JSON evidence, and the verified
+handoff.
+
+### Docker and one-command demonstration
+
+```bash
+docker build -f mujoco_scenes/Dockerfile -t mujoco-kitchen-s1 .
+
+./mujoco_scenes/scripts/run_l2_region_ablation2_demo.sh \
+  l2_living_room_region_ablation2_demo
+```
+
+The wrapper mounts the persistent local detector cache read-only:
+
+- `semantic_model_cache/yolov8m-worldv2.pt` at
+  `/models/yolov8m-worldv2.pt`;
+- `semantic_model_cache/weights` at `/workspace/weights`.
+
+It runs the actual detector once, validates the three policy outcomes,
+generates the complete report, and exits nonzero if validation or MP4
+generation fails.
+
+Current limitations are deliberate: candidate-selection volumes and the
+manual function contract are calibrated for this controlled benchmark;
+arbitrary region proposal, free-space reasoning beyond deterministic
+two-rectangle packing, FM parsing, placement feasibility, collision-aware
+execution, and TAMP remain future work.

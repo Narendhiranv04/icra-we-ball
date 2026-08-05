@@ -1,0 +1,301 @@
+{
+  "policies": {
+    "always_distinct": {
+      "alternative_valid_assignments": [],
+      "assignments": [],
+      "classification": "FALSE_NEGATIVE",
+      "distinct_physical_region_count": null,
+      "distinct_region_ids": [],
+      "failed_constraints": [
+        "NO_VALID_SHARED_CONTROLS_ASSIGNMENT"
+      ],
+      "policy": "always_distinct",
+      "status": "EXHAUSTED",
+      "valid_against_function_aware_task": false
+    },
+    "always_shared": {
+      "alternative_valid_assignments": [],
+      "assignments": [
+        {
+          "candidate_rank": 3,
+          "function_group": "personal_drinks",
+          "function_id": "PLACE_PERSONAL_DRINK",
+          "payload_id": "object_0001",
+          "region_id": "region_0004",
+          "signed_margin_m": 0.13537980975778807,
+          "slot_id": "drink_slot_1",
+          "target_id": "seating_0001"
+        },
+        {
+          "candidate_rank": 3,
+          "function_group": "personal_drinks",
+          "function_id": "PLACE_PERSONAL_DRINK",
+          "payload_id": "object_0002",
+          "region_id": "region_0004",
+          "signed_margin_m": 0.1398006181785283,
+          "slot_id": "drink_slot_2",
+          "target_id": "seating_0002"
+        },
+        {
+          "candidate_rank": 4,
+          "function_group": "shared_controls",
+          "function_id": "PLACE_SHARED_CONTROLS",
+          "payload_id": "object_0003",
+          "region_id": "region_0002",
+          "signed_margin_m": 0.10191526774762694,
+          "slot_id": "object_0003",
+          "target_id": "common_viewing_area"
+        },
+        {
+          "candidate_rank": 4,
+          "function_group": "shared_controls",
+          "function_id": "PLACE_SHARED_CONTROLS",
+          "payload_id": "object_0004",
+          "region_id": "region_0002",
+          "signed_margin_m": 0.10191526774762694,
+          "slot_id": "object_0004",
+          "target_id": "common_viewing_area"
+        }
+      ],
+      "classification": "FALSE_POSITIVE_INVALID_COMPLETE",
+      "distinct_physical_region_count": 2,
+      "distinct_region_ids": [
+        "region_0002",
+        "region_0004"
+      ],
+      "distinctness_groups": [],
+      "failed_constraints": [],
+      "policy": "always_shared",
+      "ranking_key": [
+        14,
+        -0.47901096343157024,
+        [
+          "region_0002",
+          "region_0004"
+        ]
+      ],
+      "sharing_groups": [
+        {
+          "group_id": "personal_drinks",
+          "payload_ids": [
+            "object_0001",
+            "object_0002"
+          ],
+          "region_id": "region_0004"
+        },
+        {
+          "group_id": "shared_controls",
+          "payload_ids": [
+            "object_0003",
+            "object_0004"
+          ],
+          "region_id": "region_0002"
+        }
+      ],
+      "status": "COMPLETE",
+      "valid_against_function_aware_task": false
+    },
+    "function_aware": {
+      "alternative_valid_assignments": [
+        {
+          "assignments": [
+            {
+              "candidate_rank": 1,
+              "function_group": "personal_drinks",
+              "function_id": "PLACE_PERSONAL_DRINK",
+              "payload_id": "object_0001",
+              "region_id": "region_0001",
+              "signed_margin_m": 0.2704975949594802,
+              "slot_id": "drink_slot_1",
+              "target_id": "seating_0001"
+            },
+            {
+              "candidate_rank": 3,
+              "function_group": "personal_drinks",
+              "function_id": "PLACE_PERSONAL_DRINK",
+              "payload_id": "object_0002",
+              "region_id": "region_0004",
+              "signed_margin_m": 0.1398006181785283,
+              "slot_id": "drink_slot_2",
+              "target_id": "seating_0002"
+            },
+            {
+              "candidate_rank": 4,
+              "function_group": "shared_controls",
+              "function_id": "PLACE_SHARED_CONTROLS",
+              "payload_id": "object_0003",
+              "region_id": "region_0002",
+              "signed_margin_m": 0.10191526774762694,
+              "slot_id": "object_0003",
+              "target_id": "common_viewing_area"
+            },
+            {
+              "candidate_rank": 4,
+              "function_group": "shared_controls",
+              "function_id": "PLACE_SHARED_CONTROLS",
+              "payload_id": "object_0004",
+              "region_id": "region_0002",
+              "signed_margin_m": 0.10191526774762694,
+              "slot_id": "object_0004",
+              "target_id": "common_viewing_area"
+            }
+          ],
+          "distinct_region_ids": [
+            "region_0001",
+            "region_0002",
+            "region_0004"
+          ],
+          "ranking_key": [
+            12,
+            -0.6141287486332624,
+            [
+              "region_0001",
+              "region_0002",
+              "region_0004"
+            ]
+          ]
+        },
+        {
+          "assignments": [
+            {
+              "candidate_rank": 3,
+              "function_group": "personal_drinks",
+              "function_id": "PLACE_PERSONAL_DRINK",
+              "payload_id": "object_0001",
+              "region_id": "region_0004",
+              "signed_margin_m": 0.13537980975778807,
+              "slot_id": "drink_slot_1",
+              "target_id": "seating_0001"
+            },
+            {
+              "candidate_rank": 2,
+              "function_group": "personal_drinks",
+              "function_id": "PLACE_PERSONAL_DRINK",
+              "payload_id": "object_0002",
+              "region_id": "region_0005",
+              "signed_margin_m": 0.2691869536621797,
+              "slot_id": "drink_slot_2",
+              "target_id": "seating_0002"
+            },
+            {
+              "candidate_rank": 4,
+              "function_group": "shared_controls",
+              "function_id": "PLACE_SHARED_CONTROLS",
+              "payload_id": "object_0003",
+              "region_id": "region_0002",
+              "signed_margin_m": 0.10191526774762694,
+              "slot_id": "object_0003",
+              "target_id": "common_viewing_area"
+            },
+            {
+              "candidate_rank": 4,
+              "function_group": "shared_controls",
+              "function_id": "PLACE_SHARED_CONTROLS",
+              "payload_id": "object_0004",
+              "region_id": "region_0002",
+              "signed_margin_m": 0.10191526774762694,
+              "slot_id": "object_0004",
+              "target_id": "common_viewing_area"
+            }
+          ],
+          "distinct_region_ids": [
+            "region_0002",
+            "region_0004",
+            "region_0005"
+          ],
+          "ranking_key": [
+            13,
+            -0.6083972989152217,
+            [
+              "region_0002",
+              "region_0004",
+              "region_0005"
+            ]
+          ]
+        }
+      ],
+      "assignments": [
+        {
+          "candidate_rank": 1,
+          "function_group": "personal_drinks",
+          "function_id": "PLACE_PERSONAL_DRINK",
+          "payload_id": "object_0001",
+          "region_id": "region_0001",
+          "signed_margin_m": 0.2704975949594802,
+          "slot_id": "drink_slot_1",
+          "target_id": "seating_0001"
+        },
+        {
+          "candidate_rank": 2,
+          "function_group": "personal_drinks",
+          "function_id": "PLACE_PERSONAL_DRINK",
+          "payload_id": "object_0002",
+          "region_id": "region_0005",
+          "signed_margin_m": 0.2691869536621797,
+          "slot_id": "drink_slot_2",
+          "target_id": "seating_0002"
+        },
+        {
+          "candidate_rank": 4,
+          "function_group": "shared_controls",
+          "function_id": "PLACE_SHARED_CONTROLS",
+          "payload_id": "object_0003",
+          "region_id": "region_0002",
+          "signed_margin_m": 0.10191526774762694,
+          "slot_id": "object_0003",
+          "target_id": "common_viewing_area"
+        },
+        {
+          "candidate_rank": 4,
+          "function_group": "shared_controls",
+          "function_id": "PLACE_SHARED_CONTROLS",
+          "payload_id": "object_0004",
+          "region_id": "region_0002",
+          "signed_margin_m": 0.10191526774762694,
+          "slot_id": "object_0004",
+          "target_id": "common_viewing_area"
+        }
+      ],
+      "classification": "CORRECT",
+      "distinct_physical_region_count": 3,
+      "distinct_region_ids": [
+        "region_0001",
+        "region_0002",
+        "region_0005"
+      ],
+      "distinctness_groups": [
+        {
+          "group_id": "personal_drinks",
+          "region_ids": [
+            "region_0001",
+            "region_0005"
+          ]
+        }
+      ],
+      "failed_constraints": [],
+      "policy": "function_aware",
+      "ranking_key": [
+        11,
+        -0.7435150841169138,
+        [
+          "region_0001",
+          "region_0002",
+          "region_0005"
+        ]
+      ],
+      "sharing_groups": [
+        {
+          "group_id": "shared_controls",
+          "payload_ids": [
+            "object_0003",
+            "object_0004"
+          ],
+          "region_id": "region_0002"
+        }
+      ],
+      "status": "COMPLETE",
+      "valid_against_function_aware_task": true
+    }
+  },
+  "schema_version": 1
+}

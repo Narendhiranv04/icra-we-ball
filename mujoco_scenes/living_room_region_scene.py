@@ -24,10 +24,21 @@ from mujoco_scenes.scene_loader import (
 
 ROOT = Path(__file__).resolve().parent
 L2_BASE = ROOT / "assets" / "living_room_region_base.xml"
-L2_SCENES = (
+L2_ABLATION1_SCENES = (
     "L2_living_room_region_ablation1_primary",
     "L2_living_room_region_ablation1_initial_complete",
     "L2_living_room_region_ablation1_exhaustion",
+)
+L2_ABLATION2_SCENES = (
+    "L2_living_room_region_ablation2_primary",
+    "L2_living_room_region_ablation2_drinks_dedicated",
+    "L2_living_room_region_ablation2_controls_shared",
+    "L2_living_room_region_ablation2_exhaustion",
+    "L2_living_room_region_ablation2_permuted",
+)
+L2_SCENES = L2_ABLATION1_SCENES + L2_ABLATION2_SCENES
+L2_ABLATION2_BASE = (
+    ROOT / "assets" / "living_room_region_ablation2_base.xml"
 )
 L2_CAMERAS = (
     "l2_camera_left",
@@ -40,6 +51,12 @@ L2_GOAL = (
     "Place the refreshment tray on a suitable living-room surface within "
     "easy reach of the sofa."
 )
+L2_ABLATION2_GOAL = (
+    "Set up the living room for two people watching television. Place one "
+    "drink in a separate accessible region beside each seating position, "
+    "and keep the TV remote and game controller together in one shared "
+    "accessible region."
+)
 
 
 def build_l2_region_xml(
@@ -51,8 +68,9 @@ def build_l2_region_xml(
         raise ValueError(f"Unknown L2 region scene: {scene_name}")
     if robot not in {ROBOT_GOOGLE, ROBOT_NONE}:
         raise ValueError("L2 region scenes support robot google or none")
-    root = ET.parse(L2_BASE).getroot()
-    if scene_name.endswith("_exhaustion"):
+    ablation2 = scene_name in L2_ABLATION2_SCENES
+    root = ET.parse(L2_ABLATION2_BASE if ablation2 else L2_BASE).getroot()
+    if scene_name in L2_ABLATION1_SCENES and scene_name.endswith("_exhaustion"):
         # Retain recognizable coffee-table context while making its observed
         # support patch robustly too small for the tray. Runtime inference
         # never reads this construction-time value.
@@ -83,6 +101,38 @@ def build_l2_region_xml(
                 )
                 position[1] = 0.20 + np.sign(position[1] - 0.20) * 0.06
                 geom.set("pos", " ".join(f"{value:.5f}" for value in position))
+    if ablation2 and scene_name.endswith("_exhaustion"):
+        # Keep all candidates visible and plausible, but make the only
+        # control-semantic surface too narrow for simultaneous two-object
+        # packing. Runtime geometry still measures this from RGB-D.
+        top = next(
+            geom
+            for geom in root.iter("geom")
+            if geom.get("name") == "a2_control_table_top"
+        )
+        top.set("size", "0.16 0.065 0.040")
+    if ablation2 and scene_name.endswith("_permuted"):
+        # Change the visible layout and free-instance creation order without
+        # making the detector solve a different appearance/occlusion problem.
+        # The two equivalent drink payloads exchange positions; the controls
+        # retain the primary scene's reliably recognized viewpoints. Runtime
+        # association must still recover fresh generic IDs from image evidence.
+        first_drink = root.find(".//body[@name='a2_drink_left']")
+        second_drink = root.find(".//body[@name='a2_drink_right']")
+        first_position = first_drink.get("pos")
+        first_drink.set("pos", second_drink.get("pos"))
+        second_drink.set("pos", first_position)
+        worldbody = root.find("worldbody")
+        payload_bodies = [
+            child
+            for child in list(worldbody)
+            if child.tag == "body"
+            and child.get("name", "").startswith("a2_")
+        ]
+        for child in payload_bodies:
+            worldbody.remove(child)
+        for child in reversed(payload_bodies):
+            worldbody.append(child)
     if robot == ROBOT_GOOGLE:
         _inject_google_robot(root, _google_robot_dir())
     return ET.tostring(root, encoding="unicode")
@@ -105,6 +155,11 @@ class L2LivingRoomRegionScene:
         if robot not in {ROBOT_GOOGLE, ROBOT_NONE}:
             raise ValueError("L2 region scenes support google or none")
         self.scene_name = scene_name
+        self.goal = (
+            L2_ABLATION2_GOAL
+            if scene_name in L2_ABLATION2_SCENES
+            else L2_GOAL
+        )
         self.robot_name = robot
         self.has_robot = robot == ROBOT_GOOGLE
         print(f"[L2RegionScene] Building scene: {scene_name}")
@@ -124,7 +179,10 @@ class L2LivingRoomRegionScene:
         for _ in range(600):
             mujoco.mj_step(self.model, self.data)
         print(f"  Robot: {robot}")
-        print("  Candidate supports: 3")
+        print(
+            "  Candidate supports: "
+            f"{5 if scene_name in L2_ABLATION2_SCENES else 3}"
+        )
         print("  Scene ready.\n")
 
     def _set_robot_home_pose(self) -> None:
@@ -149,6 +207,11 @@ class L2LivingRoomRegionScene:
 
     def get_visible_object_instances(self) -> list[tuple[str, str]]:
         """Expose only the fixed payload as an object-level observation."""
+        if self.scene_name in L2_ABLATION2_SCENES:
+            # Ablation 2 discovers its four generic payload IDs from visible
+            # segmentation instances and RGB semantics in one initial capture.
+            # Do not leak simulator body names through the legacy object API.
+            return []
         return [(self.payload_instance_name, "refreshment_tray")]
 
     def render_frame(
@@ -172,8 +235,16 @@ class L2LivingRoomRegionScene:
         print(f"Scene: {self.scene_name}")
         print(f"Goal:  {self.goal}")
         print("-" * 60)
-        print("Candidate regions:  RUG_PATCH, SMALL_SIDE_TABLE, COFFEE_TABLE")
-        print("Fixed payload:       one observed refreshment tray")
+        if self.scene_name in L2_ABLATION2_SCENES:
+            print("Candidate regions:  5, all visible initially")
+            print("Fixed payloads:      4, discovered from RGB-D evidence")
+            print("Seating targets:     2, spatially distinct")
+        else:
+            print(
+                "Candidate regions:  "
+                "RUG_PATCH, SMALL_SIDE_TABLE, COFFEE_TABLE"
+            )
+            print("Fixed payload:       one observed refreshment tray")
         print(f"Robot:               {self.robot_name}")
         print("=" * 60)
 

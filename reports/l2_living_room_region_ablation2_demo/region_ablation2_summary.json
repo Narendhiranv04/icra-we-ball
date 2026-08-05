@@ -1,0 +1,455 @@
+{
+  "policies": {
+    "always_distinct": {
+      "alternative_valid_assignments": [],
+      "assignments": [],
+      "classification": "FALSE_NEGATIVE",
+      "distinct_physical_region_count": null,
+      "distinct_region_ids": [],
+      "failed_constraints": [
+        "NO_VALID_SHARED_CONTROLS_ASSIGNMENT"
+      ],
+      "policy": "always_distinct",
+      "status": "EXHAUSTED",
+      "valid_against_function_aware_task": false
+    },
+    "always_shared": {
+      "alternative_valid_assignments": [],
+      "assignments": [
+        {
+          "candidate_rank": 3,
+          "function_group": "personal_drinks",
+          "function_id": "PLACE_PERSONAL_DRINK",
+          "payload_id": "object_0001",
+          "region_id": "region_0004",
+          "signed_margin_m": 0.13537980975778807,
+          "slot_id": "drink_slot_1",
+          "target_id": "seating_0001"
+        },
+        {
+          "candidate_rank": 3,
+          "function_group": "personal_drinks",
+          "function_id": "PLACE_PERSONAL_DRINK",
+          "payload_id": "object_0002",
+          "region_id": "region_0004",
+          "signed_margin_m": 0.1398006181785283,
+          "slot_id": "drink_slot_2",
+          "target_id": "seating_0002"
+        },
+        {
+          "candidate_rank": 4,
+          "function_group": "shared_controls",
+          "function_id": "PLACE_SHARED_CONTROLS",
+          "payload_id": "object_0003",
+          "region_id": "region_0002",
+          "signed_margin_m": 0.10191526774762694,
+          "slot_id": "object_0003",
+          "target_id": "common_viewing_area"
+        },
+        {
+          "candidate_rank": 4,
+          "function_group": "shared_controls",
+          "function_id": "PLACE_SHARED_CONTROLS",
+          "payload_id": "object_0004",
+          "region_id": "region_0002",
+          "signed_margin_m": 0.10191526774762694,
+          "slot_id": "object_0004",
+          "target_id": "common_viewing_area"
+        }
+      ],
+      "classification": "FALSE_POSITIVE_INVALID_COMPLETE",
+      "distinct_physical_region_count": 2,
+      "distinct_region_ids": [
+        "region_0002",
+        "region_0004"
+      ],
+      "distinctness_groups": [],
+      "failed_constraints": [],
+      "policy": "always_shared",
+      "ranking_key": [
+        14,
+        -0.47901096343157024,
+        [
+          "region_0002",
+          "region_0004"
+        ]
+      ],
+      "sharing_groups": [
+        {
+          "group_id": "personal_drinks",
+          "payload_ids": [
+            "object_0001",
+            "object_0002"
+          ],
+          "region_id": "region_0004"
+        },
+        {
+          "group_id": "shared_controls",
+          "payload_ids": [
+            "object_0003",
+            "object_0004"
+          ],
+          "region_id": "region_0002"
+        }
+      ],
+      "status": "COMPLETE",
+      "valid_against_function_aware_task": false
+    },
+    "function_aware": {
+      "alternative_valid_assignments": [
+        {
+          "assignments": [
+            {
+              "candidate_rank": 1,
+              "function_group": "personal_drinks",
+              "function_id": "PLACE_PERSONAL_DRINK",
+              "payload_id": "object_0001",
+              "region_id": "region_0001",
+              "signed_margin_m": 0.2704975949594802,
+              "slot_id": "drink_slot_1",
+              "target_id": "seating_0001"
+            },
+            {
+              "candidate_rank": 3,
+              "function_group": "personal_drinks",
+              "function_id": "PLACE_PERSONAL_DRINK",
+              "payload_id": "object_0002",
+              "region_id": "region_0004",
+              "signed_margin_m": 0.1398006181785283,
+              "slot_id": "drink_slot_2",
+              "target_id": "seating_0002"
+            },
+            {
+              "candidate_rank": 4,
+              "function_group": "shared_controls",
+              "function_id": "PLACE_SHARED_CONTROLS",
+              "payload_id": "object_0003",
+              "region_id": "region_0002",
+              "signed_margin_m": 0.10191526774762694,
+              "slot_id": "object_0003",
+              "target_id": "common_viewing_area"
+            },
+            {
+              "candidate_rank": 4,
+              "function_group": "shared_controls",
+              "function_id": "PLACE_SHARED_CONTROLS",
+              "payload_id": "object_0004",
+              "region_id": "region_0002",
+              "signed_margin_m": 0.10191526774762694,
+              "slot_id": "object_0004",
+              "target_id": "common_viewing_area"
+            }
+          ],
+          "distinct_region_ids": [
+            "region_0001",
+            "region_0002",
+            "region_0004"
+          ],
+          "ranking_key": [
+            12,
+            -0.6141287486332624,
+            [
+              "region_0001",
+              "region_0002",
+              "region_0004"
+            ]
+          ]
+        },
+        {
+          "assignments": [
+            {
+              "candidate_rank": 3,
+              "function_group": "personal_drinks",
+              "function_id": "PLACE_PERSONAL_DRINK",
+              "payload_id": "object_0001",
+              "region_id": "region_0004",
+              "signed_margin_m": 0.13537980975778807,
+              "slot_id": "drink_slot_1",
+              "target_id": "seating_0001"
+            },
+            {
+              "candidate_rank": 2,
+              "function_group": "personal_drinks",
+              "function_id": "PLACE_PERSONAL_DRINK",
+              "payload_id": "object_0002",
+              "region_id": "region_0005",
+              "signed_margin_m": 0.2691869536621797,
+              "slot_id": "drink_slot_2",
+              "target_id": "seating_0002"
+            },
+            {
+              "candidate_rank": 4,
+              "function_group": "shared_controls",
+              "function_id": "PLACE_SHARED_CONTROLS",
+              "payload_id": "object_0003",
+              "region_id": "region_0002",
+              "signed_margin_m": 0.10191526774762694,
+              "slot_id": "object_0003",
+              "target_id": "common_viewing_area"
+            },
+            {
+              "candidate_rank": 4,
+              "function_group": "shared_controls",
+              "function_id": "PLACE_SHARED_CONTROLS",
+              "payload_id": "object_0004",
+              "region_id": "region_0002",
+              "signed_margin_m": 0.10191526774762694,
+              "slot_id": "object_0004",
+              "target_id": "common_viewing_area"
+            }
+          ],
+          "distinct_region_ids": [
+            "region_0002",
+            "region_0004",
+            "region_0005"
+          ],
+          "ranking_key": [
+            13,
+            -0.6083972989152217,
+            [
+              "region_0002",
+              "region_0004",
+              "region_0005"
+            ]
+          ]
+        }
+      ],
+      "assignments": [
+        {
+          "candidate_rank": 1,
+          "function_group": "personal_drinks",
+          "function_id": "PLACE_PERSONAL_DRINK",
+          "payload_id": "object_0001",
+          "region_id": "region_0001",
+          "signed_margin_m": 0.2704975949594802,
+          "slot_id": "drink_slot_1",
+          "target_id": "seating_0001"
+        },
+        {
+          "candidate_rank": 2,
+          "function_group": "personal_drinks",
+          "function_id": "PLACE_PERSONAL_DRINK",
+          "payload_id": "object_0002",
+          "region_id": "region_0005",
+          "signed_margin_m": 0.2691869536621797,
+          "slot_id": "drink_slot_2",
+          "target_id": "seating_0002"
+        },
+        {
+          "candidate_rank": 4,
+          "function_group": "shared_controls",
+          "function_id": "PLACE_SHARED_CONTROLS",
+          "payload_id": "object_0003",
+          "region_id": "region_0002",
+          "signed_margin_m": 0.10191526774762694,
+          "slot_id": "object_0003",
+          "target_id": "common_viewing_area"
+        },
+        {
+          "candidate_rank": 4,
+          "function_group": "shared_controls",
+          "function_id": "PLACE_SHARED_CONTROLS",
+          "payload_id": "object_0004",
+          "region_id": "region_0002",
+          "signed_margin_m": 0.10191526774762694,
+          "slot_id": "object_0004",
+          "target_id": "common_viewing_area"
+        }
+      ],
+      "classification": "CORRECT",
+      "distinct_physical_region_count": 3,
+      "distinct_region_ids": [
+        "region_0001",
+        "region_0002",
+        "region_0005"
+      ],
+      "distinctness_groups": [
+        {
+          "group_id": "personal_drinks",
+          "region_ids": [
+            "region_0001",
+            "region_0005"
+          ]
+        }
+      ],
+      "failed_constraints": [],
+      "policy": "function_aware",
+      "ranking_key": [
+        11,
+        -0.7435150841169138,
+        [
+          "region_0001",
+          "region_0002",
+          "region_0005"
+        ]
+      ],
+      "sharing_groups": [
+        {
+          "group_id": "shared_controls",
+          "payload_ids": [
+            "object_0003",
+            "object_0004"
+          ],
+          "region_id": "region_0002"
+        }
+      ],
+      "status": "COMPLETE",
+      "valid_against_function_aware_task": true
+    }
+  },
+  "rerendered_for_policies": false,
+  "same_evidence_manifest": [
+    {
+      "path": "observation/cameras/inspection_close/depth.png",
+      "sha256": "03c1a9e3fb6f6b22c832c83301282bc846acecc9c9b2421d8d6aaf093446011b"
+    },
+    {
+      "path": "observation/cameras/inspection_close/evidence_masks.png",
+      "sha256": "76b4ceebaf51f747efa65842b06d9a1612c75c4bb9845e07352cc0ca55306c15"
+    },
+    {
+      "path": "observation/cameras/inspection_close/rgb.png",
+      "sha256": "fc76614b99cff33aa52e78550504831e19b13bcb4510928983048180eb4df545"
+    },
+    {
+      "path": "observation/cameras/inspection_close/segmentation.png",
+      "sha256": "006de2989246e1bb585ea023211a1740374bdda953854c3ca3fd32fade62a22a"
+    },
+    {
+      "path": "observation/cameras/inspection_front/depth.png",
+      "sha256": "53dd2758a3010711ea8217f2c3ca1f775db0fd3eea1d2d2397c4af73f256a893"
+    },
+    {
+      "path": "observation/cameras/inspection_front/evidence_masks.png",
+      "sha256": "839797dd02ca24db8da9934ed7d3a1de62e8ffcf07dcb5fc50f31fea950ac213"
+    },
+    {
+      "path": "observation/cameras/inspection_front/rgb.png",
+      "sha256": "8522adae789c31a18b1f8db7e3baac604e8601fee0dbd89ea1fb4f9ce378e041"
+    },
+    {
+      "path": "observation/cameras/inspection_front/segmentation.png",
+      "sha256": "3d5f6116e8b3d32bee53d4d7dd489aa5898eace3bcd9f3ea1f02743282aedaba"
+    },
+    {
+      "path": "observation/cameras/inspection_left/depth.png",
+      "sha256": "eb0693557952ecd65d32197ba29d740f2c2e7eb72e6f83cf537c2e0dd4ccd8be"
+    },
+    {
+      "path": "observation/cameras/inspection_left/evidence_masks.png",
+      "sha256": "e29226be0757015c9cb5b6ab014f094809b2b1d1f2e3951c05be0f24bdab16f1"
+    },
+    {
+      "path": "observation/cameras/inspection_left/rgb.png",
+      "sha256": "d656a5b2217596a691740a6e3256c414173bd22725aad42a5f964358d3ac0ec6"
+    },
+    {
+      "path": "observation/cameras/inspection_left/segmentation.png",
+      "sha256": "922a5e61387c5e2bb624ff998af8ee4d54a5889505e5954b8ce786353f26e676"
+    },
+    {
+      "path": "observation/cameras/inspection_right/depth.png",
+      "sha256": "cfa4619c010107788325491d984264d8ace4c9d01707d94d62ca1b2f55e8dcc0"
+    },
+    {
+      "path": "observation/cameras/inspection_right/evidence_masks.png",
+      "sha256": "f1e76a0cd75fd8a62ad0f711578d63eafa39601418f7d954954383b96cc55890"
+    },
+    {
+      "path": "observation/cameras/inspection_right/rgb.png",
+      "sha256": "57628e8f5208b7cda9dccb30ae4829d6834ecc87c020cc3cd24d47aea43a8583"
+    },
+    {
+      "path": "observation/cameras/inspection_right/segmentation.png",
+      "sha256": "cac44eb0b0833b92df8d3d9efe41ecccf4ab34b087887a7e77eac5af16e3f5a7"
+    },
+    {
+      "path": "observation/cameras/inspection_top/depth.png",
+      "sha256": "89d5d32e4b82928fd513295e60571132eb1951916744c114e954feb60aea1080"
+    },
+    {
+      "path": "observation/cameras/inspection_top/evidence_masks.png",
+      "sha256": "df80c3480c0a2b8838e61d67c670ff9118f10bd272d203e397e03529378ced80"
+    },
+    {
+      "path": "observation/cameras/inspection_top/rgb.png",
+      "sha256": "fdac0db6b70efbabe8e295af948b3ea907a3ea5d786015719bf4408be1a61ad6"
+    },
+    {
+      "path": "observation/cameras/inspection_top/segmentation.png",
+      "sha256": "f5f2a37e4dbad15abdda2577dd071f7961c574409d9ae10b133267d5babbe911"
+    },
+    {
+      "path": "observation/payloads/object_0001/fused.ply",
+      "sha256": "58bea5ceaf9dcc546787b39bc4d0d23901f51066f34d1996d8f8f9ad48db1553"
+    },
+    {
+      "path": "observation/payloads/object_0002/fused.ply",
+      "sha256": "da6718de6768cbb0a7ce52df2faed1d4ec50d68394454caf3ea8ecb7c4857a9a"
+    },
+    {
+      "path": "observation/payloads/object_0003/fused.ply",
+      "sha256": "fe159c6d2aa61ef4cb09c235ed9723357c545a578f515cff220dd95fcf0f4844"
+    },
+    {
+      "path": "observation/payloads/object_0004/fused.ply",
+      "sha256": "d0a8447423b4538719020b2c766a2b4e01f839563545c84ad046ef4bb3ad7e5c"
+    },
+    {
+      "path": "observation/regions/region_0001/fused.ply",
+      "sha256": "14a1d1ffc4624c22ac02c8483a248caf4a291537d3b388180949934bf696737f"
+    },
+    {
+      "path": "observation/regions/region_0002/fused.ply",
+      "sha256": "607698401f14df54cb63f86b5629b69e5f3412dba45827b97d0da3ecb2fc956c"
+    },
+    {
+      "path": "observation/regions/region_0003/fused.ply",
+      "sha256": "ae9393bbffe6b8b1c6b53d19edbb6681e6202ba93f981bee7078c5e11d7dd2ed"
+    },
+    {
+      "path": "observation/regions/region_0004/fused.ply",
+      "sha256": "e4fd8d7aae26792fce36940823b0ecacd26cb03c18044f62351a5976d44a46a3"
+    },
+    {
+      "path": "observation/regions/region_0005/fused.ply",
+      "sha256": "1bf724ca58daec94e3e6692115ab75250914a1bffae47f106f98d18ce42cec99"
+    },
+    {
+      "path": "observation/seats/seating_0001/observed_points.ply",
+      "sha256": "ec3676c685c998f4db6321092e333688634d006677468a7a7764d80c233100ea"
+    },
+    {
+      "path": "observation/seats/seating_0002/observed_points.ply",
+      "sha256": "052898285ecc02f2b1e87bfd4004841efaee83300bcf8ef1c162e6e4d388118c"
+    },
+    {
+      "path": "observation/semantics/associations.json",
+      "sha256": "3b5f0490ca2239d3608db138e3bae4bfb2e9813bc3863ed7f3be6395340cca8f"
+    },
+    {
+      "path": "observation/semantics/detections.json",
+      "sha256": "d2cac2ab3dd0bd9b4c3d09744a92946b68196d155bbe1411df01dcbe44936c37"
+    },
+    {
+      "path": "observation/semantics/fused_semantics.json",
+      "sha256": "0b103a13c6467d98b99abc96ac0970ac63da6043196b965f1938a8243fddf5c4"
+    }
+  ],
+  "scene_name": "L2_living_room_region_ablation2_primary",
+  "schema_version": 1,
+  "semantic_inference_repeated_for_policies": false,
+  "semantic_inference_timing": {
+    "camera_count": 5,
+    "per_camera_seconds": {
+      "inspection_close": 0.09236740400046983,
+      "inspection_front": 0.09332375500162016,
+      "inspection_left": 3.474539578000986,
+      "inspection_right": 0.09447774500040396,
+      "inspection_top": 0.08996824200039555
+    },
+    "total_seconds": 3.8446767240038753
+  },
+  "single_initial_observation": true,
+  "task_id": "l2_two_person_viewing_region_allocation"
+}
