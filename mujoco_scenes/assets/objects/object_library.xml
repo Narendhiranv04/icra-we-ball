@@ -15,6 +15,8 @@
     <texture name="tex_ycb_tea_box" type="2d" file="ycb/tea_box/ycb_tea_box.png"/>
     <material name="mat_ycb_tea_box" texture="tex_ycb_tea_box" specular="0.15"/>
     <mesh name="mesh_ycb_bowl" file="ycb/bowl/ycb_bowl.obj"/>
+    <mesh name="mesh_ycb_mixing_bowl" file="ycb/bowl/ycb_bowl.obj"
+          scale="0.70 0.70 1.0"/>
     <texture name="tex_ycb_bowl" type="2d" file="ycb/bowl/ycb_bowl.png"/>
     <material name="mat_ycb_bowl" texture="tex_ycb_bowl" specular="0.3" shininess="0.45"/>
     <mesh name="mesh_ycb_mug" file="ycb/mug/ycb_mug.obj"/>
@@ -25,17 +27,71 @@
     <texture name="tex_ycb_plate" type="2d" file="ycb/plate/ycb_plate.png"/>
     <material name="mat_ycb_plate" texture="tex_ycb_plate" specular="0.3" shininess="0.45"/>
     <mesh name="mesh_ycb_fork" file="ycb/fork/ycb_fork.obj"/>
+    <mesh name="mesh_ab3_long_narrow_fork"
+          file="ycb/fork/ycb_fork.obj" scale="1.50 1.0 1.0"/>
     <texture name="tex_ycb_fork" type="2d" file="ycb/fork/ycb_fork.png"/>
     <material name="mat_ycb_fork" texture="tex_ycb_fork" specular="0.65" shininess="0.8"/>
+    <!-- The original scan texture makes the dark tines merge visually at
+         inspection distance. A neutral stainless-steel material preserves
+         the recognizable YCB fork mesh while exposing its actual silhouette
+         to the RGB detector. -->
+    <material name="mat_ycb_fork_inspection" rgba="0.68 0.70 0.72 1"
+              specular="0.85" shininess="0.9"/>
     <mesh name="mesh_ycb_spoon" file="ycb/spoon/ycb_spoon.obj"/>
+    <!-- Ablation 3 controlled visible variants. Runtime inference measures
+         these from RGB-D and never reads their declared construction scale. -->
+    <mesh name="mesh_ab3_short_narrow_spoon"
+          file="ycb/spoon/ycb_spoon.obj" scale="0.72 0.70 1.0"/>
+    <mesh name="mesh_ab3_medium_spoon"
+          file="ycb/spoon/ycb_spoon.obj" scale="0.95 2.60 1.0"/>
+    <mesh name="mesh_ab3_long_wide_spoon"
+          file="ycb/spoon/ycb_spoon.obj" scale="1.35 3.20 1.20"/>
+    <mesh name="mesh_ab3_long_narrow_spoon"
+          file="ycb/spoon/ycb_spoon.obj" scale="1.45 1.70 1.0"/>
+    <mesh name="mesh_ab3_partial_spoon"
+          file="ycb/spoon/ycb_spoon.obj" scale="0.70 1.65 1.0"/>
+    <!-- Integrated Scene 1 variants remain visible scene construction only;
+         runtime measurements are reconstructed from rendered RGB-D. -->
+    <mesh name="mesh_s1i_soup_spoon"
+          file="ycb/spoon/ycb_spoon.obj" scale="0.85 1.55 1.0"/>
+    <mesh name="mesh_s1i_coffee_near_miss_spoon"
+          file="ycb/spoon/ycb_spoon.obj" scale="1.34 3.00 1.15"/>
+    <mesh name="mesh_s1i_final_long_narrow_spoon"
+          file="ycb/spoon/ycb_spoon.obj" scale="1.48 1.78 1.0"/>
+    <mesh name="mesh_s1i_oversized_spoon"
+          file="ycb/spoon/ycb_spoon.obj" scale="1.80 5.00 1.40"/>
+    <mesh name="mesh_s1i_c2_soup_spoon"
+          file="ycb/spoon/ycb_spoon.obj" scale="1.80 3.60 1.40"/>
+    <material name="mat_s1i_spoon_inspection" rgba="0.72 0.75 0.78 1"
+              specular="0.80" shininess="0.85"/>
+    <!-- Scene-specific physical counterexample: the same recognizable YCB
+         spoon scan is enlarged anisotropically. Runtime inference never reads
+         this declaration; dimensions must still be recovered from RGB-D. -->
+    <mesh name="mesh_ycb_oversized_spoon" file="ycb/spoon/ycb_spoon.obj"
+          scale="1.80 3.60 1.40"/>
     <texture name="tex_ycb_spoon" type="2d" file="ycb/spoon/ycb_spoon.png"/>
     <material name="mat_ycb_spoon" texture="tex_ycb_spoon" specular="0.65" shininess="0.8"/>
     <mesh name="mesh_ycb_knife" file="ycb/knife/ycb_knife.obj"/>
     <texture name="tex_ycb_knife" type="2d" file="ycb/knife/ycb_knife.png"/>
     <material name="mat_ycb_knife" texture="tex_ycb_knife" specular="0.65" shininess="0.8"/>
     <mesh name="mesh_ycb_cup" file="ycb/cup/ycb_cup.obj"/>
+    <mesh name="mesh_ab3_narrow_deep_cup"
+          file="ycb/cup/ycb_cup.obj" scale="1.34 1.34 2.10"/>
+    <mesh name="mesh_ab3_medium_deep_mug"
+          file="ycb/mug/ycb_mug.obj" scale="1.0 1.0 1.80"/>
+    <mesh name="mesh_ab3_shallow_bowl"
+          file="ycb/bowl/ycb_bowl.obj"/>
+    <mesh name="mesh_ab3_deep_bowl"
+          file="ycb/bowl/ycb_bowl.obj" scale="1.0 1.0 2.10"/>
+    <mesh name="mesh_s1i_wide_shallow_cup"
+          file="ycb/cup/ycb_cup.obj" scale="1.62 1.62 1.10"/>
+    <mesh name="mesh_s1i_narrow_deep_bowl"
+          file="ycb/bowl/ycb_bowl.obj" scale="0.90 0.90 2.00"/>
     <texture name="tex_ycb_cup" type="2d" file="ycb/cup/ycb_cup.png"/>
     <material name="mat_ycb_cup" texture="tex_ycb_cup" specular="0.25"/>
+    <mesh name="mesh_ycb_marker" file="ycb/marker/ycb_marker.obj"/>
+    <texture name="tex_ycb_marker" type="2d" file="ycb/marker/ycb_marker.png"/>
+    <material name="mat_ycb_marker" texture="tex_ycb_marker" specular="0.35" shininess="0.5"/>
 
     <mesh name="mesh_gso_kettle" file="gso/kettle/gso_kettle.obj"/>
     <texture name="tex_gso_kettle" type="2d" file="gso/kettle/gso_kettle.png"/>
@@ -93,6 +149,13 @@
   <body name="cup" pos="0 0 0">
     <freejoint name="cup_free"/>
     <geom name="cup_visual" type="mesh" mesh="mesh_ycb_cup" material="mat_ycb_cup"
+          class="visual" mass="0"/>
+    <!-- The scanned YCB shell can render through its open centre on some
+         backends.  This cup-owned visible floor supplies actual RGB-D
+         interior evidence below the rim; inference never reads its XML
+         dimensions or name. -->
+    <geom name="cup_interior_visual" type="cylinder" size="0.021 0.0015"
+          pos="0 0 0.0140" material="mat_ycb_cup"
           class="visual" mass="0"/>
     <geom name="cup_bottom_collision" type="cylinder" size="0.028 0.003"
           pos="0 0 -0.02776" rgba="0 0 0 0" mass="0.010" group="3"/>
@@ -177,6 +240,13 @@
     <freejoint name="bowl_free"/>
     <geom name="bowl_visual" type="mesh" mesh="mesh_ycb_bowl" material="mat_ycb_bowl"
           class="visual" mass="0"/>
+    <!-- A bowl-owned visible interior surface makes the two independently
+         placed bowls robust to view-dependent holes in the scanned shell.
+         It supplies rendered depth only; geometric inference never reads
+         this declaration or its dimensions. -->
+    <geom name="bowl_interior_visual" type="cylinder" size="0.050 0.0015"
+          pos="0 0 -0.010" material="mat_ycb_bowl"
+          class="visual" mass="0"/>
     <geom name="bowl_bottom_collision" type="cylinder" size="0.069 0.004" pos="0 0 -0.0235"
           rgba="0 0 0 0" mass="0.050" group="3"/>
     <geom name="bowl_wall_0" type="box" size="0.005 0.020 0.0235" pos="0.074 0 0.004" rgba="0 0 0 0" mass="0.008083" group="3"/>
@@ -192,6 +262,50 @@
     <geom name="bowl_wall_10" type="box" size="0.005 0.020 0.0235" pos="0.037 -0.06409 0.004" euler="0 0 5.2360" rgba="0 0 0 0" mass="0.008083" group="3"/>
     <geom name="bowl_wall_11" type="box" size="0.005 0.020 0.0235" pos="0.06409 -0.037 0.004" euler="0 0 5.7596" rgba="0 0 0 0" mass="0.008083" group="3"/>
     <site name="bowl_grasp" pos="0.055 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
+  </body>
+
+  <!-- Same textured YCB bowl at 70% horizontal scale. It remains visually a
+       bowl while creating a robust measured clearance boundary between the
+       normal fork/marker and the deliberately widened spoon. -->
+  <body name="mixing_bowl" pos="0 0 0">
+    <freejoint name="mixing_bowl_free"/>
+    <geom name="mixing_bowl_visual" type="mesh" mesh="mesh_ycb_mixing_bowl"
+          material="mat_ycb_bowl" class="visual" mass="0"/>
+    <!-- The scanned shell is open through its centre in some OpenGL
+         backends. Render a bowl-owned interior floor so RGB-D evidence
+         contains a real surface below the rim instead of missing depth or
+         countertop pixels. This is visible evidence only; inference never
+         reads this geom or its dimensions. -->
+    <geom name="mixing_bowl_interior_visual" type="cylinder"
+          size="0.041 0.0015" pos="0 0 -0.0205"
+          material="mat_ycb_bowl" class="visual" mass="0"/>
+    <geom name="mixing_bowl_bottom_collision" type="cylinder"
+          size="0.0484 0.004" pos="0 0 -0.0235"
+          rgba="0 0 0 0" mass="0.050" group="3"/>
+    <geom name="mixing_bowl_wall_0" type="box"
+          size="0.0035 0.0140 0.0235" pos="0.0518 0 0.004"
+          rgba="0 0 0 0" mass="0.0121" group="3"/>
+    <geom name="mixing_bowl_wall_1" type="box"
+          size="0.0035 0.0140 0.0235" pos="0.0366 0.0366 0.004"
+          euler="0 0 0.7854" rgba="0 0 0 0" mass="0.0121" group="3"/>
+    <geom name="mixing_bowl_wall_2" type="box"
+          size="0.0035 0.0140 0.0235" pos="0 0.0518 0.004"
+          euler="0 0 1.5708" rgba="0 0 0 0" mass="0.0121" group="3"/>
+    <geom name="mixing_bowl_wall_3" type="box"
+          size="0.0035 0.0140 0.0235" pos="-0.0366 0.0366 0.004"
+          euler="0 0 2.3562" rgba="0 0 0 0" mass="0.0121" group="3"/>
+    <geom name="mixing_bowl_wall_4" type="box"
+          size="0.0035 0.0140 0.0235" pos="-0.0518 0 0.004"
+          euler="0 0 3.1416" rgba="0 0 0 0" mass="0.0121" group="3"/>
+    <geom name="mixing_bowl_wall_5" type="box"
+          size="0.0035 0.0140 0.0235" pos="-0.0366 -0.0366 0.004"
+          euler="0 0 3.9270" rgba="0 0 0 0" mass="0.0121" group="3"/>
+    <geom name="mixing_bowl_wall_6" type="box"
+          size="0.0035 0.0140 0.0235" pos="0 -0.0518 0.004"
+          euler="0 0 4.7124" rgba="0 0 0 0" mass="0.0121" group="3"/>
+    <geom name="mixing_bowl_wall_7" type="box"
+          size="0.0035 0.0140 0.0235" pos="0.0366 -0.0366 0.004"
+          euler="0 0 5.4978" rgba="0 0 0 0" mass="0.0121" group="3"/>
   </body>
 
   <!-- ============================== UTENSILS ============================== -->
@@ -213,14 +327,45 @@
     <site name="spoon_grasp" pos="0.080 0 0.006" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
   </body>
 
+  <!-- Deliberately oversized spoon used only in the joint-grounding scenes.
+       Its visible cross-section is wider than the target bowl opening while
+       its overall length remains clearly elongated. -->
+  <body name="oversized_spoon" pos="0 0 0">
+    <freejoint name="oversized_spoon_free"/>
+    <geom name="oversized_spoon_visual" type="mesh"
+          mesh="mesh_ycb_oversized_spoon" material="mat_ycb_spoon"
+          class="visual" mass="0"/>
+    <geom name="oversized_spoon_handle_collision" type="capsule" size="0.019"
+          fromto="-0.036 0 0.0084 0.171 0 0.0084"
+          rgba="0 0 0 0" mass="0.030" friction="2 0.02 0.01" group="3"/>
+    <geom name="oversized_spoon_bowl_collision" type="ellipsoid"
+          size="0.068 0.076 0.0147" pos="-0.105 0 0"
+          rgba="0 0 0 0" mass="0.055" friction="2 0.02 0.01" group="3"/>
+    <site name="oversized_spoon_grasp" pos="0.144 0 0.0084"
+          size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
+  </body>
+
   <!-- YCB 030_fork -->
   <body name="fork" pos="0 0 0">
     <freejoint name="fork_free"/>
-    <geom name="fork_visual" type="mesh" mesh="mesh_ycb_fork" material="mat_ycb_fork"
+    <geom name="fork_visual" type="mesh" mesh="mesh_ycb_fork"
+          material="mat_ycb_fork_inspection"
           class="visual" mass="0"/>
     <geom name="fork_collision" type="box" size="0.0985 0.0125 0.00773"
           rgba="0 0 0 0" mass="0.034" group="3"/>
-    <site name="fork_grasp" pos="-0.045 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
+    <!-- Pinch the utensil at the far handle end, leaving enough material
+         beyond both finger pads for a stable passive vertical hang. -->
+    <site name="fork_grasp" pos="-0.080 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
+  </body>
+
+  <!-- YCB 040_large_marker -->
+  <body name="marker" pos="0 0 0">
+    <freejoint name="marker_free"/>
+    <geom name="marker_visual" type="mesh" mesh="mesh_ycb_marker"
+          material="mat_ycb_marker" class="visual" mass="0"/>
+    <geom name="marker_collision" type="capsule" size="0.0096"
+          fromto="0 -0.0508 0 0 0.0508 0"
+          rgba="0 0 0 0" mass="0.025" group="3"/>
   </body>
 
   <!-- YCB 032_knife -->
@@ -230,7 +375,7 @@
           class="visual" mass="0"/>
     <geom name="knife_collision" type="box" size="0.107 0.0095 0.00762"
           rgba="0 0 0 0" mass="0.031" group="3"/>
-    <site name="knife_grasp" pos="-0.050 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
+    <site name="knife_grasp" pos="-0.088 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
   </body>
 
   <!-- Simple custom wooden stirrer mesh -->
@@ -240,9 +385,9 @@
           material="mat_wood" class="visual" mass="0"/>
     <!-- A shallow box matches the flat wooden stick and prevents the old
          capsule proxy from rolling across the drawer as it accelerates. -->
-    <geom name="stirrer_collision" type="box" size="0.0675 0.004 0.002"
+    <geom name="stirrer_collision" type="box" size="0.0675 0.006 0.002"
           rgba="0 0 0 0" mass="0.02" friction="2 0.02 0.01" group="3"/>
-    <site name="stirrer_grasp" pos="-0.02 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
+    <site name="stirrer_grasp" pos="-0.055 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
   </body>
 
   <!-- Spatula -->
@@ -252,7 +397,7 @@
           material="mat_plastic_green" mass="0.06"/>
     <geom name="spatula_head" type="box" size="0.03 0.025 0.002"
           pos="0.155 0 0" material="mat_plastic_green"/>
-    <site name="spatula_grasp" pos="0.06 0 0" size="0.01" type="sphere"
+    <site name="spatula_grasp" pos="0.015 0 0" size="0.01" type="sphere"
           rgba="0 0 0 0" group="5"/>
   </body>
 
@@ -265,7 +410,7 @@
           fromto="-0.095 -0.006 0 0.095 -0.013 0" rgba="0 0 0 0" mass="0.04" group="3"/>
     <geom name="tongs_collision_2" type="capsule" size="0.005"
           fromto="-0.095 0.006 0 0.095 0.013 0" rgba="0 0 0 0" mass="0.04" group="3"/>
-    <site name="tongs_grasp" pos="-0.05 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
+    <site name="tongs_grasp" pos="-0.080 0 0" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
   </body>
 
   <!-- ============================== INGREDIENTS / FOOD ============================== -->
@@ -417,7 +562,10 @@
     <freejoint name="napkin_free"/>
     <geom name="napkin_visual" type="mesh" mesh="mesh_custom_napkin"
           material="mat_ceramic_white" class="visual" mass="0"/>
-    <geom name="napkin_collision" type="box" size="0.039 0.039 0.003"
+    <!-- A 4 mm pad around the folded cloth lets both symmetric finger pads
+         establish the centre pinch before either one can sweep the light
+         tissue across the drawer. -->
+    <geom name="napkin_collision" type="box" size="0.043 0.043 0.003"
           rgba="0 0 0 0" mass="0.02" group="3"/>
     <site name="napkin_grasp" pos="0 0 0" size="0.01" type="sphere"
           rgba="0 0 0 0" group="5"/>
@@ -440,7 +588,7 @@
           material="mat_gso_spatula" class="visual" mass="0"/>
     <geom name="gso_spatula_distractor_collision" type="box" size="0.118 0.032 0.01234"
           rgba="0 0 0 0" mass="0.06" group="3"/>
-    <site name="gso_spatula_distractor_grasp" pos="-0.05 0 0" size="0.01" type="sphere"
+    <site name="gso_spatula_distractor_grasp" pos="-0.090 0 0" size="0.01" type="sphere"
           rgba="0 0 0 0" group="5"/>
   </body>
 

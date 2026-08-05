@@ -1,0 +1,15 @@
+task_id: find_one_open_receptacle_from_geometry
+
+roles:
+  open_receptacle:
+    count: 1
+    geometric_requirements:
+      - predicate: OPEN_CAVITY
+        required_status: TRUE
+
+constraints:
+  distinct_objects: true
+  pairwise: []
+
+diagnostics:
+  max_representative_rejections: 5

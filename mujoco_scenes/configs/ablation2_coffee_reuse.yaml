@@ -1,0 +1,56 @@
+schema_version: 2
+task_id: stir_two_coffees_with_reuse
+specification_source: manual_ablation2_v1
+
+roles:
+  coffee_cup:
+    count: 2
+    assignment_order: 0
+    semantic_preferences:
+      - rank: 1
+        canonical_label: cup
+        detector_aliases: [coffee cup, mug, coffee mug]
+    unary_geometry:
+      - predicate: OPEN_CAVITY
+        expected: true
+  coffee_stirrer:
+    count: 1
+    assignment_order: 1
+    semantic_preferences:
+      - rank: 1
+        canonical_label: spoon
+        detector_aliases: [teaspoon, tablespoon]
+      - rank: 2
+        canonical_label: fork
+        detector_aliases: [table fork, dinner fork, metal fork, fork utensil]
+    unary_geometry:
+      - predicate: ELONGATED_OBJECT
+        expected: true
+
+relations:
+  - predicate: INSERTABLE_IN
+    subject_role: coffee_stirrer
+    object_role: coffee_cup
+    expected: true
+  - predicate: REACHES_BOTTOM
+    subject_role: coffee_stirrer
+    object_role: coffee_cup
+    expected: true
+
+operation_groups:
+  coffee_stirring:
+    function: STIR_COFFEE
+    tool_role: coffee_stirrer
+    target_role: coffee_cup
+    required_target_count: 2
+    usage_policy:
+      mode: sequential_reuse_allowed
+      distinct_within_group: false
+    relations: [INSERTABLE_IN, REACHES_BOTTOM]
+
+cross_group_reuse:
+  allowed: true
+constraints:
+  distinct_role_assignments: false
+selection:
+  policy: ranked_valid_candidate

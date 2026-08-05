@@ -1,0 +1,108 @@
+schema_version: 2
+task_id: s1_integrated_prepare_and_serve_coffee_and_soup
+specification_source: manual_s1_integrated_kitchen_v1
+goal_instruction: "Prepare and serve coffee and soup for three people using the available kitchenware. Stir all three coffees and provide each soup bowl with a suitable utensil. Search the closed kitchen storage for anything still required."
+target_assignment_ablation: true
+
+pairing:
+  strategy: semantic_role_scoped
+
+roles:
+  coffee_container:
+    count: 3
+    assignment_order: 0
+    semantic_preferences:
+      - rank: 1
+        canonical_label: cup
+        detector_aliases: [coffee cup]
+      - rank: 2
+        canonical_label: mug
+        detector_aliases: [coffee mug]
+    unary_geometry:
+      - predicate: OPEN_CAVITY
+        expected: true
+
+  soup_container:
+    count: 3
+    assignment_order: 1
+    semantic_preferences:
+      - rank: 1
+        canonical_label: bowl
+        detector_aliases: [soup bowl, mixing bowl]
+    unary_geometry:
+      - predicate: OPEN_CAVITY
+        expected: true
+
+  coffee_stirrer:
+    count: 1
+    assignment_order: 2
+    semantic_preferences:
+      - rank: 1
+        canonical_label: spoon
+        detector_aliases: [teaspoon, tablespoon, soup spoon]
+    known_excluded_labels: [fork, marker, pen, spatula, tongs]
+    unary_geometry:
+      - predicate: ELONGATED_OBJECT
+        expected: true
+
+  soup_eating_utensil:
+    count: 1
+    assignment_order: 3
+    semantic_preferences:
+      - rank: 1
+        canonical_label: spoon
+        detector_aliases: [teaspoon, tablespoon, soup spoon]
+    known_excluded_labels: [fork, marker, pen, spatula, tongs]
+    unary_geometry:
+      - predicate: ELONGATED_OBJECT
+        expected: true
+
+relations:
+  - predicate: INSERTABLE_IN
+    subject_role: coffee_stirrer
+    object_role: coffee_container
+    expected: true
+  - predicate: REACHES_BOTTOM
+    subject_role: coffee_stirrer
+    object_role: coffee_container
+    expected: true
+  - predicate: INSERTABLE_IN
+    subject_role: soup_eating_utensil
+    object_role: soup_container
+    expected: true
+  - predicate: REACHES_BOTTOM
+    subject_role: soup_eating_utensil
+    object_role: soup_container
+    expected: true
+
+operation_groups:
+  coffee_stirring:
+    function: STIR_COFFEE
+    tool_role: coffee_stirrer
+    target_role: coffee_container
+    required_target_count: 3
+    usage_policy:
+      mode: sequential_reuse_allowed
+      distinct_within_group: false
+      same_tool_must_cover_all_targets: true
+    relations: [INSERTABLE_IN, REACHES_BOTTOM]
+
+  soup_serving:
+    function: PROVIDE_SOUP_EATING_UTENSIL
+    tool_role: soup_eating_utensil
+    target_role: soup_container
+    required_target_count: 3
+    usage_policy:
+      mode: dedicated_per_target
+      distinct_within_group: true
+    relations: [INSERTABLE_IN, REACHES_BOTTOM]
+
+cross_group_reuse:
+  allowed: true
+constraints:
+  distinct_role_assignments: false
+selection:
+  policy: ranked_valid_candidate
+  semantic_confidence_is_only_a_gate: true
+diagnostics:
+  max_representative_rejections: 300

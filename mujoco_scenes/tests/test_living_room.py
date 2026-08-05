@@ -21,6 +21,7 @@ from mujoco_scenes.living_room_navigation import (
 from mujoco_scenes.living_room_remote import RemoteTVExecutor
 from mujoco_scenes.mobile_motion import MuJoCoBaseCollisionChecker
 from mujoco_scenes.living_room_scene import (
+    LIVING_ROOM_OBJECTS,
     PICKABLE_OBJECTS,
     ROBOT_GOOGLE,
     ROBOT_NONE,
@@ -119,6 +120,19 @@ class LivingRoomSceneTests(unittest.TestCase):
             - scene.model.geom_size[base_id, 2]
         )
         self.assertGreater(float(base_bottom), 0.20)
+
+    def test_scene_exposes_generic_observed_state_interface(self):
+        visible = dict(self.scene.get_visible_object_instances())
+        self.assertEqual(set(visible), set(LIVING_ROOM_OBJECTS))
+        self.assertEqual(self.scene.initial_observation_region, "room")
+        self.assertEqual(
+            tuple(self.scene.get_region_observation_states()),
+            ("LEFT_DRAWER", "RIGHT_DRAWER"),
+        )
+        self.assertEqual(
+            self.scene.default_inspection_order,
+            ("LEFT_DRAWER", "RIGHT_DRAWER"),
+        )
 
     def test_coffee_table_is_fixed_and_unactuated(self):
         model = self.robot_free_model

@@ -1,6 +1,6 @@
 import unittest
 
-from server import build_command
+from inference_server.server import build_command
 
 
 class ServerLauncherTests(unittest.TestCase):

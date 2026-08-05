@@ -2,7 +2,7 @@
   (:requirements :strips :typing)
 
   (:types
-    robot location object
+    robot location object region container
   )
 
   (:predicates
@@ -13,6 +13,11 @@
     (graspable ?object - object)
     (hand-empty ?robot - robot)
     (holding ?robot - robot ?object - object)
+    (object-in-region ?object - object ?region - region)
+    (container-at ?container - container ?location - location)
+    (container-closed ?container - container)
+    (container-open ?container - container)
+    (handle-graspable ?container - container)
   )
 
   ;; This schema defines action semantics only. The continuous trajectory is
@@ -44,6 +49,37 @@
       (not (object-at ?object ?location))
       (not (hand-empty ?robot))
       (holding ?robot ?object)
+    )
+  )
+
+  ;; Python samples a buffered, collision-free point inside the named region,
+  ;; executes hover/descent IK, releases above the support, and retreats.
+  (:action place
+    :parameters (?robot - robot ?object - object ?region - region)
+    :precondition (and
+      (holding ?robot ?object)
+    )
+    :effect (and
+      (not (holding ?robot ?object))
+      (hand-empty ?robot)
+      (object-in-region ?object ?region)
+    )
+  )
+
+  ;; Python horizontally inserts the empty hand around the real handle,
+  ;; confirms bilateral contact, and follows the model hinge to its limit.
+  (:action open
+    :parameters (?robot - robot ?container - container ?location - location)
+    :precondition (and
+      (at ?robot ?location)
+      (container-at ?container ?location)
+      (container-closed ?container)
+      (handle-graspable ?container)
+      (hand-empty ?robot)
+    )
+    :effect (and
+      (not (container-closed ?container))
+      (container-open ?container)
     )
   )
 )

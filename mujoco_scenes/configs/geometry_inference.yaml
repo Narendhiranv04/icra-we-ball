@@ -28,7 +28,11 @@ open_cavity:
   rim_shell_minimum_radius: 0.70
   minimum_rim_shell_fraction: 0.45
   central_top_radius_fraction: 0.52
-  maximum_central_top_occupancy_fraction: 0.22
+  # A shallow rendered interior can contribute a small number of high-band
+  # samples near the rim.  Thirty percent preserves those genuine cavities;
+  # filled planar tops still have substantially higher central occupancy and
+  # are independently rejected by the coplanar-top and planarity checks.
+  maximum_central_top_occupancy_fraction: 0.30
   minimum_filled_top_central_points: 20
   maximum_filled_top_height_spread_m: 0.002
   inner_radius_fraction: 0.62

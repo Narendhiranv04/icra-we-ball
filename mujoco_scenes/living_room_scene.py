@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import time
 import xml.etree.ElementTree as ET
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import mujoco
@@ -63,6 +64,22 @@ DUST_FADE_RESPONSE = 5.0
 LIVING_ROOM_FORWARD_LIMITS = (-1.0, 2.10)
 LIVING_ROOM_SCENARIOS = ("standard", "lost_remote")
 LOST_REMOTE_POSITION = (-0.78, -1.29, 0.018)
+LIVING_ROOM_REGIONS = ("LEFT_DRAWER", "RIGHT_DRAWER")
+LIVING_ROOM_INSPECTION_RIG_CONFIG = (
+    ROOT / "configs" / "living_room_inspection_rigs.yaml"
+)
+
+
+@dataclass
+class LivingRoomObservationState:
+    """Minimal region state consumed by the shared observation pipeline."""
+
+    opened_containers: set[str] = field(default_factory=set)
+    container_open_state: dict[str, bool] = field(
+        default_factory=lambda: {
+            region_id: False for region_id in LIVING_ROOM_REGIONS
+        }
+    )
 
 
 def build_living_room_xml(
@@ -166,6 +183,12 @@ def build_living_room_xml(
 class LivingRoomScene:
     """Compiled living room plus resettable interaction state."""
 
+    point_cloud_cameras = TOP_CAMERAS
+    inspection_rig_config_path = LIVING_ROOM_INSPECTION_RIG_CONFIG
+    initial_observation_region = "room"
+    default_inspection_order = LIVING_ROOM_REGIONS
+    inspection_interference: dict[str, str] = {}
+
     def __init__(
         self,
         robot: str = ROBOT_GOOGLE,
@@ -202,6 +225,7 @@ class LivingRoomScene:
         )
         self.model = mujoco.MjModel.from_xml_string(xml, assets=assets)
         self.data = mujoco.MjData(self.model)
+        self.state = LivingRoomObservationState()
         self.cleaned_cells: set[int] = set()
         self.tv_power_on = False
         self.under_sofa_inspected = False
@@ -270,10 +294,91 @@ class LivingRoomScene:
         self.under_sofa_inspected = False
         self.lost_remote_detected = False
         self.lost_remote_extracted = False
+        self.state.opened_containers.clear()
+        for region_id in self.state.container_open_state:
+            self.state.container_open_state[region_id] = False
         self._set_robot_home_pose()
         mujoco.mj_forward(self.model, self.data)
         for _ in range(settle_steps):
             mujoco.mj_step(self.model, self.data)
+
+    def get_visible_object_instances(self) -> list[tuple[str, str]]:
+        """Return simulator instances that are currently observable."""
+        visible = list(LIVING_ROOM_OBJECTS)
+        if self.scenario == "lost_remote" and not self.lost_remote_detected:
+            visible.remove("remote_control")
+        return [(object_name, object_name) for object_name in visible]
+
+    def get_instance_source_region(self, instance_name: str) -> str | None:
+        """Return a source region only after the instance is observable."""
+        if instance_name not in dict(self.get_visible_object_instances()):
+            return None
+        if self.scenario == "lost_remote" and instance_name == "remote_control":
+            return "under_sofa"
+        return "room"
+
+    def inspection_source_region(self, region_id: str) -> str | None:
+        """Map an inspection stage to the region allowed to add evidence."""
+        return "room" if region_id == "INITIAL" else region_id
+
+    def get_region_observation_states(self) -> dict[str, dict]:
+        """Return drawer state without exposing hidden object identities."""
+        return {
+            region_id: {
+                "region_id": region_id,
+                "open": self.state.container_open_state[region_id],
+                "inspected": region_id in self.state.opened_containers,
+            }
+            for region_id in LIVING_ROOM_REGIONS
+        }
+
+    def _drawer_actuator_id(self, region_id: str) -> int:
+        if region_id not in LIVING_ROOM_REGIONS:
+            raise ValueError(
+                f"Unknown living-room inspection region: {region_id}"
+            )
+        side = region_id.removesuffix("_DRAWER").lower()
+        actuator_id = mujoco.mj_name2id(
+            self.model,
+            mujoco.mjtObj.mjOBJ_ACTUATOR,
+            f"media_console_{side}_drawer_actuator",
+        )
+        if actuator_id < 0:
+            raise RuntimeError(f"Missing actuator for {region_id}")
+        return actuator_id
+
+    def open_container(self, region_id: str, steps: int = 1000) -> list[str]:
+        """Open a drawer for deterministic virtual inspection."""
+        actuator_id = self._drawer_actuator_id(region_id)
+        self.data.ctrl[actuator_id] = 0.27
+        for _ in range(max(steps, 600)):
+            mujoco.mj_step(self.model, self.data)
+        self.state.container_open_state[region_id] = True
+        self.state.opened_containers.add(region_id)
+        return []
+
+    def close_container(self, region_id: str, steps: int = 1000) -> None:
+        """Close a drawer and update its observable state."""
+        actuator_id = self._drawer_actuator_id(region_id)
+        self.data.ctrl[actuator_id] = 0.0
+        for _ in range(max(steps, 600)):
+            mujoco.mj_step(self.model, self.data)
+        self.state.container_open_state[region_id] = False
+
+    def set_all_containers_open_snapshot(self) -> None:
+        """Open both drawers while preserving observation bookkeeping."""
+        for region_id in LIVING_ROOM_REGIONS:
+            self.open_container(region_id)
+
+    def print_scene_summary(self) -> None:
+        print("=" * 60)
+        print(f"Scene: {self.scene_name}")
+        print(f"Goal:  {self.goal}")
+        print("-" * 60)
+        print(f"Visible objects: {sorted(self.get_visible_object_instances())}")
+        print(f"Drawers opened:  {sorted(self.state.opened_containers)}")
+        print(f"Robot:           {self.robot_name}")
+        print("=" * 60)
 
     def body_id(self, name: str) -> int:
         body_id = mujoco.mj_name2id(

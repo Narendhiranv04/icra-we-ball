@@ -1,6 +1,6 @@
 # Codex Project Handoff
 
-Updated: 2026-08-04 (Asia/Kolkata)
+Updated: 2026-08-05 (Asia/Kolkata)
 
 This file is the working context for continuing the project from another Codex
 session after SSHing into this machine. Start the next session by asking Codex
@@ -10,16 +10,18 @@ or discarding uncommitted changes.
 ## Workspace and Git state
 
 - Repository root: `/home/boreddog/Documents/RRC/LH_Extension/V1`
-- Current branch: `maine`
-- Current committed HEAD: `3f2e377` (`Add living room functional TAMP pipeline`)
-- The worktree contains substantial intentional tracked and untracked work.
+- Current branch: `three_scene_benchmarks`
+- Base commit: `ab393eb` (`Add Google Robot perception and living-room inspection`)
+- A controlled, uncommitted merge from
+  `origin/naren/googlePointCloudIntegration` (`053f95c`) is in progress.
+- The merge conflicts have been resolved. Generated `reports/` media was
+  deliberately excluded; source, configuration, and tests were retained.
+- The worktree contains substantial intentional integration work.
 - Do **not** run `git reset`, `git checkout --`, `git clean`, or otherwise remove
   changes unless the user explicitly requests it.
-- Nothing from the latest camera/sofa/perception work has been committed yet.
 - Remote: `https://github.com/Narendhiranv04/icra-we-ball.git`
-- Latest locally known point-cloud reference:
-  `origin/naren/pointCloudExtraction` at `7ca4633` (`Generalize utensil reuse
-  across coffee and soup`, 2026-08-03).
+- Integrated point-cloud reference:
+  `origin/naren/googlePointCloudIntegration` at `053f95c`.
 - The similarly named local branch `naren/pointCloudExtraction` is stale and
   should not be used for comparisons. Compare against the remote ref directly
   after fetching.
@@ -69,10 +71,22 @@ Examples include choosing a spoon or chopstick instead of a coffee stirrer,
 while rejecting undesirable objects such as a pen or knife after semantic/FM
 ranking and geometric validation.
 
-The current lightweight code includes geometry extraction, segmentation
-interfaces, observed geometry, alternative selection, and remote inference
-server workspaces. It does not yet reproduce all of Naren's latest persistent
-tracking and witness pipeline in the living room.
+The persistent observation, tracking, semantic grounding, task-witness,
+same-evidence ablation, and report-generation source from Naren's branch is now
+integrated. The kitchen object-alternative and living-room region-alternative
+benchmarks are present, and a compact workshop scaffold combines region and
+object-system alternatives. See `THREE_SCENE_BENCHMARKS.md`.
+
+The integrated test command is:
+
+```bash
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 MUJOCO_GL=egl \
+  .venv/bin/python -m pytest mujoco_scenes/tests -q
+```
+
+It currently passes 303 tests, including both server workspaces and fresh
+workshop RGB-D evidence.
+Pytest is declared in `mujoco_scenes/requirements-dev.txt`.
 
 ## Robot and environments
 

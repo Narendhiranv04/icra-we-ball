@@ -1,0 +1,14 @@
+schema_version: 1
+
+# Ablation 2 evaluates cup/bowl targets and spoon/fork utensils only.  Keeping
+# the detector vocabulary aligned with that declared benchmark avoids asking
+# an open-vocabulary model to choose between visually overlapping utensil
+# synonyms (for example "teaspoon", "knife", and "pen") while preserving the
+# required fork-versus-spoon counterexample.  These prompts are applied to RGB
+# pixels; simulator names are never supplied to the detector.
+canonical_labels:
+  bowl: [bowl, mixing bowl]
+  cup: [cup]
+  mug: [mug, coffee mug]
+  spoon: [spoon]
+  fork: [fork, dinner fork, table fork, metal fork, fork utensil]

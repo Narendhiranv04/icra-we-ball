@@ -63,7 +63,8 @@ Create the Python environment from the repository root:
 
 ```bash
 uv venv --python 3.11
-uv pip install -r mujoco_scenes/requirements.txt
+uv pip install --python .venv/bin/python \
+  -r mujoco_scenes/requirements-dev.txt
 ```
 
 The requirements install Mink as the default profile-driven IK backend.
@@ -77,14 +78,15 @@ Google Robot remains in the scene; MuJoCo instance segmentation is available
 only through an explicit oracle mode, while learned mask backends use the same
 RGB-D reconstruction path.
 
-Fetch remains the default robot:
+Google Robot is the default robot. Fetch remains available for regression
+comparison:
 
 ```bash
 MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.scene_loader \
-  --scene S1_coffee_missing_mug --robot fetch --viewer
+  --scene S1_coffee_missing_mug --robot google --viewer
 ```
 
-For Google Robot, sparse-clone its official Menagerie directory beside `V1`:
+Sparse-clone Google Robot's official Menagerie directory beside `V1`:
 
 ```bash
 git clone --depth 1 --filter=blob:none --sparse \

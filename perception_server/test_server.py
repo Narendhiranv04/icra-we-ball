@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from server import Detection, deduplicate, encode_rle
+from perception_server.server import Detection, deduplicate, encode_rle
 
 
 def decode_rle(payload):

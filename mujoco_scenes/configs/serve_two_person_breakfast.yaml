@@ -1,0 +1,63 @@
+task_id: serve_two_person_breakfast_geometry_only
+
+roles:
+  open_receptacle:
+    count: 2
+    geometric_requirements:
+      - predicate: OPEN_CAVITY
+        required_status: TRUE
+      - property: opening_width_m
+        minimum: 0.050
+        unit: m
+        allowed_statuses: [MEASURED]
+      - property: cavity_depth_m
+        minimum: 0.015
+        unit: m
+        allowed_statuses: [MEASURED]
+
+  elongated_implement:
+    count: 2
+    geometric_requirements:
+      - predicate: ELONGATED_OBJECT
+        required_status: TRUE
+      - property: usable_length_m
+        minimum: 0.090
+        unit: m
+        allowed_statuses: [DERIVED]
+
+  insertable_implement:
+    count: 1
+    geometric_requirements:
+      - predicate: ELONGATED_OBJECT
+        required_status: TRUE
+      - property: maximum_cross_section_m
+        maximum: 0.055
+        unit: m
+        allowed_statuses: [DERIVED]
+
+  planar_support:
+    count: 1
+    geometric_requirements:
+      - predicate: PLANAR_SUPPORT
+        required_status: TRUE
+      - property: support_area_m2
+        minimum: 0.008
+        unit: m2
+        allowed_statuses: [DERIVED]
+
+constraints:
+  distinct_objects: true
+  pairwise:
+    - relation: INSERTABLE_IN
+      from_role: insertable_implement
+      to_role: open_receptacle
+      apply_to: all_selected_targets
+      required_status: TRUE
+    - relation: REACHES_BOTTOM
+      from_role: insertable_implement
+      to_role: open_receptacle
+      apply_to: all_selected_targets
+      required_status: TRUE
+
+diagnostics:
+  max_representative_rejections: 5

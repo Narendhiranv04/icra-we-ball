@@ -49,6 +49,7 @@ from the YCB Object and Model Set:
 - `030_fork`
 - `031_spoon`
 - `032_knife`
+- `040_large_marker`
 - `065-a_cups`
 
 Canonical project and download page:
@@ -68,6 +69,38 @@ Recommended citation:
 > Berk Calli et al. "Benchmarking in Manipulation Research: The YCB Object
 > and Model Set and Benchmarking Protocols." IEEE Robotics & Automation
 > Magazine, 2015.
+
+## Ultralytics YOLO-World and CLIP
+
+Joint semantic grounding optionally installs and runs:
+
+- `ultralytics==8.4.112` with the pretrained
+  `yolov8m-worldv2.pt` checkpoint;
+- the Ultralytics CLIP fork pinned at commit
+  `c4b6ea0932a2c0f39a0fa528af5ec4982ff15cab`;
+- the pretrained OpenAI CLIP `ViT-B/32` text-encoder weights retrieved by
+  that package.
+
+The Ultralytics package metadata and source repository identify the software
+as GNU Affero General Public License v3.0. The pinned Ultralytics CLIP fork
+also contains an AGPL-3.0 licence:
+
+- https://github.com/ultralytics/ultralytics/blob/main/LICENSE
+- https://github.com/ultralytics/CLIP/blob/c4b6ea0932a2c0f39a0fa528af5ec4982ff15cab/LICENSE
+
+Model files are not committed to this repository. The documented preparation
+script downloads them into a user-owned ignored cache and verifies:
+
+```text
+yolov8m-worldv2.pt
+b614d33aa35b8e61d988041ff6939dfb3ed627af88ccaf643e4cdb822eb41d71
+
+ViT-B-32.pt
+40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af
+```
+
+Review the upstream licences and any commercial licensing requirements before
+redistributing a container that embeds the detector packages or checkpoints.
 
 ## Google Scanned Objects
 

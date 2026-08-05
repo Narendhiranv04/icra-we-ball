@@ -1,0 +1,33 @@
+schema_version: 1
+purpose: OFFLINE_EVALUATION_ONLY
+runtime_import_forbidden: true
+task_id: prepare_coffee_and_soup_multi_target
+scene_name: S1_ablation3_multi_target_primary
+expected:
+  semantic-only:
+    status: COMPLETE
+    completion_stage: 0
+    completion_region: INITIAL
+    intentionally_incorrect: true
+    failure_kind: false_positive
+  geometry-only:
+    status: COMPLETE
+    completion_stage: 0
+    completion_region: INITIAL
+    intentionally_incorrect: true
+    failure_kind: false_positive
+  joint-target-agnostic-count:
+    status: COMPLETE
+    completion_stage: 0
+    completion_region: INITIAL
+    intentionally_incorrect: true
+    failure_kind: false_positive
+  joint-target-specific:
+    status: COMPLETE
+    completion_stage: 2
+    completion_region: D2
+ground_truth:
+  correct_mode: joint-target-specific
+  completion_stage: 2
+  completion_region: D2
+ground_truth_scope: offline_evaluation_only

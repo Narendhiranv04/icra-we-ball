@@ -35,35 +35,67 @@ git -C ../third_party/mujoco_menagerie sparse-checkout set google_robot
 If Menagerie is elsewhere, set `MUJOCO_MENAGERIE_PATH` to either the checkout
 root or its `google_robot` directory.
 
-Launch the room, MuJoCo viewer, and companion Actions window:
+Launch the room, MuJoCo viewer, and companion Actions window through the
+shared scene selector:
 
 ```bash
-MUJOCO_GL=glfw uv run python -m mujoco_scenes.living_room_scene --viewer
+MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.scene_loader \
+  --environment living-room --robot google --viewer
 ```
 
 Calibration mode also exposes guarded candidate object actions:
 
 ```bash
-MUJOCO_GL=glfw uv run python -m mujoco_scenes.living_room_scene \
-  --viewer --calibration-mode
+MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.scene_loader \
+  --scene L1_living_room --robot google --viewer --calibration-mode
 ```
 
 Launch only the MuJoCo viewer, without the Actions window:
 
 ```bash
-MUJOCO_GL=glfw uv run python -m mujoco_scenes.living_room_scene \
-  --viewer --no-actions-panel
+MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.scene_loader \
+  --scene L1_living_room --robot google --viewer --no-actions-panel
 ```
 
 Render one frame without opening a GUI:
 
 ```bash
-MUJOCO_GL=osmesa uv run python -m mujoco_scenes.living_room_scene \
+MUJOCO_GL=egl PYOPENGL_PLATFORM=egl .venv/bin/python \
+  -m mujoco_scenes.scene_loader \
+  --scene L1_living_room --no-robot \
   --camera room_corner_camera --render captures/living_room.png
 ```
 
-The static room can be inspected without a robot using `--robot none`. The
-default is `--robot google`; Fetch is not currently composed into this scene.
+The static room can be inspected without a robot using either `--robot none`
+or `--no-robot`. The default is `--robot google`; Fetch is not composed into
+either production environment.
+
+Run the same five-view point-cloud reconstruction used by the kitchen:
+
+```bash
+MUJOCO_GL=egl PYOPENGL_PLATFORM=egl .venv/bin/python \
+  -m mujoco_scenes.scene_loader \
+  --scene L1_living_room --no-robot \
+  --point-cloud runs/living_room_cloud \
+  --point-cloud-width 640 --point-cloud-height 480
+```
+
+Run persistent stage-local inspection for the initially visible coffee-table
+objects and then the two media-console drawers:
+
+```bash
+MUJOCO_GL=egl PYOPENGL_PLATFORM=egl .venv/bin/python \
+  -m mujoco_scenes.scene_loader \
+  --scene L1_living_room --no-robot \
+  --task-requirements configs/living_room_find_planar_support.yaml \
+  --inspect-sequence LEFT_DRAWER RIGHT_DRAWER \
+  --runs-root runs --run-id living_room_inspection
+```
+
+This uses `configs/living_room_inspection_rigs.yaml`. The room and kitchen
+have independent calibrated camera poses and region volumes while sharing the
+same typed `MeasurementEvidence`, registry, graph, property, semantic, role,
+pairing, witness, and visualization implementation.
 
 ### Lost-remote scenario
 
@@ -459,3 +491,181 @@ uv run python -m unittest mujoco_scenes.tests.test_living_room -v
 - Coasters have no pick controller.
 - There is no sitting, door, pouring, cloth-wiping, or soft-object interaction
   in this scene.
+
+## L2 region-functional grounding: Region Ablation 1
+
+L1 remains the Google Robot interaction demonstration described above. The
+separate L2 family asks a different perception question: **which observed
+spatial region can perform a requested placement function?**
+
+The exact benchmark goal is:
+
+> Place the refreshment tray on a suitable living-room surface within easy
+> reach of the sofa.
+
+The manually authored future-FM contract is
+`configs/l2_region_ablation1_task.yaml`. It proposes the fixed inspection order
+`RUG_PATCH → SMALL_SIDE_TABLE → COFFEE_TABLE` and requires:
+
+- parent-furniture semantics compatible with
+  `refreshment_serving_region`;
+- `PLANAR_SUPPORT` from a fresh region-local point cloud;
+- `FITS_ON(refreshment_tray, region)` at 0° or 90° with measured edge margins;
+- `NEAR_SEATING_AREA(region, observed_sofa_context)`.
+
+Ranking is a proposal, not proof. A high-ranked candidate is still rejected
+when any required verifier returns `FALSE` or `UNKNOWN`.
+
+### Scene variants
+
+- `L2_living_room_region_ablation1_primary`: the rug is the geometry-only
+  false positive, the small side table is the semantic-only false positive,
+  and the coffee table is the joint solution.
+- `L2_living_room_region_ablation1_initial_complete`: the valid coffee table
+  is inspected first and joint grounding completes without later inspection.
+- `L2_living_room_region_ablation1_exhaustion`: the coffee table is also too
+  small, so joint grounding exhausts the fixed order without a handoff.
+
+All variants compile with `--robot google`, `--robot none`, and `--no-robot`.
+Scientific runs use no robot.
+
+### Evidence and persistent regions
+
+Each stage positions five deterministic virtual cameras, renders aligned RGB,
+metric depth, and instance segmentation, validates every view, back-projects
+depth into the MuJoCo world frame, gates the current candidate volume, and
+extracts its upper support plane. The property extractor accepts only typed
+`RegionMeasurementEvidence`. Inspection volumes select evidence; their
+configured extents never become measured support dimensions.
+
+The fixed payload is associated as the scene's single independently movable
+rigid segmentation instance. Runtime capture does not look up a tray body,
+geom, material, or asset name; its footprint is measured only from the
+selected current-view RGB-D points.
+
+Observed patches receive generic IDs such as `region_0001`. Identity is
+maintained using measured 3-D location, footprint overlap, size consistency,
+and independently detected semantic context. Public inference uses separate
+semantic, geometric, functional, and provenance namespaces. Configured labels
+such as `RUG_PATCH` remain provenance only.
+
+YOLO-World receives rendered RGB and the vocabulary in
+`configs/l2_region_semantic_vocabulary.yaml`. Projected observed masks
+associate detections with the support, fixed payload, and seating context.
+Simulator body, geom, material, asset, and region names are not detector
+inputs or semantic decisions.
+
+### Same-evidence modes
+
+Perception runs once. Offline evaluation then hashes and reuses the identical
+RGB, depth, segmentation, masks, detections, associations, region clouds,
+payload cloud, and seating evidence:
+
+| Mode | Acceptance logic | Primary outcome |
+|---|---|---|
+| Geometry-only | planar AND fits AND near | incorrectly selects the rug |
+| Semantic-only | serving semantics AND seating semantics | incorrectly selects the small side table |
+| Joint | semantics AND planar AND fits AND near | selects the coffee table |
+
+Only joint mode is production-authoritative. Diagnostic modes never stop
+inspection and never emit a verified handoff.
+
+### Local command
+
+```bash
+MUJOCO_GL=egl \
+PYOPENGL_PLATFORM=egl \
+YOLO_CONFIG_DIR=/tmp \
+MUJOCO_SEMANTIC_PROCESS_ISOLATION=1 \
+OMP_NUM_THREADS=2 \
+MKL_NUM_THREADS=2 \
+OPENBLAS_NUM_THREADS=2 \
+MALLOC_ARENA_MAX=2 \
+python -m mujoco_scenes.run_l2_region_ablation \
+  --scene L2_living_room_region_ablation1_primary \
+  --no-robot \
+  --runs-root runs \
+  --run-id l2_living_room_region_ablation1_demo \
+  --width 1280 \
+  --height 960 \
+  --semantic-detector yolo_world \
+  --semantic-model semantic_model_cache/yolov8m-worldv2.pt \
+  --semantic-vocabulary mujoco_scenes/configs/l2_region_semantic_vocabulary.yaml \
+  --semantic-confidence-threshold 0.03
+
+python -m mujoco_scenes.generate_region_ablation_report \
+  runs/l2_living_room_region_ablation1_demo \
+  --report-dir reports/l2_living_room_region_ablation1_demo
+```
+
+Open the presentation:
+
+```bash
+xdg-open reports/l2_living_room_region_ablation1_demo/presentation_report.html
+```
+
+### Docker and one-command demonstration
+
+Build the existing shared image:
+
+```bash
+docker build -f mujoco_scenes/Dockerfile -t mujoco-kitchen-s1 .
+```
+
+The wrapper uses host UID/GID, EGL, detector process isolation, writable
+run/report mounts, and the persistent model cache:
+
+```bash
+./mujoco_scenes/scripts/run_l2_region_ablation1_demo.sh \
+  l2_living_room_region_ablation1_demo
+```
+
+The equivalent perception container invocation is:
+
+```bash
+docker run --rm \
+  --user "$(id -u):$(id -g)" \
+  -e HOME=/tmp \
+  -e MUJOCO_GL=egl \
+  -e PYOPENGL_PLATFORM=egl \
+  -e YOLO_CONFIG_DIR=/tmp \
+  -e MUJOCO_SEMANTIC_PROCESS_ISOLATION=1 \
+  -e OMP_NUM_THREADS=2 \
+  -e MKL_NUM_THREADS=2 \
+  -e OPENBLAS_NUM_THREADS=2 \
+  -e MALLOC_ARENA_MAX=2 \
+  --entrypoint python \
+  -v "$PWD/runs:/output" \
+  -v "$PWD/semantic_model_cache/yolov8m-worldv2.pt:/models/yolov8m-worldv2.pt:ro" \
+  -v "$PWD/semantic_model_cache/weights:/workspace/weights:ro" \
+  mujoco-kitchen-s1 \
+  -m mujoco_scenes.run_l2_region_ablation \
+  --scene L2_living_room_region_ablation1_primary \
+  --no-robot \
+  --runs-root /output \
+  --run-id l2_living_room_region_ablation1_demo \
+  --width 1280 \
+  --height 960 \
+  --semantic-detector yolo_world \
+  --semantic-model /models/yolov8m-worldv2.pt \
+  --semantic-vocabulary mujoco_scenes/configs/l2_region_semantic_vocabulary.yaml \
+  --semantic-confidence-threshold 0.03
+```
+
+### Outputs and limitations
+
+The run contains `region_registry.json`, `payload_registry.json`,
+`region_function_evaluations.json`, JSON/CSV compatibility matrices,
+`observed_graph.json`, event history, hashed offline evaluation, and (only for
+joint success) `verified_region_handoff.json`. Every stage contains five
+camera captures, masks, semantic associations, fresh region and payload
+clouds, properties, and evaluations.
+
+The report package contains HTML, README, numeric data, matrix and graph
+images, per-stage semantic/point-cloud/mask views, GIF, and MP4.
+
+Function requirements and ranking remain manual. Region occupancy and
+arbitrary free-space decomposition are outside this first controlled
+benchmark. No FM parsing, mobile navigation, manipulation, placement action,
+planning, or TAMP execution occurs. The output is a verified
+destination-region handoff only.

@@ -44,6 +44,7 @@ YCB_OBJECTS = {
     "fork": "030_fork",
     "spoon": "031_spoon",
     "knife": "032_knife",
+    "marker": "040_large_marker",
     "cup": "065-a_cups",
 }
 
