@@ -1,8 +1,8 @@
 schema_version: 1
 task_id: l2_two_person_target_specific_drink_allocation
 natural_language_goal: >-
-  Set up drinks for two people watching television. Place one drink on a
-  suitable accessible surface beside each person’s seating position.
+  Place one drink-and-snack set on a suitable surface beside each person’s
+  seating position.
 specification_source: manual_future_fm_contract
 generated_from_foundation_model: false
 
@@ -12,12 +12,12 @@ function_groups:
     region_role: personal_drink_region
     usage_policy: DEDICATED_REGION_PER_TARGET
     target_assignment_policy: TARGET_SPECIFIC
-    payload_semantic_roles: [drink, drink]
+    payload_semantic_roles: [drink, snack_container]
     target_role: seating_target
     required_target_count: 2
     required_relations:
       - PLANAR_SUPPORT
-      - FITS_ON
+      - FITS_SET_ON
       - NEAR_SEAT
 
 semantic_requirements:
@@ -35,6 +35,7 @@ semantic_requirements:
         coffee_table: 1
   payload_roles:
     drink: [mug, cup]
+    snack_container: [bowl, ramekin]
   seating_categories: [armchair, chair, sofa]
   minimum_supporting_views: 2
   minimum_mean_confidence: 0.03
@@ -50,6 +51,12 @@ geometric_requirements:
     relation: FITS_ON
     edge_clearance_margin_m: 0.015
     allowed_orientations_degrees: [0, 90]
+  payload_set_region:
+    relation: FITS_SET_ON
+    edge_clearance_margin_m: 0.015
+    inter_payload_clearance_m: 0.020
+    allowed_orientations_degrees: [0, 90]
+    arrangements: [ALONG_LENGTH, ALONG_WIDTH]
   personal_context:
     relation: NEAR_SEAT
     maximum_centroid_distance_m: 1.15

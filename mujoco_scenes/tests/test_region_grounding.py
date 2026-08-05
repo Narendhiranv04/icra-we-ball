@@ -230,7 +230,7 @@ def test_region_registry_assigns_generic_persistent_ids():
         _region_evidence(_horizontal_points()), task_config=TASK
     )
     arguments = dict(
-        inspection_label="RUG_PATCH",
+        inspection_label="SOFA_SEAT_PATCH",
         properties=properties,
         semantic_context={"parent_furniture": {"canonical_label": "rug"}},
         functional_evaluation={},
@@ -377,19 +377,21 @@ def test_l2_variants_compile_without_robot(scene_name):
         assert sum(
             model.jnt_type[joint_id] == mujoco.mjtJoint.mjJNT_FREE
             for joint_id in range(model.njnt)
-        ) == 4
+        ) == 6
     else:
         assert sum(
             model.jnt_type[joint_id] == mujoco.mjtJoint.mjJNT_FREE
             for joint_id in range(model.njnt)
-        ) == 2
+        ) == 4
 
 
 @pytest.mark.parametrize("robot", ("none", "google"))
 def test_payload_segmentation_instance_is_selected_without_a_body_name(robot):
     scene = L2LivingRoomRegionScene(L2_SCENES[0], robot=robot)
     geom_ids = _single_free_rigid_instance_geom_ids(scene.model)
-    assert len(geom_ids) == 5
+    # The realistic loaded-tray payload retains five analytic collision geoms
+    # and adds scanned tray, mug, and bowl visual geoms to the same free body.
+    assert len(geom_ids) == 8
     owning_bodies = {
         int(scene.model.geom_bodyid[geom_id]) for geom_id in geom_ids
     }
@@ -451,7 +453,7 @@ def _stage(stage, region_id, label, semantic, fits, joint):
         "semantic_context": {
             "parent_furniture": {
                 "canonical_label": {
-                    "RUG_PATCH": "rug",
+                    "SOFA_SEAT_PATCH": "sofa",
                     "SMALL_SIDE_TABLE": "side_table",
                     "COFFEE_TABLE": "coffee_table",
                 }[label],
@@ -475,7 +477,9 @@ def test_same_evidence_modes_select_expected_counterexamples(tmp_path):
         height=48,
     )
     run.stage_records = [
-        _stage(0, "region_0001", "RUG_PATCH", "FALSE", "TRUE", "FALSE"),
+        _stage(
+            0, "region_0001", "SOFA_SEAT_PATCH", "FALSE", "TRUE", "FALSE"
+        ),
         _stage(
             1,
             "region_0002",

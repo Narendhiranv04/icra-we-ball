@@ -19,6 +19,7 @@ from mujoco_scenes.scene_loader import (
     _google_robot_dir,
     _inject_google_robot,
     _load_google_binary_assets,
+    _load_object_binary_assets,
 )
 
 
@@ -48,6 +49,8 @@ L2_SCENES = (
 L2_ABLATION2_BASE = (
     ROOT / "assets" / "living_room_region_ablation2_base.xml"
 )
+MOVIE_NIGHT_ASSETS = ROOT / "assets" / "movie_night"
+OBJECT_MESHES = ROOT / "assets" / "objects" / "meshes"
 L2_CAMERAS = (
     "l2_camera_left",
     "l2_camera_right",
@@ -56,18 +59,17 @@ L2_CAMERAS = (
     "l2_camera_close",
 )
 L2_GOAL = (
-    "Place the refreshment tray on a suitable living-room surface within "
-    "easy reach of the sofa."
+    "Place the loaded refreshment tray on a stable serving surface within "
+    "easy reach of both people."
 )
 L2_ABLATION2_GOAL = (
-    "Set up the living room for two people watching television. Place one "
-    "drink in a separate accessible region beside each seating position, "
-    "and keep the TV remote and game controller together in one shared "
-    "accessible region."
+    "Prepare movie night for two people. Place one drink-and-snack set beside "
+    "each person, and keep the TV remote and handheld game device together "
+    "on one shared surface accessible to both."
 )
 L2_ABLATION3_GOAL = (
-    "Set up drinks for two people watching television. Place one drink on "
-    "a suitable accessible surface beside each person’s seating position."
+    "Place one drink-and-snack set on a suitable surface beside each "
+    "person’s seating position."
 )
 
 
@@ -89,6 +91,313 @@ def _translate_body_geoms(
         position = np.fromstring(geom.get("pos", "0 0 0"), sep=" ")
         position[:2] += delta
         geom.set("pos", " ".join(f"{value:.5f}" for value in position))
+
+
+def _apply_movie_night_visuals(root: ET.Element, ablation2: bool) -> None:
+    """Replace benchmark collision primitives with textured visual meshes.
+
+    Existing geoms remain as invisible, stable collision/measurement proxies.
+    Semantic and geometric inference still receives rendered RGB-D and never
+    reads this construction metadata.
+    """
+    asset = root.find("asset")
+    declarations = (
+        ("texture", {"name": "movie_fabric", "type": "2d", "file": str(MOVIE_NIGHT_ASSETS / "fabric_warm.png")}),
+        ("texture", {"name": "movie_chair_fabric", "type": "2d", "file": str(MOVIE_NIGHT_ASSETS / "fabric_chair.png")}),
+        ("texture", {"name": "movie_walnut", "type": "2d", "file": str(MOVIE_NIGHT_ASSETS / "wood_walnut.png")}),
+        ("texture", {"name": "movie_oak", "type": "2d", "file": str(MOVIE_NIGHT_ASSETS / "wood_oak.png")}),
+        ("texture", {"name": "movie_remote_charcoal", "type": "2d", "file": str(MOVIE_NIGHT_ASSETS / "remote_charcoal.png")}),
+        ("material", {"name": "movie_fabric_mat", "texture": "movie_fabric", "roughness": "0.82"}),
+        ("material", {"name": "movie_chair_mat", "texture": "movie_chair_fabric", "roughness": "0.78"}),
+        ("material", {"name": "movie_walnut_mat", "texture": "movie_walnut", "roughness": "0.55"}),
+        ("material", {"name": "movie_oak_mat", "texture": "movie_oak", "roughness": "0.58"}),
+        ("material", {"name": "movie_remote_charcoal_mat", "texture": "movie_remote_charcoal", "roughness": "0.68"}),
+        ("material", {"name": "movie_rug_mat", "rgba": "0.36 0.34 0.30 1", "roughness": "0.94"}),
+        ("material", {"name": "movie_lamp_mat", "rgba": "0.63 0.57 0.48 1", "roughness": "0.50"}),
+        ("material", {"name": "movie_pot_mat", "rgba": "0.45 0.25 0.15 1", "roughness": "0.72"}),
+        ("material", {"name": "movie_leaf_mat", "rgba": "0.18 0.34 0.20 1", "roughness": "0.82"}),
+    )
+    for tag, attributes in declarations:
+        ET.SubElement(asset, tag, attributes)
+    for name in (
+        "sofa", "armchair", "coffee_table", "end_table", "c_table",
+        "media_console", "bookshelf", "remote_control",
+    ):
+        ET.SubElement(
+            asset, "mesh",
+            {"name": f"movie_{name}", "file": str(MOVIE_NIGHT_ASSETS / f"{name}.obj")},
+        )
+    scans = {
+        "movie_ycb_mug": ("ycb/mug/ycb_mug.obj", "1 1 1"),
+        "movie_ycb_bowl": ("ycb/bowl/ycb_bowl.obj", "1 1 1"),
+        "movie_gso_mug": (
+            "gso/living_room_mug/gso_living_room_mug.obj", "0.78 0.78 0.78"
+        ),
+        "movie_gso_tray": (
+            "gso/living_room_serving_tray/gso_living_room_serving_tray.obj",
+            "1.35 1.35 1.35",
+        ),
+        "movie_gso_console": (
+            "gso/living_room_game_console/gso_living_room_game_console.obj",
+            "1.30 1.30 1.30",
+        ),
+        "movie_gso_bowl": (
+            "gso/living_room_snack_bowl/gso_living_room_snack_bowl.obj",
+            "1.15 1.15 1.15",
+        ),
+    }
+    textures = {
+        "movie_ycb_mug": "ycb/mug/ycb_mug.png",
+        "movie_ycb_bowl": "ycb/bowl/ycb_bowl.png",
+        "movie_gso_mug": "gso/living_room_mug/gso_living_room_mug.png",
+        "movie_gso_tray": "gso/living_room_serving_tray/gso_living_room_serving_tray.png",
+        "movie_gso_console": "gso/living_room_game_console/gso_living_room_game_console.png",
+        "movie_gso_bowl": "gso/living_room_snack_bowl/gso_living_room_snack_bowl.png",
+    }
+    for name, (path, scale) in scans.items():
+        ET.SubElement(
+            asset, "mesh",
+            {"name": name, "file": str(OBJECT_MESHES / path), "scale": scale},
+        )
+        ET.SubElement(
+            asset, "texture",
+            {
+                "name": f"{name}_tex", "type": "2d",
+                "file": str(OBJECT_MESHES / textures[name]),
+            },
+        )
+        ET.SubElement(
+            asset, "material",
+            {"name": f"{name}_mat", "texture": f"{name}_tex", "roughness": "0.5"},
+        )
+
+    mapping = (
+        {
+            "a2_seat_left": ("movie_sofa", "movie_fabric_mat", "-0.72 1.05 0", "0.66 0.78 0.78"),
+            "a2_seat_right": ("movie_armchair", "movie_chair_mat", "0.92 1.05 0", "0.92 0.92 0.92"),
+            "a2_personal_left": ("movie_end_table", "movie_walnut_mat", "-1.48 0.60 0", "1 1 1"),
+            "a2_personal_right": ("movie_end_table", "movie_oak_mat", "1.48 0.60 0", "0.94 1.05 1"),
+            "a2_shared_drink_trap": ("movie_c_table", "movie_oak_mat", "0 0.72 0", "1.15 1.15 0.88"),
+            "a2_control_table": ("movie_coffee_table", "movie_walnut_mat", "0 -0.05 0.02", "0.72 0.74 1"),
+            "a2_media_wall": ("movie_media_console", "movie_walnut_mat", "0 1.48 0", "0.72 0.72 1"),
+        }
+        if ablation2
+        else {
+            "l2_sofa": ("movie_sofa", "movie_fabric_mat", "-0.62 0.82 0", "0.76 0.82 0.82"),
+            "l2_side_table": ("movie_c_table", "movie_oak_mat", "-1.28 0.20 0", "0.72 0.86 0.88"),
+            "l2_coffee_table": ("movie_coffee_table", "movie_walnut_mat", "0.42 0.20 0.04", "0.48 0.62 1"),
+            "l2_media_wall": ("movie_media_console", "movie_walnut_mat", "0.85 1.35 0", "0.62 0.62 1"),
+        }
+    )
+    for body_name, (mesh, material, position, scale) in mapping.items():
+        body = root.find(f".//body[@name='{body_name}']")
+        if body is None:
+            continue
+        for geom in body.findall("geom"):
+            if "tv" not in geom.get("name", ""):
+                geom.attrib.pop("material", None)
+                geom.set("rgba", "0 0 0 0")
+                geom.set("group", "3")
+        visual_mesh_name = f"{body_name}_movie_visual_mesh"
+        ET.SubElement(
+            asset,
+            "mesh",
+            {
+                "name": visual_mesh_name,
+                "file": str(
+                    MOVIE_NIGHT_ASSETS
+                    / f"{mesh.removeprefix('movie_')}.obj"
+                ),
+                "scale": scale,
+            },
+        )
+        ET.SubElement(
+            body, "geom",
+            {
+                "name": f"{body_name}_textured_visual",
+                "type": "mesh", "mesh": visual_mesh_name, "material": material,
+                "pos": position,
+                "contype": "0", "conaffinity": "0", "mass": "0", "group": "2",
+            },
+        )
+
+    # Shared apartment dressing.  These fixed visuals provide coherent room
+    # context but are not candidate regions or payload instances.
+    worldbody = root.find("worldbody")
+    for rug_name in ("l2_rug_surface", "a2_rug_surface"):
+        rug_geom = root.find(f".//geom[@name='{rug_name}']")
+        if rug_geom is not None:
+            rug_geom.set("material", "movie_rug_mat")
+            rug_geom.attrib.pop("rgba", None)
+    for border_name in ("l2_rug_border", "a2_rug_border"):
+        border = root.find(f".//geom[@name='{border_name}']")
+        if border is not None:
+            border.set("rgba", "0.28 0.27 0.25 1")
+    for staging_body_name in ("l2_staging_table", "a2_staging"):
+        staging_body = root.find(f".//body[@name='{staging_body_name}']")
+        if staging_body is not None:
+            for geom in staging_body.findall("geom"):
+                geom.set("material", "movie_walnut_mat")
+                geom.attrib.pop("rgba", None)
+
+    shelf = ET.SubElement(
+        worldbody, "body", {"name": "movie_background_bookshelf"}
+    )
+    ET.SubElement(
+        shelf, "geom",
+        {
+            "name": "movie_background_bookshelf_visual", "type": "mesh",
+            "mesh": "movie_bookshelf", "material": "movie_walnut_mat",
+            "pos": "-1.70 1.38 0",
+            "contype": "0", "conaffinity": "0", "group": "2",
+        },
+    )
+    lamp = ET.SubElement(
+        worldbody, "body", {"name": "movie_background_floor_lamp"}
+    )
+    ET.SubElement(
+        lamp, "geom",
+        {
+            "name": "movie_lamp_stem", "type": "cylinder",
+            "pos": "1.85 1.18 0.82", "size": "0.018 0.80",
+            "material": "movie_lamp_mat", "contype": "0",
+            "conaffinity": "0", "group": "2",
+        },
+    )
+    ET.SubElement(
+        lamp, "geom",
+        {
+            "name": "movie_lamp_shade", "type": "cylinder",
+            "pos": "1.85 1.18 1.62", "size": "0.18 0.22",
+            "material": "movie_lamp_mat", "contype": "0",
+            "conaffinity": "0", "group": "2",
+        },
+    )
+    plant = ET.SubElement(
+        worldbody, "body", {"name": "movie_background_plant"}
+    )
+    ET.SubElement(
+        plant, "geom",
+        {
+            "name": "movie_plant_pot", "type": "cylinder",
+            "pos": "-1.86 -0.62 0.16", "size": "0.16 0.16",
+            "material": "movie_pot_mat", "contype": "0",
+            "conaffinity": "0", "group": "2",
+        },
+    )
+    for index, (x, y, z, size) in enumerate(
+        (
+            (-1.86, -0.62, 0.48, "0.08 0.08 0.30"),
+            (-1.76, -0.62, 0.48, "0.07 0.07 0.26"),
+            (-1.96, -0.61, 0.46, "0.07 0.07 0.24"),
+        )
+    ):
+        ET.SubElement(
+            plant, "geom",
+            {
+                "name": f"movie_plant_leaf_{index}", "type": "ellipsoid",
+                "pos": f"{x} {y} {z}", "size": size,
+                "material": "movie_leaf_mat", "contype": "0",
+                "conaffinity": "0", "group": "2",
+            },
+        )
+    if not ablation2:
+        chair = ET.SubElement(
+            worldbody, "body", {"name": "movie_background_armchair"}
+        )
+        ET.SubElement(
+            chair, "geom",
+            {
+                "name": "movie_background_armchair_visual", "type": "mesh",
+                "mesh": "movie_armchair", "material": "movie_chair_mat",
+                "pos": "1.45 0.88 0",
+                "contype": "0", "conaffinity": "0", "group": "2",
+            },
+        )
+
+    if ablation2:
+        replacements = {
+            "a2_drink_left": ("movie_ycb_mug", "movie_ycb_mug_mat", "0 0 0"),
+            "a2_drink_right": ("movie_gso_mug", "movie_gso_mug_mat", "0 0 0"),
+            "a2_controller_payload": (
+                "movie_gso_console", "movie_gso_console_mat", "0 0 0"
+            ),
+            "a2_remote_payload": (
+                "movie_remote_control", "movie_remote_charcoal_mat", "0 0 0"
+            ),
+        }
+        for name, position, mesh, material in (
+            (
+                "a2_snack_left", "-0.53 -1.34 0.655",
+                "movie_ycb_bowl", "movie_ycb_bowl_mat",
+            ),
+            (
+                "a2_snack_right", "-0.03 -1.34 0.655",
+                "movie_gso_bowl", "movie_gso_bowl_mat",
+            ),
+        ):
+            body = ET.SubElement(worldbody, "body", {"name": name, "pos": position})
+            ET.SubElement(body, "freejoint", {"name": f"{name}_free"})
+            ET.SubElement(
+                body, "geom",
+                {
+                    "name": f"{name}_visual", "type": "mesh", "mesh": mesh,
+                    "material": material, "contype": "0", "conaffinity": "0",
+                    "mass": "0", "group": "2",
+                },
+            )
+            ET.SubElement(
+                body, "geom",
+                {
+                    "name": f"{name}_collision", "type": "cylinder",
+                    "size": "0.065 0.025", "rgba": "0 0 0 0",
+                    "mass": "0.22", "group": "3",
+                },
+            )
+    else:
+        replacements = {
+            "l2_refreshment_tray": (
+                "movie_gso_tray", "movie_gso_tray_mat", "0 0 0"
+            ),
+        }
+    for body_name, (mesh, material, position) in replacements.items():
+        body = root.find(f".//body[@name='{body_name}']")
+        if body is None:
+            continue
+        for geom in body.findall("geom"):
+            geom.set("rgba", "0 0 0 0")
+            geom.set("group", "3")
+            geom.attrib.pop("material", None)
+        ET.SubElement(
+            body, "geom",
+            {
+                "name": f"{body_name}_scanned_visual", "type": "mesh",
+                "mesh": mesh, "material": material, "pos": position,
+                "contype": "0", "conaffinity": "0", "mass": "0", "group": "2",
+            },
+        )
+        if body_name == "l2_refreshment_tray":
+            # A controlled compound payload: contents are visual children of
+            # the tray and therefore share its instance ID. FITS_ON continues
+            # to use the measured tray footprint from rendered evidence.
+            ET.SubElement(
+                body, "geom",
+                {
+                    "name": "loaded_tray_mug_visual", "type": "mesh",
+                    "mesh": "movie_ycb_mug", "material": "movie_ycb_mug_mat",
+                    "pos": "-0.07 0 0.065", "contype": "0", "conaffinity": "0",
+                    "mass": "0", "group": "2",
+                },
+            )
+            ET.SubElement(
+                body, "geom",
+                {
+                    "name": "loaded_tray_bowl_visual", "type": "mesh",
+                    "mesh": "movie_ycb_bowl", "material": "movie_ycb_bowl_mat",
+                    "pos": "0.07 0 0.055", "contype": "0", "conaffinity": "0",
+                    "mass": "0", "group": "2",
+                },
+            )
 
 
 def _configure_ablation3_scene(root: ET.Element, scene_name: str) -> None:
@@ -147,6 +456,11 @@ def build_l2_region_xml(
     root = ET.parse(
         L2_ABLATION2_BASE if ablation2 or ablation3 else L2_BASE
     ).getroot()
+    _apply_movie_night_visuals(root, ablation2 or ablation3)
+    if scene_name in L2_ABLATION1_SCENES:
+        # Keep the narrow C-table visually separate from the sofa so RGB
+        # detector boxes can be associated one-to-one with its instance mask.
+        _translate_body_geoms(root, "l2_side_table", (-1.65, 0.02))
     if scene_name in L2_ABLATION1_SCENES and scene_name.endswith("_exhaustion"):
         # Retain recognizable coffee-table context while making its observed
         # support patch robustly too small for the tray. Runtime inference
@@ -247,7 +561,15 @@ class L2LivingRoomRegionScene:
         self.has_robot = robot == ROBOT_GOOGLE
         print(f"[L2RegionScene] Building scene: {scene_name}")
         print(f"  Goal: {self.goal}")
-        assets = (
+        assets = _load_object_binary_assets()
+        assets.update(
+            {
+                f"movie_night/{path.name}": path.read_bytes()
+                for path in MOVIE_NIGHT_ASSETS.iterdir()
+                if path.suffix.lower() in {".obj", ".png"}
+            }
+        )
+        assets.update(
             _load_google_binary_assets(_google_robot_dir())
             if self.has_robot
             else {}
@@ -332,7 +654,7 @@ class L2LivingRoomRegionScene:
         else:
             print(
                 "Candidate regions:  "
-                "RUG_PATCH, SMALL_SIDE_TABLE, COFFEE_TABLE"
+                "SOFA_SEAT_PATCH, SMALL_SIDE_TABLE, COFFEE_TABLE"
             )
             print("Fixed payload:       one observed refreshment tray")
         print(f"Robot:               {self.robot_name}")

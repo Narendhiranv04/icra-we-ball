@@ -108,6 +108,32 @@
     <mesh name="mesh_gso_spatula" file="gso/gso_spatula_distractor/gso_gso_spatula_distractor.obj"/>
     <texture name="tex_gso_spatula" type="2d" file="gso/gso_spatula_distractor/gso_gso_spatula_distractor.png"/>
     <material name="mat_gso_spatula" texture="tex_gso_spatula" specular="0.25"/>
+    <!-- Movie-night benchmark scans.  Their scene bodies use separate
+         analytic collision proxies; these declarations are visual-only. -->
+    <mesh name="mesh_gso_living_room_mug"
+          file="gso/living_room_mug/gso_living_room_mug.obj"/>
+    <texture name="tex_gso_living_room_mug" type="2d"
+             file="gso/living_room_mug/gso_living_room_mug.png"/>
+    <material name="mat_gso_living_room_mug"
+              texture="tex_gso_living_room_mug"/>
+    <mesh name="mesh_gso_living_room_snack_bowl"
+          file="gso/living_room_snack_bowl/gso_living_room_snack_bowl.obj"/>
+    <texture name="tex_gso_living_room_snack_bowl" type="2d"
+             file="gso/living_room_snack_bowl/gso_living_room_snack_bowl.png"/>
+    <material name="mat_gso_living_room_snack_bowl"
+              texture="tex_gso_living_room_snack_bowl"/>
+    <mesh name="mesh_gso_living_room_serving_tray"
+          file="gso/living_room_serving_tray/gso_living_room_serving_tray.obj"/>
+    <texture name="tex_gso_living_room_serving_tray" type="2d"
+             file="gso/living_room_serving_tray/gso_living_room_serving_tray.png"/>
+    <material name="mat_gso_living_room_serving_tray"
+              texture="tex_gso_living_room_serving_tray"/>
+    <mesh name="mesh_gso_living_room_game_console"
+          file="gso/living_room_game_console/gso_living_room_game_console.obj"/>
+    <texture name="tex_gso_living_room_game_console" type="2d"
+             file="gso/living_room_game_console/gso_living_room_game_console.png"/>
+    <material name="mat_gso_living_room_game_console"
+              texture="tex_gso_living_room_game_console"/>
     <material name="mat_coffee_powder" rgba="0.22 0.075 0.025 1" specular="0.05"/>
     <material name="mat_open_jar_rim" rgba="0.12 0.09 0.07 1" specular="0.25"/>
 

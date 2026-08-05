@@ -21,6 +21,7 @@ from mujoco_scenes.region_ablation2 import (
     _tri_and,
     _value,
     evaluate_near_seat,
+    evaluate_fits_set_on,
     run_initial_semantics,
 )
 from mujoco_scenes.region_grounding import (
@@ -453,13 +454,18 @@ class RegionAblation3Run:
         for object_id, record in self.observation.payloads.items():
             geometry = extract_payload_properties(record["evidence"])
             semantic = semantics[object_id]
-            role = (
-                "drink"
-                if semantic.get("status") == "SUPPORTED"
-                and semantic.get("canonical_label")
-                in self.task["semantic_requirements"]["payload_roles"]["drink"]
-                else None
-            )
+            role = None
+            if semantic.get("status") == "SUPPORTED":
+                role = next(
+                    (
+                        role_name
+                        for role_name, labels in self.task[
+                            "semantic_requirements"
+                        ]["payload_roles"].items()
+                        if semantic.get("canonical_label") in labels
+                    ),
+                    None,
+                )
             self.payload_registry[object_id] = {
                 "identity": {"object_id": object_id, "entity_type": "drink_payload"},
                 "geometry": geometry,
@@ -528,6 +534,12 @@ class RegionAblation3Run:
             for object_id, record in self.payload_registry.items()
             if record["semantic_payload_role"] == "drink"
         )
+        snacks = sorted(
+            object_id
+            for object_id, record in self.payload_registry.items()
+            if record["semantic_payload_role"] == "snack_container"
+        )
+        refreshment_sets = list(zip(drinks[:2], snacks[:2]))
         role = self.task["semantic_requirements"]["region_roles"][
             "personal_drink_region"
         ]
@@ -549,17 +561,22 @@ class RegionAblation3Run:
                 else "TRUE" if planar_value else "FALSE"
             )
             fits = [
-                evaluate_fits_on(
-                    self.payload_registry[object_id]["geometry"],
+                evaluate_fits_set_on(
+                    [
+                        self.payload_registry[object_id]["geometry"]
+                        for object_id in bundle
+                    ],
                     region["geometry"],
                     task_config=self.task,
                 )
-                for object_id in drinks
+                for bundle in refreshment_sets
             ]
             fit_status = _tri_and(*(item["status"] for item in fits))
             fit_margin = (
-                min(item["signed_fit_margin_m"] for item in fits)
-                if fits and all("signed_fit_margin_m" in item for item in fits)
+                min(item["signed_clearance_margin_m"] for item in fits)
+                if fits and all(
+                    "signed_clearance_margin_m" in item for item in fits
+                )
                 else None
             )
             general = _tri_and(semantic["status"], planar, fit_status)
@@ -580,7 +597,7 @@ class RegionAblation3Run:
                     for name, value in (
                         ("REGION_SEMANTICS", semantic["status"]),
                         ("PLANAR_SUPPORT", planar),
-                        ("FITS_ON", fit_status),
+                        ("FITS_SET_ON", fit_status),
                         ("NEAR_SEAT", near["status"]),
                         ("TARGET_SEMANTICS", target_semantic),
                     )
@@ -601,7 +618,7 @@ class RegionAblation3Run:
                     ].get("supporting_view_count"),
                     "semantic_role_status": semantic["status"],
                     "PLANAR_SUPPORT": planar,
-                    "FITS_ON": fit_status,
+                    "FITS_SET_ON": fit_status,
                     "NEAR_SEAT": near["status"],
                     "general_suitability_status": general,
                     "compatibility_status": status,
@@ -620,7 +637,7 @@ class RegionAblation3Run:
                     "maximum_distance_m": maximum,
                     "near_seat_margin_m": near.get("signed_margin_m"),
                     "fit_margin_m": fit_margin,
-                    "per_payload_fit_evidence": fits,
+                    "per_refreshment_set_fit_evidence": fits,
                     "region_contributing_camera_ids": region["provenance"][
                         "contributing_camera_ids"
                     ],
@@ -735,12 +752,20 @@ class RegionAblation3Run:
             for object_id, record in self.payload_registry.items()
             if record["semantic_payload_role"] == "drink"
         )
+        snacks = sorted(
+            object_id
+            for object_id, record in self.payload_registry.items()
+            if record["semantic_payload_role"] == "snack_container"
+        )
+        refreshment_sets = [
+            list(bundle) for bundle in zip(drinks[:2], snacks[:2])
+        ]
         assignments = sorted(
             result["region_target_assignments"],
             key=lambda item: item["seating_target_id"],
         )
         mapped = []
-        for object_id, assignment in zip(drinks, assignments):
+        for bundle_ids, assignment in zip(refreshment_sets, assignments):
             row = next(
                 row
                 for row in self.compatibility_rows
@@ -750,7 +775,7 @@ class RegionAblation3Run:
             )
             mapped.append(
                 {
-                    "drink_object_id": object_id,
+                    "refreshment_set_object_ids": bundle_ids,
                     **assignment,
                     "selected_edge_evidence": row,
                 }
@@ -763,7 +788,7 @@ class RegionAblation3Run:
                 "natural_language_goal": self.task["natural_language_goal"],
                 "production_policy": "global_target_specific",
                 "drink_target_region_mapping": mapped,
-                "persistent_drink_ids": drinks,
+                "persistent_refreshment_set_ids": refreshment_sets,
                 "persistent_seating_target_ids": sorted(
                     self.seating_registry
                 ),

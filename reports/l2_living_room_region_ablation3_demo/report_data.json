@@ -63,15 +63,15 @@
         "region_target_assignments": [
           {
             "candidate_rank": 2,
-            "fit_margin_m": 0.2687191772608054,
-            "near_seat_margin_m": 0.33739508147487196,
+            "fit_margin_m": 0.21024536457752455,
+            "near_seat_margin_m": 0.3625566303598251,
             "region_id": "region_0001",
             "seating_target_id": "seating_0001"
           },
           {
             "candidate_rank": 1,
-            "fit_margin_m": 0.2798442915308883,
-            "near_seat_margin_m": 0.148193143937001,
+            "fit_margin_m": 0.35241685258130095,
+            "near_seat_margin_m": 0.17883953648707962,
             "region_id": "region_0002",
             "seating_target_id": "seating_0002"
           }
@@ -96,8 +96,8 @@
             "seating_0002"
           ],
           "total_candidate_rank": 3,
-          "total_distance_margin_m": 0.48558822541187296,
-          "total_fit_margin_m": 0.5485634687916937
+          "total_distance_margin_m": 0.5413961668469047,
+          "total_fit_margin_m": 0.5626622171588255
         },
         "uncovered_target_ids": [],
         "valid_against_true_task": true
@@ -121,8 +121,8 @@
         "region_target_assignments": [
           {
             "candidate_rank": 1,
-            "fit_margin_m": 0.2798442915308883,
-            "near_seat_margin_m": 0.1562336607906103,
+            "fit_margin_m": 0.35241685258130095,
+            "near_seat_margin_m": 0.01785731554617609,
             "region_id": "region_0002",
             "seating_target_id": "seating_0001"
           }
@@ -227,15 +227,15 @@
         "region_target_assignments": [
           {
             "candidate_rank": 1,
-            "fit_margin_m": 0.2798442915308883,
-            "near_seat_margin_m": 0.1554301143633714,
+            "fit_margin_m": 0.3754422945425083,
+            "near_seat_margin_m": 0.006585944364061236,
             "region_id": "region_0001",
             "seating_target_id": "seating_0001"
           },
           {
             "candidate_rank": 2,
-            "fit_margin_m": 0.2691869536621797,
-            "near_seat_margin_m": 0.3537276682813013,
+            "fit_margin_m": 0.2905739874351314,
+            "near_seat_margin_m": 0.43621199470982785,
             "region_id": "region_0002",
             "seating_target_id": "seating_0002"
           }
@@ -260,8 +260,8 @@
             "seating_0002"
           ],
           "total_candidate_rank": 3,
-          "total_distance_margin_m": 0.5091577826446727,
-          "total_fit_margin_m": 0.549031245193068
+          "total_distance_margin_m": 0.4427979390738891,
+          "total_fit_margin_m": 0.6660162819776397
         },
         "uncovered_target_ids": [],
         "valid_against_true_task": true
@@ -284,15 +284,15 @@
         "region_target_assignments": [
           {
             "candidate_rank": 1,
-            "fit_margin_m": 0.2798442915308883,
-            "near_seat_margin_m": 0.1554301143633714,
+            "fit_margin_m": 0.3754422945425083,
+            "near_seat_margin_m": 0.006585944364061236,
             "region_id": "region_0001",
             "seating_target_id": "seating_0001"
           },
           {
             "candidate_rank": 2,
-            "fit_margin_m": 0.2691869536621797,
-            "near_seat_margin_m": 0.3537276682813013,
+            "fit_margin_m": 0.2905739874351314,
+            "near_seat_margin_m": 0.43621199470982785,
             "region_id": "region_0002",
             "seating_target_id": "seating_0002"
           }
@@ -340,54 +340,10 @@
     },
     "primary": {
       "global_target_specific": {
-        "alternative_complete_matchings": [
-          {
-            "assignments": [
-              {
-                "candidate_rank": 2,
-                "fit_margin_m": 0.27268467256584517,
-                "near_seat_margin_m": 0.09405836005811907,
-                "region_id": "region_0002",
-                "seating_target_id": "seating_0001"
-              }
-            ],
-            "covered_target_ids": [
-              "seating_0001"
-            ],
-            "matching_cardinality": 1,
-            "ranking_key": [
-              -1,
-              2,
-              -0.09405836005811907,
-              -0.27268467256584517,
-              [
-                "region_0002"
-              ],
-              [
-                "seating_0001",
-                "seating_0002"
-              ]
-            ],
-            "selected_region_ids": [
-              "region_0002"
-            ],
-            "tie_break": {
-              "persistent_region_ids": [
-                "region_0002"
-              ],
-              "persistent_target_ids": [
-                "seating_0001",
-                "seating_0002"
-              ],
-              "total_candidate_rank": 2,
-              "total_distance_margin_m": 0.09405836005811907,
-              "total_fit_margin_m": 0.27268467256584517
-            }
-          }
-        ],
+        "alternative_complete_matchings": [],
         "candidate_region_count": 2,
         "classification": "CORRECT_REJECTION",
-        "compatibility_edge_count": 2,
+        "compatibility_edge_count": 1,
         "covered_target_count": 1,
         "covered_target_ids": [
           "seating_0001"
@@ -398,10 +354,9 @@
           {
             "coverage_deficit": 0,
             "hall_condition_satisfied": true,
-            "neighbourhood_size": 2,
+            "neighbourhood_size": 1,
             "neighbouring_region_ids": [
-              "region_0001",
-              "region_0002"
+              "region_0001"
             ],
             "target_subset": [
               "seating_0001"
@@ -419,12 +374,11 @@
             "target_subset_size": 1
           },
           {
-            "coverage_deficit": 0,
-            "hall_condition_satisfied": true,
-            "neighbourhood_size": 2,
+            "coverage_deficit": 1,
+            "hall_condition_satisfied": false,
+            "neighbourhood_size": 1,
             "neighbouring_region_ids": [
-              "region_0001",
-              "region_0002"
+              "region_0001"
             ],
             "target_subset": [
               "seating_0001",
@@ -438,8 +392,8 @@
         "region_target_assignments": [
           {
             "candidate_rank": 1,
-            "fit_margin_m": 0.2687191772608054,
-            "near_seat_margin_m": 0.3070437187500431,
+            "fit_margin_m": 0.21024536457752455,
+            "near_seat_margin_m": 0.38854757860550615,
             "region_id": "region_0001",
             "seating_target_id": "seating_0001"
           }
@@ -461,8 +415,8 @@
             "seating_0002"
           ],
           "total_candidate_rank": 1,
-          "total_distance_margin_m": 0.3070437187500431,
-          "total_fit_margin_m": 0.2687191772608054
+          "total_distance_margin_m": 0.38854757860550615,
+          "total_fit_margin_m": 0.21024536457752455
         },
         "uncovered_target_ids": [
           "seating_0002"
@@ -476,7 +430,7 @@
         ],
         "candidate_region_count": 2,
         "classification": "CORRECT_REJECTION",
-        "compatibility_edge_count": 2,
+        "compatibility_edge_count": 1,
         "covered_target_count": 1,
         "covered_target_ids": [
           "seating_0001"
@@ -488,8 +442,8 @@
         "region_target_assignments": [
           {
             "candidate_rank": 1,
-            "fit_margin_m": 0.2687191772608054,
-            "near_seat_margin_m": 0.3070437187500431,
+            "fit_margin_m": 0.21024536457752455,
+            "near_seat_margin_m": 0.38854757860550615,
             "region_id": "region_0001",
             "seating_target_id": "seating_0001"
           }
@@ -511,7 +465,7 @@
         "alternative_complete_matchings": [],
         "candidate_region_count": 2,
         "classification": "FALSE_POSITIVE_INVALID_COMPLETE",
-        "compatibility_edge_count": 2,
+        "compatibility_edge_count": 1,
         "counted_region_count": 2,
         "covered_target_count": 1,
         "covered_target_ids": [],
@@ -593,15 +547,15 @@
         "region_target_assignments": [
           {
             "candidate_rank": 1,
-            "fit_margin_m": 0.2687191772608054,
-            "near_seat_margin_m": 0.3348612685675577,
+            "fit_margin_m": 0.21024536457752455,
+            "near_seat_margin_m": 0.3612572741360498,
             "region_id": "region_0001",
             "seating_target_id": "seating_0001"
           },
           {
             "candidate_rank": 2,
-            "fit_margin_m": 0.2691869536621797,
-            "near_seat_margin_m": 0.35057277895816696,
+            "fit_margin_m": 0.2061681016192453,
+            "near_seat_margin_m": 0.4301953618222478,
             "region_id": "region_0002",
             "seating_target_id": "seating_0002"
           }
@@ -626,8 +580,8 @@
             "seating_0002"
           ],
           "total_candidate_rank": 3,
-          "total_distance_margin_m": 0.6854340475257247,
-          "total_fit_margin_m": 0.5379061309229851
+          "total_distance_margin_m": 0.7914526359582976,
+          "total_fit_margin_m": 0.41641346619676983
         },
         "uncovered_target_ids": [],
         "valid_against_true_task": true
@@ -650,15 +604,15 @@
         "region_target_assignments": [
           {
             "candidate_rank": 1,
-            "fit_margin_m": 0.2687191772608054,
-            "near_seat_margin_m": 0.3348612685675577,
+            "fit_margin_m": 0.21024536457752455,
+            "near_seat_margin_m": 0.3612572741360498,
             "region_id": "region_0001",
             "seating_target_id": "seating_0001"
           },
           {
             "candidate_rank": 2,
-            "fit_margin_m": 0.2691869536621797,
-            "near_seat_margin_m": 0.35057277895816696,
+            "fit_margin_m": 0.2061681016192453,
+            "near_seat_margin_m": 0.4301953618222478,
             "region_id": "region_0002",
             "seating_target_id": "seating_0002"
           }
@@ -706,10 +660,10 @@
     }
   },
   "runs": {
-    "matching_trap": "/home/naren/RA_iiith/runs/l2_living_room_region_ablation3_demo_matching_trap",
-    "permuted": "/home/naren/RA_iiith/runs/l2_living_room_region_ablation3_demo_permuted",
-    "primary": "/home/naren/RA_iiith/runs/l2_living_room_region_ablation3_demo_primary",
-    "valid": "/home/naren/RA_iiith/runs/l2_living_room_region_ablation3_demo_valid"
+    "matching_trap": "/home/naren/RA_iiith/runs/movie_night_a3_final2_20260806_matching_trap",
+    "permuted": "/home/naren/RA_iiith/runs/movie_night_a3_final2_20260806_permuted",
+    "primary": "/home/naren/RA_iiith/runs/movie_night_a3_final2_20260806_primary",
+    "valid": "/home/naren/RA_iiith/runs/movie_night_a3_final2_20260806_valid"
   },
   "schema_version": 1,
   "self_contained_html": true

@@ -1,6 +1,6 @@
 # L2 living-room Region Ablation 1
 
-Goal: **Place the refreshment tray on a suitable living-room surface within easy reach of the sofa.**
+Goal: **Place the loaded refreshment tray on a stable serving surface within easy reach of both people.**
 
 Kitchen grounding searches for functional objects. This report searches for a
 functional destination region. A large planar patch is not automatically a
@@ -15,9 +15,9 @@ large enough for the measured payload.
 
 | Region | YOLO parent | support L (m) | support W (m) | fit margin (m) | semantic role | FITS_ON | joint |
 |---|---|---:|---:|---:|---|---|---|
-| region_0001 | rug | 1.472 | 0.976 | +0.647 | FALSE | TRUE | FALSE |
-| region_0002 | side_table | 0.304 | 0.264 | -0.152 | TRUE | FALSE | FALSE |
-| region_0003 | coffee_table | 0.699 | 0.541 | +0.211 | TRUE | TRUE | TRUE |
+| region_0001 | sofa | 1.340 | 0.442 | +0.032 | FALSE | TRUE | FALSE |
+| region_0002 | side_table | 0.317 | 0.242 | -0.168 | TRUE | FALSE | FALSE |
+| region_0003 | side_table | 0.701 | 0.535 | +0.125 | TRUE | TRUE | TRUE |
 
 The rug is the geometry-only false positive. The undersized side table is the
 semantic-only false positive. The coffee table is the joint solution. The

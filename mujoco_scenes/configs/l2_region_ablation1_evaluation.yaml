@@ -4,7 +4,7 @@ scenes:
   L2_living_room_region_ablation1_primary:
     expected:
       geometry_only:
-        inspection_label: RUG_PATCH
+        inspection_label: SOFA_SEAT_PATCH
         completion_stage: 0
       semantic_only:
         inspection_label: SMALL_SIDE_TABLE
@@ -13,7 +13,7 @@ scenes:
         inspection_label: COFFEE_TABLE
         completion_stage: 2
   L2_living_room_region_ablation1_initial_complete:
-    ranking: [COFFEE_TABLE, SMALL_SIDE_TABLE, RUG_PATCH]
+    ranking: [COFFEE_TABLE, SMALL_SIDE_TABLE, SOFA_SEAT_PATCH]
     expected:
       joint:
         inspection_label: COFFEE_TABLE

@@ -1,5 +1,5 @@
 {
-  "evidence_manifest_sha256": "0427565b17a415db9a495f51371981d25904671dea1fb7eab562e5a7907d24cc",
+  "evidence_manifest_sha256": "663588df4236e7d2284e3706c0f9f61997f4dce8ff8ac550e58865fb64983be8",
   "policies": {
     "global_target_specific": {
       "alternative_complete_matchings": [],
@@ -59,15 +59,15 @@
       "region_target_assignments": [
         {
           "candidate_rank": 2,
-          "fit_margin_m": 0.2687191772608054,
-          "near_seat_margin_m": 0.33739508147487196,
+          "fit_margin_m": 0.21024536457752455,
+          "near_seat_margin_m": 0.3625566303598251,
           "region_id": "region_0001",
           "seating_target_id": "seating_0001"
         },
         {
           "candidate_rank": 1,
-          "fit_margin_m": 0.2798442915308883,
-          "near_seat_margin_m": 0.148193143937001,
+          "fit_margin_m": 0.35241685258130095,
+          "near_seat_margin_m": 0.17883953648707962,
           "region_id": "region_0002",
           "seating_target_id": "seating_0002"
         }
@@ -92,8 +92,8 @@
           "seating_0002"
         ],
         "total_candidate_rank": 3,
-        "total_distance_margin_m": 0.48558822541187296,
-        "total_fit_margin_m": 0.5485634687916937
+        "total_distance_margin_m": 0.5413961668469047,
+        "total_fit_margin_m": 0.5626622171588255
       },
       "uncovered_target_ids": [],
       "valid_against_true_task": true
@@ -117,8 +117,8 @@
       "region_target_assignments": [
         {
           "candidate_rank": 1,
-          "fit_margin_m": 0.2798442915308883,
-          "near_seat_margin_m": 0.1562336607906103,
+          "fit_margin_m": 0.35241685258130095,
+          "near_seat_margin_m": 0.01785731554617609,
           "region_id": "region_0002",
           "seating_target_id": "seating_0001"
         }
@@ -171,13 +171,13 @@
   "semantic_inference_timing": {
     "camera_count": 5,
     "per_camera_seconds": {
-      "inspection_close": 0.0886921559995244,
-      "inspection_front": 0.0855575220011815,
-      "inspection_left": 3.09581279700069,
-      "inspection_right": 0.09790419599994493,
-      "inspection_top": 0.08885005100091803
+      "inspection_close": 0.08959860000322806,
+      "inspection_front": 0.10126687600131845,
+      "inspection_left": 3.284360220997769,
+      "inspection_right": 0.08952995199797442,
+      "inspection_top": 0.10103183700266527
     },
-    "total_seconds": 3.4568167220022588
+    "total_seconds": 3.665787486002955
   },
   "single_initial_observation": true,
   "task_id": "l2_two_person_target_specific_drink_allocation"

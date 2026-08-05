@@ -50,7 +50,7 @@ def test_ablation3_scene_compiles_without_robot(scene_name):
     assert sum(
         model.jnt_type[index] == mujoco.mjtJoint.mjJNT_FREE
         for index in range(model.njnt)
-    ) == 2
+    ) == 4
 
 
 @pytest.mark.parametrize("scene_name", L2_ABLATION3_SCENES)

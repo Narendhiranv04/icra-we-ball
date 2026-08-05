@@ -31,69 +31,69 @@ sofa_context_volume:
 # Volumes select current evidence only. They are intentionally larger than
 # their surfaces and are never used as measured dimensions.
 regions:
-  RUG_PATCH:
-    target_world_m: [-0.15, -0.18, 0.02]
-    rig_position_world_m: [0.00, -1.62, 1.25]
+  SOFA_SEAT_PATCH:
+    target_world_m: [-0.62, 0.72, 0.54]
+    rig_position_world_m: [-0.45, -1.35, 1.45]
     up_world: [0.0, 0.0, 1.0]
     near_depth_m: 0.18
     far_depth_m: 3.20
     settle_steps: 40
     inspection_volume:
-      minimum_world_m: [-0.98, -0.76, -0.005]
-      maximum_world_m: [0.68, 0.40, 0.05]
+      minimum_world_m: [-1.34, 0.40, 0.42]
+      maximum_world_m: [0.10, 1.00, 0.61]
     cameras:
       inspection_left:
         position_offset_m: [-0.40, 0.00, 0.12]
         look_at_offset_m: [-0.18, 0.05, 0.00]
-        fovy_degrees: 72.0
+        fovy_degrees: 88.0
       inspection_right:
         position_offset_m: [0.40, 0.00, 0.12]
         look_at_offset_m: [0.18, 0.05, 0.00]
-        fovy_degrees: 72.0
+        fovy_degrees: 88.0
       inspection_top:
         position_offset_m: [0.00, 0.30, 1.30]
         look_at_offset_m: [0.00, 0.05, 0.00]
-        fovy_degrees: 74.0
+        fovy_degrees: 88.0
       inspection_front:
         position_offset_m: [-0.15, 0.18, 0.30]
         look_at_offset_m: [0.00, 0.10, 0.00]
-        fovy_degrees: 72.0
+        fovy_degrees: 88.0
       inspection_close:
         position_offset_m: [0.35, 0.30, 0.48]
         look_at_offset_m: [0.10, 0.10, 0.00]
-        fovy_degrees: 74.0
+        fovy_degrees: 88.0
 
   SMALL_SIDE_TABLE:
-    target_world_m: [-1.28, 0.20, 0.61]
-    rig_position_world_m: [-1.10, -1.02, 1.18]
+    target_world_m: [-1.65, 0.02, 0.61]
+    rig_position_world_m: [-1.30, -1.18, 1.18]
     up_world: [0.0, 0.0, 1.0]
     near_depth_m: 0.18
     far_depth_m: 3.20
     settle_steps: 40
     inspection_volume:
-      minimum_world_m: [-1.52, -0.02, 0.52]
-      maximum_world_m: [-1.04, 0.42, 0.66]
+      minimum_world_m: [-1.90, -0.22, 0.52]
+      maximum_world_m: [-1.40, 0.26, 0.66]
     cameras:
       inspection_left:
         position_offset_m: [-0.32, 0.00, 0.08]
         look_at_offset_m: [-0.06, 0.00, 0.00]
-        fovy_degrees: 68.0
+        fovy_degrees: 84.0
       inspection_right:
         position_offset_m: [0.32, 0.00, 0.08]
         look_at_offset_m: [0.06, 0.00, 0.00]
-        fovy_degrees: 68.0
+        fovy_degrees: 84.0
       inspection_top:
         position_offset_m: [0.00, 0.22, 0.78]
         look_at_offset_m: [0.00, 0.00, -0.02]
-        fovy_degrees: 70.0
+        fovy_degrees: 84.0
       inspection_front:
         position_offset_m: [-0.12, 0.12, 0.25]
         look_at_offset_m: [0.00, 0.00, 0.00]
-        fovy_degrees: 68.0
+        fovy_degrees: 84.0
       inspection_close:
         position_offset_m: [0.18, 0.20, 0.34]
         look_at_offset_m: [0.03, 0.00, 0.00]
-        fovy_degrees: 70.0
+        fovy_degrees: 84.0
 
   COFFEE_TABLE:
     target_world_m: [0.42, 0.20, 0.52]

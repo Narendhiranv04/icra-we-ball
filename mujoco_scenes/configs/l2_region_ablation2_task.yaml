@@ -1,9 +1,9 @@
 schema_version: 1
 task_id: l2_two_person_viewing_region_allocation
 natural_language_goal: >-
-  Set up the living room for two people watching television. Place one drink
-  in a separate accessible region beside each seating position, and keep the
-  TV remote and game controller together in one shared accessible region.
+  Prepare movie night for two people. Place one drink-and-snack set beside
+  each person, and keep the TV remote and handheld game device together on
+  one shared surface accessible to both.
 specification_source: manual_future_fm_contract
 generated_from_foundation_model: false
 
@@ -12,11 +12,12 @@ function_groups:
     function_id: PLACE_PERSONAL_DRINK
     region_role: personal_drink_region
     usage_policy: DEDICATED_REGION_PER_TARGET
-    payload_semantic_roles: [drink, drink]
+    payload_semantic_roles: [drink, snack_container]
+    required_target_count: 2
     target_role: seating_target
     required_relations:
       - PLANAR_SUPPORT
-      - FITS_ON
+      - FITS_SET_ON
       - NEAR_SEAT
   shared_controls:
     function_id: PLACE_SHARED_CONTROLS
@@ -57,6 +58,7 @@ semantic_requirements:
         side_table: 1
   payload_roles:
     drink: [mug, cup]
+    snack_container: [bowl, ramekin]
     tv_remote: [remote_control]
     game_controller: [game_controller, controller]
   seating_categories: [armchair, chair, sofa]

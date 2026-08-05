@@ -3,86 +3,509 @@
   "drink_target_region_mapping": [
     {
       "candidate_rank": 2,
-      "drink_object_id": "object_0001",
-      "fit_margin_m": 0.2687191772608054,
-      "near_seat_margin_m": 0.33739508147487196,
+      "fit_margin_m": 0.21024536457752455,
+      "near_seat_margin_m": 0.3625566303598251,
+      "refreshment_set_object_ids": [
+        "object_0001",
+        "object_0002"
+      ],
       "region_id": "region_0001",
       "seating_target_id": "seating_0001",
       "selected_edge_evidence": {
-        "FITS_ON": "TRUE",
+        "FITS_SET_ON": "TRUE",
         "NEAR_SEAT": "TRUE",
         "PLANAR_SUPPORT": "TRUE",
         "candidate_rank": 2,
         "compatibility_status": "TRUE",
-        "fit_margin_m": 0.2687191772608054,
+        "fit_margin_m": 0.21024536457752455,
         "general_suitability_status": "TRUE",
         "maximum_distance_m": 1.15,
-        "measured_distance_m": 0.812604918525128,
-        "near_seat_margin_m": 0.33739508147487196,
-        "per_payload_fit_evidence": [
+        "measured_distance_m": 0.7874433696401748,
+        "near_seat_margin_m": 0.3625566303598251,
+        "per_refreshment_set_fit_evidence": [
           {
             "edge_clearance_margin_m": 0.015,
-            "method": "region_payload_relations_v1",
-            "payload_length_m": 0.1407263530581176,
-            "payload_width_m": 0.10388896585159699,
-            "region_usable_length_m": 0.4844223729733867,
-            "region_usable_width_m": 0.40438656081107727,
-            "relation": "FITS_ON",
-            "selected_orientation_degrees": 0,
-            "signed_fit_margin_m": 0.2704975949594802,
+            "inter_payload_clearance_m": 0.02,
+            "method": "measured_two_rectangle_packing_v1",
+            "payload_footprints_m": [
+              [
+                0.10112813716279422,
+                0.08191176819798698
+              ],
+              [
+                0.14730164672381646,
+                0.14593180536610378
+              ]
+            ],
+            "region_usable_length_m": 0.5179081797660166,
+            "region_usable_width_m": 0.44295154482842714,
+            "relation": "FITS_SET_ON",
+            "selected_packing": {
+              "arrangement": "ALONG_LENGTH",
+              "fits": true,
+              "length_margin_m": 0.2400646062019258,
+              "non_overlapping": true,
+              "oriented_payload_footprints_m": [
+                [
+                  0.08191176819798698,
+                  0.10112813716279422
+                ],
+                [
+                  0.14593180536610378,
+                  0.14730164672381646
+                ]
+              ],
+              "payload_orientations_degrees": [
+                90,
+                90
+              ],
+              "required_length_m": 0.24784357356409076,
+              "required_width_m": 0.14730164672381646,
+              "signed_clearance_margin_m": 0.2400646062019258,
+              "width_margin_m": 0.2656498981046107
+            },
+            "signed_clearance_margin_m": 0.2400646062019258,
             "status": "TRUE",
-            "tested_orientations": [
+            "tested_packings": [
               {
+                "arrangement": "ALONG_LENGTH",
                 "fits": true,
-                "length_margin_m": 0.3136960199152691,
-                "orientation_degrees": 0,
-                "signed_fit_margin_m": 0.2704975949594802,
-                "width_margin_m": 0.2704975949594802
+                "length_margin_m": 0.21947839587940585,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.10112813716279422,
+                    0.08191176819798698
+                  ],
+                  [
+                    0.14730164672381646,
+                    0.14593180536610378
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  0,
+                  0
+                ],
+                "required_length_m": 0.2684297838866107,
+                "required_width_m": 0.14593180536610378,
+                "signed_clearance_margin_m": 0.21947839587940585,
+                "width_margin_m": 0.2670197394623234
               },
               {
+                "arrangement": "ALONG_WIDTH",
                 "fits": true,
-                "length_margin_m": 0.3505334071217897,
-                "orientation_degrees": 90,
-                "signed_fit_margin_m": 0.23366020775295968,
-                "width_margin_m": 0.23366020775295968
+                "length_margin_m": 0.3406065330422001,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.10112813716279422,
+                    0.08191176819798698
+                  ],
+                  [
+                    0.14730164672381646,
+                    0.14593180536610378
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  0,
+                  0
+                ],
+                "required_length_m": 0.14730164672381646,
+                "required_width_m": 0.24784357356409076,
+                "signed_clearance_margin_m": 0.16510797126433638,
+                "width_margin_m": 0.16510797126433638
+              },
+              {
+                "arrangement": "ALONG_LENGTH",
+                "fits": true,
+                "length_margin_m": 0.22084823723711852,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.10112813716279422,
+                    0.08191176819798698
+                  ],
+                  [
+                    0.14593180536610378,
+                    0.14730164672381646
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  0,
+                  90
+                ],
+                "required_length_m": 0.26705994252889803,
+                "required_width_m": 0.14730164672381646,
+                "signed_clearance_margin_m": 0.22084823723711852,
+                "width_margin_m": 0.2656498981046107
+              },
+              {
+                "arrangement": "ALONG_WIDTH",
+                "fits": true,
+                "length_margin_m": 0.3419763743999128,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.10112813716279422,
+                    0.08191176819798698
+                  ],
+                  [
+                    0.14593180536610378,
+                    0.14730164672381646
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  0,
+                  90
+                ],
+                "required_length_m": 0.14593180536610378,
+                "required_width_m": 0.24921341492180343,
+                "signed_clearance_margin_m": 0.1637381299066237,
+                "width_margin_m": 0.1637381299066237
+              },
+              {
+                "arrangement": "ALONG_LENGTH",
+                "fits": true,
+                "length_margin_m": 0.23869476484421312,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.08191176819798698,
+                    0.10112813716279422
+                  ],
+                  [
+                    0.14730164672381646,
+                    0.14593180536610378
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  90,
+                  0
+                ],
+                "required_length_m": 0.24921341492180343,
+                "required_width_m": 0.14593180536610378,
+                "signed_clearance_margin_m": 0.23869476484421312,
+                "width_margin_m": 0.2670197394623234
+              },
+              {
+                "arrangement": "ALONG_WIDTH",
+                "fits": true,
+                "length_margin_m": 0.3406065330422001,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.08191176819798698,
+                    0.10112813716279422
+                  ],
+                  [
+                    0.14730164672381646,
+                    0.14593180536610378
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  90,
+                  0
+                ],
+                "required_length_m": 0.14730164672381646,
+                "required_width_m": 0.26705994252889803,
+                "signed_clearance_margin_m": 0.1458916022995291,
+                "width_margin_m": 0.1458916022995291
+              },
+              {
+                "arrangement": "ALONG_LENGTH",
+                "fits": true,
+                "length_margin_m": 0.2400646062019258,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.08191176819798698,
+                    0.10112813716279422
+                  ],
+                  [
+                    0.14593180536610378,
+                    0.14730164672381646
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  90,
+                  90
+                ],
+                "required_length_m": 0.24784357356409076,
+                "required_width_m": 0.14730164672381646,
+                "signed_clearance_margin_m": 0.2400646062019258,
+                "width_margin_m": 0.2656498981046107
+              },
+              {
+                "arrangement": "ALONG_WIDTH",
+                "fits": true,
+                "length_margin_m": 0.3419763743999128,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.08191176819798698,
+                    0.10112813716279422
+                  ],
+                  [
+                    0.14593180536610378,
+                    0.14730164672381646
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  90,
+                  90
+                ],
+                "required_length_m": 0.14593180536610378,
+                "required_width_m": 0.2684297838866107,
+                "signed_clearance_margin_m": 0.14452176094181643,
+                "width_margin_m": 0.14452176094181643
               }
             ],
             "value": true
           },
           {
             "edge_clearance_margin_m": 0.015,
-            "method": "region_payload_relations_v1",
-            "payload_length_m": 0.13955868539249416,
-            "payload_width_m": 0.10566738355027186,
-            "region_usable_length_m": 0.4844223729733867,
-            "region_usable_width_m": 0.40438656081107727,
-            "relation": "FITS_ON",
-            "selected_orientation_degrees": 0,
-            "signed_fit_margin_m": 0.2687191772608054,
+            "inter_payload_clearance_m": 0.02,
+            "method": "measured_two_rectangle_packing_v1",
+            "payload_footprints_m": [
+              [
+                0.11960274626253958,
+                0.09228388212788383
+              ],
+              [
+                0.16637539874569718,
+                0.1653789330606082
+              ]
+            ],
+            "region_usable_length_m": 0.5179081797660166,
+            "region_usable_width_m": 0.44295154482842714,
+            "relation": "FITS_SET_ON",
+            "selected_packing": {
+              "arrangement": "ALONG_LENGTH",
+              "fits": true,
+              "length_margin_m": 0.21024536457752455,
+              "non_overlapping": true,
+              "oriented_payload_footprints_m": [
+                [
+                  0.09228388212788383,
+                  0.11960274626253958
+                ],
+                [
+                  0.1653789330606082,
+                  0.16637539874569718
+                ]
+              ],
+              "payload_orientations_degrees": [
+                90,
+                90
+              ],
+              "required_length_m": 0.277662815188492,
+              "required_width_m": 0.16637539874569718,
+              "signed_clearance_margin_m": 0.21024536457752455,
+              "width_margin_m": 0.24657614608272996
+            },
+            "signed_clearance_margin_m": 0.21024536457752455,
             "status": "TRUE",
-            "tested_orientations": [
+            "tested_packings": [
               {
+                "arrangement": "ALONG_LENGTH",
                 "fits": true,
-                "length_margin_m": 0.31486368758089256,
-                "orientation_degrees": 0,
-                "signed_fit_margin_m": 0.2687191772608054,
-                "width_margin_m": 0.2687191772608054
+                "length_margin_m": 0.18193003475777977,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.11960274626253958,
+                    0.09228388212788383
+                  ],
+                  [
+                    0.16637539874569718,
+                    0.1653789330606082
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  0,
+                  0
+                ],
+                "required_length_m": 0.3059781450082368,
+                "required_width_m": 0.1653789330606082,
+                "signed_clearance_margin_m": 0.18193003475777977,
+                "width_margin_m": 0.24757261176781895
               },
               {
+                "arrangement": "ALONG_WIDTH",
                 "fits": true,
-                "length_margin_m": 0.3487549894231148,
-                "orientation_degrees": 90,
-                "signed_fit_margin_m": 0.2348278754185831,
-                "width_margin_m": 0.2348278754185831
+                "length_margin_m": 0.32153278102031935,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.11960274626253958,
+                    0.09228388212788383
+                  ],
+                  [
+                    0.16637539874569718,
+                    0.1653789330606082
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  0,
+                  0
+                ],
+                "required_length_m": 0.16637539874569718,
+                "required_width_m": 0.277662815188492,
+                "signed_clearance_margin_m": 0.13528872963993513,
+                "width_margin_m": 0.13528872963993513
+              },
+              {
+                "arrangement": "ALONG_LENGTH",
+                "fits": true,
+                "length_margin_m": 0.18292650044286876,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.11960274626253958,
+                    0.09228388212788383
+                  ],
+                  [
+                    0.1653789330606082,
+                    0.16637539874569718
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  0,
+                  90
+                ],
+                "required_length_m": 0.3049816793231478,
+                "required_width_m": 0.16637539874569718,
+                "signed_clearance_margin_m": 0.18292650044286876,
+                "width_margin_m": 0.24657614608272996
+              },
+              {
+                "arrangement": "ALONG_WIDTH",
+                "fits": true,
+                "length_margin_m": 0.3225292467054084,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.11960274626253958,
+                    0.09228388212788383
+                  ],
+                  [
+                    0.1653789330606082,
+                    0.16637539874569718
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  0,
+                  90
+                ],
+                "required_length_m": 0.1653789330606082,
+                "required_width_m": 0.27865928087358105,
+                "signed_clearance_margin_m": 0.1342922639548461,
+                "width_margin_m": 0.1342922639548461
+              },
+              {
+                "arrangement": "ALONG_LENGTH",
+                "fits": true,
+                "length_margin_m": 0.2092488988924355,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.09228388212788383,
+                    0.11960274626253958
+                  ],
+                  [
+                    0.16637539874569718,
+                    0.1653789330606082
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  90,
+                  0
+                ],
+                "required_length_m": 0.27865928087358105,
+                "required_width_m": 0.1653789330606082,
+                "signed_clearance_margin_m": 0.2092488988924355,
+                "width_margin_m": 0.24757261176781895
+              },
+              {
+                "arrangement": "ALONG_WIDTH",
+                "fits": true,
+                "length_margin_m": 0.32153278102031935,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.09228388212788383,
+                    0.11960274626253958
+                  ],
+                  [
+                    0.16637539874569718,
+                    0.1653789330606082
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  90,
+                  0
+                ],
+                "required_length_m": 0.16637539874569718,
+                "required_width_m": 0.3049816793231478,
+                "signed_clearance_margin_m": 0.10796986550527934,
+                "width_margin_m": 0.10796986550527934
+              },
+              {
+                "arrangement": "ALONG_LENGTH",
+                "fits": true,
+                "length_margin_m": 0.21024536457752455,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.09228388212788383,
+                    0.11960274626253958
+                  ],
+                  [
+                    0.1653789330606082,
+                    0.16637539874569718
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  90,
+                  90
+                ],
+                "required_length_m": 0.277662815188492,
+                "required_width_m": 0.16637539874569718,
+                "signed_clearance_margin_m": 0.21024536457752455,
+                "width_margin_m": 0.24657614608272996
+              },
+              {
+                "arrangement": "ALONG_WIDTH",
+                "fits": true,
+                "length_margin_m": 0.3225292467054084,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.09228388212788383,
+                    0.11960274626253958
+                  ],
+                  [
+                    0.1653789330606082,
+                    0.16637539874569718
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  90,
+                  90
+                ],
+                "required_length_m": 0.1653789330606082,
+                "required_width_m": 0.3059781450082368,
+                "signed_clearance_margin_m": 0.10697339982019036,
+                "width_margin_m": 0.10697339982019036
               }
             ],
             "value": true
           }
         ],
         "region_centroid_world_m": [
-          -1.485162377357483,
-          0.5807040929794312,
-          0.6288148760795593
+          -1.481491506099701,
+          0.5794438123703003,
+          0.631194531917572
         ],
         "region_contributing_camera_ids": [
           "inspection_left",
@@ -93,14 +516,14 @@
         ],
         "region_evidence_path": "observation/regions/region_0001/fused.ply",
         "region_id": "region_0001",
-        "region_semantic_confidence": 0.5393625497817993,
+        "region_semantic_confidence": 0.695842333137989,
         "region_semantic_label": "side_table",
         "region_semantic_supporting_views": 4,
         "rejection_reason": null,
         "seating_centroid_world_m": [
-          -0.8945387601852417,
-          1.1388174295425415,
-          0.7767443656921387
+          -0.9692002534866333,
+          1.1774611473083496,
+          0.6033004522323608
         ],
         "seating_target_id": "seating_0001",
         "semantic_role_status": "TRUE",
@@ -116,86 +539,509 @@
     },
     {
       "candidate_rank": 1,
-      "drink_object_id": "object_0002",
-      "fit_margin_m": 0.2798442915308883,
-      "near_seat_margin_m": 0.148193143937001,
+      "fit_margin_m": 0.35241685258130095,
+      "near_seat_margin_m": 0.17883953648707962,
+      "refreshment_set_object_ids": [
+        "object_0003",
+        "object_0004"
+      ],
       "region_id": "region_0002",
       "seating_target_id": "seating_0002",
       "selected_edge_evidence": {
-        "FITS_ON": "TRUE",
+        "FITS_SET_ON": "TRUE",
         "NEAR_SEAT": "TRUE",
         "PLANAR_SUPPORT": "TRUE",
         "candidate_rank": 1,
         "compatibility_status": "TRUE",
-        "fit_margin_m": 0.2798442915308883,
+        "fit_margin_m": 0.35241685258130095,
         "general_suitability_status": "TRUE",
         "maximum_distance_m": 1.15,
-        "measured_distance_m": 1.001806856062999,
-        "near_seat_margin_m": 0.148193143937001,
-        "per_payload_fit_evidence": [
+        "measured_distance_m": 0.9711604635129203,
+        "near_seat_margin_m": 0.17883953648707962,
+        "per_refreshment_set_fit_evidence": [
           {
             "edge_clearance_margin_m": 0.015,
-            "method": "region_payload_relations_v1",
-            "payload_length_m": 0.1407263530581176,
-            "payload_width_m": 0.10388896585159699,
-            "region_usable_length_m": 0.4936155661933685,
-            "region_usable_width_m": 0.4155116750811602,
-            "relation": "FITS_ON",
-            "selected_orientation_degrees": 0,
-            "signed_fit_margin_m": 0.28162270922956323,
+            "inter_payload_clearance_m": 0.02,
+            "method": "measured_two_rectangle_packing_v1",
+            "payload_footprints_m": [
+              [
+                0.10112813716279422,
+                0.08191176819798698
+              ],
+              [
+                0.14730164672381646,
+                0.14593180536610378
+              ]
+            ],
+            "region_usable_length_m": 0.7210348011748365,
+            "region_usable_width_m": 0.5477957856419091,
+            "relation": "FITS_SET_ON",
+            "selected_packing": {
+              "arrangement": "ALONG_LENGTH",
+              "fits": true,
+              "length_margin_m": 0.42260501728822586,
+              "non_overlapping": true,
+              "oriented_payload_footprints_m": [
+                [
+                  0.10112813716279422,
+                  0.08191176819798698
+                ],
+                [
+                  0.14730164672381646,
+                  0.14593180536610378
+                ]
+              ],
+              "payload_orientations_degrees": [
+                0,
+                0
+              ],
+              "required_length_m": 0.2684297838866107,
+              "required_width_m": 0.14593180536610378,
+              "signed_clearance_margin_m": 0.37186398027580536,
+              "width_margin_m": 0.37186398027580536
+            },
+            "signed_clearance_margin_m": 0.37186398027580536,
             "status": "TRUE",
-            "tested_orientations": [
+            "tested_packings": [
               {
+                "arrangement": "ALONG_LENGTH",
                 "fits": true,
-                "length_margin_m": 0.3228892131352509,
-                "orientation_degrees": 0,
-                "signed_fit_margin_m": 0.28162270922956323,
-                "width_margin_m": 0.28162270922956323
+                "length_margin_m": 0.42260501728822586,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.10112813716279422,
+                    0.08191176819798698
+                  ],
+                  [
+                    0.14730164672381646,
+                    0.14593180536610378
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  0,
+                  0
+                ],
+                "required_length_m": 0.2684297838866107,
+                "required_width_m": 0.14593180536610378,
+                "signed_clearance_margin_m": 0.37186398027580536,
+                "width_margin_m": 0.37186398027580536
               },
               {
+                "arrangement": "ALONG_WIDTH",
                 "fits": true,
-                "length_margin_m": 0.3597266003417715,
-                "orientation_degrees": 90,
-                "signed_fit_margin_m": 0.24478532202304262,
-                "width_margin_m": 0.24478532202304262
+                "length_margin_m": 0.54373315445102,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.10112813716279422,
+                    0.08191176819798698
+                  ],
+                  [
+                    0.14730164672381646,
+                    0.14593180536610378
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  0,
+                  0
+                ],
+                "required_length_m": 0.14730164672381646,
+                "required_width_m": 0.24784357356409076,
+                "signed_clearance_margin_m": 0.2699522120778184,
+                "width_margin_m": 0.2699522120778184
+              },
+              {
+                "arrangement": "ALONG_LENGTH",
+                "fits": true,
+                "length_margin_m": 0.42397485864593853,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.10112813716279422,
+                    0.08191176819798698
+                  ],
+                  [
+                    0.14593180536610378,
+                    0.14730164672381646
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  0,
+                  90
+                ],
+                "required_length_m": 0.26705994252889803,
+                "required_width_m": 0.14730164672381646,
+                "signed_clearance_margin_m": 0.3704941389180927,
+                "width_margin_m": 0.3704941389180927
+              },
+              {
+                "arrangement": "ALONG_WIDTH",
+                "fits": true,
+                "length_margin_m": 0.5451029958087328,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.10112813716279422,
+                    0.08191176819798698
+                  ],
+                  [
+                    0.14593180536610378,
+                    0.14730164672381646
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  0,
+                  90
+                ],
+                "required_length_m": 0.14593180536610378,
+                "required_width_m": 0.24921341492180343,
+                "signed_clearance_margin_m": 0.2685823707201057,
+                "width_margin_m": 0.2685823707201057
+              },
+              {
+                "arrangement": "ALONG_LENGTH",
+                "fits": true,
+                "length_margin_m": 0.44182138625303313,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.08191176819798698,
+                    0.10112813716279422
+                  ],
+                  [
+                    0.14730164672381646,
+                    0.14593180536610378
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  90,
+                  0
+                ],
+                "required_length_m": 0.24921341492180343,
+                "required_width_m": 0.14593180536610378,
+                "signed_clearance_margin_m": 0.37186398027580536,
+                "width_margin_m": 0.37186398027580536
+              },
+              {
+                "arrangement": "ALONG_WIDTH",
+                "fits": true,
+                "length_margin_m": 0.54373315445102,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.08191176819798698,
+                    0.10112813716279422
+                  ],
+                  [
+                    0.14730164672381646,
+                    0.14593180536610378
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  90,
+                  0
+                ],
+                "required_length_m": 0.14730164672381646,
+                "required_width_m": 0.26705994252889803,
+                "signed_clearance_margin_m": 0.2507358431130111,
+                "width_margin_m": 0.2507358431130111
+              },
+              {
+                "arrangement": "ALONG_LENGTH",
+                "fits": true,
+                "length_margin_m": 0.4431912276107458,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.08191176819798698,
+                    0.10112813716279422
+                  ],
+                  [
+                    0.14593180536610378,
+                    0.14730164672381646
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  90,
+                  90
+                ],
+                "required_length_m": 0.24784357356409076,
+                "required_width_m": 0.14730164672381646,
+                "signed_clearance_margin_m": 0.3704941389180927,
+                "width_margin_m": 0.3704941389180927
+              },
+              {
+                "arrangement": "ALONG_WIDTH",
+                "fits": true,
+                "length_margin_m": 0.5451029958087328,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.08191176819798698,
+                    0.10112813716279422
+                  ],
+                  [
+                    0.14593180536610378,
+                    0.14730164672381646
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  90,
+                  90
+                ],
+                "required_length_m": 0.14593180536610378,
+                "required_width_m": 0.2684297838866107,
+                "signed_clearance_margin_m": 0.2493660017552984,
+                "width_margin_m": 0.2493660017552984
               }
             ],
             "value": true
           },
           {
             "edge_clearance_margin_m": 0.015,
-            "method": "region_payload_relations_v1",
-            "payload_length_m": 0.13955868539249416,
-            "payload_width_m": 0.10566738355027186,
-            "region_usable_length_m": 0.4936155661933685,
-            "region_usable_width_m": 0.4155116750811602,
-            "relation": "FITS_ON",
-            "selected_orientation_degrees": 0,
-            "signed_fit_margin_m": 0.2798442915308883,
+            "inter_payload_clearance_m": 0.02,
+            "method": "measured_two_rectangle_packing_v1",
+            "payload_footprints_m": [
+              [
+                0.11960274626253958,
+                0.09228388212788383
+              ],
+              [
+                0.16637539874569718,
+                0.1653789330606082
+              ]
+            ],
+            "region_usable_length_m": 0.7210348011748365,
+            "region_usable_width_m": 0.5477957856419091,
+            "relation": "FITS_SET_ON",
+            "selected_packing": {
+              "arrangement": "ALONG_LENGTH",
+              "fits": true,
+              "length_margin_m": 0.3850566561665998,
+              "non_overlapping": true,
+              "oriented_payload_footprints_m": [
+                [
+                  0.11960274626253958,
+                  0.09228388212788383
+                ],
+                [
+                  0.16637539874569718,
+                  0.1653789330606082
+                ]
+              ],
+              "payload_orientations_degrees": [
+                0,
+                0
+              ],
+              "required_length_m": 0.3059781450082368,
+              "required_width_m": 0.1653789330606082,
+              "signed_clearance_margin_m": 0.35241685258130095,
+              "width_margin_m": 0.35241685258130095
+            },
+            "signed_clearance_margin_m": 0.35241685258130095,
             "status": "TRUE",
-            "tested_orientations": [
+            "tested_packings": [
               {
+                "arrangement": "ALONG_LENGTH",
                 "fits": true,
-                "length_margin_m": 0.32405688080087436,
-                "orientation_degrees": 0,
-                "signed_fit_margin_m": 0.2798442915308883,
-                "width_margin_m": 0.2798442915308883
+                "length_margin_m": 0.3850566561665998,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.11960274626253958,
+                    0.09228388212788383
+                  ],
+                  [
+                    0.16637539874569718,
+                    0.1653789330606082
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  0,
+                  0
+                ],
+                "required_length_m": 0.3059781450082368,
+                "required_width_m": 0.1653789330606082,
+                "signed_clearance_margin_m": 0.35241685258130095,
+                "width_margin_m": 0.35241685258130095
               },
               {
+                "arrangement": "ALONG_WIDTH",
                 "fits": true,
-                "length_margin_m": 0.3579481826430966,
-                "orientation_degrees": 90,
-                "signed_fit_margin_m": 0.24595298968866605,
-                "width_margin_m": 0.24595298968866605
+                "length_margin_m": 0.5246594024291393,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.11960274626253958,
+                    0.09228388212788383
+                  ],
+                  [
+                    0.16637539874569718,
+                    0.1653789330606082
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  0,
+                  0
+                ],
+                "required_length_m": 0.16637539874569718,
+                "required_width_m": 0.277662815188492,
+                "signed_clearance_margin_m": 0.2401329704534171,
+                "width_margin_m": 0.2401329704534171
+              },
+              {
+                "arrangement": "ALONG_LENGTH",
+                "fits": true,
+                "length_margin_m": 0.3860531218516887,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.11960274626253958,
+                    0.09228388212788383
+                  ],
+                  [
+                    0.1653789330606082,
+                    0.16637539874569718
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  0,
+                  90
+                ],
+                "required_length_m": 0.3049816793231478,
+                "required_width_m": 0.16637539874569718,
+                "signed_clearance_margin_m": 0.3514203868962119,
+                "width_margin_m": 0.3514203868962119
+              },
+              {
+                "arrangement": "ALONG_WIDTH",
+                "fits": true,
+                "length_margin_m": 0.5256558681142283,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.11960274626253958,
+                    0.09228388212788383
+                  ],
+                  [
+                    0.1653789330606082,
+                    0.16637539874569718
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  0,
+                  90
+                ],
+                "required_length_m": 0.1653789330606082,
+                "required_width_m": 0.27865928087358105,
+                "signed_clearance_margin_m": 0.23913650476832807,
+                "width_margin_m": 0.23913650476832807
+              },
+              {
+                "arrangement": "ALONG_LENGTH",
+                "fits": true,
+                "length_margin_m": 0.41237552030125546,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.09228388212788383,
+                    0.11960274626253958
+                  ],
+                  [
+                    0.16637539874569718,
+                    0.1653789330606082
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  90,
+                  0
+                ],
+                "required_length_m": 0.27865928087358105,
+                "required_width_m": 0.1653789330606082,
+                "signed_clearance_margin_m": 0.35241685258130095,
+                "width_margin_m": 0.35241685258130095
+              },
+              {
+                "arrangement": "ALONG_WIDTH",
+                "fits": true,
+                "length_margin_m": 0.5246594024291393,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.09228388212788383,
+                    0.11960274626253958
+                  ],
+                  [
+                    0.16637539874569718,
+                    0.1653789330606082
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  90,
+                  0
+                ],
+                "required_length_m": 0.16637539874569718,
+                "required_width_m": 0.3049816793231478,
+                "signed_clearance_margin_m": 0.21281410631876133,
+                "width_margin_m": 0.21281410631876133
+              },
+              {
+                "arrangement": "ALONG_LENGTH",
+                "fits": true,
+                "length_margin_m": 0.4133719859863445,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.09228388212788383,
+                    0.11960274626253958
+                  ],
+                  [
+                    0.1653789330606082,
+                    0.16637539874569718
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  90,
+                  90
+                ],
+                "required_length_m": 0.277662815188492,
+                "required_width_m": 0.16637539874569718,
+                "signed_clearance_margin_m": 0.3514203868962119,
+                "width_margin_m": 0.3514203868962119
+              },
+              {
+                "arrangement": "ALONG_WIDTH",
+                "fits": true,
+                "length_margin_m": 0.5256558681142283,
+                "non_overlapping": true,
+                "oriented_payload_footprints_m": [
+                  [
+                    0.09228388212788383,
+                    0.11960274626253958
+                  ],
+                  [
+                    0.1653789330606082,
+                    0.16637539874569718
+                  ]
+                ],
+                "payload_orientations_degrees": [
+                  90,
+                  90
+                ],
+                "required_length_m": 0.1653789330606082,
+                "required_width_m": 0.3059781450082368,
+                "signed_clearance_margin_m": 0.21181764063367234,
+                "width_margin_m": 0.21181764063367234
               }
             ],
             "value": true
           }
         ],
         "region_centroid_world_m": [
-          -0.005164389498531818,
-          0.6954386234283447,
-          0.6255138516426086
+          0.005849940236657858,
+          0.6021141409873962,
+          0.6285465359687805
         ],
         "region_contributing_camera_ids": [
           "inspection_left",
@@ -206,14 +1052,14 @@
         ],
         "region_evidence_path": "observation/regions/region_0002/fused.ply",
         "region_id": "region_0002",
-        "region_semantic_confidence": 0.5294410176575184,
+        "region_semantic_confidence": 0.8918427526950836,
         "region_semantic_label": "side_table",
         "region_semantic_supporting_views": 4,
         "rejection_reason": null,
         "seating_centroid_world_m": [
-          0.9045231938362122,
-          1.115064024925232,
-          0.7648491859436035
+          0.9083200693130493,
+          0.960862398147583,
+          0.6409383416175842
         ],
         "seating_target_id": "seating_0002",
         "semantic_role_status": "TRUE",
@@ -230,14 +1076,20 @@
   ],
   "evidence_manifest_path": "evidence_manifest.json",
   "maximum_matching_cardinality": 2,
-  "natural_language_goal": "Set up drinks for two people watching television. Place one drink on a suitable accessible surface beside each person\u2019s seating position.",
+  "natural_language_goal": "Place one drink-and-snack set on a suitable surface beside each person\u2019s seating position.",
   "persistent_destination_region_ids": [
     "region_0001",
     "region_0002"
   ],
-  "persistent_drink_ids": [
-    "object_0001",
-    "object_0002"
+  "persistent_refreshment_set_ids": [
+    [
+      "object_0001",
+      "object_0002"
+    ],
+    [
+      "object_0003",
+      "object_0004"
+    ]
   ],
   "persistent_seating_target_ids": [
     "seating_0001",
@@ -254,38 +1106,46 @@
           {
             "camera_ids": [
               "inspection_close",
-              "inspection_front",
+              "inspection_front"
+            ],
+            "label": "mug",
+            "mean_confidence": 0.7913181185722351,
+            "supporting_view_count": 2,
+            "weighted_score": 1.3659887961980655
+          },
+          {
+            "camera_ids": [
               "inspection_left",
               "inspection_right"
             ],
             "label": "cup",
-            "mean_confidence": 0.560835275799036,
-            "supporting_view_count": 4,
-            "weighted_score": 1.9990449623104625
+            "mean_confidence": 0.34636328369379044,
+            "supporting_view_count": 2,
+            "weighted_score": 0.578925512703341
           }
         ],
-        "canonical_label": "cup",
-        "confidence": 0.560835275799036,
+        "canonical_label": "mug",
+        "confidence": 0.7913181185722351,
         "entity_id": "object_0001",
         "entity_type": "payload",
         "observations": [
           {
             "association_metrics": {
-              "box_fraction": 0.7281818181818182,
-              "intersection_pixels": 1602,
-              "mask_fraction": 0.994413407821229,
-              "score": 0.9012323514474352
+              "box_fraction": 0.6554276315789473,
+              "intersection_pixels": 797,
+              "mask_fraction": 0.9321637426900585,
+              "score": 0.8353061038011697
             },
             "detection": {
               "bbox_xyxy": [
-                761.4923095703125,
-                579.3607788085938,
-                800.7547607421875,
-                633.1110229492188
+                764.267822265625,
+                589.605224609375,
+                795.2049560546875,
+                626.937255859375
               ],
               "canonical_label": "cup",
               "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-              "confidence": 0.7106884717941284,
+              "confidence": 0.49830394983291626,
               "crop_source_object_id": null,
               "detection_id": null,
               "detector_name": "ultralytics_yolo_world",
@@ -302,25 +1162,25 @@
             },
             "entity_id": "object_0001",
             "entity_type": "payload",
-            "weighted_score": 0.6404954425816066
+            "weighted_score": 0.4162363308436668
           },
           {
             "association_metrics": {
-              "box_fraction": 0.6952380952380952,
-              "intersection_pixels": 803,
-              "mask_fraction": 0.9950433705080545,
-              "score": 0.8901115241635688
+              "box_fraction": 0.592,
+              "intersection_pixels": 370,
+              "mask_fraction": 0.9685863874345549,
+              "score": 0.8367811518324607
             },
             "detection": {
               "bbox_xyxy": [
-                287.7882080078125,
-                473.0134582519531,
-                319.09619140625,
-                507.9668273925781
+                291.871826171875,
+                478.96588134765625,
+                315.08447265625,
+                502.75213623046875
               ],
               "canonical_label": "cup",
               "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-              "confidence": 0.647269070148468,
+              "confidence": 0.1944226175546646,
               "crop_source_object_id": null,
               "detection_id": null,
               "detector_name": "ultralytics_yolo_world",
@@ -337,25 +1197,25 @@
             },
             "entity_id": "object_0001",
             "entity_type": "payload",
-            "weighted_score": 0.5761416585737887
+            "weighted_score": 0.16268918185967424
           },
           {
             "association_metrics": {
-              "box_fraction": 0.752715837621498,
-              "intersection_pixels": 2633,
-              "mask_fraction": 0.9623538011695907,
-              "score": 0.8889805139277582
+              "box_fraction": 0.6347462061747776,
+              "intersection_pixels": 1213,
+              "mask_fraction": 0.9711769415532426,
+              "score": 0.8534261841707799
             },
             "detection": {
               "bbox_xyxy": [
-                331.84942626953125,
-                575.5928955078125,
-                383.95233154296875,
-                640.9034423828125
+                336.1962585449219,
+                586.8497924804688,
+                374.6726989746094,
+                634.1459350585938
               ],
-              "canonical_label": "cup",
+              "canonical_label": "mug",
               "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-              "confidence": 0.24417199194431305,
+              "confidence": 0.7708093523979187,
               "crop_source_object_id": null,
               "detection_id": null,
               "detector_name": "ultralytics_yolo_world",
@@ -367,30 +1227,30 @@
               "input_crop_box_xyxy": null,
               "input_image_path": null,
               "input_kind": "FULL_FRAME",
-              "raw_label": "cup",
+              "raw_label": "mug",
               "source_camera": "inspection_front"
             },
             "entity_id": "object_0001",
             "entity_type": "payload",
-            "weighted_score": 0.21706414288541986
+            "weighted_score": 0.6578288843401058
           },
           {
             "association_metrics": {
-              "box_fraction": 0.6652452025586354,
-              "intersection_pixels": 11232,
-              "mask_fraction": 0.9982225382154284,
-              "score": 0.8816804707355508
+              "box_fraction": 0.6687647521636507,
+              "intersection_pixels": 5100,
+              "mask_fraction": 0.9819021948402002,
+              "score": 0.872304089903408
             },
             "detection": {
               "bbox_xyxy": [
-                61.633026123046875,
-                610.19091796875,
-                194.98641967773438,
-                735.27880859375
+                72.50263977050781,
+                629.0931396484375,
+                164.899169921875,
+                710.8900146484375
               ],
-              "canonical_label": "cup",
+              "canonical_label": "mug",
               "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-              "confidence": 0.6412115693092346,
+              "confidence": 0.8118268847465515,
               "crop_source_object_id": null,
               "detection_id": null,
               "detector_name": "ultralytics_yolo_world",
@@ -402,17 +1262,17 @@
               "input_crop_box_xyxy": null,
               "input_image_path": null,
               "input_kind": "FULL_FRAME",
-              "raw_label": "cup",
+              "raw_label": "mug",
               "source_camera": "inspection_close"
             },
             "entity_id": "object_0001",
             "entity_type": "payload",
-            "weighted_score": 0.5653437182696472
+            "weighted_score": 0.7081599118579596
           }
         ],
         "status": "SUPPORTED",
-        "supporting_view_count": 4,
-        "weighted_score_margin": 1.9990449623104625
+        "supporting_view_count": 2,
+        "weighted_score_margin": 0.7870632834947244
       },
       "object_0002": {
         "alternatives": [
@@ -423,34 +1283,215 @@
               "inspection_left",
               "inspection_right"
             ],
-            "label": "cup",
-            "mean_confidence": 0.6775959506630898,
+            "label": "bowl",
+            "mean_confidence": 0.3724193722009659,
             "supporting_view_count": 4,
-            "weighted_score": 2.439389536874158
+            "weighted_score": 1.2514897737423933
           }
         ],
-        "canonical_label": "cup",
-        "confidence": 0.6775959506630898,
+        "canonical_label": "bowl",
+        "confidence": 0.3724193722009659,
         "entity_id": "object_0002",
         "entity_type": "payload",
         "observations": [
           {
             "association_metrics": {
-              "box_fraction": 0.7714285714285715,
-              "intersection_pixels": 1242,
+              "box_fraction": 0.4967032967032967,
+              "intersection_pixels": 904,
               "mask_fraction": 1.0,
-              "score": 0.92
+              "score": 0.8238461538461539
             },
             "detection": {
               "bbox_xyxy": [
-                843.0244140625,
-                536.5775146484375,
-                877.840087890625,
-                581.7130126953125
+                795.80419921875,
+                572.82275390625,
+                846.1396484375,
+                606.159912109375
+              ],
+              "canonical_label": "bowl",
+              "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.5796830058097839,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "snack bowl",
+              "source_camera": "inspection_left"
+            },
+            "entity_id": "object_0002",
+            "entity_type": "payload",
+            "weighted_score": 0.47756961478636817
+          },
+          {
+            "association_metrics": {
+              "box_fraction": 0.6026315789473684,
+              "intersection_pixels": 458,
+              "mask_fraction": 0.8858800773694391,
+              "score": 0.7867431029217143
+            },
+            "detection": {
+              "bbox_xyxy": [
+                307.4208984375,
+                498.43853759765625,
+                344.7213134765625,
+                517.7232055664062
+              ],
+              "canonical_label": "bowl",
+              "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.1867639124393463,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "bowl",
+              "source_camera": "inspection_right"
+            },
+            "entity_id": "object_0002",
+            "entity_type": "payload",
+            "weighted_score": 0.1469352199863307
+          },
+          {
+            "association_metrics": {
+              "box_fraction": 0.6536885245901639,
+              "intersection_pixels": 1595,
+              "mask_fraction": 0.9981226533166458,
+              "score": 0.8775707082623772
+            },
+            "detection": {
+              "bbox_xyxy": [
+                419.17706298828125,
+                598.836181640625,
+                479.656494140625,
+                637.3876953125
+              ],
+              "canonical_label": "bowl",
+              "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.4544258117675781,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "bowl",
+              "source_camera": "inspection_front"
+            },
+            "entity_id": "object_0002",
+            "entity_type": "payload",
+            "weighted_score": 0.3987907814855792
+          },
+          {
+            "association_metrics": {
+              "box_fraction": 0.5683473389355742,
+              "intersection_pixels": 6087,
+              "mask_fraction": 1.0,
+              "score": 0.8489215686274509
+            },
+            "detection": {
+              "bbox_xyxy": [
+                229.0646209716797,
+                648.9202880859375,
+                354.23272705078125,
+                732.5123291015625
+              ],
+              "canonical_label": "bowl",
+              "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.26880475878715515,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "bowl",
+              "source_camera": "inspection_close"
+            },
+            "entity_id": "object_0002",
+            "entity_type": "payload",
+            "weighted_score": 0.22819415748411534
+          }
+        ],
+        "status": "SUPPORTED",
+        "supporting_view_count": 4,
+        "weighted_score_margin": 1.2514897737423933
+      },
+      "object_0003": {
+        "alternatives": [
+          {
+            "camera_ids": [
+              "inspection_front",
+              "inspection_left"
+            ],
+            "label": "cup",
+            "mean_confidence": 0.5528629124164581,
+            "supporting_view_count": 2,
+            "weighted_score": 0.9442235172998877
+          },
+          {
+            "camera_ids": [
+              "inspection_close"
+            ],
+            "label": "mug",
+            "mean_confidence": 0.8356724381446838,
+            "supporting_view_count": 1,
+            "weighted_score": 0.7306266346434329
+          },
+          {
+            "camera_ids": [
+              "inspection_right"
+            ],
+            "label": "bowl",
+            "mean_confidence": 0.37437647581100464,
+            "supporting_view_count": 1,
+            "weighted_score": 0.33022809274248627
+          }
+        ],
+        "canonical_label": "cup",
+        "confidence": 0.5528629124164581,
+        "entity_id": "object_0003",
+        "entity_type": "payload",
+        "observations": [
+          {
+            "association_metrics": {
+              "box_fraction": 0.5892156862745098,
+              "intersection_pixels": 601,
+              "mask_fraction": 0.9464566929133859,
+              "score": 0.8214223405897793
+            },
+            "detection": {
+              "bbox_xyxy": [
+                843.782470703125,
+                545.2279052734375,
+                872.04296875,
+                578.1719970703125
               ],
               "canonical_label": "cup",
               "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-              "confidence": 0.7318500280380249,
+              "confidence": 0.5335699915885925,
               "crop_source_object_id": null,
               "detection_id": null,
               "detector_name": "ultralytics_yolo_world",
@@ -465,27 +1506,27 @@
               "raw_label": "cup",
               "source_camera": "inspection_left"
             },
-            "entity_id": "object_0002",
+            "entity_id": "object_0003",
             "entity_type": "payload",
-            "weighted_score": 0.673302025794983
+            "weighted_score": 0.4382863113591705
           },
           {
             "association_metrics": {
-              "box_fraction": 0.7161764705882353,
-              "intersection_pixels": 974,
-              "mask_fraction": 1.0,
-              "score": 0.9006617647058823
+              "box_fraction": 0.687888198757764,
+              "intersection_pixels": 443,
+              "mask_fraction": 0.9866369710467706,
+              "score": 0.8820749007456182
             },
             "detection": {
               "bbox_xyxy": [
-                334.92864990234375,
-                499.40704345703125,
-                367.2784423828125,
-                538.3798217773438
+                336.9952392578125,
+                507.32391357421875,
+                363.3865966796875,
+                529.7352905273438
               ],
-              "canonical_label": "cup",
+              "canonical_label": "bowl",
               "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-              "confidence": 0.8143593072891235,
+              "confidence": 0.37437647581100464,
               "crop_source_object_id": null,
               "detection_id": null,
               "detector_name": "ultralytics_yolo_world",
@@ -497,30 +1538,30 @@
               "input_crop_box_xyxy": null,
               "input_image_path": null,
               "input_kind": "FULL_FRAME",
-              "raw_label": "cup",
+              "raw_label": "bowl",
               "source_camera": "inspection_right"
             },
-            "entity_id": "object_0002",
+            "entity_id": "object_0003",
             "entity_type": "payload",
-            "weighted_score": 0.7334622908076819
+            "weighted_score": 0.33022809274248627
           },
           {
             "association_metrics": {
-              "box_fraction": 0.8171717171717172,
-              "intersection_pixels": 2427,
-              "mask_fraction": 0.9499021526418787,
-              "score": 0.9034465002273222
+              "box_fraction": 0.7126909518213866,
+              "intersection_pixels": 1213,
+              "mask_fraction": 0.9766505636070854,
+              "score": 0.8842646994820909
             },
             "detection": {
               "bbox_xyxy": [
-                516.142333984375,
-                575.869384765625,
-                560.886962890625,
-                640.69775390625
+                513.6455078125,
+                587.0408325195312,
+                558.230224609375,
+                623.9006958007812
               ],
               "canonical_label": "cup",
               "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-              "confidence": 0.47402456402778625,
+              "confidence": 0.5721558332443237,
               "crop_source_object_id": null,
               "detection_id": null,
               "detector_name": "ultralytics_yolo_world",
@@ -535,27 +1576,27 @@
               "raw_label": "cup",
               "source_camera": "inspection_front"
             },
-            "entity_id": "object_0002",
+            "entity_id": "object_0003",
             "entity_type": "payload",
-            "weighted_score": 0.4282558333926857
+            "weighted_score": 0.5059372059407172
           },
           {
             "association_metrics": {
-              "box_fraction": 0.644878324844369,
-              "intersection_pixels": 9116,
+              "box_fraction": 0.6408510638297872,
+              "intersection_pixels": 4518,
               "mask_fraction": 1.0,
-              "score": 0.8757074136955292
+              "score": 0.8742978723404256
             },
             "detection": {
               "bbox_xyxy": [
-                410.79864501953125,
-                611.3297119140625,
-                523.8853759765625,
-                734.309326171875
+                407.33160400390625,
+                630.7081298828125,
+                500.232666015625,
+                704.139404296875
               ],
-              "canonical_label": "cup",
+              "canonical_label": "mug",
               "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-              "confidence": 0.6901499032974243,
+              "confidence": 0.8356724381446838,
               "crop_source_object_id": null,
               "detection_id": null,
               "detector_name": "ultralytics_yolo_world",
@@ -567,17 +1608,182 @@
               "input_crop_box_xyxy": null,
               "input_image_path": null,
               "input_kind": "FULL_FRAME",
-              "raw_label": "cup",
+              "raw_label": "mug",
               "source_camera": "inspection_close"
             },
-            "entity_id": "object_0002",
+            "entity_id": "object_0003",
             "entity_type": "payload",
-            "weighted_score": 0.604369386878807
+            "weighted_score": 0.7306266346434329
+          }
+        ],
+        "status": "SUPPORTED",
+        "supporting_view_count": 2,
+        "weighted_score_margin": 0.21359688265645482
+      },
+      "object_0004": {
+        "alternatives": [
+          {
+            "camera_ids": [
+              "inspection_close",
+              "inspection_front",
+              "inspection_left",
+              "inspection_right"
+            ],
+            "label": "bowl",
+            "mean_confidence": 0.7051023840904236,
+            "supporting_view_count": 4,
+            "weighted_score": 2.4900721051933914
+          }
+        ],
+        "canonical_label": "bowl",
+        "confidence": 0.7051023840904236,
+        "entity_id": "object_0004",
+        "entity_type": "payload",
+        "observations": [
+          {
+            "association_metrics": {
+              "box_fraction": 0.6682215743440233,
+              "intersection_pixels": 1146,
+              "mask_fraction": 1.0,
+              "score": 0.8838775510204082
+            },
+            "detection": {
+              "bbox_xyxy": [
+                867.8121337890625,
+                529.1608276367188,
+                915.8394775390625,
+                563.4754028320312
+              ],
+              "canonical_label": "bowl",
+              "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.7644818425178528,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "bowl",
+              "source_camera": "inspection_left"
+            },
+            "entity_id": "object_0004",
+            "entity_type": "payload",
+            "weighted_score": 0.6757083387642491
+          },
+          {
+            "association_metrics": {
+              "box_fraction": 0.6983729662077597,
+              "intersection_pixels": 1116,
+              "mask_fraction": 1.0,
+              "score": 0.8944305381727159
+            },
+            "detection": {
+              "bbox_xyxy": [
+                357.3079833984375,
+                525.750732421875,
+                403.7664794921875,
+                558.203857421875
+              ],
+              "canonical_label": "bowl",
+              "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.6537644267082214,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "bowl",
+              "source_camera": "inspection_right"
+            },
+            "entity_id": "object_0004",
+            "entity_type": "payload",
+            "weighted_score": 0.5847468680188116
+          },
+          {
+            "association_metrics": {
+              "box_fraction": 0.6809100998890122,
+              "intersection_pixels": 2454,
+              "mask_fraction": 1.0,
+              "score": 0.8883185349611542
+            },
+            "detection": {
+              "bbox_xyxy": [
+                595.21826171875,
+                591.602783203125,
+                662.862548828125,
+                643.598388671875
+              ],
+              "canonical_label": "bowl",
+              "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.7068430185317993,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "bowl",
+              "source_camera": "inspection_front"
+            },
+            "entity_id": "object_0004",
+            "entity_type": "payload",
+            "weighted_score": 0.6279017546696879
+          },
+          {
+            "association_metrics": {
+              "box_fraction": 0.6153669373372146,
+              "intersection_pixels": 8033,
+              "mask_fraction": 1.0,
+              "score": 0.8653784280680251
+            },
+            "detection": {
+              "bbox_xyxy": [
+                559.5479736328125,
+                635.607666015625,
+                680.4217529296875,
+                741.744873046875
+              ],
+              "canonical_label": "bowl",
+              "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.6953202486038208,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "bowl",
+              "source_camera": "inspection_close"
+            },
+            "entity_id": "object_0004",
+            "entity_type": "payload",
+            "weighted_score": 0.6017151437406428
           }
         ],
         "status": "SUPPORTED",
         "supporting_view_count": 4,
-        "weighted_score_margin": 2.439389536874158
+        "weighted_score_margin": 2.4900721051933914
       }
     },
     "regions": {
@@ -591,33 +1797,33 @@
               "inspection_right"
             ],
             "label": "side_table",
-            "mean_confidence": 0.5393625497817993,
+            "mean_confidence": 0.695842333137989,
             "supporting_view_count": 4,
-            "weighted_score": 1.5203132368886993
+            "weighted_score": 2.031565243945253
           }
         ],
         "canonical_label": "side_table",
-        "confidence": 0.5393625497817993,
+        "confidence": 0.695842333137989,
         "entity_id": "region_0001",
         "entity_type": "region",
         "observations": [
           {
             "association_metrics": {
-              "box_fraction": 0.2632937532266391,
-              "intersection_pixels": 5100,
-              "mask_fraction": 0.994733762434172,
-              "score": 0.7387297592115355
+              "box_fraction": 0.2581597222222222,
+              "intersection_pixels": 5948,
+              "mask_fraction": 1.0,
+              "score": 0.7403559027777777
             },
             "detection": {
               "bbox_xyxy": [
-                320.37579345703125,
-                476.4217224121094,
-                449.65496826171875,
-                624.5667724609375
+                315.80279541015625,
+                473.29779052734375,
+                458.59136962890625,
+                632.4147338867188
               ],
               "canonical_label": "side_table",
               "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-              "confidence": 0.6645736694335938,
+              "confidence": 0.860077440738678,
               "crop_source_object_id": null,
               "detection_id": null,
               "detector_name": "ultralytics_yolo_world",
@@ -634,25 +1840,25 @@
             },
             "entity_id": "region_0001",
             "entity_type": "region",
-            "weighted_score": 0.4909403467990053
+            "weighted_score": 0.6367634100968845
           },
           {
             "association_metrics": {
-              "box_fraction": 0.21329757199322416,
-              "intersection_pixels": 1511,
-              "mask_fraction": 0.9509125235997483,
-              "score": 0.6927472905374649
+              "box_fraction": 0.21496212121212122,
+              "intersection_pixels": 1816,
+              "mask_fraction": 1.0,
+              "score": 0.7252367424242424
             },
             "detection": {
               "bbox_xyxy": [
-                479.4933776855469,
-                393.9649658203125,
-                555.6806640625,
-                484.0284423828125
+                476.98626708984375,
+                392.4678039550781,
+                563.4061889648438,
+                487.6719055175781
               ],
               "canonical_label": "side_table",
               "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-              "confidence": 0.5013434886932373,
+              "confidence": 0.886243999004364,
               "crop_source_object_id": null,
               "detection_id": null,
               "detector_name": "ultralytics_yolo_world",
@@ -669,25 +1875,25 @@
             },
             "entity_id": "region_0001",
             "entity_type": "region",
-            "weighted_score": 0.3473043434208403
+            "weighted_score": 0.6427367108309585
           },
           {
             "association_metrics": {
-              "box_fraction": 0.2274588638225002,
-              "intersection_pixels": 3055,
-              "mask_fraction": 0.9397108581974777,
-              "score": 0.6904226601662357
+              "box_fraction": 0.2429520195174844,
+              "intersection_pixels": 3585,
+              "mask_fraction": 0.9857025020621392,
+              "score": 0.7257398331715099
             },
             "detection": {
               "bbox_xyxy": [
-                326.064697265625,
-                436.673583984375,
-                436.131591796875,
-                556.370849609375
+                325.3826904296875,
+                435.1363525390625,
+                443.8587646484375,
+                558.9398193359375
               ],
               "canonical_label": "side_table",
               "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-              "confidence": 0.5541477203369141,
+              "confidence": 0.781882643699646,
               "crop_source_object_id": null,
               "detection_id": null,
               "detector_name": "ultralytics_yolo_world",
@@ -699,30 +1905,30 @@
               "input_crop_box_xyxy": null,
               "input_image_path": null,
               "input_kind": "FULL_FRAME",
-              "raw_label": "accent table",
+              "raw_label": "side table",
               "source_camera": "inspection_front"
             },
             "entity_id": "region_0001",
             "entity_type": "region",
-            "weighted_score": 0.3825961432000674
+            "weighted_score": 0.5674433793982803
           },
           {
             "association_metrics": {
-              "box_fraction": 0.20768849206349208,
-              "intersection_pixels": 4187,
-              "mask_fraction": 0.9415336181695525,
-              "score": 0.6846878240324313
+              "box_fraction": 0.21645702306079664,
+              "intersection_pixels": 4956,
+              "mask_fraction": 0.9965815403177156,
+              "score": 0.723537959277794
             },
             "detection": {
               "bbox_xyxy": [
-                259.8836669921875,
-                418.0013427734375,
-                402.41357421875,
-                557.9375
+                255.9599609375,
+                417.21343994140625,
+                413.02777099609375,
+                560.6974487304688
               ],
               "canonical_label": "side_table",
               "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-              "confidence": 0.43738532066345215,
+              "confidence": 0.2551652491092682,
               "crop_source_object_id": null,
               "detection_id": null,
               "detector_name": "ultralytics_yolo_world",
@@ -734,17 +1940,17 @@
               "input_crop_box_xyxy": null,
               "input_image_path": null,
               "input_kind": "FULL_FRAME",
-              "raw_label": "accent table",
+              "raw_label": "side table",
               "source_camera": "inspection_close"
             },
             "entity_id": "region_0001",
             "entity_type": "region",
-            "weighted_score": 0.2994724034687863
+            "weighted_score": 0.18462174361912984
           }
         ],
         "status": "SUPPORTED",
         "supporting_view_count": 4,
-        "weighted_score_margin": 1.5203132368886993
+        "weighted_score_margin": 2.031565243945253
       },
       "region_0002": {
         "alternatives": [
@@ -756,33 +1962,33 @@
               "inspection_right"
             ],
             "label": "side_table",
-            "mean_confidence": 0.5294410176575184,
+            "mean_confidence": 0.8918427526950836,
             "supporting_view_count": 4,
-            "weighted_score": 1.336607512427818
+            "weighted_score": 2.32372774783046
           }
         ],
         "canonical_label": "side_table",
-        "confidence": 0.5294410176575184,
+        "confidence": 0.8918427526950836,
         "entity_id": "region_0002",
         "entity_type": "region",
         "observations": [
           {
             "association_metrics": {
-              "box_fraction": 0.10798898071625344,
-              "intersection_pixels": 1176,
-              "mask_fraction": 0.9144634525660964,
-              "score": 0.6321973874186514
+              "box_fraction": 0.12669683257918551,
+              "intersection_pixels": 1512,
+              "mask_fraction": 0.9593908629441624,
+              "score": 0.6679479523164205
             },
             "detection": {
               "bbox_xyxy": [
-                554.354248046875,
-                422.464599609375,
-                652.55126953125,
-                531.8178100585938
+                553.171875,
+                422.3345947265625,
+                654.375732421875,
+                538.505615234375
               ],
               "canonical_label": "side_table",
               "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-              "confidence": 0.8013287782669067,
+              "confidence": 0.8886265754699707,
               "crop_source_object_id": null,
               "detection_id": null,
               "detector_name": "ultralytics_yolo_world",
@@ -799,25 +2005,25 @@
             },
             "entity_id": "region_0002",
             "entity_type": "region",
-            "weighted_score": 0.5065979600837183
+            "weighted_score": 0.59355630145912
           },
           {
             "association_metrics": {
-              "box_fraction": 0.10587815538310588,
-              "intersection_pixels": 1187,
-              "mask_fraction": 0.9137798306389531,
-              "score": 0.6310142442994066
+              "box_fraction": 0.11120401337792642,
+              "intersection_pixels": 1330,
+              "mask_fraction": 1.0,
+              "score": 0.6889214046822743
             },
             "detection": {
               "bbox_xyxy": [
-                625.5277099609375,
-                421.08544921875,
-                725.6878662109375,
-                531.669189453125
+                624.512451171875,
+                422.74664306640625,
+                727.591796875,
+                536.1826171875
               ],
               "canonical_label": "side_table",
               "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-              "confidence": 0.7050819396972656,
+              "confidence": 0.8690651655197144,
               "crop_source_object_id": null,
               "detection_id": null,
               "detector_name": "ultralytics_yolo_world",
@@ -834,25 +2040,25 @@
             },
             "entity_id": "region_0002",
             "entity_type": "region",
-            "weighted_score": 0.4449167473472298
+            "weighted_score": 0.5987175945902747
           },
           {
             "association_metrics": {
-              "box_fraction": 0.18748208313425704,
-              "intersection_pixels": 1962,
-              "mask_fraction": 0.8582677165354331,
-              "score": 0.6234927448450215
+              "box_fraction": 0.1250219799542817,
+              "intersection_pixels": 1422,
+              "mask_fraction": 0.8982943777637398,
+              "score": 0.6276490385304294
             },
             "detection": {
               "bbox_xyxy": [
-                595.419189453125,
-                432.2142333984375,
-                685.114013671875,
-                546.1580810546875
+                594.006103515625,
+                431.25189208984375,
+                687.073974609375,
+                551.1790161132812
               ],
               "canonical_label": "side_table",
               "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-              "confidence": 0.37726864218711853,
+              "confidence": 0.9132847189903259,
               "crop_source_object_id": null,
               "detection_id": null,
               "detector_name": "ultralytics_yolo_world",
@@ -869,25 +2075,25 @@
             },
             "entity_id": "region_0002",
             "entity_type": "region",
-            "weighted_score": 0.2352242612612008
+            "weighted_score": 0.5732222757788115
           },
           {
             "association_metrics": {
-              "box_fraction": 0.22093102276588514,
-              "intersection_pixels": 3251,
-              "mask_fraction": 0.866009589770911,
-              "score": 0.6402320913191519
+              "box_fraction": 0.12831402831402833,
+              "intersection_pixels": 1994,
+              "mask_fraction": 0.888987962550156,
+              "score": 0.6227520855675114
             },
             "detection": {
               "bbox_xyxy": [
-                585.5113525390625,
-                414.93359375,
-                693.1490478515625,
-                548.0259399414062
+                585.47216796875,
+                413.20758056640625,
+                695.0968017578125,
+                552.3165283203125
               ],
               "canonical_label": "side_table",
               "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-              "confidence": 0.23408471047878265,
+              "confidence": 0.8963945508003235,
               "crop_source_object_id": null,
               "detection_id": null,
               "detector_name": "ultralytics_yolo_world",
@@ -904,12 +2110,12 @@
             },
             "entity_id": "region_0002",
             "entity_type": "region",
-            "weighted_score": 0.1498685437356692
+            "weighted_score": 0.5582315760022539
           }
         ],
         "status": "SUPPORTED",
         "supporting_view_count": 4,
-        "weighted_score_margin": 1.336607512427818
+        "weighted_score_margin": 2.32372774783046
       }
     },
     "targets": {
@@ -922,34 +2128,43 @@
               "inspection_left",
               "inspection_right"
             ],
-            "label": "armchair",
-            "mean_confidence": 0.6307465136051178,
+            "label": "sofa",
+            "mean_confidence": 0.7126036137342453,
             "supporting_view_count": 4,
-            "weighted_score": 2.223502433168645
+            "weighted_score": 2.128316970501012
+          },
+          {
+            "camera_ids": [
+              "inspection_top"
+            ],
+            "label": "chair",
+            "mean_confidence": 0.0414104163646698,
+            "supporting_view_count": 1,
+            "weighted_score": 0.025156257182516326
           }
         ],
-        "canonical_label": "armchair",
-        "confidence": 0.6307465136051178,
+        "canonical_label": "sofa",
+        "confidence": 0.7126036137342453,
         "entity_id": "seating_0001",
         "entity_type": "seat",
         "observations": [
           {
             "association_metrics": {
-              "box_fraction": 0.6148362664290488,
-              "intersection_pixels": 33120,
-              "mask_fraction": 0.999939617172876,
-              "score": 0.8651534444125364
+              "box_fraction": 0.419472315124489,
+              "intersection_pixels": 22576,
+              "mask_fraction": 0.927907932593506,
+              "score": 0.74995546647935
             },
             "detection": {
               "bbox_xyxy": [
-                348.21466064453125,
-                315.36767578125,
-                548.1202392578125,
-                582.1619262695312
+                340.13525390625,
+                372.40380859375,
+                599.868896484375,
+                578.6146240234375
               ],
-              "canonical_label": "armchair",
+              "canonical_label": "sofa",
               "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-              "confidence": 0.7866597771644592,
+              "confidence": 0.7632638216018677,
               "crop_source_object_id": null,
               "detection_id": null,
               "detector_name": "ultralytics_yolo_world",
@@ -961,30 +2176,30 @@
               "input_crop_box_xyxy": null,
               "input_image_path": null,
               "input_kind": "FULL_FRAME",
-              "raw_label": "armchair",
+              "raw_label": "sofa",
               "source_camera": "inspection_left"
             },
             "entity_id": "seating_0001",
             "entity_type": "seat",
-            "weighted_score": 0.6805814157946303
+            "weighted_score": 0.57241387537624
           },
           {
             "association_metrics": {
-              "box_fraction": 0.6227272727272727,
-              "intersection_pixels": 17810,
-              "mask_fraction": 0.9978150036416606,
-              "score": 0.8665342978216248
+              "box_fraction": 0.358664363845711,
+              "intersection_pixels": 10591,
+              "mask_fraction": 0.8706839855310753,
+              "score": 0.6914771179411978
             },
             "detection": {
               "bbox_xyxy": [
-                542.6405029296875,
-                299.6456298828125,
-                684.2171630859375,
-                498.1568603515625
+                539.4606323242188,
+                347.6448669433594,
+                731.3016967773438,
+                499.7220764160156
               ],
-              "canonical_label": "armchair",
+              "canonical_label": "sofa",
               "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-              "confidence": 0.7013290524482727,
+              "confidence": 0.6043850183486938,
               "crop_source_object_id": null,
               "detection_id": null,
               "detector_name": "ultralytics_yolo_world",
@@ -996,30 +2211,30 @@
               "input_crop_box_xyxy": null,
               "input_image_path": null,
               "input_kind": "FULL_FRAME",
-              "raw_label": "armchair",
+              "raw_label": "couch",
               "source_camera": "inspection_right"
             },
             "entity_id": "seating_0001",
             "entity_type": "seat",
-            "weighted_score": 0.6077256780051695
+            "weighted_score": 0.4179184106145928
           },
           {
             "association_metrics": {
-              "box_fraction": 0.7348917748917749,
-              "intersection_pixels": 29708,
-              "mask_fraction": 0.9996635036005115,
-              "score": 0.9069933985524538
+              "box_fraction": 0.9618338557993731,
+              "intersection_pixels": 12273,
+              "mask_fraction": 0.41668364228967203,
+              "score": 0.6074862170180674
             },
             "detection": {
               "bbox_xyxy": [
-                407.3790283203125,
-                305.3616943359375,
-                581.59912109375,
-                535.3983154296875
+                470.9046630859375,
+                237.88233947753906,
+                557.7462158203125,
+                381.65771484375
               ],
-              "canonical_label": "armchair",
+              "canonical_label": "chair",
               "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-              "confidence": 0.5187978148460388,
+              "confidence": 0.0414104163646698,
               "crop_source_object_id": null,
               "detection_id": null,
               "detector_name": "ultralytics_yolo_world",
@@ -1031,30 +2246,65 @@
               "input_crop_box_xyxy": null,
               "input_image_path": null,
               "input_kind": "FULL_FRAME",
-              "raw_label": "armchair",
+              "raw_label": "chair",
+              "source_camera": "inspection_top"
+            },
+            "entity_id": "seating_0001",
+            "entity_type": "seat",
+            "weighted_score": 0.025156257182516326
+          },
+          {
+            "association_metrics": {
+              "box_fraction": 0.46868768297339725,
+              "intersection_pixels": 22093,
+              "mask_fraction": 0.924161298418807,
+              "score": 0.7647455330129136
+            },
+            "detection": {
+              "bbox_xyxy": [
+                404.17974853515625,
+                362.42138671875,
+                662.9614868164062,
+                543.8621215820312
+              ],
+              "canonical_label": "sofa",
+              "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.7696234583854675,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "sofa",
               "source_camera": "inspection_front"
             },
             "entity_id": "seating_0001",
             "entity_type": "seat",
-            "weighted_score": 0.4705461932487954
+            "weighted_score": 0.5885661019022362
           },
           {
             "association_metrics": {
-              "box_fraction": 0.7153741987902862,
-              "intersection_pixels": 39621,
-              "mask_fraction": 0.9996215561610657,
-              "score": 0.9001349810812929
+              "box_fraction": 0.494230383303231,
+              "intersection_pixels": 29553,
+              "mask_fraction": 0.9191366279973875,
+              "score": 0.7704194423544327
             },
             "detection": {
               "bbox_xyxy": [
-                366.89251708984375,
-                269.283447265625,
-                574.7444458007812,
-                533.8892822265625
+                355.1705322265625,
+                337.5189208984375,
+                656.3538818359375,
+                534.6345825195312
               ],
-              "canonical_label": "armchair",
+              "canonical_label": "sofa",
               "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-              "confidence": 0.5161994099617004,
+              "confidence": 0.7131421566009521,
               "crop_source_object_id": null,
               "detection_id": null,
               "detector_name": "ultralytics_yolo_world",
@@ -1066,17 +2316,17 @@
               "input_crop_box_xyxy": null,
               "input_image_path": null,
               "input_kind": "FULL_FRAME",
-              "raw_label": "armchair",
+              "raw_label": "sofa",
               "source_camera": "inspection_close"
             },
             "entity_id": "seating_0001",
             "entity_type": "seat",
-            "weighted_score": 0.46464914612004976
+            "weighted_score": 0.5494185826079431
           }
         ],
         "status": "SUPPORTED",
         "supporting_view_count": 4,
-        "weighted_score_margin": 2.223502433168645
+        "weighted_score_margin": 2.1031607133184957
       },
       "seating_0002": {
         "alternatives": [
@@ -1088,33 +2338,42 @@
               "inspection_right"
             ],
             "label": "armchair",
-            "mean_confidence": 0.6854721754789352,
+            "mean_confidence": 0.8567221909761429,
             "supporting_view_count": 4,
-            "weighted_score": 2.4387903092139465
+            "weighted_score": 3.0155083590246208
+          },
+          {
+            "camera_ids": [
+              "inspection_top"
+            ],
+            "label": "chair",
+            "mean_confidence": 0.3779712915420532,
+            "supporting_view_count": 1,
+            "weighted_score": 0.35485694769410475
           }
         ],
         "canonical_label": "armchair",
-        "confidence": 0.6854721754789352,
+        "confidence": 0.8567221909761429,
         "entity_id": "seating_0002",
         "entity_type": "seat",
         "observations": [
           {
             "association_metrics": {
-              "box_fraction": 0.6250834592543135,
-              "intersection_pixels": 17788,
+              "box_fraction": 0.5833936178763764,
+              "intersection_pixels": 14516,
               "mask_fraction": 1.0,
-              "score": 0.8687792107390098
+              "score": 0.8541877662567318
             },
             "detection": {
               "bbox_xyxy": [
-                595.033935546875,
-                299.50128173828125,
-                737.83251953125,
-                497.85540771484375
+                598.6519775390625,
+                323.962646484375,
+                740.6673583984375,
+                496.55120849609375
               ],
               "canonical_label": "armchair",
               "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-              "confidence": 0.7969857454299927,
+              "confidence": 0.8548471331596375,
               "crop_source_object_id": null,
               "detection_id": null,
               "detector_name": "ultralytics_yolo_world",
@@ -1131,25 +2390,25 @@
             },
             "entity_id": "seating_0002",
             "entity_type": "seat",
-            "weighted_score": 0.6924046468849104
+            "weighted_score": 0.7301999631646017
           },
           {
             "association_metrics": {
-              "box_fraction": 0.6682585642838341,
-              "intersection_pixels": 35542,
+              "box_fraction": 0.6186686764347306,
+              "intersection_pixels": 27910,
               "mask_fraction": 1.0,
-              "score": 0.883890497499342
+              "score": 0.8665340367521557
             },
             "detection": {
               "bbox_xyxy": [
-                730.970703125,
-                315.0784912109375,
-                932.91357421875,
-                576.9208984375
+                734.969482421875,
+                350.345458984375,
+                930.27001953125,
+                578.22216796875
               ],
               "canonical_label": "armchair",
               "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-              "confidence": 0.682515025138855,
+              "confidence": 0.8663033246994019,
               "crop_source_object_id": null,
               "detection_id": null,
               "detector_name": "ultralytics_yolo_world",
@@ -1166,25 +2425,60 @@
             },
             "entity_id": "seating_0002",
             "entity_type": "seat",
-            "weighted_score": 0.6032685451207584
+            "weighted_score": 0.7506813170035861
           },
           {
             "association_metrics": {
-              "box_fraction": 0.7404150197628458,
-              "intersection_pixels": 29972,
+              "box_fraction": 0.8252751362325035,
+              "intersection_pixels": 30895,
               "mask_fraction": 1.0,
-              "score": 0.909145256916996
+              "score": 0.9388462976813763
             },
             "detection": {
               "bbox_xyxy": [
-                699.3599853515625,
-                305.2537841796875,
-                874.282470703125,
-                534.39599609375
+                704.51611328125,
+                202.9547119140625,
+                894.638671875,
+                397.89752197265625
+              ],
+              "canonical_label": "chair",
+              "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.3779712915420532,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "chair",
+              "source_camera": "inspection_top"
+            },
+            "entity_id": "seating_0002",
+            "entity_type": "seat",
+            "weighted_score": 0.35485694769410475
+          },
+          {
+            "association_metrics": {
+              "box_fraction": 0.7179983179142136,
+              "intersection_pixels": 25611,
+              "mask_fraction": 1.0,
+              "score": 0.9012994112699748
+            },
+            "detection": {
+              "bbox_xyxy": [
+                700.5994262695312,
+                333.46807861328125,
+                873.8789672851562,
+                537.6552734375
               ],
               "canonical_label": "armchair",
               "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-              "confidence": 0.7287697792053223,
+              "confidence": 0.8323498368263245,
               "crop_source_object_id": null,
               "detection_id": null,
               "detector_name": "ultralytics_yolo_world",
@@ -1201,25 +2495,25 @@
             },
             "entity_id": "seating_0002",
             "entity_type": "seat",
-            "weighted_score": 0.6625575881489651
+            "weighted_score": 0.7501964179022258
           },
           {
             "association_metrics": {
-              "box_fraction": 0.7159090909090909,
-              "intersection_pixels": 39879,
+              "box_fraction": 0.7089895557029178,
+              "intersection_pixels": 34213,
               "mask_fraction": 1.0,
-              "score": 0.9005681818181819
+              "score": 0.8981463444960213
             },
             "detection": {
               "bbox_xyxy": [
-                705.9059448242188,
-                269.63555908203125,
-                915.0806274414062,
-                532.16455078125
+                707.7489013671875,
+                304.17730712890625,
+                914.62646484375,
+                535.8219604492188
               ],
               "canonical_label": "armchair",
               "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-              "confidence": 0.533618152141571,
+              "confidence": 0.8733884692192078,
               "crop_source_object_id": null,
               "detection_id": null,
               "detector_name": "ultralytics_yolo_world",
@@ -1236,12 +2530,12 @@
             },
             "entity_id": "seating_0002",
             "entity_type": "seat",
-            "weighted_score": 0.4805595290593126
+            "weighted_score": 0.7844306609542072
           }
         ],
         "status": "SUPPORTED",
         "supporting_view_count": 4,
-        "weighted_score_margin": 2.4387903092139465
+        "weighted_score_margin": 2.660651411330516
       }
     }
   },

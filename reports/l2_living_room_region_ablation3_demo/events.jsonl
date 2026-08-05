@@ -1,15 +1,17 @@
 {"event": "PAYLOAD_OBSERVED", "observation": "INITIAL", "payload_id": "object_0001", "stage": 0}
 {"event": "PAYLOAD_OBSERVED", "observation": "INITIAL", "payload_id": "object_0002", "stage": 0}
+{"event": "PAYLOAD_OBSERVED", "observation": "INITIAL", "payload_id": "object_0003", "stage": 0}
+{"event": "PAYLOAD_OBSERVED", "observation": "INITIAL", "payload_id": "object_0004", "stage": 0}
 {"event": "DESTINATION_REGION_OBSERVED", "observation": "INITIAL", "region_id": "region_0001", "stage": 0}
 {"event": "DESTINATION_REGION_OBSERVED", "observation": "INITIAL", "region_id": "region_0002", "stage": 0}
 {"event": "SEATING_TARGET_OBSERVED", "observation": "INITIAL", "stage": 0, "target_id": "seating_0001"}
 {"event": "SEATING_TARGET_OBSERVED", "observation": "INITIAL", "stage": 0, "target_id": "seating_0002"}
 {"event": "TARGET_COMPATIBILITY_EDGE_CREATED", "observation": "INITIAL", "region_id": "region_0001", "stage": 0, "status": "TRUE", "target_id": "seating_0001"}
 {"event": "TARGET_COMPATIBILITY_EDGE_REJECTED", "observation": "INITIAL", "region_id": "region_0001", "stage": 0, "status": "FALSE", "target_id": "seating_0002"}
-{"event": "TARGET_COMPATIBILITY_EDGE_CREATED", "observation": "INITIAL", "region_id": "region_0002", "stage": 0, "status": "TRUE", "target_id": "seating_0001"}
+{"event": "TARGET_COMPATIBILITY_EDGE_REJECTED", "observation": "INITIAL", "region_id": "region_0002", "stage": 0, "status": "FALSE", "target_id": "seating_0001"}
 {"event": "TARGET_COMPATIBILITY_EDGE_REJECTED", "observation": "INITIAL", "region_id": "region_0002", "stage": 0, "status": "FALSE", "target_id": "seating_0002"}
 {"counted_region_count": 2, "event": "TARGET_AGNOSTIC_COUNT_COMPLETE", "observation": "INITIAL", "stage": 0}
-{"candidate_rank": 1, "event": "GREEDY_ASSIGNMENT_CREATED", "fit_margin_m": 0.2687191772608054, "near_seat_margin_m": 0.3070437187500431, "observation": "INITIAL", "region_id": "region_0001", "seating_target_id": "seating_0001", "stage": 0}
+{"candidate_rank": 1, "event": "GREEDY_ASSIGNMENT_CREATED", "fit_margin_m": 0.21024536457752455, "near_seat_margin_m": 0.38854757860550615, "observation": "INITIAL", "region_id": "region_0001", "seating_target_id": "seating_0001", "stage": 0}
 {"event": "GREEDY_ASSIGNMENT_BLOCKED", "observation": "INITIAL", "stage": 0, "target_id": "seating_0002"}
 {"event": "GLOBAL_MATCHING_COMPUTED", "maximum_matching_cardinality": 1, "observation": "INITIAL", "stage": 0}
 {"event": "TARGET_LEFT_UNCOVERED", "observation": "INITIAL", "stage": 0, "target_id": "seating_0002"}

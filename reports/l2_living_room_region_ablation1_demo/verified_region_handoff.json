@@ -2,49 +2,49 @@
   "FITS_ON": {
     "edge_clearance_margin_m": 0.02,
     "method": "region_payload_relations_v1",
-    "payload_length_m": 0.4155231733198542,
-    "payload_width_m": 0.2892059034208371,
-    "region_usable_length_m": 0.6990467763490513,
-    "region_usable_width_m": 0.540652195029224,
+    "payload_length_m": 0.396306038949873,
+    "payload_width_m": 0.36991656870980494,
+    "region_usable_length_m": 0.7010095879297349,
+    "region_usable_width_m": 0.534636134076194,
     "relation": "FITS_ON",
     "selected_orientation_degrees": 0,
-    "signed_fit_margin_m": 0.21144629160838693,
+    "signed_fit_margin_m": 0.12471956536638909,
     "status": "TRUE",
     "tested_orientations": [
       {
         "fits": true,
-        "length_margin_m": 0.2435236030291971,
+        "length_margin_m": 0.2647035489798619,
         "orientation_degrees": 0,
-        "signed_fit_margin_m": 0.21144629160838693,
-        "width_margin_m": 0.21144629160838693
+        "signed_fit_margin_m": 0.12471956536638909,
+        "width_margin_m": 0.12471956536638909
       },
       {
         "fits": true,
-        "length_margin_m": 0.36984087292821427,
+        "length_margin_m": 0.29109301921992997,
         "orientation_degrees": 90,
-        "signed_fit_margin_m": 0.08512902170936978,
-        "width_margin_m": 0.08512902170936978
+        "signed_fit_margin_m": 0.09833009512632104,
+        "width_margin_m": 0.09833009512632104
       }
     ],
     "value": true
   },
   "NEAR_SEATING_AREA": {
     "maximum_distance_m": 1.65,
-    "measured_distance_m": 1.206224436313378,
+    "measured_distance_m": 1.2737397707942413,
     "method": "region_payload_relations_v1",
-    "point_count": 344492,
+    "point_count": 306555,
     "region_centroid_world_m": [
-      0.425124928355217,
-      0.19378558546304703,
-      0.5216467380523682
+      0.41701729595661163,
+      0.19776038080453873,
+      0.5362772643566132
     ],
     "relation": "NEAR_SEATING_AREA",
     "seating_centroid_world_m": [
-      -0.5184408724308014,
-      0.9452248513698578,
-      0.7089325189590454
+      -0.6084014177322388,
+      0.9533591270446777,
+      0.6282453536987305
     ],
-    "signed_margin_m": 0.44377556368662185,
+    "signed_margin_m": 0.37626022920575863,
     "status": "TRUE",
     "value": true
   },
@@ -59,7 +59,7 @@
     "extractor_version": "region_support_geometry_v1",
     "measurement_cloud_path": "stages/002_after_COFFEE_TABLE/region_evidence/fused.ply",
     "method": "region_support_geometry_v1",
-    "point_count": 45090,
+    "point_count": 46196,
     "source_region": "COFFEE_TABLE",
     "source_stage": 2,
     "status": "DERIVED",
@@ -67,24 +67,24 @@
     "value": true
   },
   "candidate_ranking": [
-    "RUG_PATCH",
+    "SOFA_SEAT_PATCH",
     "SMALL_SIDE_TABLE",
     "COFFEE_TABLE"
   ],
   "completion_inspection_label": "COFFEE_TABLE",
   "completion_stage": 2,
   "evidence_paths": {
-    "payload": "stages/000_initial_RUG_PATCH/payload_evidence/fused.ply",
+    "payload": "stages/000_initial_SOFA_SEAT_PATCH/payload_evidence/fused.ply",
     "region": "stages/002_after_COFFEE_TABLE/region_evidence/fused.ply"
   },
   "function_id": "PLACE_REFRESHMENT_TRAY",
-  "natural_language_goal": "Place the refreshment tray on a suitable living-room surface within easy reach of the sofa.",
+  "natural_language_goal": "Place the loaded refreshment tray on a stable serving surface within easy reach of both people.",
   "payload_object_id": "object_0001",
   "placement_executed": false,
   "ready_for_tamp": true,
   "rejected_earlier_candidates": [
     {
-      "inspection_label": "RUG_PATCH",
+      "inspection_label": "SOFA_SEAT_PATCH",
       "region_id": "region_0001",
       "rejection_reason": "REGION_REJECTED_SEMANTIC"
     },
@@ -102,111 +102,35 @@
           "inspection_close",
           "inspection_front",
           "inspection_left",
-          "inspection_right"
-        ],
-        "label": "coffee_table",
-        "mean_confidence": 0.7534128278493881,
-        "supporting_view_count": 4,
-        "weighted_score": 2.425548589322008
-      },
-      {
-        "camera_ids": [
+          "inspection_right",
           "inspection_top"
         ],
         "label": "side_table",
-        "mean_confidence": 0.5478116273880005,
-        "supporting_view_count": 1,
-        "weighted_score": 0.4841062683719938
+        "mean_confidence": 0.7161232709884644,
+        "supporting_view_count": 5,
+        "weighted_score": 2.9747930557266287
       }
     ],
-    "canonical_label": "coffee_table",
-    "confidence": 0.7534128278493881,
+    "canonical_label": "side_table",
+    "confidence": 0.7161232709884644,
     "observations": [
       {
         "association_metrics": {
-          "box_fraction": 0.4421723888305963,
-          "intersection_pixels": 54362,
-          "mask_fraction": 0.9620401012263967,
-          "score": 0.7800864018878666
+          "box_fraction": 0.46217980000165426,
+          "intersection_pixels": 55878,
+          "mask_fraction": 0.9737048460452716,
+          "score": 0.7946710799300055
         },
         "detection": {
           "bbox_xyxy": [
-            532.7235107421875,
-            412.11041259765625,
-            914.6114501953125,
-            732.5686645507812
-          ],
-          "canonical_label": "coffee_table",
-          "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-          "confidence": 0.7595906257629395,
-          "crop_source_object_id": null,
-          "detection_id": null,
-          "detector_name": "ultralytics_yolo_world",
-          "detector_version": "8.4.112",
-          "inference_resolution": [
-            1280,
-            960
-          ],
-          "input_crop_box_xyxy": null,
-          "input_image_path": null,
-          "input_kind": "FULL_FRAME",
-          "raw_label": "low coffee table",
-          "source_camera": "inspection_left"
-        },
-        "target": "region_parent",
-        "weighted_score": 0.5925463181591645
-      },
-      {
-        "association_metrics": {
-          "box_fraction": 0.4243597094801223,
-          "intersection_pixels": 53286,
-          "mask_fraction": 0.9586571675302246,
-          "score": 0.7716530572126887
-        },
-        "detection": {
-          "bbox_xyxy": [
-            364.4366149902344,
-            418.0169372558594,
-            747.9046630859375,
-            744.2806396484375
-          ],
-          "canonical_label": "coffee_table",
-          "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-          "confidence": 0.8054726719856262,
-          "crop_source_object_id": null,
-          "detection_id": null,
-          "detector_name": "ultralytics_yolo_world",
-          "detector_version": "8.4.112",
-          "inference_resolution": [
-            1280,
-            960
-          ],
-          "input_crop_box_xyxy": null,
-          "input_image_path": null,
-          "input_kind": "FULL_FRAME",
-          "raw_label": "low coffee table",
-          "source_camera": "inspection_right"
-        },
-        "target": "region_parent",
-        "weighted_score": 0.6215454498389817
-      },
-      {
-        "association_metrics": {
-          "box_fraction": 0.7069282648681791,
-          "intersection_pixels": 47273,
-          "mask_fraction": 0.9788991965542947,
-          "score": 0.8837093704641543
-        },
-        "detection": {
-          "bbox_xyxy": [
-            498.1044921875,
-            396.31207275390625,
-            784.2880859375,
-            628.6471557617188
+            529.2030029296875,
+            410.82403564453125,
+            907.6563720703125,
+            728.1345825195312
           ],
           "canonical_label": "side_table",
           "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-          "confidence": 0.5478116273880005,
+          "confidence": 0.7747693061828613,
           "crop_source_object_id": null,
           "detection_id": null,
           "detector_name": "ultralytics_yolo_world",
@@ -218,29 +142,97 @@
           "input_crop_box_xyxy": null,
           "input_image_path": null,
           "input_kind": "FULL_FRAME",
-          "raw_label": "small side table",
+          "raw_label": "side table",
+          "source_camera": "inspection_left"
+        },
+        "target": "region_parent",
+        "weighted_score": 0.6156867612409556
+      },
+      {
+        "association_metrics": {
+          "box_fraction": 0.4611493793883731,
+          "intersection_pixels": 55432,
+          "mask_fraction": 0.9818619810117614,
+          "score": 0.7996125704435755
+        },
+        "detection": {
+          "bbox_xyxy": [
+            373.4625244140625,
+            412.5994567871094,
+            750.50439453125,
+            729.3238525390625
+          ],
+          "canonical_label": "side_table",
+          "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.8149113655090332,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "side table",
+          "source_camera": "inspection_right"
+        },
+        "target": "region_parent",
+        "weighted_score": 0.6516133716583621
+      },
+      {
+        "association_metrics": {
+          "box_fraction": 0.7441952707856598,
+          "intersection_pixels": 48782,
+          "mask_fraction": 0.9760108841359717,
+          "score": 0.8948754194633626
+        },
+        "detection": {
+          "bbox_xyxy": [
+            498.7423095703125,
+            394.39697265625,
+            782.932861328125,
+            623.2393798828125
+          ],
+          "canonical_label": "side_table",
+          "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+          "confidence": 0.6716234683990479,
+          "crop_source_object_id": null,
+          "detection_id": null,
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "inference_resolution": [
+            1280,
+            960
+          ],
+          "input_crop_box_xyxy": null,
+          "input_image_path": null,
+          "input_kind": "FULL_FRAME",
+          "raw_label": "side table",
           "source_camera": "inspection_top"
         },
         "target": "region_parent",
-        "weighted_score": 0.4841062683719938
+        "weighted_score": 0.6010193330050364
       },
       {
         "association_metrics": {
-          "box_fraction": 0.5438739799309676,
-          "intersection_pixels": 67913,
-          "mask_fraction": 0.980013853213657,
-          "score": 0.8273648975647158
+          "box_fraction": 0.5726851851851852,
+          "intersection_pixels": 69272,
+          "mask_fraction": 0.9815373715905066,
+          "score": 0.838439106348644
         },
         "detection": {
           "bbox_xyxy": [
-            483.4271240234375,
-            400.78240966796875,
-            871.708740234375,
-            720.2835083007812
+            481.3489685058594,
+            401.7761535644531,
+            864.2857666015625,
+            715.83837890625
           ],
-          "canonical_label": "coffee_table",
+          "canonical_label": "side_table",
           "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-          "confidence": 0.7766823172569275,
+          "confidence": 0.691418468952179,
           "crop_source_object_id": null,
           "detection_id": null,
           "detector_name": "ultralytics_yolo_world",
@@ -252,29 +244,29 @@
           "input_crop_box_xyxy": null,
           "input_image_path": null,
           "input_kind": "FULL_FRAME",
-          "raw_label": "low coffee table",
+          "raw_label": "side table",
           "source_camera": "inspection_front"
         },
         "target": "region_parent",
-        "weighted_score": 0.6425996858576039
+        "weighted_score": 0.5797122832212126
       },
       {
         "association_metrics": {
-          "box_fraction": 0.6217258237608808,
-          "intersection_pixels": 62568,
-          "mask_fraction": 0.9677359482785288,
-          "score": 0.846632404697352
+          "box_fraction": 0.5806773804596254,
+          "intersection_pixels": 64533,
+          "mask_fraction": 0.977994998863378,
+          "score": 0.8389338324220647
         },
         "detection": {
           "bbox_xyxy": [
-            420.2380065917969,
-            401.0563049316406,
-            781.0888671875,
-            678.7501220703125
+            425.6943054199219,
+            395.34442138671875,
+            786.184814453125,
+            701.4319458007812
           ],
-          "canonical_label": "coffee_table",
+          "canonical_label": "side_table",
           "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-          "confidence": 0.6719056963920593,
+          "confidence": 0.6278937458992004,
           "crop_source_object_id": null,
           "detection_id": null,
           "detector_name": "ultralytics_yolo_world",
@@ -286,16 +278,16 @@
           "input_crop_box_xyxy": null,
           "input_image_path": null,
           "input_kind": "FULL_FRAME",
-          "raw_label": "coffee table",
+          "raw_label": "side table",
           "source_camera": "inspection_close"
         },
         "target": "region_parent",
-        "weighted_score": 0.5688571354662582
+        "weighted_score": 0.5267613066010622
       }
     ],
     "status": "SUPPORTED",
-    "supporting_view_count": 4,
-    "weighted_score_margin": 1.9414423209500145
+    "supporting_view_count": 5,
+    "weighted_score_margin": 2.9747930557266287
   },
   "tamp_executed": false,
   "task_id": "l2_place_refreshment_tray_region_grounding",

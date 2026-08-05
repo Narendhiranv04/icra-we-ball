@@ -1395,10 +1395,10 @@ class RegionAllocationSolver:
             policy, "personal_drinks"
         )
         slots = sorted({row["slot_id"] for row in self.drink_rows})
-        required_slot_count = len(
-            self.task["function_groups"]["personal_drinks"][
-                "payload_semantic_roles"
-            ]
+        required_slot_count = int(
+            self.task["function_groups"]["personal_drinks"].get(
+                "required_target_count", 2
+            )
         )
         if len(slots) != required_slot_count:
             return []
@@ -1430,6 +1430,9 @@ class RegionAllocationSolver:
                     "function_id": "PLACE_PERSONAL_DRINK",
                     "slot_id": row["slot_id"],
                     "payload_id": row["payload_id"],
+                    "payload_ids": row.get(
+                        "payload_ids", [row["payload_id"]]
+                    ),
                     "target_id": row["seating_target_id"],
                     "region_id": row["region_id"],
                     "candidate_rank": row["candidate_rank"],
@@ -1449,7 +1452,11 @@ class RegionAllocationSolver:
                             "group_id": "personal_drinks",
                             "region_id": regions[0],
                             "payload_ids": [
-                                row["payload_id"] for row in chosen
+                                payload_id
+                                for row in chosen
+                                for payload_id in row.get(
+                                    "payload_ids", [row["payload_id"]]
+                                )
                             ],
                         }
                         if len(set(regions)) == 1
@@ -1781,7 +1788,10 @@ class RegionAblation2Run:
             }
 
     def _required_payloads(self) -> dict[str, list[str]]:
-        result = {"drink": [], "tv_remote": [], "game_controller": []}
+        result = {
+            role: []
+            for role in self.task["semantic_requirements"]["payload_roles"]
+        }
         for object_id, record in self.payload_registry.items():
             role = record["semantic_payload_role"]
             if role in result:
@@ -1804,9 +1814,15 @@ class RegionAblation2Run:
         control_role = self.task["semantic_requirements"]["region_roles"][
             "shared_control_region"
         ]
-        if len(payloads["drink"]) >= 2 and len(seats) >= 2:
-            for slot_index, (payload_id, seat_id) in enumerate(
-                zip(payloads["drink"][:2], seats[:2]), 1
+        personal_bundles = list(
+            zip(
+                payloads.get("drink", [])[:2],
+                payloads.get("snack_container", [])[:2],
+            )
+        )
+        if len(personal_bundles) >= 2 and len(seats) >= 2:
+            for slot_index, (bundle_ids, seat_id) in enumerate(
+                zip(personal_bundles[:2], seats[:2]), 1
             ):
                 for region_id, region in self.region_registry.items():
                     semantic = _semantic_role(
@@ -1815,8 +1831,11 @@ class RegionAblation2Run:
                         rejected=personal_role["rejected_categories"],
                     )
                     planar = self._planar_status(region["geometry"])
-                    fit = evaluate_fits_on(
-                        self.payload_registry[payload_id]["geometry"],
+                    fit = evaluate_fits_set_on(
+                        [
+                            self.payload_registry[payload_id]["geometry"]
+                            for payload_id in bundle_ids
+                        ],
                         region["geometry"],
                         task_config=self.task,
                     )
@@ -1843,8 +1862,9 @@ class RegionAblation2Run:
                     )
                     row = {
                         "function_group": "personal_drinks",
-                        "slot_id": f"drink_slot_{slot_index}",
-                        "payload_id": payload_id,
+                        "slot_id": f"refreshment_slot_{slot_index}",
+                        "payload_id": bundle_ids[0],
+                        "payload_ids": list(bundle_ids),
                         "seating_target_id": seat_id,
                         "region_id": region_id,
                         "candidate_rank": region["candidate_rank"],
@@ -1853,9 +1873,9 @@ class RegionAblation2Run:
                         ),
                         "semantic_role_status": semantic["status"],
                         "PLANAR_SUPPORT": planar,
-                        "FITS_ON": fit["status"],
+                        "FITS_SET_ON": fit["status"],
                         "NEAR_SEAT": near["status"],
-                        "fit_margin_m": fit.get("signed_fit_margin_m"),
+                        "fit_margin_m": fit.get("signed_clearance_margin_m"),
                         "near_seat_distance_m": near.get(
                             "measured_distance_m"
                         ),
@@ -1866,9 +1886,12 @@ class RegionAblation2Run:
                         "region_evidence_path": region["provenance"][
                             "measurement_cloud_path"
                         ],
-                        "payload_evidence_path": self.payload_registry[
-                            payload_id
-                        ]["provenance"]["measurement_cloud_path"],
+                        "payload_evidence_paths": [
+                            self.payload_registry[payload_id]["provenance"][
+                                "measurement_cloud_path"
+                            ]
+                            for payload_id in bundle_ids
+                        ],
                         "seat_evidence_path": self.seating_registry[seat_id][
                             "provenance"
                         ]["evidence_path"],
@@ -1877,15 +1900,15 @@ class RegionAblation2Run:
                     self.event(
                         "PAYLOAD_REGION_FIT_EVALUATED",
                         function_group="personal_drinks",
-                        payload_id=payload_id,
+                        payload_ids=list(bundle_ids),
                         region_id=region_id,
                         status=fit["status"],
-                        signed_margin_m=fit.get("signed_fit_margin_m"),
+                        signed_margin_m=fit.get("signed_clearance_margin_m"),
                     )
                     self.event(
                         "REGION_TARGET_COMPATIBILITY_EVALUATED",
                         function_group="personal_drinks",
-                        payload_id=payload_id,
+                        payload_ids=list(bundle_ids),
                         seating_target_id=seat_id,
                         region_id=region_id,
                         status=status,
@@ -2450,8 +2473,8 @@ class RegionAblation2Run:
                     {
                         "source": f"payload:{row['payload_id']}",
                         "target": f"region:{row['region_id']}",
-                        "type": "FITS_ON",
-                        "status": row["FITS_ON"],
+                        "type": "FITS_SET_ON",
+                        "status": row["FITS_SET_ON"],
                     },
                     {
                         "source": f"region:{row['region_id']}",

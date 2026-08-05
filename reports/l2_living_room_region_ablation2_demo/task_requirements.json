@@ -22,14 +22,15 @@
       "function_id": "PLACE_PERSONAL_DRINK",
       "payload_semantic_roles": [
         "drink",
-        "drink"
+        "snack_container"
       ],
       "region_role": "personal_drink_region",
       "required_relations": [
         "PLANAR_SUPPORT",
-        "FITS_ON",
+        "FITS_SET_ON",
         "NEAR_SEAT"
       ],
+      "required_target_count": 2,
       "target_role": "seating_target",
       "usage_policy": "DEDICATED_REGION_PER_TARGET"
     },
@@ -87,7 +88,7 @@
       "predicate": "PLANAR_SUPPORT"
     }
   },
-  "natural_language_goal": "Set up the living room for two people watching television. Place one drink in a separate accessible region beside each seating position, and keep the TV remote and game controller together in one shared accessible region.",
+  "natural_language_goal": "Prepare movie night for two people. Place one drink-and-snack set beside each person, and keep the TV remote and handheld game device together on one shared surface accessible to both.",
   "schema_version": 1,
   "semantic_requirements": {
     "minimum_mean_confidence": 0.03,
@@ -101,6 +102,10 @@
       "game_controller": [
         "game_controller",
         "controller"
+      ],
+      "snack_container": [
+        "bowl",
+        "ramekin"
       ],
       "tv_remote": [
         "remote_control"

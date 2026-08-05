@@ -22,12 +22,12 @@
       "function_id": "PLACE_PERSONAL_DRINKS",
       "payload_semantic_roles": [
         "drink",
-        "drink"
+        "snack_container"
       ],
       "region_role": "personal_drink_region",
       "required_relations": [
         "PLANAR_SUPPORT",
-        "FITS_ON",
+        "FITS_SET_ON",
         "NEAR_SEAT"
       ],
       "required_target_count": 2,
@@ -46,6 +46,19 @@
       "edge_clearance_margin_m": 0.015,
       "relation": "FITS_ON"
     },
+    "payload_set_region": {
+      "allowed_orientations_degrees": [
+        0,
+        90
+      ],
+      "arrangements": [
+        "ALONG_LENGTH",
+        "ALONG_WIDTH"
+      ],
+      "edge_clearance_margin_m": 0.015,
+      "inter_payload_clearance_m": 0.02,
+      "relation": "FITS_SET_ON"
+    },
     "personal_context": {
       "maximum_centroid_distance_m": 1.15,
       "relation": "NEAR_SEAT"
@@ -57,7 +70,7 @@
       "predicate": "PLANAR_SUPPORT"
     }
   },
-  "natural_language_goal": "Set up drinks for two people watching television. Place one drink on a suitable accessible surface beside each person\u2019s seating position.",
+  "natural_language_goal": "Place one drink-and-snack set on a suitable surface beside each person\u2019s seating position.",
   "schema_version": 1,
   "semantic_requirements": {
     "minimum_mean_confidence": 0.03,
@@ -67,6 +80,10 @@
       "drink": [
         "mug",
         "cup"
+      ],
+      "snack_container": [
+        "bowl",
+        "ramekin"
       ]
     },
     "region_roles": {

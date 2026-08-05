@@ -1,5 +1,5 @@
 {
-  "evidence_manifest_sha256": "650427c0be24b621f008efe8e261c8806e1ea1931c8de2a4ed0e1b5dfa14a606",
+  "evidence_manifest_sha256": "9876b14d4f337ec91d559571643db0b59b6f3afda6cc4b62c8b824acd2de5930",
   "policies": {
     "global_target_specific": {
       "alternative_complete_matchings": [],
@@ -59,15 +59,15 @@
       "region_target_assignments": [
         {
           "candidate_rank": 1,
-          "fit_margin_m": 0.2798442915308883,
-          "near_seat_margin_m": 0.1554301143633714,
+          "fit_margin_m": 0.3754422945425083,
+          "near_seat_margin_m": 0.006585944364061236,
           "region_id": "region_0001",
           "seating_target_id": "seating_0001"
         },
         {
           "candidate_rank": 2,
-          "fit_margin_m": 0.2691869536621797,
-          "near_seat_margin_m": 0.3537276682813013,
+          "fit_margin_m": 0.2905739874351314,
+          "near_seat_margin_m": 0.43621199470982785,
           "region_id": "region_0002",
           "seating_target_id": "seating_0002"
         }
@@ -92,8 +92,8 @@
           "seating_0002"
         ],
         "total_candidate_rank": 3,
-        "total_distance_margin_m": 0.5091577826446727,
-        "total_fit_margin_m": 0.549031245193068
+        "total_distance_margin_m": 0.4427979390738891,
+        "total_fit_margin_m": 0.6660162819776397
       },
       "uncovered_target_ids": [],
       "valid_against_true_task": true
@@ -116,15 +116,15 @@
       "region_target_assignments": [
         {
           "candidate_rank": 1,
-          "fit_margin_m": 0.2798442915308883,
-          "near_seat_margin_m": 0.1554301143633714,
+          "fit_margin_m": 0.3754422945425083,
+          "near_seat_margin_m": 0.006585944364061236,
           "region_id": "region_0001",
           "seating_target_id": "seating_0001"
         },
         {
           "candidate_rank": 2,
-          "fit_margin_m": 0.2691869536621797,
-          "near_seat_margin_m": 0.3537276682813013,
+          "fit_margin_m": 0.2905739874351314,
+          "near_seat_margin_m": 0.43621199470982785,
           "region_id": "region_0002",
           "seating_target_id": "seating_0002"
         }
@@ -177,13 +177,13 @@
   "semantic_inference_timing": {
     "camera_count": 5,
     "per_camera_seconds": {
-      "inspection_close": 0.09224596400053997,
-      "inspection_front": 0.10528176799925859,
-      "inspection_left": 3.0885088830000313,
-      "inspection_right": 0.09149561899903347,
-      "inspection_top": 0.09102355399954831
+      "inspection_close": 0.09403827600181103,
+      "inspection_front": 0.09534237000116264,
+      "inspection_left": 3.2953592230005597,
+      "inspection_right": 0.09140778900109581,
+      "inspection_top": 0.09286379600234795
     },
-    "total_seconds": 3.4685557879984117
+    "total_seconds": 3.669011454006977
   },
   "single_initial_observation": true,
   "task_id": "l2_two_person_target_specific_drink_allocation"

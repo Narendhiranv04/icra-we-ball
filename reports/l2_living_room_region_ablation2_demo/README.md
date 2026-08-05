@@ -1,6 +1,6 @@
 # Living-room Region Ablation 2
 
-Goal: **Set up the living room for two people watching television. Place one drink in a separate accessible region beside each seating position, and keep the TV remote and game controller together in one shared accessible region.**
+Goal: **Prepare movie night for two people. Place one drink-and-snack set beside each person, and keep the TV remote and handheld game device together on one shared surface accessible to both.**
 
 All candidate regions, payloads, and seating targets are visible in one
 five-view observation. The three policies reuse identical saved evidence.

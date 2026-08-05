@@ -116,7 +116,7 @@ def test_ablation2_scenes_compile_without_robot(scene_name):
         for joint_id in range(model.njnt)
         if model.jnt_type[joint_id] == mujoco.mjtJoint.mjJNT_FREE
     ]
-    assert len(free_joints) == 4
+    assert len(free_joints) == 6
 
 
 @pytest.mark.parametrize("scene_name", L2_ABLATION2_SCENES)
