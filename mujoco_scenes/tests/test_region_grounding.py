@@ -36,7 +36,7 @@ from mujoco_scenes.region_grounding import (
     semantic_region_role_status,
 )
 from mujoco_scenes.semantic_grounding import Detection, load_semantic_config
-from mujoco_scenes.generate_region_ablation_report import _write_html
+from mujoco_scenes.generate_region_ablation_report import _data_uri, _write_html
 
 
 TASK = load_region_task(DEFAULT_TASK_CONFIG)
@@ -593,3 +593,11 @@ def test_living_room_presentation_report_exposes_complete_component_audit(
     assert report.count("detector overlay") == 5
     assert "RegionMeasurementEvidence" in report
     assert "presentation_report.html" in redirect
+
+
+def test_living_room_report_embeds_displayed_media(tmp_path):
+    image = tmp_path / "frame.png"
+    image.write_bytes(b"\x89PNG\r\n\x1a\nportable-report-test")
+    uri = _data_uri(tmp_path, "frame.png")
+    assert uri.startswith("data:image/png;base64,")
+    assert "frame.png" not in uri

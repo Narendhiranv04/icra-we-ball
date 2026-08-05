@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import html
 import json
+import mimetypes
 import shutil
 import subprocess
 from pathlib import Path
@@ -576,6 +578,15 @@ def _status_badge(status: str) -> str:
     )
 
 
+def _data_uri(report_dir: Path, relative_path: str) -> str:
+    path = report_dir / relative_path
+    if not path.is_file():
+        return html.escape(relative_path, quote=True)
+    mime_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+    encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+    return f"data:{mime_type};base64,{encoded}"
+
+
 def _mode_frame(
     source: Path,
     output: Path,
@@ -681,17 +692,18 @@ def _write_html(
     mode_cards = []
     for mode in MODE_TITLES:
         animation = mode_animations[mode]
-        video = (
-            f"<video controls muted loop playsinline poster='{stage_assets[-1]['overview']}'>"
-            f"<source src='{animation['mp4']}' type='video/mp4'></video>"
+        animation_uri = _data_uri(report_dir, animation["gif"])
+        downloads = (
+            f"<a href='{animation['mp4']}'>download MP4</a> · "
             if animation.get("mp4")
-            else f"<img class='wide' src='{animation['gif']}' alt='{mode} animation'>"
+            else ""
         )
         mode_cards.append(
             f"<article class='mode mode-{mode}'><h3>{MODE_TITLES[mode]}</h3>"
-            f"<p>{mode_explanations[mode]}</p>{video}"
-            f"<details><summary>Open GIF and outcome data</summary><div class='inside'>"
-            f"<img class='wide' src='{animation['gif']}' alt='{mode} GIF'>"
+            f"<p>{mode_explanations[mode]}</p>"
+            f"<img class='wide' src='{animation_uri}' alt='{mode} animated progression'>"
+            f"<details><summary>Animation downloads and outcome data</summary><div class='inside'>"
+            f"<p>{downloads}<a href='{animation['gif']}'>download GIF</a></p>"
             f"<p>Selected <code>{summary['modes'][mode].get('selected_region_id')}</code> "
             f"at stage {_fmt(summary['modes'][mode].get('completion_stage'))}.</p>"
             "</div></details></article>"
@@ -764,7 +776,8 @@ def _write_html(
     stage_html = []
     for index, asset in enumerate(stage_assets):
         cameras = "".join(
-            f"<figure><img class='wide' src='{camera['consensus']}' "
+            f"<figure><img class='wide' "
+            f"src='{_data_uri(report_dir, camera['consensus'])}' "
             f"alt='{camera['camera_id']} detector overlay'><figcaption>"
             f"{html.escape(camera['camera_id'])} · "
             f"<a href='{camera['raw']}'>raw detector boxes</a>"
@@ -774,12 +787,12 @@ def _write_html(
         stage_html.append(
             f"<details {'open' if index == 0 else ''}><summary>{html.escape(asset['title'])}</summary>"
             "<div class='inside'>"
-            f"<img class='wide' src='{asset['overview']}' alt='complete stage overview'>"
+            f"<img class='wide' src='{_data_uri(report_dir, asset['overview'])}' alt='complete stage overview'>"
             "<div class='component-grid'>"
-            f"<figure><figcaption>YOLO-World semantic overview</figcaption><img class='wide' src='{asset['semantic']}'></figure>"
-            f"<figure><figcaption>Fresh stage-local point cloud</figcaption><img class='wide' src='{asset['pointcloud']}'></figure>"
-            f"<figure><figcaption>Observed graph through this stage</figcaption><img class='wide' src='{asset['graph']}'></figure>"
-            f"<figure><figcaption>Front-view region/payload masks</figcaption><img class='wide' src='{asset['mask']}'></figure>"
+            f"<figure><figcaption>YOLO-World semantic overview</figcaption><img class='wide' src='{_data_uri(report_dir, asset['semantic'])}'></figure>"
+            f"<figure><figcaption>Fresh stage-local point cloud</figcaption><img class='wide' src='{_data_uri(report_dir, asset['pointcloud'])}'></figure>"
+            f"<figure><figcaption>Observed graph through this stage</figcaption><img class='wide' src='{_data_uri(report_dir, asset['graph'])}'></figure>"
+            f"<figure><figcaption>Front-view region/payload masks</figcaption><img class='wide' src='{_data_uri(report_dir, asset['mask'])}'></figure>"
             "</div><details><summary>Five RGB detector and association overlays</summary>"
             f"<div class='inside camera-grid'>{cameras}</div></details>"
             f"<p class='downloads'><a href='{asset['semantic']}'>semantic PNG</a> · "
@@ -792,15 +805,15 @@ def _write_html(
     css = """*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#eef2f7;color:#111827;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;line-height:1.55}nav{position:sticky;top:0;z-index:10;background:#0f172a;padding:12px 24px;box-shadow:0 3px 12px #0004}nav a{color:#f8fafc;text-decoration:none;font-weight:800;margin-right:22px}main{max-width:1560px;margin:auto;padding:24px}.hero{background:linear-gradient(125deg,#0f172a,#253b67);color:white}.card,.mode,section{background:white;border-radius:17px;padding:27px;margin:20px 0;box-shadow:0 4px 18px #0f172a14}h1{font-size:43px;line-height:1.12;margin:.25em 0}.lede{font-size:20px;color:#dbeafe;max-width:1050px}.pill{display:inline-block;padding:6px 12px;background:#dcfce7;color:#166534;border-radius:999px;font-weight:800;margin:5px}.wide{display:block;width:100%;height:auto;border:1px solid #dbe3ef;border-radius:11px;background:white}video{display:block;width:100%;max-height:760px;border-radius:11px;background:#111}table{width:100%;border-collapse:collapse;font-size:13px}th,td{border:1px solid #dbe3ef;padding:9px;text-align:left;vertical-align:top}th{background:#e9eef5;position:sticky;top:47px;z-index:2}.scroll{overflow:auto}.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.mode{margin:0;border-top:8px solid #64748b}.mode-geometry_only{border-color:#7c3aed}.mode-semantic_only{border-color:#ea580c}.mode-joint{border-color:#16a34a}details{border:1px solid #dbe3ef;border-radius:11px;margin:14px 0;overflow:hidden}summary{padding:14px 16px;background:#f8fafc;font-weight:850;cursor:pointer}.inside{padding:16px}.component-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}.camera-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}figure{margin:0}figcaption{font-weight:800;margin:0 0 7px}.status{display:inline-block;color:white;border-radius:999px;padding:3px 9px;font-weight:900;font-size:11px}.status-true{background:#239456}.status-false{background:#cf3e3e}.status-unknown{background:#7c8593}.callout{padding:16px;border-radius:10px;margin:12px 0}.success{background:#dcfce7;color:#14532d;border-left:6px solid #16a34a}code{background:#e8edf4;padding:2px 5px;border-radius:4px;overflow-wrap:anywhere}.pipeline{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.pipeline span{padding:10px 13px;background:#e9eef5;border-radius:9px;font-weight:800}.pipeline b{color:#64748b}.downloads a{font-weight:750}@media(max-width:1100px){.modes{grid-template-columns:1fr}.two,.component-grid{grid-template-columns:1fr}}@media(max-width:760px){nav{position:static}nav a{display:inline-block;margin:4px 12px 4px 0}main{padding:10px}section,.card,.mode{padding:17px}h1{font-size:32px}.camera-grid{grid-template-columns:1fr}}"""
     document = f"""<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Living-room Region Ablation 1</title><style>{css}</style></head><body>
 <nav><a href="#summary">Summary</a><a href="#ablations">Ablations</a><a href="#matrix">Matrix</a><a href="#measurements">Measurements</a><a href="#stages">Scene audit</a><a href="#provenance">Provenance</a></nav><main>
-<section id="summary" class="hero"><small>PRESENTATION REPORT · LIVING-ROOM REGION ABLATION 1</small><h1>Semantic–geometric destination-region grounding</h1><p class="lede"><b>Goal:</b> {html.escape(run_config['natural_language_goal'])}</p><span class="pill">Scene: {html.escape(run_config['scene_name'])}</span><span class="pill">3 observed regions</span><span class="pill">5 RGB-D cameras per stage</span><span class="pill">Same evidence for all modes</span><span class="pill">No robot / FM / TAMP</span><img class="wide" src="region_ablation_comparison.png" alt="same-evidence ablation comparison"></section>
+<section id="summary" class="hero"><small>PRESENTATION REPORT · LIVING-ROOM REGION ABLATION 1</small><h1>Semantic–geometric destination-region grounding</h1><p class="lede"><b>Goal:</b> {html.escape(run_config['natural_language_goal'])}</p><span class="pill">Scene: {html.escape(run_config['scene_name'])}</span><span class="pill">3 observed regions</span><span class="pill">5 RGB-D cameras per stage</span><span class="pill">Same evidence for all modes</span><span class="pill">No robot / FM / TAMP</span><img class="wide" src="{_data_uri(report_dir, 'region_ablation_comparison.png')}" alt="same-evidence ablation comparison"></section>
 <section><h2>What was run</h2><div class="pipeline"><span>Rendered RGB-D + masks</span><b>→</b><span>five-view world cloud</span><b>→</b><span>stage-local region evidence</span><b>→</b><span>YOLO-World semantics</span><b>→</b><span>geometry relations</span><b>→</b><span>joint verified handoff</span></div><p>The benchmark searches for a destination surface for one measured refreshment tray. The three acceptance modes reuse the exact same saved observations; only their acceptance logic changes.</p></section>
 <section><h2>Headline outcomes</h2><div class="scroll"><table><thead><tr><th>Mode</th><th>Selected region</th><th>Stage</th><th>Interpretation</th><th>Production-valid?</th></tr></thead><tbody>{''.join(outcomes)}</tbody></table></div><h3>Stage-by-stage decisions</h3><div class="scroll"><table><thead><tr><th>Stage</th><th>RGB parent</th><th>Geometry-only</th><th>Semantic-only</th><th>Joint</th><th>Joint reason</th></tr></thead><tbody>{''.join(progression_rows)}</tbody></table></div></section>
 <section id="ablations"><h2>Three individual policy ablations</h2><div class="modes">{''.join(mode_cards)}</div></section>
-<section id="matrix"><h2>Compatibility matrix</h2><p>Each row is a generic persistent region. Green means the saved evidence supports that gate; red means it refutes it. Joint acceptance requires every required column to be TRUE.</p><img class="wide" src="region_compatibility_matrix.png" alt="region compatibility matrix"><div class="scroll"><table><thead><tr><th>ID</th><th>RGB parent</th><th>confidence</th><th>views</th><th>support L×W (m)</th><th>fit margin (m)</th><th>semantics</th><th>planar</th><th>fits</th><th>near</th><th>joint</th><th>rejection</th></tr></thead><tbody>{_table_html(rows)}</tbody></table></div></section>
+<section id="matrix"><h2>Compatibility matrix</h2><p>Each row is a generic persistent region. Green means the saved evidence supports that gate; red means it refutes it. Joint acceptance requires every required column to be TRUE.</p><img class="wide" src="{_data_uri(report_dir, 'region_compatibility_matrix.png')}" alt="region compatibility matrix"><div class="scroll"><table><thead><tr><th>ID</th><th>RGB parent</th><th>confidence</th><th>views</th><th>support L×W (m)</th><th>fit margin (m)</th><th>semantics</th><th>planar</th><th>fits</th><th>near</th><th>joint</th><th>rejection</th></tr></thead><tbody>{_table_html(rows)}</tbody></table></div></section>
 <section id="measurements"><h2>Payload MeasurementEvidence</h2>{payload_html}<h2>Region MeasurementEvidence</h2><div class="scroll"><table><thead><tr><th>ID</th><th>RGB label</th><th>confidence / views</th><th>support L×W (m)</th><th>area (m²)</th><th>planarity</th><th>points / cameras</th><th>sofa distance (m)</th><th>fit margin (m)</th><th>stage-local evidence path</th></tr></thead><tbody>{''.join(measurement_rows)}</tbody></table></div></section>
 <section><h2>How the geometric checks are defined</h2><div class="two"><div><h3>PLANAR_SUPPORT(region)</h3><p>Uses only the fresh region point cloud. A dominant horizontal plane must have enough support, sufficient planarity, acceptable normal alignment to gravity, and valid multi-view coverage.</p><h3>FITS_ON(payload, region)</h3><p>The measured payload footprint plus edge clearance is tested against the measured usable support extents at 0° and 90°. The minimum signed dimension margin determines TRUE/FALSE.</p></div><div><h3>NEAR_SEATING_AREA(region, sofa)</h3><p>The measured region centroid is compared with the sofa context reconstructed from current visible evidence. It passes when the measured distance is within the configured maximum.</p><h3>Joint gate</h3><p><code>semantic compatibility AND PLANAR_SUPPORT AND FITS_ON AND NEAR_SEATING_AREA</code>. Required UNKNOWN or FALSE evidence cannot complete the task.</p></div></div></section>
-<section><h2>Verified production handoff</h2>{handoff_html}<img class="wide" src="region_assignment_graph.png" alt="final observed region-function graph"></section>
-<section><h2>Full progression animation</h2><video controls muted loop playsinline><source src="region_progression.mp4" type="video/mp4"></video><details><summary>Open the GIF version</summary><div class="inside"><img class="wide" src="region_progression.gif" alt="complete region progression GIF"></div></details></section>
+<section><h2>Verified production handoff</h2>{handoff_html}<img class="wide" src="{_data_uri(report_dir, 'region_assignment_graph.png')}" alt="final observed region-function graph"></section>
+<section><h2>Full progression animation</h2><img class="wide" src="{_data_uri(report_dir, 'region_progression.gif')}" alt="complete animated region progression"><p class="downloads"><a href="region_progression.mp4">download MP4</a> · <a href="region_progression.gif">download GIF</a></p></section>
 <section id="stages"><h2>Rendered scene and component audit</h2><p>Expand every stage to inspect the scene, five RGB detections, association overlays, stage-local point cloud, region mask, and graph. These are the actual artifacts used by the report.</p>{''.join(stage_html)}</section>
 <section id="provenance"><h2>Provenance and evidence boundary</h2><p><b>Detector:</b> {html.escape(str(detector.get('name', 'UNKNOWN')))}; <b>checkpoint:</b> {html.escape(str(detector.get('checkpoint', 'UNKNOWN')))}; <b>version:</b> {html.escape(str(detector.get('version', 'UNKNOWN')))}; <b>device:</b> {html.escape(str(detector.get('device', 'UNKNOWN')))}; <b>capture:</b> {html.escape(str(run_config.get('capture_resolution')))}.</p><p>Geometry consumed typed, fresh <code>RegionMeasurementEvidence</code> and <code>PayloadMeasurementEvidence</code> only. Cumulative visualization clouds, complete-room combined clouds, configured geom sizes, hidden simulator geometry, and detector labels are not geometric measurement inputs. RGB semantics come from rendered pixels and are associated through visible masks. No placement, robot motion, navigation, FM, LLM, VLM, planning, or TAMP execution occurs.</p><p class="downloads"><a href="offline_region_ablation_evaluation.json">offline evaluation JSON</a> · <a href="region_compatibility_matrix.json">matrix JSON</a> · <a href="region_compatibility_matrix.csv">matrix CSV</a> · <a href="region_registry.json">region registry</a> · <a href="payload_registry.json">payload registry</a> · <a href="verified_region_handoff.json">verified handoff</a> · <a href="events.jsonl">events</a></p></section>
 </main></body></html>"""
