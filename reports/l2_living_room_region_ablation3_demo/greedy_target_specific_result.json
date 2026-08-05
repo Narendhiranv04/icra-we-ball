@@ -1,0 +1,38 @@
+{
+  "alternative_complete_matchings": [],
+  "blocked_targets": [
+    "seating_0002"
+  ],
+  "candidate_region_count": 2,
+  "classification": "CORRECT_REJECTION",
+  "compatibility_edge_count": 2,
+  "covered_target_count": 1,
+  "covered_target_ids": [
+    "seating_0001"
+  ],
+  "duplicate_region_violations": false,
+  "failure_reason": "GREEDY_ASSIGNMENT_BLOCKED",
+  "maximum_matching_cardinality": 1,
+  "policy": "greedy_target_specific",
+  "region_target_assignments": [
+    {
+      "candidate_rank": 1,
+      "fit_margin_m": 0.2687191772608054,
+      "near_seat_margin_m": 0.3070437187500431,
+      "region_id": "region_0001",
+      "seating_target_id": "seating_0001"
+    }
+  ],
+  "selected_region_ids": [
+    "region_0001"
+  ],
+  "selected_target_ids": [
+    "seating_0001"
+  ],
+  "status": "EXHAUSTED",
+  "target_count": 2,
+  "uncovered_target_ids": [
+    "seating_0002"
+  ],
+  "valid_against_true_task": true
+}

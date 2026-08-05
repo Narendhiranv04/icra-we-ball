@@ -1,0 +1,533 @@
+{
+  "objects": {
+    "object_0001": {
+      "geometry": {
+        "footprint_area_m2": {
+          "contributing_camera_ids": [
+            "inspection_left",
+            "inspection_right",
+            "inspection_top",
+            "inspection_front",
+            "inspection_close"
+          ],
+          "extractor_version": "payload_robust_horizontal_obb_v1",
+          "measurement_cloud_path": "observation/payloads/object_0001/fused.ply",
+          "method": "payload_robust_horizontal_obb_v1",
+          "point_count": 5706,
+          "source_stage": 0,
+          "status": "DERIVED",
+          "unit": "m2",
+          "value": 0.014619915287274559
+        },
+        "footprint_length_m": {
+          "contributing_camera_ids": [
+            "inspection_left",
+            "inspection_right",
+            "inspection_top",
+            "inspection_front",
+            "inspection_close"
+          ],
+          "extractor_version": "payload_robust_horizontal_obb_v1",
+          "measurement_cloud_path": "observation/payloads/object_0001/fused.ply",
+          "method": "payload_robust_horizontal_obb_v1",
+          "point_count": 5706,
+          "source_stage": 0,
+          "status": "MEASURED",
+          "unit": "m",
+          "value": 0.1407263530581176
+        },
+        "footprint_width_m": {
+          "contributing_camera_ids": [
+            "inspection_left",
+            "inspection_right",
+            "inspection_top",
+            "inspection_front",
+            "inspection_close"
+          ],
+          "extractor_version": "payload_robust_horizontal_obb_v1",
+          "measurement_cloud_path": "observation/payloads/object_0001/fused.ply",
+          "method": "payload_robust_horizontal_obb_v1",
+          "point_count": 5706,
+          "source_stage": 0,
+          "status": "MEASURED",
+          "unit": "m",
+          "value": 0.10388896585159699
+        },
+        "measurement_quality": {
+          "cloud_purpose": "PAYLOAD_MEASUREMENT_EVIDENCE",
+          "contributing_camera_count": 5,
+          "point_count": 5706,
+          "quality_is_valid": true
+        },
+        "principal_orientation_world": {
+          "contributing_camera_ids": [
+            "inspection_left",
+            "inspection_right",
+            "inspection_top",
+            "inspection_front",
+            "inspection_close"
+          ],
+          "extractor_version": "payload_robust_horizontal_obb_v1",
+          "measurement_cloud_path": "observation/payloads/object_0001/fused.ply",
+          "method": "payload_robust_horizontal_obb_v1",
+          "point_count": 5706,
+          "source_stage": 0,
+          "status": "MEASURED",
+          "value": [
+            -0.9798605115824882,
+            -0.19968319368766307,
+            0.0
+          ]
+        },
+        "property_status": "MEASURED"
+      },
+      "identity": {
+        "entity_type": "drink_payload",
+        "object_id": "object_0001"
+      },
+      "provenance": {
+        "contributing_camera_ids": [
+          "inspection_left",
+          "inspection_right",
+          "inspection_top",
+          "inspection_front",
+          "inspection_close"
+        ],
+        "measurement_cloud_path": "observation/payloads/object_0001/fused.ply",
+        "measurement_purpose": "PAYLOAD_MEASUREMENT_EVIDENCE",
+        "point_count": 5706
+      },
+      "semantic_payload_role": "drink",
+      "semantics": {
+        "alternatives": [
+          {
+            "camera_ids": [
+              "inspection_close",
+              "inspection_front",
+              "inspection_left",
+              "inspection_right"
+            ],
+            "label": "cup",
+            "mean_confidence": 0.5442389026284218,
+            "supporting_view_count": 4,
+            "weighted_score": 1.9393674143137956
+          }
+        ],
+        "canonical_label": "cup",
+        "confidence": 0.5442389026284218,
+        "entity_id": "object_0001",
+        "entity_type": "payload",
+        "observations": [
+          {
+            "association_metrics": {
+              "box_fraction": 0.7281818181818182,
+              "intersection_pixels": 1602,
+              "mask_fraction": 0.994413407821229,
+              "score": 0.9012323514474352
+            },
+            "detection": {
+              "bbox_xyxy": [
+                761.48779296875,
+                579.3707275390625,
+                800.759765625,
+                633.1190185546875
+              ],
+              "canonical_label": "cup",
+              "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.7117301225662231,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "cup",
+              "source_camera": "inspection_left"
+            },
+            "entity_id": "object_0001",
+            "entity_type": "payload",
+            "weighted_score": 0.6414342119563285
+          },
+          {
+            "association_metrics": {
+              "box_fraction": 0.6952380952380952,
+              "intersection_pixels": 803,
+              "mask_fraction": 0.9950433705080545,
+              "score": 0.8901115241635688
+            },
+            "detection": {
+              "bbox_xyxy": [
+                287.78924560546875,
+                473.0408935546875,
+                319.0924072265625,
+                507.98724365234375
+              ],
+              "canonical_label": "cup",
+              "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.6177523136138916,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "cup",
+              "source_camera": "inspection_right"
+            },
+            "entity_id": "object_0001",
+            "entity_type": "payload",
+            "weighted_score": 0.549868453426432
+          },
+          {
+            "association_metrics": {
+              "box_fraction": 0.752715837621498,
+              "intersection_pixels": 2633,
+              "mask_fraction": 0.9623538011695907,
+              "score": 0.8889805139277582
+            },
+            "detection": {
+              "bbox_xyxy": [
+                331.9721374511719,
+                575.202880859375,
+                383.5837707519531,
+                640.645751953125
+              ],
+              "canonical_label": "cup",
+              "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.25255414843559265,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "cup",
+              "source_camera": "inspection_front"
+            },
+            "entity_id": "object_0001",
+            "entity_type": "payload",
+            "weighted_score": 0.22451571667086048
+          },
+          {
+            "association_metrics": {
+              "box_fraction": 0.6603762492651382,
+              "intersection_pixels": 11233,
+              "mask_fraction": 0.998311411304657,
+              "score": 0.8800341045908253
+            },
+            "detection": {
+              "bbox_xyxy": [
+                61.63829803466797,
+                610.1962890625,
+                195.00457763671875,
+                735.2955322265625
+              ],
+              "canonical_label": "cup",
+              "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.5949190258979797,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "cup",
+              "source_camera": "inspection_close"
+            },
+            "entity_id": "object_0001",
+            "entity_type": "payload",
+            "weighted_score": 0.5235490322601746
+          }
+        ],
+        "status": "SUPPORTED",
+        "supporting_view_count": 4,
+        "weighted_score_margin": 1.9393674143137956
+      }
+    },
+    "object_0002": {
+      "geometry": {
+        "footprint_area_m2": {
+          "contributing_camera_ids": [
+            "inspection_left",
+            "inspection_right",
+            "inspection_top",
+            "inspection_front",
+            "inspection_close"
+          ],
+          "extractor_version": "payload_robust_horizontal_obb_v1",
+          "measurement_cloud_path": "observation/payloads/object_0002/fused.ply",
+          "method": "payload_robust_horizontal_obb_v1",
+          "point_count": 5435,
+          "source_stage": 0,
+          "status": "DERIVED",
+          "unit": "m2",
+          "value": 0.014746801137140404
+        },
+        "footprint_length_m": {
+          "contributing_camera_ids": [
+            "inspection_left",
+            "inspection_right",
+            "inspection_top",
+            "inspection_front",
+            "inspection_close"
+          ],
+          "extractor_version": "payload_robust_horizontal_obb_v1",
+          "measurement_cloud_path": "observation/payloads/object_0002/fused.ply",
+          "method": "payload_robust_horizontal_obb_v1",
+          "point_count": 5435,
+          "source_stage": 0,
+          "status": "MEASURED",
+          "unit": "m",
+          "value": 0.13955868539249416
+        },
+        "footprint_width_m": {
+          "contributing_camera_ids": [
+            "inspection_left",
+            "inspection_right",
+            "inspection_top",
+            "inspection_front",
+            "inspection_close"
+          ],
+          "extractor_version": "payload_robust_horizontal_obb_v1",
+          "measurement_cloud_path": "observation/payloads/object_0002/fused.ply",
+          "method": "payload_robust_horizontal_obb_v1",
+          "point_count": 5435,
+          "source_stage": 0,
+          "status": "MEASURED",
+          "unit": "m",
+          "value": 0.10566738355027186
+        },
+        "measurement_quality": {
+          "cloud_purpose": "PAYLOAD_MEASUREMENT_EVIDENCE",
+          "contributing_camera_count": 5,
+          "point_count": 5435,
+          "quality_is_valid": true
+        },
+        "principal_orientation_world": {
+          "contributing_camera_ids": [
+            "inspection_left",
+            "inspection_right",
+            "inspection_top",
+            "inspection_front",
+            "inspection_close"
+          ],
+          "extractor_version": "payload_robust_horizontal_obb_v1",
+          "measurement_cloud_path": "observation/payloads/object_0002/fused.ply",
+          "method": "payload_robust_horizontal_obb_v1",
+          "point_count": 5435,
+          "source_stage": 0,
+          "status": "MEASURED",
+          "value": [
+            -0.9966811220619698,
+            -0.08140479669707928,
+            0.0
+          ]
+        },
+        "property_status": "MEASURED"
+      },
+      "identity": {
+        "entity_type": "drink_payload",
+        "object_id": "object_0002"
+      },
+      "provenance": {
+        "contributing_camera_ids": [
+          "inspection_left",
+          "inspection_right",
+          "inspection_top",
+          "inspection_front",
+          "inspection_close"
+        ],
+        "measurement_cloud_path": "observation/payloads/object_0002/fused.ply",
+        "measurement_purpose": "PAYLOAD_MEASUREMENT_EVIDENCE",
+        "point_count": 5435
+      },
+      "semantic_payload_role": "drink",
+      "semantics": {
+        "alternatives": [
+          {
+            "camera_ids": [
+              "inspection_close",
+              "inspection_front",
+              "inspection_left",
+              "inspection_right"
+            ],
+            "label": "cup",
+            "mean_confidence": 0.6771490275859833,
+            "supporting_view_count": 4,
+            "weighted_score": 2.4352850524329024
+          }
+        ],
+        "canonical_label": "cup",
+        "confidence": 0.6771490275859833,
+        "entity_id": "object_0002",
+        "entity_type": "payload",
+        "observations": [
+          {
+            "association_metrics": {
+              "box_fraction": 0.7714285714285715,
+              "intersection_pixels": 1242,
+              "mask_fraction": 1.0,
+              "score": 0.92
+            },
+            "detection": {
+              "bbox_xyxy": [
+                843.0218505859375,
+                536.5830078125,
+                877.8365478515625,
+                581.70947265625
+              ],
+              "canonical_label": "cup",
+              "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.7288024425506592,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "cup",
+              "source_camera": "inspection_left"
+            },
+            "entity_id": "object_0002",
+            "entity_type": "payload",
+            "weighted_score": 0.6704982471466064
+          },
+          {
+            "association_metrics": {
+              "box_fraction": 0.7161764705882353,
+              "intersection_pixels": 974,
+              "mask_fraction": 1.0,
+              "score": 0.9006617647058823
+            },
+            "detection": {
+              "bbox_xyxy": [
+                334.92816162109375,
+                499.42413330078125,
+                367.29119873046875,
+                538.3817749023438
+              ],
+              "canonical_label": "cup",
+              "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.7981817126274109,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "cup",
+              "source_camera": "inspection_right"
+            },
+            "entity_id": "object_0002",
+            "entity_type": "payload",
+            "weighted_score": 0.7188917498509674
+          },
+          {
+            "association_metrics": {
+              "box_fraction": 0.790395846852693,
+              "intersection_pixels": 2436,
+              "mask_fraction": 0.9534246575342465,
+              "score": 0.8963645737957028
+            },
+            "detection": {
+              "bbox_xyxy": [
+                516.3116455078125,
+                574.901123046875,
+                561.3338623046875,
+                640.669189453125
+              ],
+              "canonical_label": "cup",
+              "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.5913013219833374,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "cup",
+              "source_camera": "inspection_front"
+            },
+            "entity_id": "object_0002",
+            "entity_type": "payload",
+            "weighted_score": 0.5300215574644298
+          },
+          {
+            "association_metrics": {
+              "box_fraction": 0.639719298245614,
+              "intersection_pixels": 9116,
+              "mask_fraction": 1.0,
+              "score": 0.8739017543859648
+            },
+            "detection": {
+              "bbox_xyxy": [
+                410.63958740234375,
+                610.2506103515625,
+                523.9459838867188,
+                734.4522705078125
+              ],
+              "canonical_label": "cup",
+              "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+              "confidence": 0.5903106331825256,
+              "crop_source_object_id": null,
+              "detection_id": null,
+              "detector_name": "ultralytics_yolo_world",
+              "detector_version": "8.4.112",
+              "inference_resolution": [
+                1280,
+                960
+              ],
+              "input_crop_box_xyxy": null,
+              "input_image_path": null,
+              "input_kind": "FULL_FRAME",
+              "raw_label": "cup",
+              "source_camera": "inspection_close"
+            },
+            "entity_id": "object_0002",
+            "entity_type": "payload",
+            "weighted_score": 0.5158734979708989
+          }
+        ],
+        "status": "SUPPORTED",
+        "supporting_view_count": 4,
+        "weighted_score_margin": 2.4352850524329024
+      }
+    }
+  },
+  "schema_version": 1
+}

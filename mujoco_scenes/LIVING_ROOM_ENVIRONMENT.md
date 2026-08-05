@@ -721,3 +721,64 @@ manual function contract are calibrated for this controlled benchmark;
 arbitrary region proposal, free-space reasoning beyond deterministic
 two-rectangle packing, FM parsing, placement feasibility, collision-aware
 execution, and TAMP remain future work.
+
+## Region Ablation 3: target coverage and global matching
+
+Region Ablation 3 uses the exact goal:
+
+> Set up drinks for two people watching television. Place one drink on a
+> suitable accessible surface beside each person’s seating position.
+
+All two drinks, two armchairs, and candidate side tables are visible in one
+initial five-view RGB-D observation. This is allocation, not region discovery.
+YOLO-World and point-cloud extraction run once per scene; count-only, greedy,
+and global policies reuse the identical hashed evidence.
+
+The controlled candidate tables all pass side-table semantics,
+`PLANAR_SUPPORT`, and `FITS_ON` for both cups. Only the measured
+`NEAR_SEAT(region, target)` relation changes the compatibility graph:
+
+- `TARGET_AGNOSTIC_COUNT` ignores target columns and can falsely complete
+  when two tables both serve only one chair.
+- `GREEDY_TARGET_SPECIFIC` uses valid edges but does not backtrack, so the
+  flexible-table matching trap produces a false negative.
+- `GLOBAL_TARGET_SPECIFIC` computes deterministic maximum-cardinality
+  one-to-one matching and is the production method.
+
+The four scenes are `L2_living_room_region_ablation3_primary`,
+`L2_living_room_region_ablation3_matching_trap`,
+`L2_living_room_region_ablation3_valid`, and
+`L2_living_room_region_ablation3_permuted`. They support Google Robot
+composition and robot-free authoritative rendering.
+
+Local actual-detector command:
+
+```bash
+MUJOCO_GL=egl PYOPENGL_PLATFORM=egl YOLO_CONFIG_DIR=/tmp \
+MUJOCO_SEMANTIC_PROCESS_ISOLATION=1 \
+python -m mujoco_scenes.run_l2_region_ablation3 \
+  --scene L2_living_room_region_ablation3_primary \
+  --no-robot --runs-root runs --run-id ablation3_primary \
+  --semantic-detector yolo_world \
+  --semantic-model semantic_model_cache/yolov8m-worldv2.pt \
+  --width 1280 --height 960
+```
+
+One-command Docker demonstration:
+
+```bash
+docker build -f mujoco_scenes/Dockerfile -t mujoco-kitchen-s1 .
+./mujoco_scenes/scripts/run_l2_region_ablation3_demo.sh \
+  l2_living_room_region_ablation3_demo
+```
+
+Open the self-contained report at
+`reports/l2_living_room_region_ablation3_demo/presentation_report.html`.
+It includes actual semantic overlays, point-cloud measurements, signed
+region-seat margins, the compatibility matrix, count/greedy/global graphs,
+matching diagnostics, GIF, MP4, and successful global handoffs.
+
+Requirements remain a manual future-FM contract. No FM is called; no search
+order, navigation, placement, manipulation, or TAMP execution is generated.
+The successful output is a verified drink-target-region allocation for future
+TAMP.

@@ -1,0 +1,184 @@
+{
+  "evidence_manifest_sha256": "0427565b17a415db9a495f51371981d25904671dea1fb7eab562e5a7907d24cc",
+  "policies": {
+    "global_target_specific": {
+      "alternative_complete_matchings": [],
+      "candidate_region_count": 2,
+      "classification": "CORRECT",
+      "compatibility_edge_count": 3,
+      "covered_target_count": 2,
+      "covered_target_ids": [
+        "seating_0001",
+        "seating_0002"
+      ],
+      "duplicate_region_violations": false,
+      "failure_reason": null,
+      "hall": [
+        {
+          "coverage_deficit": 0,
+          "hall_condition_satisfied": true,
+          "neighbourhood_size": 2,
+          "neighbouring_region_ids": [
+            "region_0001",
+            "region_0002"
+          ],
+          "target_subset": [
+            "seating_0001"
+          ],
+          "target_subset_size": 1
+        },
+        {
+          "coverage_deficit": 0,
+          "hall_condition_satisfied": true,
+          "neighbourhood_size": 1,
+          "neighbouring_region_ids": [
+            "region_0002"
+          ],
+          "target_subset": [
+            "seating_0002"
+          ],
+          "target_subset_size": 1
+        },
+        {
+          "coverage_deficit": 0,
+          "hall_condition_satisfied": true,
+          "neighbourhood_size": 2,
+          "neighbouring_region_ids": [
+            "region_0001",
+            "region_0002"
+          ],
+          "target_subset": [
+            "seating_0001",
+            "seating_0002"
+          ],
+          "target_subset_size": 2
+        }
+      ],
+      "maximum_matching_cardinality": 2,
+      "policy": "global_target_specific",
+      "region_target_assignments": [
+        {
+          "candidate_rank": 2,
+          "fit_margin_m": 0.2687191772608054,
+          "near_seat_margin_m": 0.33739508147487196,
+          "region_id": "region_0001",
+          "seating_target_id": "seating_0001"
+        },
+        {
+          "candidate_rank": 1,
+          "fit_margin_m": 0.2798442915308883,
+          "near_seat_margin_m": 0.148193143937001,
+          "region_id": "region_0002",
+          "seating_target_id": "seating_0002"
+        }
+      ],
+      "selected_region_ids": [
+        "region_0001",
+        "region_0002"
+      ],
+      "selected_target_ids": [
+        "seating_0001",
+        "seating_0002"
+      ],
+      "status": "COMPLETE",
+      "target_count": 2,
+      "tie_break": {
+        "persistent_region_ids": [
+          "region_0001",
+          "region_0002"
+        ],
+        "persistent_target_ids": [
+          "seating_0001",
+          "seating_0002"
+        ],
+        "total_candidate_rank": 3,
+        "total_distance_margin_m": 0.48558822541187296,
+        "total_fit_margin_m": 0.5485634687916937
+      },
+      "uncovered_target_ids": [],
+      "valid_against_true_task": true
+    },
+    "greedy_target_specific": {
+      "alternative_complete_matchings": [],
+      "blocked_targets": [
+        "seating_0002"
+      ],
+      "candidate_region_count": 2,
+      "classification": "FALSE_NEGATIVE",
+      "compatibility_edge_count": 3,
+      "covered_target_count": 1,
+      "covered_target_ids": [
+        "seating_0001"
+      ],
+      "duplicate_region_violations": false,
+      "failure_reason": "GREEDY_ASSIGNMENT_BLOCKED",
+      "maximum_matching_cardinality": 2,
+      "policy": "greedy_target_specific",
+      "region_target_assignments": [
+        {
+          "candidate_rank": 1,
+          "fit_margin_m": 0.2798442915308883,
+          "near_seat_margin_m": 0.1562336607906103,
+          "region_id": "region_0002",
+          "seating_target_id": "seating_0001"
+        }
+      ],
+      "selected_region_ids": [
+        "region_0002"
+      ],
+      "selected_target_ids": [
+        "seating_0001"
+      ],
+      "status": "EXHAUSTED",
+      "target_count": 2,
+      "uncovered_target_ids": [
+        "seating_0002"
+      ],
+      "valid_against_true_task": false
+    },
+    "target_agnostic_count": {
+      "alternative_complete_matchings": [],
+      "candidate_region_count": 2,
+      "classification": "DIAGNOSTIC_COMPLETE",
+      "compatibility_edge_count": 3,
+      "counted_region_count": 2,
+      "covered_target_count": 2,
+      "covered_target_ids": [],
+      "decision_used_near_seat": false,
+      "duplicate_region_violations": false,
+      "failure_reason": null,
+      "maximum_matching_cardinality": 2,
+      "policy": "target_agnostic_count",
+      "region_target_assignments": [],
+      "selected_region_ids": [
+        "region_0002",
+        "region_0001"
+      ],
+      "selected_target_ids": [],
+      "status": "COMPLETE",
+      "target_count": 2,
+      "uncovered_target_ids": [
+        "seating_0001",
+        "seating_0002"
+      ],
+      "valid_against_true_task": true
+    }
+  },
+  "rerendered_for_policies": false,
+  "scene_name": "L2_living_room_region_ablation3_matching_trap",
+  "schema_version": 1,
+  "semantic_inference_repeated_for_policies": false,
+  "semantic_inference_timing": {
+    "camera_count": 5,
+    "per_camera_seconds": {
+      "inspection_close": 0.0886921559995244,
+      "inspection_front": 0.0855575220011815,
+      "inspection_left": 3.09581279700069,
+      "inspection_right": 0.09790419599994493,
+      "inspection_top": 0.08885005100091803
+    },
+    "total_seconds": 3.4568167220022588
+  },
+  "single_initial_observation": true,
+  "task_id": "l2_two_person_target_specific_drink_allocation"
+}

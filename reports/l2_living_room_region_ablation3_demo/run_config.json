@@ -1,0 +1,29 @@
+{
+  "capture_resolution": [
+    1280,
+    960
+  ],
+  "created_at": "2026-08-06T01:50:25.170261+05:30",
+  "detector": {
+    "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+    "device": "cpu",
+    "inference_size": 640,
+    "name": "ultralytics_yolo_world",
+    "process_isolation": true,
+    "version": "8.4.112"
+  },
+  "natural_language_goal": "Set up drinks for two people watching television. Place one drink on a suitable accessible surface beside each person\u2019s seating position.",
+  "policy_modes": [
+    "target_agnostic_count",
+    "greedy_target_specific",
+    "global_target_specific"
+  ],
+  "production_policy": "global_target_specific",
+  "scene_name": "L2_living_room_region_ablation3_primary",
+  "schema_version": 1,
+  "single_initial_observation": true,
+  "task_id": "l2_two_person_target_specific_drink_allocation",
+  "uses_foundation_model": false,
+  "uses_robot": false,
+  "uses_tamp": false
+}

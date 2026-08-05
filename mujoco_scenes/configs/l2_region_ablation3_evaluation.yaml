@@ -1,0 +1,49 @@
+schema_version: 1
+scenes:
+  L2_living_room_region_ablation3_primary:
+    expected:
+      target_agnostic_count:
+        status: COMPLETE
+        validity: INVALID
+        classification: FALSE_POSITIVE
+        counted_region_count: 2
+      greedy_target_specific:
+        status: EXHAUSTED
+        validity: VALID
+        classification: CORRECT_REJECTION
+      global_target_specific:
+        status: EXHAUSTED
+        validity: VALID
+        classification: CORRECT_REJECTION
+        maximum_matching_cardinality: 1
+  L2_living_room_region_ablation3_matching_trap:
+    expected:
+      target_agnostic_count:
+        status: COMPLETE
+      greedy_target_specific:
+        status: EXHAUSTED
+        validity: INVALID
+        classification: FALSE_NEGATIVE
+      global_target_specific:
+        status: COMPLETE
+        validity: VALID
+        classification: CORRECT
+        maximum_matching_cardinality: 2
+  L2_living_room_region_ablation3_valid:
+    expected:
+      greedy_target_specific:
+        status: COMPLETE
+        validity: VALID
+        classification: CORRECT
+      global_target_specific:
+        status: COMPLETE
+        validity: VALID
+        classification: CORRECT
+        maximum_matching_cardinality: 2
+  L2_living_room_region_ablation3_permuted:
+    expected:
+      global_target_specific:
+        status: COMPLETE
+        validity: VALID
+        classification: CORRECT
+        maximum_matching_cardinality: 2

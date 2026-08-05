@@ -9,6 +9,7 @@ import pytest
 
 from mujoco_scenes.living_room_region_scene import (
     L2_ABLATION1_SCENES,
+    L2_ABLATION3_SCENES,
     L2_SCENES,
     L2LivingRoomRegionScene,
     build_l2_region_xml,
@@ -372,11 +373,16 @@ def test_l2_variants_compile_without_robot(scene_name):
             )
             >= 0
         )
-    else:
+    elif scene_name not in L2_ABLATION3_SCENES:
         assert sum(
             model.jnt_type[joint_id] == mujoco.mjtJoint.mjJNT_FREE
             for joint_id in range(model.njnt)
         ) == 4
+    else:
+        assert sum(
+            model.jnt_type[joint_id] == mujoco.mjtJoint.mjJNT_FREE
+            for joint_id in range(model.njnt)
+        ) == 2
 
 
 @pytest.mark.parametrize("robot", ("none", "google"))

@@ -1,0 +1,440 @@
+{
+  "adjacency_by_region": {
+    "region_0001": [
+      "seating_0001"
+    ],
+    "region_0002": [
+      "seating_0001"
+    ]
+  },
+  "adjacency_by_target": {
+    "seating_0001": [
+      "region_0001",
+      "region_0002"
+    ],
+    "seating_0002": []
+  },
+  "rows": [
+    {
+      "FITS_ON": "TRUE",
+      "NEAR_SEAT": "TRUE",
+      "PLANAR_SUPPORT": "TRUE",
+      "candidate_rank": 1,
+      "compatibility_status": "TRUE",
+      "fit_margin_m": 0.2687191772608054,
+      "general_suitability_status": "TRUE",
+      "maximum_distance_m": 1.15,
+      "measured_distance_m": 0.8429562812499568,
+      "near_seat_margin_m": 0.3070437187500431,
+      "per_payload_fit_evidence": [
+        {
+          "edge_clearance_margin_m": 0.015,
+          "method": "region_payload_relations_v1",
+          "payload_length_m": 0.1407263530581176,
+          "payload_width_m": 0.10388896585159699,
+          "region_usable_length_m": 0.4844223729733867,
+          "region_usable_width_m": 0.40438656081107727,
+          "relation": "FITS_ON",
+          "selected_orientation_degrees": 0,
+          "signed_fit_margin_m": 0.2704975949594802,
+          "status": "TRUE",
+          "tested_orientations": [
+            {
+              "fits": true,
+              "length_margin_m": 0.3136960199152691,
+              "orientation_degrees": 0,
+              "signed_fit_margin_m": 0.2704975949594802,
+              "width_margin_m": 0.2704975949594802
+            },
+            {
+              "fits": true,
+              "length_margin_m": 0.3505334071217897,
+              "orientation_degrees": 90,
+              "signed_fit_margin_m": 0.23366020775295968,
+              "width_margin_m": 0.23366020775295968
+            }
+          ],
+          "value": true
+        },
+        {
+          "edge_clearance_margin_m": 0.015,
+          "method": "region_payload_relations_v1",
+          "payload_length_m": 0.13955868539249416,
+          "payload_width_m": 0.10566738355027186,
+          "region_usable_length_m": 0.4844223729733867,
+          "region_usable_width_m": 0.40438656081107727,
+          "relation": "FITS_ON",
+          "selected_orientation_degrees": 0,
+          "signed_fit_margin_m": 0.2687191772608054,
+          "status": "TRUE",
+          "tested_orientations": [
+            {
+              "fits": true,
+              "length_margin_m": 0.31486368758089256,
+              "orientation_degrees": 0,
+              "signed_fit_margin_m": 0.2687191772608054,
+              "width_margin_m": 0.2687191772608054
+            },
+            {
+              "fits": true,
+              "length_margin_m": 0.3487549894231148,
+              "orientation_degrees": 90,
+              "signed_fit_margin_m": 0.2348278754185831,
+              "width_margin_m": 0.2348278754185831
+            }
+          ],
+          "value": true
+        }
+      ],
+      "region_centroid_world_m": [
+        -1.485162377357483,
+        0.5807040929794312,
+        0.6288148760795593
+      ],
+      "region_contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "region_evidence_path": "observation/regions/region_0001/fused.ply",
+      "region_id": "region_0001",
+      "region_semantic_confidence": 0.5195316523313522,
+      "region_semantic_label": "side_table",
+      "region_semantic_supporting_views": 4,
+      "rejection_reason": null,
+      "seating_centroid_world_m": [
+        -0.9102882742881775,
+        1.1972225904464722,
+        0.8074507117271423
+      ],
+      "seating_target_id": "seating_0001",
+      "semantic_role_status": "TRUE",
+      "target_contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "target_evidence_path": "observation/seats/seating_0001/observed_points.ply"
+    },
+    {
+      "FITS_ON": "TRUE",
+      "NEAR_SEAT": "FALSE",
+      "PLANAR_SUPPORT": "TRUE",
+      "candidate_rank": 1,
+      "compatibility_status": "FALSE",
+      "fit_margin_m": 0.2687191772608054,
+      "general_suitability_status": "TRUE",
+      "maximum_distance_m": 1.15,
+      "measured_distance_m": 2.4447625952686094,
+      "near_seat_margin_m": -1.2947625952686095,
+      "per_payload_fit_evidence": [
+        {
+          "edge_clearance_margin_m": 0.015,
+          "method": "region_payload_relations_v1",
+          "payload_length_m": 0.1407263530581176,
+          "payload_width_m": 0.10388896585159699,
+          "region_usable_length_m": 0.4844223729733867,
+          "region_usable_width_m": 0.40438656081107727,
+          "relation": "FITS_ON",
+          "selected_orientation_degrees": 0,
+          "signed_fit_margin_m": 0.2704975949594802,
+          "status": "TRUE",
+          "tested_orientations": [
+            {
+              "fits": true,
+              "length_margin_m": 0.3136960199152691,
+              "orientation_degrees": 0,
+              "signed_fit_margin_m": 0.2704975949594802,
+              "width_margin_m": 0.2704975949594802
+            },
+            {
+              "fits": true,
+              "length_margin_m": 0.3505334071217897,
+              "orientation_degrees": 90,
+              "signed_fit_margin_m": 0.23366020775295968,
+              "width_margin_m": 0.23366020775295968
+            }
+          ],
+          "value": true
+        },
+        {
+          "edge_clearance_margin_m": 0.015,
+          "method": "region_payload_relations_v1",
+          "payload_length_m": 0.13955868539249416,
+          "payload_width_m": 0.10566738355027186,
+          "region_usable_length_m": 0.4844223729733867,
+          "region_usable_width_m": 0.40438656081107727,
+          "relation": "FITS_ON",
+          "selected_orientation_degrees": 0,
+          "signed_fit_margin_m": 0.2687191772608054,
+          "status": "TRUE",
+          "tested_orientations": [
+            {
+              "fits": true,
+              "length_margin_m": 0.31486368758089256,
+              "orientation_degrees": 0,
+              "signed_fit_margin_m": 0.2687191772608054,
+              "width_margin_m": 0.2687191772608054
+            },
+            {
+              "fits": true,
+              "length_margin_m": 0.3487549894231148,
+              "orientation_degrees": 90,
+              "signed_fit_margin_m": 0.2348278754185831,
+              "width_margin_m": 0.2348278754185831
+            }
+          ],
+          "value": true
+        }
+      ],
+      "region_centroid_world_m": [
+        -1.485162377357483,
+        0.5807040929794312,
+        0.6288148760795593
+      ],
+      "region_contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "region_evidence_path": "observation/regions/region_0001/fused.ply",
+      "region_id": "region_0001",
+      "region_semantic_confidence": 0.5195316523313522,
+      "region_semantic_label": "side_table",
+      "region_semantic_supporting_views": 4,
+      "rejection_reason": "NEAR_SEAT",
+      "seating_centroid_world_m": [
+        0.9004525542259216,
+        1.1152184009552002,
+        0.7587382197380066
+      ],
+      "seating_target_id": "seating_0002",
+      "semantic_role_status": "TRUE",
+      "target_contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "target_evidence_path": "observation/seats/seating_0002/observed_points.ply"
+    },
+    {
+      "FITS_ON": "TRUE",
+      "NEAR_SEAT": "TRUE",
+      "PLANAR_SUPPORT": "TRUE",
+      "candidate_rank": 2,
+      "compatibility_status": "TRUE",
+      "fit_margin_m": 0.27268467256584517,
+      "general_suitability_status": "TRUE",
+      "maximum_distance_m": 1.15,
+      "measured_distance_m": 1.0559416399418808,
+      "near_seat_margin_m": 0.09405836005811907,
+      "per_payload_fit_evidence": [
+        {
+          "edge_clearance_margin_m": 0.015,
+          "method": "region_payload_relations_v1",
+          "payload_length_m": 0.1407263530581176,
+          "payload_width_m": 0.10388896585159699,
+          "region_usable_length_m": 0.48471000021915456,
+          "region_usable_width_m": 0.408352056116117,
+          "relation": "FITS_ON",
+          "selected_orientation_degrees": 0,
+          "signed_fit_margin_m": 0.27446309026452,
+          "status": "TRUE",
+          "tested_orientations": [
+            {
+              "fits": true,
+              "length_margin_m": 0.313983647161037,
+              "orientation_degrees": 0,
+              "signed_fit_margin_m": 0.27446309026452,
+              "width_margin_m": 0.27446309026452
+            },
+            {
+              "fits": true,
+              "length_margin_m": 0.3508210343675575,
+              "orientation_degrees": 90,
+              "signed_fit_margin_m": 0.23762570305799943,
+              "width_margin_m": 0.23762570305799943
+            }
+          ],
+          "value": true
+        },
+        {
+          "edge_clearance_margin_m": 0.015,
+          "method": "region_payload_relations_v1",
+          "payload_length_m": 0.13955868539249416,
+          "payload_width_m": 0.10566738355027186,
+          "region_usable_length_m": 0.48471000021915456,
+          "region_usable_width_m": 0.408352056116117,
+          "relation": "FITS_ON",
+          "selected_orientation_degrees": 0,
+          "signed_fit_margin_m": 0.27268467256584517,
+          "status": "TRUE",
+          "tested_orientations": [
+            {
+              "fits": true,
+              "length_margin_m": 0.31515131482666037,
+              "orientation_degrees": 0,
+              "signed_fit_margin_m": 0.27268467256584517,
+              "width_margin_m": 0.27268467256584517
+            },
+            {
+              "fits": true,
+              "length_margin_m": 0.3490426166688827,
+              "orientation_degrees": 90,
+              "signed_fit_margin_m": 0.23879337072362286,
+              "width_margin_m": 0.23879337072362286
+            }
+          ],
+          "value": true
+        }
+      ],
+      "region_centroid_world_m": [
+        -0.5545711815357208,
+        0.2030002325773239,
+        0.6282370686531067
+      ],
+      "region_contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "region_evidence_path": "observation/regions/region_0002/fused.ply",
+      "region_id": "region_0002",
+      "region_semantic_confidence": 0.5117334276437759,
+      "region_semantic_label": "side_table",
+      "region_semantic_supporting_views": 2,
+      "rejection_reason": null,
+      "seating_centroid_world_m": [
+        -0.9102882742881775,
+        1.1972225904464722,
+        0.8074507117271423
+      ],
+      "seating_target_id": "seating_0001",
+      "semantic_role_status": "TRUE",
+      "target_contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "target_evidence_path": "observation/seats/seating_0001/observed_points.ply"
+    },
+    {
+      "FITS_ON": "TRUE",
+      "NEAR_SEAT": "FALSE",
+      "PLANAR_SUPPORT": "TRUE",
+      "candidate_rank": 2,
+      "compatibility_status": "FALSE",
+      "fit_margin_m": 0.27268467256584517,
+      "general_suitability_status": "TRUE",
+      "maximum_distance_m": 1.15,
+      "measured_distance_m": 1.7173339973192323,
+      "near_seat_margin_m": -0.5673339973192324,
+      "per_payload_fit_evidence": [
+        {
+          "edge_clearance_margin_m": 0.015,
+          "method": "region_payload_relations_v1",
+          "payload_length_m": 0.1407263530581176,
+          "payload_width_m": 0.10388896585159699,
+          "region_usable_length_m": 0.48471000021915456,
+          "region_usable_width_m": 0.408352056116117,
+          "relation": "FITS_ON",
+          "selected_orientation_degrees": 0,
+          "signed_fit_margin_m": 0.27446309026452,
+          "status": "TRUE",
+          "tested_orientations": [
+            {
+              "fits": true,
+              "length_margin_m": 0.313983647161037,
+              "orientation_degrees": 0,
+              "signed_fit_margin_m": 0.27446309026452,
+              "width_margin_m": 0.27446309026452
+            },
+            {
+              "fits": true,
+              "length_margin_m": 0.3508210343675575,
+              "orientation_degrees": 90,
+              "signed_fit_margin_m": 0.23762570305799943,
+              "width_margin_m": 0.23762570305799943
+            }
+          ],
+          "value": true
+        },
+        {
+          "edge_clearance_margin_m": 0.015,
+          "method": "region_payload_relations_v1",
+          "payload_length_m": 0.13955868539249416,
+          "payload_width_m": 0.10566738355027186,
+          "region_usable_length_m": 0.48471000021915456,
+          "region_usable_width_m": 0.408352056116117,
+          "relation": "FITS_ON",
+          "selected_orientation_degrees": 0,
+          "signed_fit_margin_m": 0.27268467256584517,
+          "status": "TRUE",
+          "tested_orientations": [
+            {
+              "fits": true,
+              "length_margin_m": 0.31515131482666037,
+              "orientation_degrees": 0,
+              "signed_fit_margin_m": 0.27268467256584517,
+              "width_margin_m": 0.27268467256584517
+            },
+            {
+              "fits": true,
+              "length_margin_m": 0.3490426166688827,
+              "orientation_degrees": 90,
+              "signed_fit_margin_m": 0.23879337072362286,
+              "width_margin_m": 0.23879337072362286
+            }
+          ],
+          "value": true
+        }
+      ],
+      "region_centroid_world_m": [
+        -0.5545711815357208,
+        0.2030002325773239,
+        0.6282370686531067
+      ],
+      "region_contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "region_evidence_path": "observation/regions/region_0002/fused.ply",
+      "region_id": "region_0002",
+      "region_semantic_confidence": 0.5117334276437759,
+      "region_semantic_label": "side_table",
+      "region_semantic_supporting_views": 2,
+      "rejection_reason": "NEAR_SEAT",
+      "seating_centroid_world_m": [
+        0.9004525542259216,
+        1.1152184009552002,
+        0.7587382197380066
+      ],
+      "seating_target_id": "seating_0002",
+      "semantic_role_status": "TRUE",
+      "target_contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "target_evidence_path": "observation/seats/seating_0002/observed_points.ply"
+    }
+  ],
+  "schema_version": 1
+}

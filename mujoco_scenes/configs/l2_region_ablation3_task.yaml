@@ -1,0 +1,71 @@
+schema_version: 1
+task_id: l2_two_person_target_specific_drink_allocation
+natural_language_goal: >-
+  Set up drinks for two people watching television. Place one drink on a
+  suitable accessible surface beside each person’s seating position.
+specification_source: manual_future_fm_contract
+generated_from_foundation_model: false
+
+function_groups:
+  personal_drinks:
+    function_id: PLACE_PERSONAL_DRINKS
+    region_role: personal_drink_region
+    usage_policy: DEDICATED_REGION_PER_TARGET
+    target_assignment_policy: TARGET_SPECIFIC
+    payload_semantic_roles: [drink, drink]
+    target_role: seating_target
+    required_target_count: 2
+    required_relations:
+      - PLANAR_SUPPORT
+      - FITS_ON
+      - NEAR_SEAT
+
+semantic_requirements:
+  region_roles:
+    personal_drink_region:
+      accepted_categories:
+        side_table: 1
+      rejected_categories:
+        rug: 1
+        floor: 1
+        media_console: 1
+        chair: 1
+        armchair: 1
+        sofa: 1
+        coffee_table: 1
+  payload_roles:
+    drink: [mug, cup]
+  seating_categories: [armchair, chair, sofa]
+  minimum_supporting_views: 2
+  minimum_mean_confidence: 0.03
+  minimum_winning_score_margin: 0.015
+
+geometric_requirements:
+  unary_region:
+    predicate: PLANAR_SUPPORT
+    maximum_normal_angle_degrees: 12.0
+    minimum_planarity_score: 0.90
+    minimum_usable_area_m2: 0.045
+  payload_region:
+    relation: FITS_ON
+    edge_clearance_margin_m: 0.015
+    allowed_orientations_degrees: [0, 90]
+  personal_context:
+    relation: NEAR_SEAT
+    maximum_centroid_distance_m: 1.15
+
+allocation:
+  policy_modes:
+    - target_agnostic_count
+    - greedy_target_specific
+    - global_target_specific
+  production_policy: global_target_specific
+  deterministic_target_order: persistent_target_id
+  deterministic_tie_break:
+    - maximum_covered_targets
+    - complete_coverage
+    - total_candidate_rank
+    - total_distance_margin_descending
+    - total_fit_margin_descending
+    - persistent_region_ids
+    - persistent_target_ids

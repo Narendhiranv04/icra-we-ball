@@ -36,7 +36,15 @@ L2_ABLATION2_SCENES = (
     "L2_living_room_region_ablation2_exhaustion",
     "L2_living_room_region_ablation2_permuted",
 )
-L2_SCENES = L2_ABLATION1_SCENES + L2_ABLATION2_SCENES
+L2_ABLATION3_SCENES = (
+    "L2_living_room_region_ablation3_primary",
+    "L2_living_room_region_ablation3_matching_trap",
+    "L2_living_room_region_ablation3_valid",
+    "L2_living_room_region_ablation3_permuted",
+)
+L2_SCENES = (
+    L2_ABLATION1_SCENES + L2_ABLATION2_SCENES + L2_ABLATION3_SCENES
+)
 L2_ABLATION2_BASE = (
     ROOT / "assets" / "living_room_region_ablation2_base.xml"
 )
@@ -57,6 +65,72 @@ L2_ABLATION2_GOAL = (
     "and keep the TV remote and game controller together in one shared "
     "accessible region."
 )
+L2_ABLATION3_GOAL = (
+    "Set up drinks for two people watching television. Place one drink on "
+    "a suitable accessible surface beside each person’s seating position."
+)
+
+
+def _remove_world_bodies(root: ET.Element, names: set[str]) -> None:
+    worldbody = root.find("worldbody")
+    for child in list(worldbody):
+        if child.tag == "body" and child.get("name") in names:
+            worldbody.remove(child)
+
+
+def _translate_body_geoms(
+    root: ET.Element, body_name: str, target_xy: tuple[float, float]
+) -> None:
+    body = root.find(f".//body[@name='{body_name}']")
+    geoms = list(body.iter("geom"))
+    current = np.fromstring(geoms[0].get("pos", "0 0 0"), sep=" ")
+    delta = np.asarray(target_xy, float) - current[:2]
+    for geom in geoms:
+        position = np.fromstring(geom.get("pos", "0 0 0"), sep=" ")
+        position[:2] += delta
+        geom.set("pos", " ".join(f"{value:.5f}" for value in position))
+
+
+def _configure_ablation3_scene(root: ET.Element, scene_name: str) -> None:
+    """Create target-coverage layouts using construction metadata only."""
+    _remove_world_bodies(
+        root,
+        {
+            "a2_control_table",
+            "a2_rug",
+            "a2_media_wall",
+            "a2_remote_payload",
+            "a2_controller_payload",
+        },
+    )
+    if scene_name.endswith("_primary"):
+        _remove_world_bodies(root, {"a2_shared_drink_trap"})
+        _translate_body_geoms(
+            root, "a2_personal_right", (-0.55, 0.22)
+        )
+    elif scene_name.endswith("_matching_trap"):
+        _remove_world_bodies(root, {"a2_shared_drink_trap"})
+        _translate_body_geoms(root, "a2_personal_right", (0.0, 0.72))
+    elif scene_name.endswith("_valid"):
+        _remove_world_bodies(root, {"a2_shared_drink_trap"})
+    elif scene_name.endswith("_permuted"):
+        _remove_world_bodies(root, {"a2_shared_drink_trap"})
+        _translate_body_geoms(root, "a2_personal_left", (0.0, 0.72))
+        first_drink = root.find(".//body[@name='a2_drink_left']")
+        second_drink = root.find(".//body[@name='a2_drink_right']")
+        first_position = first_drink.get("pos")
+        first_drink.set("pos", second_drink.get("pos"))
+        second_drink.set("pos", first_position)
+        worldbody = root.find("worldbody")
+        movable = [
+            child
+            for child in list(worldbody)
+            if child.tag == "body" and child.find("freejoint") is not None
+        ]
+        for child in movable:
+            worldbody.remove(child)
+        for child in reversed(movable):
+            worldbody.append(child)
 
 
 def build_l2_region_xml(
@@ -69,7 +143,10 @@ def build_l2_region_xml(
     if robot not in {ROBOT_GOOGLE, ROBOT_NONE}:
         raise ValueError("L2 region scenes support robot google or none")
     ablation2 = scene_name in L2_ABLATION2_SCENES
-    root = ET.parse(L2_ABLATION2_BASE if ablation2 else L2_BASE).getroot()
+    ablation3 = scene_name in L2_ABLATION3_SCENES
+    root = ET.parse(
+        L2_ABLATION2_BASE if ablation2 or ablation3 else L2_BASE
+    ).getroot()
     if scene_name in L2_ABLATION1_SCENES and scene_name.endswith("_exhaustion"):
         # Retain recognizable coffee-table context while making its observed
         # support patch robustly too small for the tray. Runtime inference
@@ -133,6 +210,8 @@ def build_l2_region_xml(
             worldbody.remove(child)
         for child in reversed(payload_bodies):
             worldbody.append(child)
+    if ablation3:
+        _configure_ablation3_scene(root, scene_name)
     if robot == ROBOT_GOOGLE:
         _inject_google_robot(root, _google_robot_dir())
     return ET.tostring(root, encoding="unicode")
@@ -156,9 +235,13 @@ class L2LivingRoomRegionScene:
             raise ValueError("L2 region scenes support google or none")
         self.scene_name = scene_name
         self.goal = (
-            L2_ABLATION2_GOAL
-            if scene_name in L2_ABLATION2_SCENES
-            else L2_GOAL
+            L2_ABLATION3_GOAL
+            if scene_name in L2_ABLATION3_SCENES
+            else (
+                L2_ABLATION2_GOAL
+                if scene_name in L2_ABLATION2_SCENES
+                else L2_GOAL
+            )
         )
         self.robot_name = robot
         self.has_robot = robot == ROBOT_GOOGLE
@@ -181,7 +264,7 @@ class L2LivingRoomRegionScene:
         print(f"  Robot: {robot}")
         print(
             "  Candidate supports: "
-            f"{5 if scene_name in L2_ABLATION2_SCENES else 3}"
+            f"{2 if scene_name in L2_ABLATION3_SCENES else 5 if scene_name in L2_ABLATION2_SCENES else 3}"
         )
         print("  Scene ready.\n")
 
@@ -207,7 +290,7 @@ class L2LivingRoomRegionScene:
 
     def get_visible_object_instances(self) -> list[tuple[str, str]]:
         """Expose only the fixed payload as an object-level observation."""
-        if self.scene_name in L2_ABLATION2_SCENES:
+        if self.scene_name in L2_ABLATION2_SCENES + L2_ABLATION3_SCENES:
             # Ablation 2 discovers its four generic payload IDs from visible
             # segmentation instances and RGB semantics in one initial capture.
             # Do not leak simulator body names through the legacy object API.
@@ -235,9 +318,16 @@ class L2LivingRoomRegionScene:
         print(f"Scene: {self.scene_name}")
         print(f"Goal:  {self.goal}")
         print("-" * 60)
-        if self.scene_name in L2_ABLATION2_SCENES:
-            print("Candidate regions:  5, all visible initially")
-            print("Fixed payloads:      4, discovered from RGB-D evidence")
+        if self.scene_name in L2_ABLATION2_SCENES + L2_ABLATION3_SCENES:
+            ablation3 = self.scene_name in L2_ABLATION3_SCENES
+            print(
+                f"Candidate regions:  {2 if ablation3 else 5}, "
+                "all visible initially"
+            )
+            print(
+                f"Fixed payloads:      {2 if ablation3 else 4}, "
+                "discovered from RGB-D evidence"
+            )
             print("Seating targets:     2, spatially distinct")
         else:
             print(
