@@ -1,6 +1,6 @@
 # Codex Project Handoff
 
-Updated: 2026-08-05 (Asia/Kolkata)
+Updated: 2026-08-06 (Asia/Kolkata)
 
 This file is the working context for continuing the project from another Codex
 session after SSHing into this machine. Start the next session by asking Codex
@@ -11,17 +11,17 @@ or discarding uncommitted changes.
 
 - Repository root: `/home/boreddog/Documents/RRC/LH_Extension/V1`
 - Current branch: `three_scene_benchmarks`
-- Base commit: `ab393eb` (`Add Google Robot perception and living-room inspection`)
-- A controlled, uncommitted merge from
-  `origin/naren/googlePointCloudIntegration` (`053f95c`) is in progress.
-- The merge conflicts have been resolved. Generated `reports/` media was
-  deliberately excluded; source, configuration, and tests were retained.
-- The worktree contains substantial intentional integration work.
+- The branch contains the three-scene integration commit `412f092` and the
+  newest controlled merge from `origin/naren/googlePointCloudIntegration`.
+- The newest integrated upstream revision is `b4dcbd6`. Its complete L2
+  Ablation 1/2/3 implementation and realistic movie-night assets are retained.
+- Generated `reports/` media is deliberately excluded; report generators,
+  source, configuration, assets, and tests are retained.
 - Do **not** run `git reset`, `git checkout --`, `git clean`, or otherwise remove
   changes unless the user explicitly requests it.
 - Remote: `https://github.com/Narendhiranv04/icra-we-ball.git`
 - Integrated point-cloud reference:
-  `origin/naren/googlePointCloudIntegration` at `053f95c`.
+  `origin/naren/googlePointCloudIntegration` at `b4dcbd6`.
 - The similarly named local branch `naren/pointCloudExtraction` is stale and
   should not be used for comparisons. Compare against the remote ref directly
   after fetching.
@@ -84,8 +84,8 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 MUJOCO_GL=egl \
   .venv/bin/python -m pytest mujoco_scenes/tests -q
 ```
 
-It currently passes 303 tests, including both server workspaces and fresh
-workshop RGB-D evidence.
+It currently passes 361 tests, including both server workspaces, all three L2
+region ablations, and fresh workshop RGB-D evidence.
 Pytest is declared in `mujoco_scenes/requirements-dev.txt`.
 
 ## Robot and environments

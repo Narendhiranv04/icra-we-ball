@@ -1,8 +1,8 @@
 schema_version: 1
 task_id: l2_place_refreshment_tray_region_grounding
 natural_language_goal: >-
-  Place the refreshment tray on a suitable living-room surface within easy
-  reach of the sofa.
+  Place the loaded refreshment tray on a stable serving surface within easy
+  reach of both people.
 specification_source: manual_future_fm_contract
 generated_from_foundation_model: false
 
@@ -53,7 +53,7 @@ geometric_requirements:
 candidate_ranking:
   source: manual_future_fm_contract
   candidates:
-    - inspection_label: RUG_PATCH
+    - inspection_label: SOFA_SEAT_PATCH
       rank: 1
     - inspection_label: SMALL_SIDE_TABLE
       rank: 2

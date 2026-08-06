@@ -1,0 +1,101 @@
+schema_version: 1
+task_id: l2_two_person_viewing_region_allocation
+natural_language_goal: >-
+  Prepare movie night for two people. Place one drink-and-snack set beside
+  each person, and keep the TV remote and handheld game device together on
+  one shared surface accessible to both.
+specification_source: manual_future_fm_contract
+generated_from_foundation_model: false
+
+function_groups:
+  personal_drinks:
+    function_id: PLACE_PERSONAL_DRINK
+    region_role: personal_drink_region
+    usage_policy: DEDICATED_REGION_PER_TARGET
+    payload_semantic_roles: [drink, snack_container]
+    required_target_count: 2
+    target_role: seating_target
+    required_relations:
+      - PLANAR_SUPPORT
+      - FITS_SET_ON
+      - NEAR_SEAT
+  shared_controls:
+    function_id: PLACE_SHARED_CONTROLS
+    region_role: shared_control_region
+    usage_policy: SHARED_REGION_REQUIRED
+    payload_semantic_roles: [tv_remote, game_controller]
+    target_role: common_viewing_area
+    required_relations:
+      - PLANAR_SUPPORT
+      - FITS_SET_ON
+      - ACCESSIBLE_FROM_VIEWING_AREA
+
+allow_cross_function_region_sharing: false
+
+semantic_requirements:
+  region_roles:
+    personal_drink_region:
+      accepted_categories:
+        side_table: 1
+      rejected_categories:
+        rug: 1
+        floor: 1
+        media_console: 1
+        chair: 1
+        armchair: 1
+        sofa: 1
+        coffee_table: 1
+    shared_control_region:
+      accepted_categories:
+        coffee_table: 1
+      rejected_categories:
+        rug: 1
+        floor: 1
+        media_console: 1
+        chair: 1
+        armchair: 1
+        sofa: 1
+        side_table: 1
+  payload_roles:
+    drink: [mug, cup]
+    snack_container: [bowl, ramekin]
+    tv_remote: [remote_control]
+    game_controller: [game_controller, controller]
+  seating_categories: [armchair, chair, sofa]
+  minimum_supporting_views: 2
+  minimum_mean_confidence: 0.03
+  minimum_winning_score_margin: 0.015
+
+geometric_requirements:
+  unary_region:
+    predicate: PLANAR_SUPPORT
+    maximum_normal_angle_degrees: 12.0
+    minimum_planarity_score: 0.90
+    minimum_usable_area_m2: 0.045
+  payload_region:
+    relation: FITS_ON
+    edge_clearance_margin_m: 0.015
+    allowed_orientations_degrees: [0, 90]
+  payload_set_region:
+    relation: FITS_SET_ON
+    edge_clearance_margin_m: 0.020
+    inter_payload_clearance_m: 0.025
+    allowed_orientations_degrees: [0, 90]
+    arrangements: [ALONG_LENGTH, ALONG_WIDTH]
+  personal_context:
+    relation: NEAR_SEAT
+    maximum_centroid_distance_m: 1.15
+  control_context:
+    relation: ACCESSIBLE_FROM_VIEWING_AREA
+    maximum_distance_to_each_seat_m: 1.65
+
+allocation:
+  deterministic_tie_break:
+    - total_candidate_rank
+    - total_signed_margin_descending
+    - persistent_region_ids
+  policy_modes:
+    - always_shared
+    - always_distinct
+    - function_aware
+  production_policy: function_aware

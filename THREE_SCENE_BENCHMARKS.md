@@ -61,12 +61,22 @@ MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.scene_loader \
 
 ## Living room: region alternatives
 
-L2 ranks `RUG_PATCH`, `SMALL_SIDE_TABLE`, and `COFFEE_TABLE` for placing a
-refreshment tray near the sofa. Geometry-only, semantic-only, and joint modes
-consume the same evidence. The controlled L2 benchmark uses five virtual
-region-facing cameras. The interactive living room retains the physical
-Google Robot rig: five upper cameras for room coverage and two low cameras for
-the under-sofa task.
+The controlled L2 movie-night environment now contains three complementary
+region ablations. Every policy within an ablation consumes the same saved
+five-view RGB-D and semantic evidence:
+
+- Ablation 1 ranks `SOFA_SEAT_PATCH`, `SMALL_SIDE_TABLE`, and `COFFEE_TABLE`.
+  Geometry-only accepts the sofa cushion, semantic-only accepts the undersized
+  C-table, and joint grounding selects the coffee table.
+- Ablation 2 compares always-shared, always-distinct, and function-aware
+  allocation. The correct solution uses two distinct personal refreshment
+  regions and one shared controls region.
+- Ablation 3 compares target-agnostic counting, greedy target assignment, and
+  deterministic global one-to-one matching between tables and seats.
+
+The controlled L2 benchmarks use five virtual region-facing cameras. The
+separate interactive living room retains the physical Google Robot rig: five
+upper cameras for room coverage and two low cameras for the under-sofa task.
 
 Run the controlled native benchmark after preparing semantic models:
 
@@ -76,6 +86,9 @@ MUJOCO_GL=egl .venv/bin/python -m mujoco_scenes.run_l2_region_ablation \
   --robot none \
   --run-id living_region_trial_01
 ```
+
+The additional runners are `mujoco_scenes.run_l2_region_ablation2` and
+`mujoco_scenes.run_l2_region_ablation3`.
 
 Run the interactive living room:
 

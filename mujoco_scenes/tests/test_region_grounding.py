@@ -8,6 +8,8 @@ import numpy as np
 import pytest
 
 from mujoco_scenes.living_room_region_scene import (
+    L2_ABLATION1_SCENES,
+    L2_ABLATION3_SCENES,
     L2_SCENES,
     L2LivingRoomRegionScene,
     build_l2_region_xml,
@@ -36,6 +38,7 @@ from mujoco_scenes.region_grounding import (
     semantic_region_role_status,
 )
 from mujoco_scenes.semantic_grounding import Detection, load_semantic_config
+from mujoco_scenes.generate_region_ablation_report import _data_uri, _write_html
 
 
 TASK = load_region_task(DEFAULT_TASK_CONFIG)
@@ -227,7 +230,7 @@ def test_region_registry_assigns_generic_persistent_ids():
         _region_evidence(_horizontal_points()), task_config=TASK
     )
     arguments = dict(
-        inspection_label="RUG_PATCH",
+        inspection_label="SOFA_SEAT_PATCH",
         properties=properties,
         semantic_context={"parent_furniture": {"canonical_label": "rug"}},
         functional_evaluation={},
@@ -363,19 +366,32 @@ def test_l2_variants_compile_without_robot(scene_name):
         build_l2_region_xml(scene_name, "none")
     )
     assert model.ncam >= 5
-    assert (
-        mujoco.mj_name2id(
-            model, mujoco.mjtObj.mjOBJ_BODY, "l2_refreshment_tray"
+    if scene_name in L2_ABLATION1_SCENES:
+        assert (
+            mujoco.mj_name2id(
+                model, mujoco.mjtObj.mjOBJ_BODY, "l2_refreshment_tray"
+            )
+            >= 0
         )
-        >= 0
-    )
+    elif scene_name not in L2_ABLATION3_SCENES:
+        assert sum(
+            model.jnt_type[joint_id] == mujoco.mjtJoint.mjJNT_FREE
+            for joint_id in range(model.njnt)
+        ) == 6
+    else:
+        assert sum(
+            model.jnt_type[joint_id] == mujoco.mjtJoint.mjJNT_FREE
+            for joint_id in range(model.njnt)
+        ) == 4
 
 
 @pytest.mark.parametrize("robot", ("none", "google"))
 def test_payload_segmentation_instance_is_selected_without_a_body_name(robot):
     scene = L2LivingRoomRegionScene(L2_SCENES[0], robot=robot)
     geom_ids = _single_free_rigid_instance_geom_ids(scene.model)
-    assert len(geom_ids) == 5
+    # The realistic loaded-tray payload retains five analytic collision geoms
+    # and adds scanned tray, mug, and bowl visual geoms to the same free body.
+    assert len(geom_ids) == 8
     owning_bodies = {
         int(scene.model.geom_bodyid[geom_id]) for geom_id in geom_ids
     }
@@ -437,7 +453,7 @@ def _stage(stage, region_id, label, semantic, fits, joint):
         "semantic_context": {
             "parent_furniture": {
                 "canonical_label": {
-                    "RUG_PATCH": "rug",
+                    "SOFA_SEAT_PATCH": "sofa",
                     "SMALL_SIDE_TABLE": "side_table",
                     "COFFEE_TABLE": "coffee_table",
                 }[label],
@@ -461,7 +477,9 @@ def test_same_evidence_modes_select_expected_counterexamples(tmp_path):
         height=48,
     )
     run.stage_records = [
-        _stage(0, "region_0001", "RUG_PATCH", "FALSE", "TRUE", "FALSE"),
+        _stage(
+            0, "region_0001", "SOFA_SEAT_PATCH", "FALSE", "TRUE", "FALSE"
+        ),
         _stage(
             1,
             "region_0002",
@@ -478,3 +496,125 @@ def test_same_evidence_modes_select_expected_counterexamples(tmp_path):
     assert summary["modes"]["semantic_only"]["selected_region_id"] == "region_0002"
     assert summary["modes"]["joint"]["selected_region_id"] == "region_0003"
     assert summary["rerendered_for_diagnostics"] is False
+
+
+def test_living_room_presentation_report_exposes_complete_component_audit(
+    tmp_path,
+):
+    row = {
+        "region_id": "region_0001",
+        "parent_semantic_label": "coffee_table",
+        "semantic_confidence": 0.8,
+        "semantic_supporting_views": 5,
+        "support_length_m": 0.7,
+        "support_width_m": 0.5,
+        "fit_margin_m": 0.1,
+        "semantic_role_status": "TRUE",
+        "PLANAR_SUPPORT": "TRUE",
+        "FITS_ON": "TRUE",
+        "NEAR_SEATING_AREA": "TRUE",
+        "geometry_only_status": "TRUE",
+        "semantic_only_status": "TRUE",
+        "joint_status": "TRUE",
+        "rejection_reason": None,
+        "discovery_stage": 0,
+    }
+    modes = {
+        mode: {
+            "status": "COMPLETE",
+            "selected_region_id": "region_0001",
+            "completion_stage": 0,
+        }
+        for mode in ("geometry_only", "semantic_only", "joint")
+    }
+    region = {
+        "geometric_properties": {
+            "support_area_m2": {"value": 0.35},
+            "planarity_score": {"value": 0.99},
+        },
+        "provenance": {
+            "point_count": 1000,
+            "contributing_camera_ids": ["inspection_front"],
+            "measurement_cloud_path": "stages/000/region_evidence/fused.ply",
+        },
+        "functional_evaluations": {
+            "NEAR_SEATING_AREA": {"measured_distance_m": 1.0}
+        },
+    }
+    payload = {
+        "identity": {"object_id": "object_0001"},
+        "semantic_context": {"canonical_label": "serving_tray"},
+        "geometric_properties": {
+            "footprint_length_m": {"value": 0.4},
+            "footprint_width_m": {"value": 0.28},
+            "footprint_area_m2": {"value": 0.112},
+            "measurement_quality": {
+                "point_count": 500,
+                "contributing_camera_count": 5,
+            },
+        },
+        "provenance": {
+            "measurement_cloud_path": "stages/000/payload_evidence/fused.ply"
+        },
+    }
+    stage = {
+        "title": "Stage 000: coffee_table",
+        "overview": "stages/000/overview.png",
+        "semantic": "stages/000/semantic_overview.png",
+        "pointcloud": "stages/000/region_pointcloud.png",
+        "graph": "stages/000/graph.png",
+        "mask": "stages/000/evidence_masks.png",
+        "camera_overlays": [
+            {
+                "camera_id": f"inspection_{name}",
+                "consensus": f"stages/000/cameras/{name}/consensus.png",
+                "raw": f"stages/000/cameras/{name}/overlay.png",
+            }
+            for name in ("left", "right", "top", "front", "close")
+        ],
+    }
+    animations = {
+        mode: {
+            "gif": f"{mode}.gif",
+            "mp4": f"{mode}.mp4",
+        }
+        for mode in modes
+    }
+    _write_html(
+        report_dir=tmp_path,
+        run_config={
+            "scene_name": "living_room_test",
+            "natural_language_goal": "Place the tray.",
+            "capture_resolution": [1280, 960],
+            "detector": {
+                "name": "yolo_world",
+                "checkpoint": "weights.pt",
+                "version": "test",
+                "device": "cpu",
+            },
+        },
+        summary={"modes": modes},
+        rows=[row],
+        stage_assets=[stage],
+        region_registry={"regions": {"region_0001": region}},
+        payload_registry={"objects": {"object_0001": payload}},
+        handoff=None,
+        mode_animations=animations,
+    )
+    report = (tmp_path / "presentation_report.html").read_text()
+    redirect = (tmp_path / "ablation_report.html").read_text()
+    assert "Three individual policy ablations" in report
+    assert "How the geometric checks are defined" in report
+    assert "Rendered scene and component audit" in report
+    assert "five RGB detections" in report
+    assert report.count("detector overlay") == 5
+    assert "RegionMeasurementEvidence" in report
+    assert "presentation_report.html" in redirect
+
+
+def test_living_room_report_embeds_displayed_media(tmp_path):
+    image = tmp_path / "frame.png"
+    image.write_bytes(b"\x89PNG\r\n\x1a\nportable-report-test")
+    uri = _data_uri(tmp_path, "frame.png")
+    assert uri.startswith("data:image/png;base64,")
+    assert "frame.png" not in uri

@@ -56,6 +56,10 @@ GSO_OBJECTS = {
         "Nestle_Nesquik_Chocolate_Powder_Flavored_Milk_Additive_109_Oz_Canister"
     ),
     "gso_spatula_distractor": "OXO_Cookie_Spatula",
+    "living_room_mug": "Cole_Hardware_Mug_Classic_Blue",
+    "living_room_snack_bowl": "Room_Essentials_Bowl_Turquiose",
+    "living_room_serving_tray": "Threshold_Tray_Rectangle_Porcelain",
+    "living_room_game_console": "BlackBlack_Nintendo_3DSXL",
 }
 
 
@@ -275,6 +279,9 @@ def _record(
         "texture": str(texture_path.relative_to(ROOT)),
         "model_sha256": hashlib.sha256(model_path.read_bytes()).hexdigest(),
         "texture_sha256": hashlib.sha256(texture_path.read_bytes()).hexdigest(),
+        "scale": [1.0, 1.0, 1.0],
+        "orientation_correction_euler_rad": [0.0, 0.0, 0.0],
+        "collision_representation": "analytic_proxy_defined_in_scene",
     }
     if prepared_from:
         record["prepared_from"] = prepared_from
@@ -308,6 +315,7 @@ def main() -> None:
         "assets": records,
         "notes": [
             "GSO has no catalogued tong scan; tongs use the included custom mesh.",
+            "GSO has no catalogued TV-remote scan; the movie-night remote uses a project-authored textured visual mesh.",
             "Textures are downsampled to at most 1024x1024 for portable rendering.",
         ],
     }
@@ -321,6 +329,14 @@ def main() -> None:
         ] + records
         records.sort(key=lambda record: (record["dataset"], record["semantic_name"]))
         manifest["assets"] = records
+    for record in manifest["assets"]:
+        record.setdefault("scale", [1.0, 1.0, 1.0])
+        record.setdefault(
+            "orientation_correction_euler_rad", [0.0, 0.0, 0.0]
+        )
+        record.setdefault(
+            "collision_representation", "analytic_proxy_defined_in_scene"
+        )
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print(f"Prepared {len(records)} scanned assets; manifest: {manifest_path}")
 

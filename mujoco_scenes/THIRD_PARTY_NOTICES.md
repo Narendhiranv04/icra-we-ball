@@ -121,7 +121,29 @@ https://github.com/kevinzakka/mujoco_scanned_objects
 That conversion's MJCF is MIT licensed; the 3D assets remain CC-BY-4.0. Exact
 model IDs and hashes are listed in `assets/objects/meshes/manifest.json`.
 
+The movie-night living-room benchmarks specifically use these verified GSO
+catalogue IDs:
+
+- `Cole_Hardware_Mug_Classic_Blue` (second drink container);
+- `Room_Essentials_Bowl_Turquiose` (second snack bowl);
+- `Threshold_Tray_Rectangle_Porcelain` (loaded serving tray); and
+- `BlackBlack_Nintendo_3DSXL` (shared handheld game device).
+
+The public GSO catalogue was searched for a TV remote but contains no
+catalogued remote-control model. The authoritative benchmark therefore uses a
+project-authored deterministic textured remote visual with a separate analytic
+collision proxy; it is not represented as a GSO scan.
+
 Recommended citation:
 
 > Laura Downs et al. "Google Scanned Objects: A High-Quality Dataset of
 > 3D-Scanned Household Items." ICRA 2022.
+
+## Project-authored movie-night furniture
+
+`scripts/generate_movie_night_assets.py` deterministically creates the
+textured sofa, armchair, coffee/end/C-tables, media console, bookshelf, and TV
+remote visual meshes in `assets/movie_night/`. These assets are original to
+this repository. MuJoCo physics continues to use simpler independent analytic
+collision proxies; the generated multi-part meshes are never collision
+geometry.

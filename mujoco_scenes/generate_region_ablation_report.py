@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import html
 import json
+import mimetypes
 import shutil
 import subprocess
 from pathlib import Path
@@ -553,93 +555,280 @@ def _table_html(rows: list[dict[str, Any]]) -> str:
     return "\n".join(output)
 
 
+def _value(record: dict[str, Any], name: str, default: Any = None) -> Any:
+    value = record.get(name, default)
+    if isinstance(value, dict) and "value" in value:
+        return value["value"]
+    return value
+
+
+def _fmt(value: Any, digits: int = 3) -> str:
+    if value is None:
+        return "UNKNOWN"
+    if isinstance(value, float):
+        return f"{value:.{digits}f}"
+    return html.escape(str(value))
+
+
+def _status_badge(status: str) -> str:
+    normalized = str(status or "UNKNOWN").upper()
+    return (
+        f"<span class='status status-{normalized.lower()}'>"
+        f"{html.escape(normalized)}</span>"
+    )
+
+
+def _data_uri(report_dir: Path, relative_path: str) -> str:
+    path = report_dir / relative_path
+    if not path.is_file():
+        return html.escape(relative_path, quote=True)
+    mime_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+    encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+    return f"data:{mime_type};base64,{encoded}"
+
+
+def _mode_frame(
+    source: Path,
+    output: Path,
+    *,
+    mode: str,
+    row: dict[str, Any],
+    result: dict[str, Any],
+) -> None:
+    image = Image.open(source).convert("RGB")
+    banner_height = 108
+    canvas = Image.new(
+        "RGB", (image.width, image.height + banner_height), "#0f172a"
+    )
+    canvas.paste(image, (0, banner_height))
+    draw = ImageDraw.Draw(canvas)
+    status = row[f"{mode}_status"]
+    selected = (
+        result.get("completion_stage") == row["discovery_stage"]
+        and result.get("selected_region_id") == row["region_id"]
+    )
+    draw.text(
+        (28, 18),
+        f"{MODE_TITLES[mode]} · stage {row['discovery_stage']:03d} · "
+        f"{row.get('parent_semantic_label') or 'UNKNOWN'}",
+        fill="white",
+        font=_font(28, True),
+    )
+    detail = f"candidate={status}"
+    if selected:
+        detail += f" · SELECTED {row['region_id']}"
+    elif result.get("completion_stage") is not None:
+        detail += f" · completion stage={result['completion_stage']}"
+    draw.text(
+        (30, 61),
+        detail,
+        fill=STATUS_COLORS.get(status, "#cbd5e1"),
+        font=_font(23, True),
+    )
+    canvas.save(output)
+
+
 def _write_html(
     *,
     report_dir: Path,
     run_config: dict[str, Any],
     summary: dict[str, Any],
     rows: list[dict[str, Any]],
-    stage_assets: list[dict[str, str]],
+    stage_assets: list[dict[str, Any]],
+    region_registry: dict[str, Any],
+    payload_registry: dict[str, Any],
+    handoff: dict[str, Any] | None,
+    mode_animations: dict[str, dict[str, Any]],
 ) -> None:
+    expected = {
+        "geometry_only": "Incorrect diagnostic: rug",
+        "semantic_only": "Incorrect diagnostic: undersized side table",
+        "joint": "Correct: coffee table",
+    }
     outcomes = []
     for mode, title in MODE_TITLES.items():
         result = summary["modes"][mode]
-        selected = result["selected_region_id"] or "none"
-        correct = mode == "joint" and result["status"] == "COMPLETE"
+        selected = result.get("selected_region_id") or "none"
         outcomes.append(
             "<tr>"
-            f"<td>{title}</td><td>{selected}</td>"
-            f"<td>{result['completion_stage']}</td>"
-            f"<td>{'Yes' if correct else 'No — diagnostic false result'}</td>"
+            f"<td><b>{html.escape(title)}</b></td>"
+            f"<td><code>{html.escape(selected)}</code></td>"
+            f"<td>{_fmt(result.get('completion_stage'))}</td>"
+            f"<td>{html.escape(expected[mode])}</td>"
+            f"<td>{'YES' if mode == 'joint' else 'NO'}</td>"
             "</tr>"
         )
-    stage_html = []
-    for asset in stage_assets:
-        stage_html.append(
-            "<section class='card'>"
-            f"<h3>{html.escape(asset['title'])}</h3>"
-            f"<img src='{asset['overview']}' alt='stage overview'>"
-            "<div class='links'>"
-            f"<a href='{asset['semantic']}'>semantic overlay</a>"
-            f"<a href='{asset['pointcloud']}'>point cloud</a>"
-            f"<a href='{asset['graph']}'>graph</a>"
-            f"<a href='{asset['mask']}'>region mask</a>"
-            "</div></section>"
+
+    progression_rows = []
+    for row in rows:
+        progression_rows.append(
+            "<tr>"
+            f"<td>{row['discovery_stage']:03d}</td>"
+            f"<td>{html.escape(str(row.get('parent_semantic_label') or 'UNKNOWN'))}</td>"
+            f"<td>{_status_badge(row['geometry_only_status'])}</td>"
+            f"<td>{_status_badge(row['semantic_only_status'])}</td>"
+            f"<td>{_status_badge(row['joint_status'])}</td>"
+            f"<td>{html.escape(str(row.get('rejection_reason') or 'accepted'))}</td>"
+            "</tr>"
         )
-    document = f"""<!doctype html>
-<html><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>L2 Region Ablation 1</title>
-<style>
-body{{margin:0;background:#eef1f5;color:#192132;font:16px/1.5 Arial,sans-serif}}
-main{{max-width:1500px;margin:auto;padding:30px}} .hero{{background:#17233b;color:white;
-padding:34px;border-radius:18px}} .card{{background:white;margin:22px 0;padding:26px;
-border-radius:16px;box-shadow:0 4px 18px #17233b18}} img{{max-width:100%;
-height:auto;border:1px solid #dbe0e8;border-radius:10px}} table{{width:100%;
-border-collapse:collapse;font-size:14px}} th,td{{padding:10px;border-bottom:1px solid #ddd;
-text-align:left}} th{{background:#edf1f7;position:sticky;top:0}} .grid{{display:grid;
-grid-template-columns:1fr 1fr;gap:18px}} .links a{{display:inline-block;margin:10px 12px 0 0}}
-code{{background:#eef1f5;padding:2px 5px;border-radius:4px}}
-@media(max-width:900px){{.grid{{grid-template-columns:1fr}}}}
-</style></head><body><main>
-<section class="hero"><h1>Living-room Region Ablation 1</h1>
-<p><strong>{html.escape(run_config['natural_language_goal'])}</strong></p>
-<p>This benchmark grounds a functional destination region. It does not execute
-placement, planning, TAMP, an FM, LLM, or VLM.</p></section>
-<section class="card"><h2>What the ablation demonstrates</h2>
-<ol><li>A large planar rug passes geometry but is semantically inappropriate.</li>
-<li>A side table is semantically suitable but too small for the measured tray.</li>
-<li>Only the coffee table passes semantics, planar support, tray fit, and sofa context.</li>
-<li>Candidate ranking proposes an inspection order; it never overrides verification.</li>
-<li>All three modes read exactly the same saved RGB-D, detections, masks, and clouds.</li></ol>
-<table><thead><tr><th>Mode</th><th>Selected generic region</th>
-<th>Completion stage</th><th>Correct?</th></tr></thead>
-<tbody>{''.join(outcomes)}</tbody></table></section>
-<section class="card"><h2>Compatibility matrix</h2>
-<img src="region_compatibility_matrix.png" alt="compatibility matrix"></section>
-<section class="grid"><section class="card"><h2>Ablation progression</h2>
-<img src="region_ablation_comparison.png" alt="ablation comparison"></section>
-<section class="card"><h2>Observed graph</h2>
-<img src="region_assignment_graph.png" alt="assignment graph"></section></section>
-<section class="card"><h2>Measured evidence table</h2><div style="overflow:auto">
-<table><thead><tr><th>ID</th><th>RGB parent</th><th>confidence</th><th>views</th>
-<th>support L×W (m)</th><th>fit margin (m)</th><th>semantics</th><th>planar</th>
-<th>fits</th><th>near</th><th>joint</th><th>rejection</th></tr></thead>
-<tbody>{_table_html(rows)}</tbody></table></div></section>
-<section class="card"><h2>Progression animation</h2>
-<video controls loop muted style="max-width:100%" src="region_progression.mp4"></video>
-<p><a href="region_progression.gif">Open GIF</a> ·
-<a href="offline_region_ablation_evaluation.json">Offline evaluation JSON</a> ·
-<a href="region_compatibility_matrix.csv">Matrix CSV</a></p></section>
-<h2>Stage and component audit</h2>{''.join(stage_html)}
-<section class="card"><h2>Evidence boundary</h2>
-<p>Geometry uses typed fresh <code>RegionMeasurementEvidence</code> and
-<code>PayloadMeasurementEvidence</code>. Cumulative, full-room, configured-size,
-and hidden simulator geometry are rejected as measurement inputs. RGB semantics
-come from YOLO-World and are associated through visible projected evidence.</p>
-</section></main></body></html>"""
+
+    mode_explanations = {
+        "geometry_only": (
+            "Checks planar support, payload fit, and distance to the sofa, but "
+            "ignores what the RGB detector says the surface is. The rug therefore "
+            "becomes an intentional false positive at stage 0."
+        ),
+        "semantic_only": (
+            "Accepts a detector-supported serving-surface category, but ignores "
+            "measured payload fit. It therefore stops incorrectly at the small "
+            "side table in stage 1."
+        ),
+        "joint": (
+            "Requires semantic compatibility AND PLANAR_SUPPORT AND FITS_ON AND "
+            "NEAR_SEATING_AREA. It rejects both counterexamples and selects the "
+            "coffee table at stage 2."
+        ),
+    }
+    mode_cards = []
+    for mode in MODE_TITLES:
+        animation = mode_animations[mode]
+        animation_uri = _data_uri(report_dir, animation["gif"])
+        downloads = (
+            f"<a href='{animation['mp4']}'>download MP4</a> · "
+            if animation.get("mp4")
+            else ""
+        )
+        mode_cards.append(
+            f"<article class='mode mode-{mode}'><h3>{MODE_TITLES[mode]}</h3>"
+            f"<p>{mode_explanations[mode]}</p>"
+            f"<img class='wide' src='{animation_uri}' alt='{mode} animated progression'>"
+            f"<details><summary>Animation downloads and outcome data</summary><div class='inside'>"
+            f"<p>{downloads}<a href='{animation['gif']}'>download GIF</a></p>"
+            f"<p>Selected <code>{summary['modes'][mode].get('selected_region_id')}</code> "
+            f"at stage {_fmt(summary['modes'][mode].get('completion_stage'))}.</p>"
+            "</div></details></article>"
+        )
+
+    registry_regions = region_registry.get("regions", {})
+    measurement_rows = []
+    for row in rows:
+        region = registry_regions.get(row["region_id"], {})
+        geometry = region.get("geometric_properties", {})
+        provenance = region.get("provenance", {})
+        relations = region.get("functional_evaluations", {})
+        near = relations.get("NEAR_SEATING_AREA", {})
+        measurement_rows.append(
+            "<tr>"
+            f"<td><code>{row['region_id']}</code></td>"
+            f"<td>{html.escape(str(row.get('parent_semantic_label') or 'UNKNOWN'))}</td>"
+            f"<td>{row['semantic_confidence']:.3f} / {row['semantic_supporting_views']}</td>"
+            f"<td>{row['support_length_m']:.3f} × {row['support_width_m']:.3f}</td>"
+            f"<td>{_fmt(_value(geometry, 'support_area_m2'))}</td>"
+            f"<td>{_fmt(_value(geometry, 'planarity_score'))}</td>"
+            f"<td>{_fmt(provenance.get('point_count'))} / "
+            f"{len(provenance.get('contributing_camera_ids', []))}</td>"
+            f"<td>{_fmt(near.get('measured_distance_m'))}</td>"
+            f"<td>{row['fit_margin_m']:+.3f}</td>"
+            f"<td><code>{html.escape(str(provenance.get('measurement_cloud_path', 'UNKNOWN')))}</code></td>"
+            "</tr>"
+        )
+
+    payloads = payload_registry.get("objects", {})
+    payload = next(iter(payloads.values()), {})
+    payload_geometry = payload.get("geometric_properties", {})
+    payload_quality = payload_geometry.get("measurement_quality", {})
+    payload_html = (
+        "<table><thead><tr><th>ID</th><th>RGB label</th><th>footprint L×W</th>"
+        "<th>area</th><th>points / cameras</th><th>MeasurementEvidence</th></tr></thead><tbody><tr>"
+        f"<td><code>{html.escape(str(payload.get('identity', {}).get('object_id', 'UNKNOWN')))}</code></td>"
+        f"<td>{html.escape(str(payload.get('semantic_context', {}).get('canonical_label', 'UNKNOWN')))}</td>"
+        f"<td>{_fmt(_value(payload_geometry, 'footprint_length_m'))} × "
+        f"{_fmt(_value(payload_geometry, 'footprint_width_m'))} m</td>"
+        f"<td>{_fmt(_value(payload_geometry, 'footprint_area_m2'))} m²</td>"
+        f"<td>{_fmt(payload_quality.get('point_count'))} / "
+        f"{_fmt(payload_quality.get('contributing_camera_count'))}</td>"
+        f"<td><code>{html.escape(str(payload.get('provenance', {}).get('measurement_cloud_path', 'UNKNOWN')))}</code></td>"
+        "</tr></tbody></table>"
+    )
+
+    handoff_html = "<p>No verified handoff was produced.</p>"
+    if handoff:
+        handoff_html = (
+            "<div class='callout success'><b>Verified destination:</b> "
+            f"<code>{html.escape(str(handoff.get('selected_region_id')))}</code> "
+            f"at stage {handoff.get('completion_stage')} "
+            f"({html.escape(str(handoff.get('completion_inspection_label')))})</div>"
+            "<table><thead><tr><th>Relation</th><th>Inputs</th><th>margin</th><th>result</th></tr></thead><tbody>"
+            f"<tr><td>FITS_ON</td><td>payload {_fmt(handoff['FITS_ON'].get('payload_length_m'))} × "
+            f"{_fmt(handoff['FITS_ON'].get('payload_width_m'))} m; support "
+            f"{_fmt(handoff['FITS_ON'].get('region_usable_length_m'))} × "
+            f"{_fmt(handoff['FITS_ON'].get('region_usable_width_m'))} m</td>"
+            f"<td>{_fmt(handoff['FITS_ON'].get('signed_fit_margin_m'))} m</td>"
+            f"<td>{_status_badge(handoff['FITS_ON'].get('status'))}</td></tr>"
+            f"<tr><td>NEAR_SEATING_AREA</td><td>distance "
+            f"{_fmt(handoff['NEAR_SEATING_AREA'].get('measured_distance_m'))} m; maximum "
+            f"{_fmt(handoff['NEAR_SEATING_AREA'].get('maximum_distance_m'))} m</td>"
+            f"<td>{_fmt(handoff['NEAR_SEATING_AREA'].get('signed_margin_m'))} m</td>"
+            f"<td>{_status_badge(handoff['NEAR_SEATING_AREA'].get('status'))}</td></tr>"
+            "</tbody></table>"
+        )
+
+    stage_html = []
+    for index, asset in enumerate(stage_assets):
+        cameras = "".join(
+            f"<figure><img class='wide' "
+            f"src='{_data_uri(report_dir, camera['consensus'])}' "
+            f"alt='{camera['camera_id']} detector overlay'><figcaption>"
+            f"{html.escape(camera['camera_id'])} · "
+            f"<a href='{camera['raw']}'>raw detector boxes</a>"
+            "</figcaption></figure>"
+            for camera in asset["camera_overlays"]
+        )
+        stage_html.append(
+            f"<details {'open' if index == 0 else ''}><summary>{html.escape(asset['title'])}</summary>"
+            "<div class='inside'>"
+            f"<img class='wide' src='{_data_uri(report_dir, asset['overview'])}' alt='complete stage overview'>"
+            "<div class='component-grid'>"
+            f"<figure><figcaption>YOLO-World semantic overview</figcaption><img class='wide' src='{_data_uri(report_dir, asset['semantic'])}'></figure>"
+            f"<figure><figcaption>Fresh stage-local point cloud</figcaption><img class='wide' src='{_data_uri(report_dir, asset['pointcloud'])}'></figure>"
+            f"<figure><figcaption>Observed graph through this stage</figcaption><img class='wide' src='{_data_uri(report_dir, asset['graph'])}'></figure>"
+            f"<figure><figcaption>Front-view region/payload masks</figcaption><img class='wide' src='{_data_uri(report_dir, asset['mask'])}'></figure>"
+            "</div><details><summary>Five RGB detector and association overlays</summary>"
+            f"<div class='inside camera-grid'>{cameras}</div></details>"
+            f"<p class='downloads'><a href='{asset['semantic']}'>semantic PNG</a> · "
+            f"<a href='{asset['pointcloud']}'>point-cloud PNG</a> · "
+            f"<a href='{asset['graph']}'>graph PNG</a></p>"
+            "</div></details>"
+        )
+
+    detector = run_config.get("detector", {})
+    css = """*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#eef2f7;color:#111827;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;line-height:1.55}nav{position:sticky;top:0;z-index:10;background:#0f172a;padding:12px 24px;box-shadow:0 3px 12px #0004}nav a{color:#f8fafc;text-decoration:none;font-weight:800;margin-right:22px}main{max-width:1560px;margin:auto;padding:24px}.hero{background:linear-gradient(125deg,#0f172a,#253b67);color:white}.card,.mode,section{background:white;border-radius:17px;padding:27px;margin:20px 0;box-shadow:0 4px 18px #0f172a14}h1{font-size:43px;line-height:1.12;margin:.25em 0}.lede{font-size:20px;color:#dbeafe;max-width:1050px}.pill{display:inline-block;padding:6px 12px;background:#dcfce7;color:#166534;border-radius:999px;font-weight:800;margin:5px}.wide{display:block;width:100%;height:auto;border:1px solid #dbe3ef;border-radius:11px;background:white}video{display:block;width:100%;max-height:760px;border-radius:11px;background:#111}table{width:100%;border-collapse:collapse;font-size:13px}th,td{border:1px solid #dbe3ef;padding:9px;text-align:left;vertical-align:top}th{background:#e9eef5;position:sticky;top:47px;z-index:2}.scroll{overflow:auto}.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.mode{margin:0;border-top:8px solid #64748b}.mode-geometry_only{border-color:#7c3aed}.mode-semantic_only{border-color:#ea580c}.mode-joint{border-color:#16a34a}details{border:1px solid #dbe3ef;border-radius:11px;margin:14px 0;overflow:hidden}summary{padding:14px 16px;background:#f8fafc;font-weight:850;cursor:pointer}.inside{padding:16px}.component-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}.camera-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}figure{margin:0}figcaption{font-weight:800;margin:0 0 7px}.status{display:inline-block;color:white;border-radius:999px;padding:3px 9px;font-weight:900;font-size:11px}.status-true{background:#239456}.status-false{background:#cf3e3e}.status-unknown{background:#7c8593}.callout{padding:16px;border-radius:10px;margin:12px 0}.success{background:#dcfce7;color:#14532d;border-left:6px solid #16a34a}code{background:#e8edf4;padding:2px 5px;border-radius:4px;overflow-wrap:anywhere}.pipeline{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.pipeline span{padding:10px 13px;background:#e9eef5;border-radius:9px;font-weight:800}.pipeline b{color:#64748b}.downloads a{font-weight:750}@media(max-width:1100px){.modes{grid-template-columns:1fr}.two,.component-grid{grid-template-columns:1fr}}@media(max-width:760px){nav{position:static}nav a{display:inline-block;margin:4px 12px 4px 0}main{padding:10px}section,.card,.mode{padding:17px}h1{font-size:32px}.camera-grid{grid-template-columns:1fr}}"""
+    document = f"""<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Living-room Region Ablation 1</title><style>{css}</style></head><body>
+<nav><a href="#summary">Summary</a><a href="#ablations">Ablations</a><a href="#matrix">Matrix</a><a href="#measurements">Measurements</a><a href="#stages">Scene audit</a><a href="#provenance">Provenance</a></nav><main>
+<section id="summary" class="hero"><small>PRESENTATION REPORT · LIVING-ROOM REGION ABLATION 1</small><h1>Semantic–geometric destination-region grounding</h1><p class="lede"><b>Goal:</b> {html.escape(run_config['natural_language_goal'])}</p><span class="pill">Scene: {html.escape(run_config['scene_name'])}</span><span class="pill">3 observed regions</span><span class="pill">5 RGB-D cameras per stage</span><span class="pill">Same evidence for all modes</span><span class="pill">No robot / FM / TAMP</span><img class="wide" src="{_data_uri(report_dir, 'region_ablation_comparison.png')}" alt="same-evidence ablation comparison"></section>
+<section><h2>What was run</h2><div class="pipeline"><span>Rendered RGB-D + masks</span><b>→</b><span>five-view world cloud</span><b>→</b><span>stage-local region evidence</span><b>→</b><span>YOLO-World semantics</span><b>→</b><span>geometry relations</span><b>→</b><span>joint verified handoff</span></div><p>The benchmark searches for a destination surface for one measured refreshment tray. The three acceptance modes reuse the exact same saved observations; only their acceptance logic changes.</p></section>
+<section><h2>Headline outcomes</h2><div class="scroll"><table><thead><tr><th>Mode</th><th>Selected region</th><th>Stage</th><th>Interpretation</th><th>Production-valid?</th></tr></thead><tbody>{''.join(outcomes)}</tbody></table></div><h3>Stage-by-stage decisions</h3><div class="scroll"><table><thead><tr><th>Stage</th><th>RGB parent</th><th>Geometry-only</th><th>Semantic-only</th><th>Joint</th><th>Joint reason</th></tr></thead><tbody>{''.join(progression_rows)}</tbody></table></div></section>
+<section id="ablations"><h2>Three individual policy ablations</h2><div class="modes">{''.join(mode_cards)}</div></section>
+<section id="matrix"><h2>Compatibility matrix</h2><p>Each row is a generic persistent region. Green means the saved evidence supports that gate; red means it refutes it. Joint acceptance requires every required column to be TRUE.</p><img class="wide" src="{_data_uri(report_dir, 'region_compatibility_matrix.png')}" alt="region compatibility matrix"><div class="scroll"><table><thead><tr><th>ID</th><th>RGB parent</th><th>confidence</th><th>views</th><th>support L×W (m)</th><th>fit margin (m)</th><th>semantics</th><th>planar</th><th>fits</th><th>near</th><th>joint</th><th>rejection</th></tr></thead><tbody>{_table_html(rows)}</tbody></table></div></section>
+<section id="measurements"><h2>Payload MeasurementEvidence</h2>{payload_html}<h2>Region MeasurementEvidence</h2><div class="scroll"><table><thead><tr><th>ID</th><th>RGB label</th><th>confidence / views</th><th>support L×W (m)</th><th>area (m²)</th><th>planarity</th><th>points / cameras</th><th>sofa distance (m)</th><th>fit margin (m)</th><th>stage-local evidence path</th></tr></thead><tbody>{''.join(measurement_rows)}</tbody></table></div></section>
+<section><h2>How the geometric checks are defined</h2><div class="two"><div><h3>PLANAR_SUPPORT(region)</h3><p>Uses only the fresh region point cloud. A dominant horizontal plane must have enough support, sufficient planarity, acceptable normal alignment to gravity, and valid multi-view coverage.</p><h3>FITS_ON(payload, region)</h3><p>The measured payload footprint plus edge clearance is tested against the measured usable support extents at 0° and 90°. The minimum signed dimension margin determines TRUE/FALSE.</p></div><div><h3>NEAR_SEATING_AREA(region, sofa)</h3><p>The measured region centroid is compared with the sofa context reconstructed from current visible evidence. It passes when the measured distance is within the configured maximum.</p><h3>Joint gate</h3><p><code>semantic compatibility AND PLANAR_SUPPORT AND FITS_ON AND NEAR_SEATING_AREA</code>. Required UNKNOWN or FALSE evidence cannot complete the task.</p></div></div></section>
+<section><h2>Verified production handoff</h2>{handoff_html}<img class="wide" src="{_data_uri(report_dir, 'region_assignment_graph.png')}" alt="final observed region-function graph"></section>
+<section><h2>Full progression animation</h2><img class="wide" src="{_data_uri(report_dir, 'region_progression.gif')}" alt="complete animated region progression"><p class="downloads"><a href="region_progression.mp4">download MP4</a> · <a href="region_progression.gif">download GIF</a></p></section>
+<section id="stages"><h2>Rendered scene and component audit</h2><p>Expand every stage to inspect the scene, five RGB detections, association overlays, stage-local point cloud, region mask, and graph. These are the actual artifacts used by the report.</p>{''.join(stage_html)}</section>
+<section><h2>Household-asset provenance</h2><table><thead><tr><th>role</th><th>dataset / ID</th><th>prepared visual</th></tr></thead><tbody><tr><td>loaded serving tray</td><td>Google Scanned Objects · Threshold_Tray_Rectangle_Porcelain</td><td>assets/objects/meshes/gso/living_room_serving_tray</td></tr><tr><td>tray mug</td><td>YCB · 025_mug</td><td>assets/objects/meshes/ycb/mug</td></tr><tr><td>tray bowl</td><td>YCB · 024_bowl</td><td>assets/objects/meshes/ycb/bowl</td></tr><tr><td>furniture</td><td>project-authored deterministic textured meshes</td><td>assets/movie_night</td></tr></tbody></table><p>Exact source URLs, prepared-from URLs, textures, scales, collision representation, and SHA256 values are recorded in <code>assets/objects/meshes/manifest.json</code> and <code>THIRD_PARTY_NOTICES.md</code>.</p></section>
+<section id="provenance"><h2>Provenance and evidence boundary</h2><p><b>Detector:</b> {html.escape(str(detector.get('name', 'UNKNOWN')))}; <b>checkpoint:</b> {html.escape(str(detector.get('checkpoint', 'UNKNOWN')))}; <b>version:</b> {html.escape(str(detector.get('version', 'UNKNOWN')))}; <b>device:</b> {html.escape(str(detector.get('device', 'UNKNOWN')))}; <b>capture:</b> {html.escape(str(run_config.get('capture_resolution')))}.</p><p>Geometry consumed typed, fresh <code>RegionMeasurementEvidence</code> and <code>PayloadMeasurementEvidence</code> only. Cumulative visualization clouds, complete-room combined clouds, configured geom sizes, hidden simulator geometry, and detector labels are not geometric measurement inputs. RGB semantics come from rendered pixels and are associated through visible masks. No placement, robot motion, navigation, FM, LLM, VLM, planning, or TAMP execution occurs.</p><p class="downloads"><a href="offline_region_ablation_evaluation.json">offline evaluation JSON</a> · <a href="region_compatibility_matrix.json">matrix JSON</a> · <a href="region_compatibility_matrix.csv">matrix CSV</a> · <a href="region_registry.json">region registry</a> · <a href="payload_registry.json">payload registry</a> · <a href="verified_region_handoff.json">verified handoff</a> · <a href="events.jsonl">events</a></p></section>
+</main></body></html>"""
     (report_dir / "presentation_report.html").write_text(
         document, encoding="utf-8"
+    )
+    (report_dir / "ablation_report.html").write_text(
+        "<!doctype html><html><head><meta charset=\"utf-8\">"
+        "<meta http-equiv=\"refresh\" "
+        "content=\"0; url=presentation_report.html\">"
+        "<title>Living-room ablation presentation</title></head><body>"
+        "<p>Open <a href=\"presentation_report.html\">"
+        "presentation_report.html</a>.</p></body></html>\n",
+        encoding="utf-8",
     )
 
 
@@ -653,6 +842,10 @@ def generate_report(run_dir: Path, report_dir: Path) -> dict[str, Any]:
     matrix = _load(run_dir / "region_compatibility_matrix.json")
     rows = matrix["rows"]
     summary = _load(run_dir / "offline_region_ablation_evaluation.json")
+    region_registry = _load(run_dir / "region_registry.json")
+    payload_registry = _load(run_dir / "payload_registry.json")
+    handoff_path = run_dir / "verified_region_handoff.json"
+    handoff = _load(handoff_path) if handoff_path.exists() else None
     _copy_json_artifacts(run_dir, report_dir)
     _render_matrix(rows, report_dir / "region_compatibility_matrix.png")
     _render_ablation(
@@ -687,6 +880,28 @@ def generate_report(run_dir: Path, report_dir: Path) -> dict[str, Any]:
             / "evidence_masks.png",
             mask_target,
         )
+        cameras_target = stage_target / "cameras"
+        cameras_target.mkdir()
+        camera_overlays = []
+        semantic_cameras = stage_dir / "semantics" / "cameras"
+        for camera_dir in sorted(semantic_cameras.iterdir()):
+            camera_target = cameras_target / camera_dir.name
+            camera_target.mkdir()
+            consensus_target = camera_target / "consensus_overlay.png"
+            raw_target = camera_target / "overlay.png"
+            shutil.copy2(
+                camera_dir / "consensus_overlay.png", consensus_target
+            )
+            shutil.copy2(camera_dir / "overlay.png", raw_target)
+            camera_overlays.append(
+                {
+                    "camera_id": camera_dir.name,
+                    "consensus": consensus_target.relative_to(
+                        report_dir
+                    ).as_posix(),
+                    "raw": raw_target.relative_to(report_dir).as_posix(),
+                }
+            )
         _stage_overview(
             stage_dir=stage_dir,
             stage_output=overview,
@@ -708,6 +923,7 @@ def generate_report(run_dir: Path, report_dir: Path) -> dict[str, Any]:
                 "pointcloud": pointcloud.relative_to(report_dir).as_posix(),
                 "graph": graph.relative_to(report_dir).as_posix(),
                 "mask": mask_target.relative_to(report_dir).as_posix(),
+                "camera_overlays": camera_overlays,
             }
         )
     animation = _make_progression(
@@ -715,6 +931,42 @@ def generate_report(run_dir: Path, report_dir: Path) -> dict[str, Any]:
         report_dir / "region_progression.gif",
         report_dir / "region_progression.mp4",
     )
+    mode_animations: dict[str, dict[str, Any]] = {}
+    for mode in MODE_TITLES:
+        mode_frames_dir = report_dir / f".{mode}_frames"
+        mode_frames_dir.mkdir()
+        mode_frames = []
+        for row, stage_asset in zip(rows, stage_assets):
+            frame = mode_frames_dir / (
+                f"frame_{int(row['discovery_stage']):03d}.png"
+            )
+            _mode_frame(
+                report_dir / stage_asset["overview"],
+                frame,
+                mode=mode,
+                row=row,
+                result=summary["modes"][mode],
+            )
+            mode_frames.append(frame)
+        mode_animation = _make_progression(
+            mode_frames,
+            report_dir / f"{mode}_progression.gif",
+            report_dir / f"{mode}_progression.mp4",
+        )
+        mode_animations[mode] = {
+            **mode_animation,
+            "gif": Path(mode_animation["gif"]).relative_to(
+                report_dir
+            ).as_posix(),
+            "mp4": (
+                Path(mode_animation["mp4"])
+                .relative_to(report_dir)
+                .as_posix()
+                if mode_animation["mp4"]
+                else None
+            ),
+        }
+        shutil.rmtree(mode_frames_dir)
     shutil.rmtree(frames_dir)
     report_data = {
         "run_directory": str(run_dir),
@@ -724,6 +976,7 @@ def generate_report(run_dir: Path, report_dir: Path) -> dict[str, Any]:
         "compatibility_matrix": matrix,
         "stage_assets": stage_assets,
         "animation": animation,
+        "mode_animations": mode_animations,
     }
     (report_dir / "report_data.json").write_text(
         json.dumps(report_data, indent=2, sort_keys=True) + "\n",
@@ -735,6 +988,10 @@ def generate_report(run_dir: Path, report_dir: Path) -> dict[str, Any]:
         summary=summary,
         rows=rows,
         stage_assets=stage_assets,
+        region_registry=region_registry,
+        payload_registry=payload_registry,
+        handoff=handoff,
+        mode_animations=mode_animations,
     )
     numeric_rows = "\n".join(
         "| {region_id} | {semantic} | {length:.3f} | {width:.3f} | "

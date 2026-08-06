@@ -1,0 +1,54 @@
+schema_version: 1
+scenes:
+  L2_living_room_region_ablation2_primary:
+    expected:
+      always_shared:
+        status: COMPLETE
+        validity: INVALID
+        classification: FALSE_POSITIVE
+        distinct_region_count: 2
+      always_distinct:
+        status: EXHAUSTED
+        validity: INVALID
+        classification: FALSE_NEGATIVE
+      function_aware:
+        status: COMPLETE
+        validity: VALID
+        classification: CORRECT
+        distinct_region_count: 3
+  L2_living_room_region_ablation2_drinks_dedicated:
+    expected:
+      always_shared:
+        status: COMPLETE
+        validity: INVALID
+        classification: FALSE_POSITIVE
+        distinct_region_count: 1
+      function_aware:
+        status: COMPLETE
+        validity: VALID
+        classification: CORRECT
+        distinct_region_count: 2
+  L2_living_room_region_ablation2_controls_shared:
+    expected:
+      always_distinct:
+        status: EXHAUSTED
+        validity: INVALID
+        classification: FALSE_NEGATIVE
+      function_aware:
+        status: COMPLETE
+        validity: VALID
+        classification: CORRECT
+        distinct_region_count: 1
+  L2_living_room_region_ablation2_exhaustion:
+    expected:
+      function_aware:
+        status: EXHAUSTED
+        validity: VALID
+        classification: CORRECT_REJECTION
+  L2_living_room_region_ablation2_permuted:
+    expected:
+      function_aware:
+        status: COMPLETE
+        validity: VALID
+        classification: CORRECT
+        distinct_region_count: 3
