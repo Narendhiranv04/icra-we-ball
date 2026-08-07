@@ -204,7 +204,7 @@ OBJECT_SUPPORT_HEIGHT = {
     "ab3_partial_spoon": 0.01045,
     "ab3_long_narrow_fork": 0.00773,
     "s1i_wide_shallow_cup": 0.03384,
-    "s1i_narrow_deep_bowl": 0.05500,
+    "s1i_narrow_deep_bowl": 0.04950,
     "s1i_soup_spoon": 0.01045,
     "s1i_coffee_near_miss_spoon": 0.01463,
     "s1i_final_long_narrow_spoon": 0.01045,
@@ -265,7 +265,7 @@ SCENE_OBJECT_VARIANTS = {
         "mesh": "mesh_s1i_wide_shallow_cup",
     },
     "s1i_narrow_deep_bowl": {
-        "base": "bowl", "scale": (0.90, 0.90, 2.00),
+        "base": "bowl", "scale": (1.10, 1.10, 1.80),
         "mesh": "mesh_s1i_narrow_deep_bowl",
     },
     "s1i_soup_spoon": {
@@ -446,6 +446,13 @@ COUNTER_SPOTS = {
     "counter_spot_33": (-0.13, -0.075, 0.580),
     "counter_spot_34": (0.09, -0.075, 0.580),
     "counter_spot_35": (0.31, -0.075, 0.580),
+    # Preparation sources for the final integrated task. They occupy a
+    # separate right-hand column inside the calibrated INITIAL gate so they
+    # are observed without altering the closed-storage utensil benchmark.
+    "counter_spot_37": (0.30, -0.36, 0.580),
+    "counter_spot_38": (0.50, -0.26, 0.580),
+    "counter_spot_39": (0.46, -0.10, 0.580),
+    "counter_spot_40": (0.12, -0.075, 0.580),
     # Isolated semantic-counterexample location at the far left of INITIAL's
     # calibrated volume. It keeps a thin marker clear of vessel silhouettes.
     "counter_spot_36": (-0.67, -0.10, 0.580),

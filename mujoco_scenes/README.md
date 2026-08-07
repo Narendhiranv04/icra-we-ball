@@ -1336,3 +1336,72 @@ The new scene family, exact local/Docker commands, typed region evidence,
 persistent generic region registry, full output layout, and limitations are
 documented in
 [LIVING_ROOM_ENVIRONMENT.md](LIVING_ROOM_ENVIRONMENT.md#l2-region-functional-grounding-region-ablation-1).
+
+## Observed kitchen state to symbolic task plan
+
+`S1_integrated_kitchen_object_function_primary` is the authoritative no-robot
+three-serving experiment. Its pipeline keeps four interfaces separate:
+
+1. `configs/s1_integrated_kitchen_object_function.yaml` declares the
+   ground-truth functional task (the future FM replacement), counts, causal
+   goals, and reuse policies, but contains neither physical object IDs nor a
+   complete action order.
+2. The fixed inspection controller observes `INITIAL`, then
+   `D1 -> D2 -> C2 -> B1 -> C1`, constructing the persistent registry and
+   measured functional witness from fresh RGB-D evidence.
+3. `symbolic_planning.py` compiles only observed generic IDs, region-gated
+   location evidence, and verified witness relations into a PDDL problem.
+4. A deterministic classical state-space planner chooses the task action
+   order, after which a replay validator checks every precondition, effect,
+   holding/location invariant, reuse constraint, and final goal.
+
+Coffee stirring permits one verified utensil to be used sequentially with all
+three coffee vessels. Soup serving requires three target-specific, distinct
+utensils. Source roles (kettle, coffee source, and soup source) are grounded
+in a separate YOLO-World pass over saved stage-0 mask-bounded RGB crops using
+`configs/symbolic_source_vocabulary.yaml`. Simulator body names, hidden poses,
+mesh dimensions, and legacy source-region metadata are not compiler inputs.
+Planner-visible location comes only from `last_evidence_source_region`:
+`INITIAL` evidence maps to the known countertop, while region-gated evidence
+maps to the inspected region.
+
+Run the complete experiment from the repository root:
+
+```bash
+RUN_ID="integrated_symbolic_$(date +%Y%m%d_%H%M%S)"
+MUJOCO_GL=egl \
+PYOPENGL_PLATFORM=egl \
+YOLO_CONFIG_DIR=/tmp \
+MUJOCO_SEMANTIC_PROCESS_ISOLATION=1 \
+OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 \
+MALLOC_ARENA_MAX=2 \
+/home/naren/miniconda3/bin/python \
+  -m mujoco_scenes.run_kitchen_symbolic_pipeline \
+  --scene S1_integrated_kitchen_object_function_primary \
+  --no-robot \
+  --task-requirements configs/s1_integrated_kitchen_object_function.yaml \
+  --inspect-sequence D1 D2 C2 B1 C1 \
+  --runs-root runs \
+  --run-id "$RUN_ID" \
+  --width 1280 --height 960 \
+  --semantic-detector yolo_world \
+  --semantic-model semantic_model_cache/yolov8m-worldv2.pt \
+  --semantic-vocabulary mujoco_scenes/configs/semantic_vocabulary.yaml \
+  --semantic-confidence-threshold 0.03 \
+  --semantic-min-supporting-views 2 \
+  --save-semantic-overlays
+```
+
+The run directory retains the original per-stage RGB-D, semantic, point-cloud,
+graph, and witness evidence and adds `search_trace.json`,
+`observed_symbolic_state.json`, `grounded_role_assignments.json`,
+`symbolic_initial_state.json`, `symbolic_goal.json`, generated `domain.pddl`
+and `problem.pddl`, `plan.txt`, `plan.json`, `plan_validation.json`, and the
+human-readable `combined_action_sequence.txt`.
+
+The current planner is symbolic only. `PICK`, `PLACE`, `POUR`, `STIR`, and
+serving actions are validated state transitions; they do not invoke robot
+navigation, IK, grasping, collision motion planning, PDDLStream, or execution.
+The task specification and source-role vocabulary remain manually configured;
+object identities, geometry, semantics, compatibility, assignments, locations,
+PDDL objects/facts, action order, and validation are produced from each run.

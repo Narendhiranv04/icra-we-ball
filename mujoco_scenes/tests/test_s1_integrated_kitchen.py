@@ -152,7 +152,10 @@ def test_integrated_scene_family_is_separate_and_has_six_visible_targets():
     }
     assert names <= configs.keys()
     primary = configs["S1_integrated_kitchen_object_function_primary"]
-    assert len(primary.countertop_objects) == 11
+    assert len(primary.countertop_objects) == 14
+    assert {"kettle", "coffee_jar", "pot_with_soup"} <= set(
+        primary.countertop_objects.values()
+    )
     assert sum(map(len, primary.container_contents.values())) == 11
     assert "s1i_final_long_narrow_spoon" not in (
         primary.countertop_objects.values()

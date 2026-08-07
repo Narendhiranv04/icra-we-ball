@@ -422,7 +422,13 @@ class ObservedStateRun:
         )
         return cloud_run, stage_dir
 
-    def _source_region(self, scene, instance_id: str) -> str:
+    def _oracle_source_region(self, scene, instance_id: str) -> str:
+        """Return simulator provenance for evaluation diagnostics only.
+
+        This value must never be used as planner-visible location evidence.
+        Runtime location comes from the region-gated inspection that accepted
+        the object's current evidence.
+        """
         if hasattr(scene, "get_instance_source_region"):
             source = scene.get_instance_source_region(instance_id)
             return source if source is not None else self.initial_region_id
@@ -650,10 +656,20 @@ class ObservedStateRun:
                 merged_points,
                 merged_colors,
             )
+            observed_source_region = (
+                self.initial_region_id
+                if expected_region == "INITIAL"
+                else expected_region
+            )
             source_region = (
-                self._source_region(scene, instance_id)
+                observed_source_region
                 if is_new
                 else existing["source_region"]
+            )
+            oracle_source_region = (
+                self._oracle_source_region(scene, instance_id)
+                if is_new
+                else existing.get("oracle_source_region")
             )
             quality_is_valid = bool(
                 evidenced.measurement_quality.get(
@@ -699,6 +715,9 @@ class ObservedStateRun:
                     self.grounding_mode.upper().replace("-", "_")
                 ),
                 "source_region": source_region,
+                "source_region_basis": "REGION_GATED_OBSERVATION",
+                "oracle_source_region": oracle_source_region,
+                "oracle_source_region_usage": "EVALUATION_ONLY",
                 "first_seen_stage": stage if is_new else existing["first_seen_stage"],
                 "last_seen_stage": stage,
                 "observation_count": (

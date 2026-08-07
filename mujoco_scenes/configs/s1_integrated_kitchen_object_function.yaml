@@ -39,7 +39,7 @@ roles:
     semantic_preferences:
       - rank: 1
         canonical_label: spoon
-        detector_aliases: [teaspoon, tablespoon, soup spoon]
+        detector_aliases: [teaspoon, tablespoon, dessert spoon, soup spoon]
     known_excluded_labels: [fork, marker, pen, spatula, tongs]
     unary_geometry:
       - predicate: ELONGATED_OBJECT
@@ -51,7 +51,7 @@ roles:
     semantic_preferences:
       - rank: 1
         canonical_label: spoon
-        detector_aliases: [teaspoon, tablespoon, soup spoon]
+        detector_aliases: [teaspoon, tablespoon, dessert spoon, soup spoon]
     known_excluded_labels: [fork, marker, pen, spatula, tongs]
     unary_geometry:
       - predicate: ELONGATED_OBJECT
@@ -106,3 +106,41 @@ selection:
   semantic_confidence_is_only_a_gate: true
 diagnostics:
   max_representative_rejections: 300
+
+# Declarative preparation specification. This is the sole ground-truth block
+# intended to be replaced by a future FM. It describes required outcomes and
+# causal dependencies, never physical object IDs or a linear action order.
+symbolic_task:
+  schema_version: 1
+  home_region: countertop
+  initial_observation_region: countertop
+  contents: [coffee, water, soup]
+  source_roles:
+    coffee_source:
+      accepted_semantic_labels: [coffee_source]
+      provides: coffee
+      count: 1
+    water_source:
+      accepted_semantic_labels: [kettle]
+      provides: water
+      count: 1
+    soup_source:
+      accepted_semantic_labels: [soup_source]
+      provides: soup
+      count: 1
+  target_requirements:
+    coffee:
+      witness_role: coffee_container
+      required_contents: [coffee, water]
+      requires_operation_group: coffee_stirring
+      final_goal: served
+    soup:
+      witness_role: soup_container
+      required_contents: [soup]
+      requires_operation_group: soup_serving
+      final_goal: served
+  causal_dependencies:
+    - [coffee_contents_present, coffee_stirred]
+    - [coffee_stirred, coffee_served]
+    - [soup_content_present, soup_utensil_placed]
+    - [soup_utensil_placed, soup_served]

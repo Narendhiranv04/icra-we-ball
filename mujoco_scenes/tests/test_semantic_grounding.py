@@ -368,6 +368,48 @@ def test_unmatched_visible_instance_remains_semantically_unknown():
     assert evaluate_semantic_compatibility({}, role)["status"] == "UNKNOWN"
 
 
+def test_role_compatible_label_alternatives_can_jointly_support_role():
+    role = {
+        "semantic_preferences": [
+            {"rank": 1, "canonical_label": "cup", "detector_aliases": ["cup"]},
+            {"rank": 2, "canonical_label": "mug", "detector_aliases": ["mug"]},
+        ]
+    }
+    result = evaluate_semantic_compatibility(
+        {"semantics": {"validated": {
+            "status": "UNKNOWN",
+            "canonical_label": None,
+            "alternatives": [
+                {"label": "mug", "camera_ids": ["left"], "score": 3.6, "mean_confidence": 0.86},
+                {"label": "cup", "camera_ids": ["top"], "score": 2.8, "mean_confidence": 0.77},
+                {"label": "spoon", "camera_ids": ["front", "right"], "score": 0.7, "mean_confidence": 0.11},
+            ],
+        }}},
+        role,
+    )
+    assert result["status"] == "TRUE"
+    assert result["canonical_label"] == "cup"
+    assert result["reason"] == "SUPPORTED_ROLE_COMPATIBLE_ALTERNATIVES"
+
+
+def test_role_alternative_aggregation_does_not_overrule_stronger_excluded_evidence():
+    role = {"semantic_preferences": [
+        {"rank": 1, "canonical_label": "cup", "detector_aliases": ["cup"]}
+    ]}
+    result = evaluate_semantic_compatibility(
+        {"semantics": {"validated": {
+            "status": "UNKNOWN",
+            "canonical_label": None,
+            "alternatives": [
+                {"label": "cup", "camera_ids": ["left", "top"], "score": 0.4},
+                {"label": "spoon", "camera_ids": ["front"], "score": 2.0},
+            ],
+        }}},
+        role,
+    )
+    assert result["status"] == "UNKNOWN"
+
+
 def test_semantic_record_contains_detector_and_rgb_provenance():
     record = fuse_semantic_observations(
         [

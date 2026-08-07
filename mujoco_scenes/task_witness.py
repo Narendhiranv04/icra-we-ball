@@ -1039,12 +1039,87 @@ def evaluate_semantic_compatibility(
 ) -> dict[str, Any]:
     """Return tri-state compatibility from cached detector evidence."""
     semantics = object_attributes.get("semantics", {})
-    validated = semantics.get("validated")
+    # A supported observation is cached under ``validated``. If no canonical
+    # label passed fusion, retain the latest UNKNOWN observation so compatible
+    # role-level alternatives can still be assessed without fabricating a
+    # canonical label or overwriting stronger cached evidence.
+    validated = semantics.get("validated") or semantics.get(
+        "latest_observation"
+    )
+    if not isinstance(validated, dict):
+        return {
+            "status": "UNKNOWN",
+            "canonical_label": None,
+            "semantic_rank": None,
+            "confidence": None,
+            "reason": "NO_VALIDATED_SEMANTIC_EVIDENCE",
+            "provenance": validated,
+        }
     if (
-        not isinstance(validated, dict)
-        or validated.get("status") != "SUPPORTED"
+        validated.get("status") != "SUPPORTED"
         or not isinstance(validated.get("canonical_label"), str)
     ):
+        # Canonical-label fusion can be uncertain even when independent views
+        # consistently support labels that are interchangeable for this role
+        # (for example one view says cup and another says mug). Aggregate only
+        # role-compatible alternatives, never unrelated/excluded labels.
+        alternatives = validated.get("alternatives", [])
+        compatible = []
+        for preference in sorted(
+            role["semantic_preferences"], key=lambda item: item["rank"]
+        ):
+            accepted = {
+                preference["canonical_label"],
+                *preference.get("detector_aliases", []),
+            }
+            for alternative in alternatives:
+                if str(alternative.get("label", "")).lower() in accepted:
+                    compatible.append((preference, alternative))
+        compatible_cameras = {
+            camera_id
+            for _preference, alternative in compatible
+            for camera_id in alternative.get("camera_ids", [])
+        }
+        compatible_score = sum(
+            float(alternative.get("score") or 0.0)
+            for _preference, alternative in compatible
+        )
+        excluded_score = max(
+            (
+                float(alternative.get("score") or 0.0)
+                for alternative in alternatives
+                if all(
+                    str(alternative.get("label", "")).lower()
+                    not in {
+                        preference["canonical_label"],
+                        *preference.get("detector_aliases", []),
+                    }
+                    for preference in role["semantic_preferences"]
+                )
+            ),
+            default=0.0,
+        )
+        if len(compatible_cameras) >= 2 and compatible_score > excluded_score:
+            preference, alternative = min(
+                compatible,
+                key=lambda item: (
+                    int(item[0]["rank"]),
+                    -float(item[1].get("score") or 0.0),
+                    str(item[1].get("label", "")),
+                ),
+            )
+            return {
+                "status": "TRUE",
+                "canonical_label": alternative["label"],
+                "semantic_rank": int(preference["rank"]),
+                "confidence": alternative.get("mean_confidence"),
+                "reason": "SUPPORTED_ROLE_COMPATIBLE_ALTERNATIVES",
+                "preference": deepcopy(preference),
+                "role_compatible_camera_ids": sorted(compatible_cameras),
+                "role_compatible_score": compatible_score,
+                "strongest_excluded_score": excluded_score,
+                "provenance": validated,
+            }
         return {
             "status": "UNKNOWN",
             "canonical_label": None,
