@@ -6,6 +6,7 @@ from mujoco_scenes.geometry_checker import GeometryChecker, load_inspection_rig_
 from mujoco_scenes.workshop_alternatives import evaluate_ranked_alternatives
 from mujoco_scenes.workshop_scene import (
     WORKSHOP_CAMERAS,
+    WORKSHOP_FUNCTIONAL_REGIONS,
     WORKSHOP_INSPECTION_RIG_CONFIG,
     WorkshopScene,
 )
@@ -89,34 +90,164 @@ class WorkshopSceneTests(unittest.TestCase):
     def test_drawer_objects_are_revealed_only_after_inspection(self):
         scene = WorkshopScene("none")
         initial_names = dict(scene.get_visible_object_instances())
-        self.assertNotIn("workshop_flat_driver", initial_names)
+        self.assertNotIn("workshop_manual_driver", initial_names)
+        self.assertNotIn("workshop_power_driver", initial_names)
         self.assertIsNone(
-            scene.get_instance_source_region("workshop_flat_driver")
+            scene.get_instance_source_region("workshop_manual_driver")
         )
         revealed = scene.open_container("LEFT_DRAWER")
-        self.assertIn("workshop_flat_driver", revealed)
+        self.assertIn("workshop_manual_driver", revealed)
+        self.assertIn("workshop_short_screw", revealed)
+        self.assertIn("workshop_cabinet_key", revealed)
+        self.assertNotIn("workshop_power_driver", revealed)
         self.assertEqual(
-            scene.get_instance_source_region("workshop_flat_driver"),
+            scene.get_instance_source_region("workshop_manual_driver"),
             "LEFT_DRAWER",
+        )
+        self.assertIsNone(
+            scene.get_instance_source_region("workshop_power_driver")
+        )
+
+    def test_scene_exposes_fixture_tray_and_locked_cabinet(self):
+        scene = WorkshopScene("none")
+        self.assertEqual(
+            WORKSHOP_FUNCTIONAL_REGIONS,
+            (
+                "FRAME_FIXTURE",
+                "SCREW_STAGING_TRAY",
+                "LOCKED_TOOL_CABINET",
+            ),
+        )
+
+        initial_names = dict(scene.get_visible_object_instances())
+        self.assertEqual(
+            initial_names["workshop_frame_joint"],
+            "fixture_held_frame_joint",
+        )
+        self.assertEqual(
+            initial_names["workshop_joint_seal"],
+            "protective_joint_seal",
+        )
+        cabinet_joint_id = mujoco.mj_name2id(
+            scene.model,
+            mujoco.mjtObj.mjOBJ_JOINT,
+            "locked_cabinet_door_hinge",
+        )
+        self.assertGreaterEqual(cabinet_joint_id, 0)
+        self.assertEqual(
+            scene.model.jnt_type[cabinet_joint_id],
+            mujoco.mjtJoint.mjJNT_HINGE,
+        )
+        task_state = scene.get_task_scene_state()
+        self.assertFalse(task_state["joint_repaired"])
+        self.assertTrue(task_state["locked_cabinet"]["locked"])
+        self.assertFalse(task_state["locked_cabinet"]["open"])
+        self.assertFalse(task_state["joint_access"]["clear"])
+        self.assertEqual(
+            task_state["joint_access"]["covered_by"],
+            "workshop_joint_seal",
+        )
+
+    def test_joint_seal_is_stable_and_can_be_staged_in_tray(self):
+        scene = WorkshopScene("none")
+        seal_joint_id = mujoco.mj_name2id(
+            scene.model,
+            mujoco.mjtObj.mjOBJ_JOINT,
+            "workshop_joint_seal_free",
+        )
+        self.assertGreaterEqual(seal_joint_id, 0)
+        self.assertEqual(
+            scene.model.jnt_type[seal_joint_id],
+            mujoco.mjtJoint.mjJNT_FREE,
+        )
+        scene.move_joint_seal_to_tray()
+        state = scene.get_task_scene_state()
+        self.assertTrue(state["joint_access"]["clear"])
+        self.assertEqual(state["joint_seal_location"], "SCREW_STAGING_TRAY")
+        qpos_address = scene.model.jnt_qposadr[seal_joint_id]
+        self.assertAlmostEqual(scene.data.qpos[qpos_address], -0.84, places=2)
+        self.assertAlmostEqual(scene.data.qpos[qpos_address + 1], 0.19, places=2)
+
+    def test_locked_cabinet_requires_observed_matching_key(self):
+        scene = WorkshopScene("none")
+        with self.assertRaisesRegex(RuntimeError, "locked"):
+            scene.open_container("LOCKED_CABINET")
+        with self.assertRaisesRegex(ValueError, "must be observed"):
+            scene.unlock_container("LOCKED_CABINET", "workshop_cabinet_key")
+
+        scene.open_container("LEFT_DRAWER")
+        scene.unlock_container("LOCKED_CABINET", "workshop_cabinet_key")
+        revealed = scene.open_container("LOCKED_CABINET")
+        self.assertIn("workshop_power_driver", revealed)
+        self.assertIn("workshop_long_screw", revealed)
+        task_state = scene.get_task_scene_state()
+        self.assertFalse(task_state["locked_cabinet"]["locked"])
+        self.assertTrue(task_state["locked_cabinet"]["open"])
+        door_joint_id = mujoco.mj_name2id(
+            scene.model,
+            mujoco.mjtObj.mjOBJ_JOINT,
+            "locked_cabinet_door_hinge",
+        )
+        door_qpos_address = scene.model.jnt_qposadr[door_joint_id]
+        self.assertGreater(scene.data.qpos[door_qpos_address], 1.0)
+        lock_geom_id = mujoco.mj_name2id(
+            scene.model,
+            mujoco.mjtObj.mjOBJ_GEOM,
+            "locked_cabinet_lock",
+        )
+        self.assertGreater(
+            scene.model.geom_rgba[lock_geom_id, 1],
+            scene.model.geom_rgba[lock_geom_id, 0],
+        )
+
+    def test_short_and_long_screws_are_geometrically_distinct(self):
+        scene = WorkshopScene("none")
+        short_id = mujoco.mj_name2id(
+            scene.model, mujoco.mjtObj.mjOBJ_GEOM, "short_screw_shank"
+        )
+        long_id = mujoco.mj_name2id(
+            scene.model, mujoco.mjtObj.mjOBJ_GEOM, "long_screw_shank"
+        )
+        self.assertGreaterEqual(short_id, 0)
+        self.assertGreaterEqual(long_id, 0)
+        self.assertLess(
+            scene.model.geom_size[short_id, 1],
+            scene.model.geom_size[long_id, 1],
         )
 
     def test_workshop_has_five_views_for_each_observation_stage(self):
         config = load_inspection_rig_config(WORKSHOP_INSPECTION_RIG_CONFIG)
         self.assertEqual(
-            config["inspection_sequence"], ["LEFT_DRAWER", "RIGHT_DRAWER"]
+            config["inspection_sequence"], ["LEFT_DRAWER", "LOCKED_CABINET"]
         )
         self.assertEqual(set(config["camera_slots"].values()), set(WORKSHOP_CAMERAS))
         for region in config["regions"].values():
             self.assertEqual(len(region["cameras"]), 5)
 
-    def test_open_drawer_produces_fresh_region_gated_rgbd_evidence(self):
+    def test_open_drawers_produce_fresh_region_gated_rgbd_evidence(self):
         scene = WorkshopScene("none")
-        scene.open_container("RIGHT_DRAWER")
-        run = GeometryChecker(scene, width=320, height=240).run_region_inspection(
-            "RIGHT_DRAWER"
+        checker = GeometryChecker(scene, width=320, height=240)
+        initial_run = checker.run_region_inspection("INITIAL")
+        self.assertGreater(
+            len(initial_run.clouds["workshop_joint_seal"].points), 20
         )
-        self.assertGreater(len(run.clouds["workshop_phillips_driver"].points), 20)
-        self.assertGreater(len(run.clouds["workshop_medium_screw"].points), 20)
+        scene.open_container("LEFT_DRAWER")
+        left_run = checker.run_region_inspection("LEFT_DRAWER")
+        for instance_name in (
+            "workshop_manual_driver",
+            "workshop_short_screw",
+            "workshop_cabinet_key",
+        ):
+            self.assertGreater(len(left_run.clouds[instance_name].points), 20)
+
+        scene.unlock_container("LOCKED_CABINET", "workshop_cabinet_key")
+        scene.open_container("LOCKED_CABINET")
+        right_run = checker.run_region_inspection("LOCKED_CABINET")
+        for instance_name in (
+            "workshop_power_driver",
+            "workshop_long_screw",
+        ):
+            self.assertGreater(len(right_run.clouds[instance_name].points), 20)
 
 
 class WorkshopAlternativeTests(unittest.TestCase):

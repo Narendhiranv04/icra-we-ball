@@ -99,11 +99,36 @@ MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.living_room_scene \
 
 ## Workshop: joint region and object alternatives
 
-W1 is deliberately compact: one workbench, one frame joint, a visible
-hammer/nail near-miss, and two drawers. The left drawer contains a screwdriver
-and a screw that is too short. The right drawer contains the compatible
-driver/screw pair. This produces both region search and object-system choice
-without making the room large.
+W1 is a single-arm frame-joint repair cell. Two wooden members are already
+immobilized in a bench fixture, and a captive guide can retain a staged screw.
+The robot never needs to hold the workpiece, screw, and driver simultaneously.
+A transparent polycarbonate transport cover sits flush over the guide. It has
+a rubber gasket and a yellow pull tab, and must be removed into the adjacent
+staging tray before a screw can enter the joint. This adds a visible geometric
+access prerequisite without requiring another tool.
+A locked tabletop tool cabinet creates the logical access prerequisite. Its
+key is hidden in the left drawer, and the cabinet cannot be opened through the
+scene API until that key has first been observed and used. The adjacent orange
+tray is reserved for staging the selected screw.
+
+The left drawer hides the key, a manual Phillips driver, and a geometrically
+inadequate short screw. The locked cabinet hides a powered Phillips driver and
+the feasible long screw. Once both regions have been observed, either driver
+can form a complete cross-region system with the long screw. This retains
+object choice, region search, geometric rejection, and a meaningful
+key-before-open prerequisite while removing cutting, loose-frame assembly, and
+vertical mounting.
+
+The intended partial order is:
+
+```text
+remove_joint_seal -> insert_screw -> drive_screw
+observe_key -> unlock_cabinet -> open_cabinet -> observe_long_screw
+observe_long_screw -> insert_screw
+```
+
+Seal removal and storage inspection may occur in either order. Only the
+dependent actions above are ordered.
 
 Inspect it with Google Robot:
 
@@ -112,24 +137,27 @@ MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.workshop_scene \
   --robot google --viewer
 ```
 
-Open drawers directly for perception debugging:
+Open both storage regions directly for perception debugging:
 
 ```bash
 MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.workshop_scene \
-  --robot none --open LEFT_DRAWER --open RIGHT_DRAWER --viewer
+  --robot none --open LEFT_DRAWER --unlock-cabinet \
+  --open LOCKED_CABINET --remove-seal --viewer
 ```
 
-The FM-facing task contract is
-`mujoco_scenes/configs/workshop_joint_alternatives.yaml`. The deterministic
-validator is `mujoco_scenes.workshop_alternatives.evaluate_ranked_alternatives`.
-It accepts only observed IDs and simple functions (`can_hammer`, `can_screw`,
-`can_fasten`); it does not use efficiency scores or hidden scene contents.
+This change establishes the physical scene and observable state only. The
+existing `workshop_joint_alternatives.yaml` contract and
+`workshop_alternatives.py` validator still describe the earlier single-joint
+prototype; updating the functional-requirement, search, and sequencing
+pipeline is intentionally deferred. The `--remove-seal` option applies a
+labelled ground-truth debug transition; calibrated grasp-and-place execution
+must eventually replace it.
 
 ## Current boundary
 
 The observation, grounding, ablation, early-termination, and evidence-report
-paths are implemented. Kitchen and living-room robot manipulation remains in
-their existing calibrated controllers. Workshop arm grasps and physical
-fastening are not calibrated yet; W1 currently ends at a verified tool-system
-witness. That boundary keeps grounding results separate from future execution
-failures.
+paths are implemented for the existing benchmarks. Kitchen and living-room
+robot manipulation remains in their calibrated controllers. Workshop grasping,
+key insertion/turning, screw driving, and task sequencing are not implemented
+yet. The current W1 boundary is scene construction, region-gated observations,
+and enforced logical task-state transitions.

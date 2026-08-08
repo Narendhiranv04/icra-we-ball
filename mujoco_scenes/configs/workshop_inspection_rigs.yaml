@@ -1,5 +1,5 @@
 schema_version: 1
-inspection_sequence: [LEFT_DRAWER, RIGHT_DRAWER]
+inspection_sequence: [LEFT_DRAWER, LOCKED_CABINET]
 
 camera_slots:
   left: workshop_camera_left
@@ -34,16 +34,16 @@ evidence_acceptance:
 
 regions:
   INITIAL:
-    target_world_m: [0.0, 0.42, 0.72]
-    rig_position_world_m: [0.0, -1.10, 1.30]
+    target_world_m: [0.0, 0.48, 1.00]
+    rig_position_world_m: [0.0, -1.15, 1.45]
     up_world: [0.0, 0.0, 1.0]
     near_depth_m: 0.20
     far_depth_m: 2.50
     settle_steps: 50
     boundary_margin_m: 0.025
     inspection_volume:
-      minimum_world_m: [-0.95, 0.05, 0.57]
-      maximum_world_m: [0.95, 1.52, 1.80]
+      minimum_world_m: [-1.15, 0.00, 0.57]
+      maximum_world_m: [1.15, 1.52, 1.80]
     cameras: &workshop_views
       left:
         position_offset_m: [-0.34, 0.00, 0.12]
@@ -79,15 +79,15 @@ regions:
       maximum_world_m: [-0.06, 0.40, 0.62]
     cameras: *workshop_views
 
-  RIGHT_DRAWER:
-    target_world_m: [0.48, -0.02, 0.44]
-    rig_position_world_m: [0.48, -1.05, 0.86]
+  LOCKED_CABINET:
+    target_world_m: [0.78, 0.62, 0.90]
+    rig_position_world_m: [0.78, -0.72, 1.22]
     up_world: [0.0, 0.0, 1.0]
     near_depth_m: 0.15
-    far_depth_m: 1.80
+    far_depth_m: 2.20
     settle_steps: 80
     boundary_margin_m: 0.025
     inspection_volume:
-      minimum_world_m: [0.06, -0.42, 0.34]
-      maximum_world_m: [0.90, 0.40, 0.62]
+      minimum_world_m: [0.43, 0.42, 0.62]
+      maximum_world_m: [1.12, 0.90, 1.23]
     cameras: *workshop_views

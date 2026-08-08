@@ -1,6 +1,6 @@
 # Codex Project Handoff
 
-Updated: 2026-08-06 (Asia/Kolkata)
+Updated: 2026-08-08 (Asia/Kolkata)
 
 This file is the working context for continuing the project from another Codex
 session after SSHing into this machine. Start the next session by asking Codex
@@ -11,8 +11,8 @@ or discarding uncommitted changes.
 
 - Repository root: `/home/boreddog/Documents/RRC/LH_Extension/V1`
 - Current branch: `three_scene_benchmarks`
-- The branch contains the three-scene integration commit `412f092` and the
-  newest controlled merge from `origin/naren/googlePointCloudIntegration`.
+- The branch currently points to `761f43e`, the controlled merge of the
+  expanded living-room region ablations.
 - The newest integrated upstream revision is `b4dcbd6`. Its complete L2
   Ablation 1/2/3 implementation and realistic movie-night assets are retained.
 - Generated `reports/` media is deliberately excluded; report generators,
@@ -57,25 +57,51 @@ git log -3 --oneline --decorate
 This is a Robust TAMP research codebase using MuJoCo. The intended pipeline is:
 
 1. Provide the foundation model with visible scene images.
-2. Ask it to decompose a task into functional/geometric requirements.
-3. Inspect regions in a fixed, random, or FM-ranked order for ablations.
-4. Semantically ground visible object candidates from RGB.
-5. Build RGB-D point clouds and test geometric requirements such as
-   insertability, usable length, cross-section, cavity depth, or support.
-6. Ask the FM to rank only visible feasible alternatives.
-7. Select the first ranked candidate that passes deterministic geometry.
-8. Terminate inspection/planning early when the functional witness is complete.
-9. Execute and verify the chosen physical action.
+2. Call the FM once to decompose the goal into simple functional requirements,
+   propose/rank at most three common object or method types, and optionally
+   provide abstract subgoal precedence. The FM must not claim that an
+   unobserved type is present in the scene.
+3. Follow the experiment's configured region search order. The finalized
+   workshop production policy uses one fixed search order; fixed/random/FM
+   orders may remain diagnostic ablations elsewhere.
+4. Identify visible instances from RGB with a lightweight semantic model and
+   assign generic persistent IDs. YOLO-World has struggled with the small,
+   unusually viewed simulator objects, so SAM 3.1 and lightweight proposal +
+   crop-classification alternatives should be evaluated.
+5. Accumulate visible instances across every inspected region and build RGB-D
+   point clouds for deterministic target-specific geometry such as
+   insertability, usable length, cross-section, cavity depth, support,
+   tool-fastener mating, hole fit, and approach clearance.
+6. Construct complete functional witnesses from the full accumulated observed
+   registry. Components of one method may come from different regions.
+7. Stop immediately at the first complete method that passes every semantic
+   and geometric check. Do not keep searching for a higher-ranked method that
+   might be hidden elsewhere.
+8. Give the verified object/region handoff to a downstream sequencer. The
+   agreed direction is PDDLStream for grounded symbolic action ordering plus
+   grasp, placement, IK, navigation, and collision-free trajectory streams.
+9. Execute one action or short safe prefix, verify its observed effect, and
+   deterministically re-run PDDLStream after execution failures. Do not use the
+   FM as the replanner.
 
 Examples include choosing a spoon or chopstick instead of a coffee stirrer,
 while rejecting undesirable objects such as a pen or knife after semantic/FM
 ranking and geometric validation.
 
+The FM ranking is a bounded commonsense proposal, not global optimality. Under
+first-feasible early termination, a valid lower-ranked method found earlier in
+the fixed search is intentionally selected. Ranking only affects which
+currently constructible candidates are checked first when more than one is
+available at the same observation stage. Scientific correctness is membership
+in the deterministically verified feasible set, not agreement with one
+preferred method.
+
 The persistent observation, tracking, semantic grounding, task-witness,
 same-evidence ablation, and report-generation source from Naren's branch is now
 integrated. The kitchen object-alternative and living-room region-alternative
-benchmarks are present, and a compact workshop scaffold combines region and
-object-system alternatives. See `THREE_SCENE_BENCHMARKS.md`.
+benchmarks are present. The dirty worktree now also contains the redesigned
+compact workshop physical scene described below. See
+`THREE_SCENE_BENCHMARKS.md`.
 
 The integrated test command is:
 
@@ -84,9 +110,54 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 MUJOCO_GL=egl \
   .venv/bin/python -m pytest mujoco_scenes/tests -q
 ```
 
-It currently passes 361 tests, including both server workspaces, all three L2
+It currently passes 365 tests, including both server workspaces, all three L2
 region ablations, and fresh workshop RGB-D evidence.
 Pytest is declared in `mujoco_scenes/requirements-dev.txt`.
+
+## Finalized FM, search, and sequencing boundary
+
+Naren's controlled S1/L2 benchmark runners do **not** call an FM. Their task
+YAML files are explicitly manual future-FM contracts
+(`generated_from_foundation_model: false`). They run real RGB/RGB-D perception,
+semantic and geometric grounding, same-evidence policy ablations, and emit a
+verified handoff. They do not perform navigation, manipulation, task ordering,
+PDDLStream, or TAMP execution.
+
+The separate existing client in `mujoco_scenes/foundation_model.py` can call an
+OpenAI-compatible vLLM/SGLang endpoint. Today it receives a required function
+plus structured visible candidate IDs/categories/facts and returns a functional
+subset and ranking. It does not yet receive the actual image payload or derive
+the functional requirements from a natural-language goal. Replacing the manual
+future-FM contract with validated structured multimodal output remains future
+integration work.
+
+The agreed execution architecture is:
+
+```text
+visible images + goal
+        -> one FM decomposition/type-ranking call
+        -> fixed sequential region inspection
+        -> persistent cross-region observed-object registry
+        -> first complete semantic + geometric witness
+        -> PDDLStream problem construction/refinement
+        -> guarded execution and deterministic replanning
+```
+
+There is no PDDLStream invocation in the repository yet. When added, keep the
+outer discovery executive separate initially: it owns inspection, unknown
+regions, evidence updates, and early termination. PDDLStream begins only after
+a verified witness exists and owns the grounded execution sequence and
+continuous samplers. Suggested minimal layout:
+
+```text
+mujoco_scenes/planning/
+  domain.pddl
+  stream.pddl
+  problem_builder.py
+  streams.py
+  executor.py
+  replanner.py
+```
 
 ## Robot and environments
 
@@ -108,8 +179,9 @@ motion. Calibration guidance is maintained in
 
 Kitchen behavior exists and was ported from main to Google Robot. It includes
 navigation, picking/placing, spoon/jar interactions, cupboards, box/drawer
-actions, IK work, and calibration support. The user currently wants living-room
-work prioritized; do not start unrelated kitchen changes.
+actions, IK work, and calibration support. The current design discussion is
+focused on the third compact workshop benchmark; do not start unrelated kitchen
+changes without a new request.
 
 ### Living room
 
@@ -136,6 +208,71 @@ Important living-room files:
 
 The coffee table and sofa are intentionally static. Earlier push/pull table
 experiments were removed.
+
+### Workshop / makers-lab benchmark
+
+The dirty worktree implements a deliberately simplified, single-arm workshop
+repair cell. It is one front-facing workbench intended to keep Google Robot at
+one central stance. Two wooden frame members are already rigidly held in a
+fixture, and a captive guide can retain a staged screw. The artificial hinged
+joint guard was removed. A locked tabletop tool cabinet now supplies the TAMP
+access dependency, and the orange tray is for staging the selected screw.
+
+A small transparent polycarbonate cover with a rubber gasket and yellow pull
+tab now sits directly over the joint guide. It is a stable free-jointed object,
+not floating decorative geometry. It must be removed into the staging tray
+before screw insertion. The observable task state reports whether joint access
+is covered or clear. `--remove-seal` and `move_joint_seal_to_tray()` provide an
+explicit ground-truth debug transition; they are not a substitute for the
+future calibrated grasp-and-place action.
+
+The left drawer contains the cabinet key, a manual Phillips driver, and an
+unusably short screw. The locked cabinet contains a powered Phillips driver and
+the feasible long screw. The scene API rejects attempts to open the cabinet
+while locked and rejects use of an unobserved or mismatched key. Successful
+unlocking changes the visible lock indicator from red to green. The intended
+future execution has this partial order:
+
+```text
+remove_joint_seal -> insert_screw -> drive_screw
+observe_key -> unlock_cabinet -> open_cabinet -> observe_long_screw
+observe_long_screw -> insert_screw
+```
+
+Seal removal and region inspection are independent until screw insertion.
+After opening the cabinet, the robot rejects the short screw geometrically,
+stages and releases the long screw in the captive guide, grasps either
+compatible driver, drives the screw, and verifies the repaired joint. The
+fixture and guide replace the second hand, so the robot carries only one object
+at a time.
+
+This still supports the desired research variables: manual versus powered
+driver object alternatives, short versus long screw geometry, fixed-order
+drawer/cabinet region search, cross-region driver/fastener composition, the
+logical `key_observed -> cabinet_unlocked -> cabinet_open` prerequisite chain,
+and first-feasible termination. Cutting, loose-frame assembly, and vertical
+mounting were removed because they introduced several unrelated high-risk
+manipulation skills into one benchmark.
+
+`mujoco_scenes/workshop_scene.py` compiles with `--robot google` and
+`--robot none`, exposes five fixed cameras, preserves region-gated visibility,
+and reports non-privileged locked/open cabinet state. The
+inspection rig remains `LEFT_DRAWER` then `LOCKED_CABINET` and produces fresh
+RGB-D evidence for the new contents. Launch it with:
+
+```bash
+MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.workshop_scene \
+  --robot google --viewer
+```
+
+Current boundary: this change implements only the scene, observable state,
+camera/inspection configuration, tests, and documentation. It does **not**
+implement grasping, physical seal removal, key insertion/turning, screw
+driving, functional grounding, PDDLStream, or execution. The existing
+`configs/workshop_joint_alternatives.yaml` and `workshop_alternatives.py` still
+describe the older hammer/nail single-joint prototype and must be redesigned
+in the next workshop-pipeline phase rather than treated as the new scene's
+contract.
 
 ## Final camera topology
 
@@ -278,7 +415,7 @@ six task cameras, but its geometry fusion rig uses exactly five logical views:
 Those are virtual region-facing cameras dynamically repositioned from
 `configs/inspection_rigs.yaml`; they are not five robot wrist cameras.
 
-The current branch has local versions of:
+The current branch has integrated versions of:
 
 - `geometry_checker.py`
 - `geometry_properties.py`
@@ -289,55 +426,49 @@ The current branch has local versions of:
 - `perception.py`
 - `sam3_client.py`
 - point-cloud tests and documentation
-
-The local `geometry_checker.py` additionally supports learned image masks and
-cross-camera centroid association rather than relying solely on MuJoCo object
-segmentation.
-
-However, the following complete modules from Naren's branch are not currently
-present in this worktree:
-
 - `observed_state.py`
 - `sequential_inspection.py`
 - `semantic_grounding.py`
 - `task_witness.py`
 - `generate_grounding_report.py`
 
-Do not blindly copy `scene_loader.py` or the whole remote branch because that
-would overwrite Google Robot and living-room work. Port relevant modules
-selectively and adapt their kitchen-region assumptions.
+The local `geometry_checker.py` additionally supports learned image masks and
+cross-camera centroid association rather than relying solely on MuJoCo object
+segmentation. Do not blindly replace these integrated files with another
+branch; preserve the Google Robot, interactive living room, S1/L2 ablations,
+and local stability fixes.
 
-The remote branch has advanced beyond the previously audited `64719f1` commit.
-Fetch and review the changes through the current `7ca4633` commit before doing
-the persistent tracking integration:
+The integrated Naren reference is now
+`origin/naren/googlePointCloudIntegration` at `b4dcbd6`. Fetch that exact
+remote ref before any future comparison:
 
 ```bash
-git fetch origin naren/pointCloudExtraction
-git log --oneline --decorate -10 origin/naren/pointCloudExtraction
-git diff --name-status 3f2e377..origin/naren/pointCloudExtraction -- mujoco_scenes
+git fetch origin naren/googlePointCloudIntegration
+git log --oneline --decorate -10 origin/naren/googlePointCloudIntegration
+git diff --name-status b4dcbd6..origin/naren/googlePointCloudIntegration -- mujoco_scenes
 ```
 
 ## Current perception boundary
 
 The current state is intentionally honest:
 
-- The two lower cameras are fully integrated with the lost-remote inspection.
-- The five upper cameras render valid distinct live images and provide
-  full-surround visual coverage.
-- The five upper feeds are **not yet connected** to persistent semantic/
-  point-cloud region tracking or the foundation-model visible-state payload.
-- That integration is the next major task.
-
-A reasonable next implementation sequence is:
-
-1. Define compact living-room observation regions and navigation poses.
-2. Capture the five upper RGB-D feeds at each inspection pose.
-3. Run SAM 3.1/semantic grounding only on visible images.
-4. Associate detections across the five upper views without MuJoCo IDs.
-5. Persist generic object tracks across region inspections.
-6. Pass only visible labels/images/properties to the foundation model.
-7. Add fixed/random/FM region-order ablations and early termination.
-8. Keep oracle segmentation available only for evaluation.
+- The controlled S1/L2/workshop observation pipeline, persistent registry,
+  YOLO-World semantics, point-cloud geometry, witnesses, ablations, and reports
+  are integrated.
+- The interactive living room has two lower cameras for the sofa and five upper
+  robot-mounted cameras for general coverage.
+- SAM 3.1 is integrated through `sam3_client.py` for learned mask inspection
+  and the under-sofa path, but the S1/L2 semantic CLI runners still expose only
+  `yolo_world` and `none` as built-in semantic detector choices.
+- YOLO-World identification quality is insufficient on several small or
+  unusually viewed workshop/kitchen objects. The next perception experiment
+  should connect SAM 3.1 to the common semantic backend and compare identical
+  saved RGB evidence against YOLO-World. A lighter alternative is
+  MobileSAM-style proposals plus a lightweight image-text crop classifier.
+- Require multi-view support, persistent generic IDs, and an explicit
+  `UNKNOWN` outcome rather than forcing every mask into a known category.
+- Simulator segmentation and names remain oracle/offline-evaluation evidence,
+  never learned-path semantic inputs.
 
 ## Foundation-model inference
 
@@ -356,28 +487,17 @@ models for inference only.
 The latest complete repository test result during this conversation was:
 
 ```text
-Ran 118 tests in 18.988s
-OK
+365 passed, 14 warnings
 ```
 
-The latest focused living-room result after final camera placement was:
-
-```text
-Ran 38 tests in 0.728s
-OK
-```
+The warnings were matplotlib/pyparsing deprecations, not test failures.
 
 Useful validation commands:
 
 ```bash
 git diff --check
-.venv/bin/python -m py_compile \
-  mujoco_scenes/living_room_cameras.py \
-  mujoco_scenes/living_room_scene.py \
-  mujoco_scenes/living_room_sofa.py \
-  mujoco_scenes/living_room_camera_debug.py \
-  mujoco_scenes/living_room_actions.py
-.venv/bin/python -m unittest discover -s mujoco_scenes/tests
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 MUJOCO_GL=egl \
+  .venv/bin/python -m pytest mujoco_scenes/tests -q
 ```
 
 The five upper camera renders were visually checked at the standard home pose.
@@ -393,17 +513,17 @@ uv venv --python 3.11
 uv pip install --python .venv/bin/python -r mujoco_scenes/requirements.txt
 ```
 
-Use `MUJOCO_GL=glfw` for interactive native windows and `MUJOCO_GL=osmesa` for
+Use `MUJOCO_GL=glfw` for interactive native windows and `MUJOCO_GL=egl` for
 headless rendering/tests.
 
 ## Suggested prompt for the next Codex session
 
 ```text
 Read CODEX_HANDOFF.md completely, then inspect the current dirty worktree.
-Preserve all existing changes. Continue by wiring the five upper Google Robot
-cameras into living-room visible-state semantic/point-cloud tracking, using
-origin/naren/pointCloudExtraction only as a selective reference. Do not expose
-hidden simulator objects to the learned path, and keep oracle behavior explicit.
-Before editing, tell me what has changed on the remote branch since 64719f1 and
-which pieces you intend to port.
+Preserve all existing changes. The compact workshop physical scene has been
+implemented; do not redesign it without a new request. The next workshop work
+is the separately authorized functional-grounding/search/sequencing phase.
+Before changing that pipeline, inspect the scene inventory and explicitly
+separate visible evidence from hidden drawer truth. Keep the one-shot FM,
+fixed search, first-feasible stopping, and no-FM-replanning decisions.
 ```

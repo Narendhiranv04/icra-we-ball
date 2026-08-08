@@ -1,4 +1,4 @@
-"""Compact workshop scene for joint region and object alternatives."""
+"""Compact single-arm frame-joint repair scene."""
 
 from __future__ import annotations
 
@@ -29,7 +29,12 @@ WORKSHOP_BASE = ROOT / "assets" / "workshop_base.xml"
 WORKSHOP_INSPECTION_RIG_CONFIG = (
     ROOT / "configs" / "workshop_inspection_rigs.yaml"
 )
-WORKSHOP_REGIONS = ("LEFT_DRAWER", "RIGHT_DRAWER")
+WORKSHOP_REGIONS = ("LEFT_DRAWER", "LOCKED_CABINET")
+WORKSHOP_FUNCTIONAL_REGIONS = (
+    "FRAME_FIXTURE",
+    "SCREW_STAGING_TRAY",
+    "LOCKED_TOOL_CABINET",
+)
 WORKSHOP_CAMERAS = (
     "workshop_camera_left",
     "workshop_camera_right",
@@ -38,19 +43,18 @@ WORKSHOP_CAMERAS = (
     "workshop_camera_close",
 )
 INITIAL_OBJECTS = (
-    ("frame_joint", "frame_joint"),
-    ("workshop_hammer", "hammer"),
-    ("workshop_large_nail", "nail"),
-    ("workshop_marker", "marker"),
+    ("workshop_frame_joint", "fixture_held_frame_joint"),
+    ("workshop_joint_seal", "protective_joint_seal"),
 )
 REGION_OBJECTS = {
     "LEFT_DRAWER": (
-        ("workshop_flat_driver", "screwdriver"),
-        ("workshop_short_screw", "screw"),
+        ("workshop_manual_driver", "phillips_screwdriver"),
+        ("workshop_short_screw", "short_screw"),
+        ("workshop_cabinet_key", "cabinet_key"),
     ),
-    "RIGHT_DRAWER": (
-        ("workshop_phillips_driver", "screwdriver"),
-        ("workshop_medium_screw", "screw"),
+    "LOCKED_CABINET": (
+        ("workshop_power_driver", "powered_screwdriver"),
+        ("workshop_long_screw", "long_screw"),
     ),
 }
 
@@ -62,6 +66,11 @@ class WorkshopObservationState:
         default_factory=lambda: {
             region_id: False for region_id in WORKSHOP_REGIONS
         }
+    )
+    joint_repaired: bool = False
+    joint_seal_location: str = "FRAME_JOINT"
+    container_locked_state: dict[str, bool] = field(
+        default_factory=lambda: {"LOCKED_CABINET": True}
     )
 
 
@@ -75,10 +84,19 @@ def build_workshop_xml(robot: str = ROBOT_GOOGLE) -> str:
 
 
 class WorkshopScene:
-    """Workshop geometry plus the generic closed-region observation API."""
+    """Workshop geometry plus a bounded closed-region observation API.
+
+    The fixture and captive screw guide replace a second robot hand. The
+    cabinet enforces a key-before-open ordering constraint. This module models
+    only the scene and observable state; it does not implement grasping, key
+    insertion, screw driving, or task-and-motion planning.
+    """
 
     scene_name = "W1_workshop_joint_alternatives"
-    goal = "Fasten the two frame pieces using a compatible observed tool system."
+    goal = (
+        "Remove the protective seal, then repair the fixture-held frame joint "
+        "using the first compatible observed driver and screw."
+    )
     point_cloud_cameras = WORKSHOP_CAMERAS
     inspection_rig_config_path = WORKSHOP_INSPECTION_RIG_CONFIG
     initial_observation_region = "workbench"
@@ -119,6 +137,10 @@ class WorkshopScene:
         mujoco.mj_forward(self.model, self.data)
         for _ in range(settle_steps):
             mujoco.mj_step(self.model, self.data)
+        lock_geom_id = mujoco.mj_name2id(
+            self.model, mujoco.mjtObj.mjOBJ_GEOM, "locked_cabinet_lock"
+        )
+        self.model.geom_rgba[lock_geom_id] = (0.58, 0.07, 0.05, 1.0)
 
     def get_visible_object_instances(self) -> list[tuple[str, str]]:
         visible = list(INITIAL_OBJECTS)
@@ -143,14 +165,74 @@ class WorkshopScene:
                 "region_id": region_id,
                 "open": self.state.container_open_state[region_id],
                 "inspected": region_id in self.state.opened_containers,
+                "locked": self.state.container_locked_state.get(
+                    region_id, False
+                ),
             }
             for region_id in WORKSHOP_REGIONS
         }
 
-    def _drawer_actuator_id(self, region_id: str) -> int:
+    def get_task_scene_state(self) -> dict[str, object]:
+        """Return non-privileged symbolic state exposed by the scene.
+
+        The cabinet door and lock are initially visible, so reporting their
+        state does not reveal the hidden cabinet contents.
+        """
+        return {
+            "joint_repaired": self.state.joint_repaired,
+            "joint_access": {
+                "clear": self.state.joint_seal_location != "FRAME_JOINT",
+                "covered_by": (
+                    "workshop_joint_seal"
+                    if self.state.joint_seal_location == "FRAME_JOINT"
+                    else None
+                ),
+            },
+            "joint_seal_location": self.state.joint_seal_location,
+            "locked_cabinet": {
+                "locked": self.state.container_locked_state["LOCKED_CABINET"],
+                "open": self.state.container_open_state["LOCKED_CABINET"],
+            },
+        }
+
+    def move_joint_seal_to_tray(self, steps: int = 300) -> None:
+        """Apply the ground-truth debug transition for a successful removal.
+
+        Future execution code should replace this teleport with a planned
+        grasp-and-place motion and update the same observable state afterward.
+        """
+        joint_id = mujoco.mj_name2id(
+            self.model,
+            mujoco.mjtObj.mjOBJ_JOINT,
+            "workshop_joint_seal_free",
+        )
+        qpos_address = self.model.jnt_qposadr[joint_id]
+        self.data.qpos[qpos_address : qpos_address + 3] = (-0.84, 0.19, 0.72)
+        self.data.qpos[qpos_address + 3 : qpos_address + 7] = (1.0, 0.0, 0.0, 0.0)
+        dof_address = self.model.jnt_dofadr[joint_id]
+        self.data.qvel[dof_address : dof_address + 6] = 0.0
+        mujoco.mj_forward(self.model, self.data)
+        for _ in range(steps):
+            mujoco.mj_step(self.model, self.data)
+        self.state.joint_seal_location = "SCREW_STAGING_TRAY"
+
+    def unlock_container(self, region_id: str, key_instance: str) -> None:
+        if region_id != "LOCKED_CABINET":
+            raise ValueError(f"Workshop region is not lockable: {region_id}")
+        if self.get_instance_source_region(key_instance) is None:
+            raise ValueError("Cabinet key must be observed before it can be used")
+        if key_instance != "workshop_cabinet_key":
+            raise ValueError(f"Key does not fit workshop cabinet: {key_instance}")
+        self.state.container_locked_state[region_id] = False
+        lock_geom_id = mujoco.mj_name2id(
+            self.model, mujoco.mjtObj.mjOBJ_GEOM, "locked_cabinet_lock"
+        )
+        self.model.geom_rgba[lock_geom_id] = (0.12, 0.58, 0.20, 1.0)
+
+    def _container_actuator_id(self, region_id: str) -> int:
         actuator_name = {
             "LEFT_DRAWER": "left_tool_drawer_actuator",
-            "RIGHT_DRAWER": "right_fastener_drawer_actuator",
+            "LOCKED_CABINET": "locked_cabinet_door_actuator",
         }.get(region_id)
         if actuator_name is None:
             raise ValueError(f"Unknown workshop region: {region_id}")
@@ -162,8 +244,11 @@ class WorkshopScene:
         return actuator_id
 
     def open_container(self, region_id: str, steps: int = 300) -> list[str]:
-        actuator_id = self._drawer_actuator_id(region_id)
-        self.data.ctrl[actuator_id] = 0.72
+        if self.state.container_locked_state.get(region_id, False):
+            raise RuntimeError(f"Workshop region is locked: {region_id}")
+        actuator_id = self._container_actuator_id(region_id)
+        target = 1.25 if region_id == "LOCKED_CABINET" else 0.72
+        self.data.ctrl[actuator_id] = target
         for _ in range(steps):
             mujoco.mj_step(self.model, self.data)
         self.state.container_open_state[region_id] = True
@@ -176,7 +261,7 @@ class WorkshopScene:
         )
 
     def close_container(self, region_id: str, steps: int = 300) -> None:
-        actuator_id = self._drawer_actuator_id(region_id)
+        actuator_id = self._container_actuator_id(region_id)
         self.data.ctrl[actuator_id] = 0.0
         for _ in range(steps):
             mujoco.mj_step(self.model, self.data)
@@ -187,6 +272,26 @@ class WorkshopScene:
         print(f"Goal:  {self.goal}")
         print(f"Robot: {self.robot_name}")
         print(f"Inspected regions: {sorted(self.state.opened_containers)}")
+        print(
+            "Functional regions: "
+            + ", ".join(WORKSHOP_FUNCTIONAL_REGIONS)
+        )
+        print(
+            "Tool cabinet: "
+            + (
+                "locked"
+                if self.get_task_scene_state()["locked_cabinet"]["locked"]
+                else "unlocked"
+            )
+        )
+        print(
+            "Joint access: "
+            + (
+                "covered by protective seal"
+                if not self.get_task_scene_state()["joint_access"]["clear"]
+                else "clear"
+            )
+        )
 
     def render_frame(
         self,
@@ -229,10 +334,20 @@ def main() -> None:
     parser.add_argument("--viewer", action="store_true")
     parser.add_argument("--camera", default=FREE_CAMERA)
     parser.add_argument("--open", choices=WORKSHOP_REGIONS, action="append", default=[])
+    parser.add_argument("--unlock-cabinet", action="store_true")
+    parser.add_argument("--remove-seal", action="store_true")
     arguments = parser.parse_args()
     scene = WorkshopScene(arguments.robot)
-    for region_id in arguments.open:
+    requested_regions = list(arguments.open)
+    if arguments.unlock_cabinet:
+        if "LEFT_DRAWER" in requested_regions:
+            requested_regions.remove("LEFT_DRAWER")
+        scene.open_container("LEFT_DRAWER")
+        scene.unlock_container("LOCKED_CABINET", "workshop_cabinet_key")
+    for region_id in requested_regions:
         scene.open_container(region_id)
+    if arguments.remove_seal:
+        scene.move_joint_seal_to_tray()
     scene.print_scene_summary()
     if arguments.viewer:
         scene.launch_viewer(arguments.camera)
