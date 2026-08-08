@@ -1369,46 +1369,33 @@ Planner-visible location comes only from `last_evidence_source_region`:
 `INITIAL` evidence maps to the known countertop, while region-gated evidence
 maps to the inspected region.
 
-Run the complete experiment from the repository root:
+Phase 2 begins only after all of that evidence is frozen. It performs no RGB,
+depth, point-cloud, detector, inspection, or simulator call. Run it on a
+COMPLETE Phase-1 directory from the repository root:
 
 ```bash
-RUN_ID="integrated_symbolic_$(date +%Y%m%d_%H%M%S)"
-MUJOCO_GL=egl \
-PYOPENGL_PLATFORM=egl \
-YOLO_CONFIG_DIR=/tmp \
-MUJOCO_SEMANTIC_PROCESS_ISOLATION=1 \
-OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 \
-MALLOC_ARENA_MAX=2 \
-/home/naren/miniconda3/bin/python \
-  -m mujoco_scenes.run_kitchen_symbolic_pipeline \
-  --scene S1_integrated_kitchen_object_function_primary \
-  --no-robot \
-  --task-requirements configs/s1_integrated_kitchen_object_function.yaml \
-  --inspect-sequence D1 D2 C2 B1 C1 \
-  --runs-root runs \
-  --run-id "$RUN_ID" \
-  --width 1280 --height 960 \
-  --semantic-detector yolo_world \
-  --semantic-model semantic_model_cache/yolov8m-worldv2.pt \
-  --semantic-vocabulary mujoco_scenes/configs/semantic_vocabulary.yaml \
-  --semantic-confidence-threshold 0.03 \
-  --semantic-min-supporting-views 2 \
-  --save-semantic-overlays
+.venv/bin/python -m mujoco_scenes.run_kitchen_symbolic_pipeline \
+  --phase1-run-dir runs/feasibility_benchmarks/<benchmark-id>/<variant> \
+  --output-root runs/phase2_symbolic \
+  --run-id phase2_single_variant
 ```
 
-The run directory retains the original per-stage RGB-D, semantic, point-cloud,
-graph, and witness evidence and adds `search_trace.json`,
-`observed_symbolic_state.json`, `grounded_role_assignments.json`,
-`symbolic_initial_state.json`, `symbolic_goal.json`, generated `domain.pddl`
-and `problem.pddl`, `plan.txt`, `plan.json`, `plan_validation.json`, and the
-human-readable `combined_action_sequence.txt`.
+The output includes the compact witness contract, compiled problem, initial
+state, goal, generated plan, independent replay trace, validation, and matching
+`domain.pddl`/`problem.pddl` exports. The Phase-1 evidence directory is not
+mutated.
 
-The current planner is symbolic only. `PICK`, `PLACE`, `POUR`, `STIR`, and
-serving actions are validated state transitions; they do not invoke robot
+The planner exposes exactly `PICK`, `PLACE`, `POUR`, and `STIR`. Serving and
+utensil provision are goal interpretations of generic `PLACE`; transferred
+content is resolved from source facts by generic `POUR`. These symbolic state
+transitions do not invoke robot
 navigation, IK, grasping, collision motion planning, PDDLStream, or execution.
 The task specification and source-role vocabulary remain manually configured;
 object identities, geometry, semantics, compatibility, assignments, locations,
 PDDL objects/facts, action order, and validation are produced from each run.
+
+The tracked Phase-2 report and reproduction command are in
+`mujoco_scenes/benchmark_reports/kitchen_symbolic_phase2/`.
 
 ## No-FM kitchen task-feasibility benchmark
 

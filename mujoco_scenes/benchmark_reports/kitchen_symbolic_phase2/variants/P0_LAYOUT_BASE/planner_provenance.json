@@ -1,0 +1,24 @@
+{
+  "action_count": 31,
+  "algorithm": "deterministic_astar_symbolic_state_search",
+  "domain_source": "generated_from_generic_action_schemas",
+  "operator_types": [
+    "pick",
+    "place",
+    "pour",
+    "stir"
+  ],
+  "phase2_perception_calls": 0,
+  "plan_renderer_role": "serialization_only_after_planner_returns",
+  "planner_entry_point": "mujoco_scenes.symbolic_planning.plan_symbolic_task",
+  "problem_source": "compiled_observed_state_and_verified_witness",
+  "schema_version": 1,
+  "search_statistics": {
+    "algorithm": "deterministic_astar_symbolic_state_search",
+    "expanded_states": 4049,
+    "generated_successors": 7679,
+    "plan_length": 31,
+    "planning_time_s": 0.06841067699861014,
+    "visited_states": 4455
+  }
+}

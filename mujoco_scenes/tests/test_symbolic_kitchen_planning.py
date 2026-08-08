@@ -4,10 +4,14 @@ from pathlib import Path
 import pytest
 
 from mujoco_scenes.symbolic_planning import (
+    GroundAction,
     KitchenSymbolicProblem,
     SymbolicCompilationError,
     compile_observed_symbolic_state,
     compile_plan_and_save,
+    plan_symbolic_task,
+    render_domain_pddl,
+    validate_symbolic_plan,
 )
 
 
@@ -169,13 +173,14 @@ def test_coffee_reuse_soup_distinctness_and_plan_validation(tmp_path):
     provenance = json.loads((tmp_path / "planner_provenance.json").read_text())
     assert provenance["planner_entry_point"].endswith("plan_symbolic_task")
     assert provenance["plan_renderer_role"].startswith("serialization_only")
-    assert "physical_object region content - object" in (
-        tmp_path / "domain.pddl"
-    ).read_text()
+    domain = (tmp_path / "domain.pddl").read_text()
+    assert domain.count("(:action ") == 4
+    assert all(f"(:action {name}" in domain for name in ("pick", "place", "pour", "stir"))
+    assert all(token not in domain for token in ("serve_", "place_serving", "(:action open", "(:action close"))
     assert "PLAN VALID" in (tmp_path / "combined_action_sequence.txt").read_text()
     problem_text = (tmp_path / "problem.pddl").read_text()
     assert all(
-        f"(has_content {target} soup)" in problem_text
+        f"(contains {target} soup)" in problem_text
         for target in ids["soup"]
     )
 
@@ -222,4 +227,151 @@ def test_no_robot_or_fm_runtime_dependency_in_symbolic_boundary():
     assert "openai" not in source.lower()
     assert "anthropic" not in source.lower()
     runner = Path(__file__).resolve().parents[1].joinpath("run_kitchen_symbolic_pipeline.py").read_text()
-    assert "include_robot=False" in runner
+    assert "KitchenScene" not in runner
+    assert "ground_symbolic_sources" not in runner
+    assert "semantic_detector" not in runner
+
+
+def _problem(tmp_path):
+    _make_run(tmp_path)
+    return KitchenSymbolicProblem(compile_observed_symbolic_state(tmp_path, TASK))
+
+
+def test_noncomplete_witness_is_rejected(tmp_path):
+    _, _, witness = _make_run(tmp_path)
+    witness["status"] = "INDETERMINATE"
+    (tmp_path / "latest_witness.json").write_text(json.dumps(witness))
+    with pytest.raises(SymbolicCompilationError, match="not COMPLETE"):
+        compile_observed_symbolic_state(tmp_path, TASK)
+
+
+def test_oracle_source_binding_payload_is_rejected(tmp_path):
+    _make_run(tmp_path)
+    (tmp_path / "symbolic_source_semantics.json").write_text(json.dumps({
+        "inference_basis": "ORACLE_GROUND_TRUTH",
+        "objects": {},
+    }))
+    with pytest.raises(SymbolicCompilationError, match="frozen RGB"):
+        compile_observed_symbolic_state(tmp_path, TASK)
+
+
+def test_exactly_four_generic_operator_types():
+    assert KitchenSymbolicProblem.OPERATOR_TYPES == {"pick", "place", "pour", "stir"}
+    domain = render_domain_pddl()
+    assert domain.count("(:action ") == 4
+    assert "(:action serve" not in domain.lower()
+    assert "pour_coffee" not in domain.lower()
+    assert "place_soup" not in domain.lower()
+
+
+def test_pick_and_generic_place_preconditions_and_effects(tmp_path):
+    problem = _problem(tmp_path)
+    source = next(iter(sorted(problem.source_contents)))
+    picked = problem.apply(problem.initial, GroundAction("pick", (source,)))
+    assert picked.held == source and source not in picked.location_map()
+    with pytest.raises(ValueError, match="PICK"):
+        problem.apply(picked, GroundAction("pick", (source,)))
+    placed = problem.apply(picked, GroundAction("place", (source, problem.home)))
+    assert placed.held is None and placed.location_map()[source] == problem.home
+    with pytest.raises(ValueError, match="PLACE"):
+        problem.apply(problem.initial, GroundAction("place", (source, problem.home)))
+
+
+def test_one_place_operator_handles_all_three_destination_contexts(tmp_path):
+    ids, _, _ = _make_run(tmp_path)
+    result = compile_plan_and_save(tmp_path, TASK)
+    placements = {
+        tuple(step["arguments"])
+        for step in result["plan"] if step["action"] == "place"
+    }
+    problem = KitchenSymbolicProblem(result["compiled"])
+    assert any(destination == problem.home for _, destination in placements)
+    assert any(destination == problem.serving_destination for _, destination in placements)
+    assert all((tool, target) in placements for tool, target in problem.soup_assignments)
+    assert {step["action"] for step in result["plan"]} <= problem.OPERATOR_TYPES
+
+
+def test_generic_pour_derives_content_from_source(tmp_path):
+    problem = _problem(tmp_path)
+    by_content = {content: source for source, content in problem.source_contents.items()}
+    target = sorted(problem.coffee_targets)[0]
+    state = problem.apply(problem.initial, GroundAction("pick", (by_content["coffee"],)))
+    state = problem.apply(state, GroundAction("pour", (by_content["coffee"], target)))
+    assert (target, "coffee") in state.contents
+    assert (target, "water") not in state.contents
+    with pytest.raises(ValueError, match="POUR"):
+        problem.apply(state, GroundAction("pour", (by_content["coffee"], sorted(problem.soup_targets)[0])))
+
+
+def test_stir_requires_binding_and_both_contents(tmp_path):
+    problem = _problem(tmp_path)
+    tool, target = sorted(problem.can_stir)[0]
+    state = problem.apply(problem.initial, GroundAction("pick", (tool,)))
+    with pytest.raises(ValueError, match="STIR"):
+        problem.apply(state, GroundAction("stir", (tool, target)))
+    ready = state.__class__(
+        locations=state.locations,
+        held=state.held,
+        contents=state.contents | {(target, "coffee"), (target, "water")},
+        stirred=state.stirred,
+    )
+    stirred = problem.apply(ready, GroundAction("stir", (tool, target)))
+    assert target in stirred.stirred
+    incompatible = sorted(problem.soup_targets)[0]
+    with pytest.raises(ValueError, match="STIR"):
+        problem.apply(ready, GroundAction("stir", (tool, incompatible)))
+
+
+def test_validator_rejects_corrupted_order_and_binding(tmp_path):
+    problem = _problem(tmp_path)
+    tool, target = sorted(problem.can_stir)[0]
+    invalid = validate_symbolic_plan(problem, [GroundAction("stir", (tool, target))])
+    assert not invalid["plan_valid"]
+    assert invalid["failed_step"] == 1
+    assert f"holding({tool})" in invalid["failed_preconditions"]
+
+
+def test_planning_is_deterministic_and_goal_omission_is_detected(tmp_path):
+    problem = _problem(tmp_path)
+    first = plan_symbolic_task(problem)
+    second = plan_symbolic_task(problem)
+    assert first == second
+    valid = validate_symbolic_plan(problem, first)
+    assert valid["plan_valid"]
+    omitted = validate_symbolic_plan(problem, first[:-2])
+    assert omitted["all_actions_applicable"]
+    assert not omitted["final_goal_satisfied"]
+
+
+def test_planner_reports_no_plan_for_impossible_symbolic_problem(tmp_path):
+    problem = _problem(tmp_path)
+    problem.source_contents = {}
+    with pytest.raises(SymbolicCompilationError, match="no valid plan"):
+        plan_symbolic_task(problem)
+
+
+@pytest.mark.parametrize("tool_count", [1, 2, 3])
+def test_planner_supports_one_two_or_three_coffee_tools(tmp_path, tool_count):
+    ids, records, witness = _make_run(tmp_path)
+    tools = [ids["stir"]]
+    for index in range(1, tool_count):
+        tool = f"object_extra_stir_{index}"
+        tools.append(tool)
+        records[tool] = _record(tool, "spoon", "D1", 1)
+    coffee_assignments = []
+    for index, target in enumerate(ids["coffee"]):
+        coffee_assignments.append(_assignment(
+            "coffee_stirring", "STIR_COFFEE",
+            tools[min(index, tool_count - 1)], target,
+        ))
+    witness["operation_assignments"] = coffee_assignments + [
+        item for item in witness["operation_assignments"]
+        if item["function_group_id"] == "soup_serving"
+    ]
+    witness["selected_witness"]["coffee_stirrer"] = tools
+    (tmp_path / "object_registry.json").write_text(json.dumps({"objects": records}))
+    (tmp_path / "latest_witness.json").write_text(json.dumps(witness))
+    result = compile_plan_and_save(tmp_path, TASK)
+    assert result["validation"]["plan_valid"]
+    assert result["validation"]["coffee_distinct_tool_count"] == tool_count
+    assert {step["action"] for step in result["plan"]} <= KitchenSymbolicProblem.OPERATOR_TYPES

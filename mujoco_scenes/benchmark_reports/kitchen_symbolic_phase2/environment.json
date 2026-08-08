@@ -1,0 +1,19 @@
+{
+  "action_domain_version": "four_operator_symbolic_v2",
+  "branch": "naren/googlePointCloudIntegration",
+  "dependencies": {
+    "mujoco": "3.3.5",
+    "numpy": "2.2.6"
+  },
+  "operator_types": [
+    "PICK",
+    "PLACE",
+    "POUR",
+    "STIR"
+  ],
+  "phase1_report": "mujoco_scenes/benchmark_reports/kitchen_feasibility_phase1",
+  "phase2_benchmark_id": "phase2_kitchen_authoritative_20260809",
+  "planner_backend": "deterministic_astar_symbolic_state_search",
+  "python_version": "3.13.11",
+  "source_commit_at_generation": "e72c9be80775c0683e8c37409c558c742e92b4e7"
+}

@@ -1,0 +1,48 @@
+{
+  "check_1_observed_symbolic_state": {
+    "early_visibility_violations": [],
+    "hidden_object_exclusion_checked": true,
+    "location_basis": "REGION_GATED_INSPECTION_EVIDENCE_ONLY",
+    "location_basis_violations": [],
+    "passed": true,
+    "stage_snapshots": [
+      {
+        "observed_object_count": 11,
+        "path": "stages/000_initial/graph.json",
+        "stage": 0
+      }
+    ]
+  },
+  "check_2_pddl_problem_cleanliness": {
+    "forbidden_privileged_tokens_found": [],
+    "non_generic_physical_ids": [],
+    "passed": true,
+    "problem_state_basis": "OBSERVED_REGISTRY_PLUS_VERIFIED_FUNCTIONAL_WITNESS",
+    "problem_state_stage": 0
+  },
+  "check_3_planner_origin_and_validation": {
+    "action_count": 31,
+    "algorithm": "deterministic_best_first_classical_state_space_search",
+    "all_goals_satisfied": true,
+    "domain_operator_types": [
+      "pick",
+      "place",
+      "pour",
+      "stir"
+    ],
+    "exactly_four_domain_operators": true,
+    "forbidden_operator_types": [],
+    "passed": true,
+    "plan_operator_types": [
+      "pick",
+      "place",
+      "pour",
+      "stir"
+    ],
+    "plan_steps_well_formed": true,
+    "planner_entry_point": "mujoco_scenes.symbolic_planning.plan_symbolic_task",
+    "renderer_role": "serialization_only_after_planner_returns",
+    "validator_valid": true
+  },
+  "schema_version": 1
+}

@@ -1,0 +1,804 @@
+{
+  "all_actions_applicable": true,
+  "all_goals_satisfied": true,
+  "coffee_assignment_compliance": true,
+  "coffee_distinct_tool_count": 1,
+  "coffee_reuse_verified": true,
+  "final_goal_satisfied": true,
+  "goal_facts": [
+    [
+      "contains",
+      "object_0001",
+      "coffee"
+    ],
+    [
+      "contains",
+      "object_0001",
+      "water"
+    ],
+    [
+      "stirred",
+      "object_0001"
+    ],
+    [
+      "at",
+      "object_0001",
+      "serving_area"
+    ],
+    [
+      "contains",
+      "object_0002",
+      "coffee"
+    ],
+    [
+      "contains",
+      "object_0002",
+      "water"
+    ],
+    [
+      "stirred",
+      "object_0002"
+    ],
+    [
+      "at",
+      "object_0002",
+      "serving_area"
+    ],
+    [
+      "contains",
+      "object_0016",
+      "coffee"
+    ],
+    [
+      "contains",
+      "object_0016",
+      "water"
+    ],
+    [
+      "stirred",
+      "object_0016"
+    ],
+    [
+      "at",
+      "object_0016",
+      "serving_area"
+    ],
+    [
+      "contains",
+      "object_0003",
+      "soup"
+    ],
+    [
+      "at",
+      "object_0003",
+      "serving_area"
+    ],
+    [
+      "at",
+      "object_0007",
+      "object_0003"
+    ],
+    [
+      "contains",
+      "object_0018",
+      "soup"
+    ],
+    [
+      "at",
+      "object_0018",
+      "serving_area"
+    ],
+    [
+      "at",
+      "object_0011",
+      "object_0018"
+    ],
+    [
+      "contains",
+      "object_0020",
+      "soup"
+    ],
+    [
+      "at",
+      "object_0020",
+      "serving_area"
+    ],
+    [
+      "at",
+      "object_0013",
+      "object_0020"
+    ]
+  ],
+  "grounding_consistency": true,
+  "plan_found": true,
+  "plan_valid": true,
+  "soup_assignment_compliance": true,
+  "soup_distinctness_verified": true,
+  "steps": [
+    {
+      "action": "PICK(object_0007)",
+      "facts_added": [
+        [
+          "holding",
+          "object_0007"
+        ]
+      ],
+      "facts_removed": [
+        [
+          "hand_empty"
+        ],
+        [
+          "at",
+          "object_0007",
+          "countertop"
+        ]
+      ],
+      "held_after": "object_0007",
+      "held_before": null,
+      "preconditions_passed": true,
+      "step": 1
+    },
+    {
+      "action": "PLACE(object_0007, object_0003)",
+      "facts_added": [
+        [
+          "hand_empty"
+        ],
+        [
+          "at",
+          "object_0007",
+          "object_0003"
+        ]
+      ],
+      "facts_removed": [
+        [
+          "holding",
+          "object_0007"
+        ]
+      ],
+      "held_after": null,
+      "held_before": "object_0007",
+      "preconditions_passed": true,
+      "step": 2
+    },
+    {
+      "action": "PICK(object_0003)",
+      "facts_added": [
+        [
+          "holding",
+          "object_0003"
+        ]
+      ],
+      "facts_removed": [
+        [
+          "hand_empty"
+        ],
+        [
+          "at",
+          "object_0003",
+          "countertop"
+        ]
+      ],
+      "held_after": "object_0003",
+      "held_before": null,
+      "preconditions_passed": true,
+      "step": 3
+    },
+    {
+      "action": "PLACE(object_0003, serving_area)",
+      "facts_added": [
+        [
+          "hand_empty"
+        ],
+        [
+          "at",
+          "object_0003",
+          "serving_area"
+        ]
+      ],
+      "facts_removed": [
+        [
+          "holding",
+          "object_0003"
+        ]
+      ],
+      "held_after": null,
+      "held_before": "object_0003",
+      "preconditions_passed": true,
+      "step": 4
+    },
+    {
+      "action": "PICK(object_0011)",
+      "facts_added": [
+        [
+          "holding",
+          "object_0011"
+        ]
+      ],
+      "facts_removed": [
+        [
+          "hand_empty"
+        ],
+        [
+          "at",
+          "object_0011",
+          "D1"
+        ]
+      ],
+      "held_after": "object_0011",
+      "held_before": null,
+      "preconditions_passed": true,
+      "step": 5
+    },
+    {
+      "action": "PLACE(object_0011, object_0018)",
+      "facts_added": [
+        [
+          "hand_empty"
+        ],
+        [
+          "at",
+          "object_0011",
+          "object_0018"
+        ]
+      ],
+      "facts_removed": [
+        [
+          "holding",
+          "object_0011"
+        ]
+      ],
+      "held_after": null,
+      "held_before": "object_0011",
+      "preconditions_passed": true,
+      "step": 6
+    },
+    {
+      "action": "PICK(object_0013)",
+      "facts_added": [
+        [
+          "holding",
+          "object_0013"
+        ]
+      ],
+      "facts_removed": [
+        [
+          "hand_empty"
+        ],
+        [
+          "at",
+          "object_0013",
+          "D2"
+        ]
+      ],
+      "held_after": "object_0013",
+      "held_before": null,
+      "preconditions_passed": true,
+      "step": 7
+    },
+    {
+      "action": "PLACE(object_0013, object_0020)",
+      "facts_added": [
+        [
+          "hand_empty"
+        ],
+        [
+          "at",
+          "object_0013",
+          "object_0020"
+        ]
+      ],
+      "facts_removed": [
+        [
+          "holding",
+          "object_0013"
+        ]
+      ],
+      "held_after": null,
+      "held_before": "object_0013",
+      "preconditions_passed": true,
+      "step": 8
+    },
+    {
+      "action": "PICK(object_0018)",
+      "facts_added": [
+        [
+          "holding",
+          "object_0018"
+        ]
+      ],
+      "facts_removed": [
+        [
+          "hand_empty"
+        ],
+        [
+          "at",
+          "object_0018",
+          "B1"
+        ]
+      ],
+      "held_after": "object_0018",
+      "held_before": null,
+      "preconditions_passed": true,
+      "step": 9
+    },
+    {
+      "action": "PLACE(object_0018, serving_area)",
+      "facts_added": [
+        [
+          "hand_empty"
+        ],
+        [
+          "at",
+          "object_0018",
+          "serving_area"
+        ]
+      ],
+      "facts_removed": [
+        [
+          "holding",
+          "object_0018"
+        ]
+      ],
+      "held_after": null,
+      "held_before": "object_0018",
+      "preconditions_passed": true,
+      "step": 10
+    },
+    {
+      "action": "PICK(object_0020)",
+      "facts_added": [
+        [
+          "holding",
+          "object_0020"
+        ]
+      ],
+      "facts_removed": [
+        [
+          "hand_empty"
+        ],
+        [
+          "at",
+          "object_0020",
+          "C1"
+        ]
+      ],
+      "held_after": "object_0020",
+      "held_before": null,
+      "preconditions_passed": true,
+      "step": 11
+    },
+    {
+      "action": "PLACE(object_0020, serving_area)",
+      "facts_added": [
+        [
+          "hand_empty"
+        ],
+        [
+          "at",
+          "object_0020",
+          "serving_area"
+        ]
+      ],
+      "facts_removed": [
+        [
+          "holding",
+          "object_0020"
+        ]
+      ],
+      "held_after": null,
+      "held_before": "object_0020",
+      "preconditions_passed": true,
+      "step": 12
+    },
+    {
+      "action": "PICK(object_0009)",
+      "facts_added": [
+        [
+          "holding",
+          "object_0009"
+        ]
+      ],
+      "facts_removed": [
+        [
+          "hand_empty"
+        ],
+        [
+          "at",
+          "object_0009",
+          "countertop"
+        ]
+      ],
+      "held_after": "object_0009",
+      "held_before": null,
+      "preconditions_passed": true,
+      "step": 13
+    },
+    {
+      "action": "POUR(object_0009, object_0001)",
+      "facts_added": [
+        [
+          "contains",
+          "object_0001",
+          "coffee"
+        ]
+      ],
+      "facts_removed": [],
+      "held_after": "object_0009",
+      "held_before": "object_0009",
+      "preconditions_passed": true,
+      "step": 14
+    },
+    {
+      "action": "POUR(object_0009, object_0002)",
+      "facts_added": [
+        [
+          "contains",
+          "object_0002",
+          "coffee"
+        ]
+      ],
+      "facts_removed": [],
+      "held_after": "object_0009",
+      "held_before": "object_0009",
+      "preconditions_passed": true,
+      "step": 15
+    },
+    {
+      "action": "POUR(object_0009, object_0016)",
+      "facts_added": [
+        [
+          "contains",
+          "object_0016",
+          "coffee"
+        ]
+      ],
+      "facts_removed": [],
+      "held_after": "object_0009",
+      "held_before": "object_0009",
+      "preconditions_passed": true,
+      "step": 16
+    },
+    {
+      "action": "PLACE(object_0009, countertop)",
+      "facts_added": [
+        [
+          "hand_empty"
+        ],
+        [
+          "at",
+          "object_0009",
+          "countertop"
+        ]
+      ],
+      "facts_removed": [
+        [
+          "holding",
+          "object_0009"
+        ]
+      ],
+      "held_after": null,
+      "held_before": "object_0009",
+      "preconditions_passed": true,
+      "step": 17
+    },
+    {
+      "action": "PICK(object_0010)",
+      "facts_added": [
+        [
+          "holding",
+          "object_0010"
+        ]
+      ],
+      "facts_removed": [
+        [
+          "hand_empty"
+        ],
+        [
+          "at",
+          "object_0010",
+          "countertop"
+        ]
+      ],
+      "held_after": "object_0010",
+      "held_before": null,
+      "preconditions_passed": true,
+      "step": 18
+    },
+    {
+      "action": "POUR(object_0010, object_0001)",
+      "facts_added": [
+        [
+          "contains",
+          "object_0001",
+          "water"
+        ]
+      ],
+      "facts_removed": [],
+      "held_after": "object_0010",
+      "held_before": "object_0010",
+      "preconditions_passed": true,
+      "step": 19
+    },
+    {
+      "action": "POUR(object_0010, object_0002)",
+      "facts_added": [
+        [
+          "contains",
+          "object_0002",
+          "water"
+        ]
+      ],
+      "facts_removed": [],
+      "held_after": "object_0010",
+      "held_before": "object_0010",
+      "preconditions_passed": true,
+      "step": 20
+    },
+    {
+      "action": "POUR(object_0010, object_0016)",
+      "facts_added": [
+        [
+          "contains",
+          "object_0016",
+          "water"
+        ]
+      ],
+      "facts_removed": [],
+      "held_after": "object_0010",
+      "held_before": "object_0010",
+      "preconditions_passed": true,
+      "step": 21
+    },
+    {
+      "action": "PLACE(object_0010, countertop)",
+      "facts_added": [
+        [
+          "hand_empty"
+        ],
+        [
+          "at",
+          "object_0010",
+          "countertop"
+        ]
+      ],
+      "facts_removed": [
+        [
+          "holding",
+          "object_0010"
+        ]
+      ],
+      "held_after": null,
+      "held_before": "object_0010",
+      "preconditions_passed": true,
+      "step": 22
+    },
+    {
+      "action": "PICK(object_0015)",
+      "facts_added": [
+        [
+          "holding",
+          "object_0015"
+        ]
+      ],
+      "facts_removed": [
+        [
+          "hand_empty"
+        ],
+        [
+          "at",
+          "object_0015",
+          "C2"
+        ]
+      ],
+      "held_after": "object_0015",
+      "held_before": null,
+      "preconditions_passed": true,
+      "step": 23
+    },
+    {
+      "action": "STIR(object_0015, object_0001)",
+      "facts_added": [
+        [
+          "stirred",
+          "object_0001"
+        ]
+      ],
+      "facts_removed": [],
+      "held_after": "object_0015",
+      "held_before": "object_0015",
+      "preconditions_passed": true,
+      "step": 24
+    },
+    {
+      "action": "STIR(object_0015, object_0002)",
+      "facts_added": [
+        [
+          "stirred",
+          "object_0002"
+        ]
+      ],
+      "facts_removed": [],
+      "held_after": "object_0015",
+      "held_before": "object_0015",
+      "preconditions_passed": true,
+      "step": 25
+    },
+    {
+      "action": "STIR(object_0015, object_0016)",
+      "facts_added": [
+        [
+          "stirred",
+          "object_0016"
+        ]
+      ],
+      "facts_removed": [],
+      "held_after": "object_0015",
+      "held_before": "object_0015",
+      "preconditions_passed": true,
+      "step": 26
+    },
+    {
+      "action": "PLACE(object_0015, countertop)",
+      "facts_added": [
+        [
+          "hand_empty"
+        ],
+        [
+          "at",
+          "object_0015",
+          "countertop"
+        ]
+      ],
+      "facts_removed": [
+        [
+          "holding",
+          "object_0015"
+        ]
+      ],
+      "held_after": null,
+      "held_before": "object_0015",
+      "preconditions_passed": true,
+      "step": 27
+    },
+    {
+      "action": "PICK(object_0001)",
+      "facts_added": [
+        [
+          "holding",
+          "object_0001"
+        ]
+      ],
+      "facts_removed": [
+        [
+          "hand_empty"
+        ],
+        [
+          "at",
+          "object_0001",
+          "countertop"
+        ]
+      ],
+      "held_after": "object_0001",
+      "held_before": null,
+      "preconditions_passed": true,
+      "step": 28
+    },
+    {
+      "action": "PLACE(object_0001, serving_area)",
+      "facts_added": [
+        [
+          "hand_empty"
+        ],
+        [
+          "at",
+          "object_0001",
+          "serving_area"
+        ]
+      ],
+      "facts_removed": [
+        [
+          "holding",
+          "object_0001"
+        ]
+      ],
+      "held_after": null,
+      "held_before": "object_0001",
+      "preconditions_passed": true,
+      "step": 29
+    },
+    {
+      "action": "PICK(object_0002)",
+      "facts_added": [
+        [
+          "holding",
+          "object_0002"
+        ]
+      ],
+      "facts_removed": [
+        [
+          "hand_empty"
+        ],
+        [
+          "at",
+          "object_0002",
+          "countertop"
+        ]
+      ],
+      "held_after": "object_0002",
+      "held_before": null,
+      "preconditions_passed": true,
+      "step": 30
+    },
+    {
+      "action": "PLACE(object_0002, serving_area)",
+      "facts_added": [
+        [
+          "hand_empty"
+        ],
+        [
+          "at",
+          "object_0002",
+          "serving_area"
+        ]
+      ],
+      "facts_removed": [
+        [
+          "holding",
+          "object_0002"
+        ]
+      ],
+      "held_after": null,
+      "held_before": "object_0002",
+      "preconditions_passed": true,
+      "step": 31
+    },
+    {
+      "action": "PICK(object_0016)",
+      "facts_added": [
+        [
+          "holding",
+          "object_0016"
+        ]
+      ],
+      "facts_removed": [
+        [
+          "hand_empty"
+        ],
+        [
+          "at",
+          "object_0016",
+          "C2"
+        ]
+      ],
+      "held_after": "object_0016",
+      "held_before": null,
+      "preconditions_passed": true,
+      "step": 32
+    },
+    {
+      "action": "PLACE(object_0016, serving_area)",
+      "facts_added": [
+        [
+          "hand_empty"
+        ],
+        [
+          "at",
+          "object_0016",
+          "serving_area"
+        ]
+      ],
+      "facts_removed": [
+        [
+          "holding",
+          "object_0016"
+        ]
+      ],
+      "held_after": null,
+      "held_before": "object_0016",
+      "preconditions_passed": true,
+      "step": 33
+    }
+  ],
+  "valid": true
+}

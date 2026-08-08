@@ -8,17 +8,13 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, replace
 from heapq import heappop, heappush
+import hashlib
 import json
 import math
 from pathlib import Path
 import re
 from typing import Any, Iterable
 
-import numpy as np
-from PIL import Image
-import yaml
-
-from mujoco_scenes.semantic_grounding import YOLOWorldSemanticDetector
 from mujoco_scenes.task_witness import load_task_requirements
 
 
@@ -76,13 +72,17 @@ def ground_symbolic_sources(
     vocabulary_path: str | Path | None = None,
     confidence_threshold: float = 0.03,
 ) -> dict[str, Any]:
-    """Ground preparation sources from stage-zero RGB instance crops only.
+    """Upstream helper that freezes source evidence before Phase 2 begins.
 
-    Crops were created by the normal one-to-one detector/mask association
-    path. This source-specific open vocabulary is intentionally separate from
-    vessel/tool vocabulary so source prompts cannot alter the functional
-    witness used by the search controller.
+    This function is deliberately not called by the Phase-2 runner or
+    compiler. It remains as a backward-compatible Phase-1 evidence preparation
+    utility for old runs that lack ``symbolic_source_semantics.json``.
     """
+    import numpy as np
+    from PIL import Image
+    import yaml
+
+    from mujoco_scenes.semantic_grounding import YOLOWorldSemanticDetector
     run_path = Path(run_dir).resolve()
     vocabulary_path = Path(vocabulary_path or (
         Path(__file__).resolve().parent / "configs" /
@@ -251,11 +251,17 @@ def compile_observed_symbolic_state(
 
     objects = registry.get("objects", {})
     source_semantics_path = run_path / "symbolic_source_semantics.json"
-    source_semantics = (
-        _read_json(source_semantics_path).get("objects", {})
-        if source_semantics_path.exists()
-        else {}
-    )
+    if source_semantics_path.exists():
+        source_payload = _read_json(source_semantics_path)
+        if source_payload.get("inference_basis") != "RGB_ONLY_SOURCE_GROUNDING":
+            raise SymbolicCompilationError(
+                "Source bindings must come from frozen RGB source grounding"
+            )
+        if any("oracle" in str(key).lower() for key in source_payload):
+            raise SymbolicCompilationError("Oracle source data is forbidden")
+        source_semantics = source_payload.get("objects", {})
+    else:
+        source_semantics = {}
     initial_region = str(symbolic.get("initial_observation_region", "countertop"))
     observed_objects = {}
     for object_id, record in sorted(objects.items()):
@@ -443,12 +449,9 @@ def compile_observed_symbolic_state(
 @dataclass(frozen=True)
 class PlannerState:
     locations: tuple[tuple[str, str], ...]
-    opened: frozenset[str]
     held: str | None
     contents: frozenset[tuple[str, str]]
     stirred: frozenset[str]
-    utensil_placed: frozenset[tuple[str, str]]
-    served: frozenset[str]
 
     def location_map(self) -> dict[str, str]:
         return dict(self.locations)
@@ -464,13 +467,18 @@ class GroundAction:
 
 
 class KitchenSymbolicProblem:
-    """Small grounded STRIPS problem compiled without scene-specific IDs."""
+    """Grounded four-operator STRIPS-like problem with generic object IDs."""
+
+    OPERATOR_TYPES = frozenset({"pick", "place", "pour", "stir"})
 
     def __init__(self, compiled: dict[str, Any]):
         self.compiled = compiled
         assignments = compiled["role_assignments"]
         capabilities = compiled["capabilities"]
         self.home = compiled["requirements"].get("home_region", "countertop")
+        self.serving_destination = compiled["requirements"].get(
+            "serving_destination", "serving_area"
+        )
         self.coffee_targets = frozenset(assignments["coffee_targets"])
         self.soup_targets = frozenset(assignments["soup_targets"])
         self.source_contents = dict(map(tuple, capabilities["source_contains"]))
@@ -478,31 +486,64 @@ class KitchenSymbolicProblem:
         self.soup_assignments = frozenset(
             map(tuple, capabilities["assigned_soup_utensil"])
         )
-        self.manipulable = frozenset(self.source_contents) | {
-            tool for tool, _ in self.can_stir | self.soup_assignments
-        }
+        self.manipulable = (
+            frozenset(self.source_contents)
+            | self.coffee_targets | self.soup_targets
+            | {tool for tool, _ in self.can_stir | self.soup_assignments}
+        )
         locations = tuple(sorted(
             (object_id, record["location"]["region_id"])
             for object_id, record in compiled["objects"].items()
         ))
-        opened = frozenset(
-            region for region, state in compiled["regions"].items()
-            if state["open"]
-        ) | {self.home}
         self.initial = PlannerState(
             locations=locations,
-            opened=opened,
             held=None,
             contents=frozenset(
                 map(tuple, capabilities.get("initial_target_contents", []))
             ),
             stirred=frozenset(),
-            utensil_placed=frozenset(),
-            served=frozenset(),
         )
 
     def goals_satisfied(self, state: PlannerState) -> bool:
-        return self.coffee_targets | self.soup_targets <= state.served
+        locations = state.location_map()
+        coffee_ready = all(
+            {(target, "coffee"), (target, "water")} <= state.contents
+            and target in state.stirred
+            and locations.get(target) == self.serving_destination
+            for target in self.coffee_targets
+        )
+        soup_ready = all(
+            (target, "soup") in state.contents
+            and locations.get(target) == self.serving_destination
+            and any(
+                locations.get(tool) == target
+                for tool, assigned_target in self.soup_assignments
+                if assigned_target == target
+            )
+            for target in self.soup_targets
+        )
+        return coffee_ready and soup_ready
+
+    def goal_facts(self) -> list[tuple[str, ...]]:
+        facts: list[tuple[str, ...]] = []
+        for target in sorted(self.coffee_targets):
+            facts.extend([
+                ("contains", target, "coffee"),
+                ("contains", target, "water"),
+                ("stirred", target),
+                ("at", target, self.serving_destination),
+            ])
+        for target in sorted(self.soup_targets):
+            facts.extend([
+                ("contains", target, "soup"),
+                ("at", target, self.serving_destination),
+            ])
+            tool = next(
+                tool for tool, assigned in sorted(self.soup_assignments)
+                if assigned == target
+            )
+            facts.append(("at", tool, target))
+        return facts
 
     def heuristic(self, state: PlannerState) -> int:
         missing_contents = sum(
@@ -510,103 +551,140 @@ class KitchenSymbolicProblem:
             for target in self.coffee_targets for content in ("coffee", "water")
         ) + sum((target, "soup") not in state.contents for target in self.soup_targets)
         missing_stir = len(self.coffee_targets - state.stirred)
-        placed_targets = {target for _, target in state.utensil_placed}
-        missing_utensils = len(self.soup_targets - placed_targets)
-        missing_served = len((self.coffee_targets | self.soup_targets) - state.served)
-        return missing_contents + missing_stir + missing_utensils + missing_served
+        locations = state.location_map()
+        missing_utensils = sum(
+            locations.get(tool) != target
+            for tool, target in self.soup_assignments
+        )
+        missing_served = sum(
+            locations.get(target) != self.serving_destination
+            for target in self.coffee_targets | self.soup_targets
+        )
+        # Each unsatisfied placement requires PICK+PLACE, while contents/stir
+        # need at least one transition. This is deterministic guidance, not a
+        # claim of optimality.
+        return (
+            missing_contents + missing_stir
+            + 2 * missing_utensils + 2 * missing_served
+        )
+
+    def _allowed_destinations(self, object_id: str) -> set[str]:
+        destinations = {self.home}
+        if object_id in self.coffee_targets | self.soup_targets:
+            destinations.add(self.serving_destination)
+        destinations.update(
+            target for tool, target in self.soup_assignments
+            if tool == object_id
+        )
+        return destinations
+
+    def _needed_objects(self, state: PlannerState) -> set[str]:
+        locations = state.location_map()
+        needed = {
+            source for source, content in self.source_contents.items()
+            if any(
+                (target, content) not in state.contents
+                for target in (
+                    self.soup_targets if content == "soup"
+                    else self.coffee_targets
+                )
+            )
+        }
+        needed.update(
+            tool for tool, target in self.can_stir
+            if target not in state.stirred
+            and {(target, "coffee"), (target, "water")} <= state.contents
+        )
+        needed.update(
+            tool for tool, target in self.soup_assignments
+            if locations.get(tool) != target
+        )
+        needed.update(
+            target for target in self.coffee_targets | self.soup_targets
+            if locations.get(target) != self.serving_destination
+            and (
+                (
+                    target in self.coffee_targets
+                    and target in state.stirred
+                )
+                or (
+                    target in self.soup_targets
+                    and any(
+                        locations.get(tool) == target
+                        for tool, assigned in self.soup_assignments
+                        if assigned == target
+                    )
+                )
+            )
+        )
+        return needed
 
     def applicable_actions(self, state: PlannerState) -> list[GroundAction]:
         actions: list[GroundAction] = []
         locations = state.location_map()
         if state.held is not None:
             held = state.held
+            productive: list[GroundAction] = []
             if held in self.source_contents:
                 content = self.source_contents[held]
                 targets = self.soup_targets if content == "soup" else self.coffee_targets
                 for target in sorted(targets):
                     if (target, content) not in state.contents:
-                        actions.append(GroundAction("pour", (held, target, content)))
+                        productive.append(GroundAction("pour", (held, target)))
             for tool, target in sorted(self.can_stir):
                 if tool == held and target not in state.stirred and {
                     (target, "coffee"), (target, "water")
                 } <= state.contents:
-                    actions.append(GroundAction("stir", (tool, target)))
-            for tool, target in sorted(self.soup_assignments):
-                if (
-                    tool == held
-                    and (target, "soup") in state.contents
-                    and not any(existing_target == target for _, existing_target in state.utensil_placed)
-                    and all(
-                        coffee_target in state.stirred
-                        for stir_tool, coffee_target in self.can_stir
-                        if stir_tool == tool
-                    )
-                ):
-                    actions.append(
-                        GroundAction("place_serving_utensil", (tool, target))
-                    )
-            actions.append(GroundAction("place", (held, self.home)))
-            return actions
-
-        for target in sorted(self.coffee_targets - state.served):
-            if target in state.stirred:
-                actions.append(GroundAction("serve_coffee", (target,)))
-        placed_targets = {target for _, target in state.utensil_placed}
-        for target in sorted(self.soup_targets - state.served):
-            if (target, "soup") in state.contents and target in placed_targets:
-                tool = next(
-                    tool for tool, placed_target in sorted(state.utensil_placed)
-                    if placed_target == target
+                    productive.append(GroundAction("stir", (tool, target)))
+            if productive:
+                return sorted(
+                    set(productive), key=lambda item: (item.name, item.arguments)
                 )
-                actions.append(GroundAction("serve_soup", (target, tool)))
+            for destination in sorted(self._allowed_destinations(held)):
+                if destination == held:
+                    continue
+                if (
+                    (held, destination) in self.soup_assignments
+                    and (destination, "soup") not in state.contents
+                ):
+                    continue
+                actions.append(GroundAction("place", (held, destination)))
+            return sorted(set(actions), key=lambda item: (item.name, item.arguments))
 
-        needed_objects = set()
-        for source, content in self.source_contents.items():
-            targets = self.soup_targets if content == "soup" else self.coffee_targets
-            if any((target, content) not in state.contents for target in targets):
-                needed_objects.add(source)
-        needed_objects.update(
-            tool for tool, target in self.can_stir if target not in state.stirred
-        )
-        needed_objects.update(
-            tool for tool, target in self.soup_assignments if target not in placed_targets
-        )
-        for object_id in sorted(needed_objects):
-            region = locations.get(object_id)
-            if region in state.opened:
-                actions.append(GroundAction("pick", (object_id, region)))
-            elif region is not None:
-                actions.append(GroundAction("open", (region,)))
+        for object_id in sorted(self._needed_objects(state)):
+            if object_id in locations:
+                actions.append(GroundAction("pick", (object_id,)))
         return sorted(set(actions), key=lambda item: (item.name, item.arguments))
 
     def apply(self, state: PlannerState, action: GroundAction) -> PlannerState:
         locations = state.location_map()
         name, args = action.name, action.arguments
-        if name == "open":
-            region, = args
-            if region in state.opened:
-                raise ValueError("OPEN requires a closed region")
-            return replace(state, opened=state.opened | {region})
-        if name == "close":
-            region, = args
-            if region not in state.opened or region == self.home:
-                raise ValueError("CLOSE requires an open non-home region")
-            return replace(state, opened=state.opened - {region})
         if name == "pick":
-            object_id, region = args
-            if state.held is not None or locations.get(object_id) != region or region not in state.opened:
+            object_id, = args
+            if state.held is not None or object_id not in locations:
                 raise ValueError("PICK precondition failed")
             del locations[object_id]
             return replace(state, held=object_id, locations=tuple(sorted(locations.items())))
         if name == "place":
-            object_id, region = args
-            if state.held != object_id or region not in state.opened:
+            object_id, destination = args
+            if (
+                state.held != object_id
+                or destination not in self._allowed_destinations(object_id)
+                or (
+                    (object_id, destination) in self.soup_assignments
+                    and (destination, "soup") not in state.contents
+                )
+            ):
                 raise ValueError("PLACE precondition failed")
-            locations[object_id] = region
+            locations[object_id] = destination
             return replace(state, held=None, locations=tuple(sorted(locations.items())))
         if name == "pour":
-            source, target, content = args
-            if state.held != source or self.source_contents.get(source) != content:
+            source, target = args
+            content = self.source_contents.get(source)
+            accepted_targets = (
+                self.soup_targets if content == "soup" else self.coffee_targets
+            )
+            if state.held != source or content is None or target not in accepted_targets:
                 raise ValueError("POUR precondition failed")
             return replace(state, contents=state.contents | {(target, content)})
         if name == "stir":
@@ -617,34 +695,16 @@ class KitchenSymbolicProblem:
             ):
                 raise ValueError("STIR precondition failed")
             return replace(state, stirred=state.stirred | {target})
-        if name == "place_serving_utensil":
-            tool, target = args
-            if state.held != tool or (tool, target) not in self.soup_assignments or (target, "soup") not in state.contents:
-                raise ValueError("PLACE_SERVING_UTENSIL precondition failed")
-            locations[tool] = target
-            return replace(
-                state,
-                held=None,
-                locations=tuple(sorted(locations.items())),
-                utensil_placed=state.utensil_placed | {(tool, target)},
-            )
-        if name == "serve_coffee":
-            target, = args
-            if target not in state.stirred:
-                raise ValueError("SERVE_COFFEE precondition failed")
-            return replace(state, served=state.served | {target})
-        if name == "serve_soup":
-            target, tool = args
-            if (target, "soup") not in state.contents or (
-                tool, target
-            ) not in state.utensil_placed:
-                raise ValueError("SERVE_SOUP precondition failed")
-            return replace(state, served=state.served | {target})
         raise ValueError(f"Unknown action {name}")
 
 
-def plan_symbolic_task(problem: KitchenSymbolicProblem) -> list[GroundAction]:
-    """Run deterministic best-first classical state-space search."""
+def search_symbolic_task(
+    problem: KitchenSymbolicProblem,
+) -> tuple[list[GroundAction], dict[str, Any]]:
+    """Run deterministic A*-style classical state-space search."""
+    import time
+
+    started = time.perf_counter()
     frontier: list[tuple[int, int, int, PlannerState]] = []
     serial = 0
     heappush(frontier, (problem.heuristic(problem.initial), 0, serial, problem.initial))
@@ -652,19 +712,31 @@ def plan_symbolic_task(problem: KitchenSymbolicProblem) -> list[GroundAction]:
         problem.initial: None
     }
     best_cost = {problem.initial: 0}
+    expanded = 0
+    generated = 0
     while frontier:
         _score, cost, _serial, state = heappop(frontier)
         if cost != best_cost.get(state):
             continue
+        expanded += 1
         if problem.goals_satisfied(state):
             plan = []
             while parent[state] is not None:
                 previous, action = parent[state]
                 plan.append(action)
                 state = previous
-            return list(reversed(plan))
+            plan.reverse()
+            return plan, {
+                "algorithm": "deterministic_astar_symbolic_state_search",
+                "expanded_states": expanded,
+                "generated_successors": generated,
+                "visited_states": len(best_cost),
+                "planning_time_s": time.perf_counter() - started,
+                "plan_length": len(plan),
+            }
         for action in problem.applicable_actions(state):
             successor = problem.apply(state, action)
+            generated += 1
             next_cost = cost + 1
             if next_cost >= best_cost.get(successor, 10**9):
                 continue
@@ -678,22 +750,89 @@ def plan_symbolic_task(problem: KitchenSymbolicProblem) -> list[GroundAction]:
     raise SymbolicCompilationError("Classical planner found no valid plan")
 
 
+def plan_symbolic_task(problem: KitchenSymbolicProblem) -> list[GroundAction]:
+    return search_symbolic_task(problem)[0]
+
+
 def validate_symbolic_plan(
     problem: KitchenSymbolicProblem, plan: Iterable[GroundAction]
 ) -> dict[str, Any]:
+    """Independently replay actions without calling the planner transition."""
+    plan = list(plan)
     state = problem.initial
     steps = []
     for index, action in enumerate(plan, 1):
         before = state
-        try:
-            state = problem.apply(state, action)
-        except ValueError as error:
+        locations = state.location_map()
+        failed: list[str] = []
+        added: list[tuple[str, ...]] = []
+        removed: list[tuple[str, ...]] = []
+        name, args = action.name, action.arguments
+        if name not in problem.OPERATOR_TYPES:
+            failed.append(f"unknown_operator({name})")
+        elif name == "pick":
+            object_id, = args
+            if state.held is not None:
+                failed.append("hand_empty")
+            if object_id not in locations:
+                failed.append(f"at({object_id}, current_location)")
+            if not failed:
+                old = locations.pop(object_id)
+                state = replace(state, held=object_id, locations=tuple(sorted(locations.items())))
+                removed.extend([("hand_empty",), ("at", object_id, old)])
+                added.append(("holding", object_id))
+        elif name == "place":
+            object_id, destination = args
+            if state.held != object_id:
+                failed.append(f"holding({object_id})")
+            if destination not in problem._allowed_destinations(object_id):
+                failed.append(f"valid_place({object_id}, {destination})")
+            if (
+                (object_id, destination) in problem.soup_assignments
+                and (destination, "soup") not in state.contents
+            ):
+                failed.append(f"contains({destination}, soup)")
+            if not failed:
+                locations[object_id] = destination
+                state = replace(state, held=None, locations=tuple(sorted(locations.items())))
+                removed.append(("holding", object_id))
+                added.extend([("hand_empty",), ("at", object_id, destination)])
+        elif name == "pour":
+            source, target = args
+            content = problem.source_contents.get(source)
+            valid_targets = problem.soup_targets if content == "soup" else problem.coffee_targets
+            if state.held != source:
+                failed.append(f"holding({source})")
+            if content is None:
+                failed.append(f"provides({source}, content)")
+            if target not in valid_targets:
+                failed.append(f"accepts_content({target}, {content})")
+            if not failed:
+                state = replace(state, contents=state.contents | {(target, content)})
+                added.append(("contains", target, content))
+        elif name == "stir":
+            tool, target = args
+            if state.held != tool:
+                failed.append(f"holding({tool})")
+            if (tool, target) not in problem.can_stir:
+                failed.append(f"stirrer_for({tool}, {target})")
+            for content in ("coffee", "water"):
+                if (target, content) not in state.contents:
+                    failed.append(f"contains({target}, {content})")
+            if not failed:
+                state = replace(state, stirred=state.stirred | {target})
+                added.append(("stirred", target))
+        if failed:
             return {
+                "plan_found": bool(plan),
+                "all_actions_applicable": False,
+                "final_goal_satisfied": False,
+                "plan_valid": False,
                 "valid": False,
-                "all_goals_satisfied": False,
                 "failed_step": index,
                 "action": action.render(),
-                "error": str(error),
+                "failed_preconditions": failed,
+                "steps": steps,
             }
         locations = state.location_map()
         if len(locations) != len(set(locations)):
@@ -703,16 +842,45 @@ def validate_symbolic_plan(
         steps.append({
             "step": index,
             "action": action.render(),
-            "held_before": before.held,
-            "held_after": state.held,
+            "preconditions_passed": True,
+            "facts_added": [list(fact) for fact in added],
+            "facts_removed": [list(fact) for fact in removed],
+            "held_before": before.held, "held_after": state.held,
         })
-    soup_tools = [tool for tool, _ in state.utensil_placed]
     all_goals = problem.goals_satisfied(state)
+    locations = state.location_map()
+    soup_tools = [
+        tool for tool, target in problem.soup_assignments
+        if locations.get(tool) == target
+    ]
+    coffee_compliance = all(
+        target in state.stirred and any(
+            (tool, target) in problem.can_stir
+            and any(
+                step["action"] == GroundAction("stir", (tool, target)).render()
+                for step in steps
+            )
+            for tool, assigned in problem.can_stir if assigned == target
+        )
+        for target in problem.coffee_targets
+    )
+    soup_compliance = all(
+        locations.get(tool) == target
+        for tool, target in problem.soup_assignments
+    )
+    plan_valid = bool(plan) and all_goals and soup_compliance
     return {
-        "valid": all_goals and len(soup_tools) == len(set(soup_tools)),
+        "plan_found": bool(plan),
+        "all_actions_applicable": True,
+        "final_goal_satisfied": all_goals,
+        "plan_valid": plan_valid,
+        "valid": plan_valid,
         "all_goals_satisfied": all_goals,
-        "goal_count": len(problem.coffee_targets | problem.soup_targets),
-        "served_targets": sorted(state.served),
+        "goal_facts": [list(fact) for fact in problem.goal_facts()],
+        "coffee_assignment_compliance": coffee_compliance,
+        "soup_assignment_compliance": soup_compliance,
+        "grounding_consistency": coffee_compliance and soup_compliance,
+        "coffee_distinct_tool_count": len({tool for tool, _ in problem.can_stir}),
         "coffee_reuse_verified": len({tool for tool, _ in problem.can_stir}) == 1,
         "soup_distinctness_verified": len(soup_tools) == len(set(soup_tools)) == 3,
         "steps": steps,
@@ -720,84 +888,69 @@ def validate_symbolic_plan(
 
 
 def render_domain_pddl() -> str:
-    """Return the generic task-level domain consumed by replaceable backends."""
+    """Return the inspectable four-operator domain."""
     return """(define (domain observed-kitchen-preparation)
-  (:requirements :strips :typing)
-  (:types physical_object region content - object
-          vessel utensil source - physical_object)
+  (:requirements :strips)
   (:predicates
-    (at ?o - physical_object ?r - region) (open ?r - region)
-    (handempty) (holding ?o - physical_object)
-    (source_contains ?s - source ?c - content)
-    (can_stir ?u - utensil ?v - vessel)
-    (assigned_soup_utensil ?u - utensil ?v - vessel)
-    (has_content ?v - vessel ?c - content) (stirred ?v - vessel)
-    (utensil_placed ?u - utensil ?v - vessel) (served ?v - vessel))
-  (:action pick :parameters (?o - physical_object ?r - region)
-    :precondition (and (handempty) (at ?o ?r) (open ?r))
-    :effect (and (holding ?o) (not (handempty)) (not (at ?o ?r))))
-  (:action place :parameters (?o - physical_object ?r - region)
-    :precondition (and (holding ?o) (open ?r))
-    :effect (and (at ?o ?r) (handempty) (not (holding ?o))))
-  (:action open :parameters (?r - region)
-    :precondition (and) :effect (open ?r))
-  (:action close :parameters (?r - region)
-    :precondition (open ?r) :effect (not (open ?r)))
-  (:action pour :parameters (?s - source ?v - vessel ?c - content)
-    :precondition (and (holding ?s) (source_contains ?s ?c))
-    :effect (has_content ?v ?c))
-  (:action stir :parameters (?u - utensil ?v - vessel)
-    :precondition (and (holding ?u) (can_stir ?u ?v)
-      (has_content ?v coffee) (has_content ?v water))
-    :effect (stirred ?v))
-  (:action place_serving_utensil :parameters (?u - utensil ?v - vessel)
-    :precondition (and (holding ?u) (assigned_soup_utensil ?u ?v)
-      (has_content ?v soup))
-    :effect (and (utensil_placed ?u ?v) (handempty) (not (holding ?u))))
-  (:action serve_coffee :parameters (?v - vessel)
-    :precondition (stirred ?v) :effect (served ?v))
-  (:action serve_soup :parameters (?v - vessel ?u - utensil)
-    :precondition (and (has_content ?v soup) (utensil_placed ?u ?v))
-    :effect (served ?v))
+    (at ?o ?d) (handempty) (holding ?o)
+    (provides ?s ?c) (accepts_content ?t ?c)
+    (valid_place ?o ?d) (stirrer_for ?u ?t)
+    (contains ?t ?c) (stirred ?t))
+  (:action pick :parameters (?o ?from)
+    :precondition (and (handempty) (at ?o ?from))
+    :effect (and (holding ?o) (not (handempty)) (not (at ?o ?from))))
+  (:action place :parameters (?o ?destination)
+    :precondition (and (holding ?o) (valid_place ?o ?destination))
+    :effect (and (at ?o ?destination) (handempty) (not (holding ?o))))
+  (:action pour :parameters (?source ?target ?content)
+    :precondition (and (holding ?source) (provides ?source ?content)
+      (accepts_content ?target ?content))
+    :effect (contains ?target ?content))
+  (:action stir :parameters (?tool ?target)
+    :precondition (and (holding ?tool) (stirrer_for ?tool ?target)
+      (contains ?target coffee) (contains ?target water))
+    :effect (stirred ?target))
 )\n"""
 
 
 def render_problem_pddl(problem: KitchenSymbolicProblem, task_id: str) -> str:
-    all_vessels = sorted(problem.coffee_targets | problem.soup_targets)
-    utensils = sorted({tool for tool, _ in problem.can_stir | problem.soup_assignments})
-    sources = sorted(problem.source_contents)
-    regions = sorted(problem.compiled["regions"])
+    all_objects = sorted(
+        problem.manipulable | {problem.home, problem.serving_destination}
+        | {"coffee", "water", "soup"}
+        | {destination for _, destination in problem.initial.locations}
+        | {
+            destination
+            for object_id in problem.manipulable
+            for destination in problem._allowed_destinations(object_id)
+        }
+    )
     lines = [
         f"(define (problem {_symbol(task_id)})",
         "  (:domain observed-kitchen-preparation)",
-        "  (:objects",
-        f"    {' '.join(map(_symbol, all_vessels))} - vessel",
-        f"    {' '.join(map(_symbol, utensils))} - utensil",
-        f"    {' '.join(map(_symbol, sources))} - source",
-        f"    {' '.join(map(_symbol, regions))} - region",
-        "    coffee water soup - content",
-        "  )",
+        f"  (:objects {' '.join(map(_symbol, all_objects))})",
         "  (:init",
         "    (handempty)",
     ]
     for object_id, region in problem.initial.locations:
-        if object_id in problem.manipulable:
-            lines.append(f"    (at {_symbol(object_id)} {_symbol(region)})")
-    for region in sorted(problem.initial.opened):
-        lines.append(f"    (open {_symbol(region)})")
+        lines.append(f"    (at {_symbol(object_id)} {_symbol(region)})")
     for source, content in sorted(problem.source_contents.items()):
-        lines.append(f"    (source_contains {_symbol(source)} {_symbol(content)})")
-    for target, content in sorted(problem.initial.contents):
-        lines.append(f"    (has_content {_symbol(target)} {_symbol(content)})")
-    for tool, target in sorted(problem.can_stir):
-        lines.append(f"    (can_stir {_symbol(tool)} {_symbol(target)})")
-    for tool, target in sorted(problem.soup_assignments):
-        lines.append(
-            f"    (assigned_soup_utensil {_symbol(tool)} {_symbol(target)})"
+        lines.append(f"    (provides {_symbol(source)} {_symbol(content)})")
+        targets = (
+            problem.soup_targets if content == "soup"
+            else problem.coffee_targets
         )
+        for target in sorted(targets):
+            lines.append(f"    (accepts_content {_symbol(target)} {_symbol(content)})")
+    for target, content in sorted(problem.initial.contents):
+        lines.append(f"    (contains {_symbol(target)} {_symbol(content)})")
+    for tool, target in sorted(problem.can_stir):
+        lines.append(f"    (stirrer_for {_symbol(tool)} {_symbol(target)})")
+    for object_id in sorted(problem.manipulable):
+        for destination in sorted(problem._allowed_destinations(object_id)):
+            lines.append(f"    (valid_place {_symbol(object_id)} {_symbol(destination)})")
     lines.extend(["  )", "  (:goal (and"])
-    for target in all_vessels:
-        lines.append(f"    (served {_symbol(target)})")
+    for fact in problem.goal_facts():
+        lines.append("    (" + " ".join(map(_symbol, fact)) + ")")
     lines.extend(["  ))", ")"])
     return "\n".join(lines) + "\n"
 
@@ -821,6 +974,7 @@ def _search_trace(run_path: Path) -> list[dict[str, Any]]:
 def _scientific_validation(
     run_path: Path,
     compiled: dict[str, Any],
+    domain_pddl: str,
     problem_pddl: str,
     plan_records: list[dict[str, Any]],
     validation: dict[str, Any],
@@ -885,6 +1039,13 @@ def _scientific_validation(
         record.get("step") == index and record.get("rendered")
         for index, record in enumerate(plan_records, 1)
     )
+    operator_types = sorted({record.get("action") for record in plan_records})
+    forbidden_operators = sorted(
+        set(operator_types) - KitchenSymbolicProblem.OPERATOR_TYPES
+    )
+    domain_action_types = re.findall(
+        r"\(:action\s+([a-z0-9_-]+)", domain_pddl.lower()
+    )
     return {
         "schema_version": 1,
         "check_1_observed_symbolic_state": {
@@ -906,8 +1067,8 @@ def _scientific_validation(
             "passed": bool(
                 plan_records
                 and plan_steps_match
-                and validation.get("valid")
-                and validation.get("all_goals_satisfied")
+                and validation.get("plan_valid")
+                and validation.get("final_goal_satisfied")
             ),
             "planner_entry_point": (
                 "mujoco_scenes.symbolic_planning.plan_symbolic_task"
@@ -916,8 +1077,13 @@ def _scientific_validation(
             "renderer_role": "serialization_only_after_planner_returns",
             "action_count": len(plan_records),
             "plan_steps_well_formed": plan_steps_match,
-            "validator_valid": validation.get("valid"),
-            "all_goals_satisfied": validation.get("all_goals_satisfied"),
+            "validator_valid": validation.get("plan_valid"),
+            "all_goals_satisfied": validation.get("final_goal_satisfied"),
+            "plan_operator_types": operator_types,
+            "domain_operator_types": domain_action_types,
+            "forbidden_operator_types": forbidden_operators,
+            "exactly_four_domain_operators": set(domain_action_types)
+            == KitchenSymbolicProblem.OPERATOR_TYPES,
         },
     }
 
@@ -925,14 +1091,18 @@ def _scientific_validation(
 def compile_plan_and_save(
     run_dir: str | Path,
     task_requirements: str | Path | dict[str, Any],
+    *,
+    output_dir: str | Path | None = None,
 ) -> dict[str, Any]:
     """Compile, plan, validate, and atomically save all boundary artifacts."""
     run_path = Path(run_dir).resolve()
+    output_path = Path(output_dir).resolve() if output_dir else run_path
+    output_path.mkdir(parents=True, exist_ok=True)
     compiled = compile_observed_symbolic_state(run_path, task_requirements)
     problem = KitchenSymbolicProblem(compiled)
-    plan = plan_symbolic_task(problem)
+    plan, search_statistics = search_symbolic_task(problem)
     validation = validate_symbolic_plan(problem, plan)
-    if not validation["valid"]:
+    if not validation["plan_valid"]:
         raise SymbolicCompilationError(f"Generated plan failed validation: {validation}")
     task_id = compiled["task_id"]
     search_trace = _search_trace(run_path)
@@ -941,36 +1111,60 @@ def compile_plan_and_save(
         {"step": index, "action": action.name, "arguments": list(action.arguments), "rendered": action.render()}
         for index, action in enumerate(plan, 1)
     ]
-    _write_json(run_path / "search_trace.json", search_trace)
-    _write_json(run_path / "observed_symbolic_state.json", compiled)
-    _write_json(run_path / "grounded_role_assignments.json", assignments)
-    _write_json(run_path / "symbolic_initial_state.json", asdict(problem.initial))
-    _write_json(run_path / "symbolic_goal.json", {
-        "served": sorted(problem.coffee_targets | problem.soup_targets)
+    witness_path = run_path / "latest_witness.json"
+    witness_payload = _read_json(witness_path)
+    _write_json(output_path / "input_witness.json", {
+        "status": witness_payload.get("status"),
+        "stage": witness_payload.get("stage"),
+        "task_id": witness_payload.get("task_id"),
+        "selected_witness": witness_payload.get("selected_witness"),
+        "operation_assignments": witness_payload.get("operation_assignments", []),
+        "tool_role_binding_requirements": witness_payload.get(
+            "tool_role_binding_requirements", {}
+        ),
+        "source_phase1_witness_path": str(witness_path),
+        "source_phase1_witness_sha256": hashlib.sha256(
+            witness_path.read_bytes()
+        ).hexdigest(),
     })
-    _write_json(run_path / "plan.json", plan_records)
-    _write_json(run_path / "plan_validation.json", validation)
+    _write_json(output_path / "symbolic_problem.json", compiled)
+    _write_json(output_path / "search_trace.json", search_trace)
+    _write_json(output_path / "observed_symbolic_state.json", compiled)
+    _write_json(output_path / "grounded_role_assignments.json", assignments)
+    _write_json(output_path / "symbolic_initial_state.json", asdict(problem.initial))
+    _write_json(output_path / "symbolic_goal.json", {
+        "facts": [list(fact) for fact in problem.goal_facts()]
+    })
+    _write_json(output_path / "generated_plan.json", plan_records)
+    _write_json(output_path / "plan.json", plan_records)
+    _write_json(output_path / "validation.json", validation)
+    _write_json(output_path / "plan_validation.json", validation)
+    _write_json(output_path / "execution_trace.json", validation["steps"])
     domain_pddl = render_domain_pddl()
     problem_pddl = render_problem_pddl(problem, task_id)
-    (run_path / "domain.pddl").write_text(domain_pddl, encoding="utf-8")
-    (run_path / "problem.pddl").write_text(problem_pddl, encoding="utf-8")
+    (output_path / "domain.pddl").write_text(domain_pddl, encoding="utf-8")
+    (output_path / "problem.pddl").write_text(problem_pddl, encoding="utf-8")
     planner_provenance = {
         "schema_version": 1,
         "planner_entry_point": (
             "mujoco_scenes.symbolic_planning.plan_symbolic_task"
         ),
-        "algorithm": "deterministic_best_first_classical_state_space_search",
+        "algorithm": "deterministic_astar_symbolic_state_search",
         "domain_source": "generated_from_generic_action_schemas",
         "problem_source": "compiled_observed_state_and_verified_witness",
         "plan_renderer_role": "serialization_only_after_planner_returns",
         "action_count": len(plan_records),
+        "operator_types": sorted(KitchenSymbolicProblem.OPERATOR_TYPES),
+        "search_statistics": search_statistics,
+        "phase2_perception_calls": 0,
     }
-    _write_json(run_path / "planner_provenance.json", planner_provenance)
+    _write_json(output_path / "planner_provenance.json", planner_provenance)
     _write_json(
-        run_path / "scientific_validation.json",
+        output_path / "scientific_validation.json",
         _scientific_validation(
             run_path,
             compiled,
+            domain_pddl,
             problem_pddl,
             plan_records,
             validation,
@@ -979,7 +1173,8 @@ def compile_plan_and_save(
     plan_text = "\n".join(
         f"{record['step']:03d} {record['rendered']}" for record in plan_records
     ) + "\n"
-    (run_path / "plan.txt").write_text(plan_text, encoding="utf-8")
+    (output_path / "generated_plan.txt").write_text(plan_text, encoding="utf-8")
+    (output_path / "plan.txt").write_text(plan_text, encoding="utf-8")
     witness_lines = [
         f"coffee targets: {', '.join(assignments['coffee_targets'])}",
         "coffee reusable tool: " + ", ".join(sorted({
@@ -999,7 +1194,7 @@ def compile_plan_and_save(
         "", "=== GENERATED SYMBOLIC TASK PLAN ===", "", plan_text.rstrip(),
         "", "=== VALIDATION ===", "", "PLAN VALID", "ALL GOALS SATISFIED", "",
     ])
-    (run_path / "combined_action_sequence.txt").write_text(
+    (output_path / "combined_action_sequence.txt").write_text(
         "\n".join(combined), encoding="utf-8"
     )
     return {
@@ -1007,5 +1202,6 @@ def compile_plan_and_save(
         "plan": plan_records,
         "validation": validation,
         "search_trace": search_trace,
-        "run_dir": str(run_path),
+        "source_phase1_run_dir": str(run_path),
+        "run_dir": str(output_path),
     }
