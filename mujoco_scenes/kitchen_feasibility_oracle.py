@@ -24,6 +24,7 @@ from mujoco_scenes.scene_loader import (
 )
 from mujoco_scenes.exact_scene_geometry import extract_exact_object_geometry
 from mujoco_scenes.geometry_properties import load_geometry_config
+from mujoco_scenes.geometry_relations import evaluate_insertable_in, evaluate_reaches_bottom
 
 
 ORACLE_BASIS = "PRIVILEGED_ORACLE_EVALUATION_ONLY"
@@ -102,10 +103,12 @@ def _valid_edge(
     length = float(tool_spec["total_length_m"])
     opening = float(target_spec["opening_width_m"])
     depth = float(target_spec["cavity_depth_m"])
-    insert_margin = opening - (cross + clearance)
-    reach_margin = length - grip - depth
-    insertable = insert_margin > 0.0
-    reaches = reach_margin >= 0.0
+    insert_relation = evaluate_insertable_in(cross, opening, clearance)
+    reach_relation = evaluate_reaches_bottom(length, depth, grip)
+    insert_margin = insert_relation["pass_margin_m"]
+    reach_margin = reach_relation["pass_margin_m"]
+    insertable = insert_relation["status"] == "TRUE"
+    reaches = reach_relation["status"] == "TRUE"
     if not (insertable and reaches):
         return None
     return {

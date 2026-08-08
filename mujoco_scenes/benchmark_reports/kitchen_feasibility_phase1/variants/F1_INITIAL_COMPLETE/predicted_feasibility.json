@@ -23,7 +23,7 @@
             "maximum_cross_section_m": 0.030780545538506066,
             "method": "cross_section_clearance_vs_opening_v1",
             "opening_width_m": 0.060711627223347636,
-            "pass_margin_m": 0.024931081684841573,
+            "pass_margin_m": 0.02493108168484157,
             "reason": null,
             "source_measurement_cloud_path": "stages/000_initial/evidence/object_0007/fused.ply",
             "status": "TRUE",
@@ -69,7 +69,7 @@
       "role_relevant_projection": true,
       "semantic": {
         "canonical_label": "spoon",
-        "confidence": 0.15418696217238903,
+        "confidence": 0.1525858286768198,
         "preference": {
           "canonical_label": "spoon",
           "detector_aliases": [
@@ -89,8 +89,8 @@
                 "inspection_left"
               ],
               "label": "spoon",
-              "mean_confidence": 0.15418696217238903,
-              "score": 0.8997823256023827,
+              "mean_confidence": 0.1525858286768198,
+              "score": 0.8904410326731834,
               "supporting_view_count": 2
             },
             {
@@ -98,8 +98,8 @@
                 "inspection_top"
               ],
               "label": "knife",
-              "mean_confidence": 0.13913635909557343,
-              "score": 0.38893409956653013,
+              "mean_confidence": 0.13846127688884735,
+              "score": 0.3870470120222454,
               "supporting_view_count": 1
             },
             {
@@ -108,8 +108,8 @@
                 "inspection_right"
               ],
               "label": "fork",
-              "mean_confidence": 0.0341870803385973,
-              "score": 0.17906912859762517,
+              "mean_confidence": 0.034083930775523186,
+              "score": 0.17852870583320202,
               "supporting_view_count": 2
             }
           ],
@@ -122,16 +122,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.15418696217238903,
+          "mean_confidence": 0.1525858286768198,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.15418696217238903,
+            "mean_confidence": 0.1525858286768198,
             "supporting_view_count": 2,
             "supporting_view_margin": 1,
             "validated": true,
-            "weighted_score_margin": 0.5108482260358526,
+            "weighted_score_margin": 0.503394020650938,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 0.5108482260358526,
+            "winning_label_margin": 0.503394020650938,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -148,9 +148,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 2,
           "supporting_view_margin": 1,
-          "weighted_score_margin": 0.5108482260358526,
+          "weighted_score_margin": 0.503394020650938,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 0.5108482260358526,
+          "winning_label_margin": 0.503394020650938,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -168,7 +168,7 @@
       "target_role": "coffee_container",
       "target_semantic": {
         "canonical_label": "cup",
-        "confidence": 0.3669862945874532,
+        "confidence": 0.36546405653158825,
         "preference": {
           "canonical_label": "cup",
           "detector_aliases": [
@@ -186,8 +186,8 @@
                 "inspection_top"
               ],
               "label": "cup",
-              "mean_confidence": 0.3669862945874532,
-              "score": 3.830743933443031,
+              "mean_confidence": 0.36546405653158825,
+              "score": 3.8036888053388003,
               "supporting_view_count": 3
             },
             {
@@ -195,8 +195,8 @@
                 "inspection_right"
               ],
               "label": "spoon",
-              "mean_confidence": 0.045550066977739334,
-              "score": 0.14277013550236323,
+              "mean_confidence": 0.045483049005270004,
+              "score": 0.14256007730387107,
               "supporting_view_count": 1
             }
           ],
@@ -210,16 +210,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.3669862945874532,
+          "mean_confidence": 0.36546405653158825,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.3669862945874532,
+            "mean_confidence": 0.36546405653158825,
             "supporting_view_count": 3,
             "supporting_view_margin": 2,
             "validated": true,
-            "weighted_score_margin": 3.6879737979406677,
+            "weighted_score_margin": 3.6611287280349294,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 3.6879737979406677,
+            "winning_label_margin": 3.6611287280349294,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -235,9 +235,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 3,
           "supporting_view_margin": 2,
-          "weighted_score_margin": 3.6879737979406677,
+          "weighted_score_margin": 3.6611287280349294,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 3.6879737979406677,
+          "winning_label_margin": 3.6611287280349294,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -395,7 +395,7 @@
       "role_relevant_projection": true,
       "semantic": {
         "canonical_label": "spoon",
-        "confidence": 0.15418696217238903,
+        "confidence": 0.1525858286768198,
         "preference": {
           "canonical_label": "spoon",
           "detector_aliases": [
@@ -415,8 +415,8 @@
                 "inspection_left"
               ],
               "label": "spoon",
-              "mean_confidence": 0.15418696217238903,
-              "score": 0.8997823256023827,
+              "mean_confidence": 0.1525858286768198,
+              "score": 0.8904410326731834,
               "supporting_view_count": 2
             },
             {
@@ -424,8 +424,8 @@
                 "inspection_top"
               ],
               "label": "knife",
-              "mean_confidence": 0.13913635909557343,
-              "score": 0.38893409956653013,
+              "mean_confidence": 0.13846127688884735,
+              "score": 0.3870470120222454,
               "supporting_view_count": 1
             },
             {
@@ -434,8 +434,8 @@
                 "inspection_right"
               ],
               "label": "fork",
-              "mean_confidence": 0.0341870803385973,
-              "score": 0.17906912859762517,
+              "mean_confidence": 0.034083930775523186,
+              "score": 0.17852870583320202,
               "supporting_view_count": 2
             }
           ],
@@ -448,16 +448,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.15418696217238903,
+          "mean_confidence": 0.1525858286768198,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.15418696217238903,
+            "mean_confidence": 0.1525858286768198,
             "supporting_view_count": 2,
             "supporting_view_margin": 1,
             "validated": true,
-            "weighted_score_margin": 0.5108482260358526,
+            "weighted_score_margin": 0.503394020650938,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 0.5108482260358526,
+            "winning_label_margin": 0.503394020650938,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -474,9 +474,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 2,
           "supporting_view_margin": 1,
-          "weighted_score_margin": 0.5108482260358526,
+          "weighted_score_margin": 0.503394020650938,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 0.5108482260358526,
+          "winning_label_margin": 0.503394020650938,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -494,7 +494,7 @@
       "target_role": "coffee_container",
       "target_semantic": {
         "canonical_label": "cup",
-        "confidence": 0.45588145181536677,
+        "confidence": 0.4507430300116539,
         "preference": {
           "canonical_label": "cup",
           "detector_aliases": [
@@ -514,8 +514,8 @@
                 "inspection_top"
               ],
               "label": "cup",
-              "mean_confidence": 0.45588145181536677,
-              "score": 9.075339847752149,
+              "mean_confidence": 0.4507430300116539,
+              "score": 8.974796726185696,
               "supporting_view_count": 5
             }
           ],
@@ -531,16 +531,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.45588145181536677,
+          "mean_confidence": 0.4507430300116539,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.45588145181536677,
+            "mean_confidence": 0.4507430300116539,
             "supporting_view_count": 5,
             "supporting_view_margin": 5,
             "validated": true,
-            "weighted_score_margin": 9.075339847752149,
+            "weighted_score_margin": 8.974796726185696,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 9.075339847752149,
+            "winning_label_margin": 8.974796726185696,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -557,9 +557,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 5,
           "supporting_view_margin": 5,
-          "weighted_score_margin": 9.075339847752149,
+          "weighted_score_margin": 8.974796726185696,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 9.075339847752149,
+          "winning_label_margin": 8.974796726185696,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -718,7 +718,7 @@
       "role_relevant_projection": true,
       "semantic": {
         "canonical_label": "spoon",
-        "confidence": 0.15418696217238903,
+        "confidence": 0.1525858286768198,
         "preference": {
           "canonical_label": "spoon",
           "detector_aliases": [
@@ -738,8 +738,8 @@
                 "inspection_left"
               ],
               "label": "spoon",
-              "mean_confidence": 0.15418696217238903,
-              "score": 0.8997823256023827,
+              "mean_confidence": 0.1525858286768198,
+              "score": 0.8904410326731834,
               "supporting_view_count": 2
             },
             {
@@ -747,8 +747,8 @@
                 "inspection_top"
               ],
               "label": "knife",
-              "mean_confidence": 0.13913635909557343,
-              "score": 0.38893409956653013,
+              "mean_confidence": 0.13846127688884735,
+              "score": 0.3870470120222454,
               "supporting_view_count": 1
             },
             {
@@ -757,8 +757,8 @@
                 "inspection_right"
               ],
               "label": "fork",
-              "mean_confidence": 0.0341870803385973,
-              "score": 0.17906912859762517,
+              "mean_confidence": 0.034083930775523186,
+              "score": 0.17852870583320202,
               "supporting_view_count": 2
             }
           ],
@@ -771,16 +771,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.15418696217238903,
+          "mean_confidence": 0.1525858286768198,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.15418696217238903,
+            "mean_confidence": 0.1525858286768198,
             "supporting_view_count": 2,
             "supporting_view_margin": 1,
             "validated": true,
-            "weighted_score_margin": 0.5108482260358526,
+            "weighted_score_margin": 0.503394020650938,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 0.5108482260358526,
+            "winning_label_margin": 0.503394020650938,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -797,9 +797,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 2,
           "supporting_view_margin": 1,
-          "weighted_score_margin": 0.5108482260358526,
+          "weighted_score_margin": 0.503394020650938,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 0.5108482260358526,
+          "winning_label_margin": 0.503394020650938,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -817,7 +817,7 @@
       "target_role": "coffee_container",
       "target_semantic": {
         "canonical_label": "cup",
-        "confidence": 0.325992739200592,
+        "confidence": 0.32064796313643457,
         "preference": {
           "canonical_label": "cup",
           "detector_aliases": [
@@ -837,8 +837,8 @@
                 "inspection_top"
               ],
               "label": "cup",
-              "mean_confidence": 0.325992739200592,
-              "score": 5.848947221448598,
+              "mean_confidence": 0.32064796313643457,
+              "score": 5.753137295109324,
               "supporting_view_count": 5
             }
           ],
@@ -854,16 +854,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.325992739200592,
+          "mean_confidence": 0.32064796313643457,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.325992739200592,
+            "mean_confidence": 0.32064796313643457,
             "supporting_view_count": 5,
             "supporting_view_margin": 5,
             "validated": true,
-            "weighted_score_margin": 5.848947221448598,
+            "weighted_score_margin": 5.753137295109324,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 5.848947221448598,
+            "winning_label_margin": 5.753137295109324,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -880,9 +880,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 5,
           "supporting_view_margin": 5,
-          "weighted_score_margin": 5.848947221448598,
+          "weighted_score_margin": 5.753137295109324,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 5.848947221448598,
+          "winning_label_margin": 5.753137295109324,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -1000,7 +1000,7 @@
             "maximum_cross_section_m": 0.030780545538506066,
             "method": "cross_section_clearance_vs_opening_v1",
             "opening_width_m": 0.060711627223347636,
-            "pass_margin_m": 0.024931081684841573,
+            "pass_margin_m": 0.02493108168484157,
             "reason": null,
             "source_measurement_cloud_path": "stages/000_initial/evidence/object_0007/fused.ply",
             "status": "TRUE",
@@ -1045,7 +1045,7 @@
       "role_relevant_projection": true,
       "semantic": {
         "canonical_label": "spoon",
-        "confidence": 0.15418696217238903,
+        "confidence": 0.1525858286768198,
         "preference": {
           "canonical_label": "spoon",
           "detector_aliases": [
@@ -1065,8 +1065,8 @@
                 "inspection_left"
               ],
               "label": "spoon",
-              "mean_confidence": 0.15418696217238903,
-              "score": 0.8997823256023827,
+              "mean_confidence": 0.1525858286768198,
+              "score": 0.8904410326731834,
               "supporting_view_count": 2
             },
             {
@@ -1074,8 +1074,8 @@
                 "inspection_top"
               ],
               "label": "knife",
-              "mean_confidence": 0.13913635909557343,
-              "score": 0.38893409956653013,
+              "mean_confidence": 0.13846127688884735,
+              "score": 0.3870470120222454,
               "supporting_view_count": 1
             },
             {
@@ -1084,8 +1084,8 @@
                 "inspection_right"
               ],
               "label": "fork",
-              "mean_confidence": 0.0341870803385973,
-              "score": 0.17906912859762517,
+              "mean_confidence": 0.034083930775523186,
+              "score": 0.17852870583320202,
               "supporting_view_count": 2
             }
           ],
@@ -1098,16 +1098,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.15418696217238903,
+          "mean_confidence": 0.1525858286768198,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.15418696217238903,
+            "mean_confidence": 0.1525858286768198,
             "supporting_view_count": 2,
             "supporting_view_margin": 1,
             "validated": true,
-            "weighted_score_margin": 0.5108482260358526,
+            "weighted_score_margin": 0.503394020650938,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 0.5108482260358526,
+            "winning_label_margin": 0.503394020650938,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -1124,9 +1124,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 2,
           "supporting_view_margin": 1,
-          "weighted_score_margin": 0.5108482260358526,
+          "weighted_score_margin": 0.503394020650938,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 0.5108482260358526,
+          "winning_label_margin": 0.503394020650938,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -1143,7 +1143,7 @@
       "target_role": "coffee_container",
       "target_semantic": {
         "canonical_label": "cup",
-        "confidence": 0.3669862945874532,
+        "confidence": 0.36546405653158825,
         "preference": {
           "canonical_label": "cup",
           "detector_aliases": [
@@ -1161,8 +1161,8 @@
                 "inspection_top"
               ],
               "label": "cup",
-              "mean_confidence": 0.3669862945874532,
-              "score": 3.830743933443031,
+              "mean_confidence": 0.36546405653158825,
+              "score": 3.8036888053388003,
               "supporting_view_count": 3
             },
             {
@@ -1170,8 +1170,8 @@
                 "inspection_right"
               ],
               "label": "spoon",
-              "mean_confidence": 0.045550066977739334,
-              "score": 0.14277013550236323,
+              "mean_confidence": 0.045483049005270004,
+              "score": 0.14256007730387107,
               "supporting_view_count": 1
             }
           ],
@@ -1185,16 +1185,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.3669862945874532,
+          "mean_confidence": 0.36546405653158825,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.3669862945874532,
+            "mean_confidence": 0.36546405653158825,
             "supporting_view_count": 3,
             "supporting_view_margin": 2,
             "validated": true,
-            "weighted_score_margin": 3.6879737979406677,
+            "weighted_score_margin": 3.6611287280349294,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 3.6879737979406677,
+            "winning_label_margin": 3.6611287280349294,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -1210,9 +1210,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 3,
           "supporting_view_margin": 2,
-          "weighted_score_margin": 3.6879737979406677,
+          "weighted_score_margin": 3.6611287280349294,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 3.6879737979406677,
+          "winning_label_margin": 3.6611287280349294,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -1317,7 +1317,7 @@
             "maximum_cross_section_m": 0.031802219994713186,
             "method": "cross_section_clearance_vs_opening_v1",
             "opening_width_m": 0.060711627223347636,
-            "pass_margin_m": 0.023909407228634452,
+            "pass_margin_m": 0.02390940722863445,
             "reason": null,
             "source_measurement_cloud_path": "stages/000_initial/evidence/object_0008/fused.ply",
             "status": "TRUE",
@@ -1362,7 +1362,7 @@
       "role_relevant_projection": true,
       "semantic": {
         "canonical_label": "spoon",
-        "confidence": 0.481931297108531,
+        "confidence": 0.4824313260614872,
         "preference": {
           "canonical_label": "spoon",
           "detector_aliases": [
@@ -1384,8 +1384,8 @@
                 "inspection_right"
               ],
               "label": "spoon",
-              "mean_confidence": 0.481931297108531,
-              "score": 4.034228625357286,
+              "mean_confidence": 0.4824313260614872,
+              "score": 4.036262314614178,
               "supporting_view_count": 4
             },
             {
@@ -1393,8 +1393,8 @@
                 "inspection_top"
               ],
               "label": "knife",
-              "mean_confidence": 0.11786427348852158,
-              "score": 0.33428550840460647,
+              "mean_confidence": 0.11865754425525665,
+              "score": 0.33653537525324384,
               "supporting_view_count": 1
             }
           ],
@@ -1409,16 +1409,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.481931297108531,
+          "mean_confidence": 0.4824313260614872,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.481931297108531,
+            "mean_confidence": 0.4824313260614872,
             "supporting_view_count": 4,
             "supporting_view_margin": 3,
             "validated": true,
-            "weighted_score_margin": 3.6999431169526793,
+            "weighted_score_margin": 3.699726939360934,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 3.6999431169526793,
+            "winning_label_margin": 3.699726939360934,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -1435,9 +1435,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 4,
           "supporting_view_margin": 3,
-          "weighted_score_margin": 3.6999431169526793,
+          "weighted_score_margin": 3.699726939360934,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 3.6999431169526793,
+          "winning_label_margin": 3.699726939360934,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -1454,7 +1454,7 @@
       "target_role": "coffee_container",
       "target_semantic": {
         "canonical_label": "cup",
-        "confidence": 0.3669862945874532,
+        "confidence": 0.36546405653158825,
         "preference": {
           "canonical_label": "cup",
           "detector_aliases": [
@@ -1472,8 +1472,8 @@
                 "inspection_top"
               ],
               "label": "cup",
-              "mean_confidence": 0.3669862945874532,
-              "score": 3.830743933443031,
+              "mean_confidence": 0.36546405653158825,
+              "score": 3.8036888053388003,
               "supporting_view_count": 3
             },
             {
@@ -1481,8 +1481,8 @@
                 "inspection_right"
               ],
               "label": "spoon",
-              "mean_confidence": 0.045550066977739334,
-              "score": 0.14277013550236323,
+              "mean_confidence": 0.045483049005270004,
+              "score": 0.14256007730387107,
               "supporting_view_count": 1
             }
           ],
@@ -1496,16 +1496,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.3669862945874532,
+          "mean_confidence": 0.36546405653158825,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.3669862945874532,
+            "mean_confidence": 0.36546405653158825,
             "supporting_view_count": 3,
             "supporting_view_margin": 2,
             "validated": true,
-            "weighted_score_margin": 3.6879737979406677,
+            "weighted_score_margin": 3.6611287280349294,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 3.6879737979406677,
+            "winning_label_margin": 3.6611287280349294,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -1521,9 +1521,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 3,
           "supporting_view_margin": 2,
-          "weighted_score_margin": 3.6879737979406677,
+          "weighted_score_margin": 3.6611287280349294,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 3.6879737979406677,
+          "winning_label_margin": 3.6611287280349294,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -1673,7 +1673,7 @@
       "role_relevant_projection": true,
       "semantic": {
         "canonical_label": "spoon",
-        "confidence": 0.8417080342769623,
+        "confidence": 0.8416559994220734,
         "preference": {
           "canonical_label": "spoon",
           "detector_aliases": [
@@ -1693,8 +1693,8 @@
                 "inspection_left"
               ],
               "label": "spoon",
-              "mean_confidence": 0.8417080342769623,
-              "score": 4.286802421655599,
+              "mean_confidence": 0.8416559994220734,
+              "score": 4.286543523375478,
               "supporting_view_count": 2
             },
             {
@@ -1704,8 +1704,8 @@
                 "inspection_top"
               ],
               "label": "knife",
-              "mean_confidence": 0.07900564248363177,
-              "score": 0.676186305506207,
+              "mean_confidence": 0.07971416413784027,
+              "score": 0.6822869409737522,
               "supporting_view_count": 3
             }
           ],
@@ -1718,16 +1718,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.8417080342769623,
+          "mean_confidence": 0.8416559994220734,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.8417080342769623,
+            "mean_confidence": 0.8416559994220734,
             "supporting_view_count": 2,
             "supporting_view_margin": -1,
             "validated": true,
-            "weighted_score_margin": 3.610616116149392,
+            "weighted_score_margin": 3.604256582401726,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 3.610616116149392,
+            "winning_label_margin": 3.604256582401726,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -1744,9 +1744,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 2,
           "supporting_view_margin": -1,
-          "weighted_score_margin": 3.610616116149392,
+          "weighted_score_margin": 3.604256582401726,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 3.610616116149392,
+          "winning_label_margin": 3.604256582401726,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -1763,7 +1763,7 @@
       "target_role": "coffee_container",
       "target_semantic": {
         "canonical_label": "cup",
-        "confidence": 0.3669862945874532,
+        "confidence": 0.36546405653158825,
         "preference": {
           "canonical_label": "cup",
           "detector_aliases": [
@@ -1781,8 +1781,8 @@
                 "inspection_top"
               ],
               "label": "cup",
-              "mean_confidence": 0.3669862945874532,
-              "score": 3.830743933443031,
+              "mean_confidence": 0.36546405653158825,
+              "score": 3.8036888053388003,
               "supporting_view_count": 3
             },
             {
@@ -1790,8 +1790,8 @@
                 "inspection_right"
               ],
               "label": "spoon",
-              "mean_confidence": 0.045550066977739334,
-              "score": 0.14277013550236323,
+              "mean_confidence": 0.045483049005270004,
+              "score": 0.14256007730387107,
               "supporting_view_count": 1
             }
           ],
@@ -1805,16 +1805,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.3669862945874532,
+          "mean_confidence": 0.36546405653158825,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.3669862945874532,
+            "mean_confidence": 0.36546405653158825,
             "supporting_view_count": 3,
             "supporting_view_margin": 2,
             "validated": true,
-            "weighted_score_margin": 3.6879737979406677,
+            "weighted_score_margin": 3.6611287280349294,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 3.6879737979406677,
+            "winning_label_margin": 3.6611287280349294,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -1830,9 +1830,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 3,
           "supporting_view_margin": 2,
-          "weighted_score_margin": 3.6879737979406677,
+          "weighted_score_margin": 3.6611287280349294,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 3.6879737979406677,
+          "winning_label_margin": 3.6611287280349294,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -1982,7 +1982,7 @@
       "role_relevant_projection": true,
       "semantic": {
         "canonical_label": "spoon",
-        "confidence": 0.15418696217238903,
+        "confidence": 0.1525858286768198,
         "preference": {
           "canonical_label": "spoon",
           "detector_aliases": [
@@ -2002,8 +2002,8 @@
                 "inspection_left"
               ],
               "label": "spoon",
-              "mean_confidence": 0.15418696217238903,
-              "score": 0.8997823256023827,
+              "mean_confidence": 0.1525858286768198,
+              "score": 0.8904410326731834,
               "supporting_view_count": 2
             },
             {
@@ -2011,8 +2011,8 @@
                 "inspection_top"
               ],
               "label": "knife",
-              "mean_confidence": 0.13913635909557343,
-              "score": 0.38893409956653013,
+              "mean_confidence": 0.13846127688884735,
+              "score": 0.3870470120222454,
               "supporting_view_count": 1
             },
             {
@@ -2021,8 +2021,8 @@
                 "inspection_right"
               ],
               "label": "fork",
-              "mean_confidence": 0.0341870803385973,
-              "score": 0.17906912859762517,
+              "mean_confidence": 0.034083930775523186,
+              "score": 0.17852870583320202,
               "supporting_view_count": 2
             }
           ],
@@ -2035,16 +2035,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.15418696217238903,
+          "mean_confidence": 0.1525858286768198,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.15418696217238903,
+            "mean_confidence": 0.1525858286768198,
             "supporting_view_count": 2,
             "supporting_view_margin": 1,
             "validated": true,
-            "weighted_score_margin": 0.5108482260358526,
+            "weighted_score_margin": 0.503394020650938,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 0.5108482260358526,
+            "winning_label_margin": 0.503394020650938,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -2061,9 +2061,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 2,
           "supporting_view_margin": 1,
-          "weighted_score_margin": 0.5108482260358526,
+          "weighted_score_margin": 0.503394020650938,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 0.5108482260358526,
+          "winning_label_margin": 0.503394020650938,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -2080,7 +2080,7 @@
       "target_role": "coffee_container",
       "target_semantic": {
         "canonical_label": "cup",
-        "confidence": 0.45588145181536677,
+        "confidence": 0.4507430300116539,
         "preference": {
           "canonical_label": "cup",
           "detector_aliases": [
@@ -2100,8 +2100,8 @@
                 "inspection_top"
               ],
               "label": "cup",
-              "mean_confidence": 0.45588145181536677,
-              "score": 9.075339847752149,
+              "mean_confidence": 0.4507430300116539,
+              "score": 8.974796726185696,
               "supporting_view_count": 5
             }
           ],
@@ -2117,16 +2117,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.45588145181536677,
+          "mean_confidence": 0.4507430300116539,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.45588145181536677,
+            "mean_confidence": 0.4507430300116539,
             "supporting_view_count": 5,
             "supporting_view_margin": 5,
             "validated": true,
-            "weighted_score_margin": 9.075339847752149,
+            "weighted_score_margin": 8.974796726185696,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 9.075339847752149,
+            "winning_label_margin": 8.974796726185696,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -2143,9 +2143,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 5,
           "supporting_view_margin": 5,
-          "weighted_score_margin": 9.075339847752149,
+          "weighted_score_margin": 8.974796726185696,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 9.075339847752149,
+          "winning_label_margin": 8.974796726185696,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -2296,7 +2296,7 @@
       "role_relevant_projection": true,
       "semantic": {
         "canonical_label": "spoon",
-        "confidence": 0.481931297108531,
+        "confidence": 0.4824313260614872,
         "preference": {
           "canonical_label": "spoon",
           "detector_aliases": [
@@ -2318,8 +2318,8 @@
                 "inspection_right"
               ],
               "label": "spoon",
-              "mean_confidence": 0.481931297108531,
-              "score": 4.034228625357286,
+              "mean_confidence": 0.4824313260614872,
+              "score": 4.036262314614178,
               "supporting_view_count": 4
             },
             {
@@ -2327,8 +2327,8 @@
                 "inspection_top"
               ],
               "label": "knife",
-              "mean_confidence": 0.11786427348852158,
-              "score": 0.33428550840460647,
+              "mean_confidence": 0.11865754425525665,
+              "score": 0.33653537525324384,
               "supporting_view_count": 1
             }
           ],
@@ -2343,16 +2343,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.481931297108531,
+          "mean_confidence": 0.4824313260614872,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.481931297108531,
+            "mean_confidence": 0.4824313260614872,
             "supporting_view_count": 4,
             "supporting_view_margin": 3,
             "validated": true,
-            "weighted_score_margin": 3.6999431169526793,
+            "weighted_score_margin": 3.699726939360934,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 3.6999431169526793,
+            "winning_label_margin": 3.699726939360934,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -2369,9 +2369,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 4,
           "supporting_view_margin": 3,
-          "weighted_score_margin": 3.6999431169526793,
+          "weighted_score_margin": 3.699726939360934,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 3.6999431169526793,
+          "winning_label_margin": 3.699726939360934,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -2388,7 +2388,7 @@
       "target_role": "coffee_container",
       "target_semantic": {
         "canonical_label": "cup",
-        "confidence": 0.45588145181536677,
+        "confidence": 0.4507430300116539,
         "preference": {
           "canonical_label": "cup",
           "detector_aliases": [
@@ -2408,8 +2408,8 @@
                 "inspection_top"
               ],
               "label": "cup",
-              "mean_confidence": 0.45588145181536677,
-              "score": 9.075339847752149,
+              "mean_confidence": 0.4507430300116539,
+              "score": 8.974796726185696,
               "supporting_view_count": 5
             }
           ],
@@ -2425,16 +2425,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.45588145181536677,
+          "mean_confidence": 0.4507430300116539,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.45588145181536677,
+            "mean_confidence": 0.4507430300116539,
             "supporting_view_count": 5,
             "supporting_view_margin": 5,
             "validated": true,
-            "weighted_score_margin": 9.075339847752149,
+            "weighted_score_margin": 8.974796726185696,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 9.075339847752149,
+            "winning_label_margin": 8.974796726185696,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -2451,9 +2451,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 5,
           "supporting_view_margin": 5,
-          "weighted_score_margin": 9.075339847752149,
+          "weighted_score_margin": 8.974796726185696,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 9.075339847752149,
+          "winning_label_margin": 8.974796726185696,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -2559,7 +2559,7 @@
             "maximum_cross_section_m": 0.029647744964159884,
             "method": "cross_section_clearance_vs_opening_v1",
             "opening_width_m": 0.07906533151125597,
-            "pass_margin_m": 0.044417586547096086,
+            "pass_margin_m": 0.04441758654709609,
             "reason": null,
             "source_measurement_cloud_path": "stages/000_initial/evidence/object_0009/fused.ply",
             "status": "TRUE",
@@ -2604,7 +2604,7 @@
       "role_relevant_projection": true,
       "semantic": {
         "canonical_label": "spoon",
-        "confidence": 0.8417080342769623,
+        "confidence": 0.8416559994220734,
         "preference": {
           "canonical_label": "spoon",
           "detector_aliases": [
@@ -2624,8 +2624,8 @@
                 "inspection_left"
               ],
               "label": "spoon",
-              "mean_confidence": 0.8417080342769623,
-              "score": 4.286802421655599,
+              "mean_confidence": 0.8416559994220734,
+              "score": 4.286543523375478,
               "supporting_view_count": 2
             },
             {
@@ -2635,8 +2635,8 @@
                 "inspection_top"
               ],
               "label": "knife",
-              "mean_confidence": 0.07900564248363177,
-              "score": 0.676186305506207,
+              "mean_confidence": 0.07971416413784027,
+              "score": 0.6822869409737522,
               "supporting_view_count": 3
             }
           ],
@@ -2649,16 +2649,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.8417080342769623,
+          "mean_confidence": 0.8416559994220734,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.8417080342769623,
+            "mean_confidence": 0.8416559994220734,
             "supporting_view_count": 2,
             "supporting_view_margin": -1,
             "validated": true,
-            "weighted_score_margin": 3.610616116149392,
+            "weighted_score_margin": 3.604256582401726,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 3.610616116149392,
+            "winning_label_margin": 3.604256582401726,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -2675,9 +2675,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 2,
           "supporting_view_margin": -1,
-          "weighted_score_margin": 3.610616116149392,
+          "weighted_score_margin": 3.604256582401726,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 3.610616116149392,
+          "winning_label_margin": 3.604256582401726,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -2694,7 +2694,7 @@
       "target_role": "coffee_container",
       "target_semantic": {
         "canonical_label": "cup",
-        "confidence": 0.45588145181536677,
+        "confidence": 0.4507430300116539,
         "preference": {
           "canonical_label": "cup",
           "detector_aliases": [
@@ -2714,8 +2714,8 @@
                 "inspection_top"
               ],
               "label": "cup",
-              "mean_confidence": 0.45588145181536677,
-              "score": 9.075339847752149,
+              "mean_confidence": 0.4507430300116539,
+              "score": 8.974796726185696,
               "supporting_view_count": 5
             }
           ],
@@ -2731,16 +2731,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.45588145181536677,
+          "mean_confidence": 0.4507430300116539,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.45588145181536677,
+            "mean_confidence": 0.4507430300116539,
             "supporting_view_count": 5,
             "supporting_view_margin": 5,
             "validated": true,
-            "weighted_score_margin": 9.075339847752149,
+            "weighted_score_margin": 8.974796726185696,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 9.075339847752149,
+            "winning_label_margin": 8.974796726185696,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -2757,9 +2757,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 5,
           "supporting_view_margin": 5,
-          "weighted_score_margin": 9.075339847752149,
+          "weighted_score_margin": 8.974796726185696,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 9.075339847752149,
+          "winning_label_margin": 8.974796726185696,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -2910,7 +2910,7 @@
       "role_relevant_projection": true,
       "semantic": {
         "canonical_label": "spoon",
-        "confidence": 0.15418696217238903,
+        "confidence": 0.1525858286768198,
         "preference": {
           "canonical_label": "spoon",
           "detector_aliases": [
@@ -2930,8 +2930,8 @@
                 "inspection_left"
               ],
               "label": "spoon",
-              "mean_confidence": 0.15418696217238903,
-              "score": 0.8997823256023827,
+              "mean_confidence": 0.1525858286768198,
+              "score": 0.8904410326731834,
               "supporting_view_count": 2
             },
             {
@@ -2939,8 +2939,8 @@
                 "inspection_top"
               ],
               "label": "knife",
-              "mean_confidence": 0.13913635909557343,
-              "score": 0.38893409956653013,
+              "mean_confidence": 0.13846127688884735,
+              "score": 0.3870470120222454,
               "supporting_view_count": 1
             },
             {
@@ -2949,8 +2949,8 @@
                 "inspection_right"
               ],
               "label": "fork",
-              "mean_confidence": 0.0341870803385973,
-              "score": 0.17906912859762517,
+              "mean_confidence": 0.034083930775523186,
+              "score": 0.17852870583320202,
               "supporting_view_count": 2
             }
           ],
@@ -2963,16 +2963,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.15418696217238903,
+          "mean_confidence": 0.1525858286768198,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.15418696217238903,
+            "mean_confidence": 0.1525858286768198,
             "supporting_view_count": 2,
             "supporting_view_margin": 1,
             "validated": true,
-            "weighted_score_margin": 0.5108482260358526,
+            "weighted_score_margin": 0.503394020650938,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 0.5108482260358526,
+            "winning_label_margin": 0.503394020650938,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -2989,9 +2989,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 2,
           "supporting_view_margin": 1,
-          "weighted_score_margin": 0.5108482260358526,
+          "weighted_score_margin": 0.503394020650938,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 0.5108482260358526,
+          "winning_label_margin": 0.503394020650938,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -3008,7 +3008,7 @@
       "target_role": "coffee_container",
       "target_semantic": {
         "canonical_label": "cup",
-        "confidence": 0.325992739200592,
+        "confidence": 0.32064796313643457,
         "preference": {
           "canonical_label": "cup",
           "detector_aliases": [
@@ -3028,8 +3028,8 @@
                 "inspection_top"
               ],
               "label": "cup",
-              "mean_confidence": 0.325992739200592,
-              "score": 5.848947221448598,
+              "mean_confidence": 0.32064796313643457,
+              "score": 5.753137295109324,
               "supporting_view_count": 5
             }
           ],
@@ -3045,16 +3045,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.325992739200592,
+          "mean_confidence": 0.32064796313643457,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.325992739200592,
+            "mean_confidence": 0.32064796313643457,
             "supporting_view_count": 5,
             "supporting_view_margin": 5,
             "validated": true,
-            "weighted_score_margin": 5.848947221448598,
+            "weighted_score_margin": 5.753137295109324,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 5.848947221448598,
+            "winning_label_margin": 5.753137295109324,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -3071,9 +3071,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 5,
           "supporting_view_margin": 5,
-          "weighted_score_margin": 5.848947221448598,
+          "weighted_score_margin": 5.753137295109324,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 5.848947221448598,
+          "winning_label_margin": 5.753137295109324,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -3179,7 +3179,7 @@
             "maximum_cross_section_m": 0.031802219994713186,
             "method": "cross_section_clearance_vs_opening_v1",
             "opening_width_m": 0.06755428683066791,
-            "pass_margin_m": 0.03075206683595473,
+            "pass_margin_m": 0.030752066835954727,
             "reason": null,
             "source_measurement_cloud_path": "stages/000_initial/evidence/object_0008/fused.ply",
             "status": "TRUE",
@@ -3224,7 +3224,7 @@
       "role_relevant_projection": true,
       "semantic": {
         "canonical_label": "spoon",
-        "confidence": 0.481931297108531,
+        "confidence": 0.4824313260614872,
         "preference": {
           "canonical_label": "spoon",
           "detector_aliases": [
@@ -3246,8 +3246,8 @@
                 "inspection_right"
               ],
               "label": "spoon",
-              "mean_confidence": 0.481931297108531,
-              "score": 4.034228625357286,
+              "mean_confidence": 0.4824313260614872,
+              "score": 4.036262314614178,
               "supporting_view_count": 4
             },
             {
@@ -3255,8 +3255,8 @@
                 "inspection_top"
               ],
               "label": "knife",
-              "mean_confidence": 0.11786427348852158,
-              "score": 0.33428550840460647,
+              "mean_confidence": 0.11865754425525665,
+              "score": 0.33653537525324384,
               "supporting_view_count": 1
             }
           ],
@@ -3271,16 +3271,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.481931297108531,
+          "mean_confidence": 0.4824313260614872,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.481931297108531,
+            "mean_confidence": 0.4824313260614872,
             "supporting_view_count": 4,
             "supporting_view_margin": 3,
             "validated": true,
-            "weighted_score_margin": 3.6999431169526793,
+            "weighted_score_margin": 3.699726939360934,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 3.6999431169526793,
+            "winning_label_margin": 3.699726939360934,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -3297,9 +3297,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 4,
           "supporting_view_margin": 3,
-          "weighted_score_margin": 3.6999431169526793,
+          "weighted_score_margin": 3.699726939360934,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 3.6999431169526793,
+          "winning_label_margin": 3.699726939360934,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -3316,7 +3316,7 @@
       "target_role": "coffee_container",
       "target_semantic": {
         "canonical_label": "cup",
-        "confidence": 0.325992739200592,
+        "confidence": 0.32064796313643457,
         "preference": {
           "canonical_label": "cup",
           "detector_aliases": [
@@ -3336,8 +3336,8 @@
                 "inspection_top"
               ],
               "label": "cup",
-              "mean_confidence": 0.325992739200592,
-              "score": 5.848947221448598,
+              "mean_confidence": 0.32064796313643457,
+              "score": 5.753137295109324,
               "supporting_view_count": 5
             }
           ],
@@ -3353,16 +3353,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.325992739200592,
+          "mean_confidence": 0.32064796313643457,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.325992739200592,
+            "mean_confidence": 0.32064796313643457,
             "supporting_view_count": 5,
             "supporting_view_margin": 5,
             "validated": true,
-            "weighted_score_margin": 5.848947221448598,
+            "weighted_score_margin": 5.753137295109324,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 5.848947221448598,
+            "winning_label_margin": 5.753137295109324,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -3379,9 +3379,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 5,
           "supporting_view_margin": 5,
-          "weighted_score_margin": 5.848947221448598,
+          "weighted_score_margin": 5.753137295109324,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 5.848947221448598,
+          "winning_label_margin": 5.753137295109324,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -3487,7 +3487,7 @@
             "maximum_cross_section_m": 0.029647744964159884,
             "method": "cross_section_clearance_vs_opening_v1",
             "opening_width_m": 0.06755428683066791,
-            "pass_margin_m": 0.03290654186650803,
+            "pass_margin_m": 0.032906541866508036,
             "reason": null,
             "source_measurement_cloud_path": "stages/000_initial/evidence/object_0009/fused.ply",
             "status": "TRUE",
@@ -3532,7 +3532,7 @@
       "role_relevant_projection": true,
       "semantic": {
         "canonical_label": "spoon",
-        "confidence": 0.8417080342769623,
+        "confidence": 0.8416559994220734,
         "preference": {
           "canonical_label": "spoon",
           "detector_aliases": [
@@ -3552,8 +3552,8 @@
                 "inspection_left"
               ],
               "label": "spoon",
-              "mean_confidence": 0.8417080342769623,
-              "score": 4.286802421655599,
+              "mean_confidence": 0.8416559994220734,
+              "score": 4.286543523375478,
               "supporting_view_count": 2
             },
             {
@@ -3563,8 +3563,8 @@
                 "inspection_top"
               ],
               "label": "knife",
-              "mean_confidence": 0.07900564248363177,
-              "score": 0.676186305506207,
+              "mean_confidence": 0.07971416413784027,
+              "score": 0.6822869409737522,
               "supporting_view_count": 3
             }
           ],
@@ -3577,16 +3577,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.8417080342769623,
+          "mean_confidence": 0.8416559994220734,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.8417080342769623,
+            "mean_confidence": 0.8416559994220734,
             "supporting_view_count": 2,
             "supporting_view_margin": -1,
             "validated": true,
-            "weighted_score_margin": 3.610616116149392,
+            "weighted_score_margin": 3.604256582401726,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 3.610616116149392,
+            "winning_label_margin": 3.604256582401726,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -3603,9 +3603,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 2,
           "supporting_view_margin": -1,
-          "weighted_score_margin": 3.610616116149392,
+          "weighted_score_margin": 3.604256582401726,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 3.610616116149392,
+          "winning_label_margin": 3.604256582401726,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -3622,7 +3622,7 @@
       "target_role": "coffee_container",
       "target_semantic": {
         "canonical_label": "cup",
-        "confidence": 0.325992739200592,
+        "confidence": 0.32064796313643457,
         "preference": {
           "canonical_label": "cup",
           "detector_aliases": [
@@ -3642,8 +3642,8 @@
                 "inspection_top"
               ],
               "label": "cup",
-              "mean_confidence": 0.325992739200592,
-              "score": 5.848947221448598,
+              "mean_confidence": 0.32064796313643457,
+              "score": 5.753137295109324,
               "supporting_view_count": 5
             }
           ],
@@ -3659,16 +3659,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.325992739200592,
+          "mean_confidence": 0.32064796313643457,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.325992739200592,
+            "mean_confidence": 0.32064796313643457,
             "supporting_view_count": 5,
             "supporting_view_margin": 5,
             "validated": true,
-            "weighted_score_margin": 5.848947221448598,
+            "weighted_score_margin": 5.753137295109324,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 5.848947221448598,
+            "winning_label_margin": 5.753137295109324,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -3685,9 +3685,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 5,
           "supporting_view_margin": 5,
-          "weighted_score_margin": 5.848947221448598,
+          "weighted_score_margin": 5.753137295109324,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 5.848947221448598,
+          "winning_label_margin": 5.753137295109324,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -3853,7 +3853,7 @@
       "role_relevant_projection": true,
       "semantic": {
         "canonical_label": "spoon",
-        "confidence": 0.15418696217238903,
+        "confidence": 0.1525858286768198,
         "preference": {
           "canonical_label": "spoon",
           "detector_aliases": [
@@ -3873,8 +3873,8 @@
                 "inspection_left"
               ],
               "label": "spoon",
-              "mean_confidence": 0.15418696217238903,
-              "score": 0.8997823256023827,
+              "mean_confidence": 0.1525858286768198,
+              "score": 0.8904410326731834,
               "supporting_view_count": 2
             },
             {
@@ -3882,8 +3882,8 @@
                 "inspection_top"
               ],
               "label": "knife",
-              "mean_confidence": 0.13913635909557343,
-              "score": 0.38893409956653013,
+              "mean_confidence": 0.13846127688884735,
+              "score": 0.3870470120222454,
               "supporting_view_count": 1
             },
             {
@@ -3892,8 +3892,8 @@
                 "inspection_right"
               ],
               "label": "fork",
-              "mean_confidence": 0.0341870803385973,
-              "score": 0.17906912859762517,
+              "mean_confidence": 0.034083930775523186,
+              "score": 0.17852870583320202,
               "supporting_view_count": 2
             }
           ],
@@ -3906,16 +3906,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.15418696217238903,
+          "mean_confidence": 0.1525858286768198,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.15418696217238903,
+            "mean_confidence": 0.1525858286768198,
             "supporting_view_count": 2,
             "supporting_view_margin": 1,
             "validated": true,
-            "weighted_score_margin": 0.5108482260358526,
+            "weighted_score_margin": 0.503394020650938,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 0.5108482260358526,
+            "winning_label_margin": 0.503394020650938,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -3932,9 +3932,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 2,
           "supporting_view_margin": 1,
-          "weighted_score_margin": 0.5108482260358526,
+          "weighted_score_margin": 0.503394020650938,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 0.5108482260358526,
+          "winning_label_margin": 0.503394020650938,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -3952,7 +3952,7 @@
       "target_role": "soup_container",
       "target_semantic": {
         "canonical_label": "bowl",
-        "confidence": 0.5687059362729391,
+        "confidence": 0.5690902471542358,
         "preference": {
           "canonical_label": "bowl",
           "detector_aliases": [
@@ -3971,8 +3971,8 @@
                 "inspection_right"
               ],
               "label": "bowl",
-              "mean_confidence": 0.5687059362729391,
-              "score": 6.770958504703859,
+              "mean_confidence": 0.5690902471542358,
+              "score": 6.7756885198288845,
               "supporting_view_count": 3
             },
             {
@@ -3980,8 +3980,8 @@
                 "inspection_top"
               ],
               "label": "coaster",
-              "mean_confidence": 0.28112125396728516,
-              "score": 0.9878315417671373,
+              "mean_confidence": 0.27665942907333374,
+              "score": 0.9721531421374886,
               "supporting_view_count": 1
             },
             {
@@ -3989,8 +3989,8 @@
                 "inspection_close"
               ],
               "label": "cup",
-              "mean_confidence": 0.18966306746006012,
-              "score": 0.7308412182137246,
+              "mean_confidence": 0.17912936210632324,
+              "score": 0.6902509960048032,
               "supporting_view_count": 1
             }
           ],
@@ -4004,16 +4004,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.5687059362729391,
+          "mean_confidence": 0.5690902471542358,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.5687059362729391,
+            "mean_confidence": 0.5690902471542358,
             "supporting_view_count": 3,
             "supporting_view_margin": 2,
             "validated": true,
-            "weighted_score_margin": 5.783126962936722,
+            "weighted_score_margin": 5.803535377691396,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 5.783126962936722,
+            "winning_label_margin": 5.803535377691396,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -4030,9 +4030,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 3,
           "supporting_view_margin": 2,
-          "weighted_score_margin": 5.783126962936722,
+          "weighted_score_margin": 5.803535377691396,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 5.783126962936722,
+          "winning_label_margin": 5.803535377691396,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -4145,7 +4145,7 @@
             "maximum_cross_section_m": 0.031802219994713186,
             "method": "cross_section_clearance_vs_opening_v1",
             "opening_width_m": 0.14222527640688282,
-            "pass_margin_m": 0.10542305641216963,
+            "pass_margin_m": 0.10542305641216962,
             "reason": null,
             "source_measurement_cloud_path": "stages/000_initial/evidence/object_0008/fused.ply",
             "status": "TRUE",
@@ -4191,7 +4191,7 @@
       "role_relevant_projection": true,
       "semantic": {
         "canonical_label": "spoon",
-        "confidence": 0.481931297108531,
+        "confidence": 0.4824313260614872,
         "preference": {
           "canonical_label": "spoon",
           "detector_aliases": [
@@ -4213,8 +4213,8 @@
                 "inspection_right"
               ],
               "label": "spoon",
-              "mean_confidence": 0.481931297108531,
-              "score": 4.034228625357286,
+              "mean_confidence": 0.4824313260614872,
+              "score": 4.036262314614178,
               "supporting_view_count": 4
             },
             {
@@ -4222,8 +4222,8 @@
                 "inspection_top"
               ],
               "label": "knife",
-              "mean_confidence": 0.11786427348852158,
-              "score": 0.33428550840460647,
+              "mean_confidence": 0.11865754425525665,
+              "score": 0.33653537525324384,
               "supporting_view_count": 1
             }
           ],
@@ -4238,16 +4238,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.481931297108531,
+          "mean_confidence": 0.4824313260614872,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.481931297108531,
+            "mean_confidence": 0.4824313260614872,
             "supporting_view_count": 4,
             "supporting_view_margin": 3,
             "validated": true,
-            "weighted_score_margin": 3.6999431169526793,
+            "weighted_score_margin": 3.699726939360934,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 3.6999431169526793,
+            "winning_label_margin": 3.699726939360934,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -4264,9 +4264,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 4,
           "supporting_view_margin": 3,
-          "weighted_score_margin": 3.6999431169526793,
+          "weighted_score_margin": 3.699726939360934,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 3.6999431169526793,
+          "winning_label_margin": 3.699726939360934,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -4284,7 +4284,7 @@
       "target_role": "soup_container",
       "target_semantic": {
         "canonical_label": "bowl",
-        "confidence": 0.4337980166077614,
+        "confidence": 0.4335594862699509,
         "preference": {
           "canonical_label": "bowl",
           "detector_aliases": [
@@ -4305,8 +4305,8 @@
                 "inspection_top"
               ],
               "label": "bowl",
-              "mean_confidence": 0.4337980166077614,
-              "score": 8.594292463612025,
+              "mean_confidence": 0.4335594862699509,
+              "score": 8.5915489298994,
               "supporting_view_count": 5
             }
           ],
@@ -4322,16 +4322,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.4337980166077614,
+          "mean_confidence": 0.4335594862699509,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.4337980166077614,
+            "mean_confidence": 0.4335594862699509,
             "supporting_view_count": 5,
             "supporting_view_margin": 5,
             "validated": true,
-            "weighted_score_margin": 8.594292463612025,
+            "weighted_score_margin": 8.5915489298994,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 8.594292463612025,
+            "winning_label_margin": 8.5915489298994,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -4348,9 +4348,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 5,
           "supporting_view_margin": 5,
-          "weighted_score_margin": 8.594292463612025,
+          "weighted_score_margin": 8.5915489298994,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 8.594292463612025,
+          "winning_label_margin": 8.5915489298994,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -4509,7 +4509,7 @@
       "role_relevant_projection": true,
       "semantic": {
         "canonical_label": "spoon",
-        "confidence": 0.8417080342769623,
+        "confidence": 0.8416559994220734,
         "preference": {
           "canonical_label": "spoon",
           "detector_aliases": [
@@ -4529,8 +4529,8 @@
                 "inspection_left"
               ],
               "label": "spoon",
-              "mean_confidence": 0.8417080342769623,
-              "score": 4.286802421655599,
+              "mean_confidence": 0.8416559994220734,
+              "score": 4.286543523375478,
               "supporting_view_count": 2
             },
             {
@@ -4540,8 +4540,8 @@
                 "inspection_top"
               ],
               "label": "knife",
-              "mean_confidence": 0.07900564248363177,
-              "score": 0.676186305506207,
+              "mean_confidence": 0.07971416413784027,
+              "score": 0.6822869409737522,
               "supporting_view_count": 3
             }
           ],
@@ -4554,16 +4554,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.8417080342769623,
+          "mean_confidence": 0.8416559994220734,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.8417080342769623,
+            "mean_confidence": 0.8416559994220734,
             "supporting_view_count": 2,
             "supporting_view_margin": -1,
             "validated": true,
-            "weighted_score_margin": 3.610616116149392,
+            "weighted_score_margin": 3.604256582401726,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 3.610616116149392,
+            "winning_label_margin": 3.604256582401726,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -4580,9 +4580,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 2,
           "supporting_view_margin": -1,
-          "weighted_score_margin": 3.610616116149392,
+          "weighted_score_margin": 3.604256582401726,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 3.610616116149392,
+          "winning_label_margin": 3.604256582401726,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -4600,7 +4600,7 @@
       "target_role": "soup_container",
       "target_semantic": {
         "canonical_label": "bowl",
-        "confidence": 0.43232086673378944,
+        "confidence": 0.4323565363883972,
         "preference": {
           "canonical_label": "bowl",
           "detector_aliases": [
@@ -4620,8 +4620,8 @@
                 "inspection_top"
               ],
               "label": "bowl",
-              "mean_confidence": 0.43232086673378944,
-              "score": 6.967725406623016,
+              "mean_confidence": 0.4323565363883972,
+              "score": 6.967757290210337,
               "supporting_view_count": 4
             },
             {
@@ -4629,8 +4629,8 @@
                 "inspection_close"
               ],
               "label": "cup",
-              "mean_confidence": 0.3192724585533142,
-              "score": 1.2757958052187817,
+              "mean_confidence": 0.30795198678970337,
+              "score": 1.2305598006646943,
               "supporting_view_count": 1
             }
           ],
@@ -4645,16 +4645,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.43232086673378944,
+          "mean_confidence": 0.4323565363883972,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.43232086673378944,
+            "mean_confidence": 0.4323565363883972,
             "supporting_view_count": 4,
             "supporting_view_margin": 3,
             "validated": true,
-            "weighted_score_margin": 5.691929601404234,
+            "weighted_score_margin": 5.737197489545643,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 5.691929601404234,
+            "winning_label_margin": 5.737197489545643,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -4671,9 +4671,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 4,
           "supporting_view_margin": 3,
-          "weighted_score_margin": 5.691929601404234,
+          "weighted_score_margin": 5.737197489545643,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 5.691929601404234,
+          "winning_label_margin": 5.737197489545643,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -4831,7 +4831,7 @@
       "role_relevant_projection": true,
       "semantic": {
         "canonical_label": "spoon",
-        "confidence": 0.15418696217238903,
+        "confidence": 0.1525858286768198,
         "preference": {
           "canonical_label": "spoon",
           "detector_aliases": [
@@ -4851,8 +4851,8 @@
                 "inspection_left"
               ],
               "label": "spoon",
-              "mean_confidence": 0.15418696217238903,
-              "score": 0.8997823256023827,
+              "mean_confidence": 0.1525858286768198,
+              "score": 0.8904410326731834,
               "supporting_view_count": 2
             },
             {
@@ -4860,8 +4860,8 @@
                 "inspection_top"
               ],
               "label": "knife",
-              "mean_confidence": 0.13913635909557343,
-              "score": 0.38893409956653013,
+              "mean_confidence": 0.13846127688884735,
+              "score": 0.3870470120222454,
               "supporting_view_count": 1
             },
             {
@@ -4870,8 +4870,8 @@
                 "inspection_right"
               ],
               "label": "fork",
-              "mean_confidence": 0.0341870803385973,
-              "score": 0.17906912859762517,
+              "mean_confidence": 0.034083930775523186,
+              "score": 0.17852870583320202,
               "supporting_view_count": 2
             }
           ],
@@ -4884,16 +4884,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.15418696217238903,
+          "mean_confidence": 0.1525858286768198,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.15418696217238903,
+            "mean_confidence": 0.1525858286768198,
             "supporting_view_count": 2,
             "supporting_view_margin": 1,
             "validated": true,
-            "weighted_score_margin": 0.5108482260358526,
+            "weighted_score_margin": 0.503394020650938,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 0.5108482260358526,
+            "winning_label_margin": 0.503394020650938,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -4910,9 +4910,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 2,
           "supporting_view_margin": 1,
-          "weighted_score_margin": 0.5108482260358526,
+          "weighted_score_margin": 0.503394020650938,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 0.5108482260358526,
+          "winning_label_margin": 0.503394020650938,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -4929,7 +4929,7 @@
       "target_role": "soup_container",
       "target_semantic": {
         "canonical_label": "bowl",
-        "confidence": 0.5687059362729391,
+        "confidence": 0.5690902471542358,
         "preference": {
           "canonical_label": "bowl",
           "detector_aliases": [
@@ -4948,8 +4948,8 @@
                 "inspection_right"
               ],
               "label": "bowl",
-              "mean_confidence": 0.5687059362729391,
-              "score": 6.770958504703859,
+              "mean_confidence": 0.5690902471542358,
+              "score": 6.7756885198288845,
               "supporting_view_count": 3
             },
             {
@@ -4957,8 +4957,8 @@
                 "inspection_top"
               ],
               "label": "coaster",
-              "mean_confidence": 0.28112125396728516,
-              "score": 0.9878315417671373,
+              "mean_confidence": 0.27665942907333374,
+              "score": 0.9721531421374886,
               "supporting_view_count": 1
             },
             {
@@ -4966,8 +4966,8 @@
                 "inspection_close"
               ],
               "label": "cup",
-              "mean_confidence": 0.18966306746006012,
-              "score": 0.7308412182137246,
+              "mean_confidence": 0.17912936210632324,
+              "score": 0.6902509960048032,
               "supporting_view_count": 1
             }
           ],
@@ -4981,16 +4981,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.5687059362729391,
+          "mean_confidence": 0.5690902471542358,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.5687059362729391,
+            "mean_confidence": 0.5690902471542358,
             "supporting_view_count": 3,
             "supporting_view_margin": 2,
             "validated": true,
-            "weighted_score_margin": 5.783126962936722,
+            "weighted_score_margin": 5.803535377691396,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 5.783126962936722,
+            "winning_label_margin": 5.803535377691396,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -5007,9 +5007,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 3,
           "supporting_view_margin": 2,
-          "weighted_score_margin": 5.783126962936722,
+          "weighted_score_margin": 5.803535377691396,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 5.783126962936722,
+          "winning_label_margin": 5.803535377691396,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -5115,7 +5115,7 @@
             "maximum_cross_section_m": 0.031802219994713186,
             "method": "cross_section_clearance_vs_opening_v1",
             "opening_width_m": 0.13983559537123938,
-            "pass_margin_m": 0.1030333753765262,
+            "pass_margin_m": 0.10303337537652618,
             "reason": null,
             "source_measurement_cloud_path": "stages/000_initial/evidence/object_0008/fused.ply",
             "status": "TRUE",
@@ -5160,7 +5160,7 @@
       "role_relevant_projection": true,
       "semantic": {
         "canonical_label": "spoon",
-        "confidence": 0.481931297108531,
+        "confidence": 0.4824313260614872,
         "preference": {
           "canonical_label": "spoon",
           "detector_aliases": [
@@ -5182,8 +5182,8 @@
                 "inspection_right"
               ],
               "label": "spoon",
-              "mean_confidence": 0.481931297108531,
-              "score": 4.034228625357286,
+              "mean_confidence": 0.4824313260614872,
+              "score": 4.036262314614178,
               "supporting_view_count": 4
             },
             {
@@ -5191,8 +5191,8 @@
                 "inspection_top"
               ],
               "label": "knife",
-              "mean_confidence": 0.11786427348852158,
-              "score": 0.33428550840460647,
+              "mean_confidence": 0.11865754425525665,
+              "score": 0.33653537525324384,
               "supporting_view_count": 1
             }
           ],
@@ -5207,16 +5207,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.481931297108531,
+          "mean_confidence": 0.4824313260614872,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.481931297108531,
+            "mean_confidence": 0.4824313260614872,
             "supporting_view_count": 4,
             "supporting_view_margin": 3,
             "validated": true,
-            "weighted_score_margin": 3.6999431169526793,
+            "weighted_score_margin": 3.699726939360934,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 3.6999431169526793,
+            "winning_label_margin": 3.699726939360934,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -5233,9 +5233,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 4,
           "supporting_view_margin": 3,
-          "weighted_score_margin": 3.6999431169526793,
+          "weighted_score_margin": 3.699726939360934,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 3.6999431169526793,
+          "winning_label_margin": 3.699726939360934,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -5252,7 +5252,7 @@
       "target_role": "soup_container",
       "target_semantic": {
         "canonical_label": "bowl",
-        "confidence": 0.5687059362729391,
+        "confidence": 0.5690902471542358,
         "preference": {
           "canonical_label": "bowl",
           "detector_aliases": [
@@ -5271,8 +5271,8 @@
                 "inspection_right"
               ],
               "label": "bowl",
-              "mean_confidence": 0.5687059362729391,
-              "score": 6.770958504703859,
+              "mean_confidence": 0.5690902471542358,
+              "score": 6.7756885198288845,
               "supporting_view_count": 3
             },
             {
@@ -5280,8 +5280,8 @@
                 "inspection_top"
               ],
               "label": "coaster",
-              "mean_confidence": 0.28112125396728516,
-              "score": 0.9878315417671373,
+              "mean_confidence": 0.27665942907333374,
+              "score": 0.9721531421374886,
               "supporting_view_count": 1
             },
             {
@@ -5289,8 +5289,8 @@
                 "inspection_close"
               ],
               "label": "cup",
-              "mean_confidence": 0.18966306746006012,
-              "score": 0.7308412182137246,
+              "mean_confidence": 0.17912936210632324,
+              "score": 0.6902509960048032,
               "supporting_view_count": 1
             }
           ],
@@ -5304,16 +5304,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.5687059362729391,
+          "mean_confidence": 0.5690902471542358,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.5687059362729391,
+            "mean_confidence": 0.5690902471542358,
             "supporting_view_count": 3,
             "supporting_view_margin": 2,
             "validated": true,
-            "weighted_score_margin": 5.783126962936722,
+            "weighted_score_margin": 5.803535377691396,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 5.783126962936722,
+            "winning_label_margin": 5.803535377691396,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -5330,9 +5330,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 3,
           "supporting_view_margin": 2,
-          "weighted_score_margin": 5.783126962936722,
+          "weighted_score_margin": 5.803535377691396,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 5.783126962936722,
+          "winning_label_margin": 5.803535377691396,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -5483,7 +5483,7 @@
       "role_relevant_projection": true,
       "semantic": {
         "canonical_label": "spoon",
-        "confidence": 0.8417080342769623,
+        "confidence": 0.8416559994220734,
         "preference": {
           "canonical_label": "spoon",
           "detector_aliases": [
@@ -5503,8 +5503,8 @@
                 "inspection_left"
               ],
               "label": "spoon",
-              "mean_confidence": 0.8417080342769623,
-              "score": 4.286802421655599,
+              "mean_confidence": 0.8416559994220734,
+              "score": 4.286543523375478,
               "supporting_view_count": 2
             },
             {
@@ -5514,8 +5514,8 @@
                 "inspection_top"
               ],
               "label": "knife",
-              "mean_confidence": 0.07900564248363177,
-              "score": 0.676186305506207,
+              "mean_confidence": 0.07971416413784027,
+              "score": 0.6822869409737522,
               "supporting_view_count": 3
             }
           ],
@@ -5528,16 +5528,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.8417080342769623,
+          "mean_confidence": 0.8416559994220734,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.8417080342769623,
+            "mean_confidence": 0.8416559994220734,
             "supporting_view_count": 2,
             "supporting_view_margin": -1,
             "validated": true,
-            "weighted_score_margin": 3.610616116149392,
+            "weighted_score_margin": 3.604256582401726,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 3.610616116149392,
+            "winning_label_margin": 3.604256582401726,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -5554,9 +5554,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 2,
           "supporting_view_margin": -1,
-          "weighted_score_margin": 3.610616116149392,
+          "weighted_score_margin": 3.604256582401726,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 3.610616116149392,
+          "winning_label_margin": 3.604256582401726,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -5573,7 +5573,7 @@
       "target_role": "soup_container",
       "target_semantic": {
         "canonical_label": "bowl",
-        "confidence": 0.5687059362729391,
+        "confidence": 0.5690902471542358,
         "preference": {
           "canonical_label": "bowl",
           "detector_aliases": [
@@ -5592,8 +5592,8 @@
                 "inspection_right"
               ],
               "label": "bowl",
-              "mean_confidence": 0.5687059362729391,
-              "score": 6.770958504703859,
+              "mean_confidence": 0.5690902471542358,
+              "score": 6.7756885198288845,
               "supporting_view_count": 3
             },
             {
@@ -5601,8 +5601,8 @@
                 "inspection_top"
               ],
               "label": "coaster",
-              "mean_confidence": 0.28112125396728516,
-              "score": 0.9878315417671373,
+              "mean_confidence": 0.27665942907333374,
+              "score": 0.9721531421374886,
               "supporting_view_count": 1
             },
             {
@@ -5610,8 +5610,8 @@
                 "inspection_close"
               ],
               "label": "cup",
-              "mean_confidence": 0.18966306746006012,
-              "score": 0.7308412182137246,
+              "mean_confidence": 0.17912936210632324,
+              "score": 0.6902509960048032,
               "supporting_view_count": 1
             }
           ],
@@ -5625,16 +5625,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.5687059362729391,
+          "mean_confidence": 0.5690902471542358,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.5687059362729391,
+            "mean_confidence": 0.5690902471542358,
             "supporting_view_count": 3,
             "supporting_view_margin": 2,
             "validated": true,
-            "weighted_score_margin": 5.783126962936722,
+            "weighted_score_margin": 5.803535377691396,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 5.783126962936722,
+            "winning_label_margin": 5.803535377691396,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -5651,9 +5651,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 3,
           "supporting_view_margin": 2,
-          "weighted_score_margin": 5.783126962936722,
+          "weighted_score_margin": 5.803535377691396,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 5.783126962936722,
+          "winning_label_margin": 5.803535377691396,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -5804,7 +5804,7 @@
       "role_relevant_projection": true,
       "semantic": {
         "canonical_label": "spoon",
-        "confidence": 0.15418696217238903,
+        "confidence": 0.1525858286768198,
         "preference": {
           "canonical_label": "spoon",
           "detector_aliases": [
@@ -5824,8 +5824,8 @@
                 "inspection_left"
               ],
               "label": "spoon",
-              "mean_confidence": 0.15418696217238903,
-              "score": 0.8997823256023827,
+              "mean_confidence": 0.1525858286768198,
+              "score": 0.8904410326731834,
               "supporting_view_count": 2
             },
             {
@@ -5833,8 +5833,8 @@
                 "inspection_top"
               ],
               "label": "knife",
-              "mean_confidence": 0.13913635909557343,
-              "score": 0.38893409956653013,
+              "mean_confidence": 0.13846127688884735,
+              "score": 0.3870470120222454,
               "supporting_view_count": 1
             },
             {
@@ -5843,8 +5843,8 @@
                 "inspection_right"
               ],
               "label": "fork",
-              "mean_confidence": 0.0341870803385973,
-              "score": 0.17906912859762517,
+              "mean_confidence": 0.034083930775523186,
+              "score": 0.17852870583320202,
               "supporting_view_count": 2
             }
           ],
@@ -5857,16 +5857,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.15418696217238903,
+          "mean_confidence": 0.1525858286768198,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.15418696217238903,
+            "mean_confidence": 0.1525858286768198,
             "supporting_view_count": 2,
             "supporting_view_margin": 1,
             "validated": true,
-            "weighted_score_margin": 0.5108482260358526,
+            "weighted_score_margin": 0.503394020650938,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 0.5108482260358526,
+            "winning_label_margin": 0.503394020650938,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -5883,9 +5883,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 2,
           "supporting_view_margin": 1,
-          "weighted_score_margin": 0.5108482260358526,
+          "weighted_score_margin": 0.503394020650938,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 0.5108482260358526,
+          "winning_label_margin": 0.503394020650938,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -5902,7 +5902,7 @@
       "target_role": "soup_container",
       "target_semantic": {
         "canonical_label": "bowl",
-        "confidence": 0.4337980166077614,
+        "confidence": 0.4335594862699509,
         "preference": {
           "canonical_label": "bowl",
           "detector_aliases": [
@@ -5923,8 +5923,8 @@
                 "inspection_top"
               ],
               "label": "bowl",
-              "mean_confidence": 0.4337980166077614,
-              "score": 8.594292463612025,
+              "mean_confidence": 0.4335594862699509,
+              "score": 8.5915489298994,
               "supporting_view_count": 5
             }
           ],
@@ -5940,16 +5940,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.4337980166077614,
+          "mean_confidence": 0.4335594862699509,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.4337980166077614,
+            "mean_confidence": 0.4335594862699509,
             "supporting_view_count": 5,
             "supporting_view_margin": 5,
             "validated": true,
-            "weighted_score_margin": 8.594292463612025,
+            "weighted_score_margin": 8.5915489298994,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 8.594292463612025,
+            "winning_label_margin": 8.5915489298994,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -5966,9 +5966,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 5,
           "supporting_view_margin": 5,
-          "weighted_score_margin": 8.594292463612025,
+          "weighted_score_margin": 8.5915489298994,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 8.594292463612025,
+          "winning_label_margin": 8.5915489298994,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -6074,7 +6074,7 @@
             "maximum_cross_section_m": 0.031802219994713186,
             "method": "cross_section_clearance_vs_opening_v1",
             "opening_width_m": 0.14222527640688282,
-            "pass_margin_m": 0.10542305641216963,
+            "pass_margin_m": 0.10542305641216962,
             "reason": null,
             "source_measurement_cloud_path": "stages/000_initial/evidence/object_0008/fused.ply",
             "status": "TRUE",
@@ -6119,7 +6119,7 @@
       "role_relevant_projection": true,
       "semantic": {
         "canonical_label": "spoon",
-        "confidence": 0.481931297108531,
+        "confidence": 0.4824313260614872,
         "preference": {
           "canonical_label": "spoon",
           "detector_aliases": [
@@ -6141,8 +6141,8 @@
                 "inspection_right"
               ],
               "label": "spoon",
-              "mean_confidence": 0.481931297108531,
-              "score": 4.034228625357286,
+              "mean_confidence": 0.4824313260614872,
+              "score": 4.036262314614178,
               "supporting_view_count": 4
             },
             {
@@ -6150,8 +6150,8 @@
                 "inspection_top"
               ],
               "label": "knife",
-              "mean_confidence": 0.11786427348852158,
-              "score": 0.33428550840460647,
+              "mean_confidence": 0.11865754425525665,
+              "score": 0.33653537525324384,
               "supporting_view_count": 1
             }
           ],
@@ -6166,16 +6166,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.481931297108531,
+          "mean_confidence": 0.4824313260614872,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.481931297108531,
+            "mean_confidence": 0.4824313260614872,
             "supporting_view_count": 4,
             "supporting_view_margin": 3,
             "validated": true,
-            "weighted_score_margin": 3.6999431169526793,
+            "weighted_score_margin": 3.699726939360934,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 3.6999431169526793,
+            "winning_label_margin": 3.699726939360934,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -6192,9 +6192,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 4,
           "supporting_view_margin": 3,
-          "weighted_score_margin": 3.6999431169526793,
+          "weighted_score_margin": 3.699726939360934,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 3.6999431169526793,
+          "winning_label_margin": 3.699726939360934,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -6211,7 +6211,7 @@
       "target_role": "soup_container",
       "target_semantic": {
         "canonical_label": "bowl",
-        "confidence": 0.4337980166077614,
+        "confidence": 0.4335594862699509,
         "preference": {
           "canonical_label": "bowl",
           "detector_aliases": [
@@ -6232,8 +6232,8 @@
                 "inspection_top"
               ],
               "label": "bowl",
-              "mean_confidence": 0.4337980166077614,
-              "score": 8.594292463612025,
+              "mean_confidence": 0.4335594862699509,
+              "score": 8.5915489298994,
               "supporting_view_count": 5
             }
           ],
@@ -6249,16 +6249,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.4337980166077614,
+          "mean_confidence": 0.4335594862699509,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.4337980166077614,
+            "mean_confidence": 0.4335594862699509,
             "supporting_view_count": 5,
             "supporting_view_margin": 5,
             "validated": true,
-            "weighted_score_margin": 8.594292463612025,
+            "weighted_score_margin": 8.5915489298994,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 8.594292463612025,
+            "winning_label_margin": 8.5915489298994,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -6275,9 +6275,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 5,
           "supporting_view_margin": 5,
-          "weighted_score_margin": 8.594292463612025,
+          "weighted_score_margin": 8.5915489298994,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 8.594292463612025,
+          "winning_label_margin": 8.5915489298994,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -6428,7 +6428,7 @@
       "role_relevant_projection": true,
       "semantic": {
         "canonical_label": "spoon",
-        "confidence": 0.8417080342769623,
+        "confidence": 0.8416559994220734,
         "preference": {
           "canonical_label": "spoon",
           "detector_aliases": [
@@ -6448,8 +6448,8 @@
                 "inspection_left"
               ],
               "label": "spoon",
-              "mean_confidence": 0.8417080342769623,
-              "score": 4.286802421655599,
+              "mean_confidence": 0.8416559994220734,
+              "score": 4.286543523375478,
               "supporting_view_count": 2
             },
             {
@@ -6459,8 +6459,8 @@
                 "inspection_top"
               ],
               "label": "knife",
-              "mean_confidence": 0.07900564248363177,
-              "score": 0.676186305506207,
+              "mean_confidence": 0.07971416413784027,
+              "score": 0.6822869409737522,
               "supporting_view_count": 3
             }
           ],
@@ -6473,16 +6473,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.8417080342769623,
+          "mean_confidence": 0.8416559994220734,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.8417080342769623,
+            "mean_confidence": 0.8416559994220734,
             "supporting_view_count": 2,
             "supporting_view_margin": -1,
             "validated": true,
-            "weighted_score_margin": 3.610616116149392,
+            "weighted_score_margin": 3.604256582401726,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 3.610616116149392,
+            "winning_label_margin": 3.604256582401726,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -6499,9 +6499,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 2,
           "supporting_view_margin": -1,
-          "weighted_score_margin": 3.610616116149392,
+          "weighted_score_margin": 3.604256582401726,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 3.610616116149392,
+          "winning_label_margin": 3.604256582401726,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -6518,7 +6518,7 @@
       "target_role": "soup_container",
       "target_semantic": {
         "canonical_label": "bowl",
-        "confidence": 0.4337980166077614,
+        "confidence": 0.4335594862699509,
         "preference": {
           "canonical_label": "bowl",
           "detector_aliases": [
@@ -6539,8 +6539,8 @@
                 "inspection_top"
               ],
               "label": "bowl",
-              "mean_confidence": 0.4337980166077614,
-              "score": 8.594292463612025,
+              "mean_confidence": 0.4335594862699509,
+              "score": 8.5915489298994,
               "supporting_view_count": 5
             }
           ],
@@ -6556,16 +6556,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.4337980166077614,
+          "mean_confidence": 0.4335594862699509,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.4337980166077614,
+            "mean_confidence": 0.4335594862699509,
             "supporting_view_count": 5,
             "supporting_view_margin": 5,
             "validated": true,
-            "weighted_score_margin": 8.594292463612025,
+            "weighted_score_margin": 8.5915489298994,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 8.594292463612025,
+            "winning_label_margin": 8.5915489298994,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -6582,9 +6582,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 5,
           "supporting_view_margin": 5,
-          "weighted_score_margin": 8.594292463612025,
+          "weighted_score_margin": 8.5915489298994,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 8.594292463612025,
+          "winning_label_margin": 8.5915489298994,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -6735,7 +6735,7 @@
       "role_relevant_projection": true,
       "semantic": {
         "canonical_label": "spoon",
-        "confidence": 0.15418696217238903,
+        "confidence": 0.1525858286768198,
         "preference": {
           "canonical_label": "spoon",
           "detector_aliases": [
@@ -6755,8 +6755,8 @@
                 "inspection_left"
               ],
               "label": "spoon",
-              "mean_confidence": 0.15418696217238903,
-              "score": 0.8997823256023827,
+              "mean_confidence": 0.1525858286768198,
+              "score": 0.8904410326731834,
               "supporting_view_count": 2
             },
             {
@@ -6764,8 +6764,8 @@
                 "inspection_top"
               ],
               "label": "knife",
-              "mean_confidence": 0.13913635909557343,
-              "score": 0.38893409956653013,
+              "mean_confidence": 0.13846127688884735,
+              "score": 0.3870470120222454,
               "supporting_view_count": 1
             },
             {
@@ -6774,8 +6774,8 @@
                 "inspection_right"
               ],
               "label": "fork",
-              "mean_confidence": 0.0341870803385973,
-              "score": 0.17906912859762517,
+              "mean_confidence": 0.034083930775523186,
+              "score": 0.17852870583320202,
               "supporting_view_count": 2
             }
           ],
@@ -6788,16 +6788,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.15418696217238903,
+          "mean_confidence": 0.1525858286768198,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.15418696217238903,
+            "mean_confidence": 0.1525858286768198,
             "supporting_view_count": 2,
             "supporting_view_margin": 1,
             "validated": true,
-            "weighted_score_margin": 0.5108482260358526,
+            "weighted_score_margin": 0.503394020650938,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 0.5108482260358526,
+            "winning_label_margin": 0.503394020650938,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -6814,9 +6814,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 2,
           "supporting_view_margin": 1,
-          "weighted_score_margin": 0.5108482260358526,
+          "weighted_score_margin": 0.503394020650938,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 0.5108482260358526,
+          "winning_label_margin": 0.503394020650938,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -6833,7 +6833,7 @@
       "target_role": "soup_container",
       "target_semantic": {
         "canonical_label": "bowl",
-        "confidence": 0.43232086673378944,
+        "confidence": 0.4323565363883972,
         "preference": {
           "canonical_label": "bowl",
           "detector_aliases": [
@@ -6853,8 +6853,8 @@
                 "inspection_top"
               ],
               "label": "bowl",
-              "mean_confidence": 0.43232086673378944,
-              "score": 6.967725406623016,
+              "mean_confidence": 0.4323565363883972,
+              "score": 6.967757290210337,
               "supporting_view_count": 4
             },
             {
@@ -6862,8 +6862,8 @@
                 "inspection_close"
               ],
               "label": "cup",
-              "mean_confidence": 0.3192724585533142,
-              "score": 1.2757958052187817,
+              "mean_confidence": 0.30795198678970337,
+              "score": 1.2305598006646943,
               "supporting_view_count": 1
             }
           ],
@@ -6878,16 +6878,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.43232086673378944,
+          "mean_confidence": 0.4323565363883972,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.43232086673378944,
+            "mean_confidence": 0.4323565363883972,
             "supporting_view_count": 4,
             "supporting_view_margin": 3,
             "validated": true,
-            "weighted_score_margin": 5.691929601404234,
+            "weighted_score_margin": 5.737197489545643,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 5.691929601404234,
+            "winning_label_margin": 5.737197489545643,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -6904,9 +6904,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 4,
           "supporting_view_margin": 3,
-          "weighted_score_margin": 5.691929601404234,
+          "weighted_score_margin": 5.737197489545643,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 5.691929601404234,
+          "winning_label_margin": 5.737197489545643,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -7012,7 +7012,7 @@
             "maximum_cross_section_m": 0.031802219994713186,
             "method": "cross_section_clearance_vs_opening_v1",
             "opening_width_m": 0.14645528378751385,
-            "pass_margin_m": 0.10965306379280067,
+            "pass_margin_m": 0.10965306379280065,
             "reason": null,
             "source_measurement_cloud_path": "stages/000_initial/evidence/object_0008/fused.ply",
             "status": "TRUE",
@@ -7057,7 +7057,7 @@
       "role_relevant_projection": true,
       "semantic": {
         "canonical_label": "spoon",
-        "confidence": 0.481931297108531,
+        "confidence": 0.4824313260614872,
         "preference": {
           "canonical_label": "spoon",
           "detector_aliases": [
@@ -7079,8 +7079,8 @@
                 "inspection_right"
               ],
               "label": "spoon",
-              "mean_confidence": 0.481931297108531,
-              "score": 4.034228625357286,
+              "mean_confidence": 0.4824313260614872,
+              "score": 4.036262314614178,
               "supporting_view_count": 4
             },
             {
@@ -7088,8 +7088,8 @@
                 "inspection_top"
               ],
               "label": "knife",
-              "mean_confidence": 0.11786427348852158,
-              "score": 0.33428550840460647,
+              "mean_confidence": 0.11865754425525665,
+              "score": 0.33653537525324384,
               "supporting_view_count": 1
             }
           ],
@@ -7104,16 +7104,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.481931297108531,
+          "mean_confidence": 0.4824313260614872,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.481931297108531,
+            "mean_confidence": 0.4824313260614872,
             "supporting_view_count": 4,
             "supporting_view_margin": 3,
             "validated": true,
-            "weighted_score_margin": 3.6999431169526793,
+            "weighted_score_margin": 3.699726939360934,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 3.6999431169526793,
+            "winning_label_margin": 3.699726939360934,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -7130,9 +7130,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 4,
           "supporting_view_margin": 3,
-          "weighted_score_margin": 3.6999431169526793,
+          "weighted_score_margin": 3.699726939360934,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 3.6999431169526793,
+          "winning_label_margin": 3.699726939360934,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -7149,7 +7149,7 @@
       "target_role": "soup_container",
       "target_semantic": {
         "canonical_label": "bowl",
-        "confidence": 0.43232086673378944,
+        "confidence": 0.4323565363883972,
         "preference": {
           "canonical_label": "bowl",
           "detector_aliases": [
@@ -7169,8 +7169,8 @@
                 "inspection_top"
               ],
               "label": "bowl",
-              "mean_confidence": 0.43232086673378944,
-              "score": 6.967725406623016,
+              "mean_confidence": 0.4323565363883972,
+              "score": 6.967757290210337,
               "supporting_view_count": 4
             },
             {
@@ -7178,8 +7178,8 @@
                 "inspection_close"
               ],
               "label": "cup",
-              "mean_confidence": 0.3192724585533142,
-              "score": 1.2757958052187817,
+              "mean_confidence": 0.30795198678970337,
+              "score": 1.2305598006646943,
               "supporting_view_count": 1
             }
           ],
@@ -7194,16 +7194,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.43232086673378944,
+          "mean_confidence": 0.4323565363883972,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.43232086673378944,
+            "mean_confidence": 0.4323565363883972,
             "supporting_view_count": 4,
             "supporting_view_margin": 3,
             "validated": true,
-            "weighted_score_margin": 5.691929601404234,
+            "weighted_score_margin": 5.737197489545643,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 5.691929601404234,
+            "winning_label_margin": 5.737197489545643,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -7220,9 +7220,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 4,
           "supporting_view_margin": 3,
-          "weighted_score_margin": 5.691929601404234,
+          "weighted_score_margin": 5.737197489545643,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 5.691929601404234,
+          "winning_label_margin": 5.737197489545643,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -7373,7 +7373,7 @@
       "role_relevant_projection": true,
       "semantic": {
         "canonical_label": "spoon",
-        "confidence": 0.8417080342769623,
+        "confidence": 0.8416559994220734,
         "preference": {
           "canonical_label": "spoon",
           "detector_aliases": [
@@ -7393,8 +7393,8 @@
                 "inspection_left"
               ],
               "label": "spoon",
-              "mean_confidence": 0.8417080342769623,
-              "score": 4.286802421655599,
+              "mean_confidence": 0.8416559994220734,
+              "score": 4.286543523375478,
               "supporting_view_count": 2
             },
             {
@@ -7404,8 +7404,8 @@
                 "inspection_top"
               ],
               "label": "knife",
-              "mean_confidence": 0.07900564248363177,
-              "score": 0.676186305506207,
+              "mean_confidence": 0.07971416413784027,
+              "score": 0.6822869409737522,
               "supporting_view_count": 3
             }
           ],
@@ -7418,16 +7418,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.8417080342769623,
+          "mean_confidence": 0.8416559994220734,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.8417080342769623,
+            "mean_confidence": 0.8416559994220734,
             "supporting_view_count": 2,
             "supporting_view_margin": -1,
             "validated": true,
-            "weighted_score_margin": 3.610616116149392,
+            "weighted_score_margin": 3.604256582401726,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 3.610616116149392,
+            "winning_label_margin": 3.604256582401726,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -7444,9 +7444,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 2,
           "supporting_view_margin": -1,
-          "weighted_score_margin": 3.610616116149392,
+          "weighted_score_margin": 3.604256582401726,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 3.610616116149392,
+          "winning_label_margin": 3.604256582401726,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",
@@ -7463,7 +7463,7 @@
       "target_role": "soup_container",
       "target_semantic": {
         "canonical_label": "bowl",
-        "confidence": 0.43232086673378944,
+        "confidence": 0.4323565363883972,
         "preference": {
           "canonical_label": "bowl",
           "detector_aliases": [
@@ -7483,8 +7483,8 @@
                 "inspection_top"
               ],
               "label": "bowl",
-              "mean_confidence": 0.43232086673378944,
-              "score": 6.967725406623016,
+              "mean_confidence": 0.4323565363883972,
+              "score": 6.967757290210337,
               "supporting_view_count": 4
             },
             {
@@ -7492,8 +7492,8 @@
                 "inspection_close"
               ],
               "label": "cup",
-              "mean_confidence": 0.3192724585533142,
-              "score": 1.2757958052187817,
+              "mean_confidence": 0.30795198678970337,
+              "score": 1.2305598006646943,
               "supporting_view_count": 1
             }
           ],
@@ -7508,16 +7508,16 @@
           ],
           "detector_name": "ultralytics_yolo_world",
           "detector_version": "8.4.112",
-          "mean_confidence": 0.43232086673378944,
+          "mean_confidence": 0.4323565363883972,
           "observation_source": "RGB_DETECTOR",
           "quality": {
-            "mean_confidence": 0.43232086673378944,
+            "mean_confidence": 0.4323565363883972,
             "supporting_view_count": 4,
             "supporting_view_margin": 3,
             "validated": true,
-            "weighted_score_margin": 5.691929601404234,
+            "weighted_score_margin": 5.737197489545643,
             "winner_policy": "weighted_score_then_supporting_views",
-            "winning_label_margin": 5.691929601404234,
+            "winning_label_margin": 5.737197489545643,
             "winning_label_margin_kind": "weighted_score"
           },
           "reason_codes": [],
@@ -7534,9 +7534,9 @@
           "status": "SUPPORTED",
           "supporting_view_count": 4,
           "supporting_view_margin": 3,
-          "weighted_score_margin": 5.691929601404234,
+          "weighted_score_margin": 5.737197489545643,
           "winner_policy": "weighted_score_then_supporting_views",
-          "winning_label_margin": 5.691929601404234,
+          "winning_label_margin": 5.737197489545643,
           "winning_label_margin_kind": "weighted_score"
         },
         "reason": "SUPPORTED_ACCEPTABLE_LABEL",

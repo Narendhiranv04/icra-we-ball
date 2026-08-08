@@ -1,13 +1,17 @@
 {
   "classification_correct": true,
-  "coffee_reuse_optimal": false,
+  "coffee_minimum_tool_correct": false,
   "intended_outcome": "INFEASIBLE",
   "oracle_earliest_feasible_stage": null,
+  "oracle_failure_reason": "UNCOVERED_COFFEE_TARGET",
   "oracle_min_coffee_tools": null,
   "oracle_outcome": "INFEASIBLE",
   "oracle_soup_matching_size": 3,
   "predicted_coffee_unique_tools": null,
   "predicted_completion_stage": null,
+  "predicted_failure_reason": [
+    "REQUIRED_EVIDENCE_UNKNOWN"
+  ],
   "predicted_outcome": "INFEASIBLE",
   "predicted_soup_assignment_count": 1,
   "result": "PASS",

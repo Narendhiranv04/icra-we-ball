@@ -1,24 +1,61 @@
 {
   "FM_used": false,
   "action_planning_used": false,
-  "authoritative_run": "runs/feasibility_benchmarks/kitchen_feasibility_phase1_freeze2_20260808",
+  "assignment_driven_tool_cardinality": true,
   "coffee_complete_coverage_required": true,
   "coffee_minimum_tool_preference": true,
   "coffee_single_tool_required": false,
+  "config_hashes": {
+    "geometry_config": {
+      "path": "mujoco_scenes/configs/geometry_inference.yaml",
+      "sha256": "70d0704b8e53b6bc266c852dff5ce9dc1e7dcbbff564e07a24c254669bf23883"
+    },
+    "semantic_config": {
+      "path": "mujoco_scenes/configs/semantic_grounding.yaml",
+      "sha256": "9b3bf2a199badbbf568f448075e6f5097da577132e4dd55191032cfb5c8a267d"
+    },
+    "semantic_vocabulary": {
+      "path": "mujoco_scenes/configs/semantic_vocabulary.yaml",
+      "sha256": "1f783961da68f0ed711afe82b336e822368eb7ab5e9fff96352040f76970aeab"
+    },
+    "task_config": {
+      "path": "mujoco_scenes/configs/s1_integrated_kitchen_object_function.yaml",
+      "sha256": "93bac1a76c7d93eb891ec92352c42cc2f0efcc2ae31760c667d9627473e85827"
+    },
+    "variant_config": {
+      "path": "mujoco_scenes/configs/kitchen_feasibility_variants.yaml",
+      "sha256": "572370521f7e1aee094375c7c627d50e364185bb7f9de1ae06d075f86fc576b2"
+    }
+  },
   "cross_group_reuse_allowed": true,
   "cross_group_reuse_optimized": false,
-  "geometry_config_sha256": "70d0704b8e53b6bc266c852dff5ce9dc1e7dcbbff564e07a24c254669bf23883",
+  "evidence": {
+    "F0_failure_diagnostic": "variants/F0_REUSE_ONE/failure_diagnostic.json",
+    "benchmark_summary": "benchmark_summary.json",
+    "exact_geometry_implementation": "mujoco_scenes/exact_scene_geometry.py",
+    "focused_tests": "mujoco_scenes/tests/test_kitchen_feasibility_benchmark.py",
+    "full_test_result": "test_summary.txt",
+    "shared_relation_implementation": "mujoco_scenes/geometry_relations.py"
+  },
+  "hidden_labels_used_by_prediction": false,
+  "minimum_semantic_supporting_views": 2,
   "nonterminal_unknown_classified_as_infeasible": false,
-  "oracle_geometry_manual_numeric_table_present": false,
+  "oracle_and_prediction_share_mutable_scene": false,
+  "oracle_cavity_opening_uses_inner_geometry": true,
   "oracle_geometry_source": "ACTUAL_INSTANTIATED_MUJOCO_GEOMETRY",
+  "oracle_manual_numeric_geometry_table_present": false,
+  "oracle_outer_bbox_used_as_opening": false,
   "oracle_reads_observed_registry": false,
-  "oracle_threshold_source": "configs/geometry_inference.yaml",
   "prediction_reads_oracle": false,
   "production_geometry_source": "STAGE_LOCAL_REGION_GATED_RGBD_MEASUREMENT",
   "robot_used": false,
   "same_goal_all_variants": true,
+  "schema_version": 2,
   "semantic_confidence_used_as_assignment_objective": false,
+  "shared_insertable_definition": true,
+  "shared_reaches_bottom_definition": true,
   "soup_distinct_target_assignment_required": true,
-  "terminal_exhaustion_maps_to_infeasible": true,
-  "variant_config_sha256": "1809575c770f5321b506da83b7d437c7c0d8da0ff87fed7f8d5caf28507a3af0"
+  "source_commit_at_generation": "91968f923903b174e69692865144c8d8e09255af",
+  "status": "PASS_WITH_DOCUMENTED_F0_DETECTOR_LIMITATION",
+  "terminal_exhaustion_maps_to_infeasible": true
 }

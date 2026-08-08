@@ -1,3 +1,14 @@
-Focused: .venv/bin/python -m pytest -q mujoco_scenes/tests/test_kitchen_feasibility_benchmark.py -> 12 passed
-Full suite: .venv/bin/python -m pytest -q -> 330 passed (before final report packaging)
-Authoritative RGB-D/YOLO run: 14/16 classifications correct; F0_REUSE_ONE and P0_LAYOUT_BASE are false-infeasible due UNKNOWN multi-view bowl semantics.
+Final full-suite command:
+.venv/bin/python -m pytest -q
+
+Result on the final closure source and report-generator state:
+337 passed in 93.28s (0:01:33)
+
+Focused Phase-1 command:
+.venv/bin/python -m pytest -q mujoco_scenes/tests/test_kitchen_feasibility_benchmark.py mujoco_scenes/tests/test_usage_policy_grounding.py
+
+Focused result:
+37 passed in 21.58s
+
+Authoritative real RGB-D/YOLO benchmark:
+15/16 classifications correct. F0_REUSE_ONE is the sole false-infeasible due to UNKNOWN multi-view B1 semantic evidence under the preserved two-view gate; P0_LAYOUT_BASE now passes.

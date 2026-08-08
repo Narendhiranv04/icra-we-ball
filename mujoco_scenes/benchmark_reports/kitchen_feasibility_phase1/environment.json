@@ -1,12 +1,43 @@
 {
-  "benchmark_run": "runs/feasibility_benchmarks/kitchen_feasibility_phase1_freeze2_20260808",
+  "benchmark_id": "kitchen_feasibility_phase1_closure_20260809_combined",
+  "benchmark_timestamp": "2026-08-09",
   "branch": "naren/googlePointCloudIntegration",
-  "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-  "confidence_threshold": 0.03,
+  "configs": {
+    "geometry_config": {
+      "path": "mujoco_scenes/configs/geometry_inference.yaml",
+      "sha256": "70d0704b8e53b6bc266c852dff5ce9dc1e7dcbbff564e07a24c254669bf23883"
+    },
+    "semantic_config": {
+      "path": "mujoco_scenes/configs/semantic_grounding.yaml",
+      "sha256": "9b3bf2a199badbbf568f448075e6f5097da577132e4dd55191032cfb5c8a267d"
+    },
+    "semantic_vocabulary": {
+      "path": "mujoco_scenes/configs/semantic_vocabulary.yaml",
+      "sha256": "1f783961da68f0ed711afe82b336e822368eb7ab5e9fff96352040f76970aeab"
+    },
+    "task_config": {
+      "path": "mujoco_scenes/configs/s1_integrated_kitchen_object_function.yaml",
+      "sha256": "93bac1a76c7d93eb891ec92352c42cc2f0efcc2ae31760c667d9627473e85827"
+    },
+    "variant_config": {
+      "path": "mujoco_scenes/configs/kitchen_feasibility_variants.yaml",
+      "sha256": "572370521f7e1aee094375c7c627d50e364185bb7f9de1ae06d075f86fc576b2"
+    }
+  },
+  "dependency_versions": {
+    "mujoco": "3.3.5",
+    "numpy": "2.2.6",
+    "torch": "2.9.1",
+    "ultralytics": "8.4.112"
+  },
   "detector": "Ultralytics YOLO-World",
   "device": "cpu",
-  "goal_instruction": "Prepare and serve coffee and soup for three people using the available kitchenware. Stir all three coffees and provide each soup bowl with a suitable utensil. Search the closed kitchen storage for anything still required.",
-  "minimum_supporting_views": 2,
-  "resolution": "1280x960",
-  "robot": "none"
+  "exact_geometry_extractor": "inner_rim_radial_quantile_v2_from_actual_instantiated_mujoco_geometry",
+  "image_height": 960,
+  "image_width": 1280,
+  "python_version": "3.13.11",
+  "semantic_confidence_threshold": 0.03,
+  "semantic_minimum_supporting_views": 2,
+  "source_commit_at_generation": "91968f923903b174e69692865144c8d8e09255af",
+  "yolo_model_filename": "yolov8m-worldv2.pt"
 }

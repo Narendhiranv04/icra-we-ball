@@ -232,7 +232,9 @@ def _comparison(
         "variant_id": variant_id,
         "intended_outcome": variant["intended_outcome"],
         "oracle_outcome": oracle_outcome,
+        "oracle_failure_reason": oracle.get("oracle_failure_reason"),
         "predicted_outcome": predicted_outcome,
+        "predicted_failure_reason": predicted.get("reason_if_infeasible"),
         "classification_correct": oracle_outcome == predicted_outcome,
         "oracle_earliest_feasible_stage": oracle[
             "oracle_earliest_feasible_stage"
@@ -249,7 +251,7 @@ def _comparison(
         "predicted_coffee_unique_tools": predicted[
             "coffee_unique_tool_count"
         ],
-        "coffee_reuse_optimal": (
+        "coffee_minimum_tool_correct": (
             correctly_feasible
             and oracle["oracle_coffee_minimum_unique_tools"]
             == predicted["coffee_unique_tool_count"]
@@ -279,14 +281,22 @@ def _aggregate(rows: list[dict[str, Any]]) -> dict[str, Any]:
     correctly_feasible = [
         row for row in feasible if row["classification_correct"]
     ]
+    feasible_count = len(feasible)
+    detected_feasible_count = len(correctly_feasible)
+    stage_correct = sum(row["stage_correct"] for row in correctly_feasible)
+    tool_correct = sum(
+        row["coffee_minimum_tool_correct"] for row in correctly_feasible
+    )
     return {
         "number_of_variants": count,
         "number_oracle_feasible": len(feasible),
         "number_oracle_infeasible": len(infeasible),
         "overall_feasibility_accuracy": correct / count if count else 0.0,
+        "feasible_detection_rate": (
+            detected_feasible_count / feasible_count if feasible else 0.0
+        ),
         "feasible_recall": (
-            sum(row["classification_correct"] for row in feasible)
-            / len(feasible) if feasible else 0.0
+            detected_feasible_count / feasible_count if feasible else 0.0
         ),
         "infeasible_recall": (
             sum(row["classification_correct"] for row in infeasible)
@@ -302,13 +312,19 @@ def _aggregate(rows: list[dict[str, Any]]) -> dict[str, Any]:
             and row["predicted_outcome"] == "INFEASIBLE"
             for row in rows
         ),
-        "earliest_stage_exact_accuracy": (
-            sum(row["stage_correct"] for row in correctly_feasible)
-            / len(correctly_feasible) if correctly_feasible else 0.0
+        "earliest_stage_success_over_all_feasible": (
+            stage_correct / feasible_count if feasible else 0.0
         ),
-        "coffee_minimum_tool_optimality_accuracy": (
-            sum(row["coffee_reuse_optimal"] for row in correctly_feasible)
-            / len(correctly_feasible) if correctly_feasible else 0.0
+        "earliest_stage_accuracy_given_detected_feasible": (
+            stage_correct / detected_feasible_count
+            if correctly_feasible else 0.0
+        ),
+        "coffee_tool_optimality_over_all_feasible": (
+            tool_correct / feasible_count if feasible else 0.0
+        ),
+        "coffee_tool_optimality_given_detected_feasible": (
+            tool_correct / detected_feasible_count
+            if correctly_feasible else 0.0
         ),
         "soup_distinct_assignment_validity": (
             sum(row["soup_distinct_assignment_valid"] for row in rows)
@@ -334,15 +350,19 @@ def run_benchmark(arguments: argparse.Namespace) -> Path:
         print(f"\n=== {variant_id}: {variant['scene_name']} ===")
         scene_configs = load_all_configs()
         resolved_scene = scene_configs[variant["scene_name"]]
+        oracle_scene = KitchenScene(
+            variant["scene_name"], include_robot=False, robot="none"
+        )
+        prediction_scene = KitchenScene(
+            variant["scene_name"], include_robot=False, robot="none"
+        )
         oracle = evaluate_oracle_variant(
             variant_id, benchmark_config=benchmark,
             scene_configs=scene_configs,
-            scene=(scene := KitchenScene(
-                variant["scene_name"], include_robot=False, robot="none"
-            )),
+            scene=oracle_scene,
         )
         predicted, run_dir = run_predicted_variant(
-            variant_id, variant, benchmark, output_root, scene,
+            variant_id, variant, benchmark, output_root, prediction_scene,
             width=arguments.width,
             height=arguments.height,
             semantic_backend=arguments.semantic_detector,

@@ -7,12 +7,17 @@ from mujoco_scenes.kitchen_feasibility_oracle import (
     load_feasibility_benchmark_config,
 )
 from mujoco_scenes.run_kitchen_feasibility_benchmark import (
+    _aggregate,
     predicted_feasibility_from_witness,
     run_predicted_variant,
 )
 from mujoco_scenes.scene_loader import KitchenScene, load_all_configs
 from mujoco_scenes.exact_scene_geometry import extract_exact_object_geometry
 from mujoco_scenes.geometry_properties import load_geometry_config
+from mujoco_scenes.geometry_relations import (
+    evaluate_insertable_in,
+    evaluate_reaches_bottom,
+)
 from mujoco_scenes.task_witness import evaluate_usage_policy_task_witness
 
 
@@ -244,4 +249,73 @@ def test_oracle_geometry_is_extracted_from_instantiated_model():
     )
     assert shallow.opening_width_m > 0
     assert deep.cavity_depth_m > shallow.cavity_depth_m
-    assert shallow.geometry_source == "INSTANTIATED_MUJOCO_MODEL"
+    assert shallow.geometry_source == "ACTUAL_INSTANTIATED_MUJOCO_GEOMETRY"
+
+
+def test_shared_relation_definitions_return_numeric_margins():
+    insert = evaluate_insertable_in(0.02, 0.04, 0.005)
+    reach = evaluate_reaches_bottom(0.15, 0.10, 0.03)
+    assert insert["status"] == "TRUE"
+    assert insert["pass_margin_m"] == pytest.approx(0.015)
+    assert reach["status"] == "TRUE"
+    assert reach["pass_margin_m"] == pytest.approx(0.02)
+
+
+def test_assignment_driven_roles_omit_misleading_fixed_count():
+    import yaml
+    task = yaml.safe_load(TASK.read_text())
+    assert "count" not in task["roles"]["coffee_stirrer"]
+    assert "count" not in task["roles"]["soup_eating_utensil"]
+    result = _evaluate({"a": {COFFEE[0]}, "b": {COFFEE[1]}, "c": {COFFEE[2]}})
+    assert "coffee_stirrer" not in result["role_requirements"]
+    binding = result["tool_role_binding_requirements"]["coffee_stirrer"]
+    assert binding["selected_distinct_physical_objects"] == 3
+
+
+def test_benchmark_uses_distinct_oracle_and_prediction_scenes():
+    source = inspect.getsource(
+        __import__(
+            "mujoco_scenes.run_kitchen_feasibility_benchmark",
+            fromlist=["run_benchmark"],
+        ).run_benchmark
+    )
+    assert "oracle_scene = KitchenScene" in source
+    assert "prediction_scene = KitchenScene" in source
+    assert "scene=oracle_scene" in source
+
+
+def test_layout_controls_are_physically_distinct():
+    benchmark = load_feasibility_benchmark_config()
+    f0 = benchmark["variants"]["F0_REUSE_ONE"].get("countertop_set")
+    p0 = benchmark["variants"]["P0_LAYOUT_BASE"].get("countertop_set")
+    p1 = benchmark["variants"]["P1_LAYOUT_SWAPPED"].get("countertop_set")
+    assert p0 and p1 and p0 != p1
+    assert f0 != p0 and f0 != p1
+
+
+def test_metrics_report_all_feasible_and_conditional_denominators():
+    rows = []
+    for index in range(10):
+        detected = index != 0
+        rows.append({
+            "oracle_outcome": "FEASIBLE",
+            "predicted_outcome": "FEASIBLE" if detected else "INFEASIBLE",
+            "classification_correct": detected,
+            "stage_correct": detected,
+            "coffee_minimum_tool_correct": detected,
+            "soup_distinct_assignment_valid": True,
+        })
+    rows.extend({
+        "oracle_outcome": "INFEASIBLE",
+        "predicted_outcome": "INFEASIBLE",
+        "classification_correct": True,
+        "stage_correct": False,
+        "coffee_minimum_tool_correct": False,
+        "soup_distinct_assignment_valid": True,
+    } for _ in range(6))
+    metrics = _aggregate(rows)
+    assert metrics["feasible_detection_rate"] == pytest.approx(0.9)
+    assert metrics["earliest_stage_success_over_all_feasible"] == pytest.approx(0.9)
+    assert metrics["earliest_stage_accuracy_given_detected_feasible"] == 1.0
+    assert metrics["coffee_tool_optimality_over_all_feasible"] == pytest.approx(0.9)
+    assert metrics["coffee_tool_optimality_given_detected_feasible"] == 1.0

@@ -54,7 +54,7 @@
     },
     "evidence_directory": "stages/000_initial",
     "reason_codes": [
-      "REQUIRED_EVIDENCE_UNKNOWN"
+      "NO_COMPLETE_TARGET_MATCHING"
     ],
     "soup": {
       "candidate_target_evaluations": [],
@@ -80,6 +80,7 @@
       },
       "distinctness_satisfied": true,
       "eligible_target_object_ids": [
+        "object_0004",
         "object_0005",
         "object_0006"
       ],
@@ -92,26 +93,24 @@
       "maximum_matching_cardinality": 0,
       "minimum_distinct_tool_count": null,
       "raw_utensil_object_ids": [],
-      "reason": "REQUIRED_EVIDENCE_UNKNOWN",
+      "reason": "INSUFFICIENT_VALID_ASSIGNMENTS",
       "selected_assignments": [],
       "semantically_eligible_object_ids": [],
-      "status": "INDETERMINATE",
+      "status": "INCOMPLETE",
       "target_assignment_mode": "joint-target-specific",
       "target_role": "soup_container",
       "tool_role": "soup_eating_utensil",
       "uncovered_target_object_ids": [
+        "object_0004",
         "object_0005",
         "object_0006"
       ],
-      "unknown_target_object_ids": [
-        "object_0001",
-        "object_0004"
-      ],
+      "unknown_target_object_ids": [],
       "valid_target_tool_edges": []
     },
     "stage": 0,
     "stage_label": "INITIAL",
-    "witness_status": "INDETERMINATE"
+    "witness_status": "INCOMPLETE"
   },
   {
     "coffee": {
@@ -196,6 +195,7 @@
       },
       "distinctness_satisfied": true,
       "eligible_target_object_ids": [
+        "object_0004",
         "object_0005",
         "object_0006"
       ],
@@ -218,14 +218,11 @@
       "target_role": "soup_container",
       "tool_role": "soup_eating_utensil",
       "uncovered_target_object_ids": [
+        "object_0004",
         "object_0005",
         "object_0006"
       ],
-      "unknown_target_object_ids": [
-        "object_0001",
-        "object_0004",
-        "object_0007"
-      ],
+      "unknown_target_object_ids": [],
       "valid_target_tool_edges": []
     },
     "stage": 1,
@@ -316,6 +313,7 @@
       },
       "distinctness_satisfied": true,
       "eligible_target_object_ids": [
+        "object_0004",
         "object_0005",
         "object_0006"
       ],
@@ -339,14 +337,11 @@
       "target_role": "soup_container",
       "tool_role": "soup_eating_utensil",
       "uncovered_target_object_ids": [
+        "object_0004",
         "object_0005",
         "object_0006"
       ],
-      "unknown_target_object_ids": [
-        "object_0001",
-        "object_0004",
-        "object_0007"
-      ],
+      "unknown_target_object_ids": [],
       "valid_target_tool_edges": []
     },
     "stage": 2,
@@ -437,6 +432,7 @@
       },
       "distinctness_satisfied": true,
       "eligible_target_object_ids": [
+        "object_0004",
         "object_0005",
         "object_0006"
       ],
@@ -460,14 +456,11 @@
       "target_role": "soup_container",
       "tool_role": "soup_eating_utensil",
       "uncovered_target_object_ids": [
+        "object_0004",
         "object_0005",
         "object_0006"
       ],
-      "unknown_target_object_ids": [
-        "object_0001",
-        "object_0004",
-        "object_0007"
-      ],
+      "unknown_target_object_ids": [],
       "valid_target_tool_edges": []
     },
     "stage": 3,
@@ -558,6 +551,7 @@
       },
       "distinctness_satisfied": true,
       "eligible_target_object_ids": [
+        "object_0004",
         "object_0005",
         "object_0006"
       ],
@@ -581,14 +575,11 @@
       "target_role": "soup_container",
       "tool_role": "soup_eating_utensil",
       "uncovered_target_object_ids": [
+        "object_0004",
         "object_0005",
         "object_0006"
       ],
-      "unknown_target_object_ids": [
-        "object_0001",
-        "object_0004",
-        "object_0007"
-      ],
+      "unknown_target_object_ids": [],
       "valid_target_tool_edges": []
     },
     "stage": 4,
@@ -679,6 +670,7 @@
       },
       "distinctness_satisfied": true,
       "eligible_target_object_ids": [
+        "object_0004",
         "object_0005",
         "object_0006"
       ],
@@ -702,14 +694,11 @@
       "target_role": "soup_container",
       "tool_role": "soup_eating_utensil",
       "uncovered_target_object_ids": [
+        "object_0004",
         "object_0005",
         "object_0006"
       ],
-      "unknown_target_object_ids": [
-        "object_0001",
-        "object_0004",
-        "object_0007"
-      ],
+      "unknown_target_object_ids": [],
       "valid_target_tool_edges": []
     },
     "stage": 5,

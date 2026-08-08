@@ -27,7 +27,11 @@ class ExactObjectGeometry:
     opening_width_m: float | None = None
     cavity_depth_m: float | None = None
     open_cavity: bool | None = None
-    geometry_source: str = "INSTANTIATED_MUJOCO_MODEL"
+    geometry_source: str = "ACTUAL_INSTANTIATED_MUJOCO_GEOMETRY"
+    opening_length_m: float | None = None
+    rim_height_m: float | None = None
+    extraction_method: str = "instantiated_inner_rim_radial_quantile_v2"
+    diagnostics: dict[str, Any] | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -152,20 +156,32 @@ def extract_exact_object_geometry(
             extents_m=tuple(float(x) for x in extents),
         )
 
-    # The mesh's uppermost shell point is the exact loaded rim.  The matching
-    # bottom collision cylinder is part of the same instantiated object body,
-    # so the cavity depth follows all effective variant scaling automatically.
-    opening_width = float(max(extents[0], extents[1]))
-    cavity_depth = float(points[:, 2].max() - _bottom_top_z(model, body_id))
-    open_cavity = bool(
-        opening_width >= float(config["open_cavity"]["minimum_resolvable_opening_m"])
-        and cavity_depth >= float(config["open_cavity"]["minimum_resolvable_depth_m"])
-    )
+    # Estimate the *inner* rim envelope from the instantiated surface.  A
+    # handle or other exterior protrusion is outside the upper-rim radial
+    # cluster and therefore cannot enlarge the usable opening.
+    z_max = float(points[:, 2].max())
+    z_min = float(points[:, 2].min())
+    rim_points = points[points[:, 2] >= z_max - 0.12 * (z_max - z_min)]
+    centre = np.median(rim_points[:, :2], axis=0)
+    radii = np.linalg.norm(rim_points[:, :2] - centre, axis=1)
+    if len(radii) < 8 or not np.all(np.isfinite(radii)):
+        raise ValueError(f"Insufficient instantiated rim samples for {object_id}")
+    inner_radius = float(np.quantile(radii, 0.45))
+    opening_width = opening_length = max(2.0 * inner_radius, 1e-6)
+    cavity_depth = float(z_max - _bottom_top_z(model, body_id))
+    open_cavity = bool(cavity_depth > 0.0 and opening_width > 0.0)
     return ExactObjectGeometry(
         object_id=object_id,
         object_kind=object_kind,
         extents_m=tuple(float(x) for x in extents),
         opening_width_m=opening_width,
+        opening_length_m=opening_length,
+        rim_height_m=z_max,
         cavity_depth_m=cavity_depth,
         open_cavity=open_cavity,
+        diagnostics={
+            "rim_sample_count": int(len(rim_points)),
+            "inner_radius_quantile": 0.45,
+            "outer_protrusions_excluded": True,
+        },
     )

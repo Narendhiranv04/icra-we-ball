@@ -34,7 +34,6 @@ roles:
         expected: true
 
   coffee_stirrer:
-    count: 1
     binding_cardinality:
       mode: assignment_driven
       minimum_distinct_physical_objects: 1
@@ -51,7 +50,6 @@ roles:
         expected: true
 
   soup_eating_utensil:
-    count: 1
     binding_cardinality:
       mode: assignment_driven
       minimum_distinct_physical_objects: 3

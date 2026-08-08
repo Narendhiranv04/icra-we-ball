@@ -2404,6 +2404,24 @@ def evaluate_usage_policy_task_witness(
         declared = role.get("binding_cardinality")
         if isinstance(declared, dict) and declared.get("mode") == "assignment_driven":
             tool_role_binding_requirements[role_name] = deepcopy(declared)
+    for group in function_group_evaluations:
+        role_name = group.get("tool_role")
+        if role_name in tool_role_binding_requirements:
+            tool_role_binding_requirements[role_name][
+                "selected_distinct_physical_objects"
+            ] = group.get("minimum_distinct_tool_count")
+    count_based_role_requirements = {
+        role_name: config["roles"][role_name]["count"]
+        for role_name in relevant_roles
+        if not (
+            isinstance(
+                config["roles"].get(role_name, {}).get("binding_cardinality"),
+                dict,
+            )
+            and config["roles"][role_name]["binding_cardinality"].get("mode")
+            == "assignment_driven"
+        )
+    }
     if usage_policy_mode == "always-distinct":
         policy_distinct_requirement = sum(group_distinct_requirements)
     elif usage_policy_mode == "always-reusable":
@@ -2434,10 +2452,11 @@ def evaluate_usage_policy_task_witness(
         "selected_witness": selected_witness,
         "selected_candidate_edges": selected_candidate_edges,
         "selected_pairwise_relations": selected_pairwise_relations,
-        "role_requirements": {
-            role_name: config["roles"][role_name]["count"]
-            for role_name in relevant_roles
-        },
+        "count_based_role_requirements": count_based_role_requirements,
+        # Legacy alias retained for callers that still expect this key. It is
+        # deliberately restricted to count-based roles and never claims that
+        # an assignment-driven tool role has physical count one.
+        "role_requirements": count_based_role_requirements,
         "tool_role_binding_requirements": tool_role_binding_requirements,
         "operation_assignments": operation_assignments,
         "function_group_evaluations": function_group_evaluations,
