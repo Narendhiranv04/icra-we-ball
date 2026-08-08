@@ -43,8 +43,26 @@ L2_ABLATION3_SCENES = (
     "L2_living_room_region_ablation3_valid",
     "L2_living_room_region_ablation3_permuted",
 )
+L2_INTEGRATED_SCENES = (
+    "L2_integrated_living_room_region_function_F0_BASE",
+    "L2_integrated_living_room_region_function_F1_LAYOUT_SWAPPED",
+    "L2_integrated_living_room_region_function_F2_INSTANCE_ORDER_PERMUTED",
+    "L2_integrated_living_room_region_function_F3_GLOBAL_MATCHING_REQUIRED",
+    "L2_integrated_living_room_region_function_F4_PERSONAL_GEOMETRY_ALTERNATIVE",
+    "L2_integrated_living_room_region_function_F5_SHARED_ALTERNATIVE",
+    "L2_integrated_living_room_region_function_F6_DECOY_SURPLUS",
+    "L2_integrated_living_room_region_function_I0_PERSONAL_SEMANTIC_DEFICIT",
+    "L2_integrated_living_room_region_function_I1_PERSONAL_GEOMETRY_DEFICIT",
+    "L2_integrated_living_room_region_function_I2_PERSONAL_TARGET_COVERAGE_FAILURE",
+    "L2_integrated_living_room_region_function_I3_SHARED_FIT_FAILURE",
+    "L2_integrated_living_room_region_function_I4_SHARED_CONTEXT_FAILURE",
+    "L2_integrated_living_room_region_function_I5_CROSS_FUNCTION_CONFLICT",
+)
 L2_SCENES = (
-    L2_ABLATION1_SCENES + L2_ABLATION2_SCENES + L2_ABLATION3_SCENES
+    L2_ABLATION1_SCENES
+    + L2_ABLATION2_SCENES
+    + L2_ABLATION3_SCENES
+    + L2_INTEGRATED_SCENES
 )
 L2_ABLATION2_BASE = (
     ROOT / "assets" / "living_room_region_ablation2_base.xml"
@@ -70,6 +88,12 @@ L2_ABLATION2_GOAL = (
 L2_ABLATION3_GOAL = (
     "Place one drink-and-snack set on a suitable surface beside each "
     "person’s seating position."
+)
+L2_INTEGRATED_GOAL = (
+    "Prepare the living room for two people watching television. Place one "
+    "refreshment set within easy reach of each person's seating position, "
+    "and place the TV remote and game controller together on a suitable "
+    "shared surface accessible to both people."
 )
 
 
@@ -442,6 +466,134 @@ def _configure_ablation3_scene(root: ET.Element, scene_name: str) -> None:
             worldbody.append(child)
 
 
+def _set_support_top_size(
+    root: ET.Element,
+    geom_name: str,
+    half_length: float,
+    half_width: float,
+) -> None:
+    """Resize a construction-time support proxy and matching visual.
+
+    Runtime region measurement never calls this helper or reads these sizes;
+    it sees only the rendered RGB-D surface selected by an opaque crop.
+    """
+    top = root.find(f".//geom[@name='{geom_name}']")
+    if top is None:
+        raise RuntimeError(f"Integrated support geom missing: {geom_name}")
+    old = np.fromstring(top.get("size", ""), sep=" ")
+    top.set("size", f"{half_length:.5f} {half_width:.5f} {old[2]:.5f}")
+    body = next(
+        body for body in root.iter("body") if top in list(body.findall("geom"))
+    )
+    visual = next(
+        (
+            geom
+            for geom in body.findall("geom")
+            if geom.get("name", "").endswith("_textured_visual")
+        ),
+        None,
+    )
+    if visual is None:
+        return
+    mesh = root.find(f".//mesh[@name='{visual.get('mesh')}']")
+    if mesh is None:
+        return
+    current = np.fromstring(mesh.get("scale", "1 1 1"), sep=" ")
+    reference = {
+        "a2_personal_left_top": (0.25, 0.21),
+        "a2_personal_right_top": (0.25, 0.21),
+        "a2_shared_drink_top": (0.37, 0.22),
+        "a2_control_table_top": (0.50, 0.34),
+    }[geom_name]
+    current[0] *= half_length / reference[0]
+    current[1] *= half_width / reference[1]
+    mesh.set("scale", " ".join(f"{value:.5f}" for value in current))
+
+
+def _integrated_scene_code(scene_name: str) -> str:
+    return scene_name.rsplit("_", 2)[-2] + "_" + scene_name.rsplit("_", 1)[-1]
+
+
+def _configure_integrated_scene(root: ET.Element, scene_name: str) -> None:
+    """Apply only physical layout changes for integrated benchmark variants."""
+    code = scene_name.removeprefix(
+        "L2_integrated_living_room_region_function_"
+    )
+
+    # The additional central C-table is a plausible candidate, not a role
+    # label.  Give it the same realistic end-table appearance as the personal
+    # tables so its function must be resolved from evidence and context.
+    shared_visual = root.find(
+        ".//geom[@name='a2_shared_drink_trap_textured_visual']"
+    )
+    if shared_visual is not None:
+        shared_visual.set("mesh", "a2_personal_left_movie_visual_mesh")
+        shared_visual.set("material", "movie_oak_mat")
+
+    if code == "F1_LAYOUT_SWAPPED":
+        _translate_body_geoms(root, "a2_personal_left", (1.48, 0.60))
+        _translate_body_geoms(root, "a2_personal_right", (-1.48, 0.60))
+    elif code == "F2_INSTANCE_ORDER_PERMUTED":
+        first_drink = root.find(".//body[@name='a2_drink_left']")
+        first_snack = root.find(".//body[@name='a2_snack_left']")
+        drink_position = first_drink.get("pos")
+        first_drink.set("pos", first_snack.get("pos"))
+        first_snack.set("pos", drink_position)
+        worldbody = root.find("worldbody")
+        movable = [
+            child
+            for child in list(worldbody)
+            if child.tag == "body" and child.find("freejoint") is not None
+        ]
+        for child in movable:
+            worldbody.remove(child)
+        for child in reversed(movable):
+            worldbody.append(child)
+    elif code == "F3_GLOBAL_MATCHING_REQUIRED":
+        _translate_body_geoms(root, "a2_personal_right", (0.0, 0.72))
+    elif code == "F4_PERSONAL_GEOMETRY_ALTERNATIVE":
+        _set_support_top_size(root, "a2_personal_left_top", 0.105, 0.095)
+        _translate_body_geoms(root, "a2_shared_drink_trap", (-0.65, 0.35))
+    elif code == "F5_SHARED_ALTERNATIVE":
+        _set_support_top_size(root, "a2_control_table_top", 0.15, 0.075)
+        _translate_body_geoms(root, "a2_shared_drink_trap", (0.0, 0.30))
+        if shared_visual is not None:
+            shared_visual.set("mesh", "a2_shared_drink_trap_movie_visual_mesh")
+            mesh = root.find(
+                ".//mesh[@name='a2_shared_drink_trap_movie_visual_mesh']"
+            )
+            mesh.set("scale", "1.75 1.55 0.88")
+    elif code == "I0_PERSONAL_SEMANTIC_DEFICIT":
+        right_visual = root.find(
+            ".//geom[@name='a2_personal_right_textured_visual']"
+        )
+        if right_visual is not None:
+            right_visual.set("mesh", "a2_control_table_movie_visual_mesh")
+        if shared_visual is not None:
+            shared_visual.set("mesh", "a2_control_table_movie_visual_mesh")
+        _translate_body_geoms(root, "a2_shared_drink_trap", (0.72, 0.62))
+    elif code == "I1_PERSONAL_GEOMETRY_DEFICIT":
+        _set_support_top_size(root, "a2_personal_left_top", 0.105, 0.095)
+        _set_support_top_size(root, "a2_personal_right_top", 0.105, 0.095)
+        _set_support_top_size(root, "a2_shared_drink_top", 0.105, 0.095)
+    elif code == "I2_PERSONAL_TARGET_COVERAGE_FAILURE":
+        _translate_body_geoms(root, "a2_personal_right", (-1.15, 0.34))
+        _translate_body_geoms(root, "a2_shared_drink_trap", (-0.45, 0.82))
+    elif code == "I3_SHARED_FIT_FAILURE":
+        _set_support_top_size(root, "a2_control_table_top", 0.13, 0.065)
+        _set_support_top_size(root, "a2_shared_drink_top", 0.13, 0.065)
+    elif code == "I4_SHARED_CONTEXT_FAILURE":
+        _translate_body_geoms(root, "a2_control_table", (1.78, -0.12))
+        _translate_body_geoms(root, "a2_shared_drink_trap", (1.78, 0.62))
+    elif code == "I5_CROSS_FUNCTION_CONFLICT":
+        _set_support_top_size(root, "a2_control_table_top", 0.13, 0.065)
+        _translate_body_geoms(root, "a2_personal_right", (0.20, 0.72))
+        _translate_body_geoms(root, "a2_shared_drink_trap", (-1.45, 0.60))
+
+    # F0 and F6 intentionally retain the full coherent candidate set. F6's
+    # surplus consists of the C-table and rug already present in the scene.
+
+
 def build_l2_region_xml(
     scene_name: str,
     robot: str = ROBOT_GOOGLE,
@@ -451,7 +603,8 @@ def build_l2_region_xml(
         raise ValueError(f"Unknown L2 region scene: {scene_name}")
     if robot not in {ROBOT_GOOGLE, ROBOT_NONE}:
         raise ValueError("L2 region scenes support robot google or none")
-    ablation2 = scene_name in L2_ABLATION2_SCENES
+    integrated = scene_name in L2_INTEGRATED_SCENES
+    ablation2 = scene_name in L2_ABLATION2_SCENES or integrated
     ablation3 = scene_name in L2_ABLATION3_SCENES
     root = ET.parse(
         L2_ABLATION2_BASE if ablation2 or ablation3 else L2_BASE
@@ -526,6 +679,8 @@ def build_l2_region_xml(
             worldbody.append(child)
     if ablation3:
         _configure_ablation3_scene(root, scene_name)
+    if integrated:
+        _configure_integrated_scene(root, scene_name)
     if robot == ROBOT_GOOGLE:
         _inject_google_robot(root, _google_robot_dir())
     return ET.tostring(root, encoding="unicode")
@@ -549,7 +704,9 @@ class L2LivingRoomRegionScene:
             raise ValueError("L2 region scenes support google or none")
         self.scene_name = scene_name
         self.goal = (
-            L2_ABLATION3_GOAL
+            L2_INTEGRATED_GOAL
+            if scene_name in L2_INTEGRATED_SCENES
+            else L2_ABLATION3_GOAL
             if scene_name in L2_ABLATION3_SCENES
             else (
                 L2_ABLATION2_GOAL
@@ -580,7 +737,11 @@ class L2LivingRoomRegionScene:
         )
         self.data = mujoco.MjData(self.model)
         self._set_robot_home_pose()
-        if scene_name in L2_ABLATION2_SCENES + L2_ABLATION3_SCENES:
+        if scene_name in (
+            L2_ABLATION2_SCENES
+            + L2_ABLATION3_SCENES
+            + L2_INTEGRATED_SCENES
+        ):
             # Scanned mug/bowl visuals retain compact analytic collision
             # proxies. Cylindrical free payloads can otherwise enter a nearly
             # lossless edge-roll on the staging table. MuJoCo's freejoint XML
@@ -603,7 +764,7 @@ class L2LivingRoomRegionScene:
         print(f"  Robot: {robot}")
         print(
             "  Candidate supports: "
-            f"{2 if scene_name in L2_ABLATION3_SCENES else 5 if scene_name in L2_ABLATION2_SCENES else 3}"
+            f"{2 if scene_name in L2_ABLATION3_SCENES else 5 if scene_name in L2_ABLATION2_SCENES + L2_INTEGRATED_SCENES else 3}"
         )
         print("  Scene ready.\n")
 
@@ -629,7 +790,11 @@ class L2LivingRoomRegionScene:
 
     def get_visible_object_instances(self) -> list[tuple[str, str]]:
         """Expose only the fixed payload as an object-level observation."""
-        if self.scene_name in L2_ABLATION2_SCENES + L2_ABLATION3_SCENES:
+        if self.scene_name in (
+            L2_ABLATION2_SCENES
+            + L2_ABLATION3_SCENES
+            + L2_INTEGRATED_SCENES
+        ):
             # Ablation 2 discovers its four generic payload IDs from visible
             # segmentation instances and RGB semantics in one initial capture.
             # Do not leak simulator body names through the legacy object API.
@@ -657,14 +822,18 @@ class L2LivingRoomRegionScene:
         print(f"Scene: {self.scene_name}")
         print(f"Goal:  {self.goal}")
         print("-" * 60)
-        if self.scene_name in L2_ABLATION2_SCENES + L2_ABLATION3_SCENES:
+        if self.scene_name in (
+            L2_ABLATION2_SCENES
+            + L2_ABLATION3_SCENES
+            + L2_INTEGRATED_SCENES
+        ):
             ablation3 = self.scene_name in L2_ABLATION3_SCENES
             print(
                 f"Candidate regions:  {2 if ablation3 else 5}, "
                 "all visible initially"
             )
             print(
-                f"Fixed payloads:      {2 if ablation3 else 4}, "
+                f"Fixed payloads:      {2 if ablation3 else 6}, "
                 "discovered from RGB-D evidence"
             )
             print("Seating targets:     2, spatially distinct")

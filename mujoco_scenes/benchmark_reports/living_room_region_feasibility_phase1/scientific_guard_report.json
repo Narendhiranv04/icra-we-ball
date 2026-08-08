@@ -1,0 +1,122 @@
+{
+  "all_passed": true,
+  "checks": [
+    {
+      "guard": "fixed_goal_identical",
+      "status": "PASS"
+    },
+    {
+      "guard": "functional_candidate_kind_region_only",
+      "status": "PASS"
+    },
+    {
+      "guard": "no_object_function_grounding",
+      "status": "PASS"
+    },
+    {
+      "guard": "no_fm_or_vlm_call",
+      "status": "PASS"
+    },
+    {
+      "guard": "no_symbolic_planning",
+      "status": "PASS"
+    },
+    {
+      "guard": "no_action_sequence",
+      "status": "PASS"
+    },
+    {
+      "guard": "no_robot",
+      "status": "PASS"
+    },
+    {
+      "guard": "no_navigation",
+      "status": "PASS"
+    },
+    {
+      "guard": "no_tamp",
+      "status": "PASS"
+    },
+    {
+      "guard": "exactly_one_initial_perception_stage",
+      "status": "PASS"
+    },
+    {
+      "guard": "no_sequential_inspection",
+      "status": "PASS"
+    },
+    {
+      "guard": "all_six_payloads_initially_visible",
+      "status": "PASS"
+    },
+    {
+      "guard": "both_seating_targets_initially_visible",
+      "status": "PASS"
+    },
+    {
+      "guard": "all_candidate_regions_initially_observable",
+      "status": "PASS"
+    },
+    {
+      "guard": "generic_region_ids_in_production",
+      "status": "PASS"
+    },
+    {
+      "guard": "proposal_labels_provenance_only",
+      "status": "PASS"
+    },
+    {
+      "guard": "region_dimensions_measured_from_rgbd",
+      "status": "PASS"
+    },
+    {
+      "guard": "semantic_decisions_from_rgb_detector",
+      "status": "PASS"
+    },
+    {
+      "guard": "oracle_separated_from_production",
+      "status": "PASS"
+    },
+    {
+      "guard": "unknown_never_treated_as_true",
+      "status": "PASS"
+    },
+    {
+      "guard": "personal_regions_dedicated_per_target",
+      "status": "PASS"
+    },
+    {
+      "guard": "shared_controls_one_region",
+      "status": "PASS"
+    },
+    {
+      "guard": "cross_function_region_sharing_disabled",
+      "status": "PASS"
+    },
+    {
+      "guard": "global_allocation_not_greedy",
+      "status": "PASS"
+    },
+    {
+      "guard": "same_task_requirements_all_variants",
+      "status": "PASS"
+    },
+    {
+      "guard": "no_variant_specific_inference_hacks",
+      "status": "PASS"
+    },
+    {
+      "guard": "visual_mesh_dimensions_not_production_evidence",
+      "status": "PASS"
+    },
+    {
+      "guard": "kitchen_phase1_behavior_unchanged",
+      "status": "PASS"
+    },
+    {
+      "guard": "kitchen_phase2_behavior_unchanged",
+      "status": "PASS"
+    }
+  ],
+  "schema_version": 1
+}

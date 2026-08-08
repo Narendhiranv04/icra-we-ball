@@ -1,0 +1,236 @@
+{
+  "artifact_classification": "PRIVILEGED_ORACLE_EVALUATION_ONLY",
+  "complete_solution_count": 0,
+  "example_solution": null,
+  "personal_compatibility": [
+    {
+      "distance_m": 0.7524944754499401,
+      "fit_margin_m": 0.18499999999999997,
+      "fits": true,
+      "near_margin_m": 0.39750552455005983,
+      "region_id": "oracle_region_0001",
+      "semantic": true,
+      "slot_id": "personal_refreshment_slot_1",
+      "valid": true
+    },
+    {
+      "distance_m": 2.4278072278462886,
+      "fit_margin_m": 0.18499999999999997,
+      "fits": true,
+      "near_margin_m": -1.2778072278462886,
+      "region_id": "oracle_region_0002",
+      "semantic": true,
+      "slot_id": "personal_refreshment_slot_1",
+      "valid": false
+    },
+    {
+      "distance_m": 2.7190937740472516,
+      "fit_margin_m": 0.27,
+      "fits": true,
+      "near_margin_m": -1.5690937740472517,
+      "region_id": "oracle_region_0003",
+      "semantic": true,
+      "slot_id": "personal_refreshment_slot_1",
+      "valid": false
+    },
+    {
+      "distance_m": 2.936157240732903,
+      "fit_margin_m": 0.51,
+      "fits": true,
+      "near_margin_m": -1.7861572407329032,
+      "region_id": "oracle_region_0004",
+      "semantic": false,
+      "slot_id": "personal_refreshment_slot_1",
+      "valid": false
+    },
+    {
+      "distance_m": 2.101859597003014,
+      "fit_margin_m": 0.43,
+      "fits": true,
+      "near_margin_m": -0.9518595970030139,
+      "region_id": "oracle_region_0005",
+      "semantic": false,
+      "slot_id": "personal_refreshment_slot_1",
+      "valid": false
+    },
+    {
+      "distance_m": 2.4287658505461844,
+      "fit_margin_m": 0.18499999999999997,
+      "fits": true,
+      "near_margin_m": -1.2787658505461845,
+      "region_id": "oracle_region_0001",
+      "semantic": true,
+      "slot_id": "personal_refreshment_slot_2",
+      "valid": false
+    },
+    {
+      "distance_m": 0.7555816016680993,
+      "fit_margin_m": 0.18499999999999997,
+      "fits": true,
+      "near_margin_m": 0.3944183983319006,
+      "region_id": "oracle_region_0002",
+      "semantic": true,
+      "slot_id": "personal_refreshment_slot_2",
+      "valid": true
+    },
+    {
+      "distance_m": 0.9949539335373944,
+      "fit_margin_m": 0.27,
+      "fits": true,
+      "near_margin_m": 0.15504606646260555,
+      "region_id": "oracle_region_0003",
+      "semantic": true,
+      "slot_id": "personal_refreshment_slot_2",
+      "valid": true
+    },
+    {
+      "distance_m": 1.4915199381235251,
+      "fit_margin_m": 0.51,
+      "fits": true,
+      "near_margin_m": -0.3415199381235252,
+      "region_id": "oracle_region_0004",
+      "semantic": false,
+      "slot_id": "personal_refreshment_slot_2",
+      "valid": false
+    },
+    {
+      "distance_m": 2.1062264047207466,
+      "fit_margin_m": 0.43,
+      "fits": true,
+      "near_margin_m": -0.9562264047207467,
+      "region_id": "oracle_region_0005",
+      "semantic": false,
+      "slot_id": "personal_refreshment_slot_2",
+      "valid": false
+    }
+  ],
+  "production_consumed_this_artifact": false,
+  "regions": {
+    "oracle_region_0001": {
+      "category": "side_table",
+      "centroid_world_m": [
+        -1.48,
+        0.6,
+        0.59
+      ],
+      "construction_geom": "a2_personal_left_top",
+      "support_length_m": 0.5,
+      "support_width_m": 0.42
+    },
+    "oracle_region_0002": {
+      "category": "side_table",
+      "centroid_world_m": [
+        1.48,
+        0.6,
+        0.59
+      ],
+      "construction_geom": "a2_personal_right_top",
+      "support_length_m": 0.5,
+      "support_width_m": 0.42
+    },
+    "oracle_region_0003": {
+      "category": "side_table",
+      "centroid_world_m": [
+        1.78,
+        0.62,
+        0.56
+      ],
+      "construction_geom": "a2_shared_drink_top",
+      "support_length_m": 0.74,
+      "support_width_m": 0.44
+    },
+    "oracle_region_0004": {
+      "category": "coffee_table",
+      "centroid_world_m": [
+        1.78,
+        -0.12,
+        0.5
+      ],
+      "construction_geom": "a2_control_table_top",
+      "support_length_m": 1.0,
+      "support_width_m": 0.68
+    },
+    "oracle_region_0005": {
+      "category": "rug",
+      "centroid_world_m": [
+        0.0,
+        -0.82,
+        0.012
+      ],
+      "construction_geom": "a2_rug_surface",
+      "support_length_m": 1.44,
+      "support_width_m": 0.6
+    }
+  },
+  "scene_name": "L2_integrated_living_room_region_function_I4_SHARED_CONTEXT_FAILURE",
+  "schema_version": 1,
+  "shared_compatibility": [
+    {
+      "access_margin_m": -0.7787658505461845,
+      "distances_to_seats_m": [
+        0.7524944754499401,
+        2.4287658505461844
+      ],
+      "fit_margin_m": 0.16999999999999998,
+      "fits": true,
+      "region_id": "oracle_region_0001",
+      "semantic": true,
+      "slot_id": "shared_controls_slot",
+      "valid": false
+    },
+    {
+      "access_margin_m": -0.7778072278462886,
+      "distances_to_seats_m": [
+        2.4278072278462886,
+        0.7555816016680993
+      ],
+      "fit_margin_m": 0.16999999999999998,
+      "fits": true,
+      "region_id": "oracle_region_0002",
+      "semantic": true,
+      "slot_id": "shared_controls_slot",
+      "valid": false
+    },
+    {
+      "access_margin_m": -1.0690937740472517,
+      "distances_to_seats_m": [
+        2.7190937740472516,
+        0.9949539335373944
+      ],
+      "fit_margin_m": 0.23,
+      "fits": true,
+      "region_id": "oracle_region_0003",
+      "semantic": true,
+      "slot_id": "shared_controls_slot",
+      "valid": false
+    },
+    {
+      "access_margin_m": -1.2861572407329032,
+      "distances_to_seats_m": [
+        2.936157240732903,
+        1.4915199381235251
+      ],
+      "fit_margin_m": 0.47000000000000003,
+      "fits": true,
+      "region_id": "oracle_region_0004",
+      "semantic": true,
+      "slot_id": "shared_controls_slot",
+      "valid": false
+    },
+    {
+      "access_margin_m": -0.4562264047207467,
+      "distances_to_seats_m": [
+        2.101859597003014,
+        2.1062264047207466
+      ],
+      "fit_margin_m": 0.38999999999999996,
+      "fits": true,
+      "region_id": "oracle_region_0005",
+      "semantic": false,
+      "slot_id": "shared_controls_slot",
+      "valid": false
+    }
+  ],
+  "status": "INFEASIBLE",
+  "variant": "I4_SHARED_CONTEXT_FAILURE"
+}

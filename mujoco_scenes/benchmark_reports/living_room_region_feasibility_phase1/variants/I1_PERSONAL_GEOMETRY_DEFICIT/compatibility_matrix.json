@@ -1,0 +1,3659 @@
+{
+  "personal_refreshment_rows": [
+    {
+      "FITS_SET_ON": "UNKNOWN",
+      "NEAR_SEAT": "UNKNOWN",
+      "PLANAR_SUPPORT": "UNKNOWN",
+      "candidate_rank": 1,
+      "compatibility_status": "FALSE",
+      "context_evidence": {
+        "method": "observed_region_seat_centroid_distance_v1",
+        "reason": "MISSING_OBSERVED_CENTROID",
+        "relation": "NEAR_SEAT",
+        "status": "UNKNOWN",
+        "value": null
+      },
+      "context_margin_m": null,
+      "fit_evidence": {
+        "method": "measured_two_rectangle_packing_v1",
+        "reason": "MISSING_MEASUREMENT",
+        "relation": "FITS_SET_ON",
+        "status": "UNKNOWN",
+        "value": null
+      },
+      "fit_margin_m": null,
+      "function_id": "PERSONAL_REFRESHMENT_REGION",
+      "payload_evidence_paths": [
+        "observation/payloads/object_0001/fused.ply",
+        "observation/payloads/object_0002/fused.ply"
+      ],
+      "payload_ids": [
+        "object_0001",
+        "object_0002"
+      ],
+      "region_evidence_path": "observation/regions/region_0001/fused.ply",
+      "region_id": "region_0001",
+      "region_semantic_label": "bookshelf",
+      "seating_target_id": "seat_0001",
+      "semantic_role_status": "FALSE",
+      "slot_id": "personal_refreshment_slot_1",
+      "target_evidence_path": "observation/seats/seat_0001/observed_points.ply"
+    },
+    {
+      "FITS_SET_ON": "TRUE",
+      "NEAR_SEAT": "FALSE",
+      "PLANAR_SUPPORT": "TRUE",
+      "candidate_rank": 4,
+      "compatibility_status": "FALSE",
+      "context_evidence": {
+        "maximum_distance_m": 1.15,
+        "measured_distance_m": 1.6041169394036594,
+        "method": "observed_region_seat_centroid_distance_v1",
+        "region_centroid_world_m": [
+          0.0,
+          -0.0889149084687233,
+          0.5176053047180176
+        ],
+        "relation": "NEAR_SEAT",
+        "seat_centroid_world_m": [
+          -0.9842953085899353,
+          1.1777160167694092,
+          0.5894071459770203
+        ],
+        "signed_margin_m": -0.4541169394036595,
+        "status": "FALSE",
+        "value": false
+      },
+      "context_margin_m": -0.4541169394036595,
+      "fit_evidence": {
+        "edge_clearance_margin_m": 0.02,
+        "inter_payload_clearance_m": 0.025,
+        "method": "measured_two_rectangle_packing_v1",
+        "payload_footprints_m": [
+          [
+            0.10241257661276375,
+            0.08245646460773567
+          ],
+          [
+            0.14956947413663446,
+            0.14815757124707943
+          ]
+        ],
+        "region_usable_length_m": 1.0359446709243827,
+        "region_usable_width_m": 0.6188849208621068,
+        "relation": "FITS_SET_ON",
+        "selected_packing": {
+          "arrangement": "ALONG_LENGTH",
+          "fits": true,
+          "length_margin_m": 0.7189626201749844,
+          "non_overlapping": true,
+          "oriented_payload_footprints_m": [
+            [
+              0.10241257661276375,
+              0.08245646460773567
+            ],
+            [
+              0.14956947413663446,
+              0.14815757124707943
+            ]
+          ],
+          "payload_orientations_degrees": [
+            0,
+            0
+          ],
+          "required_length_m": 0.27698205074939825,
+          "required_width_m": 0.14815757124707943,
+          "signed_clearance_margin_m": 0.4307273496150274,
+          "width_margin_m": 0.4307273496150274
+        },
+        "signed_clearance_margin_m": 0.4307273496150274,
+        "status": "TRUE",
+        "tested_packings": [
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.7189626201749844,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.10241257661276375,
+                0.08245646460773567
+              ],
+              [
+                0.14956947413663446,
+                0.14815757124707943
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              0
+            ],
+            "required_length_m": 0.27698205074939825,
+            "required_width_m": 0.14815757124707943,
+            "signed_clearance_margin_m": 0.4307273496150274,
+            "width_margin_m": 0.4307273496150274
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": true,
+            "length_margin_m": 0.8463751967877482,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.10241257661276375,
+                0.08245646460773567
+              ],
+              [
+                0.14956947413663446,
+                0.14815757124707943
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              0
+            ],
+            "required_length_m": 0.14956947413663446,
+            "required_width_m": 0.2556140358548151,
+            "signed_clearance_margin_m": 0.3232708850072917,
+            "width_margin_m": 0.3232708850072917
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.7203745230645395,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.10241257661276375,
+                0.08245646460773567
+              ],
+              [
+                0.14815757124707943,
+                0.14956947413663446
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              90
+            ],
+            "required_length_m": 0.2755701478598432,
+            "required_width_m": 0.14956947413663446,
+            "signed_clearance_margin_m": 0.42931544672547234,
+            "width_margin_m": 0.42931544672547234
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": true,
+            "length_margin_m": 0.8477870996773033,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.10241257661276375,
+                0.08245646460773567
+              ],
+              [
+                0.14815757124707943,
+                0.14956947413663446
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              90
+            ],
+            "required_length_m": 0.14815757124707943,
+            "required_width_m": 0.25702593874437013,
+            "signed_clearance_margin_m": 0.32185898211773667,
+            "width_margin_m": 0.32185898211773667
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.7389187321800126,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.08245646460773567,
+                0.10241257661276375
+              ],
+              [
+                0.14956947413663446,
+                0.14815757124707943
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              0
+            ],
+            "required_length_m": 0.25702593874437013,
+            "required_width_m": 0.14815757124707943,
+            "signed_clearance_margin_m": 0.4307273496150274,
+            "width_margin_m": 0.4307273496150274
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": true,
+            "length_margin_m": 0.8463751967877482,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.08245646460773567,
+                0.10241257661276375
+              ],
+              [
+                0.14956947413663446,
+                0.14815757124707943
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              0
+            ],
+            "required_length_m": 0.14956947413663446,
+            "required_width_m": 0.2755701478598432,
+            "signed_clearance_margin_m": 0.3033147730022636,
+            "width_margin_m": 0.3033147730022636
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.7403306350695675,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.08245646460773567,
+                0.10241257661276375
+              ],
+              [
+                0.14815757124707943,
+                0.14956947413663446
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              90
+            ],
+            "required_length_m": 0.2556140358548151,
+            "required_width_m": 0.14956947413663446,
+            "signed_clearance_margin_m": 0.42931544672547234,
+            "width_margin_m": 0.42931544672547234
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": true,
+            "length_margin_m": 0.8477870996773033,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.08245646460773567,
+                0.10241257661276375
+              ],
+              [
+                0.14815757124707943,
+                0.14956947413663446
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              90
+            ],
+            "required_length_m": 0.14815757124707943,
+            "required_width_m": 0.27698205074939825,
+            "signed_clearance_margin_m": 0.30190287011270855,
+            "width_margin_m": 0.30190287011270855
+          }
+        ],
+        "value": true
+      },
+      "fit_margin_m": 0.4307273496150274,
+      "function_id": "PERSONAL_REFRESHMENT_REGION",
+      "payload_evidence_paths": [
+        "observation/payloads/object_0001/fused.ply",
+        "observation/payloads/object_0002/fused.ply"
+      ],
+      "payload_ids": [
+        "object_0001",
+        "object_0002"
+      ],
+      "region_evidence_path": "observation/regions/region_0002/fused.ply",
+      "region_id": "region_0002",
+      "region_semantic_label": "coffee_table",
+      "seating_target_id": "seat_0001",
+      "semantic_role_status": "FALSE",
+      "slot_id": "personal_refreshment_slot_1",
+      "target_evidence_path": "observation/seats/seat_0001/observed_points.ply"
+    },
+    {
+      "FITS_SET_ON": "TRUE",
+      "NEAR_SEAT": "FALSE",
+      "PLANAR_SUPPORT": "TRUE",
+      "candidate_rank": 5,
+      "compatibility_status": "FALSE",
+      "context_evidence": {
+        "maximum_distance_m": 1.15,
+        "measured_distance_m": 2.372932081577856,
+        "method": "observed_region_seat_centroid_distance_v1",
+        "region_centroid_world_m": [
+          0.0,
+          -0.9814434051513672,
+          0.024583959951996803
+        ],
+        "relation": "NEAR_SEAT",
+        "seat_centroid_world_m": [
+          -0.9842953085899353,
+          1.1777160167694092,
+          0.5894071459770203
+        ],
+        "signed_margin_m": -1.2229320815778562,
+        "status": "FALSE",
+        "value": false
+      },
+      "context_margin_m": -1.2229320815778562,
+      "fit_evidence": {
+        "edge_clearance_margin_m": 0.02,
+        "inter_payload_clearance_m": 0.025,
+        "method": "measured_two_rectangle_packing_v1",
+        "payload_footprints_m": [
+          [
+            0.10241257661276375,
+            0.08245646460773567
+          ],
+          [
+            0.14956947413663446,
+            0.14815757124707943
+          ]
+        ],
+        "region_usable_length_m": 1.4368630064132606,
+        "region_usable_width_m": 0.6211266800622377,
+        "relation": "FITS_SET_ON",
+        "selected_packing": {
+          "arrangement": "ALONG_LENGTH",
+          "fits": true,
+          "length_margin_m": 1.1198809556638623,
+          "non_overlapping": true,
+          "oriented_payload_footprints_m": [
+            [
+              0.10241257661276375,
+              0.08245646460773567
+            ],
+            [
+              0.14956947413663446,
+              0.14815757124707943
+            ]
+          ],
+          "payload_orientations_degrees": [
+            0,
+            0
+          ],
+          "required_length_m": 0.27698205074939825,
+          "required_width_m": 0.14815757124707943,
+          "signed_clearance_margin_m": 0.4329691088151583,
+          "width_margin_m": 0.4329691088151583
+        },
+        "signed_clearance_margin_m": 0.4329691088151583,
+        "status": "TRUE",
+        "tested_packings": [
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 1.1198809556638623,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.10241257661276375,
+                0.08245646460773567
+              ],
+              [
+                0.14956947413663446,
+                0.14815757124707943
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              0
+            ],
+            "required_length_m": 0.27698205074939825,
+            "required_width_m": 0.14815757124707943,
+            "signed_clearance_margin_m": 0.4329691088151583,
+            "width_margin_m": 0.4329691088151583
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": true,
+            "length_margin_m": 1.247293532276626,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.10241257661276375,
+                0.08245646460773567
+              ],
+              [
+                0.14956947413663446,
+                0.14815757124707943
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              0
+            ],
+            "required_length_m": 0.14956947413663446,
+            "required_width_m": 0.2556140358548151,
+            "signed_clearance_margin_m": 0.3255126442074226,
+            "width_margin_m": 0.3255126442074226
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 1.1212928585534174,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.10241257661276375,
+                0.08245646460773567
+              ],
+              [
+                0.14815757124707943,
+                0.14956947413663446
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              90
+            ],
+            "required_length_m": 0.2755701478598432,
+            "required_width_m": 0.14956947413663446,
+            "signed_clearance_margin_m": 0.43155720592560326,
+            "width_margin_m": 0.43155720592560326
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": true,
+            "length_margin_m": 1.248705435166181,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.10241257661276375,
+                0.08245646460773567
+              ],
+              [
+                0.14815757124707943,
+                0.14956947413663446
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              90
+            ],
+            "required_length_m": 0.14815757124707943,
+            "required_width_m": 0.25702593874437013,
+            "signed_clearance_margin_m": 0.3241007413178676,
+            "width_margin_m": 0.3241007413178676
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 1.1398370676688905,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.08245646460773567,
+                0.10241257661276375
+              ],
+              [
+                0.14956947413663446,
+                0.14815757124707943
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              0
+            ],
+            "required_length_m": 0.25702593874437013,
+            "required_width_m": 0.14815757124707943,
+            "signed_clearance_margin_m": 0.4329691088151583,
+            "width_margin_m": 0.4329691088151583
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": true,
+            "length_margin_m": 1.247293532276626,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.08245646460773567,
+                0.10241257661276375
+              ],
+              [
+                0.14956947413663446,
+                0.14815757124707943
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              0
+            ],
+            "required_length_m": 0.14956947413663446,
+            "required_width_m": 0.2755701478598432,
+            "signed_clearance_margin_m": 0.30555653220239454,
+            "width_margin_m": 0.30555653220239454
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 1.1412489705584454,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.08245646460773567,
+                0.10241257661276375
+              ],
+              [
+                0.14815757124707943,
+                0.14956947413663446
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              90
+            ],
+            "required_length_m": 0.2556140358548151,
+            "required_width_m": 0.14956947413663446,
+            "signed_clearance_margin_m": 0.43155720592560326,
+            "width_margin_m": 0.43155720592560326
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": true,
+            "length_margin_m": 1.248705435166181,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.08245646460773567,
+                0.10241257661276375
+              ],
+              [
+                0.14815757124707943,
+                0.14956947413663446
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              90
+            ],
+            "required_length_m": 0.14815757124707943,
+            "required_width_m": 0.27698205074939825,
+            "signed_clearance_margin_m": 0.3041446293128395,
+            "width_margin_m": 0.3041446293128395
+          }
+        ],
+        "value": true
+      },
+      "fit_margin_m": 0.4329691088151583,
+      "function_id": "PERSONAL_REFRESHMENT_REGION",
+      "payload_evidence_paths": [
+        "observation/payloads/object_0001/fused.ply",
+        "observation/payloads/object_0002/fused.ply"
+      ],
+      "payload_ids": [
+        "object_0001",
+        "object_0002"
+      ],
+      "region_evidence_path": "observation/regions/region_0003/fused.ply",
+      "region_id": "region_0003",
+      "region_semantic_label": "coffee_table",
+      "seating_target_id": "seat_0001",
+      "semantic_role_status": "FALSE",
+      "slot_id": "personal_refreshment_slot_1",
+      "target_evidence_path": "observation/seats/seat_0001/observed_points.ply"
+    },
+    {
+      "FITS_SET_ON": "TRUE",
+      "NEAR_SEAT": "TRUE",
+      "PLANAR_SUPPORT": "TRUE",
+      "candidate_rank": 3,
+      "compatibility_status": "UNKNOWN",
+      "context_evidence": {
+        "maximum_distance_m": 1.15,
+        "measured_distance_m": 1.0683615417366674,
+        "method": "observed_region_seat_centroid_distance_v1",
+        "region_centroid_world_m": [
+          0.011789190582931042,
+          0.7914362549781799,
+          0.625264585018158
+        ],
+        "relation": "NEAR_SEAT",
+        "seat_centroid_world_m": [
+          -0.9842953085899353,
+          1.1777160167694092,
+          0.5894071459770203
+        ],
+        "signed_margin_m": 0.08163845826333249,
+        "status": "TRUE",
+        "value": true
+      },
+      "context_margin_m": 0.08163845826333249,
+      "fit_evidence": {
+        "edge_clearance_margin_m": 0.02,
+        "inter_payload_clearance_m": 0.025,
+        "method": "measured_two_rectangle_packing_v1",
+        "payload_footprints_m": [
+          [
+            0.10241257661276375,
+            0.08245646460773567
+          ],
+          [
+            0.14956947413663446,
+            0.14815757124707943
+          ]
+        ],
+        "region_usable_length_m": 0.5185978295172581,
+        "region_usable_width_m": 0.29811184346799025,
+        "relation": "FITS_SET_ON",
+        "selected_packing": {
+          "arrangement": "ALONG_LENGTH",
+          "fits": true,
+          "length_margin_m": 0.20161577876785983,
+          "non_overlapping": true,
+          "oriented_payload_footprints_m": [
+            [
+              0.10241257661276375,
+              0.08245646460773567
+            ],
+            [
+              0.14956947413663446,
+              0.14815757124707943
+            ]
+          ],
+          "payload_orientations_degrees": [
+            0,
+            0
+          ],
+          "required_length_m": 0.27698205074939825,
+          "required_width_m": 0.14815757124707943,
+          "signed_clearance_margin_m": 0.10995427222091081,
+          "width_margin_m": 0.10995427222091081
+        },
+        "signed_clearance_margin_m": 0.10995427222091081,
+        "status": "TRUE",
+        "tested_packings": [
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.20161577876785983,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.10241257661276375,
+                0.08245646460773567
+              ],
+              [
+                0.14956947413663446,
+                0.14815757124707943
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              0
+            ],
+            "required_length_m": 0.27698205074939825,
+            "required_width_m": 0.14815757124707943,
+            "signed_clearance_margin_m": 0.10995427222091081,
+            "width_margin_m": 0.10995427222091081
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": true,
+            "length_margin_m": 0.32902835538062364,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.10241257661276375,
+                0.08245646460773567
+              ],
+              [
+                0.14956947413663446,
+                0.14815757124707943
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              0
+            ],
+            "required_length_m": 0.14956947413663446,
+            "required_width_m": 0.2556140358548151,
+            "signed_clearance_margin_m": 0.0024978076131751195,
+            "width_margin_m": 0.0024978076131751195
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.2030276816574149,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.10241257661276375,
+                0.08245646460773567
+              ],
+              [
+                0.14815757124707943,
+                0.14956947413663446
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              90
+            ],
+            "required_length_m": 0.2755701478598432,
+            "required_width_m": 0.14956947413663446,
+            "signed_clearance_margin_m": 0.10854236933135578,
+            "width_margin_m": 0.10854236933135578
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": true,
+            "length_margin_m": 0.3304402582701787,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.10241257661276375,
+                0.08245646460773567
+              ],
+              [
+                0.14815757124707943,
+                0.14956947413663446
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              90
+            ],
+            "required_length_m": 0.14815757124707943,
+            "required_width_m": 0.25702593874437013,
+            "signed_clearance_margin_m": 0.0010859047236201139,
+            "width_margin_m": 0.0010859047236201139
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.22157189077288794,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.08245646460773567,
+                0.10241257661276375
+              ],
+              [
+                0.14956947413663446,
+                0.14815757124707943
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              0
+            ],
+            "required_length_m": 0.25702593874437013,
+            "required_width_m": 0.14815757124707943,
+            "signed_clearance_margin_m": 0.10995427222091081,
+            "width_margin_m": 0.10995427222091081
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": false,
+            "length_margin_m": 0.32902835538062364,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.08245646460773567,
+                0.10241257661276375
+              ],
+              [
+                0.14956947413663446,
+                0.14815757124707943
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              0
+            ],
+            "required_length_m": 0.14956947413663446,
+            "required_width_m": 0.2755701478598432,
+            "signed_clearance_margin_m": -0.01745830439185294,
+            "width_margin_m": -0.01745830439185294
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.22298379366244295,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.08245646460773567,
+                0.10241257661276375
+              ],
+              [
+                0.14815757124707943,
+                0.14956947413663446
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              90
+            ],
+            "required_length_m": 0.2556140358548151,
+            "required_width_m": 0.14956947413663446,
+            "signed_clearance_margin_m": 0.10854236933135578,
+            "width_margin_m": 0.10854236933135578
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": false,
+            "length_margin_m": 0.3304402582701787,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.08245646460773567,
+                0.10241257661276375
+              ],
+              [
+                0.14815757124707943,
+                0.14956947413663446
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              90
+            ],
+            "required_length_m": 0.14815757124707943,
+            "required_width_m": 0.27698205074939825,
+            "signed_clearance_margin_m": -0.018870207281408,
+            "width_margin_m": -0.018870207281408
+          }
+        ],
+        "value": true
+      },
+      "fit_margin_m": 0.10995427222091081,
+      "function_id": "PERSONAL_REFRESHMENT_REGION",
+      "payload_evidence_paths": [
+        "observation/payloads/object_0001/fused.ply",
+        "observation/payloads/object_0002/fused.ply"
+      ],
+      "payload_ids": [
+        "object_0001",
+        "object_0002"
+      ],
+      "region_evidence_path": "observation/regions/region_0004/fused.ply",
+      "region_id": "region_0004",
+      "region_semantic_label": null,
+      "seating_target_id": "seat_0001",
+      "semantic_role_status": "UNKNOWN",
+      "slot_id": "personal_refreshment_slot_1",
+      "target_evidence_path": "observation/seats/seat_0001/observed_points.ply"
+    },
+    {
+      "FITS_SET_ON": "TRUE",
+      "NEAR_SEAT": "FALSE",
+      "PLANAR_SUPPORT": "TRUE",
+      "candidate_rank": 2,
+      "compatibility_status": "FALSE",
+      "context_evidence": {
+        "maximum_distance_m": 1.15,
+        "measured_distance_m": 2.512345170993316,
+        "method": "observed_region_seat_centroid_distance_v1",
+        "region_centroid_world_m": [
+          1.4615241289138794,
+          0.6033942103385925,
+          0.6316822171211243
+        ],
+        "relation": "NEAR_SEAT",
+        "seat_centroid_world_m": [
+          -0.9842953085899353,
+          1.1777160167694092,
+          0.5894071459770203
+        ],
+        "signed_margin_m": -1.3623451709933159,
+        "status": "FALSE",
+        "value": false
+      },
+      "context_margin_m": -1.3623451709933159,
+      "fit_evidence": {
+        "edge_clearance_margin_m": 0.02,
+        "inter_payload_clearance_m": 0.025,
+        "method": "measured_two_rectangle_packing_v1",
+        "payload_footprints_m": [
+          [
+            0.10241257661276375,
+            0.08245646460773567
+          ],
+          [
+            0.14956947413663446,
+            0.14815757124707943
+          ]
+        ],
+        "region_usable_length_m": 0.40825799750274727,
+        "region_usable_width_m": 0.23708765602921283,
+        "relation": "FITS_SET_ON",
+        "selected_packing": {
+          "arrangement": "ALONG_LENGTH",
+          "fits": true,
+          "length_margin_m": 0.09127594675334902,
+          "non_overlapping": true,
+          "oriented_payload_footprints_m": [
+            [
+              0.10241257661276375,
+              0.08245646460773567
+            ],
+            [
+              0.14956947413663446,
+              0.14815757124707943
+            ]
+          ],
+          "payload_orientations_degrees": [
+            0,
+            0
+          ],
+          "required_length_m": 0.27698205074939825,
+          "required_width_m": 0.14815757124707943,
+          "signed_clearance_margin_m": 0.048930084782133405,
+          "width_margin_m": 0.048930084782133405
+        },
+        "signed_clearance_margin_m": 0.048930084782133405,
+        "status": "TRUE",
+        "tested_packings": [
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.09127594675334902,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.10241257661276375,
+                0.08245646460773567
+              ],
+              [
+                0.14956947413663446,
+                0.14815757124707943
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              0
+            ],
+            "required_length_m": 0.27698205074939825,
+            "required_width_m": 0.14815757124707943,
+            "signed_clearance_margin_m": 0.048930084782133405,
+            "width_margin_m": 0.048930084782133405
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": false,
+            "length_margin_m": 0.2186885233661128,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.10241257661276375,
+                0.08245646460773567
+              ],
+              [
+                0.14956947413663446,
+                0.14815757124707943
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              0
+            ],
+            "required_length_m": 0.14956947413663446,
+            "required_width_m": 0.2556140358548151,
+            "signed_clearance_margin_m": -0.05852637982560229,
+            "width_margin_m": -0.05852637982560229
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.09268784964290408,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.10241257661276375,
+                0.08245646460773567
+              ],
+              [
+                0.14815757124707943,
+                0.14956947413663446
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              90
+            ],
+            "required_length_m": 0.2755701478598432,
+            "required_width_m": 0.14956947413663446,
+            "signed_clearance_margin_m": 0.04751818189257837,
+            "width_margin_m": 0.04751818189257837
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": false,
+            "length_margin_m": 0.22010042625566786,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.10241257661276375,
+                0.08245646460773567
+              ],
+              [
+                0.14815757124707943,
+                0.14956947413663446
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              90
+            ],
+            "required_length_m": 0.14815757124707943,
+            "required_width_m": 0.25702593874437013,
+            "signed_clearance_margin_m": -0.0599382827151573,
+            "width_margin_m": -0.0599382827151573
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.11123205875837713,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.08245646460773567,
+                0.10241257661276375
+              ],
+              [
+                0.14956947413663446,
+                0.14815757124707943
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              0
+            ],
+            "required_length_m": 0.25702593874437013,
+            "required_width_m": 0.14815757124707943,
+            "signed_clearance_margin_m": 0.048930084782133405,
+            "width_margin_m": 0.048930084782133405
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": false,
+            "length_margin_m": 0.2186885233661128,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.08245646460773567,
+                0.10241257661276375
+              ],
+              [
+                0.14956947413663446,
+                0.14815757124707943
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              0
+            ],
+            "required_length_m": 0.14956947413663446,
+            "required_width_m": 0.2755701478598432,
+            "signed_clearance_margin_m": -0.07848249183063036,
+            "width_margin_m": -0.07848249183063036
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.11264396164793214,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.08245646460773567,
+                0.10241257661276375
+              ],
+              [
+                0.14815757124707943,
+                0.14956947413663446
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              90
+            ],
+            "required_length_m": 0.2556140358548151,
+            "required_width_m": 0.14956947413663446,
+            "signed_clearance_margin_m": 0.04751818189257837,
+            "width_margin_m": 0.04751818189257837
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": false,
+            "length_margin_m": 0.22010042625566786,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.08245646460773567,
+                0.10241257661276375
+              ],
+              [
+                0.14815757124707943,
+                0.14956947413663446
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              90
+            ],
+            "required_length_m": 0.14815757124707943,
+            "required_width_m": 0.27698205074939825,
+            "signed_clearance_margin_m": -0.07989439472018542,
+            "width_margin_m": -0.07989439472018542
+          }
+        ],
+        "value": true
+      },
+      "fit_margin_m": 0.048930084782133405,
+      "function_id": "PERSONAL_REFRESHMENT_REGION",
+      "payload_evidence_paths": [
+        "observation/payloads/object_0001/fused.ply",
+        "observation/payloads/object_0002/fused.ply"
+      ],
+      "payload_ids": [
+        "object_0001",
+        "object_0002"
+      ],
+      "region_evidence_path": "observation/regions/region_0005/fused.ply",
+      "region_id": "region_0005",
+      "region_semantic_label": "side_table",
+      "seating_target_id": "seat_0001",
+      "semantic_role_status": "TRUE",
+      "slot_id": "personal_refreshment_slot_1",
+      "target_evidence_path": "observation/seats/seat_0001/observed_points.ply"
+    },
+    {
+      "FITS_SET_ON": "UNKNOWN",
+      "NEAR_SEAT": "UNKNOWN",
+      "PLANAR_SUPPORT": "UNKNOWN",
+      "candidate_rank": 1,
+      "compatibility_status": "FALSE",
+      "context_evidence": {
+        "method": "observed_region_seat_centroid_distance_v1",
+        "reason": "MISSING_OBSERVED_CENTROID",
+        "relation": "NEAR_SEAT",
+        "status": "UNKNOWN",
+        "value": null
+      },
+      "context_margin_m": null,
+      "fit_evidence": {
+        "method": "measured_two_rectangle_packing_v1",
+        "reason": "MISSING_MEASUREMENT",
+        "relation": "FITS_SET_ON",
+        "status": "UNKNOWN",
+        "value": null
+      },
+      "fit_margin_m": null,
+      "function_id": "PERSONAL_REFRESHMENT_REGION",
+      "payload_evidence_paths": [
+        "observation/payloads/object_0003/fused.ply",
+        "observation/payloads/object_0004/fused.ply"
+      ],
+      "payload_ids": [
+        "object_0003",
+        "object_0004"
+      ],
+      "region_evidence_path": "observation/regions/region_0001/fused.ply",
+      "region_id": "region_0001",
+      "region_semantic_label": "bookshelf",
+      "seating_target_id": "seat_0002",
+      "semantic_role_status": "FALSE",
+      "slot_id": "personal_refreshment_slot_2",
+      "target_evidence_path": "observation/seats/seat_0002/observed_points.ply"
+    },
+    {
+      "FITS_SET_ON": "TRUE",
+      "NEAR_SEAT": "FALSE",
+      "PLANAR_SUPPORT": "TRUE",
+      "candidate_rank": 4,
+      "compatibility_status": "FALSE",
+      "context_evidence": {
+        "maximum_distance_m": 1.15,
+        "measured_distance_m": 1.4148278815155,
+        "method": "observed_region_seat_centroid_distance_v1",
+        "region_centroid_world_m": [
+          0.0,
+          -0.0889149084687233,
+          0.5176053047180176
+        ],
+        "relation": "NEAR_SEAT",
+        "seat_centroid_world_m": [
+          0.9098715782165527,
+          0.9945386648178101,
+          0.6497716903686523
+        ],
+        "signed_margin_m": -0.2648278815155001,
+        "status": "FALSE",
+        "value": false
+      },
+      "context_margin_m": -0.2648278815155001,
+      "fit_evidence": {
+        "edge_clearance_margin_m": 0.02,
+        "inter_payload_clearance_m": 0.025,
+        "method": "measured_two_rectangle_packing_v1",
+        "payload_footprints_m": [
+          [
+            0.12280204099403705,
+            0.09237871922448604
+          ],
+          [
+            0.1677139724483034,
+            0.16719034947955708
+          ]
+        ],
+        "region_usable_length_m": 1.0359446709243827,
+        "region_usable_width_m": 0.6188849208621068,
+        "relation": "FITS_SET_ON",
+        "selected_packing": {
+          "arrangement": "ALONG_LENGTH",
+          "fits": true,
+          "length_margin_m": 0.6804286574820422,
+          "non_overlapping": true,
+          "oriented_payload_footprints_m": [
+            [
+              0.12280204099403705,
+              0.09237871922448604
+            ],
+            [
+              0.1677139724483034,
+              0.16719034947955708
+            ]
+          ],
+          "payload_orientations_degrees": [
+            0,
+            0
+          ],
+          "required_length_m": 0.3155160134423405,
+          "required_width_m": 0.16719034947955708,
+          "signed_clearance_margin_m": 0.4116945713825497,
+          "width_margin_m": 0.4116945713825497
+        },
+        "signed_clearance_margin_m": 0.4116945713825497,
+        "status": "TRUE",
+        "tested_packings": [
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.6804286574820422,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.12280204099403705,
+                0.09237871922448604
+              ],
+              [
+                0.1677139724483034,
+                0.16719034947955708
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              0
+            ],
+            "required_length_m": 0.3155160134423405,
+            "required_width_m": 0.16719034947955708,
+            "signed_clearance_margin_m": 0.4116945713825497,
+            "width_margin_m": 0.4116945713825497
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": true,
+            "length_margin_m": 0.8282306984760792,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.12280204099403705,
+                0.09237871922448604
+              ],
+              [
+                0.1677139724483034,
+                0.16719034947955708
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              0
+            ],
+            "required_length_m": 0.1677139724483034,
+            "required_width_m": 0.28456906870404314,
+            "signed_clearance_margin_m": 0.29431585215806366,
+            "width_margin_m": 0.29431585215806366
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.6809522804507885,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.12280204099403705,
+                0.09237871922448604
+              ],
+              [
+                0.16719034947955708,
+                0.1677139724483034
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              90
+            ],
+            "required_length_m": 0.3149923904735942,
+            "required_width_m": 0.1677139724483034,
+            "signed_clearance_margin_m": 0.41117094841380336,
+            "width_margin_m": 0.41117094841380336
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": true,
+            "length_margin_m": 0.8287543214448256,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.12280204099403705,
+                0.09237871922448604
+              ],
+              [
+                0.16719034947955708,
+                0.1677139724483034
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              90
+            ],
+            "required_length_m": 0.16719034947955708,
+            "required_width_m": 0.2850926916727895,
+            "signed_clearance_margin_m": 0.2937922291893173,
+            "width_margin_m": 0.2937922291893173
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.7108519792515932,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.09237871922448604,
+                0.12280204099403705
+              ],
+              [
+                0.1677139724483034,
+                0.16719034947955708
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              0
+            ],
+            "required_length_m": 0.2850926916727895,
+            "required_width_m": 0.16719034947955708,
+            "signed_clearance_margin_m": 0.4116945713825497,
+            "width_margin_m": 0.4116945713825497
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": true,
+            "length_margin_m": 0.8282306984760792,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.09237871922448604,
+                0.12280204099403705
+              ],
+              [
+                0.1677139724483034,
+                0.16719034947955708
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              0
+            ],
+            "required_length_m": 0.1677139724483034,
+            "required_width_m": 0.3149923904735942,
+            "signed_clearance_margin_m": 0.2638925303885126,
+            "width_margin_m": 0.2638925303885126
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.7113756022203395,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.09237871922448604,
+                0.12280204099403705
+              ],
+              [
+                0.16719034947955708,
+                0.1677139724483034
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              90
+            ],
+            "required_length_m": 0.28456906870404314,
+            "required_width_m": 0.1677139724483034,
+            "signed_clearance_margin_m": 0.41117094841380336,
+            "width_margin_m": 0.41117094841380336
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": true,
+            "length_margin_m": 0.8287543214448256,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.09237871922448604,
+                0.12280204099403705
+              ],
+              [
+                0.16719034947955708,
+                0.1677139724483034
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              90
+            ],
+            "required_length_m": 0.16719034947955708,
+            "required_width_m": 0.3155160134423405,
+            "signed_clearance_margin_m": 0.2633689074197663,
+            "width_margin_m": 0.2633689074197663
+          }
+        ],
+        "value": true
+      },
+      "fit_margin_m": 0.4116945713825497,
+      "function_id": "PERSONAL_REFRESHMENT_REGION",
+      "payload_evidence_paths": [
+        "observation/payloads/object_0003/fused.ply",
+        "observation/payloads/object_0004/fused.ply"
+      ],
+      "payload_ids": [
+        "object_0003",
+        "object_0004"
+      ],
+      "region_evidence_path": "observation/regions/region_0002/fused.ply",
+      "region_id": "region_0002",
+      "region_semantic_label": "coffee_table",
+      "seating_target_id": "seat_0002",
+      "semantic_role_status": "FALSE",
+      "slot_id": "personal_refreshment_slot_2",
+      "target_evidence_path": "observation/seats/seat_0002/observed_points.ply"
+    },
+    {
+      "FITS_SET_ON": "TRUE",
+      "NEAR_SEAT": "FALSE",
+      "PLANAR_SUPPORT": "TRUE",
+      "candidate_rank": 5,
+      "compatibility_status": "FALSE",
+      "context_evidence": {
+        "maximum_distance_m": 1.15,
+        "measured_distance_m": 2.1754014410416196,
+        "method": "observed_region_seat_centroid_distance_v1",
+        "region_centroid_world_m": [
+          0.0,
+          -0.9814434051513672,
+          0.024583959951996803
+        ],
+        "relation": "NEAR_SEAT",
+        "seat_centroid_world_m": [
+          0.9098715782165527,
+          0.9945386648178101,
+          0.6497716903686523
+        ],
+        "signed_margin_m": -1.0254014410416197,
+        "status": "FALSE",
+        "value": false
+      },
+      "context_margin_m": -1.0254014410416197,
+      "fit_evidence": {
+        "edge_clearance_margin_m": 0.02,
+        "inter_payload_clearance_m": 0.025,
+        "method": "measured_two_rectangle_packing_v1",
+        "payload_footprints_m": [
+          [
+            0.12280204099403705,
+            0.09237871922448604
+          ],
+          [
+            0.1677139724483034,
+            0.16719034947955708
+          ]
+        ],
+        "region_usable_length_m": 1.4368630064132606,
+        "region_usable_width_m": 0.6211266800622377,
+        "relation": "FITS_SET_ON",
+        "selected_packing": {
+          "arrangement": "ALONG_LENGTH",
+          "fits": true,
+          "length_margin_m": 1.08134699297092,
+          "non_overlapping": true,
+          "oriented_payload_footprints_m": [
+            [
+              0.12280204099403705,
+              0.09237871922448604
+            ],
+            [
+              0.1677139724483034,
+              0.16719034947955708
+            ]
+          ],
+          "payload_orientations_degrees": [
+            0,
+            0
+          ],
+          "required_length_m": 0.3155160134423405,
+          "required_width_m": 0.16719034947955708,
+          "signed_clearance_margin_m": 0.41393633058268064,
+          "width_margin_m": 0.41393633058268064
+        },
+        "signed_clearance_margin_m": 0.41393633058268064,
+        "status": "TRUE",
+        "tested_packings": [
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 1.08134699297092,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.12280204099403705,
+                0.09237871922448604
+              ],
+              [
+                0.1677139724483034,
+                0.16719034947955708
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              0
+            ],
+            "required_length_m": 0.3155160134423405,
+            "required_width_m": 0.16719034947955708,
+            "signed_clearance_margin_m": 0.41393633058268064,
+            "width_margin_m": 0.41393633058268064
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": true,
+            "length_margin_m": 1.2291490339649571,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.12280204099403705,
+                0.09237871922448604
+              ],
+              [
+                0.1677139724483034,
+                0.16719034947955708
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              0
+            ],
+            "required_length_m": 0.1677139724483034,
+            "required_width_m": 0.28456906870404314,
+            "signed_clearance_margin_m": 0.2965576113581946,
+            "width_margin_m": 0.2965576113581946
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 1.0818706159396663,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.12280204099403705,
+                0.09237871922448604
+              ],
+              [
+                0.16719034947955708,
+                0.1677139724483034
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              90
+            ],
+            "required_length_m": 0.3149923904735942,
+            "required_width_m": 0.1677139724483034,
+            "signed_clearance_margin_m": 0.4134127076139343,
+            "width_margin_m": 0.4134127076139343
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": true,
+            "length_margin_m": 1.2296726569337035,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.12280204099403705,
+                0.09237871922448604
+              ],
+              [
+                0.16719034947955708,
+                0.1677139724483034
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              90
+            ],
+            "required_length_m": 0.16719034947955708,
+            "required_width_m": 0.2850926916727895,
+            "signed_clearance_margin_m": 0.2960339883894482,
+            "width_margin_m": 0.2960339883894482
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 1.111770314740471,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.09237871922448604,
+                0.12280204099403705
+              ],
+              [
+                0.1677139724483034,
+                0.16719034947955708
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              0
+            ],
+            "required_length_m": 0.2850926916727895,
+            "required_width_m": 0.16719034947955708,
+            "signed_clearance_margin_m": 0.41393633058268064,
+            "width_margin_m": 0.41393633058268064
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": true,
+            "length_margin_m": 1.2291490339649571,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.09237871922448604,
+                0.12280204099403705
+              ],
+              [
+                0.1677139724483034,
+                0.16719034947955708
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              0
+            ],
+            "required_length_m": 0.1677139724483034,
+            "required_width_m": 0.3149923904735942,
+            "signed_clearance_margin_m": 0.26613428958864355,
+            "width_margin_m": 0.26613428958864355
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 1.1122939377092174,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.09237871922448604,
+                0.12280204099403705
+              ],
+              [
+                0.16719034947955708,
+                0.1677139724483034
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              90
+            ],
+            "required_length_m": 0.28456906870404314,
+            "required_width_m": 0.1677139724483034,
+            "signed_clearance_margin_m": 0.4134127076139343,
+            "width_margin_m": 0.4134127076139343
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": true,
+            "length_margin_m": 1.2296726569337035,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.09237871922448604,
+                0.12280204099403705
+              ],
+              [
+                0.16719034947955708,
+                0.1677139724483034
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              90
+            ],
+            "required_length_m": 0.16719034947955708,
+            "required_width_m": 0.3155160134423405,
+            "signed_clearance_margin_m": 0.26561066661989724,
+            "width_margin_m": 0.26561066661989724
+          }
+        ],
+        "value": true
+      },
+      "fit_margin_m": 0.41393633058268064,
+      "function_id": "PERSONAL_REFRESHMENT_REGION",
+      "payload_evidence_paths": [
+        "observation/payloads/object_0003/fused.ply",
+        "observation/payloads/object_0004/fused.ply"
+      ],
+      "payload_ids": [
+        "object_0003",
+        "object_0004"
+      ],
+      "region_evidence_path": "observation/regions/region_0003/fused.ply",
+      "region_id": "region_0003",
+      "region_semantic_label": "coffee_table",
+      "seating_target_id": "seat_0002",
+      "semantic_role_status": "FALSE",
+      "slot_id": "personal_refreshment_slot_2",
+      "target_evidence_path": "observation/seats/seat_0002/observed_points.ply"
+    },
+    {
+      "FITS_SET_ON": "TRUE",
+      "NEAR_SEAT": "TRUE",
+      "PLANAR_SUPPORT": "TRUE",
+      "candidate_rank": 3,
+      "compatibility_status": "UNKNOWN",
+      "context_evidence": {
+        "maximum_distance_m": 1.15,
+        "measured_distance_m": 0.9207619474437309,
+        "method": "observed_region_seat_centroid_distance_v1",
+        "region_centroid_world_m": [
+          0.011789190582931042,
+          0.7914362549781799,
+          0.625264585018158
+        ],
+        "relation": "NEAR_SEAT",
+        "seat_centroid_world_m": [
+          0.9098715782165527,
+          0.9945386648178101,
+          0.6497716903686523
+        ],
+        "signed_margin_m": 0.22923805255626906,
+        "status": "TRUE",
+        "value": true
+      },
+      "context_margin_m": 0.22923805255626906,
+      "fit_evidence": {
+        "edge_clearance_margin_m": 0.02,
+        "inter_payload_clearance_m": 0.025,
+        "method": "measured_two_rectangle_packing_v1",
+        "payload_footprints_m": [
+          [
+            0.12280204099403705,
+            0.09237871922448604
+          ],
+          [
+            0.1677139724483034,
+            0.16719034947955708
+          ]
+        ],
+        "region_usable_length_m": 0.5185978295172581,
+        "region_usable_width_m": 0.29811184346799025,
+        "relation": "FITS_SET_ON",
+        "selected_packing": {
+          "arrangement": "ALONG_LENGTH",
+          "fits": true,
+          "length_margin_m": 0.1630818160749176,
+          "non_overlapping": true,
+          "oriented_payload_footprints_m": [
+            [
+              0.12280204099403705,
+              0.09237871922448604
+            ],
+            [
+              0.1677139724483034,
+              0.16719034947955708
+            ]
+          ],
+          "payload_orientations_degrees": [
+            0,
+            0
+          ],
+          "required_length_m": 0.3155160134423405,
+          "required_width_m": 0.16719034947955708,
+          "signed_clearance_margin_m": 0.09092149398843316,
+          "width_margin_m": 0.09092149398843316
+        },
+        "signed_clearance_margin_m": 0.09092149398843316,
+        "status": "TRUE",
+        "tested_packings": [
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.1630818160749176,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.12280204099403705,
+                0.09237871922448604
+              ],
+              [
+                0.1677139724483034,
+                0.16719034947955708
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              0
+            ],
+            "required_length_m": 0.3155160134423405,
+            "required_width_m": 0.16719034947955708,
+            "signed_clearance_margin_m": 0.09092149398843316,
+            "width_margin_m": 0.09092149398843316
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": false,
+            "length_margin_m": 0.31088385706895466,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.12280204099403705,
+                0.09237871922448604
+              ],
+              [
+                0.1677139724483034,
+                0.16719034947955708
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              0
+            ],
+            "required_length_m": 0.1677139724483034,
+            "required_width_m": 0.28456906870404314,
+            "signed_clearance_margin_m": -0.026457225236052893,
+            "width_margin_m": -0.026457225236052893
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.1636054390436639,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.12280204099403705,
+                0.09237871922448604
+              ],
+              [
+                0.16719034947955708,
+                0.1677139724483034
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              90
+            ],
+            "required_length_m": 0.3149923904735942,
+            "required_width_m": 0.1677139724483034,
+            "signed_clearance_margin_m": 0.09039787101968683,
+            "width_margin_m": 0.09039787101968683
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": false,
+            "length_margin_m": 0.311407480037701,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.12280204099403705,
+                0.09237871922448604
+              ],
+              [
+                0.16719034947955708,
+                0.1677139724483034
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              90
+            ],
+            "required_length_m": 0.16719034947955708,
+            "required_width_m": 0.2850926916727895,
+            "signed_clearance_margin_m": -0.026980848204799256,
+            "width_margin_m": -0.026980848204799256
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.19350513784446857,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.09237871922448604,
+                0.12280204099403705
+              ],
+              [
+                0.1677139724483034,
+                0.16719034947955708
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              0
+            ],
+            "required_length_m": 0.2850926916727895,
+            "required_width_m": 0.16719034947955708,
+            "signed_clearance_margin_m": 0.09092149398843316,
+            "width_margin_m": 0.09092149398843316
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": false,
+            "length_margin_m": 0.31088385706895466,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.09237871922448604,
+                0.12280204099403705
+              ],
+              [
+                0.1677139724483034,
+                0.16719034947955708
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              0
+            ],
+            "required_length_m": 0.1677139724483034,
+            "required_width_m": 0.3149923904735942,
+            "signed_clearance_margin_m": -0.05688054700560393,
+            "width_margin_m": -0.05688054700560393
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.19402876081321493,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.09237871922448604,
+                0.12280204099403705
+              ],
+              [
+                0.16719034947955708,
+                0.1677139724483034
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              90
+            ],
+            "required_length_m": 0.28456906870404314,
+            "required_width_m": 0.1677139724483034,
+            "signed_clearance_margin_m": 0.09039787101968683,
+            "width_margin_m": 0.09039787101968683
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": false,
+            "length_margin_m": 0.311407480037701,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.09237871922448604,
+                0.12280204099403705
+              ],
+              [
+                0.16719034947955708,
+                0.1677139724483034
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              90
+            ],
+            "required_length_m": 0.16719034947955708,
+            "required_width_m": 0.3155160134423405,
+            "signed_clearance_margin_m": -0.05740416997435024,
+            "width_margin_m": -0.05740416997435024
+          }
+        ],
+        "value": true
+      },
+      "fit_margin_m": 0.09092149398843316,
+      "function_id": "PERSONAL_REFRESHMENT_REGION",
+      "payload_evidence_paths": [
+        "observation/payloads/object_0003/fused.ply",
+        "observation/payloads/object_0004/fused.ply"
+      ],
+      "payload_ids": [
+        "object_0003",
+        "object_0004"
+      ],
+      "region_evidence_path": "observation/regions/region_0004/fused.ply",
+      "region_id": "region_0004",
+      "region_semantic_label": null,
+      "seating_target_id": "seat_0002",
+      "semantic_role_status": "UNKNOWN",
+      "slot_id": "personal_refreshment_slot_2",
+      "target_evidence_path": "observation/seats/seat_0002/observed_points.ply"
+    },
+    {
+      "FITS_SET_ON": "TRUE",
+      "NEAR_SEAT": "TRUE",
+      "PLANAR_SUPPORT": "TRUE",
+      "candidate_rank": 2,
+      "compatibility_status": "TRUE",
+      "context_evidence": {
+        "maximum_distance_m": 1.15,
+        "measured_distance_m": 0.6762503389727145,
+        "method": "observed_region_seat_centroid_distance_v1",
+        "region_centroid_world_m": [
+          1.4615241289138794,
+          0.6033942103385925,
+          0.6316822171211243
+        ],
+        "relation": "NEAR_SEAT",
+        "seat_centroid_world_m": [
+          0.9098715782165527,
+          0.9945386648178101,
+          0.6497716903686523
+        ],
+        "signed_margin_m": 0.47374966102728544,
+        "status": "TRUE",
+        "value": true
+      },
+      "context_margin_m": 0.47374966102728544,
+      "fit_evidence": {
+        "edge_clearance_margin_m": 0.02,
+        "inter_payload_clearance_m": 0.025,
+        "method": "measured_two_rectangle_packing_v1",
+        "payload_footprints_m": [
+          [
+            0.12280204099403705,
+            0.09237871922448604
+          ],
+          [
+            0.1677139724483034,
+            0.16719034947955708
+          ]
+        ],
+        "region_usable_length_m": 0.40825799750274727,
+        "region_usable_width_m": 0.23708765602921283,
+        "relation": "FITS_SET_ON",
+        "selected_packing": {
+          "arrangement": "ALONG_LENGTH",
+          "fits": true,
+          "length_margin_m": 0.05274198406040679,
+          "non_overlapping": true,
+          "oriented_payload_footprints_m": [
+            [
+              0.12280204099403705,
+              0.09237871922448604
+            ],
+            [
+              0.1677139724483034,
+              0.16719034947955708
+            ]
+          ],
+          "payload_orientations_degrees": [
+            0,
+            0
+          ],
+          "required_length_m": 0.3155160134423405,
+          "required_width_m": 0.16719034947955708,
+          "signed_clearance_margin_m": 0.029897306549655757,
+          "width_margin_m": 0.029897306549655757
+        },
+        "signed_clearance_margin_m": 0.029897306549655757,
+        "status": "TRUE",
+        "tested_packings": [
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.05274198406040679,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.12280204099403705,
+                0.09237871922448604
+              ],
+              [
+                0.1677139724483034,
+                0.16719034947955708
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              0
+            ],
+            "required_length_m": 0.3155160134423405,
+            "required_width_m": 0.16719034947955708,
+            "signed_clearance_margin_m": 0.029897306549655757,
+            "width_margin_m": 0.029897306549655757
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": false,
+            "length_margin_m": 0.20054402505444385,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.12280204099403705,
+                0.09237871922448604
+              ],
+              [
+                0.1677139724483034,
+                0.16719034947955708
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              0
+            ],
+            "required_length_m": 0.1677139724483034,
+            "required_width_m": 0.28456906870404314,
+            "signed_clearance_margin_m": -0.08748141267483031,
+            "width_margin_m": -0.08748141267483031
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.053265607029153096,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.12280204099403705,
+                0.09237871922448604
+              ],
+              [
+                0.16719034947955708,
+                0.1677139724483034
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              90
+            ],
+            "required_length_m": 0.3149923904735942,
+            "required_width_m": 0.1677139724483034,
+            "signed_clearance_margin_m": 0.029373683580909422,
+            "width_margin_m": 0.029373683580909422
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": false,
+            "length_margin_m": 0.2010676480231902,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.12280204099403705,
+                0.09237871922448604
+              ],
+              [
+                0.16719034947955708,
+                0.1677139724483034
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              90
+            ],
+            "required_length_m": 0.16719034947955708,
+            "required_width_m": 0.2850926916727895,
+            "signed_clearance_margin_m": -0.08800503564357667,
+            "width_margin_m": -0.08800503564357667
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.08316530582995776,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.09237871922448604,
+                0.12280204099403705
+              ],
+              [
+                0.1677139724483034,
+                0.16719034947955708
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              0
+            ],
+            "required_length_m": 0.2850926916727895,
+            "required_width_m": 0.16719034947955708,
+            "signed_clearance_margin_m": 0.029897306549655757,
+            "width_margin_m": 0.029897306549655757
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": false,
+            "length_margin_m": 0.20054402505444385,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.09237871922448604,
+                0.12280204099403705
+              ],
+              [
+                0.1677139724483034,
+                0.16719034947955708
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              0
+            ],
+            "required_length_m": 0.1677139724483034,
+            "required_width_m": 0.3149923904735942,
+            "signed_clearance_margin_m": -0.11790473444438135,
+            "width_margin_m": -0.11790473444438135
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.08368892879870413,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.09237871922448604,
+                0.12280204099403705
+              ],
+              [
+                0.16719034947955708,
+                0.1677139724483034
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              90
+            ],
+            "required_length_m": 0.28456906870404314,
+            "required_width_m": 0.1677139724483034,
+            "signed_clearance_margin_m": 0.029373683580909422,
+            "width_margin_m": 0.029373683580909422
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": false,
+            "length_margin_m": 0.2010676480231902,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.09237871922448604,
+                0.12280204099403705
+              ],
+              [
+                0.16719034947955708,
+                0.1677139724483034
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              90
+            ],
+            "required_length_m": 0.16719034947955708,
+            "required_width_m": 0.3155160134423405,
+            "signed_clearance_margin_m": -0.11842835741312766,
+            "width_margin_m": -0.11842835741312766
+          }
+        ],
+        "value": true
+      },
+      "fit_margin_m": 0.029897306549655757,
+      "function_id": "PERSONAL_REFRESHMENT_REGION",
+      "payload_evidence_paths": [
+        "observation/payloads/object_0003/fused.ply",
+        "observation/payloads/object_0004/fused.ply"
+      ],
+      "payload_ids": [
+        "object_0003",
+        "object_0004"
+      ],
+      "region_evidence_path": "observation/regions/region_0005/fused.ply",
+      "region_id": "region_0005",
+      "region_semantic_label": "side_table",
+      "seating_target_id": "seat_0002",
+      "semantic_role_status": "TRUE",
+      "slot_id": "personal_refreshment_slot_2",
+      "target_evidence_path": "observation/seats/seat_0002/observed_points.ply"
+    }
+  ],
+  "schema_version": 1,
+  "shared_controls_rows": [
+    {
+      "ACCESSIBLE_FROM_BOTH_SEATS": "UNKNOWN",
+      "FITS_SET_ON": "UNKNOWN",
+      "PLANAR_SUPPORT": "UNKNOWN",
+      "candidate_rank": 1,
+      "compatibility_status": "FALSE",
+      "context_evidence": {
+        "method": "all_observed_seats_accessible_v1",
+        "relation": "ACCESSIBLE_FROM_BOTH_SEATS",
+        "seat_relations": [
+          {
+            "method": "observed_region_seat_centroid_distance_v1",
+            "reason": "MISSING_OBSERVED_CENTROID",
+            "relation": "NEAR_SEAT",
+            "status": "UNKNOWN",
+            "value": null
+          },
+          {
+            "method": "observed_region_seat_centroid_distance_v1",
+            "reason": "MISSING_OBSERVED_CENTROID",
+            "relation": "NEAR_SEAT",
+            "status": "UNKNOWN",
+            "value": null
+          }
+        ],
+        "signed_margin_m": null,
+        "status": "UNKNOWN",
+        "value": null
+      },
+      "context_margin_m": null,
+      "fit_evidence": {
+        "method": "measured_two_rectangle_packing_v1",
+        "reason": "MISSING_MEASUREMENT",
+        "relation": "FITS_SET_ON",
+        "status": "UNKNOWN",
+        "value": null
+      },
+      "fit_margin_m": null,
+      "function_id": "SHARED_CONTROLS_REGION",
+      "payload_evidence_paths": [
+        "observation/payloads/object_0005/fused.ply",
+        "observation/payloads/object_0006/fused.ply"
+      ],
+      "payload_ids": [
+        "object_0005",
+        "object_0006"
+      ],
+      "region_evidence_path": "observation/regions/region_0001/fused.ply",
+      "region_id": "region_0001",
+      "region_semantic_label": "bookshelf",
+      "seating_target_ids": [
+        "seat_0001",
+        "seat_0002"
+      ],
+      "semantic_role_status": "FALSE",
+      "slot_id": "shared_controls_slot"
+    },
+    {
+      "ACCESSIBLE_FROM_BOTH_SEATS": "TRUE",
+      "FITS_SET_ON": "TRUE",
+      "PLANAR_SUPPORT": "TRUE",
+      "candidate_rank": 4,
+      "compatibility_status": "TRUE",
+      "context_evidence": {
+        "method": "all_observed_seats_accessible_v1",
+        "relation": "ACCESSIBLE_FROM_BOTH_SEATS",
+        "seat_relations": [
+          {
+            "maximum_distance_m": 1.65,
+            "measured_distance_m": 1.6041169394036594,
+            "method": "observed_region_seat_centroid_distance_v1",
+            "region_centroid_world_m": [
+              0.0,
+              -0.0889149084687233,
+              0.5176053047180176
+            ],
+            "relation": "NEAR_SEAT",
+            "seat_centroid_world_m": [
+              -0.9842953085899353,
+              1.1777160167694092,
+              0.5894071459770203
+            ],
+            "signed_margin_m": 0.04588306059634051,
+            "status": "TRUE",
+            "value": true
+          },
+          {
+            "maximum_distance_m": 1.65,
+            "measured_distance_m": 1.4148278815155,
+            "method": "observed_region_seat_centroid_distance_v1",
+            "region_centroid_world_m": [
+              0.0,
+              -0.0889149084687233,
+              0.5176053047180176
+            ],
+            "relation": "NEAR_SEAT",
+            "seat_centroid_world_m": [
+              0.9098715782165527,
+              0.9945386648178101,
+              0.6497716903686523
+            ],
+            "signed_margin_m": 0.23517211848449993,
+            "status": "TRUE",
+            "value": true
+          }
+        ],
+        "signed_margin_m": 0.04588306059634051,
+        "status": "TRUE",
+        "value": true
+      },
+      "context_margin_m": 0.04588306059634051,
+      "fit_evidence": {
+        "edge_clearance_margin_m": 0.02,
+        "inter_payload_clearance_m": 0.025,
+        "method": "measured_two_rectangle_packing_v1",
+        "payload_footprints_m": [
+          [
+            0.20600104236606342,
+            0.07459014765671235
+          ],
+          [
+            0.19469943604238038,
+            0.05565786710766316
+          ]
+        ],
+        "region_usable_length_m": 1.0359446709243827,
+        "region_usable_width_m": 0.6188849208621068,
+        "relation": "FITS_SET_ON",
+        "selected_packing": {
+          "arrangement": "ALONG_LENGTH",
+          "fits": true,
+          "length_margin_m": 0.5702441925159388,
+          "non_overlapping": true,
+          "oriented_payload_footprints_m": [
+            [
+              0.20600104236606342,
+              0.07459014765671235
+            ],
+            [
+              0.19469943604238038,
+              0.05565786710766316
+            ]
+          ],
+          "payload_orientations_degrees": [
+            0,
+            0
+          ],
+          "required_length_m": 0.4257004784084438,
+          "required_width_m": 0.07459014765671235,
+          "signed_clearance_margin_m": 0.5042947732053944,
+          "width_margin_m": 0.5042947732053944
+        },
+        "signed_clearance_margin_m": 0.5042947732053944,
+        "status": "TRUE",
+        "tested_packings": [
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.5702441925159388,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.20600104236606342,
+                0.07459014765671235
+              ],
+              [
+                0.19469943604238038,
+                0.05565786710766316
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              0
+            ],
+            "required_length_m": 0.4257004784084438,
+            "required_width_m": 0.07459014765671235,
+            "signed_clearance_margin_m": 0.5042947732053944,
+            "width_margin_m": 0.5042947732053944
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": true,
+            "length_margin_m": 0.7899436285583192,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.20600104236606342,
+                0.07459014765671235
+              ],
+              [
+                0.19469943604238038,
+                0.05565786710766316
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              0
+            ],
+            "required_length_m": 0.20600104236606342,
+            "required_width_m": 0.1552480147643755,
+            "signed_clearance_margin_m": 0.4236369060977313,
+            "width_margin_m": 0.4236369060977313
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.709285761450656,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.20600104236606342,
+                0.07459014765671235
+              ],
+              [
+                0.05565786710766316,
+                0.19469943604238038
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              90
+            ],
+            "required_length_m": 0.28665890947372663,
+            "required_width_m": 0.19469943604238038,
+            "signed_clearance_margin_m": 0.3841854848197264,
+            "width_margin_m": 0.3841854848197264
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": true,
+            "length_margin_m": 0.7899436285583192,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.20600104236606342,
+                0.07459014765671235
+              ],
+              [
+                0.05565786710766316,
+                0.19469943604238038
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              90
+            ],
+            "required_length_m": 0.20600104236606342,
+            "required_width_m": 0.29428958369909275,
+            "signed_clearance_margin_m": 0.28459533716301405,
+            "width_margin_m": 0.28459533716301405
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.7016550872252899,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.07459014765671235,
+                0.20600104236606342
+              ],
+              [
+                0.19469943604238038,
+                0.05565786710766316
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              0
+            ],
+            "required_length_m": 0.29428958369909275,
+            "required_width_m": 0.20600104236606342,
+            "signed_clearance_margin_m": 0.3728838784960434,
+            "width_margin_m": 0.3728838784960434
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": true,
+            "length_margin_m": 0.8012452348820023,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.07459014765671235,
+                0.20600104236606342
+              ],
+              [
+                0.19469943604238038,
+                0.05565786710766316
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              0
+            ],
+            "required_length_m": 0.19469943604238038,
+            "required_width_m": 0.28665890947372663,
+            "signed_clearance_margin_m": 0.29222601138838017,
+            "width_margin_m": 0.29222601138838017
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.8406966561600071,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.07459014765671235,
+                0.20600104236606342
+              ],
+              [
+                0.05565786710766316,
+                0.19469943604238038
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              90
+            ],
+            "required_length_m": 0.1552480147643755,
+            "required_width_m": 0.20600104236606342,
+            "signed_clearance_margin_m": 0.3728838784960434,
+            "width_margin_m": 0.3728838784960434
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": true,
+            "length_margin_m": 0.9213545232676703,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.07459014765671235,
+                0.20600104236606342
+              ],
+              [
+                0.05565786710766316,
+                0.19469943604238038
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              90
+            ],
+            "required_length_m": 0.07459014765671235,
+            "required_width_m": 0.4257004784084438,
+            "signed_clearance_margin_m": 0.15318444245366294,
+            "width_margin_m": 0.15318444245366294
+          }
+        ],
+        "value": true
+      },
+      "fit_margin_m": 0.5042947732053944,
+      "function_id": "SHARED_CONTROLS_REGION",
+      "payload_evidence_paths": [
+        "observation/payloads/object_0005/fused.ply",
+        "observation/payloads/object_0006/fused.ply"
+      ],
+      "payload_ids": [
+        "object_0005",
+        "object_0006"
+      ],
+      "region_evidence_path": "observation/regions/region_0002/fused.ply",
+      "region_id": "region_0002",
+      "region_semantic_label": "coffee_table",
+      "seating_target_ids": [
+        "seat_0001",
+        "seat_0002"
+      ],
+      "semantic_role_status": "TRUE",
+      "slot_id": "shared_controls_slot"
+    },
+    {
+      "ACCESSIBLE_FROM_BOTH_SEATS": "FALSE",
+      "FITS_SET_ON": "TRUE",
+      "PLANAR_SUPPORT": "TRUE",
+      "candidate_rank": 5,
+      "compatibility_status": "FALSE",
+      "context_evidence": {
+        "method": "all_observed_seats_accessible_v1",
+        "relation": "ACCESSIBLE_FROM_BOTH_SEATS",
+        "seat_relations": [
+          {
+            "maximum_distance_m": 1.65,
+            "measured_distance_m": 2.372932081577856,
+            "method": "observed_region_seat_centroid_distance_v1",
+            "region_centroid_world_m": [
+              0.0,
+              -0.9814434051513672,
+              0.024583959951996803
+            ],
+            "relation": "NEAR_SEAT",
+            "seat_centroid_world_m": [
+              -0.9842953085899353,
+              1.1777160167694092,
+              0.5894071459770203
+            ],
+            "signed_margin_m": -0.7229320815778562,
+            "status": "FALSE",
+            "value": false
+          },
+          {
+            "maximum_distance_m": 1.65,
+            "measured_distance_m": 2.1754014410416196,
+            "method": "observed_region_seat_centroid_distance_v1",
+            "region_centroid_world_m": [
+              0.0,
+              -0.9814434051513672,
+              0.024583959951996803
+            ],
+            "relation": "NEAR_SEAT",
+            "seat_centroid_world_m": [
+              0.9098715782165527,
+              0.9945386648178101,
+              0.6497716903686523
+            ],
+            "signed_margin_m": -0.5254014410416197,
+            "status": "FALSE",
+            "value": false
+          }
+        ],
+        "signed_margin_m": -0.7229320815778562,
+        "status": "FALSE",
+        "value": false
+      },
+      "context_margin_m": -0.7229320815778562,
+      "fit_evidence": {
+        "edge_clearance_margin_m": 0.02,
+        "inter_payload_clearance_m": 0.025,
+        "method": "measured_two_rectangle_packing_v1",
+        "payload_footprints_m": [
+          [
+            0.20600104236606342,
+            0.07459014765671235
+          ],
+          [
+            0.19469943604238038,
+            0.05565786710766316
+          ]
+        ],
+        "region_usable_length_m": 1.4368630064132606,
+        "region_usable_width_m": 0.6211266800622377,
+        "relation": "FITS_SET_ON",
+        "selected_packing": {
+          "arrangement": "ALONG_LENGTH",
+          "fits": true,
+          "length_margin_m": 0.9711625280048168,
+          "non_overlapping": true,
+          "oriented_payload_footprints_m": [
+            [
+              0.20600104236606342,
+              0.07459014765671235
+            ],
+            [
+              0.19469943604238038,
+              0.05565786710766316
+            ]
+          ],
+          "payload_orientations_degrees": [
+            0,
+            0
+          ],
+          "required_length_m": 0.4257004784084438,
+          "required_width_m": 0.07459014765671235,
+          "signed_clearance_margin_m": 0.5065365324055253,
+          "width_margin_m": 0.5065365324055253
+        },
+        "signed_clearance_margin_m": 0.5065365324055253,
+        "status": "TRUE",
+        "tested_packings": [
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.9711625280048168,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.20600104236606342,
+                0.07459014765671235
+              ],
+              [
+                0.19469943604238038,
+                0.05565786710766316
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              0
+            ],
+            "required_length_m": 0.4257004784084438,
+            "required_width_m": 0.07459014765671235,
+            "signed_clearance_margin_m": 0.5065365324055253,
+            "width_margin_m": 0.5065365324055253
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": true,
+            "length_margin_m": 1.1908619640471971,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.20600104236606342,
+                0.07459014765671235
+              ],
+              [
+                0.19469943604238038,
+                0.05565786710766316
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              0
+            ],
+            "required_length_m": 0.20600104236606342,
+            "required_width_m": 0.1552480147643755,
+            "signed_clearance_margin_m": 0.4258786652978622,
+            "width_margin_m": 0.4258786652978622
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 1.110204096939534,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.20600104236606342,
+                0.07459014765671235
+              ],
+              [
+                0.05565786710766316,
+                0.19469943604238038
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              90
+            ],
+            "required_length_m": 0.28665890947372663,
+            "required_width_m": 0.19469943604238038,
+            "signed_clearance_margin_m": 0.38642724401985734,
+            "width_margin_m": 0.38642724401985734
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": true,
+            "length_margin_m": 1.1908619640471971,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.20600104236606342,
+                0.07459014765671235
+              ],
+              [
+                0.05565786710766316,
+                0.19469943604238038
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              90
+            ],
+            "required_length_m": 0.20600104236606342,
+            "required_width_m": 0.29428958369909275,
+            "signed_clearance_margin_m": 0.28683709636314497,
+            "width_margin_m": 0.28683709636314497
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 1.1025734227141677,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.07459014765671235,
+                0.20600104236606342
+              ],
+              [
+                0.19469943604238038,
+                0.05565786710766316
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              0
+            ],
+            "required_length_m": 0.29428958369909275,
+            "required_width_m": 0.20600104236606342,
+            "signed_clearance_margin_m": 0.3751256376961743,
+            "width_margin_m": 0.3751256376961743
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": true,
+            "length_margin_m": 1.2021635703708802,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.07459014765671235,
+                0.20600104236606342
+              ],
+              [
+                0.19469943604238038,
+                0.05565786710766316
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              0
+            ],
+            "required_length_m": 0.19469943604238038,
+            "required_width_m": 0.28665890947372663,
+            "signed_clearance_margin_m": 0.2944677705885111,
+            "width_margin_m": 0.2944677705885111
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 1.241614991648885,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.07459014765671235,
+                0.20600104236606342
+              ],
+              [
+                0.05565786710766316,
+                0.19469943604238038
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              90
+            ],
+            "required_length_m": 0.1552480147643755,
+            "required_width_m": 0.20600104236606342,
+            "signed_clearance_margin_m": 0.3751256376961743,
+            "width_margin_m": 0.3751256376961743
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": true,
+            "length_margin_m": 1.3222728587565482,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.07459014765671235,
+                0.20600104236606342
+              ],
+              [
+                0.05565786710766316,
+                0.19469943604238038
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              90
+            ],
+            "required_length_m": 0.07459014765671235,
+            "required_width_m": 0.4257004784084438,
+            "signed_clearance_margin_m": 0.15542620165379387,
+            "width_margin_m": 0.15542620165379387
+          }
+        ],
+        "value": true
+      },
+      "fit_margin_m": 0.5065365324055253,
+      "function_id": "SHARED_CONTROLS_REGION",
+      "payload_evidence_paths": [
+        "observation/payloads/object_0005/fused.ply",
+        "observation/payloads/object_0006/fused.ply"
+      ],
+      "payload_ids": [
+        "object_0005",
+        "object_0006"
+      ],
+      "region_evidence_path": "observation/regions/region_0003/fused.ply",
+      "region_id": "region_0003",
+      "region_semantic_label": "coffee_table",
+      "seating_target_ids": [
+        "seat_0001",
+        "seat_0002"
+      ],
+      "semantic_role_status": "TRUE",
+      "slot_id": "shared_controls_slot"
+    },
+    {
+      "ACCESSIBLE_FROM_BOTH_SEATS": "TRUE",
+      "FITS_SET_ON": "TRUE",
+      "PLANAR_SUPPORT": "TRUE",
+      "candidate_rank": 3,
+      "compatibility_status": "UNKNOWN",
+      "context_evidence": {
+        "method": "all_observed_seats_accessible_v1",
+        "relation": "ACCESSIBLE_FROM_BOTH_SEATS",
+        "seat_relations": [
+          {
+            "maximum_distance_m": 1.65,
+            "measured_distance_m": 1.0683615417366674,
+            "method": "observed_region_seat_centroid_distance_v1",
+            "region_centroid_world_m": [
+              0.011789190582931042,
+              0.7914362549781799,
+              0.625264585018158
+            ],
+            "relation": "NEAR_SEAT",
+            "seat_centroid_world_m": [
+              -0.9842953085899353,
+              1.1777160167694092,
+              0.5894071459770203
+            ],
+            "signed_margin_m": 0.5816384582633325,
+            "status": "TRUE",
+            "value": true
+          },
+          {
+            "maximum_distance_m": 1.65,
+            "measured_distance_m": 0.9207619474437309,
+            "method": "observed_region_seat_centroid_distance_v1",
+            "region_centroid_world_m": [
+              0.011789190582931042,
+              0.7914362549781799,
+              0.625264585018158
+            ],
+            "relation": "NEAR_SEAT",
+            "seat_centroid_world_m": [
+              0.9098715782165527,
+              0.9945386648178101,
+              0.6497716903686523
+            ],
+            "signed_margin_m": 0.7292380525562691,
+            "status": "TRUE",
+            "value": true
+          }
+        ],
+        "signed_margin_m": 0.5816384582633325,
+        "status": "TRUE",
+        "value": true
+      },
+      "context_margin_m": 0.5816384582633325,
+      "fit_evidence": {
+        "edge_clearance_margin_m": 0.02,
+        "inter_payload_clearance_m": 0.025,
+        "method": "measured_two_rectangle_packing_v1",
+        "payload_footprints_m": [
+          [
+            0.20600104236606342,
+            0.07459014765671235
+          ],
+          [
+            0.19469943604238038,
+            0.05565786710766316
+          ]
+        ],
+        "region_usable_length_m": 0.5185978295172581,
+        "region_usable_width_m": 0.29811184346799025,
+        "relation": "FITS_SET_ON",
+        "selected_packing": {
+          "arrangement": "ALONG_WIDTH",
+          "fits": true,
+          "length_margin_m": 0.2725967871511947,
+          "non_overlapping": true,
+          "oriented_payload_footprints_m": [
+            [
+              0.20600104236606342,
+              0.07459014765671235
+            ],
+            [
+              0.19469943604238038,
+              0.05565786710766316
+            ]
+          ],
+          "payload_orientations_degrees": [
+            0,
+            0
+          ],
+          "required_length_m": 0.20600104236606342,
+          "required_width_m": 0.1552480147643755,
+          "signed_clearance_margin_m": 0.10286382870361474,
+          "width_margin_m": 0.10286382870361474
+        },
+        "signed_clearance_margin_m": 0.10286382870361474,
+        "status": "TRUE",
+        "tested_packings": [
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.05289735110881425,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.20600104236606342,
+                0.07459014765671235
+              ],
+              [
+                0.19469943604238038,
+                0.05565786710766316
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              0
+            ],
+            "required_length_m": 0.4257004784084438,
+            "required_width_m": 0.07459014765671235,
+            "signed_clearance_margin_m": 0.05289735110881425,
+            "width_margin_m": 0.1835216958112779
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": true,
+            "length_margin_m": 0.2725967871511947,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.20600104236606342,
+                0.07459014765671235
+              ],
+              [
+                0.19469943604238038,
+                0.05565786710766316
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              0
+            ],
+            "required_length_m": 0.20600104236606342,
+            "required_width_m": 0.1552480147643755,
+            "signed_clearance_margin_m": 0.10286382870361474,
+            "width_margin_m": 0.10286382870361474
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.19193892004353144,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.20600104236606342,
+                0.07459014765671235
+              ],
+              [
+                0.05565786710766316,
+                0.19469943604238038
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              90
+            ],
+            "required_length_m": 0.28665890947372663,
+            "required_width_m": 0.19469943604238038,
+            "signed_clearance_margin_m": 0.06341240742560986,
+            "width_margin_m": 0.06341240742560986
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": false,
+            "length_margin_m": 0.2725967871511947,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.20600104236606342,
+                0.07459014765671235
+              ],
+              [
+                0.05565786710766316,
+                0.19469943604238038
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              90
+            ],
+            "required_length_m": 0.20600104236606342,
+            "required_width_m": 0.29428958369909275,
+            "signed_clearance_margin_m": -0.036177740231102505,
+            "width_margin_m": -0.036177740231102505
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.18430824581816532,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.07459014765671235,
+                0.20600104236606342
+              ],
+              [
+                0.19469943604238038,
+                0.05565786710766316
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              0
+            ],
+            "required_length_m": 0.29428958369909275,
+            "required_width_m": 0.20600104236606342,
+            "signed_clearance_margin_m": 0.05211080110192682,
+            "width_margin_m": 0.05211080110192682
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": false,
+            "length_margin_m": 0.2838983934748777,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.07459014765671235,
+                0.20600104236606342
+              ],
+              [
+                0.19469943604238038,
+                0.05565786710766316
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              0
+            ],
+            "required_length_m": 0.19469943604238038,
+            "required_width_m": 0.28665890947372663,
+            "signed_clearance_margin_m": -0.028547066005736386,
+            "width_margin_m": -0.028547066005736386
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.3233498147528826,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.07459014765671235,
+                0.20600104236606342
+              ],
+              [
+                0.05565786710766316,
+                0.19469943604238038
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              90
+            ],
+            "required_length_m": 0.1552480147643755,
+            "required_width_m": 0.20600104236606342,
+            "signed_clearance_margin_m": 0.05211080110192682,
+            "width_margin_m": 0.05211080110192682
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": false,
+            "length_margin_m": 0.40400768186054575,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.07459014765671235,
+                0.20600104236606342
+              ],
+              [
+                0.05565786710766316,
+                0.19469943604238038
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              90
+            ],
+            "required_length_m": 0.07459014765671235,
+            "required_width_m": 0.4257004784084438,
+            "signed_clearance_margin_m": -0.1675886349404536,
+            "width_margin_m": -0.1675886349404536
+          }
+        ],
+        "value": true
+      },
+      "fit_margin_m": 0.10286382870361474,
+      "function_id": "SHARED_CONTROLS_REGION",
+      "payload_evidence_paths": [
+        "observation/payloads/object_0005/fused.ply",
+        "observation/payloads/object_0006/fused.ply"
+      ],
+      "payload_ids": [
+        "object_0005",
+        "object_0006"
+      ],
+      "region_evidence_path": "observation/regions/region_0004/fused.ply",
+      "region_id": "region_0004",
+      "region_semantic_label": null,
+      "seating_target_ids": [
+        "seat_0001",
+        "seat_0002"
+      ],
+      "semantic_role_status": "UNKNOWN",
+      "slot_id": "shared_controls_slot"
+    },
+    {
+      "ACCESSIBLE_FROM_BOTH_SEATS": "FALSE",
+      "FITS_SET_ON": "TRUE",
+      "PLANAR_SUPPORT": "TRUE",
+      "candidate_rank": 2,
+      "compatibility_status": "FALSE",
+      "context_evidence": {
+        "method": "all_observed_seats_accessible_v1",
+        "relation": "ACCESSIBLE_FROM_BOTH_SEATS",
+        "seat_relations": [
+          {
+            "maximum_distance_m": 1.65,
+            "measured_distance_m": 2.512345170993316,
+            "method": "observed_region_seat_centroid_distance_v1",
+            "region_centroid_world_m": [
+              1.4615241289138794,
+              0.6033942103385925,
+              0.6316822171211243
+            ],
+            "relation": "NEAR_SEAT",
+            "seat_centroid_world_m": [
+              -0.9842953085899353,
+              1.1777160167694092,
+              0.5894071459770203
+            ],
+            "signed_margin_m": -0.8623451709933159,
+            "status": "FALSE",
+            "value": false
+          },
+          {
+            "maximum_distance_m": 1.65,
+            "measured_distance_m": 0.6762503389727145,
+            "method": "observed_region_seat_centroid_distance_v1",
+            "region_centroid_world_m": [
+              1.4615241289138794,
+              0.6033942103385925,
+              0.6316822171211243
+            ],
+            "relation": "NEAR_SEAT",
+            "seat_centroid_world_m": [
+              0.9098715782165527,
+              0.9945386648178101,
+              0.6497716903686523
+            ],
+            "signed_margin_m": 0.9737496610272854,
+            "status": "TRUE",
+            "value": true
+          }
+        ],
+        "signed_margin_m": -0.8623451709933159,
+        "status": "FALSE",
+        "value": false
+      },
+      "context_margin_m": -0.8623451709933159,
+      "fit_evidence": {
+        "edge_clearance_margin_m": 0.02,
+        "inter_payload_clearance_m": 0.025,
+        "method": "measured_two_rectangle_packing_v1",
+        "payload_footprints_m": [
+          [
+            0.20600104236606342,
+            0.07459014765671235
+          ],
+          [
+            0.19469943604238038,
+            0.05565786710766316
+          ]
+        ],
+        "region_usable_length_m": 0.40825799750274727,
+        "region_usable_width_m": 0.23708765602921283,
+        "relation": "FITS_SET_ON",
+        "selected_packing": {
+          "arrangement": "ALONG_WIDTH",
+          "fits": true,
+          "length_margin_m": 0.16225695513668384,
+          "non_overlapping": true,
+          "oriented_payload_footprints_m": [
+            [
+              0.20600104236606342,
+              0.07459014765671235
+            ],
+            [
+              0.19469943604238038,
+              0.05565786710766316
+            ]
+          ],
+          "payload_orientations_degrees": [
+            0,
+            0
+          ],
+          "required_length_m": 0.20600104236606342,
+          "required_width_m": 0.1552480147643755,
+          "signed_clearance_margin_m": 0.041839641264837336,
+          "width_margin_m": 0.041839641264837336
+        },
+        "signed_clearance_margin_m": 0.041839641264837336,
+        "status": "TRUE",
+        "tested_packings": [
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": false,
+            "length_margin_m": -0.05744248090569656,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.20600104236606342,
+                0.07459014765671235
+              ],
+              [
+                0.19469943604238038,
+                0.05565786710766316
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              0
+            ],
+            "required_length_m": 0.4257004784084438,
+            "required_width_m": 0.07459014765671235,
+            "signed_clearance_margin_m": -0.05744248090569656,
+            "width_margin_m": 0.12249750837250048
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": true,
+            "length_margin_m": 0.16225695513668384,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.20600104236606342,
+                0.07459014765671235
+              ],
+              [
+                0.19469943604238038,
+                0.05565786710766316
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              0
+            ],
+            "required_length_m": 0.20600104236606342,
+            "required_width_m": 0.1552480147643755,
+            "signed_clearance_margin_m": 0.041839641264837336,
+            "width_margin_m": 0.041839641264837336
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": true,
+            "length_margin_m": 0.08159908802902063,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.20600104236606342,
+                0.07459014765671235
+              ],
+              [
+                0.05565786710766316,
+                0.19469943604238038
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              90
+            ],
+            "required_length_m": 0.28665890947372663,
+            "required_width_m": 0.19469943604238038,
+            "signed_clearance_margin_m": 0.002388219986832453,
+            "width_margin_m": 0.002388219986832453
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": false,
+            "length_margin_m": 0.16225695513668384,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.20600104236606342,
+                0.07459014765671235
+              ],
+              [
+                0.05565786710766316,
+                0.19469943604238038
+              ]
+            ],
+            "payload_orientations_degrees": [
+              0,
+              90
+            ],
+            "required_length_m": 0.20600104236606342,
+            "required_width_m": 0.29428958369909275,
+            "signed_clearance_margin_m": -0.09720192766987992,
+            "width_margin_m": -0.09720192766987992
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": false,
+            "length_margin_m": 0.07396841380365451,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.07459014765671235,
+                0.20600104236606342
+              ],
+              [
+                0.19469943604238038,
+                0.05565786710766316
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              0
+            ],
+            "required_length_m": 0.29428958369909275,
+            "required_width_m": 0.20600104236606342,
+            "signed_clearance_margin_m": -0.008913386336850591,
+            "width_margin_m": -0.008913386336850591
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": false,
+            "length_margin_m": 0.17355856146036688,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.07459014765671235,
+                0.20600104236606342
+              ],
+              [
+                0.19469943604238038,
+                0.05565786710766316
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              0
+            ],
+            "required_length_m": 0.19469943604238038,
+            "required_width_m": 0.28665890947372663,
+            "signed_clearance_margin_m": -0.0895712534445138,
+            "width_margin_m": -0.0895712534445138
+          },
+          {
+            "arrangement": "ALONG_LENGTH",
+            "fits": false,
+            "length_margin_m": 0.21300998273837177,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.07459014765671235,
+                0.20600104236606342
+              ],
+              [
+                0.05565786710766316,
+                0.19469943604238038
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              90
+            ],
+            "required_length_m": 0.1552480147643755,
+            "required_width_m": 0.20600104236606342,
+            "signed_clearance_margin_m": -0.008913386336850591,
+            "width_margin_m": -0.008913386336850591
+          },
+          {
+            "arrangement": "ALONG_WIDTH",
+            "fits": false,
+            "length_margin_m": 0.29366784984603495,
+            "non_overlapping": true,
+            "oriented_payload_footprints_m": [
+              [
+                0.07459014765671235,
+                0.20600104236606342
+              ],
+              [
+                0.05565786710766316,
+                0.19469943604238038
+              ]
+            ],
+            "payload_orientations_degrees": [
+              90,
+              90
+            ],
+            "required_length_m": 0.07459014765671235,
+            "required_width_m": 0.4257004784084438,
+            "signed_clearance_margin_m": -0.228612822379231,
+            "width_margin_m": -0.228612822379231
+          }
+        ],
+        "value": true
+      },
+      "fit_margin_m": 0.041839641264837336,
+      "function_id": "SHARED_CONTROLS_REGION",
+      "payload_evidence_paths": [
+        "observation/payloads/object_0005/fused.ply",
+        "observation/payloads/object_0006/fused.ply"
+      ],
+      "payload_ids": [
+        "object_0005",
+        "object_0006"
+      ],
+      "region_evidence_path": "observation/regions/region_0005/fused.ply",
+      "region_id": "region_0005",
+      "region_semantic_label": "side_table",
+      "seating_target_ids": [
+        "seat_0001",
+        "seat_0002"
+      ],
+      "semantic_role_status": "TRUE",
+      "slot_id": "shared_controls_slot"
+    }
+  ],
+  "unknown_edges_admitted": false
+}

@@ -586,7 +586,11 @@ class InitialEvidenceCapture:
             raw_cameras, "region_points", "region"
         )
         seat_id_map = self._generic_volume_ids(
-            raw_cameras, "seat_points", "seating"
+            raw_cameras,
+            "seat_points",
+            self.config.get("entity_id_prefixes", {}).get(
+                "seating_target", "seating"
+            ),
         )
         cameras = self._rename_masks(
             raw_cameras, payload_id_map, region_id_map, seat_id_map
