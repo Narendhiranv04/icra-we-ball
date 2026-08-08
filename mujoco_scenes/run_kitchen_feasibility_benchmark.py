@@ -59,14 +59,20 @@ def predicted_feasibility_from_witness(
     witness: dict[str, Any],
     *,
     inspection_count: int,
+    inspection_exhausted: bool,
 ) -> dict[str, Any]:
     """Map observed evidence to the benchmark's two terminal labels.
 
     This function intentionally has no oracle parameter and can run when no
-    oracle file exists. Intermediate uncertainty becomes INFEASIBLE only at
-    fixed-order exhaustion.
+    oracle file exists. Intermediate uncertainty is nonterminal; an incomplete
+    witness becomes INFEASIBLE only after explicit fixed-order exhaustion.
     """
     complete = witness.get("status") == "COMPLETE"
+    if not complete and not inspection_exhausted:
+        raise RuntimeError(
+            "Cannot classify a non-complete witness before explicit "
+            "INSPECTION_ORDER_EXHAUSTED evidence"
+        )
     coffee = _group(witness, "coffee_stirring")
     soup = _group(witness, "soup_serving")
     coffee_assignments = coffee.get("selected_assignments", [])
@@ -85,6 +91,7 @@ def predicted_feasibility_from_witness(
         "completion_stage": completion_stage,
         "completion_stage_index": witness.get("stage") if complete else None,
         "inspection_count": inspection_count,
+        "inspection_exhausted": inspection_exhausted,
         "witness_status": witness.get("status"),
         "coffee_assignments": coffee_assignments,
         "coffee_unique_tool_count": len(coffee_tools) if complete else None,
@@ -146,6 +153,7 @@ def run_predicted_variant(
     variant: dict[str, Any],
     benchmark: dict[str, Any],
     output_root: Path,
+    scene: KitchenScene,
     *,
     width: int,
     height: int,
@@ -157,9 +165,6 @@ def run_predicted_variant(
     save_semantic_overlays: bool,
 ) -> tuple[dict[str, Any], Path]:
     """Run production prediction without receiving any oracle result."""
-    scene = KitchenScene(
-        variant["scene_name"], include_robot=False, robot="none"
-    )
     run_sequential_inspection(
         scene,
         benchmark["inspection_order"],
@@ -185,6 +190,15 @@ def run_predicted_variant(
         (run_dir / "latest_witness.json").read_text(encoding="utf-8")
     )
     stage_results = _saved_stage_results(run_dir)
+    events = [
+        json.loads(line)
+        for line in (run_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    inspection_exhausted = any(
+        event.get("event") == "INSPECTION_ORDER_EXHAUSTED"
+        for event in events
+    )
     inspection_count = sum(
         result["stage"] != 0 for result in stage_results
     )
@@ -193,6 +207,7 @@ def run_predicted_variant(
         benchmark["goal_instruction"],
         witness,
         inspection_count=inspection_count,
+        inspection_exhausted=inspection_exhausted,
     )
     _write_json(run_dir / "predicted_feasibility.json", predicted)
     _write_json(run_dir / "stage_results.json", stage_results)
@@ -322,9 +337,12 @@ def run_benchmark(arguments: argparse.Namespace) -> Path:
         oracle = evaluate_oracle_variant(
             variant_id, benchmark_config=benchmark,
             scene_configs=scene_configs,
+            scene=(scene := KitchenScene(
+                variant["scene_name"], include_robot=False, robot="none"
+            )),
         )
         predicted, run_dir = run_predicted_variant(
-            variant_id, variant, benchmark, output_root,
+            variant_id, variant, benchmark, output_root, scene,
             width=arguments.width,
             height=arguments.height,
             semantic_backend=arguments.semantic_detector,

@@ -2,47 +2,6 @@ schema_version: 1
 goal_instruction: "Prepare and serve coffee and soup for three people using the available kitchenware. Stir all three coffees and provide each soup bowl with a suitable utensil. Search the closed kitchen storage for anything still required."
 inspection_order: [D1, D2, C2, B1, C1]
 task_requirements: s1_integrated_kitchen_object_function.yaml
-oracle:
-  inference_basis: PRIVILEGED_ORACLE_EVALUATION_ONLY
-  clearance_margin_m: 0.005
-  grip_allowance_m: 0.030
-  minimum_elongation_ratio: 2.4
-  object_specs:
-    ab3_narrow_deep_cup: {semantic_class: coffee_container, opening_width_m: 0.060, cavity_depth_m: 0.087}
-    ab3_medium_deep_mug: {semantic_class: coffee_container, opening_width_m: 0.077, cavity_depth_m: 0.097}
-    s1i_wide_shallow_cup: {semantic_class: coffee_container, opening_width_m: 0.064, cavity_depth_m: 0.063}
-    ab3_shallow_bowl: {semantic_class: soup_container, opening_width_m: 0.138, cavity_depth_m: 0.044}
-    ab3_deep_bowl: {semantic_class: soup_container, opening_width_m: 0.143, cavity_depth_m: 0.048}
-    s1i_narrow_deep_bowl: {semantic_class: soup_container, opening_width_m: 0.119, cavity_depth_m: 0.076}
-    feas_coffee_small_shallow_cup: {semantic_class: coffee_container, opening_width_m: 0.043, cavity_depth_m: 0.080}
-    feas_coffee_medium_deep_mug: {semantic_class: coffee_container, opening_width_m: 0.055, cavity_depth_m: 0.105}
-    feas_coffee_wide_very_deep_cup: {semantic_class: coffee_container, opening_width_m: 0.070, cavity_depth_m: 0.137}
-    feas_soup_wide_shallow_bowl: {semantic_class: soup_container, opening_width_m: 0.145, cavity_depth_m: 0.045}
-    feas_soup_narrow_shallow_bowl: {semantic_class: soup_container, opening_width_m: 0.075, cavity_depth_m: 0.045}
-    feas_soup_wide_deep_bowl: {semantic_class: soup_container, opening_width_m: 0.145, cavity_depth_m: 0.150}
-    ab3_short_narrow_spoon: {semantic_class: spoon, total_length_m: 0.121, maximum_cross_section_m: 0.023, elongation_ratio: 5.2, semantic_rank: 1}
-    ab3_medium_spoon: {semantic_class: spoon, total_length_m: 0.171, maximum_cross_section_m: 0.046, elongation_ratio: 3.7, semantic_rank: 1}
-    ab3_long_wide_spoon: {semantic_class: spoon, total_length_m: 0.219, maximum_cross_section_m: 0.049, elongation_ratio: 4.4, semantic_rank: 1}
-    ab3_partial_spoon: {semantic_class: spoon, total_length_m: 0.126, maximum_cross_section_m: 0.028, elongation_ratio: 4.5, semantic_rank: 1}
-    s1i_c2_soup_spoon: {semantic_class: spoon, total_length_m: 0.198, maximum_cross_section_m: 0.040, elongation_ratio: 4.9, semantic_rank: 1}
-    feas_c2_medium_spoon: {semantic_class: spoon, total_length_m: 0.155, maximum_cross_section_m: 0.040, elongation_ratio: 3.8, semantic_rank: 1}
-    s1i_coffee_near_miss_spoon: {semantic_class: spoon, total_length_m: 0.207, maximum_cross_section_m: 0.048, elongation_ratio: 4.3, semantic_rank: 1}
-    s1i_final_long_narrow_spoon: {semantic_class: spoon, total_length_m: 0.223, maximum_cross_section_m: 0.033, elongation_ratio: 6.7, semantic_rank: 1}
-    s1i_oversized_spoon: {semantic_class: spoon, total_length_m: 0.243, maximum_cross_section_m: 0.057, elongation_ratio: 4.2, semantic_rank: 1}
-    feas_narrow_short_spoon: {semantic_class: spoon, total_length_m: 0.093, maximum_cross_section_m: 0.024, elongation_ratio: 3.9, semantic_rank: 1}
-    feas_narrow_medium_spoon: {semantic_class: spoon, total_length_m: 0.144, maximum_cross_section_m: 0.024, elongation_ratio: 6.0, semantic_rank: 1}
-    feas_medium_spoon: {semantic_class: spoon, total_length_m: 0.161, maximum_cross_section_m: 0.057, elongation_ratio: 2.8, semantic_rank: 1}
-    feas_wide_long_spoon: {semantic_class: spoon, total_length_m: 0.229, maximum_cross_section_m: 0.075, elongation_ratio: 3.1, semantic_rank: 1}
-    feas_soup_wide_short_spoon: {semantic_class: spoon, total_length_m: 0.153, maximum_cross_section_m: 0.075, elongation_ratio: 2.5, semantic_rank: 1}
-    feas_soup_wide_medium_spoon: {semantic_class: spoon, total_length_m: 0.195, maximum_cross_section_m: 0.075, elongation_ratio: 2.6, semantic_rank: 1}
-    feas_semantic_decoy_spoon: {semantic_class: spoon, total_length_m: 0.093, maximum_cross_section_m: 0.145, elongation_ratio: 1.6, semantic_rank: 1}
-    ab3_long_narrow_fork: {semantic_class: excluded_utensil, total_length_m: 0.240, maximum_cross_section_m: 0.022, elongation_ratio: 10.9}
-    marker: {semantic_class: excluded_utensil, total_length_m: 0.111, maximum_cross_section_m: 0.018, elongation_ratio: 6.2}
-    tongs: {semantic_class: excluded_utensil}
-    napkin: {semantic_class: distractor}
-    s1i_compact_kettle: {semantic_class: source}
-    s1i_compact_coffee_jar: {semantic_class: source}
-
 variants:
   F0_REUSE_ONE:
     scene_name: S1_integrated_kitchen_object_function_feasibility_F0
@@ -85,7 +44,7 @@ variants:
     container_contents:
       D1: [s1i_oversized_spoon, napkin]
       D2: [ab3_partial_spoon, tongs]
-      C2: [s1i_c2_soup_spoon, s1i_wide_shallow_cup]
+      C2: [s1i_c2_soup_spoon, feas_coffee_wide_very_deep_cup]
       B1: [ab3_deep_bowl]
       C1: [s1i_narrow_deep_bowl]
     description: No universal coffee tool; the partial and wider spoons jointly cover all targets.
@@ -97,7 +56,7 @@ variants:
     intended_min_coffee_tools: 3
     countertop_objects:
       counter_spot_41: feas_coffee_small_shallow_cup
-      counter_spot_44: feas_coffee_medium_deep_mug
+      counter_spot_44: feas_coffee_extra_deep_mug
       counter_spot_45: ab3_shallow_bowl
       counter_spot_52: s1i_compact_kettle
       counter_spot_53: s1i_compact_coffee_jar
@@ -186,6 +145,8 @@ variants:
     intended_outcome: INFEASIBLE
     intended_failure_reason: INSUFFICIENT_COFFEE_CONTAINERS
     countertop_remove: [counter_spot_23]
+    container_contents:
+      C1: []
     description: Only two coffee containers exist.
 
   I1_MISSING_SOUP_VESSEL:

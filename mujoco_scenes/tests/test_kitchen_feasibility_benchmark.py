@@ -1,4 +1,5 @@
 import inspect
+import pytest
 from pathlib import Path
 
 from mujoco_scenes.kitchen_feasibility_oracle import (
@@ -9,7 +10,9 @@ from mujoco_scenes.run_kitchen_feasibility_benchmark import (
     predicted_feasibility_from_witness,
     run_predicted_variant,
 )
-from mujoco_scenes.scene_loader import load_all_configs
+from mujoco_scenes.scene_loader import KitchenScene, load_all_configs
+from mujoco_scenes.exact_scene_geometry import extract_exact_object_geometry
+from mujoco_scenes.geometry_properties import load_geometry_config
 from mujoco_scenes.task_witness import evaluate_usage_policy_task_witness
 
 
@@ -170,17 +173,39 @@ def test_terminal_mapping_is_binary_and_early_complete_has_no_inspections():
     incomplete = predicted_feasibility_from_witness(
         "fixture", "goal", {"status": "INDETERMINATE", "stage": 5},
         inspection_count=5,
+        inspection_exhausted=True,
     )
     complete = predicted_feasibility_from_witness(
         "fixture", "goal", {
             "status": "COMPLETE", "stage": 0,
             "function_group_evaluations": [],
         }, inspection_count=0,
+        inspection_exhausted=False,
     )
     assert incomplete["terminal_outcome"] == "INFEASIBLE"
     assert complete["terminal_outcome"] == "FEASIBLE"
     assert complete["completion_stage"] == "INITIAL"
     assert complete["inspection_count"] == 0
+
+
+def test_nonterminal_incomplete_witness_cannot_be_classified():
+    with pytest.raises(RuntimeError, match="before explicit"):
+        predicted_feasibility_from_witness(
+            "fixture", "goal", {"status": "INDETERMINATE", "stage": 2},
+            inspection_count=2,
+            inspection_exhausted=False,
+        )
+
+
+def test_variant_config_has_no_manual_oracle_geometry_table():
+    benchmark = load_feasibility_benchmark_config()
+    serialized = repr(benchmark)
+    forbidden = (
+        "opening_width_m", "cavity_depth_m", "total_length_m",
+        "usable_length_m", "maximum_cross_section_m", "elongation_ratio",
+        "clearance_margin_m", "grip_allowance_m", "minimum_elongation_ratio",
+    )
+    assert not any(key in serialized for key in forbidden)
 
 
 def test_predicted_runner_has_no_oracle_or_action_planner_dependency():
@@ -190,3 +215,33 @@ def test_predicted_runner_has_no_oracle_or_action_planner_dependency():
     assert "symbolic_planning" not in source
     assert "domain.pddl" not in source
     assert "problem.pddl" not in source
+
+
+def test_semantic_confidence_is_not_an_assignment_objective():
+    graph = _assignment_graph({"object_a": set(COFFEE), "object_b": set(COFFEE)})
+    for node in graph["nodes"]:
+        if node["attributes"]["object_id"] == "object_a":
+            node["attributes"]["semantics"]["validated"]["mean_confidence"] = 0.05
+        elif node["attributes"]["object_id"] == "object_b":
+            node["attributes"]["semantics"]["validated"]["mean_confidence"] = 0.99
+    result = evaluate_usage_policy_task_witness(graph, TASK)
+    group = _coffee_group(result)
+    assert group["selected_assignments"][0]["utensil_object_id"] == "object_a"
+
+
+def test_oracle_geometry_is_extracted_from_instantiated_model():
+    scene = KitchenScene(
+        "S1_integrated_kitchen_object_function_feasibility_F3",
+        include_robot=False,
+        robot="none",
+    )
+    config = load_geometry_config()
+    shallow = extract_exact_object_geometry(
+        scene, "feas_coffee_small_shallow_cup", "cup", geometry_config=config
+    )
+    deep = extract_exact_object_geometry(
+        scene, "feas_coffee_extra_deep_mug", "mug", geometry_config=config
+    )
+    assert shallow.opening_width_m > 0
+    assert deep.cavity_depth_m > shallow.cavity_depth_m
+    assert shallow.geometry_source == "INSTANTIATED_MUJOCO_MODEL"

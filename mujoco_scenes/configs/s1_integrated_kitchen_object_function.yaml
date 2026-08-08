@@ -35,6 +35,11 @@ roles:
 
   coffee_stirrer:
     count: 1
+    binding_cardinality:
+      mode: assignment_driven
+      minimum_distinct_physical_objects: 1
+      maximum_distinct_physical_objects: 3
+      preferred: minimize_distinct
     assignment_order: 2
     semantic_preferences:
       - rank: 1
@@ -47,6 +52,10 @@ roles:
 
   soup_eating_utensil:
     count: 1
+    binding_cardinality:
+      mode: assignment_driven
+      minimum_distinct_physical_objects: 3
+      maximum_distinct_physical_objects: 3
     assignment_order: 3
     semantic_preferences:
       - rank: 1
@@ -100,6 +109,7 @@ operation_groups:
 
 cross_group_reuse:
   allowed: true
+  selection_preference: neutral
 constraints:
   distinct_role_assignments: false
 selection:

@@ -1,0 +1,104 @@
+{
+  "base_scene": "S1_integrated_kitchen_object_function_primary",
+  "description": "Explicit baseline deterministic placement perturbation control.",
+  "goal_instruction": "Prepare and serve coffee and soup for three people using the available kitchenware. Stir all three coffees and provide each soup bowl with a suitable utensil. Search the closed kitchen storage for anything still required.",
+  "intended_min_coffee_tools": 1,
+  "intended_outcome": "FEASIBLE",
+  "resolved_layout": {
+    "container_contents": {
+      "B1": [
+        "s1i_coffee_near_miss_spoon",
+        "ab3_deep_bowl"
+      ],
+      "C1": [
+        "s1i_final_long_narrow_spoon",
+        "s1i_narrow_deep_bowl"
+      ],
+      "C2": [
+        "s1i_c2_soup_spoon",
+        "s1i_wide_shallow_cup"
+      ],
+      "D1": [
+        "s1i_oversized_spoon",
+        "napkin"
+      ],
+      "D2": [
+        "ab3_partial_spoon",
+        "tongs"
+      ]
+    },
+    "countertop_objects": {
+      "counter_spot_41": "ab3_narrow_deep_cup",
+      "counter_spot_44": "ab3_medium_deep_mug",
+      "counter_spot_45": "ab3_shallow_bowl",
+      "counter_spot_47": "ab3_short_narrow_spoon",
+      "counter_spot_48": "ab3_medium_spoon",
+      "counter_spot_49": "ab3_long_wide_spoon",
+      "counter_spot_50": "ab3_long_narrow_fork",
+      "counter_spot_51": "marker",
+      "counter_spot_52": "s1i_compact_kettle",
+      "counter_spot_53": "s1i_compact_coffee_jar"
+    },
+    "countertop_positions_world_m": {
+      "counter_spot_41": [
+        -0.6,
+        -0.08,
+        0.58
+      ],
+      "counter_spot_44": [
+        -0.37,
+        -0.08,
+        0.58
+      ],
+      "counter_spot_45": [
+        -0.14,
+        -0.08,
+        0.58
+      ],
+      "counter_spot_47": [
+        -0.62,
+        -0.3,
+        0.58
+      ],
+      "counter_spot_48": [
+        -0.4,
+        -0.3,
+        0.58
+      ],
+      "counter_spot_49": [
+        -0.1,
+        -0.3,
+        0.58
+      ],
+      "counter_spot_50": [
+        0.15,
+        -0.29,
+        0.58
+      ],
+      "counter_spot_51": [
+        0.27,
+        -0.29,
+        0.58
+      ],
+      "counter_spot_52": [
+        0.48,
+        -0.31,
+        0.58
+      ],
+      "counter_spot_53": [
+        0.49,
+        -0.08,
+        0.58
+      ]
+    },
+    "inspection_order": [
+      "D1",
+      "D2",
+      "C2",
+      "B1",
+      "C1"
+    ]
+  },
+  "scene_name": "S1_integrated_kitchen_object_function_feasibility_P0",
+  "variant_id": "P0_LAYOUT_BASE"
+}

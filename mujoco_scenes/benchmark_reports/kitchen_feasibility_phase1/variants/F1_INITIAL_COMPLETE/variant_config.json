@@ -1,0 +1,121 @@
+{
+  "base_scene": "S1_integrated_kitchen_object_function_initial_complete",
+  "countertop_objects": {
+    "counter_spot_13": "ab3_narrow_deep_cup",
+    "counter_spot_14": "ab3_medium_deep_mug",
+    "counter_spot_15": "s1i_wide_shallow_cup",
+    "counter_spot_16": "ab3_shallow_bowl",
+    "counter_spot_17": "s1i_final_long_narrow_spoon",
+    "counter_spot_18": "s1i_final_long_narrow_spoon",
+    "counter_spot_20": "s1i_final_long_narrow_spoon",
+    "counter_spot_25": "ab3_deep_bowl",
+    "counter_spot_26": "s1i_narrow_deep_bowl",
+    "counter_spot_52": "s1i_compact_kettle",
+    "counter_spot_53": "s1i_compact_coffee_jar"
+  },
+  "description": "All six targets and three universal utensils are initially visible.",
+  "expected_inspections": 0,
+  "goal_instruction": "Prepare and serve coffee and soup for three people using the available kitchenware. Stir all three coffees and provide each soup bowl with a suitable utensil. Search the closed kitchen storage for anything still required.",
+  "intended_min_coffee_tools": 1,
+  "intended_outcome": "FEASIBLE",
+  "resolved_layout": {
+    "container_contents": {
+      "B1": [
+        "tea_box"
+      ],
+      "C1": [
+        "glass"
+      ],
+      "C2": [
+        "sugar_jar"
+      ],
+      "D1": [
+        "s1i_oversized_spoon",
+        "napkin"
+      ],
+      "D2": [
+        "ab3_partial_spoon",
+        "tongs"
+      ]
+    },
+    "countertop_objects": {
+      "counter_spot_13": "ab3_narrow_deep_cup",
+      "counter_spot_14": "ab3_medium_deep_mug",
+      "counter_spot_15": "s1i_wide_shallow_cup",
+      "counter_spot_16": "ab3_shallow_bowl",
+      "counter_spot_17": "s1i_final_long_narrow_spoon",
+      "counter_spot_18": "s1i_final_long_narrow_spoon",
+      "counter_spot_20": "s1i_final_long_narrow_spoon",
+      "counter_spot_25": "ab3_deep_bowl",
+      "counter_spot_26": "s1i_narrow_deep_bowl",
+      "counter_spot_52": "s1i_compact_kettle",
+      "counter_spot_53": "s1i_compact_coffee_jar"
+    },
+    "countertop_positions_world_m": {
+      "counter_spot_13": [
+        -0.55,
+        -0.34,
+        0.58
+      ],
+      "counter_spot_14": [
+        -0.35,
+        -0.34,
+        0.58
+      ],
+      "counter_spot_15": [
+        -0.1,
+        -0.32,
+        0.58
+      ],
+      "counter_spot_16": [
+        0.16,
+        -0.32,
+        0.58
+      ],
+      "counter_spot_17": [
+        -0.52,
+        -0.1,
+        0.58
+      ],
+      "counter_spot_18": [
+        -0.25,
+        -0.1,
+        0.58
+      ],
+      "counter_spot_20": [
+        0.29,
+        -0.1,
+        0.58
+      ],
+      "counter_spot_25": [
+        -0.2,
+        -0.23,
+        0.58
+      ],
+      "counter_spot_26": [
+        0.08,
+        -0.23,
+        0.58
+      ],
+      "counter_spot_52": [
+        0.48,
+        -0.31,
+        0.58
+      ],
+      "counter_spot_53": [
+        0.49,
+        -0.08,
+        0.58
+      ]
+    },
+    "inspection_order": [
+      "D1",
+      "D2",
+      "C2",
+      "B1",
+      "C1"
+    ]
+  },
+  "scene_name": "S1_integrated_kitchen_object_function_feasibility_F1",
+  "variant_id": "F1_INITIAL_COMPLETE"
+}

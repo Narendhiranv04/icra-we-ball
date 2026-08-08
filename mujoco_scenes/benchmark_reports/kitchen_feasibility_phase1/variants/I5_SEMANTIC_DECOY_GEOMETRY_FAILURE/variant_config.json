@@ -1,0 +1,92 @@
+{
+  "base_scene": "S1_integrated_kitchen_object_function_initial_complete",
+  "container_contents": {
+    "B1": [],
+    "C1": [],
+    "C2": [
+      "feas_semantic_decoy_spoon"
+    ],
+    "D1": [
+      "feas_semantic_decoy_spoon"
+    ],
+    "D2": [
+      "feas_semantic_decoy_spoon"
+    ]
+  },
+  "countertop_objects": {
+    "counter_spot_21": "ab3_narrow_deep_cup",
+    "counter_spot_22": "ab3_medium_deep_mug",
+    "counter_spot_23": "s1i_wide_shallow_cup",
+    "counter_spot_24": "ab3_shallow_bowl",
+    "counter_spot_25": "ab3_deep_bowl",
+    "counter_spot_26": "s1i_narrow_deep_bowl"
+  },
+  "description": "Three spoon-looking candidates all fail exact geometry.",
+  "goal_instruction": "Prepare and serve coffee and soup for three people using the available kitchenware. Stir all three coffees and provide each soup bowl with a suitable utensil. Search the closed kitchen storage for anything still required.",
+  "intended_failure_reason": "UNCOVERED_COFFEE_TARGET",
+  "intended_outcome": "INFEASIBLE",
+  "resolved_layout": {
+    "container_contents": {
+      "B1": [],
+      "C1": [],
+      "C2": [
+        "feas_semantic_decoy_spoon"
+      ],
+      "D1": [
+        "feas_semantic_decoy_spoon"
+      ],
+      "D2": [
+        "feas_semantic_decoy_spoon"
+      ]
+    },
+    "countertop_objects": {
+      "counter_spot_21": "ab3_narrow_deep_cup",
+      "counter_spot_22": "ab3_medium_deep_mug",
+      "counter_spot_23": "s1i_wide_shallow_cup",
+      "counter_spot_24": "ab3_shallow_bowl",
+      "counter_spot_25": "ab3_deep_bowl",
+      "counter_spot_26": "s1i_narrow_deep_bowl"
+    },
+    "countertop_positions_world_m": {
+      "counter_spot_21": [
+        -0.52,
+        -0.39,
+        0.58
+      ],
+      "counter_spot_22": [
+        -0.34,
+        -0.39,
+        0.58
+      ],
+      "counter_spot_23": [
+        -0.08,
+        -0.39,
+        0.58
+      ],
+      "counter_spot_24": [
+        -0.48,
+        -0.23,
+        0.58
+      ],
+      "counter_spot_25": [
+        -0.2,
+        -0.23,
+        0.58
+      ],
+      "counter_spot_26": [
+        0.08,
+        -0.23,
+        0.58
+      ]
+    },
+    "inspection_order": [
+      "D1",
+      "D2",
+      "C2",
+      "B1",
+      "C1"
+    ]
+  },
+  "scene_name": "S1_integrated_kitchen_object_function_feasibility_I5",
+  "variant_id": "I5_SEMANTIC_DECOY_GEOMETRY_FAILURE"
+}

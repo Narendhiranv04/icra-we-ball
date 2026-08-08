@@ -149,6 +149,27 @@ def _validate_joint_task_requirements(
             or role["count"] < 1
         ):
             raise ValueError(f"Role '{role_name}' count must be positive")
+        binding = role.get("binding_cardinality")
+        if binding is not None:
+            if not isinstance(binding, dict) or binding.get("mode") != "assignment_driven":
+                raise ValueError(
+                    f"Role '{role_name}' binding_cardinality must be assignment_driven"
+                )
+            minimum = binding.get("minimum_distinct_physical_objects")
+            maximum = binding.get("maximum_distinct_physical_objects")
+            if (
+                isinstance(minimum, bool) or not isinstance(minimum, int)
+                or minimum < 1
+                or isinstance(maximum, bool) or not isinstance(maximum, int)
+                or maximum < minimum
+            ):
+                raise ValueError(
+                    f"Role '{role_name}' has invalid assignment-driven cardinality"
+                )
+            if binding.get("preferred") not in {None, "minimize_distinct"}:
+                raise ValueError(
+                    f"Role '{role_name}' has unsupported binding preference"
+                )
         assignment_order = role.setdefault(
             "assignment_order", len(assignment_orders)
         )
@@ -392,6 +413,12 @@ def _validate_joint_task_requirements(
             cross_group.get("allowed"), bool
         ):
             raise ValueError("cross_group_reuse.allowed must be boolean")
+        cross_preference = cross_group.get("selection_preference", "neutral")
+        if cross_preference not in {"neutral", None}:
+            raise ValueError(
+                "cross_group_reuse.selection_preference must be neutral"
+            )
+        cross_group["selection_preference"] = "neutral"
         config["operation_groups"] = normalized_groups
         assignment_ablation = config.get(
             "target_assignment_ablation", False
@@ -1384,7 +1411,6 @@ def evaluate_joint_task_witness(
 
     def selection_key(assignment: dict[str, Any]) -> tuple:
         ranks = []
-        confidences = []
         ids = []
         for role_name in role_order:
             for object_id in assignment["selected_objects"][role_name]:
@@ -1392,12 +1418,8 @@ def evaluate_joint_task_witness(
                 semantic = evaluation["semantic"]
                 if grounding_mode != "geometry-only":
                     ranks.append(int(semantic["semantic_rank"]))
-                    confidence = _finite_number(semantic.get("confidence"))
-                    confidences.append(
-                        -confidence if confidence is not None else 0.0
-                    )
                 ids.append(object_id)
-        return (*ranks, *confidences, *ids)
+        return (*ranks, *ids)
 
     valid_assignments.sort(key=selection_key)
     selected_assignment = valid_assignments[0] if valid_assignments else None
@@ -1598,10 +1620,8 @@ def evaluate_usage_policy_task_witness(
             return (object_id,)
         semantic = candidate_index[(role_name, object_id)]["semantic"]
         rank = semantic.get("semantic_rank")
-        confidence = _finite_number(semantic.get("confidence"))
         return (
             int(rank) if rank is not None else 10**6,
-            -(confidence if confidence is not None else 0.0),
             object_id,
         )
 
@@ -2125,7 +2145,6 @@ def evaluate_usage_policy_task_witness(
         )
         return (
             *preferred_group_counts,
-            option["distinct_physical_tool_count"],
             *(
                 candidate_key(
                     assignment["tool_role"],
@@ -2379,6 +2398,12 @@ def evaluate_usage_policy_task_witness(
         group["counts"]["required_distinct_physical_objects"]
         for group in function_group_evaluations
     ]
+    tool_role_binding_requirements = {}
+    for role_name in ("coffee_stirrer", "soup_eating_utensil"):
+        role = config["roles"].get(role_name, {})
+        declared = role.get("binding_cardinality")
+        if isinstance(declared, dict) and declared.get("mode") == "assignment_driven":
+            tool_role_binding_requirements[role_name] = deepcopy(declared)
     if usage_policy_mode == "always-distinct":
         policy_distinct_requirement = sum(group_distinct_requirements)
     elif usage_policy_mode == "always-reusable":
@@ -2413,6 +2438,7 @@ def evaluate_usage_policy_task_witness(
             role_name: config["roles"][role_name]["count"]
             for role_name in relevant_roles
         },
+        "tool_role_binding_requirements": tool_role_binding_requirements,
         "operation_assignments": operation_assignments,
         "function_group_evaluations": function_group_evaluations,
         "usage_policy_evaluations": function_group_evaluations,
@@ -2483,7 +2509,7 @@ def evaluate_usage_policy_task_witness(
             }[evidence_mode],
             "target_edge_gate": "all_required_relations_true",
             "assignment_order": (
-                "fewest_distinct_then_semantic_rank_confidence_id"
+                "group_preferences_then_semantic_rank_id_confidence_gate_only"
             ),
         },
     }

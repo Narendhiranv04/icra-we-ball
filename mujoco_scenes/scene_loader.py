@@ -218,6 +218,7 @@ OBJECT_SUPPORT_HEIGHT = {
     "s1i_compact_coffee_jar": 0.07244,
     "feas_coffee_small_shallow_cup": 0.04306,
     "feas_coffee_medium_deep_mug": 0.05660,
+    "feas_coffee_extra_deep_mug": 0.09000,
     "feas_coffee_wide_very_deep_cup": 0.07227,
     "feas_c2_medium_spoon": 0.01045,
     "feas_soup_wide_shallow_bowl": 0.02475,
@@ -345,8 +346,13 @@ SCENE_OBJECT_VARIANTS = {
         "mesh": "mesh_feas_coffee_medium_deep_mug",
         "material": "mat_s1i_mug_blue",
     },
+    "feas_coffee_extra_deep_mug": {
+        "base": "cup", "scale": (1.60, 1.60, 3.0),
+        "mesh": "mesh_feas_coffee_extra_deep_mug",
+        "material": "mat_s1i_mug_blue",
+    },
     "feas_coffee_wide_very_deep_cup": {
-        "base": "cup", "scale": (1.40, 1.40, 2.35),
+        "base": "cup", "scale": (1.25, 1.25, 2.10),
         "mesh": "mesh_feas_coffee_wide_very_deep_cup",
         "material": "mat_s1i_cup_sage",
     },
@@ -361,12 +367,12 @@ SCENE_OBJECT_VARIANTS = {
         "material": "mat_s1i_bowl_ivory",
     },
     "feas_soup_narrow_shallow_bowl": {
-        "base": "bowl", "scale": (0.55, 0.55, 0.90),
+        "base": "bowl", "scale": (0.45, 0.45, 0.90),
         "mesh": "mesh_feas_soup_narrow_shallow_bowl",
         "material": "mat_s1i_bowl_blue",
     },
     "feas_soup_wide_deep_bowl": {
-        "base": "bowl", "scale": (1.05, 1.05, 2.30),
+        "base": "bowl", "scale": (1.05, 1.05, 3.20),
         "mesh": "mesh_feas_soup_wide_deep_bowl",
         "material": "mat_s1i_bowl_sage",
     },
@@ -391,7 +397,7 @@ SCENE_OBJECT_VARIANTS = {
         "material": "mat_s1i_spoon_inspection",
     },
     "feas_soup_wide_short_spoon": {
-        "base": "spoon", "scale": (0.90, 2.20, 1.0),
+        "base": "spoon", "scale": (0.90, 1.70, 1.0),
         "mesh": "mesh_feas_soup_wide_short_spoon",
         "material": "mat_s1i_spoon_inspection",
     },
@@ -1631,7 +1637,10 @@ def build_scene_xml(
                 fallback = lower_slots if is_tall else shelf_slots
                 allocated_slots.append((preferred or fallback).pop(0))
         elif container_id == "C2" and is_integrated_kitchen_scene(config.name):
-            allocated_slots = [slots[0], slots[2]]
+            # Keep the second integrated object away from the cabinet side
+            # wall.  The centred rear slot gives the calibrated C2 rig a
+            # complete rim/interior view for tall drinkware.
+            allocated_slots = [slots[0], slots[3]]
         elif container_id == "C2":
             plate_objects = {"plate", "small_plate"}
             nonplate_count = sum(obj not in plate_objects for obj in objects)

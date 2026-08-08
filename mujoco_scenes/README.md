@@ -1429,9 +1429,10 @@ witness maps to terminal `INFEASIBLE`.
 
 `configs/kitchen_feasibility_variants.yaml` defines F0--F7 feasible controls,
 I0--I5 infeasible count/coverage/matching/geometry counterexamples, and P0/P1
-deterministic layout perturbations. The independent oracle uses only the exact
-scene roster, intended semantic class, analytic dimensions, and exact region
-membership. Its artifacts are marked
+deterministic layout perturbations. The independent oracle loads the same
+instantiated MuJoCo model and derives dimensions from its actual mesh and
+primitive geometry, using thresholds from `configs/geometry_inference.yaml`.
+Its artifacts are marked
 `PRIVILEGED_ORACLE_EVALUATION_ONLY`; no oracle result or exact property is
 passed to the RGB-D prediction function.
 
@@ -1466,3 +1467,10 @@ normal RGB/depth/segmentation, semantic overlay, graph, and stage-local
 point-cloud evidence. Exact scene geometry is intentionally available to the
 offline oracle, so these variants evaluate controlled simulator evidence and
 are not a claim of open-world ground-truth availability.
+
+The frozen Phase-1 review package is tracked at
+`mujoco_scenes/benchmark_reports/kitchen_feasibility_phase1/`. It contains a
+compact JSON/CSV manifest for all 16 variants, scientific guard assertions,
+environment/version provenance, per-variant records, and representative
+compressed initial/terminal overview and semantic images. Raw runs remain
+outside Git under `runs/`.

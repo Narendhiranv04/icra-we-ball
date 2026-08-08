@@ -1,0 +1,104 @@
+{
+  "base_scene": "S1_integrated_kitchen_object_function_initial_complete",
+  "countertop_remove": [
+    "counter_spot_26"
+  ],
+  "description": "Only two soup containers exist.",
+  "goal_instruction": "Prepare and serve coffee and soup for three people using the available kitchenware. Stir all three coffees and provide each soup bowl with a suitable utensil. Search the closed kitchen storage for anything still required.",
+  "intended_failure_reason": "INSUFFICIENT_SOUP_CONTAINERS",
+  "intended_outcome": "INFEASIBLE",
+  "resolved_layout": {
+    "container_contents": {
+      "B1": [
+        "tea_box"
+      ],
+      "C1": [
+        "glass"
+      ],
+      "C2": [
+        "sugar_jar"
+      ],
+      "D1": [
+        "s1i_oversized_spoon",
+        "napkin"
+      ],
+      "D2": [
+        "ab3_partial_spoon",
+        "tongs"
+      ]
+    },
+    "countertop_objects": {
+      "counter_spot_12": "ab3_long_wide_spoon",
+      "counter_spot_17": "s1i_final_long_narrow_spoon",
+      "counter_spot_18": "s1i_final_long_narrow_spoon",
+      "counter_spot_19": "ab3_medium_spoon",
+      "counter_spot_20": "s1i_final_long_narrow_spoon",
+      "counter_spot_21": "ab3_narrow_deep_cup",
+      "counter_spot_22": "ab3_medium_deep_mug",
+      "counter_spot_23": "s1i_wide_shallow_cup",
+      "counter_spot_24": "ab3_shallow_bowl",
+      "counter_spot_25": "ab3_deep_bowl"
+    },
+    "countertop_positions_world_m": {
+      "counter_spot_12": [
+        0.31,
+        -0.34,
+        0.58
+      ],
+      "counter_spot_17": [
+        -0.52,
+        -0.1,
+        0.58
+      ],
+      "counter_spot_18": [
+        -0.25,
+        -0.1,
+        0.58
+      ],
+      "counter_spot_19": [
+        0.02,
+        -0.1,
+        0.58
+      ],
+      "counter_spot_20": [
+        0.29,
+        -0.1,
+        0.58
+      ],
+      "counter_spot_21": [
+        -0.52,
+        -0.39,
+        0.58
+      ],
+      "counter_spot_22": [
+        -0.34,
+        -0.39,
+        0.58
+      ],
+      "counter_spot_23": [
+        -0.08,
+        -0.39,
+        0.58
+      ],
+      "counter_spot_24": [
+        -0.48,
+        -0.23,
+        0.58
+      ],
+      "counter_spot_25": [
+        -0.2,
+        -0.23,
+        0.58
+      ]
+    },
+    "inspection_order": [
+      "D1",
+      "D2",
+      "C2",
+      "B1",
+      "C1"
+    ]
+  },
+  "scene_name": "S1_integrated_kitchen_object_function_feasibility_I1",
+  "variant_id": "I1_MISSING_SOUP_VESSEL"
+}
