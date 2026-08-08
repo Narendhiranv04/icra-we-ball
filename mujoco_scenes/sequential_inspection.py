@@ -326,6 +326,7 @@ def run_sequential_inspection(
             "uses_robot": False,
             "uses_mobile_base": False,
             "uses_virtual_inspection_rig": True,
+            "scene_layout": getattr(scene, "layout_manifest", None),
             "opening_adapter": f"{scene.__class__.__name__}.open_container",
             "opening_actuation_steps": DIRECT_ACTUATION_STEPS,
             "grounding_mode": grounding_mode,

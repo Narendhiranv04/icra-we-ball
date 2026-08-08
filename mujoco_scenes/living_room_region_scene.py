@@ -580,6 +580,23 @@ class L2LivingRoomRegionScene:
         )
         self.data = mujoco.MjData(self.model)
         self._set_robot_home_pose()
+        if scene_name in L2_ABLATION2_SCENES + L2_ABLATION3_SCENES:
+            # Scanned mug/bowl visuals retain compact analytic collision
+            # proxies. Cylindrical free payloads can otherwise enter a nearly
+            # lossless edge-roll on the staging table. MuJoCo's freejoint XML
+            # shorthand has no damping attribute, so apply ordinary payload/
+            # table dissipation directly to its six compiled DOFs before the
+            # deterministic construction settle. Object poses remain free.
+            for joint_id in range(self.model.njnt):
+                joint_name = mujoco.mj_id2name(
+                    self.model, mujoco.mjtObj.mjOBJ_JOINT, joint_id
+                )
+                if not (joint_name or "").startswith("a2_"):
+                    continue
+                if self.model.jnt_type[joint_id] != mujoco.mjtJoint.mjJNT_FREE:
+                    continue
+                dof_address = self.model.jnt_dofadr[joint_id]
+                self.model.dof_damping[dof_address:dof_address + 6] = 2.0
         mujoco.mj_forward(self.model, self.data)
         for _ in range(600):
             mujoco.mj_step(self.model, self.data)

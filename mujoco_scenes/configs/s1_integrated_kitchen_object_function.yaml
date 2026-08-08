@@ -84,7 +84,8 @@ operation_groups:
     usage_policy:
       mode: sequential_reuse_allowed
       distinct_within_group: false
-      same_tool_must_cover_all_targets: true
+      same_tool_must_cover_all_targets: false
+      selection_preference: minimize_distinct_tools
     relations: [INSERTABLE_IN, REACHES_BOTTOM]
 
   soup_serving:
@@ -124,10 +125,6 @@ symbolic_task:
       accepted_semantic_labels: [kettle]
       provides: water
       count: 1
-    soup_source:
-      accepted_semantic_labels: [soup_source]
-      provides: soup
-      count: 1
   target_requirements:
     coffee:
       witness_role: coffee_container
@@ -137,6 +134,7 @@ symbolic_task:
     soup:
       witness_role: soup_container
       required_contents: [soup]
+      initial_contents: [soup]
       requires_operation_group: soup_serving
       final_goal: served
   causal_dependencies:

@@ -286,7 +286,6 @@ def test_multiview_consensus_outweighs_one_high_confidence_outlier():
             _accepted_observation("fork", "inspection_right", 0.31),
             _accepted_observation("fork", "inspection_top", 0.29),
             _accepted_observation("pen", "inspection_front", 0.95),
-            _accepted_observation("pen", "inspection_close", 0.90),
         ],
         config=config,
         stage=0,
@@ -299,8 +298,34 @@ def test_multiview_consensus_outweighs_one_high_confidence_outlier():
     )
     assert record["status"] == "SUPPORTED"
     assert record["canonical_label"] == "fork"
-    assert record["supporting_view_margin"] == 1
+    assert record["supporting_view_margin"] == 2
     assert record["winning_label_margin_kind"] == "supporting_view_count"
+
+
+def test_strong_multiview_runner_keeps_three_to_two_disagreement_unknown():
+    config = _config()
+    config["fusion"]["maximum_conflicting_view_fraction"] = 0.60
+    config["fusion"]["minimum_conflicting_mean_confidence"] = 0.10
+    record = fuse_semantic_observations(
+        [
+            _accepted_observation("spoon", "inspection_right", 0.42),
+            _accepted_observation("spoon", "inspection_top", 0.39),
+            _accepted_observation("spoon", "inspection_front", 0.37),
+            _accepted_observation("fork", "inspection_left", 0.31),
+            _accepted_observation("fork", "inspection_close", 0.29),
+        ],
+        config=config,
+        stage=0,
+        region_id="INITIAL",
+        detector_metadata={
+            "name": "mock",
+            "checkpoint": "mock",
+            "version": "1",
+        },
+    )
+    assert record["status"] == "UNKNOWN"
+    assert record["canonical_label"] is None
+    assert "CONFLICTING_MULTI_VIEW_LABELS" in record["reason_codes"]
 
 
 def test_multiview_disagreement_is_retained_and_can_be_unknown():
@@ -408,6 +433,35 @@ def test_role_alternative_aggregation_does_not_overrule_stronger_excluded_eviden
         role,
     )
     assert result["status"] == "UNKNOWN"
+
+
+def test_role_alternative_aggregation_rejects_multiview_excluded_label():
+    role = {"semantic_preferences": [
+        {"rank": 1, "canonical_label": "spoon", "detector_aliases": ["spoon"]}
+    ]}
+    result = evaluate_semantic_compatibility(
+        {"semantics": {"latest_observation": {
+            "status": "UNKNOWN",
+            "canonical_label": None,
+            "alternatives": [
+                {
+                    "label": "spoon",
+                    "camera_ids": ["right", "top", "front"],
+                    "supporting_view_count": 3,
+                    "score": 3.2,
+                },
+                {
+                    "label": "fork",
+                    "camera_ids": ["left", "close"],
+                    "supporting_view_count": 2,
+                    "score": 1.4,
+                },
+            ],
+        }}},
+        role,
+    )
+    assert result["status"] == "UNKNOWN"
+    assert result["reason"] == "NO_VALIDATED_SEMANTIC_EVIDENCE"
 
 
 def test_semantic_record_contains_detector_and_rgb_provenance():

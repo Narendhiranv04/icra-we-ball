@@ -885,6 +885,24 @@ def fuse_semantic_observations(
             fusion["minimum_winning_label_margin"]
         ):
             reasons.append("CONFLICTING_MULTI_VIEW_LABELS")
+        strong_multi_view_runner = (
+            runner is not None
+            and runner["supporting_view_count"] >= 2
+            and runner["mean_confidence"] >= float(
+                fusion.get("minimum_conflicting_mean_confidence", 0.10)
+            )
+            and (
+                runner["supporting_view_count"]
+                / max(winner["supporting_view_count"], 1)
+            ) > float(
+                fusion.get("maximum_conflicting_view_fraction", 1.0)
+            )
+        )
+        if (
+            strong_multi_view_runner
+            and "CONFLICTING_MULTI_VIEW_LABELS" not in reasons
+        ):
+            reasons.append("CONFLICTING_MULTI_VIEW_LABELS")
     status = "SUPPORTED" if not reasons else "UNKNOWN"
     return {
         "status": status,

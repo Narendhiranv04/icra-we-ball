@@ -1357,10 +1357,14 @@ three-serving experiment. Its pipeline keeps four interfaces separate:
 
 Coffee stirring permits one verified utensil to be used sequentially with all
 three coffee vessels. Soup serving requires three target-specific, distinct
-utensils. Source roles (kettle, coffee source, and soup source) are grounded
+utensils. Source roles (kettle and coffee source) are grounded
 in a separate YOLO-World pass over saved stage-0 mask-bounded RGB crops using
 `configs/symbolic_source_vocabulary.yaml`. Simulator body names, hidden poses,
 mesh dimensions, and legacy source-region metadata are not compiler inputs.
+The three soup targets are visibly pre-filled; the task specification compiles
+those observed targets with initial `has_content(..., soup)` facts, so the
+primary scene has no redundant handled soup pot and the planner emits no
+artificial soup-pouring action.
 Planner-visible location comes only from `last_evidence_source_region`:
 `INITIAL` evidence maps to the known countertop, while region-gated evidence
 maps to the inspected region.
@@ -1405,3 +1409,60 @@ navigation, IK, grasping, collision motion planning, PDDLStream, or execution.
 The task specification and source-role vocabulary remain manually configured;
 object identities, geometry, semantics, compatibility, assignments, locations,
 PDDL objects/facts, action order, and validation are produced from each run.
+
+## No-FM kitchen task-feasibility benchmark
+
+The controlled feasibility family keeps the three-serving goal text byte-for-
+byte identical while changing only the physical roster and deterministic
+layout. It ends after observed functional grounding: it does not import the
+symbolic planner, generate PDDL, execute actions, use a robot, or call an FM.
+
+Coffee feasibility requires a valid semantic-and-geometric edge for every one
+of the three coffee vessels. A one-tool cover is preferred, but two- and
+three-tool collective covers are also feasible; complete covers are ranked by
+minimum distinct physical tools and then by the existing deterministic
+semantic/object ordering. Soup feasibility remains a global bipartite
+matching: all three bowls need target-specific compatible utensils and those
+three physical tools must be distinct. After the fixed
+`INITIAL -> D1 -> D2 -> C2 -> B1 -> C1` evidence sequence, any non-complete
+witness maps to terminal `INFEASIBLE`.
+
+`configs/kitchen_feasibility_variants.yaml` defines F0--F7 feasible controls,
+I0--I5 infeasible count/coverage/matching/geometry counterexamples, and P0/P1
+deterministic layout perturbations. The independent oracle uses only the exact
+scene roster, intended semantic class, analytic dimensions, and exact region
+membership. Its artifacts are marked
+`PRIVILEGED_ORACLE_EVALUATION_ONLY`; no oracle result or exact property is
+passed to the RGB-D prediction function.
+
+Run all curated variants with real five-view RGB-D and YOLO-World:
+
+```bash
+BENCHMARK_ID="kitchen_feasibility_$(date +%Y%m%d_%H%M%S)"
+MUJOCO_GL=egl PYOPENGL_PLATFORM=egl YOLO_CONFIG_DIR=/tmp \
+MUJOCO_SEMANTIC_PROCESS_ISOLATION=1 \
+OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 \
+MALLOC_ARENA_MAX=2 \
+.venv/bin/python -m mujoco_scenes.run_kitchen_feasibility_benchmark \
+  --all-core-variants \
+  --no-robot \
+  --output-root runs/feasibility_benchmarks \
+  --benchmark-id "$BENCHMARK_ID" \
+  --width 1280 --height 960 \
+  --semantic-detector yolo_world \
+  --semantic-model semantic_model_cache/yolov8m-worldv2.pt \
+  --semantic-vocabulary mujoco_scenes/configs/semantic_vocabulary.yaml \
+  --semantic-confidence-threshold 0.03 \
+  --semantic-min-supporting-views 2 \
+  --save-semantic-overlays
+```
+
+For one debugging case, replace `--all-core-variants` with, for example,
+`--variant F3_DISTRIBUTED_COFFEE_THREE`. The benchmark root contains
+`benchmark_summary.json`, `benchmark_summary.csv`, and `README.md`; every
+variant directory contains its config, stage-wise privileged oracle label,
+observed prediction, comparison, final witness, grounded assignments, and the
+normal RGB/depth/segmentation, semantic overlay, graph, and stage-local
+point-cloud evidence. Exact scene geometry is intentionally available to the
+offline oracle, so these variants evaluate controlled simulator evidence and
+are not a claim of open-world ground-truth availability.

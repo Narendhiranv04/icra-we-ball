@@ -361,6 +361,24 @@ def compile_observed_symbolic_state(
         source_bindings[role] = chosen
         source_capabilities[chosen] = str(requirement["provides"])
 
+    # Some targets can be observed already containing material (the primary
+    # scene's soup bowls are visibly pre-filled). This is declarative task
+    # state, not a hidden simulator lookup: target identity still comes from
+    # the validated witness and the content type comes from the replaceable
+    # ground-truth functional specification.
+    initial_target_contents: set[tuple[str, str]] = set()
+    declared_contents = set(map(str, symbolic.get("contents", [])))
+    for requirement in symbolic.get("target_requirements", {}).values():
+        witness_role = str(requirement.get("witness_role", ""))
+        targets = list(selected.get(witness_role, []))
+        required_contents = set(map(str, requirement.get("required_contents", [])))
+        for content in map(str, requirement.get("initial_contents", [])):
+            if content not in declared_contents or content not in required_contents:
+                raise SymbolicCompilationError(
+                    f"Invalid initial target content {content!r} for {witness_role}"
+                )
+            initial_target_contents.update((target, content) for target in targets)
+
     coffee_assignments = _verified_assignments(witness, "coffee_stirring")
     soup_assignments = _verified_assignments(witness, "soup_serving")
     can_stir = sorted({
@@ -404,6 +422,9 @@ def compile_observed_symbolic_state(
             "source_contains": [
                 [source, content]
                 for source, content in sorted(source_capabilities.items())
+            ],
+            "initial_target_contents": [
+                list(pair) for pair in sorted(initial_target_contents)
             ],
             "can_stir": [list(pair) for pair in can_stir],
             "assigned_soup_utensil": [
@@ -472,7 +493,9 @@ class KitchenSymbolicProblem:
             locations=locations,
             opened=opened,
             held=None,
-            contents=frozenset(),
+            contents=frozenset(
+                map(tuple, capabilities.get("initial_target_contents", []))
+            ),
             stirred=frozenset(),
             utensil_placed=frozenset(),
             served=frozenset(),
@@ -764,6 +787,8 @@ def render_problem_pddl(problem: KitchenSymbolicProblem, task_id: str) -> str:
         lines.append(f"    (open {_symbol(region)})")
     for source, content in sorted(problem.source_contents.items()):
         lines.append(f"    (source_contains {_symbol(source)} {_symbol(content)})")
+    for target, content in sorted(problem.initial.contents):
+        lines.append(f"    (has_content {_symbol(target)} {_symbol(content)})")
     for tool, target in sorted(problem.can_stir):
         lines.append(f"    (can_stir {_symbol(tool)} {_symbol(target)})")
     for tool, target in sorted(problem.soup_assignments):
@@ -791,6 +816,110 @@ def _search_trace(run_path: Path) -> list[dict[str, Any]]:
                 "stage": event.get("stage"),
             })
     return trace
+
+
+def _scientific_validation(
+    run_path: Path,
+    compiled: dict[str, Any],
+    problem_pddl: str,
+    plan_records: list[dict[str, Any]],
+    validation: dict[str, Any],
+) -> dict[str, Any]:
+    """Audit the perception/planning boundary using only saved run evidence."""
+    registry = _read_json(run_path / "object_registry.json").get("objects", {})
+    early_visibility_violations = []
+    stage_snapshots = []
+    for graph_path in sorted((run_path / "stages").glob("*/graph.json")):
+        match = re.match(r"(\d+)", graph_path.parent.name)
+        if match is None:
+            continue
+        stage = int(match.group(1))
+        graph = _read_json(graph_path)
+        visible_ids = {
+            str(node.get("id", "")).removeprefix("object:")
+            for node in graph.get("nodes", [])
+            if node.get("type") == "object"
+        }
+        stage_snapshots.append({
+            "stage": stage,
+            "path": str(graph_path.relative_to(run_path)),
+            "observed_object_count": len(visible_ids),
+        })
+        for object_id, record in registry.items():
+            first_seen = record.get("first_seen_stage")
+            if (
+                isinstance(first_seen, int)
+                and stage < first_seen
+                and object_id in visible_ids
+            ):
+                early_visibility_violations.append({
+                    "object_id": object_id,
+                    "first_seen_stage": first_seen,
+                    "leaked_at_stage": stage,
+                })
+
+    location_violations = [
+        object_id
+        for object_id, record in compiled.get("objects", {}).items()
+        if record.get("location", {}).get("basis")
+        != "REGION_GATED_INSPECTION_EVIDENCE"
+    ]
+    pddl_lower = problem_pddl.lower()
+    forbidden_tokens = [
+        token for token in (
+            "oracle_source_region",
+            "privileged_wrong_region",
+            "s1i_",
+            "ab3_",
+            "pot_with_soup",
+            "coffee_jar",
+        ) if token in pddl_lower
+    ]
+    physical_ids = sorted(compiled.get("objects", {}))
+    non_generic_ids = [
+        object_id
+        for object_id in physical_ids
+        if re.fullmatch(r"object_\d+", object_id) is None
+    ]
+    plan_steps_match = all(
+        record.get("step") == index and record.get("rendered")
+        for index, record in enumerate(plan_records, 1)
+    )
+    return {
+        "schema_version": 1,
+        "check_1_observed_symbolic_state": {
+            "passed": not early_visibility_violations and not location_violations,
+            "hidden_object_exclusion_checked": bool(stage_snapshots),
+            "early_visibility_violations": early_visibility_violations,
+            "location_basis": compiled.get("location_basis"),
+            "location_basis_violations": location_violations,
+            "stage_snapshots": stage_snapshots,
+        },
+        "check_2_pddl_problem_cleanliness": {
+            "passed": not forbidden_tokens and not non_generic_ids,
+            "forbidden_privileged_tokens_found": forbidden_tokens,
+            "non_generic_physical_ids": non_generic_ids,
+            "problem_state_stage": compiled.get("witness_stage"),
+            "problem_state_basis": compiled.get("inference_basis"),
+        },
+        "check_3_planner_origin_and_validation": {
+            "passed": bool(
+                plan_records
+                and plan_steps_match
+                and validation.get("valid")
+                and validation.get("all_goals_satisfied")
+            ),
+            "planner_entry_point": (
+                "mujoco_scenes.symbolic_planning.plan_symbolic_task"
+            ),
+            "algorithm": "deterministic_best_first_classical_state_space_search",
+            "renderer_role": "serialization_only_after_planner_returns",
+            "action_count": len(plan_records),
+            "plan_steps_well_formed": plan_steps_match,
+            "validator_valid": validation.get("valid"),
+            "all_goals_satisfied": validation.get("all_goals_satisfied"),
+        },
+    }
 
 
 def compile_plan_and_save(
@@ -821,9 +950,31 @@ def compile_plan_and_save(
     })
     _write_json(run_path / "plan.json", plan_records)
     _write_json(run_path / "plan_validation.json", validation)
-    (run_path / "domain.pddl").write_text(render_domain_pddl(), encoding="utf-8")
-    (run_path / "problem.pddl").write_text(
-        render_problem_pddl(problem, task_id), encoding="utf-8"
+    domain_pddl = render_domain_pddl()
+    problem_pddl = render_problem_pddl(problem, task_id)
+    (run_path / "domain.pddl").write_text(domain_pddl, encoding="utf-8")
+    (run_path / "problem.pddl").write_text(problem_pddl, encoding="utf-8")
+    planner_provenance = {
+        "schema_version": 1,
+        "planner_entry_point": (
+            "mujoco_scenes.symbolic_planning.plan_symbolic_task"
+        ),
+        "algorithm": "deterministic_best_first_classical_state_space_search",
+        "domain_source": "generated_from_generic_action_schemas",
+        "problem_source": "compiled_observed_state_and_verified_witness",
+        "plan_renderer_role": "serialization_only_after_planner_returns",
+        "action_count": len(plan_records),
+    }
+    _write_json(run_path / "planner_provenance.json", planner_provenance)
+    _write_json(
+        run_path / "scientific_validation.json",
+        _scientific_validation(
+            run_path,
+            compiled,
+            problem_pddl,
+            plan_records,
+            validation,
+        ),
     )
     plan_text = "\n".join(
         f"{record['step']:03d} {record['rendered']}" for record in plan_records

@@ -15,6 +15,7 @@ from collections import Counter
 from importlib.util import find_spec
 from pathlib import Path
 from dataclasses import dataclass, field
+import random
 
 import mujoco
 import mujoco.viewer
@@ -29,6 +30,9 @@ KITCHEN_BASE = ASSETS_DIR / "kitchen_base.xml"
 OBJECT_LIB = ASSETS_DIR / "objects" / "object_library.xml"
 OBJECT_MESHES_DIR = ASSETS_DIR / "objects" / "meshes"
 SCENE_CONFIGS = CONFIGS_DIR / "scene_configs.yaml"
+KITCHEN_FEASIBILITY_VARIANTS = (
+    CONFIGS_DIR / "kitchen_feasibility_variants.yaml"
+)
 
 ROBOT_FETCH = "fetch"
 ROBOT_GOOGLE = "google"
@@ -190,26 +194,42 @@ OBJECT_SUPPORT_HEIGHT = {
     "coffee_can": 0.07009, "sugar_box": 0.08802,
     "milk_carton": 0.060, "tea_box": 0.01944, "bread": 0.025,
     "butter": 0.015, "jam_jar": 0.040, "napkin": 0.003,
-    "biscuits": 0.020, "pot_with_soup": 0.050,
+    "biscuits": 0.020, "pot_with_soup": 0.03303,
     "gso_canister_distractor": 0.07187,
     "gso_spatula_distractor": 0.01234,
-    "ab3_narrow_deep_cup": 0.06460,
-    "ab3_medium_deep_mug": 0.07317,
-    "ab3_shallow_bowl": 0.02750,
-    "ab3_deep_bowl": 0.05775,
+    "ab3_narrow_deep_cup": 0.04768,
+    "ab3_medium_deep_mug": 0.05488,
+    "ab3_shallow_bowl": 0.02613,
+    "ab3_deep_bowl": 0.04263,
     "ab3_short_narrow_spoon": 0.01045,
     "ab3_medium_spoon": 0.01045,
-    "ab3_long_wide_spoon": 0.01463,
+    "ab3_long_wide_spoon": 0.01150,
     "ab3_long_narrow_spoon": 0.01045,
     "ab3_partial_spoon": 0.01045,
     "ab3_long_narrow_fork": 0.00773,
-    "s1i_wide_shallow_cup": 0.03384,
-    "s1i_narrow_deep_bowl": 0.04950,
+    "s1i_wide_shallow_cup": 0.03537,
+    "s1i_narrow_deep_bowl": 0.04263,
     "s1i_soup_spoon": 0.01045,
-    "s1i_coffee_near_miss_spoon": 0.01463,
+    "s1i_coffee_near_miss_spoon": 0.01097,
     "s1i_final_long_narrow_spoon": 0.01045,
-    "s1i_oversized_spoon": 0.01463,
-    "s1i_c2_soup_spoon": 0.01463,
+    "s1i_oversized_spoon": 0.01150,
+    "s1i_c2_soup_spoon": 0.01045,
+    "s1i_compact_kettle": 0.05317,
+    "s1i_compact_coffee_jar": 0.07244,
+    "feas_coffee_small_shallow_cup": 0.04306,
+    "feas_coffee_medium_deep_mug": 0.05660,
+    "feas_coffee_wide_very_deep_cup": 0.07227,
+    "feas_c2_medium_spoon": 0.01045,
+    "feas_soup_wide_shallow_bowl": 0.02475,
+    "feas_soup_narrow_shallow_bowl": 0.02475,
+    "feas_soup_wide_deep_bowl": 0.06325,
+    "feas_narrow_short_spoon": 0.01045,
+    "feas_narrow_medium_spoon": 0.01045,
+    "feas_medium_spoon": 0.01045,
+    "feas_wide_long_spoon": 0.01045,
+    "feas_soup_wide_short_spoon": 0.01045,
+    "feas_soup_wide_medium_spoon": 0.01045,
+    "feas_semantic_decoy_spoon": 0.01045,
 }
 
 # Controlled visible-geometry variants for Ablation 3.  These declarations
@@ -218,78 +238,171 @@ OBJECT_SUPPORT_HEIGHT = {
 # mapping, its scale factors, or the source object names.
 SCENE_OBJECT_VARIANTS = {
     "ab3_narrow_deep_cup": {
-        "base": "cup", "scale": (1.34, 1.34, 2.10),
+        "base": "cup", "scale": (1.15, 1.15, 1.55),
         "mesh": "mesh_ab3_narrow_deep_cup",
+        "material": "mat_s1i_cup_cream",
     },
     "ab3_medium_deep_mug": {
-        "base": "mug", "scale": (1.0, 1.0, 1.80),
+        "base": "mug", "scale": (0.92, 0.92, 1.35),
         "mesh": "mesh_ab3_medium_deep_mug",
+        "material": "mat_s1i_mug_blue",
     },
     "ab3_shallow_bowl": {
-        "base": "bowl", "scale": (1.0, 1.0, 1.0),
+        "base": "bowl", "scale": (0.90, 0.90, 0.95),
         "mesh": "mesh_ab3_shallow_bowl",
+        "material": "mat_s1i_bowl_ivory",
     },
     "ab3_deep_bowl": {
-        "base": "bowl", "scale": (1.0, 1.0, 2.10),
+        "base": "bowl", "scale": (0.92, 0.92, 1.55),
         "mesh": "mesh_ab3_deep_bowl",
+        "material": "mat_s1i_bowl_blue",
     },
     "ab3_short_narrow_spoon": {
-        "base": "spoon", "scale": (0.72, 0.70, 1.0),
+        "base": "spoon", "scale": (0.70, 0.75, 1.0),
         "mesh": "mesh_ab3_short_narrow_spoon",
+        "material": "mat_s1i_spoon_inspection",
     },
     "ab3_medium_spoon": {
-        "base": "spoon", "scale": (0.95, 2.60, 1.0),
+        "base": "spoon", "scale": (0.95, 1.45, 1.0),
         "mesh": "mesh_ab3_medium_spoon",
+        "material": "mat_s1i_spoon_inspection",
     },
     "ab3_long_wide_spoon": {
-        "base": "spoon", "scale": (1.35, 3.20, 1.20),
+        "base": "spoon", "scale": (1.22, 1.55, 1.10),
         "mesh": "mesh_ab3_long_wide_spoon",
+        "material": "mat_s1i_spoon_inspection",
     },
     "ab3_long_narrow_spoon": {
-        "base": "spoon", "scale": (1.45, 1.70, 1.0),
+        "base": "spoon", "scale": (1.25, 0.95, 1.0),
         "mesh": "mesh_ab3_long_narrow_spoon",
+        "material": "mat_s1i_spoon_inspection",
     },
     "ab3_partial_spoon": {
-        "base": "spoon", "scale": (0.70, 1.65, 1.0),
+        "base": "spoon", "scale": (0.72, 0.85, 1.0),
         "mesh": "mesh_ab3_partial_spoon",
+        "material": "mat_s1i_spoon_inspection",
     },
     "ab3_long_narrow_fork": {
-        "base": "fork", "scale": (1.50, 1.0, 1.0),
+        # A 24 cm serving fork remains physically plausible while preserving
+        # enough tine pixels for multi-view RGB recognition at the calibrated
+        # inspection distance.
+        "base": "fork", "scale": (1.35, 1.0, 1.0),
         "mesh": "mesh_ab3_long_narrow_fork",
     },
     # Integrated Scene 1 variants reuse the same source meshes while keeping
     # the scene-design namespace independent from Ablation 3. These scales
     # affect rendered evidence only and are never visible to inference.
     "s1i_wide_shallow_cup": {
-        "base": "cup", "scale": (1.62, 1.62, 1.10),
+        "base": "cup", "scale": (1.30, 1.30, 1.15),
         "mesh": "mesh_s1i_wide_shallow_cup",
+        "material": "mat_s1i_cup_sage",
     },
     "s1i_narrow_deep_bowl": {
-        "base": "bowl", "scale": (1.10, 1.10, 1.80),
+        "base": "bowl", "scale": (0.95, 0.95, 1.55),
         "mesh": "mesh_s1i_narrow_deep_bowl",
+        "material": "mat_s1i_bowl_sage",
     },
     "s1i_soup_spoon": {
-        "base": "spoon", "scale": (0.85, 1.55, 1.0),
+        "base": "spoon", "scale": (0.90, 0.90, 1.0),
         "mesh": "mesh_s1i_soup_spoon",
+        "material": "mat_s1i_spoon_inspection",
     },
     "s1i_coffee_near_miss_spoon": {
-        "base": "spoon", "scale": (1.34, 3.00, 1.15),
+        "base": "spoon", "scale": (1.20, 1.40, 1.05),
         "mesh": "mesh_s1i_coffee_near_miss_spoon",
         "material": "mat_s1i_spoon_inspection",
     },
     "s1i_final_long_narrow_spoon": {
-        "base": "spoon", "scale": (1.48, 2.00, 1.0),
+        "base": "spoon", "scale": (1.32, 0.95, 1.0),
         "mesh": "mesh_s1i_final_long_narrow_spoon",
         "material": "mat_s1i_spoon_inspection",
     },
     "s1i_oversized_spoon": {
-        "base": "spoon", "scale": (1.80, 5.00, 1.40),
+        "base": "spoon", "scale": (1.35, 1.70, 1.10),
         "mesh": "mesh_s1i_oversized_spoon",
         "material": "mat_s1i_spoon_inspection",
     },
     "s1i_c2_soup_spoon": {
-        "base": "spoon", "scale": (1.80, 3.60, 1.40),
+        "base": "spoon", "scale": (1.15, 1.15, 1.0),
         "mesh": "mesh_s1i_c2_soup_spoon",
+        "material": "mat_s1i_spoon_inspection",
+    },
+    "s1i_compact_kettle": {
+        "base": "kettle", "scale": (0.78, 0.78, 0.78),
+        "mesh": "mesh_s1i_compact_kettle",
+    },
+    "s1i_compact_coffee_jar": {
+        "base": "coffee_jar", "scale": (0.78, 0.78, 0.78),
+        "mesh": "mesh_s1i_compact_coffee_jar",
+    },
+    "feas_coffee_small_shallow_cup": {
+        "base": "cup", "scale": (0.82, 0.82, 1.40),
+        "mesh": "mesh_feas_coffee_small_shallow_cup",
+        "material": "mat_s1i_cup_cream",
+    },
+    "feas_coffee_medium_deep_mug": {
+        "base": "cup", "scale": (1.05, 1.05, 1.84),
+        "mesh": "mesh_feas_coffee_medium_deep_mug",
+        "material": "mat_s1i_mug_blue",
+    },
+    "feas_coffee_wide_very_deep_cup": {
+        "base": "cup", "scale": (1.40, 1.40, 2.35),
+        "mesh": "mesh_feas_coffee_wide_very_deep_cup",
+        "material": "mat_s1i_cup_sage",
+    },
+    "feas_c2_medium_spoon": {
+        "base": "spoon", "scale": (0.90, 1.15, 1.0),
+        "mesh": "mesh_feas_c2_medium_spoon",
+        "material": "mat_s1i_spoon_inspection",
+    },
+    "feas_soup_wide_shallow_bowl": {
+        "base": "bowl", "scale": (1.05, 1.05, 0.90),
+        "mesh": "mesh_feas_soup_wide_shallow_bowl",
+        "material": "mat_s1i_bowl_ivory",
+    },
+    "feas_soup_narrow_shallow_bowl": {
+        "base": "bowl", "scale": (0.55, 0.55, 0.90),
+        "mesh": "mesh_feas_soup_narrow_shallow_bowl",
+        "material": "mat_s1i_bowl_blue",
+    },
+    "feas_soup_wide_deep_bowl": {
+        "base": "bowl", "scale": (1.05, 1.05, 2.30),
+        "mesh": "mesh_feas_soup_wide_deep_bowl",
+        "material": "mat_s1i_bowl_sage",
+    },
+    "feas_narrow_short_spoon": {
+        "base": "spoon", "scale": (0.55, 0.70, 1.0),
+        "mesh": "mesh_feas_narrow_short_spoon",
+        "material": "mat_s1i_spoon_inspection",
+    },
+    "feas_narrow_medium_spoon": {
+        "base": "spoon", "scale": (0.85, 0.70, 1.0),
+        "mesh": "mesh_feas_narrow_medium_spoon",
+        "material": "mat_s1i_spoon_inspection",
+    },
+    "feas_medium_spoon": {
+        "base": "spoon", "scale": (0.95, 1.65, 1.0),
+        "mesh": "mesh_feas_medium_spoon",
+        "material": "mat_s1i_spoon_inspection",
+    },
+    "feas_wide_long_spoon": {
+        "base": "spoon", "scale": (1.35, 2.20, 1.0),
+        "mesh": "mesh_feas_wide_long_spoon",
+        "material": "mat_s1i_spoon_inspection",
+    },
+    "feas_soup_wide_short_spoon": {
+        "base": "spoon", "scale": (0.90, 2.20, 1.0),
+        "mesh": "mesh_feas_soup_wide_short_spoon",
+        "material": "mat_s1i_spoon_inspection",
+    },
+    "feas_soup_wide_medium_spoon": {
+        "base": "spoon", "scale": (1.15, 2.20, 1.0),
+        "mesh": "mesh_feas_soup_wide_medium_spoon",
+        "material": "mat_s1i_spoon_inspection",
+    },
+    "feas_semantic_decoy_spoon": {
+        "base": "spoon", "scale": (0.55, 4.20, 1.0),
+        "mesh": "mesh_feas_semantic_decoy_spoon",
         "material": "mat_s1i_spoon_inspection",
     },
 }
@@ -305,6 +418,11 @@ UTENSIL_OBJECTS = {
     "s1i_final_long_narrow_spoon",
     "s1i_oversized_spoon",
     "s1i_c2_soup_spoon",
+    "feas_c2_medium_spoon",
+    "feas_narrow_short_spoon", "feas_narrow_medium_spoon",
+    "feas_medium_spoon", "feas_wide_long_spoon",
+    "feas_soup_wide_short_spoon", "feas_soup_wide_medium_spoon",
+    "feas_semantic_decoy_spoon",
 }
 CENTRED_DRAWER_OBJECTS = {
     "spoon", "oversized_spoon", "fork", "knife", "stirrer", "tongs",
@@ -317,6 +435,11 @@ CENTRED_DRAWER_OBJECTS = {
     "s1i_final_long_narrow_spoon",
     "s1i_oversized_spoon",
     "s1i_c2_soup_spoon",
+    "feas_c2_medium_spoon",
+    "feas_narrow_short_spoon", "feas_narrow_medium_spoon",
+    "feas_medium_spoon", "feas_wide_long_spoon",
+    "feas_soup_wide_short_spoon", "feas_soup_wide_medium_spoon",
+    "feas_semantic_decoy_spoon",
 }
 
 ACTION_PICK_OBJECTS = {
@@ -329,23 +452,12 @@ PASSIVE_HANDLE_OBJECTS = {
     "gso_spatula_distractor",
 }
 
-# Scene-construction fixtures keep unusually large counterexample objects
-# physically stored while a container moves. They are released immediately
-# after direct opening and before the inspection rig captures evidence.
+# Scene-construction fixtures transport free-jointed drawer objects with their
+# moving trays. They are released immediately after direct opening and before
+# the inspection rig captures evidence.
 STORAGE_FIXTURE_EQUALITIES = {
     "D1": "storage_fixture_D1_oversized_spoon",
     "D2": "storage_fixture_D2_ablation3_utensil",
-}
-
-STORAGE_FIXTURE_OBJECTS = {
-    "D1": {
-        "oversized_spoon", "ab3_partial_spoon",
-        "s1i_oversized_spoon",
-    },
-    "D2": {
-        "ab3_long_narrow_spoon", "ab3_medium_spoon",
-        "ab3_partial_spoon",
-    },
 }
 
 # Positions are RELATIVE to the container body origin: (x, y, support_z).
@@ -453,6 +565,25 @@ COUNTER_SPOTS = {
     "counter_spot_38": (0.50, -0.26, 0.580),
     "counter_spot_39": (0.46, -0.10, 0.580),
     "counter_spot_40": (0.12, -0.075, 0.580),
+    # Authoritative integrated-scene layout revision. The vessel and utensil
+    # rows are separated by 22 cm. Long utensils are spaced by their planar
+    # footprint rather than by an arbitrary centre-to-centre interval. This
+    # remains collision-free for every randomized assignment of the six task
+    # vessels to the three visible slots.
+    "counter_spot_41": (-0.60, -0.08, 0.580),
+    "counter_spot_42": (-0.37, -0.08, 0.580),
+    "counter_spot_43": (-0.14, -0.08, 0.580),
+    "counter_spot_44": (-0.37, -0.08, 0.580),
+    "counter_spot_45": (-0.14, -0.08, 0.580),
+    "counter_spot_46": (0.09, -0.08, 0.580),
+    "counter_spot_47": (-0.62, -0.30, 0.580),
+    "counter_spot_48": (-0.40, -0.30, 0.580),
+    "counter_spot_49": (-0.10, -0.30, 0.580),
+    "counter_spot_50": (0.15, -0.29, 0.580),
+    "counter_spot_51": (0.27, -0.29, 0.580),
+    "counter_spot_52": (0.48, -0.31, 0.580),
+    "counter_spot_53": (0.49, -0.08, 0.580),
+    "counter_spot_54": (0.42, -0.055, 0.580),
     # Isolated semantic-counterexample location at the far left of INITIAL's
     # calibrated volume. It keeps a thin marker clear of vessel silhouettes.
     "counter_spot_36": (-0.67, -0.10, 0.580),
@@ -502,6 +633,171 @@ class SceneConfig:
     notes: str = ""
 
 
+INTEGRATED_PRIMARY_SCENE = "S1_integrated_kitchen_object_function_primary"
+INTEGRATED_SCENE_PREFIX = "S1_integrated_kitchen_object_function"
+
+
+def is_integrated_kitchen_scene(scene_name: str) -> bool:
+    return scene_name.startswith(INTEGRATED_SCENE_PREFIX)
+INTEGRATED_TARGET_VESSELS = (
+    "ab3_narrow_deep_cup",
+    "ab3_medium_deep_mug",
+    "s1i_wide_shallow_cup",
+    "ab3_shallow_bowl",
+    "ab3_deep_bowl",
+    "s1i_narrow_deep_bowl",
+)
+INTEGRATED_VISIBLE_TARGET_SPOTS = (
+    "counter_spot_41", "counter_spot_44", "counter_spot_45"
+)
+INTEGRATED_HIDDEN_TARGET_REGIONS = ("C2", "B1", "C1")
+
+# Conservative top-view half extents (x, y), in metres, after the integrated
+# scene's visual scaling and countertop orientation. These values are used
+# only to reject bad scene layouts; perception and geometry inference never
+# receive them. The fork is crosswise in this scene, hence its long y extent.
+INTEGRATED_COUNTERTOP_HALF_EXTENTS = {
+    "ab3_narrow_deep_cup": (0.060, 0.060),
+    "ab3_medium_deep_mug": (0.070, 0.060),
+    "s1i_wide_shallow_cup": (0.070, 0.070),
+    "ab3_shallow_bowl": (0.080, 0.080),
+    "ab3_deep_bowl": (0.080, 0.080),
+    "s1i_narrow_deep_bowl": (0.075, 0.075),
+    "ab3_short_narrow_spoon": (0.085, 0.025),
+    "ab3_medium_spoon": (0.110, 0.030),
+    "ab3_long_wide_spoon": (0.165, 0.045),
+    "ab3_long_narrow_fork": (0.025, 0.140),
+    "marker": (0.018, 0.060),
+    "s1i_compact_kettle": (0.080, 0.080),
+    "s1i_compact_coffee_jar": (0.045, 0.045),
+}
+INTEGRATED_COUNTERTOP_BUFFER_M = 0.015
+
+
+def validate_integrated_countertop_clearance(config: SceneConfig) -> None:
+    """Reject overlapping primary-scene countertop placements.
+
+    The check is deterministic and conservative. It runs after seeded target
+    randomization, so every accepted seed has at least 15 mm of axis-aligned
+    separation between the configured object footprints.
+    """
+    if config.name != INTEGRATED_PRIMARY_SCENE:
+        return
+    placed = []
+    for spot, object_kind in config.countertop_objects.items():
+        half_extent = INTEGRATED_COUNTERTOP_HALF_EXTENTS.get(object_kind)
+        if half_extent is None:
+            raise ValueError(
+                f"Missing integrated countertop footprint for {object_kind}"
+            )
+        x, y, _z = COUNTER_SPOTS[spot]
+        placed.append((spot, object_kind, x, y, *half_extent))
+    for index, first in enumerate(placed):
+        for second in placed[index + 1:]:
+            x_overlap = (
+                abs(first[2] - second[2])
+                < first[4] + second[4] + INTEGRATED_COUNTERTOP_BUFFER_M
+            )
+            y_overlap = (
+                abs(first[3] - second[3])
+                < first[5] + second[5] + INTEGRATED_COUNTERTOP_BUFFER_M
+            )
+            if x_overlap and y_overlap:
+                raise ValueError(
+                    "Integrated countertop objects violate the 15 mm buffer: "
+                    f"{first[0]}={first[1]} and {second[0]}={second[1]}"
+                )
+
+
+def configure_integrated_target_layout(
+    config: SceneConfig,
+    layout_seed: int | None,
+) -> dict:
+    """Apply a capacity-safe target layout and return its public manifest.
+
+    The YAML layout is the deterministic default. A seed shuffles only the
+    six task vessels: three remain on the counter and one is placed in each
+    cupboard/box region. Tool candidates and the fixed inspection order never
+    move, so layout variation does not silently change the benchmark policy.
+    """
+    if config.name != INTEGRATED_PRIMARY_SCENE:
+        if layout_seed is not None:
+            raise ValueError(
+                "--layout-seed is supported only for "
+                f"{INTEGRATED_PRIMARY_SCENE}"
+            )
+        return {"mode": "configured", "seed": None}
+
+    if layout_seed is not None:
+        rng = random.Random(layout_seed)
+        coffee_vessels = list(INTEGRATED_TARGET_VESSELS[:3])
+        soup_vessels = list(INTEGRATED_TARGET_VESSELS[3:])
+        rng.shuffle(coffee_vessels)
+        rng.shuffle(soup_vessels)
+        # Closed-region placements are restricted to scan/rig combinations
+        # that provide reliable RGB-D evidence: C2 gets a profile-rich coffee
+        # vessel, while B1 and C1 each get a bowl. Exact identities still
+        # shuffle with the seed. The narrow handle-free cup remains visible.
+        c2_candidates = [
+            vessel for vessel in coffee_vessels
+            if vessel != "ab3_narrow_deep_cup"
+        ]
+        rng.shuffle(c2_candidates)
+        c2_target = c2_candidates[0]
+        coffee_vessels.remove(c2_target)
+        b1_target = soup_vessels.pop(0)
+        c1_target = soup_vessels.pop(0)
+        remaining = [*coffee_vessels, *soup_vessels]
+        rng.shuffle(remaining)
+        hidden_by_region = {
+            "C2": c2_target, "B1": b1_target, "C1": c1_target,
+        }
+        visible = remaining
+        for spot, vessel in zip(INTEGRATED_VISIBLE_TARGET_SPOTS, visible):
+            config.countertop_objects[spot] = vessel
+        for region, vessel in hidden_by_region.items():
+            non_targets = [
+                item for item in config.container_contents[region]
+                if item not in INTEGRATED_TARGET_VESSELS
+            ]
+            config.container_contents[region] = [*non_targets, vessel]
+
+    target_locations = {}
+    for spot, item in config.countertop_objects.items():
+        if item in INTEGRATED_TARGET_VESSELS:
+            target_locations[item] = "INITIAL"
+    for region, items in config.container_contents.items():
+        for item in items:
+            if item in INTEGRATED_TARGET_VESSELS:
+                target_locations[item] = region
+
+    if set(target_locations) != set(INTEGRATED_TARGET_VESSELS):
+        raise ValueError("Integrated target layout must place every vessel once")
+    if any(len(items) > 2 for items in config.container_contents.values()):
+        raise ValueError("Integrated closed regions may contain at most two objects")
+    for region in INTEGRATED_HIDDEN_TARGET_REGIONS:
+        count = sum(
+            item in INTEGRATED_TARGET_VESSELS
+            for item in config.container_contents[region]
+        )
+        if count != 1:
+            raise ValueError(f"{region} must contain exactly one target vessel")
+    validate_integrated_countertop_clearance(config)
+    return {
+        "mode": "seeded_random" if layout_seed is not None else "configured",
+        "seed": layout_seed,
+        "target_locations": target_locations,
+        "closed_region_contents": {
+            region: list(items)
+            for region, items in config.container_contents.items()
+        },
+        "capacity_policy": {
+            "maximum_objects_per_closed_region": 2,
+            "maximum_target_vessels_per_cupboard_or_box": 1,
+        },
+    }
+
+
 @dataclass
 class SceneState:
     """Runtime state tracking visibility and search progress."""
@@ -533,6 +829,58 @@ def load_all_configs() -> dict[str, SceneConfig]:
             notes=cfg.get("notes", ""),
         )
         configs[name] = sc
+    if KITCHEN_FEASIBILITY_VARIANTS.exists():
+        benchmark = yaml.safe_load(
+            KITCHEN_FEASIBILITY_VARIANTS.read_text(encoding="utf-8")
+        ) or {}
+        expected_goal = benchmark.get("goal_instruction")
+        for variant_id, variant in benchmark.get("variants", {}).items():
+            scene_name = variant["scene_name"]
+            base_name = variant["base_scene"]
+            if base_name not in configs:
+                raise ValueError(
+                    f"Feasibility variant {variant_id} has unknown base "
+                    f"scene {base_name}"
+                )
+            derived = copy.deepcopy(configs[base_name])
+            derived.name = scene_name
+            if expected_goal is not None and derived.goal != expected_goal:
+                raise ValueError(
+                    f"Feasibility variant {variant_id} changed the goal"
+                )
+            if "countertop_objects" in variant:
+                derived.countertop_objects = dict(
+                    variant["countertop_objects"]
+                )
+            else:
+                for spot in variant.get("countertop_remove", []):
+                    derived.countertop_objects.pop(spot, None)
+                derived.countertop_objects.update(
+                    variant.get("countertop_set", {})
+                )
+            if "container_contents" in variant:
+                derived.container_contents = {
+                    region: list(items)
+                    for region, items in variant[
+                        "container_contents"
+                    ].items()
+                }
+            derived.optimal_search_order = list(
+                benchmark.get(
+                    "inspection_order", derived.optimal_search_order
+                )
+            )
+            derived.optimal_inspections = int(
+                variant.get(
+                    "expected_inspections",
+                    len(derived.optimal_search_order),
+                )
+            )
+            derived.notes = (
+                f"Controlled task-feasibility benchmark variant {variant_id}. "
+                + str(variant.get("description", ""))
+            )
+            configs[scene_name] = derived
     return configs
 
 
@@ -1086,10 +1434,21 @@ def build_scene_xml(
             if element.tag != "geom":
                 continue
             geom_type = element.get("type", "sphere")
+            if (
+                material_name is not None
+                and element.get("class") == "visual"
+                and element.get("material") not in {
+                    "mat_tomato_soup", "mat_hot_water", "mat_steam",
+                    "mat_coffee_powder", "mat_open_jar_rim",
+                }
+            ):
+                # Keep analytic interior surfaces visually consistent with
+                # the variant mesh. Previously the shell received the clean
+                # material while the cup/bowl floor retained a stretched YCB
+                # texture, producing the conspicuous mismatched interiors.
+                element.set("material", material_name)
             if geom_type == "mesh":
                 element.set("mesh", mesh_name)
-                if material_name is not None:
-                    element.set("material", material_name)
                 continue
             if element.get("fromto"):
                 element.set(
@@ -1244,7 +1603,7 @@ def build_scene_xml(
             print(f"  [WARNING] Unknown counter spot '{spot}', skipping {obj_name}.")
 
     # ── Place container objects ───────────────────────────────────────────
-    storage_fixture_instances: dict[str, str] = {}
+    storage_fixture_instances: dict[str, list[str]] = {}
     for container_id, objects in config.container_contents.items():
         if container_id not in CONTAINER_SLOTS:
             print(f"  [WARNING] Unknown container '{container_id}', skipping.")
@@ -1257,7 +1616,12 @@ def build_scene_xml(
         # Real-scale drinkware needs size-aware allocation. C1 has roughly
         # 16 cm below its enlarged shelf, so taller objects go above. C2 stacks
         # plate-like objects on its lower level and places other items above.
-        if container_id == "C1":
+        if container_id == "C1" and is_integrated_kitchen_scene(config.name):
+            # Keep the searched utensil and randomized vessel on separate
+            # shelves. This respects per-shelf capacity and prevents the
+            # vessel silhouette from suppressing thin-tool RGB detections.
+            allocated_slots = [slots[0], slots[2]]
+        elif container_id == "C1":
             lower_slots = [slots[0], slots[3]]
             shelf_slots = [slots[1], slots[2]]
             allocated_slots = []
@@ -1266,6 +1630,8 @@ def build_scene_xml(
                 preferred = shelf_slots if is_tall else lower_slots
                 fallback = lower_slots if is_tall else shelf_slots
                 allocated_slots.append((preferred or fallback).pop(0))
+        elif container_id == "C2" and is_integrated_kitchen_scene(config.name):
+            allocated_slots = [slots[0], slots[2]]
         elif container_id == "C2":
             plate_objects = {"plate", "small_plate"}
             nonplate_count = sum(obj not in plate_objects for obj in objects)
@@ -1334,6 +1700,17 @@ def build_scene_xml(
                     quat="0.7071068 0 0.7071068 0",
                     support_height_override=horizontal_radius,
                 )
+            elif (
+                is_integrated_kitchen_scene(config.name)
+                and container_id in {"C1", "C2", "B1"}
+                and obj_name in UTENSIL_OBJECTS
+            ):
+                # A slight diagonal exposes both the spoon bowl and handle to
+                # more than one region-facing RGB camera without changing any
+                # inference threshold or object dimensions.
+                injected_instance = _inject_object(
+                    obj_name, world_pos, quat="0.9914449 0 0 0.1305262"
+                )
             elif container_id == "D1" and obj_name in UTENSIL_OBJECTS:
                 # Point the logical handle end toward the robot centreline.
                 # D2's default -X handle direction already points inward; D1
@@ -1345,12 +1722,15 @@ def build_scene_xml(
                 )
             else:
                 injected_instance = _inject_object(obj_name, world_pos)
-            if (
-                injected_instance is not None
-                and obj_name
-                in STORAGE_FIXTURE_OBJECTS.get(container_id, set())
-            ):
-                storage_fixture_instances[container_id] = injected_instance
+            if injected_instance is not None and container_id in {"D1", "D2"}:
+                # Free-jointed objects live in world coordinates, not beneath
+                # the translating tray body. Weld every drawer item during
+                # deterministic direct opening; otherwise compact objects can
+                # remain under the counter or destabilize against the moving
+                # tray after only the large counterexample is transported.
+                storage_fixture_instances.setdefault(container_id, []).append(
+                    injected_instance
+                )
 
     # Contact-confirmed pick actions can enable one of these initially
     # inactive welds after both gripper fingers touch a supported object.
@@ -1360,20 +1740,26 @@ def build_scene_xml(
         equality = root.find("equality")
         if equality is None:
             equality = ET.SubElement(root, "equality")
-        for region_id, instance_name in sorted(
+        for region_id, instance_names in sorted(
             storage_fixture_instances.items()
         ):
-            ET.SubElement(
-                equality,
-                "weld",
-                {
-                    "name": STORAGE_FIXTURE_EQUALITIES[region_id],
-                    "body1": CONTAINER_SLOTS[region_id]["parent_body"],
-                    "body2": instance_name,
-                    "active": "true",
-                    "solref": "0.002 1",
-                },
-            )
+            for fixture_index, instance_name in enumerate(instance_names):
+                fixture_name = (
+                    STORAGE_FIXTURE_EQUALITIES[region_id]
+                    if fixture_index == 0
+                    else f"{STORAGE_FIXTURE_EQUALITIES[region_id]}_{fixture_index}"
+                )
+                ET.SubElement(
+                    equality,
+                    "weld",
+                    {
+                        "name": fixture_name,
+                        "body1": CONTAINER_SLOTS[region_id]["parent_body"],
+                        "body2": instance_name,
+                        "active": "true",
+                        "solref": "0.002 1",
+                    },
+                )
 
     if robot_name in {ROBOT_FETCH, ROBOT_GOOGLE}:
         equality = root.find("equality")
@@ -1482,13 +1868,17 @@ class KitchenScene:
         scene_name: str,
         include_robot: bool = True,
         robot: str | None = None,
+        layout_seed: int | None = None,
     ):
         configs = load_all_configs()
         if scene_name not in configs:
             available = ", ".join(configs.keys())
             raise ValueError(f"Scene '{scene_name}' not found. Available: {available}")
 
-        self.config = configs[scene_name]
+        self.config = copy.deepcopy(configs[scene_name])
+        self.layout_manifest = configure_integrated_target_layout(
+            self.config, layout_seed
+        )
         self.scene_name = scene_name
         self.robot_name = _selected_robot(include_robot, robot)
         self.has_robot = self.robot_name != ROBOT_NONE
@@ -1667,14 +2057,24 @@ class KitchenScene:
 
     def get_region_observation_states(self) -> dict[str, dict]:
         """Return opening/inspection state without exposing hidden contents."""
-        return {
-            container_id: {
+        states = {}
+        for container_id, cinfo in CONTAINER_JOINTS.items():
+            joint_id = mujoco.mj_name2id(
+                self.model, mujoco.mjtObj.mjOBJ_JOINT, cinfo["joint"]
+            )
+            joint_position = float(
+                self.data.qpos[self.model.jnt_qposadr[joint_id]]
+            )
+            physical_open = joint_position >= 0.80 * float(cinfo["open_val"])
+            states[container_id] = {
                 "region_id": container_id,
-                "open": bool(self.state.container_open_state[container_id]),
+                "open": physical_open,
                 "inspected": container_id in self.state.opened_containers,
+                "joint_position": joint_position,
+                "open_target": float(cinfo["open_val"]),
+                "open_fraction": joint_position / float(cinfo["open_val"]),
             }
-            for container_id in CONTAINER_JOINTS
-        }
+        return states
 
     def get_missing_objects(self) -> list:
         """Return missing required instances, preserving duplicate quantities."""
@@ -1703,6 +2103,9 @@ class KitchenScene:
         actuator_id = mujoco.mj_name2id(
             self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, cinfo["actuator"]
         )
+        joint_id = mujoco.mj_name2id(
+            self.model, mujoco.mjtObj.mjOBJ_JOINT, cinfo["joint"]
+        )
 
         # Set actuator target to open position
         self.data.ctrl[actuator_id] = cinfo["open_val"]
@@ -1711,19 +2114,32 @@ class KitchenScene:
         for _ in range(steps):
             mujoco.mj_step(self.model, self.data)
 
+        joint_position = float(
+            self.data.qpos[self.model.jnt_qposadr[joint_id]]
+        )
+        if joint_position < 0.80 * float(cinfo["open_val"]):
+            raise RuntimeError(
+                f"{container_id} failed to reach its physical open target: "
+                f"joint={joint_position:.4f}, target={cinfo['open_val']:.4f}"
+            )
+
         return self.record_container_opened(container_id)
 
     def release_storage_fixture(self, container_id: str) -> bool:
         """Release a scene-construction fixture before visual inspection."""
-        equality_name = STORAGE_FIXTURE_EQUALITIES.get(container_id)
-        if equality_name is None:
+        equality_prefix = STORAGE_FIXTURE_EQUALITIES.get(container_id)
+        if equality_prefix is None:
             return False
-        equality_id = mujoco.mj_name2id(
-            self.model, mujoco.mjtObj.mjOBJ_EQUALITY, equality_name
-        )
-        if equality_id < 0:
+        released = False
+        for equality_id in range(self.model.neq):
+            equality_name = mujoco.mj_id2name(
+                self.model, mujoco.mjtObj.mjOBJ_EQUALITY, equality_id
+            )
+            if equality_name and equality_name.startswith(equality_prefix):
+                self.data.eq_active[equality_id] = 0
+                released = True
+        if not released:
             return False
-        self.data.eq_active[equality_id] = 0
         mujoco.mj_forward(self.model, self.data)
         return True
 
@@ -1918,6 +2334,13 @@ if __name__ == "__main__":
         "--scene", type=str, default="S1_coffee_missing_mug",
         help=(
             "Kitchen scene name, L1_living_room, or an L2_living_room_* scene"
+        ),
+    )
+    parser.add_argument(
+        "--layout-seed", type=int, default=None,
+        help=(
+            "For the integrated primary scene, deterministically randomize "
+            "three target vessels across C2, B1 and C1"
         ),
     )
     parser.add_argument(
@@ -2155,7 +2578,9 @@ if __name__ == "__main__":
             from mujoco_scenes.living_room_scene import LivingRoomScene
             scene = LivingRoomScene(robot=selected_robot)
     else:
-        scene = KitchenScene(args.scene, robot=selected_robot)
+        scene = KitchenScene(
+            args.scene, robot=selected_robot, layout_seed=args.layout_seed
+        )
     scene.print_scene_summary()
 
     if args.inspect_sequence is not None:

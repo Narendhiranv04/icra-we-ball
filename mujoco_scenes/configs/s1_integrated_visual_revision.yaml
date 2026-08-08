@@ -1,0 +1,44 @@
+schema_version: 1
+scene: S1_integrated_kitchen_object_function_primary
+revision: physically_proportioned_randomized_storage_v3
+summary:
+  - aligned visual-mesh and collision-proxy scale factors
+  - reduced anisotropic stretching of vessels and utensils
+  - replaced stretched YCB finishes with clean ceramic and stainless materials
+  - grouped visible vessels, middle-row candidates, and sources into clear zones
+  - moved three target vessels into C2, B1, and C1 to avoid counter crowding
+  - limited every closed region to two objects and one target vessel
+  - compacted the licensed GSO kettle and coffee jar to realistic countertop scale
+  - removed the redundant handled soup pot; every soup bowl is visibly pre-filled
+  - added recessed tomato soup to every bowl and explicit coffee/hot-water cues
+  - enforced a 15 mm minimum top-view buffer for every seeded counter layout
+  - transported every drawer object with its tray and mirrored the validated D1 rig for D2
+scale_changes:
+  ab3_narrow_deep_cup: {before: [1.34, 1.34, 2.10], after: [1.15, 1.15, 1.55]}
+  ab3_medium_deep_mug: {before: [1.0, 1.0, 1.80], after: [0.92, 0.92, 1.35]}
+  s1i_wide_shallow_cup: {before: [1.62, 1.62, 1.10], after: [1.30, 1.30, 1.15]}
+  ab3_shallow_bowl: {before: [1.0, 1.0, 1.0], after: [0.90, 0.90, 0.95]}
+  ab3_deep_bowl: {before: [1.0, 1.0, 2.10], after: [0.92, 0.92, 1.55]}
+  s1i_narrow_deep_bowl: {before: [1.10, 1.10, 1.80], after: [0.95, 0.95, 1.55]}
+  ab3_medium_spoon: {before: [0.95, 2.60, 1.0], after: [0.95, 1.45, 1.0]}
+  ab3_long_wide_spoon: {before: [1.35, 3.20, 1.20], after: [1.22, 1.55, 1.10]}
+  ab3_long_narrow_fork: {before: [1.50, 1.0, 1.0], after: [1.35, 1.0, 1.0]}
+  s1i_oversized_spoon: {before: [1.80, 5.00, 1.40], after: [1.35, 1.70, 1.10]}
+  s1i_final_long_narrow_spoon: {before: [1.48, 2.00, 1.0], after: [1.32, 0.95, 1.0]}
+  s1i_compact_kettle: {before: [1.0, 1.0, 1.0], after: [0.78, 0.78, 0.78]}
+  s1i_compact_coffee_jar: {before: [1.0, 1.0, 1.0], after: [0.78, 0.78, 0.78]}
+removed_scene_objects:
+  pot_with_soup:
+    reason: redundant because all three soup targets are visibly pre-filled
+    scope: S1_integrated_kitchen_object_function_primary
+scientific_invariants:
+  inspection_sequence: [D1, D2, C2, B1, C1]
+  total_coffee_vessel_count: 3
+  total_soup_bowl_count: 3
+  initial_visible_target_count: 3
+  hidden_target_regions: [C2, B1, C1]
+  maximum_closed_region_object_count: 2
+  maximum_target_vessels_per_cupboard_or_box: 1
+  expected_completion_region: C1
+  geometry_source: stage_local_measurement_evidence
+  planner_location_source: region_gated_inspection_provenance

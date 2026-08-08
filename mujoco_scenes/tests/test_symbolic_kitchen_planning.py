@@ -151,12 +151,59 @@ def test_coffee_reuse_soup_distinctness_and_plan_validation(tmp_path):
     assert result["validation"]["all_goals_satisfied"]
     assert result["validation"]["coffee_reuse_verified"]
     assert result["validation"]["soup_distinctness_verified"]
+    assert compiled["role_assignments"]["source_roles"].keys() == {
+        "coffee_source", "water_source"
+    }
+    assert {
+        tuple(item)
+        for item in compiled["capabilities"]["initial_target_contents"]
+    } == {(target, "soup") for target in ids["soup"]}
+    assert not any(
+        step["action"] == "pour" and step["arguments"][-1] == "soup"
+        for step in result["plan"]
+    )
     assert (tmp_path / "domain.pddl").exists()
     assert (tmp_path / "problem.pddl").exists()
+    assert (tmp_path / "planner_provenance.json").exists()
+    assert (tmp_path / "scientific_validation.json").exists()
+    provenance = json.loads((tmp_path / "planner_provenance.json").read_text())
+    assert provenance["planner_entry_point"].endswith("plan_symbolic_task")
+    assert provenance["plan_renderer_role"].startswith("serialization_only")
     assert "physical_object region content - object" in (
         tmp_path / "domain.pddl"
     ).read_text()
     assert "PLAN VALID" in (tmp_path / "combined_action_sequence.txt").read_text()
+    problem_text = (tmp_path / "problem.pddl").read_text()
+    assert all(
+        f"(has_content {target} soup)" in problem_text
+        for target in ids["soup"]
+    )
+
+
+def test_symbolic_compiler_accepts_collective_multi_tool_coffee_cover(tmp_path):
+    ids, records, witness = _make_run(tmp_path)
+    second_tool = "object_second_stirrer"
+    records[second_tool] = _record(second_tool, "spoon", "D2", 2)
+    witness["operation_assignments"][2] = _assignment(
+        "coffee_stirring", "STIR_COFFEE",
+        second_tool, ids["coffee"][2],
+    )
+    witness["selected_witness"]["coffee_stirrer"] = [
+        ids["stir"], second_tool,
+    ]
+    (tmp_path / "object_registry.json").write_text(
+        json.dumps({"objects": records})
+    )
+    (tmp_path / "latest_witness.json").write_text(json.dumps(witness))
+
+    result = compile_plan_and_save(tmp_path, TASK)
+
+    assert result["validation"]["valid"]
+    assert result["validation"]["all_goals_satisfied"]
+    assert not result["validation"]["coffee_reuse_verified"]
+    assert {tool for tool, _ in map(
+        tuple, result["compiled"]["capabilities"]["can_stir"]
+    )} == {ids["stir"], second_tool}
 
 
 def test_failed_pair_geometry_never_becomes_capability(tmp_path):

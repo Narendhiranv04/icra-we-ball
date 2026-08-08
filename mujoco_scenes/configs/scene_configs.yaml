@@ -20,26 +20,22 @@ scenes:
   S1_integrated_kitchen_object_function_primary:
     goal: "Prepare and serve coffee and soup for three people using the available kitchenware. Stir all three coffees and provide each soup bowl with a suitable utensil. Search the closed kitchen storage for anything still required."
     countertop_objects:
-      counter_spot_21: ab3_narrow_deep_cup
-      counter_spot_22: ab3_medium_deep_mug
-      counter_spot_23: s1i_wide_shallow_cup
-      counter_spot_24: ab3_shallow_bowl
-      counter_spot_25: ab3_deep_bowl
-      counter_spot_26: s1i_narrow_deep_bowl
-      counter_spot_33: ab3_medium_spoon
-      counter_spot_18: ab3_short_narrow_spoon
-      counter_spot_36: marker
-      counter_spot_12: ab3_long_wide_spoon
-      counter_spot_20: ab3_long_narrow_fork
-      counter_spot_37: kettle
-      counter_spot_38: coffee_jar
-      counter_spot_39: pot_with_soup
+      counter_spot_41: ab3_narrow_deep_cup
+      counter_spot_44: ab3_medium_deep_mug
+      counter_spot_45: ab3_shallow_bowl
+      counter_spot_48: ab3_medium_spoon
+      counter_spot_47: ab3_short_narrow_spoon
+      counter_spot_51: marker
+      counter_spot_49: ab3_long_wide_spoon
+      counter_spot_50: ab3_long_narrow_fork
+      counter_spot_52: s1i_compact_kettle
+      counter_spot_53: s1i_compact_coffee_jar
     container_contents:
       D1: [s1i_oversized_spoon, napkin]
       D2: [ab3_partial_spoon, tongs]
-      C2: [plate, s1i_c2_soup_spoon, sugar_jar]
-      B1: [s1i_coffee_near_miss_spoon, tea_box]
-      C1: [s1i_final_long_narrow_spoon, tea_box]
+      C2: [s1i_c2_soup_spoon, s1i_wide_shallow_cup]
+      B1: [s1i_coffee_near_miss_spoon, ab3_deep_bowl]
+      C1: [s1i_final_long_narrow_spoon, s1i_narrow_deep_bowl]
     required_objects: []
     substitution_map: {}
     optimal_search_order: [D1, D2, C2, B1, C1]
@@ -47,7 +43,14 @@ scenes:
     notes: >
       Integrated stress test combining joint semantic-geometric grounding,
       target-specific compatibility, function-aware tool reuse, and persistent
-      discovery. Production is designed to complete only after C1.
+      discovery. Production is designed to complete only after C1. The primary
+      scene uses the physically proportioned three-zone countertop revision.
+      Three targets remain visible and one target is stored in each of C2,
+      B1 and C1. Pass --layout-seed to deterministically randomize which
+      targets occupy those regions without changing capacity or search order.
+      Every soup bowl is already filled, so this scene deliberately has no
+      separate handled soup pot. The other integrated ablations retain their
+      original placements.
 
   S1_integrated_kitchen_object_function_initial_complete:
     goal: "Prepare and serve coffee and soup for three people using the available kitchenware. Stir all three coffees and provide each soup bowl with a suitable utensil. Search the closed kitchen storage for anything still required."

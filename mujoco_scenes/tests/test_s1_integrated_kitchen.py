@@ -1,6 +1,17 @@
 from pathlib import Path
+import xml.etree.ElementTree as ET
 
-from mujoco_scenes.scene_loader import load_all_configs
+import mujoco
+
+from mujoco_scenes.scene_loader import (
+    COUNTER_SPOTS,
+    INTEGRATED_TARGET_VESSELS,
+    KitchenScene,
+    SCENE_OBJECT_VARIANTS,
+    configure_integrated_target_layout,
+    validate_integrated_countertop_clearance,
+    load_all_configs,
+)
 from mujoco_scenes.task_witness import (
     evaluate_usage_policy_task_witness,
     load_task_requirements,
@@ -9,6 +20,12 @@ from mujoco_scenes.task_witness import (
 
 CONFIG_DIR = Path(__file__).resolve().parents[1] / "configs"
 TASK_PATH = CONFIG_DIR / "s1_integrated_kitchen_object_function.yaml"
+OBJECT_LIBRARY = (
+    Path(__file__).resolve().parents[1]
+    / "assets"
+    / "objects"
+    / "object_library.xml"
+)
 COFFEE = ("coffee_1", "coffee_2", "coffee_3")
 SOUP = ("soup_1", "soup_2", "soup_3")
 TARGETS = COFFEE + SOUP
@@ -143,7 +160,7 @@ def _groups(result):
     }
 
 
-def test_integrated_scene_family_is_separate_and_has_six_visible_targets():
+def test_integrated_scene_family_has_three_visible_and_three_stored_targets():
     configs = load_all_configs()
     names = {
         "S1_integrated_kitchen_object_function_primary",
@@ -152,16 +169,70 @@ def test_integrated_scene_family_is_separate_and_has_six_visible_targets():
     }
     assert names <= configs.keys()
     primary = configs["S1_integrated_kitchen_object_function_primary"]
-    assert len(primary.countertop_objects) == 14
-    assert {"kettle", "coffee_jar", "pot_with_soup"} <= set(
+    assert len(primary.countertop_objects) == 10
+    assert {
+        "s1i_compact_kettle",
+        "s1i_compact_coffee_jar",
+    } <= set(
         primary.countertop_objects.values()
     )
-    assert sum(map(len, primary.container_contents.values())) == 11
+    assert "pot_with_soup" not in primary.countertop_objects.values()
+    assert sum(map(len, primary.container_contents.values())) == 10
     assert "s1i_final_long_narrow_spoon" not in (
         primary.countertop_objects.values()
     )
     assert "s1i_final_long_narrow_spoon" in primary.container_contents["C1"]
     assert "marker" in primary.countertop_objects.values()
+    assert len(
+        set(INTEGRATED_TARGET_VESSELS)
+        & set(primary.countertop_objects.values())
+    ) == 3
+    assert all(len(items) <= 2 for items in primary.container_contents.values())
+    assert all(
+        sum(
+            item in INTEGRATED_TARGET_VESSELS
+            for item in primary.container_contents[region]
+        ) == 1
+        for region in ("C2", "B1", "C1")
+    )
+    positions = [COUNTER_SPOTS[spot] for spot in primary.countertop_objects]
+    assert all(-0.70 <= x <= 0.60 for x, _y, _z in positions)
+    assert all(-0.40 <= y <= -0.05 for _x, y, _z in positions)
+
+
+def test_seeded_integrated_layout_is_deterministic_capacity_safe_and_varied():
+    configs = load_all_configs()
+    first = load_all_configs()[
+        "S1_integrated_kitchen_object_function_primary"
+    ]
+    second = load_all_configs()[
+        "S1_integrated_kitchen_object_function_primary"
+    ]
+    other = load_all_configs()[
+        "S1_integrated_kitchen_object_function_primary"
+    ]
+    manifest_a = configure_integrated_target_layout(first, 17)
+    manifest_b = configure_integrated_target_layout(second, 17)
+    manifest_c = configure_integrated_target_layout(other, 19)
+    assert manifest_a == manifest_b
+    assert manifest_a["target_locations"] != manifest_c["target_locations"]
+    assert all(len(items) <= 2 for items in first.container_contents.values())
+    assert all(
+        sum(
+            item in INTEGRATED_TARGET_VESSELS
+            for item in first.container_contents[region]
+        ) == 1
+        for region in ("C2", "B1", "C1")
+    )
+
+    # Assignment identity changes with the seed, but all visible vessel/tool
+    # combinations retain the scene's conservative 15 mm footprint buffer.
+    for seed in range(100):
+        seeded = load_all_configs()[
+            "S1_integrated_kitchen_object_function_primary"
+        ]
+        configure_integrated_target_layout(seeded, seed)
+        validate_integrated_countertop_clearance(seeded)
 
     initial_complete = configs[
         "S1_integrated_kitchen_object_function_initial_complete"
@@ -183,6 +254,84 @@ def test_integrated_scene_family_is_separate_and_has_six_visible_targets():
     }
 
 
+def test_variant_visual_and_proxy_scales_remain_identical():
+    root = ET.parse(OBJECT_LIBRARY).getroot()
+    mesh_scales = {
+        mesh.get("name"): tuple(
+            float(value)
+            for value in mesh.get("scale", "1 1 1").split()
+        )
+        for mesh in root.findall("./asset/mesh")
+    }
+    for name, variant in SCENE_OBJECT_VARIANTS.items():
+        assert mesh_scales[variant["mesh"]] == tuple(variant["scale"]), name
+
+
+def test_primary_vessels_use_clean_nonstretched_materials():
+    expected = {
+        "ab3_narrow_deep_cup": "mat_s1i_cup_cream",
+        "ab3_medium_deep_mug": "mat_s1i_mug_blue",
+        "s1i_wide_shallow_cup": "mat_s1i_cup_sage",
+        "ab3_shallow_bowl": "mat_s1i_bowl_ivory",
+        "ab3_deep_bowl": "mat_s1i_bowl_blue",
+        "s1i_narrow_deep_bowl": "mat_s1i_bowl_sage",
+    }
+    assert {
+        name: SCENE_OBJECT_VARIANTS[name].get("material")
+        for name in expected
+    } == expected
+
+
+def test_primary_sources_use_scanned_compact_visuals_without_redundant_pot():
+    assert SCENE_OBJECT_VARIANTS["s1i_compact_kettle"] == {
+        "base": "kettle",
+        "scale": (0.78, 0.78, 0.78),
+        "mesh": "mesh_s1i_compact_kettle",
+    }
+    assert SCENE_OBJECT_VARIANTS["s1i_compact_coffee_jar"] == {
+        "base": "coffee_jar",
+        "scale": (0.78, 0.78, 0.78),
+        "mesh": "mesh_s1i_compact_coffee_jar",
+    }
+    primary = load_all_configs()[
+        "S1_integrated_kitchen_object_function_primary"
+    ]
+    assert "pot_with_soup" not in primary.countertop_objects.values()
+
+
+def test_bowls_sources_visibly_expose_soup_powder_and_hot_water():
+    root = ET.parse(OBJECT_LIBRARY).getroot()
+    assert root.find(
+        "./body[@name='bowl']/geom[@name='bowl_soup_surface']"
+    ).get("material") == "mat_tomato_soup"
+    assert root.find(
+        "./body[@name='coffee_jar']/geom[@name='coffee_powder_surface']"
+    ).get("material") == "mat_coffee_powder"
+    assert root.find(
+        "./body[@name='kettle']/geom[@name='kettle_hot_water']"
+    ).get("material") == "mat_hot_water"
+
+
+def test_d2_drawer_and_all_contents_remain_open_after_fixture_release():
+    scene = KitchenScene(
+        "S1_integrated_kitchen_object_function_primary",
+        include_robot=False,
+        robot="none",
+    )
+    scene.open_container("D2", steps=200)
+    assert scene.release_storage_fixture("D2")
+    for _ in range(80):
+        mujoco.mj_step(scene.model, scene.data)
+    state = scene.get_region_observation_states()["D2"]
+    assert state["open"]
+    assert state["open_fraction"] > 0.95
+    for body_name in ("ab3_partial_spoon", "tongs"):
+        body_id = mujoco.mj_name2id(
+            scene.model, mujoco.mjtObj.mjOBJ_BODY, body_name
+        )
+        assert scene.data.xpos[body_id][1] < -0.48
+
+
 def test_integrated_manual_specification_has_function_scoped_usage():
     task = load_task_requirements(TASK_PATH)
     assert task["goal_instruction"] == (
@@ -195,7 +344,10 @@ def test_integrated_manual_specification_has_function_scoped_usage():
     assert task["roles"]["soup_container"]["count"] == 3
     coffee = task["operation_groups"]["coffee_stirring"]
     soup = task["operation_groups"]["soup_serving"]
-    assert coffee["usage_policy"]["same_tool_must_cover_all_targets"]
+    assert not coffee["usage_policy"]["same_tool_must_cover_all_targets"]
+    assert coffee["usage_policy"]["selection_preference"] == (
+        "minimize_distinct_tools"
+    )
     assert soup["usage_policy"]["distinct_within_group"]
     assert task["cross_group_reuse"]["allowed"]
     soup_labels = {

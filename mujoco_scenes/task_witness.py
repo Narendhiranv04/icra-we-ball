@@ -334,6 +334,19 @@ def _validate_joint_task_requirements(
                     "same_tool_must_cover_all_targets is only valid for "
                     "sequential_reuse_allowed"
                 )
+            selection_preference = usage_policy.get(
+                "selection_preference",
+                "minimize_distinct_tools"
+                if policy_mode == "sequential_reuse_allowed"
+                else "deterministic_rank",
+            )
+            if selection_preference not in {
+                "minimize_distinct_tools", "deterministic_rank"
+            }:
+                raise ValueError(
+                    "selection_preference must be minimize_distinct_tools "
+                    "or deterministic_rank"
+                )
             relation_names = group.get("relations")
             if not isinstance(relation_names, list) or not relation_names:
                 raise ValueError(
@@ -368,6 +381,7 @@ def _validate_joint_task_requirements(
                     "same_tool_must_cover_all_targets": (
                         same_tool_must_cover_all_targets
                     ),
+                    "selection_preference": selection_preference,
                 },
                 "relations": normalized_relation_names,
             }
@@ -1099,7 +1113,23 @@ def evaluate_semantic_compatibility(
             ),
             default=0.0,
         )
-        if len(compatible_cameras) >= 2 and compatible_score > excluded_score:
+        excluded_multi_view = any(
+            int(alternative.get("supporting_view_count") or 0) >= 2
+            and all(
+                str(alternative.get("label", "")).lower()
+                not in {
+                    preference["canonical_label"],
+                    *preference.get("detector_aliases", []),
+                }
+                for preference in role["semantic_preferences"]
+            )
+            for alternative in alternatives
+        )
+        if (
+            len(compatible_cameras) >= 2
+            and compatible_score > excluded_score
+            and not excluded_multi_view
+        ):
             preference, alternative = min(
                 compatible,
                 key=lambda item: (
@@ -2084,7 +2114,17 @@ def evaluate_usage_policy_task_witness(
             for group_id in group_ids
             for assignment in option["groups"][group_id]["assignments"]
         ]
+        preferred_group_counts = tuple(
+            option["groups"][group_id][
+                "distinct_assigned_physical_objects"
+            ]
+            for group_id in group_ids
+            if config["operation_groups"][group_id]["usage_policy"].get(
+                "selection_preference"
+            ) == "minimize_distinct_tools"
+        )
         return (
+            *preferred_group_counts,
             option["distinct_physical_tool_count"],
             *(
                 candidate_key(
@@ -2156,6 +2196,46 @@ def evaluate_usage_policy_task_witness(
             else 1
         )
         local_complete = bool(work["full_options"])
+        valid_edges = sorted(
+            (
+                deepcopy(edge)
+                for edge in work["edge_index"].values()
+                if edge["status"] == "TRUE"
+                and edge["target_object_id"] in work[
+                    "eligible_target_object_ids"
+                ]
+            ),
+            key=lambda edge: (
+                edge["target_object_id"], edge["utensil_object_id"]
+            ),
+        )
+        covered_targets = sorted({
+            assignment["target_object_id"]
+            for assignment in option["assignments"]
+        })
+        required_targets = option.get(
+            "target_object_ids",
+            work["eligible_target_object_ids"][:
+                work["group"]["required_target_count"]
+            ],
+        )
+        unmatched_targets = sorted(set(required_targets) - set(covered_targets))
+        minimum_distinct_tools = (
+            min(
+                candidate["distinct_assigned_physical_objects"]
+                for candidate in work["full_options"]
+            )
+            if work["full_options"] else None
+        )
+        maximum_matching_cardinality = max(
+            (
+                candidate["satisfied_target_slots"]
+                for candidate in [
+                    *work["full_options"], work["best_partial"]
+                ]
+            ),
+            default=0,
+        )
         group_status = (
             "COMPLETE"
             if local_complete
@@ -2198,6 +2278,19 @@ def evaluate_usage_policy_task_witness(
                 "unknown_target_object_ids"
             ],
             "selected_assignments": deepcopy(option["assignments"]),
+            "valid_target_tool_edges": valid_edges,
+            "covered_target_object_ids": covered_targets,
+            "uncovered_target_object_ids": unmatched_targets,
+            "complete_target_coverage_exists": local_complete,
+            "minimum_distinct_tool_count": minimum_distinct_tools,
+            "maximum_matching_cardinality": maximum_matching_cardinality,
+            "distinctness_satisfied": (
+                len(option["distinct_tool_object_ids"])
+                == len(option["assignments"])
+                if work["group"]["usage_policy"][
+                    "distinct_within_group"
+                ] else True
+            ),
             "candidate_target_evaluations": [
                 deepcopy(edge)
                 for edge in work["edge_index"].values()

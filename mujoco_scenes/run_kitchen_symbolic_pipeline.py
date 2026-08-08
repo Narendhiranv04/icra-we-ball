@@ -7,6 +7,8 @@ from datetime import datetime
 import json
 from pathlib import Path
 
+import yaml
+
 from mujoco_scenes.scene_loader import KitchenScene
 from mujoco_scenes.sequential_inspection import run_sequential_inspection
 from mujoco_scenes.symbolic_planning import (
@@ -18,6 +20,11 @@ from mujoco_scenes.symbolic_planning import (
 DEFAULT_SCENE = "S1_integrated_kitchen_object_function_primary"
 DEFAULT_TASK = "configs/s1_integrated_kitchen_object_function.yaml"
 DEFAULT_SEQUENCE = ("D1", "D2", "C2", "B1", "C1")
+VISUAL_REVISION = (
+    Path(__file__).resolve().parent
+    / "configs"
+    / "s1_integrated_visual_revision.yaml"
+)
 
 
 def run_pipeline(arguments: argparse.Namespace) -> dict:
@@ -26,7 +33,12 @@ def run_pipeline(arguments: argparse.Namespace) -> dict:
             "This milestone's authoritative entry point accepts only "
             f"{DEFAULT_SCENE}; got {arguments.scene}"
         )
-    scene = KitchenScene(arguments.scene, include_robot=False, robot="none")
+    scene = KitchenScene(
+        arguments.scene,
+        include_robot=False,
+        robot="none",
+        layout_seed=arguments.layout_seed,
+    )
     session = run_sequential_inspection(
         scene,
         arguments.inspect_sequence,
@@ -53,6 +65,13 @@ def run_pipeline(arguments: argparse.Namespace) -> dict:
         confidence_threshold=arguments.semantic_confidence_threshold,
     )
     result = compile_plan_and_save(session.run_dir, arguments.task_requirements)
+    visual_revision = yaml.safe_load(
+        VISUAL_REVISION.read_text(encoding="utf-8")
+    )
+    (session.run_dir / "scene_visual_revision.json").write_text(
+        json.dumps(visual_revision, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     witness_path = session.run_dir / "latest_witness.json"
     witness = json.loads(witness_path.read_text(encoding="utf-8"))
     (session.run_dir / "functional_witness.json").write_text(
@@ -81,6 +100,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--width", type=int, default=1280)
     parser.add_argument("--height", type=int, default=960)
+    parser.add_argument(
+        "--layout-seed",
+        type=int,
+        default=None,
+        help=(
+            "Deterministically randomize which three target vessels are "
+            "stored one each in C2, B1 and C1"
+        ),
+    )
     parser.add_argument("--semantic-detector", default="yolo_world")
     parser.add_argument(
         "--semantic-model", default="semantic_model_cache/yolov8m-worldv2.pt"

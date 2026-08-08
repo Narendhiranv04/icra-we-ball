@@ -28,7 +28,7 @@
     <material name="mat_ycb_plate" texture="tex_ycb_plate" specular="0.3" shininess="0.45"/>
     <mesh name="mesh_ycb_fork" file="ycb/fork/ycb_fork.obj"/>
     <mesh name="mesh_ab3_long_narrow_fork"
-          file="ycb/fork/ycb_fork.obj" scale="1.50 1.0 1.0"/>
+          file="ycb/fork/ycb_fork.obj" scale="1.35 1.0 1.0"/>
     <texture name="tex_ycb_fork" type="2d" file="ycb/fork/ycb_fork.png"/>
     <material name="mat_ycb_fork" texture="tex_ycb_fork" specular="0.65" shininess="0.8"/>
     <!-- The original scan texture makes the dark tines merge visually at
@@ -41,29 +41,46 @@
     <!-- Ablation 3 controlled visible variants. Runtime inference measures
          these from RGB-D and never reads their declared construction scale. -->
     <mesh name="mesh_ab3_short_narrow_spoon"
-          file="ycb/spoon/ycb_spoon.obj" scale="0.72 0.70 1.0"/>
+          file="ycb/spoon/ycb_spoon.obj" scale="0.70 0.75 1.0"/>
     <mesh name="mesh_ab3_medium_spoon"
-          file="ycb/spoon/ycb_spoon.obj" scale="0.95 2.60 1.0"/>
+          file="ycb/spoon/ycb_spoon.obj" scale="0.95 1.45 1.0"/>
     <mesh name="mesh_ab3_long_wide_spoon"
-          file="ycb/spoon/ycb_spoon.obj" scale="1.35 3.20 1.20"/>
+          file="ycb/spoon/ycb_spoon.obj" scale="1.22 1.55 1.10"/>
     <mesh name="mesh_ab3_long_narrow_spoon"
-          file="ycb/spoon/ycb_spoon.obj" scale="1.45 1.70 1.0"/>
+          file="ycb/spoon/ycb_spoon.obj" scale="1.25 0.95 1.0"/>
     <mesh name="mesh_ab3_partial_spoon"
-          file="ycb/spoon/ycb_spoon.obj" scale="0.70 1.65 1.0"/>
+          file="ycb/spoon/ycb_spoon.obj" scale="0.72 0.85 1.0"/>
     <!-- Integrated Scene 1 variants remain visible scene construction only;
          runtime measurements are reconstructed from rendered RGB-D. -->
     <mesh name="mesh_s1i_soup_spoon"
-          file="ycb/spoon/ycb_spoon.obj" scale="0.85 1.55 1.0"/>
+          file="ycb/spoon/ycb_spoon.obj" scale="0.90 0.90 1.0"/>
     <mesh name="mesh_s1i_coffee_near_miss_spoon"
-          file="ycb/spoon/ycb_spoon.obj" scale="1.34 3.00 1.15"/>
+          file="ycb/spoon/ycb_spoon.obj" scale="1.20 1.40 1.05"/>
     <mesh name="mesh_s1i_final_long_narrow_spoon"
-          file="ycb/spoon/ycb_spoon.obj" scale="1.48 1.78 1.0"/>
+          file="ycb/spoon/ycb_spoon.obj" scale="1.32 0.95 1.0"/>
     <mesh name="mesh_s1i_oversized_spoon"
-          file="ycb/spoon/ycb_spoon.obj" scale="1.80 5.00 1.40"/>
+          file="ycb/spoon/ycb_spoon.obj" scale="1.35 1.70 1.10"/>
     <mesh name="mesh_s1i_c2_soup_spoon"
-          file="ycb/spoon/ycb_spoon.obj" scale="1.80 3.60 1.40"/>
-    <material name="mat_s1i_spoon_inspection" rgba="0.72 0.75 0.78 1"
-              specular="0.80" shininess="0.85"/>
+          file="ycb/spoon/ycb_spoon.obj" scale="1.15 1.15 1.0"/>
+    <!-- Task-feasibility benchmark variants. These are deterministic scene
+         construction assets; the observed path recovers their dimensions
+         from RGB-D and never reads these scale declarations. -->
+    <mesh name="mesh_feas_narrow_short_spoon"
+          file="ycb/spoon/ycb_spoon.obj" scale="0.55 0.70 1.0"/>
+    <mesh name="mesh_feas_narrow_medium_spoon"
+          file="ycb/spoon/ycb_spoon.obj" scale="0.85 0.70 1.0"/>
+    <mesh name="mesh_feas_medium_spoon"
+          file="ycb/spoon/ycb_spoon.obj" scale="0.95 1.65 1.0"/>
+    <mesh name="mesh_feas_wide_long_spoon"
+          file="ycb/spoon/ycb_spoon.obj" scale="1.35 2.20 1.0"/>
+    <mesh name="mesh_feas_soup_wide_short_spoon"
+          file="ycb/spoon/ycb_spoon.obj" scale="0.90 2.20 1.0"/>
+    <mesh name="mesh_feas_soup_wide_medium_spoon"
+          file="ycb/spoon/ycb_spoon.obj" scale="1.15 2.20 1.0"/>
+    <mesh name="mesh_feas_semantic_decoy_spoon"
+          file="ycb/spoon/ycb_spoon.obj" scale="0.55 4.20 1.0"/>
+    <material name="mat_s1i_spoon_inspection" rgba="0.70 0.73 0.76 1"
+              specular="0.65" shininess="0.72"/>
     <!-- Scene-specific physical counterexample: the same recognizable YCB
          spoon scan is enlarged anisotropically. Runtime inference never reads
          this declaration; dimensions must still be recovered from RGB-D. -->
@@ -76,27 +93,60 @@
     <material name="mat_ycb_knife" texture="tex_ycb_knife" specular="0.65" shininess="0.8"/>
     <mesh name="mesh_ycb_cup" file="ycb/cup/ycb_cup.obj"/>
     <mesh name="mesh_ab3_narrow_deep_cup"
-          file="ycb/cup/ycb_cup.obj" scale="1.34 1.34 2.10"/>
+          file="ycb/cup/ycb_cup.obj" scale="1.15 1.15 1.55"/>
     <mesh name="mesh_ab3_medium_deep_mug"
-          file="ycb/mug/ycb_mug.obj" scale="1.0 1.0 1.80"/>
+          file="ycb/mug/ycb_mug.obj" scale="0.92 0.92 1.35"/>
     <mesh name="mesh_ab3_shallow_bowl"
-          file="ycb/bowl/ycb_bowl.obj"/>
+          file="ycb/bowl/ycb_bowl.obj" scale="0.90 0.90 0.95"/>
     <mesh name="mesh_ab3_deep_bowl"
-          file="ycb/bowl/ycb_bowl.obj" scale="1.0 1.0 2.10"/>
+          file="ycb/bowl/ycb_bowl.obj" scale="0.92 0.92 1.55"/>
     <mesh name="mesh_s1i_wide_shallow_cup"
-          file="ycb/cup/ycb_cup.obj" scale="1.62 1.62 1.10"/>
+          file="ycb/cup/ycb_cup.obj" scale="1.30 1.30 1.15"/>
     <mesh name="mesh_s1i_narrow_deep_bowl"
-          file="ycb/bowl/ycb_bowl.obj" scale="0.90 0.90 2.00"/>
+          file="ycb/bowl/ycb_bowl.obj" scale="0.95 0.95 1.55"/>
+    <mesh name="mesh_feas_coffee_small_shallow_cup"
+          file="ycb/cup/ycb_cup.obj" scale="0.82 0.82 1.40"/>
+    <mesh name="mesh_feas_coffee_medium_deep_mug"
+          file="ycb/cup/ycb_cup.obj" scale="1.05 1.05 1.84"/>
+    <mesh name="mesh_feas_coffee_wide_very_deep_cup"
+          file="ycb/cup/ycb_cup.obj" scale="1.40 1.40 2.35"/>
+    <mesh name="mesh_feas_c2_medium_spoon"
+          file="ycb/spoon/ycb_spoon.obj" scale="0.90 1.15 1.0"/>
+    <mesh name="mesh_feas_soup_wide_shallow_bowl"
+          file="ycb/bowl/ycb_bowl.obj" scale="1.05 1.05 0.90"/>
+    <mesh name="mesh_feas_soup_narrow_shallow_bowl"
+          file="ycb/bowl/ycb_bowl.obj" scale="0.55 0.55 0.90"/>
+    <mesh name="mesh_feas_soup_wide_deep_bowl"
+          file="ycb/bowl/ycb_bowl.obj" scale="1.05 1.05 2.30"/>
     <texture name="tex_ycb_cup" type="2d" file="ycb/cup/ycb_cup.png"/>
     <material name="mat_ycb_cup" texture="tex_ycb_cup" specular="0.25"/>
+    <!-- Clean, non-stretched ceramic finishes for the integrated benchmark.
+         The original YCB texture remains available to all legacy scenes. -->
+    <material name="mat_s1i_cup_cream" rgba="0.88 0.82 0.70 1"
+              specular="0.28" shininess="0.42"/>
+    <material name="mat_s1i_mug_blue" rgba="0.24 0.43 0.62 1"
+              specular="0.32" shininess="0.48"/>
+    <material name="mat_s1i_cup_sage" rgba="0.48 0.66 0.56 1"
+              specular="0.27" shininess="0.40"/>
+    <material name="mat_s1i_bowl_ivory" rgba="0.88 0.86 0.78 1"
+              specular="0.30" shininess="0.46"/>
+    <material name="mat_s1i_bowl_blue" rgba="0.35 0.55 0.70 1"
+              specular="0.31" shininess="0.48"/>
+    <material name="mat_s1i_bowl_sage" rgba="0.45 0.63 0.50 1"
+              specular="0.28" shininess="0.43"/>
     <mesh name="mesh_ycb_marker" file="ycb/marker/ycb_marker.obj"/>
     <texture name="tex_ycb_marker" type="2d" file="ycb/marker/ycb_marker.png"/>
     <material name="mat_ycb_marker" texture="tex_ycb_marker" specular="0.35" shininess="0.5"/>
 
     <mesh name="mesh_gso_kettle" file="gso/kettle/gso_kettle.obj"/>
+    <mesh name="mesh_s1i_compact_kettle" file="gso/kettle/gso_kettle.obj"
+          scale="0.78 0.78 0.78"/>
     <texture name="tex_gso_kettle" type="2d" file="gso/kettle/gso_kettle.png"/>
     <material name="mat_gso_kettle" texture="tex_gso_kettle" specular="0.35" shininess="0.5"/>
     <mesh name="mesh_gso_coffee_jar" file="gso/coffee_jar/gso_coffee_jar_open.obj"/>
+    <mesh name="mesh_s1i_compact_coffee_jar"
+          file="gso/coffee_jar/gso_coffee_jar_open.obj"
+          scale="0.78 0.78 0.78"/>
     <texture name="tex_gso_coffee_jar" type="2d" file="gso/coffee_jar/gso_coffee_jar.png"/>
     <material name="mat_gso_coffee_jar" texture="tex_gso_coffee_jar" specular="0.25"/>
     <mesh name="mesh_gso_sugar_jar" file="gso/sugar_jar/gso_sugar_jar.obj"/>
@@ -118,6 +168,9 @@
               texture="tex_gso_living_room_mug"/>
     <mesh name="mesh_gso_living_room_snack_bowl"
           file="gso/living_room_snack_bowl/gso_living_room_snack_bowl.obj"/>
+    <mesh name="mesh_s1i_gso_soup_pot"
+          file="gso/living_room_snack_bowl/gso_living_room_snack_bowl.obj"
+          scale="0.80 0.80 0.80"/>
     <texture name="tex_gso_living_room_snack_bowl" type="2d"
              file="gso/living_room_snack_bowl/gso_living_room_snack_bowl.png"/>
     <material name="mat_gso_living_room_snack_bowl"
@@ -136,6 +189,12 @@
               texture="tex_gso_living_room_game_console"/>
     <material name="mat_coffee_powder" rgba="0.22 0.075 0.025 1" specular="0.05"/>
     <material name="mat_open_jar_rim" rgba="0.12 0.09 0.07 1" specular="0.25"/>
+    <material name="mat_tomato_soup" rgba="0.72 0.12 0.055 1"
+              specular="0.30" shininess="0.55"/>
+    <material name="mat_hot_water" rgba="0.48 0.78 0.92 0.78"
+              specular="0.65" shininess="0.85"/>
+    <material name="mat_steam" rgba="0.92 0.96 1.0 0.30"
+              specular="0.05"/>
 
     <mesh name="mesh_custom_stirrer" file="custom/stirrer.obj"/>
     <mesh name="mesh_custom_napkin" file="custom/folded_napkin.obj"/>
@@ -272,6 +331,12 @@
          this declaration or its dimensions. -->
     <geom name="bowl_interior_visual" type="cylinder" size="0.050 0.0015"
           pos="0 0 -0.010" material="mat_ycb_bowl"
+          class="visual" mass="0"/>
+    <!-- Every serving bowl is already filled. The surface is deliberately
+         below the rim so rendered evidence still contains a measurable
+         cavity rather than turning the bowl into a planar red disk. -->
+    <geom name="bowl_soup_surface" type="cylinder" size="0.052 0.0012"
+          pos="0 0 -0.006" material="mat_tomato_soup"
           class="visual" mass="0"/>
     <geom name="bowl_bottom_collision" type="cylinder" size="0.069 0.004" pos="0 0 -0.0235"
           rgba="0 0 0 0" mass="0.050" group="3"/>
@@ -446,6 +511,16 @@
     <freejoint name="kettle_free"/>
     <geom name="kettle_visual" type="mesh" mesh="mesh_gso_kettle" material="mat_gso_kettle"
           class="visual" mass="0"/>
+    <!-- Visible hot-water cue. These rendered surfaces belong to the kettle
+         instance; no symbolic or geometric inference reads their XML. -->
+    <geom name="kettle_hot_water" type="cylinder" size="0.032 0.0012"
+          pos="0 0 0.050" material="mat_hot_water" class="visual" mass="0"/>
+    <geom name="kettle_steam_1" type="capsule" size="0.0025"
+          fromto="-0.010 0 0.060 -0.006 0 0.088"
+          material="mat_steam" class="visual" mass="0"/>
+    <geom name="kettle_steam_2" type="capsule" size="0.0020"
+          fromto="0.012 0.004 0.063 0.008 0.004 0.083"
+          material="mat_steam" class="visual" mass="0"/>
     <!-- A tapered body keeps the handle opening clear. The hidden flat foot
          prevents the round kettle from rolling over while it settles. -->
     <geom name="kettle_collision" type="ellipsoid" size="0.070 0.075 0.064"
@@ -466,8 +541,14 @@
     <geom name="coffee_jar_visual" type="mesh" mesh="mesh_gso_coffee_jar" material="mat_gso_coffee_jar"
           class="visual" mass="0"/>
     <!-- Exposed powder surface and a dark polygonal rim make the clipped scan visibly open. -->
-    <geom name="coffee_powder_surface" type="cylinder" size="0.036 0.001" pos="0 0 0.055"
+    <geom name="coffee_powder_surface" type="cylinder" size="0.039 0.0015" pos="0 0 0.056"
           material="mat_coffee_powder" class="visual" mass="0"/>
+    <geom name="coffee_powder_mound_1" type="sphere" size="0.009"
+          pos="-0.012 0.004 0.058" material="mat_coffee_powder"
+          class="visual" mass="0"/>
+    <geom name="coffee_powder_mound_2" type="sphere" size="0.007"
+          pos="0.010 -0.008 0.058" material="mat_coffee_powder"
+          class="visual" mass="0"/>
     <geom name="coffee_rim_0" type="box" size="0.003 0.0116 0.002" pos="0.043 0 0.060" material="mat_open_jar_rim" class="visual" mass="0"/>
     <geom name="coffee_rim_1" type="box" size="0.003 0.0116 0.002" pos="0.03724 0.0215 0.060" euler="0 0 0.5236" material="mat_open_jar_rim" class="visual" mass="0"/>
     <geom name="coffee_rim_2" type="box" size="0.003 0.0116 0.002" pos="0.0215 0.03724 0.060" euler="0 0 1.0472" material="mat_open_jar_rim" class="visual" mass="0"/>
@@ -627,15 +708,27 @@
           rgba="0 0 0 0" group="5"/>
   </body>
 
-  <!-- Pot with soup -->
+  <!-- Soup source built from the licensed GSO porcelain-bowl scan. The
+       analytic handles, soup surface and collision proxy retain the clear
+       saucepan function without exposing primitive geometry as its body. -->
   <body name="pot_with_soup" pos="0 0 0">
     <freejoint name="pot_free"/>
-    <geom name="pot_body" type="cylinder" size="0.06 0.05"
-          material="mat_steel" mass="1.5"/>
-    <geom name="pot_handle_l" type="capsule" size="0.006"
-          fromto="-0.06 0 0.02 -0.08 0 0.04" material="mat_steel"/>
-    <geom name="pot_handle_r" type="capsule" size="0.006"
-          fromto="0.06 0 0.02 0.08 0 0.04" material="mat_steel"/>
-    <site name="pot_grasp" pos="0 0 0.05" size="0.01" type="sphere" rgba="0 0 0 0" group="5"/>
+    <geom name="pot_visual" type="mesh" mesh="mesh_s1i_gso_soup_pot"
+          material="mat_gso_living_room_snack_bowl" class="visual" mass="0"/>
+    <!-- This source vessel is visibly full, unlike the recessed soup bowls.
+         Its top surface therefore supplies positive RGB-D evidence that it
+         is not an empty/open target cavity. -->
+    <geom name="pot_soup_surface" type="cylinder" size="0.055 0.0015"
+          pos="0 0 0.034" material="mat_tomato_soup" class="visual" mass="0"/>
+    <geom name="pot_handle_l" type="capsule" size="0.005"
+          fromto="-0.056 0 0.006 -0.078 0 0.018"
+          material="mat_steel" class="visual" mass="0"/>
+    <geom name="pot_handle_r" type="capsule" size="0.005"
+          fromto="0.056 0 0.006 0.078 0 0.018"
+          material="mat_steel" class="visual" mass="0"/>
+    <geom name="pot_collision" type="cylinder" size="0.060 0.030"
+          rgba="0 0 0 0" mass="0.85" group="3"/>
+    <site name="pot_grasp" pos="0 0 0.030" size="0.01" type="sphere"
+          rgba="0 0 0 0" group="5"/>
   </body>
 </mujoco>

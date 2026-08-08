@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import time
+from copy import deepcopy
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Iterable
@@ -1232,17 +1233,17 @@ class GeometryChecker:
                 )
         fusion_seconds = time.perf_counter() - fusion_started
 
+        region_state = (
+            {"region_id": "INITIAL", "open": True, "inspected": True}
+            if region_id == "INITIAL"
+            else deepcopy(
+                self.scene.get_region_observation_states().get(region_id, {})
+            )
+        )
         metadata = {
             "region_id": region_id,
-            "region_open": (
-                True
-                if region_id == "INITIAL"
-                else bool(
-                    self.scene.get_region_observation_states()
-                    .get(region_id, {})
-                    .get("open", False)
-                )
-            ),
+            "region_open": bool(region_state.get("open", False)),
+            "region_state": region_state,
             "rig_pose": {
                 "position_world_m": rig_position.tolist(),
                 "target_world_m": target_base.tolist(),
