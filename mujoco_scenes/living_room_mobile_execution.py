@@ -12,6 +12,8 @@ import hashlib
 import itertools
 import json
 import math
+import shutil
+import subprocess
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -64,6 +66,104 @@ GRASP_Z_OFFSET = {
     "tv_remote": 0.002,
     "game_controller": 0.002,
 }
+LINEAR_SETTLE_THRESHOLD_M_S = 0.02
+ANGULAR_SETTLE_THRESHOLD_RAD_S = 0.10
+CONTACT_PENETRATION_TOLERANCE_M = 0.005
+EXECUTION_GEOMETRY_TOLERANCE_M = 0.012
+
+
+@dataclass(frozen=True)
+class PlacementTarget:
+    object_id: str
+    region_id: str
+    position_world: tuple[float, float, float]
+    yaw_world_rad: float
+    footprint_length_m: float
+    footprint_width_m: float
+    packing_arrangement: str
+    phase1_orientation_deg: int
+    edge_clearance_m: float
+    inter_payload_clearance_m: float
+    predicted_minimum_margin_m: float
+    phase1_function_id: str
+    phase1_slot_id: str
+    source_phase1_signed_margin_m: float
+    source: str = "PHASE1_SELECTED_MEASURED_PACKING"
+
+
+@dataclass(frozen=True)
+class HeldObjectState:
+    object_id: str
+    backend_body: str
+    weld_id: int
+    weld_active: bool
+    gripper_body: str
+    relative_position_m: tuple[float, float, float]
+    relative_orientation_wxyz: tuple[float, float, float, float]
+    finger_joint_positions: tuple[float, float]
+    gripper_state_plausible: bool
+    validation_status: str
+    rejection_reasons: tuple[str, ...]
+
+
+def oriented_rectangle_corners(
+    center_xy: np.ndarray, length: float, width: float, yaw: float
+) -> np.ndarray:
+    """Return counter-clockwise world XY corners of an oriented rectangle."""
+    local = np.array(((-length / 2, -width / 2), (length / 2, -width / 2),
+                      (length / 2, width / 2), (-length / 2, width / 2)))
+    rotation = np.array(((math.cos(yaw), -math.sin(yaw)),
+                         (math.sin(yaw), math.cos(yaw))))
+    return local @ rotation.T + np.asarray(center_xy, float)
+
+
+def world_to_region_local(points_xy: np.ndarray, center_xy: np.ndarray, axis_xy: np.ndarray) -> np.ndarray:
+    axis = np.asarray(axis_xy, float)[:2]
+    axis /= np.linalg.norm(axis)
+    orthogonal = np.array((-axis[1], axis[0]))
+    return (np.asarray(points_xy, float) - np.asarray(center_xy, float)[:2]) @ np.column_stack((axis, orthogonal))
+
+
+def rectangle_inside_observed_support(
+    corners_world_xy: np.ndarray,
+    center_world_xy: np.ndarray,
+    principal_axis_xy: np.ndarray,
+    support_length_m: float,
+    support_width_m: float,
+    tolerance_m: float = 0.0,
+) -> dict[str, Any]:
+    local = world_to_region_local(corners_world_xy, center_world_xy, principal_axis_xy)
+    margins = np.column_stack((support_length_m / 2 - np.abs(local[:, 0]),
+                               support_width_m / 2 - np.abs(local[:, 1])))
+    minimum = float(np.min(margins))
+    return {"region_local_corners_m": local.tolist(), "minimum_edge_margin_m": minimum,
+            "inside": minimum >= -tolerance_m}
+
+
+def _rectangle_axes(corners: np.ndarray) -> list[np.ndarray]:
+    axes = []
+    for edge in (corners[1] - corners[0], corners[3] - corners[0]):
+        normal = np.array((-edge[1], edge[0]), float)
+        axes.append(normal / np.linalg.norm(normal))
+    return axes
+
+
+def oriented_rectangles_clearance(left: np.ndarray, right: np.ndarray) -> dict[str, Any]:
+    """SAT signed clearance: positive gap, negative overlap penetration."""
+    separations = []
+    for axis in (*_rectangle_axes(left), *_rectangle_axes(right)):
+        lp, rp = left @ axis, right @ axis
+        separations.append(max(float(np.min(rp) - np.max(lp)), float(np.min(lp) - np.max(rp))))
+    maximum_separation = max(separations)
+    if maximum_separation > 0:
+        # Euclidean corner/edge distance is unnecessary for the acceptance
+        # rule; SAT separation is conservative and exact along a separating axis.
+        signed = maximum_separation
+        overlap = False
+    else:
+        signed = maximum_separation
+        overlap = True
+    return {"signed_clearance_m": float(signed), "overlap": overlap}
 
 
 def _read(path: Path) -> dict[str, Any]:
@@ -205,18 +305,25 @@ def allocate_observed_placements(
     payload_registry: dict[str, Any],
     region_registry: dict[str, Any],
     phase2_plan: dict[str, Any],
+    phase1_assignments: dict[str, Any],
 ) -> dict[str, Any]:
-    """Allocate deterministic non-overlapping positions from measured OBBs."""
+    """Realize the frozen selected Phase-1 measured rectangle packing."""
     destination = {
         item["arguments"]["object"]: item["arguments"]["region"]
         for item in phase2_plan["actions"]
         if item["operator"] == "PLACE"
     }
-    grouped: dict[str, list[str]] = {}
-    for object_id, region_id in destination.items():
-        grouped.setdefault(region_id, []).append(object_id)
     rows = []
-    for region_id, object_ids in sorted(grouped.items()):
+    pair_checks = []
+    assignments = {
+        row["region_id"]: row for row in phase1_assignments["assignments"]
+        if set(row["payload_ids"]) == {
+            object_id for object_id, region_id in destination.items()
+            if region_id == row["region_id"]
+        }
+    }
+    for region_id, assignment in sorted(assignments.items()):
+        object_ids = assignment["payload_ids"]
         region = region_registry["regions"][region_id]
         geometry = region["geometry"]
         center = np.asarray(geometry["centroid_world_m"]["value"], float)
@@ -224,44 +331,67 @@ def allocate_observed_placements(
         axis /= np.linalg.norm(axis)
         length = float(geometry["support_length_m"]["value"])
         width = float(geometry["support_width_m"]["value"])
-        margin = 0.035
-        ordered = sorted(object_ids)
-        offsets = np.linspace(-0.25 * length, 0.25 * length, len(ordered))
+        orthogonal = np.array((-axis[1], axis[0], 0.0))
+        evidence = assignment["selected_compatibility_evidence"]["fit_evidence"]
+        packing = evidence["selected_packing"]
+        margin = float(evidence["edge_clearance_margin_m"])
+        clearance = float(evidence["inter_payload_clearance_m"])
+        oriented = packing["oriented_payload_footprints_m"]
+        orientations = packing["payload_orientations_degrees"]
+        along_length = packing["arrangement"] == "ALONG_LENGTH"
+        sizes = [float(item[0] if along_length else item[1]) for item in oriented]
+        offsets = np.array((-(sizes[1] + clearance) / 2, (sizes[0] + clearance) / 2))
+        placement_axis = axis if along_length else orthogonal
         footprints = []
-        for object_id, offset in zip(ordered, offsets):
+        for index, (object_id, offset) in enumerate(zip(object_ids, offsets)):
             record = payload_registry["objects"][object_id]
             role = _semantic_role(record)
             obj_length = float(record["geometry"]["footprint_length_m"]["value"])
             obj_width = float(record["geometry"]["footprint_width_m"]["value"])
-            point = center + offset * axis
+            point = center + offset * placement_axis
             point[2] = center[2] + SUPPORT_HEIGHT[role]
-            within = (
-                abs(offset) + obj_length / 2 + margin <= length / 2
-                and obj_width / 2 + margin <= width / 2
+            base_yaw = math.atan2(float(axis[1]), float(axis[0]))
+            raw_yaw = base_yaw + math.radians(int(orientations[index]))
+            # A rectangular footprint is invariant under a 180-degree turn.
+            # Canonicalize that exact geometric equivalence so manipulation
+            # never attempts an unnecessary pi wrist rotation.
+            yaw = raw_yaw % math.pi
+            if yaw > 1e-6:
+                yaw -= math.pi
+            corners = oriented_rectangle_corners(point[:2], obj_length, obj_width, yaw)
+            boundary = rectangle_inside_observed_support(
+                corners, center[:2], axis[:2], length, width
             )
-            if not within:
+            if not boundary["inside"] or boundary["minimum_edge_margin_m"] + 1e-9 < margin:
                 raise RuntimeError(f"Observed support cannot safely place {object_id}")
-            footprints.append((object_id, point, max(obj_length, obj_width) / 2))
-            rows.append(
-                {
-                    "object_id": object_id,
-                    "region_id": region_id,
-                    "desired_body_world_m": point.tolist(),
-                    "footprint_length_m": obj_length,
-                    "footprint_width_m": obj_width,
-                    "boundary_margin_m": margin,
-                    "within_measured_support": True,
-                    "source": "PHASE1_OBSERVED_REGION_AND_PAYLOAD_GEOMETRY",
-                }
+            footprints.append((object_id, corners))
+            target = PlacementTarget(
+                object_id, region_id, tuple(map(float, point)), float(yaw),
+                obj_length, obj_width, packing["arrangement"], int(orientations[index]),
+                margin, clearance, float(boundary["minimum_edge_margin_m"]),
+                assignment["function_id"], assignment["slot_id"],
+                float(packing["signed_clearance_margin_m"]),
             )
-        for (left_id, left, left_radius), (right_id, right, right_radius) in itertools.combinations(footprints, 2):
-            separation = float(np.linalg.norm(left[:2] - right[:2]))
-            required = left_radius + right_radius + 0.025
-            if separation < required:
+            row = asdict(target)
+            row["desired_body_world_m"] = list(row.pop("position_world"))
+            row["within_measured_support"] = True
+            row["footprint_corners_world_m"] = corners.tolist()
+            row["region_local_footprint_corners_m"] = boundary["region_local_corners_m"]
+            rows.append(row)
+        for (left_id, left), (right_id, right) in itertools.combinations(footprints, 2):
+            check = oriented_rectangles_clearance(left, right)
+            check.update({"region_id": region_id, "object_ids": [left_id, right_id],
+                          "required_clearance_m": clearance,
+                          "valid": not check["overlap"] and check["signed_clearance_m"] + 1e-9 >= clearance})
+            pair_checks.append(check)
+            if not check["valid"]:
                 raise RuntimeError(
-                    f"Placement overlap: {left_id}/{right_id} {separation:.3f} < {required:.3f}"
+                    f"Placement overlap/clearance failure: {left_id}/{right_id}: {check}"
                 )
-    return {"schema_version": SCHEMA_VERSION, "placements": rows}
+    if set(destination) != {row["object_id"] for row in rows}:
+        raise RuntimeError("Selected Phase-1 packing does not cover every Phase-2 PLACE")
+    return {"schema_version": 2, "phase1_selected_packing_consumed": True,
+            "placements": rows, "pairwise_rectangle_checks": pair_checks}
 
 
 def _joint_base_to_world(values: np.ndarray) -> BasePose:
@@ -512,9 +642,194 @@ def load_phase3_inputs(phase1_dir: Path, phase2_dir: Path) -> tuple[dict[str, An
     return (
         _read(phase1_dir / "payload_registry.json"),
         _read(phase1_dir / "region_registry.json"),
+        _read(phase1_dir / "region_assignments.json"),
         _read(phase2_dir / "plan.json"),
         _read(phase2_dir / "symbolic_problem.json"),
     )
+
+
+def _body_geom_ids(model: mujoco.MjModel, body_id: int) -> set[int]:
+    return set(range(int(model.body_geomadr[body_id]),
+                     int(model.body_geomadr[body_id] + model.body_geomnum[body_id])))
+
+
+def inspect_held_object_state(
+    model: mujoco.MjModel,
+    data: mujoco.MjData,
+    object_id: str,
+    backend_body: str,
+) -> HeldObjectState:
+    """Validate simulator grasp state; Python controller fields are irrelevant."""
+    body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, backend_body)
+    gripper_name = manipulation_profile("google").gripper_body
+    gripper_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, gripper_name)
+    weld_id = mujoco.mj_name2id(
+        model, mujoco.mjtObj.mjOBJ_EQUALITY, f"google:pick_weld_{backend_body}"
+    )
+    reasons = []
+    active = weld_id >= 0 and bool(data.eq_active[weld_id])
+    if not active:
+        reasons.append("GRASP_WELD_INACTIVE")
+    if weld_id < 0 or int(model.eq_obj1id[weld_id]) != gripper_id or int(model.eq_obj2id[weld_id]) != body_id:
+        reasons.append("WELD_BODY_MISMATCH")
+    active_payload_welds = []
+    for name in PAYLOAD_BACKENDS:
+        candidate = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_EQUALITY, f"google:pick_weld_{name}")
+        if candidate >= 0 and data.eq_active[candidate]:
+            active_payload_welds.append(candidate)
+    if active_payload_welds != [weld_id]:
+        reasons.append("UNEXPECTED_ACTIVE_PAYLOAD_WELD")
+    relative = data.xpos[body_id] - data.xpos[gripper_id]
+    if float(np.linalg.norm(relative)) > 0.55:
+        reasons.append("PAYLOAD_SEPARATED_FROM_GRIPPER")
+    payload_geoms = _body_geom_ids(model, body_id)
+    floor_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "a2_floor")
+    if any(
+        {int(data.contact[index].geom1), int(data.contact[index].geom2)} & payload_geoms
+        and floor_id in {int(data.contact[index].geom1), int(data.contact[index].geom2)}
+        for index in range(data.ncon)
+    ):
+        reasons.append("PAYLOAD_ON_FLOOR")
+    profile = manipulation_profile("google")
+    finger_joint_ids = [mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, name) for name in profile.finger_joints]
+    finger_values = tuple(float(data.qpos[model.jnt_qposadr[item]]) for item in finger_joint_ids)
+    gripper_plausible = min(finger_values) > profile.open_command + 0.02
+    if not gripper_plausible:
+        reasons.append("GRIPPER_NOT_PHYSICALLY_CLOSED")
+    quat = np.empty(4)
+    relative_rotation = data.xmat[gripper_id].reshape(3, 3).T @ data.xmat[body_id].reshape(3, 3)
+    mujoco.mju_mat2Quat(quat, relative_rotation.ravel())
+    return HeldObjectState(
+        object_id, backend_body, weld_id, active, gripper_name,
+        tuple(map(float, relative)), tuple(map(float, quat)),
+        finger_values, gripper_plausible,
+        "TRUE" if not reasons else "FALSE", tuple(reasons),
+    )
+
+
+def resume_held_object_from_simulator(
+    executor: CalibratedPickPlaceExecutor,
+    object_id: str,
+    backend_body: str,
+) -> HeldObjectState:
+    state = inspect_held_object_state(executor.model, executor.data, object_id, backend_body)
+    if state.validation_status != "TRUE":
+        raise RuntimeError("HELD_STATE_INVALID: " + ",".join(state.rejection_reasons))
+    executor.held_object = backend_body
+    executor.target_object = backend_body
+    executor.target_body_id = mujoco.mj_name2id(executor.model, mujoco.mjtObj.mjOBJ_BODY, backend_body)
+    executor.grasp_equality_id = state.weld_id
+    executor.mode = "holding"
+    return state
+
+
+def _actual_body_yaw(data: mujoco.MjData, body_id: int) -> float:
+    matrix = data.xmat[body_id].reshape(3, 3)
+    return math.atan2(float(matrix[1, 0]), float(matrix[0, 0]))
+
+
+def verify_physical_on_relation(
+    model: mujoco.MjModel,
+    data: mujoco.MjData,
+    object_id: str,
+    backend_body: str,
+    region_id: str,
+    support_geom_name: str,
+    region_record: dict[str, Any],
+    placement_record: dict[str, Any],
+    all_placement_records: dict[str, dict[str, Any]],
+    object_backends: dict[str, str],
+    *,
+    released_by_executor: bool = True,
+) -> dict[str, Any]:
+    """Independently establish physical ON from final MuJoCo state."""
+    mujoco.mj_forward(model, data)
+    body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, backend_body)
+    payload_geoms = _body_geom_ids(model, body_id)
+    support_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, support_geom_name)
+    floor_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "a2_floor")
+    contacts, support_contacts, floor_contact, invalid = [], [], False, []
+    payload_body_ids = {mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, name) for name in PAYLOAD_BACKENDS}
+    for index in range(data.ncon):
+        contact = data.contact[index]
+        pair = (int(contact.geom1), int(contact.geom2))
+        if not (set(pair) & payload_geoms):
+            continue
+        other = pair[1] if pair[0] in payload_geoms else pair[0]
+        row = {"geom1": mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, pair[0]),
+               "geom2": mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, pair[1]),
+               "distance_m": float(contact.dist)}
+        contacts.append(row)
+        if other == support_id:
+            support_contacts.append(row)
+        elif other == floor_id:
+            floor_contact = True
+        else:
+            other_body = int(model.geom_bodyid[other])
+            if other_body not in payload_body_ids and float(contact.dist) < -CONTACT_PENETRATION_TOLERANCE_M:
+                invalid.append(row)
+    geometry = region_record["geometry"]
+    center = np.asarray(geometry["centroid_world_m"]["value"], float)
+    axis = np.asarray(geometry["principal_axis_world"]["value"], float)
+    length = float(geometry["support_length_m"]["value"])
+    width = float(geometry["support_width_m"]["value"])
+    actual = data.xpos[body_id].copy()
+    yaw = _actual_body_yaw(data, body_id)
+    yaw_error = abs(_angle_delta(float(placement_record["yaw_world_rad"]), yaw))
+    corners = oriented_rectangle_corners(actual[:2], placement_record["footprint_length_m"],
+                                          placement_record["footprint_width_m"], yaw)
+    boundary = rectangle_inside_observed_support(corners, center[:2], axis[:2], length, width,
+                                                 EXECUTION_GEOMETRY_TOLERANCE_M)
+    pair_rows = []
+    for other_id, other_record in all_placement_records.items():
+        if other_id == object_id or other_record["region_id"] != region_id:
+            continue
+        other_backend = object_backends[other_id]
+        other_body = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, other_backend)
+        other_corners = oriented_rectangle_corners(
+            data.xpos[other_body][:2], other_record["footprint_length_m"],
+            other_record["footprint_width_m"], _actual_body_yaw(data, other_body))
+        check = oriented_rectangles_clearance(corners, other_corners)
+        required = float(placement_record["inter_payload_clearance_m"])
+        check.update({"other_object_id": other_id, "required_clearance_m": required,
+                      "valid_nonoverlap": not check["overlap"] and check["signed_clearance_m"] >= required - EXECUTION_GEOMETRY_TOLERANCE_M})
+        pair_rows.append(check)
+    velocity = np.zeros(6)
+    mujoco.mj_objectVelocity(model, data, mujoco.mjtObj.mjOBJ_BODY, body_id, velocity, 0)
+    angular_speed, linear_speed = float(np.linalg.norm(velocity[:3])), float(np.linalg.norm(velocity[3:]))
+    support_top = float(data.geom_xpos[support_id, 2] + model.geom_size[support_id, 2])
+    expected_z = support_top + SUPPORT_HEIGHT[PAYLOAD_BACKENDS[backend_body]]
+    height_error = abs(float(actual[2] - expected_z))
+    weld_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_EQUALITY, f"google:pick_weld_{backend_body}")
+    grasp_released = weld_id >= 0 and not bool(data.eq_active[weld_id]) and released_by_executor
+    checks = {
+        "grasp_released": grasp_released,
+        "support_contact": {"support_contact_found": bool(support_contacts), "support_contact_geoms": support_contacts,
+                            "contact_count": len(support_contacts)},
+        "floor_contact_found": floor_contact,
+        "footprint_inside_observed_support": {**boundary, "footprint_corners_world_m": corners.tolist(),
+                                              "final_local_center_m": world_to_region_local(actual[None, :2], center[:2], axis[:2])[0].tolist(),
+                                              "final_payload_yaw_world_rad": yaw},
+        "payload_nonoverlap": {"pairs": pair_rows, "valid_nonoverlap": all(row["valid_nonoverlap"] for row in pair_rows)},
+        "penetration_check": {"invalid_environment_penetration": bool(invalid), "offending_contacts": invalid,
+                              "minimum_signed_distance_m": min((row["distance_m"] for row in contacts), default=None)},
+        "settling": {"linear_speed_m_s": linear_speed, "angular_speed_rad_s": angular_speed,
+                     "linear_threshold_m_s": LINEAR_SETTLE_THRESHOLD_M_S,
+                     "angular_threshold_rad_s": ANGULAR_SETTLE_THRESHOLD_RAD_S,
+                     "stable": linear_speed <= LINEAR_SETTLE_THRESHOLD_M_S and angular_speed <= ANGULAR_SETTLE_THRESHOLD_RAD_S},
+        "height_support_consistency": {"actual_body_z_m": float(actual[2]), "expected_body_z_m": expected_z,
+                                       "height_error_m": height_error, "valid": height_error <= 0.03},
+        "orientation_consistency": {"target_yaw_world_rad": float(placement_record["yaw_world_rad"]),
+                                    "actual_yaw_world_rad": yaw, "yaw_error_rad": yaw_error,
+                                    "tolerance_rad": math.radians(12.0),
+                                    "valid": yaw_error <= math.radians(12.0)},
+    }
+    verified = (grasp_released and bool(support_contacts) and not floor_contact and boundary["inside"]
+                and checks["payload_nonoverlap"]["valid_nonoverlap"] and not invalid
+                and checks["settling"]["stable"] and checks["height_support_consistency"]["valid"]
+                and checks["orientation_consistency"]["valid"])
+    return {"relation": "ON", "object_id": object_id, "region_id": region_id,
+            **checks, "status": "TRUE" if verified else "FALSE", "verified": verified}
 
 
 def run_mobile_execution(
@@ -529,7 +844,7 @@ def run_mobile_execution(
     run_started = time.monotonic()
     phase1_dir, phase2_dir, output_dir = map(Path, (phase1_dir, phase2_dir, output_dir))
     output_dir.mkdir(parents=True, exist_ok=True)
-    payloads, regions, phase2_plan, symbolic_problem = load_phase3_inputs(phase1_dir, phase2_dir)
+    payloads, regions, phase1_assignments, phase2_plan, symbolic_problem = load_phase3_inputs(phase1_dir, phase2_dir)
     scene = L2LivingRoomRegionScene(SCENE, "google")
     _configure_execution_base_limits(scene)
     # The execution experiment starts from the composed model's deterministic
@@ -556,10 +871,14 @@ def run_mobile_execution(
     mujoco.mj_forward(scene.model, scene.data)
     if execute:
         _save_execution_frame(scene, output_dir / "execution_initial.png")
-    placements = allocate_observed_placements(payloads, regions, phase2_plan)
+    placements = allocate_observed_placements(
+        payloads, regions, phase2_plan, phase1_assignments
+    )
     _write(output_dir / "dynamic_placement_targets.json", placements)
+    _write(output_dir / "phase1_selected_packing_realization.json", placements)
 
     object_backend = {row["generic_object_id"]: row["backend_body"] for row in resolution["objects"]}
+    support_backend = {row["generic_region_id"]: row["backend_support_geom"] for row in resolution["regions"]}
     placement_by_object = {row["object_id"]: row for row in placements["placements"]}
     specs = make_pick_specs(payloads, resolution)
     mobile = LivingRoomMobileExecutor(scene.model, scene.data)
@@ -573,6 +892,9 @@ def run_mobile_execution(
     if max_task_actions is not None:
         actions = actions[:max_task_actions]
     held: str | None = None
+    held_backend: str | None = None
+    held_validations: list[dict[str, Any]] = []
+    placed_objects: set[str] = set()
     chosen_pick_stance: dict[str, BasePose] = {}
     for task_action in actions:
         operator, arguments = task_action["operator"], task_action["arguments"]
@@ -653,7 +975,24 @@ def run_mobile_execution(
             path = selected_path
             refined.append({"operator": "MOVE", "target_pose": asdict(selected), "reason": "CURRENT_BASE_MANIPULATION_INFEASIBLE", "carrying": held})
             if execute:
-                execution_log.append({"operator": "MOVE", "result": mobile.execute(path)})
+                held_before = None
+                if held is not None:
+                    state = inspect_held_object_state(scene.model, scene.data, held, held_backend)
+                    held_before = asdict(state)
+                    held_validations.append({"phase": "BEFORE_CARRY_MOVE", **held_before})
+                    if state.validation_status != "TRUE":
+                        raise RuntimeError("OBJECT_DROPPED before MOVE: " + str(state.rejection_reasons))
+                move_result = mobile.execute(path)
+                held_after = None
+                if held is not None:
+                    state = inspect_held_object_state(scene.model, scene.data, held, held_backend)
+                    held_after = asdict(state)
+                    held_validations.append({"phase": "AFTER_CARRY_MOVE", **held_after})
+                    if state.validation_status != "TRUE":
+                        raise RuntimeError("OBJECT_DROPPED after MOVE: " + str(state.rejection_reasons))
+                execution_log.append({"operator": "MOVE", "carrying": held,
+                                      "held_before_move": held_before,
+                                      "held_after_move": held_after, "result": move_result})
                 execution_frames.append(_capture_execution_frame(scene))
             else:
                 # Planning-state propagation only.  Physical execution uses
@@ -683,12 +1022,13 @@ def run_mobile_execution(
             if operator == "PICK":
                 picker.request_pick(backend)
             else:
-                picker.held_object = backend
-                picker.target_object = backend
-                picker.target_body_id = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_BODY, backend)
-                picker.grasp_equality_id = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_EQUALITY, f"google:pick_weld_{backend}")
-                picker.mode = "holding"
-                picker.request_place_world(target)
+                resumed = resume_held_object_from_simulator(picker, object_id, backend)
+                held_validations.append({"phase": "BEFORE_PLACE_RESUME", **asdict(resumed)})
+                yaw = float(placement_by_object[object_id]["yaw_world_rad"])
+                rz = np.array(((math.cos(yaw), -math.sin(yaw), 0.0),
+                               (math.sin(yaw), math.cos(yaw), 0.0),
+                               (0.0, 0.0, 1.0)))
+                picker.request_place_world(target, rz @ picker.profile.top_down_rotation)
             steps = 0
             while picker.mode not in {"holding" if operator == "PICK" else "idle", "failed"}:
                 picker.update()
@@ -700,44 +1040,31 @@ def run_mobile_execution(
             if operator == "PLACE" and picker.failure is None:
                 for _ in range(200):
                     mujoco.mj_step(scene.model, scene.data)
-                body_id = mujoco.mj_name2id(
-                    scene.model, mujoco.mjtObj.mjOBJ_BODY, backend
+                placed_objects.add(object_id)
+                verification = verify_physical_on_relation(
+                    scene.model, scene.data, object_id, backend, arguments["region"],
+                    support_backend[arguments["region"]], regions["regions"][arguments["region"]],
+                    placement_by_object[object_id],
+                    {key: placement_by_object[key] for key in placed_objects}, object_backend,
+                    released_by_executor=picker.held_object is None,
                 )
-                actual = scene.data.xpos[body_id].copy()
-                velocity = np.zeros(6)
-                mujoco.mj_objectVelocity(
-                    scene.model,
-                    scene.data,
-                    mujoco.mjtObj.mjOBJ_BODY,
-                    body_id,
-                    velocity,
-                    0,
-                )
-                xy_error = float(np.linalg.norm(actual[:2] - target[:2]))
-                height_error = abs(float(actual[2] - target[2]))
-                stable_speed = float(np.linalg.norm(velocity[3:]))
-                verification_ok = (
-                    xy_error <= 0.055
-                    and height_error <= 0.055
-                    and stable_speed <= 0.10
-                )
-                execution_log[-1]["physical_verification"] = {
-                    "target_body_world_m": target.tolist(),
-                    "observed_body_world_m": actual.tolist(),
-                    "xy_error_m": xy_error,
-                    "height_error_m": height_error,
-                    "linear_speed_m_s": stable_speed,
-                    "within_observed_support_boundary": xy_error <= 0.055,
-                    "stable": stable_speed <= 0.10,
-                    "verified": verification_ok,
-                }
+                verification_ok = verification["verified"]
+                execution_log[-1]["physical_verification"] = verification
                 if not verification_ok:
                     execution_log[-1]["result"] = "FAILED"
-                    execution_log[-1]["failure"] = "POST_PLACE_VERIFICATION_FAILED"
+                    execution_log[-1]["failure"] = "POSTCONDITION_FAILED"
             execution_frames.append(_capture_execution_frame(scene))
             if execution_log[-1]["result"] == "FAILED":
                 break
         held = object_id if operator == "PICK" else None
+        held_backend = backend if operator == "PICK" else None
+        if execute and operator == "PICK" and execution_log[-1]["result"] == "SUCCESS":
+            state = inspect_held_object_state(scene.model, scene.data, object_id, backend)
+            held_validations.append({"phase": "AFTER_PICK", **asdict(state)})
+            if state.validation_status != "TRUE":
+                execution_log[-1]["result"] = "FAILED"
+                execution_log[-1]["failure"] = "HELD_STATE_INVALID"
+                break
 
     refined_artifact = {
         "schema_version": SCHEMA_VERSION,
@@ -760,6 +1087,77 @@ def run_mobile_execution(
         "normal_execution_object_qpos_edits": False,
     }
     if execute:
+        final_goals = []
+        executed_place_ids = {row["object_id"] for row in execution_log if row.get("operator") == "PLACE" and row.get("result") == "SUCCESS"}
+        for item in phase2_plan["actions"]:
+            if item["operator"] != "PLACE":
+                continue
+            object_id, region_id = item["arguments"]["object"], item["arguments"]["region"]
+            if object_id not in executed_place_ids:
+                continue
+            final_goals.append(verify_physical_on_relation(
+                scene.model, scene.data, object_id, object_backend[object_id], region_id,
+                support_backend[region_id], regions["regions"][region_id],
+                placement_by_object[object_id], placement_by_object, object_backend,
+            ))
+        complete_plan_executed = start_task_action == 0 and max_task_actions is None
+        final_validation = {"schema_version": 1, "goals": final_goals,
+                            "complete_phase2_plan_executed": complete_plan_executed,
+                            "all_executed_goals_physically_satisfied": bool(final_goals) and all(row["verified"] for row in final_goals),
+                            "all_phase2_goals_physically_satisfied": complete_plan_executed and len(final_goals) == 6 and all(row["verified"] for row in final_goals)}
+        _write(output_dir / "physical_goal_validation.json",
+               {"schema_version": 1, "goals": [row["physical_verification"] for row in execution_log if row.get("operator") == "PLACE" and "physical_verification" in row],
+                "all_phase2_goals_physically_satisfied": all(row["verified"] for row in final_goals)})
+        _write(output_dir / "final_physical_goal_validation.json", final_validation)
+        _write(output_dir / "held_object_validation.json", {"schema_version": 1, "checks": held_validations})
+        physical["final_physical_goal_validation"] = final_validation
+        physical["success"] = physical["success"] and final_validation["all_executed_goals_physically_satisfied"]
+        goals = final_validation["goals"]
+        pair_clearances = [
+            pair["signed_clearance_m"]
+            for goal in goals for pair in goal["payload_nonoverlap"]["pairs"]
+        ]
+        carry_checks = [
+            row for row in held_validations
+            if row["phase"] in {"BEFORE_CARRY_MOVE", "AFTER_CARRY_MOVE"}
+        ]
+        metrics = {
+            "schema_version": 1,
+            "physical_pick_success_rate": sum(row.get("operator") == "PICK" and row.get("result") == "SUCCESS" for row in execution_log) / max(1, sum(row.get("operator") == "PICK" for row in execution_log)),
+            "physical_place_success_rate": sum(row.get("operator") == "PLACE" and row.get("result") == "SUCCESS" for row in execution_log) / max(1, sum(row.get("operator") == "PLACE" for row in execution_log)),
+            "support_contact_success_rate": sum(goal["support_contact"]["support_contact_found"] for goal in goals) / max(1, len(goals)),
+            "footprint_inside_observed_region_rate": sum(goal["footprint_inside_observed_support"]["inside"] for goal in goals) / max(1, len(goals)),
+            "floor_contact_failure_count": sum(goal["floor_contact_found"] for goal in goals),
+            "invalid_penetration_failure_count": sum(goal["penetration_check"]["invalid_environment_penetration"] for goal in goals),
+            "payload_pair_nonoverlap_rate": sum(goal["payload_nonoverlap"]["valid_nonoverlap"] for goal in goals) / max(1, len(goals)),
+            "held_object_retention_during_move_rate": sum(row["validation_status"] == "TRUE" for row in carry_checks) / max(1, len(carry_checks)),
+            "post_place_stability_rate": sum(goal["settling"]["stable"] for goal in goals) / max(1, len(goals)),
+            "final_physical_goal_satisfaction_rate": sum(goal["verified"] for goal in goals) / max(1, len(goals)),
+            "full_f0_execution_success_rate": 1.0 if final_validation["all_phase2_goals_physically_satisfied"] else 0.0,
+            "maximum_final_footprint_edge_violation_m": max((max(0.0, -goal["footprint_inside_observed_support"]["minimum_edge_margin_m"]) for goal in goals), default=0.0),
+            "minimum_final_support_edge_margin_m": min((goal["footprint_inside_observed_support"]["minimum_edge_margin_m"] for goal in goals), default=None),
+            "minimum_final_pair_clearance_m": min(pair_clearances, default=None),
+            "maximum_final_linear_speed_m_s": max((goal["settling"]["linear_speed_m_s"] for goal in goals), default=None),
+            "maximum_final_angular_speed_rad_s": max((goal["settling"]["angular_speed_rad_s"] for goal in goals), default=None),
+        }
+        guards = {
+            "schema_version": 1,
+            "phase1_selected_packing_consumed": placements["phase1_selected_packing_consumed"],
+            "final_placements_rectangularly_validated": bool(goals) and all(goal["footprint_inside_observed_support"]["inside"] and goal["payload_nonoverlap"]["valid_nonoverlap"] for goal in goals),
+            "place_verification_uses_actual_support_contact": bool(goals) and all(goal["support_contact"]["support_contact_found"] for goal in goals),
+            "place_verification_checks_floor_contact": bool(goals) and all(not goal["floor_contact_found"] for goal in goals),
+            "place_verification_checks_observed_region_boundary": bool(goals) and all(goal["footprint_inside_observed_support"]["inside"] for goal in goals),
+            "place_verification_checks_payload_nonoverlap": bool(goals) and all(goal["payload_nonoverlap"]["valid_nonoverlap"] for goal in goals),
+            "place_verification_checks_environment_penetration": bool(goals) and all(not goal["penetration_check"]["invalid_environment_penetration"] for goal in goals),
+            "place_verification_checks_linear_and_angular_settling": bool(goals) and all(goal["settling"]["stable"] for goal in goals),
+            "place_controller_resume_requires_active_physical_grasp": bool(held_validations) and all(row["weld_active"] for row in held_validations if row["phase"] == "BEFORE_PLACE_RESUME"),
+            "held_state_checked_before_carry_move": sum(row["phase"] == "BEFORE_CARRY_MOVE" for row in held_validations) == sum(row.get("operator") == "MOVE" and row.get("carrying") is not None for row in execution_log),
+            "held_state_checked_after_carry_move": sum(row["phase"] == "AFTER_CARRY_MOVE" for row in held_validations) == sum(row.get("operator") == "MOVE" and row.get("carrying") is not None for row in execution_log),
+            "final_all_six_goal_relations_revalidated_from_final_state": final_validation["all_phase2_goals_physically_satisfied"],
+        }
+        guards["all_scientific_guards_pass"] = all(value is True for key, value in guards.items() if key != "schema_version")
+        _write(output_dir / "physical_metrics.json", metrics)
+        _write(output_dir / "scientific_guard_report.json", guards)
         _save_execution_frame(scene, output_dir / "execution_final.png")
         pil_frames = [Image.fromarray(frame) for frame in execution_frames]
         pil_frames[0].save(
@@ -780,8 +1178,21 @@ def run_mobile_execution(
             )
             video_status["mp4"] = "SUCCESS"
         except Exception as error:  # optional FFmpeg/imageio path
-            video_status["mp4"] = "UNAVAILABLE"
-            video_status["mp4_error"] = str(error)
+            video_status["imageio_error"] = str(error)
+            ffmpeg = shutil.which("ffmpeg")
+            if ffmpeg:
+                process = subprocess.run(
+                    [ffmpeg, "-y", "-loglevel", "error", "-i",
+                     str(output_dir / "execution_timeline.gif"), "-movflags", "+faststart",
+                     "-pix_fmt", "yuv420p", str(output_dir / "execution_timeline.mp4")],
+                    capture_output=True, text=True, check=False,
+                )
+                video_status["mp4"] = "SUCCESS" if process.returncode == 0 else "UNAVAILABLE"
+                if process.returncode:
+                    video_status["mp4_error"] = process.stderr
+            else:
+                video_status["mp4"] = "UNAVAILABLE"
+                video_status["mp4_error"] = "FFmpeg not installed"
         _write(output_dir / "video_status.json", video_status)
     _write(output_dir / "physical_execution.json", physical)
     provenance = {
@@ -790,6 +1201,7 @@ def run_mobile_execution(
         "phase1_payload_registry": str(phase1_dir / "payload_registry.json"),
         "phase1_payload_registry_sha256": _sha256(phase1_dir / "payload_registry.json"),
         "phase1_region_registry_sha256": _sha256(phase1_dir / "region_registry.json"),
+        "phase1_region_assignments_sha256": _sha256(phase1_dir / "region_assignments.json"),
         "phase2_plan_sha256": _sha256(phase2_dir / "plan.json"),
         "phase2_symbolic_problem_sha256": _sha256(phase2_dir / "symbolic_problem.json"),
         "frozen_task_plan_preserved": True,

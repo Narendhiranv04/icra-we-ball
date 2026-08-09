@@ -1,0 +1,699 @@
+{
+  "all_phase2_goals_physically_satisfied": true,
+  "goals": [
+    {
+      "floor_contact_found": false,
+      "footprint_inside_observed_support": {
+        "final_local_center_m": [
+          -0.09242233219247492,
+          0.005239815029229348
+        ],
+        "final_payload_yaw_world_rad": -1.5833441959035195,
+        "footprint_corners_world_m": [
+          [
+            -1.8333610802658233,
+            1.2100894175491708
+          ],
+          [
+            -1.8346880178562606,
+            1.1043449332430495
+          ],
+          [
+            -1.7533623195446806,
+            1.1033244154650652
+          ],
+          [
+            -1.7520353819542434,
+            1.2090688997711865
+          ]
+        ],
+        "inside": true,
+        "minimum_edge_margin_m": 0.13136313780290104,
+        "region_local_corners_m": [
+          [
+            -0.05152376809038233,
+            -0.04745695243445341
+          ],
+          [
+            -0.05198958424150879,
+            0.05829483119045664
+          ],
+          [
+            -0.1333208962945675,
+            0.0579365824929121
+          ],
+          [
+            -0.13285508014344105,
+            -0.04781520113199795
+          ]
+        ]
+      },
+      "grasp_released": true,
+      "height_support_consistency": {
+        "actual_body_z_m": 0.6209421588235061,
+        "expected_body_z_m": 0.621,
+        "height_error_m": 5.784117649387799e-05,
+        "valid": true
+      },
+      "object_id": "object_0001",
+      "orientation_consistency": {
+        "actual_yaw_world_rad": -1.5833441959035195,
+        "target_yaw_world_rad": -1.587748973984386,
+        "tolerance_rad": 0.20943951023931956,
+        "valid": true,
+        "yaw_error_rad": 0.004404778080866478
+      },
+      "payload_nonoverlap": {
+        "pairs": [],
+        "valid_nonoverlap": true
+      },
+      "penetration_check": {
+        "invalid_environment_penetration": false,
+        "minimum_signed_distance_m": -5.859353392366211e-05,
+        "offending_contacts": []
+      },
+      "region_id": "region_0001",
+      "relation": "ON",
+      "settling": {
+        "angular_speed_rad_s": 0.0001669571782132658,
+        "angular_threshold_rad_s": 0.1,
+        "linear_speed_m_s": 1.1994143583153599e-05,
+        "linear_threshold_m_s": 0.02,
+        "stable": true
+      },
+      "status": "TRUE",
+      "support_contact": {
+        "contact_count": 5,
+        "support_contact_found": true,
+        "support_contact_geoms": [
+          {
+            "distance_m": -5.859353392366211e-05,
+            "geom1": "a2_drink_left_cup",
+            "geom2": "a2_personal_left_top"
+          },
+          {
+            "distance_m": -5.859353392366211e-05,
+            "geom1": "a2_drink_left_cup",
+            "geom2": "a2_personal_left_top"
+          },
+          {
+            "distance_m": -5.859353392366211e-05,
+            "geom1": "a2_drink_left_cup",
+            "geom2": "a2_personal_left_top"
+          },
+          {
+            "distance_m": -5.859353392366211e-05,
+            "geom1": "a2_drink_left_cup",
+            "geom2": "a2_personal_left_top"
+          },
+          {
+            "distance_m": -5.859353392366211e-05,
+            "geom1": "a2_drink_left_cup",
+            "geom2": "a2_personal_left_top"
+          }
+        ]
+      },
+      "verified": true
+    },
+    {
+      "floor_contact_found": false,
+      "footprint_inside_observed_support": {
+        "final_local_center_m": [
+          0.05573793347232924,
+          0.006256822362966529
+        ],
+        "final_payload_yaw_world_rad": -1.5690696606107697,
+        "footprint_corners_world_m": [
+          [
+            -2.013882972878387,
+            1.2307081811023386
+          ],
+          [
+            -2.0136321527091137,
+            1.0854456385704387
+          ],
+          [
+            -1.8691528594512756,
+            1.0856951063283329
+          ],
+          [
+            -1.8694036796205489,
+            1.2309576488602327
+          ]
+        ],
+        "inside": true,
+        "minimum_edge_margin_m": 0.13536232336859005,
+        "region_local_corners_m": [
+          [
+            0.1293217107288785,
+            -0.06501257585020426
+          ],
+          [
+            0.12660845992016342,
+            0.08022484165519735
+          ],
+          [
+            -0.01784584378422003,
+            0.07752622057613733
+          ],
+          [
+            -0.015132592975504938,
+            -0.06771119692926429
+          ]
+        ]
+      },
+      "grasp_released": true,
+      "height_support_consistency": {
+        "actual_body_z_m": 0.5759406425732998,
+        "expected_body_z_m": 0.5760000000000001,
+        "height_error_m": 5.9357426700268334e-05,
+        "valid": true
+      },
+      "object_id": "object_0002",
+      "orientation_consistency": {
+        "actual_yaw_world_rad": -1.5690696606107697,
+        "target_yaw_world_rad": -1.587748973984386,
+        "tolerance_rad": 0.20943951023931956,
+        "valid": true,
+        "yaw_error_rad": 0.01867931337361628
+      },
+      "payload_nonoverlap": {
+        "pairs": [
+          {
+            "other_object_id": "object_0001",
+            "overlap": false,
+            "required_clearance_m": 0.025,
+            "signed_clearance_m": 0.04204662368728229,
+            "valid_nonoverlap": true
+          }
+        ],
+        "valid_nonoverlap": true
+      },
+      "penetration_check": {
+        "invalid_environment_penetration": false,
+        "minimum_signed_distance_m": -5.977938459372585e-05,
+        "offending_contacts": []
+      },
+      "region_id": "region_0001",
+      "relation": "ON",
+      "settling": {
+        "angular_speed_rad_s": 0.0007206109622749731,
+        "angular_threshold_rad_s": 0.1,
+        "linear_speed_m_s": 2.007787917577449e-05,
+        "linear_threshold_m_s": 0.02,
+        "stable": true
+      },
+      "status": "TRUE",
+      "support_contact": {
+        "contact_count": 5,
+        "support_contact_found": true,
+        "support_contact_geoms": [
+          {
+            "distance_m": -5.977938459372585e-05,
+            "geom1": "a2_snack_left_collision",
+            "geom2": "a2_personal_left_top"
+          },
+          {
+            "distance_m": -5.977938459372585e-05,
+            "geom1": "a2_snack_left_collision",
+            "geom2": "a2_personal_left_top"
+          },
+          {
+            "distance_m": -5.977938459372585e-05,
+            "geom1": "a2_snack_left_collision",
+            "geom2": "a2_personal_left_top"
+          },
+          {
+            "distance_m": -5.977938459372585e-05,
+            "geom1": "a2_snack_left_collision",
+            "geom2": "a2_personal_left_top"
+          },
+          {
+            "distance_m": -5.977938459372585e-05,
+            "geom1": "a2_snack_left_collision",
+            "geom2": "a2_personal_left_top"
+          }
+        ]
+      },
+      "verified": true
+    },
+    {
+      "floor_contact_found": false,
+      "footprint_inside_observed_support": {
+        "final_local_center_m": [
+          -0.11019317059923407,
+          0.014151951769279943
+        ],
+        "final_payload_yaw_world_rad": -0.0187970556716918,
+        "footprint_corners_world_m": [
+          [
+            0.00694190651481702,
+            0.4831046031593712
+          ],
+          [
+            0.21152451506417105,
+            0.4792585994977426
+          ],
+          [
+            0.21293026726189668,
+            0.5540355567986394
+          ],
+          [
+            0.008347658712542644,
+            0.557881560460268
+          ]
+        ],
+        "inside": true,
+        "minimum_edge_margin_m": 0.2648788783279332,
+        "region_local_corners_m": [
+          [
+            -0.007254801518885694,
+            0.04977909602670306
+          ],
+          [
+            -0.21184319650814173,
+            0.05330387981349852
+          ],
+          [
+            -0.21313153967958248,
+            -0.02147519248814317
+          ],
+          [
+            -0.008543144690326443,
+            -0.024999976274938683
+          ]
+        ]
+      },
+      "grasp_released": true,
+      "height_support_consistency": {
+        "actual_body_z_m": 0.4089275978566635,
+        "expected_body_z_m": 0.40900000000000003,
+        "height_error_m": 7.240214333653627e-05,
+        "valid": true
+      },
+      "object_id": "object_0003",
+      "orientation_consistency": {
+        "actual_yaw_world_rad": -0.0187970556716918,
+        "target_yaw_world_rad": -0.0015701005499679788,
+        "tolerance_rad": 0.20943951023931956,
+        "valid": true,
+        "yaw_error_rad": 0.01722695512172382
+      },
+      "payload_nonoverlap": {
+        "pairs": [],
+        "valid_nonoverlap": true
+      },
+      "penetration_check": {
+        "invalid_environment_penetration": false,
+        "minimum_signed_distance_m": -7.272030241101818e-05,
+        "offending_contacts": []
+      },
+      "region_id": "region_0003",
+      "relation": "ON",
+      "settling": {
+        "angular_speed_rad_s": 1.1472529886269542e-15,
+        "angular_threshold_rad_s": 0.1,
+        "linear_speed_m_s": 7.681403150449089e-15,
+        "linear_threshold_m_s": 0.02,
+        "stable": true
+      },
+      "status": "TRUE",
+      "support_contact": {
+        "contact_count": 4,
+        "support_contact_found": true,
+        "support_contact_geoms": [
+          {
+            "distance_m": -7.272030241101818e-05,
+            "geom1": "a2_control_table_top",
+            "geom2": "a2_remote_body"
+          },
+          {
+            "distance_m": -7.208398411508622e-05,
+            "geom1": "a2_control_table_top",
+            "geom2": "a2_remote_body"
+          },
+          {
+            "distance_m": -7.272030241101589e-05,
+            "geom1": "a2_control_table_top",
+            "geom2": "a2_remote_body"
+          },
+          {
+            "distance_m": -7.208398411508393e-05,
+            "geom1": "a2_control_table_top",
+            "geom2": "a2_remote_body"
+          }
+        ]
+      },
+      "verified": true
+    },
+    {
+      "floor_contact_found": false,
+      "footprint_inside_observed_support": {
+        "final_local_center_m": [
+          -0.0949684112806896,
+          0.008767502438035072
+        ],
+        "final_payload_yaw_world_rad": -1.5464776226232047,
+        "footprint_corners_world_m": [
+          [
+            1.9341730061181834,
+            1.2026462449540716
+          ],
+          [
+            1.9367024869632308,
+            1.0986529497903974
+          ],
+          [
+            2.018092430432579,
+            1.1006326380256934
+          ],
+          [
+            2.015562949587532,
+            1.2046259331893676
+          ]
+        ],
+        "inside": true,
+        "minimum_edge_margin_m": 0.12855259745726438,
+        "region_local_corners_m": [
+          [
+            -0.05421004636505229,
+            -0.04320428927009312
+          ],
+          [
+            -0.05431279953274136,
+            0.06081971350874177
+          ],
+          [
+            -0.13572677619632667,
+            0.06073929414616326
+          ],
+          [
+            -0.1356240230286376,
+            -0.04328470863267163
+          ]
+        ]
+      },
+      "grasp_released": true,
+      "height_support_consistency": {
+        "actual_body_z_m": 0.6209424380960125,
+        "expected_body_z_m": 0.621,
+        "height_error_m": 5.7561903987535246e-05,
+        "valid": true
+      },
+      "object_id": "object_0004",
+      "orientation_consistency": {
+        "actual_yaw_world_rad": -1.5464776226232047,
+        "target_yaw_world_rad": -1.5474654055533454,
+        "tolerance_rad": 0.20943951023931956,
+        "valid": true,
+        "yaw_error_rad": 0.0009877829301407903
+      },
+      "payload_nonoverlap": {
+        "pairs": [],
+        "valid_nonoverlap": true
+      },
+      "penetration_check": {
+        "invalid_environment_penetration": false,
+        "minimum_signed_distance_m": -5.8430036881867e-05,
+        "offending_contacts": []
+      },
+      "region_id": "region_0005",
+      "relation": "ON",
+      "settling": {
+        "angular_speed_rad_s": 0.0008356562876259649,
+        "angular_threshold_rad_s": 0.1,
+        "linear_speed_m_s": 5.9908672794139996e-05,
+        "linear_threshold_m_s": 0.02,
+        "stable": true
+      },
+      "status": "TRUE",
+      "support_contact": {
+        "contact_count": 5,
+        "support_contact_found": true,
+        "support_contact_geoms": [
+          {
+            "distance_m": -5.8430036881867e-05,
+            "geom1": "a2_drink_right_cup",
+            "geom2": "a2_personal_right_top"
+          },
+          {
+            "distance_m": -5.8430036881867e-05,
+            "geom1": "a2_drink_right_cup",
+            "geom2": "a2_personal_right_top"
+          },
+          {
+            "distance_m": -5.8430036881867e-05,
+            "geom1": "a2_drink_right_cup",
+            "geom2": "a2_personal_right_top"
+          },
+          {
+            "distance_m": -5.8430036881867e-05,
+            "geom1": "a2_drink_right_cup",
+            "geom2": "a2_personal_right_top"
+          },
+          {
+            "distance_m": -5.8430036881867e-05,
+            "geom1": "a2_drink_right_cup",
+            "geom2": "a2_personal_right_top"
+          }
+        ]
+      },
+      "verified": true
+    },
+    {
+      "floor_contact_found": false,
+      "footprint_inside_observed_support": {
+        "final_local_center_m": [
+          0.1184078262501037,
+          0.016972866579483693
+        ],
+        "final_payload_yaw_world_rad": 0.008311512148980344,
+        "footprint_corners_world_m": [
+          [
+            -0.216193882817255,
+            0.42787209799001324
+          ],
+          [
+            -0.019691024176440183,
+            0.4295053714966055
+          ],
+          [
+            -0.021144231790197907,
+            0.604344092108561
+          ],
+          [
+            -0.2176470904310127,
+            0.6027108186019687
+          ]
+        ],
+        "inside": true,
+        "minimum_edge_margin_m": 0.21282087954377557,
+        "region_local_corners_m": [
+          [
+            0.21579399222320145,
+            0.10536187859765614
+          ],
+          [
+            0.01929394019588394,
+            0.10342007798459218
+          ],
+          [
+            0.02102166027700592,
+            -0.07141614543868875
+          ],
+          [
+            0.21752171230432343,
+            -0.06947434482562478
+          ]
+        ]
+      },
+      "grasp_released": true,
+      "height_support_consistency": {
+        "actual_body_z_m": 0.41881909295885456,
+        "expected_body_z_m": 0.42300000000000004,
+        "height_error_m": 0.004180907041145487,
+        "valid": true
+      },
+      "object_id": "object_0005",
+      "orientation_consistency": {
+        "actual_yaw_world_rad": 0.008311512148980344,
+        "target_yaw_world_rad": -0.0015701005499679788,
+        "tolerance_rad": 0.20943951023931956,
+        "valid": true,
+        "yaw_error_rad": 0.009881612698948323
+      },
+      "payload_nonoverlap": {
+        "pairs": [
+          {
+            "other_object_id": "object_0003",
+            "overlap": false,
+            "required_clearance_m": 0.025,
+            "signed_clearance_m": 0.0270774963146763,
+            "valid_nonoverlap": true
+          }
+        ],
+        "valid_nonoverlap": true
+      },
+      "penetration_check": {
+        "invalid_environment_penetration": false,
+        "minimum_signed_distance_m": -0.00021679745290862867,
+        "offending_contacts": []
+      },
+      "region_id": "region_0003",
+      "relation": "ON",
+      "settling": {
+        "angular_speed_rad_s": 1.0767773530366184e-10,
+        "angular_threshold_rad_s": 0.1,
+        "linear_speed_m_s": 2.5787049439765343e-11,
+        "linear_threshold_m_s": 0.02,
+        "stable": true
+      },
+      "status": "TRUE",
+      "support_contact": {
+        "contact_count": 3,
+        "support_contact_found": true,
+        "support_contact_geoms": [
+          {
+            "distance_m": -0.00021679745290862867,
+            "geom1": "a2_controller_core",
+            "geom2": "a2_control_table_top"
+          },
+          {
+            "distance_m": -3.0077065199161923e-05,
+            "geom1": "a2_controller_left_grip",
+            "geom2": "a2_control_table_top"
+          },
+          {
+            "distance_m": -3.1453658147627406e-05,
+            "geom1": "a2_controller_right_grip",
+            "geom2": "a2_control_table_top"
+          }
+        ]
+      },
+      "verified": true
+    },
+    {
+      "floor_contact_found": false,
+      "footprint_inside_observed_support": {
+        "final_local_center_m": [
+          0.05400728382122457,
+          0.002193399512622457
+        ],
+        "final_payload_yaw_world_rad": -1.5287689712985522,
+        "footprint_corners_world_m": [
+          [
+            1.742373061115267,
+            1.2348958818001234
+          ],
+          [
+            1.749401850854962,
+            1.0677511529561923
+          ],
+          [
+            1.9117153418483126,
+            1.074576778915198
+          ],
+          [
+            1.9046865521086176,
+            1.2417215077591293
+          ]
+        ],
+        "inside": true,
+        "minimum_edge_margin_m": 0.12749401953947606,
+        "region_local_corners_m": [
+          [
+            0.136785354114115,
+            -0.07991961271448757
+          ],
+          [
+            0.13365776401594875,
+            0.08734360035310232
+          ],
+          [
+            -0.028770786471665838,
+            0.08430641173973248
+          ],
+          [
+            -0.025643196373499638,
+            -0.0829568013278574
+          ]
+        ]
+      },
+      "grasp_released": true,
+      "height_support_consistency": {
+        "actual_body_z_m": 0.5759405644442174,
+        "expected_body_z_m": 0.5760000000000001,
+        "height_error_m": 5.9435555782694216e-05,
+        "valid": true
+      },
+      "object_id": "object_0006",
+      "orientation_consistency": {
+        "actual_yaw_world_rad": -1.5287689712985522,
+        "target_yaw_world_rad": -1.5474654055533454,
+        "tolerance_rad": 0.20943951023931956,
+        "valid": true,
+        "yaw_error_rad": 0.018696434254793285
+      },
+      "payload_nonoverlap": {
+        "pairs": [
+          {
+            "other_object_id": "object_0004",
+            "overlap": false,
+            "required_clearance_m": 0.025,
+            "signed_clearance_m": 0.03390653213967876,
+            "valid_nonoverlap": true
+          }
+        ],
+        "valid_nonoverlap": true
+      },
+      "penetration_check": {
+        "invalid_environment_penetration": false,
+        "minimum_signed_distance_m": -5.9423262581608336e-05,
+        "offending_contacts": []
+      },
+      "region_id": "region_0005",
+      "relation": "ON",
+      "settling": {
+        "angular_speed_rad_s": 0.00039138213566896875,
+        "angular_threshold_rad_s": 0.1,
+        "linear_speed_m_s": 1.2234162178459423e-05,
+        "linear_threshold_m_s": 0.02,
+        "stable": true
+      },
+      "status": "TRUE",
+      "support_contact": {
+        "contact_count": 5,
+        "support_contact_found": true,
+        "support_contact_geoms": [
+          {
+            "distance_m": -5.9423262581608336e-05,
+            "geom1": "a2_snack_right_collision",
+            "geom2": "a2_personal_right_top"
+          },
+          {
+            "distance_m": -5.9423262581608336e-05,
+            "geom1": "a2_snack_right_collision",
+            "geom2": "a2_personal_right_top"
+          },
+          {
+            "distance_m": -5.9423262581608336e-05,
+            "geom1": "a2_snack_right_collision",
+            "geom2": "a2_personal_right_top"
+          },
+          {
+            "distance_m": -5.9423262581608336e-05,
+            "geom1": "a2_snack_right_collision",
+            "geom2": "a2_personal_right_top"
+          },
+          {
+            "distance_m": -5.9423262581608336e-05,
+            "geom1": "a2_snack_right_collision",
+            "geom2": "a2_personal_right_top"
+          }
+        ]
+      },
+      "verified": true
+    }
+  ],
+  "schema_version": 1
+}

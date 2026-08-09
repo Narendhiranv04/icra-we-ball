@@ -1,7 +1,17 @@
-Focused regression command:
-MUJOCO_GL=egl /home/naren/miniconda3/bin/python -m pytest -q mujoco_scenes/tests/test_living_room_mobile_execution.py mujoco_scenes/tests/test_living_room_symbolic_planning.py mujoco_scenes/tests/test_mobile_motion.py mujoco_scenes/tests/test_robot_profiles.py
-Result: 48 passed in 10.50s
+Phase-3 focused command:
+MUJOCO_GL=egl PYOPENGL_PLATFORM=egl /home/naren/miniconda3/bin/python -m pytest mujoco_scenes/tests/test_living_room_mobile_execution.py -q
+Result: 27 passed in 0.27s
+
+Focused Phase-1/2/3, mobile-motion, and kitchen regression command:
+MUJOCO_GL=egl PYOPENGL_PLATFORM=egl /home/naren/miniconda3/bin/python -m pytest -q mujoco_scenes/tests/test_living_room.py mujoco_scenes/tests/test_living_room_region_function.py mujoco_scenes/tests/test_living_room_symbolic_planning.py mujoco_scenes/tests/test_living_room_mobile_execution.py mujoco_scenes/tests/test_mobile_motion.py mujoco_scenes/tests/test_kitchen_feasibility_benchmark.py
+Result: 169 passed in 33.75s
 
 Full repository command:
-MUJOCO_GL=egl /home/naren/miniconda3/bin/python -m pytest -q
-Result: 481 passed in 62.34s
+MUJOCO_GL=egl PYOPENGL_PLATFORM=egl /home/naren/miniconda3/bin/python -m pytest mujoco_scenes/tests -q
+Result: 492 passed in 78.92s
+
+Compile command:
+/home/naren/miniconda3/bin/python -m py_compile mujoco_scenes/living_room_mobile_execution.py mujoco_scenes/generic_manipulation.py
+Result: PASS
+
+git diff --check: PASS

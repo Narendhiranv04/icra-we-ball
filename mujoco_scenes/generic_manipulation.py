@@ -554,6 +554,7 @@ class CalibratedPickPlaceExecutor:
         self.retreat_waypoints: list[JointWaypoint] = []
         self.pending_place_site = "serving_spot"
         self.pending_place_world: np.ndarray | None = None
+        self.pending_place_rotation: np.ndarray | None = None
         self.configuration_checker: RobotConfigurationCollisionChecker | None = None
         self.collision_guard_tick = 0
 
@@ -839,12 +840,17 @@ class CalibratedPickPlaceExecutor:
             raise RuntimeError("Place requires Move (home) first")
         self.pending_place_site = site_name
         self.pending_place_world = None
+        self.pending_place_rotation = None
         self.failure = None
         self.calibration_attempt_ticks = 0
         self.mode = "place_base_approach"
         self.status = f"Place {self.held_object}: approaching manipulation stance"
 
-    def request_place_world(self, desired_body_world: np.ndarray) -> None:
+    def request_place_world(
+        self,
+        desired_body_world: np.ndarray,
+        target_rotation: np.ndarray | None = None,
+    ) -> None:
         """Place the held body at a measured world-frame support position.
 
         This is the dynamic counterpart of :meth:`request_place`.  The input
@@ -860,6 +866,13 @@ class CalibratedPickPlaceExecutor:
         if target.shape != (3,) or not np.all(np.isfinite(target)):
             raise ValueError("desired_body_world must be a finite xyz vector")
         self.pending_place_world = target.copy()
+        if target_rotation is None:
+            self.pending_place_rotation = None
+        else:
+            rotation = np.asarray(target_rotation, dtype=float)
+            if rotation.shape != (3, 3) or not np.all(np.isfinite(rotation)):
+                raise ValueError("target_rotation must be a finite 3x3 matrix")
+            self.pending_place_rotation = rotation.copy()
         self.pending_place_site = "<dynamic_world_target>"
         self.failure = None
         self.calibration_attempt_ticks = 0
@@ -898,6 +911,7 @@ class CalibratedPickPlaceExecutor:
             "Moving above placement site",
             self.configuration_checker,
             allowed_bodies,
+            self.pending_place_rotation,
         )
         descent, _ = self._solve_points(
             ik,
@@ -906,6 +920,7 @@ class CalibratedPickPlaceExecutor:
             "Descending to placement surface",
             self.configuration_checker,
             allowed_bodies,
+            self.pending_place_rotation,
         )
         self.waypoints = [*approach, *descent]
         retreat_to_carry = [
