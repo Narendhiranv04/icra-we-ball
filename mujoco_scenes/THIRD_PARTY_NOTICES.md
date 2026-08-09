@@ -149,7 +149,7 @@ derivatives of these Poly Haven assets, downloaded on 2026-08-09 under
 | [Modern Arm Chair 01](https://polyhaven.com/a/modern_arm_chair_01) | Vibrant Nordic | two identical seating targets |
 | [Side Table 01](https://polyhaven.com/a/side_table_01) | James Ray Cock | side/flexible destination regions |
 | [Coffee Table 01](https://polyhaven.com/a/CoffeeTable_01) | Fernando Quinn | shared coffee-table destination |
-| [Wooden Table 02](https://polyhaven.com/a/WoodenTable_02) | Fran Calvente | physically undersized alternatives |
+| [Wooden Table 02](https://polyhaven.com/a/WoodenTable_02) | Fran Calvente | natural isotropic accent and compact shared-fit-failure tables |
 | [Chinese Console Table](https://polyhaven.com/a/chinese_console_table) | Kirill Sannikov | media and staging consoles |
 
 `assets/living_room_realistic/manifest.json` records source URLs, authors,

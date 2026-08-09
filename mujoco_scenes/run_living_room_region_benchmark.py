@@ -27,12 +27,123 @@ from mujoco_scenes.living_room_region_scene import (
     L2_INTEGRATED_SCENES,
     L2LivingRoomRegionScene,
 )
+from mujoco_scenes.living_room_robot_spawn_validation import (
+    validate_google_robot_spawn,
+)
 from mujoco_scenes.region_ablation import create_region_semantic_detector
 from mujoco_scenes.region_ablation2 import DEFAULT_EVALUATION_CONFIG, _atomic_json
 from mujoco_scenes.semantic_grounding import load_semantic_config
 
 
 ROOT = Path(__file__).resolve().parent
+
+
+def _controlled_failure_diagnostic(run, code: str) -> dict:
+    """Persist direct edge evidence for each controlled infeasible case."""
+    signatures = {
+        "I0_PERSONAL_SEMANTIC_DEFICIT": (
+            run.personal_rows,
+            lambda row: row["semantic_role_status"] != "TRUE"
+            and all(
+                row[key] == "TRUE"
+                for key in ("PLANAR_SUPPORT", "FITS_SET_ON", "NEAR_SEAT")
+            ),
+        ),
+        "I1_PERSONAL_GEOMETRY_DEFICIT": (
+            run.personal_rows,
+            lambda row: row["semantic_role_status"] == "TRUE"
+            and row["PLANAR_SUPPORT"] == "TRUE"
+            and row["NEAR_SEAT"] == "TRUE"
+            and row["FITS_SET_ON"] == "FALSE",
+        ),
+        "I3_SHARED_FIT_FAILURE": (
+            run.shared_rows,
+            lambda row: row["semantic_role_status"] == "TRUE"
+            and row["PLANAR_SUPPORT"] == "TRUE"
+            and row["ACCESSIBLE_FROM_BOTH_SEATS"] == "TRUE"
+            and row["FITS_SET_ON"] == "FALSE",
+        ),
+        "I4_SHARED_CONTEXT_FAILURE": (
+            run.shared_rows,
+            lambda row: row["semantic_role_status"] == "TRUE"
+            and row["PLANAR_SUPPORT"] == "TRUE"
+            and row["FITS_SET_ON"] == "TRUE"
+            and row["ACCESSIBLE_FROM_BOTH_SEATS"] == "FALSE",
+        ),
+    }
+    rows, predicate = signatures.get(code, ([], lambda _row: False))
+    matching = []
+    for row in rows:
+        if not predicate(row):
+            continue
+        region = run.region_registry[row["region_id"]]
+        matching.append(
+            {
+                "function_id": row["function_id"],
+                "slot_id": row["slot_id"],
+                "region_id": row["region_id"],
+                "region_semantic_label": row["region_semantic_label"],
+                "semantic_role_status": row["semantic_role_status"],
+                "PLANAR_SUPPORT": row["PLANAR_SUPPORT"],
+                "FITS_SET_ON": row["FITS_SET_ON"],
+                "context_status": row.get(
+                    "NEAR_SEAT", row.get("ACCESSIBLE_FROM_BOTH_SEATS")
+                ),
+                "fit_margin_m": row["fit_margin_m"],
+                "region_geometry": region["geometry"],
+                "fit_evidence": row["fit_evidence"],
+                "region_evidence_path": row["region_evidence_path"],
+                "payload_evidence_paths": row["payload_evidence_paths"],
+            }
+        )
+    if code in {
+        "I2_PERSONAL_TARGET_COVERAGE_FAILURE",
+        "I5_CROSS_FUNCTION_CONFLICT",
+    }:
+        target_agnostic = run.diagnostics["target_agnostic_count"]
+        global_result = run.diagnostics["global_target_specific"]
+        expected_uncovered = (
+            bool(global_result.get("uncovered_slots"))
+            if code == "I2_PERSONAL_TARGET_COVERAGE_FAILURE"
+            else not global_result.get("uncovered_slots")
+        )
+        if (
+            target_agnostic["status"] == "COMPLETE"
+            and global_result["status"] == "INFEASIBLE"
+            and expected_uncovered
+        ):
+            matching.append(
+                {
+                    "target_agnostic_status": target_agnostic["status"],
+                    "global_target_specific_status": global_result["status"],
+                    "adjacency": global_result.get("adjacency"),
+                    "uncovered_slots": global_result.get("uncovered_slots"),
+                    "direct_cause": (
+                        "TARGET_SPECIFIC_COVERAGE_DEFICIT"
+                        if code == "I2_PERSONAL_TARGET_COVERAGE_FAILURE"
+                        else "CROSS_FUNCTION_NONSHARING_CONFLICT"
+                    ),
+                }
+            )
+    diagnostic = {
+        "schema_version": 1,
+        "variant": code,
+        "production_status": run.production_result["status"],
+        "direct_signature_applicable": code in signatures or code in {
+            "I2_PERSONAL_TARGET_COVERAGE_FAILURE",
+            "I5_CROSS_FUNCTION_CONFLICT",
+        },
+        "direct_signature_match_count": len(matching),
+        "direct_signature_rows": matching,
+        "target_agnostic_status": run.diagnostics[
+            "target_agnostic_count"
+        ]["status"],
+        "complete_global_assignment_exists": (
+            run.production_result["status"] == "COMPLETE"
+        ),
+    }
+    _atomic_json(run.run_dir / "controlled_failure_diagnostics.json", diagnostic)
+    return diagnostic
 
 
 def _json_sha256(payload: dict) -> str:
@@ -151,6 +262,7 @@ def _copy_compact_variant(source: Path, destination: Path) -> None:
         "diagnostic_modes.json",
         "expectation_validation.json",
         "evaluation_order.json",
+        "controlled_failure_diagnostics.json",
     ):
         if (source / name).exists():
             shutil.copy2(source / name, destination / name)
@@ -199,6 +311,13 @@ objects occupy a separate staging console, preserving a sparse destination
 layout and reliable one-to-one instance association. Visual mesh dimensions
 are never consumed by production inference.
 
+Candidate support regions are supplied by neutral simulator-derived spatial
+proposal volumes. These proposals provide only region localization/evidence
+gating. Functional validity, semantic role, support dimensions, geometry, and
+target-relative suitability are inferred from rendered RGB/RGB-D evidence.
+Open-world support-region proposal/discovery is outside the scope of this
+benchmark.
+
 {chr(10).join(table)}
 
 Overall accuracy: {metrics['overall_feasibility_accuracy']:.3f}. Feasible
@@ -206,6 +325,9 @@ recall: {metrics['feasible_recall']:.3f}. Infeasible recall:
 {metrics['infeasible_recall']:.3f}. Selected allocation validity:
 {metrics['functional_region_allocation_validity']:.3f}. F3 greedy-fail/global-
 succeed diagnostic: {metrics['f3_greedy_fails_global_succeeds']:.3f}.
+F0/F6 production complete-solution counts:
+{metrics['production_complete_solution_count_F0']} /
+{metrics['production_complete_solution_count_F6']}.
 
 Each variant directory contains the compact witness, compatibility matrix,
 oracle comparison, and representative RGB/semantic/mask overviews. Raw RGB-D
@@ -215,6 +337,12 @@ The oracle is marked `PRIVILEGED_ORACLE_EVALUATION_ONLY` and is produced only
 after the independent production result. It is never imported by production
 grounding. Every variant includes `evaluation_order.json`; the benchmark root
 contains artifact-derived metrics and `scientific_guard_report.json`.
+
+Current limitations are manually specified functional requirements,
+controlled simulator layouts, neutral privileged spatial proposals rather
+than free-space proposal discovery, no robot execution, no task planning, no
+FM requirement generation, and no photorealism claim. The included Google
+Robot artifact validates only its initial compiled pose and clearance.
 """
     (report_dir / "README.md").write_text(readme, encoding="utf-8")
     command = """#!/bin/sh
@@ -234,7 +362,9 @@ OPENBLAS_NUM_THREADS=2 MALLOC_ARENA_MAX=2 \\
     reproduction.chmod(0o755)
 
 
-def _scientific_guards(summary_rows: list[dict], task: dict) -> dict:
+def _scientific_guards(
+    summary_rows: list[dict], task: dict, robot_validation: dict
+) -> dict:
     production_source = (
         ROOT / "living_room_region_function.py"
     ).read_text(encoding="utf-8")
@@ -290,20 +420,35 @@ def _scientific_guards(summary_rows: list[dict], task: dict) -> dict:
             "runtime_artifacts",
             "perception_stage_count and INITIAL metadata",
         ),
-        "all_six_payloads_initially_visible": (
+        "all_six_payload_records_created": (
             all(row["payload_count"] == 6 for row in summary_rows),
             "runtime_artifacts",
             "payload registry count",
         ),
-        "both_seating_targets_initially_visible": (
+        "all_two_seat_records_created": (
             all(row["seat_count"] == 2 for row in summary_rows),
             "runtime_artifacts",
             "seating target registry count",
         ),
-        "all_candidate_regions_initially_observable": (
+        "all_five_region_measurements_created": (
             all(row["region_count"] == 5 for row in summary_rows),
             "runtime_artifacts",
             "region registry count",
+        ),
+        "all_payloads_have_required_measurement_camera_evidence": (
+            all(row["payload_camera_evidence_sufficient"] for row in summary_rows),
+            "measurement_provenance",
+            "payload provenance contributing_camera_ids versus configured minimum",
+        ),
+        "all_regions_have_required_measurement_camera_evidence": (
+            all(row["region_camera_evidence_sufficient"] for row in summary_rows),
+            "measurement_provenance",
+            "region provenance contributing_camera_ids versus configured minimum",
+        ),
+        "all_seats_have_required_measurement_camera_evidence": (
+            all(row["seat_camera_evidence_sufficient"] for row in summary_rows),
+            "measurement_provenance",
+            "seat provenance contributing_camera_ids versus configured minimum",
         ),
         "generic_region_ids_in_production": (
             all(row["generic_region_ids"] for row in summary_rows),
@@ -370,17 +515,51 @@ def _scientific_guards(summary_rows: list[dict], task: dict) -> dict:
             "measurement_provenance",
             "compatibility evidence paths",
         ),
-        "f6_physically_distinct_surplus": (
+        "neutral_region_proposals_encode_no_function_or_validity": (
+            all(row["neutral_region_proposal_provenance"] for row in summary_rows),
+            "resolved_rigs_and_runtime_artifacts",
+            "explicit neutral spatial-gate provenance fields",
+        ),
+        "f0_has_exactly_one_production_solution": (
+            next(row for row in summary_rows if row["variant"] == "F0_BASE")[
+                "production_complete_solution_count"
+            ] == 1,
+            "production_compatibility_matrix",
+            "F0 joint exhaustive complete solution count",
+        ),
+        "f6_has_production_side_solution_surplus": (
             next(
                 row
                 for row in summary_rows
                 if row["variant"] == "F6_DECOY_SURPLUS"
-            )["oracle_solution_count"]
+            )["production_complete_solution_count"]
             > next(
                 row for row in summary_rows if row["variant"] == "F0_BASE"
-            )["oracle_solution_count"],
-            "privileged_comparison",
-            "oracle complete solution counts",
+            )["production_complete_solution_count"],
+            "production_compatibility_matrix",
+            "F6 versus F0 joint exhaustive complete solution counts",
+        ),
+        "i3_direct_shared_fit_failure_is_observed": (
+            next(
+                row for row in summary_rows
+                if row["variant"] == "I3_SHARED_FIT_FAILURE"
+            )["direct_failure_signature_match_count"] >= 1,
+            "controlled_failure_diagnostics",
+            "semantic TRUE, planar TRUE, access TRUE, FITS_SET_ON FALSE row",
+        ),
+        "all_controlled_infeasible_causes_directly_supported": (
+            all(
+                row["direct_failure_signature_match_count"] >= 1
+                for row in summary_rows
+                if row["variant"].startswith("I")
+            ),
+            "controlled_failure_diagnostics",
+            "I0-I5 direct row or allocation-graph failure signatures",
+        ),
+        "google_robot_spawn_validation_passes": (
+            robot_validation["all_passed"],
+            "compiled_google_robot_scene",
+            "robot_spawn_validation.json",
         ),
     }
     return {
@@ -416,6 +595,12 @@ def main() -> None:
     if benchmark_dir.exists():
         raise RuntimeError(f"Benchmark directory already exists: {benchmark_dir}")
     benchmark_dir.mkdir(parents=True)
+    robot_validation = validate_google_robot_spawn(
+        L2_INTEGRATED_SCENES[0]
+    )
+    _atomic_json(
+        benchmark_dir / "robot_spawn_validation.json", robot_validation
+    )
     detector, semantic_config = create_region_semantic_detector(
         checkpoint=args.semantic_model,
         confidence_threshold=args.semantic_confidence_threshold,
@@ -441,6 +626,7 @@ def main() -> None:
             width=args.width,
             height=args.height,
         ).run(scene)
+        failure_diagnostic = _controlled_failure_diagnostic(run, code)
         production_digest = _json_sha256(run.production_result)
         # The privileged evaluator runs only after production has finished and
         # persisted its independent decision.
@@ -498,6 +684,10 @@ def main() -> None:
         task_artifact = json.loads(
             (variant_dir / "task_requirements.json").read_text(encoding="utf-8")
         )
+        rig_artifact = yaml_safe_load(rig_path)
+        minimum_entity_camera_count = int(
+            rig_artifact["view_validation"]["minimum_entity_camera_count"]
+        )
         selected_rows = [
             _selected_row(run, assignment)
             for assignment in run.production_result.get("assignments", [])
@@ -548,6 +738,9 @@ def main() -> None:
                 "greedy_target_specific"
             ]["status"],
             "oracle_solution_count": oracle["complete_solution_count"],
+            "production_complete_solution_count": run.production_result[
+                "complete_solution_count"
+            ],
             "candidate_ranks": [
                 value["candidate_rank"]
                 for value in yaml_safe_load(rig_path)[
@@ -573,6 +766,67 @@ def main() -> None:
                 and path.endswith("/fused.ply")
                 for path in provenance_paths
             ),
+            "minimum_required_entity_camera_count": minimum_entity_camera_count,
+            "payload_min_contributing_camera_count": min(
+                len(record["provenance"]["contributing_camera_ids"])
+                for record in run.payload_registry.values()
+            ),
+            "region_min_contributing_camera_count": min(
+                len(record["provenance"]["contributing_camera_ids"])
+                for record in run.region_registry.values()
+            ),
+            "seat_min_contributing_camera_count": min(
+                len(record["provenance"]["contributing_camera_ids"])
+                for record in run.seating_registry.values()
+            ),
+            "payload_camera_evidence_sufficient": all(
+                len(record["provenance"]["contributing_camera_ids"])
+                >= minimum_entity_camera_count
+                for record in run.payload_registry.values()
+            ),
+            "region_camera_evidence_sufficient": all(
+                len(record["provenance"]["contributing_camera_ids"])
+                >= minimum_entity_camera_count
+                for record in run.region_registry.values()
+            ),
+            "seat_camera_evidence_sufficient": all(
+                len(record["provenance"]["contributing_camera_ids"])
+                >= minimum_entity_camera_count
+                for record in run.seating_registry.values()
+            ),
+            "neutral_region_proposal_provenance": (
+                run_config.get("region_proposal_provenance")
+                == rig_artifact.get("region_proposal_provenance")
+                == {
+                    "region_proposal_source": (
+                        "SIMULATOR_DERIVED_NEUTRAL_SPATIAL_GATE"
+                    ),
+                    "region_proposal_encodes_function": False,
+                    "region_proposal_encodes_semantic_class": False,
+                    "region_proposal_encodes_expected_validity": False,
+                    "region_dimensions_for_functional_reasoning": (
+                        "OBSERVED_RGBD_POINT_CLOUD"
+                    ),
+                }
+                and all(
+                    record["provenance"].get(
+                        "region_proposal_encodes_function"
+                    ) is False
+                    and record["provenance"].get(
+                        "region_proposal_encodes_semantic_class"
+                    ) is False
+                    and record["provenance"].get(
+                        "region_proposal_encodes_expected_validity"
+                    ) is False
+                    and record["provenance"].get(
+                        "region_dimensions_for_functional_reasoning"
+                    ) == "OBSERVED_RGBD_POINT_CLOUD"
+                    for record in run.region_registry.values()
+                )
+            ),
+            "direct_failure_signature_match_count": failure_diagnostic[
+                "direct_signature_match_count"
+            ],
             **allocation_checks,
         }
         rows.append(row)
@@ -626,7 +880,12 @@ def main() -> None:
         "selected_compatibility_edge_validity": _mean_applicable(
             produced_feasible, "selected_compatibility_edges_valid"
         ),
-        "global_matching_correctness": float(np.mean([row["correct"] for row in rows])),
+        "production_complete_solution_count_F0": next(
+            row for row in rows if row["variant"] == "F0_BASE"
+        )["production_complete_solution_count"],
+        "production_complete_solution_count_F6": next(
+            row for row in rows if row["variant"] == "F6_DECOY_SURPLUS"
+        )["production_complete_solution_count"],
         "permutation_robustness": float(
             next(row for row in rows if row["variant"] == "F0_BASE")[
                 "production_status"
@@ -660,7 +919,7 @@ def main() -> None:
         ),
     }
     summary = {"schema_version": 1, "rows": rows, "metrics": metrics}
-    guards = _scientific_guards(rows, task)
+    guards = _scientific_guards(rows, task, robot_validation)
     _atomic_json(benchmark_dir / "benchmark_summary.json", summary)
     _atomic_json(benchmark_dir / "variant_manifest.json", {"variants": rows})
     _atomic_json(benchmark_dir / "scientific_guard_report.json", guards)
@@ -696,6 +955,7 @@ def main() -> None:
         for name in (
             "benchmark_summary.json", "benchmark_summary.csv", "environment.json",
             "variant_manifest.json", "scientific_guard_report.json",
+            "robot_spawn_validation.json",
         ):
             shutil.copy2(benchmark_dir / name, report_dir / name)
         for row in rows:

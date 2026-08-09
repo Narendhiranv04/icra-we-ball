@@ -46,19 +46,37 @@
     {
       "evidence": "payload registry count",
       "evidence_type": "runtime_artifacts",
-      "guard": "all_six_payloads_initially_visible",
+      "guard": "all_six_payload_records_created",
       "status": "PASS"
     },
     {
       "evidence": "seating target registry count",
       "evidence_type": "runtime_artifacts",
-      "guard": "both_seating_targets_initially_visible",
+      "guard": "all_two_seat_records_created",
       "status": "PASS"
     },
     {
       "evidence": "region registry count",
       "evidence_type": "runtime_artifacts",
-      "guard": "all_candidate_regions_initially_observable",
+      "guard": "all_five_region_measurements_created",
+      "status": "PASS"
+    },
+    {
+      "evidence": "payload provenance contributing_camera_ids versus configured minimum",
+      "evidence_type": "measurement_provenance",
+      "guard": "all_payloads_have_required_measurement_camera_evidence",
+      "status": "PASS"
+    },
+    {
+      "evidence": "region provenance contributing_camera_ids versus configured minimum",
+      "evidence_type": "measurement_provenance",
+      "guard": "all_regions_have_required_measurement_camera_evidence",
+      "status": "PASS"
+    },
+    {
+      "evidence": "seat provenance contributing_camera_ids versus configured minimum",
+      "evidence_type": "measurement_provenance",
+      "guard": "all_seats_have_required_measurement_camera_evidence",
       "status": "PASS"
     },
     {
@@ -122,9 +140,39 @@
       "status": "PASS"
     },
     {
-      "evidence": "oracle complete solution counts",
-      "evidence_type": "privileged_comparison",
-      "guard": "f6_physically_distinct_surplus",
+      "evidence": "explicit neutral spatial-gate provenance fields",
+      "evidence_type": "resolved_rigs_and_runtime_artifacts",
+      "guard": "neutral_region_proposals_encode_no_function_or_validity",
+      "status": "PASS"
+    },
+    {
+      "evidence": "F0 joint exhaustive complete solution count",
+      "evidence_type": "production_compatibility_matrix",
+      "guard": "f0_has_exactly_one_production_solution",
+      "status": "PASS"
+    },
+    {
+      "evidence": "F6 versus F0 joint exhaustive complete solution counts",
+      "evidence_type": "production_compatibility_matrix",
+      "guard": "f6_has_production_side_solution_surplus",
+      "status": "PASS"
+    },
+    {
+      "evidence": "semantic TRUE, planar TRUE, access TRUE, FITS_SET_ON FALSE row",
+      "evidence_type": "controlled_failure_diagnostics",
+      "guard": "i3_direct_shared_fit_failure_is_observed",
+      "status": "PASS"
+    },
+    {
+      "evidence": "I0-I5 direct row or allocation-graph failure signatures",
+      "evidence_type": "controlled_failure_diagnostics",
+      "guard": "all_controlled_infeasible_causes_directly_supported",
+      "status": "PASS"
+    },
+    {
+      "evidence": "robot_spawn_validation.json",
+      "evidence_type": "compiled_google_robot_scene",
+      "guard": "google_robot_spawn_validation_passes",
       "status": "PASS"
     }
   ],

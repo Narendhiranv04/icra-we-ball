@@ -625,6 +625,18 @@ class InitialEvidenceCapture:
             "region_selector_count": len(regions),
             "payload_instance_count": len(payloads),
             "seating_target_count": len(seats),
+            "region_proposal_provenance": self.config.get(
+                "region_proposal_provenance",
+                {
+                    "region_proposal_source": "CONFIGURED_SPATIAL_GATE",
+                    "region_proposal_encodes_function": None,
+                    "region_proposal_encodes_semantic_class": None,
+                    "region_proposal_encodes_expected_validity": None,
+                    "region_dimensions_for_functional_reasoning": (
+                        "OBSERVED_RGBD_POINT_CLOUD"
+                    ),
+                },
+            ),
             "region_selectors": {
                 selector_id: {
                     "volume": selector["volume"],
@@ -1600,6 +1612,8 @@ class RegionAblation2Run:
         with Path(evaluation_config).open(encoding="utf-8") as source:
             self.evaluation = yaml.safe_load(source)
         self.rig_config = Path(rig_config)
+        with self.rig_config.open(encoding="utf-8") as source:
+            self.rig_definition = yaml.safe_load(source)
         self.detector = semantic_detector or NullSemanticDetector()
         self.semantic_config = semantic_config or load_semantic_config(
             vocabulary_path=DEFAULT_SEMANTIC_VOCABULARY
@@ -1727,6 +1741,9 @@ class RegionAblation2Run:
                     "point_count": record["quality"]["point_count"],
                     "contributing_camera_ids": list(
                         record["evidence"].contributing_camera_ids
+                    ),
+                    **self.rig_definition.get(
+                        "region_proposal_provenance", {}
                     ),
                 },
             }

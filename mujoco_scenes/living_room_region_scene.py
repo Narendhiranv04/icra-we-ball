@@ -116,7 +116,7 @@ INTEGRATED_ROOM_LAYOUT = {
 INTEGRATED_FURNITURE_DIMENSIONS = {
     "chair": (0.738310, 0.887906, 0.920567),
     "side_table": (0.550000, 0.450000, 0.550662),
-    "accent_table": (0.360812, 0.360812, 0.501188),
+    "accent_table": (0.300676, 0.300676, 0.417657),
     "coffee_table": (1.155008, 0.729635, 0.392428),
     "media_console": (1.341307, 0.264259, 0.515379),
     "staging_table": (1.375700, 0.491250, 0.726816),
@@ -666,13 +666,20 @@ def _configure_integrated_base_room(root: ET.Element) -> None:
         )
 
     x, y = INTEGRATED_ROOM_LAYOUT["accent_table"]
-    _set_box_geom(root, "a2_shared_drink_top", (x, y, 0.485), (0.180, 0.180, 0.016))
+    # Compact, isotropically scaled accent table. Its observed top is a little
+    # too small for a two-item refreshment set, so F0 has one complete physical
+    # allocation rather than an accidental second solution.
+    _set_box_geom(
+        root, "a2_shared_drink_top", (x, y, 0.401),
+        (0.150, 0.150, 0.014),
+    )
     for geom in root.find(".//body[@name='a2_shared_drink_trap']").findall("geom"):
         if geom.get("name") != "a2_shared_drink_top":
             geom.set("rgba", "0 0 0 0")
             geom.set("group", "3")
     _set_realistic_visual(
-        root, "a2_shared_drink_trap", "WoodenTable_02", (x, y, 0.0), (1.20, 1.20, 1.20)
+        root, "a2_shared_drink_trap", "WoodenTable_02",
+        (x, y, 0.0), (1.0, 1.0, 1.0),
     )
 
     x, y = INTEGRATED_ROOM_LAYOUT["coffee_table"]
@@ -905,6 +912,10 @@ def _configure_integrated_scene(root: ET.Element, scene_name: str) -> None:
             (-1.88, 1.18, 0.0), (0.95, 0.95, 0.95),
         )
         _translate_body_geoms(root, "a2_shared_drink_trap", (-1.55, 0.55))
+        _set_box_geom(
+            root, "a2_shared_drink_top", (-1.55, 0.55, 0.468),
+            (0.170, 0.162, 0.014),
+        )
         # The alternative remains physically compact, but uses the same
         # category-faithful side-table scan as the canonical candidates.  Its
         # semantic evidence must therefore come from RGB appearance rather
@@ -923,6 +934,9 @@ def _configure_integrated_scene(root: ET.Element, scene_name: str) -> None:
     elif code == "F6_DECOY_SURPLUS":
         # A central, flexible side table creates additional complete personal
         # assignments while the ordinary coffee-table shared solution remains.
+        # Move the coffee table forward so the central table does not occlude
+        # its RGB appearance in the room-facing semantic views.
+        _translate_body_geoms(root, "a2_control_table", (0.0, 0.20))
         _set_box_geom(root, "a2_shared_drink_top", (0.0, 1.16, 0.535), (0.275, 0.225, 0.016))
         _set_realistic_visual(
             root, "a2_shared_drink_trap", "side_table_01",
@@ -958,10 +972,15 @@ def _configure_integrated_scene(root: ET.Element, scene_name: str) -> None:
         _translate_body_geoms(root, "a2_personal_right", (-1.45, 0.45))
         _translate_body_geoms(root, "a2_shared_drink_trap", (-2.05, 0.65))
     elif code == "I3_SHARED_FIT_FAILURE":
-        _set_box_geom(root, "a2_control_table_top", (0.0, 0.56, 0.377), (0.150, 0.151, 0.016))
+        # Natural, compact and isotropic: semantic/planar/access evidence can
+        # pass while two-control packing fails for the intended physical cause.
+        _set_box_geom(
+            root, "a2_control_table_top", (0.0, 0.56, 0.401),
+            (0.150, 0.150, 0.014),
+        )
         _set_realistic_visual(
-            root, "a2_control_table", "CoffeeTable_01",
-            (0.0, 0.56, 0.0), (0.195, 0.310, 0.75),
+            root, "a2_control_table", "WoodenTable_02",
+            (0.0, 0.56, 0.0), (1.0, 1.0, 1.0),
         )
     elif code == "I4_SHARED_CONTEXT_FAILURE":
         _translate_body_geoms(root, "a2_control_table", (2.45, 0.15))

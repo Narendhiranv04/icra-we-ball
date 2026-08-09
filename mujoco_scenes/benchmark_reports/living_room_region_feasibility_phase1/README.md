@@ -16,6 +16,13 @@ objects occupy a separate staging console, preserving a sparse destination
 layout and reliable one-to-one instance association. Visual mesh dimensions
 are never consumed by production inference.
 
+Candidate support regions are supplied by neutral simulator-derived spatial
+proposal volumes. These proposals provide only region localization/evidence
+gating. Functional validity, semantic role, support dimensions, geometry, and
+target-relative suitability are inferred from rendered RGB/RGB-D evidence.
+Open-world support-region proposal/discovery is outside the scope of this
+benchmark.
+
 | Variant | Oracle | Production | Semantic-only | Geometry-only |
 |---|---:|---:|---:|---:|
 | F0_BASE | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
@@ -37,6 +44,9 @@ recall: 1.000. Infeasible recall:
 1.000. Selected allocation validity:
 1.000. F3 greedy-fail/global-
 succeed diagnostic: 1.000.
+F0/F6 production complete-solution counts:
+1 /
+4.
 
 Each variant directory contains the compact witness, compatibility matrix,
 oracle comparison, and representative RGB/semantic/mask overviews. Raw RGB-D
@@ -46,3 +56,9 @@ The oracle is marked `PRIVILEGED_ORACLE_EVALUATION_ONLY` and is produced only
 after the independent production result. It is never imported by production
 grounding. Every variant includes `evaluation_order.json`; the benchmark root
 contains artifact-derived metrics and `scientific_guard_report.json`.
+
+Current limitations are manually specified functional requirements,
+controlled simulator layouts, neutral privileged spatial proposals rather
+than free-space proposal discovery, no robot execution, no task planning, no
+FM requirement generation, and no photorealism claim. The included Google
+Robot artifact validates only its initial compiled pose and clearance.

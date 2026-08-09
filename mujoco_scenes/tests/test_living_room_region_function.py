@@ -16,9 +16,13 @@ from mujoco_scenes.living_room_region_function import (
     EXPECTED_VARIANTS,
     GlobalRegionAllocationSolver,
     IntegratedLivingRoomRegionRun,
+    REGION_PROPOSAL_PROVENANCE,
     load_integrated_task,
     variant_code,
     write_resolved_integrated_rig,
+)
+from mujoco_scenes.living_room_robot_spawn_validation import (
+    validate_google_robot_spawn,
 )
 from mujoco_scenes.living_room_region_oracle import (
     ORACLE_MARKER,
@@ -193,9 +197,21 @@ def test_resolved_proposals_are_opaque_and_do_not_encode_validity(tmp_path):
     path = write_resolved_integrated_rig(L2_INTEGRATED_SCENES[0], tmp_path / "rig.yaml")
     text = path.read_text(encoding="utf-8")
     assert "region_selectors" in text
-    assert "expected_valid" not in text
+    assert "expected_valid:" not in text
     assert "PERSONAL_REFRESHMENT_REGION" not in text
     assert "SHARED_CONTROLS_REGION" not in text
+    config = yaml.safe_load(text)
+    assert config["region_proposal_provenance"] == REGION_PROPOSAL_PROVENANCE
+
+
+def test_neutral_proposal_provenance_explicitly_disclaims_privileged_meaning():
+    assert REGION_PROPOSAL_PROVENANCE == {
+        "region_proposal_source": "SIMULATOR_DERIVED_NEUTRAL_SPATIAL_GATE",
+        "region_proposal_encodes_function": False,
+        "region_proposal_encodes_semantic_class": False,
+        "region_proposal_encodes_expected_validity": False,
+        "region_dimensions_for_functional_reasoning": "OBSERVED_RGBD_POINT_CLOUD",
+    }
 
 
 def test_production_module_does_not_import_oracle_or_planning():
@@ -236,6 +252,11 @@ def test_one_initial_rgbd_capture_observes_all_entities(tmp_path, monkeypatch):
     assert len(observation.regions) == 5
     metadata = (tmp_path / "observation" / "inspection_metadata.json").read_text()
     assert "INITIAL_SINGLE_MULTI_VIEW_CAPTURE" in metadata
+    metadata_record = json.loads(metadata)
+    assert (
+        metadata_record["region_proposal_provenance"]
+        == REGION_PROPOSAL_PROVENANCE
+    )
 
 
 @pytest.mark.parametrize("scene_name", L2_INTEGRATED_SCENES)
@@ -272,6 +293,41 @@ def test_integrated_room_is_sparse_scaled_and_has_canonical_spawn():
     assert INTEGRATED_ROOM_LAYOUT["chair_right"][0] > 1.0
     assert INTEGRATED_ROOM_LAYOUT["staging_table"][1] < -1.5
     assert INTEGRATED_ROOM_LAYOUT["media_console"][1] > 2.0
+
+
+def test_f0_accent_and_i3_control_use_natural_isotropic_wooden_table():
+    for scene_name, body_name, top_name in (
+        (L2_INTEGRATED_SCENES[0], "a2_shared_drink_trap", "a2_shared_drink_top"),
+        (
+            next(name for name in L2_INTEGRATED_SCENES if "I3_SHARED_FIT_FAILURE" in name),
+            "a2_control_table",
+            "a2_control_table_top",
+        ),
+    ):
+        root = ET.fromstring(build_l2_region_xml(scene_name, "none"))
+        top = root.find(f".//geom[@name='{top_name}']")
+        half = np.fromstring(top.get("size"), sep=" ")
+        assert half[0] == pytest.approx(0.150)
+        assert half[1] == pytest.approx(0.150)
+        body = root.find(f".//body[@name='{body_name}']")
+        visuals = [
+            geom for geom in body.findall("geom")
+            if "integrated_realistic_visual" in geom.get("name", "")
+        ]
+        assert visuals
+        for visual in visuals:
+            mesh = root.find(f".//mesh[@name='{visual.get('mesh')}']")
+            scale = np.fromstring(mesh.get("scale"), sep=" ")
+            assert np.max(scale) / np.min(scale) <= 1.15
+            assert np.allclose(scale, [1.0, 1.0, 1.0])
+
+
+def test_google_robot_f0_spawn_has_clearance_and_faces_workspace():
+    validation = validate_google_robot_spawn(L2_INTEGRATED_SCENES[0])
+    assert validation["all_passed"] is True
+    assert validation["workspace_facing_alignment"] == pytest.approx(1.0)
+    assert validation["minimum_static_clearance_m"] >= 0.10
+    assert validation["invalid_robot_furniture_contacts"] == []
 
 
 def test_integrated_payloads_are_spaced_without_xy_overlap():

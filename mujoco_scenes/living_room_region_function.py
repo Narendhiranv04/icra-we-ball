@@ -36,6 +36,13 @@ DEFAULT_INTEGRATED_RIG_CONFIG = (
 )
 PRODUCTION_MODE = "joint"
 INTEGRATED_PREFIX = "L2_integrated_living_room_region_function_"
+REGION_PROPOSAL_PROVENANCE = {
+    "region_proposal_source": "SIMULATOR_DERIVED_NEUTRAL_SPATIAL_GATE",
+    "region_proposal_encodes_function": False,
+    "region_proposal_encodes_semantic_class": False,
+    "region_proposal_encodes_expected_validity": False,
+    "region_dimensions_for_functional_reasoning": "OBSERVED_RGBD_POINT_CLOUD",
+}
 
 
 EXPECTED_VARIANTS = {
@@ -81,6 +88,9 @@ def write_resolved_integrated_rig(scene_name: str, destination: Path) -> Path:
     with DEFAULT_INTEGRATED_RIG_CONFIG.open(encoding="utf-8") as source:
         config = yaml.safe_load(source)
     config["entity_id_prefixes"] = {"seating_target": "seat"}
+    config["region_proposal_provenance"] = deepcopy(
+        REGION_PROPOSAL_PROVENANCE
+    )
     # Import locally to retain the production/oracle dependency boundary.
     from mujoco_scenes.living_room_region_scene import build_l2_region_xml
 
@@ -420,6 +430,9 @@ class IntegratedLivingRoomRegionRun(RegionAblation2Run):
                 "uses_tamp": False,
                 "capture_resolution": [self.width, self.height],
                 "detector": detector,
+                "region_proposal_provenance": deepcopy(
+                    REGION_PROPOSAL_PROVENANCE
+                ),
                 "created_at": datetime.now().astimezone().isoformat(),
             },
         )

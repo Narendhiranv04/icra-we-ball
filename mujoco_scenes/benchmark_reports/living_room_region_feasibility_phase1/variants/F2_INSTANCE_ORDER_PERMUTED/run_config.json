@@ -3,7 +3,7 @@
     1280,
     960
   ],
-  "created_at": "2026-08-09T06:25:10.542114+05:30",
+  "created_at": "2026-08-09T07:24:50.354743+05:30",
   "detector": {
     "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
     "device": "cpu",
@@ -16,6 +16,13 @@
   "perception_stage_count": 1,
   "production_allocation": "deterministic_exhaustive_global",
   "production_grounding_mode": "joint",
+  "region_proposal_provenance": {
+    "region_dimensions_for_functional_reasoning": "OBSERVED_RGBD_POINT_CLOUD",
+    "region_proposal_encodes_expected_validity": false,
+    "region_proposal_encodes_function": false,
+    "region_proposal_encodes_semantic_class": false,
+    "region_proposal_source": "SIMULATOR_DERIVED_NEUTRAL_SPATIAL_GATE"
+  },
   "requirement_entity_kind": "REGION",
   "scene_name": "L2_integrated_living_room_region_function_F2_INSTANCE_ORDER_PERMUTED",
   "schema_version": 1,

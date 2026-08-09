@@ -1,19 +1,24 @@
 Focused integrated living-room command:
 MUJOCO_GL=egl PYOPENGL_PLATFORM=egl .venv/bin/python -m pytest mujoco_scenes/tests/test_living_room_region_function.py -q
-Result: 74 passed in 8.66s
+Result: 77 passed in 8.88s
 
 Region-grounding regression command:
 MUJOCO_GL=egl PYOPENGL_PLATFORM=egl .venv/bin/python -m pytest mujoco_scenes/tests/test_region_grounding.py mujoco_scenes/tests/test_region_ablation2.py mujoco_scenes/tests/test_region_ablation3.py -q
-Result: 92 passed in 6.52s
+Result: 92 passed in 6.62s
 
 Frozen kitchen Phase-1/Phase-2 regression command:
 MUJOCO_GL=egl PYOPENGL_PLATFORM=egl .venv/bin/python -m pytest mujoco_scenes/tests/test_kitchen_feasibility_benchmark.py mujoco_scenes/tests/test_s1_integrated_kitchen.py mujoco_scenes/tests/test_symbolic_kitchen_planning.py -q
-Result: 48 passed in 28.89s
+Result: 48 passed in 28.76s
 
 Full repository command:
 MUJOCO_GL=egl PYOPENGL_PLATFORM=egl .venv/bin/python -m pytest mujoco_scenes/tests -q
-Result: 437 passed in 78.37s
+Result: 440 passed in 76.74s
 
 Authoritative production benchmark:
 13 variants, five RGB-D views per variant, YOLO-World 8.4.112 on CPU,
 1280x960 capture, 13/13 oracle classification agreement.
+Run: runs/living_room_region_phase1/living_room_region_phase1_final_closure_v3_20260809
+Production complete-solution counts: F0=1, F6=4.
+I3 direct observed failure: semantic TRUE, PLANAR_SUPPORT TRUE,
+ACCESSIBLE_FROM_BOTH_SEATS TRUE, FITS_SET_ON FALSE.
+Google Robot F0 spawn validation: PASS; no navigation or execution.

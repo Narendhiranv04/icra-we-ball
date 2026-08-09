@@ -1466,10 +1466,11 @@ outside Git under `runs/`.
 
 The integrated living-room benchmark complements kitchen object-function
 grounding with REGION-only functional grounding. Every F0--F6 and I0--I5
-variant uses the exact same movie-night instruction and six initially visible
+variant uses the exact same movie-night instruction and six initially observed
 payloads: two mugs, two snack bowls, a TV remote, and a game controller. One
-deterministic five-view RGB-D observation also covers both seating targets and
-all five neutral candidate-region proposals. There is no inspection sequence,
+deterministic five-view RGB-D observation creates evidence records for both
+seating targets and all five neutral candidate-region proposals. There is no
+inspection sequence,
 hidden-region search, robot, object-function predicate, symbolic planning, or
 action execution.
 
@@ -1532,3 +1533,24 @@ result was persisted before the privileged oracle ran. Guard and allocation
 metrics are derived from saved runtime artifacts rather than declared
 constants. “INFEASIBLE” means no complete allocation exists in this controlled
 fully observed candidate set; it is not an open-world impossibility claim.
+
+Candidate support regions are supplied by neutral simulator-derived spatial
+proposal volumes. These proposals provide only region localization/evidence
+gating. Functional validity, semantic role, support dimensions, geometry, and
+target-relative suitability are inferred from rendered RGB/RGB-D evidence.
+Open-world support-region proposal/discovery is outside the scope of this
+benchmark. Resolved rig, observation, registry, and run metadata mark the
+proposal source as `SIMULATOR_DERIVED_NEUTRAL_SPATIAL_GATE` and explicitly
+state that it encodes no function, semantic class, or expected validity;
+functional dimensions come from `OBSERVED_RGBD_POINT_CLOUD` evidence.
+
+The F0 Google Robot model is compiled only for spawn validation. The saved
+`robot_spawn_validation.json` checks its canonical pose behind the staging
+console, workspace-facing orientation, static-furniture clearance, and initial
+contacts. No navigation, IK, grasp, manipulation, planning, or execution is
+performed.
+
+Current limitations are manually specified functional requirements,
+controlled simulator layouts, neutral privileged spatial proposals rather
+than free-space region discovery, no robot execution, no task planning, no FM
+requirement generation, and no photorealism claim.
