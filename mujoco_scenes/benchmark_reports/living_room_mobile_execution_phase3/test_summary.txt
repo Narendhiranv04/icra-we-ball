@@ -1,0 +1,7 @@
+Focused regression command:
+MUJOCO_GL=egl /home/naren/miniconda3/bin/python -m pytest -q mujoco_scenes/tests/test_living_room_mobile_execution.py mujoco_scenes/tests/test_living_room_symbolic_planning.py mujoco_scenes/tests/test_mobile_motion.py mujoco_scenes/tests/test_robot_profiles.py
+Result: 48 passed in 10.50s
+
+Full repository command:
+MUJOCO_GL=egl /home/naren/miniconda3/bin/python -m pytest -q
+Result: 481 passed in 62.34s

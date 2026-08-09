@@ -236,6 +236,8 @@ class MuJoCoBaseCollisionChecker:
         model: mujoco.MjModel,
         reference_data: mujoco.MjData,
         profile: MobileRobotProfile,
+        ignored_environment_geoms: frozenset[str] = frozenset(),
+        lateral_limits: tuple[float, float] = (-1.5, 1.5),
     ):
         self.model = model
         self.data = mujoco.MjData(model)
@@ -248,6 +250,8 @@ class MuJoCoBaseCollisionChecker:
         self.body_prefix = profile.body_prefix
         self.home_y = profile.home_y
         self.forward_limits = profile.forward_limits
+        self.ignored_environment_geoms = ignored_environment_geoms
+        self.lateral_limits = lateral_limits
         self.attached_body_ids: set[int] = set()
         for equality_id in range(model.neq):
             if not reference_data.eq_active[equality_id]:
@@ -306,7 +310,7 @@ class MuJoCoBaseCollisionChecker:
         lateral = -x
         if not (
             self.forward_limits[0] <= forward <= self.forward_limits[1]
-            and -1.5 <= lateral <= 1.5
+            and self.lateral_limits[0] <= lateral <= self.lateral_limits[1]
         ):
             self.cache[key] = False
             return False
@@ -363,7 +367,7 @@ class MuJoCoBaseCollisionChecker:
             if first_robot == second_robot:
                 continue
             other = second if first_robot else first
-            if other != "floor":
+            if other != "floor" and other not in self.ignored_environment_geoms:
                 valid = False
                 break
         self.cache[key] = valid

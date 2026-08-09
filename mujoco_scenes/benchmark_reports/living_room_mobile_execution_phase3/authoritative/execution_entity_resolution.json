@@ -1,0 +1,186 @@
+{
+  "boundary": "SIMULATION_ADAPTER_ONLY",
+  "execution_refiner_backend_access": "ONLY_VIA_SIMULATION_ADAPTER",
+  "objects": [
+    {
+      "accepted": true,
+      "backend_body": "a2_drink_left",
+      "backend_centroid_world_m": [
+        -0.5,
+        -1.8,
+        0.81
+      ],
+      "centroid_distance_m": 0.00802046847504908,
+      "generic_object_id": "object_0001",
+      "method": "semantic_consistent_nearest_observed_centroid_one_to_one",
+      "observed_centroid_world_m": [
+        -0.4987497627735138,
+        -1.8046133518218994,
+        0.8035593628883362
+      ],
+      "semantic_role": "drink"
+    },
+    {
+      "accepted": true,
+      "backend_body": "a2_snack_left",
+      "backend_centroid_world_m": [
+        -0.23,
+        -1.8,
+        0.765
+      ],
+      "centroid_distance_m": 0.026529155268352162,
+      "generic_object_id": "object_0002",
+      "method": "semantic_consistent_nearest_observed_centroid_one_to_one",
+      "observed_centroid_world_m": [
+        -0.2319726198911667,
+        -1.8016773462295532,
+        0.7385975122451782
+      ],
+      "semantic_role": "snack_container"
+    },
+    {
+      "accepted": true,
+      "backend_body": "a2_remote_payload",
+      "backend_centroid_world_m": [
+        -0.2,
+        -1.58,
+        0.755
+      ],
+      "centroid_distance_m": 0.003917923205045081,
+      "generic_object_id": "object_0003",
+      "method": "semantic_consistent_nearest_observed_centroid_one_to_one",
+      "observed_centroid_world_m": [
+        -0.19978584349155426,
+        -1.5809288024902344,
+        0.758800208568573
+      ],
+      "semantic_role": "tv_remote"
+    },
+    {
+      "accepted": true,
+      "backend_body": "a2_drink_right",
+      "backend_centroid_world_m": [
+        0.18,
+        -1.8,
+        0.81
+      ],
+      "centroid_distance_m": 0.010611299673402751,
+      "generic_object_id": "object_0004",
+      "method": "semantic_consistent_nearest_observed_centroid_one_to_one",
+      "observed_centroid_world_m": [
+        0.1750364452600479,
+        -1.806490182876587,
+        0.8032294511795044
+      ],
+      "semantic_role": "drink"
+    },
+    {
+      "accepted": true,
+      "backend_body": "a2_controller_payload",
+      "backend_centroid_world_m": [
+        0.25,
+        -1.57,
+        0.77
+      ],
+      "centroid_distance_m": 0.05264368055036113,
+      "generic_object_id": "object_0005",
+      "method": "semantic_consistent_nearest_observed_centroid_one_to_one",
+      "observed_centroid_world_m": [
+        0.2520392835140228,
+        -1.5364866256713867,
+        0.7294530868530273
+      ],
+      "semantic_role": "game_controller"
+    },
+    {
+      "accepted": true,
+      "backend_body": "a2_snack_right",
+      "backend_centroid_world_m": [
+        0.45,
+        -1.8,
+        0.765
+      ],
+      "centroid_distance_m": 0.014695481968860714,
+      "generic_object_id": "object_0006",
+      "method": "semantic_consistent_nearest_observed_centroid_one_to_one",
+      "observed_centroid_world_m": [
+        0.44452446699142456,
+        -1.7953342199325562,
+        0.7521857023239136
+      ],
+      "semantic_role": "snack_container"
+    }
+  ],
+  "regions": [
+    {
+      "accepted": true,
+      "backend_centroid_world_m": [
+        -1.88,
+        1.18,
+        0.535
+      ],
+      "backend_support_geom": "a2_personal_left_top",
+      "centroid_distance_m": 0.02546211986582365,
+      "generic_region_id": "region_0001",
+      "method": "nearest_observed_support_centroid_one_to_one",
+      "observed_centroid_world_m": [
+        -1.885681927204132,
+        1.1635127067565918,
+        0.5535527467727661
+      ]
+    },
+    {
+      "accepted": true,
+      "backend_centroid_world_m": [
+        -0.9,
+        0.05,
+        0.401
+      ],
+      "backend_support_geom": "a2_shared_drink_top",
+      "centroid_distance_m": 0.021647189381380855,
+      "generic_region_id": "region_0002",
+      "method": "nearest_observed_support_centroid_one_to_one",
+      "observed_centroid_world_m": [
+        -0.8998406529426575,
+        0.0395469143986702,
+        0.41995543241500854
+      ]
+    },
+    {
+      "accepted": true,
+      "backend_centroid_world_m": [
+        0.0,
+        0.56,
+        0.377
+      ],
+      "backend_support_geom": "a2_control_table_top",
+      "centroid_distance_m": 0.03251132690325517,
+      "generic_region_id": "region_0003",
+      "method": "nearest_observed_support_centroid_one_to_one",
+      "observed_centroid_world_m": [
+        -0.00023472790780942887,
+        0.532895028591156,
+        0.39495137333869934
+      ]
+    },
+    {
+      "accepted": true,
+      "backend_centroid_world_m": [
+        1.88,
+        1.18,
+        0.535
+      ],
+      "backend_support_geom": "a2_personal_right_top",
+      "centroid_distance_m": 0.02865123090925748,
+      "generic_region_id": "region_0005",
+      "method": "nearest_observed_support_centroid_one_to_one",
+      "observed_centroid_world_m": [
+        1.8809856176376343,
+        1.158189058303833,
+        0.5535527467727661
+      ]
+    }
+  ],
+  "schema_version": 1,
+  "task_planner_received_backend_names": false
+}

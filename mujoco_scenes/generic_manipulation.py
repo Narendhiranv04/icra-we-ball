@@ -43,6 +43,9 @@ MANIPULATION_BASE_LINEAR_DAMPING = 2000.0
 SELF_COLLISION_TOLERANCE = 0.003
 SELF_COLLISION_COMPARISON_EPSILON = 0.0002
 ENVIRONMENT_COLLISION_TOLERANCE = 0.002
+TRAVERSABLE_GROUND_GEOMS = frozenset(
+    ("floor", "a2_floor", "a2_rug_surface", "a2_rug_border")
+)
 COLLISION_GUARD_INTERVAL = 5
 SPOON_PIVOT_RELAXATION = 0.30
 SPOON_PIVOT_DAMPING = 0.002
@@ -356,6 +359,11 @@ class RobotConfigurationCollisionChecker:
 
         for robot_geom in self.robot_visual_geoms:
             for environment_geom in self.environment_geoms:
+                environment_geom_name = mujoco.mj_id2name(
+                    self.model, mujoco.mjtObj.mjOBJ_GEOM, environment_geom
+                ) or ""
+                if environment_geom_name in TRAVERSABLE_GROUND_GEOMS:
+                    continue
                 environment_body = int(self.model.geom_bodyid[environment_geom])
                 if environment_body in allowed_environment_bodies:
                     continue
@@ -545,6 +553,7 @@ class CalibratedPickPlaceExecutor:
         self.waypoint_ticks = 0
         self.retreat_waypoints: list[JointWaypoint] = []
         self.pending_place_site = "serving_spot"
+        self.pending_place_world: np.ndarray | None = None
         self.configuration_checker: RobotConfigurationCollisionChecker | None = None
         self.collision_guard_tick = 0
 
@@ -829,22 +838,48 @@ class CalibratedPickPlaceExecutor:
         if not self._near_navigation_home():
             raise RuntimeError("Place requires Move (home) first")
         self.pending_place_site = site_name
+        self.pending_place_world = None
         self.failure = None
         self.calibration_attempt_ticks = 0
         self.mode = "place_base_approach"
         self.status = f"Place {self.held_object}: approaching manipulation stance"
 
+    def request_place_world(self, desired_body_world: np.ndarray) -> None:
+        """Place the held body at a measured world-frame support position.
+
+        This is the dynamic counterpart of :meth:`request_place`.  The input
+        is a body-centre target derived by an upstream observed-evidence
+        placement allocator; it is never inferred from simulator object
+        metadata by this executor.
+        """
+        if not self.can_place:
+            raise RuntimeError("Pick a place-supported object before placement")
+        if not self._near_navigation_home():
+            raise RuntimeError("Place requires Move (home) first")
+        target = np.asarray(desired_body_world, dtype=float)
+        if target.shape != (3,) or not np.all(np.isfinite(target)):
+            raise ValueError("desired_body_world must be a finite xyz vector")
+        self.pending_place_world = target.copy()
+        self.pending_place_site = "<dynamic_world_target>"
+        self.failure = None
+        self.calibration_attempt_ticks = 0
+        self.mode = "place_base_approach"
+        self.status = f"Place {self.held_object}: approaching dynamic target"
+
     def _begin_place_plan(self) -> None:
         assert self.held_object is not None
         spec = self.pick_specs[self.held_object]
-        site_id = mujoco.mj_name2id(
-            self.model, mujoco.mjtObj.mjOBJ_SITE, self.pending_place_site
-        )
-        if site_id < 0:
-            raise RuntimeError(f"Unknown placement site: {self.pending_place_site}")
         mujoco.mj_forward(self.model, self.data)
-        desired_body = self.data.site_xpos[site_id].copy()
-        desired_body[2] += spec.support_height
+        if self.pending_place_world is None:
+            site_id = mujoco.mj_name2id(
+                self.model, mujoco.mjtObj.mjOBJ_SITE, self.pending_place_site
+            )
+            if site_id < 0:
+                raise RuntimeError(f"Unknown placement site: {self.pending_place_site}")
+            desired_body = self.data.site_xpos[site_id].copy()
+            desired_body[2] += spec.support_height
+        else:
+            desired_body = self.pending_place_world.copy()
         grip_to_body = (
             self.data.xpos[self.target_body_id] - self.data.site_xpos[self.grip_site_id]
         )

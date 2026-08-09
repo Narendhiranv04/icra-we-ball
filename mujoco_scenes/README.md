@@ -1554,3 +1554,14 @@ Current limitations are manually specified functional requirements,
 controlled simulator layouts, neutral privileged spatial proposals rather
 than free-space region discovery, no robot execution, no task planning, no FM
 requirement generation, and no photorealism claim.
+
+## Living-room mobile execution Phase 3A
+
+The frozen Phase-2 living-room PICK/PLACE plan can now be refined into
+condition-driven mobile Google Robot execution. The refiner uses observed
+generic IDs and point-cloud support geometry, tests the current base with the
+execution IK/collision path, generates target-facing stances, plans base paths
+with deterministic RRT*, and physically verifies each dynamic placement. See
+[`benchmark_reports/living_room_mobile_execution_phase3/README.md`](benchmark_reports/living_room_mobile_execution_phase3/README.md)
+for the exact commands and research boundaries. The preceding limitations
+describe the frozen Phase-1 report itself; Phase 3 does not alter it.

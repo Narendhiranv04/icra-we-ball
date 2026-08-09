@@ -1,0 +1,45 @@
+{
+  "authoritative_run": "runs/living_room_mobile_execution_phase3/f0_full_execution_authoritative",
+  "authoritative_scene": "L2_integrated_living_room_region_function_F0_BASE",
+  "frozen_phase2_task_actions": 12,
+  "refined_actions": 24,
+  "conditionally_inserted_moves": 12,
+  "physical_action_records": 24,
+  "physical_picks_succeeded": 6,
+  "physical_places_succeeded": 6,
+  "all_places_physically_verified": true,
+  "maximum_place_xy_error_m": 0.015387747928148917,
+  "maximum_place_height_error_m": 0.006132341119861939,
+  "maximum_post_settle_linear_speed_m_s": 0.00008317305284361945,
+  "authoritative_total_physics_steps": 189845,
+  "first_object_pick_trials": {
+    "successful": 6,
+    "attempted": 6
+  },
+  "individual_payload_pick_trials": {
+    "object_0001": "SUCCESS",
+    "object_0002": "SUCCESS",
+    "object_0003": "SUCCESS",
+    "object_0004": "SUCCESS",
+    "object_0005": "SUCCESS",
+    "object_0006": "SUCCESS"
+  },
+  "complete_f0_trials": {
+    "successful": 3,
+    "attempted": 3
+  },
+  "scientific_guards": {
+    "phase2_order_preserved": true,
+    "phase2_assignments_preserved": true,
+    "current_base_tested_first": true,
+    "move_is_condition_driven": true,
+    "dynamic_stances_face_target": true,
+    "base_paths_collision_checked_rrt_star": true,
+    "held_payload_included_in_base_collision_model": true,
+    "placements_derived_from_observed_point_cloud_geometry": true,
+    "normal_execution_teleports_base": false,
+    "normal_execution_edits_payload_qpos": false,
+    "fm_vlm_llm_used": false,
+    "pddlstream_or_tamp_used": false
+  }
+}

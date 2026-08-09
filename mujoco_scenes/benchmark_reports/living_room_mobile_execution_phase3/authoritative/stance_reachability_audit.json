@@ -1,0 +1,1098 @@
+{
+  "actions": [
+    {
+      "candidates_tested": [
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": true,
+          "base_pose": {
+            "x": -0.0,
+            "y": -2.48,
+            "yaw": 0.0
+          },
+          "current_pose": true,
+          "manipulation_validation": {
+            "carry_position_error_m": 0.00014825573479315603,
+            "feasible": false,
+            "maximum_angle_error_deg": 14.714858282668839,
+            "pregrasp_position_error_m": 0.049024266960794066,
+            "rejection_reason": "IK_TOLERANCE",
+            "segments": [],
+            "target_position_error_m": 0.03258781689366437
+          },
+          "radial_distance_m": 0.8395823071050781
+        },
+        {
+          "base_clearance_candidate": true,
+          "base_collision_free": true,
+          "base_pose": {
+            "x": -0.4987497627735139,
+            "y": -2.3846133518218995,
+            "yaw": -2.220446049250313e-16
+          },
+          "current_pose": false,
+          "manipulation_validation": {
+            "carry_position_error_m": 0.0003522213807768204,
+            "feasible": true,
+            "maximum_angle_error_deg": 0.1037057767371299,
+            "pregrasp_position_error_m": 0.0003675934708598222,
+            "rejection_reason": null,
+            "segments": [
+              {
+                "reason": null,
+                "segment": "navigation_to_carry",
+                "valid": true
+              },
+              {
+                "reason": null,
+                "segment": "carry_to_pregrasp",
+                "valid": true
+              },
+              {
+                "reason": null,
+                "segment": "pregrasp_to_contact",
+                "valid": true
+              }
+            ],
+            "target_position_error_m": 0.0004681822938757698
+          },
+          "radial_distance_m": 0.5800000000000001
+        }
+      ],
+      "current_pose_feasible": false,
+      "current_pose_tested_first": true,
+      "object_id": "object_0001",
+      "operator": "PICK",
+      "selected_pose": {
+        "x": -0.4987497627735139,
+        "y": -2.3846133518218995,
+        "yaw": -2.220446049250313e-16
+      },
+      "task_step": 0
+    },
+    {
+      "candidates_tested": [
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": true,
+          "base_pose": {
+            "x": -0.4985274675459929,
+            "y": -2.3863613572356184,
+            "yaw": -0.0002248019655601582
+          },
+          "current_pose": true,
+          "radial_distance_m": 3.811273194767601
+        },
+        {
+          "base_clearance_candidate": true,
+          "base_collision_free": true,
+          "base_pose": {
+            "x": -1.885681927204132,
+            "y": 0.5835127067565918,
+            "yaw": 0.0
+          },
+          "current_pose": false,
+          "manipulation_validation": {
+            "carry_position_error_m": 0.00042038463775483727,
+            "feasible": true,
+            "maximum_angle_error_deg": 0.3873113335451409,
+            "pregrasp_position_error_m": 0.00021597489654312364,
+            "rejection_reason": null,
+            "segments": [
+              {
+                "reason": null,
+                "segment": "navigation_to_carry",
+                "valid": true
+              },
+              {
+                "reason": null,
+                "segment": "carry_to_pregrasp",
+                "valid": true
+              },
+              {
+                "reason": null,
+                "segment": "pregrasp_to_contact",
+                "valid": true
+              }
+            ],
+            "target_position_error_m": 7.415681175119042e-05
+          },
+          "radial_distance_m": 0.58
+        }
+      ],
+      "current_pose_feasible": false,
+      "current_pose_tested_first": true,
+      "object_id": "object_0001",
+      "operator": "PLACE",
+      "selected_pose": {
+        "x": -1.885681927204132,
+        "y": 0.5835127067565918,
+        "yaw": 0.0
+      },
+      "task_step": 1
+    },
+    {
+      "candidates_tested": [
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": true,
+          "base_pose": {
+            "x": -1.8857354994072713,
+            "y": 0.5834336268700442,
+            "yaw": -1.2662790214723932e-05
+          },
+          "current_pose": true,
+          "radial_distance_m": 2.9023586986562337
+        },
+        {
+          "base_clearance_candidate": true,
+          "base_collision_free": true,
+          "base_pose": {
+            "x": -0.2319726198911668,
+            "y": -2.3816773462295533,
+            "yaw": -2.220446049250313e-16
+          },
+          "current_pose": false,
+          "manipulation_validation": {
+            "carry_position_error_m": 0.0003522213807764875,
+            "feasible": true,
+            "maximum_angle_error_deg": 0.06488483223910467,
+            "pregrasp_position_error_m": 0.0007569733666616449,
+            "rejection_reason": null,
+            "segments": [
+              {
+                "reason": null,
+                "segment": "navigation_to_carry",
+                "valid": true
+              },
+              {
+                "reason": null,
+                "segment": "carry_to_pregrasp",
+                "valid": true
+              },
+              {
+                "reason": null,
+                "segment": "pregrasp_to_contact",
+                "valid": true
+              }
+            ],
+            "target_position_error_m": 0.000175872890671117
+          },
+          "radial_distance_m": 0.5800000000000001
+        }
+      ],
+      "current_pose_feasible": false,
+      "current_pose_tested_first": true,
+      "object_id": "object_0002",
+      "operator": "PICK",
+      "selected_pose": {
+        "x": -0.2319726198911668,
+        "y": -2.3816773462295533,
+        "yaw": -2.220446049250313e-16
+      },
+      "task_step": 2
+    },
+    {
+      "candidates_tested": [
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": true,
+          "base_pose": {
+            "x": -0.2318831755433877,
+            "y": -2.3833618720031176,
+            "yaw": -0.00033304885224953203
+          },
+          "current_pose": true,
+          "radial_distance_m": 3.913485606009878
+        },
+        {
+          "base_clearance_candidate": true,
+          "base_collision_free": true,
+          "base_pose": {
+            "x": -1.885681927204132,
+            "y": 0.5835127067565918,
+            "yaw": 0.0
+          },
+          "current_pose": false,
+          "manipulation_validation": {
+            "carry_position_error_m": 0.0007090610590809724,
+            "feasible": true,
+            "maximum_angle_error_deg": 0.07858276655932134,
+            "pregrasp_position_error_m": 9.401116940477171e-05,
+            "rejection_reason": null,
+            "segments": [
+              {
+                "reason": null,
+                "segment": "navigation_to_carry",
+                "valid": true
+              },
+              {
+                "reason": null,
+                "segment": "carry_to_pregrasp",
+                "valid": true
+              },
+              {
+                "reason": null,
+                "segment": "pregrasp_to_contact",
+                "valid": true
+              }
+            ],
+            "target_position_error_m": 0.0004080178993460111
+          },
+          "radial_distance_m": 0.58
+        }
+      ],
+      "current_pose_feasible": false,
+      "current_pose_tested_first": true,
+      "object_id": "object_0002",
+      "operator": "PLACE",
+      "selected_pose": {
+        "x": -1.885681927204132,
+        "y": 0.5835127067565918,
+        "yaw": 0.0
+      },
+      "task_step": 3
+    },
+    {
+      "candidates_tested": [
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": true,
+          "base_pose": {
+            "x": -1.8857288663159941,
+            "y": 0.583438492516902,
+            "yaw": -1.400958121637854e-05
+          },
+          "current_pose": true,
+          "radial_distance_m": 2.74351775352501
+        },
+        {
+          "base_clearance_candidate": true,
+          "base_collision_free": true,
+          "base_pose": {
+            "x": -0.19978584349155437,
+            "y": -2.1609288024902344,
+            "yaw": -2.220446049250313e-16
+          },
+          "current_pose": false,
+          "manipulation_validation": {
+            "carry_position_error_m": 0.000352221380776195,
+            "feasible": true,
+            "maximum_angle_error_deg": 0.06229337381608609,
+            "pregrasp_position_error_m": 0.0005832520629559408,
+            "rejection_reason": null,
+            "segments": [
+              {
+                "reason": null,
+                "segment": "navigation_to_carry",
+                "valid": true
+              },
+              {
+                "reason": null,
+                "segment": "carry_to_pregrasp",
+                "valid": true
+              },
+              {
+                "reason": null,
+                "segment": "pregrasp_to_contact",
+                "valid": true
+              }
+            ],
+            "target_position_error_m": 0.00021673602760374989
+          },
+          "radial_distance_m": 0.5800000000000001
+        }
+      ],
+      "current_pose_feasible": false,
+      "current_pose_tested_first": true,
+      "object_id": "object_0003",
+      "operator": "PICK",
+      "selected_pose": {
+        "x": -0.19978584349155437,
+        "y": -2.1609288024902344,
+        "yaw": -2.220446049250313e-16
+      },
+      "task_step": 4
+    },
+    {
+      "candidates_tested": [
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": true,
+          "base_pose": {
+            "x": -0.1997472851802647,
+            "y": -2.1625409608812785,
+            "yaw": -0.0002954834317771027
+          },
+          "current_pose": true,
+          "radial_distance_m": 2.7028097294949633
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": -0.00023472790780953542,
+            "y": -0.047104971408843954,
+            "yaw": -2.220446049250313e-16
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.58
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": 0.22172166286394276,
+            "y": -0.0029551002653902536,
+            "yaw": 0.39269908169872436
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.58
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": -0.22219111867956182,
+            "y": -0.0029551002653901426,
+            "yaw": -0.3926990816987248
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.58
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": 0.409887205180388,
+            "y": 0.1227730955029584,
+            "yaw": 0.7853981633974483
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.58
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": -0.41035666099600704,
+            "y": 0.1227730955029585,
+            "yaw": -0.7853981633974484
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.58
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": 0.5356154009487367,
+            "y": 0.31093863781940356,
+            "yaw": 1.178097245096172
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.58
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": -0.5360848567643558,
+            "y": 0.310938637819404,
+            "yaw": -1.1780972450961724
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.5800000000000001
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": 0.5797652720921905,
+            "y": 0.532895028591156,
+            "yaw": 1.5707963267948966
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.58
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": -0.5802347279078094,
+            "y": 0.5328950285911561,
+            "yaw": -1.5707963267948968
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.58
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": 0.5356154009487368,
+            "y": 0.7548514193629081,
+            "yaw": -4.319689898685965
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.58
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": -0.5360848567643557,
+            "y": 0.7548514193629081,
+            "yaw": -1.9634954084936207
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.58
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": 0.4098872051803881,
+            "y": 0.9430169616793536,
+            "yaw": -3.9269908169872414
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.58
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": -0.41035666099600693,
+            "y": 0.9430169616793536,
+            "yaw": -2.356194490192345
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.58
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": 0.22172166286394265,
+            "y": 1.0687451574477023,
+            "yaw": -3.5342917352885177
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.58
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": -0.22219111867956146,
+            "y": 1.0687451574477023,
+            "yaw": -2.748893571891069
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.58
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": -0.00023472790780939336,
+            "y": 1.112895028591156,
+            "yaw": -3.141592653589793
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.5800000000000001
+        },
+        {
+          "base_clearance_candidate": true,
+          "base_collision_free": true,
+          "base_pose": {
+            "x": -0.0002347279078095538,
+            "y": -0.14710497140884404,
+            "yaw": -2.220446049250313e-16
+          },
+          "current_pose": false,
+          "manipulation_validation": {
+            "carry_position_error_m": 0.0002774005810389342,
+            "feasible": true,
+            "maximum_angle_error_deg": 0.6844158854295209,
+            "pregrasp_position_error_m": 6.989716173291613e-05,
+            "rejection_reason": null,
+            "segments": [
+              {
+                "reason": null,
+                "segment": "navigation_to_carry",
+                "valid": true
+              },
+              {
+                "reason": null,
+                "segment": "carry_to_pregrasp",
+                "valid": true
+              },
+              {
+                "reason": null,
+                "segment": "pregrasp_to_contact",
+                "valid": true
+              }
+            ],
+            "target_position_error_m": 0.00012714435882042372
+          },
+          "radial_distance_m": 0.68
+        }
+      ],
+      "current_pose_feasible": false,
+      "current_pose_tested_first": true,
+      "object_id": "object_0003",
+      "operator": "PLACE",
+      "selected_pose": {
+        "x": -0.0002347279078095538,
+        "y": -0.14710497140884404,
+        "yaw": -2.220446049250313e-16
+      },
+      "task_step": 5
+    },
+    {
+      "candidates_tested": [
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": true,
+          "base_pose": {
+            "x": -0.0002880685242274323,
+            "y": -0.1471839154499639,
+            "yaw": -1.2511560552522254e-05
+          },
+          "current_pose": true,
+          "radial_distance_m": 1.6685430693437207
+        },
+        {
+          "base_clearance_candidate": true,
+          "base_collision_free": true,
+          "base_pose": {
+            "x": 0.1750364452600478,
+            "y": -2.386490182876587,
+            "yaw": -2.220446049250313e-16
+          },
+          "current_pose": false,
+          "manipulation_validation": {
+            "carry_position_error_m": 0.00035222138077698265,
+            "feasible": true,
+            "maximum_angle_error_deg": 0.10334325425551436,
+            "pregrasp_position_error_m": 0.00035709315433775916,
+            "rejection_reason": null,
+            "segments": [
+              {
+                "reason": null,
+                "segment": "navigation_to_carry",
+                "valid": true
+              },
+              {
+                "reason": null,
+                "segment": "carry_to_pregrasp",
+                "valid": true
+              },
+              {
+                "reason": null,
+                "segment": "pregrasp_to_contact",
+                "valid": true
+              }
+            ],
+            "target_position_error_m": 0.0004669139873164059
+          },
+          "radial_distance_m": 0.5800000000000001
+        }
+      ],
+      "current_pose_feasible": false,
+      "current_pose_tested_first": true,
+      "object_id": "object_0004",
+      "operator": "PICK",
+      "selected_pose": {
+        "x": 0.1750364452600478,
+        "y": -2.386490182876587,
+        "yaw": -2.220446049250313e-16
+      },
+      "task_step": 6
+    },
+    {
+      "candidates_tested": [
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": true,
+          "base_pose": {
+            "x": 0.1752659918263187,
+            "y": -2.3882172193398135,
+            "yaw": -0.0002262998092444291
+          },
+          "current_pose": true,
+          "radial_distance_m": 3.935286130383426
+        },
+        {
+          "base_clearance_candidate": true,
+          "base_collision_free": true,
+          "base_pose": {
+            "x": 1.8809856176376343,
+            "y": 0.578189058303833,
+            "yaw": 0.0
+          },
+          "current_pose": false,
+          "manipulation_validation": {
+            "carry_position_error_m": 0.0004088308250079735,
+            "feasible": true,
+            "maximum_angle_error_deg": 0.2580136408595728,
+            "pregrasp_position_error_m": 0.0003631138850529304,
+            "rejection_reason": null,
+            "segments": [
+              {
+                "reason": null,
+                "segment": "navigation_to_carry",
+                "valid": true
+              },
+              {
+                "reason": null,
+                "segment": "carry_to_pregrasp",
+                "valid": true
+              },
+              {
+                "reason": null,
+                "segment": "pregrasp_to_contact",
+                "valid": true
+              }
+            ],
+            "target_position_error_m": 6.999649382985678e-05
+          },
+          "radial_distance_m": 0.58
+        }
+      ],
+      "current_pose_feasible": false,
+      "current_pose_tested_first": true,
+      "object_id": "object_0004",
+      "operator": "PLACE",
+      "selected_pose": {
+        "x": 1.8809856176376343,
+        "y": 0.578189058303833,
+        "yaw": 0.0
+      },
+      "task_step": 7
+    },
+    {
+      "candidates_tested": [
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": true,
+          "base_pose": {
+            "x": 1.8809316057259966,
+            "y": 0.5781097118008653,
+            "yaw": -1.2834547097571356e-05
+          },
+          "current_pose": true,
+          "radial_distance_m": 2.669233573108989
+        },
+        {
+          "base_clearance_candidate": true,
+          "base_collision_free": true,
+          "base_pose": {
+            "x": 0.2520392835140227,
+            "y": -2.116486625671387,
+            "yaw": -2.220446049250313e-16
+          },
+          "current_pose": false,
+          "manipulation_validation": {
+            "carry_position_error_m": 0.00035222138077650695,
+            "feasible": true,
+            "maximum_angle_error_deg": 0.05278764998249893,
+            "pregrasp_position_error_m": 6.391087368413401e-05,
+            "rejection_reason": null,
+            "segments": [
+              {
+                "reason": null,
+                "segment": "navigation_to_carry",
+                "valid": true
+              },
+              {
+                "reason": null,
+                "segment": "carry_to_pregrasp",
+                "valid": true
+              },
+              {
+                "reason": null,
+                "segment": "pregrasp_to_contact",
+                "valid": true
+              }
+            ],
+            "target_position_error_m": 0.00017333035550849287
+          },
+          "radial_distance_m": 0.5800000000000001
+        }
+      ],
+      "current_pose_feasible": false,
+      "current_pose_tested_first": true,
+      "object_id": "object_0005",
+      "operator": "PICK",
+      "selected_pose": {
+        "x": 0.2520392835140227,
+        "y": -2.116486625671387,
+        "yaw": -2.220446049250313e-16
+      },
+      "task_step": 8
+    },
+    {
+      "candidates_tested": [
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": true,
+          "base_pose": {
+            "x": 0.2521379892450235,
+            "y": -2.1181596263086218,
+            "yaw": -0.00033553849225627207
+          },
+          "current_pose": true,
+          "radial_distance_m": 2.663040137066823
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": -0.00023472790780953542,
+            "y": -0.047104971408843954,
+            "yaw": -2.220446049250313e-16
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.58
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": 0.22172166286394276,
+            "y": -0.0029551002653902536,
+            "yaw": 0.39269908169872436
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.58
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": -0.22219111867956182,
+            "y": -0.0029551002653901426,
+            "yaw": -0.3926990816987248
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.58
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": 0.409887205180388,
+            "y": 0.1227730955029584,
+            "yaw": 0.7853981633974483
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.58
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": -0.41035666099600704,
+            "y": 0.1227730955029585,
+            "yaw": -0.7853981633974484
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.58
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": 0.5356154009487367,
+            "y": 0.31093863781940356,
+            "yaw": 1.178097245096172
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.58
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": -0.5360848567643558,
+            "y": 0.310938637819404,
+            "yaw": -1.1780972450961724
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.5800000000000001
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": 0.5797652720921905,
+            "y": 0.532895028591156,
+            "yaw": 1.5707963267948966
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.58
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": -0.5802347279078094,
+            "y": 0.5328950285911561,
+            "yaw": -1.5707963267948968
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.58
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": 0.5356154009487368,
+            "y": 0.7548514193629081,
+            "yaw": -4.319689898685965
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.58
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": -0.5360848567643557,
+            "y": 0.7548514193629081,
+            "yaw": -1.9634954084936207
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.58
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": 0.4098872051803881,
+            "y": 0.9430169616793536,
+            "yaw": -3.9269908169872414
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.58
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": -0.41035666099600693,
+            "y": 0.9430169616793536,
+            "yaw": -2.356194490192345
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.58
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": 0.22172166286394265,
+            "y": 1.0687451574477023,
+            "yaw": -3.5342917352885177
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.58
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": -0.22219111867956146,
+            "y": 1.0687451574477023,
+            "yaw": -2.748893571891069
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.58
+        },
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": false,
+          "base_pose": {
+            "x": -0.00023472790780939336,
+            "y": 1.112895028591156,
+            "yaw": -3.141592653589793
+          },
+          "current_pose": false,
+          "radial_distance_m": 0.5800000000000001
+        },
+        {
+          "base_clearance_candidate": true,
+          "base_collision_free": true,
+          "base_pose": {
+            "x": -0.0002347279078095538,
+            "y": -0.14710497140884404,
+            "yaw": -2.220446049250313e-16
+          },
+          "current_pose": false,
+          "manipulation_validation": {
+            "carry_position_error_m": 0.0001064694379807805,
+            "feasible": true,
+            "maximum_angle_error_deg": 0.04052367846661218,
+            "pregrasp_position_error_m": 0.0002171632696034869,
+            "rejection_reason": null,
+            "segments": [
+              {
+                "reason": null,
+                "segment": "navigation_to_carry",
+                "valid": true
+              },
+              {
+                "reason": null,
+                "segment": "carry_to_pregrasp",
+                "valid": true
+              },
+              {
+                "reason": null,
+                "segment": "pregrasp_to_contact",
+                "valid": true
+              }
+            ],
+            "target_position_error_m": 9.287588448415143e-05
+          },
+          "radial_distance_m": 0.68
+        }
+      ],
+      "current_pose_feasible": false,
+      "current_pose_tested_first": true,
+      "object_id": "object_0005",
+      "operator": "PLACE",
+      "selected_pose": {
+        "x": -0.0002347279078095538,
+        "y": -0.14710497140884404,
+        "yaw": -2.220446049250313e-16
+      },
+      "task_step": 9
+    },
+    {
+      "candidates_tested": [
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": true,
+          "base_pose": {
+            "x": -0.00026905073453677066,
+            "y": -0.14717346192321523,
+            "yaw": -1.3932491724556843e-05
+          },
+          "current_pose": true,
+          "radial_distance_m": 1.7071248219310036
+        },
+        {
+          "base_clearance_candidate": true,
+          "base_collision_free": true,
+          "base_pose": {
+            "x": 0.44452446699142445,
+            "y": -2.3753342199325562,
+            "yaw": -2.220446049250313e-16
+          },
+          "current_pose": false,
+          "manipulation_validation": {
+            "carry_position_error_m": 0.00035222138077684257,
+            "feasible": true,
+            "maximum_angle_error_deg": 0.06251714001183639,
+            "pregrasp_position_error_m": 0.000607153807947004,
+            "rejection_reason": null,
+            "segments": [
+              {
+                "reason": null,
+                "segment": "navigation_to_carry",
+                "valid": true
+              },
+              {
+                "reason": null,
+                "segment": "carry_to_pregrasp",
+                "valid": true
+              },
+              {
+                "reason": null,
+                "segment": "pregrasp_to_contact",
+                "valid": true
+              }
+            ],
+            "target_position_error_m": 0.00020990254568506512
+          },
+          "radial_distance_m": 0.5800000000000001
+        }
+      ],
+      "current_pose_feasible": false,
+      "current_pose_tested_first": true,
+      "object_id": "object_0006",
+      "operator": "PICK",
+      "selected_pose": {
+        "x": 0.44452446699142445,
+        "y": -2.3753342199325562,
+        "yaw": -2.220446049250313e-16
+      },
+      "task_step": 10
+    },
+    {
+      "candidates_tested": [
+        {
+          "base_clearance_candidate": false,
+          "base_collision_free": true,
+          "base_pose": {
+            "x": 0.4446126375446897,
+            "y": -2.377025117499695,
+            "yaw": -0.0003347467117589201
+          },
+          "current_pose": true,
+          "radial_distance_m": 3.8158756015812814
+        },
+        {
+          "base_clearance_candidate": true,
+          "base_collision_free": true,
+          "base_pose": {
+            "x": 1.8809856176376343,
+            "y": 0.578189058303833,
+            "yaw": 0.0
+          },
+          "current_pose": false,
+          "manipulation_validation": {
+            "carry_position_error_m": 0.0007267748195656388,
+            "feasible": true,
+            "maximum_angle_error_deg": 0.07906890035956467,
+            "pregrasp_position_error_m": 6.378493952668178e-05,
+            "rejection_reason": null,
+            "segments": [
+              {
+                "reason": null,
+                "segment": "navigation_to_carry",
+                "valid": true
+              },
+              {
+                "reason": null,
+                "segment": "carry_to_pregrasp",
+                "valid": true
+              },
+              {
+                "reason": null,
+                "segment": "pregrasp_to_contact",
+                "valid": true
+              }
+            ],
+            "target_position_error_m": 0.00041473204299540223
+          },
+          "radial_distance_m": 0.58
+        }
+      ],
+      "current_pose_feasible": false,
+      "current_pose_tested_first": true,
+      "object_id": "object_0006",
+      "operator": "PLACE",
+      "selected_pose": {
+        "x": 1.8809856176376343,
+        "y": 0.578189058303833,
+        "yaw": 0.0
+      },
+      "task_step": 11
+    }
+  ],
+  "schema_version": 1
+}

@@ -1,0 +1,356 @@
+{
+  "actions": [
+    {
+      "operator": "MOVE",
+      "result": {
+        "elapsed_s": 0.14827987800526898,
+        "final_pose": {
+          "x": -0.48641405585396474,
+          "y": -2.3840394630706876,
+          "yaw": 0.00012372952136118336
+        },
+        "physics_steps": 1417
+      }
+    },
+    {
+      "backend_body": "a2_drink_left",
+      "failure": null,
+      "object_id": "object_0001",
+      "operator": "PICK",
+      "physics_steps": 6532,
+      "result": "SUCCESS"
+    },
+    {
+      "operator": "MOVE",
+      "result": {
+        "elapsed_s": 1.2148155169998063,
+        "final_pose": {
+          "x": -1.8801414602923174,
+          "y": 0.5710986411687342,
+          "yaw": -0.00023776166570838714
+        },
+        "physics_steps": 9117
+      }
+    },
+    {
+      "backend_body": "a2_drink_left",
+      "failure": null,
+      "object_id": "object_0001",
+      "operator": "PLACE",
+      "physical_verification": {
+        "height_error_m": 0.0026107064649999456,
+        "linear_speed_m_s": 1.5928015124971866e-05,
+        "observed_body_world_m": [
+          -1.7485512511485939,
+          1.151667088551621,
+          0.6209420403077662
+        ],
+        "stable": true,
+        "target_body_world_m": [
+          -1.7533589267347647,
+          1.1612692666947022,
+          0.6235527467727662
+        ],
+        "verified": true,
+        "within_observed_support_boundary": true,
+        "xy_error_m": 0.010738508724833753
+      },
+      "physics_steps": 7091,
+      "result": "SUCCESS"
+    },
+    {
+      "operator": "MOVE",
+      "result": {
+        "elapsed_s": 1.0791163399990182,
+        "final_pose": {
+          "x": -0.24137098636553747,
+          "y": -2.382698658038517,
+          "yaw": 2.2348288581585115e-05
+        },
+        "physics_steps": 9675
+      }
+    },
+    {
+      "backend_body": "a2_snack_left",
+      "failure": null,
+      "object_id": "object_0002",
+      "operator": "PICK",
+      "physics_steps": 6472,
+      "result": "SUCCESS"
+    },
+    {
+      "operator": "MOVE",
+      "result": {
+        "elapsed_s": 0.8452968979981961,
+        "final_pose": {
+          "x": -1.8864598328558808,
+          "y": 0.5741038620410976,
+          "yaw": -0.000370397283793035
+        },
+        "physics_steps": 9461
+      }
+    },
+    {
+      "backend_body": "a2_snack_left",
+      "failure": null,
+      "object_id": "object_0002",
+      "operator": "PLACE",
+      "physical_verification": {
+        "height_error_m": 0.0026118176158268502,
+        "linear_speed_m_s": 6.1366747587251485e-06,
+        "observed_body_world_m": [
+          -2.023283179404844,
+          1.156986942968735,
+          0.5759409291569393
+        ],
+        "stable": true,
+        "target_body_world_m": [
+          -2.0180049276734993,
+          1.1657561468184814,
+          0.5785527467727661
+        ],
+        "verified": true,
+        "within_observed_support_boundary": true,
+        "xy_error_m": 0.010235178430191236
+      },
+      "physics_steps": 6723,
+      "result": "SUCCESS"
+    },
+    {
+      "operator": "MOVE",
+      "result": {
+        "elapsed_s": 0.7020022869983222,
+        "final_pose": {
+          "x": -0.2094176928894785,
+          "y": -2.159700097010465,
+          "yaw": 0.00012573985864849555
+        },
+        "physics_steps": 9757
+      }
+    },
+    {
+      "backend_body": "a2_remote_payload",
+      "failure": null,
+      "object_id": "object_0003",
+      "operator": "PICK",
+      "physics_steps": 6603,
+      "result": "SUCCESS"
+    },
+    {
+      "operator": "MOVE",
+      "result": {
+        "elapsed_s": 0.8869650069973432,
+        "final_pose": {
+          "x": -0.0012697295203559498,
+          "y": -0.15960171757628006,
+          "yaw": -0.0002999487053159143
+        },
+        "physics_steps": 10520
+      }
+    },
+    {
+      "backend_body": "a2_remote_payload",
+      "failure": null,
+      "object_id": "object_0003",
+      "operator": "PLACE",
+      "physical_verification": {
+        "height_error_m": 0.0020237754820358056,
+        "linear_speed_m_s": 7.26635080699293e-15,
+        "observed_body_world_m": [
+          0.2639443391540517,
+          0.5202724075281666,
+          0.40892759785666355
+        ],
+        "stable": true,
+        "target_body_world_m": [
+          0.2655385691042079,
+          0.5324777374484463,
+          0.41095137333869936
+        ],
+        "verified": true,
+        "within_observed_support_boundary": true,
+        "xy_error_m": 0.012309006767276122
+      },
+      "physics_steps": 7595,
+      "result": "SUCCESS"
+    },
+    {
+      "operator": "MOVE",
+      "result": {
+        "elapsed_s": 0.7597574440005701,
+        "final_pose": {
+          "x": 0.1627296430821195,
+          "y": -2.386741467598576,
+          "yaw": -0.00011774132314121596
+        },
+        "physics_steps": 10611
+      }
+    },
+    {
+      "backend_body": "a2_drink_right",
+      "failure": null,
+      "object_id": "object_0004",
+      "operator": "PICK",
+      "physics_steps": 6523,
+      "result": "SUCCESS"
+    },
+    {
+      "operator": "MOVE",
+      "result": {
+        "elapsed_s": 0.7869971199979773,
+        "final_pose": {
+          "x": 1.8802414670985943,
+          "y": 0.5687079858611308,
+          "yaw": 6.230162723923094e-05
+        },
+        "physics_steps": 9454
+      }
+    },
+    {
+      "backend_body": "a2_drink_right",
+      "failure": null,
+      "object_id": "object_0004",
+      "operator": "PLACE",
+      "physical_verification": {
+        "height_error_m": 0.0026106983650592275,
+        "linear_speed_m_s": 8.317305284361945e-05,
+        "observed_body_world_m": [
+          2.015556905592684,
+          1.1511993315262437,
+          0.620942048407707
+        ],
+        "stable": true,
+        "target_body_world_m": [
+          2.013089342173288,
+          1.1612717192472035,
+          0.6235527467727662
+        ],
+        "verified": true,
+        "within_observed_support_boundary": true,
+        "xy_error_m": 0.010370239323664885
+      },
+      "physics_steps": 7094,
+      "result": "SUCCESS"
+    },
+    {
+      "operator": "MOVE",
+      "result": {
+        "elapsed_s": 0.7127482820069417,
+        "final_pose": {
+          "x": 0.2615936630997006,
+          "y": -2.114182824015127,
+          "yaw": -2.4812141641055925e-05
+        },
+        "physics_steps": 9989
+      }
+    },
+    {
+      "backend_body": "a2_controller_payload",
+      "failure": null,
+      "object_id": "object_0005",
+      "operator": "PICK",
+      "physics_steps": 6541,
+      "result": "SUCCESS"
+    },
+    {
+      "operator": "MOVE",
+      "result": {
+        "elapsed_s": 0.8386204440030269,
+        "final_pose": {
+          "x": 4.0165732520621234e-05,
+          "y": -0.1565397691483481,
+          "yaw": -0.0002694854826944345
+        },
+        "physics_steps": 9853
+      }
+    },
+    {
+      "backend_body": "a2_controller_payload",
+      "failure": null,
+      "object_id": "object_0005",
+      "operator": "PLACE",
+      "physical_verification": {
+        "height_error_m": 0.006132341119861939,
+        "linear_speed_m_s": 3.294810503774574e-09,
+        "observed_body_world_m": [
+          -0.2673714745473991,
+          0.5179850958686864,
+          0.41881903221883743
+        ],
+        "stable": true,
+        "target_body_world_m": [
+          -0.2660080249198268,
+          0.5333123197338657,
+          0.42495137333869937
+        ],
+        "verified": true,
+        "within_observed_support_boundary": true,
+        "xy_error_m": 0.015387747928148917
+      },
+      "physics_steps": 7302,
+      "result": "SUCCESS"
+    },
+    {
+      "operator": "MOVE",
+      "result": {
+        "elapsed_s": 0.6932487720041536,
+        "final_pose": {
+          "x": 0.4542722336293846,
+          "y": -2.37449511103019,
+          "yaw": -0.00016329996917637272
+        },
+        "physics_steps": 9466
+      }
+    },
+    {
+      "backend_body": "a2_snack_right",
+      "failure": null,
+      "object_id": "object_0006",
+      "operator": "PICK",
+      "physics_steps": 6473,
+      "result": "SUCCESS"
+    },
+    {
+      "operator": "MOVE",
+      "result": {
+        "elapsed_s": 0.7959168849920388,
+        "final_pose": {
+          "x": 1.8802543055142662,
+          "y": 0.5687080856725908,
+          "yaw": -3.198542038026904e-05
+        },
+        "physics_steps": 8838
+      }
+    },
+    {
+      "backend_body": "a2_snack_right",
+      "failure": null,
+      "object_id": "object_0006",
+      "operator": "PLACE",
+      "physical_verification": {
+        "height_error_m": 0.002611682502021262,
+        "linear_speed_m_s": 2.718783903166882e-05,
+        "observed_body_world_m": [
+          1.7423287991789083,
+          1.1464242710671269,
+          0.5759410642707449
+        ],
+        "stable": true,
+        "target_body_world_m": [
+          1.7488818931019807,
+          1.1551063973604625,
+          0.5785527467727661
+        ],
+        "verified": true,
+        "within_observed_support_boundary": true,
+        "xy_error_m": 0.010877608052234618
+      },
+      "physics_steps": 6738,
+      "result": "SUCCESS"
+    }
+  ],
+  "mode": "EXECUTE",
+  "normal_execution_object_qpos_edits": false,
+  "schema_version": 1,
+  "success": true
+}

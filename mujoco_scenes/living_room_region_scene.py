@@ -990,6 +990,54 @@ def _configure_integrated_scene(root: ET.Element, scene_name: str) -> None:
         _translate_body_geoms(root, "a2_shared_drink_trap", (-2.45, 0.10))
 
 
+def _add_integrated_execution_annotations(root: ET.Element) -> None:
+    """Add invisible grasp frames and inactive welds for Phase-3 execution.
+
+    These annotations have no geom, material, semantic label, or rendered
+    pixels.  They are deliberately added only to the robot-bearing execution
+    model, after the frozen perception scene has been configured.
+    """
+    grasp_frames = {
+        "a2_drink_left": ((0.0, 0.0, 0.035), "0.006"),
+        "a2_drink_right": ((0.0, 0.0, 0.035), "0.006"),
+        "a2_snack_left": ((0.0, 0.0, 0.020), "0.006"),
+        "a2_snack_right": ((0.0, 0.0, 0.020), "0.006"),
+        "a2_remote_payload": ((0.0, 0.0, 0.020), "0.005"),
+        "a2_controller_payload": ((0.0, 0.0, 0.026), "0.005"),
+    }
+    for body_name, (position, size) in grasp_frames.items():
+        body = root.find(f".//body[@name='{body_name}']")
+        if body is None:
+            raise RuntimeError(f"Integrated execution body missing: {body_name}")
+        ET.SubElement(
+            body,
+            "site",
+            {
+                "name": f"phase3_grasp_{body_name}",
+                "pos": " ".join(f"{value:.6f}" for value in position),
+                "size": size,
+                "rgba": "0 0 0 0",
+                "group": "3",
+            },
+        )
+    equality = root.find("equality")
+    if equality is None:
+        equality = ET.SubElement(root, "equality")
+    for body_name in grasp_frames:
+        ET.SubElement(
+            equality,
+            "weld",
+            {
+                "name": f"google:pick_weld_{body_name}",
+                "body1": "google:link_gripper",
+                "body2": body_name,
+                "active": "false",
+                "solref": "0.003 1",
+                "solimp": "0.95 0.99 0.001",
+            },
+        )
+
+
 def build_l2_region_xml(
     scene_name: str,
     robot: str = ROBOT_GOOGLE,
@@ -1086,6 +1134,7 @@ def build_l2_region_xml(
             x, y, z = INTEGRATED_ROOM_LAYOUT["robot_spawn"]
             robot_body.set("pos", f"{x:.6f} {y:.6f} {z:.6f}")
             robot_body.set("quat", "0.7071068 0 0 0.7071068")
+            _add_integrated_execution_annotations(root)
     return ET.tostring(root, encoding="unicode")
 
 
@@ -1167,7 +1216,14 @@ class L2LivingRoomRegionScene:
                 if self.model.jnt_type[joint_id] != mujoco.mjtJoint.mjJNT_FREE:
                     continue
                 dof_address = self.model.jnt_dofadr[joint_id]
-                self.model.dof_damping[dof_address:dof_address + 6] = 2.0
+                # Translational and angular damping have different units.
+                # Applying 2.0 to the tiny rotational inertias of scanned
+                # mugs made the explicit dynamics unstable on first support
+                # contact.  These values dissipate free-body drift without
+                # producing negative numerical damping.
+                self.model.dof_damping[dof_address:dof_address + 6] = (
+                    0.25, 0.25, 0.25, 0.02, 0.02, 0.02
+                )
         mujoco.mj_forward(self.model, self.data)
         for _ in range(600):
             mujoco.mj_step(self.model, self.data)
