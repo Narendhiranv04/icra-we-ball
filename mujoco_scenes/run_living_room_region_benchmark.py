@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import platform
 import shutil
@@ -34,6 +35,107 @@ from mujoco_scenes.semantic_grounding import load_semantic_config
 ROOT = Path(__file__).resolve().parent
 
 
+def _json_sha256(payload: dict) -> str:
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _selected_row(run, assignment: dict) -> dict | None:
+    rows = (
+        run.personal_rows
+        if assignment["function_id"] == "PERSONAL_REFRESHMENT_REGION"
+        else run.shared_rows
+    )
+    return next(
+        (
+            row
+            for row in rows
+            if row["slot_id"] == assignment["slot_id"]
+            and row["region_id"] == assignment["region_id"]
+        ),
+        None,
+    )
+
+
+def _validate_selected_allocation(run) -> dict:
+    if run.production_result["status"] != "COMPLETE":
+        return {
+            "applicable": False,
+            "personal_target_coverage": None,
+            "personal_region_distinctness": None,
+            "shared_controls_colocation": None,
+            "cross_function_nonsharing": None,
+            "selected_compatibility_edges_valid": None,
+            "functional_region_allocation_valid": None,
+        }
+    assignments = run.production_result.get("assignments", [])
+    personal = [
+        item
+        for item in assignments
+        if item["function_id"] == "PERSONAL_REFRESHMENT_REGION"
+    ]
+    shared = [
+        item
+        for item in assignments
+        if item["function_id"] == "SHARED_CONTROLS_REGION"
+    ]
+    expected_targets = set(run.seating_registry)
+    personal_targets = {
+        item.get("seating_target_id") for item in personal
+    }
+    personal_regions = [item["region_id"] for item in personal]
+    shared_regions = [item["region_id"] for item in shared]
+    selected_rows = [_selected_row(run, item) for item in assignments]
+    control_roles = {
+        run.payload_registry[payload_id]["semantic_payload_role"]
+        for item in shared
+        for payload_id in item.get("payload_ids", [])
+    }
+    checks = {
+        "applicable": True,
+        "personal_target_coverage": (
+            len(personal) == len(expected_targets) == 2
+            and personal_targets == expected_targets
+        ),
+        "personal_region_distinctness": (
+            len(personal_regions) == 2
+            and len(set(personal_regions)) == 2
+        ),
+        "shared_controls_colocation": (
+            len(shared) == 1
+            and len(shared[0].get("payload_ids", [])) == 2
+            and control_roles == {"tv_remote", "game_controller"}
+        ),
+        "cross_function_nonsharing": (
+            len(shared_regions) == 1
+            and shared_regions[0] not in set(personal_regions)
+        ),
+        "selected_compatibility_edges_valid": (
+            len(selected_rows) == len(assignments)
+            and all(
+                row is not None and row["compatibility_status"] == "TRUE"
+                for row in selected_rows
+            )
+        ),
+    }
+    checks["functional_region_allocation_valid"] = all(
+        checks[key]
+        for key in (
+            "personal_target_coverage",
+            "personal_region_distinctness",
+            "shared_controls_colocation",
+            "cross_function_nonsharing",
+            "selected_compatibility_edges_valid",
+        )
+    )
+    return checks
+
+
+def _mean_applicable(rows: list[dict], key: str) -> float | None:
+    values = [row[key] for row in rows if row.get(key) is not None]
+    return float(np.mean(values)) if values else None
+
+
 def _copy_compact_variant(source: Path, destination: Path) -> None:
     destination.mkdir(parents=True, exist_ok=True)
     for name in (
@@ -48,6 +150,7 @@ def _copy_compact_variant(source: Path, destination: Path) -> None:
         "compatibility_matrix.json",
         "diagnostic_modes.json",
         "expectation_validation.json",
+        "evaluation_order.json",
     ):
         if (source / name).exists():
             shutil.copy2(source / name, destination / name)
@@ -90,11 +193,19 @@ solver exhaustively allocates two distinct personal regions and one separate
 shared-controls region. It emits COMPLETE or controlled-set INFEASIBLE and
 stops before planning or execution.
 
+The scene uses documented CC0 Poly Haven furniture visuals at real-world scale
+with independent analytic collision and RGB-D measurement proxies. Six payload
+objects occupy a separate staging console, preserving a sparse destination
+layout and reliable one-to-one instance association. Visual mesh dimensions
+are never consumed by production inference.
+
 {chr(10).join(table)}
 
 Overall accuracy: {metrics['overall_feasibility_accuracy']:.3f}. Feasible
 recall: {metrics['feasible_recall']:.3f}. Infeasible recall:
-{metrics['infeasible_recall']:.3f}.
+{metrics['infeasible_recall']:.3f}. Selected allocation validity:
+{metrics['functional_region_allocation_validity']:.3f}. F3 greedy-fail/global-
+succeed diagnostic: {metrics['f3_greedy_fails_global_succeeds']:.3f}.
 
 Each variant directory contains the compact witness, compatibility matrix,
 oracle comparison, and representative RGB/semantic/mask overviews. Raw RGB-D
@@ -102,7 +213,8 @@ and point clouds remain in the corresponding untracked `runs/` directory.
 
 The oracle is marked `PRIVILEGED_ORACLE_EVALUATION_ONLY` and is produced only
 after the independent production result. It is never imported by production
-grounding.
+grounding. Every variant includes `evaluation_order.json`; the benchmark root
+contains artifact-derived metrics and `scientific_guard_report.json`.
 """
     (report_dir / "README.md").write_text(readme, encoding="utf-8")
     command = """#!/bin/sh
@@ -123,66 +235,166 @@ OPENBLAS_NUM_THREADS=2 MALLOC_ARENA_MAX=2 \\
 
 
 def _scientific_guards(summary_rows: list[dict], task: dict) -> dict:
-    checks = {
-        "fixed_goal_identical": all(
-            row["natural_language_goal"] == L2_INTEGRATED_GOAL
-            for row in summary_rows
+    production_source = (
+        ROOT / "living_room_region_function.py"
+    ).read_text(encoding="utf-8")
+    guard_specs = {
+        "fixed_goal_identical": (
+            all(
+                row["natural_language_goal"] == L2_INTEGRATED_GOAL
+                for row in summary_rows
+            ),
+            "runtime_artifacts",
+            "all variant run_config natural_language_goal values",
         ),
-        "functional_candidate_kind_region_only": task.get(
-            "requirement_entity_kind"
-        ) == "REGION",
-        "no_object_function_grounding": all(
-            group.get("candidate_entity_kind") == "REGION"
-            for group in task["function_groups"].values()
+        "functional_candidate_kind_region_only": (
+            task.get("requirement_entity_kind") == "REGION",
+            "task_config",
+            "requirement_entity_kind",
         ),
-        "no_fm_or_vlm_call": True,
-        "no_symbolic_planning": True,
-        "no_action_sequence": True,
-        "no_robot": True,
-        "no_navigation": True,
-        "no_tamp": True,
-        "exactly_one_initial_perception_stage": all(
-            row["perception_stage_count"] == 1 for row in summary_rows
+        "no_object_function_grounding": (
+            all(
+                group.get("candidate_entity_kind") == "REGION"
+                for group in task["function_groups"].values()
+            )
+            and "object_functions" not in task,
+            "task_config",
+            "all function candidate_entity_kind values",
         ),
-        "no_sequential_inspection": True,
-        "all_six_payloads_initially_visible": all(
-            row["payload_count"] == 6 for row in summary_rows
+        "no_fm_or_vlm_call": (
+            all(not row["uses_foundation_model"] for row in summary_rows),
+            "runtime_artifacts",
+            "run_config.uses_foundation_model",
         ),
-        "both_seating_targets_initially_visible": all(
-            row["seat_count"] == 2 for row in summary_rows
+        "no_symbolic_planning_or_action_sequence": (
+            all(
+                not row["uses_symbolic_planning"]
+                and not row["has_action_sequence"]
+                for row in summary_rows
+            ),
+            "runtime_artifacts",
+            "run_config plus functional witness",
         ),
-        "all_candidate_regions_initially_observable": all(
-            row["region_count"] == 5 for row in summary_rows
+        "no_robot_navigation_or_tamp": (
+            all(
+                not row["uses_robot"]
+                and not row["uses_navigation"]
+                and not row["uses_tamp"]
+                for row in summary_rows
+            ),
+            "runtime_artifacts",
+            "run_config execution flags",
         ),
-        "generic_region_ids_in_production": all(
-            row["generic_region_ids"] for row in summary_rows
+        "exactly_one_initial_perception_stage": (
+            all(row["perception_stage_count"] == 1 for row in summary_rows),
+            "runtime_artifacts",
+            "perception_stage_count and INITIAL metadata",
         ),
-        "proposal_labels_provenance_only": True,
-        "region_dimensions_measured_from_rgbd": True,
-        "semantic_decisions_from_rgb_detector": all(
-            row["detector_backend"] != "none" for row in summary_rows
+        "all_six_payloads_initially_visible": (
+            all(row["payload_count"] == 6 for row in summary_rows),
+            "runtime_artifacts",
+            "payload registry count",
         ),
-        "oracle_separated_from_production": True,
-        "unknown_never_treated_as_true": True,
-        "personal_regions_dedicated_per_target": True,
-        "shared_controls_one_region": True,
-        "cross_function_region_sharing_disabled": task[
-            "allow_cross_function_region_sharing"
-        ] is False,
-        "global_allocation_not_greedy": True,
-        "same_task_requirements_all_variants": True,
-        "no_variant_specific_inference_hacks": True,
-        "visual_mesh_dimensions_not_production_evidence": True,
-        "kitchen_phase1_behavior_unchanged": True,
-        "kitchen_phase2_behavior_unchanged": True,
+        "both_seating_targets_initially_visible": (
+            all(row["seat_count"] == 2 for row in summary_rows),
+            "runtime_artifacts",
+            "seating target registry count",
+        ),
+        "all_candidate_regions_initially_observable": (
+            all(row["region_count"] == 5 for row in summary_rows),
+            "runtime_artifacts",
+            "region registry count",
+        ),
+        "generic_region_ids_in_production": (
+            all(row["generic_region_ids"] for row in summary_rows),
+            "runtime_artifacts",
+            "region registry identifiers",
+        ),
+        "region_dimensions_measured_from_rgbd": (
+            all(row["rgbd_region_provenance"] for row in summary_rows),
+            "measurement_provenance",
+            "selected region evidence paths and purposes",
+        ),
+        "semantic_decisions_from_rgb_detector": (
+            all(row["detector_backend"] != "none" for row in summary_rows),
+            "runtime_artifacts",
+            "detector backend and saved RGB associations",
+        ),
+        "oracle_separated_from_production": (
+            all(row["production_before_oracle"] for row in summary_rows)
+            and "living_room_region_oracle" not in production_source,
+            "execution_order_and_code_structure",
+            "evaluation_order.json plus production module import scan",
+        ),
+        "unknown_never_treated_as_true": (
+            all(row["selected_edges_exclude_unknown"] for row in summary_rows),
+            "compatibility_matrix",
+            "selected compatibility statuses",
+        ),
+        "usage_and_nonsharing_constraints": (
+            task["function_groups"]["personal_refreshment"]["usage_policy"]
+            == "DEDICATED_REGION_PER_TARGET"
+            and task["function_groups"]["shared_controls"]["usage_policy"]
+            == "SHARED_REGION_REQUIRED"
+            and task["allow_cross_function_region_sharing"] is False,
+            "task_config",
+            "function usage policies",
+        ),
+        "global_allocation_not_greedy": (
+            next(
+                row for row in summary_rows
+                if row["variant"] == "F3_GLOBAL_MATCHING_REQUIRED"
+            )["greedy_status"] == "INFEASIBLE"
+            and next(
+                row for row in summary_rows
+                if row["variant"] == "F3_GLOBAL_MATCHING_REQUIRED"
+            )["production_status"] == "COMPLETE",
+            "diagnostic_modes",
+            "F3 greedy/global comparison",
+        ),
+        "same_task_requirements_all_variants": (
+            len({row["task_config_sha256"] for row in summary_rows}) == 1,
+            "runtime_artifacts",
+            "task_requirements hashes",
+        ),
+        "stable_candidate_ranks_all_variants": (
+            len({tuple(row["candidate_ranks"]) for row in summary_rows}) == 1,
+            "resolved_rigs",
+            "candidate ranks",
+        ),
+        "visual_mesh_dimensions_not_production_evidence": (
+            all(
+                row["production_paths_are_measurement_clouds"]
+                for row in summary_rows
+            ),
+            "measurement_provenance",
+            "compatibility evidence paths",
+        ),
+        "f6_physically_distinct_surplus": (
+            next(
+                row
+                for row in summary_rows
+                if row["variant"] == "F6_DECOY_SURPLUS"
+            )["oracle_solution_count"]
+            > next(
+                row for row in summary_rows if row["variant"] == "F0_BASE"
+            )["oracle_solution_count"],
+            "privileged_comparison",
+            "oracle complete solution counts",
+        ),
     }
     return {
         "schema_version": 1,
         "checks": [
-            {"guard": name, "status": "PASS" if passed else "FAIL"}
-            for name, passed in checks.items()
+            {
+                "guard": name,
+                "status": "PASS" if passed else "FAIL",
+                "evidence_type": evidence_type,
+                "evidence": evidence,
+            }
+            for name, (passed, evidence_type, evidence) in guard_specs.items()
         ],
-        "all_passed": all(checks.values()),
+        "all_passed": all(item[0] for item in guard_specs.values()),
     }
 
 
@@ -215,7 +427,6 @@ def main() -> None:
         code = variant_code(scene_name)
         print(f"[L2 REGION BENCHMARK] {code}", flush=True)
         scene = L2LivingRoomRegionScene(scene_name, robot="none")
-        oracle = evaluate_privileged_oracle(scene, task)
         variant_dir = benchmark_dir / code
         rig_path = benchmark_dir / "resolved_rigs" / f"{code}.yaml"
         write_resolved_integrated_rig(scene_name, rig_path)
@@ -230,6 +441,30 @@ def main() -> None:
             width=args.width,
             height=args.height,
         ).run(scene)
+        production_digest = _json_sha256(run.production_result)
+        # The privileged evaluator runs only after production has finished and
+        # persisted its independent decision.
+        oracle = evaluate_privileged_oracle(scene, task)
+        _atomic_json(
+            variant_dir / "evaluation_order.json",
+            {
+                "schema_version": 1,
+                "steps": [
+                    {
+                        "sequence": 1,
+                        "phase": "PRODUCTION_RGBD_GROUNDING",
+                        "artifact": "predicted_feasibility.json",
+                        "production_result_sha256": production_digest,
+                    },
+                    {
+                        "sequence": 2,
+                        "phase": "PRIVILEGED_ORACLE_EVALUATION_ONLY",
+                        "artifact": "oracle_feasibility.json",
+                    },
+                ],
+                "oracle_input_to_production": False,
+            },
+        )
         _atomic_json(variant_dir / "oracle_feasibility.json", oracle)
         _atomic_json(
             variant_dir / "variant_config.json",
@@ -238,24 +473,44 @@ def main() -> None:
                 "scene_name": scene_name,
                 "natural_language_goal": scene.goal,
                 "physical_variant_only": True,
+                "candidate_ranks_modified_for_variant": False,
                 "expected_oracle_status": oracle["status"],
             },
         )
+        allocation_checks = _validate_selected_allocation(run)
         comparison = {
             "variant": code,
             "oracle_status": oracle["status"],
             "production_status": run.production_result["status"],
             "classification_correct": oracle["status"] == run.production_result["status"],
-            "selected_allocation_globally_valid": (
-                run.production_result["status"] == "INFEASIBLE"
-                or len({
-                    item["region_id"]
-                    for item in run.production_result.get("assignments", [])
-                }) == 3
-            ),
+            "production_completed_before_oracle": True,
+            "production_result_sha256_before_oracle": production_digest,
+            "selected_allocation_validation": allocation_checks,
+            "selected_allocation_globally_valid": allocation_checks[
+                "functional_region_allocation_valid"
+            ],
         }
         _atomic_json(variant_dir / "comparison.json", comparison)
         run.validate_expected()
+        run_config = json.loads(
+            (variant_dir / "run_config.json").read_text(encoding="utf-8")
+        )
+        task_artifact = json.loads(
+            (variant_dir / "task_requirements.json").read_text(encoding="utf-8")
+        )
+        selected_rows = [
+            _selected_row(run, assignment)
+            for assignment in run.production_result.get("assignments", [])
+        ]
+        provenance_paths = [
+            path
+            for row_record in selected_rows
+            if row_record is not None
+            for path in (
+                [row_record["region_evidence_path"]]
+                + row_record.get("payload_evidence_paths", [])
+            )
+        ]
         row = {
             "variant": code,
             "scene_name": scene_name,
@@ -271,27 +526,138 @@ def main() -> None:
                 key.startswith("region_") for key in run.region_registry
             ),
             "detector_backend": getattr(detector, "name", "unknown"),
+            "uses_foundation_model": run_config["uses_foundation_model"],
+            "uses_symbolic_planning": run_config["uses_symbolic_planning"],
+            "uses_robot": run_config["uses_robot"],
+            "uses_navigation": False,
+            "uses_tamp": run_config["uses_tamp"],
+            "has_action_sequence": bool(
+                json.loads(
+                    (variant_dir / "functional_region_witness.json").read_text(
+                        encoding="utf-8"
+                    )
+                ).get("action_sequence")
+            ),
             "semantic_only_status": run.diagnostics["semantic_only"]["status"],
             "geometry_only_status": run.diagnostics["geometry_only"]["status"],
             "joint_status": run.production_result["status"],
+            "target_agnostic_status": run.diagnostics[
+                "target_agnostic_count"
+            ]["status"],
+            "greedy_status": run.diagnostics[
+                "greedy_target_specific"
+            ]["status"],
+            "oracle_solution_count": oracle["complete_solution_count"],
+            "candidate_ranks": [
+                value["candidate_rank"]
+                for value in yaml_safe_load(rig_path)[
+                    "region_selectors"
+                ].values()
+            ],
+            "task_config_sha256": _json_sha256(task_artifact),
+            "production_before_oracle": True,
+            "selected_edges_exclude_unknown": all(
+                item is not None and item["compatibility_status"] == "TRUE"
+                for item in selected_rows
+            ),
+            "rgbd_region_provenance": all(
+                record["provenance"]["measurement_purpose"]
+                == "REGION_MEASUREMENT_EVIDENCE"
+                and record["provenance"]["measurement_cloud_path"].startswith(
+                    "observation/regions/"
+                )
+                for record in run.region_registry.values()
+            ),
+            "production_paths_are_measurement_clouds": all(
+                path.startswith(("observation/regions/", "observation/payloads/"))
+                and path.endswith("/fused.ply")
+                for path in provenance_paths
+            ),
+            **allocation_checks,
         }
         rows.append(row)
     feasible = [row for row in rows if row["oracle_status"] == "COMPLETE"]
     infeasible = [row for row in rows if row["oracle_status"] == "INFEASIBLE"]
+    produced_feasible = [
+        row for row in rows if row["production_status"] == "COMPLETE"
+    ]
     metrics = {
-        "overall_feasibility_accuracy": float(np.mean([row["correct"] for row in rows])),
-        "feasible_recall": float(np.mean([row["production_status"] == "COMPLETE" for row in feasible])),
-        "infeasible_recall": float(np.mean([row["production_status"] == "INFEASIBLE" for row in infeasible])),
-        "false_feasible_count": sum(row["oracle_status"] == "INFEASIBLE" and row["production_status"] == "COMPLETE" for row in rows),
-        "false_infeasible_count": sum(row["oracle_status"] == "COMPLETE" and row["production_status"] == "INFEASIBLE" for row in rows),
-        "functional_region_allocation_validity": float(np.mean([row["correct"] for row in rows])),
-        "personal_target_coverage_accuracy": float(np.mean([row["correct"] for row in rows])),
-        "shared_controls_allocation_validity": float(np.mean([row["correct"] for row in rows])),
-        "dedicated_personal_region_distinctness_validity": 1.0,
-        "shared_controls_colocation_validity": 1.0,
-        "cross_function_nonsharing_validity": 1.0,
+        "overall_feasibility_accuracy": float(
+            np.mean([row["correct"] for row in rows])
+        ),
+        "feasible_recall": float(
+            np.mean(
+                [row["production_status"] == "COMPLETE" for row in feasible]
+            )
+        ),
+        "infeasible_recall": float(
+            np.mean(
+                [
+                    row["production_status"] == "INFEASIBLE"
+                    for row in infeasible
+                ]
+            )
+        ),
+        "false_feasible_count": sum(
+            row["oracle_status"] == "INFEASIBLE"
+            and row["production_status"] == "COMPLETE"
+            for row in rows
+        ),
+        "false_infeasible_count": sum(
+            row["oracle_status"] == "COMPLETE"
+            and row["production_status"] == "INFEASIBLE"
+            for row in rows
+        ),
+        "functional_region_allocation_validity": _mean_applicable(
+            produced_feasible, "functional_region_allocation_valid"
+        ),
+        "personal_target_coverage": _mean_applicable(
+            produced_feasible, "personal_target_coverage"
+        ),
+        "personal_region_distinctness": _mean_applicable(
+            produced_feasible, "personal_region_distinctness"
+        ),
+        "shared_controls_colocation": _mean_applicable(
+            produced_feasible, "shared_controls_colocation"
+        ),
+        "cross_function_nonsharing": _mean_applicable(
+            produced_feasible, "cross_function_nonsharing"
+        ),
+        "selected_compatibility_edge_validity": _mean_applicable(
+            produced_feasible, "selected_compatibility_edges_valid"
+        ),
         "global_matching_correctness": float(np.mean([row["correct"] for row in rows])),
-        "permutation_layout_consistency": float(np.mean([row["correct"] for row in rows if row["variant"].startswith(("F0", "F1", "F2"))])),
+        "permutation_robustness": float(
+            next(row for row in rows if row["variant"] == "F0_BASE")[
+                "production_status"
+            ]
+            == next(
+                row
+                for row in rows
+                if row["variant"] == "F2_INSTANCE_ORDER_PERMUTED"
+            )["production_status"]
+        ),
+        "layout_control_consistency": float(
+            all(
+                next(row for row in rows if row["variant"] == code)["production_status"]
+                == "COMPLETE"
+                for code in ("F0_BASE", "F1_LAYOUT_SWAPPED")
+            )
+        ),
+        "f3_greedy_fails_global_succeeds": float(
+            next(
+                row
+                for row in rows
+                if row["variant"] == "F3_GLOBAL_MATCHING_REQUIRED"
+            )["greedy_status"]
+            == "INFEASIBLE"
+            and next(
+                row
+                for row in rows
+                if row["variant"] == "F3_GLOBAL_MATCHING_REQUIRED"
+            )["production_status"]
+            == "COMPLETE"
+        ),
     }
     summary = {"schema_version": 1, "rows": rows, "metrics": metrics}
     guards = _scientific_guards(rows, task)

@@ -1,7 +1,18 @@
 {
   "classification_correct": true,
   "oracle_status": "COMPLETE",
+  "production_completed_before_oracle": true,
+  "production_result_sha256_before_oracle": "6679f1ea72920faa53163f9682c64bd23998b0df2a999a31fe380e2dd8b39bf8",
   "production_status": "COMPLETE",
   "selected_allocation_globally_valid": true,
+  "selected_allocation_validation": {
+    "applicable": true,
+    "cross_function_nonsharing": true,
+    "functional_region_allocation_valid": true,
+    "personal_region_distinctness": true,
+    "personal_target_coverage": true,
+    "selected_compatibility_edges_valid": true,
+    "shared_controls_colocation": true
+  },
   "variant": "F5_SHARED_ALTERNATIVE"
 }

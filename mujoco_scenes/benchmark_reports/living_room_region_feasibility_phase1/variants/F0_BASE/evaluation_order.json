@@ -1,0 +1,17 @@
+{
+  "oracle_input_to_production": false,
+  "schema_version": 1,
+  "steps": [
+    {
+      "artifact": "predicted_feasibility.json",
+      "phase": "PRODUCTION_RGBD_GROUNDING",
+      "production_result_sha256": "347714d2739a7091fee3e43839e54bf23f349762cf10c6aa583714f0ab2c1a2d",
+      "sequence": 1
+    },
+    {
+      "artifact": "oracle_feasibility.json",
+      "phase": "PRIVILEGED_ORACLE_EVALUATION_ONLY",
+      "sequence": 2
+    }
+  ]
+}

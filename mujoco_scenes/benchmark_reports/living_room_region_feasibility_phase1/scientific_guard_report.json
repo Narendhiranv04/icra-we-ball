@@ -2,119 +2,129 @@
   "all_passed": true,
   "checks": [
     {
+      "evidence": "all variant run_config natural_language_goal values",
+      "evidence_type": "runtime_artifacts",
       "guard": "fixed_goal_identical",
       "status": "PASS"
     },
     {
+      "evidence": "requirement_entity_kind",
+      "evidence_type": "task_config",
       "guard": "functional_candidate_kind_region_only",
       "status": "PASS"
     },
     {
+      "evidence": "all function candidate_entity_kind values",
+      "evidence_type": "task_config",
       "guard": "no_object_function_grounding",
       "status": "PASS"
     },
     {
+      "evidence": "run_config.uses_foundation_model",
+      "evidence_type": "runtime_artifacts",
       "guard": "no_fm_or_vlm_call",
       "status": "PASS"
     },
     {
-      "guard": "no_symbolic_planning",
+      "evidence": "run_config plus functional witness",
+      "evidence_type": "runtime_artifacts",
+      "guard": "no_symbolic_planning_or_action_sequence",
       "status": "PASS"
     },
     {
-      "guard": "no_action_sequence",
+      "evidence": "run_config execution flags",
+      "evidence_type": "runtime_artifacts",
+      "guard": "no_robot_navigation_or_tamp",
       "status": "PASS"
     },
     {
-      "guard": "no_robot",
-      "status": "PASS"
-    },
-    {
-      "guard": "no_navigation",
-      "status": "PASS"
-    },
-    {
-      "guard": "no_tamp",
-      "status": "PASS"
-    },
-    {
+      "evidence": "perception_stage_count and INITIAL metadata",
+      "evidence_type": "runtime_artifacts",
       "guard": "exactly_one_initial_perception_stage",
       "status": "PASS"
     },
     {
-      "guard": "no_sequential_inspection",
-      "status": "PASS"
-    },
-    {
+      "evidence": "payload registry count",
+      "evidence_type": "runtime_artifacts",
       "guard": "all_six_payloads_initially_visible",
       "status": "PASS"
     },
     {
+      "evidence": "seating target registry count",
+      "evidence_type": "runtime_artifacts",
       "guard": "both_seating_targets_initially_visible",
       "status": "PASS"
     },
     {
+      "evidence": "region registry count",
+      "evidence_type": "runtime_artifacts",
       "guard": "all_candidate_regions_initially_observable",
       "status": "PASS"
     },
     {
+      "evidence": "region registry identifiers",
+      "evidence_type": "runtime_artifacts",
       "guard": "generic_region_ids_in_production",
       "status": "PASS"
     },
     {
-      "guard": "proposal_labels_provenance_only",
-      "status": "PASS"
-    },
-    {
+      "evidence": "selected region evidence paths and purposes",
+      "evidence_type": "measurement_provenance",
       "guard": "region_dimensions_measured_from_rgbd",
       "status": "PASS"
     },
     {
+      "evidence": "detector backend and saved RGB associations",
+      "evidence_type": "runtime_artifacts",
       "guard": "semantic_decisions_from_rgb_detector",
       "status": "PASS"
     },
     {
+      "evidence": "evaluation_order.json plus production module import scan",
+      "evidence_type": "execution_order_and_code_structure",
       "guard": "oracle_separated_from_production",
       "status": "PASS"
     },
     {
+      "evidence": "selected compatibility statuses",
+      "evidence_type": "compatibility_matrix",
       "guard": "unknown_never_treated_as_true",
       "status": "PASS"
     },
     {
-      "guard": "personal_regions_dedicated_per_target",
+      "evidence": "function usage policies",
+      "evidence_type": "task_config",
+      "guard": "usage_and_nonsharing_constraints",
       "status": "PASS"
     },
     {
-      "guard": "shared_controls_one_region",
-      "status": "PASS"
-    },
-    {
-      "guard": "cross_function_region_sharing_disabled",
-      "status": "PASS"
-    },
-    {
+      "evidence": "F3 greedy/global comparison",
+      "evidence_type": "diagnostic_modes",
       "guard": "global_allocation_not_greedy",
       "status": "PASS"
     },
     {
+      "evidence": "task_requirements hashes",
+      "evidence_type": "runtime_artifacts",
       "guard": "same_task_requirements_all_variants",
       "status": "PASS"
     },
     {
-      "guard": "no_variant_specific_inference_hacks",
+      "evidence": "candidate ranks",
+      "evidence_type": "resolved_rigs",
+      "guard": "stable_candidate_ranks_all_variants",
       "status": "PASS"
     },
     {
+      "evidence": "compatibility evidence paths",
+      "evidence_type": "measurement_provenance",
       "guard": "visual_mesh_dimensions_not_production_evidence",
       "status": "PASS"
     },
     {
-      "guard": "kitchen_phase1_behavior_unchanged",
-      "status": "PASS"
-    },
-    {
-      "guard": "kitchen_phase2_behavior_unchanged",
+      "evidence": "oracle complete solution counts",
+      "evidence_type": "privileged_comparison",
+      "guard": "f6_physically_distinct_surplus",
       "status": "PASS"
     }
   ],

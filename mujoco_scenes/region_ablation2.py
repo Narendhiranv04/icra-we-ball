@@ -1733,6 +1733,12 @@ class RegionAblation2Run:
         role_categories = self.task["semantic_requirements"]["payload_roles"]
         for object_id, record in self.observation.payloads.items():
             properties = extract_payload_properties(record["evidence"])
+            measurement_points = record["evidence"].measurement_points
+            observed_centroid = (
+                np.median(measurement_points, axis=0).tolist()
+                if len(measurement_points)
+                else None
+            )
             semantic = semantics[object_id]
             role = None
             if semantic.get("status") == "SUPPORTED":
@@ -1753,6 +1759,7 @@ class RegionAblation2Run:
                     "observation_count": 1,
                 },
                 "geometry": properties,
+                "observed_centroid_world_m": observed_centroid,
                 "semantics": semantic,
                 "semantic_payload_role": role,
                 "provenance": {

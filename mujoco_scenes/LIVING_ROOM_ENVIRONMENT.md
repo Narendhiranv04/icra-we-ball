@@ -46,6 +46,25 @@ controlled simulator layouts, no learned free-space decomposition, and no
 placement/manipulation feasibility. The redesign provides realistic textured
 household assets and coherent furniture-scale simulation, not photorealism.
 
+## Integrated REGION-function benchmark environment
+
+The authoritative `L2_integrated_living_room_region_function_*` family uses a
+separate sparse, furniture-scale layout. Two identical Poly Haven lounge
+chairs are the seating targets; two side tables, an accent table, a coffee
+table, and a configurable alternate table are the five neutral candidate
+regions. A media console and TV establish the viewing context. A separate
+south staging console holds the six payload operands in three visually
+separated pairs so INITIAL RGB detection does not depend on cluttered placement
+on the candidate regions.
+
+The external visual furniture is documented with exact hashes and dimensions
+in `assets/living_room_realistic/manifest.json`. Independent invisible box
+proxies provide contact, instance masks, and stage-local RGB-D evidence. The
+visual meshes and catalogue dimensions never enter production compatibility.
+All thirteen variants retain the same task requirements and deterministic
+candidate ranks. They alter physical furniture size, pose, or appearance
+instead of inference thresholds or candidate order.
+
 The `L1_living_room` scene is a separate, rigid-only MuJoCo environment for
 Google Robot navigation and manipulation experiments. It does not replace or
 modify the S1 kitchen. The room contains a fixed L-shaped couch along the west

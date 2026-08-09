@@ -4,15 +4,16 @@ from __future__ import annotations
 
 import itertools
 import json
+import xml.etree.ElementTree as ET
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import yaml
 
 from mujoco_scenes.region_ablation2 import (
-    DEFAULT_RIG_CONFIG,
     RegionAblation2Run,
     _atomic_json,
     _semantic_role,
@@ -29,6 +30,9 @@ ROOT = Path(__file__).resolve().parent
 DEFAULT_TASK_CONFIG = ROOT / "configs" / "l2_integrated_region_function_task.yaml"
 DEFAULT_SEMANTIC_VOCABULARY = (
     ROOT / "configs" / "l2_integrated_region_function_semantic_vocabulary.yaml"
+)
+DEFAULT_INTEGRATED_RIG_CONFIG = (
+    ROOT / "configs" / "l2_integrated_region_function_rig.yaml"
 )
 PRODUCTION_MODE = "joint"
 INTEGRATED_PREFIX = "L2_integrated_living_room_region_function_"
@@ -72,43 +76,63 @@ def variant_code(scene_name: str) -> str:
     return code
 
 
-def _shift_volume(volume: dict[str, list[float]], dx: float, dy: float) -> None:
-    for key in ("minimum_world_m", "maximum_world_m"):
-        volume[key][0] += dx
-        volume[key][1] += dy
-
-
 def write_resolved_integrated_rig(scene_name: str, destination: Path) -> Path:
-    """Resolve opaque proposal gates; never expose function or validity."""
-    with DEFAULT_RIG_CONFIG.open(encoding="utf-8") as source:
+    """Resolve tight opaque evidence gates around the constructed supports."""
+    with DEFAULT_INTEGRATED_RIG_CONFIG.open(encoding="utf-8") as source:
         config = yaml.safe_load(source)
     config["entity_id_prefixes"] = {"seating_target": "seat"}
-    code = variant_code(scene_name)
-    selectors = config["region_selectors"]
-    shifts: dict[str, tuple[float, float]] = {}
-    if code == "F3_GLOBAL_MATCHING_REQUIRED":
-        shifts["surface_02"] = (-1.48, 0.12)
-        selectors["surface_01"]["candidate_rank"] = 2
-        selectors["surface_02"]["candidate_rank"] = 1
-    elif code == "F4_PERSONAL_GEOMETRY_ALTERNATIVE":
-        shifts["surface_03"] = (-0.65, -0.37)
-    elif code == "F5_SHARED_ALTERNATIVE":
-        shifts["surface_03"] = (0.0, -0.42)
-    elif code == "I0_PERSONAL_SEMANTIC_DEFICIT":
-        shifts["surface_03"] = (0.72, -0.10)
-    elif code == "I2_PERSONAL_TARGET_COVERAGE_FAILURE":
-        shifts.update(
-            {"surface_02": (-2.63, -0.26), "surface_03": (-0.45, 0.10)}
-        )
-    elif code == "I4_SHARED_CONTEXT_FAILURE":
-        shifts["surface_04"] = (1.78, -0.07)
-        shifts["surface_03"] = (1.78, -0.10)
-    elif code == "I5_CROSS_FUNCTION_CONFLICT":
-        shifts.update(
-            {"surface_02": (-1.28, 0.12), "surface_03": (-1.45, -0.12)}
-        )
-    for selector_id, (dx, dy) in shifts.items():
-        _shift_volume(selectors[selector_id]["volume"], dx, dy)
+    # Import locally to retain the production/oracle dependency boundary.
+    from mujoco_scenes.living_room_region_scene import build_l2_region_xml
+
+    root = ET.fromstring(build_l2_region_xml(scene_name, robot="none"))
+    support_names = (
+        "a2_personal_left_top",
+        "a2_personal_right_top",
+        "a2_shared_drink_top",
+        "a2_control_table_top",
+        "a2_rug_surface",
+    )
+    for selector_id, geom_name in zip(
+        config["region_selectors"], support_names
+    ):
+        geom = root.find(f".//geom[@name='{geom_name}']")
+        center = [float(value) for value in geom.get("pos").split()]
+        half = [float(value) for value in geom.get("size").split()]
+        margin_xy = 0.045
+        config["region_selectors"][selector_id]["volume"] = {
+            "minimum_world_m": [
+                center[0] - half[0] - margin_xy,
+                center[1] - half[1] - margin_xy,
+                center[2] - half[2] - 0.025,
+            ],
+            "maximum_world_m": [
+                center[0] + half[0] + margin_xy,
+                center[1] + half[1] + margin_xy,
+                center[2] + half[2] + 0.040,
+            ],
+        }
+    for selector_id, body_name in zip(
+        config["seating_selectors"], ("a2_seat_left", "a2_seat_right")
+    ):
+        body = root.find(f".//body[@name='{body_name}']")
+        minimum = [float("inf")] * 3
+        maximum = [-float("inf")] * 3
+        for geom in body.findall("geom"):
+            if geom.get("type", "sphere") != "box":
+                continue
+            center = [float(value) for value in geom.get("pos", "0 0 0").split()]
+            half = [float(value) for value in geom.get("size").split()]
+            for axis in range(3):
+                minimum[axis] = min(minimum[axis], center[axis] - half[axis])
+                maximum[axis] = max(maximum[axis], center[axis] + half[axis])
+        config["seating_selectors"][selector_id]["volume"] = {
+            "minimum_world_m": [
+                minimum[0] - 0.10, minimum[1] - 0.10, max(0.0, minimum[2] - 0.04)
+            ],
+            "maximum_world_m": [
+                maximum[0] + 0.10, maximum[1] + 0.10, maximum[2] + 0.08
+            ],
+        }
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
     return destination
@@ -403,10 +427,59 @@ class IntegratedLivingRoomRegionRun(RegionAblation2Run):
 
     def _build_compatibility(self) -> None:
         payloads = self._required_payloads()
-        seats = sorted(self.seating_registry)
-        drinks = payloads.get("drink", [])[:2]
-        snacks = payloads.get("snack_container", [])[:2]
-        bundles = list(zip(drinks, snacks))
+        personal_group = self.task["payload_groups"][
+            "personal_refreshment_sets"
+        ]
+        required_count = int(personal_group["count"])
+        drinks = payloads.get("drink", [])
+        snacks = payloads.get("snack_container", [])
+        if len(drinks) < required_count or len(snacks) < required_count:
+            bundles = []
+        else:
+            candidates = []
+            for selected_drinks in itertools.permutations(drinks, required_count):
+                for selected_snacks in itertools.permutations(snacks, required_count):
+                    pairs = list(zip(selected_drinks, selected_snacks))
+                    distance = sum(
+                        float(
+                            np.linalg.norm(
+                                np.asarray(
+                                    self.payload_registry[drink][
+                                        "observed_centroid_world_m"
+                                    ],
+                                    dtype=float,
+                                )[:2]
+                                - np.asarray(
+                                    self.payload_registry[snack][
+                                        "observed_centroid_world_m"
+                                    ],
+                                    dtype=float,
+                                )[:2]
+                            )
+                        )
+                        for drink, snack in pairs
+                    )
+                    canonical = tuple(sorted(tuple(sorted(pair)) for pair in pairs))
+                    candidates.append((distance, canonical, pairs))
+            _distance, _tie_break, bundles = min(candidates)
+        bundles.sort(
+            key=lambda bundle: float(
+                np.mean(
+                    [
+                        self.payload_registry[object_id][
+                            "observed_centroid_world_m"
+                        ][0]
+                        for object_id in bundle
+                    ]
+                )
+            )
+        )
+        seats = sorted(
+            self.seating_registry,
+            key=lambda seat_id: float(
+                self.seating_registry[seat_id]["centroid_world_m"][0]
+            ),
+        )
         personal_role = self.task["semantic_requirements"]["region_roles"][
             "personal_refreshment_region"
         ]

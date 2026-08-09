@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 import inspect
+import hashlib
+import json
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import mujoco
+import numpy as np
 import pytest
+import yaml
 
 from mujoco_scenes.living_room_region_function import (
     DEFAULT_TASK_CONFIG,
@@ -20,6 +25,7 @@ from mujoco_scenes.living_room_region_oracle import (
     evaluate_privileged_oracle,
 )
 from mujoco_scenes.living_room_region_scene import (
+    INTEGRATED_ROOM_LAYOUT,
     L2_INTEGRATED_GOAL,
     L2_INTEGRATED_SCENES,
     L2LivingRoomRegionScene,
@@ -29,6 +35,7 @@ from mujoco_scenes.region_ablation2 import InitialEvidenceCapture, evaluate_fits
 
 
 TASK = load_integrated_task()
+ASSET_ROOT = Path(__file__).resolve().parents[1] / "assets" / "living_room_realistic"
 
 
 def _personal(slot, target, region, rank=1, status="TRUE"):
@@ -238,3 +245,140 @@ def test_privileged_oracle_matches_curated_physical_outcome(scene_name):
     assert oracle["artifact_classification"] == ORACLE_MARKER
     assert oracle["production_consumed_this_artifact"] is False
     assert oracle["status"] == EXPECTED_VARIANTS[variant_code(scene_name)]
+
+
+def test_external_asset_manifest_is_complete_cc0_and_hash_verified():
+    manifest = json.loads((ASSET_ROOT / "manifest.json").read_text())
+    assert manifest["schema_version"] == 1
+    assert len(manifest["assets"]) == 5
+    assert {item["source"] for item in manifest["assets"]} == {"Poly Haven"}
+    assert {item["license"] for item in manifest["assets"]} == {"CC0-1.0"}
+    assert all(item["source_author"] for item in manifest["assets"])
+    for asset in manifest["assets"]:
+        assert asset["download_date"] == "2026-08-09"
+        assert asset["scene_instances"]
+        for part in asset["processed_parts"]:
+            mesh = Path(__file__).resolve().parents[1] / part["processed_filename"]
+            texture = Path(__file__).resolve().parents[1] / part["texture_file"]
+            assert hashlib.sha256(mesh.read_bytes()).hexdigest() == part["processed_sha256"]
+            assert hashlib.sha256(texture.read_bytes()).hexdigest() == part["texture_sha256"]
+
+
+def test_integrated_room_is_sparse_scaled_and_has_canonical_spawn():
+    root = build_l2_region_xml(L2_INTEGRATED_SCENES[0], "none")
+    assert "integrated_realistic_visual" in root
+    assert "l2_canonical_robot_spawn" in root
+    assert INTEGRATED_ROOM_LAYOUT["chair_left"][0] < -1.0
+    assert INTEGRATED_ROOM_LAYOUT["chair_right"][0] > 1.0
+    assert INTEGRATED_ROOM_LAYOUT["staging_table"][1] < -1.5
+    assert INTEGRATED_ROOM_LAYOUT["media_console"][1] > 2.0
+
+
+def test_integrated_payloads_are_spaced_without_xy_overlap():
+    scene = L2LivingRoomRegionScene(L2_INTEGRATED_SCENES[0], robot="none")
+    body_names = (
+        "a2_drink_left", "a2_snack_left", "a2_drink_right",
+        "a2_snack_right", "a2_remote_payload", "a2_controller_payload",
+    )
+    centers = []
+    for name in body_names:
+        body_id = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_BODY, name)
+        centers.append(scene.data.xpos[body_id, :2].copy())
+    distances = [
+        float(np.linalg.norm(first - second))
+        for index, first in enumerate(centers)
+        for second in centers[index + 1 :]
+    ]
+    assert min(distances) >= 0.20
+
+
+@pytest.mark.parametrize("scene_name", L2_INTEGRATED_SCENES)
+def test_candidate_supports_do_not_intersect_each_other_or_seating(scene_name):
+    root = ET.fromstring(build_l2_region_xml(scene_name, "none"))
+    support_names = (
+        "a2_personal_left_top", "a2_personal_right_top",
+        "a2_shared_drink_top", "a2_control_table_top",
+    )
+    seat_names = tuple(
+        f"a2_seat_{side}_{part}"
+        for side in ("left", "right")
+        for part in ("base", "cushion", "back", "arm_l", "arm_r")
+    )
+
+    def rectangle(name):
+        geom = root.find(f".//geom[@name='{name}']")
+        center = np.fromstring(geom.get("pos"), sep=" ")[:2]
+        half = np.fromstring(geom.get("size"), sep=" ")[:2]
+        return center - half, center + half
+
+    supports = {name: rectangle(name) for name in support_names}
+    seats = {name: rectangle(name) for name in seat_names}
+
+    def overlaps(first, second):
+        return bool(
+            np.all(first[0] < second[1] - 1e-6)
+            and np.all(second[0] < first[1] - 1e-6)
+        )
+
+    support_items = list(supports.items())
+    for index, (first_name, first) in enumerate(support_items):
+        for second_name, second in support_items[index + 1 :]:
+            assert not overlaps(first, second), (first_name, second_name)
+        for seat_name, seat in seats.items():
+            assert not overlaps(first, seat), (first_name, seat_name)
+
+
+def test_integrated_camera_rig_has_five_distinct_calibrated_views(tmp_path):
+    rig_paths = []
+    ranks = []
+    for scene_name in L2_INTEGRATED_SCENES:
+        path = write_resolved_integrated_rig(scene_name, tmp_path / f"{variant_code(scene_name)}.yaml")
+        config = yaml.safe_load(path.read_text())
+        rig_paths.append(tuple(config["camera_slots"].values()))
+        ranks.append(tuple(row["candidate_rank"] for row in config["region_selectors"].values()))
+        assert len(config["capture"]["cameras"]) == 5
+        positions = {
+            tuple(row["position_world_m"])
+            for row in config["capture"]["cameras"].values()
+        }
+        assert len(positions) == 5
+        assert all(row["volume"] for row in config["region_selectors"].values())
+    assert len(set(rig_paths)) == 1
+    assert len(set(ranks)) == 1
+
+
+def test_f6_surplus_is_physically_distinct_and_has_more_oracle_solutions():
+    by_code = {
+        variant_code(name): evaluate_privileged_oracle(
+            L2LivingRoomRegionScene(name, robot="none"), TASK
+        )
+        for name in L2_INTEGRATED_SCENES
+        if variant_code(name) in {"F0_BASE", "F6_DECOY_SURPLUS"}
+    }
+    assert by_code["F6_DECOY_SURPLUS"]["complete_solution_count"] > by_code["F0_BASE"]["complete_solution_count"]
+
+
+def test_oracle_payload_footprints_come_from_instantiated_geometry():
+    source = inspect.getsource(
+        __import__("mujoco_scenes.living_room_region_oracle", fromlist=["x"])
+    )
+    assert "_body_collision_footprint" in source
+    assert "instantiated_collision_geom_world_aabb_evaluation_only" in source
+    assert "PAYLOAD_FOOTPRINT" not in source
+
+
+def test_benchmark_runs_production_before_privileged_oracle():
+    source = inspect.getsource(
+        __import__("mujoco_scenes.run_living_room_region_benchmark", fromlist=["x"]).main
+    )
+    production_position = source.index(").run(scene)")
+    oracle_position = source.index("evaluate_privileged_oracle(scene, task)")
+    assert production_position < oracle_position
+    assert "evaluation_order.json" in source
+
+
+def test_task_payload_grouping_is_observation_based_not_id_order():
+    source = inspect.getsource(IntegratedLivingRoomRegionRun._build_compatibility)
+    assert "observed_centroid_world_m" in source
+    assert "itertools.permutations" in source
+    assert "MINIMUM_TOTAL_OBSERVED_CENTROID_DISTANCE" == TASK["payload_groups"]["personal_refreshment_sets"]["grouping_policy"]

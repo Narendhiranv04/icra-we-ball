@@ -1,14 +1,18 @@
-Focused living-room command:
-MUJOCO_GL=egl PYOPENGL_PLATFORM=egl .venv/bin/python -m pytest -q mujoco_scenes/tests/test_living_room_region_function.py mujoco_scenes/tests/test_region_ablation2.py mujoco_scenes/tests/test_region_ablation3.py mujoco_scenes/tests/test_region_grounding.py
-Result: 145 passed in 10.31s
+Focused integrated living-room command:
+MUJOCO_GL=egl PYOPENGL_PLATFORM=egl .venv/bin/python -m pytest mujoco_scenes/tests/test_living_room_region_function.py -q
+Result: 74 passed in 8.66s
+
+Region-grounding regression command:
+MUJOCO_GL=egl PYOPENGL_PLATFORM=egl .venv/bin/python -m pytest mujoco_scenes/tests/test_region_grounding.py mujoco_scenes/tests/test_region_ablation2.py mujoco_scenes/tests/test_region_ablation3.py -q
+Result: 92 passed in 6.52s
 
 Frozen kitchen Phase-1/Phase-2 regression command:
-MUJOCO_GL=egl PYOPENGL_PLATFORM=egl .venv/bin/python -m pytest -q mujoco_scenes/tests/test_kitchen_feasibility_benchmark.py mujoco_scenes/tests/test_symbolic_kitchen_planning.py mujoco_scenes/tests/test_usage_policy_grounding.py mujoco_scenes/tests/test_usage_policy_reporting.py
-Result: 59 passed in 22.65s
+MUJOCO_GL=egl PYOPENGL_PLATFORM=egl .venv/bin/python -m pytest mujoco_scenes/tests/test_kitchen_feasibility_benchmark.py mujoco_scenes/tests/test_s1_integrated_kitchen.py mujoco_scenes/tests/test_symbolic_kitchen_planning.py -q
+Result: 48 passed in 28.89s
 
 Full repository command:
-MUJOCO_GL=egl PYOPENGL_PLATFORM=egl .venv/bin/python -m pytest -q
-Result: 416 passed in 91.83s
+MUJOCO_GL=egl PYOPENGL_PLATFORM=egl .venv/bin/python -m pytest mujoco_scenes/tests -q
+Result: 437 passed in 78.37s
 
 Authoritative production benchmark:
 13 variants, five RGB-D views per variant, YOLO-World 8.4.112 on CPU,

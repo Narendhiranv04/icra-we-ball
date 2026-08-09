@@ -26,6 +26,35 @@ def _geom_record(scene, name: str) -> tuple[np.ndarray, np.ndarray]:
     return scene.data.geom_xpos[geom_id].copy(), scene.model.geom_size[geom_id].copy()
 
 
+def _body_collision_footprint(scene, body_name: str) -> tuple[float, float]:
+    """Derive an exact oracle footprint from instantiated collision geoms."""
+    body_id = mujoco.mj_name2id(
+        scene.model, mujoco.mjtObj.mjOBJ_BODY, body_name
+    )
+    if body_id < 0:
+        raise RuntimeError(f"Oracle payload body missing: {body_name}")
+    points = []
+    for geom_id, owner in enumerate(scene.model.geom_bodyid):
+        if int(owner) != body_id:
+            continue
+        if not (
+            int(scene.model.geom_contype[geom_id])
+            or int(scene.model.geom_conaffinity[geom_id])
+        ):
+            continue
+        local_center = scene.model.geom_aabb[geom_id, :3]
+        half = scene.model.geom_aabb[geom_id, 3:]
+        rotation = scene.data.geom_xmat[geom_id].reshape(3, 3)
+        for signs in itertools.product((-1.0, 1.0), repeat=3):
+            local = local_center + half * np.asarray(signs)
+            points.append(scene.data.geom_xpos[geom_id] + rotation @ local)
+    if not points:
+        raise RuntimeError(f"Oracle payload collision geometry missing: {body_name}")
+    values = np.asarray(points)
+    extents = np.ptp(values[:, :2], axis=0)
+    return float(max(extents)), float(min(extents))
+
+
 def _fits_pair(
     footprints: list[tuple[float, float]],
     region: tuple[float, float],
@@ -101,12 +130,22 @@ def evaluate_privileged_oracle(scene, task: dict[str, Any]) -> dict[str, Any]:
             if int(owner) == body_id
         ]
         seats.append(np.median(scene.data.geom_xpos[geom_ids], axis=0))
-    # Exact collision-proxy footprints, used only by this marked oracle.
+    # Exact footprints are independently derived from the instantiated
+    # collision geometry. No hand-authored payload dimension table is used.
     refreshment_footprints = [
-        [(0.12, 0.12), (0.13, 0.13)],
-        [(0.12, 0.12), (0.13, 0.13)],
+        [
+            _body_collision_footprint(scene, "a2_drink_left"),
+            _body_collision_footprint(scene, "a2_snack_left"),
+        ],
+        [
+            _body_collision_footprint(scene, "a2_drink_right"),
+            _body_collision_footprint(scene, "a2_snack_right"),
+        ],
     ]
-    controls = [(0.21, 0.076), (0.21, 0.17)]
+    controls = [
+        _body_collision_footprint(scene, "a2_remote_payload"),
+        _body_collision_footprint(scene, "a2_controller_payload"),
+    ]
     edge = float(
         task["geometric_requirements"]["payload_set_region"]
         ["edge_clearance_margin_m"]
@@ -216,5 +255,12 @@ def evaluate_privileged_oracle(scene, task: dict[str, Any]) -> dict[str, Any]:
         "shared_compatibility": shared_rows,
         "complete_solution_count": len(solutions),
         "example_solution": solutions[0] if solutions else None,
+        "payload_geometry_source": (
+            "instantiated_collision_geom_world_aabb_evaluation_only"
+        ),
+        "payload_footprints_m": {
+            "refreshment_sets": refreshment_footprints,
+            "shared_controls": controls,
+        },
         "production_consumed_this_artifact": False,
     }

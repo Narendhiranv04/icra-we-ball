@@ -1473,6 +1473,14 @@ all five neutral candidate-region proposals. There is no inspection sequence,
 hidden-region search, robot, object-function predicate, symbolic planning, or
 action execution.
 
+The integrated family uses a sparse furniture-scale room made from documented
+Poly Haven chair and table visuals with separate analytic collision and RGB-D
+measurement proxies. Six payloads are arranged on a dedicated staging console
+rather than cluttering candidate surfaces. Exact source, licence, author,
+scale, transform, and hash provenance is stored in
+`assets/living_room_realistic/manifest.json`; visual mesh dimensions are not
+production evidence.
+
 The future-FM contract is
 `configs/l2_integrated_region_function_task.yaml`. It asks for two distinct
 `PERSONAL_REFRESHMENT_REGION` assignments, one per observed seat and complete
@@ -1519,5 +1527,8 @@ compatibility matrix, diagnostics, and final region witness. The tracked
 compact report retains representative images and result records. The
 independent oracle is explicitly marked
 `PRIVILEGED_ORACLE_EVALUATION_ONLY` and is never imported by production
-grounding. “INFEASIBLE” means no complete allocation exists in this controlled
+grounding. Per-variant `evaluation_order.json` proves that the production
+result was persisted before the privileged oracle ran. Guard and allocation
+metrics are derived from saved runtime artifacts rather than declared
+constants. “INFEASIBLE” means no complete allocation exists in this controlled
 fully observed candidate set; it is not an open-world impossibility claim.

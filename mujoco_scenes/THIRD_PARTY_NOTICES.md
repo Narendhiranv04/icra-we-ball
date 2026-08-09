@@ -137,3 +137,24 @@ remote visual meshes in `assets/movie_night/`. These assets are original to
 this repository. MuJoCo physics continues to use simpler independent analytic
 collision proxies; the generated multi-part meshes are never collision
 geometry.
+
+## Poly Haven living-room furniture
+
+The authoritative integrated REGION-function benchmark uses processed visual
+derivatives of these Poly Haven assets, downloaded on 2026-08-09 under
+[CC0 1.0](https://polyhaven.com/license):
+
+| Asset | Author | Benchmark use |
+|---|---|---|
+| [Modern Arm Chair 01](https://polyhaven.com/a/modern_arm_chair_01) | Vibrant Nordic | two identical seating targets |
+| [Side Table 01](https://polyhaven.com/a/side_table_01) | James Ray Cock | side/flexible destination regions |
+| [Coffee Table 01](https://polyhaven.com/a/CoffeeTable_01) | Fernando Quinn | shared coffee-table destination |
+| [Wooden Table 02](https://polyhaven.com/a/WoodenTable_02) | Fran Calvente | physically undersized alternatives |
+| [Chinese Console Table](https://polyhaven.com/a/chinese_console_table) | Kirill Sannikov | media and staging consoles |
+
+`assets/living_room_realistic/manifest.json` records source URLs, authors,
+download dates, canonical and final dimensions, coordinate conversion,
+per-file SHA-256 hashes, and scene roles. The preparation script converts the
+1k glTF bundles from Y-up to MuJoCo Z-up and exports textured OBJ visual parts.
+Production collision and measurement geometry remains independent analytic
+geometry; the visual meshes are never used as measured functional evidence.

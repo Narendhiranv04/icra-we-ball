@@ -26,8 +26,7 @@
       "candidate_entity_kind": "REGION",
       "function_id": "PERSONAL_REFRESHMENT_REGION",
       "payload_groups": [
-        "refreshment_set_A",
-        "refreshment_set_B"
+        "personal_refreshment_sets"
       ],
       "region_role": "personal_refreshment_region",
       "required_relations": [
@@ -84,7 +83,7 @@
       "relation": "FITS_SET_ON"
     },
     "personal_context": {
-      "maximum_centroid_distance_m": 1.15,
+      "maximum_centroid_distance_m": 1.2,
       "relation": "NEAR_SEAT"
     },
     "unary_region": {
@@ -96,25 +95,23 @@
   },
   "natural_language_goal": "Prepare the living room for two people watching television. Place one refreshment set within easy reach of each person's seating position, and place the TV remote and game controller together on a suitable shared surface accessible to both people.",
   "payload_groups": {
-    "refreshment_set_A": {
-      "required_roles": [
-        "drink",
-        "snack_container"
-      ],
-      "target_index": 0
-    },
-    "refreshment_set_B": {
-      "required_roles": [
-        "drink",
-        "snack_container"
-      ],
-      "target_index": 1
+    "personal_refreshment_sets": {
+      "count": 2,
+      "each_requires": {
+        "drink": 1,
+        "snack_container": 1
+      },
+      "grouping_policy": "MINIMUM_TOTAL_OBSERVED_CENTROID_DISTANCE",
+      "target_assignment_policy": "OBSERVED_X_ORDER",
+      "target_role": "seating_position"
     },
     "shared_control_set": {
-      "required_roles": [
-        "tv_remote",
-        "game_controller"
-      ]
+      "count": 1,
+      "each_requires": {
+        "game_controller": 1,
+        "tv_remote": 1
+      },
+      "grouping_policy": "ALL_REQUIRED_ROLES"
     }
   },
   "requirement_entity_kind": "REGION",
@@ -164,7 +161,6 @@
         "accepted_categories": {
           "central_table": 1,
           "coffee_table": 1,
-          "shared_side_table": 1,
           "side_table": 2
         },
         "rejected_categories": {

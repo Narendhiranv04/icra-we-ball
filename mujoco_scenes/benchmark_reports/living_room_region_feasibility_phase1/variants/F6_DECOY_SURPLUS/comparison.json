@@ -1,7 +1,18 @@
 {
   "classification_correct": true,
   "oracle_status": "COMPLETE",
+  "production_completed_before_oracle": true,
+  "production_result_sha256_before_oracle": "6d507d4c519e2e039f77578af5a70a674a3e1d6dd0a2bab70915e9684d7b54e6",
   "production_status": "COMPLETE",
   "selected_allocation_globally_valid": true,
+  "selected_allocation_validation": {
+    "applicable": true,
+    "cross_function_nonsharing": true,
+    "functional_region_allocation_valid": true,
+    "personal_region_distinctness": true,
+    "personal_target_coverage": true,
+    "selected_compatibility_edges_valid": true,
+    "shared_controls_colocation": true
+  },
   "variant": "F6_DECOY_SURPLUS"
 }
