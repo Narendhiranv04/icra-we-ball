@@ -1,0 +1,108 @@
+{
+  "all_passed": true,
+  "checks": [
+    {
+      "guard": "source_phase1_commit_frozen",
+      "passed": true
+    },
+    {
+      "guard": "source_artifacts_production_only",
+      "passed": true
+    },
+    {
+      "guard": "no_oracle_artifact_consumed",
+      "passed": true
+    },
+    {
+      "guard": "complete_witnesses_compile",
+      "passed": true
+    },
+    {
+      "guard": "infeasible_witnesses_rejected",
+      "passed": true
+    },
+    {
+      "guard": "infeasible_rejection_reason_exact",
+      "passed": true
+    },
+    {
+      "guard": "planner_not_invoked_for_infeasible",
+      "passed": true
+    },
+    {
+      "guard": "six_payload_goals",
+      "passed": true
+    },
+    {
+      "guard": "all_feasible_plans_succeed",
+      "passed": true
+    },
+    {
+      "guard": "all_replays_goal_satisfied",
+      "passed": true
+    },
+    {
+      "guard": "unit_plan_costs",
+      "passed": true
+    },
+    {
+      "guard": "optimal_twelve_action_plans",
+      "passed": true
+    },
+    {
+      "guard": "operator_subset_pick_place",
+      "passed": true
+    },
+    {
+      "guard": "generic_payload_ids_only",
+      "passed": true
+    },
+    {
+      "guard": "exact_witness_bindings_preserved",
+      "passed": true
+    },
+    {
+      "guard": "f6_uses_selected_witness",
+      "passed": true
+    },
+    {
+      "guard": "deterministic_repeatability",
+      "passed": true
+    },
+    {
+      "guard": "compiler_has_no_oracle_import",
+      "passed": true
+    },
+    {
+      "guard": "compiler_has_no_mujoco_import",
+      "passed": true
+    },
+    {
+      "guard": "planner_has_no_mujoco_import",
+      "passed": true
+    },
+    {
+      "guard": "planner_has_no_rgbd_or_detector_import",
+      "passed": true
+    },
+    {
+      "guard": "no_robot_or_tamp_dependency",
+      "passed": true
+    },
+    {
+      "guard": "no_foundation_model_dependency",
+      "passed": true
+    },
+    {
+      "guard": "independent_replay_declares_no_transition_use",
+      "passed": true
+    },
+    {
+      "guard": "pddl_exports_exist",
+      "passed": true
+    }
+  ],
+  "evidence_basis": "Generated manifests, plans, replay artifacts, and import-level source inspection",
+  "guard_count": 25,
+  "passed_count": 25
+}

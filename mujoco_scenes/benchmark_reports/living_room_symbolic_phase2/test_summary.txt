@@ -1,0 +1,20 @@
+Focused Phase-2 command:
+MUJOCO_GL=egl PYOPENGL_PLATFORM=egl .venv/bin/python -m pytest mujoco_scenes/tests/test_symbolic_planning_core.py mujoco_scenes/tests/test_living_room_symbolic_planning.py -q
+Result: 25 passed in 0.42s
+
+Frozen living-room Phase-1 command:
+MUJOCO_GL=egl PYOPENGL_PLATFORM=egl .venv/bin/python -m pytest mujoco_scenes/tests/test_living_room_region_function.py -q
+Result: 77 passed in 8.80s
+
+Frozen kitchen Phase-1/Phase-2 command:
+MUJOCO_GL=egl PYOPENGL_PLATFORM=egl .venv/bin/python -m pytest mujoco_scenes/tests/test_kitchen_feasibility_benchmark.py mujoco_scenes/tests/test_s1_integrated_kitchen.py mujoco_scenes/tests/test_symbolic_kitchen_planning.py -q
+Result: 48 passed in 28.89s
+
+Full repository command:
+MUJOCO_GL=egl PYOPENGL_PLATFORM=egl .venv/bin/python -m pytest mujoco_scenes/tests -q
+Result: 465 passed in 79.11s
+
+Authoritative Phase-2 benchmark:
+python -m mujoco_scenes.run_living_room_phase2_symbolic_benchmark
+Result: 13 variants; F0-F6 planned and independently replayed to
+GOAL_SATISFIED; I0-I5 rejected before planner invocation; 25/25 guards pass.

@@ -1,0 +1,194 @@
+{
+  "final_atoms": [
+    [
+      "hand_empty"
+    ],
+    [
+      "object",
+      "object_0001"
+    ],
+    [
+      "object",
+      "object_0002"
+    ],
+    [
+      "object",
+      "object_0003"
+    ],
+    [
+      "object",
+      "object_0004"
+    ],
+    [
+      "object",
+      "object_0005"
+    ],
+    [
+      "object",
+      "object_0006"
+    ],
+    [
+      "on",
+      "object_0001",
+      "region_0001"
+    ],
+    [
+      "on",
+      "object_0002",
+      "region_0001"
+    ],
+    [
+      "on",
+      "object_0003",
+      "region_0003"
+    ],
+    [
+      "on",
+      "object_0004",
+      "region_0004"
+    ],
+    [
+      "on",
+      "object_0005",
+      "region_0003"
+    ],
+    [
+      "on",
+      "object_0006",
+      "region_0004"
+    ],
+    [
+      "region",
+      "region_0001"
+    ],
+    [
+      "region",
+      "region_0003"
+    ],
+    [
+      "region",
+      "region_0004"
+    ]
+  ],
+  "goal_status": "GOAL_SATISFIED",
+  "missing_goals": [],
+  "status": "VALID",
+  "steps": [
+    {
+      "arguments": [
+        "object_0001"
+      ],
+      "failure": null,
+      "operator": "PICK",
+      "status": "VALID",
+      "step": 0
+    },
+    {
+      "arguments": [
+        "object_0001",
+        "region_0001"
+      ],
+      "failure": null,
+      "operator": "PLACE",
+      "status": "VALID",
+      "step": 1
+    },
+    {
+      "arguments": [
+        "object_0002"
+      ],
+      "failure": null,
+      "operator": "PICK",
+      "status": "VALID",
+      "step": 2
+    },
+    {
+      "arguments": [
+        "object_0002",
+        "region_0001"
+      ],
+      "failure": null,
+      "operator": "PLACE",
+      "status": "VALID",
+      "step": 3
+    },
+    {
+      "arguments": [
+        "object_0003"
+      ],
+      "failure": null,
+      "operator": "PICK",
+      "status": "VALID",
+      "step": 4
+    },
+    {
+      "arguments": [
+        "object_0003",
+        "region_0003"
+      ],
+      "failure": null,
+      "operator": "PLACE",
+      "status": "VALID",
+      "step": 5
+    },
+    {
+      "arguments": [
+        "object_0004"
+      ],
+      "failure": null,
+      "operator": "PICK",
+      "status": "VALID",
+      "step": 6
+    },
+    {
+      "arguments": [
+        "object_0004",
+        "region_0004"
+      ],
+      "failure": null,
+      "operator": "PLACE",
+      "status": "VALID",
+      "step": 7
+    },
+    {
+      "arguments": [
+        "object_0005"
+      ],
+      "failure": null,
+      "operator": "PICK",
+      "status": "VALID",
+      "step": 8
+    },
+    {
+      "arguments": [
+        "object_0005",
+        "region_0003"
+      ],
+      "failure": null,
+      "operator": "PLACE",
+      "status": "VALID",
+      "step": 9
+    },
+    {
+      "arguments": [
+        "object_0006"
+      ],
+      "failure": null,
+      "operator": "PICK",
+      "status": "VALID",
+      "step": 10
+    },
+    {
+      "arguments": [
+        "object_0006",
+        "region_0004"
+      ],
+      "failure": null,
+      "operator": "PLACE",
+      "status": "VALID",
+      "step": 11
+    }
+  ],
+  "uses_planner_transition": false,
+  "validator": "independent_symbolic_replay_v1"
+}

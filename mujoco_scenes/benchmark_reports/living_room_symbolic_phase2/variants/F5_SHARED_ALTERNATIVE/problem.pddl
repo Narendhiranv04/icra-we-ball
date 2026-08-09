@@ -1,0 +1,6 @@
+(define (problem living-room-witness-placement)
+  (:domain living-room-placement)
+  (:objects object_0001 object_0002 object_0003 object_0004 object_0005 object_0006 - object region_0001 region_0003 region_0004 - region)
+  (:init (hand-empty) (available object_0001) (available object_0002) (available object_0003) (available object_0004) (available object_0005) (available object_0006))
+  (:goal (and (on object_0001 region_0001) (on object_0002 region_0001) (on object_0003 region_0003) (on object_0004 region_0004) (on object_0005 region_0003) (on object_0006 region_0004)))
+)
