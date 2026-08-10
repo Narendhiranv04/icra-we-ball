@@ -137,6 +137,35 @@ MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.workshop_scene \
   --robot google --viewer
 ```
 
+Run the complete five-view workshop inspection and then open the final scene:
+
+```bash
+MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.workshop_pointcloud \
+  --robot google --segmentation oracle --viewer
+```
+
+The runner captures `INITIAL`, `LEFT_DRAWER`, and `LOCKED_CABINET` in that
+order. It observes the key in the drawer before applying the labelled
+ground-truth unlock transition, so the final cabinet capture does not bypass
+the workshop prerequisite. Each stage writes the five RGB images, depth maps,
+mask overlays, per-view clouds, fused object clouds, and a summary beneath a
+timestamped `runs/workshop_pointcloud/` directory. The interactive viewer
+opens after capture with the drawer and cabinet visible.
+
+`oracle` means explicit MuJoCo instance masks for simulator debugging. To use
+the same RGB-D reconstruction with image-only masks from the separate SAM 3.1
+server, set its endpoint and select the learned backend:
+
+```bash
+export SAM3_BASE_URL=http://127.0.0.1:8010
+MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.workshop_pointcloud \
+  --robot google --segmentation sam3 --viewer
+```
+
+These are the workshop's five calibrated virtual region-facing cameras, not
+five cameras physically mounted on the Google Robot. The robot is still loaded
+in the scene for visual and future execution integration.
+
 Open both storage regions directly for perception debugging:
 
 ```bash
@@ -145,8 +174,9 @@ MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.workshop_scene \
   --open LOCKED_CABINET --remove-seal --viewer
 ```
 
-This change establishes the physical scene and observable state only. The
-existing `workshop_joint_alternatives.yaml` contract and
+The point-cloud runner establishes workshop observation and reconstruction,
+but not task execution. The existing `workshop_joint_alternatives.yaml`
+contract and
 `workshop_alternatives.py` validator still describe the earlier single-joint
 prototype; updating the functional-requirement, search, and sequencing
 pipeline is intentionally deferred. The `--remove-seal` option applies a

@@ -1,9 +1,12 @@
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import mujoco
 
 from mujoco_scenes.geometry_checker import GeometryChecker, load_inspection_rig_config
 from mujoco_scenes.workshop_alternatives import evaluate_ranked_alternatives
+from mujoco_scenes.workshop_pointcloud import run_workshop_pointcloud
 from mujoco_scenes.workshop_scene import (
     WORKSHOP_CAMERAS,
     WORKSHOP_FUNCTIONAL_REGIONS,
@@ -248,6 +251,36 @@ class WorkshopSceneTests(unittest.TestCase):
             "workshop_long_screw",
         ):
             self.assertGreater(len(right_run.clouds[instance_name].points), 20)
+
+    def test_workshop_pointcloud_runner_captures_all_regions(self):
+        with TemporaryDirectory() as directory:
+            output = Path(directory) / "workshop_run"
+            scene, manifest = run_workshop_pointcloud(
+                output,
+                robot="none",
+                width=320,
+                height=240,
+            )
+
+            self.assertEqual(
+                [stage["region_id"] for stage in manifest["stages"]],
+                ["INITIAL", "LEFT_DRAWER", "LOCKED_CABINET"],
+            )
+            self.assertEqual(manifest["segmentation"], "oracle")
+            self.assertTrue((output / "manifest.json").is_file())
+            drawer_objects = {
+                item["debug_instance_id"]
+                for item in manifest["stages"][1]["objects"]
+            }
+            self.assertIn("workshop_cabinet_key", drawer_objects)
+            for stage in manifest["stages"]:
+                stage_dir = output / stage["directory"]
+                self.assertTrue((stage_dir / "stage_summary.json").is_file())
+                self.assertTrue((stage_dir / stage["combined_ply"]).is_file())
+                self.assertGreater(stage["total_point_count"], 20)
+            self.assertFalse(
+                scene.get_task_scene_state()["locked_cabinet"]["locked"]
+            )
 
 
 class WorkshopAlternativeTests(unittest.TestCase):

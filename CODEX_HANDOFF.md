@@ -1,6 +1,6 @@
 # Codex Project Handoff
 
-Updated: 2026-08-08 (Asia/Kolkata)
+Updated: 2026-08-10 (Asia/Kolkata)
 
 This file is the working context for continuing the project from another Codex
 session after SSHing into this machine. Start the next session by asking Codex
@@ -10,9 +10,10 @@ or discarding uncommitted changes.
 ## Workspace and Git state
 
 - Repository root: `/home/boreddog/Documents/RRC/LH_Extension/V1`
-- Current branch: `three_scene_benchmarks`
-- The branch currently points to `761f43e`, the controlled merge of the
-  expanded living-room region ablations.
+- Current branch: `workshop_joint_prerequisites`
+- The branch currently points to `c24eddf`, the committed workshop joint
+  prerequisite redesign. The dirty worktree adds the workshop-only
+  point-cloud launch path described below.
 - The newest integrated upstream revision is `b4dcbd6`. Its complete L2
   Ablation 1/2/3 implementation and realistic movie-night assets are retained.
 - Generated `reports/` media is deliberately excluded; report generators,
@@ -20,8 +21,10 @@ or discarding uncommitted changes.
 - Do **not** run `git reset`, `git checkout --`, `git clean`, or otherwise remove
   changes unless the user explicitly requests it.
 - Remote: `https://github.com/Narendhiranv04/icra-we-ball.git`
-- Integrated point-cloud reference:
-  `origin/naren/googlePointCloudIntegration` at `b4dcbd6`.
+- Latest fetched point-cloud comparison ref:
+  `origin/naren/googlePointCloudIntegration` at `d898687`. The current branch
+  retains the integrated shared geometry layer from the earlier merge and does
+  not blindly copy the newer kitchen/living-room benchmark phases.
 - The similarly named local branch `naren/pointCloudExtraction` is stale and
   should not be used for comparisons. Compare against the remote ref directly
   after fetching.
@@ -110,8 +113,9 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 MUJOCO_GL=egl \
   .venv/bin/python -m pytest mujoco_scenes/tests -q
 ```
 
-It currently passes 365 tests, including both server workspaces, all three L2
-region ablations, and fresh workshop RGB-D evidence.
+The focused workshop suite passes 12 tests, including the new workshop
+point-cloud runner. The complete repository result is recorded in the
+Validation section after each full run.
 Pytest is declared in `mujoco_scenes/requirements-dev.txt`.
 
 ## Finalized FM, search, and sequencing boundary
@@ -264,6 +268,23 @@ RGB-D evidence for the new contents. Launch it with:
 MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.workshop_scene \
   --robot google --viewer
 ```
+
+`mujoco_scenes/workshop_pointcloud.py` is the workshop-only five-view capture
+entry point. It captures `INITIAL -> LEFT_DRAWER -> LOCKED_CABINET`, observes
+the key before the labelled unlock transition, and exports RGB, depth, mask
+debug views, per-camera PLY files, fused object PLY files, stage summaries, and
+a root manifest. Its default oracle mode launches without a model server:
+
+```bash
+MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.workshop_pointcloud \
+  --robot google --segmentation oracle --viewer
+```
+
+For image-only masks, start `perception_server`, set `SAM3_BASE_URL`, and use
+`--segmentation sam3`. Both modes use the same RGB-D backprojection, region
+gating, and fusion. The cameras are calibrated virtual region-facing cameras;
+the Google Robot is loaded in the same MuJoCo model but these five views are
+not robot-mounted.
 
 Current boundary: this change implements only the scene, observable state,
 camera/inspection configuration, tests, and documentation. It does **not**
@@ -484,10 +505,10 @@ models for inference only.
 
 ## Validation
 
-The latest complete repository test result during this conversation was:
+The latest complete repository test result is:
 
 ```text
-365 passed, 14 warnings
+366 passed, 14 warnings
 ```
 
 The warnings were matplotlib/pyparsing deprecations, not test failures.
