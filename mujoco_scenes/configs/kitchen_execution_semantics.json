@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "rules": [
+    {"contains": ["kettle"], "canonical_label": "kettle", "grasp_family": "KETTLE"},
+    {"contains": ["coffee_jar"], "canonical_label": "coffee_source", "grasp_family": "JAR_SOURCE"},
+    {"contains": ["spoon"], "canonical_label": "spoon", "grasp_family": "UTENSIL"},
+    {"contains": ["fork"], "canonical_label": "fork", "grasp_family": "UTENSIL"},
+    {"contains": ["bowl"], "canonical_label": "bowl", "grasp_family": "BOWL"},
+    {"contains": ["mug"], "canonical_label": "mug", "grasp_family": "VESSEL"},
+    {"contains": ["cup"], "canonical_label": "cup", "grasp_family": "VESSEL"}
+  ],
+  "semantic_compatibility": {
+    "cup": ["cup", "mug"],
+    "mug": ["cup", "mug"],
+    "bowl": ["bowl"],
+    "spoon": ["spoon", "fork"],
+    "fork": ["spoon", "fork"],
+    "kettle": ["kettle"],
+    "coffee_source": ["coffee_source"]
+  },
+  "source_role_semantic_labels": {
+    "water_source": "kettle",
+    "coffee_source": "coffee_source"
+  },
+  "maximum_centroid_error_m": 0.2
+}

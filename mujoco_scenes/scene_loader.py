@@ -1789,9 +1789,15 @@ def build_scene_xml(
             if robot_name == ROBOT_GOOGLE
             else "robot0:gripper_link"
         )
-        supported_objects = {"kettle", "coffee_jar", "sugar_jar", "spoon"}
+        supported_objects = {
+            "kettle", "coffee_jar", "sugar_jar", "spoon", "fork",
+            "mug", "cup", "bowl",
+        }
         for instance_name, object_kind in object_instances:
-            if object_kind not in supported_objects:
+            execution_base_kind = SCENE_OBJECT_VARIANTS.get(
+                object_kind, {}
+            ).get("base", object_kind)
+            if execution_base_kind not in supported_objects:
                 continue
             ET.SubElement(
                 equality,
@@ -1804,7 +1810,7 @@ def build_scene_xml(
                     "solref": "0.01 1",
                 },
             )
-            if object_kind in PASSIVE_HANDLE_OBJECTS:
+            if execution_base_kind in PASSIVE_HANDLE_OBJECTS:
                 # Activated after the initial vertical lift. Unlike the
                 # transport weld, a connect equality fixes only the handle
                 # pinch point and leaves all three rotational DOFs free, so

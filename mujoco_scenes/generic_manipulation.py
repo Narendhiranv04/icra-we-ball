@@ -440,6 +440,9 @@ class CalibratedPickPlaceExecutor:
         base_approach_delta: np.ndarray | None = None,
         arm_command_speed: float = ARM_COMMAND_SPEED,
         intermediate_tracking_tolerance: float = INTERMEDIATE_TRACKING_TOLERANCE,
+        mounting_allowances: dict[frozenset[str], float] | None = None,
+        ik_position_tolerance: float = 0.012,
+        ik_angle_tolerance: float = math.radians(2.0),
     ):
         self.model = model
         self.data = data
@@ -455,6 +458,9 @@ class CalibratedPickPlaceExecutor:
         self.intermediate_tracking_tolerance = float(
             intermediate_tracking_tolerance
         )
+        self.mounting_allowances = mounting_allowances
+        self.ik_position_tolerance = float(ik_position_tolerance)
+        self.ik_angle_tolerance = float(ik_angle_tolerance)
         if pick_specs_override is None:
             scene_objects = CALIBRATED_SCENE_OBJECTS.get(scene_name, ())
             supported_objects = (
@@ -563,6 +569,13 @@ class CalibratedPickPlaceExecutor:
         self.pending_place_rotation: np.ndarray | None = None
         self.configuration_checker: RobotConfigurationCollisionChecker | None = None
         self.collision_guard_tick = 0
+        self.attachment_translation_snap_m: float | None = None
+        self.attachment_angle_snap_rad: float | None = None
+        # Persist the contact evidence that authorized weld activation.  Live
+        # contacts usually disappear during lift, so post-pick validation
+        # must not infer bilateral contact merely from an active weld.
+        self.confirmed_contact_sides: tuple[int, ...] = ()
+        self.confirmed_contact_geoms: tuple[str, ...] = ()
 
     def _ids(self, object_type, names: tuple[str, ...]) -> np.ndarray:
         ids = np.array(
@@ -669,7 +682,10 @@ class CalibratedPickPlaceExecutor:
             current, position_error, angle_error = ik.solve(
                 point, previous, rotation
             )
-            if position_error > 0.012 or angle_error > math.radians(2.0):
+            if (
+                position_error > self.ik_position_tolerance
+                or angle_error > self.ik_angle_tolerance
+            ):
                 raise RuntimeError(
                     f"IK misses {label} by {position_error * 100:.1f} cm "
                     f"with {math.degrees(angle_error):.1f} deg tilt"
@@ -700,7 +716,10 @@ class CalibratedPickPlaceExecutor:
             home_seed,
             target_rotation,
         )
-        if position_error > 0.012 or angle_error > math.radians(2.0):
+        if (
+            position_error > self.ik_position_tolerance
+            or angle_error > self.ik_angle_tolerance
+        ):
             raise RuntimeError(
                 f"Could not calibrate carry pose: {position_error * 100:.1f} cm, "
                 f"{math.degrees(angle_error):.1f} deg"
@@ -794,6 +813,10 @@ class CalibratedPickPlaceExecutor:
         self.spoon_regrasp_ticks = 0
         self.spoon_regrasp_elapsed_ticks = 0
         self.failure = None
+        self.attachment_translation_snap_m = None
+        self.attachment_angle_snap_rad = None
+        self.confirmed_contact_sides = ()
+        self.confirmed_contact_geoms = ()
         self.calibration_attempt_ticks = 0
         self.mode = "pick_base_approach"
         self.status = f"Pick {object_name}: approaching the manipulation stance"
@@ -810,7 +833,8 @@ class CalibratedPickPlaceExecutor:
         target = self.data.site_xpos[site_id].copy()
         target[2] += spec.grasp_z_offset
         self.configuration_checker = RobotConfigurationCollisionChecker(
-            self.model, self.data, self.profile
+            self.model, self.data, self.profile,
+            mounting_allowances=self.mounting_allowances,
         )
         allowed_bodies = frozenset((self.target_body_id,))
         self.waypoints, self.retreat_waypoints = self._plan_to_grip(
@@ -905,7 +929,8 @@ class CalibratedPickPlaceExecutor:
         target_grip = desired_body - grip_to_body
         ik = ProfiledIK(self.model, self.data, self.profile)
         self.configuration_checker = RobotConfigurationCollisionChecker(
-            self.model, self.data, self.profile
+            self.model, self.data, self.profile,
+            mounting_allowances=self.mounting_allowances,
         )
         allowed_bodies = frozenset((self.target_body_id,))
         current = self._current_arm()
@@ -1032,11 +1057,35 @@ class CalibratedPickPlaceExecutor:
         if equality_id < 0:
             raise RuntimeError("The composed scene has no calibrated grasp weld")
         self.grasp_equality_id = equality_id
-        self._set_grasp_weld_world_pose(
-            self.data.xpos[self.target_body_id],
-            self.data.xquat[self.target_body_id],
-        )
+        sides = self._finger_contact_sides()
+        if sides != {0, 1}:
+            raise RuntimeError("grasp weld requires confirmed bilateral contact")
+        contact_geoms: set[str] = set()
+        for contact in self.data.contact:
+            body1 = int(self.model.geom_bodyid[contact.geom1])
+            body2 = int(self.model.geom_bodyid[contact.geom2])
+            if self.target_body_id not in {body1, body2}:
+                continue
+            other = contact.geom2 if body1 == self.target_body_id else contact.geom1
+            name = mujoco.mj_id2name(
+                self.model, mujoco.mjtObj.mjOBJ_GEOM, other
+            ) or f"geom_{other}"
+            if any(name in family for family in self.profile.finger_contact_geoms):
+                contact_geoms.add(name)
+        self.confirmed_contact_sides = tuple(sorted(sides))
+        self.confirmed_contact_geoms = tuple(sorted(contact_geoms))
+        before_pos = self.data.xpos[self.target_body_id].copy()
+        before_quat = self.data.xquat[self.target_body_id].copy()
+        self._set_grasp_weld_world_pose(before_pos, before_quat)
         self.data.eq_active[equality_id] = 1
+        mujoco.mj_forward(self.model, self.data)
+        self.attachment_translation_snap_m = float(
+            np.linalg.norm(self.data.xpos[self.target_body_id] - before_pos)
+        )
+        dot = abs(float(np.dot(self.data.xquat[self.target_body_id], before_quat)))
+        self.attachment_angle_snap_rad = 2.0 * math.acos(
+            float(np.clip(dot, -1.0, 1.0))
+        )
 
     def _set_grasp_weld_world_pose(
         self, object_pos: np.ndarray, object_quat: np.ndarray
