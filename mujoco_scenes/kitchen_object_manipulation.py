@@ -13,7 +13,6 @@ import numpy as np
 from .generic_manipulation import (
     CalibratedPickPlaceExecutor,
     GOOGLE_PICK_SPECS,
-    GOOGLE_SPOON_TOP_DOWN_ROTATION,
     SimplePickSpec,
 )
 from .kitchen_execution_entities import ObjectSourceContext
@@ -99,6 +98,16 @@ class PlacementTarget:
     provenance: str
 
 
+@dataclass(frozen=True)
+class ServingPlacementState:
+    object_id: str
+    backend_body: str
+    centre_xy_m: tuple[float, float]
+    footprint_xy_m: tuple[float, float]
+    yaw_world_rad: float
+    support_backend: str
+
+
 @dataclass
 class PhysicalPlaceResult:
     generic_object_id: str
@@ -143,9 +152,15 @@ def make_kitchen_pick_specs(
         observed = inventory_by_id[row["generic_object_id"]]
         body_id = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_BODY, body)
         support_height = max(0.008, float(scene.data.xpos[body_id, 2] - table_top))
-        rotation = GOOGLE_SPOON_TOP_DOWN_ROTATION if family == "UTENSIL" else None
+        rotation = None
+        if family == "UTENSIL":
+            angle = np.deg2rad(300.0)
+            rotation = np.array(
+                ((np.cos(angle), -np.sin(angle), 0.0),
+                 (np.sin(angle), np.cos(angle), 0.0), (0.0, 0.0, 1.0))
+            ) @ manipulation_profile("google").top_down_rotation
         if family == "KETTLE":
-            angle = np.deg2rad(45.0)
+            angle = np.deg2rad(315.0)
             rotation = np.array(
                 ((np.cos(angle), -np.sin(angle), 0.0),
                  (np.sin(angle), np.cos(angle), 0.0), (0.0, 0.0, 1.0))
@@ -156,6 +171,33 @@ def make_kitchen_pick_specs(
             "KETTLE": 0.008,
             "JAR_SOURCE": 0.011,
         }.get(family, 0.0)
+        collision_geom_names = tuple(
+            name
+            for geom_id in sorted(_body_geom_ids(scene.model, body_id))
+            if (name := mujoco.mj_id2name(
+                scene.model, mujoco.mjtObj.mjOBJ_GEOM, geom_id
+            ))
+            and "collision" in name
+        )
+        if family == "UTENSIL":
+            required_contact_geoms = tuple(
+                name for name in collision_geom_names if "handle_collision" in name
+            )
+        elif family == "KETTLE":
+            required_contact_geoms = tuple(
+                name for name in collision_geom_names if "handle_collision" in name
+            )
+        elif family == "JAR_SOURCE":
+            required_contact_geoms = tuple(
+                name for name in collision_geom_names if "wall_" in name
+            )
+        else:
+            # Vessel/bowl meshes are intentionally collision-active in the
+            # benchmark; either their prepared collision shell or their body
+            # mesh is a valid contact surface. Target-body gating still
+            # prevents contact with a neighbouring object from authorizing a
+            # weld.
+            required_contact_geoms = ()
         specs[body] = SimplePickSpec(
             label=f"Phase B {family} from {observed['source_context']['source_kind']}",
             grasp_site=f"{body}_grasp",
@@ -165,7 +207,11 @@ def make_kitchen_pick_specs(
             top_down_rotation=rotation,
             home_seed=(utensil_reference.home_seed if utensil_reference else None),
             carry_position=None,
-            final_tracking_tolerance=0.018,
+            final_tracking_tolerance=0.035 if family == "KETTLE" else 0.018,
+            required_contact_geoms=required_contact_geoms,
+            ik_angle_tolerance_rad=(
+                np.deg2rad(2.5) if family == "KETTLE" else None
+            ),
         )
     return specs
 
@@ -178,9 +224,13 @@ class KitchenPlacementResolver:
         self.inventory = inventory
         self.binding = {row["generic_object_id"]: row for row in resolution["accepted"]}
         self.allocated_serving: dict[str, PlacementTarget] = {}
+        self.serving_placements: dict[str, ServingPlacementState] = {}
+        self.inventory_by_id = {
+            row["generic_object_id"]: row for row in inventory["objects"]
+        }
         self.support_height_by_id = {
             row["generic_object_id"]: max(
-                0.008, float(row["observed_centroid_world_m"][2]) - 0.59
+                0.008, float(row["observed_centroid_world_m"][2]) - 0.58
             )
             for row in inventory["objects"]
         }
@@ -197,6 +247,41 @@ class KitchenPlacementResolver:
             for slot_x, row in zip((-0.16, 0.0, 0.16), group):
                 self.serving_slot_by_id[row["generic_object_id"]] = (slot_x, row_y)
 
+    def footprint(self, object_id: str) -> tuple[float, float]:
+        dimensions = self.inventory_by_id[object_id].get("observed_dimensions_m", {})
+        length = dimensions.get("length")
+        width = dimensions.get("width")
+        # Missing measured geometry cannot be invented. The conservative
+        # execution fallback is used only for collision spacing, not inference.
+        if length is None or width is None:
+            return (0.10, 0.10)
+        return (float(length), float(width))
+
+    @staticmethod
+    def footprints_overlap(
+        centre_a: tuple[float, float], footprint_a: tuple[float, float],
+        centre_b: tuple[float, float], footprint_b: tuple[float, float],
+        clearance_m: float = 0.012,
+    ) -> bool:
+        return (
+            abs(centre_a[0] - centre_b[0])
+            < (footprint_a[0] + footprint_b[0]) / 2.0 + clearance_m
+            and abs(centre_a[1] - centre_b[1])
+            < (footprint_a[1] + footprint_b[1]) / 2.0 + clearance_m
+        )
+
+    def record_successful_serving_placement(
+        self, object_id: str, target: PlacementTarget
+    ) -> None:
+        self.serving_placements[object_id] = ServingPlacementState(
+            object_id=object_id,
+            backend_body=self.binding[object_id]["physical_backend_body"],
+            centre_xy_m=tuple(target.target_position_world_m[:2]),
+            footprint_xy_m=self.footprint(object_id),
+            yaw_world_rad=target.target_yaw_world_rad,
+            support_backend=target.support_backend or "",
+        )
+
     def resolve(self, object_id: str, destination: str) -> PlacementTarget:
         if object_id not in self.binding:
             raise ValueError("DESTINATION_RESOLUTION_FAILED: unresolved object")
@@ -204,12 +289,46 @@ class KitchenPlacementResolver:
             if object_id not in self.serving_slot_by_id:
                 raise ValueError("DESTINATION_RESOLUTION_FAILED: object is not a serving target")
             x, y = self.serving_slot_by_id[object_id]
+            footprint = self.footprint(object_id)
+            candidates = [
+                (x, y), (-0.16, y), (0.0, y), (0.16, y),
+                (-0.16, -0.56), (0.0, -0.56), (0.16, -0.56),
+            ]
+            valid_candidates = []
+            for candidate in dict.fromkeys(candidates):
+                edge_x = 0.25 - abs(candidate[0]) - footprint[0] / 2.0
+                edge_y = 0.15 - abs(candidate[1] + 0.56) - footprint[1] / 2.0
+                edge = min(edge_x, edge_y)
+                if edge < 0.008:
+                    continue
+                if any(
+                    self.footprints_overlap(
+                        candidate, footprint, placed.centre_xy_m,
+                        placed.footprint_xy_m,
+                    )
+                    for placed in self.serving_placements.values()
+                ):
+                    continue
+                valid_candidates.append((edge, candidate))
+            if not valid_candidates:
+                raise ValueError("DESTINATION_RESOLUTION_FAILED: serving support is full")
+            # Preserve the semantic row/column slot when it is physically
+            # valid, then maximize clearance, then coordinate tie-break.
+            _, (x, y) = min(
+                valid_candidates,
+                key=lambda item: (
+                    (item[1][0] - candidates[0][0]) ** 2
+                    + (item[1][1] - candidates[0][1]) ** 2,
+                    -item[0],
+                    item[1],
+                ),
+            )
             support_height = self.support_height_by_id[object_id]
             target = PlacementTarget(
                 object_id, destination, "SERVING_SUPPORT",
                 (x, y, 0.58 + support_height), 0.0, "serving_surface", None,
-                KitchenWorkspace.HOME, 0.035, "ON",
-                "SYMBOLIC_DESTINATION_PLUS_PERSISTENT_SERVING_ALLOCATOR_V1",
+                KitchenWorkspace.HOME, 0.012, "ON",
+                "OBSERVED_FOOTPRINT_PERSISTENT_SERVING_ALLOCATOR_V2",
             )
             self.allocated_serving[object_id] = target
             return target
@@ -327,8 +446,6 @@ class KitchenObjectManipulationExecutor:
             calibrated_objects_override=tuple(specs),
             base_stance=np.zeros(3),
             mounting_allowances=PHASE_B_MOUNT_ALLOWANCES,
-            ik_position_tolerance=0.020,
-            ik_angle_tolerance=np.deg2rad(4.0),
         )
 
     def sync_workspace(self, workspace: KitchenWorkspace) -> None:
@@ -392,7 +509,14 @@ class KitchenObjectManipulationExecutor:
         self.sync_workspace(current_workspace)
         local = np.zeros(3)
         if current_workspace == KitchenWorkspace.HOME:
-            local = np.array((0.20, float(np.clip(-before_pos[0], -0.18, 0.18)), 0.0))
+            family_forward = {
+                "UTENSIL": 0.25,
+                "KETTLE": 0.20,
+                "JAR_SOURCE": 0.20,
+            }.get(binding["grasp_family"], 0.20)
+            local = np.array(
+                (family_forward, float(np.clip(-before_pos[0], -0.18, 0.18)), 0.0)
+            )
         self.executor.base_manipulation_target = self.executor.base_stance + local
         self.executor.request_pick(backend)
         try:
@@ -480,6 +604,10 @@ class KitchenObjectManipulationExecutor:
             ((np.cos(yaw), -np.sin(yaw), 0.0),
              (np.sin(yaw), np.cos(yaw), 0.0), (0.0, 0.0, 1.0))
         ) @ manipulation_profile("google").top_down_rotation
+        if target.destination_kind == "SOURCE_RETURN":
+            grasp_rotation = self.executor.pick_specs[backend].top_down_rotation
+            if grasp_rotation is not None:
+                rotation = grasp_rotation
         self.executor.request_place_world(position, rotation)
         steps = self._step_until_stable_mode()
         if self.executor.mode != "idle":
@@ -559,6 +687,10 @@ class KitchenObjectManipulationExecutor:
             released and support_contact and not floor_contact and stable
             and relative_ok and footprint_inside
         )
+        if verified and target.destination_kind == "SERVING_SUPPORT":
+            self.placement_resolver.record_successful_serving_placement(
+                generic_object_id, target
+            )
         return PhysicalPlaceResult(
             generic_object_id=generic_object_id,
             backend_body=backend,

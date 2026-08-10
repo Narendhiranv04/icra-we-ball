@@ -80,6 +80,8 @@ class SimplePickSpec:
     carry_position: np.ndarray | None = None
     final_tracking_tolerance: float = JOINT_WAYPOINT_TOLERANCE
     carry_grip_relaxation: float = 0.0
+    ik_position_tolerance: float | None = None
+    ik_angle_tolerance_rad: float | None = None
 
 
 GOOGLE_PICK_SPECS = {
@@ -682,10 +684,21 @@ class CalibratedPickPlaceExecutor:
             current, position_error, angle_error = ik.solve(
                 point, previous, rotation
             )
-            if (
-                position_error > self.ik_position_tolerance
-                or angle_error > self.ik_angle_tolerance
-            ):
+            active_spec = (
+                self.pick_specs.get(self.target_object)
+                if self.target_object is not None else None
+            )
+            position_tolerance = (
+                active_spec.ik_position_tolerance
+                if active_spec and active_spec.ik_position_tolerance is not None
+                else self.ik_position_tolerance
+            )
+            angle_tolerance = (
+                active_spec.ik_angle_tolerance_rad
+                if active_spec and active_spec.ik_angle_tolerance_rad is not None
+                else self.ik_angle_tolerance
+            )
+            if position_error > position_tolerance or angle_error > angle_tolerance:
                 raise RuntimeError(
                     f"IK misses {label} by {position_error * 100:.1f} cm "
                     f"with {math.degrees(angle_error):.1f} deg tilt"
@@ -716,10 +729,18 @@ class CalibratedPickPlaceExecutor:
             home_seed,
             target_rotation,
         )
-        if (
-            position_error > self.ik_position_tolerance
-            or angle_error > self.ik_angle_tolerance
-        ):
+        active_spec = self.pick_specs.get(self.target_object)
+        position_tolerance = (
+            active_spec.ik_position_tolerance
+            if active_spec and active_spec.ik_position_tolerance is not None
+            else self.ik_position_tolerance
+        )
+        angle_tolerance = (
+            active_spec.ik_angle_tolerance_rad
+            if active_spec and active_spec.ik_angle_tolerance_rad is not None
+            else self.ik_angle_tolerance
+        )
+        if position_error > position_tolerance or angle_error > angle_tolerance:
             raise RuntimeError(
                 f"Could not calibrate carry pose: {position_error * 100:.1f} cm, "
                 f"{math.degrees(angle_error):.1f} deg"

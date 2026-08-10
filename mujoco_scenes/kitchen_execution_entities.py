@@ -141,6 +141,14 @@ def build_phase_b_inventory(
                 "selected_functions": sorted(roles.get(object_id, ())),
                 "phase2_usage": usage.get(object_id, []),
                 "observed_centroid_world_m": record["centroid_world_m"]["value"],
+                # Stage-local measured geometry is carried across the execution
+                # boundary so placement may reason about payload footprints.
+                # These are observed values, never MuJoCo geom sizes.
+                "observed_dimensions_m": {
+                    axis: property_record.get("value")
+                    for axis, property_record in record.get("dimensions_m", {}).items()
+                    if property_record.get("status") in {"MEASURED", "DERIVED"}
+                },
                 "source_context": {
                     **asdict(context),
                     "source_kind": context.source_kind.value,
