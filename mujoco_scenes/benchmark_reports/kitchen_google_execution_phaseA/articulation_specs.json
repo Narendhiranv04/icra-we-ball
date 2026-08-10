@@ -1,0 +1,152 @@
+{
+  "B1": {
+    "actuator_name": "B1_lid_actuator",
+    "attachment_name": "google:container_grasp_B1",
+    "closed_q": 0.0,
+    "contact_offset": 0.002,
+    "container_id": "B1",
+    "final_tolerance": 0.04,
+    "grasp_strategy": "bilateral_contact_then_relative_weld",
+    "grasp_yaw_world": null,
+    "handle_geoms": [
+      "B1_lid_handle_left",
+      "B1_lid_handle_right",
+      "B1_lid_handle_bar"
+    ],
+    "handle_site": "B1_lid_handle_grasp",
+    "joint_name": "B1_lid_joint",
+    "joint_type": "HINGE",
+    "local_base_delta": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "moving_body": "B1_lid",
+    "open_q": 1.8,
+    "path_strategy": "sample_joint_then_handle_pose_then_collision_checked_ik",
+    "pregrasp_distance": 0.08,
+    "required_workspace": "right_side",
+    "sample_count": 37,
+    "settled_velocity": 0.025
+  },
+  "C1": {
+    "actuator_name": "C1_door_actuator",
+    "attachment_name": "google:container_grasp_C1",
+    "closed_q": 0.0,
+    "contact_offset": 0.002,
+    "container_id": "C1",
+    "final_tolerance": 0.035,
+    "grasp_strategy": "bilateral_contact_then_relative_weld",
+    "grasp_yaw_world": null,
+    "handle_geoms": [
+      "C1_handle_left",
+      "C1_handle_right",
+      "C1_handle_bar"
+    ],
+    "handle_site": "C1_handle_grasp",
+    "joint_name": "C1_door_joint",
+    "joint_type": "HINGE",
+    "local_base_delta": [
+      0.0,
+      -0.15,
+      0.0
+    ],
+    "moving_body": "C1_door",
+    "open_q": 1.4,
+    "path_strategy": "sample_joint_then_handle_pose_then_collision_checked_ik",
+    "pregrasp_distance": 0.08,
+    "required_workspace": "left_side",
+    "sample_count": 29,
+    "settled_velocity": 0.025
+  },
+  "C2": {
+    "actuator_name": "C2_door_actuator",
+    "attachment_name": "google:container_grasp_C2",
+    "closed_q": 0.0,
+    "contact_offset": 0.002,
+    "container_id": "C2",
+    "final_tolerance": 0.035,
+    "grasp_strategy": "bilateral_contact_then_relative_weld",
+    "grasp_yaw_world": null,
+    "handle_geoms": [
+      "C2_handle_left",
+      "C2_handle_right",
+      "C2_handle_bar"
+    ],
+    "handle_site": "C2_handle_grasp",
+    "joint_name": "C2_door_joint",
+    "joint_type": "HINGE",
+    "local_base_delta": [
+      0.0,
+      0.15,
+      0.0
+    ],
+    "moving_body": "C2_door",
+    "open_q": 1.4,
+    "path_strategy": "sample_joint_then_handle_pose_then_collision_checked_ik",
+    "pregrasp_distance": 0.08,
+    "required_workspace": "right_side",
+    "sample_count": 29,
+    "settled_velocity": 0.025
+  },
+  "D1": {
+    "actuator_name": "D1_slide_actuator",
+    "attachment_name": "google:container_grasp_D1",
+    "closed_q": 0.0,
+    "contact_offset": 0.002,
+    "container_id": "D1",
+    "final_tolerance": 0.02,
+    "grasp_strategy": "bilateral_contact_then_relative_weld",
+    "grasp_yaw_world": null,
+    "handle_geoms": [
+      "D1_handle_left",
+      "D1_handle_right",
+      "D1_handle_bar"
+    ],
+    "handle_site": "D1_handle_grasp",
+    "joint_name": "D1_slide_joint",
+    "joint_type": "PRISMATIC",
+    "local_base_delta": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "moving_body": "drawer_D1_tray",
+    "open_q": 0.25,
+    "path_strategy": "sample_joint_then_handle_pose_then_collision_checked_ik",
+    "pregrasp_distance": 0.08,
+    "required_workspace": "home",
+    "sample_count": 35,
+    "settled_velocity": 0.025
+  },
+  "D2": {
+    "actuator_name": "D2_slide_actuator",
+    "attachment_name": "google:container_grasp_D2",
+    "closed_q": 0.0,
+    "contact_offset": 0.002,
+    "container_id": "D2",
+    "final_tolerance": 0.02,
+    "grasp_strategy": "bilateral_contact_then_relative_weld",
+    "grasp_yaw_world": null,
+    "handle_geoms": [
+      "D2_handle_left",
+      "D2_handle_right",
+      "D2_handle_bar"
+    ],
+    "handle_site": "D2_handle_grasp",
+    "joint_name": "D2_slide_joint",
+    "joint_type": "PRISMATIC",
+    "local_base_delta": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "moving_body": "drawer_D2_tray",
+    "open_q": 0.25,
+    "path_strategy": "sample_joint_then_handle_pose_then_collision_checked_ik",
+    "pregrasp_distance": 0.08,
+    "required_workspace": "home",
+    "sample_count": 21,
+    "settled_velocity": 0.025
+  }
+}

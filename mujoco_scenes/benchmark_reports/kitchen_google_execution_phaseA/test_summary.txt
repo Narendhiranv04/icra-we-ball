@@ -1,0 +1,35 @@
+Kitchen Google Robot Execution Phase A validation
+=================================================
+
+Authoritative physical run:
+  sequence: container_validation
+  result: 10/10 requested OPEN/CLOSE actions passed
+  containers: D1, D2, C1, C2, B1
+  artifact: authoritative/combined_workspace_sequence.json
+
+Focused Phase-A tests:
+  /home/naren/miniconda3/bin/python -m pytest -q \
+    mujoco_scenes/tests/test_kitchen_execution_policy.py \
+    mujoco_scenes/tests/test_kitchen_articulation_phase_a.py \
+    mujoco_scenes/tests/test_kitchen_google_execution.py
+  result: PASS (12 tests, 5 subtests)
+
+Full repository tests:
+  each mujoco_scenes/tests/test_*.py executed in an isolated Python process
+  with MUJOCO_GL=egl and PYOPENGL_PLATFORM=egl
+  result: PASS (37 files; 504 passed, 5 subtests passed, 0 skipped)
+
+Previously failing regression retest:
+  /home/naren/miniconda3/bin/python -m pytest -q \
+    mujoco_scenes/tests/test_kitchen_feasibility_benchmark.py::test_oracle_curated_variants_and_stage_labels_match_intent
+  result: PASS (1 passed)
+
+Compilation:
+  /home/naren/miniconda3/bin/python -m compileall -q mujoco_scenes
+
+Whitespace:
+  git diff --check
+
+Note: an earlier requested five-cycle execution artifact stopped in cycle 3
+and is retained under runs/ as diagnostic evidence. It is not the source of
+the authoritative PASS claim.

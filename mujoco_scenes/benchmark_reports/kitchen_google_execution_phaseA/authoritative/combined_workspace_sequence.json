@@ -1,0 +1,725 @@
+{
+  "execute": true,
+  "phase": "KITCHEN_GOOGLE_EXECUTION_PHASE_A",
+  "records": [
+    {
+      "cycle": 1,
+      "execution_enabled": true,
+      "refinement": {
+        "auto_move_inserted": false,
+        "refined_actions": [
+          [
+            "OPEN",
+            "D1"
+          ]
+        ],
+        "requested_action": "OPEN",
+        "required_workspace": "home",
+        "starting_workspace": "home",
+        "target": "D1"
+      },
+      "request": {
+        "action": "OPEN",
+        "target": "D1"
+      },
+      "status": "EXECUTION_SUCCESS",
+      "steps": [
+        {
+          "action": "OPEN",
+          "action_id": "phaseA-00001",
+          "actual_workspace": "home",
+          "arm_waypoint_count": 40,
+          "articulation_segment": 1,
+          "articulation_segment_count": 1,
+          "attachment_angle_snap_rad": 0.0,
+          "attachment_translation_snap_m": 1.4486512248557126e-05,
+          "collision_status": "PLAN_VALID_AND_LIVE_GUARD_ACTIVE",
+          "direct_container_actuator_used": false,
+          "failure_code": null,
+          "final_articulation_q": 0.24427072167262734,
+          "final_joint_error": 0.005729278327372661,
+          "final_joint_velocity": 0.016992333103246153,
+          "final_postcondition": "OPEN",
+          "handle_attachment_evidence": true,
+          "handle_contact_evidence": true,
+          "handle_contact_sides": [
+            0,
+            1
+          ],
+          "handle_pose_trajectory_count": 35,
+          "ik_max_angle_residual_rad": 0.0034965812181811545,
+          "ik_max_position_residual_m": 0.0007573866012687792,
+          "initial_articulation_q": -4.76658972814854e-12,
+          "live_qpos_write_used": false,
+          "local_base_approach_used": false,
+          "local_base_delta": [],
+          "local_base_retracted": false,
+          "maximum_joint_velocity": 0.28581072109500466,
+          "message": "",
+          "physical_motion_source": "GOOGLE_ROBOT_HANDLE_MANIPULATION",
+          "required_workspace": "home",
+          "status": "EXECUTION_SUCCESS",
+          "success": true,
+          "target_container": "D1",
+          "target_semantic_q": 0.25,
+          "total_duration_s": 4.627646764012752,
+          "total_physics_steps": 5157,
+          "unexpected_articulation_motion": false
+        }
+      ],
+      "success": true
+    },
+    {
+      "cycle": 1,
+      "execution_enabled": true,
+      "refinement": {
+        "auto_move_inserted": false,
+        "refined_actions": [
+          [
+            "CLOSE",
+            "D1"
+          ]
+        ],
+        "requested_action": "CLOSE",
+        "required_workspace": "home",
+        "starting_workspace": "home",
+        "target": "D1"
+      },
+      "request": {
+        "action": "CLOSE",
+        "target": "D1"
+      },
+      "status": "EXECUTION_SUCCESS",
+      "steps": [
+        {
+          "action": "CLOSE",
+          "action_id": "phaseA-00002",
+          "actual_workspace": "home",
+          "arm_waypoint_count": 39,
+          "articulation_segment": 1,
+          "articulation_segment_count": 1,
+          "attachment_angle_snap_rad": 0.0,
+          "attachment_translation_snap_m": 5.6838950867721394e-05,
+          "collision_status": "PLAN_VALID_AND_LIVE_GUARD_ACTIVE",
+          "direct_container_actuator_used": false,
+          "failure_code": null,
+          "final_articulation_q": 0.00042988788695722896,
+          "final_joint_error": 0.00042988788695722896,
+          "final_joint_velocity": 0.009887124301380393,
+          "final_postcondition": "CLOSE",
+          "handle_attachment_evidence": true,
+          "handle_contact_evidence": true,
+          "handle_contact_sides": [
+            0,
+            1
+          ],
+          "handle_pose_trajectory_count": 35,
+          "ik_max_angle_residual_rad": 0.0007580428726409058,
+          "ik_max_position_residual_m": 0.000158229963682525,
+          "initial_articulation_q": 0.24427072167262734,
+          "live_qpos_write_used": false,
+          "local_base_approach_used": false,
+          "local_base_delta": [],
+          "local_base_retracted": false,
+          "maximum_joint_velocity": 0.2951915769745994,
+          "message": "",
+          "physical_motion_source": "GOOGLE_ROBOT_HANDLE_MANIPULATION",
+          "required_workspace": "home",
+          "status": "EXECUTION_SUCCESS",
+          "success": true,
+          "target_container": "D1",
+          "target_semantic_q": 0.0,
+          "total_duration_s": 32.01575627800776,
+          "total_physics_steps": 5534,
+          "unexpected_articulation_motion": false
+        }
+      ],
+      "success": true
+    },
+    {
+      "cycle": 1,
+      "execution_enabled": true,
+      "refinement": {
+        "auto_move_inserted": false,
+        "refined_actions": [
+          [
+            "OPEN",
+            "D2"
+          ]
+        ],
+        "requested_action": "OPEN",
+        "required_workspace": "home",
+        "starting_workspace": "home",
+        "target": "D2"
+      },
+      "request": {
+        "action": "OPEN",
+        "target": "D2"
+      },
+      "status": "EXECUTION_SUCCESS",
+      "steps": [
+        {
+          "action": "OPEN",
+          "action_id": "phaseA-00003",
+          "actual_workspace": "home",
+          "arm_waypoint_count": 24,
+          "articulation_segment": 1,
+          "articulation_segment_count": 1,
+          "attachment_angle_snap_rad": 0.0,
+          "attachment_translation_snap_m": 3.6872260616438446e-05,
+          "collision_status": "PLAN_VALID_AND_LIVE_GUARD_ACTIVE",
+          "direct_container_actuator_used": false,
+          "failure_code": null,
+          "final_articulation_q": 0.24928567773849147,
+          "final_joint_error": 0.0007143222615085265,
+          "final_joint_velocity": 6.201149426881179e-05,
+          "final_postcondition": "OPEN",
+          "handle_attachment_evidence": true,
+          "handle_contact_evidence": true,
+          "handle_contact_sides": [
+            0,
+            1
+          ],
+          "handle_pose_trajectory_count": 21,
+          "ik_max_angle_residual_rad": 0.011844684043087667,
+          "ik_max_position_residual_m": 0.0007511092061717246,
+          "initial_articulation_q": -3.4504981044573075e-22,
+          "live_qpos_write_used": false,
+          "local_base_approach_used": false,
+          "local_base_delta": [],
+          "local_base_retracted": false,
+          "maximum_joint_velocity": 0.3400802895005083,
+          "message": "",
+          "physical_motion_source": "GOOGLE_ROBOT_HANDLE_MANIPULATION",
+          "required_workspace": "home",
+          "status": "EXECUTION_SUCCESS",
+          "success": true,
+          "target_container": "D2",
+          "target_semantic_q": 0.25,
+          "total_duration_s": 3.394420876982622,
+          "total_physics_steps": 5228,
+          "unexpected_articulation_motion": false
+        }
+      ],
+      "success": true
+    },
+    {
+      "cycle": 1,
+      "execution_enabled": true,
+      "refinement": {
+        "auto_move_inserted": false,
+        "refined_actions": [
+          [
+            "CLOSE",
+            "D2"
+          ]
+        ],
+        "requested_action": "CLOSE",
+        "required_workspace": "home",
+        "starting_workspace": "home",
+        "target": "D2"
+      },
+      "request": {
+        "action": "CLOSE",
+        "target": "D2"
+      },
+      "status": "EXECUTION_SUCCESS",
+      "steps": [
+        {
+          "action": "CLOSE",
+          "action_id": "phaseA-00004",
+          "actual_workspace": "home",
+          "arm_waypoint_count": 23,
+          "articulation_segment": 1,
+          "articulation_segment_count": 1,
+          "attachment_angle_snap_rad": 0.0,
+          "attachment_translation_snap_m": 5.5576055728590035e-06,
+          "collision_status": "PLAN_VALID_AND_LIVE_GUARD_ACTIVE",
+          "direct_container_actuator_used": false,
+          "failure_code": null,
+          "final_articulation_q": 0.00042594153391563983,
+          "final_joint_error": 0.00042594153391563983,
+          "final_joint_velocity": 0.010382768696560851,
+          "final_postcondition": "CLOSE",
+          "handle_attachment_evidence": true,
+          "handle_contact_evidence": true,
+          "handle_contact_sides": [
+            0,
+            1
+          ],
+          "handle_pose_trajectory_count": 21,
+          "ik_max_angle_residual_rad": 0.00042652675170508917,
+          "ik_max_position_residual_m": 0.00020715084015235333,
+          "initial_articulation_q": 0.24928567773849147,
+          "live_qpos_write_used": false,
+          "local_base_approach_used": false,
+          "local_base_delta": [],
+          "local_base_retracted": false,
+          "maximum_joint_velocity": 0.3417261136765095,
+          "message": "",
+          "physical_motion_source": "GOOGLE_ROBOT_HANDLE_MANIPULATION",
+          "required_workspace": "home",
+          "status": "EXECUTION_SUCCESS",
+          "success": true,
+          "target_container": "D2",
+          "target_semantic_q": 0.0,
+          "total_duration_s": 2.003900664014509,
+          "total_physics_steps": 5007,
+          "unexpected_articulation_motion": false
+        }
+      ],
+      "success": true
+    },
+    {
+      "cycle": 1,
+      "execution_enabled": true,
+      "refinement": {
+        "auto_move_inserted": true,
+        "refined_actions": [
+          [
+            "MOVE",
+            "left_side"
+          ],
+          [
+            "OPEN",
+            "C1"
+          ]
+        ],
+        "requested_action": "OPEN",
+        "required_workspace": "left_side",
+        "starting_workspace": "home",
+        "target": "C1"
+      },
+      "request": {
+        "action": "OPEN",
+        "target": "C1"
+      },
+      "status": "EXECUTION_SUCCESS",
+      "steps": [
+        {
+          "action": "MOVE",
+          "automatically_inserted": true,
+          "destination": "cupboard1",
+          "duration_s": 1.9510641010128893,
+          "physics_steps": 9432,
+          "source_workspace": "home",
+          "status": "Move complete: cupboard1 (1.9 s)",
+          "success": true,
+          "target_workspace": "left_side"
+        },
+        {
+          "action": "OPEN",
+          "action_id": "phaseA-00005",
+          "actual_workspace": "left_side",
+          "arm_waypoint_count": 36,
+          "articulation_segment": 1,
+          "articulation_segment_count": 1,
+          "attachment_angle_snap_rad": 7.267194110959386e-05,
+          "attachment_translation_snap_m": 2.2974450890976876e-05,
+          "collision_status": "PLAN_VALID_AND_LIVE_GUARD_ACTIVE",
+          "direct_container_actuator_used": false,
+          "failure_code": null,
+          "final_articulation_q": 1.397662942650494,
+          "final_joint_error": 0.0023370573495058444,
+          "final_joint_velocity": 0.004263233316258114,
+          "final_postcondition": "OPEN",
+          "handle_attachment_evidence": true,
+          "handle_contact_evidence": true,
+          "handle_contact_sides": [
+            0,
+            1
+          ],
+          "handle_pose_trajectory_count": 29,
+          "ik_max_angle_residual_rad": 0.008942804160559526,
+          "ik_max_position_residual_m": 0.0007904678074142769,
+          "initial_articulation_q": 0.0,
+          "live_qpos_write_used": false,
+          "local_base_approach_used": true,
+          "local_base_delta": [
+            0.0,
+            -0.15,
+            0.0
+          ],
+          "local_base_retracted": true,
+          "maximum_joint_velocity": 0.7303593671783151,
+          "message": "",
+          "physical_motion_source": "GOOGLE_ROBOT_HANDLE_MANIPULATION",
+          "required_workspace": "left_side",
+          "status": "EXECUTION_SUCCESS",
+          "success": true,
+          "target_container": "C1",
+          "target_semantic_q": 1.4,
+          "total_duration_s": 14.219390110985842,
+          "total_physics_steps": 8056,
+          "unexpected_articulation_motion": false
+        }
+      ],
+      "success": true
+    },
+    {
+      "cycle": 1,
+      "execution_enabled": true,
+      "refinement": {
+        "auto_move_inserted": false,
+        "refined_actions": [
+          [
+            "CLOSE",
+            "C1"
+          ]
+        ],
+        "requested_action": "CLOSE",
+        "required_workspace": "left_side",
+        "starting_workspace": "left_side",
+        "target": "C1"
+      },
+      "request": {
+        "action": "CLOSE",
+        "target": "C1"
+      },
+      "status": "EXECUTION_SUCCESS",
+      "steps": [
+        {
+          "action": "CLOSE",
+          "action_id": "phaseA-00006",
+          "actual_workspace": "left_side",
+          "arm_waypoint_count": 35,
+          "articulation_segment": 1,
+          "articulation_segment_count": 1,
+          "attachment_angle_snap_rad": 2.2107116870751565e-05,
+          "attachment_translation_snap_m": 6.98891900703631e-06,
+          "collision_status": "PLAN_VALID_AND_LIVE_GUARD_ACTIVE",
+          "direct_container_actuator_used": false,
+          "failure_code": null,
+          "final_articulation_q": 0.00462687044785795,
+          "final_joint_error": 0.00462687044785795,
+          "final_joint_velocity": 0.00014681599153373352,
+          "final_postcondition": "CLOSE",
+          "handle_attachment_evidence": true,
+          "handle_contact_evidence": true,
+          "handle_contact_sides": [
+            0,
+            1
+          ],
+          "handle_pose_trajectory_count": 29,
+          "ik_max_angle_residual_rad": 0.00014926228816178924,
+          "ik_max_position_residual_m": 0.00028520305190344247,
+          "initial_articulation_q": 1.397662942650494,
+          "live_qpos_write_used": false,
+          "local_base_approach_used": true,
+          "local_base_delta": [
+            0.0,
+            -0.15,
+            0.0
+          ],
+          "local_base_retracted": true,
+          "maximum_joint_velocity": 0.7429887347015065,
+          "message": "",
+          "physical_motion_source": "GOOGLE_ROBOT_HANDLE_MANIPULATION",
+          "required_workspace": "left_side",
+          "status": "EXECUTION_SUCCESS",
+          "success": true,
+          "target_container": "C1",
+          "target_semantic_q": 0.0,
+          "total_duration_s": 34.57331704298849,
+          "total_physics_steps": 10256,
+          "unexpected_articulation_motion": false
+        }
+      ],
+      "success": true
+    },
+    {
+      "cycle": 1,
+      "execution_enabled": true,
+      "refinement": {
+        "auto_move_inserted": true,
+        "refined_actions": [
+          [
+            "MOVE",
+            "right_side"
+          ],
+          [
+            "OPEN",
+            "C2"
+          ]
+        ],
+        "requested_action": "OPEN",
+        "required_workspace": "right_side",
+        "starting_workspace": "left_side",
+        "target": "C2"
+      },
+      "request": {
+        "action": "OPEN",
+        "target": "C2"
+      },
+      "status": "EXECUTION_SUCCESS",
+      "steps": [
+        {
+          "action": "MOVE",
+          "automatically_inserted": true,
+          "destination": "cupboard2",
+          "duration_s": 3.9355332539998926,
+          "physics_steps": 18060,
+          "source_workspace": "left_side",
+          "status": "Move complete: cupboard2 (3.8 s)",
+          "success": true,
+          "target_workspace": "right_side"
+        },
+        {
+          "action": "OPEN",
+          "action_id": "phaseA-00007",
+          "actual_workspace": "right_side",
+          "arm_waypoint_count": 33,
+          "articulation_segment": 1,
+          "articulation_segment_count": 1,
+          "attachment_angle_snap_rad": 7.809232142376578e-06,
+          "attachment_translation_snap_m": 2.4687985676496264e-06,
+          "collision_status": "PLAN_VALID_AND_LIVE_GUARD_ACTIVE",
+          "direct_container_actuator_used": false,
+          "failure_code": null,
+          "final_articulation_q": 1.3960990611976527,
+          "final_joint_error": 0.003900938802347209,
+          "final_joint_velocity": 0.001591927765608306,
+          "final_postcondition": "OPEN",
+          "handle_attachment_evidence": true,
+          "handle_contact_evidence": true,
+          "handle_contact_sides": [
+            0,
+            1
+          ],
+          "handle_pose_trajectory_count": 29,
+          "ik_max_angle_residual_rad": 0.006914562583929257,
+          "ik_max_position_residual_m": 0.0007987502748110899,
+          "initial_articulation_q": 0.0,
+          "live_qpos_write_used": false,
+          "local_base_approach_used": true,
+          "local_base_delta": [
+            0.0,
+            0.15,
+            0.0
+          ],
+          "local_base_retracted": true,
+          "maximum_joint_velocity": 0.5681797834598074,
+          "message": "",
+          "physical_motion_source": "GOOGLE_ROBOT_HANDLE_MANIPULATION",
+          "required_workspace": "right_side",
+          "status": "EXECUTION_SUCCESS",
+          "success": true,
+          "target_container": "C2",
+          "target_semantic_q": 1.4,
+          "total_duration_s": 10.222492556989891,
+          "total_physics_steps": 8209,
+          "unexpected_articulation_motion": false
+        }
+      ],
+      "success": true
+    },
+    {
+      "cycle": 1,
+      "execution_enabled": true,
+      "refinement": {
+        "auto_move_inserted": false,
+        "refined_actions": [
+          [
+            "CLOSE",
+            "C2"
+          ]
+        ],
+        "requested_action": "CLOSE",
+        "required_workspace": "right_side",
+        "starting_workspace": "right_side",
+        "target": "C2"
+      },
+      "request": {
+        "action": "CLOSE",
+        "target": "C2"
+      },
+      "status": "EXECUTION_SUCCESS",
+      "steps": [
+        {
+          "action": "CLOSE",
+          "action_id": "phaseA-00008",
+          "actual_workspace": "right_side",
+          "arm_waypoint_count": 31,
+          "articulation_segment": 1,
+          "articulation_segment_count": 1,
+          "attachment_angle_snap_rad": 3.0126949394560332e-05,
+          "attachment_translation_snap_m": 9.524312541029651e-06,
+          "collision_status": "PLAN_VALID_AND_LIVE_GUARD_ACTIVE",
+          "direct_container_actuator_used": false,
+          "failure_code": null,
+          "final_articulation_q": 0.014659136385505513,
+          "final_joint_error": 0.014659136385505513,
+          "final_joint_velocity": 0.012048650668690047,
+          "final_postcondition": "CLOSE",
+          "handle_attachment_evidence": true,
+          "handle_contact_evidence": true,
+          "handle_contact_sides": [
+            0,
+            1
+          ],
+          "handle_pose_trajectory_count": 29,
+          "ik_max_angle_residual_rad": 0.0030116421128952866,
+          "ik_max_position_residual_m": 0.000713197914801887,
+          "initial_articulation_q": 1.3960990611976527,
+          "live_qpos_write_used": false,
+          "local_base_approach_used": true,
+          "local_base_delta": [
+            0.0,
+            0.15,
+            0.0
+          ],
+          "local_base_retracted": true,
+          "maximum_joint_velocity": 0.553037474088572,
+          "message": "",
+          "physical_motion_source": "GOOGLE_ROBOT_HANDLE_MANIPULATION",
+          "required_workspace": "right_side",
+          "status": "EXECUTION_SUCCESS",
+          "success": true,
+          "target_container": "C2",
+          "target_semantic_q": 0.0,
+          "total_duration_s": 2.410981670982437,
+          "total_physics_steps": 8000,
+          "unexpected_articulation_motion": false
+        }
+      ],
+      "success": true
+    },
+    {
+      "cycle": 1,
+      "execution_enabled": true,
+      "refinement": {
+        "auto_move_inserted": false,
+        "refined_actions": [
+          [
+            "OPEN",
+            "B1"
+          ]
+        ],
+        "requested_action": "OPEN",
+        "required_workspace": "right_side",
+        "starting_workspace": "right_side",
+        "target": "B1"
+      },
+      "request": {
+        "action": "OPEN",
+        "target": "B1"
+      },
+      "status": "EXECUTION_SUCCESS",
+      "steps": [
+        {
+          "action": "OPEN",
+          "action_id": "phaseA-00009",
+          "actual_workspace": "right_side",
+          "arm_waypoint_count": 41,
+          "articulation_segment": 1,
+          "articulation_segment_count": 1,
+          "attachment_angle_snap_rad": 0.0011839760820609123,
+          "attachment_translation_snap_m": 0.00010655784118163329,
+          "collision_status": "PLAN_VALID_AND_LIVE_GUARD_ACTIVE",
+          "direct_container_actuator_used": false,
+          "failure_code": null,
+          "final_articulation_q": 1.7979508270222797,
+          "final_joint_error": 0.002049172977720337,
+          "final_joint_velocity": 8.037690149400497e-05,
+          "final_postcondition": "OPEN",
+          "handle_attachment_evidence": true,
+          "handle_contact_evidence": true,
+          "handle_contact_sides": [
+            0,
+            1
+          ],
+          "handle_pose_trajectory_count": 37,
+          "ik_max_angle_residual_rad": 0.010963319856635288,
+          "ik_max_position_residual_m": 0.0007958521932407432,
+          "initial_articulation_q": -0.0015485174625166846,
+          "live_qpos_write_used": false,
+          "local_base_approach_used": false,
+          "local_base_delta": [],
+          "local_base_retracted": false,
+          "maximum_joint_velocity": 0.6897035358435739,
+          "message": "",
+          "physical_motion_source": "GOOGLE_ROBOT_HANDLE_MANIPULATION",
+          "required_workspace": "right_side",
+          "status": "EXECUTION_SUCCESS",
+          "success": true,
+          "target_container": "B1",
+          "target_semantic_q": 1.8,
+          "total_duration_s": 4.173596968990751,
+          "total_physics_steps": 5993,
+          "unexpected_articulation_motion": false
+        }
+      ],
+      "success": true
+    },
+    {
+      "cycle": 1,
+      "execution_enabled": true,
+      "refinement": {
+        "auto_move_inserted": false,
+        "refined_actions": [
+          [
+            "CLOSE",
+            "B1"
+          ]
+        ],
+        "requested_action": "CLOSE",
+        "required_workspace": "right_side",
+        "starting_workspace": "right_side",
+        "target": "B1"
+      },
+      "request": {
+        "action": "CLOSE",
+        "target": "B1"
+      },
+      "status": "EXECUTION_SUCCESS",
+      "steps": [
+        {
+          "action": "CLOSE",
+          "action_id": "phaseA-00010",
+          "actual_workspace": "right_side",
+          "arm_waypoint_count": 41,
+          "articulation_segment": 1,
+          "articulation_segment_count": 1,
+          "attachment_angle_snap_rad": 0.0013453025379377456,
+          "attachment_translation_snap_m": 0.00012107721927323852,
+          "collision_status": "PLAN_VALID_AND_LIVE_GUARD_ACTIVE",
+          "direct_container_actuator_used": false,
+          "failure_code": null,
+          "final_articulation_q": -0.0015485174625166883,
+          "final_joint_error": 0.0015485174625166883,
+          "final_joint_velocity": 4.3150629563462704e-17,
+          "final_postcondition": "CLOSE",
+          "handle_attachment_evidence": true,
+          "handle_contact_evidence": true,
+          "handle_contact_sides": [
+            0,
+            1
+          ],
+          "handle_pose_trajectory_count": 37,
+          "ik_max_angle_residual_rad": 0.0012722882130864332,
+          "ik_max_position_residual_m": 0.00028874804300655824,
+          "initial_articulation_q": 1.7979508270222797,
+          "live_qpos_write_used": false,
+          "local_base_approach_used": false,
+          "local_base_delta": [],
+          "local_base_retracted": false,
+          "maximum_joint_velocity": 0.9347773528767301,
+          "message": "",
+          "physical_motion_source": "GOOGLE_ROBOT_HANDLE_MANIPULATION",
+          "required_workspace": "right_side",
+          "status": "EXECUTION_SUCCESS",
+          "success": true,
+          "target_container": "B1",
+          "target_semantic_q": 0.0,
+          "total_duration_s": 3.5670941339922138,
+          "total_physics_steps": 5778,
+          "unexpected_articulation_motion": false
+        }
+      ],
+      "success": true
+    }
+  ],
+  "requested_cycles": 1,
+  "scene": "S1_integrated_kitchen_object_function_primary",
+  "status": "SUCCESS"
+}

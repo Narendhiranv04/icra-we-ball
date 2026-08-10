@@ -617,6 +617,12 @@ def launch_action_viewer(
         viewer.cam.type = mujoco.mjtCamera.mjCAMERA_FIXED
         viewer.cam.fixedcamid = camera_id
     executor = MobileMoveExecutor(scene.model, scene.data, scene.robot_name)
+    from mujoco_scenes.kitchen_articulation import GoogleKitchenArticulationExecutor
+    from mujoco_scenes.kitchen_execution_policy import KitchenWorkspace
+
+    articulation_executor = GoogleKitchenArticulationExecutor(
+        scene, held_object_getter=lambda: picker.held_object
+    )
     observed_run = ObservedStateRun.create_for_scene(
         scene,
         runs_root="runs",
@@ -878,7 +884,19 @@ def launch_action_viewer(
         try:
             if executor.busy or picker.busy:
                 raise RuntimeError("Wait for the current action to finish")
-            scene.open_container(container_id)
+            workspace = {
+                "home": KitchenWorkspace.HOME,
+                "cupboard1": KitchenWorkspace.LEFT_SIDE,
+                "right_side": KitchenWorkspace.RIGHT_SIDE,
+            }[executor.current_physical_location]
+            result = articulation_executor.execute("OPEN", container_id, workspace)
+            if not result.success:
+                raise RuntimeError(
+                    f"{result.failure_code}: {result.message or result.status}"
+                )
+            # Bookkeeping follows the verified physical postcondition.  The
+            # direct inspection actuator API is intentionally not called.
+            scene.record_container_opened(container_id)
             run_geometry(f"after_{container_id}", region_opened=container_id)
         except Exception as error:
             ui_error = f"Open failed: {error}"

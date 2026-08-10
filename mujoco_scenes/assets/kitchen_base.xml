@@ -110,6 +110,9 @@
         <geom name="C1_handle_bar" type="capsule" size="0.008"
               fromto="-0.355 -0.062 0.13 -0.265 -0.062 0.13"
               material="mat_metal"/>
+        <site name="C1_handle_grasp" type="capsule" size="0.012"
+              fromto="-0.345 -0.062 0.13 -0.275 -0.062 0.13"
+              rgba="0 0 0 0" group="5"/>
       </body>
 
       <!-- Site for placing objects inside -->
@@ -151,6 +154,9 @@
         <geom name="C2_handle_bar" type="capsule" size="0.008"
               fromto="0.265 -0.062 0.13 0.355 -0.062 0.13"
               material="mat_metal"/>
+        <site name="C2_handle_grasp" type="capsule" size="0.012"
+              fromto="0.275 -0.062 0.13 0.345 -0.062 0.13"
+              rgba="0 0 0 0" group="5"/>
       </body>
 
       <site name="C2_interior" pos="0 0 -0.12" size="0.18 0.14 0.01" type="box"
@@ -273,20 +279,21 @@
                range="0 2.0" damping="0.1"/>
         <geom name="B1_lid_panel" type="box" size="0.178 0.093 0.010"
               pos="0 -0.09 0" material="mat_cardboard"/>
-        <!-- Robot-facing U handle mounted into the thick front edge. The two
-             arms project toward -Y (toward Fetch) and the grasp bar runs
-             horizontally along X rather than standing above the lid. -->
+        <!-- Centered horizontal U-handle mounted on the robot-facing +X side
+             of the lid. The supports project straight along X and the bar
+             runs along Y, all in one plane: Google approaches along -X and
+             maintains one side grasp while tilting the lid. -->
         <geom name="B1_lid_handle_left" type="capsule" size="0.007"
-              fromto="-0.055 -0.181 0 -0.055 -0.218 0"
+              fromto="0.165 -0.135 0 0.255 -0.135 0"
               material="mat_metal"/>
         <geom name="B1_lid_handle_right" type="capsule" size="0.007"
-              fromto="0.055 -0.181 0 0.055 -0.218 0"
+              fromto="0.165 -0.045 0 0.255 -0.045 0"
               material="mat_metal"/>
         <geom name="B1_lid_handle_bar" type="capsule" size="0.008"
-              fromto="-0.055 -0.218 0 0.055 -0.218 0"
+              fromto="0.255 -0.135 0 0.255 -0.045 0"
               material="mat_metal"/>
         <site name="B1_lid_handle_grasp" type="capsule" size="0.012"
-              fromto="-0.045 -0.218 0 0.045 -0.218 0"
+              fromto="0.255 -0.125 0 0.255 -0.055 0"
               rgba="0 0 0 0" group="5"/>
       </body>
 

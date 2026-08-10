@@ -1,0 +1,32 @@
+{
+  "c2_b1_share_right_side": true,
+  "container_requirements": {
+    "B1": "right_side",
+    "C1": "left_side",
+    "C2": "right_side",
+    "D1": "home",
+    "D2": "home"
+  },
+  "navigation_destinations": {
+    "home": "home",
+    "left_side": "cupboard1",
+    "right_side": "cupboard2"
+  },
+  "workspaces": {
+    "cupboard1": {
+      "x_m": -1.025,
+      "y_m": -0.1,
+      "yaw_rad": -1.5707963267948966
+    },
+    "home": {
+      "x_m": 0.0,
+      "y_m": -1.1,
+      "yaw_rad": 0.0
+    },
+    "right_side": {
+      "x_m": 1.025,
+      "y_m": -0.1,
+      "yaw_rad": 1.5707963267948966
+    }
+  }
+}

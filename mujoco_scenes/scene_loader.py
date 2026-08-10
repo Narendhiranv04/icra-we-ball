@@ -1536,10 +1536,19 @@ def build_scene_xml(
             for child in obj_elem.iter():
                 if child is obj_elem:
                     continue
-                for attr in ["name", "joint"]:
-                    val = child.get(attr)
-                    if val and old_name in val:
-                        child.set(attr, val.replace(old_name, new_name))
+                name = child.get("name")
+                if name:
+                    if old_name in name:
+                        child.set("name", name.replace(old_name, new_name))
+                    else:
+                        # Decorative children such as liquid/powder surfaces
+                        # do not necessarily contain the library body name.
+                        # They still occupy MuJoCo's global geom/site namespace
+                        # and therefore need an instance-qualified name.
+                        child.set("name", f"{new_name}__{name}")
+                joint = child.get("joint")
+                if joint and old_name in joint:
+                    child.set("joint", joint.replace(old_name, new_name))
             # Rename the root exactly once. Iterating over the already-renamed
             # root used to turn the second instance into ``cup_2_2`` while
             # persistent discovery correctly looked for ``cup_2``.
@@ -1808,6 +1817,30 @@ def build_scene_xml(
                         "body1": gripper_body_name,
                         "body2": instance_name,
                         "anchor": "0 0 0",
+                        "active": "false",
+                        "solref": "0.01 1",
+                    },
+                )
+        if robot_name == ROBOT_GOOGLE:
+            # Phase-A container constraints are execution-only and inactive
+            # at reset.  The physical articulation executor fills the live
+            # relative transform and enables one weld only after bilateral
+            # finger/handle contact has been confirmed.  Perception continues
+            # to use the independent direct-actuation API.
+            for container_id, moving_body in (
+                ("D1", "drawer_D1_tray"),
+                ("D2", "drawer_D2_tray"),
+                ("C1", "C1_door"),
+                ("C2", "C2_door"),
+                ("B1", "B1_lid"),
+            ):
+                ET.SubElement(
+                    equality,
+                    "weld",
+                    {
+                        "name": f"google:container_grasp_{container_id}",
+                        "body1": gripper_body_name,
+                        "body2": moving_body,
                         "active": "false",
                         "solref": "0.01 1",
                     },

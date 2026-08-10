@@ -1,0 +1,66 @@
+{
+  "authoritative_run": "runs/kitchen_phaseA_combined/execution_results.json",
+  "authoritative_scene": "S1_integrated_kitchen_object_function_primary",
+  "automatically_inserted_moves": 2,
+  "backend": "google",
+  "containers": {
+    "B1": {
+      "close": "EXECUTION_SUCCESS",
+      "open": "EXECUTION_SUCCESS"
+    },
+    "C1": {
+      "close": "EXECUTION_SUCCESS",
+      "open": "EXECUTION_SUCCESS"
+    },
+    "C2": {
+      "close": "EXECUTION_SUCCESS",
+      "open": "EXECUTION_SUCCESS"
+    },
+    "D1": {
+      "close": "EXECUTION_SUCCESS",
+      "open": "EXECUTION_SUCCESS"
+    },
+    "D2": {
+      "close": "EXECUTION_SUCCESS",
+      "open": "EXECUTION_SUCCESS"
+    }
+  },
+  "move_steps": [
+    {
+      "action": "MOVE",
+      "automatically_inserted": true,
+      "destination": "cupboard1",
+      "duration_s": 1.9510641010128893,
+      "physics_steps": 9432,
+      "source_workspace": "home",
+      "status": "Move complete: cupboard1 (1.9 s)",
+      "success": true,
+      "target_workspace": "left_side"
+    },
+    {
+      "action": "MOVE",
+      "automatically_inserted": true,
+      "destination": "cupboard2",
+      "duration_s": 3.9355332539998926,
+      "physics_steps": 18060,
+      "source_workspace": "left_side",
+      "status": "Move complete: cupboard2 (3.8 s)",
+      "success": true,
+      "target_workspace": "right_side"
+    }
+  ],
+  "non_authoritative_reliability_attempt": {
+    "completed_records": 28,
+    "note": "Retained as diagnostic evidence; not used as the authoritative pass.",
+    "path": "runs/kitchen_phaseA_reliability_5cycles/execution_results.json",
+    "requested_cycles": 5,
+    "status": "FAILED"
+  },
+  "phase": "KITCHEN_GOOGLE_EXECUTION_PHASE_A",
+  "physical_open_close_steps": 10,
+  "redundant_moves": 0,
+  "requested_actions": 10,
+  "status": "PASS",
+  "successful_actions": 10,
+  "successful_physical_open_close_steps": 10
+}

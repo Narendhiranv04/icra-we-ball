@@ -237,6 +237,8 @@ class RobotConfigurationCollisionChecker:
         model: mujoco.MjModel,
         reference: mujoco.MjData,
         profile: ManipulationProfile,
+        *,
+        mounting_allowances: dict[frozenset[str], float] | None = None,
     ):
         self.model = model
         self.profile = profile
@@ -250,6 +252,10 @@ class RobotConfigurationCollisionChecker:
         )
         self.arm_qpos = model.jnt_qposadr[self.arm_joint_ids]
         self.body_prefix = profile.gripper_body.split(":", 1)[0] + ":"
+        self.mounting_allowances = (
+            SELF_COLLISION_MOUNT_ALLOWANCES
+            if mounting_allowances is None else mounting_allowances
+        )
         self.robot_visual_geoms = []
         self.environment_geoms = []
         for geom_id in range(model.ngeom):
@@ -303,7 +309,7 @@ class RobotConfigurationCollisionChecker:
                 second_name = mujoco.mj_id2name(
                     model, mujoco.mjtObj.mjOBJ_BODY, second_body
                 ) or ""
-                mounting_allowance = SELF_COLLISION_MOUNT_ALLOWANCES.get(
+                mounting_allowance = self.mounting_allowances.get(
                     frozenset((first_name, second_name))
                 )
                 if mounting_allowance is not None:
