@@ -101,7 +101,6 @@ class WorkshopSceneTests(unittest.TestCase):
         revealed = scene.open_container("LEFT_DRAWER")
         self.assertIn("workshop_manual_driver", revealed)
         self.assertIn("workshop_short_screw", revealed)
-        self.assertIn("workshop_cabinet_key", revealed)
         self.assertNotIn("workshop_power_driver", revealed)
         self.assertEqual(
             scene.get_instance_source_region("workshop_manual_driver"),
@@ -111,14 +110,14 @@ class WorkshopSceneTests(unittest.TestCase):
             scene.get_instance_source_region("workshop_power_driver")
         )
 
-    def test_scene_exposes_fixture_tray_and_locked_cabinet(self):
+    def test_scene_exposes_fixture_tray_and_closed_tool_cabinet(self):
         scene = WorkshopScene("none")
         self.assertEqual(
             WORKSHOP_FUNCTIONAL_REGIONS,
             (
                 "FRAME_FIXTURE",
                 "SCREW_STAGING_TRAY",
-                "LOCKED_TOOL_CABINET",
+                "TOOL_CABINET",
             ),
         )
 
@@ -134,7 +133,7 @@ class WorkshopSceneTests(unittest.TestCase):
         cabinet_joint_id = mujoco.mj_name2id(
             scene.model,
             mujoco.mjtObj.mjOBJ_JOINT,
-            "locked_cabinet_door_hinge",
+            "tool_cabinet_door_hinge",
         )
         self.assertGreaterEqual(cabinet_joint_id, 0)
         self.assertEqual(
@@ -143,8 +142,10 @@ class WorkshopSceneTests(unittest.TestCase):
         )
         task_state = scene.get_task_scene_state()
         self.assertFalse(task_state["joint_repaired"])
-        self.assertTrue(task_state["locked_cabinet"]["locked"])
-        self.assertFalse(task_state["locked_cabinet"]["open"])
+        self.assertFalse(task_state["tool_cabinet"]["open"])
+        self.assertFalse(
+            scene.get_region_observation_states()["LEFT_DRAWER"]["open"]
+        )
         self.assertFalse(task_state["joint_access"]["clear"])
         self.assertEqual(
             task_state["joint_access"]["covered_by"],
@@ -171,36 +172,39 @@ class WorkshopSceneTests(unittest.TestCase):
         self.assertAlmostEqual(scene.data.qpos[qpos_address], -0.84, places=2)
         self.assertAlmostEqual(scene.data.qpos[qpos_address + 1], 0.19, places=2)
 
-    def test_locked_cabinet_requires_observed_matching_key(self):
+    def test_tool_cabinet_opens_without_a_lock_and_closes_again(self):
         scene = WorkshopScene("none")
-        with self.assertRaisesRegex(RuntimeError, "locked"):
-            scene.open_container("LOCKED_CABINET")
-        with self.assertRaisesRegex(ValueError, "must be observed"):
-            scene.unlock_container("LOCKED_CABINET", "workshop_cabinet_key")
-
-        scene.open_container("LEFT_DRAWER")
-        scene.unlock_container("LOCKED_CABINET", "workshop_cabinet_key")
-        revealed = scene.open_container("LOCKED_CABINET")
+        revealed = scene.open_container("TOOL_CABINET")
         self.assertIn("workshop_power_driver", revealed)
         self.assertIn("workshop_long_screw", revealed)
         task_state = scene.get_task_scene_state()
-        self.assertFalse(task_state["locked_cabinet"]["locked"])
-        self.assertTrue(task_state["locked_cabinet"]["open"])
+        self.assertTrue(task_state["tool_cabinet"]["open"])
         door_joint_id = mujoco.mj_name2id(
             scene.model,
             mujoco.mjtObj.mjOBJ_JOINT,
-            "locked_cabinet_door_hinge",
+            "tool_cabinet_door_hinge",
         )
         door_qpos_address = scene.model.jnt_qposadr[door_joint_id]
         self.assertGreater(scene.data.qpos[door_qpos_address], 1.0)
-        lock_geom_id = mujoco.mj_name2id(
-            scene.model,
-            mujoco.mjtObj.mjOBJ_GEOM,
-            "locked_cabinet_lock",
+        self.assertEqual(
+            mujoco.mj_name2id(
+                scene.model,
+                mujoco.mjtObj.mjOBJ_GEOM,
+                "locked_cabinet_lock",
+            ),
+            -1,
         )
-        self.assertGreater(
-            scene.model.geom_rgba[lock_geom_id, 1],
-            scene.model.geom_rgba[lock_geom_id, 0],
+
+        scene.close_container("TOOL_CABINET")
+        self.assertFalse(scene.get_task_scene_state()["tool_cabinet"]["open"])
+        self.assertAlmostEqual(scene.data.qpos[door_qpos_address], 0.0, places=2)
+        self.assertEqual(
+            mujoco.mj_name2id(
+                scene.model,
+                mujoco.mjtObj.mjOBJ_BODY,
+                "workshop_cabinet_key",
+            ),
+            -1,
         )
 
     def test_short_and_long_screws_are_geometrically_distinct(self):
@@ -221,7 +225,7 @@ class WorkshopSceneTests(unittest.TestCase):
     def test_workshop_has_five_views_for_each_observation_stage(self):
         config = load_inspection_rig_config(WORKSHOP_INSPECTION_RIG_CONFIG)
         self.assertEqual(
-            config["inspection_sequence"], ["LEFT_DRAWER", "LOCKED_CABINET"]
+            config["inspection_sequence"], ["LEFT_DRAWER", "TOOL_CABINET"]
         )
         self.assertEqual(set(config["camera_slots"].values()), set(WORKSHOP_CAMERAS))
         for region in config["regions"].values():
@@ -239,13 +243,12 @@ class WorkshopSceneTests(unittest.TestCase):
         for instance_name in (
             "workshop_manual_driver",
             "workshop_short_screw",
-            "workshop_cabinet_key",
         ):
             self.assertGreater(len(left_run.clouds[instance_name].points), 20)
 
-        scene.unlock_container("LOCKED_CABINET", "workshop_cabinet_key")
-        scene.open_container("LOCKED_CABINET")
-        right_run = checker.run_region_inspection("LOCKED_CABINET")
+        scene.close_container("LEFT_DRAWER")
+        scene.open_container("TOOL_CABINET")
+        right_run = checker.run_region_inspection("TOOL_CABINET")
         for instance_name in (
             "workshop_power_driver",
             "workshop_long_screw",
@@ -264,23 +267,25 @@ class WorkshopSceneTests(unittest.TestCase):
 
             self.assertEqual(
                 [stage["region_id"] for stage in manifest["stages"]],
-                ["INITIAL", "LEFT_DRAWER", "LOCKED_CABINET"],
+                ["INITIAL", "LEFT_DRAWER", "TOOL_CABINET"],
             )
             self.assertEqual(manifest["segmentation"], "oracle")
             self.assertTrue((output / "manifest.json").is_file())
-            drawer_objects = {
-                item["debug_instance_id"]
-                for item in manifest["stages"][1]["objects"]
-            }
-            self.assertIn("workshop_cabinet_key", drawer_objects)
             for stage in manifest["stages"]:
                 stage_dir = output / stage["directory"]
                 self.assertTrue((stage_dir / "stage_summary.json").is_file())
                 self.assertTrue((stage_dir / stage["combined_ply"]).is_file())
                 self.assertGreater(stage["total_point_count"], 20)
+            states = scene.get_region_observation_states()
+            self.assertFalse(states["LEFT_DRAWER"]["open"])
+            self.assertFalse(states["TOOL_CABINET"]["open"])
             self.assertFalse(
-                scene.get_task_scene_state()["locked_cabinet"]["locked"]
+                manifest["final_region_states"]["LEFT_DRAWER"]["open"]
             )
+            self.assertFalse(
+                manifest["final_region_states"]["TOOL_CABINET"]["open"]
+            )
+            self.assertFalse(scene.get_task_scene_state()["tool_cabinet"]["open"])
 
 
 class WorkshopAlternativeTests(unittest.TestCase):

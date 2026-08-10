@@ -106,29 +106,26 @@ A transparent polycarbonate transport cover sits flush over the guide. It has
 a rubber gasket and a yellow pull tab, and must be removed into the adjacent
 staging tray before a screw can enter the joint. This adds a visible geometric
 access prerequisite without requiring another tool.
-A locked tabletop tool cabinet creates the logical access prerequisite. Its
-key is hidden in the left drawer, and the cabinet cannot be opened through the
-scene API until that key has first been observed and used. The adjacent orange
-tray is reserved for staging the selected screw.
+An ordinary closed tabletop tool cabinet stores a second tool/fastener option.
+It has no lock or key. The adjacent orange tray is reserved for staging the
+selected screw.
 
-The left drawer hides the key, a manual Phillips driver, and a geometrically
-inadequate short screw. The locked cabinet hides a powered Phillips driver and
-the feasible long screw. Once both regions have been observed, either driver
-can form a complete cross-region system with the long screw. This retains
-object choice, region search, geometric rejection, and a meaningful
-key-before-open prerequisite while removing cutting, loose-frame assembly, and
-vertical mounting.
+The left drawer hides a manual Phillips driver and a geometrically inadequate
+short screw. The tool cabinet hides a powered Phillips driver and the feasible
+long screw. Once both regions have been observed, either driver can form a
+complete cross-region system with the long screw. This retains object choice,
+region search, and geometric rejection while removing cutting, loose-frame
+assembly, vertical mounting, and the unrelated lock-and-key task.
 
 The intended partial order is:
 
 ```text
 remove_joint_seal -> insert_screw -> drive_screw
-observe_key -> unlock_cabinet -> open_cabinet -> observe_long_screw
 observe_long_screw -> insert_screw
 ```
 
-Seal removal and storage inspection may occur in either order. Only the
-dependent actions above are ordered.
+Seal removal and either storage inspection may occur in any order. Only the
+dependent actions above are ordered. Both containers begin closed.
 
 Inspect it with Google Robot:
 
@@ -144,13 +141,12 @@ MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.workshop_pointcloud \
   --robot google --segmentation oracle --viewer
 ```
 
-The runner captures `INITIAL`, `LEFT_DRAWER`, and `LOCKED_CABINET` in that
-order. It observes the key in the drawer before applying the labelled
-ground-truth unlock transition, so the final cabinet capture does not bypass
-the workshop prerequisite. Each stage writes the five RGB images, depth maps,
-mask overlays, per-view clouds, fused object clouds, and a summary beneath a
-timestamped `runs/workshop_pointcloud/` directory. The interactive viewer
-opens after capture with the drawer and cabinet visible.
+The runner captures `INITIAL`, `LEFT_DRAWER`, and `TOOL_CABINET` in that order.
+It temporarily opens only the region being photographed and closes it again
+immediately after capture. Consequently, the interactive viewer starts with
+both containers fully closed. Each stage writes the five RGB images, depth
+maps, mask overlays, per-view clouds, fused object clouds, and a summary
+beneath a timestamped `runs/workshop_pointcloud/` directory.
 
 `oracle` means explicit MuJoCo instance masks for simulator debugging. To use
 the same RGB-D reconstruction with image-only masks from the separate SAM 3.1
@@ -170,8 +166,8 @@ Open both storage regions directly for perception debugging:
 
 ```bash
 MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.workshop_scene \
-  --robot none --open LEFT_DRAWER --unlock-cabinet \
-  --open LOCKED_CABINET --remove-seal --viewer
+  --robot none --open LEFT_DRAWER --open TOOL_CABINET \
+  --remove-seal --viewer
 ```
 
 The point-cloud runner establishes workshop observation and reconstruction,
@@ -188,6 +184,6 @@ must eventually replace it.
 The observation, grounding, ablation, early-termination, and evidence-report
 paths are implemented for the existing benchmarks. Kitchen and living-room
 robot manipulation remains in their calibrated controllers. Workshop grasping,
-key insertion/turning, screw driving, and task sequencing are not implemented
-yet. The current W1 boundary is scene construction, region-gated observations,
-and enforced logical task-state transitions.
+screw driving, and task sequencing are not implemented yet. The current W1
+boundary is scene construction, region-gated observations, and observable
+task-state transitions.

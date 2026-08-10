@@ -11,9 +11,9 @@ or discarding uncommitted changes.
 
 - Repository root: `/home/boreddog/Documents/RRC/LH_Extension/V1`
 - Current branch: `workshop_joint_prerequisites`
-- The branch currently points to `c24eddf`, the committed workshop joint
-  prerequisite redesign. The dirty worktree adds the workshop-only
-  point-cloud launch path described below.
+- The branch currently points to `a7760e7`, the committed workshop-only
+  five-view point-cloud runner. The dirty worktree removes the lock/key task
+  and ensures both storage regions are closed outside their active capture.
 - The newest integrated upstream revision is `b4dcbd6`. Its complete L2
   Ablation 1/2/3 implementation and realistic movie-night assets are retained.
 - Generated `reports/` media is deliberately excluded; report generators,
@@ -219,8 +219,10 @@ The dirty worktree implements a deliberately simplified, single-arm workshop
 repair cell. It is one front-facing workbench intended to keep Google Robot at
 one central stance. Two wooden frame members are already rigidly held in a
 fixture, and a captive guide can retain a staged screw. The artificial hinged
-joint guard was removed. A locked tabletop tool cabinet now supplies the TAMP
-access dependency, and the orange tray is for staging the selected screw.
+joint guard was removed. An ordinary closed tabletop tool cabinet supplies a
+second tool/fastener region, and the orange tray is for staging the selected
+screw. The earlier lock and key were removed because they distracted from the
+joint-repair alternatives.
 
 A small transparent polycarbonate cover with a rubber gasket and yellow pull
 tab now sits directly over the joint guide. It is a stable free-jointed object,
@@ -230,16 +232,13 @@ is covered or clear. `--remove-seal` and `move_joint_seal_to_tray()` provide an
 explicit ground-truth debug transition; they are not a substitute for the
 future calibrated grasp-and-place action.
 
-The left drawer contains the cabinet key, a manual Phillips driver, and an
-unusably short screw. The locked cabinet contains a powered Phillips driver and
-the feasible long screw. The scene API rejects attempts to open the cabinet
-while locked and rejects use of an unobserved or mismatched key. Successful
-unlocking changes the visible lock indicator from red to green. The intended
+The left drawer contains a manual Phillips driver and an unusably short screw.
+The tool cabinet contains a powered Phillips driver and the feasible long
+screw. Both start closed and may be inspected independently. The intended
 future execution has this partial order:
 
 ```text
 remove_joint_seal -> insert_screw -> drive_screw
-observe_key -> unlock_cabinet -> open_cabinet -> observe_long_screw
 observe_long_screw -> insert_screw
 ```
 
@@ -253,16 +252,16 @@ at a time.
 This still supports the desired research variables: manual versus powered
 driver object alternatives, short versus long screw geometry, fixed-order
 drawer/cabinet region search, cross-region driver/fastener composition, the
-logical `key_observed -> cabinet_unlocked -> cabinet_open` prerequisite chain,
-and first-feasible termination. Cutting, loose-frame assembly, and vertical
+geometric seal-removal prerequisite, and first-feasible termination. Cutting,
+loose-frame assembly, lock-and-key manipulation, and vertical
 mounting were removed because they introduced several unrelated high-risk
 manipulation skills into one benchmark.
 
 `mujoco_scenes/workshop_scene.py` compiles with `--robot google` and
 `--robot none`, exposes five fixed cameras, preserves region-gated visibility,
-and reports non-privileged locked/open cabinet state. The
-inspection rig remains `LEFT_DRAWER` then `LOCKED_CABINET` and produces fresh
-RGB-D evidence for the new contents. Launch it with:
+and reports non-privileged open/closed container state. The inspection rig is
+`LEFT_DRAWER` then `TOOL_CABINET` and produces fresh RGB-D evidence for their
+contents. Launch it with:
 
 ```bash
 MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.workshop_scene \
@@ -270,10 +269,12 @@ MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.workshop_scene \
 ```
 
 `mujoco_scenes/workshop_pointcloud.py` is the workshop-only five-view capture
-entry point. It captures `INITIAL -> LEFT_DRAWER -> LOCKED_CABINET`, observes
-the key before the labelled unlock transition, and exports RGB, depth, mask
-debug views, per-camera PLY files, fused object PLY files, stage summaries, and
-a root manifest. Its default oracle mode launches without a model server:
+entry point. It captures `INITIAL -> LEFT_DRAWER -> TOOL_CABINET`, temporarily
+opens only the active region, closes it immediately after capture, and exports
+RGB, depth, mask debug views, per-camera PLY files, fused object PLY files,
+stage summaries, and a root manifest. The viewer therefore starts with the
+drawer and cabinet closed. Its default oracle mode launches without a model
+server:
 
 ```bash
 MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.workshop_pointcloud \
@@ -288,8 +289,8 @@ not robot-mounted.
 
 Current boundary: this change implements only the scene, observable state,
 camera/inspection configuration, tests, and documentation. It does **not**
-implement grasping, physical seal removal, key insertion/turning, screw
-driving, functional grounding, PDDLStream, or execution. The existing
+implement grasping, physical seal removal, screw driving, functional
+grounding, PDDLStream, or execution. The existing
 `configs/workshop_joint_alternatives.yaml` and `workshop_alternatives.py` still
 describe the older hammer/nail single-joint prototype and must be redesigned
 in the next workshop-pipeline phase rather than treated as the new scene's

@@ -37,13 +37,12 @@
     <material name="frame_wood" rgba="0.63 0.36 0.15 1"/>
     <material name="rubber_mat" rgba="0.07 0.08 0.08 1"/>
     <material name="staging_orange" rgba="0.70 0.27 0.06 1"/>
-    <material name="brass" rgba="0.78 0.55 0.12 1" reflectance="0.25"/>
     <material name="clear_polycarbonate" rgba="0.48 0.78 0.88 0.48"
               reflectance="0.18"/>
   </asset>
 
   <worldbody>
-    <light name="workshop_key" pos="-1.2 -1.4 3.5" dir="0.25 0.35 -1"
+    <light name="workshop_main_light" pos="-1.2 -1.4 3.5" dir="0.25 0.35 -1"
            directional="true" diffuse="0.92 0.87 0.79"/>
     <light name="workshop_fill" pos="1.5 -0.1 2.7" dir="-0.4 0.1 -1"
            directional="true" diffuse="0.52 0.64 0.78"/>
@@ -206,38 +205,21 @@
               quat="0.7071 0 0.7071 0" size="0.022 0.008"
               material="tool_red" contype="0" conaffinity="0"/>
       </body>
-      <body name="workshop_cabinet_key" pos="-0.16 -0.05 0.075">
-        <geom name="cabinet_key_bow" type="cylinder" pos="-0.09 0 0"
-              size="0.045 0.010" material="brass"
-              contype="0" conaffinity="0"/>
-        <geom name="cabinet_key_bow_cutout" type="cylinder"
-              pos="-0.09 0 0.012" size="0.021 0.002"
-              material="tool_black" contype="0" conaffinity="0"/>
-        <geom name="cabinet_key_shank" type="box" pos="0.01 0 0"
-              size="0.070 0.012 0.010" material="brass"
-              contype="0" conaffinity="0"/>
-        <geom name="cabinet_key_tooth_1" type="box" pos="0.060 0 0.016"
-              size="0.014 0.012 0.012" material="brass"
-              contype="0" conaffinity="0"/>
-        <geom name="cabinet_key_tooth_2" type="box" pos="0.090 0 0.021"
-              size="0.012 0.012 0.017" material="brass"
-              contype="0" conaffinity="0"/>
-      </body>
     </body>
 
-    <!-- Locked cabinet: the key is required before this door can open. -->
-    <body name="locked_tool_cabinet" pos="0.78 0.68 0.92">
-      <geom name="locked_cabinet_bottom" type="box" pos="0 0 -0.28"
+    <!-- Closed tool cabinet: powered driver and feasible long screw. -->
+    <body name="tool_cabinet" pos="0.78 0.68 0.92">
+      <geom name="tool_cabinet_bottom" type="box" pos="0 0 -0.28"
             size="0.30 0.19 0.020" material="cabinet_blue"/>
-      <geom name="locked_cabinet_top" type="box" pos="0 0 0.28"
+      <geom name="tool_cabinet_top" type="box" pos="0 0 0.28"
             size="0.30 0.19 0.020" material="cabinet_blue"/>
-      <geom name="locked_cabinet_left" type="box" pos="-0.28 0 0"
+      <geom name="tool_cabinet_left" type="box" pos="-0.28 0 0"
             size="0.020 0.19 0.28" material="cabinet_blue"/>
-      <geom name="locked_cabinet_right" type="box" pos="0.28 0 0"
+      <geom name="tool_cabinet_right" type="box" pos="0.28 0 0"
             size="0.020 0.19 0.28" material="cabinet_blue"/>
-      <geom name="locked_cabinet_back" type="box" pos="0 0.18 0"
+      <geom name="tool_cabinet_back" type="box" pos="0 0.18 0"
             size="0.30 0.020 0.28" material="cabinet_blue"/>
-      <geom name="locked_cabinet_shelf" type="box" pos="0 0 0"
+      <geom name="tool_cabinet_shelf" type="box" pos="0 0 0"
             size="0.27 0.17 0.012" material="drawer_blue"/>
 
       <body name="workshop_power_driver" pos="-0.03 0.00 -0.16">
@@ -264,22 +246,15 @@
       </body>
     </body>
 
-    <body name="locked_cabinet_door" pos="0.48 0.48 0.92">
-      <joint name="locked_cabinet_door_hinge" type="hinge"
+    <body name="tool_cabinet_door" pos="0.48 0.48 0.92">
+      <joint name="tool_cabinet_door_hinge" type="hinge"
              axis="0 0 -1" range="0 1.40" limited="true"
              damping="4" armature="0.02"/>
-      <geom name="locked_cabinet_door_panel" type="box" pos="0.30 0 0"
+      <geom name="tool_cabinet_door_panel" type="box" pos="0.30 0 0"
             size="0.30 0.022 0.28" material="drawer_blue"
             contype="0" conaffinity="0"/>
-      <geom name="locked_cabinet_door_handle" type="capsule"
+      <geom name="tool_cabinet_door_handle" type="capsule"
             fromto="0.48 -0.055 -0.07 0.48 -0.055 0.07" size="0.018"
-            material="tool_black" contype="0" conaffinity="0"/>
-      <geom name="locked_cabinet_lock" type="cylinder"
-            pos="0.48 -0.030 -0.15" quat="0.7071 0.7071 0 0"
-            size="0.037 0.014" material="tool_red"
-            contype="0" conaffinity="0"/>
-      <geom name="locked_cabinet_keyway" type="box"
-            pos="0.48 -0.046 -0.15" size="0.005 0.002 0.018"
             material="tool_black" contype="0" conaffinity="0"/>
     </body>
 
@@ -298,8 +273,8 @@
   <actuator>
     <position name="left_tool_drawer_actuator"
               joint="left_tool_drawer_slide" kp="300" ctrlrange="0 0.72"/>
-    <position name="locked_cabinet_door_actuator"
-              joint="locked_cabinet_door_hinge" kp="120"
+    <position name="tool_cabinet_door_actuator"
+              joint="tool_cabinet_door_hinge" kp="120"
               ctrlrange="0 1.40"/>
   </actuator>
 </mujoco>

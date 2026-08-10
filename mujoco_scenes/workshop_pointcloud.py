@@ -25,13 +25,12 @@ DEFAULT_PROMPTS = (
     "screwdriver",
     "powered screwdriver",
     "screw",
-    "key",
     "wooden frame",
 )
 STAGES = (
     ("INITIAL", "000_initial"),
     ("LEFT_DRAWER", "001_left_drawer"),
-    ("LOCKED_CABINET", "002_locked_cabinet"),
+    ("TOOL_CABINET", "002_tool_cabinet"),
 )
 
 
@@ -85,29 +84,6 @@ def _export_fused_clouds(run: PointCloudRun, output_dir: Path) -> dict[str, Any]
     }
 
 
-def _prepare_region(
-    scene: WorkshopScene,
-    region_id: str,
-    *,
-    cabinet_key_observed: bool,
-) -> None:
-    if region_id == "INITIAL":
-        return
-    if region_id == "LEFT_DRAWER":
-        scene.open_container(region_id)
-        return
-    if region_id == "LOCKED_CABINET":
-        if not cabinet_key_observed:
-            raise RuntimeError(
-                "Cannot inspect LOCKED_CABINET: the cabinet key was not "
-                "reconstructed from LEFT_DRAWER"
-            )
-        scene.unlock_container("LOCKED_CABINET", "workshop_cabinet_key")
-        scene.open_container(region_id)
-        return
-    raise ValueError(f"Unknown workshop inspection region: {region_id}")
-
-
 def run_workshop_pointcloud(
     output_dir: str | Path,
     *,
@@ -134,23 +110,18 @@ def run_workshop_pointcloud(
         semantic_prompts=prompts if segmentation == "sam3" else (),
     )
     stage_records = []
-    cabinet_key_observed = False
     for region_id, directory_name in STAGES:
-        _prepare_region(
-            scene,
-            region_id,
-            cabinet_key_observed=cabinet_key_observed,
-        )
+        if region_id != "INITIAL":
+            scene.open_container(region_id)
         stage_dir = output / directory_name
-        run = checker.run_region_inspection(
-            region_id,
-            stage_output_dir=stage_dir,
-        )
-        cabinet_key_observed = cabinet_key_observed or any(
-            instance_id == "workshop_cabinet_key"
-            or "key" in cloud.object_kind.casefold()
-            for instance_id, cloud in run.clouds.items()
-        )
+        try:
+            run = checker.run_region_inspection(
+                region_id,
+                stage_output_dir=stage_dir,
+            )
+        finally:
+            if region_id != "INITIAL":
+                scene.close_container(region_id)
         stage_record = {
             "region_id": region_id,
             "directory": directory_name,
@@ -174,8 +145,10 @@ def run_workshop_pointcloud(
         "camera_ids": list(scene.point_cloud_cameras),
         "resolution": [width, height],
         "inspection_order": [stage[0] for stage in STAGES],
+        "containers_closed_after_capture": True,
         "prompts": list(prompts) if segmentation == "sam3" else [],
         "stages": stage_records,
+        "final_region_states": scene.get_region_observation_states(),
         "final_task_state": scene.get_task_scene_state(),
     }
     _write_json(output / "manifest.json", manifest)

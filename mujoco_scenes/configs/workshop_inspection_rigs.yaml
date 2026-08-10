@@ -1,5 +1,5 @@
 schema_version: 1
-inspection_sequence: [LEFT_DRAWER, LOCKED_CABINET]
+inspection_sequence: [LEFT_DRAWER, TOOL_CABINET]
 
 camera_slots:
   left: workshop_camera_left
@@ -79,7 +79,7 @@ regions:
       maximum_world_m: [-0.06, 0.40, 0.62]
     cameras: *workshop_views
 
-  LOCKED_CABINET:
+  TOOL_CABINET:
     target_world_m: [0.78, 0.62, 0.90]
     rig_position_world_m: [0.78, -0.72, 1.22]
     up_world: [0.0, 0.0, 1.0]
