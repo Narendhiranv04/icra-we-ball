@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from dataclasses import replace
 from enum import Enum
 import time
 from typing import Any
@@ -12,11 +13,17 @@ import numpy as np
 
 from .generic_manipulation import (
     CalibratedPickPlaceExecutor,
+    GraspPoseCandidate,
     GOOGLE_PICK_SPECS,
     SimplePickSpec,
 )
 from .kitchen_execution_entities import ObjectSourceContext
 from .kitchen_execution_policy import KitchenWorkspace
+from .living_room_mobile_execution import (
+    oriented_rectangle_corners,
+    oriented_rectangles_clearance,
+    rectangle_inside_observed_support,
+)
 from .robot_profiles import manipulation_profile
 
 
@@ -24,7 +31,7 @@ PHASE_B_MOUNT_ALLOWANCES = {
     # Menagerie visual shells overlap at the concentric shoulder mount.  This
     # execution-local allowance is bounded to that mechanical pair; all other
     # self-collisions remain strict.
-    frozenset(("google:base_link", "google:link_shoulder")): -0.055,
+    frozenset(("google:base_link", "google:link_shoulder")): -0.060,
 }
 
 
@@ -81,6 +88,8 @@ class PhysicalPickResult:
     navigation_safe_carry_reached: bool
     held_state: dict[str, Any] | None
     direct_object_qpos_write: bool = False
+    selected_grasp_candidate_id: str | None = None
+    target_contact_geoms: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -131,11 +140,272 @@ class PhysicalPlaceResult:
     final_body_position_world_m: tuple[float, float, float] | None = None
     object_contact_pairs: tuple[tuple[str, str], ...] = ()
     direct_object_qpos_write: bool = False
+    linear_speed_m_s: float | None = None
+    angular_speed_rad_s: float | None = None
+    footprint_corners_world_m: tuple[tuple[float, float], ...] = ()
+    pairwise_payload_checks: tuple[dict[str, Any], ...] = ()
+    invalid_object_contacts: tuple[tuple[str, str], ...] = ()
+    source_return_xy_error_m: float | None = None
+    source_region_membership: bool | None = None
+    upright_alignment: float | None = None
+    intended_target_uniquely_closest: bool | None = None
 
 
 def _body_geom_ids(model: mujoco.MjModel, body_id: int) -> set[int]:
     first = int(model.body_geomadr[body_id])
     return set(range(first, first + int(model.body_geomnum[body_id])))
+
+
+def _body_yaw(data: mujoco.MjData, body_id: int) -> float:
+    rotation = data.xmat[body_id].reshape(3, 3)
+    return float(np.arctan2(rotation[1, 0], rotation[0, 0]))
+
+
+def _axis_angle_rotation(rotation_vector: np.ndarray) -> np.ndarray:
+    """Return a deterministic small-angle candidate rotation."""
+    angle = float(np.linalg.norm(rotation_vector))
+    if angle < 1e-12:
+        return np.eye(3)
+    axis = rotation_vector / angle
+    skew = np.array(
+        ((0.0, -axis[2], axis[1]),
+         (axis[2], 0.0, -axis[0]),
+         (-axis[1], axis[0], 0.0))
+    )
+    return np.eye(3) + np.sin(angle) * skew + (1.0 - np.cos(angle)) * (skew @ skew)
+
+
+class UtensilGraspCandidateGenerator:
+    """Generate bounded handle-frame candidates without object-name tuning."""
+
+    HANDLE_FRACTIONS = (0.55, 0.65, 0.75, 0.85)
+    HEIGHT_OFFSETS_M = (
+        0.0, 0.003, -0.003, 0.006, -0.006,
+        # Storage trays need the finger tips kept above the tray plane.  The
+        # pads still close onto the raised handle collision capsule, and the
+        # bilateral handle-contact gate rejects candidates that are too high.
+        0.009, 0.012, 0.015,
+    )
+
+    @classmethod
+    def generate(
+        cls, scene, body_id: int, source_kind: str = "TABLE"
+    ) -> tuple[GraspPoseCandidate, ...]:
+        handle_id = next(
+            (
+                geom_id
+                for geom_id in _body_geom_ids(scene.model, body_id)
+                if "handle_collision" in (
+                    mujoco.mj_id2name(
+                        scene.model, mujoco.mjtObj.mjOBJ_GEOM, geom_id
+                    ) or ""
+                )
+            ),
+            None,
+        )
+        if handle_id is None:
+            return ()
+        local_rotation = np.empty(9)
+        mujoco.mju_quat2Mat(local_rotation, scene.model.geom_quat[handle_id])
+        handle_axis_local = local_rotation.reshape(3, 3)[:, 2]
+        half_length = float(scene.model.geom_size[handle_id, 1])
+        centre = scene.model.geom_pos[handle_id].copy()
+        endpoints = (centre - half_length * handle_axis_local,
+                     centre + half_length * handle_axis_local)
+        head_geoms = [
+            geom_id for geom_id in _body_geom_ids(scene.model, body_id)
+            if "bowl_collision" in (
+                mujoco.mj_id2name(scene.model, mujoco.mjtObj.mjOBJ_GEOM, geom_id)
+                or ""
+            )
+        ]
+        head = (
+            scene.model.geom_pos[head_geoms[0]]
+            if head_geoms else centre - handle_axis_local * half_length
+        )
+        near, far = sorted(endpoints, key=lambda point: np.linalg.norm(point - head))
+        world_axis = scene.data.geom_xmat[handle_id].reshape(3, 3)[:, 2]
+        handle_yaw = float(np.arctan2(world_axis[1], world_axis[0]))
+        profile = manipulation_profile("google")
+        candidates = []
+        if source_kind == "DRAWER":
+            # A utensil lying low in a drawer cannot always be pinched from
+            # above without the finger tips entering the tray.  These two
+            # bounded handle-axis approaches retain horizontal jaw closure
+            # and are still subject to full collision and bilateral-contact
+            # acceptance.
+            carry_yaw = handle_yaw + np.deg2rad(330.0)
+            carry_tilt = (
+                _axis_angle_rotation(np.array((np.deg2rad(15.0), 0.0, 0.0)))
+                @ _axis_angle_rotation(np.array((0.0, np.deg2rad(15.0), 0.0)))
+            )
+            drawer_carry_rotation = (
+                _axis_angle_rotation(np.array((0.0, 0.0, carry_yaw)))
+                @ carry_tilt
+                @ profile.top_down_rotation
+            )
+            drawer_front_rotation = (
+                _axis_angle_rotation(np.array((0.0, 0.0, carry_yaw)))
+                @ profile.top_down_rotation
+            )
+            for fraction in (0.55, 0.65, 0.75, 0.85):
+                for storage_raise in (0.030, 0.040):
+                    front_position = near + fraction * (far - near)
+                    front_position[2] += storage_raise
+                    candidates.append(
+                        GraspPoseCandidate(
+                            candidate_id=(
+                                f"drawer_front_{int(storage_raise * 1000)}mm_"
+                                f"{int(fraction * 100)}pct"
+                            ),
+                            grasp_site_local_position_m=tuple(map(float, front_position)),
+                            target_rotation_world=drawer_front_rotation,
+                            approach_clearance_m=0.05,
+                            carry_rotation_world=drawer_carry_rotation,
+                            approach_offset_world_m=(0.0, -0.10, 0.0),
+                            approach_route_offsets_world_m=(
+                                (0.0, -0.35, 0.30),
+                                (0.0, -0.10, 0.20),
+                            ),
+                        )
+                    )
+            side_rotations = [
+                ("negative_axis", np.array(
+                    ((0.0, 0.0, 1.0),
+                     (0.0, 1.0, 0.0),
+                     (-1.0, 0.0, 0.0))
+                ), (-0.08, 0.0, 0.0)),
+                ("positive_axis", np.array(
+                    ((0.0, 0.0, -1.0),
+                     (0.0, 1.0, 0.0),
+                     (1.0, 0.0, 0.0))
+                ), (0.08, 0.0, 0.0)),
+            ]
+            positive_rotation = side_rotations[1][1]
+            for axis_name, rotation_vector in (
+                ("pitch_plus15", (0.0, np.deg2rad(15.0), 0.0)),
+                ("pitch_minus15", (0.0, -np.deg2rad(15.0), 0.0)),
+                ("roll_plus15", (np.deg2rad(15.0), 0.0, 0.0)),
+                ("roll_minus15", (-np.deg2rad(15.0), 0.0, 0.0)),
+            ):
+                side_rotations.append(
+                    (
+                        f"positive_axis_{axis_name}",
+                        _axis_angle_rotation(np.asarray(rotation_vector, float))
+                        @ positive_rotation,
+                        (0.08, 0.0, 0.0),
+                    )
+                )
+            side_rotations.append(
+                (
+                    "positive_axis_roll_minus15_short",
+                    _axis_angle_rotation(
+                        np.array((-np.deg2rad(15.0), 0.0, 0.0))
+                    ) @ positive_rotation,
+                    (0.04, 0.0, 0.0),
+                )
+            )
+            for fraction in (0.65, 0.75):
+                local_position = near + fraction * (far - near)
+                local_position[2] += 0.010
+                for branch, candidate_rotation, approach_offset in side_rotations:
+                    candidates.append(
+                        GraspPoseCandidate(
+                            candidate_id=(
+                                f"drawer_{branch}_{int(fraction * 100)}pct"
+                            ),
+                            grasp_site_local_position_m=tuple(map(float, local_position)),
+                            target_rotation_world=candidate_rotation,
+                            approach_clearance_m=0.04,
+                            carry_rotation_world=drawer_carry_rotation,
+                            approach_offset_world_m=approach_offset,
+                            approach_route_offsets_world_m=((approach_offset[0], 0.0, 0.20),),
+                        )
+                    )
+        for fraction in cls.HANDLE_FRACTIONS:
+            local_position = near + fraction * (far - near)
+            # The nominal perpendicular jaw branches are supplemented by
+            # bounded +/-30 degree wrist branches.  These are necessary for
+            # drawer/cupboard apertures where the same handle-frame grasp is
+            # valid but one wrist elbow branch intersects the fixture.
+            for branch_degrees in (330.0, 300.0, 0.0, 150.0, 120.0, 180.0):
+                yaw = handle_yaw + np.deg2rad(branch_degrees)
+                yaw_rotation = _axis_angle_rotation(np.array((0.0, 0.0, yaw)))
+                # A shallow diagonal approach keeps the wrist away from the
+                # table while leaving the finger pads perpendicular to the
+                # thin handle. The actual contact gate remains authoritative.
+                tilt = (
+                    _axis_angle_rotation(np.array((np.deg2rad(15.0), 0.0, 0.0)))
+                    @ _axis_angle_rotation(np.array((0.0, np.deg2rad(15.0), 0.0)))
+                )
+                rotation = yaw_rotation @ tilt @ profile.top_down_rotation
+                for height in cls.HEIGHT_OFFSETS_M:
+                    position = local_position.copy()
+                    position[2] += height
+                    candidates.append(
+                        GraspPoseCandidate(
+                            candidate_id=(
+                                f"handle_{int(fraction * 100)}pct_"
+                                f"yaw{int(branch_degrees)}_z{height:+.3f}"
+                            ),
+                            grasp_site_local_position_m=tuple(map(float, position)),
+                            target_rotation_world=rotation,
+                            approach_clearance_m=0.060,
+                        )
+                    )
+        return tuple(candidates)
+
+
+class JarGraspCandidateGenerator:
+    """Generate vertical pinch branches for approximately cylindrical jars."""
+
+    YAW_DEGREES = (0, 30, 60, 90, 120, 150, 180)
+    LOCAL_OFFSETS_M = (
+        (0.0, 0.0, 0.0),
+        (0.003, 0.0, 0.0), (-0.003, 0.0, 0.0),
+        (0.0, 0.003, 0.0), (0.0, -0.003, 0.0),
+        (0.0, 0.0, 0.003), (0.0, 0.0, -0.003),
+    )
+
+    @classmethod
+    def generate(cls, scene, grasp_site_id: int) -> tuple[GraspPoseCandidate, ...]:
+        origin = scene.model.site_pos[grasp_site_id].copy()
+        top_down = manipulation_profile("google").top_down_rotation
+        # The first branch approaches the cylindrical wall horizontally from
+        # the robot-facing side.  Its finger closing axis is horizontal and
+        # the required-contact filter admits wall geoms only.
+        wall_midpoint = origin.copy()
+        wall_midpoint[2] = 0.020
+        candidates = [
+            GraspPoseCandidate(
+                candidate_id="jar_side_wall_from_negative_y",
+                grasp_site_local_position_m=tuple(map(float, wall_midpoint)),
+                target_rotation_world=np.array(
+                    ((0.0, 1.0, 0.0),
+                     (0.0, 0.0, 1.0),
+                     (1.0, 0.0, 0.0))
+                ),
+                approach_clearance_m=0.04,
+                approach_offset_world_m=(0.0, -0.06, 0.0),
+            )
+        ]
+        for yaw_degrees in cls.YAW_DEGREES:
+            yaw = np.deg2rad(float(yaw_degrees))
+            rotation = _axis_angle_rotation(np.array((0.0, 0.0, yaw))) @ top_down
+            for offset in cls.LOCAL_OFFSETS_M:
+                position = origin + np.asarray(offset, float)
+                candidates.append(
+                    GraspPoseCandidate(
+                        candidate_id=(
+                            f"jar_yaw{yaw_degrees}_offset_"
+                            f"{offset[0]:+.3f}_{offset[1]:+.3f}_{offset[2]:+.3f}"
+                        ),
+                        grasp_site_local_position_m=tuple(map(float, position)),
+                        target_rotation_world=rotation,
+                        approach_clearance_m=0.10,
+                    )
+                )
+        return tuple(candidates)
 
 
 def make_kitchen_pick_specs(
@@ -206,11 +476,51 @@ def make_kitchen_pick_specs(
             place_supported=True,
             top_down_rotation=rotation,
             home_seed=(utensil_reference.home_seed if utensil_reference else None),
-            carry_position=None,
+            carry_position=(
+                np.array((0.20, -0.35, 0.90))
+                if family == "JAR_SOURCE" else None
+            ),
             final_tracking_tolerance=0.035 if family == "KETTLE" else 0.018,
             required_contact_geoms=required_contact_geoms,
             ik_angle_tolerance_rad=(
-                np.deg2rad(2.5) if family == "KETTLE" else None
+                np.deg2rad(2.5) if family == "KETTLE"
+                else None
+            ),
+            ik_position_tolerance=None,
+            approach_clearance_m=0.060 if family == "UTENSIL" else 0.120,
+            ik_orientation_weight=0.30,
+            grasp_candidates=(
+                UtensilGraspCandidateGenerator.generate(
+                    scene, body_id, observed["source_context"]["source_kind"]
+                )
+                if family == "UTENSIL"
+                else JarGraspCandidateGenerator.generate(
+                    scene,
+                    mujoco.mj_name2id(
+                        scene.model, mujoco.mjtObj.mjOBJ_SITE, f"{body}_grasp"
+                    ),
+                ) if family == "JAR_SOURCE" else ()
+            ),
+            ik_restart_offsets=(
+                (
+                    (0.0, 0.0, 0.25, -0.25, 0.0, 0.0, 0.0),
+                    (0.0, 0.0, -0.25, 0.25, 0.0, 0.0, 0.0),
+                    (0.0, 0.0, 0.0, 0.0, 0.25, -0.25, 0.0),
+                    (0.0, 0.0, 0.0, 0.0, -0.25, 0.25, 0.0),
+                )
+                if family == "JAR_SOURCE"
+                or observed["source_context"]["source_kind"] == "DRAWER"
+                else ()
+            ),
+            intermediate_ik_position_tolerance=(
+                0.030
+                if observed["source_context"]["source_kind"] == "DRAWER"
+                else 0.025 if family == "JAR_SOURCE" else None
+            ),
+            intermediate_ik_angle_tolerance_rad=(
+                np.deg2rad(4.0)
+                if observed["source_context"]["source_kind"] == "DRAWER"
+                else np.deg2rad(3.0) if family == "JAR_SOURCE" else None
             ),
         )
     return specs
@@ -347,12 +657,16 @@ class KitchenPlacementResolver:
             )
             current = self.scene.data.xpos[target_body]
             position = (
-                float(current[0] + 0.12), float(current[1]),
+                # Place the utensil beside, rather than over, the vessel.  A
+                # lateral service offset preserves a collision-free vertical
+                # gripper corridor while remaining uniquely associated with
+                # the intended bowl.
+                float(current[0]), float(current[1] - 0.16),
                 0.59 + self.support_height_by_id[object_id],
             )
             return PlacementTarget(
                 object_id, destination, "OBJECT_RELATIVE_DESTINATION", position,
-                0.0, "counter_surface", destination, KitchenWorkspace.HOME,
+                0.0, "serving_surface", destination, KitchenWorkspace.HOME,
                 0.025, "WITH",
                 "CURRENT_RESOLVED_TARGET_POSE_PLUS_SERVICE_OFFSET_V1",
             )
@@ -514,10 +828,27 @@ class KitchenObjectManipulationExecutor:
                 "KETTLE": 0.20,
                 "JAR_SOURCE": 0.20,
             }.get(binding["grasp_family"], 0.20)
-            local = np.array(
-                (family_forward, float(np.clip(-before_pos[0], -0.18, 0.18)), 0.0)
+            lateral_limit = (
+                0.28
+                if context_row["source_kind"] == "DRAWER"
+                else 0.23 if binding["grasp_family"] == "JAR_SOURCE" else 0.18
             )
+            lateral = float(np.clip(-before_pos[0], -lateral_limit, lateral_limit))
+            local = np.array((family_forward, lateral, 0.0))
         self.executor.base_manipulation_target = self.executor.base_stance + local
+        # The profile carry point is world-calibrated at the HOME base pose.
+        # A bounded local base approach must translate that waypoint with the
+        # base, otherwise the arm is incorrectly commanded back through the
+        # original world-frame point before descending to the object.
+        world_translation = np.array((-local[1], local[0], 0.0))
+        if self.executor.pick_specs[backend].carry_position is None:
+            self.executor.pick_specs[backend] = replace(
+                self.executor.pick_specs[backend],
+                carry_position=(
+                    manipulation_profile("google").carry_position
+                    + world_translation
+                ),
+            )
         self.executor.request_pick(backend)
         try:
             steps = self._step_until_stable_mode()
@@ -566,6 +897,8 @@ class KitchenObjectManipulationExecutor:
             self.executor.attachment_angle_snap_rad,
             self.executor.navigation_safe and self.executor.mode == "holding",
             asdict(state),
+            selected_grasp_candidate_id=self.executor.selected_grasp_candidate_id,
+            target_contact_geoms=self.executor.confirmed_target_contact_geoms,
         )
 
     def place(
@@ -604,7 +937,10 @@ class KitchenObjectManipulationExecutor:
             ((np.cos(yaw), -np.sin(yaw), 0.0),
              (np.sin(yaw), np.cos(yaw), 0.0), (0.0, 0.0, 1.0))
         ) @ manipulation_profile("google").top_down_rotation
-        if target.destination_kind == "SOURCE_RETURN":
+        if (
+            target.destination_kind == "SOURCE_RETURN"
+            or binding["grasp_family"] == "UTENSIL"
+        ):
             grasp_rotation = self.executor.pick_specs[backend].top_down_rotation
             if grasp_rotation is not None:
                 rotation = grasp_rotation
@@ -634,6 +970,17 @@ class KitchenObjectManipulationExecutor:
         )
         support_contact = floor_contact = False
         contact_pairs = []
+        invalid_object_contacts = []
+        other_payload_geom_ids = {
+            geom_id
+            for other_backend in self.backend_bodies - {backend}
+            for geom_id in _body_geom_ids(
+                self.scene.model,
+                mujoco.mj_name2id(
+                    self.scene.model, mujoco.mjtObj.mjOBJ_BODY, other_backend
+                ),
+            )
+        }
         for index in range(self.scene.data.ncon):
             pair = {
                 int(self.scene.data.contact[index].geom1),
@@ -641,22 +988,26 @@ class KitchenObjectManipulationExecutor:
             }
             if not object_geoms & pair:
                 continue
-            contact_pairs.append(tuple(
+            named_pair = tuple(
                 mujoco.mj_id2name(
                     self.scene.model, mujoco.mjtObj.mjOBJ_GEOM, geom
                 ) or f"geom_{geom}"
                 for geom in sorted(pair)
-            ))
+            )
+            contact_pairs.append(named_pair)
             support_contact |= support_id in pair
             floor_contact |= floor_id in pair
+            if other_payload_geom_ids & pair:
+                invalid_object_contacts.append(named_pair)
         velocity = np.zeros(6)
         mujoco.mj_objectVelocity(
             self.scene.model, self.scene.data, mujoco.mjtObj.mjOBJ_BODY,
             body_id, velocity, 0,
         )
-        stable = float(np.linalg.norm(velocity[:3])) <= 0.12 and float(
-            np.linalg.norm(velocity[3:])
-        ) <= 0.025
+        # MuJoCo spatial velocity is [angular, linear].
+        angular_speed = float(np.linalg.norm(velocity[:3]))
+        linear_speed = float(np.linalg.norm(velocity[3:]))
+        stable = angular_speed <= 0.10 and linear_speed <= 0.02
         weld_id = mujoco.mj_name2id(
             self.scene.model, mujoco.mjtObj.mjOBJ_EQUALITY,
             f"google:pick_weld_{backend}",
@@ -664,6 +1015,7 @@ class KitchenObjectManipulationExecutor:
         released = weld_id >= 0 and not bool(self.scene.data.eq_active[weld_id])
         relative_ok = True
         relative_distance = None
+        intended_target_uniquely_closest = None
         if target.target_object_id:
             target_backend = self.by_id[target.target_object_id]["physical_backend_body"]
             target_id = mujoco.mj_name2id(
@@ -674,18 +1026,110 @@ class KitchenObjectManipulationExecutor:
             ))
             relative_distance = distance
             relative_ok = 0.06 <= distance <= 0.18
+            bowl_distances = {}
+            for candidate_id, candidate in self.inventory_by_id.items():
+                if "soup_bowl" not in set(candidate.get("selected_functions", ())):
+                    continue
+                candidate_binding = self.by_id.get(candidate_id)
+                if candidate_binding is None:
+                    continue
+                candidate_body = mujoco.mj_name2id(
+                    self.scene.model,
+                    mujoco.mjtObj.mjOBJ_BODY,
+                    candidate_binding["physical_backend_body"],
+                )
+                bowl_distances[candidate_id] = float(np.linalg.norm(
+                    self.scene.data.xpos[body_id, :2]
+                    - self.scene.data.xpos[candidate_body, :2]
+                ))
+            intended_target_uniquely_closest = bool(bowl_distances) and all(
+                distance + 0.005 < other_distance
+                for candidate_id, other_distance in bowl_distances.items()
+                if candidate_id != target.target_object_id
+            )
+            relative_ok &= intended_target_uniquely_closest
         final_xy = self.scene.data.xpos[body_id, :2]
         footprint_inside = True
         actual_edge_margin = None
+        footprint_corners = np.empty((0, 2))
+        pairwise_payload_checks = []
         if target.destination_kind == "SERVING_SUPPORT":
-            support_geom = support_id
-            centre = self.scene.data.geom_xpos[support_geom, :2]
-            half = self.scene.model.geom_size[support_geom, :2]
-            actual_edge_margin = float(np.min(half - np.abs(final_xy - centre)))
+            length, width = self.placement_resolver.footprint(generic_object_id)
+            footprint_corners = oriented_rectangle_corners(
+                final_xy, length, width, _body_yaw(self.scene.data, body_id)
+            )
+            support_axis = self.scene.data.geom_xmat[support_id].reshape(3, 3)[:2, 0]
+            boundary = rectangle_inside_observed_support(
+                footprint_corners,
+                self.scene.data.geom_xpos[support_id, :2],
+                support_axis,
+                float(self.scene.model.geom_size[support_id, 0] * 2.0),
+                float(self.scene.model.geom_size[support_id, 1] * 2.0),
+            )
+            actual_edge_margin = float(boundary["minimum_edge_margin_m"])
             footprint_inside = actual_edge_margin >= target.edge_margin_m
+            for placed_id, placed in self.placement_resolver.serving_placements.items():
+                other_binding = self.by_id.get(placed_id)
+                if other_binding is None:
+                    continue
+                other_body = mujoco.mj_name2id(
+                    self.scene.model,
+                    mujoco.mjtObj.mjOBJ_BODY,
+                    other_binding["physical_backend_body"],
+                )
+                other_length, other_width = self.placement_resolver.footprint(placed_id)
+                other_corners = oriented_rectangle_corners(
+                    self.scene.data.xpos[other_body, :2],
+                    other_length,
+                    other_width,
+                    _body_yaw(self.scene.data, other_body),
+                )
+                check = oriented_rectangles_clearance(
+                    footprint_corners, other_corners
+                )
+                check.update(
+                    other_object_id=placed_id,
+                    required_clearance_m=0.012,
+                    valid_nonoverlap=(
+                        not check["overlap"]
+                        and check["signed_clearance_m"] >= 0.012
+                    ),
+                )
+                pairwise_payload_checks.append(check)
+            footprint_inside &= all(
+                check["valid_nonoverlap"] for check in pairwise_payload_checks
+            )
+        source_return_xy_error = None
+        source_region_membership = None
+        upright_alignment = None
+        source_return_ok = True
+        if target.destination_kind == "SOURCE_RETURN":
+            observed_source = np.asarray(
+                self.inventory_by_id[generic_object_id]["observed_centroid_world_m"],
+                float,
+            )
+            source_return_xy_error = float(np.linalg.norm(
+                self.scene.data.xpos[body_id, :2] - observed_source[:2]
+            ))
+            # The planner-visible source region is observation provenance.
+            # For tabletop sources, membership is verified by proximity to
+            # that observed source point plus actual contact with the intended
+            # countertop support; no hidden scene source mapping is consulted.
+            source_region_membership = bool(
+                source_return_xy_error <= 0.04 and support_contact
+            )
+            upright_alignment = float(
+                self.scene.data.xmat[body_id].reshape(3, 3)[2, 2]
+            )
+            source_return_ok = (
+                source_return_xy_error <= 0.04
+                and source_region_membership
+                and upright_alignment >= float(np.cos(np.deg2rad(15.0)))
+            )
         verified = (
             released and support_contact and not floor_contact and stable
-            and relative_ok and footprint_inside
+            and relative_ok and footprint_inside and source_return_ok
+            and not invalid_object_contacts
         )
         if verified and target.destination_kind == "SERVING_SUPPORT":
             self.placement_resolver.record_successful_serving_placement(
@@ -719,4 +1163,15 @@ class KitchenObjectManipulationExecutor:
                 float(x) for x in self.scene.data.xpos[body_id]
             ),
             object_contact_pairs=tuple(contact_pairs),
+            linear_speed_m_s=linear_speed,
+            angular_speed_rad_s=angular_speed,
+            footprint_corners_world_m=tuple(
+                tuple(map(float, corner)) for corner in footprint_corners
+            ),
+            pairwise_payload_checks=tuple(pairwise_payload_checks),
+            invalid_object_contacts=tuple(invalid_object_contacts),
+            source_return_xy_error_m=source_return_xy_error,
+            source_region_membership=source_region_membership,
+            upright_alignment=upright_alignment,
+            intended_target_uniquely_closest=intended_target_uniquely_closest,
         )

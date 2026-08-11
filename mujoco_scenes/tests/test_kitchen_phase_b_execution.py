@@ -37,6 +37,37 @@ def test_carried_move_validates_before_and_after_and_uses_payload_collision():
     assert result["held_state_after"]["validation_status"] == "TRUE"
 
 
+def test_carried_move_rejects_gripper_relative_transform_drift():
+    dispatcher = object.__new__(KitchenPhaseBExecutionDispatcher)
+    dispatcher.phase_a = Mock()
+    dispatcher.phase_a.current_workspace = KitchenWorkspace.HOME
+    dispatcher.phase_a._move.return_value = {"success": True, "status": "OK"}
+    dispatcher.manipulation = Mock()
+    dispatcher._held_state = Mock(
+        side_effect=[
+            {
+                "validation_status": "TRUE",
+                "relative_position_m": [0.0, 0.0, 0.1],
+                "relative_orientation_wxyz": [1.0, 0.0, 0.0, 0.0],
+            },
+            {
+                "validation_status": "TRUE",
+                "relative_position_m": [0.02, 0.0, 0.1],
+                "relative_orientation_wxyz": [1.0, 0.0, 0.0, 0.0],
+            },
+        ]
+    )
+
+    result = dispatcher.move(
+        KitchenWorkspace.LEFT_SIDE, carrying_object_id="object_1"
+    )
+
+    assert result["success"] is False
+    assert result["status"] == "OBJECT_DROPPED"
+    assert result["relative_position_drift_m"] == 0.02
+    assert result["relative_transform_drift_valid"] is False
+
+
 def test_redundant_move_is_omitted():
     dispatcher = object.__new__(KitchenPhaseBExecutionDispatcher)
     dispatcher.phase_a = Mock()

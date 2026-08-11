@@ -590,6 +590,18 @@ COUNTER_SPOTS = {
     "counter_spot_52": (0.48, -0.31, 0.580),
     "counter_spot_53": (0.49, -0.08, 0.580),
     "counter_spot_54": (0.42, -0.055, 0.580),
+    # Phase-B F1 physical-validity correction.  The former spot 16 placed the
+    # shallow and narrow bowls with overlapping collision shells.  This nearby
+    # point preserves the same support, visibility, and workspace while adding
+    # only the clearance required for independent physical extraction.
+    "counter_spot_55": (0.00, -0.43, 0.580),
+    # Phase-B F1 source-access correction. The kettle stays on the same visible
+    # countertop but leaves a collision-free side-grasp corridor to the coffee
+    # source. Fresh Phase-1 evidence is required after this correction.
+    # Keeps the kettle clear of both the bowl extraction corridor and the
+    # coffee-jar side grasp while remaining inside the original observation
+    # association gate used by the frozen F1 evidence.
+    "counter_spot_57": (0.30, -0.31, 0.580),
     # Isolated semantic-counterexample location at the far left of INITIAL's
     # calibrated volume. It keeps a thin marker clear of vessel silhouettes.
     "counter_spot_36": (-0.67, -0.10, 0.580),
@@ -1594,6 +1606,17 @@ def build_scene_xml(
             )
             countertop_quat = None
             if (
+                config.name
+                == "S1_integrated_kitchen_object_function_feasibility_F1"
+                and spot == "counter_spot_18"
+                and obj_name == "s1i_final_long_narrow_spoon"
+            ):
+                # Keep the selected duplicate's far-handle grasp corridor
+                # clear of the adjacent deep bowl. The object centre, support,
+                # identity, dimensions, and functional assignment are
+                # unchanged; only its in-plane presentation is reversed.
+                countertop_quat = "0 0 0 1"
+            elif (
                 config.name == "S1_joint_stir_initial_preference"
                 and obj_name in {"fork", "ab3_long_narrow_fork"}
             ):

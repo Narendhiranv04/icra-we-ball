@@ -218,7 +218,10 @@ class KitchenExecutionEntityResolver:
         candidates: list[ExecutionCandidate],
     ) -> dict[str, Any]:
         compatibility = self.config["semantic_compatibility"]
-        limit = float(self.config["maximum_centroid_error_m"])
+        table_limit = float(self.config["maximum_centroid_error_m"])
+        storage_limit = float(
+            self.config.get("storage_fixture_centroid_error_m", table_limit)
+        )
         edges = []
         rejection_rows = []
         for row in inventory["objects"]:
@@ -226,6 +229,12 @@ class KitchenExecutionEntityResolver:
             allowed = set(compatibility.get(row["semantic_label"], [row["semantic_label"]]))
             region = row["source_context"]["observed_source_region"]
             normalized_region = "countertop" if region in {"INITIAL", "table"} else region
+            # Storage evidence is captured after its articulated fixture has
+            # opened, whereas execution association begins from the closed
+            # fixture.  Keep semantic and source-region gates strict, but use
+            # a separately bounded displacement allowance for that known
+            # frame change.  Table evidence retains the original gate.
+            limit = table_limit if normalized_region == "countertop" else storage_limit
             for candidate in candidates:
                 semantic_ok = candidate.semantic_label in allowed
                 source_ok = candidate.source_region == normalized_region

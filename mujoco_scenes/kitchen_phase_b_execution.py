@@ -7,6 +7,7 @@ import time
 from typing import Any
 
 import mujoco
+import numpy as np
 
 from .kitchen_execution_policy import KitchenWorkspace
 from .kitchen_google_execution import KitchenGoogleExecutionDispatcher
@@ -104,7 +105,45 @@ class KitchenPhaseBExecutionDispatcher:
             after = self._held_state(carrying_object_id)
             record["held_state_before"] = before
             record["held_state_after"] = after
-            if after["validation_status"] != "TRUE":
+            before_position = before.get("relative_position_m")
+            after_position = after.get("relative_position_m")
+            before_quaternion = before.get("relative_orientation_wxyz")
+            after_quaternion = after.get("relative_orientation_wxyz")
+            position_drift = None
+            orientation_drift = None
+            if before_position is not None and after_position is not None:
+                position_drift = float(
+                    np.linalg.norm(
+                        np.asarray(after_position, dtype=float)
+                        - np.asarray(before_position, dtype=float)
+                    )
+                )
+            if before_quaternion is not None and after_quaternion is not None:
+                before_q = np.asarray(before_quaternion, dtype=float)
+                after_q = np.asarray(after_quaternion, dtype=float)
+                before_q /= max(float(np.linalg.norm(before_q)), 1e-12)
+                after_q /= max(float(np.linalg.norm(after_q)), 1e-12)
+                orientation_drift = float(
+                    2.0
+                    * np.arccos(
+                        np.clip(abs(float(np.dot(before_q, after_q))), 0.0, 1.0)
+                    )
+                )
+            record["relative_position_drift_m"] = position_drift
+            record["relative_orientation_drift_rad"] = orientation_drift
+            record["relative_transform_drift_thresholds"] = {
+                "position_m": 0.005,
+                "orientation_rad": float(np.deg2rad(2.0)),
+            }
+            drift_valid = (
+                (position_drift is None or position_drift <= 0.005)
+                and (
+                    orientation_drift is None
+                    or orientation_drift <= float(np.deg2rad(2.0))
+                )
+            )
+            record["relative_transform_drift_valid"] = drift_valid
+            if after["validation_status"] != "TRUE" or not drift_valid:
                 record.update(
                     success=False,
                     status="OBJECT_DROPPED",
