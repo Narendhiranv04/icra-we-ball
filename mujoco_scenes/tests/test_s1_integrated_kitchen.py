@@ -2,6 +2,7 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 import mujoco
+import numpy as np
 
 from mujoco_scenes.scene_loader import (
     COUNTER_SPOTS,
@@ -330,6 +331,63 @@ def test_d2_drawer_and_all_contents_remain_open_after_fixture_release():
             scene.model, mujoco.mjtObj.mjOBJ_BODY, body_name
         )
         assert scene.data.xpos[body_id][1] < -0.48
+
+
+def test_c2_spoon_stands_above_shelf_with_bowl_up_and_wall_clearance():
+    scene = KitchenScene(
+        "S1_integrated_kitchen_object_function_primary",
+        include_robot=False,
+        robot="none",
+    )
+    scene.open_container("C2", steps=200)
+    body_id = mujoco.mj_name2id(
+        scene.model, mujoco.mjtObj.mjOBJ_BODY, "s1i_c2_soup_spoon"
+    )
+    handle_id = mujoco.mj_name2id(
+        scene.model, mujoco.mjtObj.mjOBJ_GEOM,
+        "s1i_c2_soup_spoon_handle_collision",
+    )
+    bowl_id = mujoco.mj_name2id(
+        scene.model, mujoco.mjtObj.mjOBJ_GEOM,
+        "s1i_c2_soup_spoon_bowl_collision",
+    )
+    shelf_id = mujoco.mj_name2id(
+        scene.model, mujoco.mjtObj.mjOBJ_GEOM, "C2_shelf"
+    )
+    right_id = mujoco.mj_name2id(
+        scene.model, mujoco.mjtObj.mjOBJ_GEOM, "C2_right"
+    )
+    shelf_top = (
+        scene.data.geom_xpos[shelf_id, 2] + scene.model.geom_size[shelf_id, 2]
+    )
+    minimum_z = float("inf")
+    maximum_x = float("-inf")
+    for geom_id in (handle_id, bowl_id):
+        centre = scene.data.geom_xpos[geom_id]
+        rotation = scene.data.geom_xmat[geom_id].reshape(3, 3)
+        size = scene.model.geom_size[geom_id]
+        if scene.model.geom_type[geom_id] == mujoco.mjtGeom.mjGEOM_CAPSULE:
+            first = centre - rotation[:, 2] * size[1]
+            second = centre + rotation[:, 2] * size[1]
+            lower = np.minimum(first, second) - size[0]
+            upper = np.maximum(first, second) + size[0]
+        else:
+            half_extent = np.sqrt(np.sum((rotation * size[None, :]) ** 2, axis=1))
+            lower, upper = centre - half_extent, centre + half_extent
+        minimum_z = min(minimum_z, float(lower[2]))
+        maximum_x = max(maximum_x, float(upper[0]))
+    right_inner_face = (
+        scene.data.geom_xpos[right_id, 0] - scene.model.geom_size[right_id, 0]
+    )
+    assert scene.data.geom_xpos[bowl_id, 2] > scene.data.geom_xpos[handle_id, 2]
+    assert minimum_z >= shelf_top
+    assert maximum_x < right_inner_face
+    assert scene.data.eq_active[
+        mujoco.mj_name2id(
+            scene.model, mujoco.mjtObj.mjOBJ_EQUALITY,
+            "storage_fixture_C2_upright_spoon",
+        )
+    ]
 
 
 def test_integrated_manual_specification_has_function_scoped_usage():

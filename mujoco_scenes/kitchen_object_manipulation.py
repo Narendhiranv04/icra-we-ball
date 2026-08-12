@@ -332,7 +332,7 @@ class UtensilGraspCandidateGenerator:
                 side_rotation = np.column_stack(
                     (np.cross(jaw_axis, approach_axis), jaw_axis, approach_axis)
                 )
-                for fraction in (0.55, 0.65):
+                for fraction in (0.40, 0.50, 0.60):
                     position = near + fraction * (far - near)
                     world_midpoint = (
                         scene.data.xpos[body_id]
@@ -893,7 +893,7 @@ def storage_probe_candidates(
             "cupboard_front_rim_2_jawroll+0_wrist0",
         ),
         ("CUPBOARD", "UTENSIL"): (
-            "cupboard_horizontal_inward_upright_handle_65pct",
+            "cupboard_horizontal_inward_upright_handle_50pct",
             "cupboard_horizontal_over_handle_55pct_z+0.010",
         ),
         ("CUPBOARD", "BOWL"): (
@@ -1790,7 +1790,7 @@ class KitchenObjectManipulationExecutor:
             (-0.10, -0.05)
             if source_kind == "CUPBOARD"
             and family == "UTENSIL"
-            and float(target_position[0]) < 0.46
+            and float(target_position[0]) < 0.50
             else None
         )
 

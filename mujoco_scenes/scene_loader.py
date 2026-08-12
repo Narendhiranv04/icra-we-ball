@@ -1750,16 +1750,20 @@ def build_scene_xml(
                 # contact-confirmed Phase B pick releases it.  The broad
                 # side-wall buffer centres both finger links in the opening,
                 # not merely the spoon collision proxy.
-                world_pos[0] = parent_body_pos[0] + 0.070
+                world_pos[0] = parent_body_pos[0] + 0.090
                 # Present the handle near the open front while retaining a
                 # positive buffer behind the cabinet face.  This keeps the
                 # straight +Y approach short and away from both side panels.
                 world_pos[1] = parent_body_pos[1] - 0.11
-                world_pos[2] = parent_body_pos[2] - 0.032
+                # Raise the complete collision/visual envelope above the
+                # shelf.  The spoon mesh origin is near its handle rather
+                # than its lowest point, so the generic support-height rule
+                # otherwise lets its bowl pass through the shelf.
+                world_pos[2] = parent_body_pos[2] + 0.013
                 injected_instance = _inject_object(
                     obj_name,
                     world_pos,
-                    quat="0.8660254 0 -0.5000000 0",
+                    quat="0.4226183 0 0.9063078 0",
                     support_height_override=0.050,
                 )
             elif container_id == "B1" and obj_name == "coffee_jar":
