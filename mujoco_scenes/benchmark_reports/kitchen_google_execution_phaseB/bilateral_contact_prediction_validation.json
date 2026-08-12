@@ -1,7 +1,435 @@
 {
-  "first_contact_synchrony_implemented": true,
-  "live_bilateral_contact_required_for_weld": true,
-  "selection_only": true,
-  "target_geoms_collision_active_only": true,
-  "tests": "mujoco_scenes/tests/test_kitchen_phase_b_execution.py"
+  "passed": true,
+  "prediction_used_for_selection_only": true,
+  "trials": {
+    "B1_1": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_closure_storage_b1_retry3",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "ab3_deep_bowl_wall_0"
+      ]
+    },
+    "B1_2": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_final_repeatability/b1_trial_2",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "ab3_deep_bowl_wall_0"
+      ]
+    },
+    "B1_3": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_final_repeatability/b1_trial_3",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "ab3_deep_bowl_wall_0"
+      ]
+    },
+    "C1_1": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_closure_storage_c1_offset",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "s1i_narrow_deep_bowl_wall_11",
+        "s1i_narrow_deep_bowl_wall_7"
+      ]
+    },
+    "C1_2": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_final_repeatability/c1_trial_2",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "s1i_narrow_deep_bowl_wall_11",
+        "s1i_narrow_deep_bowl_wall_7"
+      ]
+    },
+    "C1_3": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_final_repeatability/c1_trial_3",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "s1i_narrow_deep_bowl_wall_11",
+        "s1i_narrow_deep_bowl_wall_7"
+      ]
+    },
+    "C2_utensil_1": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_freeze_c2_preclose_release_trial_1",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "s1i_c2_soup_spoon_handle_collision"
+      ]
+    },
+    "C2_utensil_2": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_freeze_c2_preclose_release_trial_2",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "s1i_c2_soup_spoon_handle_collision"
+      ]
+    },
+    "C2_utensil_3": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_freeze_c2_preclose_release_trial_3",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "s1i_c2_soup_spoon_handle_collision"
+      ]
+    },
+    "C2_vessel_1": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_closure_storage_c2_vessel_final",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "feas_coffee_wide_very_deep_cup_wall_0",
+        "feas_coffee_wide_very_deep_cup_wall_1",
+        "feas_coffee_wide_very_deep_cup_wall_5",
+        "feas_coffee_wide_very_deep_cup_wall_6"
+      ]
+    },
+    "C2_vessel_2": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_final_repeatability/c2_vessel_trial_2",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "feas_coffee_wide_very_deep_cup_wall_0",
+        "feas_coffee_wide_very_deep_cup_wall_1",
+        "feas_coffee_wide_very_deep_cup_wall_5",
+        "feas_coffee_wide_very_deep_cup_wall_6"
+      ]
+    },
+    "C2_vessel_3": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_final_repeatability/c2_vessel_trial_3",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "feas_coffee_wide_very_deep_cup_wall_0",
+        "feas_coffee_wide_very_deep_cup_wall_1",
+        "feas_coffee_wide_very_deep_cup_wall_5",
+        "feas_coffee_wide_very_deep_cup_wall_6"
+      ]
+    },
+    "D1_1": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_closure_storage_d1_retry",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "s1i_oversized_spoon_handle_collision"
+      ]
+    },
+    "D1_2": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_final_repeatability/d1_trial_2",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "s1i_oversized_spoon_handle_collision"
+      ]
+    },
+    "D1_3": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_final_repeatability/d1_trial_3",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "s1i_oversized_spoon_handle_collision"
+      ]
+    },
+    "D2_1": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_closure_storage_d2",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "ab3_partial_spoon_handle_collision"
+      ]
+    },
+    "D2_2": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_final_repeatability/d2_trial_2",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "ab3_partial_spoon_handle_collision"
+      ]
+    },
+    "D2_3": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_final_repeatability/d2_trial_3",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "ab3_partial_spoon_handle_collision"
+      ]
+    },
+    "table_bowl_1": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_closure_probe_bowl",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "ab3_shallow_bowl_wall_10",
+        "ab3_shallow_bowl_wall_2"
+      ]
+    },
+    "table_bowl_2": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_final_repeatability/table_bowl_trial_2",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "ab3_shallow_bowl_wall_10",
+        "ab3_shallow_bowl_wall_2"
+      ]
+    },
+    "table_bowl_3": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_final_repeatability/table_bowl_trial_3",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "ab3_shallow_bowl_wall_10",
+        "ab3_shallow_bowl_wall_2"
+      ]
+    },
+    "table_jar_1": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_closure_probe_jar5",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "s1i_compact_coffee_jar_wall_0",
+        "s1i_compact_coffee_jar_wall_11",
+        "s1i_compact_coffee_jar_wall_6",
+        "s1i_compact_coffee_jar_wall_7"
+      ]
+    },
+    "table_jar_2": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_final_repeatability/table_jar_trial_2",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "s1i_compact_coffee_jar_wall_0",
+        "s1i_compact_coffee_jar_wall_11",
+        "s1i_compact_coffee_jar_wall_6",
+        "s1i_compact_coffee_jar_wall_7"
+      ]
+    },
+    "table_jar_3": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_final_repeatability/table_jar_trial_3",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "s1i_compact_coffee_jar_wall_0",
+        "s1i_compact_coffee_jar_wall_11",
+        "s1i_compact_coffee_jar_wall_6",
+        "s1i_compact_coffee_jar_wall_7"
+      ]
+    },
+    "table_kettle_1": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_kettle_body",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "s1i_compact_kettle_collision"
+      ]
+    },
+    "table_kettle_2": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_final_repeatability/table_kettle_trial_8",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "s1i_compact_kettle_collision"
+      ]
+    },
+    "table_kettle_3": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_final_repeatability/table_kettle_trial_9",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "s1i_compact_kettle_collision"
+      ]
+    },
+    "table_utensil_1": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_closure_probe_utensil_object8",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "s1i_final_long_narrow_spoon_2_handle_collision"
+      ]
+    },
+    "table_utensil_2": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_final_repeatability/table_utensil_trial_2",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "s1i_final_long_narrow_spoon_2_handle_collision"
+      ]
+    },
+    "table_utensil_3": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_final_repeatability/table_utensil_trial_3",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "s1i_final_long_narrow_spoon_2_handle_collision"
+      ]
+    },
+    "table_vessel_1": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_closure_probe_vessel",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "ab3_narrow_deep_cup_wall_1",
+        "ab3_narrow_deep_cup_wall_2",
+        "ab3_narrow_deep_cup_wall_6",
+        "ab3_narrow_deep_cup_wall_7"
+      ]
+    },
+    "table_vessel_2": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_final_repeatability/table_vessel_trial_2",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "ab3_narrow_deep_cup_wall_1",
+        "ab3_narrow_deep_cup_wall_2",
+        "ab3_narrow_deep_cup_wall_6",
+        "ab3_narrow_deep_cup_wall_7"
+      ]
+    },
+    "table_vessel_3": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_final_repeatability/table_vessel_trial_3",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "ab3_narrow_deep_cup_wall_1",
+        "ab3_narrow_deep_cup_wall_2",
+        "ab3_narrow_deep_cup_wall_6",
+        "ab3_narrow_deep_cup_wall_7"
+      ]
+    }
+  }
 }

@@ -1,0 +1,105 @@
+{
+  "baseline_assignment_projection": {
+    "coffee_targets": [
+      "object_0001",
+      "object_0002",
+      "object_0003"
+    ],
+    "coffee_tools": [
+      "object_0007"
+    ],
+    "soup_pairs": [
+      [
+        "object_0004",
+        "object_0007"
+      ],
+      [
+        "object_0005",
+        "object_0008"
+      ],
+      [
+        "object_0006",
+        "object_0009"
+      ]
+    ],
+    "soup_targets": [
+      "object_0004",
+      "object_0005",
+      "object_0006"
+    ],
+    "sources": {}
+  },
+  "baseline_phase1": "mujoco_scenes/benchmark_reports/kitchen_feasibility_phase1/variants/F1_INITIAL_COMPLETE/grounded_assignments.json",
+  "current_assignment_projection": {
+    "coffee_targets": [
+      "object_0001",
+      "object_0002",
+      "object_0003"
+    ],
+    "coffee_tools": [
+      "object_0007"
+    ],
+    "soup_pairs": [
+      [
+        "object_0004",
+        "object_0007"
+      ],
+      [
+        "object_0005",
+        "object_0008"
+      ],
+      [
+        "object_0006",
+        "object_0009"
+      ]
+    ],
+    "soup_targets": [
+      "object_0004",
+      "object_0005",
+      "object_0006"
+    ],
+    "sources": {
+      "coffee_source": "object_0011",
+      "water_source": "object_0010"
+    }
+  },
+  "current_phase1": "runs/feasibility_benchmarks/kitchen_feasibility_phase1_closure_20260809/F1_INITIAL_COMPLETE/grounded_role_assignments.json",
+  "equivalent": true,
+  "phase1_role_equivalent": true,
+  "phase2_assignment_equivalent": true,
+  "phase2_assignment_projection": {
+    "coffee_targets": [
+      "object_0001",
+      "object_0002",
+      "object_0003"
+    ],
+    "coffee_tools": [
+      "object_0007"
+    ],
+    "soup_pairs": [
+      [
+        "object_0004",
+        "object_0007"
+      ],
+      [
+        "object_0005",
+        "object_0008"
+      ],
+      [
+        "object_0006",
+        "object_0009"
+      ]
+    ],
+    "soup_targets": [
+      "object_0004",
+      "object_0005",
+      "object_0006"
+    ],
+    "sources": {
+      "coffee_source": "object_0011",
+      "water_source": "object_0010"
+    }
+  },
+  "phase2_plan_action_count": 31,
+  "phase2_validation_passed": true
+}

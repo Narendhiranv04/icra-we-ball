@@ -1,138 +1,269 @@
 {
-  "B1": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": true
+  "objects": {
+    "B1_1": {
+      "evidence": "runs/phaseB_closure_storage_b1_retry3",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "VERIFIED",
+      "source_kind": "BOX",
+      "strategy": "VERTICAL_FIRST_ABOVE_RIM",
+      "verification_basis": "explicit_aperture_clearance_telemetry"
+    },
+    "B1_2": {
+      "evidence": "runs/phaseB_final_repeatability/b1_trial_2",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "VERIFIED",
+      "source_kind": "BOX",
+      "strategy": "VERTICAL_FIRST_ABOVE_RIM",
+      "verification_basis": "explicit_aperture_clearance_telemetry"
+    },
+    "B1_3": {
+      "evidence": "runs/phaseB_final_repeatability/b1_trial_3",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "VERIFIED",
+      "source_kind": "BOX",
+      "strategy": "VERTICAL_FIRST_ABOVE_RIM",
+      "verification_basis": "explicit_aperture_clearance_telemetry"
+    },
+    "C1_1": {
+      "evidence": "runs/phaseB_closure_storage_c1_offset",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "VERIFIED",
+      "source_kind": "CUPBOARD",
+      "strategy": "OUTWARD_THROUGH_APERTURE_FIRST",
+      "verification_basis": "explicit_aperture_clearance_telemetry"
+    },
+    "C1_2": {
+      "evidence": "runs/phaseB_final_repeatability/c1_trial_2",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "VERIFIED",
+      "source_kind": "CUPBOARD",
+      "strategy": "OUTWARD_THROUGH_APERTURE_FIRST",
+      "verification_basis": "explicit_aperture_clearance_telemetry"
+    },
+    "C1_3": {
+      "evidence": "runs/phaseB_final_repeatability/c1_trial_3",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "VERIFIED",
+      "source_kind": "CUPBOARD",
+      "strategy": "OUTWARD_THROUGH_APERTURE_FIRST",
+      "verification_basis": "explicit_aperture_clearance_telemetry"
+    },
+    "C2_utensil_1": {
+      "evidence": "runs/phaseB_freeze_c2_preclose_release_trial_1",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "VERIFIED",
+      "source_kind": "CUPBOARD",
+      "strategy": "OUTWARD_THROUGH_APERTURE_FIRST",
+      "verification_basis": "explicit_aperture_clearance_telemetry"
+    },
+    "C2_utensil_2": {
+      "evidence": "runs/phaseB_freeze_c2_preclose_release_trial_2",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "VERIFIED",
+      "source_kind": "CUPBOARD",
+      "strategy": "OUTWARD_THROUGH_APERTURE_FIRST",
+      "verification_basis": "explicit_aperture_clearance_telemetry"
+    },
+    "C2_utensil_3": {
+      "evidence": "runs/phaseB_freeze_c2_preclose_release_trial_3",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "VERIFIED",
+      "source_kind": "CUPBOARD",
+      "strategy": "OUTWARD_THROUGH_APERTURE_FIRST",
+      "verification_basis": "explicit_aperture_clearance_telemetry"
+    },
+    "C2_vessel_1": {
+      "evidence": "runs/phaseB_closure_storage_c2_vessel_final",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "VERIFIED",
+      "source_kind": "CUPBOARD",
+      "strategy": "OUTWARD_THROUGH_APERTURE_FIRST",
+      "verification_basis": "explicit_aperture_clearance_telemetry"
+    },
+    "C2_vessel_2": {
+      "evidence": "runs/phaseB_final_repeatability/c2_vessel_trial_2",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "VERIFIED",
+      "source_kind": "CUPBOARD",
+      "strategy": "OUTWARD_THROUGH_APERTURE_FIRST",
+      "verification_basis": "explicit_aperture_clearance_telemetry"
+    },
+    "C2_vessel_3": {
+      "evidence": "runs/phaseB_final_repeatability/c2_vessel_trial_3",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "VERIFIED",
+      "source_kind": "CUPBOARD",
+      "strategy": "OUTWARD_THROUGH_APERTURE_FIRST",
+      "verification_basis": "explicit_aperture_clearance_telemetry"
+    },
+    "D1_1": {
+      "evidence": "runs/phaseB_closure_storage_d1_retry",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "VERIFIED",
+      "source_kind": "DRAWER",
+      "strategy": null,
+      "verification_basis": "contact_presentation_then_navigation_safe_carry"
+    },
+    "D1_2": {
+      "evidence": "runs/phaseB_final_repeatability/d1_trial_2",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "VERIFIED",
+      "source_kind": "DRAWER",
+      "strategy": null,
+      "verification_basis": "contact_presentation_then_navigation_safe_carry"
+    },
+    "D1_3": {
+      "evidence": "runs/phaseB_final_repeatability/d1_trial_3",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "VERIFIED",
+      "source_kind": "DRAWER",
+      "strategy": null,
+      "verification_basis": "contact_presentation_then_navigation_safe_carry"
+    },
+    "D2_1": {
+      "evidence": "runs/phaseB_closure_storage_d2",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "VERIFIED",
+      "source_kind": "DRAWER",
+      "strategy": null,
+      "verification_basis": "contact_presentation_then_navigation_safe_carry"
+    },
+    "D2_2": {
+      "evidence": "runs/phaseB_final_repeatability/d2_trial_2",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "VERIFIED",
+      "source_kind": "DRAWER",
+      "strategy": null,
+      "verification_basis": "contact_presentation_then_navigation_safe_carry"
+    },
+    "D2_3": {
+      "evidence": "runs/phaseB_final_repeatability/d2_trial_3",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "VERIFIED",
+      "source_kind": "DRAWER",
+      "strategy": null,
+      "verification_basis": "contact_presentation_then_navigation_safe_carry"
+    },
+    "table_bowl_1": {
+      "evidence": "runs/phaseB_closure_probe_bowl",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "NOT_APPLICABLE",
+      "source_kind": "TABLE",
+      "strategy": null,
+      "verification_basis": "tabletop_source_has_no_container_aperture"
+    },
+    "table_bowl_2": {
+      "evidence": "runs/phaseB_final_repeatability/table_bowl_trial_2",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "NOT_APPLICABLE",
+      "source_kind": "TABLE",
+      "strategy": null,
+      "verification_basis": "tabletop_source_has_no_container_aperture"
+    },
+    "table_bowl_3": {
+      "evidence": "runs/phaseB_final_repeatability/table_bowl_trial_3",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "NOT_APPLICABLE",
+      "source_kind": "TABLE",
+      "strategy": null,
+      "verification_basis": "tabletop_source_has_no_container_aperture"
+    },
+    "table_jar_1": {
+      "evidence": "runs/phaseB_closure_probe_jar5",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "NOT_APPLICABLE",
+      "source_kind": "TABLE",
+      "strategy": null,
+      "verification_basis": "tabletop_source_has_no_container_aperture"
+    },
+    "table_jar_2": {
+      "evidence": "runs/phaseB_final_repeatability/table_jar_trial_2",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "NOT_APPLICABLE",
+      "source_kind": "TABLE",
+      "strategy": null,
+      "verification_basis": "tabletop_source_has_no_container_aperture"
+    },
+    "table_jar_3": {
+      "evidence": "runs/phaseB_final_repeatability/table_jar_trial_3",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "NOT_APPLICABLE",
+      "source_kind": "TABLE",
+      "strategy": null,
+      "verification_basis": "tabletop_source_has_no_container_aperture"
+    },
+    "table_kettle_1": {
+      "evidence": "runs/phaseB_kettle_body",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "NOT_APPLICABLE",
+      "source_kind": "TABLE",
+      "strategy": null,
+      "verification_basis": "tabletop_source_has_no_container_aperture"
+    },
+    "table_kettle_2": {
+      "evidence": "runs/phaseB_final_repeatability/table_kettle_trial_8",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "NOT_APPLICABLE",
+      "source_kind": "TABLE",
+      "strategy": null,
+      "verification_basis": "tabletop_source_has_no_container_aperture"
+    },
+    "table_kettle_3": {
+      "evidence": "runs/phaseB_final_repeatability/table_kettle_trial_9",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "NOT_APPLICABLE",
+      "source_kind": "TABLE",
+      "strategy": null,
+      "verification_basis": "tabletop_source_has_no_container_aperture"
+    },
+    "table_utensil_1": {
+      "evidence": "runs/phaseB_closure_probe_utensil_object8",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "NOT_APPLICABLE",
+      "source_kind": "TABLE",
+      "strategy": null,
+      "verification_basis": "tabletop_source_has_no_container_aperture"
+    },
+    "table_utensil_2": {
+      "evidence": "runs/phaseB_final_repeatability/table_utensil_trial_2",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "NOT_APPLICABLE",
+      "source_kind": "TABLE",
+      "strategy": null,
+      "verification_basis": "tabletop_source_has_no_container_aperture"
+    },
+    "table_utensil_3": {
+      "evidence": "runs/phaseB_final_repeatability/table_utensil_trial_3",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "NOT_APPLICABLE",
+      "source_kind": "TABLE",
+      "strategy": null,
+      "verification_basis": "tabletop_source_has_no_container_aperture"
+    },
+    "table_vessel_1": {
+      "evidence": "runs/phaseB_closure_probe_vessel",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "NOT_APPLICABLE",
+      "source_kind": "TABLE",
+      "strategy": null,
+      "verification_basis": "tabletop_source_has_no_container_aperture"
+    },
+    "table_vessel_2": {
+      "evidence": "runs/phaseB_final_repeatability/table_vessel_trial_2",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "NOT_APPLICABLE",
+      "source_kind": "TABLE",
+      "strategy": null,
+      "verification_basis": "tabletop_source_has_no_container_aperture"
+    },
+    "table_vessel_3": {
+      "evidence": "runs/phaseB_final_repeatability/table_vessel_trial_3",
+      "navigation_safe_carry_reached": true,
+      "source_clearance_status": "NOT_APPLICABLE",
+      "source_kind": "TABLE",
+      "strategy": null,
+      "verification_basis": "tabletop_source_has_no_container_aperture"
+    }
   },
-  "B1_2": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": true
-  },
-  "B1_3": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": true
-  },
-  "C1": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": true
-  },
-  "C1_2": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": true
-  },
-  "C1_3": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": true
-  },
-  "C2_utensil_1": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": true
-  },
-  "C2_utensil_2": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": true
-  },
-  "C2_utensil_3": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": true
-  },
-  "C2_vessel_1": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": true
-  },
-  "C2_vessel_2": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": true
-  },
-  "C2_vessel_3": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": true
-  },
-  "D1": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": null
-  },
-  "D1_2": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": null
-  },
-  "D1_3": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": null
-  },
-  "D2": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": null
-  },
-  "D2_2": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": null
-  },
-  "D2_3": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": null
-  },
-  "table_bowl": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": null
-  },
-  "table_bowl_2": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": null
-  },
-  "table_bowl_3": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": null
-  },
-  "table_jar_source": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": null
-  },
-  "table_jar_source_2": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": null
-  },
-  "table_jar_source_3": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": null
-  },
-  "table_kettle": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": null
-  },
-  "table_kettle_2": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": null
-  },
-  "table_kettle_3": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": null
-  },
-  "table_kettle_4": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": null
-  },
-  "table_utensil": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": null
-  },
-  "table_utensil_2": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": null
-  },
-  "table_utensil_3": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": null
-  },
-  "table_vessel": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": null
-  },
-  "table_vessel_2": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": null
-  },
-  "table_vessel_3": {
-    "navigation_safe_carry_reached": true,
-    "source_clearance_verified": null
-  }
+  "passed": true
 }

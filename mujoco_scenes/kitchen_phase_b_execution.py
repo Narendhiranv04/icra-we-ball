@@ -90,15 +90,36 @@ class KitchenPhaseBExecutionDispatcher:
         try:
             record = self.phase_a._move(workspace)
         except RuntimeError as error:
-            return {
-                "action": "MOVE",
-                "target_workspace": workspace.value,
-                "success": False,
-                "status": "MOVE_PLANNING_FAILED",
-                "failure_code": "MOVE_PLANNING_FAILED",
-                "message": str(error),
-                "held_state_before": before,
-            }
+            if carrying_object_id and "compact navigation pose" in str(error):
+                try:
+                    preparation = (
+                        self.manipulation.executor.fold_held_payload_for_navigation(
+                            step_callback=self.manipulation.step_callback
+                        )
+                    )
+                    record = self.phase_a._move(workspace)
+                    record["held_navigation_preparation"] = preparation
+                except RuntimeError as retry_error:
+                    return {
+                        "action": "MOVE",
+                        "target_workspace": workspace.value,
+                        "success": False,
+                        "status": "MOVE_PLANNING_FAILED",
+                        "failure_code": "MOVE_PLANNING_FAILED",
+                        "message": str(retry_error),
+                        "initial_planning_failure": str(error),
+                        "held_state_before": before,
+                    }
+            else:
+                return {
+                    "action": "MOVE",
+                    "target_workspace": workspace.value,
+                    "success": False,
+                    "status": "MOVE_PLANNING_FAILED",
+                    "failure_code": "MOVE_PLANNING_FAILED",
+                    "message": str(error),
+                    "held_state_before": before,
+                }
         record["automatically_inserted"] = True
         record["held_object_included_in_collision_check"] = bool(carrying_object_id)
         if carrying_object_id and record["success"]:
@@ -181,16 +202,22 @@ class KitchenPhaseBExecutionDispatcher:
             if not opened["success"]:
                 record.update(success=False, status="CONTAINER_OPEN_FAILED")
                 return record
-            # Drawer fixtures only transport free bodies during opening. Once
-            # open, release them before contact-confirmed physical extraction.
-            # C2's upright spoon remains presentation-welded during approach.
-            # The executor releases that weld only after bilateral finger
-            # contact, immediately before activating the gripper weld.
+            # Most fixtures preserve authored storage poses only through
+            # opening.  C2 retains presentation support through collision/IK
+            # approach, then the low-level executor releases it immediately
+            # before Cartesian pre-close and live bilateral contact.
+            defer_fixture_release = container == "C2"
+            record["storage_fixture_release_deferred_to_manipulation_stance"] = (
+                defer_fixture_release
+            )
             record["storage_fixture_released"] = bool(
-                False if container == "C2"
+                False if defer_fixture_release
                 else self.scene.release_storage_fixture(container)
             )
-            if container != "C2":
+            record["storage_fixture_active_before_grasp_planning"] = bool(
+                defer_fixture_release
+            )
+            if record["storage_fixture_released"]:
                 for _ in range(120):
                     mujoco.mj_step(self.scene.model, self.scene.data)
         elif container:
@@ -206,6 +233,15 @@ class KitchenPhaseBExecutionDispatcher:
             duration_s=time.perf_counter() - started,
             post_pick=asdict(result),
         )
+        fixture_audit = self.manipulation.executor.storage_fixture_release_telemetry
+        if fixture_audit is not None:
+            record["storage_fixture_release"] = fixture_audit
+            record["storage_fixture_released"] = bool(
+                fixture_audit.get("released")
+            )
+            record["storage_fixture_active_during_contact"] = bool(
+                fixture_audit.get("active_during_contact")
+            )
         return record
 
     def place(self, object_id: str, destination: str) -> dict[str, Any]:

@@ -1660,6 +1660,12 @@ def build_scene_xml(
             # shelves. This respects per-shelf capacity and prevents the
             # vessel silhouette from suppressing thin-tool RGB detections.
             allocated_slots = [slots[0], slots[2]]
+            if config.name == "S1_integrated_kitchen_object_function_primary":
+                # Keep the production-selected bowl in C1's already validated
+                # lower-left extraction corridor.  The non-selected spoon is
+                # placed on the separate upper-right shelf, preserving both
+                # identities, region membership, visibility, and capacity.
+                allocated_slots = [slots[2], slots[0]]
         elif container_id == "C1":
             lower_slots = [slots[0], slots[3]]
             shelf_slots = [slots[1], slots[2]]

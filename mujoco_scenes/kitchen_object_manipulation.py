@@ -1183,12 +1183,33 @@ class KitchenPlacementResolver:
         self.inventory_by_id = {
             row["generic_object_id"]: row for row in inventory["objects"]
         }
-        self.support_height_by_id = {
-            row["generic_object_id"]: max(
-                0.008, float(row["observed_centroid_world_m"][2]) - 0.58
+        self.support_height_by_id = {}
+        for row in inventory["objects"]:
+            source_container = row.get("source_context", {}).get(
+                "source_container"
             )
-            for row in inventory["objects"]
-        }
+            dimensions = [
+                float(value) for value in row.get("observed_dimensions_m", {}).values()
+                if value is not None
+            ]
+            if source_container and dimensions:
+                # A storage centroid is expressed in shelf/world coordinates;
+                # subtracting the serving-table height from it invents an
+                # enormous placement offset. Use the measured robust OBB
+                # extent as the conservative vertical half-size instead.
+                is_utensil = bool(
+                    {"coffee_stirrer", "soup_utensil"}
+                    & set(row.get("selected_functions", ()))
+                )
+                support_height = (
+                    min(dimensions) / 2.0 if is_utensil
+                    else max(dimensions) / 2.0
+                )
+            else:
+                support_height = float(row["observed_centroid_world_m"][2]) - 0.58
+            self.support_height_by_id[row["generic_object_id"]] = max(
+                0.008, support_height
+            )
         self.serving_slot_by_id: dict[str, tuple[float, float]] = {}
         for function, row_y in (("coffee_vessel", -0.48), ("soup_bowl", -0.64)):
             group = [
@@ -1199,7 +1220,7 @@ class KitchenPlacementResolver:
             # coordinate.  This avoids sweeping bowls across other tabletop
             # objects while preserving deterministic, non-overlapping slots.
             group.sort(key=lambda row: (row["observed_centroid_world_m"][0], row["generic_object_id"]))
-            for slot_x, row in zip((-0.16, 0.0, 0.16), group):
+            for slot_x, row in zip((-0.15, 0.0, 0.15), group):
                 self.serving_slot_by_id[row["generic_object_id"]] = (slot_x, row_y)
 
     def footprint(self, object_id: str) -> tuple[float, float]:
@@ -1237,6 +1258,41 @@ class KitchenPlacementResolver:
             support_backend=target.support_backend or "",
         )
 
+    def current_support_backend(self, object_id: str) -> str:
+        """Return the observed support currently contacting ``object_id``.
+
+        Object-relative destinations must follow the target object's current
+        physical support.  In particular, a bowl may still be on the kitchen
+        counter or may already have been moved to the serving surface.  This
+        uses only live MuJoCo contacts, not a scene/source-name shortcut.
+        """
+        backend = self.binding[object_id]["physical_backend_body"]
+        body_id = mujoco.mj_name2id(
+            self.scene.model, mujoco.mjtObj.mjOBJ_BODY, backend
+        )
+        object_geoms = _body_geom_ids(self.scene.model, body_id)
+        supported = {"counter_surface", "serving_surface"}
+        observed = []
+        for contact_index in range(self.scene.data.ncon):
+            pair = {
+                int(self.scene.data.contact[contact_index].geom1),
+                int(self.scene.data.contact[contact_index].geom2),
+            }
+            if not object_geoms & pair:
+                continue
+            for geom_id in pair - object_geoms:
+                name = mujoco.mj_id2name(
+                    self.scene.model, mujoco.mjtObj.mjOBJ_GEOM, geom_id
+                )
+                if name in supported:
+                    observed.append(name)
+        if not observed:
+            raise ValueError(
+                "DESTINATION_RESOLUTION_FAILED: target object has no observed "
+                "support contact"
+            )
+        return sorted(set(observed))[0]
+
     def resolve(self, object_id: str, destination: str) -> PlacementTarget:
         if object_id not in self.binding:
             raise ValueError("DESTINATION_RESOLUTION_FAILED: unresolved object")
@@ -1246,8 +1302,8 @@ class KitchenPlacementResolver:
             x, y = self.serving_slot_by_id[object_id]
             footprint = self.footprint(object_id)
             candidates = [
-                (x, y), (-0.16, y), (0.0, y), (0.16, y),
-                (-0.16, -0.56), (0.0, -0.56), (0.16, -0.56),
+                (x, y), (-0.15, y), (0.0, y), (0.15, y),
+                (-0.15, -0.56), (0.0, -0.56), (0.15, -0.56),
             ]
             valid_candidates = []
             for candidate in dict.fromkeys(candidates):
@@ -1301,17 +1357,28 @@ class KitchenPlacementResolver:
                 self.scene.model, mujoco.mjtObj.mjOBJ_BODY, target_backend
             )
             current = self.scene.data.xpos[target_body]
+            support_backend = self.current_support_backend(destination)
+            support_id = mujoco.mj_name2id(
+                self.scene.model, mujoco.mjtObj.mjOBJ_GEOM, support_backend
+            )
+            support_centre_y = float(self.scene.data.geom_xpos[support_id, 1])
+            service_offset_y = (
+                -0.16 if support_backend == "counter_surface"
+                else 0.16 if current[1] < support_centre_y else -0.16
+            )
             position = (
                 # Place the utensil beside, rather than over, the vessel.  A
                 # lateral service offset preserves a collision-free vertical
                 # gripper corridor while remaining uniquely associated with
-                # the intended bowl.
-                float(current[0]), float(current[1] - 0.16),
+                # the intended bowl. Point the offset toward the live support
+                # centre so rear-row serving targets cannot send a tool past
+                # the support boundary.
+                float(current[0]), float(current[1] + service_offset_y),
                 0.59 + self.support_height_by_id[object_id],
             )
             return PlacementTarget(
                 object_id, destination, "OBJECT_RELATIVE_DESTINATION", position,
-                0.0, "serving_surface", destination, KitchenWorkspace.HOME,
+                0.0, support_backend, destination, KitchenWorkspace.HOME,
                 0.025, "WITH",
                 "CURRENT_RESOLVED_TARGET_POSE_PLUS_SERVICE_OFFSET_V1",
             )
@@ -1980,7 +2047,7 @@ class KitchenObjectManipulationExecutor:
                 "maximum_coarse_stances": coarse_candidate_limit,
                 "minimum_coarse_stances_before_shortlist_stop": 8,
                 "maximum_shortlisted_stances": 3,
-                "maximum_physical_attempts": 5,
+                "maximum_ranked_candidates_reported": 5,
             },
             "candidate_count_evaluated": len(evaluations),
             "preferred_target_facing_yaw_rad": preferred_yaw,
@@ -2022,7 +2089,7 @@ class KitchenObjectManipulationExecutor:
                 }
                 for row in shortlist
             ],
-            "ranked_physical_attempts": [
+            "ranked_candidate_shortlist": [
                 {
                     "rank": rank,
                     "stance_index": row.stance_index,
@@ -2036,6 +2103,9 @@ class KitchenObjectManipulationExecutor:
                 }
                 for rank, row in enumerate(ranked_pairs[:5], start=1)
             ],
+            "physically_attempted_candidate_count": (
+                1 if selected_pair is not None else 0
+            ),
             "fine_rejections": [
                 {
                     "stance_index": row.stance_index,
@@ -2108,9 +2178,20 @@ class KitchenObjectManipulationExecutor:
             selected_spec, grasp_candidates=ordered_candidates
         )
         self._settle_navigation_posture()
+        live_selected_id = (
+            selected_pair.grasp_candidate_id
+            if selected_pair.grasp_candidate_id in by_id
+            else ranked_ids[0] if ranked_ids else ordered_candidates[0].candidate_id
+        )
+        if live_selected_id != selected_pair.grasp_candidate_id:
+            audit["selected"]["pre_settle_candidate_id"] = (
+                selected_pair.grasp_candidate_id
+            )
+            audit["selected"]["grasp_candidate_id"] = live_selected_id
+            audit["selected"]["candidate_regenerated_from_live_pose"] = True
         selected_only = replace(
             self.executor.pick_specs[backend],
-            grasp_candidates=(by_id[selected_pair.grasp_candidate_id],),
+            grasp_candidates=(by_id[live_selected_id],),
         )
         ordered_spec = self.executor.pick_specs[backend]
         self.executor.pick_specs[backend] = selected_only

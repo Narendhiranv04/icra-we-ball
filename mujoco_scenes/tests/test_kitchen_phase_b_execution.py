@@ -68,6 +68,35 @@ def test_carried_move_rejects_gripper_relative_transform_drift():
     assert result["relative_transform_drift_valid"] is False
 
 
+def test_carried_move_folds_held_payload_when_rotation_requires_compact_pose():
+    dispatcher = object.__new__(KitchenPhaseBExecutionDispatcher)
+    dispatcher.phase_a = Mock()
+    dispatcher.phase_a.current_workspace = KitchenWorkspace.HOME
+    dispatcher.phase_a._move.side_effect = [
+        RuntimeError("Final base rotation is in collision; move the arm to its compact navigation pose before moving"),
+        {"success": True, "status": "OK"},
+    ]
+    dispatcher.manipulation = Mock()
+    dispatcher.manipulation.executor.fold_held_payload_for_navigation.return_value = {
+        "performed": True,
+        "direct_object_qpos_write": False,
+        "grasp_weld_retained": True,
+    }
+    dispatcher._held_state = Mock(
+        side_effect=[
+            {"validation_status": "TRUE"},
+            {"validation_status": "TRUE"},
+        ]
+    )
+    result = dispatcher.move(
+        KitchenWorkspace.RIGHT_SIDE, carrying_object_id="object_1"
+    )
+    assert result["success"] is True
+    assert result["held_navigation_preparation"]["performed"] is True
+    dispatcher.manipulation.executor.fold_held_payload_for_navigation.assert_called_once()
+    assert dispatcher.phase_a._move.call_count == 2
+
+
 def test_redundant_move_is_omitted():
     dispatcher = object.__new__(KitchenPhaseBExecutionDispatcher)
     dispatcher.phase_a = Mock()
@@ -93,8 +122,8 @@ def test_serving_allocator_is_deterministic_and_role_separated():
         ]
     }
     resolver = KitchenPlacementResolver(Mock(), inventory, resolution)
-    assert resolver.resolve("coffee_a", "serving_area").target_position_world_m[:2] == (-0.16, -0.48)
-    assert resolver.resolve("soup_a", "serving_area").target_position_world_m[:2] == (-0.16, -0.64)
+    assert resolver.resolve("coffee_a", "serving_area").target_position_world_m[:2] == (-0.15, -0.48)
+    assert resolver.resolve("soup_a", "serving_area").target_position_world_m[:2] == (-0.15, -0.64)
 
 
 def _serving_resolver():

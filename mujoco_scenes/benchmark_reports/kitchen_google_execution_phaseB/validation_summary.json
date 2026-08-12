@@ -1,13 +1,31 @@
 {
-  "all_indexed_pick_runs_passed": true,
-  "c2_utensil_repeatability": "3/3",
-  "c2_vessel_repeatability": "3/3",
-  "full_test_result": "531 passed, 5 subtests passed",
+  "missing_or_failed": [
+    "multi_object_pass",
+    "final_relation_pass"
+  ],
   "phase": "KITCHEN_GOOGLE_EXECUTION_PHASE_B",
-  "phase_b_pick_place_closed": true,
+  "phase_b_closed": false,
   "phase_c_operators_remain_unsupported": [
     "POUR",
     "STIR"
   ],
-  "physical_evidence_count": 34
+  "phase_c_symbolic_effects_fabricated": false,
+  "requirements": {
+    "c2_unrestricted_grasp_pass": true,
+    "carried_move_pass": true,
+    "destination_coverage_pass": true,
+    "entity_resolution_pass": true,
+    "extraction_pass": true,
+    "f1_equivalence_pass": true,
+    "final_relation_pass": false,
+    "isolated_operator_coverage_pass": true,
+    "multi_object_pass": false,
+    "pick_coverage_pass": true,
+    "place_coverage_pass": true,
+    "reproduction_manifest_valid": true,
+    "scientific_guards_pass": true,
+    "storage_repeatability_pass": true,
+    "tests_pass": true,
+    "variant_coverage_pass": true
+  }
 }

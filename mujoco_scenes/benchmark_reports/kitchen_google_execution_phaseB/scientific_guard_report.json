@@ -1,10 +1,93 @@
 {
-  "backend_names_execution_only": true,
-  "direct_target_qpos_write": false,
-  "functional_substitution": false,
-  "generic_ids_at_planner_boundary": true,
-  "new_collision_exemptions_added": false,
-  "phase_c_symbolic_effects_fabricated": false,
-  "precontact_weld_allowed": false,
-  "prediction_can_activate_weld": false
+  "guards": {
+    "backend_names_execution_only": {
+      "evidence": [
+        "phaseB_object_inventory.json"
+      ],
+      "passed": true,
+      "validation_method": "inventory boundary flag"
+    },
+    "bilateral_contact_gates_weld": {
+      "evidence": [
+        "grasp_calibration_matrix.json"
+      ],
+      "passed": true,
+      "validation_method": "source guard plus live telemetry"
+    },
+    "functional_substitution": {
+      "evidence": [
+        "runs/phaseB_closure_probe_vessel",
+        "runs/phaseB_final_repeatability/table_vessel_trial_2",
+        "runs/phaseB_final_repeatability/table_vessel_trial_3",
+        "runs/phaseB_closure_probe_bowl",
+        "runs/phaseB_final_repeatability/table_bowl_trial_2",
+        "runs/phaseB_final_repeatability/table_bowl_trial_3",
+        "runs/phaseB_closure_probe_utensil_object8",
+        "runs/phaseB_final_repeatability/table_utensil_trial_2",
+        "runs/phaseB_final_repeatability/table_utensil_trial_3",
+        "runs/phaseB_kettle_body",
+        "runs/phaseB_final_repeatability/table_kettle_trial_8",
+        "runs/phaseB_final_repeatability/table_kettle_trial_9",
+        "runs/phaseB_closure_probe_jar5",
+        "runs/phaseB_final_repeatability/table_jar_trial_2",
+        "runs/phaseB_final_repeatability/table_jar_trial_3",
+        "runs/phaseB_closure_storage_d1_retry",
+        "runs/phaseB_final_repeatability/d1_trial_2",
+        "runs/phaseB_final_repeatability/d1_trial_3",
+        "runs/phaseB_closure_storage_d2",
+        "runs/phaseB_final_repeatability/d2_trial_2",
+        "runs/phaseB_final_repeatability/d2_trial_3",
+        "runs/phaseB_closure_storage_c1_offset",
+        "runs/phaseB_final_repeatability/c1_trial_2",
+        "runs/phaseB_final_repeatability/c1_trial_3",
+        "runs/phaseB_closure_storage_b1_retry3",
+        "runs/phaseB_final_repeatability/b1_trial_2",
+        "runs/phaseB_final_repeatability/b1_trial_3",
+        "runs/phaseB_closure_storage_c2_vessel_final",
+        "runs/phaseB_final_repeatability/c2_vessel_trial_2",
+        "runs/phaseB_final_repeatability/c2_vessel_trial_3",
+        "runs/phaseB_freeze_c2_preclose_release_trial_1",
+        "runs/phaseB_freeze_c2_preclose_release_trial_2",
+        "runs/phaseB_freeze_c2_preclose_release_trial_3"
+      ],
+      "passed": true,
+      "validation_method": "executed IDs equal requested frozen generic IDs in physical telemetry"
+    },
+    "mount_allowance_scoped": {
+      "evidence": [
+        "google_mount_allowance_audit.json"
+      ],
+      "passed": true,
+      "validation_method": "constant and regression test"
+    },
+    "no_target_qpos_write": {
+      "evidence": [
+        "grasp_calibration_matrix.json"
+      ],
+      "passed": true,
+      "validation_method": "physical result telemetry"
+    },
+    "phase_c_effects_not_fabricated": {
+      "evidence": [
+        "isolated_operator_validation.json"
+      ],
+      "passed": true,
+      "validation_method": "every frozen POUR/STIR row"
+    },
+    "prediction_selection_only": {
+      "evidence": [
+        "mujoco_scenes/kitchen_object_manipulation.py"
+      ],
+      "passed": true,
+      "validation_method": "source structural check"
+    },
+    "semantic_provenance_explicit": {
+      "evidence": [
+        "semantic_label_provenance.json"
+      ],
+      "passed": true,
+      "validation_method": "inventory provenance"
+    }
+  },
+  "passed": true
 }

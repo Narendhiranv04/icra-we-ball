@@ -1,13 +1,42 @@
 {
-  "object_name_specific_offsets": false,
-  "physical_success_evidence": [
-    "runs/phaseB_closure_storage_c2_vessel_final",
-    "runs/phaseB_final_repeatability/c2_vessel_trial_2",
-    "runs/phaseB_final_repeatability/c2_vessel_trial_3",
-    "runs/kitchen_phaseB_c2_head_wall_final",
-    "runs/phaseB_final_repeatability/c2_utensil_trial_2",
-    "runs/phaseB_final_repeatability/c2_utensil_trial_3"
-  ],
-  "utensil_candidates": "live handle-axis-derived cross sections",
-  "vessel_candidates": "collision-shell-derived opposing wall pairs"
+  "fixture_inactive_during_actual_contact": true,
+  "passed": true,
+  "utensil_trials": {
+    "C2_utensil_1": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_freeze_c2_preclose_release_trial_1",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "s1i_c2_soup_spoon_handle_collision"
+      ]
+    },
+    "C2_utensil_2": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_freeze_c2_preclose_release_trial_2",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "s1i_c2_soup_spoon_handle_collision"
+      ]
+    },
+    "C2_utensil_3": {
+      "bilateral_contact": true,
+      "contact_sides": [
+        0,
+        1
+      ],
+      "evidence": "runs/phaseB_freeze_c2_preclose_release_trial_3",
+      "fixture_active_during_contact": false,
+      "target_contact_geoms": [
+        "s1i_c2_soup_spoon_handle_collision"
+      ]
+    }
+  }
 }

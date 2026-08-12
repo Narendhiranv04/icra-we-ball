@@ -65,11 +65,32 @@ def test_missing_detector_label_uses_functional_role_family_not_backend_name():
         [{"step": 1, "action": "pick", "arguments": ["generic_tool"]}],
     )
     assert inventory["objects"][0]["semantic_label"] == "utensil"
+    assert (
+        inventory["objects"][0]["semantic_label_source"]
+        == "FROZEN_FUNCTIONAL_ROLE_FALLBACK"
+    )
+    assert inventory["objects"][0]["originating_functional_role"] == "soup_utensil"
     resolved = KitchenExecutionEntityResolver().resolve(
         inventory,
         [ExecutionCandidate("renamed_backend", "spoon", "UTENSIL", "D1", (0, 0, 0))],
     )
     assert resolved["all_resolved"]
+
+
+def test_detector_semantic_provenance_remains_explicit():
+    registry = {
+        "scene_name": "scene",
+        "objects": {"generic_tool": _record("spoon", [0, 0, 0])},
+    }
+    inventory = build_phase_b_inventory(
+        registry,
+        {},
+        [{"step": 1, "action": "pick", "arguments": ["generic_tool"]}],
+    )
+    row = inventory["objects"][0]
+    assert row["semantic_label"] == "spoon"
+    assert row["semantic_label_source"] == "OBSERVED_SEMANTIC_DETECTOR"
+    assert row["originating_functional_role"] is None
 
 
 def test_resolution_is_deterministic_one_to_one_and_centroid_based():

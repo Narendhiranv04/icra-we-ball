@@ -627,6 +627,7 @@ class CalibratedPickPlaceExecutor:
         self.planned_contact_points_world: tuple[tuple[float, float, float], ...] = ()
         self.preclose_settle_ticks = 0
         self.preclose_telemetry: dict[str, object] | None = None
+        self.storage_fixture_release_telemetry: dict[str, object] | None = None
 
     def _ids(self, object_type, names: tuple[str, ...]) -> np.ndarray:
         ids = np.array(
@@ -654,6 +655,100 @@ class CalibratedPickPlaceExecutor:
         # This reports the arm/carry state, not the symbolic base location.  A
         # compact robot at a cupboard must still be allowed to Move home.
         return self.mode in {"idle", "holding"}
+
+    def fold_held_payload_for_navigation(
+        self,
+        *,
+        step_callback=None,
+        maximum_steps_per_waypoint: int = 900,
+    ) -> dict[str, object]:
+        """Physically fold a held payload into the compact navigation pose.
+
+        PICK intentionally ends in a family-specific Cartesian carry pose.
+        Some bulky payloads cannot safely sweep through a subsequent base
+        rotation from that pose.  This transition commands only robot joints,
+        retains the live grasp weld, and checks both the arm path and live
+        payload/environment contacts.  It never writes target-object qpos.
+        """
+        if self.mode != "holding" or self.held_object is None:
+            raise RuntimeError("Held-payload fold requires holding mode")
+        body_id = mujoco.mj_name2id(
+            self.model, mujoco.mjtObj.mjOBJ_BODY, self.held_object
+        )
+        current = self._current_arm()
+        goal = self.profile.navigation_joints.copy()
+        checker = RobotConfigurationCollisionChecker(
+            self.model,
+            self.data,
+            self.profile,
+            mounting_allowances=self.mounting_allowances,
+        )
+        valid, reason = checker.segment_valid(
+            current, goal, frozenset((body_id,)), resolution=0.025
+        )
+        if not valid:
+            raise RuntimeError(f"Unsafe held-payload fold: {reason}")
+
+        waypoints = self._joint_points(current, goal)
+        for waypoint_index, target in enumerate(waypoints):
+            for _ in range(maximum_steps_per_waypoint):
+                command = self.data.ctrl[self.arm_actuators]
+                delta = np.clip(
+                    target - command,
+                    -self.arm_command_speed * self.model.opt.timestep,
+                    self.arm_command_speed * self.model.opt.timestep,
+                )
+                self.data.ctrl[self.arm_actuators] = command + delta
+                mujoco.mj_step(self.model, self.data)
+                if step_callback:
+                    step_callback()
+                # The grasp weld may contact the robot by construction.  Only
+                # payload contact with non-robot, non-floor environment is a
+                # failure during this navigation preparation.
+                for contact_index in range(self.data.ncon):
+                    contact = self.data.contact[contact_index]
+                    first_body = int(self.model.geom_bodyid[contact.geom1])
+                    second_body = int(self.model.geom_bodyid[contact.geom2])
+                    if body_id not in (first_body, second_body):
+                        continue
+                    other_geom = (
+                        contact.geom2 if first_body == body_id else contact.geom1
+                    )
+                    other_body = int(self.model.geom_bodyid[other_geom])
+                    other_body_name = mujoco.mj_id2name(
+                        self.model, mujoco.mjtObj.mjOBJ_BODY, other_body
+                    ) or ""
+                    other_geom_name = mujoco.mj_id2name(
+                        self.model, mujoco.mjtObj.mjOBJ_GEOM, other_geom
+                    ) or ""
+                    if (
+                        other_body_name.startswith(
+                            self.profile.gripper_body.split(":", 1)[0] + ":"
+                        )
+                        or other_geom_name == "floor"
+                    ):
+                        continue
+                    raise RuntimeError(
+                        "Held payload contacted environment during fold: "
+                        f"{other_geom_name or other_body_name}"
+                    )
+                if float(np.max(np.abs(self.data.qpos[self.arm_qpos] - target))) < 0.025:
+                    break
+            else:
+                raise RuntimeError(
+                    "Held-payload fold tracking timeout at waypoint "
+                    f"{waypoint_index}"
+                )
+        return {
+            "performed": True,
+            "joint_target": goal.tolist(),
+            "direct_object_qpos_write": False,
+            "grasp_weld_retained": bool(
+                self.grasp_equality_id >= 0
+                and self.data.eq_active[self.grasp_equality_id]
+            ),
+            "waypoint_count": len(waypoints),
+        }
 
     def _command_base(self, target: np.ndarray) -> None:
         # The short table approach benefits from stronger damping than a long
@@ -1415,6 +1510,7 @@ class CalibratedPickPlaceExecutor:
         self.planned_contact_points_world = ()
         self.preclose_settle_ticks = 0
         self.preclose_telemetry = None
+        self.storage_fixture_release_telemetry = None
         self.calibration_attempt_ticks = 0
         self.mode = "pick_base_approach"
         self.status = f"Pick {object_name}: approaching the manipulation stance"
@@ -2198,6 +2294,38 @@ class CalibratedPickPlaceExecutor:
         if self.mode == "pick_approach":
             self.data.ctrl[self.finger_actuators] = self.profile.open_command
             if self._advance_waypoints():
+                matching_fixtures = []
+                for fixture_id in range(self.model.neq):
+                    fixture_name = mujoco.mj_id2name(
+                        self.model, mujoco.mjtObj.mjOBJ_EQUALITY, fixture_id
+                    ) or ""
+                    if not fixture_name.startswith("storage_fixture_"):
+                        continue
+                    if self.target_body_id in {
+                        int(self.model.eq_obj1id[fixture_id]),
+                        int(self.model.eq_obj2id[fixture_id]),
+                    }:
+                        matching_fixtures.append(fixture_id)
+                active = [
+                    fixture_id for fixture_id in matching_fixtures
+                    if bool(self.data.eq_active[fixture_id])
+                ]
+                position_before = self.data.xpos[self.target_body_id].copy()
+                for fixture_id in active:
+                    self.data.eq_active[fixture_id] = 0
+                if active:
+                    mujoco.mj_forward(self.model, self.data)
+                self.storage_fixture_release_telemetry = {
+                    "fixture_ids": matching_fixtures,
+                    "active_immediately_before_preclose": bool(active),
+                    "released_before_preclose": bool(active),
+                    "release_target_position_world_m": position_before.tolist(),
+                    "active_during_contact": False,
+                    "grasp_weld_active_at_release": bool(
+                        self.grasp_equality_id >= 0
+                        and self.data.eq_active[self.grasp_equality_id]
+                    ),
+                }
                 self.preclose_settle_ticks = 0
                 self.mode = "pick_preclose_convergence"
                 self.status = (

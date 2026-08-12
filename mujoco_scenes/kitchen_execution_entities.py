@@ -85,6 +85,27 @@ def validated_semantic_label(record: dict[str, Any]) -> str | None:
     return str(label) if label else None
 
 
+def semantic_label_with_provenance(
+    object_id: str,
+    record: dict[str, Any],
+    roles: dict[str, set[str]],
+    forced_semantics: dict[str, str],
+    config: dict[str, Any],
+) -> tuple[str | None, str, str | None]:
+    """Resolve execution semantics without consulting a backend object name."""
+    if object_id in forced_semantics:
+        source_role = next(iter(sorted(roles.get(object_id, ()))), None)
+        return forced_semantics[object_id], "FROZEN_SOURCE_ROLE", source_role
+    observed = validated_semantic_label(record)
+    if observed is not None:
+        return observed, "OBSERVED_SEMANTIC_DETECTOR", None
+    fallback = config.get("functional_role_fallback_labels", {})
+    for role in sorted(roles.get(object_id, ())):
+        if role in fallback:
+            return fallback[role], "FROZEN_FUNCTIONAL_ROLE_FALLBACK", role
+    return None, "UNAVAILABLE", None
+
+
 def _selected_roles(
     assignments: dict[str, Any],
     source_role_labels: dict[str, str],
@@ -134,17 +155,17 @@ def build_phase_b_inventory(
     for object_id in relevant:
         record = registry["objects"][object_id]
         context = source_context(object_id, record)
-        semantic_label = forced_semantics.get(object_id) or validated_semantic_label(record)
-        if semantic_label is None:
-            fallback = config.get("functional_role_fallback_labels", {})
-            semantic_label = next(
-                (fallback[role] for role in sorted(roles.get(object_id, ())) if role in fallback),
-                None,
+        semantic_label, semantic_label_source, originating_role = (
+            semantic_label_with_provenance(
+                object_id, record, roles, forced_semantics, config
             )
+        )
         rows.append(
             {
                 "generic_object_id": object_id,
                 "semantic_label": semantic_label,
+                "semantic_label_source": semantic_label_source,
+                "originating_functional_role": originating_role,
                 "selected_functions": sorted(roles.get(object_id, ())),
                 "phase2_usage": usage.get(object_id, []),
                 "observed_centroid_world_m": record["centroid_world_m"]["value"],
@@ -268,6 +289,10 @@ class KitchenExecutionEntityResolver:
             accepted.append({
                 "generic_object_id": object_id,
                 "semantic_label": row["semantic_label"],
+                "semantic_label_source": row.get("semantic_label_source"),
+                "originating_functional_role": row.get(
+                    "originating_functional_role"
+                ),
                 "selected_functions": row["selected_functions"],
                 "observed_centroid_world_m": row["observed_centroid_world_m"],
                 "observed_source_context": row["source_context"],

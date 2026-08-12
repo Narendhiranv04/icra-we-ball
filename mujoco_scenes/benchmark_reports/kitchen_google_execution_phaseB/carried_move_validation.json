@@ -1,0 +1,1644 @@
+{
+  "families": {
+    "BOWL": {
+      "evidence_path": "runs/phaseB_freeze_carried_move/BOWL/carried_move_result.json",
+      "family": "BOWL",
+      "generic_object_id": "object_0004",
+      "inventory_backend_free": true,
+      "outbound_move": {
+        "action": "MOVE",
+        "automatically_inserted": true,
+        "destination": "cupboard2",
+        "duration_s": 3.026200762949884,
+        "held_object_included_in_collision_check": true,
+        "held_state_after": {
+          "backend_body": "ab3_shallow_bowl",
+          "exclusive_payload_weld": true,
+          "finger_joint_positions": [
+            0.2773468701560925,
+            0.2739579828630763
+          ],
+          "floor_contact": false,
+          "generic_object_id": "object_0004",
+          "gripper_body": "google:link_gripper",
+          "rejection_reasons": [],
+          "relative_orientation_wxyz": [
+            -0.00741791756669142,
+            0.006021147643928706,
+            0.999919030753477,
+            -0.008405487317878935
+          ],
+          "relative_position_m": [
+            0.05738467147842561,
+            -4.377427157526922e-05,
+            0.14991018295826922
+          ],
+          "validation_status": "TRUE",
+          "weld_active": true,
+          "weld_id": 7
+        },
+        "held_state_before": {
+          "backend_body": "ab3_shallow_bowl",
+          "exclusive_payload_weld": true,
+          "finger_joint_positions": [
+            0.27738524143775817,
+            0.27402741385371204
+          ],
+          "floor_contact": false,
+          "generic_object_id": "object_0004",
+          "gripper_body": "google:link_gripper",
+          "rejection_reasons": [],
+          "relative_orientation_wxyz": [
+            -0.007471903055384642,
+            0.0060369029891001545,
+            0.9999178572406151,
+            -0.00848559004243812
+          ],
+          "relative_position_m": [
+            0.057385971722334846,
+            -4.359076496383651e-05,
+            0.14991227044444694
+          ],
+          "validation_status": "TRUE",
+          "weld_active": true,
+          "weld_id": 7
+        },
+        "physics_steps": 9402,
+        "relative_orientation_drift_rad": 0.0001957599251939615,
+        "relative_position_drift_m": 2.466152355820733e-06,
+        "relative_transform_drift_thresholds": {
+          "orientation_rad": 0.03490658503988659,
+          "position_m": 0.005
+        },
+        "relative_transform_drift_valid": true,
+        "source_workspace": "home",
+        "status": "Move complete: cupboard2 (2.9 s)",
+        "success": true,
+        "target_workspace": "right_side"
+      },
+      "pick": {
+        "duration_s": 16.563120762002654,
+        "failure_code": null,
+        "functional_assignment_changed": false,
+        "generic_object_id": "object_0004",
+        "post_pick": {
+          "attachment_angle_snap_rad": 0.00028593250192930934,
+          "attachment_translation_snap_m": 5.763396040011929e-05,
+          "backend_body": "ab3_shallow_bowl",
+          "bilateral_contact": true,
+          "contact_geoms": [
+            "google:left_finger_pad_0",
+            "google:right_finger_pad_0",
+            "google:right_finger_pad_2"
+          ],
+          "contact_sides": [
+            0,
+            1
+          ],
+          "direct_grasp_analysis": null,
+          "direct_object_qpos_write": false,
+          "duration_s": 16.562991129001603,
+          "extraction_strategy": null,
+          "failure_code": null,
+          "generic_object_id": "object_0004",
+          "grasp_family": "BOWL",
+          "held_state": {
+            "backend_body": "ab3_shallow_bowl",
+            "exclusive_payload_weld": true,
+            "finger_joint_positions": [
+              0.27738524143775817,
+              0.27402741385371204
+            ],
+            "floor_contact": false,
+            "generic_object_id": "object_0004",
+            "gripper_body": "google:link_gripper",
+            "rejection_reasons": [],
+            "relative_orientation_wxyz": [
+              -0.007471903055384642,
+              0.0060369029891001545,
+              0.9999178572406151,
+              -0.00848559004243812
+            ],
+            "relative_position_m": [
+              0.057385971722334846,
+              -4.359076496383651e-05,
+              0.14991227044444694
+            ],
+            "validation_status": "TRUE",
+            "weld_active": true,
+            "weld_id": 7
+          },
+          "manipulation_stance": null,
+          "message": "",
+          "navigation_safe_carry_reached": true,
+          "physics_steps": 10347,
+          "presentation": null,
+          "required_workspace": "home",
+          "selected_grasp_candidate_id": "configured_grasp_site",
+          "source_clearance_verified": null,
+          "source_context": {
+            "container_must_be_open": false,
+            "object_id": "object_0004",
+            "observed_measurement_cloud_path": "stages/000_initial/evidence/object_0004/fused.ply",
+            "observed_source_region": "countertop",
+            "observed_source_stage": 0,
+            "required_workspace": "home",
+            "source_container": null,
+            "source_kind": "TABLE"
+          },
+          "status": "PICK_SUCCESS",
+          "success": true,
+          "target_contact_geoms": [
+            "ab3_shallow_bowl_wall_10",
+            "ab3_shallow_bowl_wall_2"
+          ]
+        },
+        "request": {
+          "action": "PICK",
+          "arguments": [
+            "object_0004"
+          ]
+        },
+        "status": "PICK_SUCCESS",
+        "steps": [
+          {
+            "attachment_angle_snap_rad": 0.00028593250192930934,
+            "attachment_translation_snap_m": 5.763396040011929e-05,
+            "backend_body": "ab3_shallow_bowl",
+            "bilateral_contact": true,
+            "contact_geoms": [
+              "google:left_finger_pad_0",
+              "google:right_finger_pad_0",
+              "google:right_finger_pad_2"
+            ],
+            "contact_sides": [
+              0,
+              1
+            ],
+            "direct_grasp_analysis": null,
+            "direct_object_qpos_write": false,
+            "duration_s": 16.562991129001603,
+            "extraction_strategy": null,
+            "failure_code": null,
+            "generic_object_id": "object_0004",
+            "grasp_family": "BOWL",
+            "held_state": {
+              "backend_body": "ab3_shallow_bowl",
+              "exclusive_payload_weld": true,
+              "finger_joint_positions": [
+                0.27738524143775817,
+                0.27402741385371204
+              ],
+              "floor_contact": false,
+              "generic_object_id": "object_0004",
+              "gripper_body": "google:link_gripper",
+              "rejection_reasons": [],
+              "relative_orientation_wxyz": [
+                -0.007471903055384642,
+                0.0060369029891001545,
+                0.9999178572406151,
+                -0.00848559004243812
+              ],
+              "relative_position_m": [
+                0.057385971722334846,
+                -4.359076496383651e-05,
+                0.14991227044444694
+              ],
+              "validation_status": "TRUE",
+              "weld_active": true,
+              "weld_id": 7
+            },
+            "manipulation_stance": null,
+            "message": "",
+            "navigation_safe_carry_reached": true,
+            "physics_steps": 10347,
+            "presentation": null,
+            "required_workspace": "home",
+            "selected_grasp_candidate_id": "configured_grasp_site",
+            "source_clearance_verified": null,
+            "source_context": {
+              "container_must_be_open": false,
+              "object_id": "object_0004",
+              "observed_measurement_cloud_path": "stages/000_initial/evidence/object_0004/fused.ply",
+              "observed_source_region": "countertop",
+              "observed_source_stage": 0,
+              "required_workspace": "home",
+              "source_container": null,
+              "source_kind": "TABLE"
+            },
+            "status": "PICK_SUCCESS",
+            "success": true,
+            "target_contact_geoms": [
+              "ab3_shallow_bowl_wall_10",
+              "ab3_shallow_bowl_wall_2"
+            ]
+          }
+        ],
+        "storage_fixture_active_during_contact": false,
+        "storage_fixture_release": {
+          "active_during_contact": false,
+          "active_immediately_before_preclose": false,
+          "fixture_ids": [],
+          "grasp_weld_active_at_release": false,
+          "release_target_position_world_m": [
+            -0.00013273921643568723,
+            -0.4302021815904824,
+            0.6061343566189528
+          ],
+          "released_before_preclose": false
+        },
+        "storage_fixture_released": false,
+        "success": true
+      },
+      "resolution_one_to_one": true,
+      "return_move": {
+        "action": "MOVE",
+        "automatically_inserted": true,
+        "destination": "home",
+        "duration_s": 3.146377461962402,
+        "held_object_included_in_collision_check": true,
+        "held_state_after": {
+          "backend_body": "ab3_shallow_bowl",
+          "exclusive_payload_weld": true,
+          "finger_joint_positions": [
+            0.2773639166434846,
+            0.2740153597711307
+          ],
+          "floor_contact": false,
+          "generic_object_id": "object_0004",
+          "gripper_body": "google:link_gripper",
+          "rejection_reasons": [],
+          "relative_orientation_wxyz": [
+            -0.007467221305188503,
+            0.0060298518619370575,
+            0.9999179685890627,
+            -0.008481602751012745
+          ],
+          "relative_position_m": [
+            0.057385257159273374,
+            -4.299448948341515e-05,
+            0.14991179307010594
+          ],
+          "validation_status": "TRUE",
+          "weld_active": true,
+          "weld_id": 7
+        },
+        "held_state_before": {
+          "backend_body": "ab3_shallow_bowl",
+          "exclusive_payload_weld": true,
+          "finger_joint_positions": [
+            0.2773468701560925,
+            0.2739579828630763
+          ],
+          "floor_contact": false,
+          "generic_object_id": "object_0004",
+          "gripper_body": "google:link_gripper",
+          "rejection_reasons": [],
+          "relative_orientation_wxyz": [
+            -0.00741791756669142,
+            0.006021147643928706,
+            0.999919030753477,
+            -0.008405487317878935
+          ],
+          "relative_position_m": [
+            0.05738467147842561,
+            -4.377427157526922e-05,
+            0.14991018295826922
+          ],
+          "validation_status": "TRUE",
+          "weld_active": true,
+          "weld_id": 7
+        },
+        "physics_steps": 9800,
+        "relative_orientation_drift_rad": 0.0001822230413679296,
+        "relative_position_drift_m": 1.882429890582597e-06,
+        "relative_transform_drift_thresholds": {
+          "orientation_rad": 0.03490658503988659,
+          "position_m": 0.005
+        },
+        "relative_transform_drift_valid": true,
+        "source_workspace": "right_side",
+        "status": "Move complete: home (3.1 s)",
+        "success": true,
+        "target_workspace": "home"
+      },
+      "success": true
+    },
+    "JAR_SOURCE": {
+      "evidence_path": "runs/phaseB_freeze_carried_move/JAR_SOURCE_folded/carried_move_result.json",
+      "family": "JAR_SOURCE",
+      "generic_object_id": "object_0011",
+      "inventory_backend_free": true,
+      "outbound_move": {
+        "action": "MOVE",
+        "automatically_inserted": true,
+        "destination": "cupboard2",
+        "duration_s": 2.6352656219969504,
+        "held_navigation_preparation": {
+          "direct_object_qpos_write": false,
+          "grasp_weld_retained": true,
+          "joint_target": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "performed": true,
+          "waypoint_count": 40
+        },
+        "held_object_included_in_collision_check": true,
+        "held_state_after": {
+          "backend_body": "s1i_compact_coffee_jar",
+          "exclusive_payload_weld": true,
+          "finger_joint_positions": [
+            0.5267280321338703,
+            0.52834033623342
+          ],
+          "floor_contact": false,
+          "generic_object_id": "object_0011",
+          "gripper_body": "google:link_gripper",
+          "rejection_reasons": [],
+          "relative_orientation_wxyz": [
+            0.5033586278595513,
+            0.4914681509106463,
+            0.47236528592657145,
+            0.5309992326278151
+          ],
+          "relative_position_m": [
+            -0.030635265502740063,
+            0.0001631013613992032,
+            0.13254965761488147
+          ],
+          "validation_status": "TRUE",
+          "weld_active": true,
+          "weld_id": 17
+        },
+        "held_state_before": {
+          "backend_body": "s1i_compact_coffee_jar",
+          "exclusive_payload_weld": true,
+          "finger_joint_positions": [
+            0.526540092520064,
+            0.5279699197182494
+          ],
+          "floor_contact": false,
+          "generic_object_id": "object_0011",
+          "gripper_body": "google:link_gripper",
+          "rejection_reasons": [],
+          "relative_orientation_wxyz": [
+            0.5015494537463443,
+            0.4931672768013587,
+            0.4730663101841708,
+            0.5305114972437552
+          ],
+          "relative_position_m": [
+            -0.03068037128907389,
+            0.00016423116334708367,
+            0.1325820689150109
+          ],
+          "validation_status": "TRUE",
+          "weld_active": true,
+          "weld_id": 17
+        },
+        "physics_steps": 9428,
+        "relative_orientation_drift_rad": 0.005249557899133515,
+        "relative_position_drift_m": 5.55544848712906e-05,
+        "relative_transform_drift_thresholds": {
+          "orientation_rad": 0.03490658503988659,
+          "position_m": 0.005
+        },
+        "relative_transform_drift_valid": true,
+        "source_workspace": "home",
+        "status": "Move complete: cupboard2 (2.6 s)",
+        "success": true,
+        "target_workspace": "right_side"
+      },
+      "pick": {
+        "duration_s": 9.434122097038198,
+        "failure_code": null,
+        "functional_assignment_changed": false,
+        "generic_object_id": "object_0011",
+        "post_pick": {
+          "attachment_angle_snap_rad": 0.00021453073386639468,
+          "attachment_translation_snap_m": 4.999378712802771e-05,
+          "backend_body": "s1i_compact_coffee_jar",
+          "bilateral_contact": true,
+          "contact_geoms": [
+            "google:left_finger_pad_1",
+            "google:right_finger_pad_1"
+          ],
+          "contact_sides": [
+            0,
+            1
+          ],
+          "direct_grasp_analysis": null,
+          "direct_object_qpos_write": false,
+          "duration_s": 9.434041086002253,
+          "extraction_strategy": null,
+          "failure_code": null,
+          "generic_object_id": "object_0011",
+          "grasp_family": "JAR_SOURCE",
+          "held_state": {
+            "backend_body": "s1i_compact_coffee_jar",
+            "exclusive_payload_weld": true,
+            "finger_joint_positions": [
+              0.526540092520064,
+              0.5279699197182494
+            ],
+            "floor_contact": false,
+            "generic_object_id": "object_0011",
+            "gripper_body": "google:link_gripper",
+            "rejection_reasons": [],
+            "relative_orientation_wxyz": [
+              0.5015494537463443,
+              0.4931672768013587,
+              0.4730663101841708,
+              0.5305114972437552
+            ],
+            "relative_position_m": [
+              -0.03068037128907389,
+              0.00016423116334708367,
+              0.1325820689150109
+            ],
+            "validation_status": "TRUE",
+            "weld_active": true,
+            "weld_id": 17
+          },
+          "manipulation_stance": null,
+          "message": "",
+          "navigation_safe_carry_reached": true,
+          "physics_steps": 8510,
+          "presentation": null,
+          "required_workspace": "home",
+          "selected_grasp_candidate_id": "jar_side_wall_from_negative_y",
+          "source_clearance_verified": null,
+          "source_context": {
+            "container_must_be_open": false,
+            "object_id": "object_0011",
+            "observed_measurement_cloud_path": "stages/000_initial/evidence/object_0011/fused.ply",
+            "observed_source_region": "countertop",
+            "observed_source_stage": 0,
+            "required_workspace": "home",
+            "source_container": null,
+            "source_kind": "TABLE"
+          },
+          "status": "PICK_SUCCESS",
+          "success": true,
+          "target_contact_geoms": [
+            "s1i_compact_coffee_jar_wall_0",
+            "s1i_compact_coffee_jar_wall_11",
+            "s1i_compact_coffee_jar_wall_6",
+            "s1i_compact_coffee_jar_wall_7"
+          ]
+        },
+        "request": {
+          "action": "PICK",
+          "arguments": [
+            "object_0011"
+          ]
+        },
+        "status": "PICK_SUCCESS",
+        "steps": [
+          {
+            "attachment_angle_snap_rad": 0.00021453073386639468,
+            "attachment_translation_snap_m": 4.999378712802771e-05,
+            "backend_body": "s1i_compact_coffee_jar",
+            "bilateral_contact": true,
+            "contact_geoms": [
+              "google:left_finger_pad_1",
+              "google:right_finger_pad_1"
+            ],
+            "contact_sides": [
+              0,
+              1
+            ],
+            "direct_grasp_analysis": null,
+            "direct_object_qpos_write": false,
+            "duration_s": 9.434041086002253,
+            "extraction_strategy": null,
+            "failure_code": null,
+            "generic_object_id": "object_0011",
+            "grasp_family": "JAR_SOURCE",
+            "held_state": {
+              "backend_body": "s1i_compact_coffee_jar",
+              "exclusive_payload_weld": true,
+              "finger_joint_positions": [
+                0.526540092520064,
+                0.5279699197182494
+              ],
+              "floor_contact": false,
+              "generic_object_id": "object_0011",
+              "gripper_body": "google:link_gripper",
+              "rejection_reasons": [],
+              "relative_orientation_wxyz": [
+                0.5015494537463443,
+                0.4931672768013587,
+                0.4730663101841708,
+                0.5305114972437552
+              ],
+              "relative_position_m": [
+                -0.03068037128907389,
+                0.00016423116334708367,
+                0.1325820689150109
+              ],
+              "validation_status": "TRUE",
+              "weld_active": true,
+              "weld_id": 17
+            },
+            "manipulation_stance": null,
+            "message": "",
+            "navigation_safe_carry_reached": true,
+            "physics_steps": 8510,
+            "presentation": null,
+            "required_workspace": "home",
+            "selected_grasp_candidate_id": "jar_side_wall_from_negative_y",
+            "source_clearance_verified": null,
+            "source_context": {
+              "container_must_be_open": false,
+              "object_id": "object_0011",
+              "observed_measurement_cloud_path": "stages/000_initial/evidence/object_0011/fused.ply",
+              "observed_source_region": "countertop",
+              "observed_source_stage": 0,
+              "required_workspace": "home",
+              "source_container": null,
+              "source_kind": "TABLE"
+            },
+            "status": "PICK_SUCCESS",
+            "success": true,
+            "target_contact_geoms": [
+              "s1i_compact_coffee_jar_wall_0",
+              "s1i_compact_coffee_jar_wall_11",
+              "s1i_compact_coffee_jar_wall_6",
+              "s1i_compact_coffee_jar_wall_7"
+            ]
+          }
+        ],
+        "storage_fixture_active_during_contact": false,
+        "storage_fixture_release": {
+          "active_during_contact": false,
+          "active_immediately_before_preclose": false,
+          "fixture_ids": [],
+          "grasp_weld_active_at_release": false,
+          "release_target_position_world_m": [
+            0.4900011767413496,
+            -0.07999945782408333,
+            0.6523997250062915
+          ],
+          "released_before_preclose": false
+        },
+        "storage_fixture_released": false,
+        "success": true
+      },
+      "resolution_one_to_one": true,
+      "return_move": {
+        "action": "MOVE",
+        "automatically_inserted": true,
+        "destination": "home",
+        "duration_s": 2.700986113981344,
+        "held_object_included_in_collision_check": true,
+        "held_state_after": {
+          "backend_body": "s1i_compact_coffee_jar",
+          "exclusive_payload_weld": true,
+          "finger_joint_positions": [
+            0.5267175512349304,
+            0.5281218662225841
+          ],
+          "floor_contact": false,
+          "generic_object_id": "object_0011",
+          "gripper_body": "google:link_gripper",
+          "rejection_reasons": [],
+          "relative_orientation_wxyz": [
+            0.5029023950753921,
+            0.49189517213169154,
+            0.4722874614416271,
+            0.5311053327034001
+          ],
+          "relative_position_m": [
+            -0.030634193079893155,
+            0.00016268313202877328,
+            0.13253789488600712
+          ],
+          "validation_status": "TRUE",
+          "weld_active": true,
+          "weld_id": 17
+        },
+        "held_state_before": {
+          "backend_body": "s1i_compact_coffee_jar",
+          "exclusive_payload_weld": true,
+          "finger_joint_positions": [
+            0.5267280321338703,
+            0.52834033623342
+          ],
+          "floor_contact": false,
+          "generic_object_id": "object_0011",
+          "gripper_body": "google:link_gripper",
+          "rejection_reasons": [],
+          "relative_orientation_wxyz": [
+            0.5033586278595513,
+            0.4914681509106463,
+            0.47236528592657145,
+            0.5309992326278151
+          ],
+          "relative_position_m": [
+            -0.030635265502740063,
+            0.0001631013613992032,
+            0.13254965761488147
+          ],
+          "validation_status": "TRUE",
+          "weld_active": true,
+          "weld_id": 17
+        },
+        "physics_steps": 9796,
+        "relative_orientation_drift_rad": 0.0012771990707647531,
+        "relative_position_drift_m": 1.1818916919087252e-05,
+        "relative_transform_drift_thresholds": {
+          "orientation_rad": 0.03490658503988659,
+          "position_m": 0.005
+        },
+        "relative_transform_drift_valid": true,
+        "source_workspace": "right_side",
+        "status": "Move complete: home (2.7 s)",
+        "success": true,
+        "target_workspace": "home"
+      },
+      "success": true
+    },
+    "KETTLE": {
+      "evidence_path": "runs/phaseB_freeze_carried_move/KETTLE/carried_move_result.json",
+      "family": "KETTLE",
+      "generic_object_id": "object_0010",
+      "inventory_backend_free": true,
+      "outbound_move": {
+        "action": "MOVE",
+        "automatically_inserted": true,
+        "destination": "cupboard2",
+        "duration_s": 3.296157846983988,
+        "held_object_included_in_collision_check": true,
+        "held_state_after": {
+          "backend_body": "s1i_compact_kettle",
+          "exclusive_payload_weld": true,
+          "finger_joint_positions": [
+            0.33296610303749374,
+            0.3265141803545376
+          ],
+          "floor_contact": false,
+          "generic_object_id": "object_0010",
+          "gripper_body": "google:link_gripper",
+          "rejection_reasons": [],
+          "relative_orientation_wxyz": [
+            0.0017689802557598196,
+            0.38919526519638253,
+            0.9211513438740697,
+            0.0020292699593542503
+          ],
+          "relative_position_m": [
+            -0.0015343512510847496,
+            -0.0002570163656503355,
+            0.150928668524858
+          ],
+          "validation_status": "TRUE",
+          "weld_active": true,
+          "weld_id": 16
+        },
+        "held_state_before": {
+          "backend_body": "s1i_compact_kettle",
+          "exclusive_payload_weld": true,
+          "finger_joint_positions": [
+            0.33297355633890574,
+            0.3265073420942481
+          ],
+          "floor_contact": false,
+          "generic_object_id": "object_0010",
+          "gripper_body": "google:link_gripper",
+          "rejection_reasons": [],
+          "relative_orientation_wxyz": [
+            0.001770110478896434,
+            0.38919678701406313,
+            0.9211507061606108,
+            0.002025889096407543
+          ],
+          "relative_position_m": [
+            -0.0015352791358831431,
+            -0.0002576012438143968,
+            0.15092865503999764
+          ],
+          "validation_status": "TRUE",
+          "weld_active": true,
+          "weld_id": 16
+        },
+        "physics_steps": 9392,
+        "relative_orientation_drift_rad": 7.856346664977314e-06,
+        "relative_position_drift_m": 1.0969204653686985e-06,
+        "relative_transform_drift_thresholds": {
+          "orientation_rad": 0.03490658503988659,
+          "position_m": 0.005
+        },
+        "relative_transform_drift_valid": true,
+        "source_workspace": "home",
+        "status": "Move complete: cupboard2 (3.2 s)",
+        "success": true,
+        "target_workspace": "right_side"
+      },
+      "pick": {
+        "duration_s": 18.031791008019354,
+        "failure_code": null,
+        "functional_assignment_changed": false,
+        "generic_object_id": "object_0010",
+        "post_pick": {
+          "attachment_angle_snap_rad": 0.0003500654193468013,
+          "attachment_translation_snap_m": 2.393703104250427e-05,
+          "backend_body": "s1i_compact_kettle",
+          "bilateral_contact": true,
+          "contact_geoms": [
+            "google:left_finger_pad_1",
+            "google:left_finger_pad_2",
+            "google:right_finger_pad_1",
+            "google:right_finger_pad_2"
+          ],
+          "contact_sides": [
+            0,
+            1
+          ],
+          "direct_grasp_analysis": null,
+          "direct_object_qpos_write": false,
+          "duration_s": 18.03163114900235,
+          "extraction_strategy": null,
+          "failure_code": null,
+          "generic_object_id": "object_0010",
+          "grasp_family": "KETTLE",
+          "held_state": {
+            "backend_body": "s1i_compact_kettle",
+            "exclusive_payload_weld": true,
+            "finger_joint_positions": [
+              0.33297355633890574,
+              0.3265073420942481
+            ],
+            "floor_contact": false,
+            "generic_object_id": "object_0010",
+            "gripper_body": "google:link_gripper",
+            "rejection_reasons": [],
+            "relative_orientation_wxyz": [
+              0.001770110478896434,
+              0.38919678701406313,
+              0.9211507061606108,
+              0.002025889096407543
+            ],
+            "relative_position_m": [
+              -0.0015352791358831431,
+              -0.0002576012438143968,
+              0.15092865503999764
+            ],
+            "validation_status": "TRUE",
+            "weld_active": true,
+            "weld_id": 16
+          },
+          "manipulation_stance": null,
+          "message": "",
+          "navigation_safe_carry_reached": true,
+          "physics_steps": 11042,
+          "presentation": null,
+          "required_workspace": "home",
+          "selected_grasp_candidate_id": "kettle_upper_body_shell",
+          "source_clearance_verified": null,
+          "source_context": {
+            "container_must_be_open": false,
+            "object_id": "object_0010",
+            "observed_measurement_cloud_path": "stages/000_initial/evidence/object_0010/fused.ply",
+            "observed_source_region": "countertop",
+            "observed_source_stage": 0,
+            "required_workspace": "home",
+            "source_container": null,
+            "source_kind": "TABLE"
+          },
+          "status": "PICK_SUCCESS",
+          "success": true,
+          "target_contact_geoms": [
+            "s1i_compact_kettle_collision"
+          ]
+        },
+        "request": {
+          "action": "PICK",
+          "arguments": [
+            "object_0010"
+          ]
+        },
+        "status": "PICK_SUCCESS",
+        "steps": [
+          {
+            "attachment_angle_snap_rad": 0.0003500654193468013,
+            "attachment_translation_snap_m": 2.393703104250427e-05,
+            "backend_body": "s1i_compact_kettle",
+            "bilateral_contact": true,
+            "contact_geoms": [
+              "google:left_finger_pad_1",
+              "google:left_finger_pad_2",
+              "google:right_finger_pad_1",
+              "google:right_finger_pad_2"
+            ],
+            "contact_sides": [
+              0,
+              1
+            ],
+            "direct_grasp_analysis": null,
+            "direct_object_qpos_write": false,
+            "duration_s": 18.03163114900235,
+            "extraction_strategy": null,
+            "failure_code": null,
+            "generic_object_id": "object_0010",
+            "grasp_family": "KETTLE",
+            "held_state": {
+              "backend_body": "s1i_compact_kettle",
+              "exclusive_payload_weld": true,
+              "finger_joint_positions": [
+                0.33297355633890574,
+                0.3265073420942481
+              ],
+              "floor_contact": false,
+              "generic_object_id": "object_0010",
+              "gripper_body": "google:link_gripper",
+              "rejection_reasons": [],
+              "relative_orientation_wxyz": [
+                0.001770110478896434,
+                0.38919678701406313,
+                0.9211507061606108,
+                0.002025889096407543
+              ],
+              "relative_position_m": [
+                -0.0015352791358831431,
+                -0.0002576012438143968,
+                0.15092865503999764
+              ],
+              "validation_status": "TRUE",
+              "weld_active": true,
+              "weld_id": 16
+            },
+            "manipulation_stance": null,
+            "message": "",
+            "navigation_safe_carry_reached": true,
+            "physics_steps": 11042,
+            "presentation": null,
+            "required_workspace": "home",
+            "selected_grasp_candidate_id": "kettle_upper_body_shell",
+            "source_clearance_verified": null,
+            "source_context": {
+              "container_must_be_open": false,
+              "object_id": "object_0010",
+              "observed_measurement_cloud_path": "stages/000_initial/evidence/object_0010/fused.ply",
+              "observed_source_region": "countertop",
+              "observed_source_stage": 0,
+              "required_workspace": "home",
+              "source_container": null,
+              "source_kind": "TABLE"
+            },
+            "status": "PICK_SUCCESS",
+            "success": true,
+            "target_contact_geoms": [
+              "s1i_compact_kettle_collision"
+            ]
+          }
+        ],
+        "storage_fixture_active_during_contact": false,
+        "storage_fixture_release": {
+          "active_during_contact": false,
+          "active_immediately_before_preclose": false,
+          "fixture_ids": [],
+          "grasp_weld_active_at_release": false,
+          "release_target_position_world_m": [
+            0.3000005964844247,
+            -0.31000057873003595,
+            0.6331410968933898
+          ],
+          "released_before_preclose": false
+        },
+        "storage_fixture_released": false,
+        "success": true
+      },
+      "resolution_one_to_one": true,
+      "return_move": {
+        "action": "MOVE",
+        "automatically_inserted": true,
+        "destination": "home",
+        "duration_s": 3.4369736809749156,
+        "held_object_included_in_collision_check": true,
+        "held_state_after": {
+          "backend_body": "s1i_compact_kettle",
+          "exclusive_payload_weld": true,
+          "finger_joint_positions": [
+            0.3329439333486115,
+            0.3265360416855189
+          ],
+          "floor_contact": false,
+          "generic_object_id": "object_0010",
+          "gripper_body": "google:link_gripper",
+          "rejection_reasons": [],
+          "relative_orientation_wxyz": [
+            0.0017699716139545063,
+            0.38919467870135044,
+            0.9211516133667826,
+            0.002018529863769678
+          ],
+          "relative_position_m": [
+            -0.0015347151727424851,
+            -0.0002558543785178223,
+            0.15092868660506228
+          ],
+          "validation_status": "TRUE",
+          "weld_active": true,
+          "weld_id": 16
+        },
+        "held_state_before": {
+          "backend_body": "s1i_compact_kettle",
+          "exclusive_payload_weld": true,
+          "finger_joint_positions": [
+            0.33296610303749374,
+            0.3265141803545376
+          ],
+          "floor_contact": false,
+          "generic_object_id": "object_0010",
+          "gripper_body": "google:link_gripper",
+          "rejection_reasons": [],
+          "relative_orientation_wxyz": [
+            0.0017689802557598196,
+            0.38919526519638253,
+            0.9211513438740697,
+            0.0020292699593542503
+          ],
+          "relative_position_m": [
+            -0.0015343512510847496,
+            -0.0002570163656503355,
+            0.150928668524858
+          ],
+          "validation_status": "TRUE",
+          "weld_active": true,
+          "weld_id": 16
+        },
+        "physics_steps": 9813,
+        "relative_orientation_drift_rad": 2.1610095313928904e-05,
+        "relative_position_drift_m": 1.2177766473709516e-06,
+        "relative_transform_drift_thresholds": {
+          "orientation_rad": 0.03490658503988659,
+          "position_m": 0.005
+        },
+        "relative_transform_drift_valid": true,
+        "source_workspace": "right_side",
+        "status": "Move complete: home (3.4 s)",
+        "success": true,
+        "target_workspace": "home"
+      },
+      "success": true
+    },
+    "UTENSIL": {
+      "evidence_path": "runs/phaseB_freeze_carried_move/UTENSIL/carried_move_result.json",
+      "family": "UTENSIL",
+      "generic_object_id": "object_0008",
+      "inventory_backend_free": true,
+      "outbound_move": {
+        "action": "MOVE",
+        "automatically_inserted": true,
+        "destination": "cupboard2",
+        "duration_s": 2.8358294049976394,
+        "held_object_included_in_collision_check": true,
+        "held_state_after": {
+          "backend_body": "s1i_final_long_narrow_spoon_2",
+          "exclusive_payload_weld": true,
+          "finger_joint_positions": [
+            0.9576279902094704,
+            0.9580019938562804
+          ],
+          "floor_contact": false,
+          "generic_object_id": "object_0008",
+          "gripper_body": "google:link_gripper",
+          "rejection_reasons": [],
+          "relative_orientation_wxyz": [
+            -0.46837237084504274,
+            0.8208811342833495,
+            -0.19032554662400428,
+            0.2656269412332833
+          ],
+          "relative_position_m": [
+            -0.062304861798016184,
+            0.0295145210430968,
+            0.1628733680174753
+          ],
+          "validation_status": "TRUE",
+          "weld_active": true,
+          "weld_id": 12
+        },
+        "held_state_before": {
+          "backend_body": "s1i_final_long_narrow_spoon_2",
+          "exclusive_payload_weld": true,
+          "finger_joint_positions": [
+            0.9575290117580858,
+            0.9579713101437584
+          ],
+          "floor_contact": false,
+          "generic_object_id": "object_0008",
+          "gripper_body": "google:link_gripper",
+          "rejection_reasons": [],
+          "relative_orientation_wxyz": [
+            -0.4683726683491363,
+            0.8208987202581441,
+            -0.19029964242865927,
+            0.26559062617791124
+          ],
+          "relative_position_m": [
+            -0.062305673743002624,
+            0.02951430690589186,
+            0.16287313686535432
+          ],
+          "validation_status": "TRUE",
+          "weld_active": true,
+          "weld_id": 12
+        },
+        "physics_steps": 9403,
+        "relative_orientation_drift_rad": 9.589922888268609e-05,
+        "relative_position_drift_m": 8.709424243736956e-07,
+        "relative_transform_drift_thresholds": {
+          "orientation_rad": 0.03490658503988659,
+          "position_m": 0.005
+        },
+        "relative_transform_drift_valid": true,
+        "source_workspace": "home",
+        "status": "Move complete: cupboard2 (2.7 s)",
+        "success": true,
+        "target_workspace": "right_side"
+      },
+      "pick": {
+        "duration_s": 23.374428731040098,
+        "failure_code": null,
+        "functional_assignment_changed": false,
+        "generic_object_id": "object_0008",
+        "post_pick": {
+          "attachment_angle_snap_rad": 0.018379136931775952,
+          "attachment_translation_snap_m": 0.0002150396733829472,
+          "backend_body": "s1i_final_long_narrow_spoon_2",
+          "bilateral_contact": true,
+          "contact_geoms": [
+            "google:left_finger_pad_5",
+            "google:right_finger_pad_5"
+          ],
+          "contact_sides": [
+            0,
+            1
+          ],
+          "direct_grasp_analysis": null,
+          "direct_object_qpos_write": false,
+          "duration_s": 23.374327039986383,
+          "extraction_strategy": null,
+          "failure_code": null,
+          "generic_object_id": "object_0008",
+          "grasp_family": "UTENSIL",
+          "held_state": {
+            "backend_body": "s1i_final_long_narrow_spoon_2",
+            "exclusive_payload_weld": true,
+            "finger_joint_positions": [
+              0.9575290117580858,
+              0.9579713101437584
+            ],
+            "floor_contact": false,
+            "generic_object_id": "object_0008",
+            "gripper_body": "google:link_gripper",
+            "rejection_reasons": [],
+            "relative_orientation_wxyz": [
+              -0.4683726683491363,
+              0.8208987202581441,
+              -0.19029964242865927,
+              0.26559062617791124
+            ],
+            "relative_position_m": [
+              -0.062305673743002624,
+              0.02951430690589186,
+              0.16287313686535432
+            ],
+            "validation_status": "TRUE",
+            "weld_active": true,
+            "weld_id": 12
+          },
+          "manipulation_stance": null,
+          "message": "",
+          "navigation_safe_carry_reached": true,
+          "physics_steps": 13544,
+          "presentation": null,
+          "required_workspace": "home",
+          "selected_grasp_candidate_id": "handle_55pct_yaw330_z+0.003",
+          "source_clearance_verified": null,
+          "source_context": {
+            "container_must_be_open": false,
+            "object_id": "object_0008",
+            "observed_measurement_cloud_path": "stages/000_initial/evidence/object_0008/fused.ply",
+            "observed_source_region": "countertop",
+            "observed_source_stage": 0,
+            "required_workspace": "home",
+            "source_container": null,
+            "source_kind": "TABLE"
+          },
+          "status": "PICK_SUCCESS",
+          "success": true,
+          "target_contact_geoms": [
+            "s1i_final_long_narrow_spoon_2_handle_collision"
+          ]
+        },
+        "request": {
+          "action": "PICK",
+          "arguments": [
+            "object_0008"
+          ]
+        },
+        "status": "PICK_SUCCESS",
+        "steps": [
+          {
+            "attachment_angle_snap_rad": 0.018379136931775952,
+            "attachment_translation_snap_m": 0.0002150396733829472,
+            "backend_body": "s1i_final_long_narrow_spoon_2",
+            "bilateral_contact": true,
+            "contact_geoms": [
+              "google:left_finger_pad_5",
+              "google:right_finger_pad_5"
+            ],
+            "contact_sides": [
+              0,
+              1
+            ],
+            "direct_grasp_analysis": null,
+            "direct_object_qpos_write": false,
+            "duration_s": 23.374327039986383,
+            "extraction_strategy": null,
+            "failure_code": null,
+            "generic_object_id": "object_0008",
+            "grasp_family": "UTENSIL",
+            "held_state": {
+              "backend_body": "s1i_final_long_narrow_spoon_2",
+              "exclusive_payload_weld": true,
+              "finger_joint_positions": [
+                0.9575290117580858,
+                0.9579713101437584
+              ],
+              "floor_contact": false,
+              "generic_object_id": "object_0008",
+              "gripper_body": "google:link_gripper",
+              "rejection_reasons": [],
+              "relative_orientation_wxyz": [
+                -0.4683726683491363,
+                0.8208987202581441,
+                -0.19029964242865927,
+                0.26559062617791124
+              ],
+              "relative_position_m": [
+                -0.062305673743002624,
+                0.02951430690589186,
+                0.16287313686535432
+              ],
+              "validation_status": "TRUE",
+              "weld_active": true,
+              "weld_id": 12
+            },
+            "manipulation_stance": null,
+            "message": "",
+            "navigation_safe_carry_reached": true,
+            "physics_steps": 13544,
+            "presentation": null,
+            "required_workspace": "home",
+            "selected_grasp_candidate_id": "handle_55pct_yaw330_z+0.003",
+            "source_clearance_verified": null,
+            "source_context": {
+              "container_must_be_open": false,
+              "object_id": "object_0008",
+              "observed_measurement_cloud_path": "stages/000_initial/evidence/object_0008/fused.ply",
+              "observed_source_region": "countertop",
+              "observed_source_stage": 0,
+              "required_workspace": "home",
+              "source_container": null,
+              "source_kind": "TABLE"
+            },
+            "status": "PICK_SUCCESS",
+            "success": true,
+            "target_contact_geoms": [
+              "s1i_final_long_narrow_spoon_2_handle_collision"
+            ]
+          }
+        ],
+        "storage_fixture_active_during_contact": false,
+        "storage_fixture_release": {
+          "active_during_contact": false,
+          "active_immediately_before_preclose": false,
+          "fixture_ids": [],
+          "grasp_weld_active_at_release": false,
+          "release_target_position_world_m": [
+            -0.25047154640011454,
+            -0.10000000136769147,
+            0.586602211006312
+          ],
+          "released_before_preclose": false
+        },
+        "storage_fixture_released": false,
+        "success": true
+      },
+      "resolution_one_to_one": true,
+      "return_move": {
+        "action": "MOVE",
+        "automatically_inserted": true,
+        "destination": "home",
+        "duration_s": 2.7413532289792784,
+        "held_object_included_in_collision_check": true,
+        "held_state_after": {
+          "backend_body": "s1i_final_long_narrow_spoon_2",
+          "exclusive_payload_weld": true,
+          "finger_joint_positions": [
+            0.9576156138411829,
+            0.9579872632747749
+          ],
+          "floor_contact": false,
+          "generic_object_id": "object_0008",
+          "gripper_body": "google:link_gripper",
+          "rejection_reasons": [],
+          "relative_orientation_wxyz": [
+            -0.4683792345987746,
+            0.8208769970249735,
+            -0.19032965109235994,
+            0.2656246830906154
+          ],
+          "relative_position_m": [
+            -0.062304926312783934,
+            0.02951478743438741,
+            0.16287342909420435
+          ],
+          "validation_status": "TRUE",
+          "weld_active": true,
+          "weld_id": 12
+        },
+        "held_state_before": {
+          "backend_body": "s1i_final_long_narrow_spoon_2",
+          "exclusive_payload_weld": true,
+          "finger_joint_positions": [
+            0.9576279902094704,
+            0.9580019938562804
+          ],
+          "floor_contact": false,
+          "generic_object_id": "object_0008",
+          "gripper_body": "google:link_gripper",
+          "rejection_reasons": [],
+          "relative_orientation_wxyz": [
+            -0.46837237084504274,
+            0.8208811342833495,
+            -0.19032554662400428,
+            0.2656269412332833
+          ],
+          "relative_position_m": [
+            -0.062304861798016184,
+            0.0295145210430968,
+            0.1628733680174753
+          ],
+          "validation_status": "TRUE",
+          "weld_active": true,
+          "weld_id": 12
+        },
+        "physics_steps": 9801,
+        "relative_orientation_drift_rad": 1.856593792627554e-05,
+        "relative_position_drift_m": 2.8081460397151646e-07,
+        "relative_transform_drift_thresholds": {
+          "orientation_rad": 0.03490658503988659,
+          "position_m": 0.005
+        },
+        "relative_transform_drift_valid": true,
+        "source_workspace": "right_side",
+        "status": "Move complete: home (2.7 s)",
+        "success": true,
+        "target_workspace": "home"
+      },
+      "success": true
+    },
+    "VESSEL": {
+      "evidence_path": "runs/phaseB_freeze_carried_move/VESSEL/carried_move_result.json",
+      "family": "VESSEL",
+      "generic_object_id": "object_0001",
+      "inventory_backend_free": true,
+      "outbound_move": {
+        "action": "MOVE",
+        "automatically_inserted": true,
+        "destination": "cupboard2",
+        "duration_s": 4.035984193964396,
+        "held_object_included_in_collision_check": true,
+        "held_state_after": {
+          "backend_body": "ab3_narrow_deep_cup",
+          "exclusive_payload_weld": true,
+          "finger_joint_positions": [
+            0.6211165437463025,
+            0.6202677294322078
+          ],
+          "floor_contact": false,
+          "generic_object_id": "object_0001",
+          "gripper_body": "google:link_gripper",
+          "rejection_reasons": [],
+          "relative_orientation_wxyz": [
+            -0.013264730985781592,
+            -6.228441437782492e-06,
+            0.9999118327830608,
+            0.0006111738719913029
+          ],
+          "relative_position_m": [
+            0.0013850010355545234,
+            -0.0001327340541859357,
+            0.16426548205365823
+          ],
+          "validation_status": "TRUE",
+          "weld_active": true,
+          "weld_id": 4
+        },
+        "held_state_before": {
+          "backend_body": "ab3_narrow_deep_cup",
+          "exclusive_payload_weld": true,
+          "finger_joint_positions": [
+            0.6211102622581568,
+            0.6202611299485925
+          ],
+          "floor_contact": false,
+          "generic_object_id": "object_0001",
+          "gripper_body": "google:link_gripper",
+          "rejection_reasons": [],
+          "relative_orientation_wxyz": [
+            -0.01326538314890519,
+            6.295792284993953e-07,
+            0.9999118066364171,
+            0.0006391858984713203
+          ],
+          "relative_position_m": [
+            0.0013866263522338636,
+            -0.0001343648622181444,
+            0.16426539445762406
+          ],
+          "validation_status": "TRUE",
+          "weld_active": true,
+          "weld_id": 4
+        },
+        "physics_steps": 9403,
+        "relative_orientation_drift_rad": 5.769339369404774e-05,
+        "relative_position_drift_m": 2.3040968320062406e-06,
+        "relative_transform_drift_thresholds": {
+          "orientation_rad": 0.03490658503988659,
+          "position_m": 0.005
+        },
+        "relative_transform_drift_valid": true,
+        "source_workspace": "home",
+        "status": "Move complete: cupboard2 (3.9 s)",
+        "success": true,
+        "target_workspace": "right_side"
+      },
+      "pick": {
+        "duration_s": 21.81889668403892,
+        "failure_code": null,
+        "functional_assignment_changed": false,
+        "generic_object_id": "object_0001",
+        "post_pick": {
+          "attachment_angle_snap_rad": 0.0004041126976735726,
+          "attachment_translation_snap_m": 8.109701505162897e-05,
+          "backend_body": "ab3_narrow_deep_cup",
+          "bilateral_contact": true,
+          "contact_geoms": [
+            "google:left_finger_pad_1",
+            "google:left_finger_pad_2",
+            "google:right_finger_pad_1",
+            "google:right_finger_pad_2"
+          ],
+          "contact_sides": [
+            0,
+            1
+          ],
+          "direct_grasp_analysis": null,
+          "direct_object_qpos_write": false,
+          "duration_s": 21.818782821006607,
+          "extraction_strategy": null,
+          "failure_code": null,
+          "generic_object_id": "object_0001",
+          "grasp_family": "VESSEL",
+          "held_state": {
+            "backend_body": "ab3_narrow_deep_cup",
+            "exclusive_payload_weld": true,
+            "finger_joint_positions": [
+              0.6211102622581568,
+              0.6202611299485925
+            ],
+            "floor_contact": false,
+            "generic_object_id": "object_0001",
+            "gripper_body": "google:link_gripper",
+            "rejection_reasons": [],
+            "relative_orientation_wxyz": [
+              -0.01326538314890519,
+              6.295792284993953e-07,
+              0.9999118066364171,
+              0.0006391858984713203
+            ],
+            "relative_position_m": [
+              0.0013866263522338636,
+              -0.0001343648622181444,
+              0.16426539445762406
+            ],
+            "validation_status": "TRUE",
+            "weld_active": true,
+            "weld_id": 4
+          },
+          "manipulation_stance": null,
+          "message": "",
+          "navigation_safe_carry_reached": true,
+          "physics_steps": 13101,
+          "presentation": null,
+          "required_workspace": "home",
+          "selected_grasp_candidate_id": "configured_grasp_site",
+          "source_clearance_verified": null,
+          "source_context": {
+            "container_must_be_open": false,
+            "object_id": "object_0001",
+            "observed_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply",
+            "observed_source_region": "countertop",
+            "observed_source_stage": 0,
+            "required_workspace": "home",
+            "source_container": null,
+            "source_kind": "TABLE"
+          },
+          "status": "PICK_SUCCESS",
+          "success": true,
+          "target_contact_geoms": [
+            "ab3_narrow_deep_cup_wall_1",
+            "ab3_narrow_deep_cup_wall_2",
+            "ab3_narrow_deep_cup_wall_6",
+            "ab3_narrow_deep_cup_wall_7"
+          ]
+        },
+        "request": {
+          "action": "PICK",
+          "arguments": [
+            "object_0001"
+          ]
+        },
+        "status": "PICK_SUCCESS",
+        "steps": [
+          {
+            "attachment_angle_snap_rad": 0.0004041126976735726,
+            "attachment_translation_snap_m": 8.109701505162897e-05,
+            "backend_body": "ab3_narrow_deep_cup",
+            "bilateral_contact": true,
+            "contact_geoms": [
+              "google:left_finger_pad_1",
+              "google:left_finger_pad_2",
+              "google:right_finger_pad_1",
+              "google:right_finger_pad_2"
+            ],
+            "contact_sides": [
+              0,
+              1
+            ],
+            "direct_grasp_analysis": null,
+            "direct_object_qpos_write": false,
+            "duration_s": 21.818782821006607,
+            "extraction_strategy": null,
+            "failure_code": null,
+            "generic_object_id": "object_0001",
+            "grasp_family": "VESSEL",
+            "held_state": {
+              "backend_body": "ab3_narrow_deep_cup",
+              "exclusive_payload_weld": true,
+              "finger_joint_positions": [
+                0.6211102622581568,
+                0.6202611299485925
+              ],
+              "floor_contact": false,
+              "generic_object_id": "object_0001",
+              "gripper_body": "google:link_gripper",
+              "rejection_reasons": [],
+              "relative_orientation_wxyz": [
+                -0.01326538314890519,
+                6.295792284993953e-07,
+                0.9999118066364171,
+                0.0006391858984713203
+              ],
+              "relative_position_m": [
+                0.0013866263522338636,
+                -0.0001343648622181444,
+                0.16426539445762406
+              ],
+              "validation_status": "TRUE",
+              "weld_active": true,
+              "weld_id": 4
+            },
+            "manipulation_stance": null,
+            "message": "",
+            "navigation_safe_carry_reached": true,
+            "physics_steps": 13101,
+            "presentation": null,
+            "required_workspace": "home",
+            "selected_grasp_candidate_id": "configured_grasp_site",
+            "source_clearance_verified": null,
+            "source_context": {
+              "container_must_be_open": false,
+              "object_id": "object_0001",
+              "observed_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply",
+              "observed_source_region": "countertop",
+              "observed_source_stage": 0,
+              "required_workspace": "home",
+              "source_container": null,
+              "source_kind": "TABLE"
+            },
+            "status": "PICK_SUCCESS",
+            "success": true,
+            "target_contact_geoms": [
+              "ab3_narrow_deep_cup_wall_1",
+              "ab3_narrow_deep_cup_wall_2",
+              "ab3_narrow_deep_cup_wall_6",
+              "ab3_narrow_deep_cup_wall_7"
+            ]
+          }
+        ],
+        "storage_fixture_active_during_contact": false,
+        "storage_fixture_release": {
+          "active_during_contact": false,
+          "active_immediately_before_preclose": false,
+          "fixture_ids": [],
+          "grasp_weld_active_at_release": false,
+          "release_target_position_world_m": [
+            -0.5500005660211178,
+            -0.34000031439301986,
+            0.6276457577093306
+          ],
+          "released_before_preclose": false
+        },
+        "storage_fixture_released": false,
+        "success": true
+      },
+      "resolution_one_to_one": true,
+      "return_move": {
+        "action": "MOVE",
+        "automatically_inserted": true,
+        "destination": "home",
+        "duration_s": 3.6908462529536337,
+        "held_object_included_in_collision_check": true,
+        "held_state_after": {
+          "backend_body": "ab3_narrow_deep_cup",
+          "exclusive_payload_weld": true,
+          "finger_joint_positions": [
+            0.621085561231078,
+            0.6202896199771385
+          ],
+          "floor_contact": false,
+          "generic_object_id": "object_0001",
+          "gripper_body": "google:link_gripper",
+          "rejection_reasons": [],
+          "relative_orientation_wxyz": [
+            -0.013214726721387394,
+            -1.1306974613483867e-05,
+            0.9999124663424029,
+            0.000656142428059175
+          ],
+          "relative_position_m": [
+            0.001387751734548366,
+            -0.00013279189771428854,
+            0.16426529642394913
+          ],
+          "validation_status": "TRUE",
+          "weld_active": true,
+          "weld_id": 4
+        },
+        "held_state_before": {
+          "backend_body": "ab3_narrow_deep_cup",
+          "exclusive_payload_weld": true,
+          "finger_joint_positions": [
+            0.6211165437463025,
+            0.6202677294322078
+          ],
+          "floor_contact": false,
+          "generic_object_id": "object_0001",
+          "gripper_body": "google:link_gripper",
+          "rejection_reasons": [],
+          "relative_orientation_wxyz": [
+            -0.013264730985781592,
+            -6.228441437782492e-06,
+            0.9999118327830608,
+            0.0006111738719913029
+          ],
+          "relative_position_m": [
+            0.0013850010355545234,
+            -0.0001327340541859357,
+            0.16426548205365823
+          ],
+          "validation_status": "TRUE",
+          "weld_active": true,
+          "weld_id": 4
+        },
+        "physics_steps": 9800,
+        "relative_orientation_drift_rad": 0.00013488944298410818,
+        "relative_position_drift_m": 2.757562187404088e-06,
+        "relative_transform_drift_thresholds": {
+          "orientation_rad": 0.03490658503988659,
+          "position_m": 0.005
+        },
+        "relative_transform_drift_valid": true,
+        "source_workspace": "right_side",
+        "status": "Move complete: home (3.6 s)",
+        "success": true,
+        "target_workspace": "home"
+      },
+      "success": true
+    }
+  },
+  "passed": true
+}

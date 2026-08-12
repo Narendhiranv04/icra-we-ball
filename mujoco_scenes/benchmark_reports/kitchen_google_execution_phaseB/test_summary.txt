@@ -1,19 +1,7 @@
-Focused Phase-B suite
-Command: MUJOCO_GL=egl PYOPENGL_PLATFORM=egl /home/naren/miniconda3/bin/python -m pytest mujoco_scenes/tests/test_kitchen_execution_entities.py mujoco_scenes/tests/test_kitchen_phase_b_execution.py mujoco_scenes/tests/test_manipulation_stance.py -q
-Result: 26 passed in 2.37s
+Focused Phase-B closure tests
+Command: MUJOCO_GL=egl PYOPENGL_PLATFORM=egl /home/naren/miniconda3/bin/python -m pytest mujoco_scenes/tests/test_kitchen_execution_entities.py mujoco_scenes/tests/test_kitchen_phase_b_execution.py mujoco_scenes/tests/test_manipulation_stance.py mujoco_scenes/tests/test_kitchen_phase_b_closure_report.py -q
+Result: PASS — 35 passed in 3.63s
 
-Full repository suite after final physical calibration
+Full repository suite
 Command: MUJOCO_GL=egl PYOPENGL_PLATFORM=egl /home/naren/miniconda3/bin/python -m pytest mujoco_scenes/tests -q
-Result: 531 passed, 5 subtests passed in 69.45s
-
-Compile check
-Command: /home/naren/miniconda3/bin/python -m compileall -q mujoco_scenes
-Result: PASS
-
-Diff check for intended Phase-B paths
-Command: git diff --check -- mujoco_scenes
-Result: PASS
-
-The whole-worktree diff check is blocked by a pre-existing, unrelated trailing
-space in reports/l2_living_room_region_ablation1_demo/presentation_report.html.
-That user-owned living-room file was deliberately not modified.
+Result: PASS — 540 passed, 5 subtests passed in 80.14s
