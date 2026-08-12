@@ -1750,7 +1750,11 @@ def build_scene_xml(
                 # contact-confirmed Phase B pick releases it.  The broad
                 # side-wall buffer centres both finger links in the opening,
                 # not merely the spoon collision proxy.
-                world_pos[0] = parent_body_pos[0] + 0.090
+                # Pivot the presentation about its shelf contact and shift it
+                # only slightly right.  The bowl touches C2's right panel,
+                # while the middle handle stays clear for the horizontal
+                # gripper approach.
+                world_pos[0] = parent_body_pos[0] + 0.1138
                 # Present the handle near the open front while retaining a
                 # positive buffer behind the cabinet face.  This keeps the
                 # straight +Y approach short and away from both side panels.
@@ -1765,11 +1769,11 @@ def build_scene_xml(
                 # Object positions serialize at 0.1 mm precision, so use the
                 # next representable height above exact contact.  This leaves
                 # a sub-millimetre numerical clearance with no visible float.
-                world_pos[2] = parent_body_pos[2] + 0.0104
+                world_pos[2] = parent_body_pos[2] - 0.0095
                 injected_instance = _inject_object(
                     obj_name,
                     world_pos,
-                    quat="0.4226183 0 0.9063078 0",
+                    quat="0.3007058 0 0.9537169 0",
                     support_height_override=0.050,
                 )
             elif container_id == "B1" and obj_name == "coffee_jar":

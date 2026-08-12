@@ -382,6 +382,7 @@ def test_c2_spoon_stands_above_shelf_with_bowl_up_and_wall_clearance():
     assert scene.data.geom_xpos[bowl_id, 2] > scene.data.geom_xpos[handle_id, 2]
     assert minimum_z >= shelf_top
     assert maximum_x < right_inner_face
+    assert right_inner_face - maximum_x <= 0.001
     assert scene.data.eq_active[
         mujoco.mj_name2id(
             scene.model, mujoco.mjtObj.mjOBJ_EQUALITY,

@@ -322,7 +322,10 @@ class UtensilGraspCandidateGenerator:
                 scene.model, mujoco.mjtObj.mjOBJ_GEOM, handle_id
             )
             handle_radius = float(scene.model.geom_size[handle_id, 0])
-            if abs(float(world_axis[2])) >= 0.70:
+            # Treat a wall-supported utensil as upright enough for the
+            # horizontal pinch while its handle axis remains predominantly
+            # vertical; this includes C2's deliberate 35-degree lean.
+            if abs(float(world_axis[2])) >= 0.55:
                 # Upright cupboard utensils are grasped with horizontal jaws
                 # while the wrist travels straight through the open front.
                 # C2 opens toward negative Y, so world +Y is the inward
