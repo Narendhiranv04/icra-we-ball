@@ -1759,7 +1759,13 @@ def build_scene_xml(
                 # shelf.  The spoon mesh origin is near its handle rather
                 # than its lowest point, so the generic support-height rule
                 # otherwise lets its bowl pass through the shelf.
-                world_pos[2] = parent_body_pos[2] + 0.013
+                # Calibrated from the transformed collision envelope: this
+                # puts the handle tip on C2's shelf top (rather than leaving
+                # the visually obvious 2.7 mm air gap).
+                # Object positions serialize at 0.1 mm precision, so use the
+                # next representable height above exact contact.  This leaves
+                # a sub-millimetre numerical clearance with no visible float.
+                world_pos[2] = parent_body_pos[2] + 0.0104
                 injected_instance = _inject_object(
                     obj_name,
                     world_pos,
