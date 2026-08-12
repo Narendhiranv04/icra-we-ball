@@ -674,6 +674,430 @@ class CalibratedPickPlaceExecutor:
         error[2] = math.atan2(math.sin(error[2]), math.cos(error[2]))
         return float(np.max(np.abs(error))) < BASE_HOME_REQUEST_TOLERANCE
 
+    def move_to_local_manipulation_base(
+        self,
+        *,
+        step_callback=None,
+        maximum_steps: int = 12000,
+    ) -> int:
+        """Synchronously reach the configured local base stance while empty."""
+        if self.mode != "idle" or self.held_object is not None:
+            raise RuntimeError("Local base positioning requires an idle empty gripper")
+        for step in range(1, maximum_steps + 1):
+            self.data.ctrl[self.arm_actuators] = self.profile.navigation_joints
+            self.data.ctrl[self.finger_actuators] = self.profile.open_command
+            self._command_base(self.base_manipulation_target)
+            mujoco.mj_step(self.model, self.data)
+            if step_callback:
+                step_callback()
+            if self._base_at_target(self.base_manipulation_target):
+                self._restore_navigation_base_damping()
+                return step
+        self._restore_navigation_base_damping()
+        raise RuntimeError("Local manipulation base positioning timed out")
+
+    def execute_contact_presentation(
+        self,
+        object_name: str,
+        cartesian_path_world: tuple[tuple[float, float, float], ...],
+        target_rotation_world: np.ndarray,
+        *,
+        step_callback=None,
+        waypoint_timeout_steps: int = 1200,
+        finger_command: float | None = None,
+        carry_rotation_world: np.ndarray | None = None,
+    ) -> dict[str, object]:
+        """Move the closed gripper along a contact path without attachment.
+
+        This is an execution-level non-prehensile primitive.  The target body
+        is the only environment body admitted by the collision checker; no
+        equality constraint is activated and no object state is written.
+        """
+        if self.mode != "idle" or self.held_object is not None:
+            raise RuntimeError("Presentation requires an idle empty gripper")
+        body_id = mujoco.mj_name2id(
+            self.model, mujoco.mjtObj.mjOBJ_BODY, object_name
+        )
+        if body_id < 0:
+            raise RuntimeError(f"Missing presentation target: {object_name}")
+        if len(cartesian_path_world) < 2:
+            raise ValueError("Presentation path requires at least two points")
+        equality_id = mujoco.mj_name2id(
+            self.model,
+            mujoco.mjtObj.mjOBJ_EQUALITY,
+            f"{self.robot_name}:pick_weld_{object_name}",
+        )
+        if equality_id >= 0 and self.data.eq_active[equality_id]:
+            raise RuntimeError("Presentation cannot begin with an active grasp weld")
+
+        self.target_object = object_name
+        self.target_body_id = body_id
+        try:
+            self.configuration_checker = RobotConfigurationCollisionChecker(
+                self.model,
+                self.data,
+                self.profile,
+                mounting_allowances=self.mounting_allowances,
+            )
+            checker = self.configuration_checker
+            allowed = frozenset((body_id,))
+            ik = ProfiledIK(
+                self.model,
+                self.data,
+                self.profile,
+                orientation_weight=0.30,
+            )
+            current = self._current_arm()
+            planned: list[JointWaypoint] = []
+            start_position = self.data.site_xpos[self.grip_site_id].copy()
+            route_start = start_position
+            goals = list(cartesian_path_world)
+            active_spec = self.pick_specs[object_name]
+            if goals:
+                carry_goal = np.asarray(goals.pop(0), dtype=float)
+                home_seed = (
+                    active_spec.home_seed
+                    if active_spec.home_seed is not None
+                    else self.profile.navigation_joints
+                )
+                carry_joints, position_error, angle_error = ik.solve(
+                    carry_goal,
+                    np.asarray(home_seed, dtype=float),
+                    (
+                        target_rotation_world
+                        if carry_rotation_world is None
+                        else carry_rotation_world
+                    ),
+                )
+                if (
+                    position_error > self.ik_position_tolerance
+                    or angle_error > self.ik_angle_tolerance
+                ):
+                    raise RuntimeError(
+                        "Presentation carry IK misses by "
+                        f"{position_error * 100:.1f} cm with "
+                        f"{math.degrees(angle_error):.1f} deg tilt"
+                    )
+                collision_free, reason = checker.segment_valid(
+                    current, carry_joints, allowed
+                )
+                if not collision_free:
+                    raise RuntimeError(
+                        f"Presentation carry path collision: {reason}"
+                    )
+                planned.extend(
+                    JointWaypoint(point, "Presentation carry clearance")
+                    for point in self._joint_points(current, carry_joints)
+                )
+                current = carry_joints
+                route_start = carry_goal
+            for goal_tuple in goals:
+                goal = np.asarray(goal_tuple, dtype=float)
+                segment, current = self._solve_points(
+                    ik,
+                    self._cartesian_points(route_start, goal, 0.020),
+                    current,
+                    "Presentation contact path",
+                    checker,
+                    allowed,
+                    target_rotation_world,
+                )
+                planned.extend(segment)
+                route_start = goal
+
+            target_start_position = self.data.xpos[body_id].copy()
+            target_start_quaternion = self.data.xquat[body_id].copy()
+            robot_body_ids = {
+                body_index
+                for body_index in range(self.model.nbody)
+                if (
+                    mujoco.mj_id2name(
+                        self.model, mujoco.mjtObj.mjOBJ_BODY, body_index
+                    ) or ""
+                ).startswith(f"{self.robot_name}:")
+            }
+            contact_target_geoms: set[str] = set()
+            contact_robot_geoms: set[str] = set()
+            contact_steps = 0
+            bilateral_contact_steps = 0
+            physics_steps = 0
+            presentation_finger_command = (
+                self.profile.closed_command
+                if finger_command is None else float(finger_command)
+            )
+            self.data.ctrl[self.finger_actuators] = presentation_finger_command
+            for _ in range(100):
+                mujoco.mj_step(self.model, self.data)
+                physics_steps += 1
+                if step_callback:
+                    step_callback()
+
+            terminal_bilateral_contact_steps = 0
+            presentation_grasp_ready = False
+            for waypoint_index, waypoint in enumerate(planned):
+                settled = 0
+                waypoint_touched = False
+                bilateral_streak = 0
+                for _ in range(waypoint_timeout_steps):
+                    self.data.ctrl[self.arm_actuators] = waypoint.joints
+                    self.data.ctrl[self.finger_actuators] = presentation_finger_command
+                    mujoco.mj_step(self.model, self.data)
+                    physics_steps += 1
+                    if step_callback:
+                        step_callback()
+                    touched = False
+                    step_robot_geoms: set[str] = set()
+                    for contact in self.data.contact:
+                        body1 = int(self.model.geom_bodyid[contact.geom1])
+                        body2 = int(self.model.geom_bodyid[contact.geom2])
+                        if body_id not in {body1, body2}:
+                            continue
+                        other_body = body2 if body1 == body_id else body1
+                        if other_body not in robot_body_ids:
+                            continue
+                        target_geom = (
+                            contact.geom1 if body1 == body_id else contact.geom2
+                        )
+                        robot_geom = (
+                            contact.geom2 if body1 == body_id else contact.geom1
+                        )
+                        contact_target_geoms.add(
+                            mujoco.mj_id2name(
+                                self.model, mujoco.mjtObj.mjOBJ_GEOM, target_geom
+                            ) or f"geom_{target_geom}"
+                        )
+                        robot_geom_name = (
+                            mujoco.mj_id2name(
+                                self.model, mujoco.mjtObj.mjOBJ_GEOM, robot_geom
+                            ) or f"geom_{robot_geom}"
+                        )
+                        contact_robot_geoms.add(robot_geom_name)
+                        step_robot_geoms.add(robot_geom_name)
+                        touched = True
+                    if touched:
+                        contact_steps += 1
+                        waypoint_touched = True
+                        bilateral = all(
+                            any(name in family for name in step_robot_geoms)
+                            for family in self.profile.finger_contact_geoms
+                        )
+                        if bilateral:
+                            bilateral_contact_steps += 1
+                            bilateral_streak += 1
+                        else:
+                            bilateral_streak = 0
+                    else:
+                        bilateral_streak = 0
+                    if (
+                        bilateral_streak >= CONTACT_CONFIRM_TICKS
+                        and float(
+                            np.linalg.norm(
+                                self.data.xpos[body_id] - target_start_position
+                            )
+                        ) >= 0.008
+                    ):
+                        # The physical presentation objective is a displaced
+                        # utensil in a sustained two-sided pinch.  Preserve
+                        # that state immediately; later Cartesian waypoints
+                        # are irrelevant once this stronger postcondition is
+                        # satisfied and can push the thin handle out again.
+                        terminal_bilateral_contact_steps = bilateral_streak
+                        presentation_grasp_ready = True
+                        break
+                    if waypoint_index == len(planned) - 1:
+                        terminal_bilateral_contact_steps = max(
+                            terminal_bilateral_contact_steps,
+                            bilateral_streak,
+                        )
+                        if bilateral_streak >= CONTACT_CONFIRM_TICKS:
+                            # Preserve the first physically confirmed terminal
+                            # pinch for the caller.  Continuing to integrate a
+                            # contact-constrained waypoint can push the thin
+                            # handle back out of the jaws before adoption.
+                            break
+                    collision_free, reason = checker.evaluate_live(self.data, allowed)
+                    if not collision_free:
+                        raise RuntimeError(
+                            f"Presentation live collision guard: {reason}"
+                        )
+                    tracking = float(
+                        np.max(np.abs(self.data.qpos[self.arm_qpos] - waypoint.joints))
+                    )
+                    if tracking <= 0.025:
+                        settled += 1
+                        if settled >= 5 and not (
+                            waypoint_index == len(planned) - 1
+                            and waypoint_touched
+                            and bilateral_streak < CONTACT_CONFIRM_TICKS
+                        ):
+                            break
+                    elif touched and tracking <= 0.040:
+                        # Contact motion is deliberately compliant: once the
+                        # target resists the commanded Cartesian waypoint, do
+                        # not integrate against it for the full timeout.
+                        settled += 1
+                        if settled >= 50:
+                            break
+                    else:
+                        settled = 0
+                else:
+                    if not waypoint_touched:
+                        raise RuntimeError(
+                            "Presentation waypoint tracking timeout: "
+                            f"{waypoint.label}"
+                        )
+                    # A contact-constrained push may intentionally remain off
+                    # the free-space IK target.  The bounded timeout is then
+                    # the force/dwell limit; continue to the retreat waypoint.
+                if presentation_grasp_ready:
+                    break
+
+            target_end_position = self.data.xpos[body_id].copy()
+            target_end_quaternion = self.data.xquat[body_id].copy()
+            quaternion_dot = abs(
+                float(np.dot(target_start_quaternion, target_end_quaternion))
+            )
+            return {
+                "strategy": "CONTACT_DRIVEN_DRAWER_SLIDE",
+                "success": bool(contact_steps > 0),
+                "contact_steps": contact_steps,
+                "bilateral_contact_steps": bilateral_contact_steps,
+                "terminal_bilateral_contact_steps": (
+                    terminal_bilateral_contact_steps
+                ),
+                "presentation_grasp_ready": presentation_grasp_ready,
+                "contact_target_geoms": sorted(contact_target_geoms),
+                "contact_robot_geoms": sorted(contact_robot_geoms),
+                "target_translation_m": float(
+                    np.linalg.norm(target_end_position - target_start_position)
+                ),
+                "target_rotation_rad": float(
+                    2.0 * math.acos(np.clip(quaternion_dot, 0.0, 1.0))
+                ),
+                "target_start_position_world_m": target_start_position.tolist(),
+                "target_end_position_world_m": target_end_position.tolist(),
+                "physics_steps": physics_steps,
+                "grasp_weld_active": bool(
+                    equality_id >= 0 and self.data.eq_active[equality_id]
+                ),
+                "direct_object_qpos_write": False,
+            }
+        finally:
+            self.target_object = None
+            self.target_body_id = -1
+            self.configuration_checker = None
+
+    def adopt_presented_bilateral_grasp(
+        self,
+        object_name: str,
+        target_rotation_world: np.ndarray,
+        carry_rotation_world: np.ndarray,
+        *,
+        preconfirmed_contact_steps: int = 0,
+        step_callback=None,
+    ) -> dict[str, object]:
+        """Authorize a grasp only after sustained post-presentation contact."""
+        if self.mode != "idle" or self.held_object is not None:
+            raise RuntimeError("Presented regrasp requires an idle empty executor")
+        body_id = mujoco.mj_name2id(
+            self.model, mujoco.mjtObj.mjOBJ_BODY, object_name
+        )
+        self.target_object = object_name
+        self.target_body_id = body_id
+        free_joint_id = int(self.model.body_jntadr[body_id])
+        self.target_free_dof = int(self.model.jnt_dofadr[free_joint_id])
+        self.configuration_checker = RobotConfigurationCollisionChecker(
+            self.model,
+            self.data,
+            self.profile,
+            mounting_allowances=self.mounting_allowances,
+        )
+        confirmed = 0
+        if (
+            preconfirmed_contact_steps >= CONTACT_CONFIRM_TICKS
+            and self._finger_contact_sides() == {0, 1}
+        ):
+            confirmed = int(preconfirmed_contact_steps)
+        else:
+            for _ in range(100):
+                mujoco.mj_step(self.model, self.data)
+                if step_callback:
+                    step_callback()
+                if self._finger_contact_sides() == {0, 1}:
+                    confirmed += 1
+                    if confirmed >= CONTACT_CONFIRM_TICKS:
+                        break
+                else:
+                    confirmed = 0
+        if confirmed < CONTACT_CONFIRM_TICKS:
+            self.target_object = None
+            self.target_body_id = -1
+            self.configuration_checker = None
+            raise RuntimeError("REGRASP_FAILED: bilateral contact was not sustained")
+
+        self._activate_weld()
+        current = self._current_arm()
+        checker = self.configuration_checker
+        allowed = frozenset((body_id,))
+        ik = ProfiledIK(
+            self.model, self.data, self.profile, orientation_weight=0.30
+        )
+        grip = self.data.site_xpos[self.grip_site_id].copy()
+        lift, lift_joints = self._solve_points(
+            ik,
+            self._cartesian_points(grip, grip + np.array((0.0, 0.0, 0.16)), 0.012),
+            current,
+            "Extracting presented object above drawer",
+            checker,
+            allowed,
+            target_rotation_world,
+        )
+        spec = self.pick_specs[object_name]
+        carry_position = (
+            self.profile.carry_position
+            if spec.carry_position is None else spec.carry_position
+        )
+        home_seed = (
+            self.profile.home_seed if spec.home_seed is None else spec.home_seed
+        )
+        carry_joints, position_error, angle_error = ik.solve(
+            carry_position, home_seed, carry_rotation_world
+        )
+        if (
+            position_error > self.ik_position_tolerance
+            or angle_error > self.ik_angle_tolerance
+        ):
+            raise RuntimeError(
+                "REGRASP_FAILED: carry IK misses by "
+                f"{position_error:.3f} m / {math.degrees(angle_error):.1f} deg"
+            )
+        collision_free, reason = checker.segment_valid(
+            lift_joints, carry_joints, allowed
+        )
+        if not collision_free:
+            raise RuntimeError(f"EXTRACTION_COLLISION: {reason}")
+        self.retreat_waypoints = [
+            *lift,
+            *(
+                JointWaypoint(point, "Carrying extracted drawer object")
+                for point in self._joint_points(lift_joints, carry_joints)
+            ),
+        ]
+        self.waypoints = self.retreat_waypoints
+        self.waypoint_index = 0
+        self.waypoint_ticks = 0
+        self.close_target = float(np.max(self.data.ctrl[self.finger_actuators]))
+        self.selected_grasp_candidate_id = "presentation_bilateral_regrasp"
+        self.mode = "pick_retreat"
+        self.status = "Presented handle: bilateral regrasp confirmed; extracting"
+        return {
+            "bilateral_contact_confirmed": True,
+            "contact_confirm_steps": confirmed,
+            "attachment_translation_snap_m": self.attachment_translation_snap_m,
+            "attachment_angle_snap_rad": self.attachment_angle_snap_rad,
+            "selected_grasp_candidate_id": self.selected_grasp_candidate_id,
+        }
+
     def _current_arm(self) -> np.ndarray:
         return self.data.qpos[self.arm_qpos].copy()
 
@@ -934,6 +1358,67 @@ class CalibratedPickPlaceExecutor:
         self.calibration_attempt_ticks = 0
         self.mode = "pick_base_approach"
         self.status = f"Pick {object_name}: approaching the manipulation stance"
+
+    def direct_pick_plan_feasibility(self, object_name: str) -> dict[str, object]:
+        """Evaluate the normal grasp planner without executing its motion."""
+        if self.mode != "idle" or self.held_object is not None:
+            raise RuntimeError("Direct-grasp analysis requires an idle executor")
+        spec = self.pick_specs[object_name]
+        site_id = mujoco.mj_name2id(
+            self.model, mujoco.mjtObj.mjOBJ_SITE, spec.grasp_site
+        )
+        original_site = self.model.site_pos[site_id].copy()
+        try:
+            body_id = mujoco.mj_name2id(
+                self.model, mujoco.mjtObj.mjOBJ_BODY, object_name
+            )
+            free_joint_id = int(self.model.body_jntadr[body_id])
+            self.target_object = object_name
+            self.target_body_id = body_id
+            self.target_free_dof = int(self.model.jnt_dofadr[free_joint_id])
+            self.close_target = self.profile.open_command
+            self.contact_ticks = 0
+            self.spoon_pivot_equality_id = -1
+            self.spoon_settle_ticks = 0
+            self.spoon_regrasp_command = self.profile.open_command
+            self.spoon_regrasp_target = self.profile.open_command
+            self.spoon_regrasp_ticks = 0
+            self.spoon_regrasp_elapsed_ticks = 0
+            self.failure = None
+            self.attachment_translation_snap_m = None
+            self.attachment_angle_snap_rad = None
+            self.confirmed_contact_sides = ()
+            self.confirmed_contact_geoms = ()
+            self.confirmed_target_contact_geoms = ()
+            self.selected_grasp_candidate_id = None
+            self._begin_pick_plan()
+            return {
+                "feasible": True,
+                "classification": "DIRECT_GRASP_FEASIBLE",
+                "selected_candidate_id": self.selected_grasp_candidate_id,
+                "failure": None,
+            }
+        except RuntimeError as error:
+            return {
+                "feasible": False,
+                "classification": "DIRECT_GRASP_GEOMETRICALLY_INFEASIBLE",
+                "selected_candidate_id": None,
+                "failure": str(error),
+            }
+        finally:
+            self.model.site_pos[site_id] = original_site
+            self.pick_specs[object_name] = spec
+            self.mode = "idle"
+            self.status = "Idle"
+            self.failure = None
+            self.target_object = None
+            self.target_body_id = -1
+            self.target_free_dof = -1
+            self.configuration_checker = None
+            self.waypoints = []
+            self.retreat_waypoints = []
+            self.selected_grasp_candidate_id = None
+            mujoco.mj_forward(self.model, self.data)
 
     def _begin_pick_plan(self) -> None:
         assert self.target_object is not None

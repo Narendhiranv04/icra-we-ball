@@ -45,6 +45,15 @@ class ObjectExecutionFailureCode(str, Enum):
     PICK_PATH_COLLISION = "PICK_PATH_COLLISION"
     PICK_CONTACT_FAILED = "PICK_CONTACT_FAILED"
     GRASP_FAILED = "GRASP_FAILED"
+    DIRECT_GRASP_INFEASIBLE = "DIRECT_GRASP_INFEASIBLE"
+    PRESENTATION_IK_FAILED = "PRESENTATION_IK_FAILED"
+    PRESENTATION_PATH_COLLISION = "PRESENTATION_PATH_COLLISION"
+    PRESENTATION_CONTACT_FAILED = "PRESENTATION_CONTACT_FAILED"
+    PRESENTATION_FAILED = "PRESENTATION_FAILED"
+    NEIGHBOUR_OBJECT_DISTURBED = "NEIGHBOUR_OBJECT_DISTURBED"
+    PRESENTATION_POSTCONDITION_FAILED = "PRESENTATION_POSTCONDITION_FAILED"
+    REGRASP_FAILED = "REGRASP_FAILED"
+    SOURCE_CLEARANCE_FAILED = "SOURCE_CLEARANCE_FAILED"
     HELD_STATE_INVALID = "HELD_STATE_INVALID"
     OBJECT_DROPPED = "OBJECT_DROPPED"
     PLACEMENT_FAILED = "PLACEMENT_FAILED"
@@ -90,6 +99,8 @@ class PhysicalPickResult:
     direct_object_qpos_write: bool = False
     selected_grasp_candidate_id: str | None = None
     target_contact_geoms: tuple[str, ...] = ()
+    presentation: dict[str, Any] | None = None
+    direct_grasp_analysis: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -248,6 +259,40 @@ class UtensilGraspCandidateGenerator:
                 _axis_angle_rotation(np.array((0.0, 0.0, carry_yaw)))
                 @ profile.top_down_rotation
             )
+            # Local +Y is the jaw-closing axis.  Rotating by the measured
+            # handle yaw keeps that axis perpendicular to the handle.
+            level_yaw = handle_yaw
+            level_rotation = (
+                _axis_angle_rotation(np.array((0.0, 0.0, level_yaw)))
+                @ profile.top_down_rotation
+            )
+            for fraction in (0.55, 0.65, 0.75, 0.85):
+                # The UTENSIL spec adds another 20 mm grasp offset.  These
+                # local raises therefore produce the 25--35 mm level grip
+                # heights established by the contact-presentation sweep.
+                for storage_raise in (-0.005, 0.0, 0.005, 0.010):
+                    level_position = near + fraction * (far - near)
+                    level_position[2] += storage_raise
+                    candidates.append(
+                        GraspPoseCandidate(
+                            candidate_id=(
+                                f"drawer_level_perpendicular_"
+                                f"{int(storage_raise * 1000)}mm_"
+                                f"{int(fraction * 100)}pct"
+                            ),
+                            grasp_site_local_position_m=tuple(
+                                map(float, level_position)
+                            ),
+                            target_rotation_world=level_rotation,
+                            carry_rotation_world=drawer_carry_rotation,
+                            approach_clearance_m=0.05,
+                            approach_offset_world_m=(0.0, -0.10, 0.0),
+                            approach_route_offsets_world_m=(
+                                (0.0, -0.35, 0.30),
+                                (0.0, -0.10, 0.18),
+                            ),
+                        )
+                    )
             for fraction in (0.55, 0.65, 0.75, 0.85):
                 for storage_raise in (0.030, 0.040):
                     front_position = near + fraction * (far - near)
@@ -782,6 +827,264 @@ class KitchenObjectManipulationExecutor:
                 return step
         raise RuntimeError("MANIPULATION_EXECUTION_TIMEOUT")
 
+    def _drawer_presentation(
+        self,
+        generic_object_id: str,
+        backend: str,
+    ) -> dict[str, Any]:
+        """Physically slide a low drawer utensil toward the open edge."""
+        body_id = mujoco.mj_name2id(
+            self.scene.model, mujoco.mjtObj.mjOBJ_BODY, backend
+        )
+        handle_id = next(
+            (
+                geom_id
+                for geom_id in _body_geom_ids(self.scene.model, body_id)
+                if "handle_collision" in (
+                    mujoco.mj_id2name(
+                        self.scene.model, mujoco.mjtObj.mjOBJ_GEOM, geom_id
+                    ) or ""
+                )
+            ),
+            None,
+        )
+        if handle_id is None:
+            raise RuntimeError("PRESENTATION_FAILED: target has no handle geometry")
+
+        neighbour_start: dict[str, np.ndarray] = {}
+        source_container = self.inventory_by_id[generic_object_id][
+            "source_context"
+        ]["source_container"]
+        for object_id, row in self.inventory_by_id.items():
+            if object_id == generic_object_id:
+                continue
+            if row["source_context"].get("source_container") != source_container:
+                continue
+            binding = self.by_id.get(object_id)
+            if binding is None:
+                continue
+            neighbour_body = mujoco.mj_name2id(
+                self.scene.model,
+                mujoco.mjtObj.mjOBJ_BODY,
+                binding["physical_backend_body"],
+            )
+            if neighbour_body >= 0:
+                neighbour_start[object_id] = self.scene.data.xpos[
+                    neighbour_body
+                ].copy()
+
+        target_start = self.scene.data.xpos[body_id].copy()
+        handle = self.scene.data.geom_xpos[handle_id].copy()
+        drawer_candidates = self.executor.pick_specs[backend].grasp_candidates
+        handle_axis = self.scene.data.geom_xmat[handle_id].reshape(3, 3)[:, 2]
+        handle_yaw = float(np.arctan2(handle_axis[1], handle_axis[0]))
+        # Use the mirrored inward-facing diagonal on the two drawer sides.
+        # Capsule axes are sign-ambiguous (D2 reports the same physical axis
+        # reversed by 180 degrees), so adding a constant to raw axis yaw is
+        # not mirror symmetric.
+        canonical_handle_yaw = (
+            (handle_yaw + np.pi / 2.0) % np.pi
+        ) - np.pi / 2.0
+        presentation_yaw = (
+            canonical_handle_yaw
+            + np.sign(handle[0]) * np.deg2rad(60.0)
+        )
+        rotation = (
+            _axis_angle_rotation(np.array((0.0, 0.0, presentation_yaw)))
+            @ manipulation_profile("google").top_down_rotation
+        )
+        carry_rotation = next(
+            candidate.carry_rotation_world
+            for candidate in self.executor.pick_specs[backend].grasp_candidates
+            if candidate.candidate_id.startswith("drawer_front_")
+        )
+        contact_height = float(handle[2] + 0.030)
+        # Offset the gripper toward the robot sagittal centreline.  A fixed
+        # +X offset is correct for D1 (negative X) but pushes the symmetric D2
+        # target farther out of reach.
+        contact_x = float(handle[0] - np.sign(handle[0]) * 0.032)
+        carry = self.executor.pick_specs[backend].carry_position
+        if carry is None:
+            carry = manipulation_profile("google").carry_position
+        # D1/D2 open toward negative world Y.  Approach through the open front,
+        # press the closed gripper exterior onto the handle, and use friction
+        # to drag it outward.  This needs no inaccessible behind-object pose.
+        path = (
+            tuple(map(float, carry)),
+            (contact_x, float(handle[1] - 0.30), contact_height + 0.25),
+            (contact_x, float(handle[1]), contact_height + 0.14),
+            (contact_x, float(handle[1]), contact_height),
+            (contact_x, float(handle[1] - 0.070), contact_height - 0.005),
+        )
+        # A parallel-jaw gripper has a 180-degree yaw-equivalent carry pose.
+        # Select between those two kinematically equivalent orientations using
+        # strict IK, rather than attaching object-name-specific wrist angles.
+        carry_rotations = (
+            ("measured_axis", carry_rotation),
+            (
+                "measured_axis_pi_equivalent",
+                _axis_angle_rotation(np.array((0.0, 0.0, np.pi)))
+                @ carry_rotation,
+            ),
+        )
+        contact_rotations = (
+            ("measured_axis", rotation),
+            (
+                "measured_axis_pi_equivalent",
+                _axis_angle_rotation(np.array((0.0, 0.0, np.pi))) @ rotation,
+            ),
+        )
+        carry_failures = []
+        for contact_branch, candidate_contact_rotation in contact_rotations:
+            for carry_branch, candidate_carry_rotation in carry_rotations:
+                try:
+                    result = self.executor.execute_contact_presentation(
+                        backend,
+                        path,
+                        candidate_contact_rotation,
+                        step_callback=self.step_callback,
+                        waypoint_timeout_steps=300,
+                        carry_rotation_world=candidate_carry_rotation,
+                    )
+                    result["contact_orientation_branch"] = contact_branch
+                    result["contact_rotation_world"] = (
+                        candidate_contact_rotation.tolist()
+                    )
+                    result["carry_orientation_branch"] = carry_branch
+                    result["carry_rotation_world"] = (
+                        candidate_carry_rotation.tolist()
+                    )
+                    rotation = candidate_contact_rotation
+                    break
+                except RuntimeError as error:
+                    carry_failures.append(
+                        f"{contact_branch}/{carry_branch}: {error}"
+                    )
+                    if not any(
+                        marker in str(error)
+                        for marker in (
+                            "IK misses",
+                            "Unsafe IK segment",
+                            "carry path collision",
+                        )
+                    ):
+                        raise
+            else:
+                continue
+            break
+        else:
+            raise RuntimeError("; ".join(carry_failures))
+        target_end = self.scene.data.xpos[body_id].copy()
+        neighbour_displacements = {}
+        for object_id, start in neighbour_start.items():
+            neighbour_body = mujoco.mj_name2id(
+                self.scene.model,
+                mujoco.mjtObj.mjOBJ_BODY,
+                self.by_id[object_id]["physical_backend_body"],
+            )
+            neighbour_displacements[object_id] = float(
+                np.linalg.norm(self.scene.data.xpos[neighbour_body] - start)
+            )
+        maximum_neighbour = max(neighbour_displacements.values(), default=0.0)
+        displacement = float(np.linalg.norm(target_end - target_start))
+        result.update(
+            target_displacement_m=displacement,
+            neighbour_displacements_m=neighbour_displacements,
+            maximum_neighbour_displacement_m=maximum_neighbour,
+            displacement_bounds_m=(0.008, 0.05),
+            neighbour_displacement_limit_m=0.02,
+            source_container=source_container,
+        )
+        if not result["success"]:
+            raise RuntimeError("PRESENTATION_CONTACT_FAILED: no robot-target contact")
+        if not 0.008 <= displacement <= 0.05:
+            raise RuntimeError(
+                f"PRESENTATION_POSTCONDITION_FAILED: displacement {displacement:.3f} m"
+            )
+        if maximum_neighbour > 0.02:
+            raise RuntimeError(
+                "NEIGHBOUR_OBJECT_DISTURBED: "
+                f"maximum displacement {maximum_neighbour:.3f} m"
+            )
+        if result["grasp_weld_active"]:
+            raise RuntimeError("PRESENTATION_FAILED: grasp weld became active")
+        result["postcondition_valid"] = True
+        return result
+
+    def _drawer_tip_presentation(self, backend: str) -> dict[str, Any]:
+        """Press the utensil head to raise the opposite handle end."""
+        body_id = mujoco.mj_name2id(
+            self.scene.model, mujoco.mjtObj.mjOBJ_BODY, backend
+        )
+        geom_ids = _body_geom_ids(self.scene.model, body_id)
+        handle_id = next(
+            geom_id for geom_id in geom_ids
+            if "handle_collision" in (
+                mujoco.mj_id2name(
+                    self.scene.model, mujoco.mjtObj.mjOBJ_GEOM, geom_id
+                ) or ""
+            )
+        )
+        head_id = next(
+            geom_id for geom_id in geom_ids
+            if "bowl_collision" in (
+                mujoco.mj_id2name(
+                    self.scene.model, mujoco.mjtObj.mjOBJ_GEOM, geom_id
+                ) or ""
+            )
+        )
+        handle_start_z = float(self.scene.data.geom_xpos[handle_id, 2])
+        head = self.scene.data.geom_xpos[head_id].copy()
+        handle_axis = self.scene.data.geom_xmat[handle_id].reshape(3, 3)[:, 2]
+        yaw = float(np.arctan2(handle_axis[1], handle_axis[0])) + np.deg2rad(300.0)
+        rotation = (
+            _axis_angle_rotation(np.array((0.0, 0.0, yaw)))
+            @ manipulation_profile("google").top_down_rotation
+        )
+        carry_rotation = next(
+            candidate.carry_rotation_world
+            for candidate in self.executor.pick_specs[backend].grasp_candidates
+            if candidate.candidate_id.startswith("drawer_front_")
+        )
+        carry = self.executor.pick_specs[backend].carry_position
+        contact_x = float(head[0] + 0.032)
+        contact_z = float(head[2] + 0.045)
+        path = (
+            tuple(map(float, carry)),
+            (contact_x, float(head[1] - 0.25), contact_z + 0.25),
+            (contact_x, float(head[1]), contact_z + 0.12),
+            (contact_x, float(head[1]), contact_z),
+            (contact_x, float(head[1]), contact_z - 0.008),
+            (contact_x, float(head[1] - 0.10), contact_z + 0.16),
+        )
+        result = self.executor.execute_contact_presentation(
+            backend,
+            path,
+            rotation,
+            step_callback=self.step_callback,
+            waypoint_timeout_steps=300,
+            carry_rotation_world=carry_rotation,
+        )
+        handle_elevation = float(
+            self.scene.data.geom_xpos[handle_id, 2] - handle_start_z
+        )
+        result.update(
+            strategy="CONTACT_DRIVEN_DRAWER_TIP",
+            handle_elevation_m=handle_elevation,
+            handle_elevation_target_m=(0.008, 0.040),
+            postcondition_valid=bool(
+                result["success"]
+                and 0.008 <= handle_elevation <= 0.040
+                and not result["grasp_weld_active"]
+            ),
+        )
+        if not result["postcondition_valid"]:
+            raise RuntimeError(
+                "PRESENTATION_POSTCONDITION_FAILED: handle elevation "
+                f"{handle_elevation:.3f} m"
+            )
+        return result
+
     def pick(
         self,
         generic_object_id: str,
@@ -824,7 +1127,9 @@ class KitchenObjectManipulationExecutor:
         local = np.zeros(3)
         if current_workspace == KitchenWorkspace.HOME:
             family_forward = {
-                "UTENSIL": 0.25,
+                "UTENSIL": (
+                    0.25
+                ),
                 "KETTLE": 0.20,
                 "JAR_SOURCE": 0.20,
             }.get(binding["grasp_family"], 0.20)
@@ -849,7 +1154,231 @@ class KitchenObjectManipulationExecutor:
                     + world_translation
                 ),
             )
-        self.executor.request_pick(backend)
+        presentation = None
+        presentation_grasp_adopted = False
+        direct_grasp_analysis = None
+        drawer_presentation_required = False
+        if (
+            context_row["source_kind"] == "DRAWER"
+            and binding["grasp_family"] == "UTENSIL"
+        ):
+            try:
+                self.executor.move_to_local_manipulation_base(
+                    step_callback=self.step_callback
+                )
+                # Match the normal pick-base approach's settled planning
+                # state before classifying direct feasibility.  Planning on
+                # the first in-tolerance base tick can produce a false
+                # collision/IK rejection for the opposite drawer.
+                for _ in range(120):
+                    mujoco.mj_step(self.scene.model, self.scene.data)
+                    if self.step_callback:
+                        self.step_callback()
+                direct_grasp_analysis = (
+                    self.executor.direct_pick_plan_feasibility(backend)
+                )
+                drawer_presentation_required = not bool(
+                    direct_grasp_analysis["feasible"]
+                )
+                if not drawer_presentation_required:
+                    local_target = self.executor.base_manipulation_target.copy()
+                    self.executor.base_manipulation_target = (
+                        self.executor.base_stance.copy()
+                    )
+                    self.executor.move_to_local_manipulation_base(
+                        step_callback=self.step_callback
+                    )
+                    self.executor.base_manipulation_target = local_target
+            except RuntimeError:
+                # Let the normal structured execution path report base-motion
+                # failures rather than relabeling them as grasp infeasibility.
+                drawer_presentation_required = False
+        if (
+            context_row["source_kind"] == "DRAWER"
+            and binding["grasp_family"] == "UTENSIL"
+            and drawer_presentation_required
+        ):
+            local_target = self.executor.base_manipulation_target.copy()
+            try:
+                self.executor.move_to_local_manipulation_base(
+                    step_callback=self.step_callback
+                )
+                presentation_origin = self.scene.data.xpos[
+                    mujoco.mj_name2id(
+                        self.scene.model, mujoco.mjtObj.mjOBJ_BODY, backend
+                    )
+                ].copy()
+                presentation_attempts = []
+                cumulative = 0.0
+                followup_blocker = None
+                for _ in range(1):
+                    try:
+                        presentation_attempts.append(
+                            self._drawer_presentation(generic_object_id, backend)
+                        )
+                    except RuntimeError as error:
+                        if presentation_attempts:
+                            followup_blocker = str(error)
+                            break
+                        raise
+                    cumulative = float(
+                        np.linalg.norm(
+                            self.scene.data.xpos[
+                                mujoco.mj_name2id(
+                                    self.scene.model,
+                                    mujoco.mjtObj.mjOBJ_BODY,
+                                    backend,
+                                )
+                            ]
+                            - presentation_origin
+                        )
+                    )
+                    if cumulative >= 0.035:
+                        break
+                tip_result = None
+                bilateral_ready = bool(
+                    presentation_attempts
+                    and presentation_attempts[-1].get(
+                        "bilateral_contact_steps", 0
+                    ) >= 5
+                )
+                if cumulative < 0.035 and not bilateral_ready:
+                    try:
+                        tip_result = self._drawer_tip_presentation(backend)
+                        presentation_attempts.append(tip_result)
+                    except RuntimeError as error:
+                        followup_blocker = (
+                            f"{followup_blocker}; tip: {error}"
+                        )
+                presentation = {
+                    "strategy": "CONTACT_DRIVEN_DRAWER_MULTI_STROKE",
+                    "direct_grasp_analysis": direct_grasp_analysis,
+                    "success": (
+                        0.008 <= cumulative <= 0.080
+                        and (tip_result is None or tip_result["postcondition_valid"])
+                    ),
+                    "attempts": presentation_attempts,
+                    "attempt_count": len(presentation_attempts),
+                    "cumulative_target_displacement_m": cumulative,
+                    # Match the independently validated per-stroke lower
+                    # bound.  Requiring 10 mm here rejected otherwise valid
+                    # 8--10 mm presentations purely because of reset noise.
+                    "cumulative_displacement_bounds_m": (0.008, 0.080),
+                    "followup_stroke_blocker": followup_blocker,
+                    "grasp_weld_active_during_presentation": any(
+                        attempt["grasp_weld_active"]
+                        for attempt in presentation_attempts
+                    ),
+                    "direct_object_qpos_write": False,
+                }
+                if not presentation["success"]:
+                    raise RuntimeError(
+                        "PRESENTATION_POSTCONDITION_FAILED: cumulative "
+                        f"displacement {cumulative:.3f} m"
+                    )
+                if bilateral_ready:
+                    handle_id = next(
+                        geom_id for geom_id in _body_geom_ids(
+                            self.scene.model,
+                            mujoco.mj_name2id(
+                                self.scene.model,
+                                mujoco.mjtObj.mjOBJ_BODY,
+                                backend,
+                            ),
+                        )
+                        if "handle_collision" in (
+                            mujoco.mj_id2name(
+                                self.scene.model,
+                                mujoco.mjtObj.mjOBJ_GEOM,
+                                geom_id,
+                            ) or ""
+                        )
+                    )
+                    axis = self.scene.data.geom_xmat[handle_id].reshape(3, 3)[:, 2]
+                    yaw = float(np.arctan2(axis[1], axis[0])) + np.deg2rad(300.0)
+                    regrasp_rotation = np.asarray(
+                        presentation_attempts[-1].get(
+                            "contact_rotation_world",
+                            _axis_angle_rotation(np.array((0.0, 0.0, yaw)))
+                            @ manipulation_profile("google").top_down_rotation,
+                        ),
+                        dtype=float,
+                    )
+                    carry_rotation = np.asarray(
+                        presentation_attempts[-1].get(
+                            "carry_rotation_world",
+                            next(
+                                candidate.carry_rotation_world
+                                for candidate in self.executor.pick_specs[
+                                    backend
+                                ].grasp_candidates
+                                if candidate.candidate_id.startswith(
+                                    "drawer_front_"
+                                )
+                            ),
+                        ),
+                        dtype=float,
+                    )
+                    presentation["bilateral_regrasp"] = (
+                        self.executor.adopt_presented_bilateral_grasp(
+                            backend,
+                            regrasp_rotation,
+                            carry_rotation,
+                            preconfirmed_contact_steps=int(
+                                presentation_attempts[-1].get(
+                                    "terminal_bilateral_contact_steps", 0
+                                )
+                            ),
+                            step_callback=self.step_callback,
+                        )
+                    )
+                    presentation_grasp_adopted = True
+                else:
+                    self.executor.base_manipulation_target = (
+                        self.executor.base_stance.copy()
+                    )
+                    self.executor.move_to_local_manipulation_base(
+                        step_callback=self.step_callback
+                    )
+                    self.executor.base_manipulation_target = local_target
+            except RuntimeError as error:
+                message = str(error)
+                if "IK" in message:
+                    code = ObjectExecutionFailureCode.PRESENTATION_IK_FAILED
+                elif "collision" in message.lower():
+                    code = ObjectExecutionFailureCode.PRESENTATION_PATH_COLLISION
+                elif "CONTACT" in message:
+                    code = ObjectExecutionFailureCode.PRESENTATION_CONTACT_FAILED
+                elif "NEIGHBOUR" in message:
+                    code = ObjectExecutionFailureCode.NEIGHBOUR_OBJECT_DISTURBED
+                elif "POSTCONDITION" in message:
+                    code = ObjectExecutionFailureCode.PRESENTATION_POSTCONDITION_FAILED
+                else:
+                    code = ObjectExecutionFailureCode.PRESENTATION_FAILED
+                return PhysicalPickResult(
+                    generic_object_id,
+                    backend,
+                    context_row,
+                    required.value,
+                    binding["grasp_family"],
+                    False,
+                    code.value,
+                    code.value,
+                    message,
+                    0,
+                    time.perf_counter() - started,
+                    False,
+                    (),
+                    (),
+                    None,
+                    None,
+                    False,
+                    None,
+                    presentation=presentation,
+                    direct_grasp_analysis=direct_grasp_analysis,
+                )
+        if not presentation_grasp_adopted:
+            self.executor.request_pick(backend)
         try:
             steps = self._step_until_stable_mode()
         except RuntimeError as error:
@@ -864,19 +1393,28 @@ class KitchenObjectManipulationExecutor:
                 ))
             return PhysicalPickResult(
                 generic_object_id, backend, context_row, required.value,
-                binding["grasp_family"], False, "GRASP_FAILED",
-                ObjectExecutionFailureCode.GRASP_FAILED.value,
+                binding["grasp_family"], False,
+                "REGRASP_FAILED" if presentation_grasp_adopted else "GRASP_FAILED",
+                (
+                    ObjectExecutionFailureCode.REGRASP_FAILED.value
+                    if presentation_grasp_adopted else ObjectExecutionFailureCode.GRASP_FAILED.value
+                ),
                 f"{error}; mode={self.executor.mode}; status={self.executor.status}; "
                 f"grip_site_error_m={grip_error}",
                 30000, time.perf_counter() - started, False, (), (), None,
-                None, False, None,
+                None, False, None, presentation=presentation,
+                direct_grasp_analysis=direct_grasp_analysis,
             )
         if self.executor.mode != "holding":
             return PhysicalPickResult(generic_object_id, backend, context_row, required.value,
-                binding["grasp_family"], False, "GRASP_FAILED",
-                ObjectExecutionFailureCode.GRASP_FAILED.value,
+                binding["grasp_family"], False,
+                "REGRASP_FAILED" if presentation_grasp_adopted else "GRASP_FAILED",
+                (ObjectExecutionFailureCode.REGRASP_FAILED.value
+                 if presentation_grasp_adopted else ObjectExecutionFailureCode.GRASP_FAILED.value),
                 self.executor.failure or self.executor.status, steps,
-                time.perf_counter() - started, False, (), (), None, None, False, None)
+                time.perf_counter() - started, False, (), (), None, None, False,
+                None, presentation=presentation,
+                direct_grasp_analysis=direct_grasp_analysis)
         state = inspect_held_object_state(
             self.scene.model, self.scene.data, generic_object_id, backend, self.backend_bodies
         )
@@ -899,6 +1437,8 @@ class KitchenObjectManipulationExecutor:
             asdict(state),
             selected_grasp_candidate_id=self.executor.selected_grasp_candidate_id,
             target_contact_geoms=self.executor.confirmed_target_contact_geoms,
+            presentation=presentation,
+            direct_grasp_analysis=direct_grasp_analysis,
         )
 
     def place(
