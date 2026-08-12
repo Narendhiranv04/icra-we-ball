@@ -152,6 +152,7 @@ class ManipulationStancePlanner:
         anchor: PlanarStance,
         *,
         preferred_yaw: float | None = None,
+        preferred_offset: tuple[float, float] | None = None,
     ) -> tuple[PlanarStance, ...]:
         rows = []
         for dx in self.TRANSLATION_OFFSETS_M:
@@ -160,6 +161,13 @@ class ManipulationStancePlanner:
                 if distance > self.MAX_TRANSLATION_M:
                     continue
                 for dyaw in self.YAW_OFFSETS_RAD:
+                    offset_error = (
+                        math.hypot(
+                            dx - preferred_offset[0],
+                            dy - preferred_offset[1],
+                        )
+                        if preferred_offset is not None else distance
+                    )
                     yaw_error = (
                         abs(math.atan2(
                             math.sin(anchor.yaw + dyaw - preferred_yaw),
@@ -169,12 +177,13 @@ class ManipulationStancePlanner:
                     )
                     priority = (
                         (
+                            offset_error,
                             distance + 0.12 * yaw_error,
                             yaw_error,
                             distance,
                         )
                         if preferred_yaw is not None
-                        else (distance, abs(dyaw), yaw_error)
+                        else (offset_error, distance, abs(dyaw), yaw_error)
                     )
                     rows.append((*priority, dx, dy, dyaw))
         rows.sort()
@@ -187,7 +196,7 @@ class ManipulationStancePlanner:
                 dy,
                 dyaw,
             )
-            for _, _, _, dx, dy, dyaw in rows
+            for *_, dx, dy, dyaw in rows
         )
 
     def select(
@@ -210,12 +219,17 @@ class ManipulationStancePlanner:
         maximum: int = DEFAULT_SHORTLIST_SIZE,
         candidate_limit: int | None = None,
         preferred_yaw: float | None = None,
+        preferred_offset: tuple[float, float] | None = None,
         minimum_evaluations: int | None = None,
     ) -> tuple[tuple[StanceEvaluation, ...], tuple[StanceEvaluation, ...]]:
         """Evaluate a bounded set and rank valid stances by grasp quality."""
         if maximum <= 0:
             raise ValueError("maximum shortlist size must be positive")
-        candidates = self.candidates(anchor, preferred_yaw=preferred_yaw)
+        candidates = self.candidates(
+            anchor,
+            preferred_yaw=preferred_yaw,
+            preferred_offset=preferred_offset,
+        )
         if candidate_limit is not None:
             candidates = candidates[:candidate_limit]
         evaluation_rows = []

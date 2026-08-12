@@ -893,7 +893,7 @@ def storage_probe_candidates(
             "cupboard_front_rim_2_jawroll+0_wrist0",
         ),
         ("CUPBOARD", "UTENSIL"): (
-            "cupboard_horizontal_inward_upright_handle_55pct",
+            "cupboard_horizontal_inward_upright_handle_65pct",
             "cupboard_horizontal_over_handle_55pct_z+0.010",
         ),
         ("CUPBOARD", "BOWL"): (
@@ -1305,7 +1305,13 @@ def inspect_held_object_state(
         reasons.append("UNEXPECTED_ACTIVE_PAYLOAD_WELD")
     if weld_id < 0 or int(model.eq_obj1id[weld_id]) != gripper_id or int(model.eq_obj2id[weld_id]) != body_id:
         reasons.append("WELD_BODY_MISMATCH")
-    relative = data.xpos[body_id] - data.xpos[gripper_id]
+    # Express translation in the gripper frame.  A world-frame subtraction
+    # changes whenever the held gripper rotates during navigation and used to
+    # report a false multi-centimetre "drop" despite an active rigid weld.
+    gripper_rotation = data.xmat[gripper_id].reshape(3, 3)
+    relative = gripper_rotation.T @ (
+        data.xpos[body_id] - data.xpos[gripper_id]
+    )
     if float(np.linalg.norm(relative)) > 0.55:
         reasons.append("PAYLOAD_SEPARATED_FROM_GRIPPER")
     payload_geoms = _body_geom_ids(model, body_id)
@@ -1322,7 +1328,7 @@ def inspect_held_object_state(
         for name in profile.finger_joints
     ]
     finger_values = tuple(float(data.qpos[model.jnt_qposadr[j]]) for j in finger_ids)
-    relative_rotation = data.xmat[gripper_id].reshape(3, 3).T @ data.xmat[body_id].reshape(3, 3)
+    relative_rotation = gripper_rotation.T @ data.xmat[body_id].reshape(3, 3)
     quaternion = np.empty(4)
     mujoco.mju_mat2Quat(quaternion, relative_rotation.ravel())
     return HeldObjectState(
@@ -1780,6 +1786,13 @@ class KitchenObjectManipulationExecutor:
         # Base-frame +Y is forward.  This yaw faces that axis toward the live
         # observed target and only changes deterministic candidate ordering.
         preferred_yaw = math.atan2(-target_delta[0], target_delta[1])
+        preferred_offset = (
+            (-0.10, -0.05)
+            if source_kind == "CUPBOARD"
+            and family == "UTENSIL"
+            and float(target_position[0]) < 0.46
+            else None
+        )
 
         coarse_pair_rows: list[GraspStanceEvaluation] = []
 
@@ -1862,6 +1875,7 @@ class KitchenObjectManipulationExecutor:
                 maximum=3,
                 candidate_limit=coarse_candidate_limit,
                 preferred_yaw=preferred_yaw,
+                preferred_offset=preferred_offset,
                 minimum_evaluations=8,
             )
             fine_rows: list[GraspStanceEvaluation] = []

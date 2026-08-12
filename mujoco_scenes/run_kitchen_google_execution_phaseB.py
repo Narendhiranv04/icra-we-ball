@@ -157,11 +157,25 @@ def main() -> None:
         while viewer.is_running():
             viewer.sync()
             time.sleep(0.05)
-    if not resolution["all_resolved"] or (
-        args.pick_object_id and args.execute and not summary["pick"]["success"]
+    explicit_manipulation_requested = bool(
+        args.pick_object_id or args.place_destination
+    )
+    manipulation_failed = (
+        args.pick_object_id
+        and args.execute
+        and not summary["pick"]["success"]
     ) or (
-        args.place_destination and args.execute
+        args.place_destination
+        and args.execute
         and not summary.get("place", {}).get("success", False)
+    )
+    # Inventory-only mode remains a strict whole-run entity-resolution
+    # audit.  An explicit PICK/PLACE request, however, succeeds when its own
+    # generic object resolves and the requested physical action succeeds;
+    # unrelated stale observations must not turn a verified manipulation
+    # into a shell failure.
+    if manipulation_failed or (
+        not explicit_manipulation_requested and not resolution["all_resolved"]
     ):
         raise SystemExit(1)
 
