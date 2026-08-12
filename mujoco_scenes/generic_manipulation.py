@@ -56,6 +56,10 @@ SPOON_SETTLE_TICKS = 50
 SPOON_REGRASP_SQUEEZE = 0.015
 SPOON_REGRASP_TIMEOUT_TICKS = 600
 CALIBRATION_ATTEMPT_TIMEOUT_TICKS = 20000
+PRECLOSE_POSITION_TOLERANCE_M = 0.006
+PRECLOSE_ORIENTATION_TOLERANCE_RAD = math.radians(5.0)
+PRECLOSE_HOLD_TICKS = 5
+PRECLOSE_TIMEOUT_TICKS = 250
 SELF_COLLISION_MOUNT_ALLOWANCES = {
     # The shoulder rotates inside the base's outer housing by design.  The
     # upstream visual meshes overlap slightly at this mechanical interface;
@@ -107,6 +111,8 @@ class GraspPoseCandidate:
     approach_route_offsets_world_m: tuple[tuple[float, float, float], ...] = ()
     approach_rotation_world: np.ndarray | None = None
     position_first_approach: bool = False
+    predicted_contact_geom_names: tuple[str, ...] = ()
+    predicted_contact_points_world_m: tuple[tuple[float, float, float], ...] = ()
 
 
 GOOGLE_PICK_SPECS = {
@@ -422,8 +428,12 @@ class RobotConfigurationCollisionChecker:
                         mujoco.mjtObj.mjOBJ_BODY,
                         environment_body,
                     ) or "unnamed environment body"
+                    robot_geom_name = mujoco.mj_id2name(
+                        self.model, mujoco.mjtObj.mjOBJ_GEOM, robot_geom
+                    ) or "unnamed robot geom"
                     return False, (
-                        f"environment collision {robot_name} / {environment_name} "
+                        f"environment collision {robot_name} [{robot_geom_name}] / "
+                        f"{environment_name} [{environment_geom_name}] "
                         f"({distance * 100:.1f} cm signed distance)"
                     )
         return True, None
@@ -609,6 +619,12 @@ class CalibratedPickPlaceExecutor:
         self.confirmed_contact_geoms: tuple[str, ...] = ()
         self.confirmed_target_contact_geoms: tuple[str, ...] = ()
         self.selected_grasp_candidate_id: str | None = None
+        self.planned_grasp_position_world: np.ndarray | None = None
+        self.planned_grasp_rotation_world: np.ndarray | None = None
+        self.planned_contact_geom_names: tuple[str, ...] = ()
+        self.planned_contact_points_world: tuple[tuple[float, float, float], ...] = ()
+        self.preclose_settle_ticks = 0
+        self.preclose_telemetry: dict[str, object] | None = None
 
     def _ids(self, object_type, names: tuple[str, ...]) -> np.ndarray:
         ids = np.array(
@@ -1284,7 +1300,7 @@ class CalibratedPickPlaceExecutor:
             # the pregrasp point, then retain it through the clearance route;
             # the final descent still solves the strict contact rotation.
             position_ik = ProfiledIK(
-                self.model, self.data, self.profile, orientation_weight=0.02
+                self.model, self.data, self.profile, orientation_weight=0.0
             )
             reachable, position_error, _ = position_ik.solve(
                 pregrasp, carry, approach_rotation
@@ -1387,6 +1403,12 @@ class CalibratedPickPlaceExecutor:
         self.confirmed_contact_geoms = ()
         self.confirmed_target_contact_geoms = ()
         self.selected_grasp_candidate_id = None
+        self.planned_grasp_position_world = None
+        self.planned_grasp_rotation_world = None
+        self.planned_contact_geom_names = ()
+        self.planned_contact_points_world = ()
+        self.preclose_settle_ticks = 0
+        self.preclose_telemetry = None
         self.calibration_attempt_ticks = 0
         self.mode = "pick_base_approach"
         self.status = f"Pick {object_name}: approaching the manipulation stance"
@@ -1453,6 +1475,20 @@ class CalibratedPickPlaceExecutor:
                     }
                     for row in self.retreat_waypoints
                 ],
+                "planned_grasp_position_world_m": (
+                    self.planned_grasp_position_world.tolist()
+                    if self.planned_grasp_position_world is not None else None
+                ),
+                "planned_grasp_rotation_world": (
+                    self.planned_grasp_rotation_world.tolist()
+                    if self.planned_grasp_rotation_world is not None else None
+                ),
+                "predicted_contact_geom_names": list(
+                    self.planned_contact_geom_names
+                ),
+                "predicted_contact_points_world_m": [
+                    list(point) for point in self.planned_contact_points_world
+                ],
             }
         except RuntimeError as error:
             return {
@@ -1464,6 +1500,10 @@ class CalibratedPickPlaceExecutor:
                 "planned_waypoint_count": 0,
                 "planned_waypoints": [],
                 "planned_retreat_waypoints": [],
+                "planned_grasp_position_world_m": None,
+                "planned_grasp_rotation_world": None,
+                "predicted_contact_geom_names": [],
+                "predicted_contact_points_world_m": [],
             }
         finally:
             self.model.site_pos[site_id] = original_site
@@ -1478,6 +1518,12 @@ class CalibratedPickPlaceExecutor:
             self.waypoints = []
             self.retreat_waypoints = []
             self.selected_grasp_candidate_id = None
+            self.planned_grasp_position_world = None
+            self.planned_grasp_rotation_world = None
+            self.planned_contact_geom_names = ()
+            self.planned_contact_points_world = ()
+            self.preclose_settle_ticks = 0
+            self.preclose_telemetry = None
             mujoco.mj_forward(self.model, self.data)
 
     def request_preplanned_pick(
@@ -1486,6 +1532,10 @@ class CalibratedPickPlaceExecutor:
         candidate_id: str,
         planned_waypoints: list[dict[str, object]],
         planned_retreat_waypoints: list[dict[str, object]],
+        planned_grasp_position_world_m: list[float] | None = None,
+        planned_grasp_rotation_world: list[list[float]] | None = None,
+        predicted_contact_geom_names: list[str] | None = None,
+        predicted_contact_points_world_m: list[list[float]] | None = None,
     ) -> None:
         """Start a physically executed pick from a validated cached plan.
 
@@ -1519,6 +1569,23 @@ class CalibratedPickPlaceExecutor:
             for row in planned_retreat_waypoints
         ]
         self.selected_grasp_candidate_id = candidate_id
+        self.planned_grasp_position_world = (
+            None if planned_grasp_position_world_m is None
+            else np.asarray(planned_grasp_position_world_m, dtype=float)
+        )
+        self.planned_grasp_rotation_world = (
+            None if planned_grasp_rotation_world is None
+            else np.asarray(planned_grasp_rotation_world, dtype=float)
+        )
+        self.planned_contact_geom_names = tuple(
+            predicted_contact_geom_names or ()
+        )
+        self.planned_contact_points_world = tuple(
+            tuple(map(float, point))
+            for point in (predicted_contact_points_world_m or ())
+        )
+        self.preclose_settle_ticks = 0
+        self.preclose_telemetry = None
         self.waypoint_index = 0
         self.waypoint_ticks = 0
         self.mode = "pick_approach"
@@ -1590,6 +1657,19 @@ class CalibratedPickPlaceExecutor:
             self.pick_specs[self.target_object] = spec
             raise RuntimeError("No collision-free grasp candidate; " + "; ".join(failures))
         self.selected_grasp_candidate_id = selected.candidate_id
+        self.planned_grasp_position_world = target.copy()
+        self.planned_grasp_rotation_world = np.asarray(
+            selected.target_rotation_world, dtype=float
+        ).copy()
+        self.planned_contact_geom_names = tuple(
+            selected.predicted_contact_geom_names
+        )
+        self.planned_contact_points_world = tuple(
+            tuple(map(float, point))
+            for point in selected.predicted_contact_points_world_m
+        )
+        self.preclose_settle_ticks = 0
+        self.preclose_telemetry = None
         self.waypoint_index = 0
         self.waypoint_ticks = 0
         self.mode = "pick_approach"
@@ -1784,6 +1864,68 @@ class CalibratedPickPlaceExecutor:
                     sides.add(side)
         return sides
 
+    def _finger_pad_centres_world(self) -> tuple[list[float], list[float]]:
+        centres = []
+        for names in self.profile.finger_contact_geoms:
+            geom_ids = [
+                mujoco.mj_name2id(
+                    self.model, mujoco.mjtObj.mjOBJ_GEOM, name
+                )
+                for name in names
+            ]
+            valid = [item for item in geom_ids if item >= 0]
+            centre = (
+                np.mean(self.data.geom_xpos[valid], axis=0)
+                if valid else np.full(3, np.nan)
+            )
+            centres.append(centre.tolist())
+        return centres[0], centres[1]
+
+    def _measure_preclose_pose(self) -> dict[str, object]:
+        planned_position = self.planned_grasp_position_world
+        planned_rotation = self.planned_grasp_rotation_world
+        actual_position = self.data.site_xpos[self.grip_site_id].copy()
+        actual_rotation = self.data.site_xmat[self.grip_site_id].reshape(3, 3).copy()
+        position_error = (
+            float(np.linalg.norm(actual_position - planned_position))
+            if planned_position is not None else float("inf")
+        )
+        orientation_error = (
+            float(np.linalg.norm(
+                _rotation_vector(planned_rotation @ actual_rotation.T)
+            ))
+            if planned_rotation is not None else float("inf")
+        )
+        left_pad, right_pad = self._finger_pad_centres_world()
+        live_target_positions = {}
+        for name in self.planned_contact_geom_names:
+            geom_id = mujoco.mj_name2id(
+                self.model, mujoco.mjtObj.mjOBJ_GEOM, name
+            )
+            if geom_id >= 0:
+                live_target_positions[name] = self.data.geom_xpos[geom_id].tolist()
+        return {
+            "planned_grip_site_xyz_world_m": (
+                planned_position.tolist() if planned_position is not None else None
+            ),
+            "actual_grip_site_xyz_world_m": actual_position.tolist(),
+            "preclose_cartesian_error_m": position_error,
+            "planned_gripper_rotation_world": (
+                planned_rotation.tolist() if planned_rotation is not None else None
+            ),
+            "actual_gripper_rotation_world": actual_rotation.tolist(),
+            "preclose_orientation_error_rad": orientation_error,
+            "actual_left_pad_centre_world_m": left_pad,
+            "actual_right_pad_centre_world_m": right_pad,
+            "predicted_target_contact_positions_world_m": [
+                list(point) for point in self.planned_contact_points_world
+            ],
+            "live_target_collision_geom_positions_world_m": live_target_positions,
+            "preclose_settle_steps": self.preclose_settle_ticks,
+            "position_tolerance_m": PRECLOSE_POSITION_TOLERANCE_M,
+            "orientation_tolerance_rad": PRECLOSE_ORIENTATION_TOLERANCE_RAD,
+        }
+
     def _activate_weld(self) -> None:
         assert self.target_object is not None
         equality_id = mujoco.mj_name2id(
@@ -1820,6 +1962,19 @@ class CalibratedPickPlaceExecutor:
         self.confirmed_target_contact_geoms = tuple(sorted(target_contact_geoms))
         before_pos = self.data.xpos[self.target_body_id].copy()
         before_quat = self.data.xquat[self.target_body_id].copy()
+        # A stored object may be held in a deterministic presentation fixture
+        # while the gripper approaches.  Release that fixture only after both
+        # fingers have contacted the object, so it cannot fall before grasp.
+        for fixture_id in range(self.model.neq):
+            fixture_name = mujoco.mj_id2name(
+                self.model, mujoco.mjtObj.mjOBJ_EQUALITY, fixture_id
+            ) or ""
+            if not fixture_name.startswith("storage_fixture_"):
+                continue
+            body1 = int(self.model.eq_obj1id[fixture_id])
+            body2 = int(self.model.eq_obj2id[fixture_id])
+            if self.target_body_id in {body1, body2}:
+                self.data.eq_active[fixture_id] = 0
         self._set_grasp_weld_world_pose(before_pos, before_quat)
         self.data.eq_active[equality_id] = 1
         mujoco.mj_forward(self.model, self.data)
@@ -1965,6 +2120,7 @@ class CalibratedPickPlaceExecutor:
             return True
         target_contact_modes = {
             "pick_approach",
+            "pick_preclose_convergence",
             "closing",
             "pick_retreat",
             "spoon_regrasp",
@@ -2000,6 +2156,7 @@ class CalibratedPickPlaceExecutor:
                 return
         guarded_modes = {
             "pick_approach",
+            "pick_preclose_convergence",
             "closing",
             "pick_retreat",
             "spoon_regrasp",
@@ -2035,8 +2192,42 @@ class CalibratedPickPlaceExecutor:
         if self.mode == "pick_approach":
             self.data.ctrl[self.finger_actuators] = self.profile.open_command
             if self._advance_waypoints():
+                self.preclose_settle_ticks = 0
+                self.mode = "pick_preclose_convergence"
+                self.status = (
+                    f"Pick {self.target_object}: validating Cartesian pre-close pose"
+                )
+            return
+        if self.mode == "pick_preclose_convergence":
+            self.data.ctrl[self.finger_actuators] = self.profile.open_command
+            if self.waypoints:
+                # Keep commanding the exact final joint solution while the
+                # physical arm settles.  Acceptance is Cartesian, not merely
+                # a repeat of joint-space waypoint tracking.
+                self.data.ctrl[self.arm_actuators] = self.waypoints[-1].joints
+            self.preclose_settle_ticks += 1
+            measurement = self._measure_preclose_pose()
+            self.preclose_telemetry = measurement
+            position_ok = (
+                measurement["preclose_cartesian_error_m"]
+                <= PRECLOSE_POSITION_TOLERANCE_M
+            )
+            orientation_ok = (
+                measurement["preclose_orientation_error_rad"]
+                <= PRECLOSE_ORIENTATION_TOLERANCE_RAD
+            )
+            if position_ok and orientation_ok:
                 self.mode = "closing"
-                self.status = f"Pick {self.target_object}: closing until bilateral contact"
+                self.status = (
+                    f"Pick {self.target_object}: closing until bilateral contact"
+                )
+                return
+            if self.preclose_settle_ticks >= PRECLOSE_TIMEOUT_TICKS:
+                self._fail(
+                    "PRE_CLOSE_CARTESIAN_CONVERGENCE_FAILED: "
+                    f"position={measurement['preclose_cartesian_error_m']:.6f} m, "
+                    f"orientation={measurement['preclose_orientation_error_rad']:.6f} rad"
+                )
             return
         if self.mode == "closing":
             self.close_target = min(

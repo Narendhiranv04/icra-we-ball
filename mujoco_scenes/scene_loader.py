@@ -464,6 +464,7 @@ PASSIVE_HANDLE_OBJECTS = {
 STORAGE_FIXTURE_EQUALITIES = {
     "D1": "storage_fixture_D1_oversized_spoon",
     "D2": "storage_fixture_D2_ablation3_utensil",
+    "C2": "storage_fixture_C2_upright_spoon",
 }
 
 # Positions are RELATIVE to the container body origin: (x, y, support_z).
@@ -1670,7 +1671,7 @@ def build_scene_xml(
                 allocated_slots.append((preferred or fallback).pop(0))
         elif container_id == "C2" and is_integrated_kitchen_scene(config.name):
             # Keep the second integrated object away from the cabinet side
-            # wall.  The centred rear slot gives the calibrated C2 rig a
+            # wall. The centred rear slot gives the calibrated C2 rig a
             # complete rim/interior view for tall drinkware.
             allocated_slots = [slots[0], slots[3]]
         elif container_id == "C2":
@@ -1702,6 +1703,15 @@ def build_scene_xml(
                 print(f"  [WARNING] Container {container_id} full, cannot place {obj_name}.")
                 continue
             slot_rel_pos = np.array(allocated_slots[i], dtype=float)
+            if (
+                is_integrated_kitchen_scene(config.name)
+                and container_id == "C2"
+                and obj_name != "s1i_c2_soup_spoon"
+            ):
+                # Reserve the left half of C2's shelf for the vessel so the
+                # upright utensil has a separate, unobstructed central-right
+                # grasp corridor.
+                slot_rel_pos[0] = -0.10
             # Centred scanned utensils use the drawer middle lane; legacy +X
             # primitives retain the left lane. Compact objects use the right
             # lane so realistic-width napkins/boxes cannot overlap utensils.
@@ -1727,7 +1737,32 @@ def build_scene_xml(
                     # following C2 RGB-D capture.
                     slot_rel_pos[1] = -0.09
             world_pos = parent_body_pos + np.array(slot_rel_pos)
-            if container_id == "B1" and obj_name == "coffee_jar":
+            if (
+                is_integrated_kitchen_scene(config.name)
+                and container_id == "C2"
+                and obj_name == "s1i_c2_soup_spoon"
+            ):
+                # Store the spoon fully inside C2, standing on its bowl and
+                # leaning gently toward the right wall.  Keep the lean small
+                # enough that the handle tip and the horizontal gripper
+                # corridor remain inside the cabinet side panels.  A
+                # temporary weld stabilizes this presentation until the
+                # contact-confirmed Phase B pick releases it.  The broad
+                # side-wall buffer centres both finger links in the opening,
+                # not merely the spoon collision proxy.
+                world_pos[0] = parent_body_pos[0] + 0.070
+                # Present the handle near the open front while retaining a
+                # positive buffer behind the cabinet face.  This keeps the
+                # straight +Y approach short and away from both side panels.
+                world_pos[1] = parent_body_pos[1] - 0.11
+                world_pos[2] = parent_body_pos[2] - 0.032
+                injected_instance = _inject_object(
+                    obj_name,
+                    world_pos,
+                    quat="0.8660254 0 -0.5000000 0",
+                    support_height_override=0.050,
+                )
+            elif container_id == "B1" and obj_name == "coffee_jar":
                 # The coffee jar remains slightly taller than B1's closed
                 # interior. Store it centred on its side along the longer X
                 # dimension. The shorter sugar jar now fits upright in the
@@ -1763,7 +1798,13 @@ def build_scene_xml(
                 )
             else:
                 injected_instance = _inject_object(obj_name, world_pos)
-            if injected_instance is not None and container_id in {"D1", "D2"}:
+            if injected_instance is not None and (
+                container_id in {"D1", "D2"}
+                or (
+                    container_id == "C2"
+                    and obj_name == "s1i_c2_soup_spoon"
+                )
+            ):
                 # Free-jointed objects live in world coordinates, not beneath
                 # the translating tray body. Weld every drawer item during
                 # deterministic direct opening; otherwise compact objects can
@@ -1790,17 +1831,14 @@ def build_scene_xml(
                     if fixture_index == 0
                     else f"{STORAGE_FIXTURE_EQUALITIES[region_id]}_{fixture_index}"
                 )
-                ET.SubElement(
-                    equality,
-                    "weld",
-                    {
-                        "name": fixture_name,
-                        "body1": CONTAINER_SLOTS[region_id]["parent_body"],
-                        "body2": instance_name,
-                        "active": "true",
-                        "solref": "0.002 1",
-                    },
-                )
+                fixture_attributes = {
+                    "name": fixture_name,
+                    "body1": CONTAINER_SLOTS[region_id]["parent_body"],
+                    "body2": instance_name,
+                    "active": "true",
+                    "solref": "0.002 1",
+                }
+                ET.SubElement(equality, "weld", fixture_attributes)
 
     if robot_name in {ROBOT_FETCH, ROBOT_GOOGLE}:
         equality = root.find("equality")
@@ -2213,6 +2251,12 @@ class KitchenScene:
             return False
         mujoco.mj_forward(self.model, self.data)
         return True
+
+    def release_storage_fixture_for_inspection(self, container_id: str) -> bool:
+        """Release transport fixtures, but retain C2's upright display weld."""
+        if container_id == "C2":
+            return False
+        return self.release_storage_fixture(container_id)
 
     def record_container_opened(self, container_id: str) -> list:
         """Update visibility after an API- or motion-driven physical opening."""

@@ -102,7 +102,9 @@ class SequentialInspectionAdapter:
                 conflicting, steps=DIRECT_ACTUATION_STEPS
             )
         self.scene.open_container(region_id, steps=DIRECT_ACTUATION_STEPS)
-        if hasattr(self.scene, "release_storage_fixture"):
+        if hasattr(self.scene, "release_storage_fixture_for_inspection"):
+            self.scene.release_storage_fixture_for_inspection(region_id)
+        elif hasattr(self.scene, "release_storage_fixture"):
             self.scene.release_storage_fixture(region_id)
 
 

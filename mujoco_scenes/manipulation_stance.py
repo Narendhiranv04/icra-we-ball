@@ -46,6 +46,15 @@ class BilateralContactPrediction:
     predicted_left_contact_possible: bool
     predicted_right_contact_possible: bool
     predicted_bilateral_contact: bool
+    left_first_contact_closure: float | None = None
+    right_first_contact_closure: float | None = None
+    left_first_contact_distance_m: float | None = None
+    right_first_contact_distance_m: float | None = None
+    first_contact_closure_delta: float | None = None
+    maximum_pre_contact_penetration_m: float = 0.0
+    contact_distance_threshold_m: float = 0.0005
+    left_target_geom: str | None = None
+    right_target_geom: str | None = None
 
 
 @dataclass(frozen=True)

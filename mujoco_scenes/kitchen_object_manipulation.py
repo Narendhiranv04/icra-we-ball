@@ -184,6 +184,67 @@ def _body_geom_ids(model: mujoco.MjModel, body_id: int) -> set[int]:
     return set(range(first, first + int(model.body_geomnum[body_id])))
 
 
+def physical_contact_target_geoms(
+    model: mujoco.MjModel,
+    body_id: int,
+    required_names: tuple[str, ...] = (),
+) -> tuple[int, ...]:
+    """Return only collision-active target geoms usable for live contact.
+
+    Visual/interior render geoms commonly share the target body but have both
+    collision masks disabled.  They must never influence grasp prediction.
+    """
+    required = set(required_names)
+    rows = []
+    for geom_id in sorted(_body_geom_ids(model, body_id)):
+        name = mujoco.mj_id2name(
+            model, mujoco.mjtObj.mjOBJ_GEOM, geom_id
+        ) or ""
+        if required and name not in required:
+            continue
+        if not (
+            int(model.geom_contype[geom_id])
+            or int(model.geom_conaffinity[geom_id])
+        ):
+            continue
+        if "visual" in name.lower():
+            continue
+        rows.append(geom_id)
+    return tuple(rows)
+
+
+def bilateral_first_contact_metrics(
+    closures: list[float],
+    distances: list[tuple[float, float]],
+    target_names: list[tuple[str, str]],
+    *,
+    contact_threshold_m: float = 0.0005,
+) -> dict[str, Any]:
+    """Summarize first-contact timing without advancing object physics."""
+    first: list[tuple[float, float, str] | None] = [None, None]
+    maximum_precontact_penetration = 0.0
+    for closure, pair, names in zip(closures, distances, target_names):
+        for side in (0, 1):
+            if first[side] is None and pair[side] <= contact_threshold_m:
+                first[side] = (closure, pair[side], names[side])
+        if not all(first):
+            maximum_precontact_penetration = max(
+                maximum_precontact_penetration,
+                max(0.0, -min(pair)),
+            )
+    return {
+        "left": first[0],
+        "right": first[1],
+        "closure_delta": (
+            abs(first[0][0] - first[1][0]) if all(first) else None
+        ),
+        "maximum_precontact_penetration_m": (
+            maximum_precontact_penetration
+        ),
+        "contact_threshold_m": contact_threshold_m,
+    }
+
+
 def _body_yaw(data: mujoco.MjData, body_id: int) -> float:
     rotation = data.xmat[body_id].reshape(3, 3)
     return float(np.arctan2(rotation[1, 0], rotation[0, 0]))
@@ -257,64 +318,114 @@ class UtensilGraspCandidateGenerator:
         profile = manipulation_profile("google")
         candidates = []
         if source_kind == "CUPBOARD":
-            # Side workspaces put the mobile base to the left/right of the
-            # cupboard.  Prefer an approach from that clear side.  The jaws
-            # close along world Y, perpendicular to the approximately world-X
-            # utensil handle, while local Z points from the robot to target.
-            robot_x = float(scene.data.xpos[
-                mujoco.mj_name2id(
-                    scene.model, mujoco.mjtObj.mjOBJ_BODY, "google:base_link"
-                ), 0
-            ])
-            approach_sign = 1.0 if robot_x >= scene.data.xpos[body_id, 0] else -1.0
-            side_rotation = np.array(
-                ((0.0, 0.0, -approach_sign),
-                 (0.0, 1.0, 0.0),
-                 (approach_sign, 0.0, 0.0))
+            handle_name = mujoco.mj_id2name(
+                scene.model, mujoco.mjtObj.mjOBJ_GEOM, handle_id
             )
-            for fraction in (0.65, 0.75, 0.55, 0.85):
-                for height in (0.010, 0.005, 0.015, 0.0):
+            handle_radius = float(scene.model.geom_size[handle_id, 0])
+            if abs(float(world_axis[2])) >= 0.70:
+                # Upright cupboard utensils are grasped with horizontal jaws
+                # while the wrist travels straight through the open front.
+                # C2 opens toward negative Y, so world +Y is the inward
+                # approach direction.  The local gripper columns are X/Y/Z.
+                jaw_axis = np.array((1.0, 0.0, 0.0))
+                approach_axis = np.array((0.0, 1.0, 0.0))
+                side_rotation = np.column_stack(
+                    (np.cross(jaw_axis, approach_axis), jaw_axis, approach_axis)
+                )
+                for fraction in (0.55, 0.65):
                     position = near + fraction * (far - near)
-                    position[2] += height
+                    world_midpoint = (
+                        scene.data.xpos[body_id]
+                        + scene.data.xmat[body_id].reshape(3, 3) @ position
+                    )
                     candidates.append(
                         GraspPoseCandidate(
                             candidate_id=(
-                                "cupboard_side_horizontal_jaws_"
-                                f"{int(fraction * 100)}pct_"
-                                f"z{height:+.3f}"
+                                "cupboard_horizontal_inward_upright_handle_"
+                                f"{int(fraction * 100)}pct"
                             ),
                             grasp_site_local_position_m=tuple(map(float, position)),
                             target_rotation_world=side_rotation,
-                            approach_clearance_m=0.060,
-                            approach_offset_world_m=(
-                                0.10 * approach_sign, 0.0, 0.0
+                            approach_clearance_m=0.09,
+                            approach_offset_world_m=(0.0, -0.09, 0.0),
+                            approach_route_offsets_world_m=(),
+                            approach_rotation_world=side_rotation,
+                            position_first_approach=False,
+                            predicted_contact_geom_names=(handle_name,),
+                            predicted_contact_points_world_m=(
+                                tuple(map(float, world_midpoint - jaw_axis * handle_radius)),
+                                tuple(map(float, world_midpoint + jaw_axis * handle_radius)),
                             ),
                         )
                     )
-            # Front-accessible shelf utensils have little overhead clearance.
-            # Approach through the aperture along +world Y while the jaws
-            # close vertically across the thin handle.  The target positions
-            # still come exclusively from the live handle geometry.
-            frontal_vertical_jaws = np.array(
-                ((-1.0, 0.0, 0.0), (0.0, 0.0, 1.0), (0.0, 1.0, 0.0))
+                return tuple(candidates)
+            # Local gripper +Y closes transverse to the live handle capsule,
+            # not a world-axis approximation.
+            horizontal_handle = world_axis.copy()
+            horizontal_handle[2] = 0.0
+            horizontal_handle /= max(
+                float(np.linalg.norm(horizontal_handle)), 1e-12
             )
-            for fraction in (0.65, 0.75, 0.55, 0.85):
+            transverse_jaw = np.cross(
+                np.array((0.0, 0.0, 1.0)), horizontal_handle
+            )
+            transverse_jaw /= max(
+                float(np.linalg.norm(transverse_jaw)), 1e-12
+            )
+            # The gripper body remains horizontal over the utensil: local +Z
+            # points down, while local +Y closes across the live handle axis.
+            top_transverse_rotation = (
+                _axis_angle_rotation(np.array((0.0, 0.0, handle_yaw)))
+                @ np.asarray(
+                    GOOGLE_PICK_SPECS["spoon"].top_down_rotation, dtype=float
+                )
+            )
+            for fraction in (0.55, 0.65, 0.75, 0.85):
                 for height in (0.010, 0.005, 0.015, 0.0):
                     position = near + fraction * (far - near)
                     position[2] += height
+                    world_midpoint = (
+                        scene.data.xpos[body_id]
+                        + scene.data.xmat[body_id].reshape(3, 3) @ position
+                    )
                     candidates.append(
+                        # Pregrasp offsets point from the handle back toward
+                        # the robot, opposite the gripper's +Z approach axis.
                         GraspPoseCandidate(
                             candidate_id=(
-                                "cupboard_front_vertical_jaws_"
+                                "cupboard_horizontal_over_handle_"
                                 f"{int(fraction * 100)}pct_"
                                 f"z{height:+.3f}"
                             ),
                             grasp_site_local_position_m=tuple(map(float, position)),
-                            target_rotation_world=frontal_vertical_jaws,
-                            approach_clearance_m=0.060,
-                            approach_offset_world_m=(0.0, -0.10, 0.0),
+                            target_rotation_world=top_transverse_rotation,
+                            # The C2 shelf leaves a short vertical corridor.
+                            # Keep the palm level and descend vertically, but
+                            # start close enough that the Google arm can reach
+                            # the pregrasp without touching the cabinet roof.
+                            approach_clearance_m=0.080,
+                            approach_offset_world_m=(0.0, 0.0, 0.080),
+                            approach_route_offsets_world_m=(),
+                            approach_rotation_world=top_transverse_rotation,
+                            position_first_approach=False,
+                            predicted_contact_geom_names=(handle_name,),
+                            predicted_contact_points_world_m=(
+                                tuple(map(float,
+                                    world_midpoint
+                                    - transverse_jaw * handle_radius
+                                )),
+                                tuple(map(float,
+                                    world_midpoint
+                                    + transverse_jaw * handle_radius
+                                )),
+                            ),
                         )
                     )
+            # Cupboard utensils deliberately use only the level, transverse
+            # handle grasp above.  Do not append the generic top-down family:
+            # the user-facing execution contract for this source is a
+            # horizontal gripper throughout approach and contact.
+            return tuple(candidates)
         if source_kind == "DRAWER":
             # A utensil lying low in a drawer cannot always be pinched from
             # above without the finger tips entering the tray.  These two
@@ -550,6 +661,117 @@ class StorageGraspCandidateGenerator:
         rows = []
         position_index = 0
         if family == "VESSEL":
+            # Build strict diameter pinches from opposite collision-active
+            # wall proxies.  The grasp midpoint, jaw axis, contact height and
+            # target geom provenance therefore scale with the physical shell
+            # rather than a category- or object-name-specific radius.
+            wall_geoms = [
+                geom_id
+                for geom_id in physical_contact_target_geoms(
+                    scene.model, body_id
+                )
+                if "wall" in (
+                    mujoco.mj_id2name(
+                        scene.model, mujoco.mjtObj.mjOBJ_GEOM, geom_id
+                    ) or ""
+                ).lower()
+            ]
+            body_rotation = scene.data.xmat[body_id].reshape(3, 3)
+            aperture_axis = np.array((0.0, 1.0, 0.0))
+            opposite_pairs = []
+            for left_index, left_geom in enumerate(wall_geoms):
+                left_local = scene.model.geom_pos[left_geom].copy()
+                left_radial = left_local[:2]
+                left_norm = float(np.linalg.norm(left_radial))
+                if left_norm < 1e-9:
+                    continue
+                for right_geom in wall_geoms[left_index + 1 :]:
+                    right_local = scene.model.geom_pos[right_geom].copy()
+                    right_radial = right_local[:2]
+                    right_norm = float(np.linalg.norm(right_radial))
+                    if right_norm < 1e-9:
+                        continue
+                    opposition = float(
+                        np.dot(left_radial, right_radial)
+                        / (left_norm * right_norm)
+                    )
+                    if opposition > -0.95:
+                        continue
+                    jaw_axis = body_rotation @ np.array((
+                        *(right_radial - left_radial), 0.0
+                    ))
+                    jaw_axis /= max(float(np.linalg.norm(jaw_axis)), 1e-12)
+                    # Closing and aperture axes must span a stable gripper
+                    # frame.  Parallel axes cannot define a frontal pinch.
+                    approach_axis = aperture_axis - jaw_axis * float(
+                        jaw_axis @ aperture_axis
+                    )
+                    approach_norm = float(np.linalg.norm(approach_axis))
+                    if approach_norm < 0.35:
+                        continue
+                    approach_axis /= approach_norm
+                    gripper_x = np.cross(jaw_axis, approach_axis)
+                    gripper_x /= max(float(np.linalg.norm(gripper_x)), 1e-12)
+                    rotation = np.column_stack(
+                        (gripper_x, jaw_axis, approach_axis)
+                    )
+                    midpoint = 0.5 * (left_local + right_local)
+                    half_height = min(
+                        float(scene.model.geom_size[left_geom, 2]),
+                        float(scene.model.geom_size[right_geom, 2]),
+                    )
+                    opposite_pairs.append((
+                        math.atan2(jaw_axis[1], jaw_axis[0]),
+                        left_geom,
+                        right_geom,
+                        midpoint,
+                        half_height,
+                        rotation,
+                    ))
+            opposite_pairs.sort(key=lambda row: row[0])
+            for pair_index, (
+                _, left_geom, right_geom, midpoint, half_height, rotation
+            ) in enumerate(opposite_pairs):
+                left_name = mujoco.mj_id2name(
+                    scene.model, mujoco.mjtObj.mjOBJ_GEOM, left_geom
+                )
+                right_name = mujoco.mj_id2name(
+                    scene.model, mujoco.mjtObj.mjOBJ_GEOM, right_geom
+                )
+                # Pinch the upper collision wall band.  Mid/lower-wall
+                # contacts put the long Google finger links into the shelf
+                # before the pads reach the vessel.  These fractions remain
+                # strictly inside the measured collision wall half-height.
+                for height_fraction in (0.35, 0.60, 0.80):
+                    local = midpoint.copy()
+                    local[2] += height_fraction * half_height
+                    world_height_offset = (
+                        body_rotation[:, 2] * height_fraction * half_height
+                    )
+                    rows.append(GraspPoseCandidate(
+                        candidate_id=(
+                            "cupboard_contact_diameter_"
+                            f"{pair_index}_z{height_fraction:+.2f}"
+                        ),
+                        grasp_site_local_position_m=tuple(map(float, local)),
+                        target_rotation_world=rotation.copy(),
+                        carry_rotation_world=carry_rotation.copy(),
+                        approach_rotation_world=carry_rotation.copy(),
+                        position_first_approach=True,
+                        approach_clearance_m=0.10,
+                        approach_offset_world_m=(0.0, -0.10, 0.0),
+                        predicted_contact_geom_names=(left_name, right_name),
+                        predicted_contact_points_world_m=(
+                            tuple(map(float,
+                                scene.data.geom_xpos[left_geom]
+                                + world_height_offset
+                            )),
+                            tuple(map(float,
+                                scene.data.geom_xpos[right_geom]
+                                + world_height_offset
+                            )),
+                        ),
+                    ))
             top_down = manipulation_profile("google").top_down_rotation
             local_centre = cls._local_point(
                 scene, body_id, np.zeros(3, dtype=float)
@@ -667,17 +889,12 @@ def storage_probe_candidates(
     identifiers = {
         ("CUPBOARD", "VESSEL"): (
             "cupboard_vessel_top_yaw+30",
-            "cupboard_vessel_top_yaw+60",
             "cupboard_vessel_diameter_+0.000_+0.000",
-            "cupboard_front_rim_0_jawroll+20_wrist0",
             "cupboard_front_rim_2_jawroll+0_wrist0",
         ),
-        ("CUPBOARD", "UTENSIL"): tuple(
-            f"cupboard_{approach}_{fraction}pct_z+0.010"
-            for approach in (
-                "side_horizontal_jaws", "front_vertical_jaws"
-            )
-            for fraction in (55, 75, 85)
+        ("CUPBOARD", "UTENSIL"): (
+            "cupboard_horizontal_inward_upright_handle_55pct",
+            "cupboard_horizontal_over_handle_55pct_z+0.010",
         ),
         ("CUPBOARD", "BOWL"): (
             "cupboard_front_rim_0_jawroll+20_wrist0",
@@ -688,6 +905,27 @@ def storage_probe_candidates(
     }.get((source_kind, family), ())
     by_id = {candidate.candidate_id: candidate for candidate in candidates}
     selected = tuple(by_id[item] for item in identifiers if item in by_id)
+    if (source_kind, family) == ("CUPBOARD", "VESSEL"):
+        # Probe one highest-clearance pose from every distinct opposite-wall
+        # pair.  Selecting several heights from the most frontal pair can
+        # miss a diagonally reachable diameter at the same base stance.
+        contact_by_pair: dict[str, list[GraspPoseCandidate]] = {}
+        for candidate in candidates:
+            if "cupboard_contact_diameter" not in candidate.candidate_id:
+                continue
+            pair_id = candidate.candidate_id.split("_z", 1)[0]
+            contact_by_pair.setdefault(pair_id, []).append(candidate)
+        contact_centred = tuple(
+            max(
+                rows,
+                key=lambda candidate: (
+                    float(candidate.grasp_site_local_position_m[2]),
+                    candidate.candidate_id,
+                ),
+            )
+            for _, rows in sorted(contact_by_pair.items())
+        )
+        selected = (*contact_centred, *selected)
     return selected or candidates[:1]
 
 
@@ -695,12 +933,16 @@ def storage_grasp_family(candidate_id: str) -> str:
     """Map a calibrated candidate ID to a physical approach family."""
     if "vessel_top" in candidate_id or "box_top" in candidate_id:
         return "TOP_DOWN"
+    if "contact_diameter" in candidate_id:
+        return "CONTACT_CENTERED_DIAMETER"
     if "vessel_diameter" in candidate_id:
         return "FRONTAL_DIAMETER"
     if "front_rim" in candidate_id:
         return "FRONT_OR_DIAGONAL_RIM"
-    if "side_horizontal" in candidate_id:
-        return "SIDE_HORIZONTAL_HANDLE"
+    if "handle_transverse" in candidate_id:
+        return "TRANSVERSE_HANDLE"
+    if "top_transverse" in candidate_id:
+        return "TOP_TRANSVERSE_HANDLE"
     if "front_vertical" in candidate_id:
         return "FRONT_VERTICAL_HANDLE"
     return "OTHER"
@@ -755,7 +997,11 @@ def fine_storage_grasp_candidates(
     retained = []
     for candidate in unique:
         identifier = candidate.candidate_id
-        if "vessel_top" in identifier or "vessel_diameter" in identifier:
+        if (
+            "contact_diameter" in identifier
+            or "vessel_top" in identifier
+            or "vessel_diameter" in identifier
+        ):
             retained.append(candidate)
             continue
         if "front_rim" in identifier:
@@ -1191,6 +1437,11 @@ class KitchenObjectManipulationExecutor:
             )
         self.executor.pick_specs[backend] = replace(
             spec,
+            grasp_z_offset=(
+                0.0
+                if source_kind == "CUPBOARD" and family == "UTENSIL"
+                else spec.grasp_z_offset
+            ),
             carry_position=carry_position,
             home_seed=profile.home_seed.copy(),
             grasp_candidates=candidates,
@@ -1202,7 +1453,8 @@ class KitchenObjectManipulationExecutor:
                 # This applies only to the collision-checked non-contact
                 # aperture waypoint; the final grasp retains the strict
                 # executor tolerance and bilateral contact requirement.
-                0.040 if source_kind in {"CUPBOARD", "BOX"} else
+                0.060 if source_kind == "CUPBOARD" and family == "UTENSIL"
+                else 0.040 if source_kind in {"CUPBOARD", "BOX"} else
                 spec.intermediate_ik_position_tolerance
             ),
             intermediate_ik_angle_tolerance_rad=(
@@ -1251,6 +1503,7 @@ class KitchenObjectManipulationExecutor:
         self,
         backend: str,
         planned_final_arm_joints: np.ndarray,
+        candidate: GraspPoseCandidate | None = None,
     ) -> BilateralContactPrediction:
         """Sweep finger closure on temporary state and score exact target geoms.
 
@@ -1263,14 +1516,14 @@ class KitchenObjectManipulationExecutor:
         body_id = mujoco.mj_name2id(
             model, mujoco.mjtObj.mjOBJ_BODY, backend
         )
-        required_names = set(spec.required_contact_geoms)
-        target_geoms = [
-            geom_id for geom_id in sorted(_body_geom_ids(model, body_id))
-            if not required_names or (
-                mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, geom_id)
-                in required_names
-            )
-        ]
+        candidate_names = (
+            candidate.predicted_contact_geom_names if candidate else ()
+        )
+        target_geoms = list(physical_contact_target_geoms(
+            model,
+            body_id,
+            candidate_names or spec.required_contact_geoms,
+        ))
         finger_geoms = tuple(
             tuple(
                 geom_id for name in sorted(names)
@@ -1289,9 +1542,21 @@ class KitchenObjectManipulationExecutor:
         saved_qvel = data.qvel.copy()
         saved_ctrl = data.ctrl.copy()
         rows = []
+        contact_threshold = 0.0005
+        closure_values: list[float] = []
+        distance_values: list[tuple[float, float]] = []
+        target_name_values: list[tuple[str, str]] = []
         try:
             data.qpos[self.executor.arm_qpos] = planned_final_arm_joints
-            target_centre = np.mean(data.geom_xpos[target_geoms], axis=0)
+            mujoco.mj_forward(model, data)
+            target_centre = (
+                np.mean(
+                    np.asarray(candidate.predicted_contact_points_world_m),
+                    axis=0,
+                )
+                if candidate and candidate.predicted_contact_points_world_m
+                else np.mean(data.geom_xpos[target_geoms], axis=0)
+            )
             for closure in np.linspace(
                 self.executor.profile.open_command,
                 self.executor.profile.closed_command,
@@ -1319,26 +1584,62 @@ class KitchenObjectManipulationExecutor:
                 between = bool(-0.003 <= projection <= separation + 0.003)
                 alignment = float(np.clip(1.0 - lateral / 0.04, 0.0, 1.0))
                 distances = []
+                closest_target_names = []
                 for ids in finger_geoms:
-                    distances.append(min(
-                        float(mujoco.mj_geomDistance(
-                            model, data, pad, target, 0.25, None
-                        ))
+                    pairs = [
+                        (
+                            float(mujoco.mj_geomDistance(
+                                model, data, pad, target, 0.25, None
+                            )),
+                            target,
+                        )
                         for pad in ids for target in target_geoms
-                    ))
+                    ]
+                    distance, closest_target = min(pairs, key=lambda row: row[0])
+                    distances.append(distance)
+                    closest_target_names.append(
+                        mujoco.mj_id2name(
+                            model, mujoco.mjtObj.mjOBJ_GEOM, closest_target
+                        ) or ""
+                    )
+                closure_values.append(float(closure))
+                distance_values.append((distances[0], distances[1]))
+                target_name_values.append((
+                    closest_target_names[0], closest_target_names[1]
+                ))
                 rows.append((
                     max(distances), abs(distances[0] - distances[1]),
                     distances, separation, between, alignment,
+                    closest_target_names,
                 ))
             best = min(rows, key=lambda row: (row[0], row[1]))
             open_separation = rows[0][3]
             closed_separation = rows[-1][3]
             available = max(0.0, open_separation - closed_separation)
             required = max(0.0, open_separation - best[3])
-            left_possible = best[2][0] <= 0.006
-            right_possible = best[2][1] <= 0.006
+            contact_metrics = bilateral_first_contact_metrics(
+                closure_values,
+                distance_values,
+                target_name_values,
+                contact_threshold_m=contact_threshold,
+            )
+            first_contacts = (
+                contact_metrics["left"], contact_metrics["right"]
+            )
+            maximum_precontact_penetration = contact_metrics[
+                "maximum_precontact_penetration_m"
+            ]
+            left_possible = first_contacts[0] is not None
+            right_possible = first_contacts[1] is not None
+            synchrony_error = contact_metrics["closure_delta"]
             predicted = bool(
-                left_possible and right_possible and best[4] and best[5] >= 0.40
+                left_possible
+                and right_possible
+                and best[4]
+                and best[5] >= 0.40
+                and synchrony_error is not None
+                and synchrony_error <= 0.12
+                and maximum_precontact_penetration <= 0.003
             )
             return BilateralContactPrediction(
                 left_pad_target_distance_m=best[2][0],
@@ -1350,6 +1651,29 @@ class KitchenObjectManipulationExecutor:
                 predicted_left_contact_possible=left_possible,
                 predicted_right_contact_possible=right_possible,
                 predicted_bilateral_contact=predicted,
+                left_first_contact_closure=(
+                    first_contacts[0][0] if first_contacts[0] else None
+                ),
+                right_first_contact_closure=(
+                    first_contacts[1][0] if first_contacts[1] else None
+                ),
+                left_first_contact_distance_m=(
+                    first_contacts[0][1] if first_contacts[0] else None
+                ),
+                right_first_contact_distance_m=(
+                    first_contacts[1][1] if first_contacts[1] else None
+                ),
+                first_contact_closure_delta=synchrony_error,
+                maximum_pre_contact_penetration_m=(
+                    maximum_precontact_penetration
+                ),
+                contact_distance_threshold_m=contact_threshold,
+                left_target_geom=(
+                    first_contacts[0][2] if first_contacts[0] else None
+                ),
+                right_target_geom=(
+                    first_contacts[1][2] if first_contacts[1] else None
+                ),
             )
         finally:
             data.qpos[:] = saved_qpos
@@ -1363,6 +1687,8 @@ class KitchenObjectManipulationExecutor:
         candidate: GraspPoseCandidate,
         stance: PlanarStance,
         stance_index: int,
+        *,
+        require_predicted_contact: bool,
     ) -> GraspStanceEvaluation:
         spec = self.executor.pick_specs[backend]
         self.executor.pick_specs[backend] = replace(
@@ -1373,7 +1699,7 @@ class KitchenObjectManipulationExecutor:
             planned = analysis.get("planned_final_arm_joints")
             prediction = (
                 self._predict_bilateral_contact(
-                    backend, np.asarray(planned, dtype=float)
+                    backend, np.asarray(planned, dtype=float), candidate
                 )
                 if analysis["feasible"] and planned is not None else None
             )
@@ -1403,10 +1729,15 @@ class KitchenObjectManipulationExecutor:
                     stance.anchor_dx, stance.anchor_dy
                 )),
                 joint_displacement_rad=joint_displacement,
-                valid=bool(analysis["feasible"] and prediction_valid),
+                valid=bool(
+                    analysis["feasible"]
+                    and (prediction_valid or not require_predicted_contact)
+                ),
                 failure_reason=(
                     None
-                    if analysis["feasible"] and prediction_valid
+                    if analysis["feasible"] and (
+                        prediction_valid or not require_predicted_contact
+                    )
                     else (
                         "PREDICTED_BILATERAL_CONTACT_FALSE"
                         if analysis["feasible"] else str(analysis["failure"])
@@ -1482,7 +1813,8 @@ class KitchenObjectManipulationExecutor:
             )
             pair_rows = tuple(
                 self._evaluate_storage_grasp_candidate(
-                    backend, candidate, stance, index
+                    backend, candidate, stance, index,
+                    require_predicted_contact=False,
                 )
                 for candidate in probes
             )
@@ -1520,12 +1852,15 @@ class KitchenObjectManipulationExecutor:
             )
 
         planning_started = time.perf_counter()
+        coarse_candidate_limit = (
+            40 if source_kind == "CUPBOARD" and family == "UTENSIL" else 24
+        )
         try:
             shortlist, evaluations = planner.shortlist(
                 anchor,
                 evaluate,
                 maximum=3,
-                candidate_limit=24,
+                candidate_limit=coarse_candidate_limit,
                 preferred_yaw=preferred_yaw,
                 minimum_evaluations=8,
             )
@@ -1551,7 +1886,8 @@ class KitchenObjectManipulationExecutor:
                 )
                 fine_rows.extend(
                     self._evaluate_storage_grasp_candidate(
-                        backend, candidate, stance, stance_row.candidate_index
+                        backend, candidate, stance, stance_row.candidate_index,
+                        require_predicted_contact=True,
                     )
                     for candidate in candidates
                 )
@@ -1566,7 +1902,7 @@ class KitchenObjectManipulationExecutor:
             "anchor_world": [anchor.x, anchor.y, anchor.yaw],
             "search_strategy": "COARSE_TO_FINE_RANKED_STANCE_GRASP",
             "search_limits": {
-                "maximum_coarse_stances": 24,
+                "maximum_coarse_stances": coarse_candidate_limit,
                 "minimum_coarse_stances_before_shortlist_stop": 8,
                 "maximum_shortlisted_stances": 3,
                 "maximum_physical_attempts": 5,
@@ -1577,6 +1913,20 @@ class KitchenObjectManipulationExecutor:
                 row.reason != "BASE_PATH_COLLISION" for row in evaluations
             ),
             "representative_probes_evaluated": len(coarse_pair_rows),
+            "coarse_pair_evaluations": [
+                {
+                    "stance_index": row.stance_index,
+                    "candidate_id": row.grasp_candidate_id,
+                    "grasp_family": row.grasp_family,
+                    "valid": row.valid,
+                    "failure_reason": row.failure_reason,
+                    "contact_prediction": (
+                        asdict(row.contact_prediction)
+                        if row.contact_prediction else None
+                    ),
+                }
+                for row in coarse_pair_rows
+            ],
             "shortlisted_stance_count": len(shortlist),
             "full_grasp_candidates_evaluated": len(fine_rows),
             "planning_wall_clock_s": time.perf_counter() - planning_started,
@@ -1610,6 +1960,19 @@ class KitchenObjectManipulationExecutor:
                     ),
                 }
                 for rank, row in enumerate(ranked_pairs[:5], start=1)
+            ],
+            "fine_rejections": [
+                {
+                    "stance_index": row.stance_index,
+                    "candidate_id": row.grasp_candidate_id,
+                    "grasp_family": row.grasp_family,
+                    "failure_reason": row.failure_reason,
+                    "contact_prediction": (
+                        asdict(row.contact_prediction)
+                        if row.contact_prediction else None
+                    ),
+                }
+                for row in fine_rows if not row.valid
             ],
             "rejections": [
                 {
@@ -2296,12 +2659,28 @@ class KitchenObjectManipulationExecutor:
                     str(direct_grasp_analysis["selected_candidate_id"]),
                     direct_grasp_analysis["planned_waypoints"],
                     direct_grasp_analysis["planned_retreat_waypoints"],
+                    direct_grasp_analysis.get(
+                        "planned_grasp_position_world_m"
+                    ),
+                    direct_grasp_analysis.get(
+                        "planned_grasp_rotation_world"
+                    ),
+                    direct_grasp_analysis.get(
+                        "predicted_contact_geom_names"
+                    ),
+                    direct_grasp_analysis.get(
+                        "predicted_contact_points_world_m"
+                    ),
                 )
             else:
                 self.executor.request_pick(backend)
         try:
             steps = self._step_until_stable_mode()
         except RuntimeError as error:
+            if direct_grasp_analysis is not None:
+                direct_grasp_analysis["preclose_telemetry"] = (
+                    self.executor.preclose_telemetry
+                )
             site_id = mujoco.mj_name2id(
                 self.scene.model, mujoco.mjtObj.mjOBJ_SITE, f"{backend}_grasp"
             )
@@ -2325,6 +2704,10 @@ class KitchenObjectManipulationExecutor:
                 None, False, None, presentation=presentation,
                 direct_grasp_analysis=direct_grasp_analysis,
                 manipulation_stance=manipulation_stance,
+            )
+        if direct_grasp_analysis is not None:
+            direct_grasp_analysis["preclose_telemetry"] = (
+                self.executor.preclose_telemetry
             )
         if self.executor.mode != "holding":
             return PhysicalPickResult(generic_object_id, backend, context_row, required.value,
@@ -2371,11 +2754,12 @@ class KitchenObjectManipulationExecutor:
                 if context_row["source_kind"] == "BOX"
                 else "OUTWARD_THROUGH_APERTURE_FIRST"
             )
-        success = (
-            state.validation_status == "TRUE"
-            and float(after_pos[2] - before_pos[2]) > 0.03
-            and source_clearance is not False
+        storage_extracted = (
+            source_clearance is True
+            if context_row["source_kind"] in {"CUPBOARD", "BOX"}
+            else float(after_pos[2] - before_pos[2]) > 0.03
         )
+        success = state.validation_status == "TRUE" and storage_extracted
         return PhysicalPickResult(
             generic_object_id, backend, context_row, required.value, binding["grasp_family"],
             success, "PICK_SUCCESS" if success else "HELD_STATE_INVALID",

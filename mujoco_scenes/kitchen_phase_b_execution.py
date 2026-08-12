@@ -183,11 +183,16 @@ class KitchenPhaseBExecutionDispatcher:
                 return record
             # Drawer fixtures only transport free bodies during opening. Once
             # open, release them before contact-confirmed physical extraction.
+            # C2's upright spoon remains presentation-welded during approach.
+            # The executor releases that weld only after bilateral finger
+            # contact, immediately before activating the gripper weld.
             record["storage_fixture_released"] = bool(
-                self.scene.release_storage_fixture(container)
+                False if container == "C2"
+                else self.scene.release_storage_fixture(container)
             )
-            for _ in range(120):
-                mujoco.mj_step(self.scene.model, self.scene.data)
+            if container != "C2":
+                for _ in range(120):
+                    mujoco.mj_step(self.scene.model, self.scene.data)
         elif container:
             record["redundant_open_omitted"] = True
         result = self.manipulation.pick(

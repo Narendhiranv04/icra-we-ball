@@ -1,9 +1,17 @@
 import math
 
+import mujoco
 import numpy as np
 
 from mujoco_scenes.generic_manipulation import GraspPoseCandidate
-from mujoco_scenes.kitchen_object_manipulation import storage_probe_candidates
+from mujoco_scenes.kitchen_object_manipulation import (
+    StorageGraspCandidateGenerator,
+    UtensilGraspCandidateGenerator,
+    bilateral_first_contact_metrics,
+    physical_contact_target_geoms,
+    storage_probe_candidates,
+)
+from mujoco_scenes.scene_loader import KitchenScene
 from mujoco_scenes.manipulation_stance import (
     BilateralContactPrediction,
     GraspStanceEvaluation,
@@ -42,20 +50,134 @@ def test_cupboard_vessel_probe_covers_top_diameter_and_rim_families():
     assert any("front_rim" in item for item in identifiers)
 
 
-def test_cupboard_utensil_probe_covers_both_approaches_and_handle_spread():
+def test_collision_target_filter_excludes_closer_visual_geometries():
+    scene = KitchenScene(
+        "S1_integrated_kitchen_object_function_primary", robot="google"
+    )
+    body_id = mujoco.mj_name2id(
+        scene.model, mujoco.mjtObj.mjOBJ_BODY, "s1i_wide_shallow_cup"
+    )
+    names = {
+        mujoco.mj_id2name(scene.model, mujoco.mjtObj.mjOBJ_GEOM, geom_id)
+        for geom_id in physical_contact_target_geoms(scene.model, body_id)
+    }
+    assert "s1i_wide_shallow_cup_visual" not in names
+    assert "s1i_wide_shallow_cup_interior_visual" not in names
+    assert "s1i_wide_shallow_cup_wall_0" in names
+    assert "s1i_wide_shallow_cup_bottom_collision" in names
+
+
+def test_contact_centred_vessel_candidates_follow_collision_shell_scale():
+    scene = KitchenScene(
+        "S1_integrated_kitchen_object_function_primary", robot="google"
+    )
+    body_id = mujoco.mj_name2id(
+        scene.model, mujoco.mjtObj.mjOBJ_BODY, "s1i_wide_shallow_cup"
+    )
+    first = StorageGraspCandidateGenerator.cupboard(
+        scene, body_id, np.eye(3), "VESSEL"
+    )
+    candidate = next(
+        row for row in first if "contact_diameter" in row.candidate_id
+    )
+    first_spacing = np.linalg.norm(
+        np.asarray(candidate.predicted_contact_points_world_m[1])
+        - np.asarray(candidate.predicted_contact_points_world_m[0])
+    )
+    wall_ids = [
+        geom_id for geom_id in physical_contact_target_geoms(
+            scene.model, body_id
+        )
+        if "wall" in (
+            mujoco.mj_id2name(
+                scene.model, mujoco.mjtObj.mjOBJ_GEOM, geom_id
+            ) or ""
+        )
+    ]
+    scene.model.geom_pos[wall_ids, :2] *= 1.25
+    mujoco.mj_forward(scene.model, scene.data)
+    second = StorageGraspCandidateGenerator.cupboard(
+        scene, body_id, np.eye(3), "VESSEL"
+    )
+    scaled = next(
+        row for row in second
+        if row.candidate_id == candidate.candidate_id
+    )
+    second_spacing = np.linalg.norm(
+        np.asarray(scaled.predicted_contact_points_world_m[1])
+        - np.asarray(scaled.predicted_contact_points_world_m[0])
+    )
+    assert second_spacing > first_spacing * 1.20
+    assert all("wall" in name for name in candidate.predicted_contact_geom_names)
+
+
+def test_first_contact_synchrony_accepts_centred_and_rejects_asymmetric_sweep():
+    closures = [0.0, 0.4, 0.8, 1.2]
+    names = [("left_wall", "right_wall")] * len(closures)
+    centred = bilateral_first_contact_metrics(
+        closures,
+        [(0.02, 0.02), (0.006, 0.006), (0.0002, 0.0003), (-0.001, -0.001)],
+        names,
+    )
+    asymmetric = bilateral_first_contact_metrics(
+        closures,
+        [(0.02, 0.02), (0.0002, 0.010), (-0.002, 0.006), (-0.004, 0.0002)],
+        names,
+    )
+    unilateral = bilateral_first_contact_metrics(
+        closures,
+        [(0.02, 0.02), (0.0002, 0.020), (-0.002, 0.015), (-0.004, 0.010)],
+        names,
+    )
+    assert centred["closure_delta"] == 0.0
+    assert math.isclose(asymmetric["closure_delta"], 0.8)
+    assert asymmetric["maximum_precontact_penetration_m"] >= 0.002
+    assert unilateral["right"] is None
+
+
+def test_cupboard_utensil_probe_uses_horizontal_over_handle_grasp():
     candidates = tuple(
         _candidate(f"cupboard_{approach}_{fraction}pct_z+0.010")
-        for approach in ("side_horizontal_jaws", "front_vertical_jaws")
+        for approach in ("horizontal_over_handle", "front_vertical_jaws")
         for fraction in (55, 65, 75, 85)
     )
     selected = storage_probe_candidates(candidates, "CUPBOARD", "UTENSIL")
     identifiers = {row.candidate_id for row in selected}
-    assert any("side_horizontal" in item for item in identifiers)
-    assert any("front_vertical" in item for item in identifiers)
-    assert {fraction for fraction in (55, 75, 85)
-            if any(f"_{fraction}pct_" in item for item in identifiers)} == {
-                55, 75, 85
-            }
+    assert any("horizontal_over_handle" in item for item in identifiers)
+    assert not any("front_vertical" in item for item in identifiers)
+    assert identifiers == {
+        "cupboard_horizontal_over_handle_55pct_z+0.010"
+    }
+
+
+def test_upright_cupboard_utensil_uses_horizontal_inward_grasp():
+    scene = KitchenScene(
+        "S1_integrated_kitchen_object_function_primary", robot="google"
+    )
+    scene.open_container("C2")
+    body_id = mujoco.mj_name2id(
+        scene.model, mujoco.mjtObj.mjOBJ_BODY, "s1i_c2_soup_spoon"
+    )
+    first = UtensilGraspCandidateGenerator.generate(
+        scene, body_id, "CUPBOARD"
+    )
+    assert first
+    assert all(
+        "horizontal_inward_upright_handle" in row.candidate_id
+        for row in first
+    )
+    # Local +Y is the horizontal jaw-closing axis; local +Z enters C2
+    # through its open front in world +Y.
+    assert all(
+        np.allclose(row.target_rotation_world[:, 1], (1.0, 0.0, 0.0))
+        and np.allclose(row.target_rotation_world[:, 2], (0.0, 1.0, 0.0))
+        for row in first
+    )
+    assert all(
+        row.approach_offset_world_m == (0.0, -0.09, 0.0)
+        for row in first
+    )
+    assert all(not row.position_first_approach for row in first)
 
 
 def test_base_qpos_world_stance_round_trip():
