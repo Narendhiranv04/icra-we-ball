@@ -28,6 +28,63 @@ class StanceEvaluation:
     joint_displacement_rad: float | None
     candidate_index: int
     reason: str | None = None
+    feasible_grasp_families: tuple[str, ...] = ()
+    feasible_probe_ids: tuple[str, ...] = ()
+    predicted_grasp_score: float = 0.0
+
+
+@dataclass(frozen=True)
+class BilateralContactPrediction:
+    """Geometric ranking evidence; never authorizes a physical weld."""
+
+    left_pad_target_distance_m: float
+    right_pad_target_distance_m: float
+    jaw_axis_target_alignment: float
+    target_between_jaws: bool
+    available_finger_closure_m: float
+    required_finger_closure_m: float
+    predicted_left_contact_possible: bool
+    predicted_right_contact_possible: bool
+    predicted_bilateral_contact: bool
+
+
+@dataclass(frozen=True)
+class GraspStanceEvaluation:
+    stance: PlanarStance
+    stance_index: int
+    grasp_candidate_id: str
+    grasp_family: str
+    carry_valid: bool
+    approach_valid: bool
+    grasp_ik_position_error_m: float | None
+    grasp_ik_angle_error_rad: float | None
+    collision_free: bool
+    minimum_collision_clearance_m: float | None
+    contact_prediction: BilateralContactPrediction | None
+    base_displacement_m: float
+    joint_displacement_rad: float | None
+    valid: bool
+    failure_reason: str | None = None
+
+    @property
+    def predicted_grasp_score(self) -> float:
+        prediction = self.contact_prediction
+        if prediction is None:
+            return float("-inf")
+        worst_distance = max(
+            prediction.left_pad_target_distance_m,
+            prediction.right_pad_target_distance_m,
+        )
+        asymmetry = abs(
+            prediction.left_pad_target_distance_m
+            - prediction.right_pad_target_distance_m
+        )
+        return (
+            (10.0 if prediction.predicted_bilateral_contact else 0.0)
+            + 2.0 * prediction.jaw_axis_target_alignment
+            - 20.0 * worst_distance
+            - 10.0 * asymmetry
+        )
 
 
 def yaw_rotation(yaw: float) -> np.ndarray:
@@ -66,13 +123,27 @@ def base_relative_pose_to_world(
 class ManipulationStancePlanner:
     """Rank a deterministic bounded SE(2) search around a named anchor."""
 
-    TRANSLATION_OFFSETS_M = (0.0, -0.05, 0.05, -0.10, 0.10, -0.15, 0.15)
+    TRANSLATION_OFFSETS_M = (
+        0.0, -0.025, 0.025, -0.05, 0.05, -0.075, 0.075,
+        -0.10, 0.10, -0.15, 0.15,
+    )
     YAW_OFFSETS_RAD = tuple(
-        math.radians(value) for value in (0, -10, 10, -20, 20, -30, 30, -40, 40)
+        math.radians(value)
+        for value in (
+            0, -5, 5, -10, 10, -15, 15, -20, 20,
+            -25, 25, -30, 30, -35, 35, -40, 40,
+            -45, 45, -50, 50,
+        )
     )
     MAX_TRANSLATION_M = 0.19
+    DEFAULT_SHORTLIST_SIZE = 8
 
-    def candidates(self, anchor: PlanarStance) -> tuple[PlanarStance, ...]:
+    def candidates(
+        self,
+        anchor: PlanarStance,
+        *,
+        preferred_yaw: float | None = None,
+    ) -> tuple[PlanarStance, ...]:
         rows = []
         for dx in self.TRANSLATION_OFFSETS_M:
             for dy in self.TRANSLATION_OFFSETS_M:
@@ -80,7 +151,23 @@ class ManipulationStancePlanner:
                 if distance > self.MAX_TRANSLATION_M:
                     continue
                 for dyaw in self.YAW_OFFSETS_RAD:
-                    rows.append((distance, abs(dyaw), dx, dy, dyaw))
+                    yaw_error = (
+                        abs(math.atan2(
+                            math.sin(anchor.yaw + dyaw - preferred_yaw),
+                            math.cos(anchor.yaw + dyaw - preferred_yaw),
+                        ))
+                        if preferred_yaw is not None else abs(dyaw)
+                    )
+                    priority = (
+                        (
+                            distance + 0.12 * yaw_error,
+                            yaw_error,
+                            distance,
+                        )
+                        if preferred_yaw is not None
+                        else (distance, abs(dyaw), yaw_error)
+                    )
+                    rows.append((*priority, dx, dy, dyaw))
         rows.sort()
         return tuple(
             PlanarStance(
@@ -91,7 +178,7 @@ class ManipulationStancePlanner:
                 dy,
                 dyaw,
             )
-            for _, _, dx, dy, dyaw in rows
+            for _, _, _, dx, dy, dyaw in rows
         )
 
     def select(
@@ -99,13 +186,101 @@ class ManipulationStancePlanner:
         anchor: PlanarStance,
         evaluate: Callable[[PlanarStance, int], StanceEvaluation],
     ) -> tuple[StanceEvaluation | None, tuple[StanceEvaluation, ...]]:
-        # Candidates are already in the complete deterministic ranking order.
-        # Stop at the first valid stance so physical execution is not delayed
-        # by hundreds of lower-ranked IK checks.
-        evaluations = []
-        for index, candidate in enumerate(self.candidates(anchor)):
+        ranked, evaluations = self.shortlist(
+            anchor,
+            evaluate,
+            maximum=self.DEFAULT_SHORTLIST_SIZE,
+        )
+        return (ranked[0] if ranked else None), evaluations
+
+    def shortlist(
+        self,
+        anchor: PlanarStance,
+        evaluate: Callable[[PlanarStance, int], StanceEvaluation],
+        *,
+        maximum: int = DEFAULT_SHORTLIST_SIZE,
+        candidate_limit: int | None = None,
+        preferred_yaw: float | None = None,
+        minimum_evaluations: int | None = None,
+    ) -> tuple[tuple[StanceEvaluation, ...], tuple[StanceEvaluation, ...]]:
+        """Evaluate a bounded set and rank valid stances by grasp quality."""
+        if maximum <= 0:
+            raise ValueError("maximum shortlist size must be positive")
+        candidates = self.candidates(anchor, preferred_yaw=preferred_yaw)
+        if candidate_limit is not None:
+            candidates = candidates[:candidate_limit]
+        evaluation_rows = []
+        valid_count = 0
+        for index, candidate in enumerate(candidates):
             row = evaluate(candidate, index)
-            evaluations.append(row)
-            if row.valid:
-                return row, tuple(evaluations)
-        return None, tuple(evaluations)
+            evaluation_rows.append(row)
+            valid_count += int(row.valid)
+            if (
+                minimum_evaluations is not None
+                and len(evaluation_rows) >= minimum_evaluations
+                and valid_count >= maximum
+            ):
+                break
+        evaluations = tuple(evaluation_rows)
+        valid = [row for row in evaluations if row.valid]
+        valid.sort(
+            key=lambda row: (
+                -len(row.feasible_grasp_families),
+                -row.predicted_grasp_score,
+                -(
+                    row.collision_clearance_m
+                    if row.collision_clearance_m is not None
+                    else float("-inf")
+                ),
+                row.ik_residual_m if row.ik_residual_m is not None else float("inf"),
+                math.hypot(row.stance.anchor_dx, row.stance.anchor_dy),
+                abs(row.stance.anchor_dyaw),
+                (
+                    row.joint_displacement_rad
+                    if row.joint_displacement_rad is not None
+                    else float("inf")
+                ),
+                row.candidate_index,
+            )
+        )
+        return tuple(valid[:maximum]), evaluations
+
+
+def rank_grasp_stance_pairs(
+    evaluations: tuple[GraspStanceEvaluation, ...],
+) -> tuple[GraspStanceEvaluation, ...]:
+    """Deterministically rank only complete collision-free pair plans."""
+    valid = [row for row in evaluations if row.valid]
+    valid.sort(
+        key=lambda row: (
+            -int(bool(
+                row.contact_prediction
+                and row.contact_prediction.predicted_bilateral_contact
+            )),
+            -row.predicted_grasp_score,
+            max(
+                row.contact_prediction.left_pad_target_distance_m,
+                row.contact_prediction.right_pad_target_distance_m,
+            ) if row.contact_prediction else float("inf"),
+            abs(
+                row.contact_prediction.left_pad_target_distance_m
+                - row.contact_prediction.right_pad_target_distance_m
+            ) if row.contact_prediction else float("inf"),
+            (
+                row.grasp_ik_position_error_m
+                if row.grasp_ik_position_error_m is not None else float("inf")
+            ),
+            (
+                row.grasp_ik_angle_error_rad
+                if row.grasp_ik_angle_error_rad is not None else float("inf")
+            ),
+            row.base_displacement_m,
+            (
+                row.joint_displacement_rad
+                if row.joint_displacement_rad is not None else float("inf")
+            ),
+            row.stance_index,
+            row.grasp_candidate_id,
+        )
+    )
+    return tuple(valid)

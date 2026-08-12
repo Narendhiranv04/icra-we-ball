@@ -90,6 +90,8 @@ class SimplePickSpec:
     intermediate_ik_angle_tolerance_rad: float | None = None
     approach_offset_world_m: tuple[float, float, float] | None = None
     approach_route_offsets_world_m: tuple[tuple[float, float, float], ...] = ()
+    approach_rotation_world: np.ndarray | None = None
+    position_first_approach: bool = False
 
 
 @dataclass(frozen=True)
@@ -103,6 +105,8 @@ class GraspPoseCandidate:
     carry_rotation_world: np.ndarray | None = None
     approach_offset_world_m: tuple[float, float, float] | None = None
     approach_route_offsets_world_m: tuple[tuple[float, float, float], ...] = ()
+    approach_rotation_world: np.ndarray | None = None
+    position_first_approach: bool = False
 
 
 GOOGLE_PICK_SPECS = {
@@ -1198,6 +1202,7 @@ class CalibratedPickPlaceExecutor:
         home_seed: np.ndarray,
         carry_position: np.ndarray,
         carry_rotation: np.ndarray | None = None,
+        approach_rotation: np.ndarray | None = None,
     ) -> tuple[list[JointWaypoint], list[JointWaypoint]]:
         active_spec = self.pick_specs.get(self.target_object)
         ik = ProfiledIK(
@@ -1261,6 +1266,10 @@ class CalibratedPickPlaceExecutor:
         )
         approach = []
         pregrasp_joints = carry
+        approach_rotation = (
+            target_rotation
+            if approach_rotation is None else approach_rotation
+        )
         route_start = carry_position
         route_goals = [
             target + np.asarray(offset, float)
@@ -1269,6 +1278,29 @@ class CalibratedPickPlaceExecutor:
                 if active_spec is not None else ()
             )
         ] or [pregrasp]
+        if active_spec and active_spec.position_first_approach:
+            # Aperture traversal constrains position and collision clearance,
+            # not an arbitrary wrist attitude.  Find a reachable attitude at
+            # the pregrasp point, then retain it through the clearance route;
+            # the final descent still solves the strict contact rotation.
+            position_ik = ProfiledIK(
+                self.model, self.data, self.profile, orientation_weight=0.02
+            )
+            reachable, position_error, _ = position_ik.solve(
+                pregrasp, carry, approach_rotation
+            )
+            if position_error <= (
+                active_spec.intermediate_ik_position_tolerance
+                or self.ik_position_tolerance
+            ):
+                saved_arm = self.data.qpos[self.arm_qpos].copy()
+                self.data.qpos[self.arm_qpos] = reachable
+                mujoco.mj_forward(self.model, self.data)
+                approach_rotation = self.data.site_xmat[
+                    self.grip_site_id
+                ].reshape(3, 3).copy()
+                self.data.qpos[self.arm_qpos] = saved_arm
+                mujoco.mj_forward(self.model, self.data)
         if not np.allclose(route_goals[-1], pregrasp):
             route_goals.append(pregrasp)
         for route_goal in route_goals:
@@ -1279,7 +1311,7 @@ class CalibratedPickPlaceExecutor:
                 "Approaching above object",
                 collision_checker,
                 allowed_environment_bodies,
-                target_rotation,
+                approach_rotation,
             )
             approach.extend(segment)
             route_start = route_goal
@@ -1392,11 +1424,35 @@ class CalibratedPickPlaceExecutor:
             self.confirmed_target_contact_geoms = ()
             self.selected_grasp_candidate_id = None
             self._begin_pick_plan()
+            final_arm_joints = (
+                self.waypoints[-1].joints.copy()
+                if self.waypoints else self._current_arm()
+            )
             return {
                 "feasible": True,
                 "classification": "DIRECT_GRASP_FEASIBLE",
                 "selected_candidate_id": self.selected_grasp_candidate_id,
                 "failure": None,
+                # Returned solely for temporary geometric ranking.  The live
+                # robot still reaches this configuration through actuators.
+                "planned_final_arm_joints": final_arm_joints.tolist(),
+                "planned_waypoint_count": len(self.waypoints),
+                "planned_waypoints": [
+                    {
+                        "joints": row.joints.tolist(),
+                        "label": row.label,
+                        "passive_pivot": row.passive_pivot,
+                    }
+                    for row in self.waypoints
+                ],
+                "planned_retreat_waypoints": [
+                    {
+                        "joints": row.joints.tolist(),
+                        "label": row.label,
+                        "passive_pivot": row.passive_pivot,
+                    }
+                    for row in self.retreat_waypoints
+                ],
             }
         except RuntimeError as error:
             return {
@@ -1404,6 +1460,10 @@ class CalibratedPickPlaceExecutor:
                 "classification": "DIRECT_GRASP_GEOMETRICALLY_INFEASIBLE",
                 "selected_candidate_id": None,
                 "failure": str(error),
+                "planned_final_arm_joints": None,
+                "planned_waypoint_count": 0,
+                "planned_waypoints": [],
+                "planned_retreat_waypoints": [],
             }
         finally:
             self.model.site_pos[site_id] = original_site
@@ -1419,6 +1479,50 @@ class CalibratedPickPlaceExecutor:
             self.retreat_waypoints = []
             self.selected_grasp_candidate_id = None
             mujoco.mj_forward(self.model, self.data)
+
+    def request_preplanned_pick(
+        self,
+        object_name: str,
+        candidate_id: str,
+        planned_waypoints: list[dict[str, object]],
+        planned_retreat_waypoints: list[dict[str, object]],
+    ) -> None:
+        """Start a physically executed pick from a validated cached plan.
+
+        The cache contains arm joint waypoints only.  It never contains or
+        writes target-object state, and live collision/contact guards remain
+        active throughout execution.
+        """
+        self.request_pick(object_name)
+        if not planned_waypoints or not planned_retreat_waypoints:
+            raise ValueError("A preplanned pick requires approach and retreat paths")
+        self.configuration_checker = RobotConfigurationCollisionChecker(
+            self.model,
+            self.data,
+            self.profile,
+            mounting_allowances=self.mounting_allowances,
+        )
+        self.waypoints = [
+            JointWaypoint(
+                np.asarray(row["joints"], dtype=float),
+                str(row["label"]),
+                bool(row.get("passive_pivot", False)),
+            )
+            for row in planned_waypoints
+        ]
+        self.retreat_waypoints = [
+            JointWaypoint(
+                np.asarray(row["joints"], dtype=float),
+                str(row["label"]),
+                bool(row.get("passive_pivot", False)),
+            )
+            for row in planned_retreat_waypoints
+        ]
+        self.selected_grasp_candidate_id = candidate_id
+        self.waypoint_index = 0
+        self.waypoint_ticks = 0
+        self.mode = "pick_approach"
+        self.status = f"Pick {object_name}: executing ranked cached plan"
 
     def _begin_pick_plan(self) -> None:
         assert self.target_object is not None
@@ -1445,6 +1549,8 @@ class CalibratedPickPlaceExecutor:
                 approach_clearance_m=spec.approach_clearance_m,
                 approach_offset_world_m=spec.approach_offset_world_m,
                 approach_route_offsets_world_m=spec.approach_route_offsets_world_m,
+                approach_rotation_world=spec.approach_rotation_world,
+                position_first_approach=spec.position_first_approach,
             ),
         )
         failures = []
@@ -1460,6 +1566,8 @@ class CalibratedPickPlaceExecutor:
                 approach_clearance_m=candidate.approach_clearance_m,
                 approach_offset_world_m=candidate.approach_offset_world_m,
                 approach_route_offsets_world_m=candidate.approach_route_offsets_world_m,
+                approach_rotation_world=candidate.approach_rotation_world,
+                position_first_approach=candidate.position_first_approach,
             )
             self.pick_specs[self.target_object] = candidate_spec
             try:
@@ -1471,6 +1579,7 @@ class CalibratedPickPlaceExecutor:
                     self.profile.home_seed if spec.home_seed is None else spec.home_seed,
                     self.profile.carry_position if spec.carry_position is None else spec.carry_position,
                     candidate.carry_rotation_world,
+                    candidate.approach_rotation_world,
                 )
             except RuntimeError as error:
                 failures.append(f"{candidate.candidate_id}: {error}")

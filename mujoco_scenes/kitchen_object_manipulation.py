@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from dataclasses import replace
 from enum import Enum
+import math
 import time
 from typing import Any
 
@@ -25,11 +26,14 @@ from .living_room_mobile_execution import (
     rectangle_inside_observed_support,
 )
 from .manipulation_stance import (
+    BilateralContactPrediction,
+    GraspStanceEvaluation,
     ManipulationStancePlanner,
     PlanarStance,
     StanceEvaluation,
     base_relative_pose_to_world,
     qpos_to_world_stance,
+    rank_grasp_stance_pairs,
     world_stance_to_qpos,
     yaw_rotation,
 )
@@ -559,14 +563,16 @@ class StorageGraspCandidateGenerator:
                             yaw_rotation(np.deg2rad(yaw_degrees)) @ top_down
                         ),
                         carry_rotation_world=carry_rotation.copy(),
+                        approach_rotation_world=carry_rotation.copy(),
+                        position_first_approach=True,
                         approach_clearance_m=0.10,
                     )
                 )
             # A narrow cup is pinched across its diameter, not at one rim
             # corner.  The centre/near-centre sites are derived from its live
             # body frame and approached through the open cupboard front.
-            for x_offset in (0.0, 0.010, -0.010):
-                for z_offset in (0.0, 0.010, -0.010):
+            for x_offset in (0.0, 0.005, -0.005, 0.010, -0.010):
+                for z_offset in (0.0, 0.005, 0.010, 0.015, 0.020, -0.010):
                     local = cls._local_point(
                         scene, body_id, np.array((x_offset, 0.0, z_offset))
                     )
@@ -579,6 +585,8 @@ class StorageGraspCandidateGenerator:
                             grasp_site_local_position_m=local,
                             target_rotation_world=frontal.copy(),
                             carry_rotation_world=carry_rotation.copy(),
+                            approach_rotation_world=carry_rotation.copy(),
+                            position_first_approach=True,
                             approach_clearance_m=0.10,
                             approach_offset_world_m=(0.0, -0.10, 0.0),
                         )
@@ -609,6 +617,8 @@ class StorageGraspCandidateGenerator:
                                 grasp_site_local_position_m=local,
                                 target_rotation_world=rotation.copy(),
                                 carry_rotation_world=carry_rotation.copy(),
+                                approach_rotation_world=carry_rotation.copy(),
+                                position_first_approach=True,
                                 approach_clearance_m=0.10,
                                 approach_offset_world_m=(0.0, -0.10, 0.0),
                             )
@@ -631,6 +641,8 @@ class StorageGraspCandidateGenerator:
                 grasp_site_local_position_m=local,
                 target_rotation_world=yaw_rotation(np.deg2rad(yaw_degrees)) @ top,
                 carry_rotation_world=carry_rotation.copy(),
+                approach_rotation_world=carry_rotation.copy(),
+                position_first_approach=True,
                 approach_clearance_m=0.10,
                 approach_route_offsets_world_m=((0.0, 0.0, 0.18),),
             )
@@ -652,21 +664,105 @@ def storage_probe_candidates(
     local base stance by hundreds of near-duplicate handle-height variants;
     the full candidate set is restored after selecting a stance.
     """
-    prefixes = {
-        ("CUPBOARD", "VESSEL"): ("cupboard_vessel_top_",),
-        ("CUPBOARD", "UTENSIL"): (
-            "cupboard_side_horizontal_jaws_65pct_",
-            "cupboard_front_vertical_jaws_65pct_",
+    identifiers = {
+        ("CUPBOARD", "VESSEL"): (
+            "cupboard_vessel_top_yaw+30",
+            "cupboard_vessel_top_yaw+60",
+            "cupboard_vessel_diameter_+0.000_+0.000",
+            "cupboard_front_rim_0_jawroll+20_wrist0",
+            "cupboard_front_rim_2_jawroll+0_wrist0",
         ),
-        ("CUPBOARD", "BOWL"): ("cupboard_front_rim_0_",),
-        ("BOX", "BOWL"): ("box_top_jaw_",),
-        ("BOX", "VESSEL"): ("box_top_jaw_",),
+        ("CUPBOARD", "UTENSIL"): tuple(
+            f"cupboard_{approach}_{fraction}pct_z+0.010"
+            for approach in (
+                "side_horizontal_jaws", "front_vertical_jaws"
+            )
+            for fraction in (55, 75, 85)
+        ),
+        ("CUPBOARD", "BOWL"): (
+            "cupboard_front_rim_0_jawroll+20_wrist0",
+            "cupboard_front_rim_2_jawroll+0_wrist0",
+        ),
+        ("BOX", "BOWL"): ("box_top_jaw_yaw+60", "box_top_jaw_yaw+30"),
+        ("BOX", "VESSEL"): ("box_top_jaw_yaw+60", "box_top_jaw_yaw+30"),
     }.get((source_kind, family), ())
-    selected = tuple(
-        candidate for candidate in candidates
-        if any(candidate.candidate_id.startswith(prefix) for prefix in prefixes)
-    )
+    by_id = {candidate.candidate_id: candidate for candidate in candidates}
+    selected = tuple(by_id[item] for item in identifiers if item in by_id)
     return selected or candidates[:1]
+
+
+def storage_grasp_family(candidate_id: str) -> str:
+    """Map a calibrated candidate ID to a physical approach family."""
+    if "vessel_top" in candidate_id or "box_top" in candidate_id:
+        return "TOP_DOWN"
+    if "vessel_diameter" in candidate_id:
+        return "FRONTAL_DIAMETER"
+    if "front_rim" in candidate_id:
+        return "FRONT_OR_DIAGONAL_RIM"
+    if "side_horizontal" in candidate_id:
+        return "SIDE_HORIZONTAL_HANDLE"
+    if "front_vertical" in candidate_id:
+        return "FRONT_VERTICAL_HANDLE"
+    return "OTHER"
+
+
+def prune_duplicate_grasp_candidates(
+    candidates: tuple[GraspPoseCandidate, ...],
+    *,
+    position_epsilon_m: float = 0.001,
+    rotation_epsilon_rad: float = np.deg2rad(1.0),
+) -> tuple[GraspPoseCandidate, ...]:
+    """Keep the deterministic first representative of near-identical poses."""
+    retained: list[GraspPoseCandidate] = []
+    for candidate in candidates:
+        family = storage_grasp_family(candidate.candidate_id)
+        position = np.asarray(candidate.grasp_site_local_position_m, dtype=float)
+        duplicate = False
+        for previous in retained:
+            if storage_grasp_family(previous.candidate_id) != family:
+                continue
+            previous_position = np.asarray(
+                previous.grasp_site_local_position_m, dtype=float
+            )
+            relative = previous.target_rotation_world.T @ candidate.target_rotation_world
+            angle = np.arccos(np.clip((np.trace(relative) - 1.0) / 2.0, -1.0, 1.0))
+            if (
+                np.linalg.norm(position - previous_position) < position_epsilon_m
+                and angle < rotation_epsilon_rad
+            ):
+                duplicate = True
+                break
+        if not duplicate:
+            retained.append(candidate)
+    return tuple(retained)
+
+
+def fine_storage_grasp_candidates(
+    candidates: tuple[GraspPoseCandidate, ...],
+    family: str,
+    grasp_families: tuple[str, ...] | None = None,
+) -> tuple[GraspPoseCandidate, ...]:
+    """Bound expensive fine IK while retaining every physical branch type."""
+    unique = prune_duplicate_grasp_candidates(candidates)
+    if grasp_families:
+        permitted = set(grasp_families)
+        unique = tuple(
+            candidate for candidate in unique
+            if storage_grasp_family(candidate.candidate_id) in permitted
+        )
+    if family != "VESSEL":
+        return unique
+    retained = []
+    for candidate in unique:
+        identifier = candidate.candidate_id
+        if "vessel_top" in identifier or "vessel_diameter" in identifier:
+            retained.append(candidate)
+            continue
+        if "front_rim" in identifier:
+            # Three spatial rim sites × every jaw-roll × both wrist branches.
+            if any(f"front_rim_{index}_" in identifier for index in (0, 2, 4)):
+                retained.append(candidate)
+    return tuple(retained)
 
 
 def make_kitchen_pick_specs(
@@ -1070,6 +1166,16 @@ class KitchenObjectManipulationExecutor:
             candidates = StorageGraspCandidateGenerator.cupboard(
                 self.scene, body_id, carry_rotation, family
             )
+        elif source_kind == "CUPBOARD" and family == "UTENSIL":
+            # The clear side depends on the live local stance, so regenerate
+            # these geometry-derived candidates after every base transform.
+            candidates = UtensilGraspCandidateGenerator.generate(
+                self.scene, body_id, source_kind
+            )
+            candidates = tuple(
+                replace(candidate, carry_rotation_world=carry_rotation.copy())
+                for candidate in candidates
+            )
         elif source_kind == "BOX" and family in {"BOWL", "VESSEL"}:
             candidates = StorageGraspCandidateGenerator.box(
                 self.scene, site_id, carry_rotation
@@ -1088,6 +1194,10 @@ class KitchenObjectManipulationExecutor:
             carry_position=carry_position,
             home_seed=profile.home_seed.copy(),
             grasp_candidates=candidates,
+            # Storage aperture reaches are orientation-limited.  Bias the IK
+            # objective toward the configured gripper attitude; the existing
+            # position/angle acceptance thresholds remain unchanged.
+            ik_orientation_weight=0.45,
             intermediate_ik_position_tolerance=(
                 # This applies only to the collision-checked non-contact
                 # aperture waypoint; the final grasp retains the strict
@@ -1137,6 +1247,175 @@ class KitchenObjectManipulationExecutor:
             "Arm did not physically settle into the navigation posture"
         )
 
+    def _predict_bilateral_contact(
+        self,
+        backend: str,
+        planned_final_arm_joints: np.ndarray,
+    ) -> BilateralContactPrediction:
+        """Sweep finger closure on temporary state and score exact target geoms.
+
+        This is deliberately selection-only.  It neither steps physics nor
+        activates an equality; the live executor still requires confirmed
+        left and right MuJoCo contacts before `_activate_weld` can run.
+        """
+        model, data = self.scene.model, self.scene.data
+        spec = self.executor.pick_specs[backend]
+        body_id = mujoco.mj_name2id(
+            model, mujoco.mjtObj.mjOBJ_BODY, backend
+        )
+        required_names = set(spec.required_contact_geoms)
+        target_geoms = [
+            geom_id for geom_id in sorted(_body_geom_ids(model, body_id))
+            if not required_names or (
+                mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, geom_id)
+                in required_names
+            )
+        ]
+        finger_geoms = tuple(
+            tuple(
+                geom_id for name in sorted(names)
+                if (geom_id := mujoco.mj_name2id(
+                    model, mujoco.mjtObj.mjOBJ_GEOM, name
+                )) >= 0
+            )
+            for names in self.executor.profile.finger_contact_geoms
+        )
+        if not target_geoms or not all(finger_geoms):
+            return BilateralContactPrediction(
+                float("inf"), float("inf"), 0.0, False, 0.0, 0.0,
+                False, False, False,
+            )
+        saved_qpos = data.qpos.copy()
+        saved_qvel = data.qvel.copy()
+        saved_ctrl = data.ctrl.copy()
+        rows = []
+        try:
+            data.qpos[self.executor.arm_qpos] = planned_final_arm_joints
+            target_centre = np.mean(data.geom_xpos[target_geoms], axis=0)
+            for closure in np.linspace(
+                self.executor.profile.open_command,
+                self.executor.profile.closed_command,
+                17,
+            ):
+                data.qpos[self.executor.finger_qpos] = closure
+                mujoco.mj_forward(model, data)
+                pad_centres = tuple(
+                    np.mean(data.geom_xpos[list(ids)], axis=0)
+                    for ids in finger_geoms
+                )
+                jaw_vector = pad_centres[1] - pad_centres[0]
+                separation = float(np.linalg.norm(jaw_vector))
+                jaw_axis = (
+                    jaw_vector / separation
+                    if separation > 1e-9 else np.array((0.0, 1.0, 0.0))
+                )
+                projection = float(
+                    np.dot(target_centre - pad_centres[0], jaw_axis)
+                )
+                closest_axis_point = pad_centres[0] + np.clip(
+                    projection, 0.0, separation
+                ) * jaw_axis
+                lateral = float(np.linalg.norm(target_centre - closest_axis_point))
+                between = bool(-0.003 <= projection <= separation + 0.003)
+                alignment = float(np.clip(1.0 - lateral / 0.04, 0.0, 1.0))
+                distances = []
+                for ids in finger_geoms:
+                    distances.append(min(
+                        float(mujoco.mj_geomDistance(
+                            model, data, pad, target, 0.25, None
+                        ))
+                        for pad in ids for target in target_geoms
+                    ))
+                rows.append((
+                    max(distances), abs(distances[0] - distances[1]),
+                    distances, separation, between, alignment,
+                ))
+            best = min(rows, key=lambda row: (row[0], row[1]))
+            open_separation = rows[0][3]
+            closed_separation = rows[-1][3]
+            available = max(0.0, open_separation - closed_separation)
+            required = max(0.0, open_separation - best[3])
+            left_possible = best[2][0] <= 0.006
+            right_possible = best[2][1] <= 0.006
+            predicted = bool(
+                left_possible and right_possible and best[4] and best[5] >= 0.40
+            )
+            return BilateralContactPrediction(
+                left_pad_target_distance_m=best[2][0],
+                right_pad_target_distance_m=best[2][1],
+                jaw_axis_target_alignment=best[5],
+                target_between_jaws=best[4],
+                available_finger_closure_m=available,
+                required_finger_closure_m=required,
+                predicted_left_contact_possible=left_possible,
+                predicted_right_contact_possible=right_possible,
+                predicted_bilateral_contact=predicted,
+            )
+        finally:
+            data.qpos[:] = saved_qpos
+            data.qvel[:] = saved_qvel
+            data.ctrl[:] = saved_ctrl
+            mujoco.mj_forward(model, data)
+
+    def _evaluate_storage_grasp_candidate(
+        self,
+        backend: str,
+        candidate: GraspPoseCandidate,
+        stance: PlanarStance,
+        stance_index: int,
+    ) -> GraspStanceEvaluation:
+        spec = self.executor.pick_specs[backend]
+        self.executor.pick_specs[backend] = replace(
+            spec, grasp_candidates=(candidate,)
+        )
+        try:
+            analysis = self.executor.direct_pick_plan_feasibility(backend)
+            planned = analysis.get("planned_final_arm_joints")
+            prediction = (
+                self._predict_bilateral_contact(
+                    backend, np.asarray(planned, dtype=float)
+                )
+                if analysis["feasible"] and planned is not None else None
+            )
+            joint_displacement = (
+                float(np.linalg.norm(
+                    np.asarray(planned, dtype=float)
+                    - self.executor.profile.navigation_joints
+                ))
+                if planned is not None else None
+            )
+            prediction_valid = bool(
+                prediction and prediction.predicted_bilateral_contact
+            )
+            return GraspStanceEvaluation(
+                stance=stance,
+                stance_index=stance_index,
+                grasp_candidate_id=candidate.candidate_id,
+                grasp_family=storage_grasp_family(candidate.candidate_id),
+                carry_valid=bool(analysis["feasible"]),
+                approach_valid=bool(analysis["feasible"]),
+                grasp_ik_position_error_m=None,
+                grasp_ik_angle_error_rad=None,
+                collision_free=bool(analysis["feasible"]),
+                minimum_collision_clearance_m=None,
+                contact_prediction=prediction,
+                base_displacement_m=float(math.hypot(
+                    stance.anchor_dx, stance.anchor_dy
+                )),
+                joint_displacement_rad=joint_displacement,
+                valid=bool(analysis["feasible"] and prediction_valid),
+                failure_reason=(
+                    None
+                    if analysis["feasible"] and prediction_valid
+                    else (
+                        "PREDICTED_BILATERAL_CONTACT_FALSE"
+                        if analysis["feasible"] else str(analysis["failure"])
+                    )
+                ),
+            )
+        finally:
+            self.executor.pick_specs[backend] = spec
+
     def _select_storage_manipulation_stance(
         self,
         backend: str,
@@ -1161,6 +1440,17 @@ class KitchenObjectManipulationExecutor:
             self.scene.model, self.scene.data, mobile
         )
         planner = ManipulationStancePlanner()
+        target_position = self.scene.data.xpos[
+            mujoco.mj_name2id(
+                self.scene.model, mujoco.mjtObj.mjOBJ_BODY, backend
+            )
+        ]
+        target_delta = target_position[:2] - np.array((anchor.x, anchor.y))
+        # Base-frame +Y is forward.  This yaw faces that axis toward the live
+        # observed target and only changes deterministic candidate ordering.
+        preferred_yaw = math.atan2(-target_delta[0], target_delta[1])
+
+        coarse_pair_rows: list[GraspStanceEvaluation] = []
 
         def evaluate(stance: PlanarStance, index: int) -> StanceEvaluation:
             path_valid = all(
@@ -1187,35 +1477,140 @@ class KitchenObjectManipulationExecutor:
             mujoco.mj_forward(self.scene.model, self.scene.data)
             self._configure_source_aware_pick_spec(backend, family, source_kind)
             stance_spec = self.executor.pick_specs[backend]
-            self.executor.pick_specs[backend] = replace(
-                stance_spec,
-                grasp_candidates=storage_probe_candidates(
-                    stance_spec.grasp_candidates, source_kind, family
-                ),
+            probes = storage_probe_candidates(
+                stance_spec.grasp_candidates, source_kind, family
             )
-            analysis = self.executor.direct_pick_plan_feasibility(backend)
-            self.executor.pick_specs[backend] = stance_spec
+            pair_rows = tuple(
+                self._evaluate_storage_grasp_candidate(
+                    backend, candidate, stance, index
+                )
+                for candidate in probes
+            )
+            coarse_pair_rows.extend(pair_rows)
+            valid_rows = [row for row in pair_rows if row.valid]
+            families = tuple(sorted({row.grasp_family for row in valid_rows}))
+            best_score = max(
+                (row.predicted_grasp_score for row in valid_rows),
+                default=float("-inf"),
+            )
             return StanceEvaluation(
                 stance=stance,
-                valid=bool(analysis["feasible"]),
+                valid=bool(valid_rows),
                 collision_clearance_m=None,
-                ik_residual_m=None,
-                joint_displacement_rad=None,
+                ik_residual_m=0.0 if valid_rows else None,
+                joint_displacement_rad=min(
+                    (
+                        row.joint_displacement_rad
+                        for row in valid_rows
+                        if row.joint_displacement_rad is not None
+                    ),
+                    default=None,
+                ),
                 candidate_index=index,
-                reason=None if analysis["feasible"] else str(analysis["failure"]),
+                reason=(
+                    None if valid_rows else "; ".join(
+                        row.failure_reason or "INFEASIBLE" for row in pair_rows
+                    )
+                ),
+                feasible_grasp_families=families,
+                feasible_probe_ids=tuple(
+                    row.grasp_candidate_id for row in valid_rows
+                ),
+                predicted_grasp_score=best_score,
             )
 
+        planning_started = time.perf_counter()
         try:
-            selected, evaluations = planner.select(anchor, evaluate)
+            shortlist, evaluations = planner.shortlist(
+                anchor,
+                evaluate,
+                maximum=3,
+                candidate_limit=24,
+                preferred_yaw=preferred_yaw,
+                minimum_evaluations=8,
+            )
+            fine_rows: list[GraspStanceEvaluation] = []
+            for stance_row in shortlist:
+                stance = stance_row.stance
+                self.scene.data.qpos[:] = saved_qpos
+                self.scene.data.qvel[:] = 0.0
+                self.scene.data.qpos[self.executor.base_qpos] = (
+                    world_stance_to_qpos(stance, home_y=mobile.home_y)
+                )
+                self.scene.data.qpos[self.executor.arm_qpos] = (
+                    self.executor.profile.navigation_joints
+                )
+                mujoco.mj_forward(self.scene.model, self.scene.data)
+                self._configure_source_aware_pick_spec(
+                    backend, family, source_kind
+                )
+                candidates = fine_storage_grasp_candidates(
+                    self.executor.pick_specs[backend].grasp_candidates,
+                    family,
+                    stance_row.feasible_grasp_families,
+                )
+                fine_rows.extend(
+                    self._evaluate_storage_grasp_candidate(
+                        backend, candidate, stance, stance_row.candidate_index
+                    )
+                    for candidate in candidates
+                )
+            ranked_pairs = rank_grasp_stance_pairs(tuple(fine_rows))
         finally:
             self.scene.data.qpos[:] = saved_qpos
             self.scene.data.qvel[:] = saved_qvel
             self.scene.data.ctrl[:] = saved_ctrl
             mujoco.mj_forward(self.scene.model, self.scene.data)
+        selected_pair = ranked_pairs[0] if ranked_pairs else None
         audit = {
             "anchor_world": [anchor.x, anchor.y, anchor.yaw],
+            "search_strategy": "COARSE_TO_FINE_RANKED_STANCE_GRASP",
+            "search_limits": {
+                "maximum_coarse_stances": 24,
+                "minimum_coarse_stances_before_shortlist_stop": 8,
+                "maximum_shortlisted_stances": 3,
+                "maximum_physical_attempts": 5,
+            },
             "candidate_count_evaluated": len(evaluations),
+            "preferred_target_facing_yaw_rad": preferred_yaw,
+            "base_valid_count": sum(
+                row.reason != "BASE_PATH_COLLISION" for row in evaluations
+            ),
+            "representative_probes_evaluated": len(coarse_pair_rows),
+            "shortlisted_stance_count": len(shortlist),
+            "full_grasp_candidates_evaluated": len(fine_rows),
+            "planning_wall_clock_s": time.perf_counter() - planning_started,
             "selected": None,
+            "shortlist": [
+                {
+                    "candidate_index": row.candidate_index,
+                    "anchor_delta": [
+                        row.stance.anchor_dx,
+                        row.stance.anchor_dy,
+                        row.stance.anchor_dyaw,
+                    ],
+                    "feasible_grasp_families": list(
+                        row.feasible_grasp_families
+                    ),
+                    "feasible_probe_ids": list(row.feasible_probe_ids),
+                    "predicted_grasp_score": row.predicted_grasp_score,
+                }
+                for row in shortlist
+            ],
+            "ranked_physical_attempts": [
+                {
+                    "rank": rank,
+                    "stance_index": row.stance_index,
+                    "candidate_id": row.grasp_candidate_id,
+                    "grasp_family": row.grasp_family,
+                    "predicted_grasp_score": row.predicted_grasp_score,
+                    "contact_prediction": (
+                        asdict(row.contact_prediction)
+                        if row.contact_prediction else None
+                    ),
+                }
+                for rank, row in enumerate(ranked_pairs[:5], start=1)
+            ],
             "rejections": [
                 {
                     "candidate_index": row.candidate_index,
@@ -1229,16 +1624,22 @@ class KitchenObjectManipulationExecutor:
                 for row in evaluations if not row.valid
             ],
         }
-        if selected is None:
+        if selected_pair is None:
             return audit, None
-        stance = selected.stance
+        stance = selected_pair.stance
         selected_qpos = world_stance_to_qpos(stance, home_y=mobile.home_y)
         audit["selected"] = {
-            "candidate_index": selected.candidate_index,
+            "candidate_index": selected_pair.stance_index,
             "world": [stance.x, stance.y, stance.yaw],
             "anchor_delta": [
                 stance.anchor_dx, stance.anchor_dy, stance.anchor_dyaw
             ],
+            "grasp_candidate_id": selected_pair.grasp_candidate_id,
+            "grasp_family": selected_pair.grasp_family,
+            "contact_prediction": (
+                asdict(selected_pair.contact_prediction)
+                if selected_pair.contact_prediction else None
+            ),
         }
         self.executor.base_stance = anchor_qpos.copy()
         self.executor.base_manipulation_target = selected_qpos.copy()
@@ -1250,8 +1651,36 @@ class KitchenObjectManipulationExecutor:
         self.executor.base_stance = selected_qpos.copy()
         self.executor.base_manipulation_target = selected_qpos.copy()
         self._configure_source_aware_pick_spec(backend, family, source_kind)
+        selected_spec = self.executor.pick_specs[backend]
+        by_id = {
+            candidate.candidate_id: candidate
+            for candidate in selected_spec.grasp_candidates
+        }
+        ranked_at_stance = [
+            row for row in ranked_pairs
+            if row.stance_index == selected_pair.stance_index
+            and row.grasp_candidate_id in by_id
+        ]
+        ranked_ids = [row.grasp_candidate_id for row in ranked_at_stance]
+        ordered_candidates = tuple(by_id[item] for item in ranked_ids) + tuple(
+            candidate for candidate in selected_spec.grasp_candidates
+            if candidate.candidate_id not in set(ranked_ids)
+        )
+        self.executor.pick_specs[backend] = replace(
+            selected_spec, grasp_candidates=ordered_candidates
+        )
         self._settle_navigation_posture()
-        return audit, self.executor.direct_pick_plan_feasibility(backend)
+        selected_only = replace(
+            self.executor.pick_specs[backend],
+            grasp_candidates=(by_id[selected_pair.grasp_candidate_id],),
+        )
+        ordered_spec = self.executor.pick_specs[backend]
+        self.executor.pick_specs[backend] = selected_only
+        try:
+            analysis = self.executor.direct_pick_plan_feasibility(backend)
+        finally:
+            self.executor.pick_specs[backend] = ordered_spec
+        return audit, analysis
 
     @staticmethod
     def _target_dict(target: PlacementTarget) -> dict[str, Any]:
@@ -1647,6 +2076,29 @@ class KitchenObjectManipulationExecutor:
                     context_row["source_kind"],
                 )
             )
+            if direct_grasp_analysis is None:
+                return PhysicalPickResult(
+                    generic_object_id,
+                    backend,
+                    context_row,
+                    required.value,
+                    binding["grasp_family"],
+                    False,
+                    ObjectExecutionFailureCode.DIRECT_GRASP_INFEASIBLE.value,
+                    ObjectExecutionFailureCode.DIRECT_GRASP_INFEASIBLE.value,
+                    "No ranked storage stance/grasp pair passed geometric planning",
+                    0,
+                    time.perf_counter() - started,
+                    False,
+                    (),
+                    (),
+                    None,
+                    None,
+                    False,
+                    None,
+                    direct_grasp_analysis=None,
+                    manipulation_stance=manipulation_stance,
+                )
         if (
             context_row["source_kind"] == "DRAWER"
             and binding["grasp_family"] == "UTENSIL"
@@ -1833,7 +2285,20 @@ class KitchenObjectManipulationExecutor:
                     manipulation_stance=manipulation_stance,
                 )
         if not presentation_grasp_adopted:
-            self.executor.request_pick(backend)
+            if (
+                context_row["source_kind"] in {"CUPBOARD", "BOX"}
+                and direct_grasp_analysis
+                and direct_grasp_analysis.get("feasible")
+                and direct_grasp_analysis.get("selected_candidate_id")
+            ):
+                self.executor.request_preplanned_pick(
+                    backend,
+                    str(direct_grasp_analysis["selected_candidate_id"]),
+                    direct_grasp_analysis["planned_waypoints"],
+                    direct_grasp_analysis["planned_retreat_waypoints"],
+                )
+            else:
+                self.executor.request_pick(backend)
         try:
             steps = self._step_until_stable_mode()
         except RuntimeError as error:
