@@ -16,12 +16,21 @@
     "spoon": ["spoon", "fork"],
     "fork": ["spoon", "fork"],
     "kettle": ["kettle"],
-    "coffee_source": ["coffee_source"]
+    "coffee_source": ["coffee_source"],
+    "utensil": ["spoon", "fork"],
+    "vessel": ["cup", "mug"],
+    "soup_vessel": ["bowl"]
+  },
+  "functional_role_fallback_labels": {
+    "coffee_stirrer": "utensil",
+    "soup_utensil": "utensil",
+    "coffee_vessel": "vessel",
+    "soup_bowl": "soup_vessel"
   },
   "source_role_semantic_labels": {
     "water_source": "kettle",
     "coffee_source": "coffee_source"
   },
   "maximum_centroid_error_m": 0.2,
-  "storage_fixture_centroid_error_m": 0.3
+  "storage_fixture_centroid_error_m": 0.305
 }

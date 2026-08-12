@@ -134,10 +134,17 @@ def build_phase_b_inventory(
     for object_id in relevant:
         record = registry["objects"][object_id]
         context = source_context(object_id, record)
+        semantic_label = forced_semantics.get(object_id) or validated_semantic_label(record)
+        if semantic_label is None:
+            fallback = config.get("functional_role_fallback_labels", {})
+            semantic_label = next(
+                (fallback[role] for role in sorted(roles.get(object_id, ())) if role in fallback),
+                None,
+            )
         rows.append(
             {
                 "generic_object_id": object_id,
-                "semantic_label": forced_semantics.get(object_id) or validated_semantic_label(record),
+                "semantic_label": semantic_label,
                 "selected_functions": sorted(roles.get(object_id, ())),
                 "phase2_usage": usage.get(object_id, []),
                 "observed_centroid_world_m": record["centroid_world_m"]["value"],

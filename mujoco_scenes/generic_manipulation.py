@@ -92,6 +92,8 @@ class SimplePickSpec:
     ik_restart_offsets: tuple[tuple[float, ...], ...] = ()
     intermediate_ik_position_tolerance: float | None = None
     intermediate_ik_angle_tolerance_rad: float | None = None
+    carry_ik_position_tolerance: float | None = None
+    carry_ik_angle_tolerance_rad: float | None = None
     approach_offset_world_m: tuple[float, float, float] | None = None
     approach_route_offsets_world_m: tuple[tuple[float, float, float], ...] = ()
     approach_rotation_world: np.ndarray | None = None
@@ -1248,6 +1250,10 @@ class CalibratedPickPlaceExecutor:
             if active_spec and active_spec.ik_angle_tolerance_rad is not None
             else self.ik_angle_tolerance
         )
+        if active_spec and active_spec.carry_ik_position_tolerance is not None:
+            position_tolerance = active_spec.carry_ik_position_tolerance
+        if active_spec and active_spec.carry_ik_angle_tolerance_rad is not None:
+            angle_tolerance = active_spec.carry_ik_angle_tolerance_rad
         if position_error > position_tolerance or angle_error > angle_tolerance:
             raise RuntimeError(
                 f"Could not calibrate carry pose: {position_error * 100:.1f} cm, "
@@ -2222,6 +2228,47 @@ class CalibratedPickPlaceExecutor:
                     f"Pick {self.target_object}: closing until bilateral contact"
                 )
                 return
+            # Static actuator/gravity error can leave the live gripper a few
+            # millimetres away from an otherwise valid planned pose.  Refine
+            # from the *current* physical arm state rather than waiting on the
+            # same stale command.  The correction must still pass the normal
+            # robot/environment segment collision checker, and contact/weld
+            # authorization remains unchanged.
+            if (
+                self.preclose_settle_ticks % 20 == 0
+                and self.planned_grasp_position_world is not None
+                and self.planned_grasp_rotation_world is not None
+                and self.configuration_checker is not None
+            ):
+                current = self._current_arm()
+                active_spec = self.pick_specs.get(self.target_object)
+                ik = ProfiledIK(
+                    self.model,
+                    self.data,
+                    self.profile,
+                    orientation_weight=(
+                        active_spec.ik_orientation_weight
+                        if active_spec is not None else 0.30
+                    ),
+                )
+                correction, _, _ = ik.solve(
+                    self.planned_grasp_position_world,
+                    current,
+                    self.planned_grasp_rotation_world,
+                )
+                # Compensate the steady-state actuator deflection observed at
+                # the live pose. This is bounded feedback on robot joints,
+                # not a target-object pose write or tolerance relaxation.
+                correction = current + 2.0 * (correction - current)
+                valid, _ = self.configuration_checker.segment_valid(
+                    current,
+                    correction,
+                    frozenset((self.target_body_id,)),
+                )
+                if valid:
+                    self.waypoints[-1] = JointWaypoint(
+                        correction.copy(), "Cartesian pre-close correction"
+                    )
             if self.preclose_settle_ticks >= PRECLOSE_TIMEOUT_TICKS:
                 self._fail(
                     "PRE_CLOSE_CARTESIAN_CONVERGENCE_FAILED: "

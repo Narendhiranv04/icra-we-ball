@@ -48,6 +48,30 @@ def test_inventory_is_driven_by_roles_and_plan_without_backend_binding():
     assert not inventory["planner_received_backend_names"]
 
 
+def test_missing_detector_label_uses_functional_role_family_not_backend_name():
+    registry = {
+        "scene_name": "scene",
+        "objects": {"generic_tool": _record(None, [0, 0, 0], "D1")},
+    }
+    assignments = {
+        "soup_serving": [{
+            "tool_object_id": "generic_tool",
+            "target_object_id": "generic_bowl",
+        }],
+    }
+    inventory = build_phase_b_inventory(
+        registry,
+        assignments,
+        [{"step": 1, "action": "pick", "arguments": ["generic_tool"]}],
+    )
+    assert inventory["objects"][0]["semantic_label"] == "utensil"
+    resolved = KitchenExecutionEntityResolver().resolve(
+        inventory,
+        [ExecutionCandidate("renamed_backend", "spoon", "UTENSIL", "D1", (0, 0, 0))],
+    )
+    assert resolved["all_resolved"]
+
+
 def test_resolution_is_deterministic_one_to_one_and_centroid_based():
     inventory = {
         "scene_name": "scene",

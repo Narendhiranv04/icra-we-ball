@@ -759,8 +759,12 @@ class StorageGraspCandidateGenerator:
                         grasp_site_local_position_m=tuple(map(float, local)),
                         target_rotation_world=rotation.copy(),
                         carry_rotation_world=carry_rotation.copy(),
-                        approach_rotation_world=carry_rotation.copy(),
-                        position_first_approach=True,
+                        # Keep the wrist in the final frontal pinch frame
+                        # while entering the aperture; rotating from the
+                        # carry frame inside the cabinet sweeps finger tips
+                        # through shelves and doors.
+                        approach_rotation_world=rotation.copy(),
+                        position_first_approach=False,
                         approach_clearance_m=0.10,
                         approach_offset_world_m=(0.0, -0.10, 0.0),
                         predicted_contact_geom_names=(left_name, right_name),
@@ -810,8 +814,8 @@ class StorageGraspCandidateGenerator:
                             grasp_site_local_position_m=local,
                             target_rotation_world=frontal.copy(),
                             carry_rotation_world=carry_rotation.copy(),
-                            approach_rotation_world=carry_rotation.copy(),
-                            position_first_approach=True,
+                            approach_rotation_world=frontal.copy(),
+                            position_first_approach=False,
                             approach_clearance_m=0.10,
                             approach_offset_world_m=(0.0, -0.10, 0.0),
                         )
@@ -842,8 +846,8 @@ class StorageGraspCandidateGenerator:
                                 grasp_site_local_position_m=local,
                                 target_rotation_world=rotation.copy(),
                                 carry_rotation_world=carry_rotation.copy(),
-                                approach_rotation_world=carry_rotation.copy(),
-                                position_first_approach=True,
+                                approach_rotation_world=rotation.copy(),
+                                position_first_approach=False,
                                 approach_clearance_m=0.10,
                                 approach_offset_world_m=(0.0, -0.10, 0.0),
                             )
@@ -858,12 +862,16 @@ class StorageGraspCandidateGenerator:
         grasp_site_id: int,
         carry_rotation: np.ndarray,
     ) -> tuple[GraspPoseCandidate, ...]:
-        local = tuple(map(float, scene.model.site_pos[grasp_site_id]))
+        origin = scene.model.site_pos[grasp_site_id].copy()
         top = manipulation_profile("google").top_down_rotation
         return tuple(
             GraspPoseCandidate(
-                candidate_id=f"box_top_jaw_yaw{yaw_degrees:+d}",
-                grasp_site_local_position_m=local,
+                candidate_id=(
+                    f"box_top_jaw_yaw{yaw_degrees:+d}_z{height:+.3f}"
+                ),
+                grasp_site_local_position_m=tuple(map(
+                    float, origin + np.array((0.0, 0.0, height))
+                )),
                 target_rotation_world=yaw_rotation(np.deg2rad(yaw_degrees)) @ top,
                 carry_rotation_world=carry_rotation.copy(),
                 approach_rotation_world=carry_rotation.copy(),
@@ -874,6 +882,7 @@ class StorageGraspCandidateGenerator:
             # +60 degrees is the least-obstructed direct top grasp from the
             # shared RIGHT_SIDE anchor; retain the remaining deterministic
             # alternatives for changed layouts.
+            for height in (0.015, 0.025, 0.005, 0.0)
             for yaw_degrees in (60, 30, 0, -30, -60, 90)
         )
 
@@ -893,6 +902,7 @@ def storage_probe_candidates(
         ("CUPBOARD", "VESSEL"): (
             "cupboard_vessel_top_yaw+30",
             "cupboard_vessel_diameter_+0.000_+0.000",
+            "cupboard_front_rim_1_jawroll+0_wrist0",
             "cupboard_front_rim_2_jawroll+0_wrist0",
         ),
         ("CUPBOARD", "UTENSIL"): (
@@ -901,10 +911,15 @@ def storage_probe_candidates(
         ),
         ("CUPBOARD", "BOWL"): (
             "cupboard_front_rim_0_jawroll+20_wrist0",
+            "cupboard_front_rim_1_jawroll+0_wrist0",
             "cupboard_front_rim_2_jawroll+0_wrist0",
         ),
-        ("BOX", "BOWL"): ("box_top_jaw_yaw+60", "box_top_jaw_yaw+30"),
-        ("BOX", "VESSEL"): ("box_top_jaw_yaw+60", "box_top_jaw_yaw+30"),
+        ("BOX", "BOWL"): (
+            "box_top_jaw_yaw+60_z+0.015", "box_top_jaw_yaw+30_z+0.015",
+        ),
+        ("BOX", "VESSEL"): (
+            "box_top_jaw_yaw+60_z+0.015", "box_top_jaw_yaw+30_z+0.015",
+        ),
     }.get((source_kind, family), ())
     by_id = {candidate.candidate_id: candidate for candidate in candidates}
     selected = tuple(by_id[item] for item in identifiers if item in by_id)
@@ -1041,10 +1056,25 @@ def make_kitchen_pick_specs(
                 ((np.cos(angle), -np.sin(angle), 0.0),
                  (np.sin(angle), np.cos(angle), 0.0), (0.0, 0.0, 1.0))
             ) @ manipulation_profile("google").top_down_rotation
+        kettle_candidates = ()
+        if family == "KETTLE":
+            # The compact kettle's visual handle sits inside its conservative
+            # whole-body collision envelope. A nominal handle pinch therefore
+            # contacts that shell unilaterally first. Use a symmetric upper-
+            # body pinch against the collision-active kettle shell.
+            local = np.array((0.0, 0.0, 0.040), dtype=float)
+            kettle_candidates = (GraspPoseCandidate(
+                candidate_id="kettle_upper_body_shell",
+                grasp_site_local_position_m=local,
+                target_rotation_world=rotation.copy(),
+                approach_clearance_m=0.12,
+            ),)
         utensil_reference = GOOGLE_PICK_SPECS["spoon"] if family == "UTENSIL" else None
         grasp_offset = {
             "UTENSIL": 0.020,
-            "KETTLE": 0.008,
+            # The Google finger-pad centres sit above the commanded grip site
+            # in this top-down frame. Centre them on the upper body shell.
+            "KETTLE": -0.020,
             "JAR_SOURCE": 0.011,
         }.get(family, 0.0)
         collision_geom_names = tuple(
@@ -1061,7 +1091,8 @@ def make_kitchen_pick_specs(
             )
         elif family == "KETTLE":
             required_contact_geoms = tuple(
-                name for name in collision_geom_names if "handle_collision" in name
+                name for name in collision_geom_names
+                if name.endswith("_kettle_collision")
             )
         elif family == "JAR_SOURCE":
             required_contact_geoms = tuple(
@@ -1105,7 +1136,7 @@ def make_kitchen_pick_specs(
                     mujoco.mj_name2id(
                         scene.model, mujoco.mjtObj.mjOBJ_SITE, f"{body}_grasp"
                     ),
-                ) if family == "JAR_SOURCE" else ()
+                ) if family == "JAR_SOURCE" else kettle_candidates
             ),
             ik_restart_offsets=(
                 (
@@ -1121,12 +1152,20 @@ def make_kitchen_pick_specs(
             intermediate_ik_position_tolerance=(
                 0.030
                 if observed["source_context"]["source_kind"] == "DRAWER"
+                else 0.015 if family == "UTENSIL"
                 else 0.025 if family == "JAR_SOURCE" else None
             ),
             intermediate_ik_angle_tolerance_rad=(
                 np.deg2rad(4.0)
                 if observed["source_context"]["source_kind"] == "DRAWER"
+                else np.deg2rad(4.0) if family == "UTENSIL"
                 else np.deg2rad(3.0) if family == "JAR_SOURCE" else None
+            ),
+            # The carry waypoint is clearance-only; the final grasp remains
+            # subject to the strict family IK and Cartesian pre-close gates.
+            carry_ik_position_tolerance=0.030 if family == "UTENSIL" else None,
+            carry_ik_angle_tolerance_rad=(
+                np.deg2rad(7.0) if family == "UTENSIL" else None
             ),
         )
     return specs
@@ -1458,6 +1497,15 @@ class KitchenObjectManipulationExecutor:
             # objective toward the configured gripper attitude; the existing
             # position/angle acceptance thresholds remain unchanged.
             ik_orientation_weight=0.45,
+            # Deep cupboard reaches are a little under-actuated at the wrist:
+            # allow a small Cartesian terminal residual during planning, then
+            # retain the existing live pre-close correction and bilateral
+            # target-contact acceptance as the physical success gates.
+            ik_position_tolerance=(
+                0.018
+                if source_kind == "CUPBOARD" and family in {"BOWL", "VESSEL"}
+                else spec.ik_position_tolerance
+            ),
             intermediate_ik_position_tolerance=(
                 # This applies only to the collision-checked non-contact
                 # aperture waypoint; the final grasp retains the strict
@@ -1789,13 +1837,20 @@ class KitchenObjectManipulationExecutor:
         # Base-frame +Y is forward.  This yaw faces that axis toward the live
         # observed target and only changes deterministic candidate ordering.
         preferred_yaw = math.atan2(-target_delta[0], target_delta[1])
-        preferred_offset = (
-            (-0.10, -0.05)
-            if source_kind == "CUPBOARD"
-            and family == "UTENSIL"
-            and float(target_position[0]) < 0.50
-            else None
-        )
+        preferred_offset = None
+        if source_kind == "CUPBOARD":
+            if family == "UTENSIL" and float(target_position[0]) < 0.50:
+                preferred_offset = (-0.10, -0.05)
+            elif family in {"BOWL", "VESSEL"}:
+                # Start the bounded stance search with a modest translation
+                # toward the observed object.  At deep shelves a yaw-only
+                # prefix exhausts the coarse budget while leaving the wrist
+                # just outside its Cartesian reach.
+                target_distance = float(np.linalg.norm(target_delta))
+                if target_distance > 1e-9:
+                    preferred_offset = tuple(
+                        map(float, 0.10 * target_delta / target_distance)
+                    )
 
         coarse_pair_rows: list[GraspStanceEvaluation] = []
 
@@ -1904,7 +1959,10 @@ class KitchenObjectManipulationExecutor:
                 fine_rows.extend(
                     self._evaluate_storage_grasp_candidate(
                         backend, candidate, stance, stance_row.candidate_index,
-                        require_predicted_contact=True,
+                        # Prediction ranks candidates but cannot be the
+                        # physical acceptance gate. Real bilateral target
+                        # contact remains mandatory before weld activation.
+                        require_predicted_contact=False,
                     )
                     for candidate in candidates
                 )
@@ -2390,7 +2448,7 @@ class KitchenObjectManipulationExecutor:
             lateral_limit = (
                 0.28
                 if context_row["source_kind"] == "DRAWER"
-                else 0.23 if binding["grasp_family"] == "JAR_SOURCE" else 0.18
+                else 0.35 if binding["grasp_family"] == "JAR_SOURCE" else 0.18
             )
             lateral = float(np.clip(-before_pos[0], -lateral_limit, lateral_limit))
             local = np.array((family_forward, lateral, 0.0))
@@ -2727,6 +2785,28 @@ class KitchenObjectManipulationExecutor:
                 self.executor.preclose_telemetry
             )
         if self.executor.mode != "holding":
+            if direct_grasp_analysis is None:
+                live_target_contacts = []
+                for contact in self.scene.data.contact:
+                    body1 = self.scene.model.geom_bodyid[contact.geom1]
+                    body2 = self.scene.model.geom_bodyid[contact.geom2]
+                    if self.executor.target_body_id not in {body1, body2}:
+                        continue
+                    live_target_contacts.append([
+                        mujoco.mj_id2name(
+                            self.scene.model, mujoco.mjtObj.mjOBJ_GEOM,
+                            contact.geom1,
+                        ),
+                        mujoco.mj_id2name(
+                            self.scene.model, mujoco.mjtObj.mjOBJ_GEOM,
+                            contact.geom2,
+                        ),
+                    ])
+                direct_grasp_analysis = {
+                    "preclose_telemetry": self.executor.preclose_telemetry,
+                    "selected_candidate_id": self.executor.selected_grasp_candidate_id,
+                    "terminal_target_contacts": live_target_contacts,
+                }
             return PhysicalPickResult(generic_object_id, backend, context_row, required.value,
                 binding["grasp_family"], False,
                 "REGRASP_FAILED" if presentation_grasp_adopted else "GRASP_FAILED",
