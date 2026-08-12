@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
 from pathlib import Path
 
 from .kitchen_execution_entities import (
@@ -49,6 +50,10 @@ def main() -> None:
     parser.add_argument("--pick-object-id")
     parser.add_argument("--place-destination")
     parser.add_argument("--execute", action="store_true")
+    parser.add_argument(
+        "--viewer", action="store_true",
+        help="Show a synchronized MuJoCo viewer during the physical PICK/PLACE",
+    )
     parser.add_argument("--stop-before-phase-c", action="store_true")
     args = parser.parse_args()
 
@@ -57,6 +62,17 @@ def main() -> None:
     plan = _read(args.phase2_run / "generated_plan.json")
     inventory = build_phase_b_inventory(registry, assignments, plan)
     scene = KitchenScene(inventory["scene_name"], robot=args.robot)
+    viewer = None
+    if args.viewer:
+        import mujoco.viewer
+
+        viewer = mujoco.viewer.launch_passive(scene.model, scene.data)
+        mujoco.mjv_defaultFreeCamera(scene.model, viewer.cam)
+
+    def sync_viewer():
+        if viewer is not None and viewer.is_running():
+            viewer.sync()
+
     resolver = KitchenExecutionEntityResolver()
     observed_regions = {
         row["source_context"]["source_container"]
@@ -89,7 +105,10 @@ def main() -> None:
                 "status": "PLAN_ONLY",
             }
         else:
-            dispatcher = KitchenPhaseBExecutionDispatcher(scene, inventory, resolution)
+            dispatcher = KitchenPhaseBExecutionDispatcher(
+                scene, inventory, resolution,
+                step_callback=sync_viewer if viewer is not None else None,
+            )
             result = dispatcher.pick(args.pick_object_id)
             summary["pick"] = result
             _write(args.output_dir / "pick_result.json", summary["pick"])
@@ -105,7 +124,10 @@ def main() -> None:
                 summary["execution_success"] = True
         _write(args.output_dir / "validation_summary.json", summary)
     elif args.stop_before_phase_c:
-        dispatcher = KitchenPhaseBExecutionDispatcher(scene, inventory, resolution)
+        dispatcher = KitchenPhaseBExecutionDispatcher(
+            scene, inventory, resolution,
+            step_callback=sync_viewer if viewer is not None else None,
+        )
         actions = []
         if args.execute:
             for action in plan:
@@ -130,6 +152,11 @@ def main() -> None:
         _write(args.output_dir / "phase2_adapter_results.json", actions)
         _write(args.output_dir / "validation_summary.json", summary)
     print(json.dumps(summary, indent=2))
+    if viewer is not None:
+        print("Viewer open; close the MuJoCo window to finish.", flush=True)
+        while viewer.is_running():
+            viewer.sync()
+            time.sleep(0.05)
     if not resolution["all_resolved"] or (
         args.pick_object_id and args.execute and not summary["pick"]["success"]
     ) or (

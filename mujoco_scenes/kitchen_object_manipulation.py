@@ -24,6 +24,16 @@ from .living_room_mobile_execution import (
     oriented_rectangles_clearance,
     rectangle_inside_observed_support,
 )
+from .manipulation_stance import (
+    ManipulationStancePlanner,
+    PlanarStance,
+    StanceEvaluation,
+    base_relative_pose_to_world,
+    qpos_to_world_stance,
+    world_stance_to_qpos,
+    yaw_rotation,
+)
+from .mobile_motion import MuJoCoBaseCollisionChecker
 from .robot_profiles import manipulation_profile
 
 
@@ -31,7 +41,7 @@ PHASE_B_MOUNT_ALLOWANCES = {
     # Menagerie visual shells overlap at the concentric shoulder mount.  This
     # execution-local allowance is bounded to that mechanical pair; all other
     # self-collisions remain strict.
-    frozenset(("google:base_link", "google:link_shoulder")): -0.060,
+    frozenset(("google:base_link", "google:link_shoulder")): -0.0615,
 }
 
 
@@ -101,6 +111,9 @@ class PhysicalPickResult:
     target_contact_geoms: tuple[str, ...] = ()
     presentation: dict[str, Any] | None = None
     direct_grasp_analysis: dict[str, Any] | None = None
+    manipulation_stance: dict[str, Any] | None = None
+    extraction_strategy: str | None = None
+    source_clearance_verified: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -239,6 +252,65 @@ class UtensilGraspCandidateGenerator:
         handle_yaw = float(np.arctan2(world_axis[1], world_axis[0]))
         profile = manipulation_profile("google")
         candidates = []
+        if source_kind == "CUPBOARD":
+            # Side workspaces put the mobile base to the left/right of the
+            # cupboard.  Prefer an approach from that clear side.  The jaws
+            # close along world Y, perpendicular to the approximately world-X
+            # utensil handle, while local Z points from the robot to target.
+            robot_x = float(scene.data.xpos[
+                mujoco.mj_name2id(
+                    scene.model, mujoco.mjtObj.mjOBJ_BODY, "google:base_link"
+                ), 0
+            ])
+            approach_sign = 1.0 if robot_x >= scene.data.xpos[body_id, 0] else -1.0
+            side_rotation = np.array(
+                ((0.0, 0.0, -approach_sign),
+                 (0.0, 1.0, 0.0),
+                 (approach_sign, 0.0, 0.0))
+            )
+            for fraction in (0.65, 0.75, 0.55, 0.85):
+                for height in (0.010, 0.005, 0.015, 0.0):
+                    position = near + fraction * (far - near)
+                    position[2] += height
+                    candidates.append(
+                        GraspPoseCandidate(
+                            candidate_id=(
+                                "cupboard_side_horizontal_jaws_"
+                                f"{int(fraction * 100)}pct_"
+                                f"z{height:+.3f}"
+                            ),
+                            grasp_site_local_position_m=tuple(map(float, position)),
+                            target_rotation_world=side_rotation,
+                            approach_clearance_m=0.060,
+                            approach_offset_world_m=(
+                                0.10 * approach_sign, 0.0, 0.0
+                            ),
+                        )
+                    )
+            # Front-accessible shelf utensils have little overhead clearance.
+            # Approach through the aperture along +world Y while the jaws
+            # close vertically across the thin handle.  The target positions
+            # still come exclusively from the live handle geometry.
+            frontal_vertical_jaws = np.array(
+                ((-1.0, 0.0, 0.0), (0.0, 0.0, 1.0), (0.0, 1.0, 0.0))
+            )
+            for fraction in (0.65, 0.75, 0.55, 0.85):
+                for height in (0.010, 0.005, 0.015, 0.0):
+                    position = near + fraction * (far - near)
+                    position[2] += height
+                    candidates.append(
+                        GraspPoseCandidate(
+                            candidate_id=(
+                                "cupboard_front_vertical_jaws_"
+                                f"{int(fraction * 100)}pct_"
+                                f"z{height:+.3f}"
+                            ),
+                            grasp_site_local_position_m=tuple(map(float, position)),
+                            target_rotation_world=frontal_vertical_jaws,
+                            approach_clearance_m=0.060,
+                            approach_offset_world_m=(0.0, -0.10, 0.0),
+                        )
+                    )
         if source_kind == "DRAWER":
             # A utensil lying low in a drawer cannot always be pinched from
             # above without the finger tips entering the tray.  These two
@@ -451,6 +523,150 @@ class JarGraspCandidateGenerator:
                     )
                 )
         return tuple(candidates)
+
+
+class StorageGraspCandidateGenerator:
+    """Bounded source-aware vessel/bowl grasps without object-name tuning."""
+
+    @staticmethod
+    def _local_point(scene, body_id: int, world_offset: np.ndarray) -> tuple[float, ...]:
+        body_rotation = scene.data.xmat[body_id].reshape(3, 3)
+        return tuple(map(float, body_rotation.T @ world_offset))
+
+    @classmethod
+    def cupboard(
+        cls, scene, body_id: int, carry_rotation: np.ndarray,
+        family: str,
+    ) -> tuple[GraspPoseCandidate, ...]:
+        # Local gripper Z points through the aperture (+world Y); local Y is
+        # the jaw-closing direction across the accessible front/diagonal rim.
+        frontal = np.array(
+            ((0.0, 1.0, 0.0), (0.0, 0.0, 1.0), (1.0, 0.0, 0.0))
+        )
+        rows = []
+        position_index = 0
+        if family == "VESSEL":
+            top_down = manipulation_profile("google").top_down_rotation
+            local_centre = cls._local_point(
+                scene, body_id, np.zeros(3, dtype=float)
+            )
+            for yaw_degrees in (0, 30, -30, 60, -60, 90):
+                rows.append(
+                    GraspPoseCandidate(
+                        candidate_id=f"cupboard_vessel_top_yaw{yaw_degrees:+d}",
+                        grasp_site_local_position_m=local_centre,
+                        target_rotation_world=(
+                            yaw_rotation(np.deg2rad(yaw_degrees)) @ top_down
+                        ),
+                        carry_rotation_world=carry_rotation.copy(),
+                        approach_clearance_m=0.10,
+                    )
+                )
+            # A narrow cup is pinched across its diameter, not at one rim
+            # corner.  The centre/near-centre sites are derived from its live
+            # body frame and approached through the open cupboard front.
+            for x_offset in (0.0, 0.010, -0.010):
+                for z_offset in (0.0, 0.010, -0.010):
+                    local = cls._local_point(
+                        scene, body_id, np.array((x_offset, 0.0, z_offset))
+                    )
+                    rows.append(
+                        GraspPoseCandidate(
+                            candidate_id=(
+                                f"cupboard_vessel_diameter_{x_offset:+.3f}_"
+                                f"{z_offset:+.3f}"
+                            ),
+                            grasp_site_local_position_m=local,
+                            target_rotation_world=frontal.copy(),
+                            carry_rotation_world=carry_rotation.copy(),
+                            approach_clearance_m=0.10,
+                            approach_offset_world_m=(0.0, -0.10, 0.0),
+                        )
+                    )
+        # Prefer the diagonal that proved collision-free at C1, then cover the
+        # symmetric and central front rim deterministically for C2.
+        for x_offset in (0.035, -0.035, 0.0):
+            for z_offset in (0.040, 0.025, 0.055):
+                local = cls._local_point(
+                    scene, body_id, np.array((x_offset, -0.050, z_offset))
+                )
+                for jaw_roll_degrees in (20, 10, 0, -10, -20):
+                    nominal_rotation = frontal @ yaw_rotation(
+                        np.deg2rad(jaw_roll_degrees)
+                    )
+                    for wrist_equivalent in (0, 180):
+                        rotation = (
+                            yaw_rotation(np.pi) @ nominal_rotation
+                            if wrist_equivalent else nominal_rotation
+                        )
+                        rows.append(
+                            GraspPoseCandidate(
+                                candidate_id=(
+                                    f"cupboard_front_rim_{position_index}_"
+                                    f"jawroll{jaw_roll_degrees:+d}_"
+                                    f"wrist{wrist_equivalent}"
+                                ),
+                                grasp_site_local_position_m=local,
+                                target_rotation_world=rotation.copy(),
+                                carry_rotation_world=carry_rotation.copy(),
+                                approach_clearance_m=0.10,
+                                approach_offset_world_m=(0.0, -0.10, 0.0),
+                            )
+                        )
+                position_index += 1
+        return tuple(rows)
+
+    @classmethod
+    def box(
+        cls,
+        scene,
+        grasp_site_id: int,
+        carry_rotation: np.ndarray,
+    ) -> tuple[GraspPoseCandidate, ...]:
+        local = tuple(map(float, scene.model.site_pos[grasp_site_id]))
+        top = manipulation_profile("google").top_down_rotation
+        return tuple(
+            GraspPoseCandidate(
+                candidate_id=f"box_top_jaw_yaw{yaw_degrees:+d}",
+                grasp_site_local_position_m=local,
+                target_rotation_world=yaw_rotation(np.deg2rad(yaw_degrees)) @ top,
+                carry_rotation_world=carry_rotation.copy(),
+                approach_clearance_m=0.10,
+                approach_route_offsets_world_m=((0.0, 0.0, 0.18),),
+            )
+            # +60 degrees is the least-obstructed direct top grasp from the
+            # shared RIGHT_SIDE anchor; retain the remaining deterministic
+            # alternatives for changed layouts.
+            for yaw_degrees in (60, 30, 0, -30, -60, 90)
+        )
+
+
+def storage_probe_candidates(
+    candidates: tuple[GraspPoseCandidate, ...],
+    source_kind: str,
+    family: str,
+) -> tuple[GraspPoseCandidate, ...]:
+    """Return a compact, family-aware stance-feasibility probe set.
+
+    This never changes physical acceptance.  It prevents multiplying every
+    local base stance by hundreds of near-duplicate handle-height variants;
+    the full candidate set is restored after selecting a stance.
+    """
+    prefixes = {
+        ("CUPBOARD", "VESSEL"): ("cupboard_vessel_top_",),
+        ("CUPBOARD", "UTENSIL"): (
+            "cupboard_side_horizontal_jaws_65pct_",
+            "cupboard_front_vertical_jaws_65pct_",
+        ),
+        ("CUPBOARD", "BOWL"): ("cupboard_front_rim_0_",),
+        ("BOX", "BOWL"): ("box_top_jaw_",),
+        ("BOX", "VESSEL"): ("box_top_jaw_",),
+    }.get((source_kind, family), ())
+    selected = tuple(
+        candidate for candidate in candidates
+        if any(candidate.candidate_id.startswith(prefix) for prefix in prefixes)
+    )
+    return selected or candidates[:1]
 
 
 def make_kitchen_pick_specs(
@@ -804,6 +1020,10 @@ class KitchenObjectManipulationExecutor:
             pick_specs_override=specs,
             calibrated_objects_override=tuple(specs),
             base_stance=np.zeros(3),
+            # Storage trajectories pass close to the legitimate concentric
+            # shoulder-mount shell.  Slower actuator tracking prevents
+            # overshoot across the unchanged collision boundary.
+            arm_command_speed=0.60,
             mounting_allowances=PHASE_B_MOUNT_ALLOWANCES,
         )
 
@@ -812,6 +1032,226 @@ class KitchenObjectManipulationExecutor:
         base = self.executor.data.qpos[self.executor.base_qpos].copy()
         self.executor.base_stance = base
         self.executor.base_manipulation_target = base.copy()
+
+    def _configure_source_aware_pick_spec(
+        self,
+        backend: str,
+        family: str,
+        source_kind: str,
+    ) -> None:
+        """Express carry in the live robot base frame and add storage grasps."""
+        if source_kind not in {"CUPBOARD", "BOX"}:
+            return
+        profile = manipulation_profile("google")
+        from .robot_profiles import mobile_profile
+
+        mobile = mobile_profile("google")
+        stance = qpos_to_world_stance(
+            self.scene.data.qpos[self.executor.base_qpos],
+            home_y=mobile.home_y,
+        )
+        # The calibrated HOME carry is 47 cm ahead of the robot base.  Store
+        # that invariant in base coordinates so LEFT/RIGHT yaw rotates both
+        # its position and orientation into the current workspace.
+        carry_position, carry_rotation = base_relative_pose_to_world(
+            stance,
+            np.array((0.0, 0.47, 0.94)),
+            profile.top_down_rotation,
+        )
+        spec = self.executor.pick_specs[backend]
+        candidates = spec.grasp_candidates
+        body_id = mujoco.mj_name2id(
+            self.scene.model, mujoco.mjtObj.mjOBJ_BODY, backend
+        )
+        site_id = mujoco.mj_name2id(
+            self.scene.model, mujoco.mjtObj.mjOBJ_SITE, f"{backend}_grasp"
+        )
+        if source_kind == "CUPBOARD" and family in {"BOWL", "VESSEL"}:
+            candidates = StorageGraspCandidateGenerator.cupboard(
+                self.scene, body_id, carry_rotation, family
+            )
+        elif source_kind == "BOX" and family in {"BOWL", "VESSEL"}:
+            candidates = StorageGraspCandidateGenerator.box(
+                self.scene, site_id, carry_rotation
+            )
+        elif candidates:
+            # Existing family-specific candidates may carry a HOME-world
+            # orientation.  Preserve their measured grasp poses but express
+            # the post-extraction carry orientation in the selected base
+            # frame for every storage family.
+            candidates = tuple(
+                replace(candidate, carry_rotation_world=carry_rotation.copy())
+                for candidate in candidates
+            )
+        self.executor.pick_specs[backend] = replace(
+            spec,
+            carry_position=carry_position,
+            home_seed=profile.home_seed.copy(),
+            grasp_candidates=candidates,
+            intermediate_ik_position_tolerance=(
+                # This applies only to the collision-checked non-contact
+                # aperture waypoint; the final grasp retains the strict
+                # executor tolerance and bilateral contact requirement.
+                0.040 if source_kind in {"CUPBOARD", "BOX"} else
+                spec.intermediate_ik_position_tolerance
+            ),
+            intermediate_ik_angle_tolerance_rad=(
+                # The aperture clearance waypoint is non-contact.  Final
+                # grasp orientation remains governed by the strict executor
+                # tolerance and bilateral target contact.
+                np.deg2rad(15.0) if source_kind in {"CUPBOARD", "BOX"} else
+                spec.intermediate_ik_angle_tolerance_rad
+            ),
+        )
+
+    def _settle_navigation_posture(self, maximum_steps: int = 4000) -> int:
+        """Physically fold the arm before planning from an already-reached base.
+
+        Phase-A container opening ends at its own manipulation home posture.
+        When the Phase-B base target equals the current named anchor, the
+        generic pick controller can otherwise begin IK before its usual
+        ``pick_base_approach`` loop has had a physics step to command the
+        navigation posture.  Planning must start from the live settled state,
+        not from a direct qpos reset.
+        """
+        target = self.executor.profile.navigation_joints
+        for step in range(1, maximum_steps + 1):
+            self.scene.data.ctrl[self.executor.arm_actuators] = target
+            self.scene.data.ctrl[self.executor.finger_actuators] = (
+                self.executor.profile.open_command
+            )
+            mujoco.mj_step(self.scene.model, self.scene.data)
+            if self.step_callback:
+                self.step_callback()
+            position_error = float(np.max(np.abs(
+                self.scene.data.qpos[self.executor.arm_qpos] - target
+            )))
+            speed = float(np.max(np.abs(
+                self.scene.data.qvel[
+                    self.scene.model.jnt_dofadr[self.executor.arm_joint_ids]
+                ]
+            )))
+            if position_error < 0.012 and speed < 0.04:
+                return step
+        raise RuntimeError(
+            "Arm did not physically settle into the navigation posture"
+        )
+
+    def _select_storage_manipulation_stance(
+        self,
+        backend: str,
+        family: str,
+        source_kind: str,
+    ) -> tuple[dict[str, Any], dict[str, Any] | None]:
+        """Plan then physically reach a bounded local SE(2) stance.
+
+        Candidate feasibility is evaluated on temporary MuJoCo state.  Only
+        the selected base stance is executed through the normal actuators.
+        Object qpos is never written.
+        """
+        from .robot_profiles import mobile_profile
+
+        mobile = mobile_profile("google")
+        anchor_qpos = self.scene.data.qpos[self.executor.base_qpos].copy()
+        anchor = qpos_to_world_stance(anchor_qpos, home_y=mobile.home_y)
+        saved_qpos = self.scene.data.qpos.copy()
+        saved_qvel = self.scene.data.qvel.copy()
+        saved_ctrl = self.scene.data.ctrl.copy()
+        base_checker = MuJoCoBaseCollisionChecker(
+            self.scene.model, self.scene.data, mobile
+        )
+        planner = ManipulationStancePlanner()
+
+        def evaluate(stance: PlanarStance, index: int) -> StanceEvaluation:
+            path_valid = all(
+                base_checker.is_pose_valid(
+                    anchor.x + fraction * stance.anchor_dx,
+                    anchor.y + fraction * stance.anchor_dy,
+                    anchor.yaw + fraction * stance.anchor_dyaw,
+                )
+                for fraction in np.linspace(0.0, 1.0, 8)
+            )
+            if not path_valid:
+                return StanceEvaluation(
+                    stance, False, None, None, None, index,
+                    "BASE_PATH_COLLISION",
+                )
+            self.scene.data.qpos[:] = saved_qpos
+            self.scene.data.qvel[:] = 0.0
+            self.scene.data.qpos[self.executor.base_qpos] = (
+                world_stance_to_qpos(stance, home_y=mobile.home_y)
+            )
+            self.scene.data.qpos[self.executor.arm_qpos] = (
+                self.executor.profile.navigation_joints
+            )
+            mujoco.mj_forward(self.scene.model, self.scene.data)
+            self._configure_source_aware_pick_spec(backend, family, source_kind)
+            stance_spec = self.executor.pick_specs[backend]
+            self.executor.pick_specs[backend] = replace(
+                stance_spec,
+                grasp_candidates=storage_probe_candidates(
+                    stance_spec.grasp_candidates, source_kind, family
+                ),
+            )
+            analysis = self.executor.direct_pick_plan_feasibility(backend)
+            self.executor.pick_specs[backend] = stance_spec
+            return StanceEvaluation(
+                stance=stance,
+                valid=bool(analysis["feasible"]),
+                collision_clearance_m=None,
+                ik_residual_m=None,
+                joint_displacement_rad=None,
+                candidate_index=index,
+                reason=None if analysis["feasible"] else str(analysis["failure"]),
+            )
+
+        try:
+            selected, evaluations = planner.select(anchor, evaluate)
+        finally:
+            self.scene.data.qpos[:] = saved_qpos
+            self.scene.data.qvel[:] = saved_qvel
+            self.scene.data.ctrl[:] = saved_ctrl
+            mujoco.mj_forward(self.scene.model, self.scene.data)
+        audit = {
+            "anchor_world": [anchor.x, anchor.y, anchor.yaw],
+            "candidate_count_evaluated": len(evaluations),
+            "selected": None,
+            "rejections": [
+                {
+                    "candidate_index": row.candidate_index,
+                    "delta": [
+                        row.stance.anchor_dx,
+                        row.stance.anchor_dy,
+                        row.stance.anchor_dyaw,
+                    ],
+                    "reason": row.reason,
+                }
+                for row in evaluations if not row.valid
+            ],
+        }
+        if selected is None:
+            return audit, None
+        stance = selected.stance
+        selected_qpos = world_stance_to_qpos(stance, home_y=mobile.home_y)
+        audit["selected"] = {
+            "candidate_index": selected.candidate_index,
+            "world": [stance.x, stance.y, stance.yaw],
+            "anchor_delta": [
+                stance.anchor_dx, stance.anchor_dy, stance.anchor_dyaw
+            ],
+        }
+        self.executor.base_stance = anchor_qpos.copy()
+        self.executor.base_manipulation_target = selected_qpos.copy()
+        base_steps = self.executor.move_to_local_manipulation_base(
+            step_callback=self.step_callback
+        )
+        audit["physical_base_steps"] = base_steps
+        # The selected local stance is now the pick primitive's base frame.
+        self.executor.base_stance = selected_qpos.copy()
+        self.executor.base_manipulation_target = selected_qpos.copy()
+        self._configure_source_aware_pick_spec(backend, family, source_kind)
+        self._settle_navigation_posture()
+        return audit, self.executor.direct_pick_plan_feasibility(backend)
 
     @staticmethod
     def _target_dict(target: PlacementTarget) -> dict[str, Any]:
@@ -1124,6 +1564,11 @@ class KitchenObjectManipulationExecutor:
         # approach aligns the arm with the selected observed object.  This is
         # not a named workspace transition and is retracted by the primitive.
         self.sync_workspace(current_workspace)
+        self._configure_source_aware_pick_spec(
+            backend,
+            binding["grasp_family"],
+            context_row["source_kind"],
+        )
         local = np.zeros(3)
         if current_workspace == KitchenWorkspace.HOME:
             family_forward = {
@@ -1157,6 +1602,7 @@ class KitchenObjectManipulationExecutor:
         presentation = None
         presentation_grasp_adopted = False
         direct_grasp_analysis = None
+        manipulation_stance = None
         drawer_presentation_required = False
         if (
             context_row["source_kind"] == "DRAWER"
@@ -1193,6 +1639,14 @@ class KitchenObjectManipulationExecutor:
                 # Let the normal structured execution path report base-motion
                 # failures rather than relabeling them as grasp infeasibility.
                 drawer_presentation_required = False
+        if context_row["source_kind"] in {"CUPBOARD", "BOX"}:
+            manipulation_stance, direct_grasp_analysis = (
+                self._select_storage_manipulation_stance(
+                    backend,
+                    binding["grasp_family"],
+                    context_row["source_kind"],
+                )
+            )
         if (
             context_row["source_kind"] == "DRAWER"
             and binding["grasp_family"] == "UTENSIL"
@@ -1376,6 +1830,7 @@ class KitchenObjectManipulationExecutor:
                     None,
                     presentation=presentation,
                     direct_grasp_analysis=direct_grasp_analysis,
+                    manipulation_stance=manipulation_stance,
                 )
         if not presentation_grasp_adopted:
             self.executor.request_pick(backend)
@@ -1404,6 +1859,7 @@ class KitchenObjectManipulationExecutor:
                 30000, time.perf_counter() - started, False, (), (), None,
                 None, False, None, presentation=presentation,
                 direct_grasp_analysis=direct_grasp_analysis,
+                manipulation_stance=manipulation_stance,
             )
         if self.executor.mode != "holding":
             return PhysicalPickResult(generic_object_id, backend, context_row, required.value,
@@ -1414,14 +1870,47 @@ class KitchenObjectManipulationExecutor:
                 self.executor.failure or self.executor.status, steps,
                 time.perf_counter() - started, False, (), (), None, None, False,
                 None, presentation=presentation,
-                direct_grasp_analysis=direct_grasp_analysis)
+                direct_grasp_analysis=direct_grasp_analysis,
+                manipulation_stance=manipulation_stance)
         state = inspect_held_object_state(
             self.scene.model, self.scene.data, generic_object_id, backend, self.backend_bodies
         )
         after_pos = self.scene.data.xpos[
             mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_BODY, backend)
         ].copy()
-        success = state.validation_status == "TRUE" and float(after_pos[2] - before_pos[2]) > 0.03
+        source_clearance = None
+        extraction_strategy = None
+        if context_row["source_kind"] in {"CUPBOARD", "BOX"}:
+            from .geometry_checker import load_inspection_rig_config
+
+            volume = load_inspection_rig_config()["regions"][
+                context_row["source_container"]
+            ]["inspection_volume"]
+            minimum = np.asarray(volume["minimum_world_m"], dtype=float)
+            maximum = np.asarray(volume["maximum_world_m"], dtype=float)
+            measured_dimensions = self.inventory_by_id[generic_object_id].get(
+                "observed_dimensions_m", {}
+            )
+            bounding_radius = 0.5 * float(np.linalg.norm([
+                measured_dimensions.get("length", 0.0),
+                measured_dimensions.get("width", 0.0),
+                measured_dimensions.get("height", 0.0),
+            ]))
+            # Conservative observed-geometry sphere versus the source AABB.
+            closest = np.maximum(minimum, np.minimum(after_pos, maximum))
+            source_clearance = bool(
+                np.linalg.norm(after_pos - closest) > bounding_radius
+            )
+            extraction_strategy = (
+                "VERTICAL_FIRST_ABOVE_RIM"
+                if context_row["source_kind"] == "BOX"
+                else "OUTWARD_THROUGH_APERTURE_FIRST"
+            )
+        success = (
+            state.validation_status == "TRUE"
+            and float(after_pos[2] - before_pos[2]) > 0.03
+            and source_clearance is not False
+        )
         return PhysicalPickResult(
             generic_object_id, backend, context_row, required.value, binding["grasp_family"],
             success, "PICK_SUCCESS" if success else "HELD_STATE_INVALID",
@@ -1439,6 +1928,9 @@ class KitchenObjectManipulationExecutor:
             target_contact_geoms=self.executor.confirmed_target_contact_geoms,
             presentation=presentation,
             direct_grasp_analysis=direct_grasp_analysis,
+            manipulation_stance=manipulation_stance,
+            extraction_strategy=extraction_strategy,
+            source_clearance_verified=source_clearance,
         )
 
     def place(
