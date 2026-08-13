@@ -1,9 +1,12 @@
 from unittest.mock import Mock
 
+import numpy as np
+
 from mujoco_scenes.kitchen_execution_policy import KitchenWorkspace
 from mujoco_scenes.kitchen_phase_b_execution import KitchenPhaseBExecutionDispatcher
 from mujoco_scenes.kitchen_object_manipulation import (
     KitchenPlacementResolver,
+    KitchenObjectManipulationExecutor,
     ServingPlacementState,
 )
 
@@ -16,6 +19,17 @@ def test_phase_c_operators_fail_without_symbolic_effects():
         )
         assert result["status"] == "UNSUPPORTED_PHASE_C_OPERATOR"
         assert result["symbolic_effects_applied"] is False
+
+
+def test_home_place_stance_candidates_are_bounded_and_target_centred():
+    candidates = KitchenObjectManipulationExecutor._home_place_candidates(
+        np.array((-0.14, -0.24, 0.598))
+    )
+    assert len(candidates) == 12
+    assert candidates[0] == (0.20, 0.14, 0.0)
+    assert {row[0] for row in candidates} == {0.20, 0.23, 0.25, 0.28}
+    assert {round(row[1], 2) for row in candidates} == {0.11, 0.14, 0.17}
+    assert all(-0.18 <= row[1] <= 0.18 for row in candidates)
 
 
 def test_carried_move_validates_before_and_after_and_uses_payload_collision():

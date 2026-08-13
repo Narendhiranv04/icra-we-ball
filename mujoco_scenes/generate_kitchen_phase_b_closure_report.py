@@ -8,6 +8,7 @@ import math
 import platform
 import re
 import statistics
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -70,7 +71,7 @@ CARRY_EVIDENCE = {
     "BOWL": "runs/phaseB_freeze_carried_move/BOWL/carried_move_result.json",
     "UTENSIL": "runs/phaseB_freeze_carried_move/UTENSIL/carried_move_result.json",
     "KETTLE": "runs/phaseB_freeze_carried_move/KETTLE/carried_move_result.json",
-    "JAR_SOURCE": "runs/phaseB_freeze_carried_move/JAR_SOURCE_folded/carried_move_result.json",
+    "JAR_SOURCE": "runs/phaseB_freeze_carried_move/JAR_SOURCE/carried_move_result.json",
 }
 
 
@@ -92,6 +93,24 @@ def sha256(path: Path) -> str:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def git_provenance() -> dict[str, Any]:
+    """Return the repository revision and an honest worktree cleanliness audit."""
+    head = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=ROOT, check=True,
+        capture_output=True, text=True,
+    ).stdout.strip()
+    status = subprocess.run(
+        ["git", "status", "--short"], cwd=ROOT, check=True,
+        capture_output=True, text=True,
+    ).stdout.splitlines()
+    return {
+        "git_head": head,
+        "worktree_status": "dirty" if status else "clean",
+        "worktree_dirty": bool(status),
+        "worktree_status_short": status,
+    }
 
 
 def pick_row(relative: str) -> dict[str, Any]:
@@ -274,12 +293,10 @@ def variant_and_operator_coverage(rows: dict[str, dict]) -> tuple[dict, dict]:
                     if destination == "serving_area": destination_kind = "SERVING_SUPPORT"
                     elif destination == "countertop": destination_kind = "SOURCE_RETURN"
                     else: destination_kind = "OBJECT_RELATIVE_DESTINATION"
-                    place_examples = {
-                        "SERVING_SUPPORT": rows["table_vessel_1"],
-                        "SOURCE_RETURN": rows["table_kettle_1"],
-                        "OBJECT_RELATIVE_DESTINATION": rows["table_utensil_1"],
-                    }
-                    candidate = place_examples[destination_kind]
+                    # PLACE evidence follows the manipulated object's family,
+                    # never merely the destination type.  This preserves the
+                    # physical identity of the isolated operator validation.
+                    candidate = family_evidence[family]
                     supported = bool(candidate.get("place", {}).get("success"))
                 else:
                     supported = bool(candidate and candidate["pick_success"])
@@ -449,10 +466,29 @@ def main() -> None:
         baseline_normalized[key] == current_normalized[key]
         for key in role_keys
     )
+    baseline_sources_available = bool(baseline_normalized["sources"])
+    current_phase2_sources_equal = (
+        current_normalized["sources"] == phase2_normalized["sources"]
+    )
     phase2_plan = read(PHASE2_ROOT / "F1_INITIAL_COMPLETE/generated_plan.json")
     f1_equivalence = {"baseline_phase1": str((REPORT.parent / "kitchen_feasibility_phase1/variants/F1_INITIAL_COMPLETE/grounded_assignments.json").relative_to(ROOT)),
         "current_phase1": str((PHASE1_ROOT / "F1_INITIAL_COMPLETE/grounded_role_assignments.json").relative_to(ROOT)),
         "phase1_role_equivalent": equivalent_roles,
+        "legacy_baseline_source_roles": {
+            "availability": (
+                "AVAILABLE" if baseline_sources_available else "UNAVAILABLE"
+            ),
+            "value": (
+                baseline_normalized["sources"]
+                if baseline_sources_available else None
+            ),
+            "comparison_performed": baseline_sources_available,
+        },
+        "current_phase1_vs_phase2_source_roles": {
+            "current_phase1": current_normalized["sources"],
+            "phase2": phase2_normalized["sources"],
+            "equivalent": current_phase2_sources_equal,
+        },
         "baseline_assignment_projection": baseline_normalized,
         "current_assignment_projection": current_normalized,
         "phase2_assignment_projection": phase2_normalized,
@@ -460,7 +496,12 @@ def main() -> None:
         "phase2_plan_action_count": len(phase2_plan),
         "phase2_validation_passed": read(PHASE2_ROOT / "F1_INITIAL_COMPLETE/validation.json").get("valid", False),
     }
-    f1_equivalence["equivalent"] = all((f1_equivalence["phase1_role_equivalent"], f1_equivalence["phase2_assignment_equivalent"], f1_equivalence["phase2_validation_passed"]))
+    f1_equivalence["equivalent"] = all((
+        f1_equivalence["phase1_role_equivalent"],
+        f1_equivalence["phase2_assignment_equivalent"],
+        current_phase2_sources_equal,
+        f1_equivalence["phase2_validation_passed"],
+    ))
     write("f1_physical_layout_equivalence.json", f1_equivalence)
 
     accepted_storage = []
@@ -471,21 +512,43 @@ def main() -> None:
         accepted_storage.extend(row for row in data["accepted"] if row["observed_source_context"]["source_container"])
     maximum_error = max((row["centroid_error_m"] for row in accepted_storage), default=0.0)
     chosen_gate = 0.265
-    competing_distances = []
+    per_object_competition = []
     for variant in VARIANTS:
         path = ROOT / f"runs/phaseB_closure_inventory/{variant}/execution_entity_resolution.json"
         if not path.exists():
             continue
-        competing_distances.extend(
-            row["centroid_error_m"]
-            for row in read(path).get("rejected_candidate_edges", [])
-            if row.get("semantic_consistent")
-            and row.get("source_context_consistent")
-        )
+        resolution_data = read(path)
+        rejected = resolution_data.get("rejected_candidate_edges", [])
+        for winner in resolution_data.get("accepted", []):
+            compatible = sorted(
+                row["centroid_error_m"] for row in rejected
+                if row.get("generic_object_id") == winner.get("generic_object_id")
+                and row.get("semantic_consistent")
+                and row.get("source_context_consistent")
+            )
+            second_best = compatible[0] if compatible else None
+            winner_distance = winner["centroid_error_m"]
+            per_object_competition.append({
+                "variant": variant,
+                "generic_object_id": winner.get("generic_object_id"),
+                "physical_backend_body": winner.get("physical_backend_body"),
+                "winning_distance_m": winner_distance,
+                "second_best_semantic_and_source_compatible_distance_m": second_best,
+                "winning_margin_to_second_best_m": (
+                    second_best - winner_distance
+                    if second_best is not None else None
+                ),
+            })
+    competing_distances = [
+        row["second_best_semantic_and_source_compatible_distance_m"]
+        for row in per_object_competition
+        if row["second_best_semantic_and_source_compatible_distance_m"] is not None
+    ]
     nearest_competing = min(competing_distances, default=None)
     gate_audit = {"accepted_storage_bindings": accepted_storage,
         "maximum_actual_accepted_error_m": maximum_error,
         "nearest_semantic_and_source_consistent_competing_distance_m": nearest_competing,
+        "per_object_winner_vs_second_best": per_object_competition,
         "configured_threshold_m": chosen_gate,
         "numerical_safety_margin_m": chosen_gate-maximum_error,
         "semantic_and_source_gates_remain_required": True,
@@ -606,16 +669,29 @@ def main() -> None:
     write("multi_object_validation.json", multi)
     write("final_physical_relation_validation.json", relation)
 
+    provenance = git_provenance()
     manifest_entries = []
     for name,row in rows.items():
         manifest_entries.append({"name":name,"relative_run_path":row["evidence_directory"],
             "generic_object_id":row.get("generic_object_id"),"pick_sha256":row.get("pick_sha256"),
-            "place_sha256":row.get("place_sha256"),"code_commit":"a9ce846929601b18d452f3deb01f0d1109738f63"})
+            "place_sha256":row.get("place_sha256"),
+            "committed_tree_provenance":"UNAVAILABLE_LEGACY_ARTIFACT"})
     for family,record in carry.items():
         path=ROOT/record["evidence_path"]
-        manifest_entries.append({"name":f"carry_{family}","relative_run_path":record["evidence_path"],"sha256":sha256(path) if path.exists() else None,"code_commit":"working-tree scientific-freeze pass"})
+        manifest_entries.append({"name":f"carry_{family}","relative_run_path":record["evidence_path"],"sha256":sha256(path) if path.exists() else None,
+            "committed_tree_provenance":"UNAVAILABLE_LEGACY_ARTIFACT"})
+    for name, path in (("multi_object_authoritative", multi_path),
+                       ("final_physical_relations", relation_path)):
+        manifest_entries.append({
+            "name": name,
+            "relative_run_path": str(path.relative_to(ROOT)),
+            "sha256": sha256(path) if path.exists() else None,
+            "execution_committed_tree_sha": provenance["git_head"],
+            "worktree_status_at_manifest_generation": provenance["worktree_status"],
+        })
     manifest_valid = all(entry.get("pick_sha256") or entry.get("sha256") for entry in manifest_entries)
-    write("physical_run_manifest.json", {"entries":manifest_entries,"valid":manifest_valid,"raw_artifacts_committed":False})
+    write("physical_run_manifest.json", {"repository": provenance,
+          "entries":manifest_entries,"valid":manifest_valid,"raw_artifacts_committed":False})
 
     test_text = (REPORT / "test_summary.txt").read_text() if (REPORT/"test_summary.txt").exists() else ""
     tests_pass = bool(
@@ -650,7 +726,7 @@ def main() -> None:
         "phase_c_operators_remain_unsupported":["POUR","STIR"],
         "phase_c_symbolic_effects_fabricated":False}
     write("validation_summary.json", summary)
-    write("environment.json", {"python":platform.python_version(),"platform":platform.platform(),"robot":"google","render_backend":"EGL headless","starting_commit":"a9ce846929601b18d452f3deb01f0d1109738f63"})
+    write("environment.json", {"python":platform.python_version(),"platform":platform.platform(),"robot":"google","render_backend":"EGL headless",**provenance})
 
 
 if __name__ == "__main__":

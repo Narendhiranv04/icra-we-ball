@@ -1,6 +1,9 @@
 from mujoco_scenes.generate_kitchen_phase_b_closure_report import (
+    CARRY_EVIDENCE,
     closure_from_artifacts,
+    git_provenance,
     guards_are_verifiable,
+    normalized_assignment_ids,
 )
 
 
@@ -67,3 +70,31 @@ def test_bare_scientific_guard_is_unverifiable():
             "evidence": ["artifact.json"],
         }
     })
+
+
+def test_canonical_jar_carry_evidence_path_matches_reproduction_output():
+    assert CARRY_EVIDENCE["JAR_SOURCE"] == (
+        "runs/phaseB_freeze_carried_move/JAR_SOURCE/carried_move_result.json"
+    )
+
+
+def test_git_provenance_reports_real_head_and_cleanliness():
+    provenance = git_provenance()
+    assert len(provenance["git_head"]) == 40
+    assert provenance["worktree_status"] in {"clean", "dirty"}
+    assert provenance["worktree_dirty"] == bool(
+        provenance["worktree_status_short"]
+    )
+
+
+def test_missing_legacy_sources_remain_explicitly_empty():
+    legacy = normalized_assignment_ids({"coffee": [], "soup": []})
+    current = normalized_assignment_ids({
+        "coffee_targets": [],
+        "coffee_stirring": [],
+        "soup_targets": [],
+        "soup_serving": [],
+        "source_roles": {"water_source": "object_1"},
+    })
+    assert legacy["sources"] == {}
+    assert current["sources"] == {"water_source": "object_1"}

@@ -38,7 +38,7 @@ from .manipulation_stance import (
     yaw_rotation,
 )
 from .mobile_motion import MuJoCoBaseCollisionChecker
-from .robot_profiles import manipulation_profile
+from .robot_profiles import manipulation_profile, mobile_profile
 
 
 PHASE_B_MOUNT_ALLOWANCES = {
@@ -177,6 +177,7 @@ class PhysicalPlaceResult:
     source_region_membership: bool | None = None
     upright_alignment: float | None = None
     intended_target_uniquely_closest: bool | None = None
+    placement_stance: dict[str, Any] | None = None
 
 
 def _body_geom_ids(model: mujoco.MjModel, body_id: int) -> set[int]:
@@ -2205,6 +2206,175 @@ class KitchenObjectManipulationExecutor:
     def _target_dict(target: PlacementTarget) -> dict[str, Any]:
         return {**asdict(target), "required_workspace": target.required_workspace.value}
 
+    @staticmethod
+    def _home_place_candidates(position: np.ndarray) -> tuple[tuple[float, float, float], ...]:
+        """Return the small deterministic HOME stance search set.
+
+        The nominal lateral coordinate is target-centred.  Candidates are
+        deliberately bounded so this remains an execution refinement rather
+        than a new navigation or symbolic-location policy.
+        """
+        nominal = float(np.clip(-position[0], -0.18, 0.18))
+        rows = []
+        for forward in (0.20, 0.23, 0.25, 0.28):
+            for lateral_delta in (0.0, -0.03, 0.03):
+                rows.append((forward, nominal + lateral_delta, 0.0))
+        return tuple(rows)
+
+    def _select_home_place_stance(
+        self,
+        position: np.ndarray,
+        rotation: np.ndarray | None,
+    ) -> dict[str, Any]:
+        """Select a payload-safe HOME stance using strict placement IK.
+
+        Every candidate is evaluated on temporary state.  The attached free
+        body is transformed with the candidate base pose, so the mobile base
+        collision checker includes the held payload.  The live state is
+        restored before returning; the chosen stance is then used by the real
+        physical placement primitive.
+        """
+        low = self.executor
+        model, data = self.scene.model, self.scene.data
+        saved_qpos = data.qpos.copy()
+        saved_qvel = data.qvel.copy()
+        saved_ctrl = data.ctrl.copy()
+        saved_eq = data.eq_active.copy()
+        names = (
+            "base_manipulation_target", "pending_place_site", "pending_place_world",
+            "pending_place_rotation", "mode", "status", "failure", "waypoints",
+            "retreat_waypoints", "waypoint_index", "waypoint_ticks", "release_ticks",
+            "configuration_checker",
+        )
+        saved_attributes = {name: getattr(low, name) for name in names}
+        saved_base_stance = low.base_stance.copy()
+        profile = mobile_profile("google")
+        checker = MuJoCoBaseCollisionChecker(model, data, profile)
+        body_id = mujoco.mj_name2id(
+            model, mujoco.mjtObj.mjOBJ_BODY, str(low.held_object)
+        )
+        joint_id = int(model.body_jntadr[body_id])
+        free_address = int(model.jnt_qposadr[joint_id]) if joint_id >= 0 else -1
+        reference_base = saved_qpos[low.base_qpos].copy()
+        rows: list[dict[str, Any]] = []
+
+        def set_candidate(base_target: np.ndarray) -> None:
+            data.qpos[low.base_qpos] = base_target
+            if free_address >= 0 and model.jnt_type[joint_id] == mujoco.mjtJoint.mjJNT_FREE:
+                reference_xy = np.array(
+                    (-reference_base[1], profile.home_y + reference_base[0])
+                )
+                candidate_xy = np.array(
+                    (-base_target[1], profile.home_y + base_target[0])
+                )
+                angle = float(base_target[2] - reference_base[2])
+                cosine, sine = np.cos(-reference_base[2]), np.sin(-reference_base[2])
+                inverse = np.array(((cosine, -sine), (sine, cosine)))
+                cosine, sine = np.cos(base_target[2]), np.sin(base_target[2])
+                forward = np.array(((cosine, -sine), (sine, cosine)))
+                relative = inverse @ (
+                    saved_qpos[free_address:free_address + 2] - reference_xy
+                )
+                data.qpos[free_address:free_address + 2] = (
+                    candidate_xy + forward @ relative
+                )
+                delta_quaternion = np.array(
+                    (np.cos(angle / 2.0), 0.0, 0.0, np.sin(angle / 2.0))
+                )
+                rotated = np.empty(4)
+                mujoco.mju_mulQuat(
+                    rotated, delta_quaternion,
+                    saved_qpos[free_address + 3:free_address + 7],
+                )
+                data.qpos[free_address + 3:free_address + 7] = rotated
+            mujoco.mj_forward(model, data)
+
+        try:
+            for index, local in enumerate(self._home_place_candidates(position)):
+                data.qpos[:] = saved_qpos
+                data.qvel[:] = saved_qvel
+                data.ctrl[:] = saved_ctrl
+                data.eq_active[:] = saved_eq
+                mujoco.mj_forward(model, data)
+                base_target = saved_base_stance + np.asarray(local, dtype=float)
+                base_valid = checker.is_pose_valid(
+                    -float(base_target[1]),
+                    float(profile.home_y + base_target[0]),
+                    float(base_target[2]),
+                )
+                row: dict[str, Any] = {
+                    "candidate_index": index,
+                    "local_forward_m": float(local[0]),
+                    "local_lateral_m": float(local[1]),
+                    "base_collision_valid": bool(base_valid),
+                    "arm_ik_valid": False,
+                }
+                if base_valid:
+                    set_candidate(base_target)
+                    low.base_manipulation_target = base_target.copy()
+                    low.pending_place_world = position.copy()
+                    low.pending_place_rotation = (
+                        None if rotation is None else np.asarray(rotation).copy()
+                    )
+                    low.pending_place_site = "<dynamic_world_target>"
+                    low.failure = None
+                    low.mode = "place_base_approach"
+                    try:
+                        low._begin_place_plan()
+                        row["arm_ik_valid"] = True
+                        row["strict_ik_residual"] = {
+                            "position_m": float(
+                                np.linalg.norm(
+                                    data.site_xpos[low.grip_site_id]
+                                    - (position - (
+                                        data.xpos[body_id]
+                                        - data.site_xpos[low.grip_site_id]
+                                    ))
+                                )
+                            ),
+                        }
+                    except RuntimeError as error:
+                        row["failure"] = str(error)
+                rows.append(row)
+        finally:
+            for name, value in saved_attributes.items():
+                setattr(low, name, value)
+            low.base_stance = saved_base_stance
+            data.qpos[:] = saved_qpos
+            data.qvel[:] = saved_qvel
+            data.ctrl[:] = saved_ctrl
+            data.eq_active[:] = saved_eq
+            mujoco.mj_forward(model, data)
+
+        valid = [row for row in rows if row["base_collision_valid"] and row["arm_ik_valid"]]
+        if not valid:
+            return {
+                "selected": None,
+                "candidates": rows,
+                "search": "BOUNDED_HOME_PAYLOAD_SAFE_STRICT_PLACE_IK",
+            }
+        selected = min(
+            valid,
+            key=lambda row: (
+                float(row["local_forward_m"]) ** 2
+                + float(row["local_lateral_m"]) ** 2,
+                float(row["strict_ik_residual"]["position_m"]),
+                int(row["candidate_index"]),
+            ),
+        )
+        return {
+            "selected": {
+                "candidate_index": selected["candidate_index"],
+                "local_forward_m": selected["local_forward_m"],
+                "local_lateral_m": selected["local_lateral_m"],
+                "base_collision_valid": selected["base_collision_valid"],
+                "arm_ik_valid": selected["arm_ik_valid"],
+                "strict_ik_residual": selected.get("strict_ik_residual"),
+            },
+            "candidates": rows,
+            "search": "BOUNDED_HOME_PAYLOAD_SAFE_STRICT_PLACE_IK",
+        }
+
     def _step_until_stable_mode(self, maximum_steps: int = 30000) -> int:
         for step in range(1, maximum_steps + 1):
             self.executor.update()
@@ -2988,8 +3158,19 @@ class KitchenObjectManipulationExecutor:
         position = np.asarray(target.target_position_world_m, float)
         self.sync_workspace(current_workspace)
         local = np.zeros(3)
+        placement_stance = None
         if current_workspace == KitchenWorkspace.HOME:
-            local = np.array((0.20, float(np.clip(-position[0], -0.18, 0.18)), 0.0))
+            placement_stance = self._select_home_place_stance(
+                position, None
+            )
+            selected = placement_stance.get("selected")
+            local = np.array((
+                float(selected["local_forward_m"]),
+                float(selected["local_lateral_m"]),
+                0.0,
+            )) if selected is not None else np.array((
+                0.20, float(np.clip(-position[0], -0.18, 0.18)), 0.0
+            ))
         self.executor.base_manipulation_target = self.executor.base_stance + local
         yaw = target.target_yaw_world_rad
         rotation = np.array(
@@ -3011,6 +3192,7 @@ class KitchenObjectManipulationExecutor:
                 "PLACEMENT_FAILED", ObjectExecutionFailureCode.PLACEMENT_FAILED.value,
                 self.executor.failure or self.executor.status, steps,
                 time.perf_counter() - started, False, False, False, False, False,
+                placement_stance=placement_stance,
             )
         for _ in range(400):
             mujoco.mj_step(self.scene.model, self.scene.data)
@@ -3233,4 +3415,5 @@ class KitchenObjectManipulationExecutor:
             source_region_membership=source_region_membership,
             upright_alignment=upright_alignment,
             intended_target_uniquely_closest=intended_target_uniquely_closest,
+            placement_stance=placement_stance,
         )
