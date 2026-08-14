@@ -6,6 +6,7 @@ names enter only in the output of :class:`KitchenExecutionEntityResolver`.
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import asdict, dataclass
 from enum import Enum
 import json
@@ -99,6 +100,14 @@ def semantic_label_with_provenance(
     observed = validated_semantic_label(record)
     if observed is not None:
         return observed, "OBSERVED_SEMANTIC_DETECTOR", None
+    calibration = record.get("execution_scene_calibration") or {}
+    current_observed = calibration.get("current_observed_semantic_label")
+    if current_observed is not None:
+        return (
+            current_observed,
+            "EXECUTION_CALIBRATION_OBSERVED_SEMANTIC",
+            None,
+        )
     fallback = config.get("functional_role_fallback_labels", {})
     for role in sorted(roles.get(object_id, ())):
         if role in fallback:
@@ -150,7 +159,11 @@ def build_phase_b_inventory(
                 usage.setdefault(argument, []).append(
                     {"step": action["step"], "action": action["action"].upper(), "argument_index": index}
                 )
-    relevant = sorted(set(roles) | set(usage))
+    calibrated = {
+        object_id for object_id, record in registry["objects"].items()
+        if record.get("execution_scene_calibration") is not None
+    }
+    relevant = sorted(set(roles) | set(usage) | calibrated)
     rows = []
     for object_id in relevant:
         record = registry["objects"][object_id]
@@ -182,7 +195,9 @@ def build_phase_b_inventory(
                     "source_kind": context.source_kind.value,
                     "required_workspace": context.required_workspace.value,
                 },
-                "instance_token": record.get("instance_token"),
+                "execution_scene_calibration": deepcopy(
+                    record.get("execution_scene_calibration")
+                ),
                 "backend_binding_present": False,
             }
         )
@@ -191,6 +206,7 @@ def build_phase_b_inventory(
         "scene_name": registry["scene_name"],
         "inference_boundary": "FROZEN_OBSERVED_STATE_AND_WITNESS_ONLY",
         "planner_received_backend_names": False,
+        "evaluation_instance_tokens_excluded": True,
         "objects": rows,
     }
 

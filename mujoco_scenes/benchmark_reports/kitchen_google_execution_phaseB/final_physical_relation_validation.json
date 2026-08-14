@@ -1,16 +1,198 @@
 {
-  "active_payload_welds": [
-    "google:pick_weld_ab3_partial_spoon"
-  ],
+  "active_payload_welds": [],
   "active_storage_fixtures": [
-    "storage_fixture_C2_upright_spoon",
     "storage_fixture_D1_oversized_spoon",
     "storage_fixture_D1_oversized_spoon_1"
   ],
   "all_relations_verified": true,
   "pairwise_serving_clear": true,
-  "pairwise_serving_clearance": [],
-  "placed_relations": [],
-  "success": false,
+  "pairwise_serving_clearance": [
+    {
+      "first_object_id": "object_0020",
+      "overlap": false,
+      "second_object_id": "object_0016",
+      "signed_clearance_m": 0.05990672457048038
+    },
+    {
+      "first_object_id": "object_0020",
+      "overlap": false,
+      "second_object_id": "object_0018",
+      "signed_clearance_m": 0.06979238735014762
+    },
+    {
+      "first_object_id": "object_0016",
+      "overlap": false,
+      "second_object_id": "object_0018",
+      "signed_clearance_m": 0.034487837495700724
+    }
+  ],
+  "placed_relations": [
+    {
+      "angular_speed_rad_s": 2.66793268703544e-09,
+      "competing_target_distances_m": {
+        "object_0002": 0.489852073528766,
+        "object_0018": 0.7701977054914921,
+        "object_0020": 0.5813609031041506
+      },
+      "current_body_position_world_m": [
+        -0.600594042866265,
+        -0.24675939361698415,
+        0.586587279799384
+      ],
+      "current_physical_relation_verified": true,
+      "destination_kind": "OBJECT_RELATIVE_DESTINATION",
+      "floor_contact": false,
+      "generic_object_id": "object_0013",
+      "intended_target_distance_m": 0.16676077181822754,
+      "intended_target_object_id": "object_0003",
+      "intended_target_uniquely_closest": true,
+      "invalid_object_contacts": [],
+      "linear_speed_m_s": 3.7092543726411376e-10,
+      "stable": true,
+      "support_contact": true
+    },
+    {
+      "angular_speed_rad_s": 4.9152739412883686e-14,
+      "current_body_position_world_m": [
+        -0.14177950519748467,
+        -0.6037884115999164,
+        0.6550092703900297
+      ],
+      "current_physical_relation_verified": true,
+      "destination_kind": "SERVING_SUPPORT",
+      "floor_contact": false,
+      "footprint_corners_world_m": [
+        [
+          -0.05982934779223459,
+          -0.6491266010930616
+        ],
+        [
+          -0.09810896822984841,
+          -0.5209375580966487
+        ],
+        [
+          -0.22372966260273475,
+          -0.5584502221067711
+        ],
+        [
+          -0.18545004216512093,
+          -0.6866392651031841
+        ]
+      ],
+      "generic_object_id": "object_0020",
+      "invalid_object_contacts": [],
+      "linear_speed_m_s": 1.5997843997456676e-14,
+      "minimum_edge_margin_m": 0.023360734896815977,
+      "stable": true,
+      "support_contact": true
+    },
+    {
+      "angular_speed_rad_s": 0.00014290935398299088,
+      "current_body_position_world_m": [
+        -0.007207529665962247,
+        -0.4794576184249388,
+        0.616382445668531
+      ],
+      "current_physical_relation_verified": true,
+      "destination_kind": "SERVING_SUPPORT",
+      "floor_contact": false,
+      "footprint_corners_world_m": [
+        [
+          -0.037632976795597475,
+          -0.44020046921099437
+        ],
+        [
+          -0.03586022607864118,
+          -0.5200267518360308
+        ],
+        [
+          0.023217917463672983,
+          -0.5187147676388832
+        ],
+        [
+          0.021445166746716687,
+          -0.4388884850138468
+        ]
+      ],
+      "generic_object_id": "object_0016",
+      "invalid_object_contacts": [],
+      "linear_speed_m_s": 8.032875651318064e-06,
+      "minimum_edge_margin_m": 0.02888848501384675,
+      "stable": true,
+      "support_contact": true
+    },
+    {
+      "angular_speed_rad_s": 0.0004904564555425452,
+      "current_body_position_world_m": [
+        0.07552781838036604,
+        -0.615627573714903,
+        0.6225938477936068
+      ],
+      "current_physical_relation_verified": true,
+      "destination_kind": "SERVING_SUPPORT",
+      "floor_contact": false,
+      "footprint_corners_world_m": [
+        [
+          0.009442514913767575,
+          -0.6751237550297852
+        ],
+        [
+          0.13910791620643057,
+          -0.6777937549210364
+        ],
+        [
+          0.1416131218469645,
+          -0.5561313924000207
+        ],
+        [
+          0.011947720554301516,
+          -0.5534613925087695
+        ]
+      ],
+      "generic_object_id": "object_0018",
+      "invalid_object_contacts": [],
+      "linear_speed_m_s": 1.6311041803492607e-05,
+      "minimum_edge_margin_m": 0.03220624507896361,
+      "stable": true,
+      "support_contact": true
+    },
+    {
+      "angular_speed_rad_s": 0.0003348055479624423,
+      "current_body_position_world_m": [
+        0.4553016830796539,
+        -0.3515848943767013,
+        0.6331408969880907
+      ],
+      "current_physical_relation_verified": true,
+      "destination_kind": "SOURCE_RETURN",
+      "floor_contact": false,
+      "generic_object_id": "object_0009",
+      "invalid_object_contacts": [],
+      "linear_speed_m_s": 1.658921606490583e-05,
+      "source_return_xy_error_m": 0.013132088278633821,
+      "stable": true,
+      "support_contact": true,
+      "upright_alignment": 0.9999999999058795
+    },
+    {
+      "angular_speed_rad_s": 0.00028250793586611706,
+      "current_body_position_world_m": [
+        0.08119117620841478,
+        -0.10890739197031017,
+        0.6523994610719432
+      ],
+      "current_physical_relation_verified": true,
+      "destination_kind": "SOURCE_RETURN",
+      "floor_contact": false,
+      "generic_object_id": "object_0010",
+      "invalid_object_contacts": [],
+      "linear_speed_m_s": 1.2835583396676334e-05,
+      "source_return_xy_error_m": 0.008162845782213199,
+      "stable": true,
+      "support_contact": true,
+      "upright_alignment": 0.9999999998895808
+    }
+  ],
+  "success": true,
   "unexpected_active_storage_fixtures": []
 }

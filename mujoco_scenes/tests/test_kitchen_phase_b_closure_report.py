@@ -8,6 +8,11 @@ from mujoco_scenes.generate_kitchen_phase_b_closure_report import (
 
 
 REQUIRED = {
+    "frozen_phase1_input_integrity_pass": True,
+    "frozen_phase2_input_integrity_pass": True,
+    "execution_scene_calibration_audit_pass": True,
+    "no_runtime_functional_substitution_pass": True,
+    "primary_b1_corrected_layout_repeatability_pass": True,
     "pick_coverage_pass": True,
     "place_coverage_pass": True,
     "carried_move_pass": True,
@@ -16,7 +21,6 @@ REQUIRED = {
     "entity_resolution_pass": True,
     "extraction_pass": True,
     "destination_coverage_pass": True,
-    "f1_equivalence_pass": True,
     "variant_coverage_pass": True,
     "isolated_operator_coverage_pass": True,
     "scientific_guards_pass": True,

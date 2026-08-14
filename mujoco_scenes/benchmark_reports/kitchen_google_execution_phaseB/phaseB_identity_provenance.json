@@ -1,0 +1,50 @@
+{
+  "identifiers": [
+    {
+      "algorithm": "sha256(f'{scene_name}:{instance_id}')[:24]",
+      "backend_or_hidden_identity_leak": true,
+      "generated_by": "ObservedStateRun._association_token in mujoco_scenes/observed_state.py",
+      "identifier": "instance_token",
+      "input_fields": [
+        "scene_name",
+        "MuJoCo object instance body name (instance_id)"
+      ],
+      "intended_role": "within-run association and evaluation-only cross-run physical-instance correspondence",
+      "perception_visible": "INTERNAL_ASSOCIATION_ONLY; stored in evaluation registry",
+      "planner_visible": false,
+      "simulator_ground_truth_dependency": true
+    },
+    {
+      "algorithm": "object_{len(registry.objects)+1:04d}",
+      "backend_or_hidden_identity_leak": false,
+      "generated_by": "ObservedStateRun._new_object_id in mujoco_scenes/observed_state.py",
+      "identifier": "generic_object_id (object_XXXX)",
+      "input_fields": [
+        "current registry object count",
+        "first-acceptance iteration order"
+      ],
+      "intended_role": "episode-local backend-free symbolic label",
+      "perception_visible": true,
+      "planner_visible": true,
+      "simulator_ground_truth_dependency": false
+    },
+    {
+      "backend_or_hidden_identity_leak": true,
+      "generated_by": "scene_loader._inject_object / MuJoCo model composition",
+      "identifier": "physical_backend_body",
+      "input_fields": [
+        "configured object kind",
+        "duplicate-instance counter"
+      ],
+      "intended_role": "execution-only physical backend binding",
+      "perception_visible": "SIMULATOR SEGMENTATION IMPLEMENTATION ONLY",
+      "planner_visible": false,
+      "simulator_ground_truth_dependency": true
+    }
+  ],
+  "runtime_boundary_correction": {
+    "audit_use": "EVALUATION_ONLY_GROUND_TRUTH",
+    "instance_token_removed_from_phase_b_execution_inventory": true,
+    "planner_and_functional_grounding_use_instance_token": false
+  }
+}

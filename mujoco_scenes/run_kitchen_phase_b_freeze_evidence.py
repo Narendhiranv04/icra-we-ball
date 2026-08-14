@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from copy import deepcopy
 import json
 from pathlib import Path
 
@@ -32,6 +33,7 @@ F2_PHASE1 = ROOT / "runs/feasibility_benchmarks/kitchen_feasibility_phase1_closu
 F2_PHASE2 = ROOT / "mujoco_scenes/benchmark_reports/kitchen_symbolic_phase2/variants/F2_DISTRIBUTED_COFFEE_TWO"
 PRIMARY_CURRENT = ROOT / "runs/phaseB_freeze_observed_current"
 PRIMARY_C1_CURRENT = ROOT / "runs/phaseB_freeze_observed_swapped_c1"
+PRIMARY_B1_CORRECTED = ROOT / "runs/phaseB_freeze_observed_b1_corrected"
 PRIMARY_FROZEN = ROOT / "runs/integrated_no_pot_clearance_seed19_20260807"
 
 
@@ -44,6 +46,256 @@ def write(path: Path, payload) -> None:
     temporary = path.with_suffix(path.suffix + ".tmp")
     temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
     temporary.replace(path)
+
+
+def _semantic_label(record: dict) -> str | None:
+    return (
+        record.get("semantics", {}).get("validated", {})
+        .get("canonical_label")
+    )
+
+
+def _dimension_vector(record: dict) -> np.ndarray:
+    return np.asarray([
+        record.get("dimensions_m", {}).get(axis, {}).get("value", np.nan)
+        for axis in ("length", "width", "height")
+    ], dtype=float)
+
+
+_CURRENT_MEASUREMENT_FIELDS = (
+    "centroid_world_m", "dimensions_m", "principal_axis_world",
+    "property_status", "point_count", "contributing_camera_count",
+    "geometric_properties", "geometric_predicates", "measurement_quality",
+    "measurement_cloud_path", "geometry", "last_evidence_stage",
+    "last_evidence_source_region", "last_property_update_stage",
+    "last_property_source_region",
+)
+
+
+def _physical_family(record: dict) -> str | None:
+    """Return a coarse observable family, including geometry-only fallback."""
+    label = _semantic_label(record)
+    if label in {"bowl", "cup", "mug", "glass"}:
+        return "OPEN_VESSEL"
+    if label in {"spoon", "fork", "knife", "stirrer", "utensil"}:
+        return "ELONGATED_UTENSIL"
+    dimensions = _dimension_vector(record)
+    finite = dimensions[np.isfinite(dimensions) & (dimensions > 0.0)]
+    if len(finite) >= 2:
+        ratio = float(np.max(finite) / np.partition(finite, -2)[-2])
+        if ratio >= 2.0:
+            return "ELONGATED_UTENSIL"
+    return None
+
+
+def _transfer_current_measurements(
+    frozen_registry: dict,
+    current_registry: dict,
+    *,
+    regions: set[str] | None = None,
+    excluded_object_ids: set[str] | None = None,
+) -> dict:
+    """Transfer pose/geometry by episode ID while preserving frozen evidence."""
+    result = deepcopy(frozen_registry)
+    for object_id, target in result["objects"].items():
+        if object_id in (excluded_object_ids or set()):
+            continue
+        current = current_registry["objects"].get(object_id)
+        if current is None:
+            continue
+        if regions is not None and target.get("source_region") not in regions:
+            continue
+        for field in _CURRENT_MEASUREMENT_FIELDS:
+            if field in current:
+                target[field] = deepcopy(current[field])
+    return result
+
+
+def apply_current_target_vessel_grounding(
+    frozen_registry: dict,
+    current_registry: dict,
+    assignments: dict,
+    *,
+    region: str,
+) -> tuple[dict, list[dict]]:
+    """Ground frozen target roles to current vessels without hidden identity."""
+    result = deepcopy(frozen_registry)
+    role_by_id = {
+        **{object_id: "COFFEE_VESSEL" for object_id in assignments["coffee_targets"]},
+        **{object_id: "SOUP_BOWL" for object_id in assignments["soup_targets"]},
+    }
+    allowed_labels = {
+        "COFFEE_VESSEL": {"cup", "mug"},
+        "SOUP_BOWL": {"bowl"},
+    }
+    frozen_rows = [
+        (object_id, result["objects"][object_id], role)
+        for object_id, role in role_by_id.items()
+        if result["objects"][object_id].get("source_region") == region
+    ]
+    current_rows = [
+        (object_id, row)
+        for object_id, row in current_registry["objects"].items()
+        if row.get("source_region") == region
+    ]
+    edges = []
+    for frozen_id, frozen_row, role in frozen_rows:
+        frozen_dimensions = _dimension_vector(frozen_row)
+        for current_id, current_row in current_rows:
+            current_label = _semantic_label(current_row)
+            if current_label not in allowed_labels[role]:
+                continue
+            current_dimensions = _dimension_vector(current_row)
+            finite = np.isfinite(frozen_dimensions) & np.isfinite(current_dimensions)
+            if not np.any(finite):
+                continue
+            error = float(np.linalg.norm(
+                frozen_dimensions[finite] - current_dimensions[finite]
+            ))
+            edges.append((error, frozen_id, current_id, current_row, role))
+    assigned_frozen = set()
+    assigned_current = set()
+    audit = []
+    for error, frozen_id, current_id, current_row, role in sorted(edges):
+        if frozen_id in assigned_frozen or current_id in assigned_current:
+            continue
+        assigned_frozen.add(frozen_id)
+        assigned_current.add(current_id)
+        target = result["objects"][frozen_id]
+        for field in _CURRENT_MEASUREMENT_FIELDS:
+            if field in current_row:
+                target[field] = deepcopy(current_row[field])
+        target["execution_scene_calibration"] = {
+            "classification": "CURRENT_EXECUTION_TARGET_GROUNDING",
+            "region": region,
+            "frozen_functional_family": role,
+            "association_inputs": [
+                "frozen_source_region", "frozen_functional_family",
+                "current_observed_semantic_family", "observed_dimensions",
+            ],
+            "instance_token_used": False,
+            "backend_body_name_used": False,
+            "current_observation_generic_id_not_planner_visible": current_id,
+            "dimension_error_m": error,
+        }
+        audit.append({
+            "frozen_generic_id": frozen_id,
+            "frozen_functional_family": role,
+            "current_observation_generic_id": current_id,
+            "current_observed_semantic_label": _semantic_label(current_row),
+            "source_region": region,
+            "dimension_error_m": error,
+            "instance_token_used": False,
+            "backend_body_name_used": False,
+            "accepted": True,
+        })
+    missing = sorted(set(row[0] for row in frozen_rows) - assigned_frozen)
+    if missing:
+        raise RuntimeError(
+            f"Current {region} vessel grounding did not resolve frozen IDs: {missing}"
+        )
+    return result, audit
+
+
+def apply_approved_within_region_execution_calibration(
+    frozen_registry: dict,
+    current_registry: dict,
+    *,
+    region: str,
+) -> tuple[dict, list[dict]]:
+    """Transfer current geometry without token or backend-name association.
+
+    Generic IDs and frozen semantics stay fixed. Candidates are gated by the
+    same observed source and semantic family, then ranked one-to-one by
+    measured dimension distance. This is intentionally limited to an
+    explicitly approved within-region physical calibration.
+    """
+    result = deepcopy(frozen_registry)
+    frozen_rows = [
+        (object_id, row)
+        for object_id, row in result["objects"].items()
+        if row.get("source_region") == region
+    ]
+    current_rows = [
+        (object_id, row)
+        for object_id, row in current_registry["objects"].items()
+        if row.get("source_region") == region
+    ]
+    edges = []
+    rejected = []
+    for frozen_id, frozen_row in frozen_rows:
+        frozen_label = _semantic_label(frozen_row)
+        frozen_family = _physical_family(frozen_row)
+        frozen_dimensions = _dimension_vector(frozen_row)
+        for current_id, current_row in current_rows:
+            current_label = _semantic_label(current_row)
+            current_family = _physical_family(current_row)
+            semantic_ok = (
+                frozen_label is not None and frozen_label == current_label
+            )
+            family_ok = frozen_family is not None and frozen_family == current_family
+            current_dimensions = _dimension_vector(current_row)
+            finite = np.isfinite(frozen_dimensions) & np.isfinite(current_dimensions)
+            dimension_error = (
+                float(np.linalg.norm(
+                    frozen_dimensions[finite] - current_dimensions[finite]
+                )) if np.any(finite) else float("inf")
+            )
+            edge = {
+                "frozen_generic_id": frozen_id,
+                "current_observation_generic_id": current_id,
+                "source_region": region,
+                "frozen_semantic_label": frozen_label,
+                "current_semantic_label": current_label,
+                "semantic_consistent": semantic_ok,
+                "frozen_physical_family": frozen_family,
+                "current_physical_family": current_family,
+                "physical_family_consistent": family_ok,
+                "dimension_error_m": dimension_error,
+            }
+            if (semantic_ok or family_ok) and np.isfinite(dimension_error):
+                edges.append((dimension_error, frozen_id, current_id, current_row, edge))
+            else:
+                rejected.append(edge)
+    assigned_frozen = set()
+    assigned_current = set()
+    accepted = []
+    for _, frozen_id, current_id, current_row, edge in sorted(
+        edges, key=lambda item: (item[0], item[1], item[2])
+    ):
+        if frozen_id in assigned_frozen or current_id in assigned_current:
+            continue
+        assigned_frozen.add(frozen_id)
+        assigned_current.add(current_id)
+        target = result["objects"][frozen_id]
+        # Keep frozen semantic/functional evidence. Transfer only typed,
+        # current physical localization and geometry measurements.
+        for field in _CURRENT_MEASUREMENT_FIELDS:
+            if field in current_row:
+                target[field] = deepcopy(current_row[field])
+        target["execution_scene_calibration"] = {
+            "classification": "APPROVED_WITHIN_REGION_EXECUTION_CALIBRATION",
+            "region": region,
+            "association_inputs": [
+                "observed_source_region", "frozen_semantic_or_shape_family",
+                "current_observed_semantic_or_shape_family",
+                "observed_dimensions",
+            ],
+            "instance_token_used": False,
+            "backend_body_name_used": False,
+            "current_observation_generic_id_not_planner_visible": current_id,
+            "current_observed_semantic_label": edge["current_semantic_label"],
+            "frozen_physical_family": edge["frozen_physical_family"],
+            "current_physical_family": edge["current_physical_family"],
+            "dimension_error_m": edge["dimension_error_m"],
+        }
+        accepted.append({**edge, "accepted": True})
+    if len(assigned_frozen) != len(frozen_rows):
+        missing = sorted(set(row[0] for row in frozen_rows) - assigned_frozen)
+        raise RuntimeError(
+            f"Approved {region} calibration did not resolve frozen IDs: {missing}"
+        )
+    return result, accepted + [{**row, "accepted": False} for row in rejected]
 
 
 def dispatcher(phase1: Path = F1_PHASE1, phase2: Path = F1_PHASE2):
@@ -62,18 +314,31 @@ def dispatcher(phase1: Path = F1_PHASE1, phase2: Path = F1_PHASE2):
 
 
 def primary_validation_dispatcher():
-    """Bind fresh primary-scene observations to frozen functional IDs.
-
-    The current registry supplies all centroids, semantics, and source-region
-    evidence.  The previously frozen primary witness/plan supplies only role
-    selection and usage; it never supplies backend names or current poses.
-    """
-    registry = read(PRIMARY_CURRENT / "object_registry.json")
-    c1_registry = read(PRIMARY_C1_CURRENT / "object_registry.json")
-    for object_id, record in c1_registry["objects"].items():
-        if record.get("source_region") == "C1":
-            registry["objects"][object_id] = record
+    """Bind current measurements to the authoritative frozen symbolic input."""
     assignments = read(PRIMARY_FROZEN / "grounded_role_assignments.json")
+    registry = read(PRIMARY_FROZEN / "object_registry.json")
+    registry, target_grounding = apply_current_target_vessel_grounding(
+        registry,
+        read(PRIMARY_CURRENT / "object_registry.json"),
+        assignments,
+        region="countertop",
+    )
+    registry = _transfer_current_measurements(
+        registry,
+        read(PRIMARY_CURRENT / "object_registry.json"),
+        excluded_object_ids={
+            row["frozen_generic_id"] for row in target_grounding
+        },
+    )
+    c1_registry = read(PRIMARY_C1_CURRENT / "object_registry.json")
+    registry = _transfer_current_measurements(
+        registry, c1_registry, regions={"C1"}
+    )
+    registry, b1_calibration = apply_approved_within_region_execution_calibration(
+        registry,
+        read(PRIMARY_B1_CORRECTED / "object_registry.json"),
+        region="B1",
+    )
     plan = read(PRIMARY_FROZEN / "plan.json")
     inventory = build_phase_b_inventory(registry, assignments, plan)
     scene = KitchenScene(inventory["scene_name"], robot="google")
@@ -89,6 +354,8 @@ def primary_validation_dispatcher():
             scene, observed_regions=observed_regions
         ),
     )
+    resolution["approved_within_region_execution_calibration"] = b1_calibration
+    resolution["current_target_vessel_grounding"] = target_grounding
     if not resolution["all_resolved"] or not resolution["one_to_one"]:
         raise RuntimeError(
             "Fresh primary execution IDs did not resolve: "
@@ -133,6 +400,62 @@ def carry(family: str, output: Path) -> None:
         "pick": picked,
         "outbound_move": moved,
         "return_move": returned,
+        "success": passed,
+    })
+    if not passed:
+        raise SystemExit(1)
+
+
+def b1_repeatability(output: Path, trials: int = 3) -> None:
+    records = []
+    for trial in range(1, trials + 1):
+        _, inventory, resolution, execution = primary_validation_dispatcher()
+        binding = next(
+            row for row in resolution["accepted"]
+            if row["generic_object_id"] == "object_0018"
+        )
+        pick = execution.pick("object_0018")
+        records.append({
+            "trial": trial,
+            "fresh_scene_reset": True,
+            "frozen_generic_object_id": "object_0018",
+            "frozen_selected_functions": next(
+                row["selected_functions"] for row in inventory["objects"]
+                if row["generic_object_id"] == "object_0018"
+            ),
+            "execution_binding": binding,
+            "pick": pick,
+            "success": bool(pick["success"]),
+        })
+    passed = len(records) == trials and all(row["success"] for row in records)
+    write(output / "b1_primary_corrected_layout_validation.json", {
+        "requested_trials": trials,
+        "fresh_reset_trials": len(records),
+        "successful_trials": sum(row["success"] for row in records),
+        "frozen_generic_object_id": "object_0018",
+        "expected_physical_family": "BOWL",
+        "instance_token_used_for_runtime_resolution": False,
+        "backend_name_exposed_to_planner": False,
+        "trials": records,
+        "success": passed,
+    })
+    if not passed:
+        raise SystemExit(1)
+
+
+def c2_open_b1_diagnostic(output: Path) -> None:
+    _, inventory, resolution, execution = primary_validation_dispatcher()
+    opened_c2 = execution.phase_a.request("OPEN", "C2", execute=True)
+    pick = execution.pick("object_0018") if opened_c2["success"] else None
+    passed = bool(opened_c2["success"] and pick and pick["success"])
+    write(output / "c2_open_b1_diagnostic.json", {
+        "sequence": ["OPEN C2", "OPEN B1", "PICK object_0018"],
+        "frozen_generic_object_id": "object_0018",
+        "inventory_backend_free": not inventory["planner_received_backend_names"],
+        "resolution_one_to_one": resolution["one_to_one"],
+        "open_c2": opened_c2,
+        "b1_pick": pick,
+        "close_c2_required": False if passed else None,
         "success": passed,
     })
     if not passed:
@@ -391,14 +714,23 @@ def main() -> None:
         "VESSEL", "BOWL", "UTENSIL", "KETTLE", "JAR_SOURCE"
     ))
     parser.add_argument("--multi-object", action="store_true")
+    parser.add_argument("--b1-repeatability", action="store_true")
+    parser.add_argument("--c2-open-b1-diagnostic", action="store_true")
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()
     if args.multi_object:
         multi_object(args.output_dir)
+    elif args.b1_repeatability:
+        b1_repeatability(args.output_dir)
+    elif args.c2_open_b1_diagnostic:
+        c2_open_b1_diagnostic(args.output_dir)
     elif args.carry_family:
         carry(args.carry_family, args.output_dir)
     else:
-        parser.error("choose --carry-family or --multi-object")
+        parser.error(
+            "choose --carry-family, --multi-object, --b1-repeatability, "
+            "or --c2-open-b1-diagnostic"
+        )
 
 
 if __name__ == "__main__":

@@ -34,7 +34,10 @@ scenes:
       D1: [s1i_oversized_spoon, napkin]
       D2: [ab3_partial_spoon, tongs]
       C2: [s1i_c2_soup_spoon, s1i_wide_shallow_cup]
-      B1: [s1i_coffee_near_miss_spoon, ab3_deep_bowl]
+      # Phase-B physical correction: preserve both observed identities and
+      # B1 membership while placing the selected bowl in the collision-
+      # validated -X lane. The near-miss spoon remains in B1's +X lane.
+      B1: [ab3_deep_bowl, s1i_coffee_near_miss_spoon]
       C1: [s1i_final_long_narrow_spoon, s1i_narrow_deep_bowl]
     required_objects: []
     substitution_map: {}

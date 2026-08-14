@@ -1,4 +1,5 @@
 import json
+from copy import deepcopy
 
 from mujoco_scenes.kitchen_execution_entities import (
     ExecutionCandidate,
@@ -6,6 +7,9 @@ from mujoco_scenes.kitchen_execution_entities import (
     SourceKind,
     build_phase_b_inventory,
     source_context,
+)
+from mujoco_scenes.run_kitchen_phase_b_freeze_evidence import (
+    apply_approved_within_region_execution_calibration,
 )
 
 
@@ -19,6 +23,43 @@ def _record(label, xyz, region="countertop"):
         },
         "semantics": {"validated": {"canonical_label": label}},
     }
+
+
+def _measured_record(label, xyz, dimensions, region="B1"):
+    row = _record(label, xyz, region)
+    row["dimensions_m"] = {
+        axis: {"value": value, "status": "MEASURED"}
+        for axis, value in zip(("length", "width", "height"), dimensions)
+    }
+    row["principal_axis_world"] = {"value": [1.0, 0.0, 0.0]}
+    return row
+
+
+def test_approved_region_calibration_matches_semantics_and_dimensions_not_ids():
+    frozen = {"objects": {
+        "frozen_spoon": _measured_record("spoon", [0.0, 0.0, 0.0], [0.2, 0.04, 0.02]),
+        "frozen_bowl": _measured_record("bowl", [1.0, 0.0, 0.0], [0.14, 0.14, 0.07]),
+    }}
+    current = {"objects": {
+        "fresh_left": _measured_record("bowl", [0.0, 0.0, 0.0], [0.141, 0.139, 0.071]),
+        "fresh_right": _measured_record("spoon", [1.0, 0.0, 0.0], [0.201, 0.041, 0.02]),
+    }}
+
+    calibrated, audit = apply_approved_within_region_execution_calibration(
+        deepcopy(frozen), current, region="B1"
+    )
+
+    assert calibrated["objects"]["frozen_bowl"]["centroid_world_m"]["value"] == [0.0, 0.0, 0.0]
+    assert calibrated["objects"]["frozen_spoon"]["centroid_world_m"]["value"] == [1.0, 0.0, 0.0]
+    assert all(
+        row["instance_token_used"] is False
+        and row["backend_body_name_used"] is False
+        for row in (
+            calibrated["objects"]["frozen_bowl"]["execution_scene_calibration"],
+            calibrated["objects"]["frozen_spoon"]["execution_scene_calibration"],
+        )
+    )
+    assert sum(row["accepted"] for row in audit) == 2
 
 
 def test_source_context_uses_observation_region_not_backend_name():
@@ -46,6 +87,8 @@ def test_inventory_is_driven_by_roles_and_plan_without_backend_binding():
     assert {row["generic_object_id"] for row in inventory["objects"]} == {"renamed_a", "renamed_b"}
     assert all(not row["backend_binding_present"] for row in inventory["objects"])
     assert not inventory["planner_received_backend_names"]
+    assert inventory["evaluation_instance_tokens_excluded"]
+    assert all("instance_token" not in row for row in inventory["objects"])
 
 
 def test_missing_detector_label_uses_functional_role_family_not_backend_name():

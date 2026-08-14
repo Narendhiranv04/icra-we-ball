@@ -1,0 +1,357 @@
+{
+  "approved_calibration_resolution": [
+    {
+      "accepted": true,
+      "current_observation_generic_id": "object_0017",
+      "current_physical_family": "OPEN_VESSEL",
+      "current_semantic_label": "bowl",
+      "dimension_error_m": 0.0017309358598994466,
+      "frozen_generic_id": "object_0018",
+      "frozen_physical_family": "OPEN_VESSEL",
+      "frozen_semantic_label": "bowl",
+      "physical_family_consistent": true,
+      "semantic_consistent": true,
+      "source_region": "B1"
+    },
+    {
+      "accepted": true,
+      "current_observation_generic_id": "object_0018",
+      "current_physical_family": "ELONGATED_UTENSIL",
+      "current_semantic_label": "spoon",
+      "dimension_error_m": 0.07312555857164792,
+      "frozen_generic_id": "object_0017",
+      "frozen_physical_family": "ELONGATED_UTENSIL",
+      "frozen_semantic_label": null,
+      "physical_family_consistent": true,
+      "semantic_consistent": false,
+      "source_region": "B1"
+    },
+    {
+      "accepted": false,
+      "current_observation_generic_id": "object_0017",
+      "current_physical_family": "OPEN_VESSEL",
+      "current_semantic_label": "bowl",
+      "dimension_error_m": 0.11971343063678828,
+      "frozen_generic_id": "object_0017",
+      "frozen_physical_family": "ELONGATED_UTENSIL",
+      "frozen_semantic_label": null,
+      "physical_family_consistent": false,
+      "semantic_consistent": false,
+      "source_region": "B1"
+    },
+    {
+      "accepted": false,
+      "current_observation_generic_id": "object_0018",
+      "current_physical_family": "ELONGATED_UTENSIL",
+      "current_semantic_label": "spoon",
+      "dimension_error_m": 0.0939098780590453,
+      "frozen_generic_id": "object_0018",
+      "frozen_physical_family": "OPEN_VESSEL",
+      "frozen_semantic_label": "bowl",
+      "physical_family_consistent": false,
+      "semantic_consistent": false,
+      "source_region": "B1"
+    }
+  ],
+  "b1_objects": [
+    {
+      "corrected_b1_slot": 1,
+      "corrected_measured_dimensions_m": {
+        "height": 0.01305947642408073,
+        "length": 0.1295545281352424,
+        "width": 0.0486135216339188
+      },
+      "corrected_observable_physical_family": "ELONGATED_UTENSIL",
+      "corrected_scene_observed_semantic_evidence": {
+        "alternatives": [
+          {
+            "camera_ids": [
+              "inspection_close",
+              "inspection_top"
+            ],
+            "label": "spoon",
+            "mean_confidence": 0.30083638429641724,
+            "score": 1.5788679154008238,
+            "supporting_view_count": 2
+          },
+          {
+            "camera_ids": [
+              "inspection_left"
+            ],
+            "label": "cup",
+            "mean_confidence": 0.04203516244888306,
+            "score": 0.08567528226296912,
+            "supporting_view_count": 1
+          }
+        ],
+        "association_method": "mask_box_overlap_v1",
+        "canonical_label": "spoon",
+        "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+        "contributing_camera_ids": [
+          "inspection_close",
+          "inspection_top"
+        ],
+        "detector_name": "ultralytics_yolo_world",
+        "detector_version": "8.4.112",
+        "mean_confidence": 0.30083638429641724,
+        "observation_source": "RGB_DETECTOR",
+        "quality": {
+          "mean_confidence": 0.30083638429641724,
+          "supporting_view_count": 2,
+          "supporting_view_margin": 1,
+          "validated": true,
+          "weighted_score_margin": 1.4931926331378547,
+          "winner_policy": "supporting_views_then_weighted_score",
+          "winning_label_margin": 1.0,
+          "winning_label_margin_kind": "supporting_view_count"
+        },
+        "reason_codes": [],
+        "semantic_evidence_paths": [
+          "stages/004_after_B1/cameras/inspection_close/rgb.png",
+          "stages/004_after_B1/cameras/inspection_left/rgb.png",
+          "stages/004_after_B1/cameras/inspection_top/rgb.png"
+        ],
+        "semantic_record_path": "stages/004_after_B1/semantics/object_0018/semantic_evidence.json",
+        "source_region": "B1",
+        "source_stage": 4,
+        "status": "SUPPORTED",
+        "supporting_view_count": 2,
+        "supporting_view_margin": 1,
+        "weighted_score_margin": 1.4931926331378547,
+        "winner_policy": "supporting_views_then_weighted_score",
+        "winning_label_margin": 1.0,
+        "winning_label_margin_kind": "supporting_view_count"
+      },
+      "evaluation_only_instance_token": "6fc36a1e8be51572abd233c0",
+      "execution_binding": {
+        "centroid_error_m": 0.07549163256715864,
+        "physical_backend_body": "s1i_coffee_near_miss_spoon",
+        "resolution_method": "SEMANTIC_SOURCE_GATE_THEN_NEAREST_CENTROID_V1"
+      },
+      "frozen_generic_id": "object_0017",
+      "frozen_measured_dimensions_m": {
+        "height": 0.012252789725904534,
+        "length": 0.20727923284103406,
+        "width": 0.04761863520276775
+      },
+      "frozen_observable_physical_family": "ELONGATED_UTENSIL",
+      "frozen_semantic_evidence": null,
+      "functional_role_in_frozen_witness": [],
+      "original_b1_slot": 0,
+      "source_region": "B1"
+    },
+    {
+      "corrected_b1_slot": 0,
+      "corrected_measured_dimensions_m": {
+        "height": 0.07270786009506844,
+        "length": 0.12969288797696893,
+        "width": 0.12168815270804467
+      },
+      "corrected_observable_physical_family": "OPEN_VESSEL",
+      "corrected_scene_observed_semantic_evidence": {
+        "alternatives": [
+          {
+            "camera_ids": [
+              "inspection_front",
+              "inspection_left",
+              "inspection_right"
+            ],
+            "label": "bowl",
+            "mean_confidence": 0.5607780814170837,
+            "score": 5.18274431615206,
+            "supporting_view_count": 3
+          },
+          {
+            "camera_ids": [
+              "inspection_close",
+              "inspection_top"
+            ],
+            "label": "cup",
+            "mean_confidence": 0.08899052813649178,
+            "score": 0.615050551812218,
+            "supporting_view_count": 2
+          }
+        ],
+        "association_method": "mask_box_overlap_v1",
+        "canonical_label": "bowl",
+        "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+        "contributing_camera_ids": [
+          "inspection_front",
+          "inspection_left",
+          "inspection_right"
+        ],
+        "detector_name": "ultralytics_yolo_world",
+        "detector_version": "8.4.112",
+        "mean_confidence": 0.5607780814170837,
+        "observation_source": "RGB_DETECTOR",
+        "quality": {
+          "mean_confidence": 0.5607780814170837,
+          "supporting_view_count": 3,
+          "supporting_view_margin": 1,
+          "validated": true,
+          "weighted_score_margin": 4.567693764339841,
+          "winner_policy": "supporting_views_then_weighted_score",
+          "winning_label_margin": 1.0,
+          "winning_label_margin_kind": "supporting_view_count"
+        },
+        "reason_codes": [],
+        "semantic_evidence_paths": [
+          "stages/004_after_B1/cameras/inspection_front/rgb.png",
+          "stages/004_after_B1/cameras/inspection_left/rgb.png",
+          "stages/004_after_B1/cameras/inspection_right/rgb.png",
+          "stages/004_after_B1/semantics/cameras/inspection_close/crops/000_object_0017.png",
+          "stages/004_after_B1/semantics/cameras/inspection_top/crops/000_object_0017.png"
+        ],
+        "semantic_record_path": "stages/004_after_B1/semantics/object_0017/semantic_evidence.json",
+        "source_region": "B1",
+        "source_stage": 4,
+        "status": "SUPPORTED",
+        "supporting_view_count": 3,
+        "supporting_view_margin": 1,
+        "weighted_score_margin": 4.567693764339841,
+        "winner_policy": "supporting_views_then_weighted_score",
+        "winning_label_margin": 1.0,
+        "winning_label_margin_kind": "supporting_view_count"
+      },
+      "evaluation_only_instance_token": "82cf74da59bdd16a78133ef4",
+      "execution_binding": {
+        "centroid_error_m": 0.02063409041702607,
+        "physical_backend_body": "ab3_deep_bowl",
+        "resolution_method": "SEMANTIC_SOURCE_GATE_THEN_NEAREST_CENTROID_V1"
+      },
+      "frozen_generic_id": "object_0018",
+      "frozen_measured_dimensions_m": {
+        "height": 0.07372335874459704,
+        "length": 0.12965104175305786,
+        "width": 0.1220787633602954
+      },
+      "frozen_observable_physical_family": "OPEN_VESSEL",
+      "frozen_semantic_evidence": {
+        "alternatives": [
+          {
+            "camera_ids": [
+              "inspection_front",
+              "inspection_left",
+              "inspection_right"
+            ],
+            "label": "bowl",
+            "mean_confidence": 0.09801180784900983,
+            "score": 1.1280598597194214,
+            "supporting_view_count": 3
+          },
+          {
+            "camera_ids": [
+              "inspection_close",
+              "inspection_top"
+            ],
+            "label": "cup",
+            "mean_confidence": 0.04781125858426094,
+            "score": 0.40704227531710746,
+            "supporting_view_count": 2
+          }
+        ],
+        "association_method": "mask_box_overlap_v1",
+        "canonical_label": "bowl",
+        "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+        "contributing_camera_ids": [
+          "inspection_front",
+          "inspection_left",
+          "inspection_right"
+        ],
+        "detector_name": "ultralytics_yolo_world",
+        "detector_version": "8.4.112",
+        "mean_confidence": 0.09801180784900983,
+        "observation_source": "RGB_DETECTOR",
+        "quality": {
+          "mean_confidence": 0.09801180784900983,
+          "supporting_view_count": 3,
+          "supporting_view_margin": 1,
+          "validated": true,
+          "weighted_score_margin": 0.7210175844023139,
+          "winner_policy": "weighted_score_then_supporting_views",
+          "winning_label_margin": 0.7210175844023139,
+          "winning_label_margin_kind": "weighted_score"
+        },
+        "reason_codes": [],
+        "semantic_evidence_paths": [
+          "stages/004_after_B1/semantics/cameras/inspection_close/crops/001_object_0018.png",
+          "stages/004_after_B1/semantics/cameras/inspection_front/crops/001_object_0018.png",
+          "stages/004_after_B1/semantics/cameras/inspection_left/crops/001_object_0018.png",
+          "stages/004_after_B1/semantics/cameras/inspection_right/crops/001_object_0018.png",
+          "stages/004_after_B1/semantics/cameras/inspection_top/crops/001_object_0018.png"
+        ],
+        "semantic_record_path": "stages/004_after_B1/semantics/object_0018/semantic_evidence.json",
+        "source_region": "B1",
+        "source_stage": 4,
+        "status": "SUPPORTED",
+        "supporting_view_count": 3,
+        "supporting_view_margin": 1,
+        "weighted_score_margin": 0.7210175844023139,
+        "winner_policy": "weighted_score_then_supporting_views",
+        "winning_label_margin": 0.7210175844023139,
+        "winning_label_margin_kind": "weighted_score"
+      },
+      "functional_role_in_frozen_witness": [
+        "soup_container"
+      ],
+      "original_b1_slot": 1,
+      "source_region": "B1"
+    }
+  ],
+  "execution_evidence": {
+    "action_count": 12,
+    "b1_repeatability": "mujoco_scenes/benchmark_reports/kitchen_google_execution_phaseB/b1_primary_corrected_layout_validation.json",
+    "multi_object_validation": "runs/phaseB_freeze_multi_object_authoritative/multi_object_validation.json",
+    "successful_actions": 12
+  },
+  "fresh_phase1_diagnostic_is_closure_gate": false,
+  "fresh_semantic_witness_substituted": false,
+  "frozen_phase1_input_integrity": {
+    "actual_sha256": {
+      "grounded_role_assignments.json": "06b98327fe256942b6c49d22e4d5cd01802925115e9d1b0aba967a70b534af29",
+      "latest_witness.json": "68533aaf8b234f9cbb187ed4b6a9496691cab838a369257d86447f7ba13726a4",
+      "object_registry.json": "22dce4b63df5dc38caed122fd87d4e485ae15c43d9eca527a9e085b2239f0817"
+    },
+    "expected_sha256": {
+      "grounded_role_assignments.json": "06b98327fe256942b6c49d22e4d5cd01802925115e9d1b0aba967a70b534af29",
+      "latest_witness.json": "68533aaf8b234f9cbb187ed4b6a9496691cab838a369257d86447f7ba13726a4",
+      "object_registry.json": "22dce4b63df5dc38caed122fd87d4e485ae15c43d9eca527a9e085b2239f0817"
+    },
+    "passed": true,
+    "root": "runs/integrated_no_pot_clearance_seed19_20260807"
+  },
+  "frozen_phase2_input_integrity": {
+    "actual_sha256": {
+      "grounded_role_assignments.json": "06b98327fe256942b6c49d22e4d5cd01802925115e9d1b0aba967a70b534af29",
+      "plan.json": "de0c488070fc3a0e92dca8bfd1c09e3a007555dcbf452cf9b659f4d99bcefc92",
+      "plan_validation.json": "9f99b4eac02758739fd243091cfd109d5f1991e58222290e636d308e8599b078"
+    },
+    "expected_sha256": {
+      "grounded_role_assignments.json": "06b98327fe256942b6c49d22e4d5cd01802925115e9d1b0aba967a70b534af29",
+      "plan.json": "de0c488070fc3a0e92dca8bfd1c09e3a007555dcbf452cf9b659f4d99bcefc92",
+      "plan_validation.json": "9f99b4eac02758739fd243091cfd109d5f1991e58222290e636d308e8599b078"
+    },
+    "passed": true,
+    "root": "runs/integrated_no_pot_clearance_seed19_20260807"
+  },
+  "gates": {
+    "evaluation_instance_token_excluded_from_runtime": true,
+    "execution_resolution_all_frozen_selected_ids_resolved": true,
+    "execution_resolution_one_to_one": true,
+    "frozen_phase1_witness_retained": true,
+    "frozen_phase2_plan_retained": true,
+    "no_functional_substitution_during_execution": true,
+    "only_approved_within_b1_pose_calibration_changed": true,
+    "runtime_inventory_backend_free": true,
+    "same_b1_container_membership": true,
+    "same_b1_object_count": true,
+    "same_container_region_identity": true,
+    "same_frozen_task_requirements": true,
+    "same_physical_object_inventory": true,
+    "same_relevant_b1_families": true
+  },
+  "passed": true,
+  "pre_execution_passed": true,
+  "scope": "CONDITIONAL_PHASE_B_EXECUTION_SCENE_CALIBRATION",
+  "statement": "The lane correction does not redefine the frozen functional witness. Fresh semantic evidence is diagnostic only and is not substituted into Phase-B symbolic input."
+}

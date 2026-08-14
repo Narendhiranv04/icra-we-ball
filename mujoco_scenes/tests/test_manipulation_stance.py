@@ -111,6 +111,38 @@ def test_contact_centred_vessel_candidates_follow_collision_shell_scale():
     assert all("wall" in name for name in candidate.predicted_contact_geom_names)
 
 
+def test_box_bowl_grasp_is_collision_centred_and_probe_is_mirrored():
+    scene = KitchenScene(
+        "S1_integrated_kitchen_object_function_primary", robot="google"
+    )
+    site_id = mujoco.mj_name2id(
+        scene.model, mujoco.mjtObj.mjOBJ_SITE, "ab3_deep_bowl_grasp"
+    )
+    candidates = StorageGraspCandidateGenerator.box(
+        scene, site_id, np.eye(3), "BOWL"
+    )
+    centred = next(
+        row for row in candidates
+        if row.candidate_id == "box_bowl_diameter_0_yaw+60_z+0.35"
+    )
+    assert abs(centred.grasp_site_local_position_m[0]) < 0.01
+    assert abs(centred.grasp_site_local_position_m[1]) < 0.01
+    assert centred.predicted_contact_geom_names == (
+        "ab3_deep_bowl_wall_0", "ab3_deep_bowl_wall_6"
+    )
+    probe_ids = {
+        row.candidate_id
+        for row in storage_probe_candidates(candidates, "BOX", "BOWL")
+    }
+    assert {
+        "box_bowl_diameter_0_yaw+60_z+0.35",
+        "box_bowl_diameter_0_yaw+30_z+0.35",
+        "box_bowl_diameter_0_yaw+0_z+0.35",
+        "box_bowl_diameter_0_yaw-30_z+0.35",
+        "box_bowl_diameter_0_yaw-60_z+0.35",
+    } == probe_ids
+
+
 def test_first_contact_synchrony_accepts_centred_and_rejects_asymmetric_sweep():
     closures = [0.0, 0.4, 0.8, 1.2]
     names = [("left_wall", "right_wall")] * len(closures)

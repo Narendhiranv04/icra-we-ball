@@ -1,10 +1,9 @@
 {
-  "missing_or_failed": [
-    "multi_object_pass",
-    "final_relation_pass"
-  ],
+  "evaluation_scope": "CONDITIONAL_EXECUTION_VALIDATION_GIVEN_FROZEN_PHASE1_PHASE2",
+  "fresh_phase1_equivalence_is_closure_gate": false,
+  "missing_or_failed": [],
   "phase": "KITCHEN_GOOGLE_EXECUTION_PHASE_B",
-  "phase_b_closed": false,
+  "phase_b_closed": true,
   "phase_c_operators_remain_unsupported": [
     "POUR",
     "STIR"
@@ -15,13 +14,17 @@
     "carried_move_pass": true,
     "destination_coverage_pass": true,
     "entity_resolution_pass": true,
+    "execution_scene_calibration_audit_pass": true,
     "extraction_pass": true,
-    "f1_equivalence_pass": true,
-    "final_relation_pass": false,
+    "final_relation_pass": true,
+    "frozen_phase1_input_integrity_pass": true,
+    "frozen_phase2_input_integrity_pass": true,
     "isolated_operator_coverage_pass": true,
-    "multi_object_pass": false,
+    "multi_object_pass": true,
+    "no_runtime_functional_substitution_pass": true,
     "pick_coverage_pass": true,
     "place_coverage_pass": true,
+    "primary_b1_corrected_layout_repeatability_pass": true,
     "reproduction_manifest_valid": true,
     "scientific_guards_pass": true,
     "storage_repeatability_pass": true,

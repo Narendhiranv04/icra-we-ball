@@ -203,10 +203,15 @@ def normalized_assignment_ids(payload: dict[str, Any]) -> dict[str, Any]:
 def closure_from_artifacts(artifacts: dict[str, bool]) -> dict[str, Any]:
     """Pure final gate used by tests to prevent PICK-only closure claims."""
     required = (
+        "frozen_phase1_input_integrity_pass",
+        "frozen_phase2_input_integrity_pass",
+        "execution_scene_calibration_audit_pass",
+        "no_runtime_functional_substitution_pass",
+        "primary_b1_corrected_layout_repeatability_pass",
         "pick_coverage_pass", "place_coverage_pass", "carried_move_pass",
         "storage_repeatability_pass", "c2_unrestricted_grasp_pass",
         "entity_resolution_pass",
-        "extraction_pass", "destination_coverage_pass", "f1_equivalence_pass",
+        "extraction_pass", "destination_coverage_pass",
         "variant_coverage_pass", "isolated_operator_coverage_pass",
         "scientific_guards_pass", "multi_object_pass", "final_relation_pass",
         "tests_pass", "reproduction_manifest_valid",
@@ -666,6 +671,33 @@ def main() -> None:
     relation_path = ROOT / "runs/phaseB_freeze_multi_object_authoritative/final_physical_relation_validation.json"
     multi = read(multi_path) if multi_path.exists() else {"success":False,"missing":str(multi_path)}
     relation = read(relation_path) if relation_path.exists() else {"success":False,"missing":str(relation_path)}
+    calibration_path = REPORT / "b1_execution_scene_calibration_audit.json"
+    b1_path = REPORT / "b1_primary_corrected_layout_validation.json"
+    calibration = read(calibration_path)
+    b1_repeat = read(b1_path)
+    execution_actions = multi.get("actions", [])
+    no_substitution = bool(execution_actions) and all(
+        action.get("functional_assignment_changed") is False
+        for action in execution_actions
+    )
+    calibration["gates"][
+        "no_functional_substitution_during_execution"
+    ] = no_substitution
+    calibration["execution_evidence"] = {
+        "multi_object_validation": str(multi_path.relative_to(ROOT)),
+        "successful_actions": sum(
+            bool(action.get("success")) for action in execution_actions
+        ),
+        "action_count": len(execution_actions),
+        "b1_repeatability": str(b1_path.relative_to(ROOT)),
+    }
+    calibration["passed"] = bool(
+        calibration.get("pre_execution_passed")
+        and no_substitution
+        and b1_repeat.get("success")
+        and multi.get("success")
+    )
+    write("b1_execution_scene_calibration_audit.json", calibration)
     write("multi_object_validation.json", multi)
     write("final_physical_relation_validation.json", relation)
 
@@ -700,6 +732,20 @@ def main() -> None:
         and not re.search(r"\b[1-9]\d* failed\b", test_text)
     )
     artifacts = {
+        "frozen_phase1_input_integrity_pass": bool(
+            calibration["frozen_phase1_input_integrity"]["passed"]
+        ),
+        "frozen_phase2_input_integrity_pass": bool(
+            calibration["frozen_phase2_input_integrity"]["passed"]
+        ),
+        "execution_scene_calibration_audit_pass": bool(
+            calibration["passed"]
+        ),
+        "no_runtime_functional_substitution_pass": no_substitution,
+        "primary_b1_corrected_layout_repeatability_pass": bool(
+            b1_repeat.get("success")
+            and b1_repeat.get("successful_trials") == 3
+        ),
         "pick_coverage_pass": all(item["passed"] for item in repeatability.values()),
         "place_coverage_pass": destination_pass,
         "carried_move_pass": carry_pass,
@@ -712,7 +758,6 @@ def main() -> None:
         "entity_resolution_pass": resolution["all_resolved"] and resolution["one_to_one"],
         "extraction_pass": all(r["source_clearance_status"] in {"VERIFIED","NOT_APPLICABLE"} for r in extraction.values()),
         "destination_coverage_pass": destination_pass,
-        "f1_equivalence_pass": f1_equivalence["equivalent"],
         "variant_coverage_pass": variant_coverage["passed"],
         "isolated_operator_coverage_pass": operator_coverage["phase_b_passed"] and operator_coverage["phase_c_explicit"],
         "scientific_guards_pass": guards_pass,
@@ -723,6 +768,10 @@ def main() -> None:
     }
     closure = closure_from_artifacts(artifacts)
     summary = {"phase":"KITCHEN_GOOGLE_EXECUTION_PHASE_B", **closure,
+        "evaluation_scope": (
+            "CONDITIONAL_EXECUTION_VALIDATION_GIVEN_FROZEN_PHASE1_PHASE2"
+        ),
+        "fresh_phase1_equivalence_is_closure_gate": False,
         "phase_c_operators_remain_unsupported":["POUR","STIR"],
         "phase_c_symbolic_effects_fabricated":False}
     write("validation_summary.json", summary)

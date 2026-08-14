@@ -251,6 +251,38 @@ def _body_yaw(data: mujoco.MjData, body_id: int) -> float:
     return float(np.arctan2(rotation[1, 0], rotation[0, 0]))
 
 
+def aligned_payload_gripper_yaw(
+    current_gripper_rotation: np.ndarray,
+    current_body_rotation: np.ndarray,
+    zero_yaw_gripper_rotation: np.ndarray,
+    support_yaw: float,
+) -> float:
+    """Preserve the grasp transform while aligning a payload to a support.
+
+    A storage grasp can leave the payload rotated relative to the gripper.
+    Reusing a fixed world gripper yaw at placement transfers that storage
+    rotation to the released object.  This computes the gripper yaw that
+    preserves the observed gripper-to-body yaw while aligning the body with
+    the support axes.  It uses only current physical transforms.
+    """
+    current_gripper_rotation = np.asarray(current_gripper_rotation, dtype=float)
+    current_body_rotation = np.asarray(current_body_rotation, dtype=float)
+    zero_yaw_gripper_rotation = np.asarray(
+        zero_yaw_gripper_rotation, dtype=float
+    )
+    relative_gripper_to_body = (
+        current_gripper_rotation.T @ current_body_rotation
+    )
+    zero_yaw_body_rotation = (
+        zero_yaw_gripper_rotation @ relative_gripper_to_body
+    )
+    zero_yaw_body = float(math.atan2(
+        zero_yaw_body_rotation[1, 0], zero_yaw_body_rotation[0, 0]
+    ))
+    yaw = support_yaw - zero_yaw_body
+    return float(math.atan2(math.sin(yaw), math.cos(yaw)))
+
+
 def _axis_angle_rotation(rotation_vector: np.ndarray) -> np.ndarray:
     """Return a deterministic small-angle candidate rotation."""
     angle = float(np.linalg.norm(rotation_vector))
@@ -862,9 +894,150 @@ class StorageGraspCandidateGenerator:
         scene,
         grasp_site_id: int,
         carry_rotation: np.ndarray,
+        family: str = "BOWL",
     ) -> tuple[GraspPoseCandidate, ...]:
-        origin = scene.model.site_pos[grasp_site_id].copy()
         top = manipulation_profile("google").top_down_rotation
+        if family == "BOWL":
+            # The legacy ``<body>_grasp`` site is a one-sided authoring aid,
+            # not a physical pinch centre (for ab3 bowls it is +X offset).
+            # Derive the centre and contact height from the live collision
+            # wall ring instead.  This keeps the grasp invariant when the
+            # same object occupies either lane of a box.
+            body_id = int(scene.model.site_bodyid[grasp_site_id])
+            body_rotation = scene.data.xmat[body_id].reshape(3, 3)
+            wall_geoms = tuple(
+                geom_id for geom_id in sorted(
+                    physical_contact_target_geoms(scene.model, body_id)
+                )
+                if "wall" in (
+                    mujoco.mj_id2name(
+                        scene.model, mujoco.mjtObj.mjOBJ_GEOM, geom_id
+                    ) or ""
+                ).lower()
+            )
+            if wall_geoms:
+                shell_centre = np.mean(
+                    [scene.model.geom_pos[geom_id][:2]
+                     for geom_id in wall_geoms], axis=0
+                )
+                opposite_pairs = []
+                for left_index, left_geom in enumerate(wall_geoms):
+                    left_xy = scene.model.geom_pos[left_geom][:2] - shell_centre
+                    left_norm = float(np.linalg.norm(left_xy))
+                    if left_norm < 1e-9:
+                        continue
+                    for right_geom in wall_geoms[left_index + 1:]:
+                        right_xy = (
+                            scene.model.geom_pos[right_geom][:2]
+                            - shell_centre
+                        )
+                        right_norm = float(np.linalg.norm(right_xy))
+                        if right_norm < 1e-9:
+                            continue
+                        opposition = float(
+                            np.dot(left_xy, right_xy)
+                            / (left_norm * right_norm)
+                        )
+                        if opposition > -0.93:
+                            continue
+                        midpoint = 0.5 * (
+                            scene.model.geom_pos[left_geom]
+                            + scene.model.geom_pos[right_geom]
+                        )
+                        half_height = min(
+                            float(scene.model.geom_size[left_geom, 2]),
+                            float(scene.model.geom_size[right_geom, 2]),
+                        )
+                        opposite_pairs.append(
+                            (left_geom, right_geom, midpoint, half_height)
+                        )
+                if opposite_pairs:
+                    rows = []
+                    # Upper wall-band contacts keep the long fingers above
+                    # the box shelf while remaining strictly inside the
+                    # measured collision shell.
+                    # A regular shell contains several equivalent diameters.
+                    # Keep two orthogonal representatives (rather than
+                    # multiplying the expensive IK search by every wall
+                    # segment); mirrored wrist branches cover either box
+                    # lane and the physical pair remains explicit.
+                    pair_indices = (
+                        (0, len(opposite_pairs) // 2)
+                        if len(opposite_pairs) > 1 else (0,)
+                    )
+                    for pair_index in pair_indices:
+                        left_geom, right_geom, midpoint, half_height = (
+                            opposite_pairs[pair_index]
+                        )
+                        left_name = mujoco.mj_id2name(
+                            scene.model, mujoco.mjtObj.mjOBJ_GEOM, left_geom
+                        ) or ""
+                        right_name = mujoco.mj_id2name(
+                            scene.model, mujoco.mjtObj.mjOBJ_GEOM, right_geom
+                        ) or ""
+                        for height_fraction in (0.35, 0.60, 0.80):
+                            local = midpoint.copy()
+                            local[2] += height_fraction * half_height
+                            contact_points = tuple(
+                                tuple(map(float, scene.data.xpos[body_id]
+                                    + body_rotation @ (
+                                        scene.model.geom_pos[geom_id]
+                                        + np.array((
+                                            0.0, 0.0,
+                                            height_fraction * half_height,
+                                        ))
+                                    )))
+                                for geom_id in (left_geom, right_geom)
+                            )
+                            for yaw_degrees in (60, 30, 0, -30, -60):
+                                rows.append(GraspPoseCandidate(
+                                    candidate_id=(
+                                        "box_bowl_diameter_"
+                                        f"{pair_index}_yaw{yaw_degrees:+d}_"
+                                        f"z{height_fraction:+.2f}"
+                                    ),
+                                    grasp_site_local_position_m=tuple(
+                                        map(float, local)
+                                    ),
+                                    target_rotation_world=(
+                                        yaw_rotation(
+                                            np.deg2rad(yaw_degrees)
+                                        ) @ top
+                                    ),
+                                    carry_rotation_world=carry_rotation.copy(),
+                                    # Enter the open box in the same
+                                    # top-down wrist frame used at contact.
+                                    # The carry frame is only for the later
+                                    # extraction/navigation path; using it for
+                                    # the approach sweeps the fingers into the
+                                    # mirrored box wall/lid.
+                                    approach_rotation_world=(
+                                        yaw_rotation(
+                                            np.deg2rad(yaw_degrees)
+                                        ) @ top
+                                    ),
+                                    position_first_approach=False,
+                                    approach_offset_world_m=(
+                                        0.0, 0.0, 0.12
+                                    ),
+                                    approach_clearance_m=0.10,
+                                    approach_route_offsets_world_m=(
+                                        (0.0, 0.0, 0.18),
+                                    ),
+                                    predicted_contact_geom_names=(
+                                        left_name, right_name
+                                    ),
+                                    predicted_contact_points_world_m=(
+                                        contact_points[0], contact_points[1]
+                                    ),
+                                ))
+                    return tuple(rows)
+            # A malformed collision shell must not silently fall back to the
+            # legacy offset site: retain a centred body-frame fallback and let
+            # strict IK/contact validation report UNKNOWN/infeasible.
+            origin = np.zeros(3, dtype=float)
+        else:
+            origin = scene.model.site_pos[grasp_site_id].copy()
         return tuple(
             GraspPoseCandidate(
                 candidate_id=(
@@ -880,9 +1053,6 @@ class StorageGraspCandidateGenerator:
                 approach_clearance_m=0.10,
                 approach_route_offsets_world_m=((0.0, 0.0, 0.18),),
             )
-            # +60 degrees is the least-obstructed direct top grasp from the
-            # shared RIGHT_SIDE anchor; retain the remaining deterministic
-            # alternatives for changed layouts.
             for height in (0.015, 0.025, 0.005, 0.0)
             for yaw_degrees in (60, 30, 0, -30, -60, 90)
         )
@@ -916,7 +1086,13 @@ def storage_probe_candidates(
             "cupboard_front_rim_2_jawroll+0_wrist0",
         ),
         ("BOX", "BOWL"): (
-            "box_top_jaw_yaw+60_z+0.015", "box_top_jaw_yaw+30_z+0.015",
+            # Probe both mirrored wrist signs (and a neutral branch) before
+            # fine stance ranking.  The full candidate set remains bounded.
+            "box_bowl_diameter_0_yaw+60_z+0.35",
+            "box_bowl_diameter_0_yaw+30_z+0.35",
+            "box_bowl_diameter_0_yaw+0_z+0.35",
+            "box_bowl_diameter_0_yaw-30_z+0.35",
+            "box_bowl_diameter_0_yaw-60_z+0.35",
         ),
         ("BOX", "VESSEL"): (
             "box_top_jaw_yaw+60_z+0.015", "box_top_jaw_yaw+30_z+0.015",
@@ -950,7 +1126,11 @@ def storage_probe_candidates(
 
 def storage_grasp_family(candidate_id: str) -> str:
     """Map a calibrated candidate ID to a physical approach family."""
-    if "vessel_top" in candidate_id or "box_top" in candidate_id:
+    if (
+        "vessel_top" in candidate_id
+        or "box_top" in candidate_id
+        or "box_bowl_diameter" in candidate_id
+    ):
         return "TOP_DOWN"
     if "contact_diameter" in candidate_id:
         return "CONTACT_CENTERED_DIAMETER"
@@ -1221,7 +1401,15 @@ class KitchenPlacementResolver:
             # coordinate.  This avoids sweeping bowls across other tabletop
             # objects while preserving deterministic, non-overlapping slots.
             group.sort(key=lambda row: (row["observed_centroid_world_m"][0], row["generic_object_id"]))
-            for slot_x, row in zip((-0.15, 0.0, 0.15), group):
+            # Keep the forward-right coffee-serving corridor clear for
+            # subsequent main-table source retrieval. Soup bowls retain their
+            # validated monotonic left/centre/right allocation.
+            slot_order = (
+                (-0.15, 0.15, 0.0)
+                if function == "coffee_vessel"
+                else (-0.15, 0.0, 0.075)
+            )
+            for slot_x, row in zip(slot_order, group):
                 self.serving_slot_by_id[row["generic_object_id"]] = (slot_x, row_y)
 
     def footprint(self, object_id: str) -> tuple[float, float]:
@@ -1233,6 +1421,19 @@ class KitchenPlacementResolver:
         if length is None or width is None:
             return (0.10, 0.10)
         return (float(length), float(width))
+
+    def rotation_safe_half_extent(self, object_id: str) -> float:
+        """Return a yaw-invariant support-boundary half extent.
+
+        The object can retain a grasp-relative yaw after release even when the
+        placement target requests zero tool yaw.  Using the raw length/width
+        against axis-aligned support bounds can therefore accept a target that
+        becomes invalid after the physical release.  Half the footprint
+        diagonal bounds every in-plane rotation without assuming a semantic
+        object family or changing manipulation calibration.
+        """
+        length, width = self.footprint(object_id)
+        return math.hypot(length, width) / 2.0
 
     @staticmethod
     def footprints_overlap(
@@ -1302,16 +1503,40 @@ class KitchenPlacementResolver:
                 raise ValueError("DESTINATION_RESOLUTION_FAILED: object is not a serving target")
             x, y = self.serving_slot_by_id[object_id]
             footprint = self.footprint(object_id)
-            candidates = [
+            required_edge_margin = 0.012
+            rotation_safe_half_extent = self.rotation_safe_half_extent(object_id)
+            safe_x_limit = 0.25 - rotation_safe_half_extent - required_edge_margin
+            safe_y_limit = 0.15 - rotation_safe_half_extent - required_edge_margin
+            if safe_x_limit < 0.0 or safe_y_limit < 0.0:
+                raise ValueError(
+                    "DESTINATION_RESOLUTION_FAILED: object footprint does not "
+                    "fit serving support at any in-plane rotation"
+                )
+            nominal_candidates = [
                 (x, y), (-0.15, y), (0.0, y), (0.15, y),
                 (-0.15, -0.56), (0.0, -0.56), (0.15, -0.56),
             ]
+            candidates = [
+                (
+                    max(-safe_x_limit, min(safe_x_limit, candidate_x)),
+                    -0.56
+                    + max(
+                        -safe_y_limit,
+                        min(safe_y_limit, candidate_y + 0.56),
+                    ),
+                )
+                for candidate_x, candidate_y in nominal_candidates
+            ]
             valid_candidates = []
             for candidate in dict.fromkeys(candidates):
-                edge_x = 0.25 - abs(candidate[0]) - footprint[0] / 2.0
-                edge_y = 0.15 - abs(candidate[1] + 0.56) - footprint[1] / 2.0
+                edge_x = 0.25 - abs(candidate[0]) - rotation_safe_half_extent
+                edge_y = (
+                    0.15
+                    - abs(candidate[1] + 0.56)
+                    - rotation_safe_half_extent
+                )
                 edge = min(edge_x, edge_y)
-                if edge < 0.008:
+                if edge < required_edge_margin - 1e-9:
                     continue
                 if any(
                     self.footprints_overlap(
@@ -1339,8 +1564,8 @@ class KitchenPlacementResolver:
             target = PlacementTarget(
                 object_id, destination, "SERVING_SUPPORT",
                 (x, y, 0.58 + support_height), 0.0, "serving_surface", None,
-                KitchenWorkspace.HOME, 0.012, "ON",
-                "OBSERVED_FOOTPRINT_PERSISTENT_SERVING_ALLOCATOR_V2",
+                KitchenWorkspace.HOME, required_edge_margin, "ON",
+                "ROTATION_SAFE_OBSERVED_FOOTPRINT_SERVING_ALLOCATOR_V3",
             )
             self.allocated_serving[object_id] = target
             return target
@@ -1511,10 +1736,20 @@ class KitchenObjectManipulationExecutor:
         # The calibrated HOME carry is 47 cm ahead of the robot base.  Store
         # that invariant in base coordinates so LEFT/RIGHT yaw rotates both
         # its position and orientation into the current workspace.
+        carry_local = np.array((0.0, 0.47, 0.94))
+        if source_kind == "BOX" and family == "BOWL":
+            # A bowl fills most of the B1 footprint.  Once the weld is
+            # confirmed, carry it through the front/left side of the open
+            # box before folding to HOME; this is a bounded Cartesian
+            # extraction offset, not a collision allowance or qpos write.
+            carry_local[0] = -0.12
+            # The observed bowl radius is about 9 cm; the default carry height
+            # leaves its lower shell inside the B1 inspection volume. Lift the
+            # attached payload by a bounded additional 11 cm so the entire
+            # measured shell is above the volume before HOME folding.
+            carry_local[2] = 0.97
         carry_position, carry_rotation = base_relative_pose_to_world(
-            stance,
-            np.array((0.0, 0.47, 0.94)),
-            profile.top_down_rotation,
+            stance, carry_local, profile.top_down_rotation
         )
         spec = self.executor.pick_specs[backend]
         candidates = spec.grasp_candidates
@@ -1540,7 +1775,7 @@ class KitchenObjectManipulationExecutor:
             )
         elif source_kind == "BOX" and family in {"BOWL", "VESSEL"}:
             candidates = StorageGraspCandidateGenerator.box(
-                self.scene, site_id, carry_rotation
+                self.scene, site_id, carry_rotation, family
             )
         elif candidates:
             # Existing family-specific candidates may carry a HOME-world
@@ -2709,14 +2944,18 @@ class KitchenObjectManipulationExecutor:
         # base, otherwise the arm is incorrectly commanded back through the
         # original world-frame point before descending to the object.
         world_translation = np.array((-local[1], local[0], 0.0))
-        if self.executor.pick_specs[backend].carry_position is None:
-            self.executor.pick_specs[backend] = replace(
-                self.executor.pick_specs[backend],
-                carry_position=(
-                    manipulation_profile("google").carry_position
-                    + world_translation
-                ),
-            )
+        configured_carry = self.executor.pick_specs[backend].carry_position
+        if configured_carry is None:
+            configured_carry = manipulation_profile("google").carry_position
+        # Every carry waypoint is authored in the nominal HOME world frame.
+        # Translate both profile-default and family-specific waypoints with
+        # the bounded local base approach. Previously the jar's explicit
+        # waypoint alone stayed behind in the nominal frame, folding the
+        # shoulder through the base after otherwise valid source returns.
+        self.executor.pick_specs[backend] = replace(
+            self.executor.pick_specs[backend],
+            carry_position=configured_carry + world_translation,
+        )
         presentation = None
         presentation_grasp_adopted = False
         direct_grasp_analysis = None
@@ -3156,6 +3395,45 @@ class KitchenObjectManipulationExecutor:
                 time.perf_counter() - started, False, False, False, False, False,
             )
         position = np.asarray(target.target_position_world_m, float)
+        if (
+            target.destination_kind == "SERVING_SUPPORT"
+            and binding["grasp_family"] == "BOWL"
+            and self.inventory_by_id[generic_object_id]
+            .get("source_context", {})
+            .get("source_kind") == "BOX"
+            and target.support_backend
+        ):
+            body_id = mujoco.mj_name2id(
+                self.scene.model, mujoco.mjtObj.mjOBJ_BODY, backend
+            )
+            support_id = mujoco.mj_name2id(
+                self.scene.model,
+                mujoco.mjtObj.mjOBJ_GEOM,
+                target.support_backend,
+            )
+            gripper_rotation = self.scene.data.site_xmat[
+                self.executor.grip_site_id
+            ].reshape(3, 3)
+            body_rotation = self.scene.data.xmat[body_id].reshape(3, 3)
+            support_rotation = self.scene.data.geom_xmat[
+                support_id
+            ].reshape(3, 3)
+            aligned_yaw = aligned_payload_gripper_yaw(
+                gripper_rotation,
+                body_rotation,
+                manipulation_profile("google").top_down_rotation,
+                float(math.atan2(
+                    support_rotation[1, 0], support_rotation[0, 0]
+                )),
+            )
+            target = replace(
+                target,
+                target_yaw_world_rad=aligned_yaw,
+                provenance=(
+                    target.provenance
+                    + "+LIVE_GRASP_TRANSFORM_SUPPORT_AXIS_ALIGNMENT"
+                ),
+            )
         self.sync_workspace(current_workspace)
         local = np.zeros(3)
         placement_stance = None

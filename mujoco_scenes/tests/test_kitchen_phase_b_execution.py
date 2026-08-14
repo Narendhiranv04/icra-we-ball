@@ -5,6 +5,7 @@ import numpy as np
 from mujoco_scenes.kitchen_execution_policy import KitchenWorkspace
 from mujoco_scenes.kitchen_phase_b_execution import KitchenPhaseBExecutionDispatcher
 from mujoco_scenes.kitchen_object_manipulation import (
+    aligned_payload_gripper_yaw,
     KitchenPlacementResolver,
     KitchenObjectManipulationExecutor,
     ServingPlacementState,
@@ -19,6 +20,25 @@ def test_phase_c_operators_fail_without_symbolic_effects():
         )
         assert result["status"] == "UNSUPPORTED_PHASE_C_OPERATOR"
         assert result["symbolic_effects_applied"] is False
+
+
+def test_serving_bowl_alignment_preserves_live_grasp_yaw_offset():
+    # A body currently at 0 degrees while its gripper is at -60 degrees must
+    # keep the gripper at -60 degrees to release body-aligned on a 0-degree
+    # support.  This avoids transferring the storage grasp yaw to the bowl.
+    top_down = np.array(((1.0, 0.0, 0.0), (0.0, -1.0, 0.0), (0.0, 0.0, -1.0)))
+    angle = np.deg2rad(-60.0)
+    grasp_yaw = np.array((
+        (np.cos(angle), -np.sin(angle), 0.0),
+        (np.sin(angle), np.cos(angle), 0.0),
+        (0.0, 0.0, 1.0),
+    ))
+    yaw = aligned_payload_gripper_yaw(
+        grasp_yaw @ top_down, np.eye(3), top_down, np.deg2rad(0.0)
+    )
+    assert np.isclose(yaw, np.deg2rad(-60.0))
+
+    assert -np.pi <= yaw <= np.pi
 
 
 def test_home_place_stance_candidates_are_bounded_and_target_centred():
@@ -136,8 +156,45 @@ def test_serving_allocator_is_deterministic_and_role_separated():
         ]
     }
     resolver = KitchenPlacementResolver(Mock(), inventory, resolution)
-    assert resolver.resolve("coffee_a", "serving_area").target_position_world_m[:2] == (-0.15, -0.48)
-    assert resolver.resolve("soup_a", "serving_area").target_position_world_m[:2] == (-0.15, -0.64)
+    coffee_target = resolver.resolve("coffee_a", "serving_area")
+    soup_target = resolver.resolve("soup_a", "serving_area")
+    assert coffee_target.target_position_world_m[0] == -0.15
+    assert soup_target.target_position_world_m[0] == -0.15
+    assert abs(coffee_target.target_position_world_m[1] + 0.56) < 0.08
+    assert abs(soup_target.target_position_world_m[1] + 0.56) < 0.08
+    for target, object_id in (
+        (coffee_target, "coffee_a"),
+        (soup_target, "soup_a"),
+    ):
+        radius = resolver.rotation_safe_half_extent(object_id)
+        x, y = target.target_position_world_m[:2]
+        assert 0.25 - abs(x) - radius >= target.edge_margin_m - 1e-9
+        assert 0.15 - abs(y + 0.56) - radius >= target.edge_margin_m - 1e-9
+
+
+def test_serving_allocator_contains_rotated_asymmetric_payload():
+    inventory = {
+        "objects": [{
+            "generic_object_id": "wide_bowl",
+            "selected_functions": ["soup_bowl"],
+            "observed_centroid_world_m": [0.2, 0.0, 0.63],
+            "observed_dimensions_m": {"length": 0.13, "width": 0.12},
+        }]
+    }
+    resolution = {
+        "accepted": [{
+            "generic_object_id": "wide_bowl",
+            "physical_backend_body": "wide_bowl",
+        }]
+    }
+    resolver = KitchenPlacementResolver(Mock(), inventory, resolution)
+    target = resolver.resolve("wide_bowl", "serving_area")
+    radius = resolver.rotation_safe_half_extent("wide_bowl")
+    x, y = target.target_position_world_m[:2]
+
+    assert 0.25 - abs(x) - radius >= 0.012 - 1e-9
+    assert 0.15 - abs(y + 0.56) - radius >= 0.012 - 1e-9
+    assert target.provenance == "ROTATION_SAFE_OBSERVED_FOOTPRINT_SERVING_ALLOCATOR_V3"
 
 
 def _serving_resolver():

@@ -242,6 +242,14 @@ class KitchenPhaseBExecutionDispatcher:
             record["storage_fixture_active_during_contact"] = bool(
                 fixture_audit.get("active_during_contact")
             )
+        if record["success"] and container:
+            # Once the selected payload is physically held, any presentation
+            # fixture for a sibling object in the same open region has served
+            # its purpose. Releasing the whole region prevents hidden support
+            # welds from surviving into the simultaneous final-state audit.
+            record["remaining_region_fixture_released_after_pick"] = bool(
+                self.scene.release_storage_fixture(container)
+            )
         return record
 
     def place(self, object_id: str, destination: str) -> dict[str, Any]:
