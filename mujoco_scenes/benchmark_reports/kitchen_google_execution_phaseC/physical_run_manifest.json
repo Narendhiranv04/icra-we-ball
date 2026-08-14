@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "implementation_commit": "5ff90a1aadee3e1ae3ad36f238e97ecf12272c6f",
+  "fresh_reset_evidence": [
+    "pour_pair_coverage.json",
+    "pour_kettle_repeatability.json",
+    "pour_jar_repeatability.json",
+    "pour_sequential_source_validation.json",
+    "stir_pair_coverage.json",
+    "stir_worst_case_repeatability.json",
+    "stir_sequential_validation.json"
+  ],
+  "integrated_evidence": [
+    "complete_plan_execution.json",
+    "phaseC_execution_ledger.json",
+    "final_phaseC_physical_validation.json"
+  ],
+  "phase_c_integrated_ledger_complete": true,
+  "full_plan_complete": false,
+  "full_plan_failure_scope": "PHASE_B_SERVING_TAIL_AFTER_ALL_PHASE_C_EVENTS"
+}

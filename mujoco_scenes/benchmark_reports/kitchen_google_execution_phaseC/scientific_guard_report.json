@@ -1,10 +1,12 @@
 {
-  "implementation_commit": "93144e473734aee31e6eb551fad885ebbb02bcfa",
+  "implementation_commit": "5ff90a1aadee3e1ae3ad36f238e97ecf12272c6f",
   "planner_inventory_backend_names_exposed": false,
   "direct_payload_qpos_writes_in_phase_c_operators": false,
-  "hidden_release_or_regrasp_in_stir_sequence": false,
+  "hidden_release_or_regrasp_in_sequential_runs": false,
+  "object_substitution": false,
   "task_contact_policy": "ONLY_HELD_PAYLOAD_TO_EXPLICIT_INTENDED_TARGET_BODY",
   "robot_target_collision_allowance_added": false,
   "physical_fluid_dynamics_modeled": false,
-  "evidence_mode": "KINEMATIC_ACTION_PROXY_NO_FLUID_DYNAMICS"
+  "evidence_mode": "KINEMATIC_ACTION_PROXY_NO_FLUID_DYNAMICS",
+  "full_plan_limitation_disclosed": true
 }

@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "operator": "POUR",
+  "source_family_count": 2,
+  "fresh_reset_per_trial": true,
+  "families": [
+    {
+      "source_or_tool_generic_id": "object_0009",
+      "hardest_target_generic_id": "object_0003",
+      "requested_trials": 3,
+      "successful_trials": 3,
+      "success": true,
+      "authoritative_evidence": "pour_kettle_repeatability.json"
+    },
+    {
+      "source_or_tool_generic_id": "object_0010",
+      "hardest_target_generic_id": "object_0003",
+      "requested_trials": 3,
+      "successful_trials": 3,
+      "success": true,
+      "authoritative_evidence": "pour_jar_repeatability.json"
+    }
+  ],
+  "success": true
+}

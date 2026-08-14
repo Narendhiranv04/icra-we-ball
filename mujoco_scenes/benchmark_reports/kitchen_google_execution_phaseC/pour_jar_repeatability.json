@@ -1,0 +1,3112 @@
+{
+  "execution_code_sha": "b4f4c1750c526c7d35f561c11e619239c93623f8",
+  "families": [
+    {
+      "hardest_target_selection": {
+        "candidates": [
+          {
+            "action": {
+              "action": "pour",
+              "arguments": [
+                "object_0010",
+                "object_0001",
+                "coffee"
+              ],
+              "rendered": "POUR(object_0010, object_0001, coffee)",
+              "step": 7
+            },
+            "cavity_depth_m": 0.09610493779182439,
+            "geometry_provenance": "FROZEN_OPEN_CAVITY_DIMENSIONS_LOCALIZED_BY_LIVE_PHYSICAL_BODY",
+            "opening_half_extents_m": [
+              0.04039054602333592,
+              0.03864506347184517
+            ],
+            "target_generic_id": "object_0001",
+            "tool_geometry_provenance": null,
+            "usable_radial_clearance_m": 0.03264506347184517
+          },
+          {
+            "action": {
+              "action": "pour",
+              "arguments": [
+                "object_0010",
+                "object_0003",
+                "coffee"
+              ],
+              "rendered": "POUR(object_0010, object_0003, coffee)",
+              "step": 8
+            },
+            "cavity_depth_m": 0.08684825897216797,
+            "geometry_provenance": "FROZEN_OPEN_CAVITY_DIMENSIONS_LOCALIZED_BY_LIVE_PHYSICAL_BODY",
+            "opening_half_extents_m": [
+              0.03130807313250088,
+              0.029973615928427663
+            ],
+            "target_generic_id": "object_0003",
+            "tool_geometry_provenance": null,
+            "usable_radial_clearance_m": 0.023973615928427665
+          }
+        ],
+        "selected": {
+          "action": {
+            "action": "pour",
+            "arguments": [
+              "object_0010",
+              "object_0003",
+              "coffee"
+            ],
+            "rendered": "POUR(object_0010, object_0003, coffee)",
+            "step": 8
+          },
+          "cavity_depth_m": 0.08684825897216797,
+          "geometry_provenance": "FROZEN_OPEN_CAVITY_DIMENSIONS_LOCALIZED_BY_LIVE_PHYSICAL_BODY",
+          "opening_half_extents_m": [
+            0.03130807313250088,
+            0.029973615928427663
+          ],
+          "target_generic_id": "object_0003",
+          "tool_geometry_provenance": null,
+          "usable_radial_clearance_m": 0.023973615928427665
+        },
+        "selection_rule": "MINIMUM_USABLE_RADIAL_CLEARANCE_THEN_CAVITY_DEPTH"
+      },
+      "records": [
+        {
+          "execution_code_sha": "b4f4c1750c526c7d35f561c11e619239c93623f8",
+          "execution_resolution_one_to_one": true,
+          "fresh_scene_reset": true,
+          "frozen_step": 8,
+          "motion": {
+            "duration_s": 28.544968714006245,
+            "dwell_time_s": 0.35,
+            "evidence_mode": "KINEMATIC_ACTION_PROXY_NO_FLUID_DYNAMICS",
+            "functional_assignment_changed": false,
+            "held_state_after": {
+              "backend_body": "s1i_compact_coffee_jar",
+              "exclusive_payload_weld": true,
+              "finger_joint_positions": [
+                0.5674061440252031,
+                0.5617376735158389
+              ],
+              "floor_contact": false,
+              "generic_object_id": "object_0010",
+              "gripper_body": "google:link_gripper",
+              "rejection_reasons": [],
+              "relative_orientation_wxyz": [
+                0.5467762494749814,
+                0.4530642588468506,
+                0.4536384945203482,
+                0.5384984927137124
+              ],
+              "relative_position_m": [
+                -0.03122661529616089,
+                8.302904424073581e-06,
+                0.13392517507820637
+              ],
+              "validation_status": "TRUE",
+              "weld_active": true,
+              "weld_id": 17
+            },
+            "held_state_before": {
+              "backend_body": "s1i_compact_coffee_jar",
+              "exclusive_payload_weld": true,
+              "finger_joint_positions": [
+                0.5293673059428149,
+                0.5204922294788891
+              ],
+              "floor_contact": false,
+              "generic_object_id": "object_0010",
+              "gripper_body": "google:link_gripper",
+              "rejection_reasons": [],
+              "relative_orientation_wxyz": [
+                0.5027663972000623,
+                0.49753500722150545,
+                0.4698980874303067,
+                0.5280915203493671
+              ],
+              "relative_position_m": [
+                -0.0308873620021007,
+                0.0003238579555184629,
+                0.13237329644437412
+              ],
+              "validation_status": "TRUE",
+              "weld_active": true,
+              "weld_id": 17
+            },
+            "invalid_collision_pairs": [],
+            "maximum_tilt_angle_rad": 0.6108652381980153,
+            "minimum_outlet_interior_margin_m": 0.014069519949908916,
+            "minimum_source_target_clearance_m": 0.0,
+            "opening_geometry": {
+              "cavity_depth_m": 0.08684825897216797,
+              "centre_world_m": [
+                -0.6000020095742189,
+                -0.08000010493193631,
+                0.6710468606899848
+              ],
+              "opening_half_extents_m": [
+                0.03130807313250088,
+                0.029973615928427663
+              ],
+              "provenance": "FROZEN_OPEN_CAVITY_DIMENSIONS_LOCALIZED_BY_LIVE_PHYSICAL_BODY",
+              "rim_normal_world": [
+                -2.2133969454783055e-05,
+                -1.3840825067407473e-06,
+                0.9999999997540859
+              ],
+              "safety_margin_m": 0.006,
+              "target_generic_id": "object_0003"
+            },
+            "outlet_height_above_rim_m": 0.20516830758891666,
+            "physical_action_telemetry": {
+              "adjacent_joint_deltas": [
+                {
+                  "continuity_guard_applied": false,
+                  "interpolated_pose_index": 0,
+                  "label": "POUR_HIGH_CLEARANCE_APPROACH",
+                  "maximum_joint_delta_rad": 1.9969329926398711
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 1,
+                  "label": "POUR_APPROACH",
+                  "maximum_joint_delta_rad": 0.0388129857662709
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 2,
+                  "label": "POUR_APPROACH",
+                  "maximum_joint_delta_rad": 0.04270389206134895
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 3,
+                  "label": "POUR_APPROACH",
+                  "maximum_joint_delta_rad": 0.04287901540460881
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 4,
+                  "label": "POUR_APPROACH",
+                  "maximum_joint_delta_rad": 0.042002022441935294
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 5,
+                  "label": "POUR_TILT",
+                  "maximum_joint_delta_rad": 0.07885436183363725
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 6,
+                  "label": "POUR_TILT",
+                  "maximum_joint_delta_rad": 0.08669424025495576
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 7,
+                  "label": "POUR_TILT",
+                  "maximum_joint_delta_rad": 0.08936390074877765
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 8,
+                  "label": "POUR_TILT",
+                  "maximum_joint_delta_rad": 0.09310577456078928
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 9,
+                  "label": "POUR_TILT",
+                  "maximum_joint_delta_rad": 0.09636141215818439
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 10,
+                  "label": "POUR_UPRIGHT_RECOVERY",
+                  "maximum_joint_delta_rad": 0.09253352830173389
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 11,
+                  "label": "POUR_UPRIGHT_RECOVERY",
+                  "maximum_joint_delta_rad": 0.09430256585539865
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 12,
+                  "label": "POUR_UPRIGHT_RECOVERY",
+                  "maximum_joint_delta_rad": 0.09270529244474957
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 13,
+                  "label": "POUR_UPRIGHT_RECOVERY",
+                  "maximum_joint_delta_rad": 0.09061947715217977
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 14,
+                  "label": "POUR_UPRIGHT_RECOVERY",
+                  "maximum_joint_delta_rad": 0.0882790517811467
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 15,
+                  "label": "POUR_HIGH_CLEARANCE_RECOVERY",
+                  "maximum_joint_delta_rad": 0.0356299718169395
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 16,
+                  "label": "POUR_HIGH_CLEARANCE_RECOVERY",
+                  "maximum_joint_delta_rad": 0.040313596657008954
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 17,
+                  "label": "POUR_HIGH_CLEARANCE_RECOVERY",
+                  "maximum_joint_delta_rad": 0.0413954422743994
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 18,
+                  "label": "POUR_HIGH_CLEARANCE_RECOVERY",
+                  "maximum_joint_delta_rad": 0.04214605772540314
+                }
+              ],
+              "allowed_task_contacts": [],
+              "direct_object_qpos_write": false,
+              "dwell_pose_samples": [
+                {
+                  "dwell_steps": 175,
+                  "grip_position_world_m": [
+                    -0.6084484346862259,
+                    -0.09125770264842378,
+                    0.8440056205129887
+                  ],
+                  "held_body_position_world_m": [
+                    -0.5917389155154918,
+                    -0.08598002751739116,
+                    0.8178145155970429
+                  ],
+                  "held_body_rotation_world": [
+                    [
+                      0.8354318787416807,
+                      0.054343325691110264,
+                      -0.5469007029936753
+                    ],
+                    [
+                      0.02181454682365766,
+                      0.9910364456787472,
+                      0.1317986679876342
+                    ],
+                    [
+                      0.5491609067741664,
+                      -0.12203919980590704,
+                      0.8267579646920312
+                    ]
+                  ],
+                  "label": "POUR_TILT"
+                }
+              ],
+              "grasp_weld_preserved": true,
+              "held_backend_body": "s1i_compact_coffee_jar",
+              "interpolated_pose_count": 19,
+              "invalid_collision_pairs": [],
+              "joint_waypoint_count": 62,
+              "local_continuity_limit_rad": 0.71,
+              "maximum_adjacent_joint_delta_rad": 1.9969329926398711,
+              "maximum_ik_orientation_error_rad": 0.004663608050077316,
+              "maximum_ik_position_error_m": 0.0007283520125955713,
+              "maximum_local_adjacent_joint_delta_rad": 0.09636141215818439,
+              "minimum_monitored_clearance_m": 0.0,
+              "physics_steps": 4445,
+              "pose_count": 5,
+              "stance_selected_initial_branch_used": true,
+              "success": true
+            },
+            "physical_fluid_transfer_modeled": false,
+            "pour_motion_verified": true,
+            "pour_spec": {
+              "dwell_time_s": 0.35,
+              "family": "JAR_SOURCE",
+              "outlet_local_m": [
+                0.03354,
+                0.0,
+                0.04836
+              ],
+              "outlet_provenance": "AUTHORED_PHYSICAL_MOUTH_SITE_PLUS_COLLISION_DERIVED_RIM_EDGE",
+              "tilt_candidates_rad": [
+                0.6108652381980153,
+                0.7853981633974483,
+                0.9599310885968813
+              ]
+            },
+            "pre_pour_alignment_error_m": 0.009904095978518749,
+            "request": {
+              "action": "POUR",
+              "arguments": [
+                "object_0010",
+                "object_0003",
+                "coffee"
+              ]
+            },
+            "selected_base_stance": {
+              "candidate_count": 1,
+              "candidates": [
+                {
+                  "arm_collision_valid": true,
+                  "arm_joints": [
+                    0.502197665904142,
+                    1.1755455306456573,
+                    1.1855484603524222,
+                    0.449726511529559,
+                    -2.5406836802027817,
+                    0.8942631764173702,
+                    -2.3877051347972196
+                  ],
+                  "base_qpos": [
+                    0.22,
+                    0.3,
+                    0.0
+                  ],
+                  "candidate_index": 0,
+                  "failure": null,
+                  "pose_diagnostics": [
+                    {
+                      "collision_failure": null,
+                      "collision_valid": true,
+                      "orientation_error_rad": 0.00017787257943626436,
+                      "pose_index": 0,
+                      "position_error_m": 0.0003388435777558296
+                    },
+                    {
+                      "collision_failure": null,
+                      "collision_valid": true,
+                      "orientation_error_rad": 0.0004317066786813746,
+                      "pose_index": 1,
+                      "position_error_m": 0.0003377811550348796
+                    },
+                    {
+                      "collision_failure": null,
+                      "collision_valid": true,
+                      "orientation_error_rad": 0.001180471620008367,
+                      "pose_index": 2,
+                      "position_error_m": 0.0004200348264695279
+                    }
+                  ],
+                  "pose_family_index": 0,
+                  "seed_policy": "LIVE_CARRY_ARM",
+                  "strict_ik_orientation_error_rad": 0.001180471620008367,
+                  "strict_ik_position_error_m": 0.0004200348264695279,
+                  "valid": true
+                }
+              ],
+              "pose_family_count": 15,
+              "selected": {
+                "arm_collision_valid": true,
+                "arm_joints": [
+                  0.502197665904142,
+                  1.1755455306456573,
+                  1.1855484603524222,
+                  0.449726511529559,
+                  -2.5406836802027817,
+                  0.8942631764173702,
+                  -2.3877051347972196
+                ],
+                "base_qpos": [
+                  0.22,
+                  0.3,
+                  0.0
+                ],
+                "candidate_index": 0,
+                "failure": null,
+                "pose_diagnostics": [
+                  {
+                    "collision_failure": null,
+                    "collision_valid": true,
+                    "orientation_error_rad": 0.00017787257943626436,
+                    "pose_index": 0,
+                    "position_error_m": 0.0003388435777558296
+                  },
+                  {
+                    "collision_failure": null,
+                    "collision_valid": true,
+                    "orientation_error_rad": 0.0004317066786813746,
+                    "pose_index": 1,
+                    "position_error_m": 0.0003377811550348796
+                  },
+                  {
+                    "collision_failure": null,
+                    "collision_valid": true,
+                    "orientation_error_rad": 0.001180471620008367,
+                    "pose_index": 2,
+                    "position_error_m": 0.0004200348264695279
+                  }
+                ],
+                "pose_family_index": 0,
+                "seed_policy": "LIVE_CARRY_ARM",
+                "strict_ik_orientation_error_rad": 0.001180471620008367,
+                "strict_ik_position_error_m": 0.0004200348264695279,
+                "valid": true
+              },
+              "strategy": "BOUNDED_LOCAL_PAYLOAD_SAFE_STRICT_PHASE_C_IK",
+              "workspace": "home"
+            },
+            "selected_source_yaw_deg": 0.0,
+            "selected_tilt_direction": 1.0,
+            "source_generic_id": "object_0010",
+            "source_outlet_world_m": [
+              -0.59016664829927,
+              -0.07887458403304369,
+              0.8762153875827551
+            ],
+            "source_physical_family": "JAR_SOURCE",
+            "source_returned_upright": true,
+            "source_still_held": true,
+            "status": "POUR_MOTION_VERIFIED",
+            "steps": [
+              {
+                "action": "LOCAL_PAYLOAD_STANCE",
+                "execution": {
+                  "direct_object_qpos_write": false,
+                  "held_object_included_in_collision_check": true,
+                  "invalid_collision_pairs": [],
+                  "physics_steps": 978,
+                  "position_tolerance_m": 0.02,
+                  "start_base_qpos": [
+                    1.75082339732663e-05,
+                    4.224865943300794e-05,
+                    2.7190615569763154e-05
+                  ],
+                  "success": true,
+                  "target_base_qpos": [
+                    0.22,
+                    0.3,
+                    0.0
+                  ],
+                  "terminal_base_error": [
+                    0.00047279626076787706,
+                    -0.0004692139514144156,
+                    -0.0006243617652037972
+                  ]
+                },
+                "search": {
+                  "candidate_count": 1,
+                  "candidates": [
+                    {
+                      "arm_collision_valid": true,
+                      "arm_joints": [
+                        0.502197665904142,
+                        1.1755455306456573,
+                        1.1855484603524222,
+                        0.449726511529559,
+                        -2.5406836802027817,
+                        0.8942631764173702,
+                        -2.3877051347972196
+                      ],
+                      "base_qpos": [
+                        0.22,
+                        0.3,
+                        0.0
+                      ],
+                      "candidate_index": 0,
+                      "failure": null,
+                      "pose_diagnostics": [
+                        {
+                          "collision_failure": null,
+                          "collision_valid": true,
+                          "orientation_error_rad": 0.00017787257943626436,
+                          "pose_index": 0,
+                          "position_error_m": 0.0003388435777558296
+                        },
+                        {
+                          "collision_failure": null,
+                          "collision_valid": true,
+                          "orientation_error_rad": 0.0004317066786813746,
+                          "pose_index": 1,
+                          "position_error_m": 0.0003377811550348796
+                        },
+                        {
+                          "collision_failure": null,
+                          "collision_valid": true,
+                          "orientation_error_rad": 0.001180471620008367,
+                          "pose_index": 2,
+                          "position_error_m": 0.0004200348264695279
+                        }
+                      ],
+                      "pose_family_index": 0,
+                      "seed_policy": "LIVE_CARRY_ARM",
+                      "strict_ik_orientation_error_rad": 0.001180471620008367,
+                      "strict_ik_position_error_m": 0.0004200348264695279,
+                      "valid": true
+                    }
+                  ],
+                  "pose_family_count": 15,
+                  "selected": {
+                    "arm_collision_valid": true,
+                    "arm_joints": [
+                      0.502197665904142,
+                      1.1755455306456573,
+                      1.1855484603524222,
+                      0.449726511529559,
+                      -2.5406836802027817,
+                      0.8942631764173702,
+                      -2.3877051347972196
+                    ],
+                    "base_qpos": [
+                      0.22,
+                      0.3,
+                      0.0
+                    ],
+                    "candidate_index": 0,
+                    "failure": null,
+                    "pose_diagnostics": [
+                      {
+                        "collision_failure": null,
+                        "collision_valid": true,
+                        "orientation_error_rad": 0.00017787257943626436,
+                        "pose_index": 0,
+                        "position_error_m": 0.0003388435777558296
+                      },
+                      {
+                        "collision_failure": null,
+                        "collision_valid": true,
+                        "orientation_error_rad": 0.0004317066786813746,
+                        "pose_index": 1,
+                        "position_error_m": 0.0003377811550348796
+                      },
+                      {
+                        "collision_failure": null,
+                        "collision_valid": true,
+                        "orientation_error_rad": 0.001180471620008367,
+                        "pose_index": 2,
+                        "position_error_m": 0.0004200348264695279
+                      }
+                    ],
+                    "pose_family_index": 0,
+                    "seed_policy": "LIVE_CARRY_ARM",
+                    "strict_ik_orientation_error_rad": 0.001180471620008367,
+                    "strict_ik_position_error_m": 0.0004200348264695279,
+                    "valid": true
+                  },
+                  "strategy": "BOUNDED_LOCAL_PAYLOAD_SAFE_STRICT_PHASE_C_IK",
+                  "workspace": "home"
+                },
+                "selected_seed_recovery": {
+                  "direct_object_qpos_write": false,
+                  "grasp_weld_retained": true,
+                  "joint_target": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0
+                  ],
+                  "performed": true,
+                  "recovery_policy": "COMPACT_NAVIGATION_ARM",
+                  "waypoint_count": 37
+                }
+              },
+              {
+                "action": "LIVE_POUR_ORIENTATION_SELECTION",
+                "arm_joints": [
+                  0.5914529479064788,
+                  1.536180637814469,
+                  -1.9691252488845346,
+                  0.07149569861903773,
+                  0.37600299473715815,
+                  0.5258914878112243,
+                  -1.5815441838016653
+                ],
+                "evaluated_candidate_count": 2,
+                "pose_diagnostics": [
+                  {
+                    "collision_failure": null,
+                    "collision_valid": true,
+                    "orientation_error_rad": 0.0001891330046845211,
+                    "pose_index": 0,
+                    "position_error_m": 0.0004303748463809422
+                  },
+                  {
+                    "collision_failure": null,
+                    "collision_valid": true,
+                    "orientation_error_rad": 0.0004080426456913624,
+                    "pose_index": 1,
+                    "position_error_m": 0.0005665671504097457
+                  },
+                  {
+                    "collision_failure": null,
+                    "collision_valid": true,
+                    "orientation_error_rad": 0.003291312983449259,
+                    "pose_index": 2,
+                    "position_error_m": 0.0005633778768997766
+                  }
+                ],
+                "pose_family_index": 0,
+                "rejected_candidates": [
+                  {
+                    "arm_joints": [
+                      -0.004596728042486111,
+                      0.025039204625831795,
+                      0.02780774375533657,
+                      0.018732051478720632,
+                      -0.05469441166677318,
+                      0.01641053045066933,
+                      -0.0786536807346871
+                    ],
+                    "pose_diagnostics": [
+                      {
+                        "collision_failure": "STRICT_IK_TOLERANCE_MISS",
+                        "collision_valid": false,
+                        "orientation_error_rad": 1.0672207382009042,
+                        "pose_index": 0,
+                        "position_error_m": 0.603326506747536
+                      }
+                    ],
+                    "pose_family_index": 0,
+                    "seed_policy": "LIVE_CARRY_ARM",
+                    "valid": false
+                  }
+                ],
+                "seed_policy": "NAVIGATION_ARM",
+                "valid": true
+              },
+              {
+                "action": "POUR_TRAJECTORY",
+                "adjacent_joint_deltas": [
+                  {
+                    "continuity_guard_applied": false,
+                    "interpolated_pose_index": 0,
+                    "label": "POUR_HIGH_CLEARANCE_APPROACH",
+                    "maximum_joint_delta_rad": 1.9969329926398711
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 1,
+                    "label": "POUR_APPROACH",
+                    "maximum_joint_delta_rad": 0.0388129857662709
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 2,
+                    "label": "POUR_APPROACH",
+                    "maximum_joint_delta_rad": 0.04270389206134895
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 3,
+                    "label": "POUR_APPROACH",
+                    "maximum_joint_delta_rad": 0.04287901540460881
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 4,
+                    "label": "POUR_APPROACH",
+                    "maximum_joint_delta_rad": 0.042002022441935294
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 5,
+                    "label": "POUR_TILT",
+                    "maximum_joint_delta_rad": 0.07885436183363725
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 6,
+                    "label": "POUR_TILT",
+                    "maximum_joint_delta_rad": 0.08669424025495576
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 7,
+                    "label": "POUR_TILT",
+                    "maximum_joint_delta_rad": 0.08936390074877765
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 8,
+                    "label": "POUR_TILT",
+                    "maximum_joint_delta_rad": 0.09310577456078928
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 9,
+                    "label": "POUR_TILT",
+                    "maximum_joint_delta_rad": 0.09636141215818439
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 10,
+                    "label": "POUR_UPRIGHT_RECOVERY",
+                    "maximum_joint_delta_rad": 0.09253352830173389
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 11,
+                    "label": "POUR_UPRIGHT_RECOVERY",
+                    "maximum_joint_delta_rad": 0.09430256585539865
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 12,
+                    "label": "POUR_UPRIGHT_RECOVERY",
+                    "maximum_joint_delta_rad": 0.09270529244474957
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 13,
+                    "label": "POUR_UPRIGHT_RECOVERY",
+                    "maximum_joint_delta_rad": 0.09061947715217977
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 14,
+                    "label": "POUR_UPRIGHT_RECOVERY",
+                    "maximum_joint_delta_rad": 0.0882790517811467
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 15,
+                    "label": "POUR_HIGH_CLEARANCE_RECOVERY",
+                    "maximum_joint_delta_rad": 0.0356299718169395
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 16,
+                    "label": "POUR_HIGH_CLEARANCE_RECOVERY",
+                    "maximum_joint_delta_rad": 0.040313596657008954
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 17,
+                    "label": "POUR_HIGH_CLEARANCE_RECOVERY",
+                    "maximum_joint_delta_rad": 0.0413954422743994
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 18,
+                    "label": "POUR_HIGH_CLEARANCE_RECOVERY",
+                    "maximum_joint_delta_rad": 0.04214605772540314
+                  }
+                ],
+                "allowed_task_contacts": [],
+                "direct_object_qpos_write": false,
+                "dwell_pose_samples": [
+                  {
+                    "dwell_steps": 175,
+                    "grip_position_world_m": [
+                      -0.6084484346862259,
+                      -0.09125770264842378,
+                      0.8440056205129887
+                    ],
+                    "held_body_position_world_m": [
+                      -0.5917389155154918,
+                      -0.08598002751739116,
+                      0.8178145155970429
+                    ],
+                    "held_body_rotation_world": [
+                      [
+                        0.8354318787416807,
+                        0.054343325691110264,
+                        -0.5469007029936753
+                      ],
+                      [
+                        0.02181454682365766,
+                        0.9910364456787472,
+                        0.1317986679876342
+                      ],
+                      [
+                        0.5491609067741664,
+                        -0.12203919980590704,
+                        0.8267579646920312
+                      ]
+                    ],
+                    "label": "POUR_TILT"
+                  }
+                ],
+                "grasp_weld_preserved": true,
+                "held_backend_body": "s1i_compact_coffee_jar",
+                "interpolated_pose_count": 19,
+                "invalid_collision_pairs": [],
+                "joint_waypoint_count": 62,
+                "local_continuity_limit_rad": 0.71,
+                "maximum_adjacent_joint_delta_rad": 1.9969329926398711,
+                "maximum_ik_orientation_error_rad": 0.004663608050077316,
+                "maximum_ik_position_error_m": 0.0007283520125955713,
+                "maximum_local_adjacent_joint_delta_rad": 0.09636141215818439,
+                "minimum_monitored_clearance_m": 0.0,
+                "physics_steps": 4445,
+                "pose_count": 5,
+                "stance_selected_initial_branch_used": true,
+                "success": true
+              },
+              {
+                "action": "RECOVER_COMPACT_NAVIGATION_CARRY_ARM",
+                "direct_object_qpos_write": false,
+                "grasp_weld_retained": true,
+                "joint_target": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "performed": true,
+                "recovery_policy": "COMPACT_NAVIGATION_ARM",
+                "waypoint_count": 33
+              },
+              {
+                "action": "RESTORE_DECLARED_WORKSPACE_STANCE",
+                "direct_object_qpos_write": false,
+                "held_object_included_in_collision_check": true,
+                "invalid_collision_pairs": [],
+                "physics_steps": 978,
+                "position_tolerance_m": 0.02,
+                "start_base_qpos": [
+                  0.22014772641573363,
+                  0.2998755175484516,
+                  -3.7053355802981e-05
+                ],
+                "success": true,
+                "target_base_qpos": [
+                  1.75082339732663e-05,
+                  4.224865943300794e-05,
+                  2.7190615569763154e-05
+                ],
+                "terminal_base_error": [
+                  -0.0004945815118502525,
+                  0.0004676957853167672,
+                  0.0006191489502554756
+                ]
+              }
+            ],
+            "success": true,
+            "symbolic_effects_applied": true,
+            "target_generic_id": "object_0003",
+            "target_opening_centre_world_m": [
+              -0.6000020095742189,
+              -0.08000010493193631,
+              0.6710468606899848
+            ],
+            "target_orientation_drift_rad": 1.19824980197742e-05,
+            "target_position_drift_m": 6.156031602406731e-08
+          },
+          "operator": "POUR",
+          "pick": {
+            "duration_s": 7.354701170988847,
+            "failure_code": null,
+            "functional_assignment_changed": false,
+            "generic_object_id": "object_0010",
+            "post_pick": {
+              "attachment_angle_snap_rad": 0.0006516965832537818,
+              "attachment_translation_snap_m": 0.00010365970791291846,
+              "backend_body": "s1i_compact_coffee_jar",
+              "bilateral_contact": true,
+              "contact_geoms": [
+                "google:left_finger_pad_1",
+                "google:right_finger_pad_1"
+              ],
+              "contact_sides": [
+                0,
+                1
+              ],
+              "direct_grasp_analysis": null,
+              "direct_object_qpos_write": false,
+              "duration_s": 7.354630607995205,
+              "extraction_strategy": null,
+              "failure_code": null,
+              "generic_object_id": "object_0010",
+              "grasp_family": "JAR_SOURCE",
+              "held_state": {
+                "backend_body": "s1i_compact_coffee_jar",
+                "exclusive_payload_weld": true,
+                "finger_joint_positions": [
+                  0.5293673059428149,
+                  0.5204922294788891
+                ],
+                "floor_contact": false,
+                "generic_object_id": "object_0010",
+                "gripper_body": "google:link_gripper",
+                "rejection_reasons": [],
+                "relative_orientation_wxyz": [
+                  0.5027663972000623,
+                  0.49753500722150545,
+                  0.4698980874303067,
+                  0.5280915203493671
+                ],
+                "relative_position_m": [
+                  -0.0308873620021007,
+                  0.0003238579555184629,
+                  0.13237329644437412
+                ],
+                "validation_status": "TRUE",
+                "weld_active": true,
+                "weld_id": 17
+              },
+              "manipulation_stance": null,
+              "message": "",
+              "navigation_safe_carry_reached": true,
+              "physics_steps": 8966,
+              "presentation": null,
+              "required_workspace": "home",
+              "selected_grasp_candidate_id": "jar_side_wall_from_negative_y",
+              "source_clearance_verified": null,
+              "source_context": {
+                "container_must_be_open": false,
+                "object_id": "object_0010",
+                "observed_measurement_cloud_path": "stages/000_initial/evidence/object_0010/fused.ply",
+                "observed_source_region": "countertop",
+                "observed_source_stage": 0,
+                "required_workspace": "home",
+                "source_container": null,
+                "source_kind": "TABLE"
+              },
+              "status": "PICK_SUCCESS",
+              "success": true,
+              "target_contact_geoms": [
+                "s1i_compact_coffee_jar_wall_0",
+                "s1i_compact_coffee_jar_wall_11",
+                "s1i_compact_coffee_jar_wall_6",
+                "s1i_compact_coffee_jar_wall_7"
+              ]
+            },
+            "request": {
+              "action": "PICK",
+              "arguments": [
+                "object_0010"
+              ]
+            },
+            "status": "PICK_SUCCESS",
+            "steps": [
+              {
+                "attachment_angle_snap_rad": 0.0006516965832537818,
+                "attachment_translation_snap_m": 0.00010365970791291846,
+                "backend_body": "s1i_compact_coffee_jar",
+                "bilateral_contact": true,
+                "contact_geoms": [
+                  "google:left_finger_pad_1",
+                  "google:right_finger_pad_1"
+                ],
+                "contact_sides": [
+                  0,
+                  1
+                ],
+                "direct_grasp_analysis": null,
+                "direct_object_qpos_write": false,
+                "duration_s": 7.354630607995205,
+                "extraction_strategy": null,
+                "failure_code": null,
+                "generic_object_id": "object_0010",
+                "grasp_family": "JAR_SOURCE",
+                "held_state": {
+                  "backend_body": "s1i_compact_coffee_jar",
+                  "exclusive_payload_weld": true,
+                  "finger_joint_positions": [
+                    0.5293673059428149,
+                    0.5204922294788891
+                  ],
+                  "floor_contact": false,
+                  "generic_object_id": "object_0010",
+                  "gripper_body": "google:link_gripper",
+                  "rejection_reasons": [],
+                  "relative_orientation_wxyz": [
+                    0.5027663972000623,
+                    0.49753500722150545,
+                    0.4698980874303067,
+                    0.5280915203493671
+                  ],
+                  "relative_position_m": [
+                    -0.0308873620021007,
+                    0.0003238579555184629,
+                    0.13237329644437412
+                  ],
+                  "validation_status": "TRUE",
+                  "weld_active": true,
+                  "weld_id": 17
+                },
+                "manipulation_stance": null,
+                "message": "",
+                "navigation_safe_carry_reached": true,
+                "physics_steps": 8966,
+                "presentation": null,
+                "required_workspace": "home",
+                "selected_grasp_candidate_id": "jar_side_wall_from_negative_y",
+                "source_clearance_verified": null,
+                "source_context": {
+                  "container_must_be_open": false,
+                  "object_id": "object_0010",
+                  "observed_measurement_cloud_path": "stages/000_initial/evidence/object_0010/fused.ply",
+                  "observed_source_region": "countertop",
+                  "observed_source_stage": 0,
+                  "required_workspace": "home",
+                  "source_container": null,
+                  "source_kind": "TABLE"
+                },
+                "status": "PICK_SUCCESS",
+                "success": true,
+                "target_contact_geoms": [
+                  "s1i_compact_coffee_jar_wall_0",
+                  "s1i_compact_coffee_jar_wall_11",
+                  "s1i_compact_coffee_jar_wall_6",
+                  "s1i_compact_coffee_jar_wall_7"
+                ]
+              }
+            ],
+            "storage_fixture_active_during_contact": false,
+            "storage_fixture_release": {
+              "active_during_contact": false,
+              "active_immediately_before_preclose": false,
+              "fixture_ids": [],
+              "grasp_weld_active_at_release": false,
+              "release_target_position_world_m": [
+                0.0900010453544726,
+                -0.0800002729657351,
+                0.6523993470374558
+              ],
+              "released_before_preclose": false
+            },
+            "storage_fixture_released": false,
+            "success": true
+          },
+          "planner_inventory_backend_free": true,
+          "source_or_tool_generic_id": "object_0010",
+          "success": true,
+          "target_generic_id": "object_0003",
+          "trial": 1
+        },
+        {
+          "execution_code_sha": "b4f4c1750c526c7d35f561c11e619239c93623f8",
+          "execution_resolution_one_to_one": true,
+          "fresh_scene_reset": true,
+          "frozen_step": 8,
+          "motion": {
+            "duration_s": 28.6534007070004,
+            "dwell_time_s": 0.35,
+            "evidence_mode": "KINEMATIC_ACTION_PROXY_NO_FLUID_DYNAMICS",
+            "functional_assignment_changed": false,
+            "held_state_after": {
+              "backend_body": "s1i_compact_coffee_jar",
+              "exclusive_payload_weld": true,
+              "finger_joint_positions": [
+                0.5674061440252031,
+                0.5617376735158389
+              ],
+              "floor_contact": false,
+              "generic_object_id": "object_0010",
+              "gripper_body": "google:link_gripper",
+              "rejection_reasons": [],
+              "relative_orientation_wxyz": [
+                0.5467762494749814,
+                0.4530642588468506,
+                0.4536384945203482,
+                0.5384984927137124
+              ],
+              "relative_position_m": [
+                -0.03122661529616089,
+                8.302904424073581e-06,
+                0.13392517507820637
+              ],
+              "validation_status": "TRUE",
+              "weld_active": true,
+              "weld_id": 17
+            },
+            "held_state_before": {
+              "backend_body": "s1i_compact_coffee_jar",
+              "exclusive_payload_weld": true,
+              "finger_joint_positions": [
+                0.5293673059428149,
+                0.5204922294788891
+              ],
+              "floor_contact": false,
+              "generic_object_id": "object_0010",
+              "gripper_body": "google:link_gripper",
+              "rejection_reasons": [],
+              "relative_orientation_wxyz": [
+                0.5027663972000623,
+                0.49753500722150545,
+                0.4698980874303067,
+                0.5280915203493671
+              ],
+              "relative_position_m": [
+                -0.0308873620021007,
+                0.0003238579555184629,
+                0.13237329644437412
+              ],
+              "validation_status": "TRUE",
+              "weld_active": true,
+              "weld_id": 17
+            },
+            "invalid_collision_pairs": [],
+            "maximum_tilt_angle_rad": 0.6108652381980153,
+            "minimum_outlet_interior_margin_m": 0.014069519949908916,
+            "minimum_source_target_clearance_m": 0.0,
+            "opening_geometry": {
+              "cavity_depth_m": 0.08684825897216797,
+              "centre_world_m": [
+                -0.6000020095742189,
+                -0.08000010493193631,
+                0.6710468606899848
+              ],
+              "opening_half_extents_m": [
+                0.03130807313250088,
+                0.029973615928427663
+              ],
+              "provenance": "FROZEN_OPEN_CAVITY_DIMENSIONS_LOCALIZED_BY_LIVE_PHYSICAL_BODY",
+              "rim_normal_world": [
+                -2.2133969454783055e-05,
+                -1.3840825067407473e-06,
+                0.9999999997540859
+              ],
+              "safety_margin_m": 0.006,
+              "target_generic_id": "object_0003"
+            },
+            "outlet_height_above_rim_m": 0.20516830758891666,
+            "physical_action_telemetry": {
+              "adjacent_joint_deltas": [
+                {
+                  "continuity_guard_applied": false,
+                  "interpolated_pose_index": 0,
+                  "label": "POUR_HIGH_CLEARANCE_APPROACH",
+                  "maximum_joint_delta_rad": 1.9969329926398711
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 1,
+                  "label": "POUR_APPROACH",
+                  "maximum_joint_delta_rad": 0.0388129857662709
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 2,
+                  "label": "POUR_APPROACH",
+                  "maximum_joint_delta_rad": 0.04270389206134895
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 3,
+                  "label": "POUR_APPROACH",
+                  "maximum_joint_delta_rad": 0.04287901540460881
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 4,
+                  "label": "POUR_APPROACH",
+                  "maximum_joint_delta_rad": 0.042002022441935294
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 5,
+                  "label": "POUR_TILT",
+                  "maximum_joint_delta_rad": 0.07885436183363725
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 6,
+                  "label": "POUR_TILT",
+                  "maximum_joint_delta_rad": 0.08669424025495576
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 7,
+                  "label": "POUR_TILT",
+                  "maximum_joint_delta_rad": 0.08936390074877765
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 8,
+                  "label": "POUR_TILT",
+                  "maximum_joint_delta_rad": 0.09310577456078928
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 9,
+                  "label": "POUR_TILT",
+                  "maximum_joint_delta_rad": 0.09636141215818439
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 10,
+                  "label": "POUR_UPRIGHT_RECOVERY",
+                  "maximum_joint_delta_rad": 0.09253352830173389
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 11,
+                  "label": "POUR_UPRIGHT_RECOVERY",
+                  "maximum_joint_delta_rad": 0.09430256585539865
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 12,
+                  "label": "POUR_UPRIGHT_RECOVERY",
+                  "maximum_joint_delta_rad": 0.09270529244474957
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 13,
+                  "label": "POUR_UPRIGHT_RECOVERY",
+                  "maximum_joint_delta_rad": 0.09061947715217977
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 14,
+                  "label": "POUR_UPRIGHT_RECOVERY",
+                  "maximum_joint_delta_rad": 0.0882790517811467
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 15,
+                  "label": "POUR_HIGH_CLEARANCE_RECOVERY",
+                  "maximum_joint_delta_rad": 0.0356299718169395
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 16,
+                  "label": "POUR_HIGH_CLEARANCE_RECOVERY",
+                  "maximum_joint_delta_rad": 0.040313596657008954
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 17,
+                  "label": "POUR_HIGH_CLEARANCE_RECOVERY",
+                  "maximum_joint_delta_rad": 0.0413954422743994
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 18,
+                  "label": "POUR_HIGH_CLEARANCE_RECOVERY",
+                  "maximum_joint_delta_rad": 0.04214605772540314
+                }
+              ],
+              "allowed_task_contacts": [],
+              "direct_object_qpos_write": false,
+              "dwell_pose_samples": [
+                {
+                  "dwell_steps": 175,
+                  "grip_position_world_m": [
+                    -0.6084484346862259,
+                    -0.09125770264842378,
+                    0.8440056205129887
+                  ],
+                  "held_body_position_world_m": [
+                    -0.5917389155154918,
+                    -0.08598002751739116,
+                    0.8178145155970429
+                  ],
+                  "held_body_rotation_world": [
+                    [
+                      0.8354318787416807,
+                      0.054343325691110264,
+                      -0.5469007029936753
+                    ],
+                    [
+                      0.02181454682365766,
+                      0.9910364456787472,
+                      0.1317986679876342
+                    ],
+                    [
+                      0.5491609067741664,
+                      -0.12203919980590704,
+                      0.8267579646920312
+                    ]
+                  ],
+                  "label": "POUR_TILT"
+                }
+              ],
+              "grasp_weld_preserved": true,
+              "held_backend_body": "s1i_compact_coffee_jar",
+              "interpolated_pose_count": 19,
+              "invalid_collision_pairs": [],
+              "joint_waypoint_count": 62,
+              "local_continuity_limit_rad": 0.71,
+              "maximum_adjacent_joint_delta_rad": 1.9969329926398711,
+              "maximum_ik_orientation_error_rad": 0.004663608050077316,
+              "maximum_ik_position_error_m": 0.0007283520125955713,
+              "maximum_local_adjacent_joint_delta_rad": 0.09636141215818439,
+              "minimum_monitored_clearance_m": 0.0,
+              "physics_steps": 4445,
+              "pose_count": 5,
+              "stance_selected_initial_branch_used": true,
+              "success": true
+            },
+            "physical_fluid_transfer_modeled": false,
+            "pour_motion_verified": true,
+            "pour_spec": {
+              "dwell_time_s": 0.35,
+              "family": "JAR_SOURCE",
+              "outlet_local_m": [
+                0.03354,
+                0.0,
+                0.04836
+              ],
+              "outlet_provenance": "AUTHORED_PHYSICAL_MOUTH_SITE_PLUS_COLLISION_DERIVED_RIM_EDGE",
+              "tilt_candidates_rad": [
+                0.6108652381980153,
+                0.7853981633974483,
+                0.9599310885968813
+              ]
+            },
+            "pre_pour_alignment_error_m": 0.009904095978518749,
+            "request": {
+              "action": "POUR",
+              "arguments": [
+                "object_0010",
+                "object_0003",
+                "coffee"
+              ]
+            },
+            "selected_base_stance": {
+              "candidate_count": 1,
+              "candidates": [
+                {
+                  "arm_collision_valid": true,
+                  "arm_joints": [
+                    0.502197665904142,
+                    1.1755455306456573,
+                    1.1855484603524222,
+                    0.449726511529559,
+                    -2.5406836802027817,
+                    0.8942631764173702,
+                    -2.3877051347972196
+                  ],
+                  "base_qpos": [
+                    0.22,
+                    0.3,
+                    0.0
+                  ],
+                  "candidate_index": 0,
+                  "failure": null,
+                  "pose_diagnostics": [
+                    {
+                      "collision_failure": null,
+                      "collision_valid": true,
+                      "orientation_error_rad": 0.00017787257943626436,
+                      "pose_index": 0,
+                      "position_error_m": 0.0003388435777558296
+                    },
+                    {
+                      "collision_failure": null,
+                      "collision_valid": true,
+                      "orientation_error_rad": 0.0004317066786813746,
+                      "pose_index": 1,
+                      "position_error_m": 0.0003377811550348796
+                    },
+                    {
+                      "collision_failure": null,
+                      "collision_valid": true,
+                      "orientation_error_rad": 0.001180471620008367,
+                      "pose_index": 2,
+                      "position_error_m": 0.0004200348264695279
+                    }
+                  ],
+                  "pose_family_index": 0,
+                  "seed_policy": "LIVE_CARRY_ARM",
+                  "strict_ik_orientation_error_rad": 0.001180471620008367,
+                  "strict_ik_position_error_m": 0.0004200348264695279,
+                  "valid": true
+                }
+              ],
+              "pose_family_count": 15,
+              "selected": {
+                "arm_collision_valid": true,
+                "arm_joints": [
+                  0.502197665904142,
+                  1.1755455306456573,
+                  1.1855484603524222,
+                  0.449726511529559,
+                  -2.5406836802027817,
+                  0.8942631764173702,
+                  -2.3877051347972196
+                ],
+                "base_qpos": [
+                  0.22,
+                  0.3,
+                  0.0
+                ],
+                "candidate_index": 0,
+                "failure": null,
+                "pose_diagnostics": [
+                  {
+                    "collision_failure": null,
+                    "collision_valid": true,
+                    "orientation_error_rad": 0.00017787257943626436,
+                    "pose_index": 0,
+                    "position_error_m": 0.0003388435777558296
+                  },
+                  {
+                    "collision_failure": null,
+                    "collision_valid": true,
+                    "orientation_error_rad": 0.0004317066786813746,
+                    "pose_index": 1,
+                    "position_error_m": 0.0003377811550348796
+                  },
+                  {
+                    "collision_failure": null,
+                    "collision_valid": true,
+                    "orientation_error_rad": 0.001180471620008367,
+                    "pose_index": 2,
+                    "position_error_m": 0.0004200348264695279
+                  }
+                ],
+                "pose_family_index": 0,
+                "seed_policy": "LIVE_CARRY_ARM",
+                "strict_ik_orientation_error_rad": 0.001180471620008367,
+                "strict_ik_position_error_m": 0.0004200348264695279,
+                "valid": true
+              },
+              "strategy": "BOUNDED_LOCAL_PAYLOAD_SAFE_STRICT_PHASE_C_IK",
+              "workspace": "home"
+            },
+            "selected_source_yaw_deg": 0.0,
+            "selected_tilt_direction": 1.0,
+            "source_generic_id": "object_0010",
+            "source_outlet_world_m": [
+              -0.59016664829927,
+              -0.07887458403304369,
+              0.8762153875827551
+            ],
+            "source_physical_family": "JAR_SOURCE",
+            "source_returned_upright": true,
+            "source_still_held": true,
+            "status": "POUR_MOTION_VERIFIED",
+            "steps": [
+              {
+                "action": "LOCAL_PAYLOAD_STANCE",
+                "execution": {
+                  "direct_object_qpos_write": false,
+                  "held_object_included_in_collision_check": true,
+                  "invalid_collision_pairs": [],
+                  "physics_steps": 978,
+                  "position_tolerance_m": 0.02,
+                  "start_base_qpos": [
+                    1.75082339732663e-05,
+                    4.224865943300794e-05,
+                    2.7190615569763154e-05
+                  ],
+                  "success": true,
+                  "target_base_qpos": [
+                    0.22,
+                    0.3,
+                    0.0
+                  ],
+                  "terminal_base_error": [
+                    0.00047279626076787706,
+                    -0.0004692139514144156,
+                    -0.0006243617652037972
+                  ]
+                },
+                "search": {
+                  "candidate_count": 1,
+                  "candidates": [
+                    {
+                      "arm_collision_valid": true,
+                      "arm_joints": [
+                        0.502197665904142,
+                        1.1755455306456573,
+                        1.1855484603524222,
+                        0.449726511529559,
+                        -2.5406836802027817,
+                        0.8942631764173702,
+                        -2.3877051347972196
+                      ],
+                      "base_qpos": [
+                        0.22,
+                        0.3,
+                        0.0
+                      ],
+                      "candidate_index": 0,
+                      "failure": null,
+                      "pose_diagnostics": [
+                        {
+                          "collision_failure": null,
+                          "collision_valid": true,
+                          "orientation_error_rad": 0.00017787257943626436,
+                          "pose_index": 0,
+                          "position_error_m": 0.0003388435777558296
+                        },
+                        {
+                          "collision_failure": null,
+                          "collision_valid": true,
+                          "orientation_error_rad": 0.0004317066786813746,
+                          "pose_index": 1,
+                          "position_error_m": 0.0003377811550348796
+                        },
+                        {
+                          "collision_failure": null,
+                          "collision_valid": true,
+                          "orientation_error_rad": 0.001180471620008367,
+                          "pose_index": 2,
+                          "position_error_m": 0.0004200348264695279
+                        }
+                      ],
+                      "pose_family_index": 0,
+                      "seed_policy": "LIVE_CARRY_ARM",
+                      "strict_ik_orientation_error_rad": 0.001180471620008367,
+                      "strict_ik_position_error_m": 0.0004200348264695279,
+                      "valid": true
+                    }
+                  ],
+                  "pose_family_count": 15,
+                  "selected": {
+                    "arm_collision_valid": true,
+                    "arm_joints": [
+                      0.502197665904142,
+                      1.1755455306456573,
+                      1.1855484603524222,
+                      0.449726511529559,
+                      -2.5406836802027817,
+                      0.8942631764173702,
+                      -2.3877051347972196
+                    ],
+                    "base_qpos": [
+                      0.22,
+                      0.3,
+                      0.0
+                    ],
+                    "candidate_index": 0,
+                    "failure": null,
+                    "pose_diagnostics": [
+                      {
+                        "collision_failure": null,
+                        "collision_valid": true,
+                        "orientation_error_rad": 0.00017787257943626436,
+                        "pose_index": 0,
+                        "position_error_m": 0.0003388435777558296
+                      },
+                      {
+                        "collision_failure": null,
+                        "collision_valid": true,
+                        "orientation_error_rad": 0.0004317066786813746,
+                        "pose_index": 1,
+                        "position_error_m": 0.0003377811550348796
+                      },
+                      {
+                        "collision_failure": null,
+                        "collision_valid": true,
+                        "orientation_error_rad": 0.001180471620008367,
+                        "pose_index": 2,
+                        "position_error_m": 0.0004200348264695279
+                      }
+                    ],
+                    "pose_family_index": 0,
+                    "seed_policy": "LIVE_CARRY_ARM",
+                    "strict_ik_orientation_error_rad": 0.001180471620008367,
+                    "strict_ik_position_error_m": 0.0004200348264695279,
+                    "valid": true
+                  },
+                  "strategy": "BOUNDED_LOCAL_PAYLOAD_SAFE_STRICT_PHASE_C_IK",
+                  "workspace": "home"
+                },
+                "selected_seed_recovery": {
+                  "direct_object_qpos_write": false,
+                  "grasp_weld_retained": true,
+                  "joint_target": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0
+                  ],
+                  "performed": true,
+                  "recovery_policy": "COMPACT_NAVIGATION_ARM",
+                  "waypoint_count": 37
+                }
+              },
+              {
+                "action": "LIVE_POUR_ORIENTATION_SELECTION",
+                "arm_joints": [
+                  0.5914529479064788,
+                  1.536180637814469,
+                  -1.9691252488845346,
+                  0.07149569861903773,
+                  0.37600299473715815,
+                  0.5258914878112243,
+                  -1.5815441838016653
+                ],
+                "evaluated_candidate_count": 2,
+                "pose_diagnostics": [
+                  {
+                    "collision_failure": null,
+                    "collision_valid": true,
+                    "orientation_error_rad": 0.0001891330046845211,
+                    "pose_index": 0,
+                    "position_error_m": 0.0004303748463809422
+                  },
+                  {
+                    "collision_failure": null,
+                    "collision_valid": true,
+                    "orientation_error_rad": 0.0004080426456913624,
+                    "pose_index": 1,
+                    "position_error_m": 0.0005665671504097457
+                  },
+                  {
+                    "collision_failure": null,
+                    "collision_valid": true,
+                    "orientation_error_rad": 0.003291312983449259,
+                    "pose_index": 2,
+                    "position_error_m": 0.0005633778768997766
+                  }
+                ],
+                "pose_family_index": 0,
+                "rejected_candidates": [
+                  {
+                    "arm_joints": [
+                      -0.004596728042486111,
+                      0.025039204625831795,
+                      0.02780774375533657,
+                      0.018732051478720632,
+                      -0.05469441166677318,
+                      0.01641053045066933,
+                      -0.0786536807346871
+                    ],
+                    "pose_diagnostics": [
+                      {
+                        "collision_failure": "STRICT_IK_TOLERANCE_MISS",
+                        "collision_valid": false,
+                        "orientation_error_rad": 1.0672207382009042,
+                        "pose_index": 0,
+                        "position_error_m": 0.603326506747536
+                      }
+                    ],
+                    "pose_family_index": 0,
+                    "seed_policy": "LIVE_CARRY_ARM",
+                    "valid": false
+                  }
+                ],
+                "seed_policy": "NAVIGATION_ARM",
+                "valid": true
+              },
+              {
+                "action": "POUR_TRAJECTORY",
+                "adjacent_joint_deltas": [
+                  {
+                    "continuity_guard_applied": false,
+                    "interpolated_pose_index": 0,
+                    "label": "POUR_HIGH_CLEARANCE_APPROACH",
+                    "maximum_joint_delta_rad": 1.9969329926398711
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 1,
+                    "label": "POUR_APPROACH",
+                    "maximum_joint_delta_rad": 0.0388129857662709
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 2,
+                    "label": "POUR_APPROACH",
+                    "maximum_joint_delta_rad": 0.04270389206134895
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 3,
+                    "label": "POUR_APPROACH",
+                    "maximum_joint_delta_rad": 0.04287901540460881
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 4,
+                    "label": "POUR_APPROACH",
+                    "maximum_joint_delta_rad": 0.042002022441935294
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 5,
+                    "label": "POUR_TILT",
+                    "maximum_joint_delta_rad": 0.07885436183363725
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 6,
+                    "label": "POUR_TILT",
+                    "maximum_joint_delta_rad": 0.08669424025495576
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 7,
+                    "label": "POUR_TILT",
+                    "maximum_joint_delta_rad": 0.08936390074877765
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 8,
+                    "label": "POUR_TILT",
+                    "maximum_joint_delta_rad": 0.09310577456078928
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 9,
+                    "label": "POUR_TILT",
+                    "maximum_joint_delta_rad": 0.09636141215818439
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 10,
+                    "label": "POUR_UPRIGHT_RECOVERY",
+                    "maximum_joint_delta_rad": 0.09253352830173389
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 11,
+                    "label": "POUR_UPRIGHT_RECOVERY",
+                    "maximum_joint_delta_rad": 0.09430256585539865
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 12,
+                    "label": "POUR_UPRIGHT_RECOVERY",
+                    "maximum_joint_delta_rad": 0.09270529244474957
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 13,
+                    "label": "POUR_UPRIGHT_RECOVERY",
+                    "maximum_joint_delta_rad": 0.09061947715217977
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 14,
+                    "label": "POUR_UPRIGHT_RECOVERY",
+                    "maximum_joint_delta_rad": 0.0882790517811467
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 15,
+                    "label": "POUR_HIGH_CLEARANCE_RECOVERY",
+                    "maximum_joint_delta_rad": 0.0356299718169395
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 16,
+                    "label": "POUR_HIGH_CLEARANCE_RECOVERY",
+                    "maximum_joint_delta_rad": 0.040313596657008954
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 17,
+                    "label": "POUR_HIGH_CLEARANCE_RECOVERY",
+                    "maximum_joint_delta_rad": 0.0413954422743994
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 18,
+                    "label": "POUR_HIGH_CLEARANCE_RECOVERY",
+                    "maximum_joint_delta_rad": 0.04214605772540314
+                  }
+                ],
+                "allowed_task_contacts": [],
+                "direct_object_qpos_write": false,
+                "dwell_pose_samples": [
+                  {
+                    "dwell_steps": 175,
+                    "grip_position_world_m": [
+                      -0.6084484346862259,
+                      -0.09125770264842378,
+                      0.8440056205129887
+                    ],
+                    "held_body_position_world_m": [
+                      -0.5917389155154918,
+                      -0.08598002751739116,
+                      0.8178145155970429
+                    ],
+                    "held_body_rotation_world": [
+                      [
+                        0.8354318787416807,
+                        0.054343325691110264,
+                        -0.5469007029936753
+                      ],
+                      [
+                        0.02181454682365766,
+                        0.9910364456787472,
+                        0.1317986679876342
+                      ],
+                      [
+                        0.5491609067741664,
+                        -0.12203919980590704,
+                        0.8267579646920312
+                      ]
+                    ],
+                    "label": "POUR_TILT"
+                  }
+                ],
+                "grasp_weld_preserved": true,
+                "held_backend_body": "s1i_compact_coffee_jar",
+                "interpolated_pose_count": 19,
+                "invalid_collision_pairs": [],
+                "joint_waypoint_count": 62,
+                "local_continuity_limit_rad": 0.71,
+                "maximum_adjacent_joint_delta_rad": 1.9969329926398711,
+                "maximum_ik_orientation_error_rad": 0.004663608050077316,
+                "maximum_ik_position_error_m": 0.0007283520125955713,
+                "maximum_local_adjacent_joint_delta_rad": 0.09636141215818439,
+                "minimum_monitored_clearance_m": 0.0,
+                "physics_steps": 4445,
+                "pose_count": 5,
+                "stance_selected_initial_branch_used": true,
+                "success": true
+              },
+              {
+                "action": "RECOVER_COMPACT_NAVIGATION_CARRY_ARM",
+                "direct_object_qpos_write": false,
+                "grasp_weld_retained": true,
+                "joint_target": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "performed": true,
+                "recovery_policy": "COMPACT_NAVIGATION_ARM",
+                "waypoint_count": 33
+              },
+              {
+                "action": "RESTORE_DECLARED_WORKSPACE_STANCE",
+                "direct_object_qpos_write": false,
+                "held_object_included_in_collision_check": true,
+                "invalid_collision_pairs": [],
+                "physics_steps": 978,
+                "position_tolerance_m": 0.02,
+                "start_base_qpos": [
+                  0.22014772641573363,
+                  0.2998755175484516,
+                  -3.7053355802981e-05
+                ],
+                "success": true,
+                "target_base_qpos": [
+                  1.75082339732663e-05,
+                  4.224865943300794e-05,
+                  2.7190615569763154e-05
+                ],
+                "terminal_base_error": [
+                  -0.0004945815118502525,
+                  0.0004676957853167672,
+                  0.0006191489502554756
+                ]
+              }
+            ],
+            "success": true,
+            "symbolic_effects_applied": true,
+            "target_generic_id": "object_0003",
+            "target_opening_centre_world_m": [
+              -0.6000020095742189,
+              -0.08000010493193631,
+              0.6710468606899848
+            ],
+            "target_orientation_drift_rad": 1.19824980197742e-05,
+            "target_position_drift_m": 6.156031602406731e-08
+          },
+          "operator": "POUR",
+          "pick": {
+            "duration_s": 7.2748751870240085,
+            "failure_code": null,
+            "functional_assignment_changed": false,
+            "generic_object_id": "object_0010",
+            "post_pick": {
+              "attachment_angle_snap_rad": 0.0006516965832537818,
+              "attachment_translation_snap_m": 0.00010365970791291846,
+              "backend_body": "s1i_compact_coffee_jar",
+              "bilateral_contact": true,
+              "contact_geoms": [
+                "google:left_finger_pad_1",
+                "google:right_finger_pad_1"
+              ],
+              "contact_sides": [
+                0,
+                1
+              ],
+              "direct_grasp_analysis": null,
+              "direct_object_qpos_write": false,
+              "duration_s": 7.274807629990391,
+              "extraction_strategy": null,
+              "failure_code": null,
+              "generic_object_id": "object_0010",
+              "grasp_family": "JAR_SOURCE",
+              "held_state": {
+                "backend_body": "s1i_compact_coffee_jar",
+                "exclusive_payload_weld": true,
+                "finger_joint_positions": [
+                  0.5293673059428149,
+                  0.5204922294788891
+                ],
+                "floor_contact": false,
+                "generic_object_id": "object_0010",
+                "gripper_body": "google:link_gripper",
+                "rejection_reasons": [],
+                "relative_orientation_wxyz": [
+                  0.5027663972000623,
+                  0.49753500722150545,
+                  0.4698980874303067,
+                  0.5280915203493671
+                ],
+                "relative_position_m": [
+                  -0.0308873620021007,
+                  0.0003238579555184629,
+                  0.13237329644437412
+                ],
+                "validation_status": "TRUE",
+                "weld_active": true,
+                "weld_id": 17
+              },
+              "manipulation_stance": null,
+              "message": "",
+              "navigation_safe_carry_reached": true,
+              "physics_steps": 8966,
+              "presentation": null,
+              "required_workspace": "home",
+              "selected_grasp_candidate_id": "jar_side_wall_from_negative_y",
+              "source_clearance_verified": null,
+              "source_context": {
+                "container_must_be_open": false,
+                "object_id": "object_0010",
+                "observed_measurement_cloud_path": "stages/000_initial/evidence/object_0010/fused.ply",
+                "observed_source_region": "countertop",
+                "observed_source_stage": 0,
+                "required_workspace": "home",
+                "source_container": null,
+                "source_kind": "TABLE"
+              },
+              "status": "PICK_SUCCESS",
+              "success": true,
+              "target_contact_geoms": [
+                "s1i_compact_coffee_jar_wall_0",
+                "s1i_compact_coffee_jar_wall_11",
+                "s1i_compact_coffee_jar_wall_6",
+                "s1i_compact_coffee_jar_wall_7"
+              ]
+            },
+            "request": {
+              "action": "PICK",
+              "arguments": [
+                "object_0010"
+              ]
+            },
+            "status": "PICK_SUCCESS",
+            "steps": [
+              {
+                "attachment_angle_snap_rad": 0.0006516965832537818,
+                "attachment_translation_snap_m": 0.00010365970791291846,
+                "backend_body": "s1i_compact_coffee_jar",
+                "bilateral_contact": true,
+                "contact_geoms": [
+                  "google:left_finger_pad_1",
+                  "google:right_finger_pad_1"
+                ],
+                "contact_sides": [
+                  0,
+                  1
+                ],
+                "direct_grasp_analysis": null,
+                "direct_object_qpos_write": false,
+                "duration_s": 7.274807629990391,
+                "extraction_strategy": null,
+                "failure_code": null,
+                "generic_object_id": "object_0010",
+                "grasp_family": "JAR_SOURCE",
+                "held_state": {
+                  "backend_body": "s1i_compact_coffee_jar",
+                  "exclusive_payload_weld": true,
+                  "finger_joint_positions": [
+                    0.5293673059428149,
+                    0.5204922294788891
+                  ],
+                  "floor_contact": false,
+                  "generic_object_id": "object_0010",
+                  "gripper_body": "google:link_gripper",
+                  "rejection_reasons": [],
+                  "relative_orientation_wxyz": [
+                    0.5027663972000623,
+                    0.49753500722150545,
+                    0.4698980874303067,
+                    0.5280915203493671
+                  ],
+                  "relative_position_m": [
+                    -0.0308873620021007,
+                    0.0003238579555184629,
+                    0.13237329644437412
+                  ],
+                  "validation_status": "TRUE",
+                  "weld_active": true,
+                  "weld_id": 17
+                },
+                "manipulation_stance": null,
+                "message": "",
+                "navigation_safe_carry_reached": true,
+                "physics_steps": 8966,
+                "presentation": null,
+                "required_workspace": "home",
+                "selected_grasp_candidate_id": "jar_side_wall_from_negative_y",
+                "source_clearance_verified": null,
+                "source_context": {
+                  "container_must_be_open": false,
+                  "object_id": "object_0010",
+                  "observed_measurement_cloud_path": "stages/000_initial/evidence/object_0010/fused.ply",
+                  "observed_source_region": "countertop",
+                  "observed_source_stage": 0,
+                  "required_workspace": "home",
+                  "source_container": null,
+                  "source_kind": "TABLE"
+                },
+                "status": "PICK_SUCCESS",
+                "success": true,
+                "target_contact_geoms": [
+                  "s1i_compact_coffee_jar_wall_0",
+                  "s1i_compact_coffee_jar_wall_11",
+                  "s1i_compact_coffee_jar_wall_6",
+                  "s1i_compact_coffee_jar_wall_7"
+                ]
+              }
+            ],
+            "storage_fixture_active_during_contact": false,
+            "storage_fixture_release": {
+              "active_during_contact": false,
+              "active_immediately_before_preclose": false,
+              "fixture_ids": [],
+              "grasp_weld_active_at_release": false,
+              "release_target_position_world_m": [
+                0.0900010453544726,
+                -0.0800002729657351,
+                0.6523993470374558
+              ],
+              "released_before_preclose": false
+            },
+            "storage_fixture_released": false,
+            "success": true
+          },
+          "planner_inventory_backend_free": true,
+          "source_or_tool_generic_id": "object_0010",
+          "success": true,
+          "target_generic_id": "object_0003",
+          "trial": 2
+        },
+        {
+          "execution_code_sha": "b4f4c1750c526c7d35f561c11e619239c93623f8",
+          "execution_resolution_one_to_one": true,
+          "fresh_scene_reset": true,
+          "frozen_step": 8,
+          "motion": {
+            "duration_s": 28.94099751196336,
+            "dwell_time_s": 0.35,
+            "evidence_mode": "KINEMATIC_ACTION_PROXY_NO_FLUID_DYNAMICS",
+            "functional_assignment_changed": false,
+            "held_state_after": {
+              "backend_body": "s1i_compact_coffee_jar",
+              "exclusive_payload_weld": true,
+              "finger_joint_positions": [
+                0.5674061440252031,
+                0.5617376735158389
+              ],
+              "floor_contact": false,
+              "generic_object_id": "object_0010",
+              "gripper_body": "google:link_gripper",
+              "rejection_reasons": [],
+              "relative_orientation_wxyz": [
+                0.5467762494749814,
+                0.4530642588468506,
+                0.4536384945203482,
+                0.5384984927137124
+              ],
+              "relative_position_m": [
+                -0.03122661529616089,
+                8.302904424073581e-06,
+                0.13392517507820637
+              ],
+              "validation_status": "TRUE",
+              "weld_active": true,
+              "weld_id": 17
+            },
+            "held_state_before": {
+              "backend_body": "s1i_compact_coffee_jar",
+              "exclusive_payload_weld": true,
+              "finger_joint_positions": [
+                0.5293673059428149,
+                0.5204922294788891
+              ],
+              "floor_contact": false,
+              "generic_object_id": "object_0010",
+              "gripper_body": "google:link_gripper",
+              "rejection_reasons": [],
+              "relative_orientation_wxyz": [
+                0.5027663972000623,
+                0.49753500722150545,
+                0.4698980874303067,
+                0.5280915203493671
+              ],
+              "relative_position_m": [
+                -0.0308873620021007,
+                0.0003238579555184629,
+                0.13237329644437412
+              ],
+              "validation_status": "TRUE",
+              "weld_active": true,
+              "weld_id": 17
+            },
+            "invalid_collision_pairs": [],
+            "maximum_tilt_angle_rad": 0.6108652381980153,
+            "minimum_outlet_interior_margin_m": 0.014069519949908916,
+            "minimum_source_target_clearance_m": 0.0,
+            "opening_geometry": {
+              "cavity_depth_m": 0.08684825897216797,
+              "centre_world_m": [
+                -0.6000020095742189,
+                -0.08000010493193631,
+                0.6710468606899848
+              ],
+              "opening_half_extents_m": [
+                0.03130807313250088,
+                0.029973615928427663
+              ],
+              "provenance": "FROZEN_OPEN_CAVITY_DIMENSIONS_LOCALIZED_BY_LIVE_PHYSICAL_BODY",
+              "rim_normal_world": [
+                -2.2133969454783055e-05,
+                -1.3840825067407473e-06,
+                0.9999999997540859
+              ],
+              "safety_margin_m": 0.006,
+              "target_generic_id": "object_0003"
+            },
+            "outlet_height_above_rim_m": 0.20516830758891666,
+            "physical_action_telemetry": {
+              "adjacent_joint_deltas": [
+                {
+                  "continuity_guard_applied": false,
+                  "interpolated_pose_index": 0,
+                  "label": "POUR_HIGH_CLEARANCE_APPROACH",
+                  "maximum_joint_delta_rad": 1.9969329926398711
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 1,
+                  "label": "POUR_APPROACH",
+                  "maximum_joint_delta_rad": 0.0388129857662709
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 2,
+                  "label": "POUR_APPROACH",
+                  "maximum_joint_delta_rad": 0.04270389206134895
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 3,
+                  "label": "POUR_APPROACH",
+                  "maximum_joint_delta_rad": 0.04287901540460881
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 4,
+                  "label": "POUR_APPROACH",
+                  "maximum_joint_delta_rad": 0.042002022441935294
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 5,
+                  "label": "POUR_TILT",
+                  "maximum_joint_delta_rad": 0.07885436183363725
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 6,
+                  "label": "POUR_TILT",
+                  "maximum_joint_delta_rad": 0.08669424025495576
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 7,
+                  "label": "POUR_TILT",
+                  "maximum_joint_delta_rad": 0.08936390074877765
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 8,
+                  "label": "POUR_TILT",
+                  "maximum_joint_delta_rad": 0.09310577456078928
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 9,
+                  "label": "POUR_TILT",
+                  "maximum_joint_delta_rad": 0.09636141215818439
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 10,
+                  "label": "POUR_UPRIGHT_RECOVERY",
+                  "maximum_joint_delta_rad": 0.09253352830173389
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 11,
+                  "label": "POUR_UPRIGHT_RECOVERY",
+                  "maximum_joint_delta_rad": 0.09430256585539865
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 12,
+                  "label": "POUR_UPRIGHT_RECOVERY",
+                  "maximum_joint_delta_rad": 0.09270529244474957
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 13,
+                  "label": "POUR_UPRIGHT_RECOVERY",
+                  "maximum_joint_delta_rad": 0.09061947715217977
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 14,
+                  "label": "POUR_UPRIGHT_RECOVERY",
+                  "maximum_joint_delta_rad": 0.0882790517811467
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 15,
+                  "label": "POUR_HIGH_CLEARANCE_RECOVERY",
+                  "maximum_joint_delta_rad": 0.0356299718169395
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 16,
+                  "label": "POUR_HIGH_CLEARANCE_RECOVERY",
+                  "maximum_joint_delta_rad": 0.040313596657008954
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 17,
+                  "label": "POUR_HIGH_CLEARANCE_RECOVERY",
+                  "maximum_joint_delta_rad": 0.0413954422743994
+                },
+                {
+                  "continuity_guard_applied": true,
+                  "interpolated_pose_index": 18,
+                  "label": "POUR_HIGH_CLEARANCE_RECOVERY",
+                  "maximum_joint_delta_rad": 0.04214605772540314
+                }
+              ],
+              "allowed_task_contacts": [],
+              "direct_object_qpos_write": false,
+              "dwell_pose_samples": [
+                {
+                  "dwell_steps": 175,
+                  "grip_position_world_m": [
+                    -0.6084484346862259,
+                    -0.09125770264842378,
+                    0.8440056205129887
+                  ],
+                  "held_body_position_world_m": [
+                    -0.5917389155154918,
+                    -0.08598002751739116,
+                    0.8178145155970429
+                  ],
+                  "held_body_rotation_world": [
+                    [
+                      0.8354318787416807,
+                      0.054343325691110264,
+                      -0.5469007029936753
+                    ],
+                    [
+                      0.02181454682365766,
+                      0.9910364456787472,
+                      0.1317986679876342
+                    ],
+                    [
+                      0.5491609067741664,
+                      -0.12203919980590704,
+                      0.8267579646920312
+                    ]
+                  ],
+                  "label": "POUR_TILT"
+                }
+              ],
+              "grasp_weld_preserved": true,
+              "held_backend_body": "s1i_compact_coffee_jar",
+              "interpolated_pose_count": 19,
+              "invalid_collision_pairs": [],
+              "joint_waypoint_count": 62,
+              "local_continuity_limit_rad": 0.71,
+              "maximum_adjacent_joint_delta_rad": 1.9969329926398711,
+              "maximum_ik_orientation_error_rad": 0.004663608050077316,
+              "maximum_ik_position_error_m": 0.0007283520125955713,
+              "maximum_local_adjacent_joint_delta_rad": 0.09636141215818439,
+              "minimum_monitored_clearance_m": 0.0,
+              "physics_steps": 4445,
+              "pose_count": 5,
+              "stance_selected_initial_branch_used": true,
+              "success": true
+            },
+            "physical_fluid_transfer_modeled": false,
+            "pour_motion_verified": true,
+            "pour_spec": {
+              "dwell_time_s": 0.35,
+              "family": "JAR_SOURCE",
+              "outlet_local_m": [
+                0.03354,
+                0.0,
+                0.04836
+              ],
+              "outlet_provenance": "AUTHORED_PHYSICAL_MOUTH_SITE_PLUS_COLLISION_DERIVED_RIM_EDGE",
+              "tilt_candidates_rad": [
+                0.6108652381980153,
+                0.7853981633974483,
+                0.9599310885968813
+              ]
+            },
+            "pre_pour_alignment_error_m": 0.009904095978518749,
+            "request": {
+              "action": "POUR",
+              "arguments": [
+                "object_0010",
+                "object_0003",
+                "coffee"
+              ]
+            },
+            "selected_base_stance": {
+              "candidate_count": 1,
+              "candidates": [
+                {
+                  "arm_collision_valid": true,
+                  "arm_joints": [
+                    0.502197665904142,
+                    1.1755455306456573,
+                    1.1855484603524222,
+                    0.449726511529559,
+                    -2.5406836802027817,
+                    0.8942631764173702,
+                    -2.3877051347972196
+                  ],
+                  "base_qpos": [
+                    0.22,
+                    0.3,
+                    0.0
+                  ],
+                  "candidate_index": 0,
+                  "failure": null,
+                  "pose_diagnostics": [
+                    {
+                      "collision_failure": null,
+                      "collision_valid": true,
+                      "orientation_error_rad": 0.00017787257943626436,
+                      "pose_index": 0,
+                      "position_error_m": 0.0003388435777558296
+                    },
+                    {
+                      "collision_failure": null,
+                      "collision_valid": true,
+                      "orientation_error_rad": 0.0004317066786813746,
+                      "pose_index": 1,
+                      "position_error_m": 0.0003377811550348796
+                    },
+                    {
+                      "collision_failure": null,
+                      "collision_valid": true,
+                      "orientation_error_rad": 0.001180471620008367,
+                      "pose_index": 2,
+                      "position_error_m": 0.0004200348264695279
+                    }
+                  ],
+                  "pose_family_index": 0,
+                  "seed_policy": "LIVE_CARRY_ARM",
+                  "strict_ik_orientation_error_rad": 0.001180471620008367,
+                  "strict_ik_position_error_m": 0.0004200348264695279,
+                  "valid": true
+                }
+              ],
+              "pose_family_count": 15,
+              "selected": {
+                "arm_collision_valid": true,
+                "arm_joints": [
+                  0.502197665904142,
+                  1.1755455306456573,
+                  1.1855484603524222,
+                  0.449726511529559,
+                  -2.5406836802027817,
+                  0.8942631764173702,
+                  -2.3877051347972196
+                ],
+                "base_qpos": [
+                  0.22,
+                  0.3,
+                  0.0
+                ],
+                "candidate_index": 0,
+                "failure": null,
+                "pose_diagnostics": [
+                  {
+                    "collision_failure": null,
+                    "collision_valid": true,
+                    "orientation_error_rad": 0.00017787257943626436,
+                    "pose_index": 0,
+                    "position_error_m": 0.0003388435777558296
+                  },
+                  {
+                    "collision_failure": null,
+                    "collision_valid": true,
+                    "orientation_error_rad": 0.0004317066786813746,
+                    "pose_index": 1,
+                    "position_error_m": 0.0003377811550348796
+                  },
+                  {
+                    "collision_failure": null,
+                    "collision_valid": true,
+                    "orientation_error_rad": 0.001180471620008367,
+                    "pose_index": 2,
+                    "position_error_m": 0.0004200348264695279
+                  }
+                ],
+                "pose_family_index": 0,
+                "seed_policy": "LIVE_CARRY_ARM",
+                "strict_ik_orientation_error_rad": 0.001180471620008367,
+                "strict_ik_position_error_m": 0.0004200348264695279,
+                "valid": true
+              },
+              "strategy": "BOUNDED_LOCAL_PAYLOAD_SAFE_STRICT_PHASE_C_IK",
+              "workspace": "home"
+            },
+            "selected_source_yaw_deg": 0.0,
+            "selected_tilt_direction": 1.0,
+            "source_generic_id": "object_0010",
+            "source_outlet_world_m": [
+              -0.59016664829927,
+              -0.07887458403304369,
+              0.8762153875827551
+            ],
+            "source_physical_family": "JAR_SOURCE",
+            "source_returned_upright": true,
+            "source_still_held": true,
+            "status": "POUR_MOTION_VERIFIED",
+            "steps": [
+              {
+                "action": "LOCAL_PAYLOAD_STANCE",
+                "execution": {
+                  "direct_object_qpos_write": false,
+                  "held_object_included_in_collision_check": true,
+                  "invalid_collision_pairs": [],
+                  "physics_steps": 978,
+                  "position_tolerance_m": 0.02,
+                  "start_base_qpos": [
+                    1.75082339732663e-05,
+                    4.224865943300794e-05,
+                    2.7190615569763154e-05
+                  ],
+                  "success": true,
+                  "target_base_qpos": [
+                    0.22,
+                    0.3,
+                    0.0
+                  ],
+                  "terminal_base_error": [
+                    0.00047279626076787706,
+                    -0.0004692139514144156,
+                    -0.0006243617652037972
+                  ]
+                },
+                "search": {
+                  "candidate_count": 1,
+                  "candidates": [
+                    {
+                      "arm_collision_valid": true,
+                      "arm_joints": [
+                        0.502197665904142,
+                        1.1755455306456573,
+                        1.1855484603524222,
+                        0.449726511529559,
+                        -2.5406836802027817,
+                        0.8942631764173702,
+                        -2.3877051347972196
+                      ],
+                      "base_qpos": [
+                        0.22,
+                        0.3,
+                        0.0
+                      ],
+                      "candidate_index": 0,
+                      "failure": null,
+                      "pose_diagnostics": [
+                        {
+                          "collision_failure": null,
+                          "collision_valid": true,
+                          "orientation_error_rad": 0.00017787257943626436,
+                          "pose_index": 0,
+                          "position_error_m": 0.0003388435777558296
+                        },
+                        {
+                          "collision_failure": null,
+                          "collision_valid": true,
+                          "orientation_error_rad": 0.0004317066786813746,
+                          "pose_index": 1,
+                          "position_error_m": 0.0003377811550348796
+                        },
+                        {
+                          "collision_failure": null,
+                          "collision_valid": true,
+                          "orientation_error_rad": 0.001180471620008367,
+                          "pose_index": 2,
+                          "position_error_m": 0.0004200348264695279
+                        }
+                      ],
+                      "pose_family_index": 0,
+                      "seed_policy": "LIVE_CARRY_ARM",
+                      "strict_ik_orientation_error_rad": 0.001180471620008367,
+                      "strict_ik_position_error_m": 0.0004200348264695279,
+                      "valid": true
+                    }
+                  ],
+                  "pose_family_count": 15,
+                  "selected": {
+                    "arm_collision_valid": true,
+                    "arm_joints": [
+                      0.502197665904142,
+                      1.1755455306456573,
+                      1.1855484603524222,
+                      0.449726511529559,
+                      -2.5406836802027817,
+                      0.8942631764173702,
+                      -2.3877051347972196
+                    ],
+                    "base_qpos": [
+                      0.22,
+                      0.3,
+                      0.0
+                    ],
+                    "candidate_index": 0,
+                    "failure": null,
+                    "pose_diagnostics": [
+                      {
+                        "collision_failure": null,
+                        "collision_valid": true,
+                        "orientation_error_rad": 0.00017787257943626436,
+                        "pose_index": 0,
+                        "position_error_m": 0.0003388435777558296
+                      },
+                      {
+                        "collision_failure": null,
+                        "collision_valid": true,
+                        "orientation_error_rad": 0.0004317066786813746,
+                        "pose_index": 1,
+                        "position_error_m": 0.0003377811550348796
+                      },
+                      {
+                        "collision_failure": null,
+                        "collision_valid": true,
+                        "orientation_error_rad": 0.001180471620008367,
+                        "pose_index": 2,
+                        "position_error_m": 0.0004200348264695279
+                      }
+                    ],
+                    "pose_family_index": 0,
+                    "seed_policy": "LIVE_CARRY_ARM",
+                    "strict_ik_orientation_error_rad": 0.001180471620008367,
+                    "strict_ik_position_error_m": 0.0004200348264695279,
+                    "valid": true
+                  },
+                  "strategy": "BOUNDED_LOCAL_PAYLOAD_SAFE_STRICT_PHASE_C_IK",
+                  "workspace": "home"
+                },
+                "selected_seed_recovery": {
+                  "direct_object_qpos_write": false,
+                  "grasp_weld_retained": true,
+                  "joint_target": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0
+                  ],
+                  "performed": true,
+                  "recovery_policy": "COMPACT_NAVIGATION_ARM",
+                  "waypoint_count": 37
+                }
+              },
+              {
+                "action": "LIVE_POUR_ORIENTATION_SELECTION",
+                "arm_joints": [
+                  0.5914529479064788,
+                  1.536180637814469,
+                  -1.9691252488845346,
+                  0.07149569861903773,
+                  0.37600299473715815,
+                  0.5258914878112243,
+                  -1.5815441838016653
+                ],
+                "evaluated_candidate_count": 2,
+                "pose_diagnostics": [
+                  {
+                    "collision_failure": null,
+                    "collision_valid": true,
+                    "orientation_error_rad": 0.0001891330046845211,
+                    "pose_index": 0,
+                    "position_error_m": 0.0004303748463809422
+                  },
+                  {
+                    "collision_failure": null,
+                    "collision_valid": true,
+                    "orientation_error_rad": 0.0004080426456913624,
+                    "pose_index": 1,
+                    "position_error_m": 0.0005665671504097457
+                  },
+                  {
+                    "collision_failure": null,
+                    "collision_valid": true,
+                    "orientation_error_rad": 0.003291312983449259,
+                    "pose_index": 2,
+                    "position_error_m": 0.0005633778768997766
+                  }
+                ],
+                "pose_family_index": 0,
+                "rejected_candidates": [
+                  {
+                    "arm_joints": [
+                      -0.004596728042486111,
+                      0.025039204625831795,
+                      0.02780774375533657,
+                      0.018732051478720632,
+                      -0.05469441166677318,
+                      0.01641053045066933,
+                      -0.0786536807346871
+                    ],
+                    "pose_diagnostics": [
+                      {
+                        "collision_failure": "STRICT_IK_TOLERANCE_MISS",
+                        "collision_valid": false,
+                        "orientation_error_rad": 1.0672207382009042,
+                        "pose_index": 0,
+                        "position_error_m": 0.603326506747536
+                      }
+                    ],
+                    "pose_family_index": 0,
+                    "seed_policy": "LIVE_CARRY_ARM",
+                    "valid": false
+                  }
+                ],
+                "seed_policy": "NAVIGATION_ARM",
+                "valid": true
+              },
+              {
+                "action": "POUR_TRAJECTORY",
+                "adjacent_joint_deltas": [
+                  {
+                    "continuity_guard_applied": false,
+                    "interpolated_pose_index": 0,
+                    "label": "POUR_HIGH_CLEARANCE_APPROACH",
+                    "maximum_joint_delta_rad": 1.9969329926398711
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 1,
+                    "label": "POUR_APPROACH",
+                    "maximum_joint_delta_rad": 0.0388129857662709
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 2,
+                    "label": "POUR_APPROACH",
+                    "maximum_joint_delta_rad": 0.04270389206134895
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 3,
+                    "label": "POUR_APPROACH",
+                    "maximum_joint_delta_rad": 0.04287901540460881
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 4,
+                    "label": "POUR_APPROACH",
+                    "maximum_joint_delta_rad": 0.042002022441935294
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 5,
+                    "label": "POUR_TILT",
+                    "maximum_joint_delta_rad": 0.07885436183363725
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 6,
+                    "label": "POUR_TILT",
+                    "maximum_joint_delta_rad": 0.08669424025495576
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 7,
+                    "label": "POUR_TILT",
+                    "maximum_joint_delta_rad": 0.08936390074877765
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 8,
+                    "label": "POUR_TILT",
+                    "maximum_joint_delta_rad": 0.09310577456078928
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 9,
+                    "label": "POUR_TILT",
+                    "maximum_joint_delta_rad": 0.09636141215818439
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 10,
+                    "label": "POUR_UPRIGHT_RECOVERY",
+                    "maximum_joint_delta_rad": 0.09253352830173389
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 11,
+                    "label": "POUR_UPRIGHT_RECOVERY",
+                    "maximum_joint_delta_rad": 0.09430256585539865
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 12,
+                    "label": "POUR_UPRIGHT_RECOVERY",
+                    "maximum_joint_delta_rad": 0.09270529244474957
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 13,
+                    "label": "POUR_UPRIGHT_RECOVERY",
+                    "maximum_joint_delta_rad": 0.09061947715217977
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 14,
+                    "label": "POUR_UPRIGHT_RECOVERY",
+                    "maximum_joint_delta_rad": 0.0882790517811467
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 15,
+                    "label": "POUR_HIGH_CLEARANCE_RECOVERY",
+                    "maximum_joint_delta_rad": 0.0356299718169395
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 16,
+                    "label": "POUR_HIGH_CLEARANCE_RECOVERY",
+                    "maximum_joint_delta_rad": 0.040313596657008954
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 17,
+                    "label": "POUR_HIGH_CLEARANCE_RECOVERY",
+                    "maximum_joint_delta_rad": 0.0413954422743994
+                  },
+                  {
+                    "continuity_guard_applied": true,
+                    "interpolated_pose_index": 18,
+                    "label": "POUR_HIGH_CLEARANCE_RECOVERY",
+                    "maximum_joint_delta_rad": 0.04214605772540314
+                  }
+                ],
+                "allowed_task_contacts": [],
+                "direct_object_qpos_write": false,
+                "dwell_pose_samples": [
+                  {
+                    "dwell_steps": 175,
+                    "grip_position_world_m": [
+                      -0.6084484346862259,
+                      -0.09125770264842378,
+                      0.8440056205129887
+                    ],
+                    "held_body_position_world_m": [
+                      -0.5917389155154918,
+                      -0.08598002751739116,
+                      0.8178145155970429
+                    ],
+                    "held_body_rotation_world": [
+                      [
+                        0.8354318787416807,
+                        0.054343325691110264,
+                        -0.5469007029936753
+                      ],
+                      [
+                        0.02181454682365766,
+                        0.9910364456787472,
+                        0.1317986679876342
+                      ],
+                      [
+                        0.5491609067741664,
+                        -0.12203919980590704,
+                        0.8267579646920312
+                      ]
+                    ],
+                    "label": "POUR_TILT"
+                  }
+                ],
+                "grasp_weld_preserved": true,
+                "held_backend_body": "s1i_compact_coffee_jar",
+                "interpolated_pose_count": 19,
+                "invalid_collision_pairs": [],
+                "joint_waypoint_count": 62,
+                "local_continuity_limit_rad": 0.71,
+                "maximum_adjacent_joint_delta_rad": 1.9969329926398711,
+                "maximum_ik_orientation_error_rad": 0.004663608050077316,
+                "maximum_ik_position_error_m": 0.0007283520125955713,
+                "maximum_local_adjacent_joint_delta_rad": 0.09636141215818439,
+                "minimum_monitored_clearance_m": 0.0,
+                "physics_steps": 4445,
+                "pose_count": 5,
+                "stance_selected_initial_branch_used": true,
+                "success": true
+              },
+              {
+                "action": "RECOVER_COMPACT_NAVIGATION_CARRY_ARM",
+                "direct_object_qpos_write": false,
+                "grasp_weld_retained": true,
+                "joint_target": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "performed": true,
+                "recovery_policy": "COMPACT_NAVIGATION_ARM",
+                "waypoint_count": 33
+              },
+              {
+                "action": "RESTORE_DECLARED_WORKSPACE_STANCE",
+                "direct_object_qpos_write": false,
+                "held_object_included_in_collision_check": true,
+                "invalid_collision_pairs": [],
+                "physics_steps": 978,
+                "position_tolerance_m": 0.02,
+                "start_base_qpos": [
+                  0.22014772641573363,
+                  0.2998755175484516,
+                  -3.7053355802981e-05
+                ],
+                "success": true,
+                "target_base_qpos": [
+                  1.75082339732663e-05,
+                  4.224865943300794e-05,
+                  2.7190615569763154e-05
+                ],
+                "terminal_base_error": [
+                  -0.0004945815118502525,
+                  0.0004676957853167672,
+                  0.0006191489502554756
+                ]
+              }
+            ],
+            "success": true,
+            "symbolic_effects_applied": true,
+            "target_generic_id": "object_0003",
+            "target_opening_centre_world_m": [
+              -0.6000020095742189,
+              -0.08000010493193631,
+              0.6710468606899848
+            ],
+            "target_orientation_drift_rad": 1.19824980197742e-05,
+            "target_position_drift_m": 6.156031602406731e-08
+          },
+          "operator": "POUR",
+          "pick": {
+            "duration_s": 7.325882803008426,
+            "failure_code": null,
+            "functional_assignment_changed": false,
+            "generic_object_id": "object_0010",
+            "post_pick": {
+              "attachment_angle_snap_rad": 0.0006516965832537818,
+              "attachment_translation_snap_m": 0.00010365970791291846,
+              "backend_body": "s1i_compact_coffee_jar",
+              "bilateral_contact": true,
+              "contact_geoms": [
+                "google:left_finger_pad_1",
+                "google:right_finger_pad_1"
+              ],
+              "contact_sides": [
+                0,
+                1
+              ],
+              "direct_grasp_analysis": null,
+              "direct_object_qpos_write": false,
+              "duration_s": 7.325825374980923,
+              "extraction_strategy": null,
+              "failure_code": null,
+              "generic_object_id": "object_0010",
+              "grasp_family": "JAR_SOURCE",
+              "held_state": {
+                "backend_body": "s1i_compact_coffee_jar",
+                "exclusive_payload_weld": true,
+                "finger_joint_positions": [
+                  0.5293673059428149,
+                  0.5204922294788891
+                ],
+                "floor_contact": false,
+                "generic_object_id": "object_0010",
+                "gripper_body": "google:link_gripper",
+                "rejection_reasons": [],
+                "relative_orientation_wxyz": [
+                  0.5027663972000623,
+                  0.49753500722150545,
+                  0.4698980874303067,
+                  0.5280915203493671
+                ],
+                "relative_position_m": [
+                  -0.0308873620021007,
+                  0.0003238579555184629,
+                  0.13237329644437412
+                ],
+                "validation_status": "TRUE",
+                "weld_active": true,
+                "weld_id": 17
+              },
+              "manipulation_stance": null,
+              "message": "",
+              "navigation_safe_carry_reached": true,
+              "physics_steps": 8966,
+              "presentation": null,
+              "required_workspace": "home",
+              "selected_grasp_candidate_id": "jar_side_wall_from_negative_y",
+              "source_clearance_verified": null,
+              "source_context": {
+                "container_must_be_open": false,
+                "object_id": "object_0010",
+                "observed_measurement_cloud_path": "stages/000_initial/evidence/object_0010/fused.ply",
+                "observed_source_region": "countertop",
+                "observed_source_stage": 0,
+                "required_workspace": "home",
+                "source_container": null,
+                "source_kind": "TABLE"
+              },
+              "status": "PICK_SUCCESS",
+              "success": true,
+              "target_contact_geoms": [
+                "s1i_compact_coffee_jar_wall_0",
+                "s1i_compact_coffee_jar_wall_11",
+                "s1i_compact_coffee_jar_wall_6",
+                "s1i_compact_coffee_jar_wall_7"
+              ]
+            },
+            "request": {
+              "action": "PICK",
+              "arguments": [
+                "object_0010"
+              ]
+            },
+            "status": "PICK_SUCCESS",
+            "steps": [
+              {
+                "attachment_angle_snap_rad": 0.0006516965832537818,
+                "attachment_translation_snap_m": 0.00010365970791291846,
+                "backend_body": "s1i_compact_coffee_jar",
+                "bilateral_contact": true,
+                "contact_geoms": [
+                  "google:left_finger_pad_1",
+                  "google:right_finger_pad_1"
+                ],
+                "contact_sides": [
+                  0,
+                  1
+                ],
+                "direct_grasp_analysis": null,
+                "direct_object_qpos_write": false,
+                "duration_s": 7.325825374980923,
+                "extraction_strategy": null,
+                "failure_code": null,
+                "generic_object_id": "object_0010",
+                "grasp_family": "JAR_SOURCE",
+                "held_state": {
+                  "backend_body": "s1i_compact_coffee_jar",
+                  "exclusive_payload_weld": true,
+                  "finger_joint_positions": [
+                    0.5293673059428149,
+                    0.5204922294788891
+                  ],
+                  "floor_contact": false,
+                  "generic_object_id": "object_0010",
+                  "gripper_body": "google:link_gripper",
+                  "rejection_reasons": [],
+                  "relative_orientation_wxyz": [
+                    0.5027663972000623,
+                    0.49753500722150545,
+                    0.4698980874303067,
+                    0.5280915203493671
+                  ],
+                  "relative_position_m": [
+                    -0.0308873620021007,
+                    0.0003238579555184629,
+                    0.13237329644437412
+                  ],
+                  "validation_status": "TRUE",
+                  "weld_active": true,
+                  "weld_id": 17
+                },
+                "manipulation_stance": null,
+                "message": "",
+                "navigation_safe_carry_reached": true,
+                "physics_steps": 8966,
+                "presentation": null,
+                "required_workspace": "home",
+                "selected_grasp_candidate_id": "jar_side_wall_from_negative_y",
+                "source_clearance_verified": null,
+                "source_context": {
+                  "container_must_be_open": false,
+                  "object_id": "object_0010",
+                  "observed_measurement_cloud_path": "stages/000_initial/evidence/object_0010/fused.ply",
+                  "observed_source_region": "countertop",
+                  "observed_source_stage": 0,
+                  "required_workspace": "home",
+                  "source_container": null,
+                  "source_kind": "TABLE"
+                },
+                "status": "PICK_SUCCESS",
+                "success": true,
+                "target_contact_geoms": [
+                  "s1i_compact_coffee_jar_wall_0",
+                  "s1i_compact_coffee_jar_wall_11",
+                  "s1i_compact_coffee_jar_wall_6",
+                  "s1i_compact_coffee_jar_wall_7"
+                ]
+              }
+            ],
+            "storage_fixture_active_during_contact": false,
+            "storage_fixture_release": {
+              "active_during_contact": false,
+              "active_immediately_before_preclose": false,
+              "fixture_ids": [],
+              "grasp_weld_active_at_release": false,
+              "release_target_position_world_m": [
+                0.0900010453544726,
+                -0.0800002729657351,
+                0.6523993470374558
+              ],
+              "released_before_preclose": false
+            },
+            "storage_fixture_released": false,
+            "success": true
+          },
+          "planner_inventory_backend_free": true,
+          "source_or_tool_generic_id": "object_0010",
+          "success": true,
+          "target_generic_id": "object_0003",
+          "trial": 3
+        }
+      ],
+      "requested_trials": 3,
+      "source_or_tool_generic_id": "object_0010",
+      "success": true,
+      "successful_trials": 3
+    }
+  ],
+  "fresh_reset_per_trial": true,
+  "operator": "POUR",
+  "source_family_count": 1,
+  "success": true
+}

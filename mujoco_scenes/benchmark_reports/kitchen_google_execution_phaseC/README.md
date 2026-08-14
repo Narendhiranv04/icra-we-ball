@@ -1,19 +1,23 @@
-# Kitchen Google-Robot Phase C evidence
+# Kitchen Google-Robot Phase C completion evidence
 
-Implementation commit: `93144e473734aee31e6eb551fad885ebbb02bcfa`
+Implementation commit: `5ff90a1aadee3e1ae3ad36f238e97ecf12272c6f`
 
-Execution scope is intentionally limited to POUR/STIR targets on the
-countertop or in the box (`B1`). Cupboard objects participate only in the
-existing OPEN/PICK/PLACE workflow. The filtered frozen plan contains 23
-actions: 4 POUR and 2 STIR actions.
+Phase C is complete for the requested scope: POUR and STIR targets are limited
+to countertop objects or box `B1`; cupboard vessels are excluded from both
+operators and participate only through OPEN/PICK/PLACE. The frozen 26-action
+input therefore yields a 23-action execution contract containing exactly four
+POUR and two STIR actions.
 
-Fast closure verification passed 16 focused Phase-C tests and Python bytecode
-compilation. Development MuJoCo gates passed STIR pair coverage (2/2), hardest
-target repeatability (3/3), and sequential same-tool execution plus placement.
+Physical evidence passed POUR pair coverage (4/4), both source-family hardest-
+target repeatability gates (3/3 each), POUR sequential same-held-object runs,
+STIR pair coverage (2/2), STIR repeatability (3/3), and STIR sequential same-
+held-object execution. The integrated run committed all six Phase-C ledger
+events. No hidden regrasp, object substitution, direct payload qpos write, or
+fluid-dynamics claim is made.
 
-The final narrow-cup kettle POUR adjustment was committed without another full
-four-pair authoritative rerun at the user's request to stop extended tuning.
-This limitation is recorded in `validation_summary.json`; no result is
-represented as stronger than the executed evidence.
+The broader frozen-plan run reached 14/23 actions and then stopped at the first
+post-Phase-C `SERVE_COFFEE` grasp. This is a Phase-B serving-tail limitation,
+not a missing POUR/STIR event, and is preserved explicitly in
+`validation_summary.json` rather than represented as full-plan closure.
 
-Reproduce the fast verification with `reproduction_commands.sh`.
+Use `reproduction_commands.sh` for focused tests and evidence commands.

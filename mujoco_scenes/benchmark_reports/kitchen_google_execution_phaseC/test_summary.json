@@ -1,8 +1,17 @@
 {
-  "implementation_commit": "93144e473734aee31e6eb551fad885ebbb02bcfa",
-  "command": "MUJOCO_GL=egl PYOPENGL_PLATFORM=egl /home/naren/miniconda3/bin/python -m pytest mujoco_scenes/tests/test_kitchen_phase_c_execution.py -q",
-  "passed": 16,
+  "implementation_commit": "5ff90a1aadee3e1ae3ad36f238e97ecf12272c6f",
+  "command": "MUJOCO_GL=egl .venv/bin/python -m pytest -q mujoco_scenes/tests/test_kitchen_phase_c_execution.py mujoco_scenes/tests/test_kitchen_phase_b_execution.py",
+  "passed": 29,
   "failed": 0,
-  "duration_seconds": 0.98,
-  "compileall_passed": true
+  "duration_seconds": 2.35,
+  "compileall_passed": true,
+  "full_suite": {
+    "command": "MUJOCO_GL=egl PYOPENGL_PLATFORM=egl .venv/bin/python -m pytest -q mujoco_scenes/tests",
+    "passed": 563,
+    "failed": 1,
+    "subtests_passed": 5,
+    "duration_seconds": 96.40,
+    "kitchen_failures": 0,
+    "unrelated_failure": "test_movie_night_free_payloads_settle_finitely: L2 living-room ablation2 max qvel 0.1217520974 exceeded 0.08"
+  }
 }

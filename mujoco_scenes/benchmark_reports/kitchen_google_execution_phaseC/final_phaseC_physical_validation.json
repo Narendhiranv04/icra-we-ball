@@ -1,0 +1,78 @@
+{
+  "active_payload_welds": [],
+  "active_storage_fixtures": [
+    "storage_fixture_D1_oversized_spoon",
+    "storage_fixture_D1_oversized_spoon_1",
+    "storage_fixture_D2_ablation3_utensil",
+    "storage_fixture_D2_ablation3_utensil_1"
+  ],
+  "all_relations_verified": false,
+  "execution_code_sha": "5ff90a1aadee3e1ae3ad36f238e97ecf12272c6f",
+  "pairwise_serving_clear": true,
+  "pairwise_serving_clearance": [],
+  "placed_relations": [
+    {
+      "angular_speed_rad_s": 0.16696479418824645,
+      "current_body_position_world_m": [
+        0.45253789812870243,
+        -0.3674643783057879,
+        0.6315150313950021
+      ],
+      "current_physical_relation_verified": true,
+      "destination_kind": "SOURCE_RETURN",
+      "floor_contact": false,
+      "generic_object_id": "object_0009",
+      "invalid_object_contacts": [],
+      "linear_speed_m_s": 0.007959501674373145,
+      "source_return_xy_error_m": 0.02913979678369555,
+      "stable": true,
+      "support_contact": true,
+      "upright_alignment": 0.9999999314514214
+    },
+    {
+      "angular_speed_rad_s": 0.02235422265059417,
+      "current_body_position_world_m": [
+        0.06734597220124325,
+        -0.11129908371798108,
+        0.6513176861509961
+      ],
+      "current_physical_relation_verified": true,
+      "destination_kind": "SOURCE_RETURN",
+      "floor_contact": false,
+      "generic_object_id": "object_0010",
+      "invalid_object_contacts": [],
+      "linear_speed_m_s": 0.0010019738320575272,
+      "source_return_xy_error_m": 0.020784768250209574,
+      "stable": true,
+      "support_contact": true,
+      "upright_alignment": 0.999999767532088
+    },
+    {
+      "angular_speed_rad_s": 1.3406363533859651e-06,
+      "competing_target_distances_m": {
+        "object_0002": 0.5271433653133091,
+        "object_0018": 0.8097934518679569,
+        "object_0020": 1.317763754680796
+      },
+      "current_body_position_world_m": [
+        0.10417367666089981,
+        -0.5470225522634143,
+        0.5869082521028179
+      ],
+      "current_physical_relation_verified": false,
+      "destination_kind": "OBJECT_RELATIVE_DESTINATION",
+      "floor_contact": false,
+      "generic_object_id": "object_0015",
+      "intended_target_distance_m": 0.8097934518679569,
+      "intended_target_object_id": "object_0018",
+      "intended_target_uniquely_closest": false,
+      "invalid_object_contacts": [],
+      "linear_speed_m_s": 4.409283258353535e-08,
+      "stable": true,
+      "support_contact": true
+    }
+  ],
+  "success": false,
+  "unexpected_active_storage_fixtures": [],
+  "validation_basis": "CURRENT_SETTLED_MUJOCO_STATE_NOT_CACHED_ACTION_FLAGS"
+}
