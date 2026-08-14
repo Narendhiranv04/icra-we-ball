@@ -176,6 +176,18 @@ def _rotation_vector(matrix: np.ndarray) -> np.ndarray:
     return quat[1:] / norm * (2.0 * math.atan2(norm, float(quat[0])))
 
 
+def _axis_angle_rotation(axis: np.ndarray, angle: float) -> np.ndarray:
+    axis = np.asarray(axis, dtype=float)
+    axis /= max(float(np.linalg.norm(axis)), 1e-12)
+    x, y, z = axis
+    cross = np.array(((0.0, -z, y), (z, 0.0, -x), (-y, x, 0.0)))
+    return (
+        np.eye(3)
+        + math.sin(angle) * cross
+        + (1.0 - math.cos(angle)) * (cross @ cross)
+    )
+
+
 class ProfiledIK:
     """Damped least-squares pose IK over a profile's declared arm joints."""
 
@@ -185,10 +197,14 @@ class ProfiledIK:
         reference: mujoco.MjData,
         profile: ManipulationProfile,
         orientation_weight: float = 0.30,
+        seed_continuity_weight: float = 0.0,
+        maximum_seed_delta_rad: float | None = None,
     ):
         self.model = model
         self.profile = profile
         self.orientation_weight = float(orientation_weight)
+        self.seed_continuity_weight = float(seed_continuity_weight)
+        self.maximum_seed_delta_rad = maximum_seed_delta_rad
         self.data = mujoco.MjData(model)
         self.data.qpos[:] = reference.qpos
         self.site_id = mujoco.mj_name2id(
@@ -215,7 +231,17 @@ class ProfiledIK:
         seed: np.ndarray,
         target_rotation: np.ndarray,
     ) -> tuple[np.ndarray, float, float]:
-        self.data.qpos[self.qpos_addresses] = np.clip(seed, self.lower, self.upper)
+        seed = np.clip(np.asarray(seed, dtype=float), self.lower, self.upper)
+        local_lower = self.lower
+        local_upper = self.upper
+        if self.maximum_seed_delta_rad is not None:
+            local_lower = np.maximum(
+                local_lower, seed - float(self.maximum_seed_delta_rad)
+            )
+            local_upper = np.minimum(
+                local_upper, seed + float(self.maximum_seed_delta_rad)
+            )
+        self.data.qpos[self.qpos_addresses] = seed
         self.data.qvel[:] = 0
         for _ in range(1200):
             mujoco.mj_forward(self.model, self.data)
@@ -243,14 +269,19 @@ class ProfiledIK:
                 )
             )
             damping = 0.0025
-            delta = jacobian.T @ np.linalg.solve(
-                jacobian @ jacobian.T + damping * np.eye(6), error
+            damped_inverse = np.linalg.solve(
+                jacobian @ jacobian.T + damping * np.eye(6), np.eye(6)
             )
+            pseudoinverse = jacobian.T @ damped_inverse
+            delta = pseudoinverse @ error
             current = self.data.qpos[self.qpos_addresses]
+            delta += self.seed_continuity_weight * (
+                np.eye(len(current)) - pseudoinverse @ jacobian
+            ) @ (seed - current)
             self.data.qpos[self.qpos_addresses] = np.clip(
                 current + np.clip(delta, -0.055, 0.055),
-                self.lower,
-                self.upper,
+                local_lower,
+                local_upper,
             )
 
         mujoco.mj_forward(self.model, self.data)
@@ -1103,6 +1134,399 @@ class CalibratedPickPlaceExecutor:
             self.target_object = None
             self.target_body_id = -1
             self.configuration_checker = None
+
+    def execute_held_pose_trajectory(
+        self,
+        poses_world: tuple[tuple[np.ndarray, np.ndarray, str, int], ...],
+        *,
+        initial_arm_joints: np.ndarray | None = None,
+        monitored_body_names: tuple[str, ...] = (),
+        step_callback=None,
+        maximum_steps_per_waypoint: int = 1800,
+    ) -> dict[str, object]:
+        """Command a welded payload through strict Cartesian wrist poses.
+
+        Each tuple is ``(position, rotation, label, dwell_steps)``.  The
+        method moves robot controls only: it never writes a payload freejoint
+        and never creates or changes a weld.  Contacts between the payload and
+        any non-robot body are fail-closed.
+        """
+        if self.mode != "holding" or self.held_object is None:
+            raise RuntimeError("Held trajectory requires an existing grasp")
+        if not poses_world:
+            raise ValueError("Held trajectory requires at least one pose")
+        held_name = self.held_object
+        held_body = mujoco.mj_name2id(
+            self.model, mujoco.mjtObj.mjOBJ_BODY, held_name
+        )
+        weld_id = mujoco.mj_name2id(
+            self.model,
+            mujoco.mjtObj.mjOBJ_EQUALITY,
+            f"{self.robot_name}:pick_weld_{held_name}",
+        )
+        if weld_id < 0 or not bool(self.data.eq_active[weld_id]):
+            raise RuntimeError("Held trajectory requires an active grasp weld")
+
+        checker = RobotConfigurationCollisionChecker(
+            self.model,
+            self.data,
+            self.profile,
+            mounting_allowances=self.mounting_allowances,
+        )
+        initial_ik = ProfiledIK(
+            self.model,
+            self.data,
+            self.profile,
+            orientation_weight=0.45,
+        )
+        continuity_ik = ProfiledIK(
+            self.model,
+            self.data,
+            self.profile,
+            orientation_weight=0.45,
+        )
+        current = self._current_arm()
+        planned: list[tuple[JointWaypoint, int]] = []
+        maximum_position_error = 0.0
+        maximum_angle_error = 0.0
+        maximum_adjacent_joint_delta = 0.0
+        maximum_local_adjacent_joint_delta = 0.0
+        adjacent_joint_deltas: list[dict[str, object]] = []
+        previous_position = self.data.site_xpos[self.grip_site_id].copy()
+        previous_rotation = self.data.site_xmat[self.grip_site_id].reshape(3, 3).copy()
+        interpolated_poses: list[tuple[np.ndarray, np.ndarray, str, int]] = []
+        for requested_pose_index, (position, rotation, label, dwell_steps) in enumerate(poses_world):
+            position = np.asarray(position, float)
+            rotation = np.asarray(rotation, float)
+            if requested_pose_index == 0:
+                interpolated_poses.append((
+                    position, rotation, label, int(dwell_steps)
+                ))
+                previous_position = position
+                previous_rotation = rotation
+                continue
+            rotation_delta = _rotation_vector(rotation @ previous_rotation.T)
+            rotation_angle = float(np.linalg.norm(rotation_delta))
+            count = max(
+                1,
+                int(math.ceil(float(np.linalg.norm(position - previous_position)) / 0.015)),
+                int(math.ceil(rotation_angle / math.radians(8.0))),
+            )
+            rotation_axis = (
+                np.array((1.0, 0.0, 0.0))
+                if rotation_angle < 1e-12
+                else rotation_delta / rotation_angle
+            )
+            for interpolation_index, fraction in enumerate(
+                np.linspace(0.0, 1.0, count + 1)[1:]
+            ):
+                interpolated_poses.append((
+                    previous_position + float(fraction) * (position - previous_position),
+                    _axis_angle_rotation(rotation_axis, float(fraction) * rotation_angle)
+                    @ previous_rotation,
+                    label,
+                    int(dwell_steps) if interpolation_index == count - 1 else 0,
+                ))
+            previous_position = position
+            previous_rotation = rotation
+
+        for pose_index, (position, rotation, label, dwell_steps) in enumerate(interpolated_poses):
+            active_ik = initial_ik if pose_index == 0 else continuity_ik
+            solve_seed = (
+                np.asarray(initial_arm_joints, float)
+                if pose_index == 0 and initial_arm_joints is not None
+                else current
+            )
+            goal, position_error, angle_error = active_ik.solve(
+                np.asarray(position, float), solve_seed, np.asarray(rotation, float)
+            )
+            if pose_index == 0 and initial_arm_joints is None and (
+                position_error > self.ik_position_tolerance
+                or angle_error > self.ik_angle_tolerance
+            ):
+                # The transition from the live carry configuration to the
+                # pre-manipulation pose is a global, collision-checked move.
+                # Navigation joints are a legitimate alternate seed here,
+                # but never after the local manipulation branch is fixed.
+                restarted = active_ik.solve(
+                    np.asarray(position, float),
+                    self.profile.navigation_joints,
+                    np.asarray(rotation, float),
+                )
+                if (
+                    restarted[1] / self.ik_position_tolerance
+                    + restarted[2] / self.ik_angle_tolerance
+                    < position_error / self.ik_position_tolerance
+                    + angle_error / self.ik_angle_tolerance
+                ):
+                    goal, position_error, angle_error = restarted
+            maximum_position_error = max(maximum_position_error, float(position_error))
+            maximum_angle_error = max(maximum_angle_error, float(angle_error))
+            if position_error > self.ik_position_tolerance or angle_error > self.ik_angle_tolerance:
+                raise RuntimeError(
+                    f"Held trajectory IK misses {label} by {position_error * 100:.1f} cm "
+                    f"with {math.degrees(angle_error):.1f} deg tilt; "
+                    f"interpolated_pose_index={pose_index}; "
+                    f"target_position_world_m={np.asarray(position, float).tolist()}"
+                )
+            maximum_joint_delta = float(np.max(np.abs(goal - current)))
+            maximum_adjacent_joint_delta = max(
+                maximum_adjacent_joint_delta, maximum_joint_delta
+            )
+            if pose_index > 0:
+                maximum_local_adjacent_joint_delta = max(
+                    maximum_local_adjacent_joint_delta, maximum_joint_delta
+                )
+            adjacent_joint_deltas.append({
+                "interpolated_pose_index": pose_index,
+                "label": label,
+                "maximum_joint_delta_rad": maximum_joint_delta,
+                "continuity_guard_applied": pose_index > 0,
+            })
+            if pose_index > 0 and maximum_joint_delta > 0.71:
+                raise RuntimeError(
+                    f"Held trajectory IK branch discontinuity during {label}: "
+                    f"maximum_joint_delta_rad={maximum_joint_delta:.6f}"
+                )
+            valid, reason = checker.segment_valid(
+                current, goal, frozenset((held_body,)), resolution=0.025
+            )
+            if not valid:
+                raise RuntimeError(f"Held trajectory collision during {label}: {reason}")
+            points = self._joint_points(current, goal)
+            planned.extend(
+                (JointWaypoint(point, label), int(dwell_steps) if index == len(points) - 1 else 0)
+                for index, point in enumerate(points)
+            )
+            current = goal
+
+        robot_bodies = {
+            body_id
+            for body_id in range(self.model.nbody)
+            if (mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_BODY, body_id) or "").startswith(
+                f"{self.robot_name}:"
+            )
+        }
+        monitored = {
+            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, name): name
+            for name in monitored_body_names
+        }
+        monitored = {body_id: name for body_id, name in monitored.items() if body_id >= 0}
+        minimum_monitored_clearance = math.inf
+        invalid_pairs: set[tuple[str, str]] = set()
+        physics_steps = 0
+        dwell_pose_samples: list[dict[str, object]] = []
+        active_label = "UNSET"
+        active_waypoint_index = -1
+        active_waypoint_target = current.copy()
+
+        def validate_live() -> None:
+            nonlocal minimum_monitored_clearance
+            if not bool(self.data.eq_active[weld_id]) or self.held_object != held_name:
+                raise RuntimeError("Held payload weld was lost during trajectory")
+            valid, reason = checker.evaluate_live(self.data, frozenset((held_body,)))
+            if not valid:
+                raise RuntimeError(f"Held trajectory live collision: {reason}")
+            held_geoms = [
+                geom_id for geom_id in range(self.model.ngeom)
+                if int(self.model.geom_bodyid[geom_id]) == held_body
+                and (self.model.geom_contype[geom_id] or self.model.geom_conaffinity[geom_id])
+            ]
+            for monitored_body, monitored_name in monitored.items():
+                for held_geom in held_geoms:
+                    for other_geom in range(self.model.ngeom):
+                        if int(self.model.geom_bodyid[other_geom]) != monitored_body:
+                            continue
+                        if not (
+                            self.model.geom_contype[other_geom]
+                            or self.model.geom_conaffinity[other_geom]
+                        ):
+                            continue
+                        distance = float(mujoco.mj_geomDistance(
+                            self.model, self.data, held_geom, other_geom, 0.20, None
+                        ))
+                        minimum_monitored_clearance = min(minimum_monitored_clearance, distance)
+            for contact_index in range(self.data.ncon):
+                contact = self.data.contact[contact_index]
+                first_body = int(self.model.geom_bodyid[contact.geom1])
+                second_body = int(self.model.geom_bodyid[contact.geom2])
+                if held_body not in (first_body, second_body):
+                    continue
+                other_body = second_body if first_body == held_body else first_body
+                if other_body in robot_bodies:
+                    continue
+                first_name = mujoco.mj_id2name(
+                    self.model, mujoco.mjtObj.mjOBJ_GEOM, contact.geom1
+                ) or f"geom_{contact.geom1}"
+                second_name = mujoco.mj_id2name(
+                    self.model, mujoco.mjtObj.mjOBJ_GEOM, contact.geom2
+                ) or f"geom_{contact.geom2}"
+                invalid_pairs.add(tuple(sorted((first_name, second_name))))
+            if invalid_pairs:
+                held_position = self.data.xpos[held_body].copy()
+                grip_position = self.data.site_xpos[self.grip_site_id].copy()
+                joint_error = float(
+                    np.max(
+                        np.abs(
+                            self.data.qpos[self.arm_qpos]
+                            - active_waypoint_target
+                        )
+                    )
+                )
+                raise RuntimeError(
+                    f"Held payload contacted environment during {active_label}: "
+                    f"{sorted(invalid_pairs)}; waypoint_index={active_waypoint_index}; "
+                    f"held_body_position_world_m={held_position.tolist()}; "
+                    f"grip_position_world_m={grip_position.tolist()}; "
+                    f"maximum_joint_tracking_error_rad={joint_error:.6f}"
+                )
+
+        for waypoint_index, (waypoint, dwell_steps) in enumerate(planned):
+            active_label = waypoint.label
+            active_waypoint_index = waypoint_index
+            active_waypoint_target = waypoint.joints
+            settled = 0
+            for _ in range(maximum_steps_per_waypoint):
+                command = self.data.ctrl[self.arm_actuators]
+                delta = np.clip(
+                    waypoint.joints - command,
+                    -self.arm_command_speed * self.model.opt.timestep,
+                    self.arm_command_speed * self.model.opt.timestep,
+                )
+                self.data.ctrl[self.arm_actuators] = command + delta
+                self.data.ctrl[self.finger_actuators] = self.profile.closed_command
+                mujoco.mj_step(self.model, self.data)
+                physics_steps += 1
+                if step_callback:
+                    step_callback()
+                validate_live()
+                tracking = float(np.max(np.abs(self.data.qpos[self.arm_qpos] - waypoint.joints)))
+                settled = settled + 1 if tracking <= self.intermediate_tracking_tolerance + 0.005 else 0
+                if settled >= 5:
+                    break
+            else:
+                tracking = float(
+                    np.max(np.abs(self.data.qpos[self.arm_qpos] - waypoint.joints))
+                )
+                raise RuntimeError(
+                    f"Held trajectory tracking timeout: {waypoint.label}; "
+                    f"maximum_joint_error_rad={tracking:.6f}"
+                )
+            for _ in range(dwell_steps):
+                mujoco.mj_step(self.model, self.data)
+                physics_steps += 1
+                if step_callback:
+                    step_callback()
+                validate_live()
+            if dwell_steps:
+                dwell_pose_samples.append({
+                    "label": waypoint.label,
+                    "grip_position_world_m": self.data.site_xpos[self.grip_site_id].tolist(),
+                    "held_body_position_world_m": self.data.xpos[held_body].tolist(),
+                    "held_body_rotation_world": self.data.xmat[held_body].reshape(3, 3).tolist(),
+                    "dwell_steps": dwell_steps,
+                })
+
+        return {
+            "success": True,
+            "held_backend_body": held_name,
+            "pose_count": len(poses_world),
+            "interpolated_pose_count": len(interpolated_poses),
+            "joint_waypoint_count": len(planned),
+            "maximum_adjacent_joint_delta_rad": maximum_adjacent_joint_delta,
+            "maximum_local_adjacent_joint_delta_rad": (
+                maximum_local_adjacent_joint_delta
+            ),
+            "local_continuity_limit_rad": 0.71,
+            "adjacent_joint_deltas": adjacent_joint_deltas,
+            "physics_steps": physics_steps,
+            "maximum_ik_position_error_m": maximum_position_error,
+            "maximum_ik_orientation_error_rad": maximum_angle_error,
+            "minimum_monitored_clearance_m": (
+                None if math.isinf(minimum_monitored_clearance) else minimum_monitored_clearance
+            ),
+            "invalid_collision_pairs": [list(pair) for pair in sorted(invalid_pairs)],
+            "direct_object_qpos_write": False,
+            "grasp_weld_preserved": True,
+            "stance_selected_initial_branch_used": initial_arm_joints is not None,
+            "dwell_pose_samples": dwell_pose_samples,
+        }
+
+    def reposition_held_payload_base(
+        self,
+        target_base_qpos: np.ndarray,
+        *,
+        step_callback=None,
+        maximum_steps: int = 15000,
+    ) -> dict[str, object]:
+        """Drive to a bounded local stance with the existing payload weld."""
+        if self.mode != "holding" or self.held_object is None:
+            raise RuntimeError("Held base reposition requires holding mode")
+        held_name = self.held_object
+        held_body = mujoco.mj_name2id(
+            self.model, mujoco.mjtObj.mjOBJ_BODY, held_name
+        )
+        target = np.asarray(target_base_qpos, float)
+        if target.shape != (3,):
+            raise ValueError("Base target must contain three qpos values")
+        start = self.data.qpos[self.base_qpos].copy()
+        if float(np.linalg.norm(target[:2] - start[:2])) > 0.65:
+            raise RuntimeError("Held local base reposition exceeds 0.65 m bound")
+        held_arm_target = self._current_arm()
+        checker = RobotConfigurationCollisionChecker(
+            self.model, self.data, self.profile,
+            mounting_allowances=self.mounting_allowances,
+        )
+        invalid_pairs: set[tuple[str, str]] = set()
+        for step in range(1, maximum_steps + 1):
+            self.data.ctrl[self.arm_actuators] = held_arm_target
+            self.data.ctrl[self.finger_actuators] = self.profile.closed_command
+            self._command_base(target)
+            mujoco.mj_step(self.model, self.data)
+            if step_callback:
+                step_callback()
+            valid, reason = checker.evaluate_live(self.data, frozenset((held_body,)))
+            if not valid:
+                raise RuntimeError(f"Held local base collision: {reason}")
+            for contact_index in range(self.data.ncon):
+                contact = self.data.contact[contact_index]
+                first_body = int(self.model.geom_bodyid[contact.geom1])
+                second_body = int(self.model.geom_bodyid[contact.geom2])
+                if held_body not in (first_body, second_body):
+                    continue
+                other_body = second_body if first_body == held_body else first_body
+                other_name = mujoco.mj_id2name(
+                    self.model, mujoco.mjtObj.mjOBJ_BODY, other_body
+                ) or ""
+                if other_name.startswith(f"{self.robot_name}:"):
+                    continue
+                first_name = mujoco.mj_id2name(
+                    self.model, mujoco.mjtObj.mjOBJ_GEOM, contact.geom1
+                ) or f"geom_{contact.geom1}"
+                second_name = mujoco.mj_id2name(
+                    self.model, mujoco.mjtObj.mjOBJ_GEOM, contact.geom2
+                ) or f"geom_{contact.geom2}"
+                invalid_pairs.add(tuple(sorted((first_name, second_name))))
+            if invalid_pairs:
+                raise RuntimeError(f"Held payload base contact: {sorted(invalid_pairs)}")
+            if self._base_at_target(target):
+                self._restore_navigation_base_damping()
+                self.base_stance = target.copy()
+                self.base_manipulation_target = target.copy()
+                return {
+                    "success": True,
+                    "start_base_qpos": start.tolist(),
+                    "target_base_qpos": target.tolist(),
+                    "physics_steps": step,
+                    "held_object_included_in_collision_check": True,
+                    "invalid_collision_pairs": [],
+                    "direct_object_qpos_write": False,
+                }
+        self._restore_navigation_base_damping()
+        raise RuntimeError(
+            "Held local base reposition timed out; "
+            f"current={self.data.qpos[self.base_qpos].tolist()} target={target.tolist()}"
+        )
 
     def adopt_presented_bilateral_grasp(
         self,
