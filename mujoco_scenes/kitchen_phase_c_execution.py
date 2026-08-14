@@ -412,7 +412,7 @@ class KitchenPhaseCExecutionDispatcher:
         if compact_arm_for_base_motion or selected["seed_policy"] == "NAVIGATION_ARM":
             seed_recovery = low.fold_held_payload_for_navigation(
                 tracking_tolerance_rad=(
-                    0.050 if compact_arm_for_base_motion else 0.025
+                    0.080 if compact_arm_for_base_motion else 0.025
                 ),
                 step_callback=self.phase_b.manipulation.step_callback,
                 maximum_steps_per_waypoint=(
@@ -539,8 +539,11 @@ class KitchenPhaseCExecutionDispatcher:
                 }
                 rows.append(row)
                 if valid:
-                    row["candidates"] = rows
-                    return row
+                    return {
+                        **row,
+                        "evaluated_candidate_count": len(rows),
+                        "rejected_candidates": rows[:-1],
+                    }
         raise RuntimeError(
             "No strict collision-valid POUR orientation at live base; "
             f"candidates={rows}"
@@ -604,11 +607,19 @@ class KitchenPhaseCExecutionDispatcher:
         if np.linalg.norm(source_direction) < 1e-9:
             source_direction = np.array((1.0, 0.0, 0.0))
         source_direction /= np.linalg.norm(source_direction)
+        radial_reserve = (
+            0.018
+            if (
+                family == "KETTLE"
+                and min(opening.opening_half_extents_m) > 0.035
+            )
+            else 0.007
+        )
         radial_offset = max(
             0.0,
             min(opening.opening_half_extents_m)
             - opening.safety_margin_m
-            - 0.007,
+            - radial_reserve,
         )
         aligned_outlet = opening_centre + source_direction * radial_offset
         pre_height = 0.26 if family == "JAR_SOURCE" else 0.090
@@ -711,9 +722,13 @@ class KitchenPhaseCExecutionDispatcher:
                 step_callback=self.phase_b.manipulation.step_callback,
             )
             record["steps"].append({"action": "POUR_TRAJECTORY", **trajectory})
-            arm_recovery = self.recover_post_pick_carry(source_id)
+            arm_recovery = low.fold_held_payload_for_navigation(
+                tracking_tolerance_rad=0.080,
+                step_callback=self.phase_b.manipulation.step_callback,
+                maximum_steps_per_waypoint=1800,
+            )
             record["steps"].append({
-                "action": "RECOVER_RECORDED_POST_PICK_CARRY_ARM",
+                "action": "RECOVER_COMPACT_NAVIGATION_CARRY_ARM",
                 **arm_recovery,
             })
             if stance is not None:
