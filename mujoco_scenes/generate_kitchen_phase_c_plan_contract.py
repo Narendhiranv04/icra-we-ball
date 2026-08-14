@@ -8,6 +8,8 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+from .kitchen_pour_stir_manipulation import phase_c_execution_plan
+
 
 ROOT = Path(__file__).resolve().parents[1]
 FROZEN_ROOT = ROOT / "runs/integrated_no_pot_clearance_seed19_20260807"
@@ -27,10 +29,13 @@ def build_contract() -> dict[str, Any]:
     assignments_path = FROZEN_ROOT / "grounded_role_assignments.json"
     registry_path = FROZEN_ROOT / "object_registry.json"
     plan = json.loads(plan_path.read_text())
+    registry = json.loads(registry_path.read_text())
+    execution_plan = phase_c_execution_plan(plan, registry)
     assignments = json.loads(assignments_path.read_text())
 
-    pours = [row for row in plan if row["action"].upper() == "POUR"]
-    stirs = [row for row in plan if row["action"].upper() == "STIR"]
+    pours = [row for row in execution_plan if row["action"].upper() == "POUR"]
+    stirs = [row for row in execution_plan if row["action"].upper() == "STIR"]
+    excluded = [row for row in plan if row not in execution_plan]
     coffee_targets = list(assignments["coffee_targets"])
     soup_targets = list(assignments["soup_targets"])
     return {
@@ -53,9 +58,11 @@ def build_contract() -> dict[str, Any]:
                 "sha256": _sha256(registry_path),
             },
         },
-        "plan_length": len(plan),
-        "operator_counts": dict(sorted(Counter(row["action"].upper() for row in plan).items())),
-        "ordered_actions": plan,
+        "plan_length": len(execution_plan),
+        "frozen_input_plan_length": len(plan),
+        "operator_counts": dict(sorted(Counter(row["action"].upper() for row in execution_plan).items())),
+        "ordered_actions": execution_plan,
+        "excluded_by_execution_scope": excluded,
         "ordered_pour_actions": pours,
         "ordered_stir_actions": stirs,
         "source_roles": assignments["source_roles"],
@@ -65,7 +72,7 @@ def build_contract() -> dict[str, Any]:
         },
         "coffee_stirring": assignments["coffee_stirring"],
         "soup_serving": assignments["soup_serving"],
-        "execution_scope": "CONDITIONAL_EXECUTION_VALIDATION_GIVEN_FROZEN_PHASE1_PHASE2",
+        "execution_scope": "POUR_STIR_TARGETS_ON_COUNTERTOP_OR_BOX_ONLY;CUPBOARD_PICK_PLACE_ONLY",
     }
 
 

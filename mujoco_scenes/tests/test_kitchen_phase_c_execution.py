@@ -6,6 +6,7 @@ import mujoco
 import numpy as np
 import pytest
 
+from mujoco_scenes.generic_manipulation import classify_held_payload_contact
 from mujoco_scenes.kitchen_phase_c_execution import KitchenPhaseCExecutionDispatcher
 from mujoco_scenes.kitchen_pour_stir_manipulation import (
     EVIDENCE_MODE,
@@ -39,9 +40,13 @@ def test_plan_contract_is_exact_and_non_vacuous():
     contract = json.loads(
         Path("runs/phaseC_plan_contract/phaseC_plan_contract.json").read_text()
     )
-    assert contract["plan_length"] == 26
-    assert contract["operator_counts"]["POUR"] == 6
-    assert contract["operator_counts"]["STIR"] == 3
+    assert contract["frozen_input_plan_length"] == 26
+    assert contract["plan_length"] == 23
+    assert contract["operator_counts"]["POUR"] == 4
+    assert contract["operator_counts"]["STIR"] == 2
+    assert {row["step"] for row in contract["excluded_by_execution_scope"]} == {
+        4, 9, 15
+    }
     assert len(contract["ordered_actions"]) == contract["plan_length"]
 
 
@@ -77,6 +82,14 @@ def test_stir_requires_existing_held_tool(dispatchers):
     assert not result["success"]
     assert result["failure_code"] == "STIR_TOOL_NOT_HELD"
     assert not result["symbolic_effects_applied"]
+
+
+def test_cupboard_vessel_is_not_a_phase_c_operator_target(dispatchers):
+    _, phase_c = dispatchers
+    pour = phase_c.pour("object_0009", "object_0016", "water")
+    stir = phase_c.stir("object_0015", "object_0016")
+    assert pour["failure_code"] == "POUR_TARGET_RESOLUTION_FAILED"
+    assert stir["failure_code"] == "STIR_TARGET_RESOLUTION_FAILED"
 
 
 def test_opening_geometry_requires_frozen_measurement(dispatchers, frozen_inputs):
@@ -172,3 +185,54 @@ def test_phase_c_execution_does_not_write_payload_qpos_or_add_exemptions():
     assert "eq_active[" not in source + helper
     assert "PHASE_B_MOUNT_ALLOWANCES" not in source + helper
     assert "collision_exemption" not in source + helper
+
+
+def test_intended_stir_payload_contact_is_operator_scoped():
+    held_tool_body = 17
+    intended_target_body = 23
+    assert classify_held_payload_contact(
+        held_tool_body, intended_target_body, frozenset((intended_target_body,))
+    ) == "ALLOWED_TASK_CONTACT"
+    assert classify_held_payload_contact(
+        held_tool_body, intended_target_body, frozenset()
+    ) == "INVALID_COLLISION"
+    assert classify_held_payload_contact(
+        held_tool_body, 29, frozenset((intended_target_body,))
+    ) == "INVALID_COLLISION"
+
+
+def test_stir_orientation_family_preserves_strict_task_axis_geometry():
+    normal = np.array((0.0, 0.0, 1.0))
+    local_axis = np.array((0.0, 0.0, 1.0))
+    candidates = KitchenPhaseCExecutionDispatcher._stir_orientation_family(
+        np.eye(3), local_axis, normal, np.array((1.0, 0.0, 0.0))
+    )
+    task_candidates = [
+        row for row in candidates
+        if row["provenance"] == "TASK_EQUIVALENT_TOOL_AXIS_FAMILY"
+    ]
+    assert {row["inclination_deg"] for row in task_candidates} == {
+        0.0, 15.0, 30.0, 45.0, 60.0
+    }
+    assert {row["tool_roll_deg"] for row in task_candidates} == {
+        0.0, 180.0
+    }
+    for row in task_candidates:
+        axis = row["rotation"] @ local_axis
+        expected = np.cos(np.deg2rad(row["inclination_deg"]))
+        assert float(np.dot(axis, normal)) == pytest.approx(expected, abs=1e-7)
+
+
+def test_serving_utensil_can_bind_to_frozen_future_target_slot(dispatchers):
+    phase_b, _ = dispatchers
+    resolver = phase_b.manipulation.placement_resolver
+    target = resolver.prepare_future_serving_relative_destination(
+        "object_0015", "object_0018"
+    )
+    assert target.destination_kind == "OBJECT_RELATIVE_DESTINATION"
+    assert target.target_object_id == "object_0018"
+    assert target.support_backend == "serving_surface"
+    assert target.provenance == (
+        "FROZEN_TARGET_FUTURE_SERVING_SLOT_CENTRELINE_CLEAR_RELEASE_V3"
+    )
+    assert resolver.resolve("object_0015", "object_0018") == target

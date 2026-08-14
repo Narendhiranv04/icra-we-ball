@@ -11,6 +11,30 @@ import numpy as np
 
 
 EVIDENCE_MODE = "KINEMATIC_ACTION_PROXY_NO_FLUID_DYNAMICS"
+PHASE_C_OPERATOR_ELIGIBLE_TARGET_REGIONS = frozenset(("countertop", "B1"))
+
+
+def phase_c_execution_plan(
+    frozen_plan: list[dict[str, Any]], frozen_registry: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """Exclude POUR/STIR whose target remains in a cupboard or drawer.
+
+    B1 is the scene's BOX region.  All non-Phase-C operators, including
+    cupboard PICK/PLACE, retain their original order and object identities.
+    """
+    objects = frozen_registry["objects"]
+    result = []
+    for row in frozen_plan:
+        operator = row["action"].upper()
+        arguments = list(row.get("arguments", []))
+        if operator in {"POUR", "STIR"}:
+            target_id = arguments[1]
+            if objects[target_id].get("source_region") not in (
+                PHASE_C_OPERATOR_ELIGIBLE_TARGET_REGIONS
+            ):
+                continue
+        result.append(row)
+    return result
 
 
 @dataclass(frozen=True)

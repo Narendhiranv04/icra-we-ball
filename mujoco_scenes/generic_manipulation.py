@@ -199,12 +199,14 @@ class ProfiledIK:
         orientation_weight: float = 0.30,
         seed_continuity_weight: float = 0.0,
         maximum_seed_delta_rad: float | None = None,
+        maximum_iterations: int = 1200,
     ):
         self.model = model
         self.profile = profile
         self.orientation_weight = float(orientation_weight)
         self.seed_continuity_weight = float(seed_continuity_weight)
         self.maximum_seed_delta_rad = maximum_seed_delta_rad
+        self.maximum_iterations = int(maximum_iterations)
         self.data = mujoco.MjData(model)
         self.data.qpos[:] = reference.qpos
         self.site_id = mujoco.mj_name2id(
@@ -243,7 +245,7 @@ class ProfiledIK:
             )
         self.data.qpos[self.qpos_addresses] = seed
         self.data.qvel[:] = 0
-        for _ in range(1200):
+        for _ in range(self.maximum_iterations):
             mujoco.mj_forward(self.model, self.data)
             rotation = self.data.site_xmat[self.site_id].reshape(3, 3)
             position_error = target - self.data.site_xpos[self.site_id]
@@ -497,6 +499,21 @@ class JointWaypoint:
     passive_pivot: bool = False
 
 
+def classify_held_payload_contact(
+    held_body: int,
+    other_body: int,
+    allowed_task_contact_bodies: frozenset[int],
+) -> str:
+    """Classify only an explicitly named held-payload task contact as allowed."""
+    if held_body == other_body:
+        raise ValueError("Held payload contact requires two distinct bodies")
+    return (
+        "ALLOWED_TASK_CONTACT"
+        if other_body in allowed_task_contact_bodies
+        else "INVALID_COLLISION"
+    )
+
+
 class CalibratedPickPlaceExecutor:
     """Execute calibrated vertical Google Robot pick and place actions."""
 
@@ -690,6 +707,8 @@ class CalibratedPickPlaceExecutor:
     def fold_held_payload_for_navigation(
         self,
         *,
+        target_arm_joints: np.ndarray | None = None,
+        tracking_tolerance_rad: float = 0.025,
         step_callback=None,
         maximum_steps_per_waypoint: int = 900,
     ) -> dict[str, object]:
@@ -707,7 +726,13 @@ class CalibratedPickPlaceExecutor:
             self.model, mujoco.mjtObj.mjOBJ_BODY, self.held_object
         )
         current = self._current_arm()
-        goal = self.profile.navigation_joints.copy()
+        goal = (
+            self.profile.navigation_joints.copy()
+            if target_arm_joints is None
+            else np.asarray(target_arm_joints, float).copy()
+        )
+        if goal.shape != current.shape:
+            raise ValueError("Held-payload recovery target has wrong shape")
         checker = RobotConfigurationCollisionChecker(
             self.model,
             self.data,
@@ -718,7 +743,7 @@ class CalibratedPickPlaceExecutor:
             current, goal, frozenset((body_id,)), resolution=0.025
         )
         if not valid:
-            raise RuntimeError(f"Unsafe held-payload fold: {reason}")
+            raise RuntimeError(f"Unsafe held-payload recovery: {reason}")
 
         waypoints = self._joint_points(current, goal)
         for waypoint_index, target in enumerate(waypoints):
@@ -760,18 +785,24 @@ class CalibratedPickPlaceExecutor:
                     ):
                         continue
                     raise RuntimeError(
-                        "Held payload contacted environment during fold: "
+                        "Held payload contacted environment during recovery: "
                         f"{other_geom_name or other_body_name}"
                     )
-                if float(np.max(np.abs(self.data.qpos[self.arm_qpos] - target))) < 0.025:
+                if float(np.max(np.abs(
+                    self.data.qpos[self.arm_qpos] - target
+                ))) < tracking_tolerance_rad:
                     break
             else:
                 raise RuntimeError(
-                    "Held-payload fold tracking timeout at waypoint "
+                    "Held-payload recovery tracking timeout at waypoint "
                     f"{waypoint_index}"
                 )
         return {
             "performed": True,
+            "recovery_policy": (
+                "COMPACT_NAVIGATION_ARM"
+                if target_arm_joints is None else "RECORDED_POST_PICK_CARRY_ARM"
+            ),
             "joint_target": goal.tolist(),
             "direct_object_qpos_write": False,
             "grasp_weld_retained": bool(
@@ -1141,6 +1172,7 @@ class CalibratedPickPlaceExecutor:
         *,
         initial_arm_joints: np.ndarray | None = None,
         monitored_body_names: tuple[str, ...] = (),
+        allowed_payload_contact_body_names: tuple[str, ...] = (),
         step_callback=None,
         maximum_steps_per_waypoint: int = 1800,
     ) -> dict[str, object]:
@@ -1149,7 +1181,10 @@ class CalibratedPickPlaceExecutor:
         Each tuple is ``(position, rotation, label, dwell_steps)``.  The
         method moves robot controls only: it never writes a payload freejoint
         and never creates or changes a weld.  Contacts between the payload and
-        any non-robot body are fail-closed.
+        any non-robot body are fail-closed unless the caller explicitly names
+        an intended task-contact body.  This narrow payload/body allowance is
+        separate from robot collision checking: gripper, arm, and base contact
+        with that body remain invalid.
         """
         if self.mode != "holding" or self.held_object is None:
             raise RuntimeError("Held trajectory requires an existing grasp")
@@ -1312,8 +1347,19 @@ class CalibratedPickPlaceExecutor:
             for name in monitored_body_names
         }
         monitored = {body_id: name for body_id, name in monitored.items() if body_id >= 0}
+        allowed_payload_contacts = {
+            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, name): name
+            for name in allowed_payload_contact_body_names
+        }
+        if any(body_id < 0 for body_id in allowed_payload_contacts):
+            missing = sorted(
+                name for body_id, name in allowed_payload_contacts.items()
+                if body_id < 0
+            )
+            raise ValueError(f"Unknown allowed payload contact bodies: {missing}")
         minimum_monitored_clearance = math.inf
         invalid_pairs: set[tuple[str, str]] = set()
+        allowed_task_pairs: set[tuple[str, str]] = set()
         physics_steps = 0
         dwell_pose_samples: list[dict[str, object]] = []
         active_label = "UNSET"
@@ -1361,7 +1407,14 @@ class CalibratedPickPlaceExecutor:
                 second_name = mujoco.mj_id2name(
                     self.model, mujoco.mjtObj.mjOBJ_GEOM, contact.geom2
                 ) or f"geom_{contact.geom2}"
-                invalid_pairs.add(tuple(sorted((first_name, second_name))))
+                pair = tuple(sorted((first_name, second_name)))
+                classification = classify_held_payload_contact(
+                    held_body, other_body, frozenset(allowed_payload_contacts)
+                )
+                if classification == "ALLOWED_TASK_CONTACT":
+                    allowed_task_pairs.add(pair)
+                    continue
+                invalid_pairs.add(pair)
             if invalid_pairs:
                 held_position = self.data.xpos[held_body].copy()
                 grip_position = self.data.site_xpos[self.grip_site_id].copy()
@@ -1445,6 +1498,9 @@ class CalibratedPickPlaceExecutor:
             "minimum_monitored_clearance_m": (
                 None if math.isinf(minimum_monitored_clearance) else minimum_monitored_clearance
             ),
+            "allowed_task_contacts": [
+                list(pair) for pair in sorted(allowed_task_pairs)
+            ],
             "invalid_collision_pairs": [list(pair) for pair in sorted(invalid_pairs)],
             "direct_object_qpos_write": False,
             "grasp_weld_preserved": True,
@@ -1456,6 +1512,7 @@ class CalibratedPickPlaceExecutor:
         self,
         target_base_qpos: np.ndarray,
         *,
+        position_tolerance_m: float = BASE_TARGET_TOLERANCE,
         step_callback=None,
         maximum_steps: int = 15000,
     ) -> dict[str, object]:
@@ -1509,7 +1566,21 @@ class CalibratedPickPlaceExecutor:
                 invalid_pairs.add(tuple(sorted((first_name, second_name))))
             if invalid_pairs:
                 raise RuntimeError(f"Held payload base contact: {sorted(invalid_pairs)}")
-            if self._base_at_target(target):
+            base_error = self.data.qpos[self.base_qpos] - target
+            base_error[2] = math.atan2(
+                math.sin(base_error[2]), math.cos(base_error[2])
+            )
+            command_error = self.data.ctrl[self.base_actuators] - target
+            command_error[2] = math.atan2(
+                math.sin(command_error[2]), math.cos(command_error[2])
+            )
+            at_target = bool(
+                float(np.max(np.abs(base_error))) < position_tolerance_m
+                and float(np.max(np.abs(command_error))) < BASE_COMMAND_TOLERANCE
+                and float(np.max(np.abs(self.data.qvel[self.base_dofs])))
+                < BASE_SETTLE_SPEED
+            )
+            if at_target:
                 self._restore_navigation_base_damping()
                 self.base_stance = target.copy()
                 self.base_manipulation_target = target.copy()
@@ -1517,6 +1588,8 @@ class CalibratedPickPlaceExecutor:
                     "success": True,
                     "start_base_qpos": start.tolist(),
                     "target_base_qpos": target.tolist(),
+                    "terminal_base_error": base_error.tolist(),
+                    "position_tolerance_m": float(position_tolerance_m),
                     "physics_steps": step,
                     "held_object_included_in_collision_check": True,
                     "invalid_collision_pairs": [],

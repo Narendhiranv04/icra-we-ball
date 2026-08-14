@@ -1361,6 +1361,9 @@ class KitchenPlacementResolver:
         self.binding = {row["generic_object_id"]: row for row in resolution["accepted"]}
         self.allocated_serving: dict[str, PlacementTarget] = {}
         self.serving_placements: dict[str, ServingPlacementState] = {}
+        self.future_serving_relative_destinations: dict[
+            tuple[str, str], PlacementTarget
+        ] = {}
         self.inventory_by_id = {
             row["generic_object_id"]: row for row in inventory["objects"]
         }
@@ -1495,6 +1498,47 @@ class KitchenPlacementResolver:
             )
         return sorted(set(observed))[0]
 
+    def prepare_future_serving_relative_destination(
+        self, object_id: str, target_object_id: str
+    ) -> PlacementTarget:
+        """Reserve a physical utensil pose beside a frozen future serving slot.
+
+        A frozen PLACE_SERVING_UTENSIL may precede retrieval of its target bowl.
+        The tool is therefore placed on the serving support beside the bowl's
+        deterministic serving slot; the later SERVE action physically brings
+        that exact bowl to the already placed tool.
+        """
+        if object_id not in self.binding or target_object_id not in self.binding:
+            raise ValueError("DESTINATION_RESOLUTION_FAILED: unresolved object")
+        if target_object_id not in self.serving_slot_by_id:
+            raise ValueError(
+                "DESTINATION_RESOLUTION_FAILED: target has no frozen serving slot"
+            )
+        key = (object_id, target_object_id)
+        if key in self.future_serving_relative_destinations:
+            return self.future_serving_relative_destinations[key]
+        target_x, target_y = self.serving_slot_by_id[target_object_id]
+        support_centre_y = -0.56
+        target = PlacementTarget(
+            object_id,
+            target_object_id,
+            "OBJECT_RELATIVE_DESTINATION",
+            (
+                float(target_x),
+                support_centre_y,
+                0.58 + max(self.support_height_by_id[object_id], 0.035),
+            ),
+            0.0,
+            "serving_surface",
+            target_object_id,
+            KitchenWorkspace.HOME,
+            0.025,
+            "WITH",
+            "FROZEN_TARGET_FUTURE_SERVING_SLOT_CENTRELINE_CLEAR_RELEASE_V3",
+        )
+        self.future_serving_relative_destinations[key] = target
+        return target
+
     def resolve(self, object_id: str, destination: str) -> PlacementTarget:
         if object_id not in self.binding:
             raise ValueError("DESTINATION_RESOLUTION_FAILED: unresolved object")
@@ -1578,6 +1622,11 @@ class KitchenPlacementResolver:
                 "RETURNED_TO_SOURCE", "ORIGINAL_OBSERVED_SOURCE_POSE_V1",
             )
         if destination in self.binding:
+            prepared = self.future_serving_relative_destinations.get(
+                (object_id, destination)
+            )
+            if prepared is not None:
+                return prepared
             target_backend = self.binding[destination]["physical_backend_body"]
             target_body = mujoco.mj_name2id(
                 self.scene.model, mujoco.mjtObj.mjOBJ_BODY, target_backend
@@ -3536,12 +3585,24 @@ class KitchenObjectManipulationExecutor:
         relative_distance = None
         intended_target_uniquely_closest = None
         if target.target_object_id:
-            target_backend = self.by_id[target.target_object_id]["physical_backend_body"]
-            target_id = mujoco.mj_name2id(
-                self.scene.model, mujoco.mjtObj.mjOBJ_BODY, target_backend
+            future_slot = target.provenance.startswith(
+                "FROZEN_TARGET_FUTURE_SERVING_SLOT_"
             )
+            if future_slot:
+                target_xy = np.asarray(
+                    self.placement_resolver.serving_slot_by_id[
+                        target.target_object_id
+                    ],
+                    float,
+                )
+            else:
+                target_backend = self.by_id[target.target_object_id]["physical_backend_body"]
+                target_id = mujoco.mj_name2id(
+                    self.scene.model, mujoco.mjtObj.mjOBJ_BODY, target_backend
+                )
+                target_xy = self.scene.data.xpos[target_id, :2]
             distance = float(np.linalg.norm(
-                self.scene.data.xpos[body_id, :2] - self.scene.data.xpos[target_id, :2]
+                self.scene.data.xpos[body_id, :2] - target_xy
             ))
             relative_distance = distance
             relative_ok = 0.06 <= distance <= 0.18
@@ -3549,17 +3610,23 @@ class KitchenObjectManipulationExecutor:
             for candidate_id, candidate in self.inventory_by_id.items():
                 if "soup_bowl" not in set(candidate.get("selected_functions", ())):
                     continue
-                candidate_binding = self.by_id.get(candidate_id)
-                if candidate_binding is None:
-                    continue
-                candidate_body = mujoco.mj_name2id(
-                    self.scene.model,
-                    mujoco.mjtObj.mjOBJ_BODY,
-                    candidate_binding["physical_backend_body"],
-                )
+                if future_slot:
+                    candidate_xy = np.asarray(
+                        self.placement_resolver.serving_slot_by_id[candidate_id],
+                        float,
+                    )
+                else:
+                    candidate_binding = self.by_id.get(candidate_id)
+                    if candidate_binding is None:
+                        continue
+                    candidate_body = mujoco.mj_name2id(
+                        self.scene.model,
+                        mujoco.mjtObj.mjOBJ_BODY,
+                        candidate_binding["physical_backend_body"],
+                    )
+                    candidate_xy = self.scene.data.xpos[candidate_body, :2]
                 bowl_distances[candidate_id] = float(np.linalg.norm(
-                    self.scene.data.xpos[body_id, :2]
-                    - self.scene.data.xpos[candidate_body, :2]
+                    self.scene.data.xpos[body_id, :2] - candidate_xy
                 ))
             intended_target_uniquely_closest = bool(bowl_distances) and all(
                 distance + 0.005 < other_distance
@@ -3572,7 +3639,10 @@ class KitchenObjectManipulationExecutor:
         actual_edge_margin = None
         footprint_corners = np.empty((0, 2))
         pairwise_payload_checks = []
-        if target.destination_kind == "SERVING_SUPPORT":
+        if (
+            target.destination_kind == "SERVING_SUPPORT"
+            or target.support_backend == "serving_surface"
+        ):
             length, width = self.placement_resolver.footprint(generic_object_id)
             footprint_corners = oriented_rectangle_corners(
                 final_xy, length, width, _body_yaw(self.scene.data, body_id)

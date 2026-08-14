@@ -20,7 +20,11 @@ from .kitchen_object_manipulation import (
     rectangle_inside_observed_support,
 )
 from .kitchen_phase_c_execution import KitchenPhaseCExecutionDispatcher
-from .kitchen_pour_stir_manipulation import derive_target_opening, derive_tool_tip
+from .kitchen_pour_stir_manipulation import (
+    derive_target_opening,
+    derive_tool_tip,
+    phase_c_execution_plan,
+)
 from .run_kitchen_phase_b_freeze_evidence import (
     PRIMARY_FROZEN,
     primary_validation_dispatcher,
@@ -67,7 +71,8 @@ def fresh_dispatcher():
 
 
 def frozen_actions(operator: str) -> list[dict[str, Any]]:
-    _, plan = frozen_inputs()
+    registry, plan = frozen_inputs()
+    plan = phase_c_execution_plan(plan, registry)
     return [row for row in plan if row["action"].upper() == operator.upper()]
 
 
@@ -191,7 +196,8 @@ def repeatability(operator: str, output: Path, trials: int = 3) -> dict[str, Any
 
 
 def _frozen_place_destination(source_id: str) -> str:
-    _, plan = frozen_inputs()
+    registry, plan = frozen_inputs()
+    plan = phase_c_execution_plan(plan, registry)
     for row in plan:
         if (
             row["action"].upper() in {"PLACE", "PLACE_SERVING_UTENSIL"}
@@ -225,12 +231,17 @@ def sequential(operator: str, output: Path) -> dict[str, Any]:
         if pick["success"] and len(motions) == len(actions) and all(
             row["success"] for row in motions
         ):
+            if operator == "STIR":
+                phase_c.phase_b.manipulation.placement_resolver.prepare_future_serving_relative_destination(
+                    source_id, _frozen_place_destination(source_id)
+                )
+                phase_c.recover_post_pick_carry(source_id)
             place = phase_c.place(source_id, _frozen_place_destination(source_id))
         held_backend_names = {
-            row.get("held_state_before", {}).get("physical_backend_body")
+            row.get("held_state_before", {}).get("backend_body")
             for row in motions
         } | {
-            row.get("held_state_after", {}).get("physical_backend_body")
+            row.get("held_state_after", {}).get("backend_body")
             for row in motions
         }
         held_backend_names.discard(None)
@@ -459,14 +470,19 @@ def final_physical_validation(
 
 def complete_plan(output: Path) -> dict[str, Any]:
     scene, inventory, resolution, phase_c = fresh_dispatcher()
-    _, plan = frozen_inputs()
+    registry, plan = frozen_inputs()
+    plan = phase_c_execution_plan(plan, registry)
     actions = []
     for action in plan:
         result = phase_c.execute_phase2_action(action)
         actions.append({"frozen_step": int(action["step"]), **result})
         if not result["success"]:
             break
-    counts = Counter(row.get("request", {}).get("action", "UNKNOWN") for row in actions)
+    counts = Counter(
+        row.get("frozen_operator")
+        or row.get("request", {}).get("action", "UNKNOWN")
+        for row in actions
+    )
     expected_counts = Counter(row["action"].upper() for row in plan)
     symbolic_steps = [row["frozen_step"] for row in actions]
     ledger = phase_c.ledger.summary()

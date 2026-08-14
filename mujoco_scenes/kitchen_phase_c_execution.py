@@ -19,6 +19,7 @@ from .kitchen_pour_stir_manipulation import (
     derive_pour_spec,
     derive_target_opening,
     derive_tool_tip,
+    phase_c_execution_plan,
     rotation_about_axis,
 )
 
@@ -66,20 +67,22 @@ class KitchenPhaseCExecutionDispatcher:
             objects if isinstance(objects, dict)
             else {row["generic_object_id"]: row for row in objects}
         )
-        self.frozen_plan = frozen_plan
-        self.ledger = PhaseCExecutionLedger(frozen_plan)
+        self.authoritative_frozen_plan = frozen_plan
+        self.frozen_plan = phase_c_execution_plan(frozen_plan, frozen_registry)
+        self.post_pick_carry_arm_by_id: dict[str, np.ndarray] = {}
+        self.ledger = PhaseCExecutionLedger(self.frozen_plan)
         self.expected_pairs = {
             row["action"].upper(): {
                 tuple(row.get("arguments", [])[:2]): int(row["step"])
-                for row in frozen_plan
+                for row in self.frozen_plan
                 if row["action"].upper() == row["action"].upper()
             }
-            for row in frozen_plan
+            for row in self.frozen_plan
         }
         self.expected_pairs = {
             operator: {
                 tuple(row.get("arguments", [])[:2]): int(row["step"])
-                for row in frozen_plan if row["action"].upper() == operator
+                for row in self.frozen_plan if row["action"].upper() == operator
             }
             for operator in ("POUR", "STIR")
         }
@@ -89,7 +92,24 @@ class KitchenPhaseCExecutionDispatcher:
         return self.phase_b.current_workspace
 
     def pick(self, object_id: str) -> dict[str, Any]:
-        return self.phase_b.pick(object_id)
+        result = self.phase_b.pick(object_id)
+        if result["success"]:
+            low = self.phase_b.manipulation.executor
+            self.post_pick_carry_arm_by_id[object_id] = self.scene.data.qpos[
+                low.arm_qpos
+            ].copy()
+        return result
+
+    def recover_post_pick_carry(self, object_id: str) -> dict[str, Any]:
+        target = self.post_pick_carry_arm_by_id.get(object_id)
+        if target is None:
+            raise RuntimeError(f"No recorded post-PICK carry branch for {object_id}")
+        return self.phase_b.manipulation.executor.fold_held_payload_for_navigation(
+            target_arm_joints=target,
+            tracking_tolerance_rad=0.040,
+            step_callback=self.phase_b.manipulation.step_callback,
+            maximum_steps_per_waypoint=1800,
+        )
 
     def place(self, object_id: str, destination: str) -> dict[str, Any]:
         return self.phase_b.place(object_id, destination)
@@ -116,6 +136,77 @@ class KitchenPhaseCExecutionDispatcher:
             self.scene.data.xquat[body_id].copy(),
         )
 
+    def _target_has_support_contact(self, target_body: int, tool_body: int) -> bool:
+        robot_prefix = f"{self.phase_b.manipulation.executor.robot_name}:"
+        for contact_index in range(self.scene.data.ncon):
+            contact = self.scene.data.contact[contact_index]
+            first_body = int(self.scene.model.geom_bodyid[contact.geom1])
+            second_body = int(self.scene.model.geom_bodyid[contact.geom2])
+            if target_body not in (first_body, second_body):
+                continue
+            other_body = second_body if first_body == target_body else first_body
+            other_name = mujoco.mj_id2name(
+                self.scene.model, mujoco.mjtObj.mjOBJ_BODY, other_body
+            ) or ""
+            if other_body != tool_body and not other_name.startswith(robot_prefix):
+                return True
+        return False
+
+    @staticmethod
+    def _stir_orientation_family(
+        current_body_rotation: np.ndarray,
+        local_axis: np.ndarray,
+        rim_normal: np.ndarray,
+        preferred_tangent: np.ndarray,
+    ) -> list[dict[str, Any]]:
+        """Return a small deterministic family of task-equivalent STIR poses.
+
+        Tip position remains strict.  The family varies utensil-axis inclination,
+        azimuth, and the task-irrelevant roll about that axis rather than relaxing
+        global IK tolerances.
+        """
+        normal = np.asarray(rim_normal, float)
+        normal /= np.linalg.norm(normal)
+        tangent = np.asarray(preferred_tangent, float)
+        tangent -= normal * float(np.dot(tangent, normal))
+        if np.linalg.norm(tangent) < 1e-9:
+            tangent = np.cross(normal, np.array((1.0, 0.0, 0.0)))
+            if np.linalg.norm(tangent) < 1e-9:
+                tangent = np.cross(normal, np.array((0.0, 1.0, 0.0)))
+        tangent /= np.linalg.norm(tangent)
+        lateral = np.cross(normal, tangent)
+        candidates: list[dict[str, Any]] = []
+        seen: set[tuple[float, ...]] = set()
+
+        def append(rotation: np.ndarray, inclination: float, azimuth: float, roll: float, provenance: str) -> None:
+            key = tuple(float(value) for value in np.round(rotation, 7).ravel())
+            if key in seen:
+                return
+            seen.add(key)
+            candidates.append({
+                "rotation": rotation,
+                "inclination_deg": inclination,
+                "azimuth_deg": azimuth,
+                "tool_roll_deg": roll,
+                "provenance": provenance,
+            })
+
+        current_axis = np.asarray(current_body_rotation, float) @ np.asarray(local_axis, float)
+        current_inclination = math.degrees(math.acos(np.clip(float(np.dot(current_axis, normal)), -1.0, 1.0)))
+        append(np.asarray(current_body_rotation, float), current_inclination, 0.0, 0.0, "LIVE_HELD_ORIENTATION")
+        for inclination_deg in (0.0, 15.0, 30.0, 45.0, 60.0):
+            inclination = math.radians(inclination_deg)
+            azimuths = (0.0,) if inclination_deg == 0.0 else (0.0, -90.0, 90.0, 180.0)
+            for azimuth_deg in azimuths:
+                azimuth = math.radians(azimuth_deg)
+                radial = math.cos(azimuth) * tangent + math.sin(azimuth) * lateral
+                desired_axis = math.cos(inclination) * normal + math.sin(inclination) * radial
+                aligned = _align_vectors(current_axis, desired_axis) @ current_body_rotation
+                for roll_deg in (0.0, 180.0):
+                    rotation = rotation_about_axis(desired_axis, math.radians(roll_deg)) @ aligned
+                    append(rotation, inclination_deg, azimuth_deg, roll_deg, "TASK_EQUIVALENT_TOOL_AXIS_FAMILY")
+        return candidates
+
     def _prepare_target_workspace(self, held_id: str, target_id: str) -> list[dict[str, Any]]:
         steps = []
         context = self.inventory_by_id[target_id]["source_context"]
@@ -138,6 +229,12 @@ class KitchenPhaseCExecutionDispatcher:
         grip_position: np.ndarray,
         grip_rotation: np.ndarray,
         additional_poses: tuple[tuple[np.ndarray, np.ndarray], ...] = (),
+        alternative_pose_families: tuple[
+            tuple[np.ndarray, np.ndarray, tuple[tuple[np.ndarray, np.ndarray], ...]],
+            ...,
+        ] = (),
+        base_position_tolerance_m: float = 0.010,
+        compact_arm_for_base_motion: bool = False,
     ) -> dict[str, Any] | None:
         low = self.phase_b.manipulation.executor
         data = self.scene.data
@@ -146,7 +243,7 @@ class KitchenPhaseCExecutionDispatcher:
         candidates = []
         if self.current_workspace == KitchenWorkspace.HOME:
             nominal_lateral = float(np.clip(-float(grip_position[0]), -0.42, 0.42))
-            for forward in (0.22, 0.25, 0.28):
+            for forward in (0.22, 0.25, 0.28, 0.31, 0.34):
                 for lateral_delta in (0.0, -0.06, 0.06, -0.12, 0.12):
                     for yaw in (
                         0.0, -0.15, 0.15, -0.30, 0.30,
@@ -158,11 +255,22 @@ class KitchenPhaseCExecutionDispatcher:
                             yaw,
                         )))
         else:
-            for forward_delta in (-0.10, 0.0, 0.10, 0.20, 0.30):
-                for lateral_delta in (-0.10, 0.0, 0.10, 0.20, 0.30, 0.35):
-                    for yaw_delta in (
-                        -0.40, 0.0, 0.40, 0.80, 1.00, 1.20, 1.40, 1.60,
-                    ):
+            forward_deltas = (
+                (0.0, 0.15, 0.30)
+                if alternative_pose_families else (-0.10, 0.0, 0.10, 0.20, 0.30)
+            )
+            lateral_deltas = (
+                (0.0, 0.15, 0.30, 0.35)
+                if alternative_pose_families else (-0.10, 0.0, 0.10, 0.20, 0.30, 0.35)
+            )
+            yaw_deltas = (
+                (0.0, 0.60, 1.10, 1.60)
+                if alternative_pose_families
+                else (-0.40, 0.0, 0.40, 0.80, 1.00, 1.20, 1.40, 1.60)
+            )
+            for forward_delta in forward_deltas:
+                for lateral_delta in lateral_deltas:
+                    for yaw_delta in yaw_deltas:
                         candidate = current_base + np.array((
                             forward_delta, lateral_delta, yaw_delta
                         ))
@@ -170,7 +278,24 @@ class KitchenPhaseCExecutionDispatcher:
                             candidate[:2] - current_base[:2]
                         )) <= 0.65:
                             candidates.append(candidate)
+        pose_families = (
+            (np.asarray(grip_position, float), np.asarray(grip_rotation, float), additional_poses),
+            *alternative_pose_families,
+        )
+        # Candidate order is itself part of the deterministic ranking.  Search
+        # the smallest base displacement first, then the ordered task-equivalent
+        # pose family, and stop as soon as a strict, collision-valid solution is
+        # available at that stance.
+        candidates = sorted(
+            candidates,
+            key=lambda candidate: (
+                float(np.linalg.norm(candidate - current_base)),
+                float(np.linalg.norm(candidate[:2] - current_base[:2])),
+                tuple(float(value) for value in candidate),
+            ),
+        )
         rows = []
+        selected = None
         held_body = mujoco.mj_name2id(
             self.scene.model, mujoco.mjtObj.mjOBJ_BODY, str(low.held_object)
         )
@@ -180,75 +305,101 @@ class KitchenPhaseCExecutionDispatcher:
         )
         try:
             for index, candidate in enumerate(candidates):
-                for seed_name, initial_seed in stance_seeds:
-                    data.qpos[:] = saved_qpos
-                    data.qvel[:] = 0.0
-                    data.qpos[low.base_qpos] = candidate
-                    data.qpos[low.arm_qpos] = initial_seed
-                    mujoco.mj_forward(self.scene.model, data)
-                    ik = ProfiledIK(
-                        self.scene.model, data, low.profile, orientation_weight=0.45
-                    )
-                    checker = RobotConfigurationCollisionChecker(
-                        self.scene.model, data, low.profile,
-                        mounting_allowances=low.mounting_allowances,
-                    )
-                    seed = initial_seed.copy()
-                    position_error = angle_error = 0.0
-                    collision_valid, reason = True, None
-                    pose_diagnostics = []
-                    for pose_index, (pose_position, pose_rotation) in enumerate((
-                        (np.asarray(grip_position, float), np.asarray(grip_rotation, float)),
-                        *additional_poses,
-                    )):
-                        joints, pose_position_error, pose_angle_error = ik.solve(
-                            np.asarray(pose_position, float), seed,
-                            np.asarray(pose_rotation, float),
+                for family_index, (family_position, family_rotation, family_additional) in enumerate(pose_families):
+                    for seed_name, initial_seed in stance_seeds:
+                        data.qpos[:] = saved_qpos
+                        data.qvel[:] = 0.0
+                        data.qpos[low.base_qpos] = candidate
+                        data.qpos[low.arm_qpos] = initial_seed
+                        mujoco.mj_forward(self.scene.model, data)
+                        ik = ProfiledIK(
+                            self.scene.model,
+                            data,
+                            low.profile,
+                            orientation_weight=0.45,
+                            maximum_iterations=(
+                                320
+                                if (
+                                    alternative_pose_families
+                                    and self.current_workspace
+                                    != KitchenWorkspace.HOME
+                                )
+                                else 1200
+                            ),
                         )
-                        position_error = max(position_error, float(pose_position_error))
-                        angle_error = max(angle_error, float(pose_angle_error))
-                        collision_valid, reason = checker.segment_valid(
-                            seed, joints, frozenset((held_body,)), resolution=0.025
+                        checker = RobotConfigurationCollisionChecker(
+                            self.scene.model, data, low.profile,
+                            mounting_allowances=low.mounting_allowances,
                         )
-                        pose_diagnostics.append({
-                            "pose_index": pose_index,
-                            "position_error_m": float(pose_position_error),
-                            "orientation_error_rad": float(pose_angle_error),
-                            "collision_valid": bool(collision_valid),
-                            "collision_failure": reason,
+                        seed = initial_seed.copy()
+                        position_error = angle_error = 0.0
+                        collision_valid, reason = True, None
+                        pose_diagnostics = []
+                        for pose_index, (pose_position, pose_rotation) in enumerate((
+                            (np.asarray(family_position, float), np.asarray(family_rotation, float)),
+                            *family_additional,
+                        )):
+                            joints, pose_position_error, pose_angle_error = ik.solve(
+                                np.asarray(pose_position, float), seed,
+                                np.asarray(pose_rotation, float),
+                            )
+                            position_error = max(position_error, float(pose_position_error))
+                            angle_error = max(angle_error, float(pose_angle_error))
+                            pose_ik_valid = bool(
+                                pose_position_error <= low.ik_position_tolerance
+                                and pose_angle_error <= low.ik_angle_tolerance
+                            )
+                            if pose_ik_valid:
+                                collision_valid, reason = checker.segment_valid(
+                                    seed, joints, frozenset((held_body,)), resolution=0.025
+                                )
+                            else:
+                                collision_valid = False
+                                reason = "STRICT_IK_TOLERANCE_MISS"
+                            pose_diagnostics.append({
+                                "pose_index": pose_index,
+                                "position_error_m": float(pose_position_error),
+                                "orientation_error_rad": float(pose_angle_error),
+                                "collision_valid": bool(collision_valid),
+                                "collision_failure": reason,
+                            })
+                            if (
+                                not pose_ik_valid or not collision_valid
+                            ):
+                                break
+                            seed = joints
+                        valid = bool(
+                            len(pose_diagnostics) == 1 + len(family_additional)
+                            and position_error <= low.ik_position_tolerance
+                            and angle_error <= low.ik_angle_tolerance
+                            and collision_valid
+                        )
+                        rows.append({
+                            "candidate_index": index,
+                            "pose_family_index": family_index,
+                            "seed_policy": seed_name,
+                            "base_qpos": candidate.tolist(),
+                            "strict_ik_position_error_m": float(position_error),
+                            "strict_ik_orientation_error_rad": float(angle_error),
+                            "arm_collision_valid": bool(collision_valid),
+                            "arm_joints": seed.tolist(),
+                            "pose_diagnostics": pose_diagnostics,
+                            "failure": None if valid else reason,
+                            "valid": valid,
                         })
-                        if (
-                            pose_position_error > low.ik_position_tolerance
-                            or pose_angle_error > low.ik_angle_tolerance
-                            or not collision_valid
-                        ):
+                        if valid:
+                            selected = rows[-1]
                             break
-                        seed = joints
-                    valid = bool(
-                        len(pose_diagnostics) == 1 + len(additional_poses)
-                        and position_error <= low.ik_position_tolerance
-                        and angle_error <= low.ik_angle_tolerance
-                        and collision_valid
-                    )
-                    rows.append({
-                        "candidate_index": index,
-                        "seed_policy": seed_name,
-                        "base_qpos": candidate.tolist(),
-                        "strict_ik_position_error_m": float(position_error),
-                        "strict_ik_orientation_error_rad": float(angle_error),
-                        "arm_collision_valid": bool(collision_valid),
-                        "arm_joints": seed.tolist(),
-                        "pose_diagnostics": pose_diagnostics,
-                        "failure": None if valid else reason,
-                        "valid": valid,
-                    })
+                    if selected is not None:
+                        break
+                if selected is not None:
+                    break
         finally:
             data.qpos[:] = saved_qpos
             data.qvel[:] = saved_qvel
             data.ctrl[:] = saved_ctrl
             mujoco.mj_forward(self.scene.model, data)
-        valid_rows = [row for row in rows if row["valid"]]
-        if not valid_rows:
+        if selected is None:
             best = min(
                 rows,
                 key=lambda row: row["strict_ik_position_error_m"]
@@ -256,26 +407,33 @@ class KitchenPhaseCExecutionDispatcher:
                 default=None,
             )
             raise RuntimeError(f"No payload-safe strict-IK HOME stance; best={best}")
-        selected = min(
-            valid_rows,
-            key=lambda row: (
-                float(np.linalg.norm(np.asarray(row["base_qpos"]) - current_base)),
-                row["strict_ik_position_error_m"] + row["strict_ik_orientation_error_rad"],
-                row["candidate_index"],
-            ),
-        )
         target = np.asarray(selected["base_qpos"], float)
+        seed_recovery = None
+        if compact_arm_for_base_motion or selected["seed_policy"] == "NAVIGATION_ARM":
+            seed_recovery = low.fold_held_payload_for_navigation(
+                tracking_tolerance_rad=(
+                    0.050 if compact_arm_for_base_motion else 0.025
+                ),
+                step_callback=self.phase_b.manipulation.step_callback,
+                maximum_steps_per_waypoint=(
+                    1800 if compact_arm_for_base_motion else 900
+                ),
+            )
         reposition = low.reposition_held_payload_base(
-            target, step_callback=self.phase_b.manipulation.step_callback
+            target,
+            position_tolerance_m=base_position_tolerance_m,
+            step_callback=self.phase_b.manipulation.step_callback,
         )
         return {
             "search": {
                 "strategy": "BOUNDED_LOCAL_PAYLOAD_SAFE_STRICT_PHASE_C_IK",
                 "workspace": self.current_workspace.value,
+                "pose_family_count": len(pose_families),
                 "candidate_count": len(rows),
                 "selected": selected,
                 "candidates": rows,
             },
+            "selected_seed_recovery": seed_recovery,
             "execution": reposition,
         }
 
@@ -299,6 +457,94 @@ class KitchenPhaseCExecutionDispatcher:
         desired_body_position = np.asarray(feature_world, float) - desired_body_rotation @ feature_local
         desired_grip_position = desired_body_position - desired_grip_rotation @ body_in_grip_position
         return desired_grip_position, desired_grip_rotation
+
+    def _select_live_held_pose_family(
+        self,
+        pose_families: list[
+            tuple[
+                tuple[np.ndarray, np.ndarray],
+                tuple[np.ndarray, np.ndarray],
+                tuple[np.ndarray, np.ndarray],
+            ]
+        ],
+        additional_seeds: tuple[tuple[str, np.ndarray], ...] = (),
+    ) -> dict[str, Any]:
+        """Select a strict, collision-valid pose family at the live base pose."""
+        low = self.phase_b.manipulation.executor
+        held_body = mujoco.mj_name2id(
+            self.scene.model, mujoco.mjtObj.mjOBJ_BODY, str(low.held_object)
+        )
+        checker = RobotConfigurationCollisionChecker(
+            self.scene.model,
+            self.scene.data,
+            low.profile,
+            mounting_allowances=low.mounting_allowances,
+        )
+        rows = []
+        for family_index, family in enumerate(pose_families):
+            for seed_name, initial_seed in (
+                ("LIVE_CARRY_ARM", self.scene.data.qpos[low.arm_qpos].copy()),
+                ("NAVIGATION_ARM", low.profile.navigation_joints.copy()),
+                *additional_seeds,
+            ):
+                ik = ProfiledIK(
+                    self.scene.model,
+                    self.scene.data,
+                    low.profile,
+                    orientation_weight=0.45,
+                )
+                seed = initial_seed
+                first_pose_joints = None
+                diagnostics = []
+                valid = True
+                for pose_index, (position, rotation) in enumerate(family):
+                    joints, position_error, angle_error = ik.solve(
+                        np.asarray(position, float),
+                        seed,
+                        np.asarray(rotation, float),
+                    )
+                    strict = bool(
+                        position_error <= low.ik_position_tolerance
+                        and angle_error <= low.ik_angle_tolerance
+                    )
+                    collision_valid, reason = (False, "STRICT_IK_TOLERANCE_MISS")
+                    if strict:
+                        collision_valid, reason = checker.segment_valid(
+                            seed,
+                            joints,
+                            frozenset((held_body,)),
+                            resolution=0.025,
+                        )
+                    diagnostics.append({
+                        "pose_index": pose_index,
+                        "position_error_m": float(position_error),
+                        "orientation_error_rad": float(angle_error),
+                        "collision_valid": bool(collision_valid),
+                        "collision_failure": reason,
+                    })
+                    if not strict or not collision_valid:
+                        valid = False
+                        break
+                    if pose_index == 0:
+                        first_pose_joints = joints.copy()
+                    seed = joints
+                row = {
+                    "pose_family_index": family_index,
+                    "seed_policy": seed_name,
+                    "valid": valid,
+                    "arm_joints": (
+                        seed if first_pose_joints is None else first_pose_joints
+                    ).tolist(),
+                    "pose_diagnostics": diagnostics,
+                }
+                rows.append(row)
+                if valid:
+                    row["candidates"] = rows
+                    return row
+        raise RuntimeError(
+            "No strict collision-valid POUR orientation at live base; "
+            f"candidates={rows}"
+        )
 
     def pour(self, source_id: str, target_id: str, content: str | None = None) -> dict[str, Any]:
         started = time.perf_counter()
@@ -351,9 +597,7 @@ class KitchenPhaseCExecutionDispatcher:
         # Candidate is family-level and world-frame deterministic; outlet
         # alignment is solved independently, so tilt direction is selected
         # for wrist feasibility rather than inferred from a generic ID.
-        tilt_axis = np.array((0.0, -1.0, 0.0))
         tilt = spec.tilt_candidates_rad[0]
-        tilted_rotation = rotation_about_axis(tilt_axis, tilt) @ upright_rotation
         outlet_local = np.asarray(spec.outlet_local_m, float)
         source_direction = self.scene.data.xpos[source_body] - opening_centre
         source_direction -= normal * float(np.dot(source_direction, normal))
@@ -364,36 +608,95 @@ class KitchenPhaseCExecutionDispatcher:
             0.0,
             min(opening.opening_half_extents_m)
             - opening.safety_margin_m
-            - 0.009,
+            - 0.007,
         )
         aligned_outlet = opening_centre + source_direction * radial_offset
-        pre_height = 0.26 if family == "JAR_SOURCE" else 0.055
+        pre_height = 0.26 if family == "JAR_SOURCE" else 0.090
         pre_outlet = aligned_outlet + normal * pre_height
-        pour_height = 0.230 if family == "JAR_SOURCE" else 0.040
+        pour_height = 0.230 if family == "JAR_SOURCE" else 0.090
         pour_outlet = aligned_outlet + normal * pour_height
-        high_outlet = aligned_outlet + normal * (pre_height + 0.06)
-        high_pose = self._grip_pose_for_body_feature(
-            source_body, outlet_local, high_outlet, upright_rotation
+        high_extra = 0.03 if family == "KETTLE" else 0.06
+        high_retreat = 0.06 if family == "KETTLE" else 0.0
+        high_outlet = (
+            aligned_outlet
+            + source_direction * high_retreat
+            + normal * (pre_height + high_extra)
         )
-        pre_pose = self._grip_pose_for_body_feature(source_body, outlet_local, pre_outlet, upright_rotation)
-        tilt_pose = self._grip_pose_for_body_feature(source_body, outlet_local, pour_outlet, tilted_rotation)
+
+        def pour_pose_family(yaw_deg: float, tilt_direction: float = 1.0):
+            yaw_rotation = rotation_about_axis(normal, math.radians(yaw_deg))
+            family_upright = yaw_rotation @ upright_rotation
+            family_tilt_axis = yaw_rotation @ np.array((0.0, -1.0, 0.0))
+            family_tilted = (
+                rotation_about_axis(
+                    family_tilt_axis, tilt_direction * tilt
+                ) @ family_upright
+            )
+            return (
+                self._grip_pose_for_body_feature(
+                    source_body, outlet_local, high_outlet, family_upright
+                ),
+                self._grip_pose_for_body_feature(
+                    source_body, outlet_local, pre_outlet, family_upright
+                ),
+                self._grip_pose_for_body_feature(
+                    source_body, outlet_local, pour_outlet, family_tilted
+                ),
+            )
+
+        pour_orientations = (
+            (0.0, 1.0), (-25.0, 1.0), (-30.0, 1.0), (-35.0, 1.0),
+            (25.0, 1.0), (30.0, 1.0), (35.0, 1.0),
+            (-60.0, 1.0), (60.0, 1.0), (90.0, 1.0), (180.0, 1.0),
+            (0.0, -1.0), (-25.0, -1.0), (-30.0, -1.0), (-35.0, -1.0),
+        )
+        pose_families = [
+            pour_pose_family(yaw_deg, tilt_direction)
+            for yaw_deg, tilt_direction in pour_orientations
+        ]
+        high_pose, pre_pose, tilt_pose = pose_families[0]
         try:
             stance = self._local_stance(
                 high_pose[0],
                 high_pose[1],
                 ((pre_pose[0], pre_pose[1]), (tilt_pose[0], tilt_pose[1])),
+                alternative_pose_families=tuple(
+                    (
+                        family_high[0],
+                        family_high[1],
+                        (
+                            (family_pre[0], family_pre[1]),
+                            (family_tilt[0], family_tilt[1]),
+                        ),
+                    )
+                    for family_high, family_pre, family_tilt in pose_families[1:]
+                ),
+                base_position_tolerance_m=0.020,
+                compact_arm_for_base_motion=True,
             )
             if stance is not None:
                 record["steps"].append({"action": "LOCAL_PAYLOAD_STANCE", **stance})
-                # Recompute the grasp transform after the real base motion.
-                high_pose = self._grip_pose_for_body_feature(source_body, outlet_local, high_outlet, upright_rotation)
-                pre_pose = self._grip_pose_for_body_feature(source_body, outlet_local, pre_outlet, upright_rotation)
-                tilt_pose = self._grip_pose_for_body_feature(source_body, outlet_local, pour_outlet, tilted_rotation)
-            low = self.phase_b.manipulation.executor
-            safe_pose = (
-                self.scene.data.site_xpos[low.grip_site_id].copy(),
-                self.scene.data.site_xmat[low.grip_site_id].reshape(3, 3).copy(),
+            live_family = self._select_live_held_pose_family(
+                pose_families,
+                additional_seeds=(
+                    (
+                        "STANCE_SELECTED_ARM",
+                        np.asarray(
+                            stance["search"]["selected"]["arm_joints"], float
+                        ),
+                    ),
+                ) if stance is not None else (),
             )
+            family_index = int(live_family["pose_family_index"])
+            high_pose, pre_pose, tilt_pose = pose_families[family_index]
+            selected_yaw_deg, selected_tilt_direction = pour_orientations[
+                family_index
+            ]
+            record["steps"].append({
+                "action": "LIVE_POUR_ORIENTATION_SELECTION",
+                **live_family,
+            })
+            low = self.phase_b.manipulation.executor
             dwell_steps = max(1, int(round(spec.dwell_time_s / self.scene.model.opt.timestep)))
             trajectory = self.phase_b.manipulation.executor.execute_held_pose_trajectory(
                 (
@@ -402,16 +705,27 @@ class KitchenPhaseCExecutionDispatcher:
                     (tilt_pose[0], tilt_pose[1], "POUR_TILT", dwell_steps),
                     (pre_pose[0], pre_pose[1], "POUR_UPRIGHT_RECOVERY", 0),
                     (high_pose[0], high_pose[1], "POUR_HIGH_CLEARANCE_RECOVERY", 0),
-                    (safe_pose[0], safe_pose[1], "POUR_SAFE_HELD_RECOVERY", 0),
                 ),
-                initial_arm_joints=(
-                    None if stance is None
-                    else np.asarray(stance["search"]["selected"]["arm_joints"], float)
-                ),
+                initial_arm_joints=np.asarray(live_family["arm_joints"], float),
                 monitored_body_names=(self.binding_by_id[target_id]["physical_backend_body"],),
                 step_callback=self.phase_b.manipulation.step_callback,
             )
             record["steps"].append({"action": "POUR_TRAJECTORY", **trajectory})
+            arm_recovery = self.recover_post_pick_carry(source_id)
+            record["steps"].append({
+                "action": "RECOVER_RECORDED_POST_PICK_CARRY_ARM",
+                **arm_recovery,
+            })
+            if stance is not None:
+                restored = low.reposition_held_payload_base(
+                    np.asarray(stance["execution"]["start_base_qpos"], float),
+                    position_tolerance_m=0.020,
+                    step_callback=self.phase_b.manipulation.step_callback,
+                )
+                record["steps"].append({
+                    "action": "RESTORE_DECLARED_WORKSPACE_STANCE",
+                    **restored,
+                })
         except RuntimeError as error:
             message = str(error)
             collision_failure = any(fragment in message.lower() for fragment in (
@@ -448,7 +762,16 @@ class KitchenPhaseCExecutionDispatcher:
             target_generic_id=target_id,
             source_physical_family=family,
             held_state_after=held_after,
-            selected_base_stance=record["steps"][-3].get("search") if len(record["steps"]) >= 3 and record["steps"][-3].get("action") == "LOCAL_PAYLOAD_STANCE" else None,
+            selected_base_stance=next(
+                (
+                    step.get("search")
+                    for step in record["steps"]
+                    if step.get("action") == "LOCAL_PAYLOAD_STANCE"
+                ),
+                None,
+            ),
+            selected_source_yaw_deg=selected_yaw_deg,
+            selected_tilt_direction=selected_tilt_direction,
             pour_spec=asdict(spec),
             target_opening_centre_world_m=list(opening.centre_world_m),
             opening_geometry=asdict(opening),
@@ -528,25 +851,17 @@ class KitchenPhaseCExecutionDispatcher:
         target_body, target_start_position, target_start_quaternion = self._target_pose(target_id)
         current_body_rotation = self.scene.data.xmat[tool_body].reshape(3, 3).copy()
         local_axis = np.asarray(tool.longitudinal_axis_local, float)
-        if self.current_workspace == KitchenWorkspace.HOME:
-            approach_body_rotation = current_body_rotation
-        else:
-            grip_position = self.scene.data.site_xpos[
-                self.phase_b.manipulation.executor.grip_site_id
-            ].copy()
-            handle_direction = grip_position - opening_centre
-            handle_direction -= normal * float(np.dot(handle_direction, normal))
-            if np.linalg.norm(handle_direction) < 1e-9:
-                handle_direction = np.array((1.0, 0.0, 0.0))
-            handle_direction /= np.linalg.norm(handle_direction)
-            target_tool_axis = (
-                math.cos(math.radians(60.0)) * normal
-                + math.sin(math.radians(60.0)) * handle_direction
-            )
-            approach_body_rotation = _align_vectors(
-                current_body_rotation @ local_axis, target_tool_axis
-            ) @ current_body_rotation
-        cycle_body_rotation = approach_body_rotation
+        grip_position = self.scene.data.site_xpos[
+            self.phase_b.manipulation.executor.grip_site_id
+        ].copy()
+        handle_direction = grip_position - opening_centre
+        handle_direction -= normal * float(np.dot(handle_direction, normal))
+        if np.linalg.norm(handle_direction) < 1e-9:
+            handle_direction = np.array((1.0, 0.0, 0.0))
+        handle_direction /= np.linalg.norm(handle_direction)
+        orientation_candidates = self._stir_orientation_family(
+            current_body_rotation, local_axis, normal, handle_direction
+        )
         tip_local = np.asarray(tool.active_tip_local_m, float)
         insertion_depth = min(
             0.20 * opening.cavity_depth_m,
@@ -559,47 +874,86 @@ class KitchenPhaseCExecutionDispatcher:
         if radius <= 0.003 or insertion_depth <= opening.safety_margin_m:
             record.update(success=False, status="STIR_INSERTION_INFEASIBLE", failure_code="STIR_INSERTION_INFEASIBLE")
             return record
-        tangent_x = cycle_body_rotation[:, 0].copy()
-        tangent_x -= normal * float(np.dot(tangent_x, normal))
-        tangent_x /= np.linalg.norm(tangent_x)
+        tangent_x = handle_direction
         tangent_y = np.cross(normal, tangent_x)
         approach_clearance = (
             0.10 if self.current_workspace == KitchenWorkspace.HOME else 0.035
         )
         above_tip = opening_centre + normal * approach_clearance
         centre_tip = opening_centre - normal * insertion_depth
-        poses = [(*self._grip_pose_for_body_feature(
-            tool_body, tip_local, above_tip, approach_body_rotation
-        ), "STIR_APPROACH", 0)]
-        for fraction in np.linspace(0.125, 1.0, 8):
-            insertion_tip = above_tip + float(fraction) * (centre_tip - above_tip)
-            poses.append((*self._grip_pose_for_body_feature(
-                tool_body, tip_local, insertion_tip, approach_body_rotation
-            ), "STIR_INSERTION", 0))
-        segments = 20
-        for index in range(segments + 1):
-            angle = 2.0 * math.pi * index / segments
-            tip = centre_tip + radius * (math.cos(angle) * tangent_x + math.sin(angle) * tangent_y)
-            poses.append((*self._grip_pose_for_body_feature(
-                tool_body, tip_local, tip, cycle_body_rotation
-            ), "STIR_CYCLE", 0))
-        for fraction in np.linspace(0.125, 1.0, 8):
-            withdrawal_tip = centre_tip + float(fraction) * (above_tip - centre_tip)
-            poses.append((*self._grip_pose_for_body_feature(
-                tool_body, tip_local, withdrawal_tip, approach_body_rotation
-            ), "STIR_WITHDRAWAL", 0))
-        recovery_tip = opening_centre + normal * 0.10
-        poses.append((*self._grip_pose_for_body_feature(
-            tool_body, tip_local, recovery_tip, approach_body_rotation
-        ), "STIR_SAFE_HELD_RECOVERY", 0))
+        preapproach_tip = (
+            above_tip
+            if self.current_workspace == KitchenWorkspace.HOME
+            else above_tip + 0.12 * handle_direction
+        )
+
+        def build_poses(body_rotation: np.ndarray) -> list[tuple[np.ndarray, np.ndarray, str, int]]:
+            result = []
+            if self.current_workspace != KitchenWorkspace.HOME:
+                result.append((*self._grip_pose_for_body_feature(
+                    tool_body, tip_local, preapproach_tip, body_rotation
+                ), "STIR_GLOBAL_PREAPPROACH", 0))
+            result.append((*self._grip_pose_for_body_feature(
+                tool_body, tip_local, above_tip, body_rotation
+            ), "STIR_APPROACH", 0))
+            for fraction in np.linspace(0.125, 1.0, 8):
+                insertion_tip = above_tip + float(fraction) * (centre_tip - above_tip)
+                result.append((*self._grip_pose_for_body_feature(
+                    tool_body, tip_local, insertion_tip, body_rotation
+                ), "STIR_INSERTION", 0))
+            segments = 20
+            for index in range(segments + 1):
+                angle = 2.0 * math.pi * index / segments
+                tip = centre_tip + radius * (
+                    math.cos(angle) * tangent_x + math.sin(angle) * tangent_y
+                )
+                result.append((*self._grip_pose_for_body_feature(
+                    tool_body, tip_local, tip, body_rotation
+                ), "STIR_CYCLE", 0))
+            for fraction in np.linspace(0.125, 1.0, 8):
+                withdrawal_tip = centre_tip + float(fraction) * (above_tip - centre_tip)
+                result.append((*self._grip_pose_for_body_feature(
+                    tool_body, tip_local, withdrawal_tip, body_rotation
+                ), "STIR_WITHDRAWAL", 0))
+            result.append((*self._grip_pose_for_body_feature(
+                tool_body, tip_local, above_tip, body_rotation
+            ), "STIR_SAFE_HELD_RECOVERY", 0))
+            return result
+
+        pose_families = [build_poses(candidate["rotation"]) for candidate in orientation_candidates]
         try:
-            first_position, first_rotation, _, _ = poses[0]
+            primary = pose_families[0]
+            first_position, first_rotation, _, _ = primary[0]
+            check_indices = (
+                next(index for index, pose in enumerate(primary) if pose[2] == "STIR_APPROACH"),
+                max(index for index, pose in enumerate(primary) if pose[2] == "STIR_INSERTION"),
+                next(index for index, pose in enumerate(primary) if pose[2] == "STIR_CYCLE"),
+            )
+            primary_checks = tuple(
+                (primary[index][0], primary[index][1]) for index in check_indices
+            )
+            alternatives = tuple(
+                (
+                    family[0][0],
+                    family[0][1],
+                    tuple(
+                        (family[index][0], family[index][1])
+                        for index in check_indices
+                    ),
+                )
+                for family in pose_families[1:]
+            )
             stance = self._local_stance(
                 first_position,
                 first_rotation,
+                primary_checks,
+                alternatives,
             )
             if stance is not None:
                 record["steps"].append({"action": "LOCAL_PAYLOAD_STANCE", **stance})
+            selected_family_index = int(stance["search"]["selected"]["pose_family_index"])
+            selected_orientation = orientation_candidates[selected_family_index]
+            poses = pose_families[selected_family_index]
             trajectory = self.phase_b.manipulation.executor.execute_held_pose_trajectory(
                 tuple(poses),
                 initial_arm_joints=(
@@ -607,9 +961,27 @@ class KitchenPhaseCExecutionDispatcher:
                     else np.asarray(stance["search"]["selected"]["arm_joints"], float)
                 ),
                 monitored_body_names=(self.binding_by_id[target_id]["physical_backend_body"],),
+                allowed_payload_contact_body_names=(
+                    self.binding_by_id[target_id]["physical_backend_body"],
+                ),
                 step_callback=self.phase_b.manipulation.step_callback,
             )
             record["steps"].append({"action": "STIR_TRAJECTORY", **trajectory})
+            arm_recovery = self.recover_post_pick_carry(tool_id)
+            record["steps"].append({
+                "action": "RECOVER_RECORDED_POST_PICK_CARRY_ARM",
+                **arm_recovery,
+            })
+            if stance is not None:
+                restored = self.phase_b.manipulation.executor.reposition_held_payload_base(
+                    np.asarray(stance["execution"]["start_base_qpos"], float),
+                    position_tolerance_m=0.010,
+                    step_callback=self.phase_b.manipulation.step_callback,
+                )
+                record["steps"].append({
+                    "action": "RESTORE_DECLARED_WORKSPACE_STANCE",
+                    **restored,
+                })
         except RuntimeError as error:
             message = str(error)
             code = "STIR_RIM_COLLISION" if "collision" in message.lower() or "contact" in message.lower() else "STIR_TRAJECTORY_INFEASIBLE"
@@ -623,6 +995,9 @@ class KitchenPhaseCExecutionDispatcher:
         held_after = self.phase_b._held_state(tool_id)
         path_length = 2.0 * math.pi * radius
         rim_clearance = usable_radius - radius
+        selected_axis = np.asarray(selected_orientation["rotation"], float) @ local_axis
+        selected_axis_error = math.acos(np.clip(float(np.dot(selected_axis, normal)), -1.0, 1.0))
+        target_support_contact = self._target_has_support_contact(target_body, tool_body)
         record.update(
             tool_generic_id=tool_id,
             target_generic_id=target_id,
@@ -637,12 +1012,22 @@ class KitchenPhaseCExecutionDispatcher:
             angular_path_coverage_rad=2.0 * math.pi,
             cycle_count=1.0,
             tip_inside_cavity_fraction=1.0,
+            stir_orientation_formulation="STRICT_TIP_POSITION_TASK_EQUIVALENT_TOOL_AXIS_FAMILY",
+            orientation_candidate_count=len(orientation_candidates),
+            selected_orientation={
+                key: value for key, value in selected_orientation.items()
+                if key != "rotation"
+            },
+            selected_tool_axis_world=selected_axis.tolist(),
+            selected_tool_axis_to_rim_normal_rad=selected_axis_error,
             planned_observed_geometry_rim_clearance_m=rim_clearance,
             minimum_rim_clearance_m=trajectory["minimum_monitored_clearance_m"],
+            allowed_task_contacts=trajectory["allowed_task_contacts"],
             invalid_collision_pairs=trajectory["invalid_collision_pairs"],
             target_position_drift_m=position_drift,
             target_orientation_drift_rad=orientation_drift,
             target_stable=position_drift <= POSITION_DRIFT_LIMIT_M and orientation_drift <= ORIENTATION_DRIFT_LIMIT_RAD,
+            target_support_contact=target_support_contact,
             successful_withdrawal=True,
             tool_still_held=held_after["validation_status"] == "TRUE",
             physical_action_telemetry=trajectory,
@@ -650,6 +1035,9 @@ class KitchenPhaseCExecutionDispatcher:
         )
         if not record["target_stable"]:
             record.update(success=False, status="STIR_TARGET_DISTURBED", failure_code="STIR_TARGET_DISTURBED")
+            return record
+        if not target_support_contact:
+            record.update(success=False, status="STIR_TARGET_UNSUPPORTED", failure_code="STIR_TARGET_UNSUPPORTED")
             return record
         if held_after["validation_status"] != "TRUE":
             record.update(success=False, status="STIR_TOOL_DROPPED", failure_code="STIR_TOOL_DROPPED")
@@ -679,7 +1067,15 @@ class KitchenPhaseCExecutionDispatcher:
             result["symbolic_effects_applied"] = bool(result["success"])
             return result
         if operator == "PLACE_SERVING_UTENSIL":
+            self.phase_b.manipulation.placement_resolver.prepare_future_serving_relative_destination(
+                arguments[0], arguments[1]
+            )
+            recovery = self.recover_post_pick_carry(arguments[0])
             result = self.place(arguments[0], arguments[1])
+            result["steps"] = [
+                {"action": "SAFE_HELD_RECOVERY", **recovery},
+                *result.get("steps", []),
+            ]
             result["frozen_operator"] = operator
             return result
         if operator in {"SERVE_COFFEE", "SERVE_SOUP"}:
