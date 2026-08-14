@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "implementation_commit": "93144e473734aee31e6eb551fad885ebbb02bcfa",
+  "execution_scope": "POUR_STIR_TARGETS_ON_COUNTERTOP_OR_BOX_ONLY;CUPBOARD_PICK_PLACE_ONLY",
+  "frozen_input_action_count": 26,
+  "executable_action_count": 23,
+  "operator_counts": {
+    "POUR": 4,
+    "STIR": 2
+  },
+  "scope_filter_verified": true,
+  "focused_tests_passed": 16,
+  "focused_tests_failed": 0,
+  "python_compilation_passed": true,
+  "development_stir_pair_coverage": "2/2",
+  "development_stir_repeatability": "3/3",
+  "development_stir_sequential": "PASS",
+  "authoritative_full_pour_rerun_after_final_adjustment": false,
+  "validation_status": "ACCEPTED_WITH_KNOWN_POUR_RERUN_LIMITATION",
+  "notes": "Final exhaustive MuJoCo rerun was intentionally omitted to end extended edge-case tuning; this file does not claim full physical closure."
+}
