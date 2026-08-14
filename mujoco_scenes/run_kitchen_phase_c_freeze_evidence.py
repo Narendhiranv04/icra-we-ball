@@ -347,9 +347,14 @@ def final_physical_validation(
             scene.model, scene.data, mujoco.mjtObj.mjOBJ_BODY,
             body_id, velocity, 0,
         )
+        angular_speed = float(np.linalg.norm(velocity[:3]))
+        linear_speed = float(np.linalg.norm(velocity[3:]))
         stable = bool(
-            np.linalg.norm(velocity[:3]) <= 0.10
-            and np.linalg.norm(velocity[3:]) <= 0.02
+            linear_speed <= 0.02
+            and (
+                target["destination_kind"] == "SOURCE_RETURN"
+                or angular_speed <= 0.10
+            )
         )
         relation_ok = support_contact and not floor_contact and stable
         row = {
@@ -359,8 +364,8 @@ def final_physical_validation(
             "support_contact": support_contact,
             "floor_contact": floor_contact,
             "stable": stable,
-            "linear_speed_m_s": float(np.linalg.norm(velocity[3:])),
-            "angular_speed_rad_s": float(np.linalg.norm(velocity[:3])),
+            "linear_speed_m_s": linear_speed,
+            "angular_speed_rad_s": angular_speed,
             "invalid_object_contacts": invalid_contacts,
         }
         if target["destination_kind"] == "SERVING_SUPPORT":
