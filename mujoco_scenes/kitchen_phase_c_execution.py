@@ -106,7 +106,7 @@ class KitchenPhaseCExecutionDispatcher:
             raise RuntimeError(f"No recorded post-PICK carry branch for {object_id}")
         return self.phase_b.manipulation.executor.fold_held_payload_for_navigation(
             target_arm_joints=target,
-            tracking_tolerance_rad=0.040,
+            tracking_tolerance_rad=0.080,
             step_callback=self.phase_b.manipulation.step_callback,
             maximum_steps_per_waypoint=1800,
         )
@@ -741,6 +741,11 @@ class KitchenPhaseCExecutionDispatcher:
                     "action": "RESTORE_DECLARED_WORKSPACE_STANCE",
                     **restored,
                 })
+            post_pick_recovery = self.recover_post_pick_carry(source_id)
+            record["steps"].append({
+                "action": "RECOVER_RECORDED_POST_PICK_CARRY_ARM",
+                **post_pick_recovery,
+            })
         except RuntimeError as error:
             message = str(error)
             collision_failure = any(fragment in message.lower() for fragment in (
