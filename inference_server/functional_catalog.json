@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "min_ranked_candidates": 10,
+  "max_ranked_candidates": 15,
+  "forbidden_generic_candidate_types": [
+    "object",
+    "objects",
+    "item",
+    "items",
+    "thing",
+    "things",
+    "tool",
+    "tools",
+    "utensil",
+    "utensils",
+    "implement",
+    "implements",
+    "container",
+    "containers",
+    "vessel",
+    "vessels",
+    "receptacle",
+    "receptacles",
+    "region",
+    "regions",
+    "area",
+    "areas",
+    "surface",
+    "surfaces",
+    "furniture",
+    "storage"
+  ],
+  "functions": {
+    "can_store": {
+      "candidate_kind": "region",
+      "description": "Can hold a rigid object after robot placement."
+    },
+    "can_stir": {
+      "candidate_kind": "object",
+      "description": "Can stir the contents of a receptacle."
+    },
+    "can_hold_liquid": {
+      "candidate_kind": "object",
+      "description": "Can contain liquid for the requested task."
+    },
+    "can_clean": {
+      "candidate_kind": "object",
+      "description": "Can clean a reachable rigid surface."
+    },
+    "can_spread": {
+      "candidate_kind": "object",
+      "description": "Can spread a soft ingredient across a surface."
+    }
+  }
+}

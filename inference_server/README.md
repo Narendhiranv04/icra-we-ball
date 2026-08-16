@@ -1,104 +1,304 @@
-# vLLM Inference Server
+# Standalone multimodal inference server
 
-This folder is an independent GPU-server workspace. It serves an existing
-model through the OpenAI-compatible API used by `mujoco_scenes`. It contains
-no MuJoCo dependency and performs no training.
+This directory is a self-contained, Docker-first workspace for serving the
+project's foundation models on one RTX 5090. It has no MuJoCo dependency and
+can be copied directly to the GPU machine.
 
-vLLM is pinned to `0.23.0` in both native and Docker setups.
+Use vLLM by default. SGLang is an explicit fallback for a model/version
+combination that behaves better there. Only run one model at a time: the 5090
+has 32 GB VRAM, and the server needs space for image features and KV cache as
+well as weights.
 
-## Pull only this workspace
+The workspace starts two processes:
 
-On the inference server:
-
-```bash
-git clone --filter=blob:none --no-checkout \
-  https://github.com/Narendhiranv04/icra-we-ball.git
-cd icra-we-ball
-git sparse-checkout init --cone
-git sparse-checkout set inference_server
-git checkout main
-cd inference_server
+```text
+scene images + goal -> functional API :8080 -> vLLM/SGLang :8000
+                 ranked type priors <- validated JSON <- VLM
 ```
 
-Use the branch containing this folder until it has been merged into `main`.
+The functional layer never imports MuJoCo. It sends only the supplied images,
+goal, and small function catalog to the VLM. It does not search, claim that a
+candidate is present, run geometry, sequence actions, or execute anything.
 
-## Native installation with uv
+For native SSH-tunnel testing, both processes may run without API keys only
+when bound to `127.0.0.1`. The planner refuses keyless startup on a non-loopback
+address. Docker deployments retain authenticated network-facing defaults.
 
-The current vLLM release supports Linux and Python 3.10 through 3.13. Python
-3.12 is used here:
+## Models
+
+| Profile | Checkpoint | Load mode | Default context |
+|---|---|---:|---:|
+| `qwen35-9b` | `Qwen/Qwen3.5-9B` | BF16 | 32K |
+| `glm46v-flash` | `zai-org/GLM-4.6V-Flash` | BF16 | 16K |
+| `qwen3-vl-8b-thinking` | `Qwen/Qwen3-VL-8B-Thinking` | BF16 | 32K |
+| `internvl35-14b` | `OpenGVLab/InternVL3_5-14B-HF` | online FP8 | 16K |
+| `kimi-vl-a3b-thinking` | `moonshotai/Kimi-VL-A3B-Thinking-2506` | online FP8 | 16K |
+
+The bounded contexts are intentional single-GPU defaults, not each model's
+advertised maximum. Profiles accept up to eight images per prompt, covering
+the simulator's seven-camera observation. InternVL and Kimi use load-time FP8
+because their BF16 weights leave too little VRAM for practical multimodal
+inference on a 32 GB card.
+
+`muse-glimmer` is a disabled registry placeholder until Meta publishes a
+verified local checkpoint and serving recipe. Muse Spark is available through
+Meta's hosted API and cannot be run locally in this workspace.
+
+## Functional decomposition contract
+
+`functional_catalog.json` mirrors the repository's simple function registry:
+`can_store`, `can_stir`, `can_hold_liquid`, `can_clean`, and `can_spread`.
+Functions identify replaceable roles, not low-level robot actions. Each has an
+  `object` or `region` candidate kind.
+
+The VLM returns only:
+
+- the applicable functional requirements;
+- ten to fifteen concrete candidate types for each requirement, ordered by normal,
+  safe semantic suitability; and
+- dependencies between functional requirements when needed.
+
+The ranked types are hypotheses such as `teaspoon`, `coffee stirrer`, and
+`chopstick`. Generic umbrella labels such as `utensil`, `tool`, `container`,
+and `object` are forbidden because the semantic search needs concrete category
+queries. The types are deliberately not observation-bounded detections. The VLM
+must not say that any proposed type is present, visible, graspable, or feasible.
+The downstream search inspects regions, grounds observed instances, and applies
+the deterministic task-specific point-cloud predicates such as `OPEN_CAVITY`,
+`INSERTABLE_IN`, and `REACHES_BOTTOM`. First-feasible termination happens there,
+not in this service.
+
+The prompt, strict schema, and deterministic validator are in
+`functional_planner.py`. The validator rejects unknown functions, a wrong
+candidate kind, fewer than ten or more than fifteen alternatives, generic or
+duplicate types, invalid
+dependencies, and dependency cycles. `functional_client.py` is the matching
+CLI. Kitchen, living-room, and workshop scene labels are accepted.
+
+Requests currently enable Qwen3.5 thinking through `chat_template_kwargs` and
+reserve up to 8,192 output tokens for reasoning plus the final JSON. Set
+`PLANNER_ENABLE_THINKING=false` for the low-latency ablation. If a response
+exhausts its budget in `reasoning_content` and has no final `content`, increase
+`PLANNER_MAX_TOKENS` or disable thinking.
+
+Thinking requests use Qwen3.5's recommended sampling family rather than greedy
+decoding: temperature 1.0, top-p 0.95, top-k 20, min-p 0, presence penalty 1.5,
+and repetition penalty 1.0. Non-thinking requests use temperature 0.7 and
+top-p 0.8 with the same remaining values. Greedy decoding caused Qwen to spend
+every available token in reasoning without emitting final JSON.
+
+## GPU host setup
+
+Install the NVIDIA driver, Docker Engine, and NVIDIA Container Toolkit on the
+server. Verify container GPU access before copying model data:
 
 ```bash
-uv venv --python 3.12 --seed
-source .venv/bin/activate
-uv pip install -r requirements.txt --torch-backend=auto
+docker run --rm --gpus all nvidia/cuda:12.8.1-base-ubuntu24.04 nvidia-smi
 ```
 
-Copy and edit the configuration:
+Copy only this directory from the development computer:
 
 ```bash
+rsync -av --delete \
+  --exclude .env --exclude cache/ --exclude models/ --exclude .venv/ \
+  inference_server/ user@gpu-server:~/tamp-inference/
+ssh user@gpu-server
+cd ~/tamp-inference
 cp .env.example .env
 ```
 
-`VLLM_MODEL` can be a local model directory or a model identifier supported
-by vLLM. Set `HF_TOKEN` in the shell only when the model download requires it.
-Do not commit either token.
+The exclusions preserve the server's API key and downloaded weights on later
+syncs. Do not remove them while using `--delete`.
 
-Load the configuration and start the server:
+Set a random `INFERENCE_API_KEY` in `.env`. Set `HF_TOKEN` there only if a
+checkpoint requires authenticated access. Cache and weights remain in host
+directories, so replacing a serving container does not download them again.
+
+```bash
+./serve doctor
+./serve list
+./serve up qwen35-9b --detach
+./serve logs --backend vllm --follow
+```
+
+`./serve up` starts both the selected model backend on port 8000 and the
+functional API on port 8080. The API uses the same key unless a separate
+`PLANNER_API_KEY` is set.
+
+Switch models by stopping the current server and starting another profile:
+
+```bash
+./serve down
+./serve up internvl35-14b --detach
+```
+
+Use SGLang for a targeted compatibility comparison:
+
+```bash
+./serve down
+./serve up qwen35-9b --backend sglang --detach
+./serve logs --backend sglang --follow
+```
+
+Qwen3.5 is new enough that its model card may require a newer vLLM nightly
+than the stable image pinned in `.env.example`. If the log reports an unknown
+architecture, set `VLLM_IMAGE` to the current Qwen-recommended vLLM image, or
+use the SGLang profile. Keep the image reference pinned after it passes your
+experiment smoke test.
+
+## Test the raw model endpoint
+
+Load the API key into the current shell, then test text or one or more images:
 
 ```bash
 set -a
 source .env
 set +a
-uv run python server.py
+python3 smoke_test.py --prompt "Reply with the word ready."
+python3 smoke_test.py --image view_1.png --image view_2.png
 ```
 
-Additional vLLM arguments can be appended:
+## Request functional requirements
+
+Send between one and eight camera images. Camera names are evidence labels;
+they do not reveal simulator state.
 
 ```bash
-uv run python server.py --dtype bfloat16
+python3 functional_client.py \
+  --scene kitchen \
+  --goal "Make coffee, stir it, and serve it" \
+  --image front_camera=/path/front.png \
+  --image overhead_camera=/path/overhead.png
 ```
 
-Use the smallest tensor-parallel size that fits the model. Multiple GPUs can
-increase communication overhead for a single low-concurrency request.
-
-## Docker Compose
-
-The Compose setup uses vLLM's official NVIDIA image. It mounts `./models`
-read-only and keeps downloaded model files under `./cache` by default.
+For a native keyless Qwen server on the same machine, start the functional API
+in a second shell:
 
 ```bash
-cp .env.example .env
-docker compose up -d
-docker compose logs -f vllm
+export INFERENCE_MODEL=qwen35-9b
+export PLANNER_MODEL=qwen35-9b
+export PLANNER_MODEL_BASE_URL=http://127.0.0.1:8000/v1
+export PLANNER_HOST=127.0.0.1
+export PLANNER_PORT=8080
+export PLANNER_ENABLE_THINKING=true
+export PLANNER_MAX_TOKENS=8192
+unset INFERENCE_API_KEY PLANNER_API_KEY
+python3 planner_api.py
 ```
 
-If `VLLM_MODEL` is a model identifier rather than a local `/models/...` path,
-the model is downloaded into the mounted cache. Set `HF_CACHE_DIR` or
-`MODEL_DIR` in `.env` to use other host directories.
+Tunnel ports 8000 and 8080 with SSH. `functional_client.py` and `smoke_test.py`
+omit the Authorization header when no key is configured.
 
-## Check the endpoint
+The corresponding `POST /v1/decompose` body is:
+
+```json
+{
+  "scene": "kitchen",
+  "goal": "Make coffee, stir it, and serve it",
+  "images": [
+    {
+      "camera": "front_camera",
+      "data_url": "data:image/png;base64,..."
+    }
+  ]
+}
+```
+
+The relevant part of a typical coffee response is:
+
+```json
+{
+  "status": "DECOMPOSED",
+  "scene": "kitchen",
+  "functional_requirements": [
+    {
+      "id": "req_1",
+      "function": "can_hold_liquid",
+      "candidate_kind": "object",
+      "purpose": "Contain the prepared coffee.",
+      "target_description": "The prepared coffee.",
+      "ranked_candidate_types": [
+        "coffee mug",
+        "ceramic cup",
+        "glass tumbler",
+        "travel mug",
+        "teacup",
+        "insulated cup",
+        "enamel cup",
+        "demitasse cup",
+        "measuring cup",
+        "drinking glass"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "req_2",
+      "function": "can_stir",
+      "candidate_kind": "object",
+      "purpose": "Stir the coffee contents.",
+      "target_description": "The selected liquid container.",
+      "ranked_candidate_types": [
+        "teaspoon",
+        "coffee stirrer",
+        "chopstick",
+        "swizzle stick",
+        "small whisk",
+        "bar spoon",
+        "wooden stir stick",
+        "cocktail spoon",
+        "stirring rod",
+        "silicone spatula"
+      ],
+      "depends_on": ["req_1"]
+    }
+  ]
+}
+```
+
+Exact wording and ordering are model outputs. The downstream system treats the
+list order as a semantic prior only; observed first-feasible candidates still
+have to pass the configured geometry checks.
+
+A successful response contains a decomposition and ranked candidate types. The
+envelope explicitly reports `search_started: false`,
+`semantic_grounding_complete: false`, `geometry_verified: false`, and
+`execution_started: false`. The API does not invoke perception, point-cloud
+checks, navigation, IK, PDDLStream, motion planning, or simulator actions.
+
+Inspect the catalogs without contacting the VLM:
 
 ```bash
-curl -fsS http://127.0.0.1:8000/v1/models \
-  -H "Authorization: Bearer $VLLM_API_KEY"
+curl -fsS http://GPU_SERVER:8080/v1/functions \
+  -H "Authorization: Bearer $INFERENCE_API_KEY"
 ```
 
-On the MuJoCo computer, configure the matching values:
+On the simulator machine, use the same served profile name and key:
 
 ```bash
-export TAMP_FM_BASE_URL=http://INFERENCE_SERVER:8000/v1
-export TAMP_FM_MODEL=tamp-ranker
-export TAMP_FM_API_KEY="$VLLM_API_KEY"
+export TAMP_FM_BASE_URL=http://GPU_SERVER:8000/v1
+export TAMP_FM_MODEL=qwen35-9b
+export TAMP_FM_API_KEY="$INFERENCE_API_KEY"
+export PLANNER_BASE_URL=http://GPU_SERVER:8080/v1
+export PLANNER_API_KEY="$INFERENCE_API_KEY"
 ```
 
-Keep port 8000 on a private network. For access across an untrusted network,
-put TLS in front of vLLM rather than exposing the raw HTTP endpoint.
+Keep ports 8000 and 8080 on a trusted private network. Use loopback bindings
+plus an SSH tunnel for keyless native testing. Use authentication and a TLS
+reverse proxy for any network-facing deployment.
 
-## Upgrade
+## Overrides and diagnostics
 
-Change the version in both `requirements.txt` and `compose.yaml`, then rerun
-the launcher tests:
+The common overrides in `.env` are `INFERENCE_MAX_MODEL_LEN`,
+`INFERENCE_MAX_CONCURRENCY`, `INFERENCE_GPU_MEMORY_UTILIZATION`, and
+`CUDA_VISIBLE_DEVICES`. Reduce context first if model startup runs out of VRAM.
+Do not raise concurrency until the full seven-image request succeeds.
+
+Inspect a generated backend command without exposing its API key:
 
 ```bash
-uv run python -m unittest test_server.py
+./serve command kimi-vl-a3b-thinking
 ```
+
+The native `uv` requirements remain only as a fallback. Docker is the supported
+path for avoiding CUDA, PyTorch, Transformers, and model-specific dependency
+conflicts on the 5090 server.

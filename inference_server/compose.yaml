@@ -1,29 +1,87 @@
+x-inference-common: &inference-common
+  gpus: all
+  ipc: host
+  restart: unless-stopped
+  ports:
+    - "${INFERENCE_PORT:-8000}:8000"
+  environment: &inference-environment
+    INFERENCE_MODEL: "${INFERENCE_MODEL:-}"
+    INFERENCE_API_KEY: "${INFERENCE_API_KEY:-}"
+    INFERENCE_HOST: "0.0.0.0"
+    INFERENCE_CONTAINER_PORT: "8000"
+    INFERENCE_TENSOR_PARALLEL_SIZE: "${INFERENCE_TENSOR_PARALLEL_SIZE:-1}"
+    INFERENCE_MAX_MODEL_LEN: "${INFERENCE_MAX_MODEL_LEN:-}"
+    INFERENCE_MAX_CONCURRENCY: "${INFERENCE_MAX_CONCURRENCY:-}"
+    INFERENCE_GPU_MEMORY_UTILIZATION: "${INFERENCE_GPU_MEMORY_UTILIZATION:-0.90}"
+    INFERENCE_MODEL_ID: "${INFERENCE_MODEL_ID:-}"
+    INFERENCE_SERVED_NAME: "${INFERENCE_SERVED_NAME:-}"
+    HF_TOKEN: "${HF_TOKEN:-}"
+    HUGGING_FACE_HUB_TOKEN: "${HF_TOKEN:-}"
+    HF_HOME: /cache/huggingface
+    XDG_CACHE_HOME: /cache
+    CUDA_VISIBLE_DEVICES: "${CUDA_VISIBLE_DEVICES:-0}"
+  volumes:
+    - "${CACHE_DIR:-./cache}:/cache"
+    - "${MODEL_DIR:-./models}:/models:ro"
+    - ".:/workspace:ro"
+  entrypoint: ["python3", "/workspace/server.py"]
+  healthcheck:
+    test:
+      - CMD
+      - python3
+      - -c
+      - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)"
+    interval: 30s
+    timeout: 10s
+    retries: 10
+    start_period: 300s
+
 services:
   vllm:
-    image: vllm/vllm-openai:v0.23.0
-    gpus: all
-    ipc: host
-    restart: unless-stopped
-    ports:
-      - "${VLLM_PORT:-8000}:8000"
+    <<: *inference-common
+    image: "${VLLM_IMAGE:-vllm/vllm-openai:v0.24.0}"
+    container_name: tamp-inference-vllm
+    profiles: ["vllm"]
     environment:
-      HF_TOKEN: "${HF_TOKEN:-}"
+      <<: *inference-environment
+      INFERENCE_BACKEND: vllm
+
+  sglang:
+    <<: *inference-common
+    image: "${SGLANG_IMAGE:-lmsysorg/sglang:latest}"
+    container_name: tamp-inference-sglang
+    profiles: ["sglang"]
+    environment:
+      <<: *inference-environment
+      INFERENCE_BACKEND: sglang
+
+  planner:
+    image: "${PLANNER_IMAGE:-python:3.12-slim}"
+    container_name: tamp-functional-planner
+    profiles: ["planner"]
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      INFERENCE_MODEL: "${INFERENCE_MODEL:-}"
+      INFERENCE_API_KEY: "${INFERENCE_API_KEY:-}"
+      PLANNER_API_KEY: "${PLANNER_API_KEY:-}"
+      PLANNER_MODEL: "${PLANNER_MODEL:-}"
+      PLANNER_MODEL_BASE_URL: "http://127.0.0.1:${INFERENCE_PORT:-8000}/v1"
+      PLANNER_MODEL_TIMEOUT_SECONDS: "${PLANNER_MODEL_TIMEOUT_SECONDS:-300}"
+      PLANNER_MAX_TOKENS: "${PLANNER_MAX_TOKENS:-8192}"
+      PLANNER_ENABLE_THINKING: "${PLANNER_ENABLE_THINKING:-true}"
+      PLANNER_HOST: "0.0.0.0"
+      PLANNER_PORT: "${PLANNER_PORT:-8080}"
     volumes:
-      - "${HF_CACHE_DIR:-./cache}:/root/.cache/huggingface"
-      - "${MODEL_DIR:-./models}:/models:ro"
-    command:
-      - --model
-      - "${VLLM_MODEL:?Set VLLM_MODEL in .env}"
-      - --served-model-name
-      - "${VLLM_SERVED_MODEL_NAME:-tamp-ranker}"
-      - --host
-      - "0.0.0.0"
-      - --port
-      - "8000"
-      - --api-key
-      - "${VLLM_API_KEY:?Set VLLM_API_KEY in .env}"
-      - --tensor-parallel-size
-      - "${VLLM_TENSOR_PARALLEL_SIZE:-1}"
-      - --enable-prefix-caching
-      - --generation-config
-      - vllm
+      - ".:/workspace:ro"
+    entrypoint: ["python3", "/workspace/planner_api.py"]
+    healthcheck:
+      test:
+        - CMD
+        - python3
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:${PLANNER_PORT:-8080}/health', timeout=5)"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s

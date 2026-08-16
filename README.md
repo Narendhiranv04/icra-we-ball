@@ -91,8 +91,12 @@ alternatives, offline smoke-test mode, and extension points are documented in
 [TAMP_PIPELINE.md](mujoco_scenes/TAMP_PIPELINE.md).
 
 The separate [inference_server](inference_server/README.md) workspace contains
-the pinned vLLM server setup for a remote GPU machine and can be pulled with a
-Git sparse checkout.
+Docker-first vLLM and SGLang profiles for the project's multimodal models. It
+can be rsynced directly to a 5090 server and has no MuJoCo dependency. Its
+functional API accepts scene images plus a goal and returns simple functional
+requirements with 10–15 ranked concrete object or region types. It
+does not claim those types are present, search the scene, verify geometry,
+sequence actions, or execute anything.
 
 The separate [perception_server](perception_server/README.md) workspace runs
 SAM 3.1 on a GPU server. The simulator sends it RGB images and text prompts,

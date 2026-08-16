@@ -1,6 +1,6 @@
 # Codex Project Handoff
 
-Updated: 2026-08-10 (Asia/Kolkata)
+Updated: 2026-08-16 (Asia/Kolkata)
 
 This file is the working context for continuing the project from another Codex
 session after SSHing into this machine. Start the next session by asking Codex
@@ -11,9 +11,10 @@ or discarding uncommitted changes.
 
 - Repository root: `/home/boreddog/Documents/RRC/LH_Extension/V1`
 - Current branch: `workshop_joint_prerequisites`
-- The branch currently points to `a7760e7`, the committed workshop-only
-  five-view point-cloud runner. The dirty worktree removes the lock/key task
-  and ensures both storage regions are closed outside their active capture.
+- The branch currently points to `4861d6e`, which removes the workshop lock/key
+  task and keeps both storage regions closed outside active capture. The dirty
+  worktree redesigns the separate remote inference-server workspace and updates
+  its root/hand-off documentation; it does not modify scene execution code.
 - The newest integrated upstream revision is `b4dcbd6`. Its complete L2
   Ablation 1/2/3 implementation and realistic movie-night assets are retained.
 - Generated `reports/` media is deliberately excluded; report generators,
@@ -22,9 +23,14 @@ or discarding uncommitted changes.
   changes unless the user explicitly requests it.
 - Remote: `https://github.com/Narendhiranv04/icra-we-ball.git`
 - Latest fetched point-cloud comparison ref:
-  `origin/naren/googlePointCloudIntegration` at `d898687`. The current branch
-  retains the integrated shared geometry layer from the earlier merge and does
-  not blindly copy the newer kitchen/living-room benchmark phases.
+  `origin/naren/googlePointCloudIntegration-phaseC` at `a15d7ed` ("Add kitchen
+  ground-truth execution demos"). It is 38 commits ahead and 7 commits behind
+  this branch at the current divergent tips. Its production symbolic action
+  contracts are `PICK`, `PLACE`, `POUR`, `STIR` for kitchen and `PICK`, `PLACE`
+  for living room. The newer `OPEN`, `CLOSE`, `MOVE`, serving, and refinement
+  operations are oracle/execution helpers, not part of the planning contract.
+  The current branch retains the integrated shared geometry layer from the
+  earlier merge and does not blindly copy the newer kitchen/living-room phases.
 - The similarly named local branch `naren/pointCloudExtraction` is stale and
   should not be used for comparisons. Compare against the remote ref directly
   after fetching.
@@ -53,7 +59,8 @@ git log -3 --oneline --decorate
   backend and must be clearly labelled.
 - Functional predicates should remain simple, such as `can_stir` or
   `can_clean`, instead of subjective notions such as efficiency.
-- Object alternatives should normally be capped at three.
+- Each functional ranking should contain 10–15 distinct concrete searchable
+  categories, never umbrella labels such as `utensil`, `tool`, or `object`.
 
 ## Overall research direction
 
@@ -61,7 +68,7 @@ This is a Robust TAMP research codebase using MuJoCo. The intended pipeline is:
 
 1. Provide the foundation model with visible scene images.
 2. Call the FM once to decompose the goal into simple functional requirements,
-   propose/rank at most three common object or method types, and optionally
+   propose/rank 10–15 concrete object or method types, and optionally
    provide abstract subgoal precedence. The FM must not claim that an
    unobserved type is present in the scene.
 3. Follow the experiment's configured region search order. The finalized
@@ -102,8 +109,8 @@ preferred method.
 The persistent observation, tracking, semantic grounding, task-witness,
 same-evidence ablation, and report-generation source from Naren's branch is now
 integrated. The kitchen object-alternative and living-room region-alternative
-benchmarks are present. The dirty worktree now also contains the redesigned
-compact workshop physical scene described below. See
+benchmarks are present. The branch also contains the redesigned compact
+workshop physical scene described below. See
 `THREE_SCENE_BENCHMARKS.md`.
 
 The integrated test command is:
@@ -127,13 +134,13 @@ semantic and geometric grounding, same-evidence policy ablations, and emit a
 verified handoff. They do not perform navigation, manipulation, task ordering,
 PDDLStream, or TAMP execution.
 
-The separate existing client in `mujoco_scenes/foundation_model.py` can call an
-OpenAI-compatible vLLM/SGLang endpoint. Today it receives a required function
-plus structured visible candidate IDs/categories/facts and returns a functional
-subset and ranking. It does not yet receive the actual image payload or derive
-the functional requirements from a natural-language goal. Replacing the manual
-future-FM contract with validated structured multimodal output remains future
-integration work.
+The existing client in `mujoco_scenes/foundation_model.py` can call an
+OpenAI-compatible vLLM/SGLang endpoint for the older required-function ranking
+path. The separate `inference_server` workspace now also provides a planning-
+only multimodal API. It receives actual camera images and a natural-language
+goal, but no hidden simulator inventory or MuJoCo state, and returns a validated
+scene action sequence. Connecting that result to simulator execution remains
+future work.
 
 The agreed execution architecture is:
 
@@ -215,8 +222,8 @@ experiments were removed.
 
 ### Workshop / makers-lab benchmark
 
-The dirty worktree implements a deliberately simplified, single-arm workshop
-repair cell. It is one front-facing workbench intended to keep Google Robot at
+The branch implements a deliberately simplified, single-arm workshop repair
+cell. It is one front-facing workbench intended to keep Google Robot at
 one central stance. Two wooden frame members are already rigidly held in a
 fixture, and a captive guide can retain a staged screw. The artificial hinged
 joint guard was removed. An ordinary closed tabletop tool cabinet supplies a
@@ -460,14 +467,14 @@ segmentation. Do not blindly replace these integrated files with another
 branch; preserve the Google Robot, interactive living room, S1/L2 ablations,
 and local stability fixes.
 
-The integrated Naren reference is now
-`origin/naren/googlePointCloudIntegration` at `b4dcbd6`. Fetch that exact
-remote ref before any future comparison:
+The last integrated Naren baseline is `b4dcbd6`; the newest fetched comparison
+tip is `origin/naren/googlePointCloudIntegration-phaseC` at `a15d7ed`. Fetch
+and compare the remote Phase-C ref before any future integration:
 
 ```bash
-git fetch origin naren/googlePointCloudIntegration
-git log --oneline --decorate -10 origin/naren/googlePointCloudIntegration
-git diff --name-status b4dcbd6..origin/naren/googlePointCloudIntegration -- mujoco_scenes
+git fetch --prune origin
+git log --oneline --decorate -10 origin/naren/googlePointCloudIntegration-phaseC
+git diff --name-status b4dcbd6..origin/naren/googlePointCloudIntegration-phaseC -- mujoco_scenes
 ```
 
 ## Current perception boundary
@@ -497,29 +504,98 @@ The current state is intentionally honest:
 Remote inference is intended to use an OpenAI-compatible server. The repository
 contains separate workspaces for server deployment:
 
-- `inference_server/` for vLLM-oriented model serving;
+- `inference_server/` for Docker-first vLLM/SGLang multimodal model serving;
 - `perception_server/` for SAM 3.1.
 
-The client code should remain backend-neutral enough to support vLLM or SGLang.
-No Hugging Face training pipeline is required; this project uses existing
-models for inference only.
+`inference_server/` is self-contained and can be rsynced directly to the RTX
+5090 machine. `models.json` profiles Qwen3.5-9B, GLM-4.6V-Flash,
+Qwen3-VL-8B-Thinking, InternVL3.5-14B-HF, and the updated
+Kimi-VL-A3B-Thinking-2506 checkpoint. It starts one model at a time, retains
+weights/cache on the host, supports up to eight images, and uses load-time FP8
+for the two 15B/16B-total checkpoints. `./serve` provides `doctor`, `list`,
+`up`, `logs`, `down`, and redacted `command` operations; `smoke_test.py` checks
+the OpenAI-compatible endpoint with text or multiple local images. vLLM is the
+default backend and SGLang is a per-launch fallback. Muse Glimmer remains a
+disabled profile until an official local checkpoint/serving recipe exists;
+Muse Spark is a hosted Meta Model API model, not a local 5090 checkpoint.
+
+`./serve up MODEL --detach` starts the raw OpenAI-compatible model backend on
+port 8000 and an authenticated functional-decomposition API on port 8080. The
+direct VLM action planner was removed because action sequencing belongs after
+search and deterministic feasibility checks. The relevant files are:
+
+- `functional_catalog.json`: the standalone copy of the simple repository
+  function registry, forbidden generic labels, and the required range of
+  10–15 ranked candidates;
+- `functional_planner.py`: image/goal prompt, strict decomposition schema,
+  request validation, ranked-type validation, and dependency-cycle checks;
+- `planner_api.py`: `GET /health`, `GET /v1/functions`, and
+  `POST /v1/decompose`, with authentication for non-loopback deployments;
+- `functional_client.py`: local-image CLI for testing the API.
+
+The VLM selects configured functions such as `can_hold_liquid` or `can_stir`
+and ranks 10–15 concrete object or region types for each replaceable role.
+These are commonsense priors, not detections: the prompt forbids claims that a
+type is present, visible, graspable, or geometrically feasible. It also forbids
+object IDs, simulator names, action sequences, search order, and geometry
+results. The production system prompt contains no concrete candidate examples,
+and a regression test protects this candidate-unseeded condition. The
+downstream search must ground observed instances and run the
+task-specific semantic and point-cloud checks. The response envelope states
+that search, semantic grounding, geometry verification, and execution have not
+started. Kitchen, living-room, and workshop labels are accepted.
+
+The decomposition validator normalizes harmless `unsupported_reason`
+placeholders (`none`, `N/A`, or `not applicable`) to the required empty string
+for `DECOMPOSED`. It still rejects a genuinely non-empty reason, a decomposed
+response with zero requirements, or an unsupported response that contains
+requirements.
+
+Native SSH-tunnel testing also supports no-key operation. `planner_api.py`
+defaults to `127.0.0.1`, omits upstream authorization when no inference key is
+configured, and accepts unauthenticated clients only on a loopback bind. It
+refuses keyless startup on `0.0.0.0` or another non-loopback host. The smoke
+test and functional client likewise omit rather than fabricate Authorization headers.
+This is intended for the user's `ssh -L` workflow; network-facing Docker
+deployment remains authenticated.
+
+Qwen3.5 thinking is currently enabled for functional decomposition through
+`chat_template_kwargs.enable_thinking=true`. It can be disabled without a code
+change using `PLANNER_ENABLE_THINKING=false` for the low-latency ablation. The
+output budget is 8,192 tokens. A reasoning-only or otherwise null final response
+reports the finish reason and recommends either increasing the budget or
+disabling thinking.
+
+Do not use greedy decoding for Qwen3.5 thinking. It repeatedly consumed the
+entire 4K, 8K, and 12K budgets without reaching final JSON. Functional requests
+now use the official Qwen3.5 thinking sampler: temperature 1.0, top-p 0.95,
+top-k 20, min-p 0, presence penalty 1.5, and repetition penalty 1.0. The
+non-thinking ablation uses temperature 0.7 and top-p 0.8.
+
+The client code remains backend-neutral. No Hugging Face training pipeline is
+required; this project uses existing models for inference only. Actual model
+loading still needs validation on the RTX 5090 host because the local machine
+does not provide that GPU or download the checkpoints.
 
 ## Validation
 
 The latest complete repository test result is:
 
 ```text
-366 passed, 14 warnings
+388 passed, 4 skipped, 14 warnings
 ```
 
-The warnings were matplotlib/pyparsing deprecations, not test failures.
+The warnings were matplotlib/pyparsing deprecations, not test failures. The
+four skips are HTTP socket integration tests because this Codex sandbox denies
+local socket creation; planner validation and transport tests pass, and those
+HTTP tests run normally on an unrestricted machine.
 
 Useful validation commands:
 
 ```bash
 git diff --check
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 MUJOCO_GL=egl \
-  .venv/bin/python -m pytest mujoco_scenes/tests -q
+  .venv/bin/python -m pytest -q
 ```
 
 The five upper camera renders were visually checked at the standard home pose.
@@ -542,10 +618,11 @@ headless rendering/tests.
 
 ```text
 Read CODEX_HANDOFF.md completely, then inspect the current dirty worktree.
-Preserve all existing changes. The compact workshop physical scene has been
-implemented; do not redesign it without a new request. The next workshop work
-is the separately authorized functional-grounding/search/sequencing phase.
-Before changing that pipeline, inspect the scene inventory and explicitly
-separate visible evidence from hidden drawer truth. Keep the one-shot FM,
-fixed search, first-feasible stopping, and no-FM-replanning decisions.
+Preserve all existing changes. The standalone inference workspace now has a
+planning-only multimodal API constrained to the newest Naren kitchen/living-
+room symbolic contracts. Do not connect its output to execution unless the
+user asks. First validate an actual model and a seven-image request on the RTX
+5090. For later workshop work, explicitly separate visible evidence from hidden
+drawer truth and keep the one-shot FM, fixed search, first-feasible stopping,
+and no-FM-replanning decisions.
 ```

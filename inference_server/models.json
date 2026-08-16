@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "models": {
+    "qwen35-9b": {
+      "model_id": "Qwen/Qwen3.5-9B",
+      "served_name": "qwen35-9b",
+      "default_backend": "vllm",
+      "modalities": ["text", "image"],
+      "precision": "bfloat16",
+      "max_model_len": 32768,
+      "max_concurrency": 2,
+      "max_images": 8,
+      "vllm": {
+        "args": [
+          "--reasoning-parser",
+          "qwen3"
+        ]
+      },
+      "sglang": {
+        "args": [
+          "--reasoning-parser",
+          "qwen3"
+        ]
+      },
+      "notes": "Qwen currently recommends a recent vLLM/SGLang build for Qwen3.5."
+    },
+    "glm46v-flash": {
+      "model_id": "zai-org/GLM-4.6V-Flash",
+      "served_name": "glm46v-flash",
+      "default_backend": "vllm",
+      "modalities": ["text", "image"],
+      "precision": "bfloat16",
+      "max_model_len": 16384,
+      "max_concurrency": 1,
+      "max_images": 8,
+      "vllm": {"args": []},
+      "sglang": {"args": []},
+      "notes": "The official BF16 checkpoint is about 20.6 GB and fits a 32 GB 5090 at this bounded context."
+    },
+    "qwen3-vl-8b-thinking": {
+      "model_id": "Qwen/Qwen3-VL-8B-Thinking",
+      "served_name": "qwen3-vl-8b-thinking",
+      "default_backend": "vllm",
+      "modalities": ["text", "image"],
+      "precision": "bfloat16",
+      "max_model_len": 32768,
+      "max_concurrency": 2,
+      "max_images": 8,
+      "vllm": {
+        "args": [
+          "--reasoning-parser",
+          "qwen3"
+        ]
+      },
+      "sglang": {
+        "args": [
+          "--reasoning-parser",
+          "qwen3"
+        ]
+      },
+      "notes": "The 8B Thinking checkpoint is the single-5090 Qwen3-VL profile."
+    },
+    "internvl35-14b": {
+      "model_id": "OpenGVLab/InternVL3_5-14B-HF",
+      "served_name": "internvl35-14b",
+      "default_backend": "vllm",
+      "modalities": ["text", "image"],
+      "precision": "fp8-online",
+      "max_model_len": 16384,
+      "max_concurrency": 1,
+      "max_images": 8,
+      "vllm": {
+        "quantization": "fp8_per_tensor",
+        "args": []
+      },
+      "sglang": {
+        "quantization": "fp8",
+        "args": []
+      },
+      "notes": "15.1B total parameters; online FP8 leaves room for image features and KV cache."
+    },
+    "kimi-vl-a3b-thinking": {
+      "model_id": "moonshotai/Kimi-VL-A3B-Thinking-2506",
+      "served_name": "kimi-vl-a3b-thinking",
+      "default_backend": "vllm",
+      "modalities": ["text", "image"],
+      "precision": "fp8-online",
+      "max_model_len": 16384,
+      "max_concurrency": 1,
+      "max_images": 8,
+      "trust_remote_code": true,
+      "vllm": {
+        "quantization": "fp8_per_tensor",
+        "args": []
+      },
+      "sglang": {
+        "quantization": "fp8",
+        "args": []
+      },
+      "notes": "Uses the improved 2506 Thinking checkpoint; total weights are 16B despite 3B active parameters."
+    },
+    "muse-glimmer": {
+      "available": false,
+      "model_id": null,
+      "served_name": "muse-glimmer",
+      "default_backend": "vllm",
+      "modalities": ["text", "image"],
+      "precision": "official-quantized-checkpoint-required",
+      "notes": "Reserved for Meta Muse Glimmer after an official model ID and supported serving recipe are verified. Muse Spark is API-only and cannot be hosted on this 5090."
+    }
+  }
+}

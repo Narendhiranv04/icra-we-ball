@@ -4,10 +4,18 @@ The simulator uses one OpenAI-compatible client for either vLLM or SGLang.
 The inference server runs on the GPU machine; the MuJoCo environment needs no
 inference framework or additional Python dependency.
 
-A ready-to-deploy vLLM workspace is provided in
-[`inference_server/`](../inference_server/README.md). It can be checked out
-without the MuJoCo assets and includes native uv and official-image Docker
-setups.
+A ready-to-deploy Docker workspace is provided in
+[`inference_server/`](../inference_server/README.md). It can be rsynced without
+the MuJoCo assets and supports profiled vLLM or SGLang launches on the remote
+GPU server.
+
+The workspace also exposes a functional-decomposition endpoint on port 8080.
+It accepts camera images and a natural-language goal, selects simple configured
+functions such as `can_stir`, and ranks 10–15 concrete candidate types
+for each replaceable role. The types are proposals, not claims about visible
+inventory. Search, semantic grounding, target-specific geometry, action
+sequencing, and execution remain separate. See the inference workspace README
+for the request schema and `functional_client.py` example.
 
 ## Start a server
 
@@ -73,7 +81,8 @@ with OpenAICompatibleRanker.from_env() as ranker:
     print(result.candidate_ids)
 ```
 
-Only the candidates passed to `RankingRequest` are sent to the server.
+This older observed-instance ranker belongs after search: only candidates
+passed to `RankingRequest` are sent to the server.
 `assess()` returns both the functional subset and its ranking; unknown,
 non-visible, duplicate, missing, or malformed IDs are rejected before
 execution. `rank()` remains available when every supplied candidate is already
