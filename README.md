@@ -98,6 +98,9 @@ requirements with 10–15 ranked concrete object or region types. It
 does not claim those types are present, search the scene, verify geometry,
 sequence actions, or execute anything.
 
+The complete native server and new-client-PC procedure is in
+[NEW_PC_SETUP.md](inference_server/NEW_PC_SETUP.md).
+
 The separate [perception_server](perception_server/README.md) workspace runs
 SAM 3.1 on a GPU server. The simulator sends it RGB images and text prompts,
 then performs depth back-projection and cross-camera association locally.

@@ -4,6 +4,9 @@ This directory is a self-contained, Docker-first workspace for serving the
 project's foundation models on one RTX 5090. It has no MuJoCo dependency and
 can be copied directly to the GPU machine.
 
+For the current native Qwen3.5 setup using Fish on the server and an SSH tunnel
+from a new client PC, follow [NEW_PC_SETUP.md](NEW_PC_SETUP.md).
+
 Use vLLM by default. SGLang is an explicit fallback for a model/version
 combination that behaves better there. Only run one model at a time: the 5090
 has 32 GB VRAM, and the server needs space for image features and KV cache as

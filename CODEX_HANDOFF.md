@@ -519,6 +519,11 @@ default backend and SGLang is a per-launch fallback. Muse Glimmer remains a
 disabled profile until an official local checkpoint/serving recipe exists;
 Muse Spark is a hosted Meta Model API model, not a local 5090 checkpoint.
 
+`inference_server/NEW_PC_SETUP.md` is the standalone end-to-end runbook for a
+fresh client: native `uv`/vLLM setup on the Fish-based GPU server, both server
+processes, keyless loopback binding, the two-port SSH tunnel from Bash, camera
+image transfer, prompt submission, shutdown, and common failure modes.
+
 `./serve up MODEL --detach` starts the raw OpenAI-compatible model backend on
 port 8000 and an authenticated functional-decomposition API on port 8080. The
 direct VLM action planner was removed because action sequencing belongs after
