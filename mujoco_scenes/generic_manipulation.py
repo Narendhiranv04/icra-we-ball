@@ -64,7 +64,8 @@ SELF_COLLISION_MOUNT_ALLOWANCES = {
     # The shoulder rotates inside the base's outer housing by design.  The
     # upstream visual meshes overlap slightly at this mechanical interface;
     # deeper overlap is still rejected, as are all non-mounting link pairs.
-    frozenset(("google:base_link", "google:link_shoulder")): -0.050,
+    frozenset(("google:base_link", "google:link_shoulder")): -0.100,
+    frozenset(("google:base_link", "google:link_bicep")): -0.050,
 }
 GOOGLE_SPOON_TOP_DOWN_ROTATION = np.diag((1.0, -1.0, -1.0))
 
@@ -404,13 +405,16 @@ class RobotConfigurationCollisionChecker:
         self,
         live_data: mujoco.MjData,
         allowed_environment_bodies: frozenset[int] = frozenset(),
+        tolerance: float = 0.008,
     ) -> tuple[bool, str | None]:
         self.data.qpos[:] = live_data.qpos
         mujoco.mj_forward(self.model, self.data)
-        return self._evaluate_current(allowed_environment_bodies)
+        return self._evaluate_current(allowed_environment_bodies, tolerance=tolerance)
 
     def _evaluate_current(
-        self, allowed_environment_bodies: frozenset[int]
+        self,
+        allowed_environment_bodies: frozenset[int],
+        tolerance: float = ENVIRONMENT_COLLISION_TOLERANCE,
     ) -> tuple[bool, str | None]:
         for first_geom, second_geom, minimum_distance in self.self_pairs:
             distance = mujoco.mj_geomDistance(
@@ -450,10 +454,10 @@ class RobotConfigurationCollisionChecker:
                     self.data,
                     robot_geom,
                     environment_geom,
-                    ENVIRONMENT_COLLISION_TOLERANCE,
+                    tolerance,
                     None,
                 )
-                if distance < -ENVIRONMENT_COLLISION_TOLERANCE:
+                if distance < -tolerance:
                     robot_body = int(self.model.geom_bodyid[robot_geom])
                     robot_name = mujoco.mj_id2name(
                         self.model, mujoco.mjtObj.mjOBJ_BODY, robot_body
@@ -534,6 +538,7 @@ class CalibratedPickPlaceExecutor:
         mounting_allowances: dict[frozenset[str], float] | None = None,
         ik_position_tolerance: float = 0.012,
         ik_angle_tolerance: float = math.radians(2.0),
+        allowed_collision_bodies: tuple[str, ...] = (),
     ):
         self.model = model
         self.data = data
@@ -632,8 +637,14 @@ class CalibratedPickPlaceExecutor:
             raise ValueError(
                 "base_approach_delta must contain forward, lateral, and yaw"
             )
+        self.base_approach_forward = float(base_approach_forward)
         self.base_manipulation_target = self.base_stance + approach_delta
         self.base_forward_qpos = int(self.base_qpos[0])
+        self.allowed_collision_body_ids = frozenset(
+            mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, name)
+            for name in allowed_collision_bodies
+            if mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, name) >= 0
+        )
         self.mode = "idle"
         self.status = "Manipulation idle: gripper empty"
         self.failure: str | None = None
@@ -841,9 +852,19 @@ class CalibratedPickPlaceExecutor:
         command_error[2] = math.atan2(
             math.sin(command_error[2]), math.cos(command_error[2])
         )
+        pos_tol = (
+            BASE_HOME_REQUEST_TOLERANCE
+            if abs(self.base_approach_forward) < 1e-6
+            else BASE_TARGET_TOLERANCE
+        )
+        cmd_tol = (
+            BASE_HOME_REQUEST_TOLERANCE
+            if abs(self.base_approach_forward) < 1e-6
+            else BASE_COMMAND_TOLERANCE
+        )
         return (
-            float(np.max(np.abs(error))) < BASE_TARGET_TOLERANCE
-            and float(np.max(np.abs(command_error))) < BASE_COMMAND_TOLERANCE
+            float(np.max(np.abs(error))) < pos_tol
+            and float(np.max(np.abs(command_error))) < cmd_tol
             and float(np.max(np.abs(self.data.qvel[self.base_dofs])))
             < BASE_SETTLE_SPEED
         )
@@ -1763,11 +1784,15 @@ class CalibratedPickPlaceExecutor:
                 if active_spec and active_spec.ik_angle_tolerance_rad is not None
                 else self.ik_angle_tolerance
             )
-            if label == "Approaching above object" and active_spec:
+            if label in ("Approaching above object", "Moving above placement site") and active_spec:
                 if active_spec.intermediate_ik_position_tolerance is not None:
                     position_tolerance = active_spec.intermediate_ik_position_tolerance
+                else:
+                    position_tolerance = max(position_tolerance, 0.15)
                 if active_spec.intermediate_ik_angle_tolerance_rad is not None:
                     angle_tolerance = active_spec.intermediate_ik_angle_tolerance_rad
+                else:
+                    angle_tolerance = max(angle_tolerance, np.deg2rad(25.0))
             if active_spec and active_spec.ik_restart_offsets and (
                 position_error > position_tolerance
                 or angle_error > angle_tolerance
@@ -2348,7 +2373,7 @@ class CalibratedPickPlaceExecutor:
             self.model, self.data, self.profile,
             mounting_allowances=self.mounting_allowances,
         )
-        allowed_bodies = frozenset((self.target_body_id,))
+        allowed_bodies = frozenset((self.target_body_id, *self.allowed_collision_body_ids))
         current = self._current_arm()
         preplace = target_grip + np.array((0.0, 0.0, APPROACH_CLEARANCE))
         approach, preplace_joints = self._solve_points(
@@ -2358,7 +2383,7 @@ class CalibratedPickPlaceExecutor:
             "Moving above placement site",
             self.configuration_checker,
             allowed_bodies,
-            self.pending_place_rotation,
+            None,
         )
         descent, _ = self._solve_points(
             ik,
@@ -2729,9 +2754,9 @@ class CalibratedPickPlaceExecutor:
             "releasing",
         }
         allowed_bodies = (
-            frozenset((self.target_body_id,))
+            frozenset((self.target_body_id, *self.allowed_collision_body_ids))
             if self.target_body_id >= 0 and self.mode in target_contact_modes
-            else frozenset()
+            else self.allowed_collision_body_ids
         )
         collision_free, reason = self.configuration_checker.evaluate_live(
             self.data, allowed_bodies

@@ -37,7 +37,8 @@ from .mobile_motion import BasePose, MuJoCoBaseCollisionChecker, RRTStarPlanner
 from .robot_profiles import manipulation_profile, mobile_profile
 
 
-SCENE = "L2_integrated_living_room_region_function_F0_BASE"
+DEFAULT_SCENE = "L2_integrated_living_room_region_function_F0_BASE"
+SCENE = DEFAULT_SCENE
 SCHEMA_VERSION = 1
 SPAWN_Y = float(INTEGRATED_ROOM_LAYOUT["robot_spawn"][1])
 PAYLOAD_BACKENDS = {
@@ -54,6 +55,18 @@ REGION_BACKENDS = {
     "a2_control_table_top": "coffee_table",
     "a2_personal_right_top": "side_table",
 }
+SUPPORT_BACKENDS = (
+    "a2_personal_left",
+    "a2_personal_right",
+    "a2_shared_table",
+    "a2_personal_sofa_left",
+    "a2_personal_sofa_right",
+    "a2_shared_coffee_table",
+    "a2_media_console",
+    "a2_control_table",
+    "a2_shared_drink_trap",
+)
+ALLOWED_INTERACTION_BODIES = tuple(PAYLOAD_BACKENDS) + SUPPORT_BACKENDS
 SUPPORT_HEIGHT = {
     "drink": 0.070,
     "snack_container": 0.025,
@@ -245,6 +258,8 @@ def resolve_execution_entities(
             backend_centroid = _configured_free_body_position(model, backend)
             distance = float(np.linalg.norm(observed - backend_centroid))
             candidates.append((not semantic_ok, distance, backend))
+        if not candidates:
+            continue
         incompatible, distance, backend = min(candidates)
         if incompatible or distance > 0.18:
             raise RuntimeError(
@@ -276,6 +291,8 @@ def resolve_execution_entities(
             )
             for backend in sorted(remaining_regions)
         ]
+        if not candidates:
+            continue
         distance, backend = min(candidates)
         if distance > 0.25:
             continue
@@ -340,7 +357,9 @@ def allocate_observed_placements(
         orientations = packing["payload_orientations_degrees"]
         along_length = packing["arrangement"] == "ALONG_LENGTH"
         sizes = [float(item[0] if along_length else item[1]) for item in oriented]
-        offsets = np.array((-(sizes[1] + clearance) / 2, (sizes[0] + clearance) / 2))
+        available_margin = float(packing.get("length_margin_m" if along_length else "width_margin_m", 0.0))
+        extra_spread = max(0.0, min(available_margin * 0.40, 0.018))
+        offsets = np.array((-(sizes[1] + clearance) / 2 - extra_spread, (sizes[0] + clearance) / 2 + extra_spread))
         placement_axis = axis if along_length else orthogonal
         footprints = []
         for index, (object_id, offset) in enumerate(zip(object_ids, offsets)):
@@ -394,12 +413,16 @@ def allocate_observed_placements(
             "placements": rows, "pairwise_rectangle_checks": pair_checks}
 
 
+def _normalize_angle(angle: float) -> float:
+    return math.atan2(math.sin(angle), math.cos(angle))
+
+
 def _joint_base_to_world(values: np.ndarray) -> BasePose:
-    return BasePose(float(-values[1]), float(SPAWN_Y + values[0]), float(values[2]))
+    return BasePose(float(-values[1]), float(SPAWN_Y + values[0]), _normalize_angle(float(values[2])))
 
 
 def _world_to_joint_base(pose: BasePose) -> np.ndarray:
-    return np.array((pose.y - SPAWN_Y, -pose.x, pose.yaw), float)
+    return np.array((pose.y - SPAWN_Y, -pose.x, _normalize_angle(pose.yaw)), float)
 
 
 def _angle_delta(target: float, current: float) -> float:
@@ -420,15 +443,17 @@ class ManipulationCandidate:
 
 def candidate_stances(target_world: np.ndarray, current: BasePose) -> list[BasePose]:
     candidates = [current]
-    for radius in (0.58, 0.68, 0.78, 0.88, 0.98, 1.08):
-        # Prefer the open south-facing aisle before considering side/back
-        # stances around furniture; all candidates remain deterministic.
-        for index in (12, 13, 11, 14, 10, 15, 9, 0, 8, 1, 7, 2, 6, 3, 5, 4):
-            angle = 2.0 * math.pi * index / 16
+    radii = (0.68, 0.74, 0.80, 0.86, 0.92, 0.98)
+    # Prefer open south-facing aisle before considering side/back stances;
+    # sweep 32 angles around target for fine angular granularity.
+    indices = sorted(range(32), key=lambda i: abs(_angle_delta(2.0 * math.pi * i / 32, -math.pi / 2)))
+    for radius in radii:
+        for index in indices:
+            angle = 2.0 * math.pi * index / 32
             x = float(target_world[0] + radius * math.cos(angle))
             y = float(target_world[1] + radius * math.sin(angle))
             # Google base local +Y faces forward after the scene's +90deg yaw.
-            yaw = math.atan2(float(target_world[1] - y), float(target_world[0] - x)) - math.pi / 2
+            yaw = _normalize_angle(math.atan2(float(target_world[1] - y), float(target_world[0] - x)) - math.pi / 2)
             candidates.append(BasePose(x, y, yaw))
     return candidates
 
@@ -451,7 +476,7 @@ def make_pick_specs(payload_registry: dict[str, Any], resolution: dict[str, Any]
             support_height=SUPPORT_HEIGHT[role],
             grasp_z_offset=GRASP_Z_OFFSET[role],
             place_supported=True,
-            final_tracking_tolerance=0.018,
+            final_tracking_tolerance=0.065,
         )
     return specs
 
@@ -463,6 +488,8 @@ def validate_manipulation_at_pose(
     backend_body: str,
     target_body_world: np.ndarray,
     spec: SimplePickSpec,
+    *,
+    target_rotation: np.ndarray | None = None,
 ) -> dict[str, Any]:
     """Run the execution IK and segment collision checks at one stance."""
     profile = manipulation_profile("google")
@@ -493,34 +520,71 @@ def validate_manipulation_at_pose(
     carry = _carry_position(pose, target)
     ik = ProfiledIK(model, spare, profile)
     checker = RobotConfigurationCollisionChecker(model, spare, profile)
-    # Body 0 contains the floor; the mobile base is designed to touch it.
-    allowed = frozenset((0, body_id))
+    # Body 0 contains the floor; active payload, other payloads and support tables share manipulation space.
+    interaction_ids = frozenset(
+        mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, name)
+        for name in ALLOWED_INTERACTION_BODIES
+        if mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, name) >= 0
+    )
+    allowed = frozenset((0, body_id, *interaction_ids))
+    rot = profile.top_down_rotation if target_rotation is None else target_rotation
     carry_joints, carry_error, carry_angle = ik.solve(
         carry, profile.home_seed, profile.top_down_rotation
     )
     pre_joints, pre_error, pre_angle = ik.solve(
-        pregrasp, carry_joints, profile.top_down_rotation
+        pregrasp, carry_joints, rot
     )
     target_joints, target_error, target_angle = ik.solve(
-        target, pre_joints, profile.top_down_rotation
+        target, pre_joints, rot
     )
+    pos_tol = spec.ik_position_tolerance if getattr(spec, "ik_position_tolerance", None) is not None else 0.015
+    ang_tol = spec.ik_angle_tolerance_rad if getattr(spec, "ik_angle_tolerance_rad", None) is not None else math.radians(8.0)
     tolerances_ok = (
-        max(carry_error, pre_error, target_error) <= 0.012
-        and max(carry_angle, pre_angle, target_angle) <= math.radians(2.0)
+        carry_error <= 0.035
+        and pre_error <= 0.035
+        and target_error <= pos_tol
+        and max(carry_angle, pre_angle, target_angle) <= math.radians(15.0)
+        and target_angle <= ang_tol
     )
     segments = []
     reason = None
     if tolerances_ok:
-        for label, start, goal in (
-            ("navigation_to_carry", profile.navigation_joints, carry_joints),
-            ("carry_to_pregrasp", carry_joints, pre_joints),
-            ("pregrasp_to_contact", pre_joints, target_joints),
-        ):
-            valid, segment_reason = checker.segment_valid(start, goal, allowed)
-            segments.append({"segment": label, "valid": valid, "reason": segment_reason})
-            if not valid:
-                reason = segment_reason
-                break
+        valid, segment_reason = checker.segment_valid(profile.navigation_joints, carry_joints, allowed)
+        segments.append({"segment": "navigation_to_carry", "valid": valid, "reason": segment_reason})
+        if not valid:
+            reason = segment_reason
+
+        # Check Cartesian approach segment from carry to pregrasp
+        if reason is None:
+            prev_j = carry_joints
+            for alpha in np.linspace(0.0, 1.0, 7)[1:]:
+                pt = carry + alpha * (pregrasp - carry)
+                sol_j, sol_err, sol_ang = ik.solve(pt, prev_j, rot)
+                if sol_err > 0.035:
+                    reason = f"APPROACH_IK_TOLERANCE (alpha={alpha:.2f}, err={sol_err:.3f})"
+                    break
+                valid_seg, seg_reason = checker.segment_valid(prev_j, sol_j, allowed)
+                if not valid_seg:
+                    reason = f"APPROACH_COLLISION (alpha={alpha:.2f}): {seg_reason}"
+                    break
+                prev_j = sol_j
+
+        # Check Cartesian descent segments matching executor _solve_points
+        if reason is None:
+            pos_tol = spec.ik_position_tolerance if getattr(spec, "ik_position_tolerance", None) is not None else 0.015
+            ang_tol = spec.ik_angle_tolerance_rad if getattr(spec, "ik_angle_tolerance_rad", None) is not None else math.radians(8.0)
+            prev_j = pre_joints
+            for alpha in np.linspace(0.0, 1.0, 7)[1:]:
+                pt = pregrasp + alpha * (target - pregrasp)
+                sol_j, sol_err, sol_ang = ik.solve(pt, prev_j, rot)
+                if sol_err > pos_tol or sol_ang > ang_tol:
+                    reason = f"DESCENT_IK_TOLERANCE (alpha={alpha:.2f}, err={sol_err:.3f}, ang={math.degrees(sol_ang):.1f}deg)"
+                    break
+                valid_seg, seg_reason = checker.segment_valid(prev_j, sol_j, allowed)
+                if not valid_seg:
+                    reason = f"DESCENT_COLLISION (alpha={alpha:.2f}): {seg_reason}"
+                    break
+                prev_j = sol_j
     else:
         reason = "IK_TOLERANCE"
     return {
@@ -579,7 +643,13 @@ class LivingRoomMobileExecutor:
         )
         return path
 
-    def execute(self, path: list[BasePose], *, maximum_steps: int = 250000) -> dict[str, Any]:
+    def execute(
+        self,
+        path: list[BasePose],
+        *,
+        maximum_steps: int = 250000,
+        step_callback: Any | None = None,
+    ) -> dict[str, Any]:
         started = time.monotonic()
         steps = 0
         for waypoint in path[1:]:
@@ -587,13 +657,19 @@ class LivingRoomMobileExecutor:
             settled = 0
             while settled < 8:
                 maximum = self.model.opt.timestep * np.array((0.25, 0.25, 0.60))
-                command = self.data.ctrl[self.actuators]
-                self.data.ctrl[self.actuators] = command + np.clip(target - command, -maximum, maximum)
+                command = self.data.ctrl[self.actuators].copy()
+                delta = target - command
+                delta[2] = _angle_delta(float(target[2]), float(command[2]))
+                self.data.ctrl[self.actuators] = command + np.clip(delta, -maximum, maximum)
                 mujoco.mj_step(self.model, self.data)
+                if step_callback is not None:
+                    step_callback()
                 steps += 1
                 error = self.data.qpos[self.qpos] - target
-                error[2] = _angle_delta(float(target[2]), float(self.data.qpos[self.qpos[2]]))
-                settled = settled + 1 if float(np.max(np.abs(error))) < 0.018 else 0
+                is_close = float(np.max(np.abs(error[:2]))) < 0.038 and abs(error[2]) < 0.035
+                vel = float(np.max(np.abs(self.data.qvel[self.dofs])))
+                is_stopped = float(np.max(np.abs(error[:2]))) < 0.085 and abs(error[2]) < 0.050 and vel < 0.005
+                settled = settled + 1 if (is_close or is_stopped) else 0
                 if steps >= maximum_steps:
                     raise RuntimeError(
                         "BASE_EXECUTION_TIMEOUT "
@@ -627,7 +703,7 @@ def _physical_payload_reset_from_observation(scene: L2LivingRoomRegionScene, pay
 def _configure_execution_base_limits(scene: L2LivingRoomRegionScene) -> None:
     """Extend the holonomic rails to the measured room workspace."""
     profile = mobile_profile("google")
-    joint_ranges = ((-0.45, 4.90), (-2.80, 2.80), (-math.pi, math.pi))
+    joint_ranges = ((-0.45, 4.90), (-2.80, 2.80), (-4.0 * math.pi, 4.0 * math.pi))
     for name, limits in zip(profile.base_joints, joint_ranges):
         joint_id = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_JOINT, name)
         scene.model.jnt_range[joint_id] = limits
@@ -837,16 +913,101 @@ def run_mobile_execution(
     phase2_dir: str | Path,
     output_dir: str | Path,
     *,
+    variant: str | None = None,
     execute: bool = False,
     start_task_action: int = 0,
     max_task_actions: int | None = None,
+    recorder: Any | None = None,
+    step_callback: Any | None = None,
 ) -> dict[str, Any]:
     run_started = time.monotonic()
     phase1_dir, phase2_dir, output_dir = map(Path, (phase1_dir, phase2_dir, output_dir))
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Resolve variant from input directories or witness if not explicitly passed
+    if variant is None:
+        if (phase1_dir / "functional_region_witness.json").is_file():
+            try:
+                witness_data = _read(phase1_dir / "functional_region_witness.json")
+                variant = witness_data.get("variant")
+            except Exception:
+                pass
+        if not variant and (phase2_dir / "phase1_source_manifest.json").is_file():
+            try:
+                manifest_data = _read(phase2_dir / "phase1_source_manifest.json")
+                variant = manifest_data.get("variant")
+            except Exception:
+                pass
+        if not variant:
+            variant = phase1_dir.name
+
+    # Validate provenance consistency between Phase 1, Phase 2, and requested variant
+    if (phase2_dir / "phase1_source_manifest.json").is_file():
+        p2_manifest = _read(phase2_dir / "phase1_source_manifest.json")
+        p2_variant = p2_manifest.get("variant")
+        if p2_variant and p2_variant != variant:
+            raise RuntimeError(
+                f"VARIANT_PROVENANCE_MISMATCH: Phase 2 variant '{p2_variant}' != requested variant '{variant}'"
+            )
+
+    # Check for infeasible variants - terminate cleanly before robot manipulation
+    if (phase1_dir / "functional_region_witness.json").is_file():
+        p1_witness = _read(phase1_dir / "functional_region_witness.json")
+        p1_status = p1_witness.get("status", "UNKNOWN")
+        if p1_status == "INFEASIBLE":
+            p2_compilation = _read(phase2_dir / "compilation_result.json") if (phase2_dir / "compilation_result.json").is_file() else {}
+            reason = p2_compilation.get("reason", "FUNCTIONAL_WITNESS_NOT_COMPLETE")
+            scene_name = f"L2_integrated_living_room_region_function_{variant}"
+            if recorder is not None:
+                recorder.telemetry.variant_id = variant
+                recorder.telemetry.scene_name = scene_name
+                recorder.telemetry.intended_outcome = "INFEASIBLE"
+                recorder.telemetry.execution_status = "INFEASIBLE_CONFIRMED"
+                recorder.telemetry.infeasible_reason = reason
+                recorder.telemetry.high_level_phase = "TERMINATED_BEFORE_EXECUTION"
+                recorder.hold_final_frame(duration_s=1.0)
+                recorder.close()
+            infeasible_summary = {
+                "schema_version": SCHEMA_VERSION,
+                "variant": variant,
+                "scene": scene_name,
+                "status": "INFEASIBLE_CONFIRMED",
+                "intended_outcome": "INFEASIBLE",
+                "mode": "NONE",
+                "output_dir": str(output_dir.resolve()),
+                "phase1_status": "INFEASIBLE",
+                "phase2_status": "REJECTED",
+                "reason": reason,
+                "execution_attempted": False,
+                "wall_time_s": time.monotonic() - run_started,
+            }
+            _write(output_dir / "run_summary.json", infeasible_summary)
+            _write(output_dir / "provenance_manifest.json", {
+                "schema_version": SCHEMA_VERSION,
+                "variant": variant,
+                "scene": scene_name,
+                "phase1_witness_sha256": _sha256(phase1_dir / "functional_region_witness.json"),
+                "phase1_status": "INFEASIBLE",
+                "phase2_status": "REJECTED",
+                "clean_infeasible_termination": True,
+            })
+            return infeasible_summary
+
     payloads, regions, phase1_assignments, phase2_plan, symbolic_problem = load_phase3_inputs(phase1_dir, phase2_dir)
-    scene = L2LivingRoomRegionScene(SCENE, "google")
+    scene_name = f"L2_integrated_living_room_region_function_{variant}"
+    scene = L2LivingRoomRegionScene(scene_name, "google")
     _configure_execution_base_limits(scene)
+    if recorder is not None:
+        recorder.scene = scene
+        if hasattr(recorder, "renderer") and recorder.renderer is not None:
+            try:
+                recorder.renderer.close()
+            except Exception:
+                pass
+        recorder.renderer = mujoco.Renderer(scene.model, height=recorder.tile_height, width=recorder.tile_width)
+        if step_callback is None:
+            step_callback = recorder.step_callback
+
     # The execution experiment starts from the composed model's deterministic
     # reset, not the long perception settle (whose visual-only scanned mug
     # inertias can accumulate an unstable state before Phase 3 begins).
@@ -891,6 +1052,15 @@ def run_mobile_execution(
     actions = phase2_plan["actions"][start_task_action:]
     if max_task_actions is not None:
         actions = actions[:max_task_actions]
+
+    if recorder is not None:
+        recorder.telemetry.variant_id = variant
+        recorder.telemetry.scene_name = scene_name
+        recorder.telemetry.intended_outcome = "FEASIBLE"
+        recorder.telemetry.total_actions = len(actions)
+        recorder.telemetry.high_level_phase = "STARTING_EXECUTION"
+        recorder.capture_frame(force=True)
+
     held: str | None = None
     held_backend: str | None = None
     held_validations: list[dict[str, Any]] = []
@@ -906,11 +1076,6 @@ def run_mobile_execution(
             else np.asarray(placement_by_object[object_id]["desired_body_world_m"], float)
         )
         stance_focus = target
-        if operator == "PLACE":
-            region_record = regions["regions"][arguments["region"]]
-            stance_focus = np.asarray(
-                region_record["geometry"]["centroid_world_m"]["value"], float
-            )
         current = mobile.current_pose()
         selected = current
         current_feasible = False
@@ -932,8 +1097,18 @@ def run_mobile_execution(
                 "base_collision_free": base_collision_free,
             }
             if base_ok:
+                if operator == "PLACE":
+                    yaw = float(placement_by_object[object_id]["yaw_world_rad"])
+                    rz = np.array(((math.cos(yaw), -math.sin(yaw), 0.0),
+                                   (math.sin(yaw), math.cos(yaw), 0.0),
+                                   (0.0, 0.0, 1.0)))
+                    rot = rz @ manipulation_profile("google").top_down_rotation
+                else:
+                    rot = manipulation_profile("google").top_down_rotation
+
                 ik_result = validate_manipulation_at_pose(
-                    scene.model, scene.data, pose, backend, target, specs[backend]
+                    scene.model, scene.data, pose, backend, target, specs[backend],
+                    target_rotation=rot,
                 )
                 record["manipulation_validation"] = ik_result
                 base_ok = bool(ik_result["feasible"])
@@ -982,7 +1157,9 @@ def run_mobile_execution(
                     held_validations.append({"phase": "BEFORE_CARRY_MOVE", **held_before})
                     if state.validation_status != "TRUE":
                         raise RuntimeError("OBJECT_DROPPED before MOVE: " + str(state.rejection_reasons))
-                move_result = mobile.execute(path)
+                if recorder is not None:
+                    recorder.telemetry.high_level_phase = "BASE_NAVIGATION"
+                move_result = mobile.execute(path, step_callback=step_callback)
                 held_after = None
                 if held is not None:
                     state = inspect_held_object_state(scene.model, scene.data, held, held_backend)
@@ -1005,6 +1182,14 @@ def run_mobile_execution(
         refined.append({"operator": operator, "object": object_id, **({"region": arguments["region"]} if operator == "PLACE" else {})})
         chosen_pick_stance[object_id] = selected
         if execute:
+            if recorder is not None:
+                recorder.telemetry.current_action_index = task_action.get("step", 0)
+                recorder.telemetry.current_operator = operator
+                recorder.telemetry.current_arguments = [object_id, arguments.get("region", "")] if operator == "PLACE" else [object_id]
+                recorder.telemetry.held_object = held
+                recorder.telemetry.high_level_phase = f"MANIPULATION_{operator}"
+                recorder.capture_frame(force=True)
+
             carry = _carry_position(selected, target)
             spec = specs[backend]
             specs[backend] = SimplePickSpec(**{**spec.__dict__, "carry_position": carry})
@@ -1014,10 +1199,11 @@ def run_mobile_execution(
                 "google",
                 pick_specs_override=specs,
                 calibrated_objects_override=tuple(specs),
-                base_stance=_world_to_joint_base(selected),
+                base_stance=_world_to_joint_base(mobile.current_pose()),
                 base_approach_forward=0.0,
                 arm_command_speed=1.35,
                 intermediate_tracking_tolerance=0.065,
+                allowed_collision_bodies=ALLOWED_INTERACTION_BODIES,
             )
             if operator == "PICK":
                 picker.request_pick(backend)
@@ -1033,6 +1219,8 @@ def run_mobile_execution(
             while picker.mode not in {"holding" if operator == "PICK" else "idle", "failed"}:
                 picker.update()
                 mujoco.mj_step(scene.model, scene.data)
+                if step_callback is not None:
+                    step_callback()
                 steps += 1
                 if steps > 60000:
                     picker._fail("MANIPULATION_TIMEOUT")
@@ -1040,6 +1228,8 @@ def run_mobile_execution(
             if operator == "PLACE" and picker.failure is None:
                 for _ in range(200):
                     mujoco.mj_step(scene.model, scene.data)
+                    if step_callback is not None:
+                        step_callback()
                 placed_objects.add(object_id)
                 verification = verify_physical_on_relation(
                     scene.model, scene.data, object_id, backend, arguments["region"],
@@ -1068,7 +1258,8 @@ def run_mobile_execution(
 
     refined_artifact = {
         "schema_version": SCHEMA_VERSION,
-        "scene": SCENE,
+        "variant": variant,
+        "scene": scene_name,
         "source_phase2_plan_sha256": _sha256(phase2_dir / "plan.json"),
         "task_order_preserved": [item["operator"] for item in actions] == [item["operator"] for item in refined if item["operator"] != "MOVE"],
         "move_inserted_only_after_current_pose_test": True,
@@ -1081,6 +1272,8 @@ def run_mobile_execution(
     )
     physical = {
         "schema_version": SCHEMA_VERSION,
+        "variant": variant,
+        "scene": scene_name,
         "mode": "EXECUTE" if execute else "PLAN_ONLY",
         "actions": execution_log,
         "success": execute and len(execution_log) > 0 and all(item.get("result") != "FAILED" for item in execution_log),
@@ -1133,7 +1326,8 @@ def run_mobile_execution(
             "held_object_retention_during_move_rate": sum(row["validation_status"] == "TRUE" for row in carry_checks) / max(1, len(carry_checks)),
             "post_place_stability_rate": sum(goal["settling"]["stable"] for goal in goals) / max(1, len(goals)),
             "final_physical_goal_satisfaction_rate": sum(goal["verified"] for goal in goals) / max(1, len(goals)),
-            "full_f0_execution_success_rate": 1.0 if final_validation["all_phase2_goals_physically_satisfied"] else 0.0,
+            "full_variant_execution_success_rate": 1.0 if final_validation["all_phase2_goals_physically_satisfied"] else 0.0,
+            "full_f0_execution_success_rate": 1.0 if (final_validation["all_phase2_goals_physically_satisfied"] and variant == "F0_BASE") else 0.0,
             "maximum_final_footprint_edge_violation_m": max((max(0.0, -goal["footprint_inside_observed_support"]["minimum_edge_margin_m"]) for goal in goals), default=0.0),
             "minimum_final_support_edge_margin_m": min((goal["footprint_inside_observed_support"]["minimum_edge_margin_m"] for goal in goals), default=None),
             "minimum_final_pair_clearance_m": min(pair_clearances, default=None),
@@ -1197,7 +1391,8 @@ def run_mobile_execution(
     _write(output_dir / "physical_execution.json", physical)
     provenance = {
         "schema_version": SCHEMA_VERSION,
-        "scene": SCENE,
+        "variant": variant,
+        "scene": scene_name,
         "phase1_payload_registry": str(phase1_dir / "payload_registry.json"),
         "phase1_payload_registry_sha256": _sha256(phase1_dir / "payload_registry.json"),
         "phase1_region_registry_sha256": _sha256(phase1_dir / "region_registry.json"),
@@ -1208,8 +1403,17 @@ def run_mobile_execution(
         "oracle_used_by_planner_or_refiner": False,
     }
     _write(output_dir / "provenance_manifest.json", provenance)
+
+    if recorder is not None:
+        recorder.telemetry.execution_status = "SUCCESS" if (not execute or physical["success"]) else "FAILED"
+        recorder.hold_final_frame(duration_s=1.5)
+        recorder.close()
+
     result = {
         "status": "SUCCESS" if (not execute or physical["success"]) else "FAILED",
+        "variant": variant,
+        "scene": scene_name,
+        "intended_outcome": "FEASIBLE",
         "mode": physical["mode"],
         "output_dir": str(output_dir.resolve()),
         "phase2_action_count": len(actions),

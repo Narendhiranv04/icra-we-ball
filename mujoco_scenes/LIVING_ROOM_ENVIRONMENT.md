@@ -847,3 +847,44 @@ Requirements remain a manual future-FM contract. No FM is called; no search
 order, navigation, placement, manipulation, or TAMP execution is generated.
 The successful output is a verified drink-target-region allocation for future
 TAMP.
+
+## Integrated Phase 3: Mobile Manipulation & Physical Execution
+
+The integrated living-room execution pipeline executes the frozen Phase-2
+`PICK`/`PLACE` symbolic plan using the mobile Google Robot in MuJoCo.
+
+### Key Architectural Boundaries
+
+1. **Frozen Inputs**: Physical execution consumes only frozen Phase-1
+   observed registries (`payload_registry.json`, `region_registry.json`,
+   `region_assignments.json`) and the frozen Phase-2 plan (`plan.json`).
+2. **Simulation Adapter**: Resolves generic IDs (`object_XXXX`, `region_XXXX`)
+   to physical MuJoCo bodies/geoms strictly at the simulation boundary by
+   semantic consistency and nearest observed centroid.
+3. **No Action Order Rewrite**: The frozen Phase-2 `PICK`/`PLACE` order is
+   strictly preserved. `MOVE` actions are conditionally inserted only when the
+   robot's current base pose cannot achieve collision-free IK reachability.
+4. **Clean Infeasible Termination**: Infeasible variants (I0–I5) terminate
+   cleanly as `INFEASIBLE_CONFIRMED` without initiating fake manipulation.
+5. **Synchronized 5-Camera Recording**: Continuously captures all 5 living-room
+   project cameras (`l2_camera_left`, `l2_camera_right`, `l2_camera_top`,
+   `l2_camera_front`, `l2_camera_close`) composed into a 3x2 mosaic with an
+   interactive status panel into `<variant>_5cam.mp4`.
+
+### Usage
+
+```bash
+# List all registered variants and plan availability
+python -m mujoco_scenes.run_living_room_execution --list-variants
+
+# Execute a single variant with 5-camera continuous recording
+MUJOCO_GL=egl PYOPENGL_PLATFORM=egl python -m mujoco_scenes.run_living_room_execution \
+  --variant F0_BASE --record
+
+# Execute all variants (feasible and infeasible)
+MUJOCO_GL=egl PYOPENGL_PLATFORM=egl python -m mujoco_scenes.run_living_room_execution \
+  --variant all --record
+
+# Dry-run reachability check without physics stepping
+python -m mujoco_scenes.run_living_room_execution --variant all --dry-run
+```

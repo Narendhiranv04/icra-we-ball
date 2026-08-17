@@ -39,6 +39,11 @@ from .kitchen_object_manipulation import (
     PlacementTarget,
     inspect_held_object_state,
 )
+from .generic_manipulation import (
+    JointWaypoint,
+    ProfiledIK,
+    RobotConfigurationCollisionChecker,
+)
 from .kitchen_phase_b_execution import KitchenPhaseBExecutionDispatcher
 from .kitchen_phase_c_execution import KitchenPhaseCExecutionDispatcher
 from .kitchen_pour_stir_manipulation import (
@@ -50,11 +55,9 @@ from .kitchen_pour_stir_manipulation import (
 
 
 STAGING_SPOTS_XY = (
-    (-0.45, -0.22),
     (-0.25, -0.22),
     (-0.05, -0.22),
     (0.15, -0.22),
-    (-0.35, -0.10),
     (-0.15, -0.10),
     (0.05, -0.10),
     (0.25, -0.10),
@@ -258,37 +261,267 @@ class KitchenGroundTruthExecutionDispatcher:
     def physically_open_containers(self) -> set[str]:
         return self.phase_b.physically_open_containers()
 
-    def _allocate_staging_spot(self, object_id: str) -> tuple[float, float]:
-        """Find an unoccupied countertop staging coordinate with maximum clearance."""
-        occupied = []
+    def _get_candidate_staging_spots(self, object_id: str) -> list[tuple[float, float]]:
+        """Rank candidate staging spots by clearance to occupied countertop objects."""
+        occupied: list[tuple[float, float]] = []
         for body, _, _ in self.scene._object_instance_records:
             if body == object_id:
                 continue
             body_id = mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_BODY, body)
             if body_id >= 0:
                 pos = self.scene.data.xpos[body_id]
-                # If on countertop (z approx 0.58 to 0.75 and y >= -0.45)
-                if pos[2] >= 0.55 and pos[1] >= -0.45:
+                # If on countertop (z approx 0.55 to 0.80 and -0.45 <= y <= 0.05)
+                if 0.55 <= pos[2] <= 0.80 and -0.45 <= pos[1] <= 0.05:
                     occupied.append((float(pos[0]), float(pos[1])))
 
-        for spot in self.staged_countertop_slots.values():
-            occupied.append(spot)
+        for slot in self.staged_countertop_slots.values():
+            occupied.append(slot)
 
-        best_spot = None
-        best_clearance = -1.0
+        return sorted(
+            STAGING_SPOTS_XY,
+            key=lambda s: -min((math.hypot(s[0] - o[0], s[1] - o[1]) for o in occupied), default=1.0),
+        )
 
-        for spot in STAGING_SPOTS_XY:
-            clearance = min(
-                (math.hypot(spot[0] - occ[0], spot[1] - occ[1]) for occ in occupied),
-                default=1.0,
-            )
-            if clearance > best_clearance:
-                best_clearance = clearance
-                best_spot = spot
-
-        chosen = best_spot or STAGING_SPOTS_XY[0]
+    def _allocate_staging_spot(self, object_id: str) -> tuple[float, float]:
+        """Find an unoccupied countertop staging coordinate with maximum clearance."""
+        candidates = self._get_candidate_staging_spots(object_id)
+        chosen = candidates[0] if candidates else STAGING_SPOTS_XY[0]
         self.staged_countertop_slots[object_id] = chosen
         return chosen
+
+    def _find_canonical_upright_place_plan(self, object_id: str) -> dict[str, Any] | None:
+        """Find collision-free IK trajectory to place held vessel canonically upright."""
+        low = self.phase_b.manipulation.executor
+        backend = self.binding_by_id.get(object_id, {}).get("physical_backend_body", object_id)
+        body_id = mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_BODY, backend)
+        if body_id < 0:
+            return None
+
+        grip_site_id = low.grip_site_id
+        R_grip = self.scene.data.site_xmat[grip_site_id].reshape(3, 3).copy()
+        R_body = self.scene.data.xmat[body_id].reshape(3, 3).copy()
+        R_rel = R_grip.T @ R_body
+        supp_h = self.phase_b.manipulation.placement_resolver.support_height_by_id.get(object_id, 0.07)
+
+        candidate_spots = self._get_candidate_staging_spots(object_id)[:4]
+        candidate_yaws = (315, 135, 225, 45, 0, 180)
+        joint_id = int(self.scene.model.body_jntadr[body_id])
+        free_adr = int(self.scene.model.jnt_qposadr[joint_id]) if joint_id >= 0 else -1
+        is_free = (free_adr >= 0 and self.scene.model.jnt_type[joint_id] == mujoco.mjtJoint.mjJNT_FREE)
+
+        for spot in candidate_spots:
+            target_pos = np.array([spot[0], spot[1], 0.58 + supp_h])
+            for yaw_deg in candidate_yaws:
+                yaw = np.deg2rad(yaw_deg)
+                R_z = np.array([
+                    [np.cos(yaw), -np.sin(yaw), 0],
+                    [np.sin(yaw),  np.cos(yaw), 0],
+                    [0, 0, 1],
+                ])
+                R_grip_target = R_z @ R_rel.T
+                stance = self.phase_b.manipulation._select_home_place_stance(target_pos, R_grip_target)
+                if not stance.get("selected"):
+                    continue
+
+                sel_stance = stance["selected"]
+                local = np.array((float(sel_stance["local_forward_m"]), float(sel_stance["local_lateral_m"]), 0.0))
+                base_target = low.base_stance + local
+
+                # Plan arm trajectory using low._begin_place_plan on base target
+                saved_qpos = self.scene.data.qpos.copy()
+                self.scene.data.qpos[low.base_qpos] = base_target
+                if is_free:
+                    delta = base_target[:2] - saved_qpos[low.base_qpos][:2]
+                    delta_world = np.array([-delta[1], delta[0]])
+                    self.scene.data.qpos[free_adr : free_adr + 2] = saved_qpos[free_adr : free_adr + 2] + delta_world
+                mujoco.mj_forward(self.scene.model, self.scene.data)
+
+                low.base_manipulation_target = base_target.copy()
+                low.pending_place_world = target_pos.copy()
+                low.pending_place_rotation = R_grip_target.copy()
+                low.pending_place_site = "<dynamic_world_target>"
+                low.mode = "place_base_approach"
+                try:
+                    low._begin_place_plan()
+                    approach_descent_wps = list(low.waypoints)
+                    retreat_wps = list(low.retreat_waypoints)
+
+                    self.scene.data.qpos[:] = saved_qpos
+                    mujoco.mj_forward(self.scene.model, self.scene.data)
+                    self.staged_countertop_slots[object_id] = spot
+                    return {
+                        "spot": spot,
+                        "target_pos": target_pos,
+                        "yaw_deg": yaw_deg,
+                        "R_grip_target": R_grip_target,
+                        "selected_stance": sel_stance,
+                        "approach_descent_wps": approach_descent_wps,
+                        "retreat_wps": retreat_wps,
+                    }
+                except Exception:
+                    self.scene.data.qpos[:] = saved_qpos
+                    mujoco.mj_forward(self.scene.model, self.scene.data)
+                    continue
+
+        return None
+
+    def _execute_controlled_placement(self, object_id: str, plan: dict[str, Any]) -> None:
+        """Physically execute the 9-step controlled placement trajectory with gentle release and settling."""
+        low = self.phase_b.manipulation.executor
+        sel = plan["selected_stance"]
+        local = np.array((float(sel["local_forward_m"]), float(sel["local_lateral_m"]), 0.0))
+        low.base_manipulation_target = low.base_stance + local
+
+        # 1. Base approach to placement stance
+        for _ in range(1500):
+            low._command_base(low.base_manipulation_target)
+            mujoco.mj_step(self.scene.model, self.scene.data)
+            if self.step_callback is not None:
+                self.step_callback(self.scene)
+            if low._base_at_target(low.base_manipulation_target):
+                break
+        low._restore_navigation_base_damping()
+        mujoco.mj_forward(self.scene.model, self.scene.data)
+
+        # 2. Arm approach and descent
+        for wp in plan["approach_descent_wps"]:
+            low.data.ctrl[low.arm_actuators] = wp.joints
+            for _ in range(25):
+                mujoco.mj_step(self.scene.model, self.scene.data)
+                if self.step_callback is not None:
+                    self.step_callback(self.scene)
+        final_place = plan["approach_descent_wps"][-1].joints
+        for _ in range(300):
+            low.data.ctrl[low.arm_actuators] = final_place
+            mujoco.mj_step(self.scene.model, self.scene.data)
+            if self.step_callback is not None:
+                self.step_callback(self.scene)
+            if np.max(np.abs(low.data.qpos[low.arm_qpos] - final_place)) < 0.02:
+                break
+
+        # 3. Hold briefly before release
+        for _ in range(50):
+            mujoco.mj_step(self.scene.model, self.scene.data)
+            if self.step_callback is not None:
+                self.step_callback(self.scene)
+
+        # 4. Gentle release: deactivate weld and open fingers gradually
+        if low.grasp_equality_id >= 0:
+            self.scene.data.eq_active[low.grasp_equality_id] = 0
+        open_cmd = float(low.profile.open_command)
+        curr_finger = float(self.scene.data.ctrl[low.finger_actuators[0]])
+        for f_cmd in np.linspace(curr_finger, open_cmd, 15):
+            self.scene.data.ctrl[low.finger_actuators] = f_cmd
+            for _ in range(15):
+                mujoco.mj_step(self.scene.model, self.scene.data)
+                if self.step_callback is not None:
+                    self.step_callback(self.scene)
+
+        # 5. Settle object on countertop
+        for _ in range(800):
+            mujoco.mj_step(self.scene.model, self.scene.data)
+            if self.step_callback is not None:
+                self.step_callback(self.scene)
+
+        # 6. Arm retreat
+        for wp in plan["retreat_wps"]:
+            low.data.ctrl[low.arm_actuators] = wp.joints
+            for _ in range(20):
+                mujoco.mj_step(self.scene.model, self.scene.data)
+                if self.step_callback is not None:
+                    self.step_callback(self.scene)
+        for _ in range(300):
+            low.data.ctrl[low.arm_actuators] = low.profile.navigation_joints
+            mujoco.mj_step(self.scene.model, self.scene.data)
+            if self.step_callback is not None:
+                self.step_callback(self.scene)
+            if np.max(np.abs(low.data.qpos[low.arm_qpos] - low.profile.navigation_joints)) < 0.04:
+                break
+
+        # 7. Base retreat to HOME
+        for _ in range(1500):
+            low._command_base(low.base_stance)
+            mujoco.mj_step(self.scene.model, self.scene.data)
+            if self.step_callback is not None:
+                self.step_callback(self.scene)
+            if low._base_at_target(low.base_stance):
+                break
+        low._restore_navigation_base_damping()
+
+        # Final settle
+        for _ in range(500):
+            mujoco.mj_step(self.scene.model, self.scene.data)
+            if self.step_callback is not None:
+                self.step_callback(self.scene)
+        mujoco.mj_forward(self.scene.model, self.scene.data)
+
+        # Final settle
+        for _ in range(500):
+            mujoco.mj_step(self.scene.model, self.scene.data)
+            if self.step_callback is not None:
+                self.step_callback(self.scene)
+        mujoco.mj_forward(self.scene.model, self.scene.data)
+
+        low.mode = "idle"
+        low.held_object = None
+        low.target_object = None
+        low.target_body_id = -1
+        low.grasp_equality_id = -1
+
+    def validate_stable_placement(
+        self, object_id: str, destination: str = "countertop"
+    ) -> tuple[bool, str, dict[str, Any]]:
+        """Verify that a placed object is upright, physically supported, settled, and undamaged."""
+        backend = self.binding_by_id.get(object_id, {}).get("physical_backend_body", object_id)
+        body_id = mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_BODY, backend)
+        if body_id < 0:
+            return False, "UNKNOWN_OBJECT_BODY", {}
+
+        pos = self.scene.data.xpos[body_id].copy()
+        mat = self.scene.data.xmat[body_id].reshape(3, 3).copy()
+        vel = np.zeros(6)
+        mujoco.mj_objectVelocity(self.scene.model, self.scene.data, mujoco.mjtObj.mjOBJ_BODY, body_id, vel, 0)
+        lin_speed = float(np.linalg.norm(vel[3:]))
+        ang_speed = float(np.linalg.norm(vel[:3]))
+        tilt_deg = float(np.rad2deg(np.arccos(np.clip(mat[2, 2], -1.0, 1.0))))
+
+        counter_contact = False
+        floor_contact = False
+        for contact in self.scene.data.contact:
+            b1 = self.scene.model.geom_bodyid[contact.geom1]
+            b2 = self.scene.model.geom_bodyid[contact.geom2]
+            if body_id not in (b1, b2):
+                continue
+            other_geom = contact.geom2 if b1 == body_id else contact.geom1
+            gname = mujoco.mj_id2name(self.scene.model, mujoco.mjtObj.mjOBJ_GEOM, other_geom) or ""
+            if any(k in gname for k in ("counter", "surface", "table", "serving")):
+                counter_contact = True
+            if "floor" in gname:
+                floor_contact = True
+
+        telemetry = {
+            "object_id": object_id,
+            "destination": destination,
+            "position_xyz_m": pos.tolist(),
+            "tilt_deg": tilt_deg,
+            "linear_speed_mps": lin_speed,
+            "angular_speed_radps": ang_speed,
+            "counter_contact": counter_contact,
+            "floor_contact": floor_contact,
+        }
+
+        if floor_contact:
+            return False, "OBJECT_FELL_TO_FLOOR", telemetry
+        if tilt_deg > 8.0:
+            return False, f"OBJECT_TILTED_{tilt_deg:.1f}_DEG", telemetry
+        if lin_speed > 0.03:
+            return False, f"OBJECT_UNSETTLED_LIN_VEL_{lin_speed:.3f}", telemetry
+        if ang_speed > 0.12:
+            return False, f"OBJECT_UNSETTLED_ANG_VEL_{ang_speed:.3f}", telemetry
+        if pos[2] < 0.55:
+            return False, f"OBJECT_BELOW_TABLE_{pos[2]:.3f}", telemetry
+
+        return True, "STABLE_UPRIGHT_PLACEMENT", telemetry
 
     def update_object_to_countertop_location(self, object_id: str) -> None:
         """Update object context after relocation to countertop."""
@@ -386,6 +619,10 @@ class KitchenGroundTruthExecutionDispatcher:
 
     def place(self, object_id: str, destination: str) -> dict[str, Any]:
         """Execute physical PLACE to countertop, serving area, or relative to another vessel."""
+        target_ws = KitchenWorkspace.SERVING if destination == "serving_area" else KitchenWorkspace.HOME
+        if self.current_workspace != target_ws:
+            self.move(target_ws, carrying_object_id=object_id)
+
         low = self.phase_b.manipulation.executor
         if self.current_workspace == KitchenWorkspace.HOME:
             self.scene.data.qpos[low.base_qpos] = 0.0
@@ -394,28 +631,50 @@ class KitchenGroundTruthExecutionDispatcher:
 
         self._settle_navigation_posture(steps=100)
 
-        if destination == "countertop":
-            row = self.inventory_by_id.get(object_id)
-            if row and row.get("source_context", {}).get("source_kind") != SourceKind.TABLE.value:
-                spot_x, spot_y = self._allocate_staging_spot(object_id)
-                row["observed_centroid_world_m"] = [spot_x, spot_y, 0.58]
+        row = self.inventory_by_id.get(object_id, {})
+        is_relocation = row.get("source_context", {}).get("source_kind") != SourceKind.TABLE.value
 
+        # For countertop staging of relocated vessels, use controlled upright placement
+        if destination == "countertop" and is_relocation:
+            plan = self._find_canonical_upright_place_plan(object_id)
+            if plan is not None:
+                self._execute_controlled_placement(object_id, plan)
+                valid, reason, telemetry = self.validate_stable_placement(object_id, destination)
+                if valid:
+                    self.update_object_to_countertop_location(object_id)
+                    return {
+                        "action": "PLACE",
+                        "arguments": [object_id, destination],
+                        "success": True,
+                        "status": "PLACEMENT_COMPLETED",
+                        "telemetry": telemetry,
+                    }
+
+        # Fallback or standard placement route
         try:
             record = self.phase_b.place(object_id, destination)
         except Exception:
             record = {"success": False, "status": "MANIPULATION_TIMEOUT"}
 
         if not record.get("success", False):
-            # Ground-truth release equality weld and complete placement
-            if low.grasp_equality_id >= 0:
-                self.scene.data.eq_active[low.grasp_equality_id] = 0
-            low.mode = "idle"
-            low.held_object = None
-            record = {
-                "success": True,
-                "status": "PLACEMENT_COMPLETED",
-                "request": {"action": "PLACE", "arguments": [object_id, destination]},
-            }
+            # Attempt controlled upright plan as recovery if standard phase_b failed
+            plan = self._find_canonical_upright_place_plan(object_id)
+            if plan is not None:
+                self._execute_controlled_placement(object_id, plan)
+                valid, reason, telemetry = self.validate_stable_placement(object_id, destination)
+                if valid:
+                    if destination == "countertop":
+                        self.update_object_to_countertop_location(object_id)
+                    return {
+                        "action": "PLACE",
+                        "arguments": [object_id, destination],
+                        "success": True,
+                        "status": "PLACEMENT_COMPLETED",
+                        "telemetry": telemetry,
+                    }
+                record = {"success": False, "status": f"PLACEMENT_FAILED_{reason}", "telemetry": telemetry}
+            else:
+                record = {"success": False, "status": "PLACEMENT_PLAN_NOT_FOUND"}
 
         if record.get("success", False):
             if destination == "countertop":
@@ -429,6 +688,7 @@ class KitchenGroundTruthExecutionDispatcher:
             except Exception:
                 pass
             self._settle_navigation_posture(steps=200)
+
         return record
 
     def pour(self, source_id: str, target_id: str, content: str | None = None) -> dict[str, Any]:
