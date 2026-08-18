@@ -612,6 +612,8 @@ class GeometryChecker:
         voxel_size: float = 0.003,
         segmenter: Any | None = None,
         semantic_prompts: Sequence[str] = (),
+        render_geom_groups: Iterable[int] | None = None,
+        instance_geom_groups: Iterable[int] | None = None,
         allowed_geom_groups: Iterable[int] | None = None,
     ):
         if mujoco is None:
@@ -630,12 +632,30 @@ class GeometryChecker:
         self.voxel_size = voxel_size
         self.segmenter = segmenter
         self.semantic_prompts = tuple(semantic_prompts)
-        if allowed_geom_groups is not None:
-            self.allowed_geom_groups: tuple[int, ...] | None = tuple(allowed_geom_groups)
+
+        if render_geom_groups is not None:
+            self.render_geom_groups: tuple[int, ...] | None = tuple(render_geom_groups)
+        elif hasattr(scene, "perception_render_geom_groups") and scene.perception_render_geom_groups is not None:
+            self.render_geom_groups = tuple(scene.perception_render_geom_groups)
+        elif allowed_geom_groups is not None:
+            self.render_geom_groups = tuple(allowed_geom_groups)
         elif hasattr(scene, "perception_geom_groups") and scene.perception_geom_groups is not None:
-            self.allowed_geom_groups = tuple(scene.perception_geom_groups)
+            self.render_geom_groups = tuple(scene.perception_geom_groups)
         else:
-            self.allowed_geom_groups = None
+            self.render_geom_groups = None
+
+        if instance_geom_groups is not None:
+            self.instance_geom_groups: tuple[int, ...] | None = tuple(instance_geom_groups)
+        elif hasattr(scene, "perception_instance_geom_groups") and scene.perception_instance_geom_groups is not None:
+            self.instance_geom_groups = tuple(scene.perception_instance_geom_groups)
+        elif allowed_geom_groups is not None:
+            self.instance_geom_groups = tuple(allowed_geom_groups)
+        elif hasattr(scene, "perception_geom_groups") and scene.perception_geom_groups is not None:
+            self.instance_geom_groups = tuple(scene.perception_geom_groups)
+        else:
+            self.instance_geom_groups = None
+
+        self.allowed_geom_groups = self.instance_geom_groups
         self._camera_ids = {
             name: self._require_id(mujoco.mjtObj.mjOBJ_CAMERA, name)
             for name in self.cameras
@@ -643,9 +663,9 @@ class GeometryChecker:
 
     def _build_scene_option(self) -> mujoco.MjvOption:
         vopt = mujoco.MjvOption()
-        if self.allowed_geom_groups is not None:
+        if self.render_geom_groups is not None:
             vopt.geomgroup[:] = 0
-            for g in self.allowed_geom_groups:
+            for g in self.render_geom_groups:
                 if 0 <= g < len(vopt.geomgroup):
                     vopt.geomgroup[g] = 1
         return vopt
@@ -669,7 +689,7 @@ class GeometryChecker:
         groups = (
             tuple(allowed_geom_groups)
             if allowed_geom_groups is not None
-            else self.allowed_geom_groups
+            else self.instance_geom_groups
         )
 
         geom_ids: dict[str, list[int]] = {name: [] for name in instance_names}

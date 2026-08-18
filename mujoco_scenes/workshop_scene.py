@@ -67,6 +67,17 @@ WORKSHOP_CAMERAS = (
 
 
 # ==============================================================================
+# CANONICAL TARGET HOLE & WORKPIECE CONSTANTS
+# ==============================================================================
+
+WORKSHOP_TARGET_HOLE_DIAMETER_M = 0.007
+WORKSHOP_TARGET_HOLE_RADIUS_M = 0.0035
+WORKSHOP_TARGET_HOLE_DEPTH_M = 0.030
+WORKSHOP_TARGET_RADIAL_CLEARANCE_M = 0.0005
+WORKSHOP_TARGET_RECESS_PROFILE = "PH2"
+
+
+# ==============================================================================
 # PRIVILEGED_SIMULATION_ORACLE_ONLY METADATA
 # Used strictly for simulator construction, benchmark auditing, and oracle tests.
 # MUST NOT be leaked to production perception or task planning.
@@ -77,7 +88,7 @@ PRIVILEGED_WORKSHOP_ORACLE_SPECS: dict[str, dict[str, Any]] = {
         "kind": "phillips_screwdriver",
         "functions": ["can_drive_screw"],
         "reach_m": 0.18,
-        "tip_profile": "PH2",
+        "tip_profile": WORKSHOP_TARGET_RECESS_PROFILE,
         "tip_width_m": 0.006,
         "bounding_area_m2": 0.026 * 0.035,
         "mass": 0.15,
@@ -86,7 +97,7 @@ PRIVILEGED_WORKSHOP_ORACLE_SPECS: dict[str, dict[str, Any]] = {
         "kind": "phillips_screwdriver",
         "functions": ["can_drive_screw"],
         "reach_m": 0.020,  # Insufficient reach for recessed frame joint (<0.025m)
-        "tip_profile": "PH2",
+        "tip_profile": WORKSHOP_TARGET_RECESS_PROFILE,
         "tip_width_m": 0.006,
         "bounding_area_m2": 0.014 * 0.040,
         "mass": 0.10,
@@ -104,7 +115,7 @@ PRIVILEGED_WORKSHOP_ORACLE_SPECS: dict[str, dict[str, Any]] = {
         "kind": "powered_screwdriver",
         "functions": ["can_drive_screw"],
         "reach_m": 0.12,
-        "tip_profile": "PH2",
+        "tip_profile": WORKSHOP_TARGET_RECESS_PROFILE,
         "tip_width_m": 0.006,
         "bounding_area_m2": 0.21 * 0.08,  # Large footprint: 0.0168 m^2
         "mass": 0.60,
@@ -113,12 +124,12 @@ PRIVILEGED_WORKSHOP_ORACLE_SPECS: dict[str, dict[str, Any]] = {
         "kind": "medium_screw",
         "functions": ["can_fasten"],
         "length_m": 0.045,
-        "head_diameter_m": 0.016,
+        "head_diameter_m": 0.014,
         "shaft_diameter_m": 0.0055,
-        "recess_profile": "PH2",
+        "recess_profile": WORKSHOP_TARGET_RECESS_PROFILE,
         "recess_width_m": 0.0065,
         "required_tool_reach_m": 0.025,
-        "bounding_area_m2": 0.045 * 0.016,
+        "bounding_area_m2": 0.045 * 0.014,
         "mass": 0.02,
     },
     "workshop_short_phillips_screw": {
@@ -127,7 +138,7 @@ PRIVILEGED_WORKSHOP_ORACLE_SPECS: dict[str, dict[str, Any]] = {
         "length_m": 0.018,  # Inadequate joint engagement depth (<0.030m)
         "head_diameter_m": 0.014,
         "shaft_diameter_m": 0.0055,
-        "recess_profile": "PH2",
+        "recess_profile": WORKSHOP_TARGET_RECESS_PROFILE,
         "recess_width_m": 0.0065,
         "required_tool_reach_m": 0.010,
         "bounding_area_m2": 0.018 * 0.014,
@@ -162,9 +173,10 @@ PRIVILEGED_WORKSHOP_ORACLE_SPECS: dict[str, dict[str, Any]] = {
     "workshop_frame_joint": {
         "kind": "fixture_held_frame_joint",
         "functions": ["target_workpiece"],
-        "hole_diameter_m": 0.007,
-        "hole_depth_m": 0.030,
-        "radial_clearance_m": 0.0005,
+        "hole_diameter_m": WORKSHOP_TARGET_HOLE_DIAMETER_M,
+        "hole_depth_m": WORKSHOP_TARGET_HOLE_DEPTH_M,
+        "radial_clearance_m": WORKSHOP_TARGET_RADIAL_CLEARANCE_M,
+        "recess_profile": WORKSHOP_TARGET_RECESS_PROFILE,
     },
 }
 
@@ -205,17 +217,17 @@ def _create_object_element(
     if object_name == "workshop_long_phillips_driver":
         ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "long_driver_mesh", "material": "screwdrivers_visual_mat"})
         ET.SubElement(body, "geom", {"name": f"{object_name}_col_handle", "class": "collision", "type": "cylinder", "pos": "0 0 0.05", "size": "0.013 0.05"})
-        ET.SubElement(body, "geom", {"name": f"{object_name}_col_shaft", "class": "collision", "type": "cylinder", "pos": "0 0 0.17", "size": "0.0035 0.07"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col_shaft", "class": "collision", "type": "cylinder", "pos": "0 0 0.165", "size": "0.003 0.065"})
 
     elif object_name == "workshop_stubby_phillips_driver":
         ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "stubby_driver_mesh", "material": "screwdrivers_visual_mat"})
         ET.SubElement(body, "geom", {"name": f"{object_name}_col_handle", "class": "collision", "type": "cylinder", "pos": "0 0 0.035", "size": "0.015 0.035"})
-        ET.SubElement(body, "geom", {"name": f"{object_name}_col_shaft", "class": "collision", "type": "cylinder", "pos": "0 0 0.095", "size": "0.0035 0.025"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col_shaft", "class": "collision", "type": "cylinder", "pos": "0 0 0.090", "size": "0.003 0.020"})
 
     elif object_name == "workshop_flathead_screwdriver":
         ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "flathead_driver_mesh", "material": "screwdriver_visual_mat"})
         ET.SubElement(body, "geom", {"name": f"{object_name}_col_handle", "class": "collision", "type": "cylinder", "pos": "0 0 0.05", "size": "0.014 0.05"})
-        ET.SubElement(body, "geom", {"name": f"{object_name}_col_shaft", "class": "collision", "type": "cylinder", "pos": "0 0 0.15", "size": "0.0035 0.05"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col_shaft", "class": "collision", "type": "cylinder", "pos": "0 0 0.15", "size": "0.003 0.05"})
 
     elif object_name == "workshop_power_driver":
         ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "power_driver_mesh", "material": "drill_visual_mat"})
@@ -224,15 +236,18 @@ def _create_object_element(
 
     elif object_name == "workshop_medium_phillips_screw":
         ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "medium_screw_mesh", "material": "screwdrivers_visual_mat"})
-        ET.SubElement(body, "geom", {"name": f"{object_name}_col", "class": "collision", "type": "cylinder", "pos": "0 0 0.0225", "size": "0.004 0.0225"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col_shaft", "class": "collision", "type": "cylinder", "pos": "0 0 0.0195", "size": "0.00275 0.0195"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col_head", "class": "collision", "type": "cylinder", "pos": "0 0 0.042", "size": "0.007 0.003"})
 
     elif object_name == "workshop_short_phillips_screw":
         ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "short_screw_mesh", "material": "screwdrivers_visual_mat"})
-        ET.SubElement(body, "geom", {"name": f"{object_name}_col", "class": "collision", "type": "cylinder", "pos": "0 0 0.009", "size": "0.004 0.009"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col_shaft", "class": "collision", "type": "cylinder", "pos": "0 0 0.006", "size": "0.00275 0.006"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col_head", "class": "collision", "type": "cylinder", "pos": "0 0 0.015", "size": "0.007 0.003"})
 
     elif object_name == "workshop_hex_bolt":
         ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "hex_bolt_mesh", "material": "screwdrivers_visual_mat"})
-        ET.SubElement(body, "geom", {"name": f"{object_name}_col", "class": "collision", "type": "cylinder", "pos": "0 0 0.025", "size": "0.005 0.025"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col_shaft", "class": "collision", "type": "cylinder", "pos": "0 0 0.021", "size": "0.004 0.021"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col_head", "class": "collision", "type": "cylinder", "pos": "0 0 0.046", "size": "0.009 0.004"})
 
     elif object_name == "workshop_pliers":
         ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "pliers_mesh", "material": "pliers_visual_mat"})
@@ -724,6 +739,8 @@ class WorkshopScene:
         "and keep loose small parts in a suitable container."
     )
     point_cloud_cameras = WORKSHOP_CAMERAS
+    perception_render_geom_groups = (0, 1, 2)
+    perception_instance_geom_groups = (1,)
     perception_geom_groups = (1,)
     inspection_rig_config_path = WORKSHOP_INSPECTION_RIG_CONFIG
     initial_observation_region = "workbench"
@@ -855,12 +872,13 @@ class WorkshopScene:
 
     def get_candidate_regions(self) -> list[dict[str, Any]]:
         """Return neutral candidate spatial region proposals based strictly on physical scene presence."""
-        is_swapped = self.variant_name == "F6_LAYOUT_SWAPPED"
         proposals = []
 
         # 1. MAIN_WORKBENCH_ZONE: physical workbench body exists in the room
-        if mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "workbench") >= 0:
-            center = [0.05, 0.32, 0.68]
+        wb_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "workbench")
+        if wb_id >= 0:
+            wb_pos = self.data.xpos[wb_id]
+            center = [wb_pos[0] + 0.05, wb_pos[1] - 0.06, wb_pos[2] + 0.68]
             dim = [0.50, 0.32, 0.04]
             proposals.append(
                 {
@@ -874,8 +892,10 @@ class WorkshopScene:
             )
 
         # 2. TOOL_CART_TOP: mobile tool cart physically present
-        if mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_tool_cart") >= 0:
-            center = [-0.95 if is_swapped else 0.95, 0.35, 0.80]
+        cart_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_tool_cart")
+        if cart_id >= 0:
+            cart_pos = self.data.xpos[cart_id]
+            center = [cart_pos[0], cart_pos[1], cart_pos[2] + 0.80]
             dim = [0.32, 0.21, 0.05]
             proposals.append(
                 {
@@ -889,8 +909,10 @@ class WorkshopScene:
             )
 
         # 3. NARROW_WALL_SHELF: wall shelf physically present
-        if mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_narrow_shelf") >= 0:
-            center = [0.70 if is_swapped else -0.70, 0.68, 1.05]
+        shelf_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_narrow_shelf")
+        if shelf_id >= 0:
+            shelf_pos = self.data.xpos[shelf_id]
+            center = [shelf_pos[0], shelf_pos[1], shelf_pos[2]]
             dim = [0.24, 0.07, 0.03]
             proposals.append(
                 {
@@ -904,8 +926,10 @@ class WorkshopScene:
             )
 
         # 4. PARTS_TRAY: parts tray physically present
-        if mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_parts_tray") >= 0:
-            center = [0.42 if is_swapped else -0.42, 0.22, 0.71]
+        tray_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_parts_tray")
+        if tray_id >= 0:
+            tray_pos = self.data.xpos[tray_id]
+            center = [tray_pos[0], tray_pos[1], tray_pos[2]]
             dim = [0.22, 0.14, 0.035]
             proposals.append(
                 {
@@ -919,8 +943,10 @@ class WorkshopScene:
             )
 
         # 5. HARDWARE_BIN: hardware bin physically present
-        if mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_hardware_bin") >= 0:
-            center = [0.42 if is_swapped else -0.42, 0.52, 0.71]
+        bin_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_hardware_bin")
+        if bin_id >= 0:
+            bin_pos = self.data.xpos[bin_id]
+            center = [bin_pos[0], bin_pos[1], bin_pos[2]]
             dim = [0.15, 0.11, 0.08]
             proposals.append(
                 {
@@ -1039,11 +1065,12 @@ class WorkshopScene:
         return {
             "workpiece_id": "workshop_frame_joint",
             "fixture_center_world_m": [-0.08, 0.30, 0.71],
-            "target_hole_diameter_m": 0.007,
-            "target_hole_depth_m": 0.030,
+            "target_hole_diameter_m": WORKSHOP_TARGET_HOLE_DIAMETER_M,
+            "target_hole_depth_m": WORKSHOP_TARGET_HOLE_DEPTH_M,
+            "target_radial_clearance_m": WORKSHOP_TARGET_RADIAL_CLEARANCE_M,
             "required_driver_function": "can_drive_screw",
             "required_fastener_function": "can_fasten",
-            "required_recess_profile": "PH2",
+            "required_recess_profile": WORKSHOP_TARGET_RECESS_PROFILE,
         }
 
     def privileged_get_ground_truth_solution(self) -> dict[str, Any] | None:
@@ -1115,8 +1142,9 @@ class WorkshopScene:
             raise RuntimeError(f"Missing actuator: {actuator_name}")
         return actuator_id
 
-    def open_container(self, region_id: str, steps: int = 300) -> dict[str, Any]:
-        """Physically actuate and open a storage container without leaking hidden contents."""
+    def open_container(self, region_id: str, steps: int = 600) -> dict[str, Any]:
+        if region_id not in WORKSHOP_REGIONS:
+            raise ValueError(f"Unknown storage container: {region_id}")
         actuator_id = self._container_actuator_id(region_id)
         target = 1.45 if region_id == "TOOL_CABINET" else 0.40
         self.data.ctrl[actuator_id] = target
@@ -1156,7 +1184,12 @@ class WorkshopScene:
             raise ValueError(f"Unknown workshop camera: {camera}")
         renderer = mujoco.Renderer(self.model, height=height, width=width)
         scene_option = mujoco.MjvOption()
-        if hasattr(self, "perception_geom_groups") and self.perception_geom_groups is not None:
+        if hasattr(self, "perception_render_geom_groups") and self.perception_render_geom_groups is not None:
+            scene_option.geomgroup[:] = 0
+            for g in self.perception_render_geom_groups:
+                if 0 <= g < len(scene_option.geomgroup):
+                    scene_option.geomgroup[g] = 1
+        elif hasattr(self, "perception_geom_groups") and self.perception_geom_groups is not None:
             scene_option.geomgroup[:] = 0
             for g in self.perception_geom_groups:
                 if 0 <= g < len(scene_option.geomgroup):
@@ -1185,6 +1218,74 @@ class WorkshopScene:
                 remaining = self.model.opt.timestep - (time.time() - started)
                 if remaining > 0:
                     time.sleep(remaining)
+
+
+def privileged_audit_object_dimensions(scene: WorkshopScene) -> dict[str, dict[str, Any]]:
+    """Privileged audit helper reporting visual mesh dimensions, collision proxy AABB, oracle specs, and manifest metadata."""
+    manifest_path = WORKSHOP_ASSETS_DIR / "manifest.json"
+    manifest_data = {}
+    if manifest_path.is_file():
+        try:
+            m_json = json.loads(manifest_path.read_text(encoding="utf-8"))
+            for asset in m_json.get("assets", []):
+                roles = asset.get("roles", [])
+                for part in asset.get("processed_parts", []):
+                    manifest_data[part["part_id"]] = part
+                    for role in roles:
+                        if role not in manifest_data:
+                            manifest_data[role] = part
+        except Exception:
+            pass
+
+    report: dict[str, dict[str, Any]] = {}
+    for obj_name in ALL_PICKABLE_OBJECT_NAMES:
+        b_id = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_BODY, obj_name)
+        if b_id < 0:
+            continue
+
+        col_min = np.array([np.inf, np.inf, np.inf])
+        col_max = np.array([-np.inf, -np.inf, -np.inf])
+        has_col = False
+        for g_id in range(scene.model.ngeom):
+            if scene.model.geom_bodyid[g_id] == b_id and scene.model.geom_group[g_id] == 3:
+                has_col = True
+                g_pos = scene.model.geom_pos[g_id]
+                g_size = scene.model.geom_size[g_id]
+                g_type = scene.model.geom_type[g_id]
+                if g_type == mujoco.mjtGeom.mjGEOM_CYLINDER:
+                    half_extent = np.array([g_size[0], g_size[0], g_size[1]])
+                elif g_type == mujoco.mjtGeom.mjGEOM_BOX:
+                    half_extent = g_size
+                elif g_type == mujoco.mjtGeom.mjGEOM_SPHERE:
+                    half_extent = np.array([g_size[0], g_size[0], g_size[0]])
+                else:
+                    half_extent = np.zeros(3)
+                col_min = np.minimum(col_min, g_pos - half_extent)
+                col_max = np.maximum(col_max, g_pos + half_extent)
+
+        collision_extents = (col_max - col_min).tolist() if has_col else None
+
+        visual_extents = None
+        for g_id in range(scene.model.ngeom):
+            if scene.model.geom_bodyid[g_id] == b_id and scene.model.geom_group[g_id] == 1:
+                data_meshid = scene.model.geom_dataid[g_id]
+                if data_meshid >= 0:
+                    vert_addr = scene.model.mesh_vertadr[data_meshid]
+                    vert_num = scene.model.mesh_vertnum[data_meshid]
+                    verts = scene.model.mesh_vert[vert_addr : vert_addr + vert_num]
+                    visual_extents = (verts.max(axis=0) - verts.min(axis=0)).tolist()
+
+        oracle_spec = PRIVILEGED_WORKSHOP_ORACLE_SPECS.get(obj_name, {})
+        manifest_entry = manifest_data.get(obj_name, {})
+
+        report[obj_name] = {
+            "visual_mesh_extents_m": visual_extents,
+            "collision_proxy_extents_m": collision_extents,
+            "oracle_spec": oracle_spec,
+            "manifest_canonical_extents_m": manifest_entry.get("canonical_dimensions_m"),
+        }
+
+    return report
 
 
 def list_variants() -> None:

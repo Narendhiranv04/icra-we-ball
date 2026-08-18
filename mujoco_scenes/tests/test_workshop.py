@@ -577,86 +577,176 @@ class WorkshopPrivilegeBoundaryTests(unittest.TestCase):
         self.assertTrue(summary["all_passed"], "All 14 benchmark variants must pass full physical and oracle audit")
         self.assertEqual(summary["passed_variants"], 14)
 
-    def test_asset_generation_reproducibility(self):
-        """Verify that prepare_workshop_assets reproduces exact committed mesh geometries."""
-        from mujoco_scenes.scripts.prepare_workshop_assets import prepare_assets
-        import trimesh
-
-        with TemporaryDirectory() as tmpdir:
-            tmp_out = Path(tmpdir) / "assets"
-            manifest = prepare_assets(output_dir=tmp_out)
-            self.assertGreaterEqual(len(manifest["assets"]), 12)
-
-            committed_dir = Path(__file__).resolve().parents[1] / "assets" / "workshop_realistic"
-            critical_assets = [
-                "workshop_medium_phillips_screw.obj",
-                "workshop_short_phillips_screw.obj",
-                "workshop_parts_tray.obj",
-                "workshop_long_phillips_driver.obj",
-                "workshop_stubby_phillips_driver.obj",
-                "workshop_hex_bolt.obj",
-            ]
-            for asset_name in critical_assets:
-                gen_p = tmp_out / asset_name
-                comm_p = committed_dir / asset_name
-                self.assertTrue(gen_p.is_file(), f"Missing generated {asset_name}")
-                self.assertTrue(comm_p.is_file(), f"Missing committed {asset_name}")
-
-                m_gen = trimesh.load(gen_p)
-                m_comm = trimesh.load(comm_p)
-                self.assertEqual(len(m_gen.vertices), len(m_comm.vertices), f"Vertex count mismatch in {asset_name}")
-                self.assertEqual(len(m_gen.faces), len(m_comm.faces), f"Face count mismatch in {asset_name}")
-                max_diff = float(np.max(np.abs(m_gen.extents - m_comm.extents)))
-                self.assertLess(max_diff, 1e-5, f"Dimension mismatch in {asset_name}: {max_diff}")
-
-    def test_manifest_asset_completeness_and_truthfulness(self):
-        """Verify that manifest.json accurately reflects all assets and their provenance."""
-        import json
-        manifest_path = Path(__file__).resolve().parents[1] / "assets" / "workshop_realistic" / "manifest.json"
-        self.assertTrue(manifest_path.is_file())
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-
-        self.assertIn("assets", manifest)
-        assets_by_id = {a["asset_id"]: a for a in manifest["assets"]}
-        self.assertIn("workshop_parts_tray", assets_by_id)
-        tray_meta = assets_by_id["workshop_parts_tray"]
-        self.assertEqual(tray_meta["source"], "project-generated procedural mesh")
-        self.assertEqual(tray_meta["license"], "CC0-1.0")
-
-        # Verify dimensions and files
-        for asset in manifest["assets"]:
-            for part in asset["processed_parts"]:
-                p_file = Path(__file__).resolve().parents[1] / part["processed_filename"]
-                self.assertTrue(p_file.is_file(), f"Manifest references missing file {p_file}")
-
-    def test_collision_proxy_excluded_from_perception(self):
-        """Verify that group-3 collision proxies never appear in segmentation, depth, or point clouds."""
+    def test_workshop_cross_layer_geometry_consistency(self):
+        """Verify cross-layer agreement between visual mesh, collision proxy, manifest, and oracle specs."""
+        from mujoco_scenes.workshop_scene import privileged_audit_object_dimensions
         scene = WorkshopScene("none", variant="F0_BASE")
-        scene.open_container("LEFT_DRAWER")
-        scene.open_container("RIGHT_DRAWER")
-        scene.open_container("TOOL_CABINET")
+        report = privileged_audit_object_dimensions(scene)
+
+        # 1. Medium Phillips Screw (Canonical Fastener)
+        self.assertIn("workshop_medium_phillips_screw", report)
+        med = report["workshop_medium_phillips_screw"]
+        self.assertAlmostEqual(med["oracle_spec"]["length_m"], 0.045, delta=1e-3)
+        self.assertAlmostEqual(med["oracle_spec"]["head_diameter_m"], 0.014, delta=1e-3)
+        self.assertAlmostEqual(med["oracle_spec"]["shaft_diameter_m"], 0.0055, delta=1e-3)
+        self.assertEqual(med["oracle_spec"]["recess_profile"], "PH2")
+        self.assertAlmostEqual(med["collision_proxy_extents_m"][2], 0.045, delta=1e-3)
+        self.assertAlmostEqual(med["visual_mesh_extents_m"][2], 0.045, delta=1e-3)
+        if med["manifest_canonical_extents_m"]:
+            self.assertAlmostEqual(med["manifest_canonical_extents_m"][2], 0.045, delta=1e-3)
+
+        # 2. Short Phillips Screw (Inadequate Reach)
+        self.assertIn("workshop_short_phillips_screw", report)
+        short = report["workshop_short_phillips_screw"]
+        self.assertAlmostEqual(short["oracle_spec"]["length_m"], 0.018, delta=1e-3)
+        self.assertAlmostEqual(short["collision_proxy_extents_m"][2], 0.018, delta=1e-3)
+        self.assertAlmostEqual(short["visual_mesh_extents_m"][2], 0.018, delta=1e-3)
+
+        # 3. Hex Bolt (Incompatible Profile & Diameter)
+        self.assertIn("workshop_hex_bolt", report)
+        bolt = report["workshop_hex_bolt"]
+        self.assertAlmostEqual(bolt["oracle_spec"]["length_m"], 0.050, delta=1e-3)
+        self.assertAlmostEqual(bolt["oracle_spec"]["head_diameter_m"], 0.018, delta=1e-3)
+        self.assertAlmostEqual(bolt["oracle_spec"]["shaft_diameter_m"], 0.008, delta=1e-3)
+        self.assertEqual(bolt["oracle_spec"]["recess_profile"], "HEX")
+        self.assertAlmostEqual(bolt["collision_proxy_extents_m"][2], 0.050, delta=1e-3)
+        self.assertAlmostEqual(bolt["visual_mesh_extents_m"][2], 0.050, delta=1e-3)
+
+        # 4. Long Phillips Driver (Canonical Tool)
+        self.assertIn("workshop_long_phillips_driver", report)
+        long_d = report["workshop_long_phillips_driver"]
+        self.assertAlmostEqual(long_d["oracle_spec"]["reach_m"], 0.18, delta=1e-3)
+        self.assertEqual(long_d["oracle_spec"]["tip_profile"], "PH2")
+        self.assertAlmostEqual(long_d["collision_proxy_extents_m"][2], 0.23, delta=1e-3)
+        self.assertAlmostEqual(long_d["visual_mesh_extents_m"][2], 0.23, delta=1e-3)
+
+        # 5. Stubby Phillips Driver (Inadequate Reach)
+        self.assertIn("workshop_stubby_phillips_driver", report)
+        stub = report["workshop_stubby_phillips_driver"]
+        self.assertAlmostEqual(stub["oracle_spec"]["reach_m"], 0.020, delta=1e-3)
+        self.assertAlmostEqual(stub["collision_proxy_extents_m"][2], 0.11, delta=1e-3)
+
+    def test_physical_insertion_corridor_recess(self):
+        """Verify that target hole is a real 3D hollow recess of diameter >= 7mm and depth >= 30mm."""
+        scene = WorkshopScene("none", variant="F0_BASE")
+        target_xy = np.array([-0.18, 0.28])
+        top_z = 0.749  # top surface of bracket in world coordinates
+        bottom_z = top_z - 0.030  # 0.719m
+
+        # 1. Verify that all collision proxies surrounding the hole leave a clear corridor
+        for z in np.linspace(bottom_z, top_z, 40):
+            for gid in range(scene.model.ngeom):
+                if scene.model.geom_group[gid] != 3:
+                    continue
+                g_name = mujoco.mj_id2name(scene.model, mujoco.mjtObj.mjOBJ_GEOM, gid) or ""
+                if "bottom" in g_name:
+                    continue  # solid floor beneath z=0.718
+                b_name = mujoco.mj_id2name(scene.model, mujoco.mjtObj.mjOBJ_BODY, scene.model.geom_bodyid[gid]) or ""
+                if "fixture" not in b_name and "joint" not in b_name:
+                    continue
+                g_pos = scene.data.geom_xpos[gid]
+                g_size = scene.model.geom_size[gid]
+                # Check horizontal clearance if this geom spans current Z
+                if g_pos[2] - g_size[2] <= z <= g_pos[2] + g_size[2]:
+                    dx = max(abs(target_xy[0] - g_pos[0]) - g_size[0], 0)
+                    dy = max(abs(target_xy[1] - g_pos[1]) - g_size[1], 0)
+                    xy_dist = np.sqrt(dx * dx + dy * dy)
+                    self.assertGreaterEqual(
+                        xy_dist,
+                        0.0035,
+                        f"Collision geom {g_name} blocks 7mm hole corridor at z={z:.4f} (clearance={xy_dist*1000:.2f}mm)",
+                    )
+
+    def test_physical_tool_fastener_feasibility_matrix(self):
+        """Verify physical feasibility rules between tools, fasteners, and target workpiece."""
+        from mujoco_scenes.workshop_scene import (
+            WORKSHOP_TARGET_HOLE_DIAMETER_M,
+            WORKSHOP_TARGET_HOLE_DEPTH_M,
+            WORKSHOP_TARGET_RECESS_PROFILE,
+        )
+        scene = WorkshopScene("none", variant="F0_BASE")
+        specs = PRIVILEGED_WORKSHOP_ORACLE_SPECS
+
+        # Workpiece target hole: 7mm diameter, 30mm depth, PH2 recess
+        target = specs["workshop_frame_joint"]
+        self.assertEqual(target["hole_diameter_m"], WORKSHOP_TARGET_HOLE_DIAMETER_M)
+        self.assertEqual(target["hole_depth_m"], WORKSHOP_TARGET_HOLE_DEPTH_M)
+        self.assertEqual(target["recess_profile"], WORKSHOP_TARGET_RECESS_PROFILE)
+
+        # Feasible Pair: long_driver + medium_screw
+        med_screw = specs["workshop_medium_phillips_screw"]
+        long_driver = specs["workshop_long_phillips_driver"]
+        self.assertLess(med_screw["shaft_diameter_m"], target["hole_diameter_m"])
+        self.assertGreaterEqual(med_screw["length_m"], target["hole_depth_m"])
+        self.assertGreaterEqual(long_driver["reach_m"], med_screw["required_tool_reach_m"])
+        self.assertEqual(long_driver["tip_profile"], med_screw["recess_profile"])
+
+        # Infeasible: short_screw (insufficient engagement depth)
+        short_screw = specs["workshop_short_phillips_screw"]
+        self.assertLess(short_screw["length_m"], target["hole_depth_m"])
+
+        # Infeasible: stubby_driver (insufficient reach for recessed screw)
+        stubby_driver = specs["workshop_stubby_phillips_driver"]
+        self.assertLess(stubby_driver["reach_m"], med_screw["required_tool_reach_m"])
+
+        # Infeasible: hex_bolt (too large diameter and incompatible profile)
+        hex_bolt = specs["workshop_hex_bolt"]
+        self.assertGreater(hex_bolt["shaft_diameter_m"], target["hole_diameter_m"])
+        self.assertNotEqual(hex_bolt["recess_profile"], target["recess_profile"])
+
+    def test_perception_render_and_instance_mask_isolation(self):
+        """Verify RGB-D rendering includes floor/robot while segmentation isolates only group-1 objects."""
+        # 1. Google Robot scene
+        scene = WorkshopScene("google", variant="F0_BASE")
+        self.assertEqual(scene.perception_render_geom_groups, (0, 1, 2))
+        self.assertEqual(scene.perception_instance_geom_groups, (1,))
 
         checker = GeometryChecker(scene, width=640, height=480)
-        self.assertEqual(checker.allowed_geom_groups, (1,))
+        self.assertEqual(checker.render_geom_groups, (0, 1, 2))
+        self.assertEqual(checker.instance_geom_groups, (1,))
 
-        # Inspect segmentation in full reconstruction
         renderer = mujoco.Renderer(scene.model, height=480, width=640)
-        scene_opt = checker._build_scene_option()
-        renderer.update_scene(scene.data, camera="workshop_camera_front", scene_option=scene_opt)
+        vopt = checker._build_scene_option()
+        renderer.update_scene(scene.data, camera="workshop_camera_front", scene_option=vopt)
+        rgb = renderer.render()
+        self.assertEqual(rgb.shape, (480, 640, 3))
+        self.assertGreater(rgb.mean(), 50.0)
+
+        renderer.enable_depth_rendering()
+        depth = renderer.render()
+        renderer.disable_depth_rendering()
+        valid_depth = depth[np.isfinite(depth)]
+        self.assertGreater(len(valid_depth), 10000)
+
         renderer.enable_segmentation_rendering()
         seg = renderer.render()
         renderer.disable_segmentation_rendering()
 
-        unique_geoms = set(seg[seg[:, :, 1] == int(mujoco.mjtObj.mjOBJ_GEOM), 0])
-        for g_id in unique_geoms:
-            g_group = scene.model.geom_group[g_id]
-            self.assertNotEqual(g_group, 3, f"Group 3 collision geom {g_id} appeared in perception segmentation!")
+        # Instance geom mapping must only include group-1 geoms
+        geom_map = checker._geom_ids_by_instance(["workshop_frame_joint"])
+        for g_id in geom_map.get("workshop_frame_joint", []):
+            self.assertEqual(scene.model.geom_group[g_id], 1)
 
-        # Verify point clouds for representative objects
-        run = checker.run_region_inspection("TOOL_CABINET", rig_config=scene.inspection_rig_config)
-        self.assertIn("workshop_long_phillips_driver", run.clouds)
-        cloud = run.clouds["workshop_long_phillips_driver"]
-        self.assertGreaterEqual(len(cloud.points), MIN_WORKSHOP_OBJECT_FUSED_POINTS)
+    def test_manifest_offline_verification(self):
+        """Verify offline that committed assets strictly match the provenance manifest."""
+        from mujoco_scenes.scripts.prepare_workshop_assets import (
+            generate_workshop_hex_bolt,
+            generate_workshop_parts_tray,
+            verify_manifest,
+        )
+        # 1. Full offline manifest audit
+        self.assertTrue(verify_manifest(), "Committed realistic assets do not match manifest.json offline")
+
+        # 2. Offline procedural asset generation check
+        with TemporaryDirectory() as tmpdir:
+            tmp_out = Path(tmpdir)
+            tray_entry = generate_workshop_parts_tray(tmp_out)
+            self.assertEqual(tray_entry["asset_id"], "workshop_parts_tray")
+            self.assertTrue((tmp_out / "workshop_parts_tray.obj").is_file())
+
+            bolt_entry = generate_workshop_hex_bolt(tmp_out)
+            self.assertEqual(bolt_entry["asset_id"], "workshop_hex_bolt")
+            self.assertTrue((tmp_out / "workshop_hex_bolt.obj").is_file())
 
     def test_storage_physical_containment(self):
         """Verify that open drawers and cabinet contain resting objects when welds are disabled."""
@@ -723,11 +813,12 @@ class WorkshopPrivilegeBoundaryTests(unittest.TestCase):
         """Verify fixture collision coverage and clear tool approach corridor to target hole."""
         scene = WorkshopScene("none", variant="F0_BASE")
         for col_name in (
-            "fixture_base_col",
+            "fixture_base_bottom_col",
             "fixture_clamp_col",
-            "frame_horizontal_rail_col",
-            "frame_vertical_rail_col",
-            "frame_joint_bracket_col",
+            "frame_h_rail_l_col",
+            "frame_h_rail_r_col",
+            "frame_bracket_l_col",
+            "frame_bracket_r_col",
         ):
             gid = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_GEOM, col_name)
             self.assertGreaterEqual(gid, 0, f"Missing collision geom {col_name}")

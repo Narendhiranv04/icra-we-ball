@@ -150,8 +150,18 @@
     <body name="workshop_frame_fixture" pos="-0.08 0.30 0.71">
       <geom name="fixture_base_plate" class="visual" type="box" pos="0 0 0.008"
             size="0.16 0.10 0.008" material="fixture_anodized"/>
-      <geom name="fixture_base_col" class="collision" type="box" pos="0 0 0.008"
-            size="0.16 0.10 0.008"/>
+      <!-- Split fixture base collision: solid bottom slab (0..8mm) + hollow top slab (8..16mm) -->
+      <geom name="fixture_base_bottom_col" class="collision" type="box" pos="0 0 0.004"
+            size="0.16 0.10 0.004"/>
+      <geom name="fixture_base_top_l_col" class="collision" type="box" pos="-0.131875 0 0.012"
+            size="0.028125 0.10 0.004"/>
+      <geom name="fixture_base_top_r_col" class="collision" type="box" pos="0.031875 0 0.012"
+            size="0.128125 0.10 0.004"/>
+      <geom name="fixture_base_top_f_col" class="collision" type="box" pos="-0.10 -0.061875 0.012"
+            size="0.00375 0.038125 0.004"/>
+      <geom name="fixture_base_top_b_col" class="collision" type="box" pos="-0.10 0.041875 0.012"
+            size="0.00375 0.058125 0.004"/>
+
       <geom name="fixture_clamp" class="visual" type="box" pos="0.10 -0.02 0.024"
             size="0.025 0.035 0.012" material="fixture_clamp_mat"/>
       <geom name="fixture_clamp_col" class="collision" type="box" pos="0.10 -0.02 0.024"
@@ -161,19 +171,36 @@
       <body name="workshop_frame_joint" pos="0 0 0.016">
         <geom name="frame_horizontal_rail" class="visual" type="box" pos="0 -0.02 0.010"
               size="0.14 0.024 0.010" material="wood_frame_mat"/>
-        <geom name="frame_horizontal_rail_col" class="collision" type="box" pos="0 -0.02 0.010"
-              size="0.14 0.024 0.010"/>
+        <!-- Split horizontal wood rail collision surrounding the 7mm target hole at x=-0.10, y=-0.02 -->
+        <geom name="frame_h_rail_l_col" class="collision" type="box" pos="-0.121875 -0.02 0.010"
+              size="0.018125 0.024 0.010"/>
+        <geom name="frame_h_rail_r_col" class="collision" type="box" pos="0.021875 -0.02 0.010"
+              size="0.118125 0.024 0.010"/>
+        <geom name="frame_h_rail_f_col" class="collision" type="box" pos="-0.10 -0.033875 0.010"
+              size="0.00375 0.010125 0.010"/>
+        <geom name="frame_h_rail_b_col" class="collision" type="box" pos="-0.10 -0.006125 0.010"
+              size="0.00375 0.010125 0.010"/>
+
         <geom name="frame_vertical_rail" class="visual" type="box" pos="-0.10 0.04 0.010"
               size="0.024 0.050 0.010" material="wood_frame_mat"/>
         <geom name="frame_vertical_rail_col" class="collision" type="box" pos="-0.10 0.04 0.010"
               size="0.024 0.050 0.010"/>
+
         <geom name="frame_joint_bracket" class="visual" type="box" pos="-0.10 -0.02 0.021"
               size="0.030 0.030 0.002" material="dark_steel"/>
-        <geom name="frame_joint_bracket_col" class="collision" type="box" pos="-0.10 -0.02 0.021"
-              size="0.030 0.030 0.002"/>
-        <!-- Clear recessed target screw hole: 7mm diameter, 30mm depth -->
+        <!-- Split bracket collision surrounding the 7mm target hole at x=-0.10, y=-0.02 -->
+        <geom name="frame_bracket_l_col" class="collision" type="box" pos="-0.116875 -0.02 0.021"
+              size="0.013125 0.030 0.002"/>
+        <geom name="frame_bracket_r_col" class="collision" type="box" pos="-0.083125 -0.02 0.021"
+              size="0.013125 0.030 0.002"/>
+        <geom name="frame_bracket_f_col" class="collision" type="box" pos="-0.10 -0.036875 0.021"
+              size="0.00375 0.013125 0.002"/>
+        <geom name="frame_bracket_b_col" class="collision" type="box" pos="-0.10 -0.003125 0.021"
+              size="0.00375 0.013125 0.002"/>
+
+        <!-- Clear recessed target screw hole: 7mm diameter (3.5mm radius), 30mm depth -->
         <geom name="frame_target_hole_inset" class="visual" type="cylinder" pos="-0.10 -0.02 0.0215"
-              size="0.007 0.001" material="target_hole_mat"/>
+              size="0.0035 0.001" material="target_hole_mat"/>
       </body>
     </body>
 

@@ -46,7 +46,6 @@ ASSET_DEFS: dict[str, dict[str, Any]] = {
             "workshop_medium_phillips_screw",
             "workshop_short_phillips_screw",
             "workshop_long_phillips_screw",
-            "workshop_hex_bolt",
         ],
     },
     "screwdriver": {
@@ -255,6 +254,80 @@ def generate_workshop_parts_tray(output_dir: Path) -> dict[str, Any]:
         for face in tray_mesh.faces:
             f.write(f"f {face[0]+1} {face[1]+1} {face[2]+1}\n")
 
+def _record_part(obj_path: Path, tex_path: Path | None, part_id: str) -> dict[str, Any]:
+    """Inspect the saved OBJ mesh and record exact canonical metadata."""
+    loaded = trimesh.load(obj_path)
+    return {
+        "part_id": part_id,
+        "processed_filename": f"assets/workshop_realistic/{obj_path.name}",
+        "processed_sha256": _sha256(obj_path),
+        "texture_file": f"assets/workshop_realistic/{tex_path.name}" if tex_path and tex_path.exists() else None,
+        "texture_sha256": _sha256(tex_path) if tex_path and tex_path.exists() else None,
+        "canonical_dimensions_m": [float(x) for x in loaded.extents],
+        "triangle_count": len(loaded.faces),
+        "vertex_count": len(loaded.vertices),
+    }
+
+
+def generate_workshop_parts_tray(output_dir: Path) -> dict[str, Any]:
+    """Generate deterministic utility parts tray using procedural box concatenation."""
+    # Outer dimensions: 0.22 x 0.14 x 0.032m, wall thickness 0.006m, floor thickness 0.006m
+    length = 0.22
+    width = 0.14
+    height = 0.032
+    wall_t = 0.006
+    floor_t = 0.006
+
+    base = trimesh.creation.box(extents=[length, width, floor_t])
+    base.apply_translation([0, 0, floor_t / 2.0])
+
+    wall_h = height - floor_t
+    wall_z = floor_t + wall_h / 2.0
+
+    left_w = trimesh.creation.box(extents=[wall_t, width, wall_h])
+    left_w.apply_translation([-length / 2.0 + wall_t / 2.0, 0, wall_z])
+
+    right_w = trimesh.creation.box(extents=[wall_t, width, wall_h])
+    right_w.apply_translation([length / 2.0 - wall_t / 2.0, 0, wall_z])
+
+    inner_l = length - 2 * wall_t
+    front_w = trimesh.creation.box(extents=[inner_l, wall_t, wall_h])
+    front_w.apply_translation([0, -width / 2.0 + wall_t / 2.0, wall_z])
+
+    back_w = trimesh.creation.box(extents=[inner_l, wall_t, wall_h])
+    back_w.apply_translation([0, width / 2.0 - wall_t / 2.0, wall_z])
+
+    tray_mesh = trimesh.util.concatenate([base, left_w, right_w, front_w, back_w])
+    tray_mesh = _center_and_ground(tray_mesh)
+
+    tex_path = output_dir / "workshop_parts_tray_diff.png"
+    img = Image.new("RGB", (256, 256), color=(140, 145, 150))
+    draw = ImageDraw.Draw(img)
+    draw.rectangle([10, 10, 245, 245], outline=(100, 105, 110), width=4)
+    img.save(tex_path, format="PNG")
+
+    obj_path = output_dir / "workshop_parts_tray.obj"
+    mtl_path = output_dir / "workshop_parts_tray.mtl"
+
+    mtl_content = (
+        "newmtl material_workshop_parts_tray\n"
+        "Ka 1.000 1.000 1.000\n"
+        "Kd 1.000 1.000 1.000\n"
+        "Ks 0.300 0.300 0.300\n"
+        "Ns 30.000\n"
+        "map_Kd workshop_parts_tray_diff.png\n"
+    )
+    mtl_path.write_text(mtl_content, encoding="utf-8")
+
+    with obj_path.open("w", encoding="utf-8") as f:
+        f.write("# Workshop utility parts tray\n")
+        f.write(f"mtllib {mtl_path.name}\n")
+        f.write("usemtl material_workshop_parts_tray\n\n")
+        for v in tray_mesh.vertices:
+            f.write(f"v {v[0]:.6f} {v[1]:.6f} {v[2]:.6f}\n")
+        for face in tray_mesh.faces:
+            f.write(f"f {face[0]+1} {face[1]+1} {face[2]+1}\n")
+
     return {
         "asset_id": "workshop_parts_tray",
         "human_readable_name": "Workshop Parts Staging Tray",
@@ -263,20 +336,60 @@ def generate_workshop_parts_tray(output_dir: Path) -> dict[str, Any]:
         "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
         "source": "project-generated procedural mesh",
         "source_url": "mujoco_scenes/scripts/prepare_workshop_assets.py",
-        "download_date": str(date.today()),
+        "acquisition_date": "2026-08-18",
         "roles": ["workshop_parts_tray"],
-        "processed_parts": [
-            {
-                "part_id": "workshop_parts_tray",
-                "processed_filename": f"assets/workshop_realistic/{obj_path.name}",
-                "processed_sha256": _sha256(obj_path),
-                "texture_file": f"assets/workshop_realistic/{tex_path.name}",
-                "texture_sha256": _sha256(tex_path),
-                "canonical_dimensions_m": [float(x) for x in tray_mesh.extents],
-                "triangle_count": len(tray_mesh.faces),
-                "vertex_count": len(tray_mesh.vertices),
-            }
-        ],
+        "processed_parts": [_record_part(obj_path, tex_path, "workshop_parts_tray")],
+    }
+
+
+def generate_workshop_hex_bolt(output_dir: Path) -> dict[str, Any]:
+    """Generate deterministic metric M8 hex-head bolt with procedural geometry."""
+    shaft = trimesh.creation.cylinder(radius=0.004, height=0.042, sections=16)
+    shaft.apply_translation([0, 0, 0.021])
+
+    head = trimesh.creation.cylinder(radius=0.009, height=0.008, sections=6)
+    head.apply_translation([0, 0, 0.042 + 0.004])
+
+    bolt_mesh = trimesh.util.concatenate([shaft, head])
+    min_z = bolt_mesh.bounds[0, 2]
+    bolt_mesh.apply_translation([0, 0, -min_z])
+    center_xy = (bolt_mesh.bounds[0, :2] + bolt_mesh.bounds[1, :2]) / 2.0
+    bolt_mesh.apply_translation([-center_xy[0], -center_xy[1], 0])
+
+    obj_path = output_dir / "workshop_hex_bolt.obj"
+    tex_path = output_dir / "screwdrivers_02_diff.png"
+    mtl_path = output_dir / "workshop_hex_bolt.mtl"
+
+    mtl_content = (
+        "newmtl material_workshop_hex_bolt\n"
+        "Ka 1.000 1.000 1.000\n"
+        "Kd 1.000 1.000 1.000\n"
+        "Ks 0.400 0.400 0.400\n"
+        "Ns 40.000\n"
+        "map_Kd screwdrivers_02_diff.png\n"
+    )
+    mtl_path.write_text(mtl_content, encoding="utf-8")
+
+    with obj_path.open("w", encoding="utf-8") as f:
+        f.write("# Workshop metric M8 hex-head bolt\n")
+        f.write(f"mtllib {mtl_path.name}\n")
+        f.write("usemtl material_workshop_hex_bolt\n\n")
+        for v in bolt_mesh.vertices:
+            f.write(f"v {v[0]:.6f} {v[1]:.6f} {v[2]:.6f}\n")
+        for face in bolt_mesh.faces:
+            f.write(f"f {face[0]+1} {face[1]+1} {face[2]+1}\n")
+
+    return {
+        "asset_id": "workshop_hex_bolt",
+        "human_readable_name": "Metric M8 Hex-Head Machine Bolt",
+        "author": "ICRA Benchmark Suite Procedural Generator",
+        "license": "CC0-1.0",
+        "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "source": "project-generated procedural mesh",
+        "source_url": "mujoco_scenes/scripts/prepare_workshop_assets.py",
+        "acquisition_date": "2026-08-18",
+        "roles": ["workshop_hex_bolt"],
+        "processed_parts": [_record_part(obj_path, tex_path, "workshop_hex_bolt")],
     }
 
 
@@ -319,42 +432,29 @@ def prepare_assets(
             if diff_jpg:
                 _convert_texture(diff_jpg, tex_path)
 
-            # Main long phillips screwdriver (from geom 0)
-            long_driver = _center_and_ground(geoms[0])
-            cur_len = long_driver.extents[2]
-            if cur_len > 0:
-                long_driver.apply_scale(0.26 / cur_len)
-            long_driver = _center_and_ground(long_driver)
-            driver_obj = output / "workshop_long_phillips_driver.obj"
-            _write_obj_with_texture(long_driver, driver_obj, tex_name)
-            processed_parts.append({
-                "part_id": "workshop_long_phillips_driver",
-                "processed_filename": f"assets/workshop_realistic/{driver_obj.name}",
-                "processed_sha256": _sha256(driver_obj),
-                "texture_file": f"assets/workshop_realistic/{tex_name}",
-                "texture_sha256": _sha256(tex_path),
-                "canonical_dimensions_m": [float(x) for x in long_driver.extents],
-                "triangle_count": len(long_driver.faces),
-                "vertex_count": len(long_driver.vertices),
-            })
+            first_geom = geoms[0]
 
-            # Stubby phillips screwdriver (scaled shorter shaft)
-            stubby_driver = _center_and_ground(geoms[0])
-            stubby_scale = np.array([1.1, 1.1, 0.13 / cur_len])
-            stubby_driver.apply_scale(stubby_scale)
+            # Long Phillips driver (reach 0.18m, tip 0.006m, length 0.23m)
+            long_driver = _center_and_ground(first_geom)
+            long_max_xy = max(long_driver.extents[0], long_driver.extents[1])
+            long_len = long_driver.extents[2]
+            if long_max_xy > 0 and long_len > 0:
+                long_driver.apply_scale([0.026 / long_max_xy, 0.026 / long_max_xy, 0.23 / long_len])
+            long_driver = _center_and_ground(long_driver)
+            long_obj = output / "workshop_long_phillips_driver.obj"
+            _write_obj_with_texture(long_driver, long_obj, tex_name)
+            processed_parts.append(_record_part(long_obj, tex_path, "workshop_long_phillips_driver"))
+
+            # Stubby Phillips driver (reach 0.020m, length 0.11m)
+            stubby_driver = _center_and_ground(first_geom)
+            stubby_max_xy = max(stubby_driver.extents[0], stubby_driver.extents[1])
+            stubby_len = stubby_driver.extents[2]
+            if stubby_max_xy > 0 and stubby_len > 0:
+                stubby_driver.apply_scale([0.030 / stubby_max_xy, 0.030 / stubby_max_xy, 0.11 / stubby_len])
             stubby_driver = _center_and_ground(stubby_driver)
             stubby_obj = output / "workshop_stubby_phillips_driver.obj"
             _write_obj_with_texture(stubby_driver, stubby_obj, tex_name)
-            processed_parts.append({
-                "part_id": "workshop_stubby_phillips_driver",
-                "processed_filename": f"assets/workshop_realistic/{stubby_obj.name}",
-                "processed_sha256": _sha256(stubby_obj),
-                "texture_file": f"assets/workshop_realistic/{tex_name}",
-                "texture_sha256": _sha256(tex_path),
-                "canonical_dimensions_m": [float(x) for x in stubby_driver.extents],
-                "triangle_count": len(stubby_driver.faces),
-                "vertex_count": len(stubby_driver.vertices),
-            })
+            processed_parts.append(_record_part(stubby_obj, tex_path, "workshop_stubby_phillips_driver"))
 
             # Medium Phillips screw (canonical fastener: length 0.045m, head 0.014m, shaft ~0.0055m)
             second_geom = geoms[1] if len(geoms) > 1 else geoms[0]
@@ -366,16 +466,7 @@ def prepare_assets(
             med_screw = _center_and_ground(med_screw)
             med_obj = output / "workshop_medium_phillips_screw.obj"
             _write_obj_with_texture(med_screw, med_obj, tex_name)
-            processed_parts.append({
-                "part_id": "workshop_medium_phillips_screw",
-                "processed_filename": f"assets/workshop_realistic/{med_obj.name}",
-                "processed_sha256": _sha256(med_obj),
-                "texture_file": f"assets/workshop_realistic/{tex_name}",
-                "texture_sha256": _sha256(tex_path),
-                "canonical_dimensions_m": [float(x) for x in med_screw.extents],
-                "triangle_count": len(med_screw.faces),
-                "vertex_count": len(med_screw.vertices),
-            })
+            processed_parts.append(_record_part(med_obj, tex_path, "workshop_medium_phillips_screw"))
 
             # Short Phillips screw (inadequate reach/engagement: length 0.018m, head 0.014m)
             short_screw = _center_and_ground(second_geom)
@@ -386,16 +477,7 @@ def prepare_assets(
             short_screw = _center_and_ground(short_screw)
             short_obj = output / "workshop_short_phillips_screw.obj"
             _write_obj_with_texture(short_screw, short_obj, tex_name)
-            processed_parts.append({
-                "part_id": "workshop_short_phillips_screw",
-                "processed_filename": f"assets/workshop_realistic/{short_obj.name}",
-                "processed_sha256": _sha256(short_obj),
-                "texture_file": f"assets/workshop_realistic/{tex_name}",
-                "texture_sha256": _sha256(tex_path),
-                "canonical_dimensions_m": [float(x) for x in short_screw.extents],
-                "triangle_count": len(short_screw.faces),
-                "vertex_count": len(short_screw.vertices),
-            })
+            processed_parts.append(_record_part(short_obj, tex_path, "workshop_short_phillips_screw"))
 
             # Long / oversized Phillips screw (too long: length 0.085m, head 0.0105m)
             long_screw = _center_and_ground(second_geom)
@@ -406,35 +488,7 @@ def prepare_assets(
             long_screw = _center_and_ground(long_screw)
             long_obj = output / "workshop_long_phillips_screw.obj"
             _write_obj_with_texture(long_screw, long_obj, tex_name)
-            processed_parts.append({
-                "part_id": "workshop_long_phillips_screw",
-                "processed_filename": f"assets/workshop_realistic/{long_obj.name}",
-                "processed_sha256": _sha256(long_obj),
-                "texture_file": f"assets/workshop_realistic/{tex_name}",
-                "texture_sha256": _sha256(tex_path),
-                "canonical_dimensions_m": [float(x) for x in long_screw.extents],
-                "triangle_count": len(long_screw.faces),
-                "vertex_count": len(long_screw.vertices),
-            })
-
-            # Hex bolt decoy (incompatible fastener: length 0.050m, head ~0.035m)
-            hex_bolt = _center_and_ground(second_geom)
-            hex_len = hex_bolt.extents[2]
-            if hex_len > 0:
-                hex_bolt.apply_scale([1.3, 1.3, 0.050 / hex_len])
-            hex_bolt = _center_and_ground(hex_bolt)
-            bolt_obj = output / "workshop_hex_bolt.obj"
-            _write_obj_with_texture(hex_bolt, bolt_obj, tex_name)
-            processed_parts.append({
-                "part_id": "workshop_hex_bolt",
-                "processed_filename": f"assets/workshop_realistic/{bolt_obj.name}",
-                "processed_sha256": _sha256(bolt_obj),
-                "texture_file": f"assets/workshop_realistic/{tex_name}",
-                "texture_sha256": _sha256(tex_path),
-                "canonical_dimensions_m": [float(x) for x in hex_bolt.extents],
-                "triangle_count": len(hex_bolt.faces),
-                "vertex_count": len(hex_bolt.vertices),
-            })
+            processed_parts.append(_record_part(long_obj, tex_path, "workshop_long_phillips_screw"))
 
         else:
             comb = trimesh.util.concatenate(geoms)
@@ -481,17 +535,7 @@ def prepare_assets(
 
             obj_path = output / f"{asset_id}.obj"
             _write_obj_with_texture(z_up_mesh, obj_path, tex_name)
-
-            processed_parts.append({
-                "part_id": asset_id,
-                "processed_filename": f"assets/workshop_realistic/{obj_path.name}",
-                "processed_sha256": _sha256(obj_path),
-                "texture_file": f"assets/workshop_realistic/{tex_name}",
-                "texture_sha256": _sha256(tex_path) if tex_path.exists() else None,
-                "canonical_dimensions_m": [float(x) for x in z_up_mesh.extents],
-                "triangle_count": len(z_up_mesh.faces),
-                "vertex_count": len(z_up_mesh.vertices),
-            })
+            processed_parts.append(_record_part(obj_path, tex_path, asset_id))
 
         manifest_entries.append({
             "asset_id": asset_id,
@@ -501,7 +545,7 @@ def prepare_assets(
             "license_url": LICENSE_URL,
             "source": "Poly Haven",
             "source_url": f"https://polyhaven.com/a/{asset_id}",
-            "download_date": str(date.today()),
+            "acquisition_date": "2026-08-18",
             "roles": meta["roles"],
             "processed_parts": processed_parts,
         })
@@ -509,6 +553,10 @@ def prepare_assets(
     # Procedural parts tray entry
     tray_entry = generate_workshop_parts_tray(output)
     manifest_entries.append(tray_entry)
+
+    # Procedural metric hex bolt entry
+    bolt_entry = generate_workshop_hex_bolt(output)
+    manifest_entries.append(bolt_entry)
 
     manifest = {
         "schema_version": 1,
@@ -524,10 +572,60 @@ def prepare_assets(
     return manifest
 
 
+def verify_manifest(manifest_path: Path | None = None) -> bool:
+    """Verify offline that committed assets match manifest hashes, counts, and dimensions."""
+    m_path = manifest_path or (DEFAULT_OUTPUT / "manifest.json")
+    if not m_path.is_file():
+        print(f"ERROR: Manifest not found: {m_path}")
+        return False
+    manifest = json.loads(m_path.read_text(encoding="utf-8"))
+    assets = manifest.get("assets", [])
+    all_ok = True
+    base_dir = ROOT
+
+    for asset in assets:
+        for part in asset.get("processed_parts", []):
+            obj_path = base_dir / part["processed_filename"]
+            if not obj_path.is_file():
+                print(f"[FAIL] Missing OBJ: {obj_path}")
+                all_ok = False
+                continue
+            actual_sha = _sha256(obj_path)
+            if actual_sha != part["processed_sha256"]:
+                print(f"[FAIL] Hash mismatch for {part['part_id']}: {actual_sha} != {part['processed_sha256']}")
+                all_ok = False
+            mesh = trimesh.load(obj_path)
+            if len(mesh.faces) != part["triangle_count"] or len(mesh.vertices) != part["vertex_count"]:
+                print(f"[FAIL] Geometry count mismatch for {part['part_id']}")
+                all_ok = False
+            max_dim_err = float(np.max(np.abs(mesh.extents - np.array(part["canonical_dimensions_m"]))))
+            if max_dim_err > 1e-4:
+                print(f"[FAIL] Dimension drift for {part['part_id']}: max error = {max_dim_err:.6f}")
+                all_ok = False
+
+            tex_file = part.get("texture_file")
+            if tex_file:
+                tex_path = base_dir / tex_file
+                if not tex_path.is_file():
+                    print(f"[FAIL] Missing texture: {tex_path}")
+                    all_ok = False
+                elif part.get("texture_sha256") and _sha256(tex_path) != part["texture_sha256"]:
+                    print(f"[FAIL] Texture hash mismatch for {tex_file}")
+                    all_ok = False
+
+    if all_ok:
+        print(f"[PASS] Manifest offline verification passed ({len(assets)} asset families).")
+    return all_ok
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Prepare realistic workshop assets.")
     parser.add_argument("--force", action="store_true", help="Force reprocessing existing files.")
+    parser.add_argument("--verify", action="store_true", help="Verify committed assets against manifest offline.")
     args = parser.parse_args()
+    if args.verify:
+        ok = verify_manifest()
+        raise SystemExit(0 if ok else 1)
     prepare_assets(force=args.force)
 
 
