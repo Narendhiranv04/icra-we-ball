@@ -21,7 +21,6 @@ from mujoco_scenes.workshop_scene import WorkshopScene
 
 
 DEFAULT_PROMPTS = (
-    "protective plate",
     "screwdriver",
     "powered screwdriver",
     "screw",

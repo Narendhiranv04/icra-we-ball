@@ -49,7 +49,6 @@ FORBIDDEN_LEAKAGE_STRINGS = (
     "NARROW_WALL_SHELF",
     "PARTS_TRAY",
     "HARDWARE_BIN",
-    "TOOLBOX_COMPARTMENT",
     # Semantic ground truth
     "phillips",
     "screwdriver",
@@ -242,7 +241,7 @@ def audit_single_variant(
                 )
 
                 if reg_id == "INITIAL":
-                    expected_objs = ["workshop_joint_seal", "workshop_frame_joint"]
+                    expected_objs = ["workshop_frame_joint"]
                 else:
                     expected_objs = list(scene.storage_contents.get(reg_id, []))
 

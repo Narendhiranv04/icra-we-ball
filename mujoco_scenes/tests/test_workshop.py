@@ -151,14 +151,14 @@ class WorkshopSceneTests(unittest.TestCase):
         }
         self.assertNotIn("workshop_long_phillips_driver", initial_backend_names)
         self.assertNotIn("workshop_power_driver", initial_backend_names)
-        self.assertNotIn("workshop_stubby_phillips_driver", initial_backend_names)
+        self.assertNotIn("workshop_flathead_screwdriver", initial_backend_names)
 
         # Open LEFT_DRAWER - open_container returns status dict without object names
         open_res = scene.open_container("LEFT_DRAWER")
         self.assertEqual(open_res["region_id"], "LEFT_DRAWER")
         self.assertTrue(open_res["opened"])
         self.assertTrue(open_res["newly_opened"])
-        self.assertNotIn("workshop_stubby_phillips_driver", open_res)
+        self.assertNotIn("workshop_flathead_screwdriver", open_res)
 
         # Discovery occurs via observation API
         post_open_visible = scene.get_observed_instances()
@@ -166,10 +166,10 @@ class WorkshopSceneTests(unittest.TestCase):
             scene.privileged_backend_name_for_instance(obs["instance_id"])
             for obs in post_open_visible
         }
-        self.assertIn("workshop_stubby_phillips_driver", post_open_names)
+        self.assertIn("workshop_flathead_screwdriver", post_open_names)
         self.assertNotIn("workshop_long_phillips_driver", post_open_names)
         self.assertEqual(
-            scene.get_instance_source_region("workshop_stubby_phillips_driver"),
+            scene.get_instance_source_region("workshop_flathead_screwdriver"),
             "LEFT_DRAWER",
         )
         self.assertIsNone(
@@ -195,29 +195,48 @@ class WorkshopSceneTests(unittest.TestCase):
         surface_ids = [s["region_id"] for s in surfaces]
         self.assertIn("MAIN_WORKBENCH_ZONE", surface_ids)
         self.assertIn("TOOL_CART_TOP", surface_ids)
-        self.assertIn("NARROW_WALL_SHELF", surface_ids)
 
         containers = scene.privileged_get_parts_container_specs()
         container_ids = [c["region_id"] for c in containers]
         self.assertIn("PARTS_TRAY", container_ids)
         self.assertIn("HARDWARE_BIN", container_ids)
 
-    def test_joint_seal_is_stable_and_can_be_moved_to_tray(self):
+    def test_collision_visual_separation_policy(self):
+        """Verify strict separation between visual mesh geoms and invisible collision proxies."""
         scene = WorkshopScene("none", variant="F0_BASE")
-        seal_joint_id = mujoco.mj_name2id(
-            scene.model,
-            mujoco.mjtObj.mjOBJ_JOINT,
-            "workshop_joint_seal_free",
-        )
-        self.assertGreaterEqual(seal_joint_id, 0)
-        self.assertEqual(
-            scene.model.jnt_type[seal_joint_id],
-            mujoco.mjtJoint.mjJNT_FREE,
-        )
-        scene.move_joint_seal_to_tray()
-        state = scene.privileged_get_task_scene_state()
-        self.assertTrue(state["joint_access"]["clear"])
-        self.assertEqual(state["joint_seal_location"], "PARTS_TRAY")
+        for i in range(scene.model.ngeom):
+            name = mujoco.mj_id2name(scene.model, mujoco.mjtObj.mjOBJ_GEOM, i) or ""
+            g_type = scene.model.geom_type[i]
+            contype = scene.model.geom_contype[i]
+            conaffinity = scene.model.geom_conaffinity[i]
+            group = scene.model.geom_group[i]
+            rgba = scene.model.geom_rgba[i]
+
+            # If it's a visual mesh geom
+            if g_type == mujoco.mjtGeom.mjGEOM_MESH or name.endswith("_vis") or name.endswith("_visual"):
+                self.assertEqual(
+                    contype, 0, f"Visual geom {name} has non-zero contype ({contype})"
+                )
+                self.assertEqual(
+                    conaffinity, 0, f"Visual geom {name} has non-zero conaffinity ({conaffinity})"
+                )
+                self.assertEqual(
+                    group, 1, f"Visual geom {name} is not in group 1 ({group})"
+                )
+
+            # If it's a collision proxy
+            if name.endswith("_col") or "_col_" in name:
+                self.assertNotEqual(
+                    contype + conaffinity,
+                    0,
+                    f"Collision proxy {name} has zero contype and conaffinity",
+                )
+                self.assertEqual(
+                    group, 3, f"Collision proxy {name} is not in group 3 ({group})"
+                )
+                self.assertEqual(
+                    rgba[3], 0.0, f"Collision proxy {name} is not transparent ({rgba})"
+                )
 
     def test_all_three_storage_regions_open_and_close(self):
         scene = WorkshopScene("none", variant="F0_BASE")
@@ -353,12 +372,12 @@ class WorkshopSceneTests(unittest.TestCase):
         checker = GeometryChecker(scene, width=640, height=480)
         initial_run = checker.run_region_inspection("INITIAL", rig_config=scene.inspection_rig_config)
         self.assertGreater(
-            len(initial_run.clouds["workshop_joint_seal"].points), 20
+            len(initial_run.clouds["workshop_frame_joint"].points), 20
         )
         scene.open_container("LEFT_DRAWER")
         left_run = checker.run_region_inspection("LEFT_DRAWER", rig_config=scene.inspection_rig_config)
         for instance_name in (
-            "workshop_stubby_phillips_driver",
+            "workshop_flathead_screwdriver",
             "workshop_short_phillips_screw",
         ):
             self.assertIn(instance_name, left_run.clouds)
@@ -508,22 +527,22 @@ class WorkshopPrivilegeBoundaryTests(unittest.TestCase):
 
         self.assertEqual(scene1._backend_to_instance_id, scene2._backend_to_instance_id)
 
-        # ID of joint seal before opening
-        initial_seal_id = [
+        # ID of workpiece target before opening
+        initial_target_id = [
             obs["instance_id"]
             for obs in scene1.get_observed_instances()
-            if scene1.privileged_backend_name_for_instance(obs["instance_id"]) == "workshop_joint_seal"
+            if scene1.privileged_backend_name_for_instance(obs["instance_id"]) == "workshop_frame_joint"
         ][0]
 
         # Open drawer
         scene1.open_container("LEFT_DRAWER")
-        post_open_seal_id = [
+        post_open_target_id = [
             obs["instance_id"]
             for obs in scene1.get_observed_instances()
-            if scene1.privileged_backend_name_for_instance(obs["instance_id"]) == "workshop_joint_seal"
+            if scene1.privileged_backend_name_for_instance(obs["instance_id"]) == "workshop_frame_joint"
         ][0]
 
-        self.assertEqual(initial_seal_id, post_open_seal_id, "Instance ID must not mutate upon container opening")
+        self.assertEqual(initial_target_id, post_open_target_id, "Instance ID must not mutate upon container opening")
 
     def test_privileged_apis_retain_full_ground_truth(self):
         scene = WorkshopScene("none", variant="F0_BASE")

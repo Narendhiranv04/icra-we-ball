@@ -54,7 +54,6 @@ WORKSHOP_FUNCTIONAL_WORK_SURFACES = WORKSHOP_ALL_FUNCTIONAL_WORK_SURFACES
 WORKSHOP_ALL_FUNCTIONAL_PARTS_CONTAINERS = (
     "PARTS_TRAY",
     "HARDWARE_BIN",
-    "TOOLBOX_COMPARTMENT",
 )
 WORKSHOP_FUNCTIONAL_PARTS_CONTAINERS = WORKSHOP_ALL_FUNCTIONAL_PARTS_CONTAINERS
 
@@ -134,18 +133,6 @@ PRIVILEGED_WORKSHOP_ORACLE_SPECS: dict[str, dict[str, Any]] = {
         "bounding_area_m2": 0.018 * 0.014,
         "mass": 0.01,
     },
-    "workshop_long_phillips_screw": {
-        "kind": "long_screw",
-        "functions": ["can_fasten"],
-        "length_m": 0.085,  # Too long for standard hole
-        "head_diameter_m": 0.018,
-        "shaft_diameter_m": 0.009,
-        "recess_profile": "PH2",
-        "recess_width_m": 0.0065,
-        "required_tool_reach_m": 0.025,
-        "bounding_area_m2": 0.085 * 0.018,
-        "mass": 0.03,
-    },
     "workshop_hex_bolt": {
         "kind": "hex_bolt",
         "functions": ["can_fasten"],
@@ -172,26 +159,6 @@ PRIVILEGED_WORKSHOP_ORACLE_SPECS: dict[str, dict[str, Any]] = {
         "bounding_area_m2": 0.21 * 0.04,
         "mass": 0.15,
     },
-    "workshop_ratchet_wrench": {
-        "kind": "ratchet_wrench",
-        "functions": ["can_turn_hex"],
-        "reach_m": 0.12,
-        "bounding_area_m2": 0.24 * 0.045,
-        "mass": 0.22,
-    },
-    "workshop_wooden_mallet": {
-        "kind": "wooden_mallet",
-        "functions": ["can_hammer"],
-        "reach_m": 0.12,
-        "bounding_area_m2": 0.28 * 0.11,
-        "mass": 0.35,
-    },
-    "workshop_joint_seal": {
-        "kind": "protective_joint_seal",
-        "functions": ["seal_cover"],
-        "bounding_area_m2": 0.06 * 0.05,
-        "mass": 0.12,
-    },
     "workshop_frame_joint": {
         "kind": "fixture_held_frame_joint",
         "functions": ["target_workpiece"],
@@ -203,25 +170,24 @@ PRIVILEGED_WORKSHOP_ORACLE_SPECS: dict[str, dict[str, Any]] = {
 
 INITIAL_OBJECTS = (
     ("workshop_frame_joint", "fixture_held_frame_joint"),
-    ("workshop_joint_seal", "protective_joint_seal"),
 )
 
 ALL_PICKABLE_OBJECT_NAMES = tuple(
     name
     for name in PRIVILEGED_WORKSHOP_ORACLE_SPECS.keys()
-    if name not in ("workshop_frame_joint", "workshop_joint_seal")
+    if name != "workshop_frame_joint"
 )
 
 
 # ==============================================================================
 # REUSABLE SIMULATOR OBJECT TEMPLATES
-# Generates top-level free bodies with visual mesh, collision proxy, and freejoint.
+# Generates top-level free bodies with visual mesh, invisible collision proxy, and freejoint.
 # ==============================================================================
 
 def _create_object_element(
     object_name: str, pos: tuple[float, float, float], quat: tuple[float, float, float, float]
 ) -> ET.Element:
-    """Generate an independent free-body MuJoCo XML Element for any workshop object."""
+    """Generate an independent free-body MuJoCo XML Element with strict visual/collision separation."""
     body = ET.Element(
         "body",
         {
@@ -237,60 +203,47 @@ def _create_object_element(
     ET.SubElement(body, "inertial", {"pos": "0 0 0.05", "mass": str(mass), "diaginertia": "0.001 0.001 0.001"})
 
     if object_name == "workshop_long_phillips_driver":
-        ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "type": "mesh", "mesh": "long_driver_mesh", "material": "screwdrivers_visual_mat", "contype": "0", "conaffinity": "0", "group": "1"})
-        ET.SubElement(body, "geom", {"name": f"{object_name}_col_handle", "type": "cylinder", "pos": "0 0 0.07", "size": "0.020 0.07", "material": "bench_steel"})
-        ET.SubElement(body, "geom", {"name": f"{object_name}_col_shaft", "type": "cylinder", "pos": "0 0 0.18", "size": "0.004 0.07", "material": "polished_steel"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "long_driver_mesh", "material": "screwdrivers_visual_mat"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col_handle", "class": "collision", "type": "cylinder", "pos": "0 0 0.05", "size": "0.013 0.05"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col_shaft", "class": "collision", "type": "cylinder", "pos": "0 0 0.17", "size": "0.0035 0.07"})
 
     elif object_name == "workshop_stubby_phillips_driver":
-        ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "type": "mesh", "mesh": "stubby_driver_mesh", "material": "screwdrivers_visual_mat", "contype": "0", "conaffinity": "0", "group": "1"})
-        ET.SubElement(body, "geom", {"name": f"{object_name}_col_handle", "type": "cylinder", "pos": "0 0 0.04", "size": "0.022 0.04", "material": "bench_steel"})
-        ET.SubElement(body, "geom", {"name": f"{object_name}_col_shaft", "type": "cylinder", "pos": "0 0 0.10", "size": "0.005 0.03", "material": "polished_steel"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "stubby_driver_mesh", "material": "screwdrivers_visual_mat"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col_handle", "class": "collision", "type": "cylinder", "pos": "0 0 0.035", "size": "0.015 0.035"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col_shaft", "class": "collision", "type": "cylinder", "pos": "0 0 0.095", "size": "0.0035 0.025"})
 
     elif object_name == "workshop_flathead_screwdriver":
-        ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "type": "mesh", "mesh": "flathead_driver_mesh", "material": "screwdriver_visual_mat", "contype": "0", "conaffinity": "0", "group": "1"})
-        ET.SubElement(body, "geom", {"name": f"{object_name}_col_handle", "type": "cylinder", "pos": "0 0 0.06", "size": "0.018 0.06", "material": "bench_steel"})
-        ET.SubElement(body, "geom", {"name": f"{object_name}_col_shaft", "type": "cylinder", "pos": "0 0 0.15", "size": "0.004 0.06", "material": "polished_steel"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "flathead_driver_mesh", "material": "screwdriver_visual_mat"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col_handle", "class": "collision", "type": "cylinder", "pos": "0 0 0.05", "size": "0.014 0.05"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col_shaft", "class": "collision", "type": "cylinder", "pos": "0 0 0.15", "size": "0.0035 0.05"})
 
     elif object_name == "workshop_power_driver":
-        ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "type": "mesh", "mesh": "power_driver_mesh", "material": "drill_visual_mat", "contype": "0", "conaffinity": "0", "group": "1"})
-        ET.SubElement(body, "geom", {"name": f"{object_name}_col_body", "type": "box", "pos": "0 0 0.08", "size": "0.035 0.08 0.04", "material": "bench_steel"})
-        ET.SubElement(body, "geom", {"name": f"{object_name}_col_handle", "type": "capsule", "fromto": "0 0 0.04 0 -0.08 -0.04", "size": "0.020", "material": "dark_steel"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "power_driver_mesh", "material": "drill_visual_mat"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col_body", "class": "collision", "type": "box", "pos": "0 0 0.08", "size": "0.035 0.08 0.04"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col_handle", "class": "collision", "type": "capsule", "fromto": "0 0 0.04 0 -0.08 -0.04", "size": "0.020"})
 
     elif object_name == "workshop_medium_phillips_screw":
-        ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "type": "mesh", "mesh": "medium_screw_mesh", "material": "screwdrivers_visual_mat", "contype": "0", "conaffinity": "0", "group": "1"})
-        ET.SubElement(body, "geom", {"name": f"{object_name}_col", "type": "cylinder", "pos": "0 0 0.02", "size": "0.008 0.02", "material": "polished_steel"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "medium_screw_mesh", "material": "screwdrivers_visual_mat"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col", "class": "collision", "type": "cylinder", "pos": "0 0 0.0225", "size": "0.004 0.0225"})
 
     elif object_name == "workshop_short_phillips_screw":
-        ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "type": "mesh", "mesh": "short_screw_mesh", "material": "screwdrivers_visual_mat", "contype": "0", "conaffinity": "0", "group": "1"})
-        ET.SubElement(body, "geom", {"name": f"{object_name}_col", "type": "cylinder", "pos": "0 0 0.01", "size": "0.008 0.01", "material": "polished_steel"})
-
-    elif object_name == "workshop_long_phillips_screw":
-        ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "type": "mesh", "mesh": "long_screw_mesh", "material": "screwdrivers_visual_mat", "contype": "0", "conaffinity": "0", "group": "1"})
-        ET.SubElement(body, "geom", {"name": f"{object_name}_col", "type": "cylinder", "pos": "0 0 0.04", "size": "0.009 0.04", "material": "polished_steel"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "short_screw_mesh", "material": "screwdrivers_visual_mat"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col", "class": "collision", "type": "cylinder", "pos": "0 0 0.009", "size": "0.004 0.009"})
 
     elif object_name == "workshop_hex_bolt":
-        ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "type": "mesh", "mesh": "hex_bolt_mesh", "material": "screwdrivers_visual_mat", "contype": "0", "conaffinity": "0", "group": "1"})
-        ET.SubElement(body, "geom", {"name": f"{object_name}_col", "type": "cylinder", "pos": "0 0 0.02", "size": "0.010 0.02", "material": "polished_steel"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "hex_bolt_mesh", "material": "screwdrivers_visual_mat"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col", "class": "collision", "type": "cylinder", "pos": "0 0 0.025", "size": "0.005 0.025"})
 
     elif object_name == "workshop_pliers":
-        ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "type": "mesh", "mesh": "pliers_mesh", "material": "pliers_visual_mat", "contype": "0", "conaffinity": "0", "group": "1"})
-        ET.SubElement(body, "geom", {"name": f"{object_name}_col", "type": "box", "pos": "0 0 0.08", "size": "0.025 0.010 0.08", "material": "polished_steel"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "pliers_mesh", "material": "pliers_visual_mat"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col", "class": "collision", "type": "box", "pos": "0 0 0.095", "size": "0.025 0.008 0.095"})
 
     elif object_name == "workshop_combination_wrench":
-        ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "type": "mesh", "mesh": "combination_wrench_mesh", "material": "wrench_visual_mat", "contype": "0", "conaffinity": "0", "group": "1"})
-        ET.SubElement(body, "geom", {"name": f"{object_name}_col", "type": "box", "pos": "0 0 0.10", "size": "0.015 0.006 0.10", "material": "polished_steel"})
-
-    elif object_name == "workshop_ratchet_wrench":
-        ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "type": "mesh", "mesh": "ratchet_wrench_mesh", "material": "ratchet_visual_mat", "contype": "0", "conaffinity": "0", "group": "1"})
-        ET.SubElement(body, "geom", {"name": f"{object_name}_col", "type": "box", "pos": "0 0 0.11", "size": "0.018 0.008 0.11", "material": "polished_steel"})
-
-    elif object_name == "workshop_wooden_mallet":
-        ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "type": "mesh", "mesh": "wooden_mallet_mesh", "material": "mallet_visual_mat", "contype": "0", "conaffinity": "0", "group": "1"})
-        ET.SubElement(body, "geom", {"name": f"{object_name}_col_head", "type": "box", "pos": "0 0 0.22", "size": "0.055 0.025 0.035", "material": "bench_wood_mat"})
-        ET.SubElement(body, "geom", {"name": f"{object_name}_col_handle", "type": "cylinder", "pos": "0 0 0.10", "size": "0.014 0.10", "material": "bench_wood_mat"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "combination_wrench_mesh", "material": "wrench_visual_mat"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col", "class": "collision", "type": "box", "pos": "0 0 0.105", "size": "0.015 0.005 0.105"})
 
     else:
-        ET.SubElement(body, "geom", {"name": f"{object_name}_col", "type": "box", "size": "0.05 0.05 0.05", "material": "bench_steel"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col", "class": "collision", "type": "box", "size": "0.05 0.05 0.05"})
 
     return body
 
@@ -302,24 +255,24 @@ def _create_object_element(
 def _get_storage_slots(
     layout_swapped: bool = False
 ) -> dict[str, list[tuple[tuple[float, float, float], tuple[float, float, float, float], str]]]:
-    """Return deterministic (pos, quat, parent_body) slots for each storage container."""
+    """Return deterministic resting (pos, quat, parent_body) slots for each storage container."""
     q_flat_x = (0.7071, 0.0, 0.7071, 0.0)
     q_flat_y = (0.7071, 0.7071, 0.0, 0.0)
 
     left_drawer_slots = [
-        ((-0.34, 0.28, 0.485), q_flat_x, "left_tool_drawer"),
-        ((-0.22, 0.32, 0.485), q_flat_x, "left_tool_drawer"),
+        ((-0.22, 0.36, 0.485), q_flat_x, "left_tool_drawer"),
+        ((-0.34, 0.32, 0.485), q_flat_x, "left_tool_drawer"),
+        ((-0.22, 0.28, 0.485), q_flat_x, "left_tool_drawer"),
         ((-0.34, 0.40, 0.485), q_flat_x, "left_tool_drawer"),
-        ((-0.22, 0.40, 0.485), q_flat_x, "left_tool_drawer"),
-        ((-0.28, 0.35, 0.485), q_flat_y, "left_tool_drawer"),
+        ((-0.28, 0.34, 0.485), q_flat_y, "left_tool_drawer"),
     ]
 
     right_drawer_slots = [
-        ((0.22, 0.28, 0.485), q_flat_x, "right_tool_drawer"),
+        ((0.22, 0.36, 0.485), q_flat_x, "right_tool_drawer"),
         ((0.34, 0.32, 0.485), q_flat_x, "right_tool_drawer"),
-        ((0.22, 0.40, 0.485), q_flat_x, "right_tool_drawer"),
+        ((0.22, 0.28, 0.485), q_flat_x, "right_tool_drawer"),
         ((0.34, 0.40, 0.485), q_flat_x, "right_tool_drawer"),
-        ((0.28, 0.35, 0.485), q_flat_y, "right_tool_drawer"),
+        ((0.28, 0.34, 0.485), q_flat_y, "right_tool_drawer"),
     ]
 
     cab_x = -0.38 if layout_swapped else 0.38
@@ -381,8 +334,6 @@ def build_workshop_xml(
                 body.set("pos", "-0.38 0.54 0.71")
             elif b_name == "workshop_tool_cart":
                 body.set("pos", "-0.95 0.35 0")
-            elif b_name == "workshop_narrow_shelf":
-                body.set("pos", "0.70 0.68 1.05")
             elif b_name == "workshop_parts_tray":
                 body.set("pos", "0.42 0.22 0.71")
             elif b_name == "workshop_hardware_bin":
@@ -399,33 +350,84 @@ def build_workshop_xml(
             obs_body,
             "geom",
             {
-                "name": "obstruction_crate",
+                "name": "obstruction_case_vis",
+                "class": "visual",
                 "type": "box",
-                "size": "0.24 0.15 0.04",
-                "material": "bench_steel",
+                "size": "0.20 0.12 0.035",
+                "material": "obstruction_case_mat",
             },
         )
         ET.SubElement(
             obs_body,
             "geom",
             {
-                "name": "obstruction_warning_tape",
+                "name": "obstruction_case_col",
+                "class": "collision",
                 "type": "box",
-                "pos": "0 0 0.042",
-                "size": "0.23 0.14 0.002",
-                "material": "tab_yellow",
+                "size": "0.20 0.12 0.035",
             },
         )
 
     if "TOOL_CART_TOP" not in active_surfaces:
         for body in list(worldbody):
-            if body.get("name") in ("workshop_tool_cart", "workshop_toolbox_compartment"):
+            if body.get("name") == "workshop_tool_cart":
                 worldbody.remove(body)
 
-    if "NARROW_WALL_SHELF" not in active_surfaces:
-        for body in list(worldbody):
-            if body.get("name") == "workshop_narrow_shelf":
-                worldbody.remove(body)
+    # Optional NARROW_WALL_SHELF: present only when explicitly declared in active_surfaces
+    if "NARROW_WALL_SHELF" in active_surfaces:
+        shelf_pos = "0.70 0.68 1.05" if is_swapped else "-0.70 0.68 1.05"
+        shelf_body = ET.SubElement(
+            worldbody,
+            "body",
+            {"name": "workshop_narrow_shelf", "pos": shelf_pos},
+        )
+        ET.SubElement(
+            shelf_body,
+            "geom",
+            {
+                "name": "narrow_shelf_bracket_l",
+                "class": "visual",
+                "type": "box",
+                "pos": "-0.18 -0.08 -0.08",
+                "size": "0.015 0.08 0.08",
+                "material": "dark_steel",
+            },
+        )
+        ET.SubElement(
+            shelf_body,
+            "geom",
+            {
+                "name": "narrow_shelf_bracket_r",
+                "class": "visual",
+                "type": "box",
+                "pos": "0.18 -0.08 -0.08",
+                "size": "0.015 0.08 0.08",
+                "material": "dark_steel",
+            },
+        )
+        ET.SubElement(
+            shelf_body,
+            "geom",
+            {
+                "name": "narrow_shelf_top_vis",
+                "class": "visual",
+                "type": "box",
+                "pos": "0 -0.08 0",
+                "size": "0.24 0.07 0.015",
+                "material": "shelf_wood",
+            },
+        )
+        ET.SubElement(
+            shelf_body,
+            "geom",
+            {
+                "name": "narrow_shelf_top_col",
+                "class": "collision",
+                "type": "box",
+                "pos": "0 -0.08 0",
+                "size": "0.24 0.07 0.015",
+            },
+        )
 
     # 3. Apply active/inactive parts container modifications
     if "PARTS_TRAY" not in active_containers:
@@ -436,11 +438,6 @@ def build_workshop_xml(
     if "HARDWARE_BIN" not in active_containers:
         for body in list(worldbody):
             if body.get("name") == "workshop_hardware_bin":
-                worldbody.remove(body)
-
-    if "TOOLBOX_COMPARTMENT" not in active_containers:
-        for body in list(worldbody):
-            if body.get("name") == "workshop_toolbox_compartment":
                 worldbody.remove(body)
 
     # 4. Instantiate declared storage objects into deterministic slots
@@ -562,9 +559,6 @@ def privileged_actual_parts_container_regions(scene: WorkshopScene) -> list[str]
 
     if mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_hardware_bin") >= 0:
         available.append("HARDWARE_BIN")
-
-    if mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_toolbox_compartment") >= 0:
-        available.append("TOOLBOX_COMPARTMENT")
 
     return available
 
@@ -718,7 +712,6 @@ class WorkshopObservationState:
         default_factory=lambda: {region_id: False for region_id in WORKSHOP_REGIONS}
     )
     joint_repaired: bool = False
-    joint_seal_location: str = "FRAME_JOINT"
 
 
 class WorkshopScene:
@@ -860,7 +853,7 @@ class WorkshopScene:
         }
 
     def get_candidate_regions(self) -> list[dict[str, Any]]:
-        """Return neutral candidate spatial region proposals based on physical scene presence."""
+        """Return neutral candidate spatial region proposals based strictly on physical scene presence."""
         is_swapped = self.variant_name == "F6_LAYOUT_SWAPPED"
         proposals = []
 
@@ -912,7 +905,7 @@ class WorkshopScene:
         # 4. PARTS_TRAY: parts tray physically present
         if mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_parts_tray") >= 0:
             center = [0.42 if is_swapped else -0.42, 0.22, 0.71]
-            dim = [0.28, 0.18, 0.04]
+            dim = [0.22, 0.14, 0.035]
             proposals.append(
                 {
                     "region_instance_id": self._backend_to_region_id["PARTS_TRAY"],
@@ -936,21 +929,6 @@ class WorkshopScene:
                         "maximum_world_m": [center[0] + dim[0] / 2, center[1] + dim[1] / 2, center[2] + dim[2] / 2],
                     },
                     "observation_source": "workbench",
-                }
-            )
-
-        # 6. TOOLBOX_COMPARTMENT: toolbox compartment physically present
-        if mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_toolbox_compartment") >= 0:
-            center = [-0.95 if is_swapped else 0.95, 0.35, 0.85]
-            dim = [0.36, 0.18, 0.14]
-            proposals.append(
-                {
-                    "region_instance_id": self._backend_to_region_id["TOOLBOX_COMPARTMENT"],
-                    "proposal_bounds_m": {
-                        "minimum_world_m": [center[0] - dim[0] / 2, center[1] - dim[1] / 2, center[2] - dim[2] / 2],
-                        "maximum_world_m": [center[0] + dim[0] / 2, center[1] + dim[1] / 2, center[2] + dim[2] / 2],
-                    },
-                    "observation_source": "cart",
                 }
             )
 
@@ -1037,8 +1015,8 @@ class WorkshopScene:
                     0.22,
                     0.71,
                 ],
-                "dimensions_m": [0.28, 0.18, 0.04],
-                "cavity_volume_m3": 0.26 * 0.16 * 0.035,
+                "dimensions_m": [0.22, 0.14, 0.035],
+                "cavity_volume_m3": 0.20 * 0.12 * 0.026,
                 "is_open": True,
             },
             {
@@ -1050,17 +1028,6 @@ class WorkshopScene:
                 ],
                 "dimensions_m": [0.15, 0.11, 0.08],
                 "cavity_volume_m3": 0.14 * 0.10 * 0.07,
-                "is_open": True,
-            },
-            {
-                "region_id": "TOOLBOX_COMPARTMENT",
-                "center_world_m": [
-                    -0.95 if self.variant_name == "F6_LAYOUT_SWAPPED" else 0.95,
-                    0.35,
-                    0.85,
-                ],
-                "dimensions_m": [0.36, 0.18, 0.14],
-                "cavity_volume_m3": 0.34 * 0.16 * 0.12,
                 "is_open": True,
             },
         ]
@@ -1109,7 +1076,7 @@ class WorkshopScene:
         """Return production-safe task observation state (zero privileged metadata)."""
         return {
             "joint_access": {
-                "clear": self.state.joint_seal_location != "FRAME_JOINT",
+                "clear": True,
             },
             "containers": {
                 region_id: {"open": self.state.container_open_state[region_id]}
@@ -1123,38 +1090,14 @@ class WorkshopScene:
             "variant": self.variant_name,
             "joint_repaired": self.state.joint_repaired,
             "joint_access": {
-                "clear": self.state.joint_seal_location != "FRAME_JOINT",
-                "covered_by": (
-                    "workshop_joint_seal"
-                    if self.state.joint_seal_location == "FRAME_JOINT"
-                    else None
-                ),
+                "clear": True,
+                "covered_by": None,
             },
-            "joint_seal_location": self.state.joint_seal_location,
             "containers": {
                 region_id: {"open": self.state.container_open_state[region_id]}
                 for region_id in WORKSHOP_REGIONS
             },
         }
-
-    def move_joint_seal_to_tray(self, steps: int = 300) -> None:
-        """Debug helper to move the seal cover to the parts tray."""
-        joint_id = mujoco.mj_name2id(
-            self.model,
-            mujoco.mjtObj.mjOBJ_JOINT,
-            "workshop_joint_seal_free",
-        )
-        if joint_id >= 0:
-            tray_x = 0.42 if self.variant_name == "F6_LAYOUT_SWAPPED" else -0.42
-            qpos_adr = self.model.jnt_qposadr[joint_id]
-            self.data.qpos[qpos_adr : qpos_adr + 3] = (tray_x, 0.22, 0.73)
-            self.data.qpos[qpos_adr + 3 : qpos_adr + 7] = (1.0, 0.0, 0.0, 0.0)
-            dof_adr = self.model.jnt_dofadr[joint_id]
-            self.data.qvel[dof_adr : dof_adr + 6] = 0.0
-            mujoco.mj_forward(self.model, self.data)
-            for _ in range(steps):
-                mujoco.mj_step(self.model, self.data)
-        self.state.joint_seal_location = "PARTS_TRAY"
 
     def _container_actuator_id(self, region_id: str) -> int:
         actuator_name = {
@@ -1257,7 +1200,6 @@ def main() -> None:
     parser.add_argument("--viewer", action="store_true")
     parser.add_argument("--camera", default=FREE_CAMERA)
     parser.add_argument("--open", choices=WORKSHOP_REGIONS + ("ALL",), action="append", default=[])
-    parser.add_argument("--remove-seal", action="store_true")
     parser.add_argument("--render", type=str, default=None, help="Render frame to PNG file.")
     arguments = parser.parse_args()
 
@@ -1273,9 +1215,6 @@ def main() -> None:
                 scene.open_container(reg)
         else:
             scene.open_container(region_id)
-
-    if arguments.remove_seal:
-        scene.move_joint_seal_to_tray()
 
     scene.print_scene_summary()
 
