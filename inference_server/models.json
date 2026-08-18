@@ -10,6 +10,28 @@
       "max_model_len": 32768,
       "max_concurrency": 2,
       "max_images": 8,
+      "planner": {
+        "thinking_mode": "toggle",
+        "max_tokens": 12288,
+        "sampling": {
+          "thinking": {
+            "temperature": 1.0,
+            "top_p": 0.95,
+            "top_k": 20,
+            "min_p": 0.0,
+            "presence_penalty": 1.5,
+            "repetition_penalty": 1.0
+          },
+          "direct": {
+            "temperature": 0.7,
+            "top_p": 0.8,
+            "top_k": 20,
+            "min_p": 0.0,
+            "presence_penalty": 1.5,
+            "repetition_penalty": 1.0
+          }
+        }
+      },
       "vllm": {
         "args": [
           "--reasoning-parser",
@@ -33,8 +55,36 @@
       "max_model_len": 16384,
       "max_concurrency": 1,
       "max_images": 8,
-      "vllm": {"args": []},
-      "sglang": {"args": []},
+      "planner": {
+        "thinking_mode": "toggle",
+        "max_tokens": 12288,
+        "sampling": {
+          "thinking": {
+            "temperature": 0.8,
+            "top_p": 0.6,
+            "top_k": 2,
+            "repetition_penalty": 1.1
+          },
+          "direct": {
+            "temperature": 0.8,
+            "top_p": 0.6,
+            "top_k": 2,
+            "repetition_penalty": 1.1
+          }
+        }
+      },
+      "vllm": {
+        "args": [
+          "--reasoning-parser",
+          "glm45"
+        ]
+      },
+      "sglang": {
+        "args": [
+          "--reasoning-parser",
+          "glm45"
+        ]
+      },
       "notes": "The official BF16 checkpoint is about 20.6 GB and fits a 32 GB 5090 at this bounded context."
     },
     "qwen3-vl-8b-thinking": {
@@ -46,6 +96,19 @@
       "max_model_len": 32768,
       "max_concurrency": 2,
       "max_images": 8,
+      "planner": {
+        "thinking_mode": "always",
+        "max_tokens": 12288,
+        "sampling": {
+          "thinking": {
+            "temperature": 1.0,
+            "top_p": 0.95,
+            "top_k": 20,
+            "presence_penalty": 0.0,
+            "repetition_penalty": 1.0
+          }
+        }
+      },
       "vllm": {
         "args": [
           "--reasoning-parser",
@@ -69,6 +132,19 @@
       "max_model_len": 16384,
       "max_concurrency": 1,
       "max_images": 8,
+      "planner": {
+        "thinking_mode": "always",
+        "max_tokens": 12288,
+        "structured_output": false,
+        "reasoning_markers": ["<think>", "</think>"],
+        "system_prompt_prefix": "Reason through the task inside <think> and </think> tags. After </think>, return only the requested final JSON object. Never include reasoning in that JSON.",
+        "sampling": {
+          "thinking": {
+            "temperature": 0.6,
+            "top_p": 0.95
+          }
+        }
+      },
       "vllm": {
         "quantization": "fp8_per_tensor",
         "args": []
@@ -89,6 +165,17 @@
       "max_concurrency": 1,
       "max_images": 8,
       "trust_remote_code": true,
+      "planner": {
+        "thinking_mode": "always",
+        "max_tokens": 12288,
+        "structured_output": false,
+        "reasoning_markers": ["◁think▷", "◁/think▷"],
+        "sampling": {
+          "thinking": {
+            "temperature": 0.6
+          }
+        }
+      },
       "vllm": {
         "quantization": "fp8_per_tensor",
         "args": []

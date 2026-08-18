@@ -524,6 +524,41 @@ fresh client: native `uv`/vLLM setup on the Fish-based GPU server, both server
 processes, keyless loopback binding, the two-port SSH tunnel from Bash, camera
 image transfer, prompt submission, shutdown, and common failure modes.
 
+The non-Qwen profiles are now wired through the same functional API rather
+than merely listed as launch placeholders. Every registry entry contains its
+own planner mode, sampling values, and output budget. Qwen3.5 and
+GLM-4.6V-Flash support a thinking/non-thinking toggle; GLM launches with the
+vLLM `glm45` reasoning parser. Qwen3-VL-8B-Thinking and
+Kimi-VL-A3B-Thinking-2506 are fixed-thinking checkpoints. InternVL3.5-14B-HF
+now also defaults to its prompt-driven thinking mode, using temperature 0.6,
+top-p 0.95, and a 12,288-token output budget. Qwen3-VL uses presence
+penalty 0 rather than the Qwen3.5 setting, and the other profiles likewise no
+longer inherit Qwen3.5 sampling accidentally.
+
+All thinking samplers were checked against the current checkpoint guidance and
+are protected by a regression test: Qwen3.5 uses temperature 1.0/top-p
+0.95/top-k 20/min-p 0/presence 1.5/repetition 1.0; GLM-4.6V-Flash uses
+0.8/0.6/2/repetition 1.1; Qwen3-VL visual inference uses 1.0/0.95/20/presence
+0/repetition 1.0; InternVL thinking uses temperature 0.6/top-p 0.95; and Kimi
+2506 uses temperature 0.6 from that checkpoint's bundled generation config.
+The common 12,288-token planner cap is a local deployment bound, not a claim
+that it is the creator-recommended maximum output length.
+
+`server.py` now permits a missing inference API key only when the raw model
+server is bound to loopback. This makes the registry-backed native command
+usable with the existing SSH tunnel: set `INFERENCE_MODEL`, set
+`INFERENCE_HOST=127.0.0.1`, erase `INFERENCE_API_KEY`, and run
+`python3 inference_server/server.py`. Network-facing and Docker launches still
+require a key. `NEW_PC_SETUP.md` contains the exact Fish commands for switching
+both the model process and the planner process between all five profiles.
+
+InternVL and Kimi are intentionally experimental for functional JSON because
+their reasoning modes are not connected to dedicated vLLM parsers here. Their
+requests embed the JSON schema in the prompt, strip `<think>` or `◁think▷`
+markers, extract the final object, and apply the same deterministic validator.
+Raw multimodal serving is still available if a sample fails that contract.
+`blobfile` was added to the native requirements for Kimi's remote model code.
+
 `./serve up MODEL --detach` starts the raw OpenAI-compatible model backend on
 port 8000 and an authenticated functional-decomposition API on port 8080. The
 direct VLM action planner was removed because action sequencing belongs after
@@ -564,12 +599,14 @@ test and functional client likewise omit rather than fabricate Authorization hea
 This is intended for the user's `ssh -L` workflow; network-facing Docker
 deployment remains authenticated.
 
-Qwen3.5 thinking is currently enabled for functional decomposition through
+Qwen3.5 thinking is enabled for functional decomposition through
 `chat_template_kwargs.enable_thinking=true`. It can be disabled without a code
-change using `PLANNER_ENABLE_THINKING=false` for the low-latency ablation. The
-output budget is 8,192 tokens. A reasoning-only or otherwise null final response
-reports the finish reason and recommends either increasing the budget or
-disabling thinking.
+change using `PLANNER_ENABLE_THINKING=false` for the low-latency ablation. Its
+profile output budget is 12,288 tokens. A reasoning-only or otherwise null
+final response reports the finish reason and recommends increasing the budget
+or, for a toggleable checkpoint, disabling thinking. Empty
+`PLANNER_MAX_TOKENS` and `PLANNER_ENABLE_THINKING` values now select the model
+profile defaults.
 
 Do not use greedy decoding for Qwen3.5 thinking. It repeatedly consumed the
 entire 4K, 8K, and 12K budgets without reaching final JSON. Functional requests
@@ -587,7 +624,7 @@ does not provide that GPU or download the checkpoints.
 The latest complete repository test result is:
 
 ```text
-388 passed, 4 skipped, 14 warnings
+395 passed, 4 skipped, 14 warnings
 ```
 
 The warnings were matplotlib/pyparsing deprecations, not test failures. The

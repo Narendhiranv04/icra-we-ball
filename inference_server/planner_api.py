@@ -50,15 +50,37 @@ def config_from_env(environ: dict[str, str] | None = None) -> tuple[PlannerConfi
     incoming_key = values.get("PLANNER_API_KEY", "").strip() or upstream_key
     profile_name = values.get("INFERENCE_MODEL", "").strip()
     model = values.get("PLANNER_MODEL", "").strip()
+    profile = None
     if not model and profile_name:
         profile = load_profiles().get(profile_name)
         if profile and profile.get("available", True):
             model = str(profile["served_name"])
     if not model:
         raise ValueError("PLANNER_MODEL or INFERENCE_MODEL is required")
+    if profile is None and profile_name:
+        profile = load_profiles().get(profile_name)
+    planner = profile.get("planner", {}) if profile else {}
+    thinking_mode = str(planner.get("thinking_mode", "toggle"))
+    if thinking_mode not in {"toggle", "always", "none"}:
+        raise ValueError(f"Invalid planner thinking mode {thinking_mode!r}")
+    default_thinking = thinking_mode != "none"
+    enable_thinking = _boolean_env(
+        values, "PLANNER_ENABLE_THINKING", default_thinking
+    )
+    if thinking_mode == "always" and not enable_thinking:
+        raise ValueError(f"{profile_name} is a fixed-thinking checkpoint")
+    if thinking_mode == "none" and enable_thinking:
+        raise ValueError(f"{profile_name} has no configured thinking mode")
+    sampling_name = "thinking" if enable_thinking else "direct"
+    sampling_profiles = planner.get("sampling", {})
+    sampling = sampling_profiles.get(sampling_name) if sampling_profiles else None
+    if sampling is not None and not isinstance(sampling, dict):
+        raise ValueError(f"Invalid {profile_name or model} planner sampling profile")
     timeout = float(values.get("PLANNER_MODEL_TIMEOUT_SECONDS", "300"))
-    max_tokens = int(values.get("PLANNER_MAX_TOKENS", "8192"))
-    enable_thinking = _boolean_env(values, "PLANNER_ENABLE_THINKING", True)
+    max_tokens = int(
+        values.get("PLANNER_MAX_TOKENS", "").strip()
+        or planner.get("max_tokens", 8192)
+    )
     port = int(values.get("PLANNER_PORT", "8080"))
     host = values.get("PLANNER_HOST", "127.0.0.1").strip()
     if timeout <= 0 or max_tokens <= 0 or not 1 <= port <= 65535:
@@ -72,6 +94,19 @@ def config_from_env(environ: dict[str, str] | None = None) -> tuple[PlannerConfi
         timeout_seconds=timeout,
         max_tokens=max_tokens,
         enable_thinking=enable_thinking,
+        sampling=sampling,
+        chat_template_kwargs=(
+            {"enable_thinking": enable_thinking}
+            if thinking_mode == "toggle"
+            else {}
+        ),
+        structured_output=bool(planner.get("structured_output", True)),
+        reasoning_markers=(
+            tuple(planner["reasoning_markers"])
+            if planner.get("reasoning_markers")
+            else None
+        ),
+        system_prompt_prefix=str(planner.get("system_prompt_prefix", "")),
     )
     return config, incoming_key, host, port
 
@@ -112,6 +147,9 @@ class Handler(BaseHTTPRequestHandler):
                     "status": "ok",
                     "service": "functional-planner",
                     "model": self.server.planner.config.model,
+                    "thinking_enabled": self.server.planner.config.enable_thinking,
+                    "structured_output": self.server.planner.config.structured_output,
+                    "max_tokens": self.server.planner.config.max_tokens,
                 },
             )
             return

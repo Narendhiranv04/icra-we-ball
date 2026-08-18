@@ -1,4 +1,4 @@
-# Run Qwen on the GPU server from a new PC
+# Run the VLM inference profiles from a new PC
 
 This guide recreates the current native, keyless SSH-tunnel setup. It uses:
 
@@ -62,13 +62,14 @@ cd ~/SearchTAMP
 uv venv --python 3.11 .venv-qwen35
 source .venv-qwen35/bin/activate.fish
 
-uv pip install vllm --torch-backend=auto \
+uv pip install vllm blobfile --torch-backend=auto \
   --extra-index-url https://wheels.vllm.ai/nightly
 ```
 
-Qwen3.5 requires a recent vLLM build. The checkpoint is public, so no
-Hugging Face token is required. vLLM downloads `Qwen/Qwen3.5-9B` automatically
-on the first launch and reuses the Hugging Face cache afterward.
+Qwen3.5 requires a recent vLLM build. The listed checkpoints are public, so no
+Hugging Face token is required. vLLM downloads the selected model automatically
+on first launch and reuses the Hugging Face cache afterward. `blobfile` covers
+Kimi-VL's remote model code.
 
 Verify the GPU before starting the model:
 
@@ -129,6 +130,66 @@ python3 inference_server/planner_api.py
 
 Leave this shell running too. Only `planner_api.py` must be restarted after a
 prompt, schema, catalog, or planner configuration change. vLLM can keep running.
+
+### Switch to another model
+
+Stop both processes with `Ctrl-C`. In shell A, use the registry-backed launcher
+instead of writing a new vLLM command:
+
+```fish
+cd ~/SearchTAMP
+source .venv-qwen35/bin/activate.fish
+
+set -x INFERENCE_MODEL glm46v-flash
+set -x INFERENCE_HOST 127.0.0.1
+set -x INFERENCE_CONTAINER_PORT 8000
+set -e INFERENCE_API_KEY
+
+python3 inference_server/server.py
+```
+
+Valid profile values are:
+
+```text
+qwen35-9b
+glm46v-flash
+qwen3-vl-8b-thinking
+internvl35-14b
+kimi-vl-a3b-thinking
+```
+
+In shell B, select the same profile and let it supply its own planner defaults:
+
+```fish
+cd ~/SearchTAMP
+source .venv-qwen35/bin/activate.fish
+
+set -x INFERENCE_MODEL glm46v-flash
+set -x PLANNER_MODEL_BASE_URL http://127.0.0.1:8000/v1
+set -x PLANNER_HOST 127.0.0.1
+set -x PLANNER_PORT 8080
+set -x PLANNER_MODEL_TIMEOUT_SECONDS 300
+
+set -e PLANNER_MODEL
+set -e PLANNER_ENABLE_THINKING
+set -e PLANNER_MAX_TOKENS
+set -e INFERENCE_API_KEY
+set -e PLANNER_API_KEY
+
+python3 inference_server/planner_api.py
+```
+
+The functional client command on the local PC does not change. The `/health`
+response should show the newly selected served profile. Run one model at a
+time. InternVL and Kimi are loaded with online FP8 to leave room on the 32 GB
+5090; if either fails during startup, first retry with
+`set -x INFERENCE_MAX_MODEL_LEN 8192` and
+`set -x INFERENCE_GPU_MEMORY_UTILIZATION 0.90`.
+
+InternVL and Kimi use prompt-driven reasoning without dedicated vLLM parsers in
+this setup, so their functional JSON modes are experimental. The gateway strips
+their thinking blocks and validates the final JSON. A validation failure is not
+an execution failure; it means that sample did not satisfy the planner schema.
 
 ## 5. Open the tunnel from the client PC
 

@@ -17,6 +17,10 @@ MODEL_REGISTRY = ROOT / "models.json"
 BACKENDS = ("vllm", "sglang")
 
 
+def _is_loopback(host: str) -> bool:
+    return host.strip().strip("[]").lower() in {"127.0.0.1", "::1", "localhost"}
+
+
 def load_profiles(path: str | Path = MODEL_REGISTRY) -> dict[str, dict[str, Any]]:
     document = json.loads(Path(path).read_text(encoding="utf-8"))
     if document.get("schema_version") != 1:
@@ -77,15 +81,14 @@ def build_command(
     profiles: Mapping[str, dict[str, Any]] | None = None,
 ) -> list[str]:
     _profile_name, profile, backend = resolve_profile(environ, profiles)
-    api_key = environ.get("INFERENCE_API_KEY", "").strip()
-    if not api_key:
-        raise ValueError("INFERENCE_API_KEY is required")
-
     model_id = environ.get("INFERENCE_MODEL_ID", "").strip() or profile["model_id"]
     served_name = environ.get("INFERENCE_SERVED_NAME", "").strip() or profile[
         "served_name"
     ]
     host = _setting(environ, "INFERENCE_HOST", "0.0.0.0")
+    api_key = environ.get("INFERENCE_API_KEY", "").strip()
+    if not api_key and not _is_loopback(host):
+        raise ValueError("INFERENCE_API_KEY is required for a non-loopback host")
     port = _setting(environ, "INFERENCE_CONTAINER_PORT", "8000")
     tensor_parallel = _positive_int(
         _setting(environ, "INFERENCE_TENSOR_PARALLEL_SIZE", 1),
@@ -116,8 +119,6 @@ def build_command(
             host,
             "--port",
             port,
-            "--api-key",
-            api_key,
             "--tensor-parallel-size",
             str(tensor_parallel),
             "--max-model-len",
@@ -132,6 +133,8 @@ def build_command(
             "--generation-config",
             "vllm",
         ]
+        if api_key:
+            command.extend(("--api-key", api_key))
         max_images = int(profile.get("max_images", 0))
         if max_images:
             command.extend(
@@ -153,8 +156,6 @@ def build_command(
             host,
             "--port",
             port,
-            "--api-key",
-            api_key,
             "--tp-size",
             str(tensor_parallel),
             "--context-length",
@@ -166,6 +167,8 @@ def build_command(
             "--dtype",
             "bfloat16",
         ]
+        if api_key:
+            command.extend(("--api-key", api_key))
 
     if profile.get("trust_remote_code"):
         command.append("--trust-remote-code")

@@ -258,7 +258,7 @@ class FunctionalPlannerTests(unittest.TestCase):
         )
         self.assertEqual(config.model, "qwen35-9b")
         self.assertTrue(config.enable_thinking)
-        self.assertEqual(config.max_tokens, 8192)
+        self.assertEqual(config.max_tokens, 12288)
         self.assertEqual(incoming_key, "secret")
         self.assertEqual((host, port), ("127.0.0.1", 8080))
 
@@ -290,6 +290,105 @@ class FunctionalPlannerTests(unittest.TestCase):
                 }
             )
 
+    def test_model_profiles_select_their_own_planner_settings(self):
+        cases = {
+            "glm46v-flash": (True, 12288, 0.8, True),
+            "qwen3-vl-8b-thinking": (True, 12288, 1.0, True),
+            "internvl35-14b": (True, 12288, 0.6, False),
+            "kimi-vl-a3b-thinking": (True, 12288, 0.6, False),
+        }
+        for profile, expected in cases.items():
+            with self.subTest(profile=profile):
+                config, *_ = config_from_env({"INFERENCE_MODEL": profile})
+                payload = completion_payload(request(), config)
+                self.assertEqual(
+                    (
+                        config.enable_thinking,
+                        config.max_tokens,
+                        payload["temperature"],
+                        "response_format" in payload,
+                    ),
+                    expected,
+                )
+
+    def test_thinking_sampling_matches_checkpoint_guidance(self):
+        expected = {
+            "qwen35-9b": {
+                "temperature": 1.0,
+                "top_p": 0.95,
+                "top_k": 20,
+                "min_p": 0.0,
+                "presence_penalty": 1.5,
+                "repetition_penalty": 1.0,
+            },
+            "glm46v-flash": {
+                "temperature": 0.8,
+                "top_p": 0.6,
+                "top_k": 2,
+                "repetition_penalty": 1.1,
+            },
+            "qwen3-vl-8b-thinking": {
+                "temperature": 1.0,
+                "top_p": 0.95,
+                "top_k": 20,
+                "presence_penalty": 0.0,
+                "repetition_penalty": 1.0,
+            },
+            "internvl35-14b": {
+                "temperature": 0.6,
+                "top_p": 0.95,
+            },
+            "kimi-vl-a3b-thinking": {"temperature": 0.6},
+        }
+        for profile, sampling in expected.items():
+            with self.subTest(profile=profile):
+                config, *_ = config_from_env({"INFERENCE_MODEL": profile})
+                self.assertEqual(config.sampling, sampling)
+
+    def test_fixed_thinking_profiles_reject_incompatible_override(self):
+        with self.assertRaisesRegex(ValueError, "fixed-thinking"):
+            config_from_env(
+                {
+                    "INFERENCE_MODEL": "qwen3-vl-8b-thinking",
+                    "PLANNER_ENABLE_THINKING": "false",
+                }
+            )
+        with self.assertRaisesRegex(ValueError, "fixed-thinking"):
+            config_from_env(
+                {
+                    "INFERENCE_MODEL": "internvl35-14b",
+                    "PLANNER_ENABLE_THINKING": "false",
+                }
+            )
+
+    def test_internvl_uses_prompt_driven_thinking(self):
+        config, *_ = config_from_env({"INFERENCE_MODEL": "internvl35-14b"})
+        payload = completion_payload(request(), config)
+        system_prompt = payload["messages"][0]["content"]
+        self.assertIn("<think>", system_prompt)
+        self.assertNotIn("response_format", payload)
+        self.assertEqual(config.reasoning_markers, ("<think>", "</think>"))
+
+    def test_kimi_unconstrained_request_includes_schema_and_parses_final_json(self):
+        config, *_ = config_from_env({"INFERENCE_MODEL": "kimi-vl-a3b-thinking"})
+        payload = completion_payload(request(), config)
+        task = json.loads(payload["messages"][1]["content"][0]["text"])
+        self.assertIn("output_schema", task)
+        transport = FakeTransport(decomposition())
+        transport.complete = lambda _payload: {
+            "choices": [
+                {
+                    "message": {
+                        "content": "◁think▷hidden◁/think▷\n```json\n"
+                        + json.dumps(decomposition())
+                        + "\n```"
+                    }
+                }
+            ]
+        }
+        result = FunctionalPlanner(config, transport).decompose(request())
+        self.assertEqual(result["decomposition"]["status"], "DECOMPOSED")
+
 
 @unittest.skipUnless(local_sockets_available(), "local sockets are sandboxed")
 class FunctionalPlannerAPITests(unittest.TestCase):
@@ -320,6 +419,9 @@ class FunctionalPlannerAPITests(unittest.TestCase):
     def test_health_and_function_catalog(self):
         status, health = self.call("/health")
         self.assertEqual((status, health["service"]), (200, "functional-planner"))
+        self.assertTrue(health["thinking_enabled"])
+        self.assertTrue(health["structured_output"])
+        self.assertEqual(health["max_tokens"], 8192)
         status, catalog = self.call("/v1/functions", key="client-secret")
         self.assertEqual(catalog["min_ranked_candidates"], 10)
         self.assertEqual(catalog["max_ranked_candidates"], 15)

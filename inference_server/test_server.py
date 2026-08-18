@@ -32,6 +32,19 @@ class ServerLauncherTests(unittest.TestCase):
         self.assertEqual(command[command.index("--reasoning-parser") + 1], "qwen3")
         self.assertEqual(command[command.index("--limit-mm-per-prompt") + 1], '{"image":8}')
 
+    def test_glm_uses_its_reasoning_parser(self):
+        command = build_command(self.environment("glm46v-flash"))
+        self.assertEqual(command[command.index("--reasoning-parser") + 1], "glm45")
+
+    def test_allows_keyless_loopback_native_server(self):
+        command = build_command(
+            {
+                "INFERENCE_MODEL": "qwen35-9b",
+                "INFERENCE_HOST": "127.0.0.1",
+            }
+        )
+        self.assertNotIn("--api-key", command)
+
     def test_builds_sglang_command(self):
         command = build_command(
             self.environment("qwen3-vl-8b-thinking", INFERENCE_BACKEND="sglang")
@@ -75,7 +88,7 @@ class ServerLauncherTests(unittest.TestCase):
     def test_rejects_missing_or_invalid_configuration(self):
         cases = (
             ({"INFERENCE_API_KEY": "secret"}, "INFERENCE_MODEL"),
-            ({"INFERENCE_MODEL": "qwen35-9b"}, "INFERENCE_API_KEY"),
+            ({"INFERENCE_MODEL": "qwen35-9b"}, "non-loopback"),
             (self.environment("unknown"), "Unknown model profile"),
             (self.environment(INFERENCE_BACKEND="other"), "INFERENCE_BACKEND"),
             (self.environment(INFERENCE_MAX_MODEL_LEN="0"), "must be positive"),

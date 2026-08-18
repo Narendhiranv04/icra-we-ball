@@ -75,7 +75,7 @@ Rules:
   least one functional requirement and unsupported_reason must be exactly an
   empty string. GOAL_UNSUPPORTED must contain no requirements and must provide
   a non-empty unsupported_reason.
-- Do not expose chain-of-thought.
+- Do not include chain-of-thought in the final JSON object.
 """
 
 
@@ -156,6 +156,11 @@ class PlannerConfig:
     timeout_seconds: float = 300.0
     max_tokens: int = 8192
     enable_thinking: bool = True
+    sampling: Mapping[str, object] | None = None
+    chat_template_kwargs: Mapping[str, object] | None = None
+    structured_output: bool = True
+    reasoning_markers: tuple[str, str] | None = None
+    system_prompt_prefix: str = ""
 
 
 def load_function_catalog(
@@ -275,7 +280,7 @@ def completion_payload(
         function_catalog["functions"]
     )
     requirement_properties["id"]["pattern"] = REQUIREMENT_ID.pattern
-    sampling = (
+    sampling = config.sampling if config.sampling is not None else (
         {
             "temperature": 1.0,
             "top_p": 0.95,
@@ -294,28 +299,47 @@ def completion_payload(
             "repetition_penalty": 1.0,
         }
     )
-    return {
+    payload: dict[str, object] = {
         "model": config.model,
         "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {
+                "role": "system",
+                "content": (
+                    f"{config.system_prompt_prefix}\n\n{SYSTEM_PROMPT}"
+                    if config.system_prompt_prefix
+                    else SYSTEM_PROMPT
+                ),
+            },
             {"role": "user", "content": content},
         ],
         **sampling,
         "max_tokens": config.max_tokens,
         "stream": False,
-        "chat_template_kwargs": {"enable_thinking": config.enable_thinking},
-        "response_format": {
+    }
+    template_kwargs = config.chat_template_kwargs
+    if template_kwargs is None:
+        template_kwargs = {"enable_thinking": config.enable_thinking}
+    if template_kwargs:
+        payload["chat_template_kwargs"] = dict(template_kwargs)
+    if config.structured_output:
+        payload["response_format"] = {
             "type": "json_schema",
             "json_schema": {
                 "name": "functional_decomposition",
                 "strict": True,
                 "schema": response_schema,
             },
-        },
-    }
+        }
+    else:
+        task["output_schema"] = response_schema
+        content[0]["text"] = json.dumps(task, separators=(",", ":"), sort_keys=True)
+    return payload
 
 
-def _response_content(response: Mapping[str, object]) -> dict[str, Any]:
+def _response_content(
+    response: Mapping[str, object],
+    config: PlannerConfig | None = None,
+) -> dict[str, Any]:
     try:
         choices = response["choices"]
         choice = choices[0]  # type: ignore[index]
@@ -334,15 +358,33 @@ def _response_content(response: Mapping[str, object]) -> dict[str, Any]:
         raise FunctionalPlanValidationError(
             "Completion has no final JSON content"
             f"{detail} (finish_reason={finish_reason}); increase "
-            "PLANNER_MAX_TOKENS or disable PLANNER_ENABLE_THINKING"
+            "PLANNER_MAX_TOKENS; for a toggleable profile, setting "
+            "PLANNER_ENABLE_THINKING=false is another option"
         )
     if not isinstance(content, str):
         raise FunctionalPlanValidationError(
             f"Completion content must be JSON text, received {type(content).__name__}"
         )
+    if config and config.reasoning_markers:
+        _start, end = config.reasoning_markers
+        if end in content:
+            content = content.split(end, 1)[1].strip()
+    if content.startswith("```") and content.endswith("```"):
+        content = re.sub(r"^```(?:json)?\s*|\s*```$", "", content).strip()
     try:
         result = json.loads(content)
     except json.JSONDecodeError as error:
+        if config and not config.structured_output:
+            start = content.find("{")
+            end = content.rfind("}")
+            if 0 <= start < end:
+                try:
+                    result = json.loads(content[start : end + 1])
+                except json.JSONDecodeError:
+                    pass
+                else:
+                    if isinstance(result, dict):
+                        return result
         raise FunctionalPlanValidationError(
             "Completion content is not valid JSON"
         ) from error
@@ -598,7 +640,7 @@ class FunctionalPlanner:
         response = self.transport.complete(payload)
         latency_ms = (time.perf_counter() - started) * 1000.0
         decomposition = validate_decomposition(
-            _response_content(response), request, self.catalog
+            _response_content(response, self.config), request, self.catalog
         )
         return {
             "decomposition": decomposition,

@@ -29,19 +29,52 @@ address. Docker deployments retain authenticated network-facing defaults.
 
 ## Models
 
-| Profile | Checkpoint | Load mode | Default context |
-|---|---|---:|---:|
-| `qwen35-9b` | `Qwen/Qwen3.5-9B` | BF16 | 32K |
-| `glm46v-flash` | `zai-org/GLM-4.6V-Flash` | BF16 | 16K |
-| `qwen3-vl-8b-thinking` | `Qwen/Qwen3-VL-8B-Thinking` | BF16 | 32K |
-| `internvl35-14b` | `OpenGVLab/InternVL3_5-14B-HF` | online FP8 | 16K |
-| `kimi-vl-a3b-thinking` | `moonshotai/Kimi-VL-A3B-Thinking-2506` | online FP8 | 16K |
+| Profile | Checkpoint | Load mode | Planner mode | Output budget |
+|---|---|---:|---:|---:|
+| `qwen35-9b` | `Qwen/Qwen3.5-9B` | BF16 | thinking, toggleable | 12K |
+| `glm46v-flash` | `zai-org/GLM-4.6V-Flash` | BF16 | thinking, toggleable | 12K |
+| `qwen3-vl-8b-thinking` | `Qwen/Qwen3-VL-8B-Thinking` | BF16 | fixed thinking | 12K |
+| `internvl35-14b` | `OpenGVLab/InternVL3_5-14B-HF` | online FP8 | prompt-driven thinking | 12K |
+| `kimi-vl-a3b-thinking` | `moonshotai/Kimi-VL-A3B-Thinking-2506` | online FP8 | fixed thinking | 12K |
 
 The bounded contexts are intentional single-GPU defaults, not each model's
 advertised maximum. Profiles accept up to eight images per prompt, covering
 the simulator's seven-camera observation. InternVL and Kimi use load-time FP8
 because their BF16 weights leave too little VRAM for practical multimodal
 inference on a 32 GB card.
+
+The registry also owns each model's planner settings. Qwen3.5 uses the Qwen3
+reasoning parser and its recommended thinking sampler. GLM uses the `glm45`
+reasoning parser, its `/nothink` toggle, and the checkpoint's recommended
+sampling family. The dedicated Qwen3-VL Thinking checkpoint cannot be changed
+into its Instruct counterpart with a request flag. InternVL uses its documented
+prompt-driven thinking mode with temperature 0.6 and top-p 0.95. The gateway
+strips both InternVL's and Kimi's reasoning markers before validating the final
+answer.
+
+InternVL and Kimi use experimental prompt-constrained functional JSON. Their
+reasoning modes are not connected to dedicated vLLM parsers here, so each
+request includes the schema in the prompt and the gateway validates the
+returned final JSON instead of applying vLLM's constrained JSON decoder. Their
+raw endpoints remain usable even if a particular response fails the functional
+contract.
+
+The thinking sampling defaults follow the checkpoint authors' recipes:
+
+- Qwen3.5: temperature 1.0, top-p 0.95, top-k 20, min-p 0, presence
+  penalty 1.5, and repetition penalty 1.0;
+- GLM-4.6V-Flash: temperature 0.8, top-p 0.6, top-k 2, and repetition
+  penalty 1.1;
+- Qwen3-VL Thinking for visual inputs: temperature 1.0, top-p 0.95, top-k 20,
+  presence penalty 0, and repetition penalty 1.0;
+- InternVL3.5 thinking: temperature 0.6 and top-p 0.95; and
+- Kimi-VL 2506: temperature 0.6 from the checkpoint-specific bundled
+  generation configuration. The older general Kimi-VL Thinking guidance says
+  0.8, but the selected 2506 checkpoint's own configuration is more specific.
+
+The 12K planner output caps remain deployment bounds for the 32 GB GPU rather
+than creator-recommended maximum generation lengths. They can be revisited
+separately without changing the sampling recipes.
 
 `muse-glimmer` is a disabled registry placeholder until Meta publishes a
 verified local checkpoint and serving recipe. Muse Spark is available through
@@ -78,11 +111,13 @@ duplicate types, invalid
 dependencies, and dependency cycles. `functional_client.py` is the matching
 CLI. Kitchen, living-room, and workshop scene labels are accepted.
 
-Requests currently enable Qwen3.5 thinking through `chat_template_kwargs` and
-reserve up to 8,192 output tokens for reasoning plus the final JSON. Set
-`PLANNER_ENABLE_THINKING=false` for the low-latency ablation. If a response
+Qwen3.5 and GLM thinking are enabled by default through model-specific chat
+template settings. Set `PLANNER_ENABLE_THINKING=false` for their low-latency
+ablation. Qwen3-VL Thinking, InternVL, and Kimi Thinking reject that override
+because their current profiles are fixed to thinking. If a response
 exhausts its budget in `reasoning_content` and has no final `content`, increase
-`PLANNER_MAX_TOKENS` or disable thinking.
+`PLANNER_MAX_TOKENS`; for a toggleable model, disabling thinking is another
+option.
 
 Thinking requests use Qwen3.5's recommended sampling family rather than greedy
 decoding: temperature 1.0, top-p 0.95, top-k 20, min-p 0, presence penalty 1.5,
@@ -134,6 +169,29 @@ Switch models by stopping the current server and starting another profile:
 ./serve down
 ./serve up internvl35-14b --detach
 ```
+
+For the current native, keyless SSH-tunnel setup, the same registry-backed
+launcher avoids copying model-specific vLLM commands. In Fish on the GPU host:
+
+```fish
+cd ~/SearchTAMP
+source .venv-qwen35/bin/activate.fish
+
+set -x INFERENCE_MODEL glm46v-flash
+set -x INFERENCE_HOST 127.0.0.1
+set -x INFERENCE_CONTAINER_PORT 8000
+set -e INFERENCE_API_KEY
+
+python3 inference_server/server.py
+```
+
+Replace `glm46v-flash` with any profile in the table. Stop the current model
+before starting the next one. vLLM downloads the selected public checkpoint on
+first launch and reuses the Hugging Face cache thereafter. In the second server
+shell, set the same `INFERENCE_MODEL`, erase explicit
+`PLANNER_MODEL`, `PLANNER_ENABLE_THINKING`, and `PLANNER_MAX_TOKENS` values, and
+restart `planner_api.py`; it will then use the selected profile's served name,
+sampling, thinking mode, and output budget.
 
 Use SGLang for a targeted compatibility comparison:
 
