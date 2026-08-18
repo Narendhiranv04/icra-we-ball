@@ -1,0 +1,41 @@
+# Workshop Phase 1 Grounding Configuration
+
+pipeline:
+  mask_backend: "production"  # options: production, oracle, connected_component
+  requirements_source: "static"  # options: static, fm
+  inspection_policy: "fixed"  # options: fixed, fm
+  image_width: 1280
+  image_height: 720
+
+perception:
+  yolo_weights: "mujoco_scenes/yolov8s-worldv2.pt"
+  confidence_threshold: 0.12
+  nms_iou_threshold: 0.45
+  volume_margin_m: 0.08
+  min_points_per_mask: 10
+
+tracking:
+  cluster_distance_threshold_m: 0.065
+  track_match_distance_threshold_m: 0.055
+  voxel_size_m: 0.003
+  min_cluster_points: 15
+
+grounding:
+  target_hole_depth_m: 0.030
+  target_hole_diameter_m: 0.007
+  min_driver_reach_m: 0.025
+  min_fastener_length_m: 0.022
+  min_surface_area_m2: 0.015
+  min_container_volume_m3: 0.0001
+  staging_margin_multiplier: 1.20
+
+inspection:
+  sequence:
+    - "LEFT_DRAWER"
+    - "RIGHT_DRAWER"
+    - "TOOL_CABINET"
+  early_stopping: true
+
+fm:
+  max_requirement_calls_per_episode: 1
+  max_search_prior_calls_per_episode: 1
