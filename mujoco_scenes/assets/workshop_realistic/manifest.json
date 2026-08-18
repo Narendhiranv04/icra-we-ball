@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "description": "Poly Haven CC0 textured 3D assets for Workshop (W1) benchmark.",
+  "description": "Poly Haven CC0 and project-generated textured 3D assets for Workshop (W1) benchmark.",
   "license_summary": "All assets in this directory are licensed CC0 1.0 Universal Public Domain.",
   "assets": [
     {
@@ -52,12 +52,12 @@
         {
           "part_id": "workshop_medium_phillips_screw",
           "processed_filename": "assets/workshop_realistic/workshop_medium_phillips_screw.obj",
-          "processed_sha256": "5a66d6c70e7c25efaba7827af7052d1669225faf9fac237e7f263860b540fcf5",
+          "processed_sha256": "687cf5573fb7401c8d49b11de540131dcd2d6d26aaee47abf1b95fffb4e80754",
           "texture_file": "assets/workshop_realistic/screwdrivers_02_diff.png",
           "texture_sha256": "cc0106545725c636f67c65b74cbcf69307af60eda46a278193911d48edfb5618",
           "canonical_dimensions_m": [
-            0.005537022922946459,
-            0.0055370206367686085,
+            0.014000000000000002,
+            0.013999994219548964,
             0.045
           ],
           "triangle_count": 2032,
@@ -66,12 +66,12 @@
         {
           "part_id": "workshop_short_phillips_screw",
           "processed_filename": "assets/workshop_realistic/workshop_short_phillips_screw.obj",
-          "processed_sha256": "80300082c49ad9736e6730894e1c01ffd1fad625bb83fb308af91acaf047d44d",
+          "processed_sha256": "8048f141a38c1ebfe451dd019c415c01907793657b550293facd8474deaa66ab",
           "texture_file": "assets/workshop_realistic/screwdrivers_02_diff.png",
           "texture_sha256": "cc0106545725c636f67c65b74cbcf69307af60eda46a278193911d48edfb5618",
           "canonical_dimensions_m": [
-            0.0022148091691785833,
-            0.0022148082547074435,
+            0.014000000000000002,
+            0.013999994219548964,
             0.018
           ],
           "triangle_count": 2032,
@@ -80,12 +80,12 @@
         {
           "part_id": "workshop_long_phillips_screw",
           "processed_filename": "assets/workshop_realistic/workshop_long_phillips_screw.obj",
-          "processed_sha256": "852b7c3ef6372b0e24219b3fa0051c3a64a12b6ee8080a45432b76e00e11eb8f",
+          "processed_sha256": "5a4f6d30f31a6ee5a093e6c6a16a9fd49e8b8ef7cfd22866c138fbf62900dbcb",
           "texture_file": "assets/workshop_realistic/screwdrivers_02_diff.png",
           "texture_sha256": "cc0106545725c636f67c65b74cbcf69307af60eda46a278193911d48edfb5618",
           "canonical_dimensions_m": [
-            0.010458821076676644,
-            0.010458816758340705,
+            0.0105,
+            0.010499995664661723,
             0.085
           ],
           "triangle_count": 2032,
@@ -210,13 +210,13 @@
         {
           "part_id": "combination_wrench",
           "processed_filename": "assets/workshop_realistic/combination_wrench.obj",
-          "processed_sha256": "3671543d42687cf4f61f6d38233625787477ff3d576cbbea214d8fc4cc4d5c6d",
+          "processed_sha256": "788fe148d9727645083bba2d2be11c11cdf20eefb41aef6a28da57fbae7c6331",
           "texture_file": "assets/workshop_realistic/combination_wrench_diff.png",
           "texture_sha256": "97d8158698d09d71b39097c8d10ac3d2a70a4d40e8f1b8e2a178a301919878ac",
           "canonical_dimensions_m": [
             0.035259908556066075,
             0.21,
-            0.01340636547009277
+            0.013406365470092746
           ],
           "triangle_count": 1986,
           "vertex_count": 1680
@@ -311,35 +311,6 @@
       ]
     },
     {
-      "asset_id": "seeding_tray_01",
-      "human_readable_name": "Workshop Parts Staging Tray",
-      "author": "Poly Haven / Mike van der Valk",
-      "license": "CC0-1.0",
-      "license_url": "https://polyhaven.com/license",
-      "source": "Poly Haven",
-      "source_url": "https://polyhaven.com/a/seeding_tray_01",
-      "download_date": "2026-08-18",
-      "roles": [
-        "workshop_parts_tray"
-      ],
-      "processed_parts": [
-        {
-          "part_id": "seeding_tray_01",
-          "processed_filename": "assets/workshop_realistic/seeding_tray_01.obj",
-          "processed_sha256": "491a36d6f957faf1fa3c4523dca044888f86af96706da1fb3873d363d8848b6b",
-          "texture_file": "assets/workshop_realistic/seeding_tray_01_diff.png",
-          "texture_sha256": "bd3660cc075be5d6e82b5a89e0d05ad4ed9d34535737ffdb999114a1a97e740c",
-          "canonical_dimensions_m": [
-            0.32,
-            0.22,
-            0.045
-          ],
-          "triangle_count": 8334,
-          "vertex_count": 5818
-        }
-      ]
-    },
-    {
       "asset_id": "plastic_container",
       "human_readable_name": "Plastic Hardware Storage Bin",
       "author": "Poly Haven / Mike van der Valk",
@@ -399,15 +370,15 @@
     },
     {
       "asset_id": "wooden_table_02",
-      "human_readable_name": "Heavy-Duty Workshop Workbench",
-      "author": "Poly Haven / Fran Calvente",
+      "human_readable_name": "Workshop Wooden Workbench Table",
+      "author": "Poly Haven / Martin Klekner",
       "license": "CC0-1.0",
       "license_url": "https://polyhaven.com/license",
       "source": "Poly Haven",
       "source_url": "https://polyhaven.com/a/wooden_table_02",
       "download_date": "2026-08-18",
       "roles": [
-        "workshop_workbench_table"
+        "workbench"
       ],
       "processed_parts": [
         {
@@ -423,6 +394,35 @@
           ],
           "triangle_count": 196,
           "vertex_count": 200
+        }
+      ]
+    },
+    {
+      "asset_id": "workshop_parts_tray",
+      "human_readable_name": "Workshop Parts Staging Tray",
+      "author": "icra-we-ball project",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "project-generated procedural mesh",
+      "source_url": "mujoco_scenes/scripts/prepare_workshop_assets.py",
+      "download_date": "2026-08-18",
+      "roles": [
+        "workshop_parts_tray"
+      ],
+      "processed_parts": [
+        {
+          "part_id": "workshop_parts_tray",
+          "processed_filename": "assets/workshop_realistic/workshop_parts_tray.obj",
+          "processed_sha256": "a28782617d95b04604bd2c33a416f37cff5c30e7902c2c3e5bf425611ca29aa1",
+          "texture_file": "assets/workshop_realistic/workshop_parts_tray_diff.png",
+          "texture_sha256": "5e11ead022cb7d36ae19c215c1d772ad65701b20742affd4a19aa75edfdbc699",
+          "canonical_dimensions_m": [
+            0.22,
+            0.14,
+            0.032
+          ],
+          "triangle_count": 60,
+          "vertex_count": 40
         }
       ]
     }

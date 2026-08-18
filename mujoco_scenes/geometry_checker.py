@@ -612,6 +612,7 @@ class GeometryChecker:
         voxel_size: float = 0.003,
         segmenter: Any | None = None,
         semantic_prompts: Sequence[str] = (),
+        allowed_geom_groups: Iterable[int] | None = None,
     ):
         if mujoco is None:
             raise RuntimeError("GeometryChecker requires the mujoco package")
@@ -629,10 +630,25 @@ class GeometryChecker:
         self.voxel_size = voxel_size
         self.segmenter = segmenter
         self.semantic_prompts = tuple(semantic_prompts)
+        if allowed_geom_groups is not None:
+            self.allowed_geom_groups: tuple[int, ...] | None = tuple(allowed_geom_groups)
+        elif hasattr(scene, "perception_geom_groups") and scene.perception_geom_groups is not None:
+            self.allowed_geom_groups = tuple(scene.perception_geom_groups)
+        else:
+            self.allowed_geom_groups = None
         self._camera_ids = {
             name: self._require_id(mujoco.mjtObj.mjOBJ_CAMERA, name)
             for name in self.cameras
         }
+
+    def _build_scene_option(self) -> mujoco.MjvOption:
+        vopt = mujoco.MjvOption()
+        if self.allowed_geom_groups is not None:
+            vopt.geomgroup[:] = 0
+            for g in self.allowed_geom_groups:
+                if 0 <= g < len(vopt.geomgroup):
+                    vopt.geomgroup[g] = 1
+        return vopt
 
     def _require_id(self, object_type, name: str) -> int:
         object_id = mujoco.mj_name2id(self.model, object_type, name)
@@ -641,15 +657,26 @@ class GeometryChecker:
         return object_id
 
     def _geom_ids_by_instance(
-        self, instance_names: Iterable[str]
+        self,
+        instance_names: Iterable[str],
+        allowed_geom_groups: Iterable[int] | None = None,
     ) -> dict[str, np.ndarray]:
         root_by_body: dict[int, str] = {}
         for name in instance_names:
             body_id = self._require_id(mujoco.mjtObj.mjOBJ_BODY, name)
             root_by_body[body_id] = name
 
+        groups = (
+            tuple(allowed_geom_groups)
+            if allowed_geom_groups is not None
+            else self.allowed_geom_groups
+        )
+
         geom_ids: dict[str, list[int]] = {name: [] for name in instance_names}
         for geom_id, geom_body_id in enumerate(self.model.geom_bodyid):
+            if groups is not None:
+                if self.model.geom_group[geom_id] not in groups:
+                    continue
             body_id = int(geom_body_id)
             while body_id > 0:
                 instance_name = root_by_body.get(body_id)
@@ -670,7 +697,9 @@ class GeometryChecker:
         else:
             visible = self.scene.get_visible_object_instances()
         instance_kinds = {name: kind for name, kind in visible}
-        geom_ids = self._geom_ids_by_instance(instance_kinds)
+        geom_ids = self._geom_ids_by_instance(
+            instance_kinds, allowed_geom_groups=self.allowed_geom_groups
+        )
         identification_done = time.perf_counter()
 
         points: dict[str, list[np.ndarray]] = {name: [] for name in instance_kinds}
@@ -684,10 +713,13 @@ class GeometryChecker:
         renderer = mujoco.Renderer(
             self.model, height=self.height, width=self.width
         )
+        scene_option = self._build_scene_option()
         try:
             for camera_name in self.cameras:
                 camera_id = self._camera_ids[camera_name]
-                renderer.update_scene(self.data, camera=camera_id)
+                renderer.update_scene(
+                    self.data, camera=camera_id, scene_option=scene_option
+                )
 
                 render_started = time.perf_counter()
                 rgb = renderer.render().copy()
@@ -822,7 +854,9 @@ class GeometryChecker:
         else:
             visible = self.scene.get_visible_object_instances()
         instance_kinds = {name: kind for name, kind in visible}
-        geom_ids = self._geom_ids_by_instance(instance_kinds)
+        geom_ids = self._geom_ids_by_instance(
+            instance_kinds, allowed_geom_groups=self.allowed_geom_groups
+        )
         identification_done = time.perf_counter()
 
         camera_slots = configuration["camera_slots"]
@@ -915,10 +949,13 @@ class GeometryChecker:
         renderer = mujoco.Renderer(
             self.model, height=self.height, width=self.width
         )
+        scene_option = self._build_scene_option()
         try:
             for logical_name, model_camera_name in camera_slots.items():
                 camera_id = camera_ids[logical_name]
-                renderer.update_scene(self.data, camera=camera_id)
+                renderer.update_scene(
+                    self.data, camera=camera_id, scene_option=scene_option
+                )
                 render_started = time.perf_counter()
                 rgb = renderer.render().copy()
                 renderer.enable_depth_rendering()

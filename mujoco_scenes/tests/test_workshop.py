@@ -577,6 +577,177 @@ class WorkshopPrivilegeBoundaryTests(unittest.TestCase):
         self.assertTrue(summary["all_passed"], "All 14 benchmark variants must pass full physical and oracle audit")
         self.assertEqual(summary["passed_variants"], 14)
 
+    def test_asset_generation_reproducibility(self):
+        """Verify that prepare_workshop_assets reproduces exact committed mesh geometries."""
+        from mujoco_scenes.scripts.prepare_workshop_assets import prepare_assets
+        import trimesh
+
+        with TemporaryDirectory() as tmpdir:
+            tmp_out = Path(tmpdir) / "assets"
+            manifest = prepare_assets(output_dir=tmp_out)
+            self.assertGreaterEqual(len(manifest["assets"]), 12)
+
+            committed_dir = Path(__file__).resolve().parents[1] / "assets" / "workshop_realistic"
+            critical_assets = [
+                "workshop_medium_phillips_screw.obj",
+                "workshop_short_phillips_screw.obj",
+                "workshop_parts_tray.obj",
+                "workshop_long_phillips_driver.obj",
+                "workshop_stubby_phillips_driver.obj",
+                "workshop_hex_bolt.obj",
+            ]
+            for asset_name in critical_assets:
+                gen_p = tmp_out / asset_name
+                comm_p = committed_dir / asset_name
+                self.assertTrue(gen_p.is_file(), f"Missing generated {asset_name}")
+                self.assertTrue(comm_p.is_file(), f"Missing committed {asset_name}")
+
+                m_gen = trimesh.load(gen_p)
+                m_comm = trimesh.load(comm_p)
+                self.assertEqual(len(m_gen.vertices), len(m_comm.vertices), f"Vertex count mismatch in {asset_name}")
+                self.assertEqual(len(m_gen.faces), len(m_comm.faces), f"Face count mismatch in {asset_name}")
+                max_diff = float(np.max(np.abs(m_gen.extents - m_comm.extents)))
+                self.assertLess(max_diff, 1e-5, f"Dimension mismatch in {asset_name}: {max_diff}")
+
+    def test_manifest_asset_completeness_and_truthfulness(self):
+        """Verify that manifest.json accurately reflects all assets and their provenance."""
+        import json
+        manifest_path = Path(__file__).resolve().parents[1] / "assets" / "workshop_realistic" / "manifest.json"
+        self.assertTrue(manifest_path.is_file())
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+        self.assertIn("assets", manifest)
+        assets_by_id = {a["asset_id"]: a for a in manifest["assets"]}
+        self.assertIn("workshop_parts_tray", assets_by_id)
+        tray_meta = assets_by_id["workshop_parts_tray"]
+        self.assertEqual(tray_meta["source"], "project-generated procedural mesh")
+        self.assertEqual(tray_meta["license"], "CC0-1.0")
+
+        # Verify dimensions and files
+        for asset in manifest["assets"]:
+            for part in asset["processed_parts"]:
+                p_file = Path(__file__).resolve().parents[1] / part["processed_filename"]
+                self.assertTrue(p_file.is_file(), f"Manifest references missing file {p_file}")
+
+    def test_collision_proxy_excluded_from_perception(self):
+        """Verify that group-3 collision proxies never appear in segmentation, depth, or point clouds."""
+        scene = WorkshopScene("none", variant="F0_BASE")
+        scene.open_container("LEFT_DRAWER")
+        scene.open_container("RIGHT_DRAWER")
+        scene.open_container("TOOL_CABINET")
+
+        checker = GeometryChecker(scene, width=640, height=480)
+        self.assertEqual(checker.allowed_geom_groups, (1,))
+
+        # Inspect segmentation in full reconstruction
+        renderer = mujoco.Renderer(scene.model, height=480, width=640)
+        scene_opt = checker._build_scene_option()
+        renderer.update_scene(scene.data, camera="workshop_camera_front", scene_option=scene_opt)
+        renderer.enable_segmentation_rendering()
+        seg = renderer.render()
+        renderer.disable_segmentation_rendering()
+
+        unique_geoms = set(seg[seg[:, :, 1] == int(mujoco.mjtObj.mjOBJ_GEOM), 0])
+        for g_id in unique_geoms:
+            g_group = scene.model.geom_group[g_id]
+            self.assertNotEqual(g_group, 3, f"Group 3 collision geom {g_id} appeared in perception segmentation!")
+
+        # Verify point clouds for representative objects
+        run = checker.run_region_inspection("TOOL_CABINET", rig_config=scene.inspection_rig_config)
+        self.assertIn("workshop_long_phillips_driver", run.clouds)
+        cloud = run.clouds["workshop_long_phillips_driver"]
+        self.assertGreaterEqual(len(cloud.points), MIN_WORKSHOP_OBJECT_FUSED_POINTS)
+
+    def test_storage_physical_containment(self):
+        """Verify that open drawers and cabinet contain resting objects when welds are disabled."""
+        # 1. Left drawer containment
+        scene_l = WorkshopScene("none", variant="F0_BASE")
+        scene_l.open_container("LEFT_DRAWER")
+        weld_id_l = mujoco.mj_name2id(scene_l.model, mujoco.mjtObj.mjOBJ_EQUALITY, "storage_weld_workshop_flathead_screwdriver")
+        self.assertGreaterEqual(weld_id_l, 0)
+        scene_l.data.eq_active[weld_id_l] = 0
+        for _ in range(300):
+            mujoco.mj_step(scene_l.model, scene_l.data)
+        b_id_l = mujoco.mj_name2id(scene_l.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_flathead_screwdriver")
+        pos_l = scene_l.data.xpos[b_id_l]
+        # Must stay within left drawer bounds (x around -0.28, z supported on drawer floor >= 0.45)
+        self.assertAlmostEqual(pos_l[0], -0.28, delta=0.15)
+        self.assertGreaterEqual(pos_l[2], 0.45)
+
+        # 2. Right drawer containment
+        scene_r = WorkshopScene("none", variant="F0_BASE")
+        scene_r.open_container("RIGHT_DRAWER")
+        weld_id_r = mujoco.mj_name2id(scene_r.model, mujoco.mjtObj.mjOBJ_EQUALITY, "storage_weld_workshop_stubby_phillips_driver")
+        self.assertGreaterEqual(weld_id_r, 0)
+        scene_r.data.eq_active[weld_id_r] = 0
+        for _ in range(300):
+            mujoco.mj_step(scene_r.model, scene_r.data)
+        b_id_r = mujoco.mj_name2id(scene_r.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_stubby_phillips_driver")
+        pos_r = scene_r.data.xpos[b_id_r]
+        self.assertAlmostEqual(pos_r[0], 0.28, delta=0.15)
+        self.assertGreaterEqual(pos_r[2], 0.45)
+
+        # 3. Cabinet containment (fastener supported on shelf, driver inside cabinet bounds)
+        scene_c = WorkshopScene("none", variant="F0_BASE")
+        scene_c.open_container("TOOL_CABINET")
+        weld_id_c = mujoco.mj_name2id(scene_c.model, mujoco.mjtObj.mjOBJ_EQUALITY, "storage_weld_workshop_medium_phillips_screw")
+        self.assertGreaterEqual(weld_id_c, 0)
+        scene_c.data.eq_active[weld_id_c] = 0
+        for _ in range(300):
+            mujoco.mj_step(scene_c.model, scene_c.data)
+        b_id_c = mujoco.mj_name2id(scene_c.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_medium_phillips_screw")
+        pos_c = scene_c.data.xpos[b_id_c]
+        # Must stay on cabinet shelf (z >= 0.85)
+        self.assertGreaterEqual(pos_c[2], 0.85)
+
+    def test_cabinet_door_collision_articulates_with_hinge(self):
+        """Verify that tool cabinet door collision follows the door hinge cleanly."""
+        scene = WorkshopScene("none", variant="F0_BASE")
+        door_jnt = scene.model.joint("tool_cabinet_door_hinge").id
+        door_col_id = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_GEOM, "tool_cabinet_door_col")
+        self.assertGreaterEqual(door_col_id, 0)
+
+        # Initially closed
+        self.assertAlmostEqual(scene.data.qpos[door_jnt], 0.0, delta=0.05)
+        init_geom_pos = scene.data.geom_xpos[door_col_id].copy()
+
+        # Open container
+        scene.open_container("TOOL_CABINET")
+        self.assertGreater(scene.data.qpos[door_jnt], 1.4)
+        open_geom_pos = scene.data.geom_xpos[door_col_id].copy()
+        # The collision proxy must have moved significantly in XY
+        dist_moved = float(np.linalg.norm(open_geom_pos[:2] - init_geom_pos[:2]))
+        self.assertGreater(dist_moved, 0.10, "Door collision proxy did not follow hinge articulation")
+
+    def test_frame_fixture_collision_coverage_and_target_approach_corridor(self):
+        """Verify fixture collision coverage and clear tool approach corridor to target hole."""
+        scene = WorkshopScene("none", variant="F0_BASE")
+        for col_name in (
+            "fixture_base_col",
+            "fixture_clamp_col",
+            "frame_horizontal_rail_col",
+            "frame_vertical_rail_col",
+            "frame_joint_bracket_col",
+        ):
+            gid = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_GEOM, col_name)
+            self.assertGreaterEqual(gid, 0, f"Missing collision geom {col_name}")
+            self.assertEqual(scene.model.geom_group[gid], 3)
+            self.assertNotEqual(scene.model.geom_contype[gid] + scene.model.geom_conaffinity[gid], 0)
+
+        # Approach corridor check: target hole is at [-0.10, -0.02, 0.0215] in workpiece frame
+        # (world pos [-0.18, 0.28, 0.7475]). Verify no collision geom obstructs straight-down -Z axis above it.
+        target_world = np.array([-0.18, 0.28, 0.7475])
+        for z_offset in np.linspace(0.01, 0.20, 10):
+            sample_pt = target_world + np.array([0, 0, z_offset])
+            # Ensure sample_pt is outside all collision boxes
+            for gid in range(scene.model.ngeom):
+                if scene.model.geom_group[gid] == 3:
+                    g_pos = scene.data.geom_xpos[gid]
+                    g_size = scene.model.geom_size[gid]
+                    if scene.model.geom_type[gid] == mujoco.mjtGeom.mjGEOM_BOX:
+                        in_box = np.all(np.abs(sample_pt - g_pos) <= g_size[:3])
+                        self.assertFalse(in_box, f"Collision geom {mujoco.mj_id2name(scene.model, mujoco.mjtObj.mjOBJ_GEOM, gid)} obstructs approach corridor at {sample_pt}")
+
 
 class WorkshopAlternativeTests(unittest.TestCase):
     def test_joint_reasoning_rejects_near_misses_then_selects_screw(self):

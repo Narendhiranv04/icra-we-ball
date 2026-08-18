@@ -344,7 +344,7 @@ def build_workshop_xml(
         obs_body = ET.SubElement(
             worldbody,
             "body",
-            {"name": "workbench_surface_obstruction", "pos": "0.05 0.32 0.73"},
+            {"name": "workbench_surface_obstruction", "pos": "-0.02 0.28 0.73"},
         )
         ET.SubElement(
             obs_body,
@@ -353,7 +353,7 @@ def build_workshop_xml(
                 "name": "obstruction_case_vis",
                 "class": "visual",
                 "type": "box",
-                "size": "0.20 0.12 0.035",
+                "size": "0.16 0.11 0.035",
                 "material": "obstruction_case_mat",
             },
         )
@@ -364,7 +364,7 @@ def build_workshop_xml(
                 "name": "obstruction_case_col",
                 "class": "collision",
                 "type": "box",
-                "size": "0.20 0.12 0.035",
+                "size": "0.16 0.11 0.035",
             },
         )
 
@@ -724,6 +724,7 @@ class WorkshopScene:
         "and keep loose small parts in a suitable container."
     )
     point_cloud_cameras = WORKSHOP_CAMERAS
+    perception_geom_groups = (1,)
     inspection_rig_config_path = WORKSHOP_INSPECTION_RIG_CONFIG
     initial_observation_region = "workbench"
     default_inspection_order = WORKSHOP_REGIONS
@@ -1154,8 +1155,14 @@ class WorkshopScene:
         if camera not in WORKSHOP_CAMERAS:
             raise ValueError(f"Unknown workshop camera: {camera}")
         renderer = mujoco.Renderer(self.model, height=height, width=width)
+        scene_option = mujoco.MjvOption()
+        if hasattr(self, "perception_geom_groups") and self.perception_geom_groups is not None:
+            scene_option.geomgroup[:] = 0
+            for g in self.perception_geom_groups:
+                if 0 <= g < len(scene_option.geomgroup):
+                    scene_option.geomgroup[g] = 1
         try:
-            renderer.update_scene(self.data, camera=camera)
+            renderer.update_scene(self.data, camera=camera, scene_option=scene_option)
             return renderer.render().copy()
         finally:
             renderer.close()

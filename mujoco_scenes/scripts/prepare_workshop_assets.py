@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Prepare CC0 3D assets used by the integrated Workshop (W1) benchmark.
+"""Prepare CC0 and procedural 3D assets used by the integrated Workshop (W1) benchmark.
 
 Source glTF bundles are downloaded into an ignored cache directory (.cache).
 Processed OBJ visual parts and PNG textures are exported into
-assets/workshop_realistic/.  The script normalizes Poly Haven's Y-up convention
+assets/workshop_realistic/. The script normalizes Poly Haven's Y-up convention
 to MuJoCo Z-up, centers meshes, computes physical bounding dimensions, and
 writes complete hash and provenance metadata into manifest.json.
 
@@ -24,13 +24,13 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 import trimesh
 
 
 ROOT = Path(__file__).resolve().parents[1]
-OUTPUT = ROOT / "assets" / "workshop_realistic"
-CACHE = ROOT / "assets" / ".cache" / "workshop_realistic"
+DEFAULT_OUTPUT = ROOT / "assets" / "workshop_realistic"
+DEFAULT_CACHE = ROOT / "assets" / ".cache" / "workshop_realistic"
 API = "https://api.polyhaven.com"
 LICENSE_URL = "https://polyhaven.com/license"
 USER_AGENT = "icra-we-ball-workshop-assets/1.0"
@@ -84,11 +84,6 @@ ASSET_DEFS: dict[str, dict[str, Any]] = {
         "author": "Poly Haven / Mike van der Valk",
         "roles": ["workshop_tool_cart"],
     },
-    "seeding_tray_01": {
-        "human_readable_name": "Workshop Parts Staging Tray",
-        "author": "Poly Haven / Mike van der Valk",
-        "roles": ["workshop_parts_tray"],
-    },
     "plastic_container": {
         "human_readable_name": "Plastic Hardware Storage Bin",
         "author": "Poly Haven / Mike van der Valk",
@@ -100,23 +95,22 @@ ASSET_DEFS: dict[str, dict[str, Any]] = {
         "roles": ["workshop_metal_toolbox"],
     },
     "wooden_table_02": {
-        "human_readable_name": "Heavy-Duty Workshop Workbench",
-        "author": "Poly Haven / Fran Calvente",
-        "roles": ["workshop_workbench_table"],
+        "human_readable_name": "Workshop Wooden Workbench Table",
+        "author": "Poly Haven / Martin Klekner",
+        "roles": ["workbench"],
     },
 }
 
 
-def _download_json(url: str) -> dict:
+def _download_json(url: str) -> dict[str, Any]:
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(request, timeout=60) as response:
-        return json.load(response)
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return json.loads(response.read().decode("utf-8"))
 
 
 def _download_file(url: str, path: Path, expected_size: int | None = None) -> None:
-    if path.is_file() and (expected_size is None or path.stat().st_size == expected_size):
+    if path.exists() and (expected_size is None or path.stat().st_size == expected_size):
         return
-    path.parent.mkdir(parents=True, exist_ok=True)
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     with urllib.request.urlopen(request, timeout=120) as response:
         data = response.read()
@@ -131,10 +125,10 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _fetch_gltf_bundle(asset_id: str) -> Path:
+def _fetch_gltf_bundle(asset_id: str, cache_dir: Path) -> Path:
     info = _download_json(f"{API}/files/{asset_id}")
     gltf_spec = info["gltf"]["1k"]["gltf"]
-    target_dir = CACHE / asset_id
+    target_dir = cache_dir / asset_id
     target_dir.mkdir(parents=True, exist_ok=True)
     gltf_file = target_dir / f"{asset_id}_1k.gltf"
     _download_file(gltf_spec["url"], gltf_file, gltf_spec.get("size"))
@@ -150,7 +144,6 @@ def _fetch_gltf_bundle(asset_id: str) -> Path:
 
 def _convert_texture(src_jpg: Path, dst_png: Path) -> None:
     img = Image.open(src_jpg).convert("RGB")
-    # Resize texture to max 1024x1024 if larger, to keep visual quality high and memory lean
     if max(img.size) > 1024:
         img.thumbnail((1024, 1024), Image.Resampling.LANCZOS)
     img.save(dst_png, format="PNG", optimize=True)
@@ -190,64 +183,149 @@ def _write_obj_with_texture(mesh: trimesh.Trimesh, obj_path: Path, texture_filen
     )
     mtl_path.write_text(mtl_content, encoding="utf-8")
 
-    vertices = mesh.vertices
-    faces = mesh.faces
-    uvs = getattr(mesh.visual, "uv", None)
-
     with obj_path.open("w", encoding="utf-8") as stream:
         stream.write(f"# Exported by prepare_workshop_assets.py\n")
         stream.write(f"mtllib {mtl_name}\n")
         stream.write(f"usemtl {material_name}\n\n")
+        for vertex in mesh.vertices:
+            stream.write(f"v {vertex[0]:.6f} {vertex[1]:.6f} {vertex[2]:.6f}\n")
 
-        for v in vertices:
-            stream.write(f"v {v[0]:.6f} {v[1]:.6f} {v[2]:.6f}\n")
-
-        has_uv = uvs is not None and len(uvs) == len(vertices)
-        if has_uv:
+        uvs = getattr(mesh.visual, "uv", None)
+        if uvs is not None and len(uvs) == len(mesh.vertices):
             for uv in uvs:
                 stream.write(f"vt {uv[0]:.6f} {uv[1]:.6f}\n")
-
-        for face in faces:
-            if has_uv:
-                stream.write(f"f {face[0]+1}/{face[0]+1} {face[1]+1}/{face[1]+1} {face[2]+1}/{face[2]+1}\n")
-            else:
+            for face in mesh.faces:
+                stream.write(
+                    f"f {face[0]+1}/{face[0]+1} {face[1]+1}/{face[1]+1} {face[2]+1}/{face[2]+1}\n"
+                )
+        else:
+            for face in mesh.faces:
                 stream.write(f"f {face[0]+1} {face[1]+1} {face[2]+1}\n")
 
 
-def prepare_assets(force: bool = False) -> dict[str, Any]:
-    OUTPUT.mkdir(parents=True, exist_ok=True)
+def generate_workshop_parts_tray(output_dir: Path) -> dict[str, Any]:
+    """Generate clean, realistic workshop utility parts tray without boolean operations."""
+    w, d, h = 0.22, 0.14, 0.032
+    t = 0.008   # wall thickness
+    tf = 0.006  # floor thickness
+
+    floor = trimesh.creation.box(extents=[w, d, tf])
+    floor.apply_translation([0, 0, tf / 2.0])
+
+    wall_f = trimesh.creation.box(extents=[w, t, h - tf])
+    wall_f.apply_translation([0, -d / 2.0 + t / 2.0, tf + (h - tf) / 2.0])
+
+    wall_b = trimesh.creation.box(extents=[w, t, h - tf])
+    wall_b.apply_translation([0, d / 2.0 - t / 2.0, tf + (h - tf) / 2.0])
+
+    wall_l = trimesh.creation.box(extents=[t, d - 2 * t, h - tf])
+    wall_l.apply_translation([-w / 2.0 + t / 2.0, 0, tf + (h - tf) / 2.0])
+
+    wall_r = trimesh.creation.box(extents=[t, d - 2 * t, h - tf])
+    wall_r.apply_translation([w / 2.0 - t / 2.0, 0, tf + (h - tf) / 2.0])
+
+    tray_mesh = trimesh.util.concatenate([floor, wall_f, wall_b, wall_l, wall_r])
+    tray_mesh = _center_and_ground(tray_mesh)
+
+    obj_path = output_dir / "workshop_parts_tray.obj"
+    mtl_path = output_dir / "workshop_parts_tray.mtl"
+    tex_path = output_dir / "workshop_parts_tray_diff.png"
+
+    img = Image.new("RGB", (256, 256), color=(48, 56, 64))
+    draw = ImageDraw.Draw(img)
+    draw.rectangle([6, 6, 249, 249], outline=(72, 85, 98), width=6)
+    img.save(tex_path, format="PNG", optimize=True)
+
+    mtl_content = (
+        "newmtl material_workshop_parts_tray\n"
+        "Ka 1.000 1.000 1.000\n"
+        "Kd 1.000 1.000 1.000\n"
+        "Ks 0.300 0.300 0.300\n"
+        "Ns 30.000\n"
+        "map_Kd workshop_parts_tray_diff.png\n"
+    )
+    mtl_path.write_text(mtl_content, encoding="utf-8")
+
+    with obj_path.open("w", encoding="utf-8") as f:
+        f.write("# Workshop utility parts tray\n")
+        f.write(f"mtllib {mtl_path.name}\n")
+        f.write("usemtl material_workshop_parts_tray\n\n")
+        for v in tray_mesh.vertices:
+            f.write(f"v {v[0]:.6f} {v[1]:.6f} {v[2]:.6f}\n")
+        for face in tray_mesh.faces:
+            f.write(f"f {face[0]+1} {face[1]+1} {face[2]+1}\n")
+
+    return {
+        "asset_id": "workshop_parts_tray",
+        "human_readable_name": "Workshop Parts Staging Tray",
+        "author": "icra-we-ball project",
+        "license": "CC0-1.0",
+        "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "source": "project-generated procedural mesh",
+        "source_url": "mujoco_scenes/scripts/prepare_workshop_assets.py",
+        "download_date": str(date.today()),
+        "roles": ["workshop_parts_tray"],
+        "processed_parts": [
+            {
+                "part_id": "workshop_parts_tray",
+                "processed_filename": f"assets/workshop_realistic/{obj_path.name}",
+                "processed_sha256": _sha256(obj_path),
+                "texture_file": f"assets/workshop_realistic/{tex_path.name}",
+                "texture_sha256": _sha256(tex_path),
+                "canonical_dimensions_m": [float(x) for x in tray_mesh.extents],
+                "triangle_count": len(tray_mesh.faces),
+                "vertex_count": len(tray_mesh.vertices),
+            }
+        ],
+    }
+
+
+def prepare_assets(
+    output_dir: Path | None = None,
+    cache_dir: Path | None = None,
+    force: bool = False,
+) -> dict[str, Any]:
+    """Download and normalize workshop visual assets."""
+    output = output_dir or DEFAULT_OUTPUT
+    cache = cache_dir or DEFAULT_CACHE
+    output.mkdir(parents=True, exist_ok=True)
+    cache.mkdir(parents=True, exist_ok=True)
+
     manifest_entries: list[dict[str, Any]] = []
 
     for asset_id, meta in ASSET_DEFS.items():
-        print(f"--> Processing {asset_id} ({meta['human_readable_name']})...")
-        gltf_file = _fetch_gltf_bundle(asset_id)
-        asset_dir = gltf_file.parent
+        print(f"--> Processing asset: {asset_id} ({meta['human_readable_name']})")
+        gltf_file = _fetch_gltf_bundle(asset_id, cache_dir=cache)
+        scene = trimesh.load(gltf_file)
 
-        # Find diffuse texture
-        diff_textures = list(asset_dir.glob("textures/*diff*.jpg"))
-        if not diff_textures:
-            diff_textures = list(asset_dir.glob("textures/*.jpg"))
-        diff_jpg = diff_textures[0] if diff_textures else None
+        tex_cache_dir = cache / asset_id / "textures"
+        diff_jpg = None
+        if tex_cache_dir.exists():
+            for p in tex_cache_dir.iterdir():
+                if "diff" in p.name.lower() and p.suffix.lower() in {".jpg", ".png", ".jpeg"}:
+                    diff_jpg = p
+                    break
 
-        loaded = trimesh.load(str(gltf_file))
-        geoms = loaded.geometry if isinstance(loaded, trimesh.Scene) else {"default": loaded}
+        if hasattr(scene, "geometry"):
+            geoms = list(scene.geometry.values())
+        else:
+            geoms = [scene]
 
-        processed_parts = []
+        processed_parts: list[dict[str, Any]] = []
 
         if asset_id == "screwdrivers_02":
-            tex_name = "screwdrivers_02_diff.png"
-            tex_path = OUTPUT / tex_name
+            tex_name = f"{asset_id}_diff.png"
+            tex_path = output / tex_name
             if diff_jpg:
                 _convert_texture(diff_jpg, tex_path)
 
-            geom_list = list(geoms.values())
             # Main long phillips screwdriver (from geom 0)
-            long_driver = _center_and_ground(geom_list[0])
+            long_driver = _center_and_ground(geoms[0])
             cur_len = long_driver.extents[2]
             if cur_len > 0:
                 long_driver.apply_scale(0.26 / cur_len)
             long_driver = _center_and_ground(long_driver)
-            driver_obj = OUTPUT / "workshop_long_phillips_driver.obj"
+            driver_obj = output / "workshop_long_phillips_driver.obj"
             _write_obj_with_texture(long_driver, driver_obj, tex_name)
             processed_parts.append({
                 "part_id": "workshop_long_phillips_driver",
@@ -261,11 +339,11 @@ def prepare_assets(force: bool = False) -> dict[str, Any]:
             })
 
             # Stubby phillips screwdriver (scaled shorter shaft)
-            stubby_driver = _center_and_ground(geom_list[0])
+            stubby_driver = _center_and_ground(geoms[0])
             stubby_scale = np.array([1.1, 1.1, 0.13 / cur_len])
             stubby_driver.apply_scale(stubby_scale)
             stubby_driver = _center_and_ground(stubby_driver)
-            stubby_obj = OUTPUT / "workshop_stubby_phillips_driver.obj"
+            stubby_obj = output / "workshop_stubby_phillips_driver.obj"
             _write_obj_with_texture(stubby_driver, stubby_obj, tex_name)
             processed_parts.append({
                 "part_id": "workshop_stubby_phillips_driver",
@@ -278,14 +356,15 @@ def prepare_assets(force: bool = False) -> dict[str, Any]:
                 "vertex_count": len(stubby_driver.vertices),
             })
 
-            # Medium Phillips screw (canonical fastener: length 0.045m, head 0.016m, shaft 0.007m)
-            second_geom = geom_list[1] if len(geom_list) > 1 else geom_list[0]
+            # Medium Phillips screw (canonical fastener: length 0.045m, head 0.014m, shaft ~0.0055m)
+            second_geom = geoms[1] if len(geoms) > 1 else geoms[0]
             med_screw = _center_and_ground(second_geom)
+            med_max_xy = max(med_screw.extents[0], med_screw.extents[1])
             med_len = med_screw.extents[2]
-            if med_len > 0:
-                med_screw.apply_scale(0.045 / med_len)
+            if med_max_xy > 0 and med_len > 0:
+                med_screw.apply_scale([0.014 / med_max_xy, 0.014 / med_max_xy, 0.045 / med_len])
             med_screw = _center_and_ground(med_screw)
-            med_obj = OUTPUT / "workshop_medium_phillips_screw.obj"
+            med_obj = output / "workshop_medium_phillips_screw.obj"
             _write_obj_with_texture(med_screw, med_obj, tex_name)
             processed_parts.append({
                 "part_id": "workshop_medium_phillips_screw",
@@ -298,12 +377,14 @@ def prepare_assets(force: bool = False) -> dict[str, Any]:
                 "vertex_count": len(med_screw.vertices),
             })
 
-            # Short Phillips screw (inadequate reach/engagement: length 0.018m)
+            # Short Phillips screw (inadequate reach/engagement: length 0.018m, head 0.014m)
             short_screw = _center_and_ground(second_geom)
-            if med_len > 0:
-                short_screw.apply_scale(0.018 / med_len)
+            short_max_xy = max(short_screw.extents[0], short_screw.extents[1])
+            short_len = short_screw.extents[2]
+            if short_max_xy > 0 and short_len > 0:
+                short_screw.apply_scale([0.014 / short_max_xy, 0.014 / short_max_xy, 0.018 / short_len])
             short_screw = _center_and_ground(short_screw)
-            short_obj = OUTPUT / "workshop_short_phillips_screw.obj"
+            short_obj = output / "workshop_short_phillips_screw.obj"
             _write_obj_with_texture(short_screw, short_obj, tex_name)
             processed_parts.append({
                 "part_id": "workshop_short_phillips_screw",
@@ -316,12 +397,14 @@ def prepare_assets(force: bool = False) -> dict[str, Any]:
                 "vertex_count": len(short_screw.vertices),
             })
 
-            # Long / oversized Phillips screw (too long: length 0.085m)
+            # Long / oversized Phillips screw (too long: length 0.085m, head 0.0105m)
             long_screw = _center_and_ground(second_geom)
-            if med_len > 0:
-                long_screw.apply_scale(0.085 / med_len)
+            long_max_xy = max(long_screw.extents[0], long_screw.extents[1])
+            long_len = long_screw.extents[2]
+            if long_max_xy > 0 and long_len > 0:
+                long_screw.apply_scale([0.0105 / long_max_xy, 0.0105 / long_max_xy, 0.085 / long_len])
             long_screw = _center_and_ground(long_screw)
-            long_obj = OUTPUT / "workshop_long_phillips_screw.obj"
+            long_obj = output / "workshop_long_phillips_screw.obj"
             _write_obj_with_texture(long_screw, long_obj, tex_name)
             processed_parts.append({
                 "part_id": "workshop_long_phillips_screw",
@@ -334,12 +417,13 @@ def prepare_assets(force: bool = False) -> dict[str, Any]:
                 "vertex_count": len(long_screw.vertices),
             })
 
-            # Hex bolt decoy (incompatible fastener)
+            # Hex bolt decoy (incompatible fastener: length 0.050m, head ~0.035m)
             hex_bolt = _center_and_ground(second_geom)
-            if med_len > 0:
-                hex_bolt.apply_scale([1.3, 1.3, 0.050 / med_len])
+            hex_len = hex_bolt.extents[2]
+            if hex_len > 0:
+                hex_bolt.apply_scale([1.3, 1.3, 0.050 / hex_len])
             hex_bolt = _center_and_ground(hex_bolt)
-            bolt_obj = OUTPUT / "workshop_hex_bolt.obj"
+            bolt_obj = output / "workshop_hex_bolt.obj"
             _write_obj_with_texture(hex_bolt, bolt_obj, tex_name)
             processed_parts.append({
                 "part_id": "workshop_hex_bolt",
@@ -353,52 +437,49 @@ def prepare_assets(force: bool = False) -> dict[str, Any]:
             })
 
         else:
-            combined_mesh = trimesh.util.concatenate(list(geoms.values()))
-            z_up_mesh = _center_and_ground(_to_z_up(combined_mesh))
+            comb = trimesh.util.concatenate(geoms)
 
-            if asset_id == "screwdriver":
-                max_ext = max(z_up_mesh.extents)
-                if max_ext > 0:
-                    z_up_mesh.apply_scale(0.22 / max_ext)
+            if asset_id == "combination_wrench":
+                rot = trimesh.transformations.rotation_matrix(-np.pi / 2, [1, 0, 0])
+                comb.apply_transform(rot)
+                comb.apply_scale(0.21 / comb.extents[1])
+                z_up_mesh = _center_and_ground(comb)
             elif asset_id == "Drill_01":
-                max_ext = max(z_up_mesh.extents)
-                if max_ext > 0:
-                    z_up_mesh.apply_scale(0.21 / max_ext)
-            elif asset_id == "pliers":
-                max_ext = max(z_up_mesh.extents)
-                if max_ext > 0:
-                    z_up_mesh.apply_scale(0.19 / max_ext)
-            elif asset_id == "combination_wrench":
-                max_ext = max(z_up_mesh.extents)
-                if max_ext > 0:
-                    z_up_mesh.apply_scale(0.21 / max_ext)
-            elif asset_id == "ratchet_wrench":
-                max_ext = max(z_up_mesh.extents)
-                if max_ext > 0:
-                    z_up_mesh.apply_scale(0.24 / max_ext)
-            elif asset_id == "wooden_hammer_01":
-                max_ext = max(z_up_mesh.extents)
-                if max_ext > 0:
-                    z_up_mesh.apply_scale(0.28 / max_ext)
+                z_up_mesh = _center_and_ground(_to_z_up(comb))
+                z_up_mesh.apply_scale(0.21 / max(z_up_mesh.extents))
+            elif asset_id in {"screwdriver", "pliers", "ratchet_wrench", "wooden_hammer_01"}:
+                z_up_mesh = _center_and_ground(_to_z_up(comb))
+                if asset_id == "screwdriver":
+                    z_up_mesh.apply_scale(0.22 / z_up_mesh.extents[2])
+                elif asset_id == "pliers":
+                    z_up_mesh.apply_scale(0.19 / z_up_mesh.extents[2])
+                elif asset_id == "ratchet_wrench":
+                    z_up_mesh.apply_scale(0.24 / z_up_mesh.extents[2])
+                elif asset_id == "wooden_hammer_01":
+                    z_up_mesh.apply_scale(0.28 / z_up_mesh.extents[2])
             elif asset_id == "tool_cart":
+                z_up_mesh = _center_and_ground(_to_z_up(comb))
                 z_up_mesh.apply_scale([0.70 / z_up_mesh.extents[0], 0.45 / z_up_mesh.extents[1], 0.82 / z_up_mesh.extents[2]])
-            elif asset_id == "seeding_tray_01":
-                z_up_mesh.apply_scale([0.32 / z_up_mesh.extents[0], 0.22 / z_up_mesh.extents[1], 0.045 / z_up_mesh.extents[2]])
             elif asset_id == "plastic_container":
+                z_up_mesh = _center_and_ground(_to_z_up(comb))
                 z_up_mesh.apply_scale([0.16 / z_up_mesh.extents[0], 0.12 / z_up_mesh.extents[1], 0.08 / z_up_mesh.extents[2]])
             elif asset_id == "metal_toolbox":
+                z_up_mesh = _center_and_ground(_to_z_up(comb))
                 z_up_mesh.apply_scale([0.38 / z_up_mesh.extents[0], 0.18 / z_up_mesh.extents[1], 0.14 / z_up_mesh.extents[2]])
             elif asset_id == "wooden_table_02":
+                z_up_mesh = _center_and_ground(_to_z_up(comb))
                 z_up_mesh.apply_scale([1.20 / z_up_mesh.extents[0], 0.65 / z_up_mesh.extents[1], 0.68 / z_up_mesh.extents[2]])
+            else:
+                z_up_mesh = _center_and_ground(_to_z_up(comb))
 
             z_up_mesh = _center_and_ground(z_up_mesh)
 
             tex_name = f"{asset_id}_diff.png"
-            tex_path = OUTPUT / tex_name
+            tex_path = output / tex_name
             if diff_jpg:
                 _convert_texture(diff_jpg, tex_path)
 
-            obj_path = OUTPUT / f"{asset_id}.obj"
+            obj_path = output / f"{asset_id}.obj"
             _write_obj_with_texture(z_up_mesh, obj_path, tex_name)
 
             processed_parts.append({
@@ -425,16 +506,20 @@ def prepare_assets(force: bool = False) -> dict[str, Any]:
             "processed_parts": processed_parts,
         })
 
+    # Procedural parts tray entry
+    tray_entry = generate_workshop_parts_tray(output)
+    manifest_entries.append(tray_entry)
+
     manifest = {
         "schema_version": 1,
-        "description": "Poly Haven CC0 textured 3D assets for Workshop (W1) benchmark.",
+        "description": "Poly Haven CC0 and project-generated textured 3D assets for Workshop (W1) benchmark.",
         "license_summary": "All assets in this directory are licensed CC0 1.0 Universal Public Domain.",
         "assets": manifest_entries,
     }
 
-    manifest_path = OUTPUT / "manifest.json"
+    manifest_path = output / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
-    print(f"\n--> Successfully prepared {len(manifest_entries)} asset families in {OUTPUT}")
+    print(f"\n--> Successfully prepared {len(manifest_entries)} asset families in {output}")
     print(f"--> Wrote provenance manifest to {manifest_path}")
     return manifest
 
