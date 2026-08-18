@@ -219,10 +219,10 @@ variants:
         - workshop_hex_bolt
       RIGHT_DRAWER:
         - workshop_flathead_screwdriver
-        - workshop_hex_bolt
+        - workshop_pliers
       TOOL_CABINET:
         - workshop_power_driver
-        - workshop_hex_bolt
+        - workshop_combination_wrench
     active_surfaces: [MAIN_WORKBENCH_ZONE, TOOL_CART_TOP]
     active_containers: [PARTS_TRAY]
 
@@ -261,9 +261,9 @@ variants:
         - workshop_stubby_phillips_driver
         - workshop_medium_phillips_screw
       RIGHT_DRAWER:
-        - workshop_stubby_phillips_driver
+        - workshop_combination_wrench
       TOOL_CABINET:
-        - workshop_flathead_screwdriver
+        - workshop_pliers
     active_surfaces: [MAIN_WORKBENCH_ZONE, TOOL_CART_TOP]
     active_containers: [PARTS_TRAY]
 
@@ -273,7 +273,7 @@ variants:
     description: "Relational packing failure: only narrow wall shelf is available; driver + fastener bounding set exceeds usable surface area."
     storage_contents:
       LEFT_DRAWER:
-        - workshop_long_phillips_driver
+        - workshop_power_driver
         - workshop_medium_phillips_screw
       RIGHT_DRAWER: []
       TOOL_CABINET: []
@@ -289,10 +289,10 @@ variants:
         - workshop_flathead_screwdriver
         - workshop_medium_phillips_screw
       RIGHT_DRAWER:
-        - workshop_power_driver
-        - workshop_short_phillips_screw
+        - workshop_stubby_phillips_driver
+        - workshop_hex_bolt
       TOOL_CABINET:
         - workshop_combination_wrench
-        - workshop_hex_bolt
-    active_surfaces: [NARROW_WALL_SHELF]
+        - workshop_pliers
+    active_surfaces: [MAIN_WORKBENCH_ZONE, TOOL_CART_TOP]
     active_containers: [PARTS_TRAY]

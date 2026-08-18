@@ -215,6 +215,98 @@ class WorkshopSceneTests(unittest.TestCase):
                 f"NaN found in qvel for variant {var_name}",
             )
 
+    def test_physical_inventory_matches_yaml_across_all_14_variants(self):
+        from mujoco_scenes.workshop_scene import privileged_actual_storage_region
+        config = _load_workshop_variants_config()
+        variants = config.get("variants", {})
+        for var_name, var_meta in variants.items():
+            scene = WorkshopScene("none", variant=var_name)
+            declared_contents = var_meta.get("storage_contents", {})
+            actual_contents: dict[str, list[str]] = {reg: [] for reg in WORKSHOP_REGIONS}
+            for reg, expected_objs in declared_contents.items():
+                for obj_name in expected_objs:
+                    actual_reg = privileged_actual_storage_region(scene, obj_name)
+                    self.assertIn(actual_reg, actual_contents, f"Object {obj_name} placed in invalid region {actual_reg}")
+                    actual_contents[actual_reg].append(obj_name)
+                self.assertEqual(
+                    sorted(expected_objs),
+                    sorted(actual_contents[reg]),
+                    f"Physical inventory mismatch in {var_name} for region {reg}",
+                )
+
+    def test_all_pickable_objects_are_independent_free_bodies(self):
+        config = _load_workshop_variants_config()
+        variants = config.get("variants", {})
+        for var_name, var_meta in variants.items():
+            scene = WorkshopScene("none", variant=var_name)
+            for reg, objs in var_meta.get("storage_contents", {}).items():
+                for obj_name in objs:
+                    b_id = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_BODY, obj_name)
+                    j_id = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_JOINT, f"{obj_name}_free")
+                    self.assertGreaterEqual(b_id, 0, f"Missing body {obj_name} in {var_name}")
+                    self.assertGreaterEqual(j_id, 0, f"Missing freejoint {obj_name}_free in {var_name}")
+                    self.assertEqual(
+                        scene.model.jnt_type[j_id],
+                        mujoco.mjtJoint.mjJNT_FREE,
+                        f"Joint {obj_name}_free is not a free joint in {var_name}",
+                    )
+
+    def test_active_surfaces_and_containers_match_variant_config(self):
+        config = _load_workshop_variants_config()
+        variants = config.get("variants", {})
+        for var_name, var_meta in variants.items():
+            scene = WorkshopScene("none", variant=var_name)
+            expected_surfaces = set(var_meta.get("active_surfaces", []))
+            actual_surfaces = {s["region_id"] for s in scene.get_candidate_work_surfaces()}
+            self.assertEqual(
+                expected_surfaces,
+                actual_surfaces,
+                f"Active surfaces mismatch in {var_name}",
+            )
+
+            expected_containers = set(var_meta.get("active_containers", []))
+            actual_containers = {c["region_id"] for c in scene.get_candidate_parts_containers()}
+            self.assertEqual(
+                expected_containers,
+                actual_containers,
+                f"Active containers mismatch in {var_name}",
+            )
+
+    def test_f6_layout_swapped_differs_physically_from_base(self):
+        scene_f0 = WorkshopScene("none", variant="F0_BASE")
+        scene_f6 = WorkshopScene("none", variant="F6_LAYOUT_SWAPPED")
+
+        cab_f0 = scene_f0.data.xpos[mujoco.mj_name2id(scene_f0.model, mujoco.mjtObj.mjOBJ_BODY, "tool_cabinet")]
+        cab_f6 = scene_f6.data.xpos[mujoco.mj_name2id(scene_f6.model, mujoco.mjtObj.mjOBJ_BODY, "tool_cabinet")]
+        self.assertNotAlmostEqual(cab_f0[0], cab_f6[0], delta=0.2)
+        self.assertAlmostEqual(cab_f0[0], 0.0, delta=0.05)
+        self.assertAlmostEqual(cab_f6[0], -0.40, delta=0.05)
+
+        tray_f0 = scene_f0.data.xpos[mujoco.mj_name2id(scene_f0.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_parts_tray")]
+        tray_f6 = scene_f6.data.xpos[mujoco.mj_name2id(scene_f6.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_parts_tray")]
+        self.assertNotAlmostEqual(tray_f0[0], tray_f6[0], delta=0.4)
+
+    def test_privileged_oracle_feasibility_across_all_14_variants(self):
+        from mujoco_scenes.workshop_scene import privileged_validate_variant_feasibility
+        config = _load_workshop_variants_config()
+        variants = config.get("variants", {})
+        for var_name, var_meta in variants.items():
+            scene = WorkshopScene("none", variant=var_name)
+            oracle_res = privileged_validate_variant_feasibility(scene)
+            intended = var_meta.get("intended_outcome")
+            expected_reason = var_meta.get("rejection_reason")
+            self.assertEqual(
+                oracle_res["status"],
+                intended,
+                f"Oracle status mismatch in {var_name}",
+            )
+            if intended == "INFEASIBLE":
+                self.assertEqual(
+                    oracle_res["rejection_reason"],
+                    expected_reason,
+                    f"Rejection reason mismatch in {var_name}",
+                )
+
     def test_workshop_has_five_views_for_each_observation_stage(self):
         config = load_inspection_rig_config(WORKSHOP_INSPECTION_RIG_CONFIG)
         self.assertEqual(
@@ -227,7 +319,7 @@ class WorkshopSceneTests(unittest.TestCase):
 
     def test_open_drawers_produce_fresh_region_gated_rgbd_evidence(self):
         scene = WorkshopScene("none", variant="F0_BASE")
-        checker = GeometryChecker(scene, width=320, height=240)
+        checker = GeometryChecker(scene, width=640, height=480)
         initial_run = checker.run_region_inspection("INITIAL")
         self.assertGreater(
             len(initial_run.clouds["workshop_joint_seal"].points), 20
@@ -238,6 +330,7 @@ class WorkshopSceneTests(unittest.TestCase):
             "workshop_stubby_phillips_driver",
             "workshop_short_phillips_screw",
         ):
+            self.assertIn(instance_name, left_run.clouds)
             self.assertGreater(len(left_run.clouds[instance_name].points), 20)
 
         scene.close_container("LEFT_DRAWER")
@@ -247,6 +340,7 @@ class WorkshopSceneTests(unittest.TestCase):
             "workshop_long_phillips_driver",
             "workshop_medium_phillips_screw",
         ):
+            self.assertIn(instance_name, cab_run.clouds)
             self.assertGreater(len(cab_run.clouds[instance_name].points), 20)
 
     def test_workshop_pointcloud_runner_captures_all_four_stages(self):

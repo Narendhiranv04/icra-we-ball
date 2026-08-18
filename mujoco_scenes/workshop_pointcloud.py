@@ -123,6 +123,7 @@ def run_workshop_pointcloud(
             run = checker.run_region_inspection(
                 region_id,
                 stage_output_dir=stage_dir,
+                rig_config=scene.inspection_rig_config,
             )
         finally:
             if region_id != "INITIAL":

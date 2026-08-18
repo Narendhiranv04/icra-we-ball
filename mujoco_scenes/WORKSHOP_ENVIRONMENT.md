@@ -78,6 +78,45 @@ All asset downloads, coordinate frame conversions (Poly Haven Y-up to MuJoCo Z-u
 
 ---
 
+## Scene Construction Architecture
+
+The Workshop domain uses a modular, template-driven, and physically truthful variant generation architecture:
+
+1. **Clean Structural Foundation (`assets/workshop_base.xml`)**:
+   - Contains only structural geometry: walls, floor, workbench, pegboard, fixture workpiece, tool cart, narrow wall shelf, metal toolbox, parts tray, and hardware bin.
+   - Articulated storage containers:
+     - `left_tool_drawer` (prismatic slide along Y axis)
+     - `right_tool_drawer` (prismatic slide along Y axis)
+     - `tool_cabinet` (tabletop metal cabinet with hinged door)
+   - 5 calibrated cameras.
+   - All tools, fasteners, and decoys are excluded from the base XML.
+
+2. **Template-Based Object Realization (`WORKSHOP_SIM_OBJECT_TEMPLATES`)**:
+   - All 12 manipulable tool/fastener types are instantiated dynamically based on `workshop_variants.yaml`.
+   - **Dynamic Free-Body Policy**: Every instantiated tool and fastener is a top-level `<body name="..."><freejoint name="..."/>...</body>` in `<worldbody>`, giving each object independent 6-DOF dynamic freedom.
+   - **Deterministic Placement Slots**: Pre-computed collision-free resting positions and canonical orientations for `LEFT_DRAWER`, `RIGHT_DRAWER`, and `TOOL_CABINET`.
+   - **Inspection Storage Welds**: Named equality constraints (`storage_weld_<object>`) ensure objects move smoothly with drawer/door articulation during inspection without popping or falling through, and are detached for robotic manipulation.
+
+3. **Active Surface & Container Physics**:
+   - `MAIN_WORKBENCH_ZONE`: In `F2_REGION_ALTERNATIVE`, `I2`, `I5`, and `I6`, a physical obstruction crate is instantiated on the workbench, visibly and physically blocking the surface.
+   - `TOOL_CART_TOP` / `NARROW_WALL_SHELF`: Removed or obstructed in variants where they are inactive.
+   - Candidate parts containers (`PARTS_TRAY`, `HARDWARE_BIN`, `TOOLBOX_COMPARTMENT`): Physically present only when declared active in the variant configuration.
+
+4. **Physical Layout Profiles (`F6_LAYOUT_SWAPPED`)**:
+   - In `F6_LAYOUT_SWAPPED`, the spatial layout is physically swapped:
+     - `tool_cabinet`: moved from center (`x = 0.0`) to left workbench (`x = -0.40`).
+     - `workshop_tool_cart`: moved from right (`x = 0.92`) to left (`x = -0.92`).
+     - `workshop_narrow_shelf`: moved from left (`x = -0.70`) to right wall (`x = 0.70`).
+     - `workshop_parts_tray`: moved from left (`x = -0.44`) to right (`x = 0.44`).
+     - `workshop_hardware_bin`: moved from right (`x = 0.44`) to left (`x = -0.44`).
+
+5. **Privileged Oracle Feasibility Validator (`privileged_validate_variant_feasibility`)**:
+   - Performs a true scene-level search over all present bodies and active regions.
+   - Evaluates: `can_drive_screw`, `can_fasten`, `fits_hole` (radial clearance <= 7mm), `reaches_joint` (length >= 30mm), `driver_reaches` (reach >= 25mm), `tip_mates` (PH2 == PH2), `fits_work_surface` (usable area >= 1.2 * set area), `fits_parts_container` (open cavity > 0).
+   - Produces exact oracle status (`FEASIBLE` vs `INFEASIBLE`) and exact failure codes (`NO_VALID_DRIVER`, `NO_VALID_FASTENER`, `NO_WORK_SURFACE`, `NO_PARTS_CONTAINER`, `TOOL_GEOMETRY_FAILURE`, `OBJECT_REGION_PACKING_FAILURE`, `GLOBAL_CONFLICT`).
+
+---
+
 ## Multi-Camera Observation Rigs
 
 The scene features 5 calibrated cameras calibrated across 4 sequential inspection stages:
@@ -102,15 +141,18 @@ Cameras:
 ## CLI Usage
 
 ```bash
-# List all 14 benchmark variants
-PYTHONPATH=. /home/naren/miniconda3/bin/python mujoco_scenes/workshop_scene.py --list-variants
+# 1. List all 14 benchmark variants
+PYTHONPATH=. /home/naren/miniconda3/bin/python -m mujoco_scenes.workshop_scene --list-variants
 
-# Launch interactive viewer with Google Robot on variant F0_BASE
-PYTHONPATH=. /home/naren/miniconda3/bin/python mujoco_scenes/workshop_scene.py --robot google --variant F0_BASE --viewer
+# 2. Launch interactive viewer on variant F0_BASE
+PYTHONPATH=. /home/naren/miniconda3/bin/python -m mujoco_scenes.workshop_scene --robot google --variant F0_BASE --viewer
 
-# Inspect specific opened regions and render front overview
-MUJOCO_GL=egl PYTHONPATH=. /home/naren/miniconda3/bin/python mujoco_scenes/workshop_scene.py --variant F1_TOOL_ALTERNATIVE --open LEFT_DRAWER --open TOOL_CABINET --render overview.png
+# 3. Inspect specific opened regions and render front overview
+MUJOCO_GL=egl PYTHONPATH=. /home/naren/miniconda3/bin/python -m mujoco_scenes.workshop_scene --variant F1_TOOL_ALTERNATIVE --open LEFT_DRAWER --open TOOL_CABINET --render overview.png
 
-# Run 5-camera RGB-D point cloud reconstruction across all 4 inspection stages
-MUJOCO_GL=egl PYTHONPATH=. /home/naren/miniconda3/bin/python mujoco_scenes/workshop_pointcloud.py --variant F0_BASE --output runs/workshop_pc_f0
+# 4. Run 5-camera RGB-D point cloud reconstruction across all 4 inspection stages
+MUJOCO_GL=egl PYTHONPATH=. /home/naren/miniconda3/bin/python -m mujoco_scenes.workshop_pointcloud --variant F0_BASE --output runs/workshop_pc_f0
+
+# 5. Run full 14-variant physical & oracle suite audit
+MUJOCO_GL=egl PYTHONPATH=. /home/naren/miniconda3/bin/python -m mujoco_scenes.audit_workshop_scene --variant all --output-dir runs/workshop_scene_audit
 ```
