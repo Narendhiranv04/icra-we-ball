@@ -90,7 +90,7 @@ WORKSHOP_HARDWARE_BIN_CAVITY_VOLUME_M3 = (
 
 WORKSHOP_PARTS_TRAY_WIDTH_M = 0.22
 WORKSHOP_PARTS_TRAY_LENGTH_M = 0.14
-WORKSHOP_PARTS_TRAY_HEIGHT_M = 0.035
+WORKSHOP_PARTS_TRAY_HEIGHT_M = 0.032
 WORKSHOP_PARTS_TRAY_INNER_WIDTH_M = 0.20
 WORKSHOP_PARTS_TRAY_INNER_LENGTH_M = 0.12
 WORKSHOP_PARTS_TRAY_USABLE_HEIGHT_M = 0.026
@@ -141,7 +141,7 @@ PRIVILEGED_WORKSHOP_ORACLE_SPECS: dict[str, dict[str, Any]] = {
         "reach_m": 0.12,
         "tip_profile": WORKSHOP_TARGET_RECESS_PROFILE,
         "tip_width_m": 0.006,
-        "bounding_area_m2": 0.21 * 0.08,  # Large footprint: 0.0168 m^2
+        "bounding_area_m2": 0.163054 * 0.165,  # Compact 12V side-rest planar footprint: ~0.026904 m^2
         "mass": 0.60,
     },
     "workshop_medium_phillips_screw": {
@@ -1064,12 +1064,12 @@ class WorkshopScene:
         tray_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_parts_tray")
         if tray_id >= 0:
             tray_pos = self.data.xpos[tray_id]
-            center = [tray_pos[0], tray_pos[1], tray_pos[2]]
             dim = [
                 WORKSHOP_PARTS_TRAY_WIDTH_M,
                 WORKSHOP_PARTS_TRAY_LENGTH_M,
                 WORKSHOP_PARTS_TRAY_HEIGHT_M,
             ]
+            center = [tray_pos[0], tray_pos[1], tray_pos[2] + dim[2] / 2]
             proposals.append(
                 {
                     "region_instance_id": self._backend_to_region_id["PARTS_TRAY"],
@@ -1085,12 +1085,12 @@ class WorkshopScene:
         bin_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_hardware_bin")
         if bin_id >= 0:
             bin_pos = self.data.xpos[bin_id]
-            center = [bin_pos[0], bin_pos[1], bin_pos[2]]
             dim = [
                 WORKSHOP_HARDWARE_BIN_WIDTH_M,
                 WORKSHOP_HARDWARE_BIN_LENGTH_M,
                 WORKSHOP_HARDWARE_BIN_HEIGHT_M,
             ]
+            center = [bin_pos[0], bin_pos[1], bin_pos[2] + dim[2] / 2]
             proposals.append(
                 {
                     "region_instance_id": self._backend_to_region_id["HARDWARE_BIN"],
@@ -1183,7 +1183,7 @@ class WorkshopScene:
                 "center_world_m": [
                     0.42 if self.variant_name == "F6_LAYOUT_SWAPPED" else -0.42,
                     0.22,
-                    0.68,
+                    0.68 + WORKSHOP_PARTS_TRAY_HEIGHT_M / 2,
                 ],
                 "dimensions_m": [
                     WORKSHOP_PARTS_TRAY_WIDTH_M,
@@ -1198,7 +1198,7 @@ class WorkshopScene:
                 "center_world_m": [
                     0.44 if self.variant_name == "F6_LAYOUT_SWAPPED" else -0.44,
                     0.52,
-                    0.68,
+                    0.68 + WORKSHOP_HARDWARE_BIN_HEIGHT_M / 2,
                 ],
                 "dimensions_m": [
                     WORKSHOP_HARDWARE_BIN_WIDTH_M,
