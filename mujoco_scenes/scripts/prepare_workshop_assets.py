@@ -525,7 +525,7 @@ def prepare_assets(
                 z_up_mesh = _center_and_ground(comb)
             elif asset_id == "Drill_01":
                 z_up_mesh = _center_and_ground(_to_z_up(comb))
-                z_up_mesh.apply_scale(0.21 / max(z_up_mesh.extents))
+                z_up_mesh.apply_scale(0.165 / max(z_up_mesh.extents))
             elif asset_id in {"screwdriver", "pliers", "ratchet_wrench", "wooden_hammer_01"}:
                 z_up_mesh = _center_and_ground(_to_z_up(comb))
                 if asset_id == "screwdriver":

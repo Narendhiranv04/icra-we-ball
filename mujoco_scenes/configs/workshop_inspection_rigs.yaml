@@ -93,14 +93,14 @@ regions:
     cameras: *workshop_views
 
   TOOL_CABINET:
-    target_world_m: [0.44, 0.56, 0.86]
-    rig_position_world_m: [0.44, -0.70, 1.25]
+    target_world_m: [0.44, 0.56, 0.83]
+    rig_position_world_m: [0.44, -0.70, 1.22]
     up_world: [0.0, 0.0, 1.0]
     near_depth_m: 0.15
     far_depth_m: 2.20
     settle_steps: 80
     boundary_margin_m: 0.025
     inspection_volume:
-      minimum_world_m: [0.20, 0.35, 0.68]
-      maximum_world_m: [0.70, 0.75, 1.15]
+      minimum_world_m: [0.20, 0.35, 0.65]
+      maximum_world_m: [0.70, 0.75, 1.12]
     cameras: *workshop_views

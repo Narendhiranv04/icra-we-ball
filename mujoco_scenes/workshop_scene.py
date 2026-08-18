@@ -255,8 +255,8 @@ def _create_object_element(
 
     elif object_name == "workshop_power_driver":
         ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "power_driver_mesh", "material": "drill_visual_mat"})
-        ET.SubElement(body, "geom", {"name": f"{object_name}_col_body", "class": "collision", "type": "box", "pos": "0 0 0.08", "size": "0.035 0.08 0.04"})
-        ET.SubElement(body, "geom", {"name": f"{object_name}_col_handle", "class": "collision", "type": "capsule", "fromto": "0 0 0.04 0 -0.08 -0.04", "size": "0.020"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col_body", "class": "collision", "type": "box", "pos": "0 0 0.13", "size": "0.080 0.024 0.035"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col_handle", "class": "collision", "type": "box", "pos": "0 0 0.06", "size": "0.025 0.020 0.060"})
 
     elif object_name == "workshop_medium_phillips_screw":
         ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "medium_screw_mesh", "material": "screwdrivers_visual_mat"})
@@ -279,7 +279,7 @@ def _create_object_element(
 
     elif object_name == "workshop_combination_wrench":
         ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "combination_wrench_mesh", "material": "wrench_visual_mat"})
-        ET.SubElement(body, "geom", {"name": f"{object_name}_col", "class": "collision", "type": "box", "pos": "0 0 0.105", "size": "0.015 0.005 0.105"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col", "class": "collision", "type": "box", "pos": "0 0 0.0067", "size": "0.018 0.105 0.0067"})
 
     else:
         ET.SubElement(body, "geom", {"name": f"{object_name}_col", "class": "collision", "type": "box", "size": "0.05 0.05 0.05"})
@@ -288,8 +288,119 @@ def _create_object_element(
 
 
 # ==============================================================================
-# DETERMINISTIC STORAGE PLACEMENT SLOTS
+# DETERMINISTIC STORAGE PLACEMENT SLOTS & NATURAL RESTING POSES
 # ==============================================================================
+
+def _get_object_storage_pose(
+    obj_name: str, region_id: str, slot_idx: int, layout_swapped: bool = False
+) -> tuple[tuple[float, float, float], tuple[float, float, float, float], str]:
+    """Return deterministic resting (pos, quat, parent_body) tailored for object physical geometry."""
+    q_along_x = (0.7071, 0.0, 0.7071, 0.0)      # local Z -> world +X
+    q_along_y = (0.7071, 0.7071, 0.0, 0.0)      # local Z -> world +Y
+    q_flat = (1.0, 0.0, 0.0, 0.0)
+    q_pliers_x = (0.5, 0.5, 0.5, 0.5)          # local Z -> world +X, local X -> world +Y, local Y -> world +Z
+    q_wrench_x = (0.7071, 0.0, 0.0, 0.7071)    # local Y -> world +X
+    q_drill_side = (0.7071, -0.7071, 0.0, 0.0) # lies flat on side
+
+    if region_id == "TOOL_CABINET":
+        cab_x = -0.49 if layout_swapped else 0.44
+        cab_y = 0.56
+        shelf_z = 0.8260
+        floor_z = 0.6880
+        cab_slots_xy = [
+            (cab_x, cab_y + 0.03),
+            (cab_x, cab_y - 0.03),
+            (cab_x, cab_y - 0.08),
+            (cab_x - 0.04, cab_y - 0.03),
+            (cab_x + 0.04, cab_y - 0.03),
+        ]
+        base_x, base_y = cab_slots_xy[min(slot_idx, len(cab_slots_xy) - 1)]
+
+        if obj_name == "workshop_long_phillips_driver":
+            return (base_x - 0.115, base_y, shelf_z + 0.013), q_along_x, "tool_cabinet"
+        elif obj_name == "workshop_medium_phillips_screw":
+            return (base_x - 0.0225, base_y, shelf_z + 0.007), q_along_x, "tool_cabinet"
+        elif obj_name == "workshop_short_phillips_screw":
+            return (base_x - 0.009, base_y, shelf_z + 0.007), q_along_x, "tool_cabinet"
+        elif obj_name == "workshop_stubby_phillips_driver":
+            return (base_x - 0.055, base_y, shelf_z + 0.015), q_along_x, "tool_cabinet"
+        elif obj_name == "workshop_hex_bolt":
+            return (base_x - 0.025, base_y, shelf_z + 0.009), q_along_x, "tool_cabinet"
+        elif obj_name == "workshop_power_driver":
+            return (base_x, cab_y - 0.08, floor_z + 0.024), q_drill_side, "tool_cabinet"
+        elif obj_name == "workshop_pliers":
+            return (base_x - 0.095, base_y, shelf_z + 0.010), q_pliers_x, "tool_cabinet"
+        elif obj_name == "workshop_combination_wrench":
+            return (base_x, base_y, shelf_z), q_wrench_x, "tool_cabinet"
+        else:
+            return (base_x, base_y, shelf_z + 0.020), q_along_x, "tool_cabinet"
+
+    elif region_id == "LEFT_DRAWER":
+        floor_z = 0.4720
+        drawer_slots_xy = [
+            (-0.34, 0.28),
+            (-0.22, 0.45),
+            (-0.22, 0.28),
+            (-0.34, 0.45),
+            (-0.28, 0.35),
+        ]
+        base_x, base_y = drawer_slots_xy[min(slot_idx, len(drawer_slots_xy) - 1)]
+
+        if obj_name == "workshop_flathead_screwdriver":
+            return (base_x, base_y + 0.110, floor_z + 0.014), q_along_y, "left_tool_drawer"
+        elif obj_name == "workshop_long_phillips_driver":
+            return (base_x, base_y + 0.115, floor_z + 0.013), q_along_y, "left_tool_drawer"
+        elif obj_name == "workshop_stubby_phillips_driver":
+            return (base_x, base_y + 0.055, floor_z + 0.015), q_along_y, "left_tool_drawer"
+        elif obj_name == "workshop_medium_phillips_screw":
+            return (base_x, base_y + 0.0225, floor_z + 0.007), q_along_y, "left_tool_drawer"
+        elif obj_name == "workshop_short_phillips_screw":
+            return (base_x, base_y + 0.009, floor_z + 0.007), q_along_y, "left_tool_drawer"
+        elif obj_name == "workshop_hex_bolt":
+            return (base_x, base_y + 0.025, floor_z + 0.009), q_along_y, "left_tool_drawer"
+        elif obj_name == "workshop_power_driver":
+            return (-0.28, 0.22, floor_z + 0.024), q_drill_side, "left_tool_drawer"
+        elif obj_name == "workshop_pliers":
+            return (base_x, base_y + 0.095, floor_z + 0.010), q_along_y, "left_tool_drawer"
+        elif obj_name == "workshop_combination_wrench":
+            return (base_x, base_y, floor_z), q_flat, "left_tool_drawer"
+        else:
+            return (base_x, base_y, floor_z + 0.020), q_along_y, "left_tool_drawer"
+
+    elif region_id == "RIGHT_DRAWER":
+        floor_z = 0.4720
+        drawer_slots_xy = [
+            (0.22, 0.28),
+            (0.34, 0.45),
+            (0.34, 0.28),
+            (0.22, 0.45),
+            (0.28, 0.35),
+        ]
+        base_x, base_y = drawer_slots_xy[min(slot_idx, len(drawer_slots_xy) - 1)]
+
+        if obj_name == "workshop_stubby_phillips_driver":
+            return (base_x, base_y + 0.055, floor_z + 0.015), q_along_y, "right_tool_drawer"
+        elif obj_name == "workshop_flathead_screwdriver":
+            return (base_x, base_y + 0.110, floor_z + 0.014), q_along_y, "right_tool_drawer"
+        elif obj_name == "workshop_long_phillips_driver":
+            return (base_x, base_y + 0.115, floor_z + 0.013), q_along_y, "right_tool_drawer"
+        elif obj_name == "workshop_medium_phillips_screw":
+            return (base_x, base_y + 0.0225, floor_z + 0.007), q_along_y, "right_tool_drawer"
+        elif obj_name == "workshop_short_phillips_screw":
+            return (base_x, base_y + 0.009, floor_z + 0.007), q_along_y, "right_tool_drawer"
+        elif obj_name == "workshop_hex_bolt":
+            return (base_x, base_y + 0.025, floor_z + 0.009), q_along_y, "right_tool_drawer"
+        elif obj_name == "workshop_power_driver":
+            return (0.28, 0.22, floor_z + 0.024), q_drill_side, "right_tool_drawer"
+        elif obj_name == "workshop_pliers":
+            return (base_x, base_y + 0.095, floor_z + 0.010), q_along_y, "right_tool_drawer"
+        elif obj_name == "workshop_combination_wrench":
+            return (base_x, base_y, floor_z), q_flat, "right_tool_drawer"
+        else:
+            return (base_x, base_y, floor_z + 0.020), q_along_y, "right_tool_drawer"
+
+    return (0.0, 0.0, 0.0), q_flat, "world"
+
 
 def _get_storage_slots(
     layout_swapped: bool = False
@@ -298,30 +409,33 @@ def _get_storage_slots(
     q_flat_x = (0.7071, 0.0, 0.7071, 0.0)
     q_flat_y = (0.7071, 0.7071, 0.0, 0.0)
 
+    # Left Drawer: floor top Z = 0.4720m, inner X in [-0.43, -0.13], inner Y in [0.16, 0.53] (closed)
     left_drawer_slots = [
-        ((-0.34, 0.35, 0.485), q_flat_y, "left_tool_drawer"),
-        ((-0.22, 0.35, 0.485), q_flat_x, "left_tool_drawer"),
-        ((-0.22, 0.25, 0.485), q_flat_y, "left_tool_drawer"),
-        ((-0.34, 0.25, 0.485), q_flat_y, "left_tool_drawer"),
-        ((-0.28, 0.35, 0.485), q_flat_y, "left_tool_drawer"),
+        ((-0.34, 0.46, 0.486), q_flat_y, "left_tool_drawer"),
+        ((-0.22, 0.359, 0.479), q_flat_y, "left_tool_drawer"),
+        ((-0.22, 0.46, 0.486), q_flat_y, "left_tool_drawer"),
+        ((-0.34, 0.28, 0.479), q_flat_y, "left_tool_drawer"),
+        ((-0.28, 0.37, 0.485), q_flat_y, "left_tool_drawer"),
     ]
 
+    # Right Drawer: floor top Z = 0.4720m, inner X in [0.13, 0.43], inner Y in [0.16, 0.53] (closed)
     right_drawer_slots = [
-        ((0.34, 0.35, 0.485), q_flat_y, "right_tool_drawer"),
-        ((0.22, 0.35, 0.485), q_flat_x, "right_tool_drawer"),
-        ((0.22, 0.25, 0.485), q_flat_y, "right_tool_drawer"),
-        ((0.34, 0.25, 0.485), q_flat_y, "right_tool_drawer"),
-        ((0.28, 0.35, 0.485), q_flat_y, "right_tool_drawer"),
+        ((0.22, 0.405, 0.487), q_flat_y, "right_tool_drawer"),
+        ((0.34, 0.375, 0.481), q_flat_y, "right_tool_drawer"),
+        ((0.34, 0.46, 0.486), q_flat_y, "right_tool_drawer"),
+        ((0.22, 0.28, 0.479), q_flat_y, "right_tool_drawer"),
+        ((0.28, 0.37, 0.485), q_flat_y, "right_tool_drawer"),
     ]
 
+    # Tool Cabinet: shelf top Z = 0.8260m, inner X in [cab_x-0.137, cab_x+0.137], inner Y in [cab_y-0.094, cab_y+0.084]
     cab_x = -0.49 if layout_swapped else 0.44
     cab_y = 0.56
     tool_cabinet_slots = [
-        ((cab_x, cab_y + 0.02, 0.865), q_flat_x, "tool_cabinet"),
-        ((cab_x - 0.05, cab_y - 0.03, 0.865), q_flat_x, "tool_cabinet"),
-        ((cab_x + 0.05, cab_y - 0.03, 0.865), q_flat_x, "tool_cabinet"),
-        ((cab_x - 0.05, cab_y + 0.02, 0.865), q_flat_x, "tool_cabinet"),
-        ((cab_x, cab_y, 0.865), q_flat_y, "tool_cabinet"),
+        ((cab_x - 0.115, cab_y + 0.03, 0.839), q_flat_x, "tool_cabinet"),
+        ((cab_x - 0.0225, cab_y - 0.03, 0.833), q_flat_x, "tool_cabinet"),
+        ((cab_x - 0.105, cab_y + 0.02, 0.861), q_flat_x, "tool_cabinet"),
+        ((cab_x - 0.095, cab_y - 0.03, 0.841), q_flat_x, "tool_cabinet"),
+        ((cab_x + 0.05, cab_y - 0.03, 0.833), q_flat_x, "tool_cabinet"),
     ]
 
     return {
@@ -370,20 +484,20 @@ def build_workshop_xml(
         for body in worldbody.iter("body"):
             b_name = body.get("name", "")
             if b_name == "tool_cabinet":
-                body.set("pos", "-0.49 0.56 0.71")
+                body.set("pos", "-0.49 0.56 0.68")
             elif b_name == "workshop_tool_cart":
                 body.set("pos", "-1.08 0.40 0")
             elif b_name == "workshop_parts_tray":
-                body.set("pos", "0.42 0.22 0.71")
+                body.set("pos", "0.42 0.22 0.68")
             elif b_name == "workshop_hardware_bin":
-                body.set("pos", "0.44 0.52 0.71")
+                body.set("pos", "0.44 0.52 0.68")
 
     # 2. Apply active/inactive surface modifications
     if "MAIN_WORKBENCH_ZONE" not in active_surfaces:
         obs_body = ET.SubElement(
             worldbody,
             "body",
-            {"name": "workbench_surface_obstruction", "pos": "0.0 0.26 0.73"},
+            {"name": "workbench_surface_obstruction", "pos": "0.0 0.26 0.715"},
         )
         ET.SubElement(
             obs_body,
@@ -479,8 +593,7 @@ def build_workshop_xml(
             if body.get("name") == "workshop_hardware_bin":
                 worldbody.remove(body)
 
-    # 4. Instantiate declared storage objects into deterministic slots
-    slots = _get_storage_slots(layout_swapped=is_swapped)
+    # 4. Instantiate declared storage objects into deterministic natural resting poses
     equality = root.find("equality")
     if equality is None:
         equality = ET.SubElement(root, "equality")
@@ -488,15 +601,10 @@ def build_workshop_xml(
     present_pickable_objects: set[str] = set()
 
     for region_id, object_list in storage_contents.items():
-        region_slots = slots.get(region_id, [])
         for idx, obj_name in enumerate(object_list):
-            if idx >= len(region_slots):
-                base_slot = region_slots[-1]
-                pos = (base_slot[0][0], base_slot[0][1] + 0.08 * (idx - len(region_slots) + 1), base_slot[0][2])
-                quat = base_slot[1]
-                parent_body = base_slot[2]
-            else:
-                pos, quat, parent_body = region_slots[idx]
+            pos, quat, parent_body = _get_object_storage_pose(
+                obj_name, region_id, idx, layout_swapped=is_swapped
+            )
 
             obj_elem = _create_object_element(obj_name, pos, quat)
             worldbody.append(obj_elem)
@@ -559,10 +667,10 @@ def privileged_actual_storage_region(
         ):
             return "TOOL_CABINET"
 
-    if -0.50 <= x <= -0.10 and 0.15 <= y <= 0.60 and 0.35 <= z <= 0.65:
+    if -0.50 <= x <= -0.10 and -0.20 <= y <= 0.65 and 0.35 <= z <= 0.65:
         return "LEFT_DRAWER"
 
-    if 0.10 <= x <= 0.50 and 0.15 <= y <= 0.60 and 0.35 <= z <= 0.65:
+    if 0.10 <= x <= 0.50 and -0.20 <= y <= 0.65 and 0.35 <= z <= 0.65:
         return "RIGHT_DRAWER"
 
     if -0.80 <= x <= 0.80 and 0.0 <= y <= 0.80 and 0.65 <= z <= 1.20:
@@ -1000,7 +1108,7 @@ class WorkshopScene:
         """Return neutral target workpiece localization."""
         return {
             "target_instance_id": self._backend_to_instance_id.get("workshop_frame_joint", "target_0001"),
-            "fixture_center_world_m": [-0.15, 0.50, 0.71],
+            "fixture_center_world_m": [-0.15, 0.50, 0.68],
         }
 
     # --------------------------------------------------------------------------
@@ -1075,7 +1183,7 @@ class WorkshopScene:
                 "center_world_m": [
                     0.42 if self.variant_name == "F6_LAYOUT_SWAPPED" else -0.42,
                     0.22,
-                    0.71,
+                    0.68,
                 ],
                 "dimensions_m": [
                     WORKSHOP_PARTS_TRAY_WIDTH_M,
@@ -1090,7 +1198,7 @@ class WorkshopScene:
                 "center_world_m": [
                     0.44 if self.variant_name == "F6_LAYOUT_SWAPPED" else -0.44,
                     0.52,
-                    0.71,
+                    0.68,
                 ],
                 "dimensions_m": [
                     WORKSHOP_HARDWARE_BIN_WIDTH_M,
@@ -1107,7 +1215,7 @@ class WorkshopScene:
         """Privileged oracle helper returning exact workpiece ground truth."""
         return {
             "workpiece_id": "workshop_frame_joint",
-            "fixture_center_world_m": [-0.15, 0.50, 0.71],
+            "fixture_center_world_m": [-0.15, 0.50, 0.68],
             "target_hole_diameter_m": WORKSHOP_TARGET_HOLE_DIAMETER_M,
             "target_hole_depth_m": WORKSHOP_TARGET_HOLE_DEPTH_M,
             "target_radial_clearance_m": WORKSHOP_TARGET_RADIAL_CLEARANCE_M,
@@ -1137,10 +1245,10 @@ class WorkshopScene:
         if self.variant_name == "F6_LAYOUT_SWAPPED":
             if "TOOL_CABINET" in config.get("regions", {}):
                 cab_reg = config["regions"]["TOOL_CABINET"]
-                cab_reg["target_world_m"] = [-0.49, 0.56, 0.86]
-                cab_reg["rig_position_world_m"] = [-0.49, -0.70, 1.25]
-                cab_reg["inspection_volume"]["minimum_world_m"] = [-0.75, 0.35, 0.68]
-                cab_reg["inspection_volume"]["maximum_world_m"] = [-0.25, 0.75, 1.15]
+                cab_reg["target_world_m"] = [-0.49, 0.56, 0.83]
+                cab_reg["rig_position_world_m"] = [-0.49, -0.70, 1.22]
+                cab_reg["inspection_volume"]["minimum_world_m"] = [-0.75, 0.35, 0.65]
+                cab_reg["inspection_volume"]["maximum_world_m"] = [-0.25, 0.75, 1.12]
         return config
 
     def get_task_scene_state(self) -> dict[str, Any]:

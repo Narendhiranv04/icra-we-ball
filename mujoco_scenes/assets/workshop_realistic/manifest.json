@@ -137,13 +137,13 @@
         {
           "part_id": "Drill_01",
           "processed_filename": "assets/workshop_realistic/Drill_01.obj",
-          "processed_sha256": "0c3200265ee8b42fbef7354a1f3d53621b7e391e29a73182d35007f62885dd64",
+          "processed_sha256": "d28b7de5d2202642b82c4c052a053a1c79cf220e9e60562b77b7e2b7d9b177aa",
           "texture_file": "assets/workshop_realistic/Drill_01_diff.png",
           "texture_sha256": "59e733f4acfd99126464e05056467c2c7edd5de9332d08c92ad4f30cd9cb39f2",
           "canonical_dimensions_m": [
-            0.207524,
-            0.059478,
-            0.21
+            0.163054,
+            0.046734,
+            0.165
           ],
           "triangle_count": 2926,
           "vertex_count": 2263
@@ -296,35 +296,6 @@
       ]
     },
     {
-      "asset_id": "workshop_hardware_bin",
-      "human_readable_name": "Open Industrial Hardware Storage Bin",
-      "author": "icra-we-ball project",
-      "license": "CC0-1.0",
-      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "source": "project-generated procedural mesh",
-      "source_url": "mujoco_scenes/scripts/prepare_workshop_assets.py",
-      "acquisition_date": "2026-08-18",
-      "roles": [
-        "workshop_hardware_bin"
-      ],
-      "processed_parts": [
-        {
-          "part_id": "workshop_hardware_bin",
-          "processed_filename": "assets/workshop_realistic/workshop_hardware_bin.obj",
-          "processed_sha256": "c60b81142e626ac2468c7b50630b5c3b9918c32e81a3281d23d317bcb5180fc1",
-          "texture_file": "assets/workshop_realistic/workshop_hardware_bin_diff.png",
-          "texture_sha256": "ae155d79fe533b0fd28c5c8547da0309848bc3ebd370f128e7d17c9128b5a2f6",
-          "canonical_dimensions_m": [
-            0.11,
-            0.15,
-            0.08
-          ],
-          "triangle_count": 84,
-          "vertex_count": 40
-        }
-      ]
-    },
-    {
       "asset_id": "metal_toolbox",
       "human_readable_name": "Metal Tool Box Compartment",
       "author": "Poly Haven / Martin Klekner",
@@ -408,6 +379,35 @@
           ],
           "triangle_count": 60,
           "vertex_count": 28
+        }
+      ]
+    },
+    {
+      "asset_id": "workshop_hardware_bin",
+      "human_readable_name": "Open Industrial Hardware Storage Bin",
+      "author": "icra-we-ball project",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "project-generated procedural mesh",
+      "source_url": "mujoco_scenes/scripts/prepare_workshop_assets.py",
+      "acquisition_date": "2026-08-18",
+      "roles": [
+        "workshop_hardware_bin"
+      ],
+      "processed_parts": [
+        {
+          "part_id": "workshop_hardware_bin",
+          "processed_filename": "assets/workshop_realistic/workshop_hardware_bin.obj",
+          "processed_sha256": "c60b81142e626ac2468c7b50630b5c3b9918c32e81a3281d23d317bcb5180fc1",
+          "texture_file": "assets/workshop_realistic/workshop_hardware_bin_diff.png",
+          "texture_sha256": "ae155d79fe533b0fd28c5c8547da0309848bc3ebd370f128e7d17c9128b5a2f6",
+          "canonical_dimensions_m": [
+            0.11,
+            0.15,
+            0.08
+          ],
+          "triangle_count": 84,
+          "vertex_count": 40
         }
       ]
     },

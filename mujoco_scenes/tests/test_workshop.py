@@ -944,8 +944,113 @@ class WorkshopPrivilegeBoundaryTests(unittest.TestCase):
             mujoco.mj_step(scene_c.model, scene_c.data)
         b_id_c = mujoco.mj_name2id(scene_c.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_medium_phillips_screw")
         pos_c = scene_c.data.xpos[b_id_c]
-        # Must stay on cabinet shelf (z >= 0.85)
-        self.assertGreaterEqual(pos_c[2], 0.85)
+        # Must stay on cabinet shelf (z >= 0.82)
+        self.assertGreaterEqual(pos_c[2], 0.82)
+
+    def test_all_workshop_storage_objects_are_physically_well_placed(self):
+        """Verify across all 14 variants that storage objects rest on support, stay contained, and do not overlap."""
+        config = _load_workshop_variants_config()
+        variants = config.get("variants", {})
+
+        for vname, vspec in variants.items():
+            scene = WorkshopScene("none", variant=vname)
+            is_swapped = vname == "F6_LAYOUT_SWAPPED"
+            cab_x = -0.49 if is_swapped else 0.44
+
+            cab_usable = {
+                "min": [cab_x - 0.137, 0.56 - 0.094, 0.688],
+                "max": [cab_x + 0.137, 0.56 + 0.084, 0.978],
+            }
+            left_usable = {"min": [-0.43, 0.16, 0.472], "max": [-0.13, 0.53, 0.60]}
+            right_usable = {"min": [0.13, 0.16, 0.472], "max": [0.43, 0.53, 0.60]}
+            reg_bounds = {"TOOL_CABINET": cab_usable, "LEFT_DRAWER": left_usable, "RIGHT_DRAWER": right_usable}
+            support_z = {"TOOL_CABINET": (0.8260, 0.6880), "LEFT_DRAWER": (0.4720,), "RIGHT_DRAWER": (0.4720,)}
+
+            for reg_id, obj_list in vspec.get("storage_contents", {}).items():
+                aabbs = []
+                for obj_name in obj_list:
+                    bid = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_BODY, obj_name)
+                    self.assertGreaterEqual(bid, 0, f"Body {obj_name} missing in {vname}")
+
+                    min_pt = np.array([np.inf, np.inf, np.inf])
+                    max_pt = np.array([-np.inf, -np.inf, -np.inf])
+                    for gid in range(scene.model.ngeom):
+                        if scene.model.geom_bodyid[gid] == bid and scene.model.geom_group[gid] == 1:
+                            gpos = scene.data.geom_xpos[gid]
+                            gmat = scene.data.geom_xmat[gid].reshape(3, 3)
+                            gtype = scene.model.geom_type[gid]
+                            if gtype == mujoco.mjtGeom.mjGEOM_MESH:
+                                mid = scene.model.geom_dataid[gid]
+                                vert_start = scene.model.mesh_vertadr[mid]
+                                vert_num = scene.model.mesh_vertnum[mid]
+                                verts = scene.model.mesh_vert[vert_start:vert_start + vert_num]
+                                world_verts = (gmat @ verts.T).T + gpos
+                                min_pt = np.minimum(min_pt, world_verts.min(axis=0))
+                                max_pt = np.maximum(max_pt, world_verts.max(axis=0))
+                            elif gtype == mujoco.mjtGeom.mjGEOM_BOX:
+                                gsize = scene.model.geom_size[gid]
+                                corners = np.array([[sx * gsize[0], sy * gsize[1], sz * gsize[2]] for sx in (-1, 1) for sy in (-1, 1) for sz in (-1, 1)])
+                                world_corners = (gmat @ corners.T).T + gpos
+                                min_pt = np.minimum(min_pt, world_corners.min(axis=0))
+                                max_pt = np.maximum(max_pt, world_corners.max(axis=0))
+
+                    aabbs.append((obj_name, min_pt, max_pt))
+
+                    # 1. Containment check
+                    ub = reg_bounds[reg_id]
+                    for axis, name in enumerate(["X", "Y", "Z"]):
+                        self.assertGreaterEqual(min_pt[axis], ub["min"][axis] - 0.005, f"{vname} {reg_id} {obj_name} min {name} < {ub['min'][axis]}")
+                        self.assertLessEqual(max_pt[axis], ub["max"][axis] + 0.005, f"{vname} {reg_id} {obj_name} max {name} > {ub['max'][axis]}")
+
+                    # 2. Support contact check (within 5mm)
+                    min_gap = min(abs(min_pt[2] - sz) for sz in support_z[reg_id])
+                    self.assertLessEqual(min_gap, 0.005, f"{vname} {reg_id} {obj_name} support contact gap {min_gap:.4f} > 5mm")
+
+                # 3. Pairwise non-intersection
+                for i, (n1, min1, max1) in enumerate(aabbs):
+                    for n2, min2, max2 in aabbs[i + 1:]:
+                        overlap_x = max(0.0, min(max1[0], max2[0]) - max(min1[0], min2[0]))
+                        overlap_y = max(0.0, min(max1[1], max2[1]) - max(min1[1], min2[1]))
+                        overlap_z = max(0.0, min(max1[2], max2[2]) - max(min1[2], min2[2]))
+                        vol = overlap_x * overlap_y * overlap_z
+                        self.assertEqual(vol, 0.0, f"{vname} {reg_id}: {n1} overlaps {n2}")
+
+    def test_workshop_tabletop_props_rest_on_support_surface(self):
+        """Verify that tabletop props (tray, bin, fixture, cabinet) rest directly on the wood tabletop (z=0.68m)."""
+        scene = WorkshopScene("none", variant="F0_BASE")
+        tabletop_bodies = ["workshop_parts_tray", "workshop_hardware_bin", "workshop_frame_fixture", "tool_cabinet"]
+
+        for bname in tabletop_bodies:
+            bid = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_BODY, bname)
+            self.assertGreaterEqual(bid, 0)
+            bpos = scene.data.xpos[bid]
+            # Body base Z must match tabletop height z=0.6800m within 2mm
+            self.assertAlmostEqual(bpos[2], 0.6800, delta=0.002, msg=f"{bname} base Z ({bpos[2]}) does not match tabletop height 0.68m")
+
+    def test_cabinet_door_sweep_does_not_intersect_stored_objects(self):
+        """Verify that opening the cabinet door does not sweep through or collide with stored tools."""
+        for vname in ["F0_BASE", "F6_LAYOUT_SWAPPED"]:
+            scene = WorkshopScene("none", variant=vname)
+            cab_id = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_BODY, "tool_cabinet")
+            cab_pos = scene.data.xpos[cab_id]
+            door_inner_y = cab_pos[1] - 0.088
+
+            # Stored tools must stay behind closed door plane with positive margin
+            for obj_name in scene.storage_contents.get("TOOL_CABINET", []):
+                bid = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_BODY, obj_name)
+                min_y = np.inf
+                for gid in range(scene.model.ngeom):
+                    if scene.model.geom_bodyid[gid] == bid and scene.model.geom_group[gid] == 1:
+                        gpos = scene.data.geom_xpos[gid]
+                        gmat = scene.data.geom_xmat[gid].reshape(3, 3)
+                        if scene.model.geom_type[gid] == mujoco.mjtGeom.mjGEOM_MESH:
+                            mid = scene.model.geom_dataid[gid]
+                            vert_start = scene.model.mesh_vertadr[mid]
+                            vert_num = scene.model.mesh_vertnum[mid]
+                            verts = scene.model.mesh_vert[vert_start:vert_start + vert_num]
+                            world_verts = (gmat @ verts.T).T + gpos
+                            min_y = min(min_y, world_verts[:, 1].min())
+                self.assertGreaterEqual(min_y, door_inner_y + 0.005, f"{vname} {obj_name} door clearance {min_y - door_inner_y:.4f} < 5mm")
 
     def test_cabinet_door_collision_articulates_with_hinge(self):
         """Verify that tool cabinet door collision follows the door hinge cleanly."""
