@@ -1,0 +1,93 @@
+schema_version: 1
+inspection_sequence: [LEFT_DRAWER, TOOL_CABINET]
+
+camera_slots:
+  left: workshop_camera_left
+  right: workshop_camera_right
+  top: workshop_camera_top
+  front: workshop_camera_front
+  close: workshop_camera_close
+
+view_validation:
+  minimum_valid_rig_cameras: 5
+  minimum_object_camera_count: 2
+  maximum_target_angle_degrees: 8.0
+  minimum_valid_depth_pixels: 150
+
+processing:
+  mask_erosion_pixels: 0
+  depth_discontinuity_m: 0.040
+  depth_discontinuity_radius_pixels: 1
+  voxel_size_m: 0.003
+  outlier_removal:
+    enabled: true
+    voxel_radius_m: 0.012
+    minimum_neighbours: 2
+    minimum_input_points: 30
+  primary_component_filter:
+    enabled: false
+    minimum_component_fraction: 0.60
+
+evidence_acceptance:
+  minimum_object_points: 20
+  minimum_inside_fraction: 0.55
+
+regions:
+  INITIAL:
+    target_world_m: [0.0, 0.48, 1.00]
+    rig_position_world_m: [0.0, -1.15, 1.45]
+    up_world: [0.0, 0.0, 1.0]
+    near_depth_m: 0.20
+    far_depth_m: 2.50
+    settle_steps: 50
+    boundary_margin_m: 0.025
+    inspection_volume:
+      minimum_world_m: [-1.15, 0.00, 0.57]
+      maximum_world_m: [1.15, 1.52, 1.80]
+    cameras: &workshop_views
+      left:
+        position_offset_m: [-0.34, 0.00, 0.12]
+        look_at_offset_m: [-0.12, 0.00, 0.00]
+        fovy_degrees: 62.0
+      right:
+        position_offset_m: [0.34, 0.00, 0.12]
+        look_at_offset_m: [0.12, 0.00, 0.00]
+        fovy_degrees: 62.0
+      top:
+        position_offset_m: [0.00, 0.20, 0.55]
+        look_at_offset_m: [0.00, 0.00, -0.05]
+        fovy_degrees: 64.0
+      front:
+        position_offset_m: [-0.16, 0.08, 0.22]
+        look_at_offset_m: [0.06, 0.00, 0.00]
+        fovy_degrees: 60.0
+      close:
+        position_offset_m: [0.16, 0.12, 0.30]
+        look_at_offset_m: [-0.06, 0.00, 0.00]
+        fovy_degrees: 58.0
+
+  LEFT_DRAWER:
+    target_world_m: [-0.48, -0.02, 0.44]
+    rig_position_world_m: [-0.48, -1.05, 0.86]
+    up_world: [0.0, 0.0, 1.0]
+    near_depth_m: 0.15
+    far_depth_m: 1.80
+    settle_steps: 80
+    boundary_margin_m: 0.025
+    inspection_volume:
+      minimum_world_m: [-0.90, -0.42, 0.34]
+      maximum_world_m: [-0.06, 0.40, 0.62]
+    cameras: *workshop_views
+
+  TOOL_CABINET:
+    target_world_m: [0.78, 0.62, 0.90]
+    rig_position_world_m: [0.78, -0.72, 1.22]
+    up_world: [0.0, 0.0, 1.0]
+    near_depth_m: 0.15
+    far_depth_m: 2.20
+    settle_steps: 80
+    boundary_margin_m: 0.025
+    inspection_volume:
+      minimum_world_m: [0.43, 0.42, 0.62]
+      maximum_world_m: [1.12, 0.90, 1.23]
+    cameras: *workshop_views

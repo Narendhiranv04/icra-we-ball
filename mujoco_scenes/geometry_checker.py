@@ -610,6 +610,8 @@ class GeometryChecker:
         height: int = 480,
         max_depth: float = 5.0,
         voxel_size: float = 0.003,
+        segmenter: Any | None = None,
+        semantic_prompts: Sequence[str] = (),
     ):
         if mujoco is None:
             raise RuntimeError("GeometryChecker requires the mujoco package")
@@ -625,6 +627,8 @@ class GeometryChecker:
         self.height = height
         self.max_depth = max_depth
         self.voxel_size = voxel_size
+        self.segmenter = segmenter
+        self.semantic_prompts = tuple(semantic_prompts)
         self._camera_ids = {
             name: self._require_id(mujoco.mjtObj.mjOBJ_CAMERA, name)
             for name in self.cameras
