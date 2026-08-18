@@ -76,6 +76,30 @@ WORKSHOP_TARGET_HOLE_DEPTH_M = 0.030
 WORKSHOP_TARGET_RADIAL_CLEARANCE_M = 0.0005
 WORKSHOP_TARGET_RECESS_PROFILE = "PH2"
 
+WORKSHOP_HARDWARE_BIN_WIDTH_M = 0.11
+WORKSHOP_HARDWARE_BIN_LENGTH_M = 0.15
+WORKSHOP_HARDWARE_BIN_HEIGHT_M = 0.08
+WORKSHOP_HARDWARE_BIN_INNER_WIDTH_M = 0.10
+WORKSHOP_HARDWARE_BIN_INNER_LENGTH_M = 0.14
+WORKSHOP_HARDWARE_BIN_USABLE_HEIGHT_M = 0.030
+WORKSHOP_HARDWARE_BIN_CAVITY_VOLUME_M3 = (
+    WORKSHOP_HARDWARE_BIN_INNER_WIDTH_M
+    * WORKSHOP_HARDWARE_BIN_INNER_LENGTH_M
+    * WORKSHOP_HARDWARE_BIN_USABLE_HEIGHT_M
+)
+
+WORKSHOP_PARTS_TRAY_WIDTH_M = 0.22
+WORKSHOP_PARTS_TRAY_LENGTH_M = 0.14
+WORKSHOP_PARTS_TRAY_HEIGHT_M = 0.035
+WORKSHOP_PARTS_TRAY_INNER_WIDTH_M = 0.20
+WORKSHOP_PARTS_TRAY_INNER_LENGTH_M = 0.12
+WORKSHOP_PARTS_TRAY_USABLE_HEIGHT_M = 0.026
+WORKSHOP_PARTS_TRAY_CAVITY_VOLUME_M3 = (
+    WORKSHOP_PARTS_TRAY_INNER_WIDTH_M
+    * WORKSHOP_PARTS_TRAY_INNER_LENGTH_M
+    * WORKSHOP_PARTS_TRAY_USABLE_HEIGHT_M
+)
+
 
 # ==============================================================================
 # PRIVILEGED_SIMULATION_ORACLE_ONLY METADATA
@@ -290,7 +314,7 @@ def _get_storage_slots(
         ((0.28, 0.35, 0.485), q_flat_y, "right_tool_drawer"),
     ]
 
-    cab_x = -0.44 if layout_swapped else 0.44
+    cab_x = -0.49 if layout_swapped else 0.44
     cab_y = 0.56
     tool_cabinet_slots = [
         ((cab_x, cab_y + 0.02, 0.865), q_flat_x, "tool_cabinet"),
@@ -346,7 +370,7 @@ def build_workshop_xml(
         for body in worldbody.iter("body"):
             b_name = body.get("name", "")
             if b_name == "tool_cabinet":
-                body.set("pos", "-0.44 0.56 0.71")
+                body.set("pos", "-0.49 0.56 0.71")
             elif b_name == "workshop_tool_cart":
                 body.set("pos", "-1.08 0.40 0")
             elif b_name == "workshop_parts_tray":
@@ -525,12 +549,15 @@ def privileged_actual_storage_region(
         return "none"
     x, y, z = scene.data.xpos[body_id]
 
-    is_swapped = scene.variant_name == "F6_LAYOUT_SWAPPED"
-    cab_x_min = -0.58 if is_swapped else 0.18
-    cab_x_max = -0.18 if is_swapped else 0.58
-
-    if cab_x_min <= x <= cab_x_max and 0.40 <= y <= 0.70 and 0.70 <= z <= 1.20:
-        return "TOOL_CABINET"
+    cab_bid = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_BODY, "tool_cabinet")
+    if cab_bid >= 0:
+        cab_pos = scene.data.xpos[cab_bid]
+        if (
+            cab_pos[0] - 0.20 <= x <= cab_pos[0] + 0.20
+            and cab_pos[1] - 0.16 <= y <= cab_pos[1] + 0.16
+            and cab_pos[2] <= z <= cab_pos[2] + 0.35
+        ):
+            return "TOOL_CABINET"
 
     if -0.50 <= x <= -0.10 and 0.15 <= y <= 0.60 and 0.35 <= z <= 0.65:
         return "LEFT_DRAWER"
@@ -930,7 +957,11 @@ class WorkshopScene:
         if tray_id >= 0:
             tray_pos = self.data.xpos[tray_id]
             center = [tray_pos[0], tray_pos[1], tray_pos[2]]
-            dim = [0.22, 0.14, 0.035]
+            dim = [
+                WORKSHOP_PARTS_TRAY_WIDTH_M,
+                WORKSHOP_PARTS_TRAY_LENGTH_M,
+                WORKSHOP_PARTS_TRAY_HEIGHT_M,
+            ]
             proposals.append(
                 {
                     "region_instance_id": self._backend_to_region_id["PARTS_TRAY"],
@@ -947,7 +978,11 @@ class WorkshopScene:
         if bin_id >= 0:
             bin_pos = self.data.xpos[bin_id]
             center = [bin_pos[0], bin_pos[1], bin_pos[2]]
-            dim = [0.15, 0.11, 0.08]
+            dim = [
+                WORKSHOP_HARDWARE_BIN_WIDTH_M,
+                WORKSHOP_HARDWARE_BIN_LENGTH_M,
+                WORKSHOP_HARDWARE_BIN_HEIGHT_M,
+            ]
             proposals.append(
                 {
                     "region_instance_id": self._backend_to_region_id["HARDWARE_BIN"],
@@ -1042,8 +1077,12 @@ class WorkshopScene:
                     0.22,
                     0.71,
                 ],
-                "dimensions_m": [0.22, 0.14, 0.035],
-                "cavity_volume_m3": 0.20 * 0.12 * 0.026,
+                "dimensions_m": [
+                    WORKSHOP_PARTS_TRAY_WIDTH_M,
+                    WORKSHOP_PARTS_TRAY_LENGTH_M,
+                    WORKSHOP_PARTS_TRAY_HEIGHT_M,
+                ],
+                "cavity_volume_m3": WORKSHOP_PARTS_TRAY_CAVITY_VOLUME_M3,
                 "is_open": True,
             },
             {
@@ -1053,8 +1092,12 @@ class WorkshopScene:
                     0.52,
                     0.71,
                 ],
-                "dimensions_m": [0.15, 0.11, 0.08],
-                "cavity_volume_m3": 0.14 * 0.10 * 0.07,
+                "dimensions_m": [
+                    WORKSHOP_HARDWARE_BIN_WIDTH_M,
+                    WORKSHOP_HARDWARE_BIN_LENGTH_M,
+                    WORKSHOP_HARDWARE_BIN_HEIGHT_M,
+                ],
+                "cavity_volume_m3": WORKSHOP_HARDWARE_BIN_CAVITY_VOLUME_M3,
                 "is_open": True,
             },
         ]
@@ -1094,10 +1137,10 @@ class WorkshopScene:
         if self.variant_name == "F6_LAYOUT_SWAPPED":
             if "TOOL_CABINET" in config.get("regions", {}):
                 cab_reg = config["regions"]["TOOL_CABINET"]
-                cab_reg["target_world_m"] = [-0.44, 0.56, 0.86]
-                cab_reg["rig_position_world_m"] = [-0.44, -0.70, 1.25]
-                cab_reg["inspection_volume"]["minimum_world_m"] = [-0.70, 0.35, 0.68]
-                cab_reg["inspection_volume"]["maximum_world_m"] = [-0.20, 0.75, 1.15]
+                cab_reg["target_world_m"] = [-0.49, 0.56, 0.86]
+                cab_reg["rig_position_world_m"] = [-0.49, -0.70, 1.25]
+                cab_reg["inspection_volume"]["minimum_world_m"] = [-0.75, 0.35, 0.68]
+                cab_reg["inspection_volume"]["maximum_world_m"] = [-0.25, 0.75, 1.15]
         return config
 
     def get_task_scene_state(self) -> dict[str, Any]:

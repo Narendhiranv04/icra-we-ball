@@ -1,5 +1,6 @@
 """Comprehensive test suite for the realistic Workshop (W1) benchmark."""
 
+import json
 import re
 import unittest
 from pathlib import Path
@@ -24,7 +25,15 @@ from mujoco_scenes.workshop_scene import (
     WORKSHOP_CAMERAS,
     WORKSHOP_FUNCTIONAL_PARTS_CONTAINERS,
     WORKSHOP_FUNCTIONAL_WORK_SURFACES,
+    WORKSHOP_HARDWARE_BIN_CAVITY_VOLUME_M3,
+    WORKSHOP_HARDWARE_BIN_HEIGHT_M,
+    WORKSHOP_HARDWARE_BIN_LENGTH_M,
+    WORKSHOP_HARDWARE_BIN_WIDTH_M,
     WORKSHOP_INSPECTION_RIG_CONFIG,
+    WORKSHOP_PARTS_TRAY_CAVITY_VOLUME_M3,
+    WORKSHOP_PARTS_TRAY_HEIGHT_M,
+    WORKSHOP_PARTS_TRAY_LENGTH_M,
+    WORKSHOP_PARTS_TRAY_WIDTH_M,
     WORKSHOP_REGIONS,
     WorkshopScene,
     _load_workshop_variants_config,
@@ -33,6 +42,57 @@ from mujoco_scenes.workshop_scene import (
     privileged_actual_work_surface_regions,
     privileged_validate_variant_feasibility,
 )
+
+
+def _get_body_collision_aabb(model: mujoco.MjModel, data: mujoco.MjData, body_name: str) -> tuple[np.ndarray, np.ndarray]:
+    """Compute exact world-space axis-aligned bounding box of all collision geoms for a body and its subtree."""
+    bid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, body_name)
+    if bid < 0:
+        raise ValueError(f"Body not found: {body_name}")
+    min_pt = np.array([np.inf, np.inf, np.inf])
+    max_pt = np.array([-np.inf, -np.inf, -np.inf])
+    for gid in range(model.ngeom):
+        gbid = model.geom_bodyid[gid]
+        curr = gbid
+        is_child = False
+        while curr >= 0:
+            if curr == bid:
+                is_child = True
+                break
+            if curr == 0:
+                break
+            curr = model.body_parentid[curr]
+        if is_child and model.geom_group[gid] == 3:
+            gpos = data.geom_xpos[gid]
+            gmat = data.geom_xmat[gid].reshape(3, 3)
+            gsize = model.geom_size[gid]
+            gtype = model.geom_type[gid]
+            if gtype == mujoco.mjtGeom.mjGEOM_BOX:
+                corners = np.array([
+                    [sx * gsize[0], sy * gsize[1], sz * gsize[2]]
+                    for sx in (-1, 1) for sy in (-1, 1) for sz in (-1, 1)
+                ])
+                world_corners = (gmat @ corners.T).T + gpos
+                min_pt = np.minimum(min_pt, world_corners.min(axis=0))
+                max_pt = np.maximum(max_pt, world_corners.max(axis=0))
+            elif gtype == mujoco.mjtGeom.mjGEOM_CYLINDER:
+                r, h = gsize[0], gsize[1]
+                corners = np.array([
+                    [sx * r, sy * r, sz * h]
+                    for sx in (-1, 1) for sy in (-1, 1) for sz in (-1, 1)
+                ])
+                world_corners = (gmat @ corners.T).T + gpos
+                min_pt = np.minimum(min_pt, world_corners.min(axis=0))
+                max_pt = np.maximum(max_pt, world_corners.max(axis=0))
+            elif gtype == mujoco.mjtGeom.mjGEOM_SPHERE:
+                r = gsize[0]
+                min_pt = np.minimum(min_pt, gpos - r)
+                max_pt = np.maximum(max_pt, gpos + r)
+            elif gtype == mujoco.mjtGeom.mjGEOM_CAPSULE:
+                r, h = gsize[0], gsize[1]
+                min_pt = np.minimum(min_pt, gpos - np.array([r, r, h + r]))
+                max_pt = np.maximum(max_pt, gpos + np.array([r, r, h + r]))
+    return min_pt, max_pt
 
 
 TARGET = {
@@ -331,7 +391,7 @@ class WorkshopSceneTests(unittest.TestCase):
         cab_f6 = scene_f6.data.xpos[mujoco.mj_name2id(scene_f6.model, mujoco.mjtObj.mjOBJ_BODY, "tool_cabinet")]
         self.assertNotAlmostEqual(cab_f0[0], cab_f6[0], delta=0.2)
         self.assertAlmostEqual(cab_f0[0], 0.44, delta=0.05)
-        self.assertAlmostEqual(cab_f6[0], -0.44, delta=0.05)
+        self.assertAlmostEqual(cab_f6[0], -0.49, delta=0.05)
 
         tray_f0 = scene_f0.data.xpos[mujoco.mj_name2id(scene_f0.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_parts_tray")]
         tray_f6 = scene_f6.data.xpos[mujoco.mj_name2id(scene_f6.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_parts_tray")]
@@ -922,9 +982,10 @@ class WorkshopPrivilegeBoundaryTests(unittest.TestCase):
             self.assertEqual(scene.model.geom_group[gid], 3)
             self.assertNotEqual(scene.model.geom_contype[gid] + scene.model.geom_conaffinity[gid], 0)
 
-        # Approach corridor check: target hole is at [-0.10, -0.02, 0.0215] in workpiece frame
-        # (world pos [-0.18, 0.28, 0.7475]). Verify no collision geom obstructs straight-down -Z axis above it.
-        target_world = np.array([-0.18, 0.28, 0.7475])
+        # Approach corridor check: target hole is dynamically derived from workshop_frame_joint
+        joint_body_id = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_frame_joint")
+        joint_pos = scene.data.xpos[joint_body_id]
+        target_world = np.array([joint_pos[0] - 0.10, joint_pos[1] - 0.02, joint_pos[2] + 0.0215])
         for z_offset in np.linspace(0.01, 0.20, 10):
             sample_pt = target_world + np.array([0, 0, z_offset])
             # Ensure sample_pt is outside all collision boxes
@@ -935,6 +996,175 @@ class WorkshopPrivilegeBoundaryTests(unittest.TestCase):
                     if scene.model.geom_type[gid] == mujoco.mjtGeom.mjGEOM_BOX:
                         in_box = np.all(np.abs(sample_pt - g_pos) <= g_size[:3])
                         self.assertFalse(in_box, f"Collision geom {mujoco.mj_id2name(scene.model, mujoco.mjtObj.mjOBJ_GEOM, gid)} obstructs approach corridor at {sample_pt}")
+
+    def test_hardware_bin_and_parts_tray_cross_layer_geometry_consistency(self):
+        """Verify cross-layer geometry, bounding dimensions, and cavity coherence for parts containers."""
+        scene = WorkshopScene("none", variant="F0_BASE")
+
+        # 1. HARDWARE_BIN checks
+        bin_bid = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_hardware_bin")
+        self.assertGreaterEqual(bin_bid, 0)
+        bin_min, bin_max = _get_body_collision_aabb(scene.model, scene.data, "workshop_hardware_bin")
+        col_extents_bin = bin_max - bin_min
+        # Physical collision bounding box: X ~= 0.11, Y ~= 0.15, Z ~= 0.08
+        np.testing.assert_allclose(col_extents_bin, [WORKSHOP_HARDWARE_BIN_WIDTH_M, WORKSHOP_HARDWARE_BIN_LENGTH_M, WORKSHOP_HARDWARE_BIN_HEIGHT_M], atol=0.015)
+
+        # Manifest extents
+        manifest_path = Path("mujoco_scenes/assets/workshop_realistic/manifest.json")
+        self.assertTrue(manifest_path.is_file())
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        bin_entry = next((a for a in manifest["assets"] if a["asset_id"] == "workshop_hardware_bin"), None)
+        self.assertIsNotNone(bin_entry)
+        bin_part = bin_entry["processed_parts"][0]
+        np.testing.assert_allclose(bin_part["canonical_dimensions_m"], [WORKSHOP_HARDWARE_BIN_WIDTH_M, WORKSHOP_HARDWARE_BIN_LENGTH_M, WORKSHOP_HARDWARE_BIN_HEIGHT_M], atol=0.01)
+
+        # Production candidate proposal bounds
+        proposals = scene.get_candidate_regions()
+        bin_prop = next(
+            (p for p in proposals if scene.privileged_backend_name_for_region(p["region_instance_id"]) == "HARDWARE_BIN"),
+            None,
+        )
+        self.assertIsNotNone(bin_prop)
+        prop_min = np.array(bin_prop["proposal_bounds_m"]["minimum_world_m"])
+        prop_max = np.array(bin_prop["proposal_bounds_m"]["maximum_world_m"])
+        np.testing.assert_allclose(prop_max - prop_min, [WORKSHOP_HARDWARE_BIN_WIDTH_M, WORKSHOP_HARDWARE_BIN_LENGTH_M, WORKSHOP_HARDWARE_BIN_HEIGHT_M], atol=0.005)
+
+        # Privileged container specification
+        specs = scene.privileged_get_parts_container_specs()
+        bin_spec = next((s for s in specs if s["region_id"] == "HARDWARE_BIN"), None)
+        self.assertIsNotNone(bin_spec)
+        self.assertEqual(bin_spec["dimensions_m"], [WORKSHOP_HARDWARE_BIN_WIDTH_M, WORKSHOP_HARDWARE_BIN_LENGTH_M, WORKSHOP_HARDWARE_BIN_HEIGHT_M])
+        self.assertAlmostEqual(bin_spec["cavity_volume_m3"], WORKSHOP_HARDWARE_BIN_CAVITY_VOLUME_M3, places=6)
+
+        # 2. PARTS_TRAY checks
+        tray_bid = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_parts_tray")
+        self.assertGreaterEqual(tray_bid, 0)
+        tray_min, tray_max = _get_body_collision_aabb(scene.model, scene.data, "workshop_parts_tray")
+        col_extents_tray = tray_max - tray_min
+        np.testing.assert_allclose(col_extents_tray, [WORKSHOP_PARTS_TRAY_WIDTH_M, WORKSHOP_PARTS_TRAY_LENGTH_M, WORKSHOP_PARTS_TRAY_HEIGHT_M], atol=0.015)
+
+        tray_entry = next((a for a in manifest["assets"] if a["asset_id"] == "workshop_parts_tray"), None)
+        self.assertIsNotNone(tray_entry)
+        tray_part = tray_entry["processed_parts"][0]
+        np.testing.assert_allclose(tray_part["canonical_dimensions_m"], [WORKSHOP_PARTS_TRAY_WIDTH_M, WORKSHOP_PARTS_TRAY_LENGTH_M, WORKSHOP_PARTS_TRAY_HEIGHT_M], atol=0.01)
+
+        tray_prop = next(
+            (p for p in proposals if scene.privileged_backend_name_for_region(p["region_instance_id"]) == "PARTS_TRAY"),
+            None,
+        )
+        self.assertIsNotNone(tray_prop)
+        t_prop_min = np.array(tray_prop["proposal_bounds_m"]["minimum_world_m"])
+        t_prop_max = np.array(tray_prop["proposal_bounds_m"]["maximum_world_m"])
+        np.testing.assert_allclose(t_prop_max - t_prop_min, [WORKSHOP_PARTS_TRAY_WIDTH_M, WORKSHOP_PARTS_TRAY_LENGTH_M, WORKSHOP_PARTS_TRAY_HEIGHT_M], atol=0.005)
+
+        tray_spec = next((s for s in specs if s["region_id"] == "PARTS_TRAY"), None)
+        self.assertIsNotNone(tray_spec)
+        self.assertEqual(tray_spec["dimensions_m"], [WORKSHOP_PARTS_TRAY_WIDTH_M, WORKSHOP_PARTS_TRAY_LENGTH_M, WORKSHOP_PARTS_TRAY_HEIGHT_M])
+        self.assertAlmostEqual(tray_spec["cavity_volume_m3"], WORKSHOP_PARTS_TRAY_CAVITY_VOLUME_M3, places=6)
+
+    def test_major_static_workshop_components_do_not_intersect(self):
+        """Verify no static collision AABB overlaps between tabletop components in F0 and F6."""
+        for var_name in ("F0_BASE", "F6_LAYOUT_SWAPPED"):
+            scene = WorkshopScene("none", variant=var_name)
+            tabletop_bodies = [
+                "workshop_frame_fixture",
+                "tool_cabinet",
+                "workshop_parts_tray",
+                "workshop_hardware_bin",
+            ]
+            aabbs = {b: _get_body_collision_aabb(scene.model, scene.data, b) for b in tabletop_bodies}
+
+            for i, b1 in enumerate(tabletop_bodies):
+                for b2 in tabletop_bodies[i + 1 :]:
+                    min1, max1 = aabbs[b1]
+                    min2, max2 = aabbs[b2]
+                    overlap_3d = np.all(max1 > min2) and np.all(max2 > min1)
+                    self.assertFalse(
+                        overlap_3d,
+                        f"Improper collision overlap between {b1} and {b2} in variant {var_name}",
+                    )
+
+            # Assert explicit positive clearance between cabinet and fixture
+            cab_min, cab_max = aabbs["tool_cabinet"]
+            fix_min, fix_max = aabbs["workshop_frame_fixture"]
+            if var_name == "F0_BASE":
+                clearance = cab_min[0] - fix_max[0]
+            else:
+                clearance = fix_min[0] - cab_max[0]
+            self.assertGreaterEqual(
+                clearance,
+                0.020,
+                f"Cabinet-fixture clearance in {var_name} ({clearance*100:.1f}cm) is below 2.0cm threshold",
+            )
+
+    def test_f6_cabinet_door_sweep_clearance(self):
+        """Verify F6 cabinet door articulation trajectory does not intersect fixture or other static elements."""
+        scene = WorkshopScene("none", variant="F6_LAYOUT_SWAPPED")
+        act_id = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_ACTUATOR, "tool_cabinet_door_actuator")
+        door_gid = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_GEOM, "tool_cabinet_door_col")
+        fix_min, fix_max = _get_body_collision_aabb(scene.model, scene.data, "workshop_frame_fixture")
+
+        for ctrl in np.linspace(0.0, 1.45, 20):
+            scene.data.ctrl[act_id] = ctrl
+            for _ in range(30):
+                mujoco.mj_step(scene.model, scene.data)
+
+            gpos = scene.data.geom_xpos[door_gid]
+            gmat = scene.data.geom_xmat[door_gid].reshape(3, 3)
+            gsize = scene.model.geom_size[door_gid]
+            corners = np.array([
+                [sx * gsize[0], sy * gsize[1], sz * gsize[2]]
+                for sx in (-1, 1) for sy in (-1, 1) for sz in (-1, 1)
+            ])
+            door_corners = (gmat @ corners.T).T + gpos
+            door_min = door_corners.min(axis=0)
+            door_max = door_corners.max(axis=0)
+
+            # Fixture intersection check
+            overlap_x = max(0.0, min(door_max[0], fix_max[0]) - max(door_min[0], fix_min[0]))
+            overlap_y = max(0.0, min(door_max[1], fix_max[1]) - max(door_min[1], fix_min[1]))
+            overlap_z = max(0.0, min(door_max[2], fix_max[2]) - max(door_min[2], fix_min[2]))
+            self.assertEqual(
+                overlap_x * overlap_y * overlap_z,
+                0.0,
+                f"F6 cabinet door intersects fixture at ctrl={ctrl:.2f}",
+            )
+            # Positive clearance along X
+            self.assertGreaterEqual(
+                fix_min[0] - door_max[0],
+                0.020,
+                f"F6 cabinet door approaches fixture closer than 2.0cm at ctrl={ctrl:.2f}",
+            )
+
+    def test_f6_storage_contents_containment_and_pointcloud(self):
+        """Verify that F6 cabinet contents stay within relocated cabinet and pass point-cloud smoke test."""
+        scene = WorkshopScene("none", variant="F6_LAYOUT_SWAPPED")
+        scene.open_container("TOOL_CABINET")
+
+        cab_min, cab_max = _get_body_collision_aabb(scene.model, scene.data, "tool_cabinet")
+        declared_cab_objs = scene.storage_contents.get("TOOL_CABINET", [])
+        self.assertEqual(len(declared_cab_objs), 2)
+
+        for obj_name in declared_cab_objs:
+            b_id = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_BODY, obj_name)
+            obj_pos = scene.data.xpos[b_id]
+            self.assertGreaterEqual(obj_pos[0], cab_min[0] - 0.05)
+            self.assertLessEqual(obj_pos[0], cab_max[0] + 0.05)
+            self.assertGreaterEqual(obj_pos[1], cab_min[1] - 0.05)
+            self.assertLessEqual(obj_pos[1], cab_max[1] + 0.05)
+            self.assertGreaterEqual(obj_pos[2], cab_min[2] - 0.05)
+
+        # Point cloud test
+        checker = GeometryChecker(scene, width=640, height=480)
+        run = checker.run_region_inspection("TOOL_CABINET", rig_config=scene.inspection_rig_config)
+        for obj_name in declared_cab_objs:
+            self.assertIn(obj_name, run.clouds)
+            point_count = len(run.clouds[obj_name].points)
+            self.assertGreaterEqual(
+                point_count,
+                20,
+                f"{obj_name} in F6 TOOL_CABINET only has {point_count} points (<20)",
+            )
 
 
 class WorkshopAlternativeTests(unittest.TestCase):
