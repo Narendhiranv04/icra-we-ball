@@ -202,58 +202,6 @@ def _write_obj_with_texture(mesh: trimesh.Trimesh, obj_path: Path, texture_filen
                 stream.write(f"f {face[0]+1} {face[1]+1} {face[2]+1}\n")
 
 
-def generate_workshop_parts_tray(output_dir: Path) -> dict[str, Any]:
-    """Generate clean, realistic workshop utility parts tray without boolean operations."""
-    w, d, h = 0.22, 0.14, 0.032
-    t = 0.008   # wall thickness
-    tf = 0.006  # floor thickness
-
-    floor = trimesh.creation.box(extents=[w, d, tf])
-    floor.apply_translation([0, 0, tf / 2.0])
-
-    wall_f = trimesh.creation.box(extents=[w, t, h - tf])
-    wall_f.apply_translation([0, -d / 2.0 + t / 2.0, tf + (h - tf) / 2.0])
-
-    wall_b = trimesh.creation.box(extents=[w, t, h - tf])
-    wall_b.apply_translation([0, d / 2.0 - t / 2.0, tf + (h - tf) / 2.0])
-
-    wall_l = trimesh.creation.box(extents=[t, d - 2 * t, h - tf])
-    wall_l.apply_translation([-w / 2.0 + t / 2.0, 0, tf + (h - tf) / 2.0])
-
-    wall_r = trimesh.creation.box(extents=[t, d - 2 * t, h - tf])
-    wall_r.apply_translation([w / 2.0 - t / 2.0, 0, tf + (h - tf) / 2.0])
-
-    tray_mesh = trimesh.util.concatenate([floor, wall_f, wall_b, wall_l, wall_r])
-    tray_mesh = _center_and_ground(tray_mesh)
-
-    obj_path = output_dir / "workshop_parts_tray.obj"
-    mtl_path = output_dir / "workshop_parts_tray.mtl"
-    tex_path = output_dir / "workshop_parts_tray_diff.png"
-
-    img = Image.new("RGB", (256, 256), color=(48, 56, 64))
-    draw = ImageDraw.Draw(img)
-    draw.rectangle([6, 6, 249, 249], outline=(72, 85, 98), width=6)
-    img.save(tex_path, format="PNG", optimize=True)
-
-    mtl_content = (
-        "newmtl material_workshop_parts_tray\n"
-        "Ka 1.000 1.000 1.000\n"
-        "Kd 1.000 1.000 1.000\n"
-        "Ks 0.300 0.300 0.300\n"
-        "Ns 30.000\n"
-        "map_Kd workshop_parts_tray_diff.png\n"
-    )
-    mtl_path.write_text(mtl_content, encoding="utf-8")
-
-    with obj_path.open("w", encoding="utf-8") as f:
-        f.write("# Workshop utility parts tray\n")
-        f.write(f"mtllib {mtl_path.name}\n")
-        f.write("usemtl material_workshop_parts_tray\n\n")
-        for v in tray_mesh.vertices:
-            f.write(f"v {v[0]:.6f} {v[1]:.6f} {v[2]:.6f}\n")
-        for face in tray_mesh.faces:
-            f.write(f"f {face[0]+1} {face[1]+1} {face[2]+1}\n")
-
 def _record_part(obj_path: Path, tex_path: Path | None, part_id: str) -> dict[str, Any]:
     """Inspect the saved OBJ mesh and record exact canonical metadata."""
     loaded = trimesh.load(obj_path)

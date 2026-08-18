@@ -626,6 +626,34 @@ class WorkshopPrivilegeBoundaryTests(unittest.TestCase):
         self.assertAlmostEqual(stub["oracle_spec"]["reach_m"], 0.020, delta=1e-3)
         self.assertAlmostEqual(stub["collision_proxy_extents_m"][2], 0.11, delta=1e-3)
 
+        # 6. Target Workpiece & Joint Specification Cross-Layer Consistency
+        from mujoco_scenes.workshop_scene import (
+            WORKSHOP_TARGET_HOLE_DIAMETER_M,
+            WORKSHOP_TARGET_HOLE_RADIUS_M,
+            WORKSHOP_TARGET_HOLE_DEPTH_M,
+            WORKSHOP_TARGET_RADIAL_CLEARANCE_M,
+            WORKSHOP_TARGET_RECESS_PROFILE,
+        )
+        priv_target = scene.privileged_get_target_joint_specification()
+        self.assertEqual(priv_target["target_hole_diameter_m"], WORKSHOP_TARGET_HOLE_DIAMETER_M)
+        self.assertEqual(priv_target["target_hole_depth_m"], WORKSHOP_TARGET_HOLE_DEPTH_M)
+        self.assertEqual(priv_target["required_recess_profile"], WORKSHOP_TARGET_RECESS_PROFILE)
+        self.assertEqual(WORKSHOP_TARGET_HOLE_RADIUS_M * 2.0, WORKSHOP_TARGET_HOLE_DIAMETER_M)
+
+        # 7. Target Visual vs Collision Opening Consistency
+        gid_bottom = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_GEOM, "frame_target_hole_bottom")
+        self.assertGreaterEqual(gid_bottom, 0)
+        self.assertAlmostEqual(scene.model.geom_size[gid_bottom][0], WORKSHOP_TARGET_HOLE_RADIUS_M, delta=1e-4)
+
+        gid_bracket_l_vis = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_GEOM, "frame_bracket_l_vis")
+        gid_bracket_r_vis = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_GEOM, "frame_bracket_r_vis")
+        vis_opening_x = (
+            (scene.model.geom_pos[gid_bracket_r_vis][0] - scene.model.geom_size[gid_bracket_r_vis][0])
+            - (scene.model.geom_pos[gid_bracket_l_vis][0] + scene.model.geom_size[gid_bracket_l_vis][0])
+        )
+        self.assertAlmostEqual(vis_opening_x, 0.0075, delta=1e-3)
+        self.assertGreaterEqual(vis_opening_x, WORKSHOP_TARGET_HOLE_DIAMETER_M)
+
     def test_physical_insertion_corridor_recess(self):
         """Verify that target hole is a real 3D hollow recess of diameter >= 7mm and depth >= 30mm."""
         scene = WorkshopScene("none", variant="F0_BASE")
@@ -726,6 +754,73 @@ class WorkshopPrivilegeBoundaryTests(unittest.TestCase):
         geom_map = checker._geom_ids_by_instance(["workshop_frame_joint"])
         for g_id in geom_map.get("workshop_frame_joint", []):
             self.assertEqual(scene.model.geom_group[g_id], 1)
+
+    def test_rgbd_observable_target_recess(self):
+        """Verify that production RGB-D rendering sees an actual ~30mm deep 3D cavity at the target hole."""
+        scene = WorkshopScene("none", variant="F0_BASE")
+        checker = GeometryChecker(scene, width=640, height=480)
+        vopt = checker._build_scene_option()
+
+        renderer = mujoco.Renderer(scene.model, height=480, width=640)
+        cam_id = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_CAMERA, "workshop_camera_top")
+        renderer.update_scene(scene.data, camera=cam_id, scene_option=vopt)
+
+        renderer.enable_depth_rendering()
+        depth = renderer.render().copy()
+        renderer.disable_depth_rendering()
+
+        renderer.enable_segmentation_rendering()
+        seg = renderer.render().copy()
+        renderer.disable_segmentation_rendering()
+
+        # Target workpiece coordinates
+        target_top_world = np.array([-0.18, 0.28, 0.749])
+        cam_pos = scene.data.cam_xpos[cam_id]
+        cam_mat = scene.data.cam_xmat[cam_id].reshape(3, 3)
+        fovy = scene.model.cam_fovy[cam_id]
+        f = 0.5 * 480 / np.tan(np.deg2rad(fovy) / 2.0)
+
+        # World to camera frame
+        p_top_cam = cam_mat.T @ (target_top_world - cam_pos)
+        u_top = int(np.round(320 + f * (p_top_cam[0] / -p_top_cam[2])))
+        v_top = int(np.round(240 - f * (p_top_cam[1] / -p_top_cam[2])))
+
+        depth_center = float(depth[v_top, u_top])
+        surrounding_pixels = [
+            depth[v_top, u_top - 8],
+            depth[v_top, u_top + 8],
+            depth[v_top - 8, u_top],
+            depth[v_top + 8, u_top],
+        ]
+        depth_surrounding = float(np.mean(surrounding_pixels))
+        observed_recess_depth = depth_center - depth_surrounding
+
+        # 1. Assert observable recess depth is approximately 30mm (>= 20mm, <= 40mm)
+        self.assertGreaterEqual(
+            observed_recess_depth,
+            0.020,
+            f"Production depth renderer sees solid surface or shallow depth ({observed_recess_depth*1000:.1f}mm < 20mm)",
+        )
+        self.assertLessEqual(
+            observed_recess_depth,
+            0.040,
+            f"Production depth renderer sees excessively deep hole ({observed_recess_depth*1000:.1f}mm > 40mm)",
+        )
+
+        # 2. Visual mask sanity: Center ray must reach deeper cavity and not be blocked by mouth bracket geoms
+        center_geom_id = int(seg[v_top, u_top, 0])
+        center_geom_name = mujoco.mj_id2name(scene.model, mujoco.mjtObj.mjOBJ_GEOM, center_geom_id) or ""
+        mouth_bracket_geoms = {
+            "frame_bracket_l_vis",
+            "frame_bracket_r_vis",
+            "frame_bracket_f_vis",
+            "frame_bracket_b_vis",
+        }
+        self.assertNotIn(
+            center_geom_name,
+            mouth_bracket_geoms,
+            f"Mouth bracket geom {center_geom_name} blocks target hole center ray at pixel ({u_top}, {v_top})",
+        )
 
     def test_manifest_offline_verification(self):
         """Verify offline that committed assets strictly match the provenance manifest."""

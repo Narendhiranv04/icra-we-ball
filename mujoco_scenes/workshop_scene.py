@@ -587,9 +587,9 @@ def privileged_validate_variant_feasibility(
         for i in range(scene.model.nbody)
     }
 
-    target_hole_diam = 0.007
-    target_joint_depth = 0.030
-    radial_clearance = 0.0005
+    target_hole_diam = WORKSHOP_TARGET_HOLE_DIAMETER_M
+    target_joint_depth = WORKSHOP_TARGET_HOLE_DEPTH_M
+    radial_clearance = WORKSHOP_TARGET_RADIAL_CLEARANCE_M
 
     # Derive candidate regions strictly from compiled physical MjModel
     physical_surface_ids = set(privileged_actual_work_surface_regions(scene))
