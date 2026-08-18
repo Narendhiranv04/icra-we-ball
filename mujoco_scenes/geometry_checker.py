@@ -665,7 +665,10 @@ class GeometryChecker:
         """Run one reconstruction over all currently visible object instances."""
         started = time.perf_counter()
         mujoco.mj_forward(self.model, self.data)
-        visible = self.scene.get_visible_object_instances()
+        if hasattr(self.scene, "privileged_get_visible_backend_instances"):
+            visible = self.scene.privileged_get_visible_backend_instances()
+        else:
+            visible = self.scene.get_visible_object_instances()
         instance_kinds = {name: kind for name, kind in visible}
         geom_ids = self._geom_ids_by_instance(instance_kinds)
         identification_done = time.perf_counter()
@@ -814,9 +817,10 @@ class GeometryChecker:
         settle_steps = int(region.get("settle_steps", 0))
         for _ in range(max(0, settle_steps)):
             mujoco.mj_step(self.model, self.data)
-        mujoco.mj_forward(self.model, self.data)
-
-        visible = self.scene.get_visible_object_instances()
+        if hasattr(self.scene, "privileged_get_visible_backend_instances"):
+            visible = self.scene.privileged_get_visible_backend_instances()
+        else:
+            visible = self.scene.get_visible_object_instances()
         instance_kinds = {name: kind for name, kind in visible}
         geom_ids = self._geom_ids_by_instance(instance_kinds)
         identification_done = time.perf_counter()

@@ -35,6 +35,48 @@ and keep loose small parts in a suitable container.
 
 ---
 
+## Benchmark Architecture Flow
+
+The Workshop domain enforces a strict scientific boundary between simulation truth, physical interaction, observation, and perception-based grounding:
+
+```text
+                  TASK INSTRUCTION
+                         ↓
+                   Physical Scene
+                         ↓
+                Inspect / Open Region
+                         ↓
+                     RGB / RGB-D
+                         ↓
+  Generic Object Instances + Neutral Region Proposals
+                         ↓
+                 [FUTURE PHASE 1]
+           Semantic / Geometric Grounding
+```
+
+### Key Principles
+
+1. **`open_container()` Never Returns Inventory**:
+   - Opening a container only commands the actuator, simulates physics, and updates the physical open state.
+   - It returns a neutral status dictionary (`{"region_id": "...", "opened": True, "newly_opened": True}`).
+   - It never returns object lists, backend body names, semantic classes, or hidden counts.
+   - Object discovery occurs strictly through subsequent visual observation (RGB-D point cloud perception).
+
+2. **Neutral Region Proposals Are Based on Physical Existence, Not Benchmark Validity**:
+   - Production `get_candidate_regions()` proposes candidate spatial patches based solely on whether the underlying physical bodies exist in the compiled MuJoCo model.
+   - It does NOT filter by benchmark configuration (`active_surfaces` / `active_containers`).
+   - Obstructed regions (such as the main workbench in `F2_REGION_ALTERNATIVE` or `I2_NO_WORK_SURFACE`) are still emitted as neutral spatial proposals; Phase 1 perception is responsible for inferring whether the candidate is usable or obstructed.
+   - Physically absent bodies (e.g. removed containers in `I3_NO_PARTS_CONTAINER`) are not proposed.
+
+3. **Production Candidate Regions Do Not Encode Function**:
+   - The production API returns only `{"region_instance_id": "region_XXXX", "proposal_bounds_m": {...}, "observation_source": "workbench|cart|shelf"}`.
+   - `proposal_type` ("surface" vs "container") is intentionally omitted to prevent leaking functional classifications.
+
+4. **Privileged APIs Exist Only for Benchmark Evaluation and Oracle Testing**:
+   - All ground-truth parameters, semantic affordances, exact dimensions, and oracle feasibility search algorithms are confined to explicit `privileged_*` methods.
+
+---
+
 ## Controlled Benchmark Variant Matrix
 
 The Workshop domain provides 14 standardized benchmark variants across 7 feasible configurations and 7 controlled infeasible failure modes:
@@ -65,19 +107,23 @@ The Workshop domain enforces an absolute architectural separation between produc
 ### Production-Safe Interface (Zero Cheating / Zero Leakage)
 
 - **Natural Language Task**: High-level task prompt (`"Repair the loose frame joint using an appropriate tool and fastener..."`).
-- **Generic Object Instances**: Deterministic generic IDs (`object_0001`, `object_0002`, ...) assigned deterministically during scene initialization. The production API (`get_observed_instances()`) returns only `instance_id` and `source_region`. It contains NO simulator backend body names, NO semantic classes, NO functional affordances (`can_drive_screw`), and NO physical dimensions.
-- **Generic Region Proposals**: Region proposals (`get_candidate_regions()`) return generic IDs (`region_0001`, `region_0002`), neutral proposal bounds (`proposal_bounds_m`) for RGB-D cropping, and observation handles. They contain NO ground-truth classes (`WORK_SURFACE`, `SMALL_PARTS_CONTAINER`), NO usable surface area (`usable_area_m2`), and NO cavity containment volume (`cavity_volume_m3`).
-- **Neutral Target Workpiece**: Workpiece observation (`get_target_workpiece_specification()`) exposes only workpiece position and localization handle (`target_instance_id`). It contains NO hole diameter, NO hole depth, NO driver/fastener function requirements, and NO recess profiles (`PH2`).
+- **Generic Object Instances (`get_observed_instances`)**: Deterministic generic IDs (`object_0001`, `object_0002`, ...) assigned deterministically during scene initialization. The production API returns only `{"instance_id": "object_XXXX", "source_region": "..."}`. It contains NO simulator backend body names, NO semantic classes, NO functional affordances (`can_drive_screw`), and NO physical dimensions.
+- **Generic Region Proposals (`get_candidate_regions`)**: Region proposals return generic IDs (`region_0001`, `region_0002`), neutral proposal bounds (`proposal_bounds_m`) for RGB-D cropping, and observation handles. They contain NO ground-truth classes (`WORK_SURFACE`, `SMALL_PARTS_CONTAINER`), NO usable surface area (`usable_area_m2`), and NO cavity containment volume (`cavity_volume_m3`).
+- **Neutral Target Workpiece (`get_target_workpiece_specification`)**: Workpiece observation exposes only workpiece position and localization handle (`target_instance_id`). It contains NO hole diameter, NO hole depth, NO driver/fastener function requirements, and NO recess profiles (`PH2`).
+- **Container Articulation (`open_container`, `close_container`)**: Commands physical actuation without revealing contained inventory.
+- **Task Observation State (`get_task_scene_state`)**: Exposes only known container open states and access status without benchmark variant metadata or hidden seal identities.
 - **Raw Sensor Data**: RGB images, calibrated depth maps, and fused colored point clouds.
 
 ### Privileged Simulation Oracle (Benchmark Construction, Testing & Evaluation Only)
 
 - **Simulator Backend Names**: MuJoCo body names (`workshop_long_phillips_driver`, `workshop_medium_phillips_screw`, etc.).
 - **Privileged Object Metadata (`PRIVILEGED_WORKSHOP_ORACLE_SPECS`)**: Semantic classes, functional affordance labels (`can_drive_screw`, `can_fasten`), true shaft reach, tip profiles, fastener recess profiles, exact diameters, lengths, and bounding areas.
+- **Privileged Storage Contents (`privileged_get_storage_contents`)**: True declared backend contents of a storage container.
 - **Privileged Region Specs (`privileged_get_work_surface_specs`, `privileged_get_parts_container_specs`)**: Exact ground-truth planar dimensions, usable surface area, and open cavity containment volume.
 - **Privileged Workpiece Ground Truth (`privileged_get_target_joint_specification`)**: Exact target hole diameter (7mm), hole depth (30mm), and required tool/fastener mating properties.
 - **Physical Region Inference (`privileged_actual_work_surface_regions`, `privileged_actual_parts_container_regions`)**: Privileged audit routines that inspect compiled `MjModel` bodies and collision geoms directly, independent of YAML configuration metadata.
 - **Privileged Scene Oracle Validator (`privileged_validate_variant_feasibility`)**: Oracle feasibility validator evaluating true 4-tuple physical constraints.
+- **Privileged Task State (`privileged_get_task_scene_state`)**: Evaluation-grade task state including variant name, true seal location, and repair state.
 - **Oracle Segmentation (`EXPLICIT_MUJOCO_ORACLE_DEBUG`)**: Labeled multi-camera point cloud exports used exclusively for ground-truth inspection and debug visualization.
 
 ---

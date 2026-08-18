@@ -42,21 +42,40 @@ from mujoco_scenes.workshop_scene import (
 MIN_WORKSHOP_OBJECT_FUSED_POINTS = 20
 
 FORBIDDEN_LEAKAGE_STRINGS = (
-    "workshop_long_phillips_driver",
-    "workshop_power_driver",
-    "phillips_screwdriver",
-    "powered_screwdriver",
+    # Backend identities
+    "workshop_",
+    "MAIN_WORKBENCH_ZONE",
+    "TOOL_CART_TOP",
+    "NARROW_WALL_SHELF",
+    "PARTS_TRAY",
+    "HARDWARE_BIN",
+    "TOOLBOX_COMPARTMENT",
+    # Semantic ground truth
+    "phillips",
+    "screwdriver",
+    "drill",
+    "wrench",
+    "screw",
+    "fastener",
     "can_drive_screw",
     "can_fasten",
     "PH2",
-    "tip_profile",
+    "WORK_SURFACE",
+    "SMALL_PARTS_CONTAINER",
+    # Geometric GT fields
+    "usable_area_m2",
+    "cavity_volume_m3",
     "reach_m",
+    "tip_profile",
+    "recess_profile",
     "shaft_diameter_m",
     "target_hole_diameter_m",
     "target_hole_depth_m",
-    "usable_area_m2",
-    "cavity_volume_m3",
+    # Benchmark GT
     "expected_solution",
+    "intended_outcome",
+    "F0_BASE",
+    "I0_NO_VALID_DRIVER",
 )
 
 
@@ -65,16 +84,24 @@ def _check_dict_leakage(data: Any, forbidden: tuple[str, ...]) -> list[str]:
     leaks = []
     if isinstance(data, dict):
         for k, v in data.items():
+            k_str = str(k).lower()
             for f in forbidden:
-                if f.lower() == str(k).lower() or f.lower() == str(v).lower():
-                    leaks.append(f"Key/Value leak: {k}={v} matches {f}")
-            leaks.extend(_check_dict_leakage(v, forbidden))
+                if f.lower() in k_str:
+                    leaks.append(f"Key leak: {k} contains {f}")
+            if isinstance(v, str):
+                v_str = v.lower()
+                for f in forbidden:
+                    if f.lower() in v_str:
+                        leaks.append(f"Value leak: {k}={v} contains {f}")
+            else:
+                leaks.extend(_check_dict_leakage(v, forbidden))
     elif isinstance(data, (list, tuple, set)):
         for item in data:
             if isinstance(item, str):
+                item_str = item.lower()
                 for f in forbidden:
-                    if f.lower() == item.lower():
-                        leaks.append(f"List item leak: {item} matches {f}")
+                    if f.lower() in item_str:
+                        leaks.append(f"List item leak: {item} contains {f}")
             else:
                 leaks.extend(_check_dict_leakage(item, forbidden))
     return leaks
@@ -167,14 +194,36 @@ def audit_single_variant(
     )
 
     # 7. Production API leakage check
+    # Reset scene to clean initial state for leakage check
+    scene.reset()
     observed_instances = scene.get_observed_instances()
     candidate_regions = scene.get_candidate_regions()
     target_spec = scene.get_target_workpiece_specification()
+    task_state = scene.get_task_scene_state()
+    open_res = scene.open_container("LEFT_DRAWER")
+    scene.reset()
 
     leaks = []
     leaks.extend(_check_dict_leakage(observed_instances, FORBIDDEN_LEAKAGE_STRINGS))
     leaks.extend(_check_dict_leakage(candidate_regions, FORBIDDEN_LEAKAGE_STRINGS))
     leaks.extend(_check_dict_leakage(target_spec, FORBIDDEN_LEAKAGE_STRINGS))
+    leaks.extend(_check_dict_leakage(task_state, FORBIDDEN_LEAKAGE_STRINGS))
+    leaks.extend(_check_dict_leakage(open_res, FORBIDDEN_LEAKAGE_STRINGS))
+
+    # Allowlist checks
+    for obs in observed_instances:
+        if not set(obs.keys()).issubset({"instance_id", "source_region"}):
+            leaks.append(f"Disallowed keys in observed instance: {obs.keys()}")
+    for reg_prop in candidate_regions:
+        if not set(reg_prop.keys()).issubset({"region_instance_id", "proposal_bounds_m", "observation_source"}):
+            leaks.append(f"Disallowed keys in candidate region: {reg_prop.keys()}")
+    if not set(target_spec.keys()).issubset({"target_instance_id", "fixture_center_world_m"}):
+        leaks.append(f"Disallowed keys in target workpiece spec: {target_spec.keys()}")
+    if not set(task_state.keys()).issubset({"joint_access", "containers"}):
+        leaks.append(f"Disallowed keys in task scene state: {task_state.keys()}")
+    if not set(open_res.keys()).issubset({"region_id", "opened", "newly_opened"}):
+        leaks.append(f"Disallowed keys in open_container return: {open_res.keys()}")
+
     production_api_leakage_pass = len(leaks) == 0
 
     # 8. Point-cloud stage-level evidence verification
@@ -183,6 +232,7 @@ def audit_single_variant(
 
     if run_pointcloud_smoke:
         try:
+            scene.reset()
             checker = GeometryChecker(scene, width=640, height=480)
             for reg_id, _dir_name in STAGES:
                 if reg_id != "INITIAL":

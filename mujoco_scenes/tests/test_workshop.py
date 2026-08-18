@@ -153,10 +153,21 @@ class WorkshopSceneTests(unittest.TestCase):
         self.assertNotIn("workshop_power_driver", initial_backend_names)
         self.assertNotIn("workshop_stubby_phillips_driver", initial_backend_names)
 
-        # Open LEFT_DRAWER
-        left_revealed = scene.open_container("LEFT_DRAWER")
-        self.assertIn("workshop_stubby_phillips_driver", left_revealed)
-        self.assertNotIn("workshop_long_phillips_driver", left_revealed)
+        # Open LEFT_DRAWER - open_container returns status dict without object names
+        open_res = scene.open_container("LEFT_DRAWER")
+        self.assertEqual(open_res["region_id"], "LEFT_DRAWER")
+        self.assertTrue(open_res["opened"])
+        self.assertTrue(open_res["newly_opened"])
+        self.assertNotIn("workshop_stubby_phillips_driver", open_res)
+
+        # Discovery occurs via observation API
+        post_open_visible = scene.get_observed_instances()
+        post_open_names = {
+            scene.privileged_backend_name_for_instance(obs["instance_id"])
+            for obs in post_open_visible
+        }
+        self.assertIn("workshop_stubby_phillips_driver", post_open_names)
+        self.assertNotIn("workshop_long_phillips_driver", post_open_names)
         self.assertEqual(
             scene.get_instance_source_region("workshop_stubby_phillips_driver"),
             "LEFT_DRAWER",
@@ -166,8 +177,13 @@ class WorkshopSceneTests(unittest.TestCase):
         )
 
         # Open TOOL_CABINET
-        cab_revealed = scene.open_container("TOOL_CABINET")
-        self.assertIn("workshop_long_phillips_driver", cab_revealed)
+        cab_res = scene.open_container("TOOL_CABINET")
+        self.assertEqual(cab_res["region_id"], "TOOL_CABINET")
+        post_cab_names = {
+            scene.privileged_backend_name_for_instance(obs["instance_id"])
+            for obs in scene.get_observed_instances()
+        }
+        self.assertIn("workshop_long_phillips_driver", post_cab_names)
         self.assertEqual(
             scene.get_instance_source_region("workshop_long_phillips_driver"),
             "TOOL_CABINET",
@@ -199,7 +215,7 @@ class WorkshopSceneTests(unittest.TestCase):
             mujoco.mjtJoint.mjJNT_FREE,
         )
         scene.move_joint_seal_to_tray()
-        state = scene.get_task_scene_state()
+        state = scene.privileged_get_task_scene_state()
         self.assertTrue(state["joint_access"]["clear"])
         self.assertEqual(state["joint_seal_location"], "PARTS_TRAY")
 
@@ -413,6 +429,7 @@ class WorkshopPrivilegeBoundaryTests(unittest.TestCase):
             self.assertRegex(reg["region_instance_id"], pattern)
             self.assertNotIn("usable_area_m2", reg)
             self.assertNotIn("cavity_volume_m3", reg)
+            self.assertNotIn("proposal_type", reg)
             self.assertIn("proposal_bounds_m", reg)
 
         leaks = _check_dict_leakage(regions, FORBIDDEN_LEAKAGE_STRINGS)
@@ -431,6 +448,59 @@ class WorkshopPrivilegeBoundaryTests(unittest.TestCase):
 
         leaks = _check_dict_leakage(target_spec, FORBIDDEN_LEAKAGE_STRINGS)
         self.assertEqual(leaks, [], f"Forbidden strings leaked in target workpiece spec: {leaks}")
+
+    def test_f2_region_alternative_proposes_obstructed_workbench_neutrally(self):
+        scene = WorkshopScene("none", variant="F2_REGION_ALTERNATIVE")
+        proposals = scene.get_candidate_regions()
+        proposal_backend_names = {
+            scene.privileged_backend_name_for_region(p["region_instance_id"])
+            for p in proposals
+        }
+        # Physical workbench exists and is proposed neutrally
+        self.assertIn("MAIN_WORKBENCH_ZONE", proposal_backend_names)
+
+        # But privileged physical oracle confirms it is obstructed and not a valid work surface
+        actual_surfaces = privileged_actual_work_surface_regions(scene)
+        self.assertNotIn("MAIN_WORKBENCH_ZONE", actual_surfaces)
+
+    def test_i2_no_work_surface_proposals_follow_physical_presence(self):
+        scene = WorkshopScene("none", variant="I2_NO_WORK_SURFACE")
+        proposals = scene.get_candidate_regions()
+        proposal_backend_names = {
+            scene.privileged_backend_name_for_region(p["region_instance_id"])
+            for p in proposals
+        }
+        # Physically present workbench table is proposed neutrally
+        self.assertIn("MAIN_WORKBENCH_ZONE", proposal_backend_names)
+        # Physically removed tool cart and shelf are NOT proposed
+        self.assertNotIn("TOOL_CART_TOP", proposal_backend_names)
+        self.assertNotIn("NARROW_WALL_SHELF", proposal_backend_names)
+
+        # Privileged oracle confirms zero valid work surfaces
+        oracle_res = privileged_validate_variant_feasibility(scene)
+        self.assertEqual(oracle_res["rejection_reason"], "NO_WORK_SURFACE")
+
+    def test_i3_no_parts_container_physically_absent_containers_not_proposed(self):
+        scene = WorkshopScene("none", variant="I3_NO_PARTS_CONTAINER")
+        proposals = scene.get_candidate_regions()
+        proposal_backend_names = {
+            scene.privileged_backend_name_for_region(p["region_instance_id"])
+            for p in proposals
+        }
+        # Physically removed parts containers are NOT proposed
+        self.assertNotIn("PARTS_TRAY", proposal_backend_names)
+        self.assertNotIn("HARDWARE_BIN", proposal_backend_names)
+        self.assertNotIn("TOOLBOX_COMPARTMENT", proposal_backend_names)
+
+        # Privileged oracle confirms NO_PARTS_CONTAINER
+        oracle_res = privileged_validate_variant_feasibility(scene)
+        self.assertEqual(oracle_res["rejection_reason"], "NO_PARTS_CONTAINER")
+
+    def test_ordinary_api_surface_has_no_cheating_wrappers(self):
+        scene = WorkshopScene("none", variant="F0_BASE")
+        self.assertFalse(hasattr(scene, "get_candidate_work_surfaces"))
+        self.assertFalse(hasattr(scene, "get_candidate_parts_containers"))
+        self.assertFalse(hasattr(scene, "get_target_joint_specification"))
 
     def test_generic_instance_ids_are_deterministic_and_persistent(self):
         scene1 = WorkshopScene("none", variant="F0_BASE")
