@@ -3,7 +3,8 @@
 Provides authoritative, config-driven variant construction for the 14-variant
 workshop benchmark suite, independent dynamic free-body pickable objects,
 deterministic storage slot allocation, physical layout profiles, physical
-realization of active functional regions, and privileged scene oracle auditing.
+realization of active functional regions, generic production observation identities,
+strict privilege boundaries, and scene-level oracle auditing.
 """
 
 from __future__ import annotations
@@ -47,7 +48,6 @@ WORKSHOP_ALL_FUNCTIONAL_WORK_SURFACES = (
     "MAIN_WORKBENCH_ZONE",
     "TOOL_CART_TOP",
     "NARROW_WALL_SHELF",
-    "HIGH_CABINET_TOP",
 )
 WORKSHOP_FUNCTIONAL_WORK_SURFACES = WORKSHOP_ALL_FUNCTIONAL_WORK_SURFACES
 
@@ -290,7 +290,6 @@ def _create_object_element(
         ET.SubElement(body, "geom", {"name": f"{object_name}_col_handle", "type": "cylinder", "pos": "0 0 0.10", "size": "0.014 0.10", "material": "bench_wood_mat"})
 
     else:
-        # Generic fallback
         ET.SubElement(body, "geom", {"name": f"{object_name}_col", "type": "box", "size": "0.05 0.05 0.05", "material": "bench_steel"})
 
     return body
@@ -304,34 +303,32 @@ def _get_storage_slots(
     layout_swapped: bool = False
 ) -> dict[str, list[tuple[tuple[float, float, float], tuple[float, float, float, float], str]]]:
     """Return deterministic (pos, quat, parent_body) slots for each storage container."""
-    # Quats: flat lying orientation for long tools: [0.7071, 0, 0.7071, 0] or [0.7071, 0.7071, 0, 0]
     q_flat_x = (0.7071, 0.0, 0.7071, 0.0)
     q_flat_y = (0.7071, 0.7071, 0.0, 0.0)
-    q_up = (1.0, 0.0, 0.0, 0.0)
 
     left_drawer_slots = [
-        ((-0.40, 0.28, 0.485), q_flat_x, "left_tool_drawer"),
-        ((-0.24, 0.28, 0.485), q_flat_x, "left_tool_drawer"),
-        ((-0.40, 0.44, 0.485), q_flat_x, "left_tool_drawer"),
-        ((-0.24, 0.44, 0.485), q_flat_x, "left_tool_drawer"),
-        ((-0.32, 0.36, 0.485), q_flat_y, "left_tool_drawer"),
+        ((-0.38, 0.28, 0.485), q_flat_x, "left_tool_drawer"),
+        ((-0.26, 0.32, 0.485), q_flat_x, "left_tool_drawer"),
+        ((-0.38, 0.42, 0.485), q_flat_x, "left_tool_drawer"),
+        ((-0.26, 0.42, 0.485), q_flat_x, "left_tool_drawer"),
+        ((-0.32, 0.35, 0.485), q_flat_y, "left_tool_drawer"),
     ]
 
     right_drawer_slots = [
-        ((0.24, 0.28, 0.485), q_flat_x, "right_tool_drawer"),
-        ((0.40, 0.28, 0.485), q_flat_x, "right_tool_drawer"),
-        ((0.24, 0.44, 0.485), q_flat_x, "right_tool_drawer"),
-        ((0.40, 0.44, 0.485), q_flat_x, "right_tool_drawer"),
-        ((0.32, 0.36, 0.485), q_flat_y, "right_tool_drawer"),
+        ((0.26, 0.28, 0.485), q_flat_x, "right_tool_drawer"),
+        ((0.38, 0.32, 0.485), q_flat_x, "right_tool_drawer"),
+        ((0.26, 0.42, 0.485), q_flat_x, "right_tool_drawer"),
+        ((0.38, 0.42, 0.485), q_flat_x, "right_tool_drawer"),
+        ((0.32, 0.35, 0.485), q_flat_y, "right_tool_drawer"),
     ]
 
     cab_x_offset = -0.40 if layout_swapped else 0.0
     tool_cabinet_slots = [
-        ((cab_x_offset - 0.08, 0.55, 0.91), q_flat_x, "tool_cabinet"),
-        ((cab_x_offset + 0.00, 0.55, 0.91), q_flat_x, "tool_cabinet"),
-        ((cab_x_offset + 0.08, 0.55, 0.91), q_flat_x, "tool_cabinet"),
-        ((cab_x_offset - 0.08, 0.55, 0.75), q_flat_x, "tool_cabinet"),
-        ((cab_x_offset + 0.08, 0.55, 0.75), q_flat_x, "tool_cabinet"),
+        ((cab_x_offset - 0.07, 0.58, 0.92), q_flat_x, "tool_cabinet"),
+        ((cab_x_offset + 0.07, 0.50, 0.92), q_flat_x, "tool_cabinet"),
+        ((cab_x_offset + 0.07, 0.58, 0.92), q_flat_x, "tool_cabinet"),
+        ((cab_x_offset - 0.07, 0.50, 0.92), q_flat_x, "tool_cabinet"),
+        ((cab_x_offset + 0.00, 0.54, 0.92), q_flat_y, "tool_cabinet"),
     ]
 
     return {
@@ -391,7 +388,6 @@ def build_workshop_xml(
                 body.set("pos", "-0.44 0.22 0.71")
 
     # 2. Apply active/inactive surface modifications
-    # In F2_REGION_ALTERNATIVE or when MAIN_WORKBENCH_ZONE is inactive: place a physical obstruction
     if "MAIN_WORKBENCH_ZONE" not in active_surfaces:
         obs_body = ET.SubElement(
             worldbody,
@@ -420,13 +416,11 @@ def build_workshop_xml(
             },
         )
 
-    # If TOOL_CART_TOP is inactive (e.g. I2, I5, I6), remove/obstruct tool cart
     if "TOOL_CART_TOP" not in active_surfaces:
         for body in list(worldbody):
             if body.get("name") in ("workshop_tool_cart", "workshop_toolbox_compartment"):
                 worldbody.remove(body)
 
-    # If NARROW_WALL_SHELF is inactive (e.g. I2), remove narrow shelf
     if "NARROW_WALL_SHELF" not in active_surfaces:
         for body in list(worldbody):
             if body.get("name") == "workshop_narrow_shelf":
@@ -460,7 +454,6 @@ def build_workshop_xml(
         region_slots = slots.get(region_id, [])
         for idx, obj_name in enumerate(object_list):
             if idx >= len(region_slots):
-                # Extra objects placed with safe spacing
                 base_slot = region_slots[-1]
                 pos = (base_slot[0][0], base_slot[0][1] + 0.08 * (idx - len(region_slots) + 1), base_slot[0][2])
                 quat = base_slot[1]
@@ -468,12 +461,10 @@ def build_workshop_xml(
             else:
                 pos, quat, parent_body = region_slots[idx]
 
-            # Create top-level free body
             obj_elem = _create_object_element(obj_name, pos, quat)
             worldbody.append(obj_elem)
             present_pickable_objects.add(obj_name)
 
-            # Add storage weld constraint for deterministic container articulation
             ET.SubElement(
                 equality,
                 "weld",
@@ -506,7 +497,8 @@ def build_workshop_xml(
 
 
 # ==============================================================================
-# PRIVILEGED AUDIT HELPERS
+# PRIVILEGED PHYSICAL SCENE AUDIT HELPERS
+# Evaluates compiled MjModel structure without relying on YAML metadata.
 # ==============================================================================
 
 def privileged_actual_storage_region(
@@ -524,29 +516,62 @@ def privileged_actual_storage_region(
     cab_x_min = -0.65 if is_swapped else -0.25
     cab_x_max = -0.15 if is_swapped else 0.25
 
-    # Check TOOL_CABINET bounds
     if cab_x_min <= x <= cab_x_max and 0.40 <= y <= 0.75 and 0.70 <= z <= 1.20:
         return "TOOL_CABINET"
 
-    # Check LEFT_DRAWER bounds
     if -0.55 <= x <= -0.10 and 0.15 <= y <= 0.65 and 0.35 <= z <= 0.65:
         return "LEFT_DRAWER"
 
-    # Check RIGHT_DRAWER bounds
     if 0.10 <= x <= 0.55 and 0.15 <= y <= 0.65 and 0.35 <= z <= 0.65:
         return "RIGHT_DRAWER"
 
-    # Check Workbench general workspace
     if -0.80 <= x <= 0.80 and 0.0 <= y <= 0.80 and 0.65 <= z <= 1.20:
         return "workbench"
 
     return "workspace"
 
 
+def privileged_actual_work_surface_regions(scene: WorkshopScene) -> list[str]:
+    """Privileged physical audit inspecting actual compiled MjModel for available surfaces."""
+    available: list[str] = []
+
+    # 1. MAIN_WORKBENCH_ZONE: workbench must exist and must not be obstructed
+    has_workbench = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_BODY, "workbench") >= 0
+    has_obstruction = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_BODY, "workbench_surface_obstruction") >= 0
+    if has_workbench and not has_obstruction:
+        available.append("MAIN_WORKBENCH_ZONE")
+
+    # 2. TOOL_CART_TOP: tool cart body must physically exist
+    if mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_tool_cart") >= 0:
+        available.append("TOOL_CART_TOP")
+
+    # 3. NARROW_WALL_SHELF: narrow shelf body must physically exist
+    if mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_narrow_shelf") >= 0:
+        available.append("NARROW_WALL_SHELF")
+
+    return available
+
+
+def privileged_actual_parts_container_regions(scene: WorkshopScene) -> list[str]:
+    """Privileged physical audit inspecting actual compiled MjModel for available containers."""
+    available: list[str] = []
+
+    if mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_parts_tray") >= 0:
+        available.append("PARTS_TRAY")
+
+    if mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_hardware_bin") >= 0:
+        available.append("HARDWARE_BIN")
+
+    if mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_toolbox_compartment") >= 0:
+        available.append("TOOLBOX_COMPARTMENT")
+
+    return available
+
+
 def privileged_validate_variant_feasibility(
     scene: WorkshopScene,
 ) -> dict[str, Any]:
-    """Privileged oracle feasibility validator analyzing the actual physical scene."""
+    """Privileged oracle feasibility validator analyzing actual physical scene and regions."""
     present_body_names = {
         mujoco.mj_id2name(scene.model, mujoco.mjtObj.mjOBJ_BODY, i)
         for i in range(scene.model.nbody)
@@ -556,8 +581,18 @@ def privileged_validate_variant_feasibility(
     target_joint_depth = 0.030
     radial_clearance = 0.0005
 
-    candidate_surfaces = scene.get_candidate_work_surfaces()
-    candidate_containers = scene.get_candidate_parts_containers()
+    # Derive candidate regions strictly from compiled physical MjModel
+    physical_surface_ids = set(privileged_actual_work_surface_regions(scene))
+    physical_container_ids = set(privileged_actual_parts_container_regions(scene))
+
+    candidate_surfaces = [
+        s for s in scene.privileged_get_work_surface_specs()
+        if s["region_id"] in physical_surface_ids
+    ]
+    candidate_containers = [
+        c for c in scene.privileged_get_parts_container_specs()
+        if c["region_id"] in physical_container_ids
+    ]
 
     # Find present drivers and fasteners
     present_drivers = []
@@ -578,25 +613,16 @@ def privileged_validate_variant_feasibility(
 
     for d_name, d_spec in present_drivers:
         for f_name, f_spec in present_fasteners:
-            # 1. Fastener fits target hole
             f_diam = f_spec.get("shaft_diameter_m", 0.010)
             fits_hole = (f_diam + 2.0 * radial_clearance) <= target_hole_diam
-
-            # 2. Fastener reaches joint depth
             f_len = f_spec.get("length_m", 0.0)
             reaches_joint = f_len >= target_joint_depth
-
-            # 3. Driver tip matches fastener recess
             d_profile = d_spec.get("tip_profile", "")
             f_profile = f_spec.get("recess_profile", "")
             tip_mates = bool(d_profile and f_profile and d_profile.upper() == f_profile.upper())
-
-            # 4. Driver reach >= required reach
             d_reach = d_spec.get("reach_m", 0.0)
             req_reach = f_spec.get("required_tool_reach_m", 0.025)
             driver_reaches = d_reach >= req_reach
-
-            # 5. Fastener + Driver set fits work surface
             req_set_area = (d_spec.get("bounding_area_m2", 0.01) + f_spec.get("bounding_area_m2", 0.001)) * 1.2
 
             for surf in candidate_surfaces:
@@ -648,14 +674,12 @@ def privileged_validate_variant_feasibility(
     elif not candidate_containers:
         rejection_reason = "NO_PARTS_CONTAINER"
     else:
-        # Check if ALL present drivers have insufficient reach (< 0.025m)
         all_drivers_short = bool(present_drivers) and all(
             d_spec.get("reach_m", 0.0) < 0.025 for _, d_spec in present_drivers
         )
         if all_drivers_short:
             rejection_reason = "TOOL_GEOMETRY_FAILURE"
         else:
-            # Check packing failure
             max_surf_area = max((s.get("usable_area_m2", 0.0) for s in candidate_surfaces), default=0.0)
             mating_pairs = [
                 (d_name, d_spec, f_name, f_spec)
@@ -731,6 +755,33 @@ class WorkshopScene:
             "active_containers", list(WORKSHOP_ALL_FUNCTIONAL_PARTS_CONTAINERS)
         )
 
+        # Build persistent deterministic generic instance IDs (object_0001, ...)
+        all_possible_objects: list[str] = [name for name, _ in INITIAL_OBJECTS]
+        for region_objects in self.storage_contents.values():
+            for obj_name in region_objects:
+                if obj_name not in all_possible_objects:
+                    all_possible_objects.append(obj_name)
+        all_possible_objects.sort()
+
+        self._backend_to_instance_id: dict[str, str] = {
+            name: f"object_{idx + 1:04d}"
+            for idx, name in enumerate(all_possible_objects)
+        }
+        self._instance_to_backend_id: dict[str, str] = {
+            v: k for k, v in self._backend_to_instance_id.items()
+        }
+
+        # Deterministic region proposals
+        all_regions = list(WORKSHOP_ALL_FUNCTIONAL_WORK_SURFACES) + list(WORKSHOP_ALL_FUNCTIONAL_PARTS_CONTAINERS)
+        all_regions.sort()
+        self._backend_to_region_id: dict[str, str] = {
+            name: f"region_{idx + 1:04d}"
+            for idx, name in enumerate(all_regions)
+        }
+        self._region_to_backend_id: dict[str, str] = {
+            v: k for k, v in self._backend_to_region_id.items()
+        }
+
         # Load binary mesh/texture assets for MjModel
         assets = {
             f"workshop_realistic/{path.name}": path.read_bytes()
@@ -767,20 +818,38 @@ class WorkshopScene:
         for _ in range(settle_steps):
             mujoco.mj_step(self.model, self.data)
 
-    def get_visible_object_instances(self) -> list[tuple[str, str]]:
-        """Return currently visible objects based on opened container state."""
-        visible = list(INITIAL_OBJECTS)
+    # --------------------------------------------------------------------------
+    # Production-Safe Observation APIs (Zero Ground-Truth Leaks)
+    # --------------------------------------------------------------------------
+
+    def get_observed_instances(self) -> list[dict[str, Any]]:
+        """Return currently observed objects with generic IDs and source region."""
+        visible = [name for name, _ in INITIAL_OBJECTS]
         for region_id in self.state.opened_containers:
             for obj_name in self.storage_contents.get(region_id, []):
-                kind = PRIVILEGED_WORKSHOP_ORACLE_SPECS.get(obj_name, {}).get("kind", "tool")
-                visible.append((obj_name, kind))
-        return visible
+                visible.append(obj_name)
+        return [
+            {
+                "instance_id": self._backend_to_instance_id[name],
+                "source_region": self.get_instance_source_region(name),
+            }
+            for name in visible
+        ]
+
+    def get_visible_object_instances(self) -> list[tuple[str, str]]:
+        """Oracle/debug helper returning (backend_body_name, generic_instance_id)."""
+        visible = [name for name, _ in INITIAL_OBJECTS]
+        for region_id in self.state.opened_containers:
+            for obj_name in self.storage_contents.get(region_id, []):
+                visible.append(obj_name)
+        return [(name, self._backend_to_instance_id[name]) for name in visible]
 
     def get_instance_source_region(self, instance_name: str) -> str | None:
-        if any(name == instance_name for name, _kind in INITIAL_OBJECTS):
+        backend_name = self._instance_to_backend_id.get(instance_name, instance_name)
+        if any(name == backend_name for name, _ in INITIAL_OBJECTS):
             return "workbench"
         for region_id, objects in self.storage_contents.items():
-            if instance_name in objects:
+            if backend_name in objects:
                 return region_id if region_id in self.state.opened_containers else None
         return None
 
@@ -797,24 +866,82 @@ class WorkshopScene:
             for region_id in WORKSHOP_REGIONS
         }
 
-    @property
-    def inspection_rig_config(self) -> dict[str, Any]:
-        """Return variant-aware inspection rig configuration."""
-        from mujoco_scenes.geometry_checker import load_inspection_rig_config
-        raw_config = load_inspection_rig_config(WORKSHOP_INSPECTION_RIG_CONFIG)
-        config = copy.deepcopy(raw_config)
-        if self.variant_name == "F6_LAYOUT_SWAPPED":
-            # Adjust TOOL_CABINET inspection rig coordinates for swapped cabinet position
-            if "TOOL_CABINET" in config.get("regions", {}):
-                cab_reg = config["regions"]["TOOL_CABINET"]
-                cab_reg["target_world_m"] = [-0.40, 0.55, 0.88]
-                cab_reg["rig_position_world_m"] = [-0.40, -0.75, 1.25]
-                cab_reg["inspection_volume"]["minimum_world_m"] = [-0.70, 0.38, 0.68]
-                cab_reg["inspection_volume"]["maximum_world_m"] = [-0.10, 0.78, 1.18]
-        return config
+    def get_candidate_regions(self) -> list[dict[str, Any]]:
+        """Return neutral candidate region proposals without ground-truth dimensions or classes."""
+        proposals = []
+        for s in self.privileged_get_work_surface_specs():
+            center = s["center_world_m"]
+            dim = s["dimensions_m"]
+            reg_id = s["region_id"]
+            proposals.append(
+                {
+                    "region_instance_id": self._backend_to_region_id[reg_id],
+                    "proposal_type": "surface",
+                    "observation_source": "workbench" if "WORKBENCH" in reg_id else "cart" if "CART" in reg_id else "shelf",
+                    "proposal_bounds_m": {
+                        "minimum_world_m": [center[0] - dim[0] / 2, center[1] - dim[1] / 2, center[2] - dim[2] / 2],
+                        "maximum_world_m": [center[0] + dim[0] / 2, center[1] + dim[1] / 2, center[2] + dim[2] / 2],
+                    },
+                }
+            )
+        for c in self.privileged_get_parts_container_specs():
+            center = c["center_world_m"]
+            dim = c["dimensions_m"]
+            reg_id = c["region_id"]
+            proposals.append(
+                {
+                    "region_instance_id": self._backend_to_region_id[reg_id],
+                    "proposal_type": "container",
+                    "observation_source": "workbench" if "TRAY" in reg_id or "BIN" in reg_id else "cart",
+                    "proposal_bounds_m": {
+                        "minimum_world_m": [center[0] - dim[0] / 2, center[1] - dim[1] / 2, center[2] - dim[2] / 2],
+                        "maximum_world_m": [center[0] + dim[0] / 2, center[1] + dim[1] / 2, center[2] + dim[2] / 2],
+                    },
+                }
+            )
+        return proposals
 
     def get_candidate_work_surfaces(self) -> list[dict[str, Any]]:
-        """Return candidate work surface proposals filtered by active variant configuration."""
+        """Compatibility wrapper forwarding to privileged surface specs."""
+        return self.privileged_get_work_surface_specs()
+
+    def get_candidate_parts_containers(self) -> list[dict[str, Any]]:
+        """Compatibility wrapper forwarding to privileged container specs."""
+        return self.privileged_get_parts_container_specs()
+
+    def get_target_workpiece_specification(self) -> dict[str, Any]:
+        """Return neutral target workpiece localization."""
+        return {
+            "target_instance_id": self._backend_to_instance_id.get("workshop_frame_joint", "target_0001"),
+            "fixture_center_world_m": [-0.02, 0.32, 0.71],
+        }
+
+    def get_target_joint_specification(self) -> dict[str, Any]:
+        """Compatibility wrapper forwarding to privileged target joint specification."""
+        return self.privileged_get_target_joint_specification()
+
+    # --------------------------------------------------------------------------
+    # Privileged Oracle APIs (Explicitly Marked for Evaluation & Benchmark Audit)
+    # --------------------------------------------------------------------------
+
+    def privileged_backend_name_for_instance(self, instance_id: str) -> str:
+        """Privileged helper resolving generic instance ID to backend body name."""
+        return self._instance_to_backend_id.get(instance_id, instance_id)
+
+    def privileged_instance_id_for_backend(self, backend_name: str) -> str:
+        """Privileged helper resolving backend body name to generic instance ID."""
+        return self._backend_to_instance_id.get(backend_name, backend_name)
+
+    def privileged_backend_name_for_region(self, region_instance_id: str) -> str:
+        """Privileged helper resolving generic region ID to backend region name."""
+        return self._region_to_backend_id.get(region_instance_id, region_instance_id)
+
+    def privileged_region_instance_id_for_backend(self, backend_region: str) -> str:
+        """Privileged helper resolving backend region name to generic region ID."""
+        return self._backend_to_region_id.get(backend_region, backend_region)
+
+    def privileged_get_work_surface_specs(self) -> list[dict[str, Any]]:
+        """Privileged oracle helper returning exact ground-truth work surface properties."""
         all_candidates = [
             {
                 "region_id": "MAIN_WORKBENCH_ZONE",
@@ -842,21 +969,11 @@ class WorkshopScene:
                 "dimensions_m": [0.24, 0.07, 0.03],
                 "usable_area_m2": 0.24 * 0.07,
             },
-            {
-                "region_id": "HIGH_CABINET_TOP",
-                "center_world_m": [
-                    -0.40 if self.variant_name == "F6_LAYOUT_SWAPPED" else 0.0,
-                    0.58,
-                    1.10,
-                ],
-                "dimensions_m": [0.22, 0.14, 0.03],
-                "usable_area_m2": 0.22 * 0.14,
-            },
         ]
         return [c for c in all_candidates if c["region_id"] in self.active_surfaces]
 
-    def get_candidate_parts_containers(self) -> list[dict[str, Any]]:
-        """Return candidate parts container proposals filtered by active variant configuration."""
+    def privileged_get_parts_container_specs(self) -> list[dict[str, Any]]:
+        """Privileged oracle helper returning exact ground-truth parts container properties."""
         all_candidates = [
             {
                 "region_id": "PARTS_TRAY",
@@ -894,8 +1011,8 @@ class WorkshopScene:
         ]
         return [c for c in all_candidates if c["region_id"] in self.active_containers]
 
-    def get_target_joint_specification(self) -> dict[str, Any]:
-        """Return target workpiece specification."""
+    def privileged_get_target_joint_specification(self) -> dict[str, Any]:
+        """Privileged oracle helper returning exact workpiece ground truth."""
         return {
             "workpiece_id": "workshop_frame_joint",
             "fixture_center_world_m": [-0.02, 0.32, 0.71],
@@ -905,6 +1022,33 @@ class WorkshopScene:
             "required_fastener_function": "can_fasten",
             "required_recess_profile": "PH2",
         }
+
+    def privileged_get_ground_truth_solution(self) -> dict[str, Any] | None:
+        """Privileged oracle helper for ground-truth benchmark auditing."""
+        return self.variant_meta.get("expected_solution")
+
+    def privileged_get_variant_metadata(self) -> dict[str, Any]:
+        """Privileged oracle metadata for test verification."""
+        return dict(self.variant_meta)
+
+    # --------------------------------------------------------------------------
+    # Scene Dynamics & Articulation
+    # --------------------------------------------------------------------------
+
+    @property
+    def inspection_rig_config(self) -> dict[str, Any]:
+        """Return variant-aware inspection rig configuration."""
+        from mujoco_scenes.geometry_checker import load_inspection_rig_config
+        raw_config = load_inspection_rig_config(WORKSHOP_INSPECTION_RIG_CONFIG)
+        config = copy.deepcopy(raw_config)
+        if self.variant_name == "F6_LAYOUT_SWAPPED":
+            if "TOOL_CABINET" in config.get("regions", {}):
+                cab_reg = config["regions"]["TOOL_CABINET"]
+                cab_reg["target_world_m"] = [-0.40, 0.55, 0.88]
+                cab_reg["rig_position_world_m"] = [-0.40, -0.75, 1.25]
+                cab_reg["inspection_volume"]["minimum_world_m"] = [-0.70, 0.38, 0.68]
+                cab_reg["inspection_volume"]["maximum_world_m"] = [-0.10, 0.78, 1.18]
+        return config
 
     def get_task_scene_state(self) -> dict[str, Any]:
         return {
@@ -977,14 +1121,6 @@ class WorkshopScene:
             mujoco.mj_step(self.model, self.data)
         self.state.container_open_state[region_id] = False
 
-    def privileged_get_ground_truth_solution(self) -> dict[str, Any] | None:
-        """Privileged oracle helper for ground-truth benchmark auditing."""
-        return self.variant_meta.get("expected_solution")
-
-    def privileged_get_variant_metadata(self) -> dict[str, Any]:
-        """Privileged oracle metadata for test verification."""
-        return dict(self.variant_meta)
-
     def print_scene_summary(self) -> None:
         print(f"Scene: {self.scene_name}")
         print(f"Variant: {self.variant_name} ({self.variant_meta.get('intended_outcome', 'UNKNOWN')})")
@@ -992,8 +1128,6 @@ class WorkshopScene:
         print(f"Robot: {self.robot_name}")
         print(f"Inspected regions: {sorted(self.state.opened_containers)}")
         print("Storage regions: " + ", ".join(WORKSHOP_REGIONS))
-        print("Candidate work surfaces: " + ", ".join([s["region_id"] for s in self.get_candidate_work_surfaces()]))
-        print("Candidate parts containers: " + ", ".join([c["region_id"] for c in self.get_candidate_parts_containers()]))
 
     def render_frame(
         self,

@@ -28,7 +28,7 @@ and keep loose small parts in a suitable container.
    - Candidates: `workshop_medium_phillips_screw` (valid), `workshop_short_phillips_screw` (depth failure), `workshop_long_phillips_screw` (depth failure), `workshop_hex_bolt` (recess profile failure).
 3. **Region Function 1 (`WORK_SURFACE`)**:
    - Requires a planar work surface within reach of the repair fixture that can accommodate the bounding set of selected driver + fastener (`FITS_SET(work_surface, {driver, fastener})`).
-   - Candidates: `MAIN_WORKBENCH_ZONE` (canonical), `TOOL_CART_TOP` (alternative), `NARROW_WALL_SHELF` (packing failure), `HIGH_CABINET_TOP` (inaccessible/contextual failure).
+   - Candidates: `MAIN_WORKBENCH_ZONE` (canonical), `TOOL_CART_TOP` (alternative), `NARROW_WALL_SHELF` (packing failure).
 4. **Region Function 2 (`SMALL_PARTS_CONTAINER`)**:
    - Requires an open container with non-zero cavity volume to hold loose small parts and the removed seal cover (`FITS_IN(container, {parts})`).
    - Candidates: `PARTS_TRAY` (canonical shallow staging tray), `HARDWARE_BIN` (small bin), `TOOLBOX_COMPARTMENT` (deep tool compartment).
@@ -47,7 +47,7 @@ The Workshop domain provides 14 standardized benchmark variants across 7 feasibl
 | `F3_DISTRIBUTED_OBJECTS` | FEASIBLE | Distributed search: valid driver is in `LEFT_DRAWER`, valid fastener in `TOOL_CABINET`. | N/A |
 | `F4_OBJECT_REGION_COUPLING` | FEASIBLE | Relational packing: power driver requires large tool cart; manual driver fits auxiliary shelf. | N/A |
 | `F5_DECOY_HEAVY` | FEASIBLE | Decoy heavy: multiple wrenches, mallets, pliers, bolts distributed across all regions. | N/A |
-| `F6_LAYOUT_SWAPPED` | FEASIBLE | Swapped layout: storage regions and staging areas mirrored. | N/A |
+| `F6_LAYOUT_SWAPPED` | FEASIBLE | Layout rearranged: the tool cabinet, tool cart, shelf, and parts-storage locations are spatially swapped while drawer fixtures remain fixed. | N/A |
 | `I0_NO_VALID_DRIVER` | INFEASIBLE | Semantic deficit: only wrenches, pliers, and mallets available; no screw driver. | `NO_VALID_DRIVER` |
 | `I1_NO_VALID_FASTENER` | INFEASIBLE | Semantic deficit: only hex bolts available; no compatible screw fastener. | `NO_VALID_FASTENER` |
 | `I2_NO_WORK_SURFACE` | INFEASIBLE | Region deficit: candidate work surfaces obstructed or missing. | `NO_WORK_SURFACE` |
@@ -55,6 +55,30 @@ The Workshop domain provides 14 standardized benchmark variants across 7 feasibl
 | `I4_TOOL_GEOMETRY_FAILURE` | INFEASIBLE | Tool geometry failure: only stubby driver available; shaft reach < required joint depth. | `TOOL_GEOMETRY_FAILURE` |
 | `I5_OBJECT_REGION_PACKING_FAILURE` | INFEASIBLE | Relational packing failure: only narrow shelf available; set area exceeds usable surface. | `OBJECT_REGION_PACKING_FAILURE` |
 | `I6_GLOBAL_CONFLICT` | INFEASIBLE | Global conflict: valid driver, fastener, and surface exist individually, but no compatible triplet exists. | `GLOBAL_CONFLICT` |
+
+---
+
+## Production-Safe vs Privileged Simulation Boundary
+
+The Workshop domain enforces an absolute architectural separation between production-facing perception/planning interfaces and privileged simulation oracle interfaces:
+
+### Production-Safe Interface (Zero Cheating / Zero Leakage)
+
+- **Natural Language Task**: High-level task prompt (`"Repair the loose frame joint using an appropriate tool and fastener..."`).
+- **Generic Object Instances**: Deterministic generic IDs (`object_0001`, `object_0002`, ...) assigned deterministically during scene initialization. The production API (`get_observed_instances()`) returns only `instance_id` and `source_region`. It contains NO simulator backend body names, NO semantic classes, NO functional affordances (`can_drive_screw`), and NO physical dimensions.
+- **Generic Region Proposals**: Region proposals (`get_candidate_regions()`) return generic IDs (`region_0001`, `region_0002`), neutral proposal bounds (`proposal_bounds_m`) for RGB-D cropping, and observation handles. They contain NO ground-truth classes (`WORK_SURFACE`, `SMALL_PARTS_CONTAINER`), NO usable surface area (`usable_area_m2`), and NO cavity containment volume (`cavity_volume_m3`).
+- **Neutral Target Workpiece**: Workpiece observation (`get_target_workpiece_specification()`) exposes only workpiece position and localization handle (`target_instance_id`). It contains NO hole diameter, NO hole depth, NO driver/fastener function requirements, and NO recess profiles (`PH2`).
+- **Raw Sensor Data**: RGB images, calibrated depth maps, and fused colored point clouds.
+
+### Privileged Simulation Oracle (Benchmark Construction, Testing & Evaluation Only)
+
+- **Simulator Backend Names**: MuJoCo body names (`workshop_long_phillips_driver`, `workshop_medium_phillips_screw`, etc.).
+- **Privileged Object Metadata (`PRIVILEGED_WORKSHOP_ORACLE_SPECS`)**: Semantic classes, functional affordance labels (`can_drive_screw`, `can_fasten`), true shaft reach, tip profiles, fastener recess profiles, exact diameters, lengths, and bounding areas.
+- **Privileged Region Specs (`privileged_get_work_surface_specs`, `privileged_get_parts_container_specs`)**: Exact ground-truth planar dimensions, usable surface area, and open cavity containment volume.
+- **Privileged Workpiece Ground Truth (`privileged_get_target_joint_specification`)**: Exact target hole diameter (7mm), hole depth (30mm), and required tool/fastener mating properties.
+- **Physical Region Inference (`privileged_actual_work_surface_regions`, `privileged_actual_parts_container_regions`)**: Privileged audit routines that inspect compiled `MjModel` bodies and collision geoms directly, independent of YAML configuration metadata.
+- **Privileged Scene Oracle Validator (`privileged_validate_variant_feasibility`)**: Oracle feasibility validator evaluating true 4-tuple physical constraints.
+- **Oracle Segmentation (`EXPLICIT_MUJOCO_ORACLE_DEBUG`)**: Labeled multi-camera point cloud exports used exclusively for ground-truth inspection and debug visualization.
 
 ---
 
@@ -111,7 +135,7 @@ The Workshop domain uses a modular, template-driven, and physically truthful var
      - `workshop_hardware_bin`: moved from right (`x = 0.44`) to left (`x = -0.44`).
 
 5. **Privileged Oracle Feasibility Validator (`privileged_validate_variant_feasibility`)**:
-   - Performs a true scene-level search over all present bodies and active regions.
+   - Performs a true scene-level search over all present bodies and active regions derived directly from compiled `MjModel` state.
    - Evaluates: `can_drive_screw`, `can_fasten`, `fits_hole` (radial clearance <= 7mm), `reaches_joint` (length >= 30mm), `driver_reaches` (reach >= 25mm), `tip_mates` (PH2 == PH2), `fits_work_surface` (usable area >= 1.2 * set area), `fits_parts_container` (open cavity > 0).
    - Produces exact oracle status (`FEASIBLE` vs `INFEASIBLE`) and exact failure codes (`NO_VALID_DRIVER`, `NO_VALID_FASTENER`, `NO_WORK_SURFACE`, `NO_PARTS_CONTAINER`, `TOOL_GEOMETRY_FAILURE`, `OBJECT_REGION_PACKING_FAILURE`, `GLOBAL_CONFLICT`).
 

@@ -1,5 +1,6 @@
 """Comprehensive test suite for the realistic Workshop (W1) benchmark."""
 
+import re
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -7,10 +8,19 @@ from tempfile import TemporaryDirectory
 import mujoco
 import numpy as np
 
+from mujoco_scenes.audit_workshop_scene import (
+    FORBIDDEN_LEAKAGE_STRINGS,
+    MIN_WORKSHOP_OBJECT_FUSED_POINTS,
+    _check_dict_leakage,
+    audit_all_variants,
+    audit_single_variant,
+)
 from mujoco_scenes.geometry_checker import GeometryChecker, load_inspection_rig_config
 from mujoco_scenes.workshop_alternatives import evaluate_ranked_alternatives
 from mujoco_scenes.workshop_pointcloud import run_workshop_pointcloud
 from mujoco_scenes.workshop_scene import (
+    INITIAL_OBJECTS,
+    PRIVILEGED_WORKSHOP_ORACLE_SPECS,
     WORKSHOP_CAMERAS,
     WORKSHOP_FUNCTIONAL_PARTS_CONTAINERS,
     WORKSHOP_FUNCTIONAL_WORK_SURFACES,
@@ -18,6 +28,10 @@ from mujoco_scenes.workshop_scene import (
     WORKSHOP_REGIONS,
     WorkshopScene,
     _load_workshop_variants_config,
+    privileged_actual_parts_container_regions,
+    privileged_actual_storage_region,
+    privileged_actual_work_surface_regions,
+    privileged_validate_variant_feasibility,
 )
 
 
@@ -102,7 +116,7 @@ SAMPLE_REGIONS = [
     },
     {
         "region_id": "NARROW_WALL_SHELF",
-        "usable_area_m2": 0.010,  # too small for driver + fastener set
+        "usable_area_m2": 0.010,
     },
     {
         "region_id": "PARTS_TRAY",
@@ -130,10 +144,14 @@ class WorkshopSceneTests(unittest.TestCase):
 
     def test_storage_objects_revealed_only_after_opening(self):
         scene = WorkshopScene("none", variant="F0_BASE")
-        initial_names = dict(scene.get_visible_object_instances())
-        self.assertNotIn("workshop_long_phillips_driver", initial_names)
-        self.assertNotIn("workshop_power_driver", initial_names)
-        self.assertNotIn("workshop_stubby_phillips_driver", initial_names)
+        initial_visible = scene.get_observed_instances()
+        initial_ids = {obs["instance_id"] for obs in initial_visible}
+        initial_backend_names = {
+            scene.privileged_backend_name_for_instance(i_id) for i_id in initial_ids
+        }
+        self.assertNotIn("workshop_long_phillips_driver", initial_backend_names)
+        self.assertNotIn("workshop_power_driver", initial_backend_names)
+        self.assertNotIn("workshop_stubby_phillips_driver", initial_backend_names)
 
         # Open LEFT_DRAWER
         left_revealed = scene.open_container("LEFT_DRAWER")
@@ -157,13 +175,13 @@ class WorkshopSceneTests(unittest.TestCase):
 
     def test_candidate_work_surfaces_and_parts_containers(self):
         scene = WorkshopScene("none", variant="F0_BASE")
-        surfaces = scene.get_candidate_work_surfaces()
+        surfaces = scene.privileged_get_work_surface_specs()
         surface_ids = [s["region_id"] for s in surfaces]
         self.assertIn("MAIN_WORKBENCH_ZONE", surface_ids)
         self.assertIn("TOOL_CART_TOP", surface_ids)
         self.assertIn("NARROW_WALL_SHELF", surface_ids)
 
-        containers = scene.get_candidate_parts_containers()
+        containers = scene.privileged_get_parts_container_specs()
         container_ids = [c["region_id"] for c in containers]
         self.assertIn("PARTS_TRAY", container_ids)
         self.assertIn("HARDWARE_BIN", container_ids)
@@ -205,7 +223,6 @@ class WorkshopSceneTests(unittest.TestCase):
                 scene.variant_meta.get("intended_outcome"),
                 var_meta.get("intended_outcome"),
             )
-            # Verify data is physically valid (no NaNs in qpos or qvel)
             self.assertFalse(
                 any(np.isnan(scene.data.qpos)),
                 f"NaN found in qpos for variant {var_name}",
@@ -216,7 +233,6 @@ class WorkshopSceneTests(unittest.TestCase):
             )
 
     def test_physical_inventory_matches_yaml_across_all_14_variants(self):
-        from mujoco_scenes.workshop_scene import privileged_actual_storage_region
         config = _load_workshop_variants_config()
         variants = config.get("variants", {})
         for var_name, var_meta in variants.items():
@@ -251,25 +267,25 @@ class WorkshopSceneTests(unittest.TestCase):
                         f"Joint {obj_name}_free is not a free joint in {var_name}",
                     )
 
-    def test_active_surfaces_and_containers_match_variant_config(self):
+    def test_physical_region_availability_matches_yaml_14_of_14(self):
         config = _load_workshop_variants_config()
         variants = config.get("variants", {})
         for var_name, var_meta in variants.items():
             scene = WorkshopScene("none", variant=var_name)
-            expected_surfaces = set(var_meta.get("active_surfaces", []))
-            actual_surfaces = {s["region_id"] for s in scene.get_candidate_work_surfaces()}
+            declared_surfaces = set(var_meta.get("active_surfaces", []))
+            actual_surfaces = set(privileged_actual_work_surface_regions(scene))
             self.assertEqual(
-                expected_surfaces,
+                declared_surfaces,
                 actual_surfaces,
-                f"Active surfaces mismatch in {var_name}",
+                f"Physical surfaces mismatch in {var_name}",
             )
 
-            expected_containers = set(var_meta.get("active_containers", []))
-            actual_containers = {c["region_id"] for c in scene.get_candidate_parts_containers()}
+            declared_containers = set(var_meta.get("active_containers", []))
+            actual_containers = set(privileged_actual_parts_container_regions(scene))
             self.assertEqual(
-                expected_containers,
+                declared_containers,
                 actual_containers,
-                f"Active containers mismatch in {var_name}",
+                f"Physical containers mismatch in {var_name}",
             )
 
     def test_f6_layout_swapped_differs_physically_from_base(self):
@@ -287,7 +303,6 @@ class WorkshopSceneTests(unittest.TestCase):
         self.assertNotAlmostEqual(tray_f0[0], tray_f6[0], delta=0.4)
 
     def test_privileged_oracle_feasibility_across_all_14_variants(self):
-        from mujoco_scenes.workshop_scene import privileged_validate_variant_feasibility
         config = _load_workshop_variants_config()
         variants = config.get("variants", {})
         for var_name, var_meta in variants.items():
@@ -320,12 +335,12 @@ class WorkshopSceneTests(unittest.TestCase):
     def test_open_drawers_produce_fresh_region_gated_rgbd_evidence(self):
         scene = WorkshopScene("none", variant="F0_BASE")
         checker = GeometryChecker(scene, width=640, height=480)
-        initial_run = checker.run_region_inspection("INITIAL")
+        initial_run = checker.run_region_inspection("INITIAL", rig_config=scene.inspection_rig_config)
         self.assertGreater(
             len(initial_run.clouds["workshop_joint_seal"].points), 20
         )
         scene.open_container("LEFT_DRAWER")
-        left_run = checker.run_region_inspection("LEFT_DRAWER")
+        left_run = checker.run_region_inspection("LEFT_DRAWER", rig_config=scene.inspection_rig_config)
         for instance_name in (
             "workshop_stubby_phillips_driver",
             "workshop_short_phillips_screw",
@@ -335,7 +350,7 @@ class WorkshopSceneTests(unittest.TestCase):
 
         scene.close_container("LEFT_DRAWER")
         scene.open_container("TOOL_CABINET")
-        cab_run = checker.run_region_inspection("TOOL_CABINET")
+        cab_run = checker.run_region_inspection("TOOL_CABINET", rig_config=scene.inspection_rig_config)
         for instance_name in (
             "workshop_long_phillips_driver",
             "workshop_medium_phillips_screw",
@@ -365,6 +380,113 @@ class WorkshopSceneTests(unittest.TestCase):
                 self.assertTrue((stage_dir / "stage_summary.json").is_file())
                 self.assertTrue((stage_dir / stage["combined_ply"]).is_file())
                 self.assertGreater(stage["total_point_count"], 20)
+
+
+class WorkshopPrivilegeBoundaryTests(unittest.TestCase):
+    """Rigorous tests ensuring zero privileged semantic leakage through production APIs."""
+
+    def test_production_observed_instances_leak_no_semantics(self):
+        for v_name in ("F0_BASE", "F3_DISTRIBUTED_OBJECTS", "F5_DECOY_HEAVY", "F6_LAYOUT_SWAPPED"):
+            scene = WorkshopScene("none", variant=v_name)
+            for reg in WORKSHOP_REGIONS:
+                scene.open_container(reg)
+            observed = scene.get_observed_instances()
+
+            pattern = re.compile(r"^object_\d{4}$")
+            seen_ids = set()
+            for item in observed:
+                self.assertIn("instance_id", item)
+                self.assertIn("source_region", item)
+                self.assertRegex(item["instance_id"], pattern)
+                seen_ids.add(item["instance_id"])
+
+            self.assertEqual(len(seen_ids), len(observed), "Generic instance IDs must be unique")
+
+            leaks = _check_dict_leakage(observed, FORBIDDEN_LEAKAGE_STRINGS)
+            self.assertEqual(leaks, [], f"Forbidden strings leaked in {v_name}: {leaks}")
+
+    def test_production_candidate_regions_leak_no_ground_truth(self):
+        scene = WorkshopScene("none", variant="F0_BASE")
+        regions = scene.get_candidate_regions()
+        pattern = re.compile(r"^region_\d{4}$")
+        for reg in regions:
+            self.assertRegex(reg["region_instance_id"], pattern)
+            self.assertNotIn("usable_area_m2", reg)
+            self.assertNotIn("cavity_volume_m3", reg)
+            self.assertIn("proposal_bounds_m", reg)
+
+        leaks = _check_dict_leakage(regions, FORBIDDEN_LEAKAGE_STRINGS)
+        self.assertEqual(leaks, [], f"Forbidden strings leaked in candidate regions: {leaks}")
+
+    def test_production_target_workpiece_spec_leaks_no_ground_truth(self):
+        scene = WorkshopScene("none", variant="F0_BASE")
+        target_spec = scene.get_target_workpiece_specification()
+        self.assertIn("target_instance_id", target_spec)
+        self.assertIn("fixture_center_world_m", target_spec)
+        self.assertNotIn("target_hole_diameter_m", target_spec)
+        self.assertNotIn("target_hole_depth_m", target_spec)
+        self.assertNotIn("required_driver_function", target_spec)
+        self.assertNotIn("required_fastener_function", target_spec)
+        self.assertNotIn("required_recess_profile", target_spec)
+
+        leaks = _check_dict_leakage(target_spec, FORBIDDEN_LEAKAGE_STRINGS)
+        self.assertEqual(leaks, [], f"Forbidden strings leaked in target workpiece spec: {leaks}")
+
+    def test_generic_instance_ids_are_deterministic_and_persistent(self):
+        scene1 = WorkshopScene("none", variant="F0_BASE")
+        scene2 = WorkshopScene("none", variant="F0_BASE")
+
+        self.assertEqual(scene1._backend_to_instance_id, scene2._backend_to_instance_id)
+
+        # ID of joint seal before opening
+        initial_seal_id = [
+            obs["instance_id"]
+            for obs in scene1.get_observed_instances()
+            if scene1.privileged_backend_name_for_instance(obs["instance_id"]) == "workshop_joint_seal"
+        ][0]
+
+        # Open drawer
+        scene1.open_container("LEFT_DRAWER")
+        post_open_seal_id = [
+            obs["instance_id"]
+            for obs in scene1.get_observed_instances()
+            if scene1.privileged_backend_name_for_instance(obs["instance_id"]) == "workshop_joint_seal"
+        ][0]
+
+        self.assertEqual(initial_seal_id, post_open_seal_id, "Instance ID must not mutate upon container opening")
+
+    def test_privileged_apis_retain_full_ground_truth(self):
+        scene = WorkshopScene("none", variant="F0_BASE")
+
+        # Invertibility of ID mapping
+        for backend_name, instance_id in scene._backend_to_instance_id.items():
+            self.assertEqual(scene.privileged_backend_name_for_instance(instance_id), backend_name)
+            self.assertEqual(scene.privileged_instance_id_for_backend(backend_name), instance_id)
+
+        # Target spec ground truth
+        priv_target = scene.privileged_get_target_joint_specification()
+        self.assertEqual(priv_target["target_hole_diameter_m"], 0.007)
+        self.assertEqual(priv_target["target_hole_depth_m"], 0.030)
+        self.assertEqual(priv_target["required_recess_profile"], "PH2")
+        self.assertEqual(priv_target["required_driver_function"], "can_drive_screw")
+        self.assertEqual(priv_target["required_fastener_function"], "can_fasten")
+
+        # Work surface spec ground truth
+        surfs = scene.privileged_get_work_surface_specs()
+        for s in surfs:
+            self.assertIn("usable_area_m2", s)
+            self.assertGreater(s["usable_area_m2"], 0.0)
+
+        # Parts container spec ground truth
+        conts = scene.privileged_get_parts_container_specs()
+        for c in conts:
+            self.assertIn("cavity_volume_m3", c)
+            self.assertGreater(c["cavity_volume_m3"], 0.0)
+
+    def test_hardened_suite_audit_all_14_variants_pass_100_percent(self):
+        summary = audit_all_variants(run_pointcloud_smoke=True)
+        self.assertTrue(summary["all_passed"], "All 14 benchmark variants must pass full physical and oracle audit")
+        self.assertEqual(summary["passed_variants"], 14)
 
 
 class WorkshopAlternativeTests(unittest.TestCase):
@@ -408,7 +530,7 @@ class WorkshopAlternativeTests(unittest.TestCase):
                 "method": "screw",
                 "tool_object_id": "phillips_driver",
                 "fastener_object_id": "medium_screw",
-                "work_surface_id": "NARROW_WALL_SHELF",  # packing failure
+                "work_surface_id": "NARROW_WALL_SHELF",
                 "parts_container_id": "PARTS_TRAY",
             },
             {
@@ -416,8 +538,8 @@ class WorkshopAlternativeTests(unittest.TestCase):
                 "method": "screw",
                 "tool_object_id": "phillips_driver",
                 "fastener_object_id": "medium_screw",
-                "work_surface_id": "MAIN_WORKBENCH_ZONE",  # valid
-                "parts_container_id": "PARTS_TRAY",        # valid
+                "work_surface_id": "MAIN_WORKBENCH_ZONE",
+                "parts_container_id": "PARTS_TRAY",
             },
         ]
         result = evaluate_ranked_alternatives(

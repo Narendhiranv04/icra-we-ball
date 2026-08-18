@@ -3,36 +3,81 @@
 Audits all 14 benchmark variants (F0-F6, I0-I6) against:
 1. Physical inventory truthfulness (declared YAML == physical MuJoCo bodies).
 2. Dynamic free-body compliance (all pickable objects have independent freejoints).
-3. Active functional region filtering (work surfaces & parts containers).
+3. Physical functional region availability (compiled MjModel == declared active regions).
 4. Physical stability on reset (no NaNs, no infinities, bounded velocities).
 5. Storage articulation (smooth open/close preserving contained objects).
 6. Privileged scene oracle feasibility & rejection reason verification.
-7. Multi-camera RGB-D point cloud smoke verification.
+7. Multi-camera RGB-D point cloud stage-level evidence verification (threshold >= 20 pts).
+8. Production observation API leakage boundary compliance.
 
 Generates structured per-variant manifests and an overall suite_summary.json.
+Exits with non-zero status code if any audit check fails.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import sys
 import time
 from pathlib import Path
-from tempfile import TemporaryDirectory
 from typing import Any
 
 import mujoco
 import numpy as np
 
 from mujoco_scenes.geometry_checker import GeometryChecker
-from mujoco_scenes.workshop_pointcloud import STAGES, _export_fused_clouds
+from mujoco_scenes.workshop_pointcloud import STAGES
 from mujoco_scenes.workshop_scene import (
     WORKSHOP_REGIONS,
     WorkshopScene,
     _load_workshop_variants_config,
+    privileged_actual_parts_container_regions,
     privileged_actual_storage_region,
+    privileged_actual_work_surface_regions,
     privileged_validate_variant_feasibility,
 )
+
+
+MIN_WORKSHOP_OBJECT_FUSED_POINTS = 20
+
+FORBIDDEN_LEAKAGE_STRINGS = (
+    "workshop_long_phillips_driver",
+    "workshop_power_driver",
+    "phillips_screwdriver",
+    "powered_screwdriver",
+    "can_drive_screw",
+    "can_fasten",
+    "PH2",
+    "tip_profile",
+    "reach_m",
+    "shaft_diameter_m",
+    "target_hole_diameter_m",
+    "target_hole_depth_m",
+    "usable_area_m2",
+    "cavity_volume_m3",
+    "expected_solution",
+)
+
+
+def _check_dict_leakage(data: Any, forbidden: tuple[str, ...]) -> list[str]:
+    """Recursively search data structures for forbidden ground-truth leakage strings."""
+    leaks = []
+    if isinstance(data, dict):
+        for k, v in data.items():
+            for f in forbidden:
+                if f.lower() == str(k).lower() or f.lower() == str(v).lower():
+                    leaks.append(f"Key/Value leak: {k}={v} matches {f}")
+            leaks.extend(_check_dict_leakage(v, forbidden))
+    elif isinstance(data, (list, tuple, set)):
+        for item in data:
+            if isinstance(item, str):
+                for f in forbidden:
+                    if f.lower() == item.lower():
+                        leaks.append(f"List item leak: {item} matches {f}")
+            else:
+                leaks.extend(_check_dict_leakage(item, forbidden))
+    return leaks
 
 
 def audit_single_variant(
@@ -90,17 +135,13 @@ def audit_single_variant(
         if sorted(expected_objs) != sorted(actual_storage_inventory.get(reg, [])):
             inventory_match = False
 
-    # 4. Active functional regions verification
-    actual_active_surfaces = [
-        s["region_id"] for s in scene.get_candidate_work_surfaces()
-    ]
-    actual_active_containers = [
-        c["region_id"] for c in scene.get_candidate_parts_containers()
-    ]
+    # 4. Physical functional regions verification (derived from compiled MjModel)
+    physically_available_surfaces = privileged_actual_work_surface_regions(scene)
+    physically_available_containers = privileged_actual_parts_container_regions(scene)
 
-    surface_match = set(declared_active_surfaces) == set(actual_active_surfaces)
-    container_match = set(declared_active_containers) == set(actual_active_containers)
-    region_configuration_match = surface_match and container_match
+    physical_surface_match = set(declared_active_surfaces) == set(physically_available_surfaces)
+    physical_container_match = set(declared_active_containers) == set(physically_available_containers)
+    region_configuration_match = physical_surface_match and physical_container_match
 
     # 5. Storage articulation test
     storage_articulation_pass = True
@@ -125,26 +166,75 @@ def audit_single_variant(
         )
     )
 
-    # 7. Point-cloud smoke capture
+    # 7. Production API leakage check
+    observed_instances = scene.get_observed_instances()
+    candidate_regions = scene.get_candidate_regions()
+    target_spec = scene.get_target_workpiece_specification()
+
+    leaks = []
+    leaks.extend(_check_dict_leakage(observed_instances, FORBIDDEN_LEAKAGE_STRINGS))
+    leaks.extend(_check_dict_leakage(candidate_regions, FORBIDDEN_LEAKAGE_STRINGS))
+    leaks.extend(_check_dict_leakage(target_spec, FORBIDDEN_LEAKAGE_STRINGS))
+    production_api_leakage_pass = len(leaks) == 0
+
+    # 8. Point-cloud stage-level evidence verification
     pointcloud_smoke_pass = True
-    pointcloud_points_by_stage: dict[str, int] = {}
+    pointcloud_stage_results: list[dict[str, Any]] = []
+
     if run_pointcloud_smoke:
         try:
-            checker = GeometryChecker(scene, width=320, height=240)
-            for reg_id, dir_name in STAGES:
+            checker = GeometryChecker(scene, width=640, height=480)
+            for reg_id, _dir_name in STAGES:
                 if reg_id != "INITIAL":
                     scene.open_container(reg_id)
                 run = checker.run_region_inspection(
                     reg_id, rig_config=scene.inspection_rig_config
                 )
-                pointcloud_points_by_stage[reg_id] = run.total_points
+
+                if reg_id == "INITIAL":
+                    expected_objs = ["workshop_joint_seal", "workshop_frame_joint"]
+                else:
+                    expected_objs = list(scene.storage_contents.get(reg_id, []))
+
+                observed_objs = list(run.clouds.keys())
+                point_count_by_obj = {
+                    obj: len(run.clouds[obj].points)
+                    for obj in observed_objs
+                }
+                missing_objs = [
+                    obj for obj in expected_objs if obj not in run.clouds
+                ]
+                low_point_objs = [
+                    obj
+                    for obj in expected_objs
+                    if obj in run.clouds and len(run.clouds[obj].points) < MIN_WORKSHOP_OBJECT_FUSED_POINTS
+                ]
+
+                if not expected_objs:
+                    stage_pass = True
+                else:
+                    stage_pass = len(missing_objs) == 0 and len(low_point_objs) == 0
+
+                stage_record = {
+                    "region_id": reg_id,
+                    "total_points": run.total_points,
+                    "expected_object_ids": expected_objs,
+                    "observed_object_ids": observed_objs,
+                    "point_count_by_object": point_count_by_obj,
+                    "missing_object_ids": missing_objs,
+                    "low_point_count_object_ids": low_point_objs,
+                    "stage_pass": stage_pass,
+                }
+                pointcloud_stage_results.append(stage_record)
+
+                if not stage_pass:
+                    pointcloud_smoke_pass = False
+
                 if reg_id != "INITIAL":
                     scene.close_container(reg_id)
-            if any(pts < 0 for pts in pointcloud_points_by_stage.values()):
-                pointcloud_smoke_pass = False
         except Exception as err:
             pointcloud_smoke_pass = False
-            pointcloud_points_by_stage["error"] = str(err)
+            pointcloud_stage_results.append({"error": str(err), "stage_pass": False})
 
     overall_pass = (
         stable_reset
@@ -153,6 +243,7 @@ def audit_single_variant(
         and region_configuration_match
         and storage_articulation_pass
         and outcome_match
+        and production_api_leakage_pass
         and pointcloud_smoke_pass
     )
 
@@ -166,10 +257,12 @@ def audit_single_variant(
         "expected_storage_inventory": declared_contents,
         "actual_physical_storage_inventory": actual_storage_inventory,
         "inventory_match": inventory_match,
-        "active_work_surfaces": declared_active_surfaces,
-        "actual_physical_work_surface_candidates": actual_active_surfaces,
-        "active_parts_containers": declared_active_containers,
-        "actual_physical_parts_container_candidates": actual_active_containers,
+        "declared_active_surfaces": declared_active_surfaces,
+        "physically_available_surfaces": physically_available_surfaces,
+        "physical_surface_match": physical_surface_match,
+        "declared_active_containers": declared_active_containers,
+        "physically_available_containers": physically_available_containers,
+        "physical_container_match": physical_container_match,
         "region_configuration_match": region_configuration_match,
         "body_count": n_bodies,
         "object_count": len(all_objects),
@@ -181,8 +274,10 @@ def audit_single_variant(
         "storage_articulation_pass": storage_articulation_pass,
         "dynamic_free_bodies_pass": free_bodies_pass,
         "oracle_feasibility_result": oracle_res,
+        "production_api_leakage_pass": production_api_leakage_pass,
+        "api_leaks": leaks,
+        "pointcloud_stage_results": pointcloud_stage_results,
         "pointcloud_smoke_pass": pointcloud_smoke_pass,
-        "pointcloud_points_by_stage": pointcloud_points_by_stage,
         "overall_pass": overall_pass,
     }
 
@@ -230,9 +325,10 @@ def audit_all_variants(
         print(
             f"[{pass_str}] {v_name:<34} | "
             f"Outcome: {manifest['intended_outcome']:<10} -> {manifest['actual_oracle_outcome']:<10} | "
-            f"Inv: {'OK' if manifest['inventory_match'] else 'MISMATCH':<8} | "
-            f"Reg: {'OK' if manifest['region_configuration_match'] else 'MISMATCH':<8} | "
-            f"Artic: {'OK' if manifest['storage_articulation_pass'] else 'FAIL':<4} | "
+            f"Inv: {'OK' if manifest['inventory_match'] else 'FAIL':<4} | "
+            f"Surfs: {'OK' if manifest['physical_surface_match'] else 'FAIL':<4} | "
+            f"Conts: {'OK' if manifest['physical_container_match'] else 'FAIL':<4} | "
+            f"Leak: {'OK' if manifest['production_api_leakage_pass'] else 'FAIL':<4} | "
             f"PC: {'OK' if manifest['pointcloud_smoke_pass'] else 'FAIL':<4} | "
             f"({elapsed:.2f}s)"
         )
@@ -245,11 +341,18 @@ def audit_all_variants(
                 "expected_rejection_reason": manifest["expected_rejection_reason"],
                 "actual_rejection_reason": manifest["actual_rejection_reason"],
                 "inventory_match": manifest["inventory_match"],
-                "region_configuration_match": manifest["region_configuration_match"],
+                "declared_active_surfaces": manifest["declared_active_surfaces"],
+                "physically_available_surfaces": manifest["physically_available_surfaces"],
+                "physical_surface_match": manifest["physical_surface_match"],
+                "declared_active_containers": manifest["declared_active_containers"],
+                "physically_available_containers": manifest["physically_available_containers"],
+                "physical_container_match": manifest["physical_container_match"],
                 "stable_reset": manifest["scene_stability_result"]["stable_reset"],
                 "dynamic_free_bodies_pass": manifest["dynamic_free_bodies_pass"],
                 "storage_articulation_pass": manifest["storage_articulation_pass"],
+                "production_api_leakage_pass": manifest["production_api_leakage_pass"],
                 "pointcloud_smoke_pass": manifest["pointcloud_smoke_pass"],
+                "pointcloud_stage_results": manifest["pointcloud_stage_results"],
                 "overall_pass": manifest["overall_pass"],
             }
         )
@@ -299,12 +402,16 @@ def main() -> None:
     run_pc = not args.no_pointcloud
 
     if args.variant == "all":
-        audit_all_variants(output_dir=out_dir, run_pointcloud_smoke=run_pc)
+        summary = audit_all_variants(output_dir=out_dir, run_pointcloud_smoke=run_pc)
+        if not summary["all_passed"]:
+            sys.exit(1)
     else:
         manifest = audit_single_variant(
             args.variant, output_dir=out_dir, run_pointcloud_smoke=run_pc
         )
         print(json.dumps(manifest, indent=2, sort_keys=True))
+        if not manifest["overall_pass"]:
+            sys.exit(1)
 
 
 if __name__ == "__main__":

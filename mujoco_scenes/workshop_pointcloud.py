@@ -45,7 +45,9 @@ def _write_json(path: Path, value: Any) -> None:
     )
 
 
-def _export_fused_clouds(run: PointCloudRun, output_dir: Path) -> dict[str, Any]:
+def _export_fused_clouds(
+    run: PointCloudRun, output_dir: Path, scene: WorkshopScene | None = None
+) -> dict[str, Any]:
     fused_dir = output_dir / "fused"
     fused_dir.mkdir(parents=True, exist_ok=True)
     all_points = []
@@ -57,9 +59,15 @@ def _export_fused_clouds(run: PointCloudRun, output_dir: Path) -> dict[str, Any]
         if len(cloud.points):
             all_points.append(cloud.points)
             all_colors.append(cloud.colors)
+        generic_id = (
+            scene.privileged_instance_id_for_backend(instance_id)
+            if scene is not None
+            else f"object_{index:04d}"
+        )
         objects.append(
             {
-                "debug_instance_id": instance_id,
+                "instance_id": generic_id,
+                "debug_backend_identity": instance_id,
                 "object_kind": cloud.object_kind,
                 "point_count": len(cloud.points),
                 "contributing_camera_count": sum(
@@ -131,7 +139,7 @@ def run_workshop_pointcloud(
         stage_record = {
             "region_id": region_id,
             "directory": directory_name,
-            **_export_fused_clouds(run, stage_dir),
+            **_export_fused_clouds(run, stage_dir, scene=scene),
         }
         _write_json(stage_dir / "stage_summary.json", stage_record)
         stage_records.append(stage_record)
