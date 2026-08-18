@@ -48,7 +48,8 @@ class RobotProfileTests(unittest.TestCase):
         self.assertEqual(
             SELF_COLLISION_MOUNT_ALLOWANCES,
             {
-                frozenset(("google:base_link", "google:link_shoulder")): -0.050
+                frozenset(("google:base_link", "google:link_shoulder")): -0.100,
+                frozenset(("google:base_link", "google:link_bicep")): -0.050,
             },
         )
 

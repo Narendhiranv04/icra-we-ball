@@ -25,12 +25,16 @@ DEFAULT_PROMPTS = (
     "screwdriver",
     "powered screwdriver",
     "screw",
+    "wrench",
+    "pliers",
     "wooden frame",
+    "parts tray",
 )
 STAGES = (
     ("INITIAL", "000_initial"),
     ("LEFT_DRAWER", "001_left_drawer"),
-    ("TOOL_CABINET", "002_tool_cabinet"),
+    ("RIGHT_DRAWER", "002_right_drawer"),
+    ("TOOL_CABINET", "003_tool_cabinet"),
 )
 
 
@@ -88,6 +92,7 @@ def run_workshop_pointcloud(
     output_dir: str | Path,
     *,
     robot: str = "google",
+    variant: str = "F0_BASE",
     width: int = 640,
     height: int = 480,
     segmentation: str = "oracle",
@@ -101,7 +106,7 @@ def run_workshop_pointcloud(
         raise FileExistsError(f"Workshop point-cloud run already exists: {output}")
     output.mkdir(parents=True, exist_ok=True)
 
-    scene = WorkshopScene(robot)
+    scene = WorkshopScene(robot=robot, variant=variant)
     checker = GeometryChecker(
         scene,
         width=width,
@@ -134,6 +139,7 @@ def run_workshop_pointcloud(
     manifest = {
         "schema_version": 1,
         "scene": scene.scene_name,
+        "variant": variant,
         "robot": robot,
         "segmentation": segmentation,
         "segmentation_scope": (
@@ -158,6 +164,7 @@ def run_workshop_pointcloud(
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--robot", choices=("google", "none"), default="google")
+    parser.add_argument("--variant", default="F0_BASE")
     parser.add_argument("--segmentation", choices=("oracle", "sam3"), default="oracle")
     parser.add_argument("--prompt", action="append", dest="prompts")
     parser.add_argument("--width", type=int, default=640)
@@ -181,6 +188,7 @@ def main() -> None:
     scene, manifest = run_workshop_pointcloud(
         output,
         robot=arguments.robot,
+        variant=arguments.variant,
         width=arguments.width,
         height=arguments.height,
         segmentation=arguments.segmentation,

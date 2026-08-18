@@ -1,25 +1,23 @@
 schema_version: 1
 task_id: w1_fastening_region_and_object_alternatives
 goal_instruction: >-
-  Fasten the two frame pieces using a compatible tool and fastener found in
-  the observed workshop regions.
+  Repair the loose frame joint using an appropriate tool and fastener found in
+  the observed workshop regions. Arrange the required tool and hardware on a
+  suitable nearby work surface, and keep loose small parts in a suitable container.
 specification_source: manual_future_fm_contract
 generated_from_foundation_model: false
 
 max_ranked_alternatives: 3
 region_policy:
-  candidates: [LEFT_DRAWER, RIGHT_DRAWER]
+  candidates: [LEFT_DRAWER, RIGHT_DRAWER, TOOL_CABINET]
   stop_when_a_valid_method_is_observed: true
 
 functional_methods:
-  nail:
-    tool_function: can_hammer
-    fastener_function: can_fasten
-    geometric_checks: [fits_hole, reaches_joint, tool_mates]
   screw:
-    tool_function: can_screw
+    tool_function: can_drive_screw
     fastener_function: can_fasten
     geometric_checks: [fits_hole, reaches_joint, tool_mates]
+    region_checks: [fits_work_surface, fits_parts_container]
 
 evidence_contract:
   semantic_functions_source: foundation_model_visible_state_only

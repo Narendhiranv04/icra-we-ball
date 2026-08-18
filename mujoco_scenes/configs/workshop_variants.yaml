@@ -1,0 +1,298 @@
+schema_version: 1
+benchmark: W1_integrated_workshop_object_region_function
+description: "Joint object-function and region-function grounding benchmark for workshop repair."
+
+canonical_task_instruction: >-
+  Repair the loose frame joint using an appropriate tool and fastener.
+  Arrange the required tool and hardware on a suitable nearby work surface,
+  and keep loose small parts in a suitable container.
+
+storage_regions:
+  - LEFT_DRAWER
+  - RIGHT_DRAWER
+  - TOOL_CABINET
+
+functional_work_surfaces:
+  - MAIN_WORKBENCH_ZONE
+  - TOOL_CART_TOP
+  - NARROW_WALL_SHELF
+  - HIGH_CABINET_TOP
+
+functional_parts_containers:
+  - PARTS_TRAY
+  - HARDWARE_BIN
+  - TOOLBOX_COMPARTMENT
+
+variants:
+  # ============================================================================
+  # FEASIBLE VARIANTS (F0 - F6)
+  # ============================================================================
+
+  F0_BASE:
+    intended_outcome: FEASIBLE
+    description: "Canonical base variant: long Phillips driver + medium screw + main workbench work surface + parts tray."
+    storage_contents:
+      LEFT_DRAWER:
+        - workshop_stubby_phillips_driver
+        - workshop_flathead_screwdriver
+        - workshop_short_phillips_screw
+        - workshop_combination_wrench
+      RIGHT_DRAWER:
+        - workshop_power_driver
+        - workshop_hex_bolt
+        - workshop_pliers
+      TOOL_CABINET:
+        - workshop_long_phillips_driver
+        - workshop_medium_phillips_screw
+        - workshop_long_phillips_screw
+    active_surfaces: [MAIN_WORKBENCH_ZONE, TOOL_CART_TOP, NARROW_WALL_SHELF]
+    active_containers: [PARTS_TRAY, HARDWARE_BIN]
+    expected_solution:
+      driver: workshop_long_phillips_driver
+      fastener: workshop_medium_phillips_screw
+      work_surface: MAIN_WORKBENCH_ZONE
+      parts_container: PARTS_TRAY
+
+  F1_TOOL_ALTERNATIVE:
+    intended_outcome: FEASIBLE
+    description: "Tool alternative: both manual long Phillips driver and power drill driver are feasible with medium screw."
+    storage_contents:
+      LEFT_DRAWER:
+        - workshop_stubby_phillips_driver
+        - workshop_flathead_screwdriver
+        - workshop_short_phillips_screw
+      RIGHT_DRAWER:
+        - workshop_power_driver
+        - workshop_hex_bolt
+        - workshop_pliers
+      TOOL_CABINET:
+        - workshop_long_phillips_driver
+        - workshop_medium_phillips_screw
+    active_surfaces: [MAIN_WORKBENCH_ZONE, TOOL_CART_TOP]
+    active_containers: [PARTS_TRAY, HARDWARE_BIN]
+    expected_solution:
+      driver: workshop_long_phillips_driver
+      fastener: workshop_medium_phillips_screw
+      work_surface: MAIN_WORKBENCH_ZONE
+      parts_container: PARTS_TRAY
+
+  F2_REGION_ALTERNATIVE:
+    intended_outcome: FEASIBLE
+    description: "Region alternative: main workbench zone is obstructed/occupied; tool cart top is the primary valid work surface."
+    storage_contents:
+      LEFT_DRAWER:
+        - workshop_stubby_phillips_driver
+        - workshop_flathead_screwdriver
+        - workshop_short_phillips_screw
+      RIGHT_DRAWER:
+        - workshop_power_driver
+        - workshop_hex_bolt
+      TOOL_CABINET:
+        - workshop_long_phillips_driver
+        - workshop_medium_phillips_screw
+    active_surfaces: [TOOL_CART_TOP, NARROW_WALL_SHELF]
+    active_containers: [PARTS_TRAY, HARDWARE_BIN]
+    expected_solution:
+      driver: workshop_long_phillips_driver
+      fastener: workshop_medium_phillips_screw
+      work_surface: TOOL_CART_TOP
+      parts_container: PARTS_TRAY
+
+  F3_DISTRIBUTED_OBJECTS:
+    intended_outcome: FEASIBLE
+    description: "Distributed search: valid driver is in LEFT_DRAWER while valid fastener is in TOOL_CABINET."
+    storage_contents:
+      LEFT_DRAWER:
+        - workshop_long_phillips_driver
+        - workshop_short_phillips_screw
+      RIGHT_DRAWER:
+        - workshop_flathead_screwdriver
+        - workshop_hex_bolt
+      TOOL_CABINET:
+        - workshop_stubby_phillips_driver
+        - workshop_medium_phillips_screw
+    active_surfaces: [MAIN_WORKBENCH_ZONE, TOOL_CART_TOP]
+    active_containers: [PARTS_TRAY, HARDWARE_BIN]
+    expected_solution:
+      driver: workshop_long_phillips_driver
+      fastener: workshop_medium_phillips_screw
+      work_surface: MAIN_WORKBENCH_ZONE
+      parts_container: PARTS_TRAY
+
+  F4_OBJECT_REGION_COUPLING:
+    intended_outcome: FEASIBLE
+    description: "Object-region relational coupling: bulky power driver requires large tool cart top, while manual driver fits auxiliary surface."
+    storage_contents:
+      LEFT_DRAWER:
+        - workshop_stubby_phillips_driver
+        - workshop_short_phillips_screw
+      RIGHT_DRAWER:
+        - workshop_power_driver
+        - workshop_medium_phillips_screw
+      TOOL_CABINET:
+        - workshop_long_phillips_driver
+        - workshop_long_phillips_screw
+    active_surfaces: [TOOL_CART_TOP, NARROW_WALL_SHELF]
+    active_containers: [PARTS_TRAY, HARDWARE_BIN]
+    expected_solution:
+      driver: workshop_power_driver
+      fastener: workshop_medium_phillips_screw
+      work_surface: TOOL_CART_TOP
+      parts_container: PARTS_TRAY
+
+  F5_DECOY_HEAVY:
+    intended_outcome: FEASIBLE
+    description: "Decoy heavy: multiple wrenches, mallets, pliers, bolts, and decoys distributed across all regions."
+    storage_contents:
+      LEFT_DRAWER:
+        - workshop_stubby_phillips_driver
+        - workshop_flathead_screwdriver
+        - workshop_short_phillips_screw
+        - workshop_combination_wrench
+        - workshop_wooden_mallet
+      RIGHT_DRAWER:
+        - workshop_power_driver
+        - workshop_hex_bolt
+        - workshop_pliers
+        - workshop_ratchet_wrench
+      TOOL_CABINET:
+        - workshop_long_phillips_driver
+        - workshop_medium_phillips_screw
+        - workshop_long_phillips_screw
+    active_surfaces: [MAIN_WORKBENCH_ZONE, TOOL_CART_TOP, NARROW_WALL_SHELF]
+    active_containers: [PARTS_TRAY, HARDWARE_BIN, TOOLBOX_COMPARTMENT]
+    expected_solution:
+      driver: workshop_long_phillips_driver
+      fastener: workshop_medium_phillips_screw
+      work_surface: MAIN_WORKBENCH_ZONE
+      parts_container: PARTS_TRAY
+
+  F6_LAYOUT_SWAPPED:
+    intended_outcome: FEASIBLE
+    description: "Layout swapped: tool cabinet is on the left, drawers on the right, tray and bin positions inverted."
+    storage_contents:
+      LEFT_DRAWER:
+        - workshop_long_phillips_driver
+        - workshop_medium_phillips_screw
+      RIGHT_DRAWER:
+        - workshop_stubby_phillips_driver
+        - workshop_short_phillips_screw
+      TOOL_CABINET:
+        - workshop_power_driver
+        - workshop_hex_bolt
+    active_surfaces: [MAIN_WORKBENCH_ZONE, TOOL_CART_TOP]
+    active_containers: [PARTS_TRAY, HARDWARE_BIN]
+    expected_solution:
+      driver: workshop_long_phillips_driver
+      fastener: workshop_medium_phillips_screw
+      work_surface: MAIN_WORKBENCH_ZONE
+      parts_container: PARTS_TRAY
+
+  # ============================================================================
+  # INFEASIBLE VARIANTS (I0 - I6)
+  # ============================================================================
+
+  I0_NO_VALID_DRIVER:
+    intended_outcome: INFEASIBLE
+    rejection_reason: NO_VALID_DRIVER
+    description: "Semantic deficit: only wrenches, pliers, and mallets available; no screw driving tool."
+    storage_contents:
+      LEFT_DRAWER:
+        - workshop_combination_wrench
+        - workshop_short_phillips_screw
+      RIGHT_DRAWER:
+        - workshop_pliers
+        - workshop_hex_bolt
+      TOOL_CABINET:
+        - workshop_wooden_mallet
+        - workshop_medium_phillips_screw
+    active_surfaces: [MAIN_WORKBENCH_ZONE, TOOL_CART_TOP]
+    active_containers: [PARTS_TRAY]
+
+  I1_NO_VALID_FASTENER:
+    intended_outcome: INFEASIBLE
+    rejection_reason: NO_VALID_FASTENER
+    description: "Semantic deficit: only hex bolts and decoys available; no frame-joint compatible screw fastener."
+    storage_contents:
+      LEFT_DRAWER:
+        - workshop_long_phillips_driver
+        - workshop_hex_bolt
+      RIGHT_DRAWER:
+        - workshop_flathead_screwdriver
+        - workshop_hex_bolt
+      TOOL_CABINET:
+        - workshop_power_driver
+        - workshop_hex_bolt
+    active_surfaces: [MAIN_WORKBENCH_ZONE, TOOL_CART_TOP]
+    active_containers: [PARTS_TRAY]
+
+  I2_NO_WORK_SURFACE:
+    intended_outcome: INFEASIBLE
+    rejection_reason: NO_WORK_SURFACE
+    description: "Region deficit: all candidate work surfaces are obstructed or outside robot reach."
+    storage_contents:
+      LEFT_DRAWER:
+        - workshop_long_phillips_driver
+        - workshop_medium_phillips_screw
+      RIGHT_DRAWER: []
+      TOOL_CABINET: []
+    active_surfaces: []
+    active_containers: [PARTS_TRAY]
+
+  I3_NO_PARTS_CONTAINER:
+    intended_outcome: INFEASIBLE
+    rejection_reason: NO_PARTS_CONTAINER
+    description: "Region deficit: no valid open container/tray with containment cavity available."
+    storage_contents:
+      LEFT_DRAWER:
+        - workshop_long_phillips_driver
+        - workshop_medium_phillips_screw
+      RIGHT_DRAWER: []
+      TOOL_CABINET: []
+    active_surfaces: [MAIN_WORKBENCH_ZONE]
+    active_containers: []
+
+  I4_TOOL_GEOMETRY_FAILURE:
+    intended_outcome: INFEASIBLE
+    rejection_reason: TOOL_GEOMETRY_FAILURE
+    description: "Tool geometry failure: only stubby driver is available; usable shaft reach is insufficient for the recessed joint."
+    storage_contents:
+      LEFT_DRAWER:
+        - workshop_stubby_phillips_driver
+        - workshop_medium_phillips_screw
+      RIGHT_DRAWER:
+        - workshop_stubby_phillips_driver
+      TOOL_CABINET:
+        - workshop_flathead_screwdriver
+    active_surfaces: [MAIN_WORKBENCH_ZONE, TOOL_CART_TOP]
+    active_containers: [PARTS_TRAY]
+
+  I5_OBJECT_REGION_PACKING_FAILURE:
+    intended_outcome: INFEASIBLE
+    rejection_reason: OBJECT_REGION_PACKING_FAILURE
+    description: "Relational packing failure: only narrow wall shelf is available; driver + fastener bounding set exceeds usable surface area."
+    storage_contents:
+      LEFT_DRAWER:
+        - workshop_long_phillips_driver
+        - workshop_medium_phillips_screw
+      RIGHT_DRAWER: []
+      TOOL_CABINET: []
+    active_surfaces: [NARROW_WALL_SHELF]
+    active_containers: [PARTS_TRAY]
+
+  I6_GLOBAL_CONFLICT:
+    intended_outcome: INFEASIBLE
+    rejection_reason: GLOBAL_CONFLICT
+    description: "Global assignment conflict: valid driver, fastener, and surface exist individually, but no mutually compatible triplet exists."
+    storage_contents:
+      LEFT_DRAWER:
+        - workshop_flathead_screwdriver
+        - workshop_medium_phillips_screw
+      RIGHT_DRAWER:
+        - workshop_power_driver
+        - workshop_short_phillips_screw
+      TOOL_CABINET:
+        - workshop_combination_wrench
+        - workshop_hex_bolt
+    active_surfaces: [NARROW_WALL_SHELF]
+    active_containers: [PARTS_TRAY]

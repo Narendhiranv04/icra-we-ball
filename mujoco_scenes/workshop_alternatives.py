@@ -1,4 +1,4 @@
-"""Validate FM-ranked workshop alternatives against observed geometry."""
+"""Validate FM-ranked workshop alternatives against observed object and region geometry."""
 
 from __future__ import annotations
 
@@ -8,9 +8,11 @@ from typing import Any
 
 METHOD_FUNCTIONS = {
     "nail": "can_hammer",
-    "screw": "can_screw",
+    "screw": "can_drive_screw",
+    "can_screw": "can_drive_screw",
+    "can_drive_screw": "can_drive_screw",
 }
-MAX_ALTERNATIVES = 3
+MAX_ALTERNATIVES = 5
 
 
 def _positive_number(mapping: Mapping[str, Any], key: str) -> float:
@@ -41,13 +43,35 @@ def _normalize_objects(
             raise ValueError(f"Invalid functions for {object_id}")
         if not isinstance(geometry, Mapping):
             raise ValueError(f"Invalid geometry for {object_id}")
+
+        # Support canonical functions with backward compatibility
+        fn_set = set(functions)
+        if "can_screw" in fn_set:
+            fn_set.add("can_drive_screw")
+        if "can_drive_screw" in fn_set:
+            fn_set.add("can_screw")
+
         objects[object_id] = {
             "object_id": object_id,
-            "functions": frozenset(functions),
+            "functions": frozenset(fn_set),
             "geometry": dict(geometry),
             "source_region": raw.get("source_region"),
         }
     return objects
+
+
+def _normalize_regions(
+    observed_regions: Iterable[Mapping[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    regions: dict[str, dict[str, Any]] = {}
+    for raw in observed_regions:
+        region_id = raw.get("region_id")
+        if not isinstance(region_id, str) or not region_id:
+            raise ValueError("Every observed region needs a region_id")
+        if region_id in regions:
+            raise ValueError(f"Duplicate observed region_id: {region_id}")
+        regions[region_id] = dict(raw)
+    return regions
 
 
 def _check_tool_mates(
@@ -67,16 +91,25 @@ def _check_tool_mates(
     recess_profile = fastener_geometry.get("recess_profile")
     tip_width = _positive_number(tool_geometry, "tip_width_m")
     recess_width = _positive_number(fastener_geometry, "recess_width_m")
-    passed = (
+    tool_reach = tool_geometry.get("reach_m", 0.10)
+    min_required_reach = fastener_geometry.get("required_tool_reach_m", 0.05)
+
+    profile_match = (
         isinstance(tip_profile, str)
-        and tip_profile == recess_profile
-        and tip_width <= recess_width
+        and isinstance(recess_profile, str)
+        and tip_profile.upper() == recess_profile.upper()
     )
+    width_match = tip_width <= recess_width * 1.05  # slight tolerance
+    reach_match = tool_reach >= min_required_reach
+
+    passed = profile_match and width_match and reach_match
     return passed, {
         "tool_tip_profile": tip_profile,
         "fastener_recess_profile": recess_profile,
         "tool_tip_width_m": tip_width,
         "fastener_recess_width_m": recess_width,
+        "tool_reach_m": tool_reach,
+        "required_tool_reach_m": min_required_reach,
     }
 
 
@@ -84,8 +117,9 @@ def _evaluate_proposal(
     proposal: Mapping[str, Any],
     objects: Mapping[str, dict[str, Any]],
     target: Mapping[str, Any],
+    regions: Mapping[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    method = proposal.get("method")
+    method = proposal.get("method", "screw")
     if method not in METHOD_FUNCTIONS:
         raise ValueError(f"Unknown fastening method: {method!r}")
     tool_id = proposal.get("tool_object_id")
@@ -98,8 +132,11 @@ def _evaluate_proposal(
     tool = objects[tool_id]
     fastener = objects[fastener_id]
     tool_function = METHOD_FUNCTIONS[method]
+
     semantic_checks = {
-        tool_function: tool_function in tool["functions"],
+        tool_function: (
+            tool_function in tool["functions"] or "can_screw" in tool["functions"]
+        ),
         "can_fasten": "can_fasten" in fastener["functions"],
     }
 
@@ -118,12 +155,50 @@ def _evaluate_proposal(
         "reaches_joint": fastener_length >= joint_depth,
         "tool_mates": tool_mates,
     }
-    accepted = all(semantic_checks.values()) and all(geometry_checks.values())
+
+    region_checks: dict[str, bool] = {}
+    region_evidence: dict[str, Any] = {}
+
+    # Check relational region coupling if proposal includes work_surface or parts_container
+    if regions is not None:
+        work_surface_id = proposal.get("work_surface_id")
+        if work_surface_id is not None:
+            if work_surface_id not in regions:
+                region_checks["valid_work_surface"] = False
+            else:
+                surf = regions[work_surface_id]
+                usable_area = surf.get("usable_area_m2", 0.0)
+                tool_area = tool["geometry"].get("bounding_area_m2", 0.01)
+                fastener_area = fastener["geometry"].get("bounding_area_m2", 0.001)
+                fits_set = usable_area >= (tool_area + fastener_area) * 1.2
+                region_checks["fits_work_surface"] = fits_set
+                region_evidence["work_surface_usable_area_m2"] = usable_area
+                region_evidence["required_set_area_m2"] = tool_area + fastener_area
+
+        container_id = proposal.get("parts_container_id")
+        if container_id is not None:
+            if container_id not in regions:
+                region_checks["valid_parts_container"] = False
+            else:
+                cont = regions[container_id]
+                cavity_vol = cont.get("cavity_volume_m3", 0.0)
+                is_open = cont.get("is_open", True)
+                region_checks["fits_parts_container"] = is_open and cavity_vol > 0.0
+                region_evidence["container_cavity_volume_m3"] = cavity_vol
+
+    accepted = (
+        all(semantic_checks.values())
+        and all(geometry_checks.values())
+        and all(region_checks.values())
+    )
+
     return {
         "rank": int(proposal["rank"]),
         "method": method,
         "tool_object_id": tool_id,
         "fastener_object_id": fastener_id,
+        "work_surface_id": proposal.get("work_surface_id"),
+        "parts_container_id": proposal.get("parts_container_id"),
         "source_regions": sorted(
             {
                 region
@@ -136,6 +211,7 @@ def _evaluate_proposal(
         ),
         "semantic_checks": semantic_checks,
         "geometry_checks": geometry_checks,
+        "region_checks": region_checks,
         "geometry_evidence": {
             "hole_diameter_m": hole_diameter,
             "joint_depth_m": joint_depth,
@@ -143,6 +219,7 @@ def _evaluate_proposal(
             "fastener_diameter_m": fastener_diameter,
             "fastener_length_m": fastener_length,
             **mating_evidence,
+            **region_evidence,
         },
         "status": "VALID" if accepted else "REJECTED",
     }
@@ -153,17 +230,14 @@ def evaluate_ranked_alternatives(
     observed_objects: Iterable[Mapping[str, Any]],
     target_geometry: Mapping[str, Any],
     ranked_proposals: Iterable[Mapping[str, Any]],
+    observed_regions: Iterable[Mapping[str, Any]] | None = None,
     max_alternatives: int = MAX_ALTERNATIVES,
 ) -> dict[str, Any]:
-    """Validate visible FM proposals and stop at the first geometric witness.
-
-    This function does not rank candidates and has no scene inventory. The FM
-    supplies a ranking over visible object IDs; this stage only checks that the
-    proposed objects are observed and satisfy the functional geometry.
-    """
+    """Validate visible FM proposals and stop at the first geometric witness."""
     if not 1 <= max_alternatives <= MAX_ALTERNATIVES:
         raise ValueError(f"max_alternatives must be in [1, {MAX_ALTERNATIVES}]")
     objects = _normalize_objects(observed_objects)
+    regions = _normalize_regions(observed_regions) if observed_regions is not None else None
     proposals = list(ranked_proposals)
     if len(proposals) > max_alternatives:
         raise ValueError(
@@ -178,7 +252,7 @@ def evaluate_ranked_alternatives(
     evaluated = []
     selected = None
     for proposal in sorted(proposals, key=lambda item: item["rank"]):
-        result = _evaluate_proposal(proposal, objects, target_geometry)
+        result = _evaluate_proposal(proposal, objects, target_geometry, regions=regions)
         evaluated.append(result)
         if result["status"] == "VALID":
             selected = result
