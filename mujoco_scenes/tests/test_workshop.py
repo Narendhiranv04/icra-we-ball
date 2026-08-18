@@ -311,8 +311,8 @@ class WorkshopSceneTests(unittest.TestCase):
         cab_f0 = scene_f0.data.xpos[mujoco.mj_name2id(scene_f0.model, mujoco.mjtObj.mjOBJ_BODY, "tool_cabinet")]
         cab_f6 = scene_f6.data.xpos[mujoco.mj_name2id(scene_f6.model, mujoco.mjtObj.mjOBJ_BODY, "tool_cabinet")]
         self.assertNotAlmostEqual(cab_f0[0], cab_f6[0], delta=0.2)
-        self.assertAlmostEqual(cab_f0[0], 0.0, delta=0.05)
-        self.assertAlmostEqual(cab_f6[0], -0.40, delta=0.05)
+        self.assertAlmostEqual(cab_f0[0], 0.38, delta=0.05)
+        self.assertAlmostEqual(cab_f6[0], -0.38, delta=0.05)
 
         tray_f0 = scene_f0.data.xpos[mujoco.mj_name2id(scene_f0.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_parts_tray")]
         tray_f6 = scene_f6.data.xpos[mujoco.mj_name2id(scene_f6.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_parts_tray")]

@@ -307,28 +307,29 @@ def _get_storage_slots(
     q_flat_y = (0.7071, 0.7071, 0.0, 0.0)
 
     left_drawer_slots = [
-        ((-0.38, 0.28, 0.485), q_flat_x, "left_tool_drawer"),
-        ((-0.26, 0.32, 0.485), q_flat_x, "left_tool_drawer"),
-        ((-0.38, 0.42, 0.485), q_flat_x, "left_tool_drawer"),
-        ((-0.26, 0.42, 0.485), q_flat_x, "left_tool_drawer"),
-        ((-0.32, 0.35, 0.485), q_flat_y, "left_tool_drawer"),
+        ((-0.34, 0.28, 0.485), q_flat_x, "left_tool_drawer"),
+        ((-0.22, 0.32, 0.485), q_flat_x, "left_tool_drawer"),
+        ((-0.34, 0.40, 0.485), q_flat_x, "left_tool_drawer"),
+        ((-0.22, 0.40, 0.485), q_flat_x, "left_tool_drawer"),
+        ((-0.28, 0.35, 0.485), q_flat_y, "left_tool_drawer"),
     ]
 
     right_drawer_slots = [
-        ((0.26, 0.28, 0.485), q_flat_x, "right_tool_drawer"),
-        ((0.38, 0.32, 0.485), q_flat_x, "right_tool_drawer"),
-        ((0.26, 0.42, 0.485), q_flat_x, "right_tool_drawer"),
-        ((0.38, 0.42, 0.485), q_flat_x, "right_tool_drawer"),
-        ((0.32, 0.35, 0.485), q_flat_y, "right_tool_drawer"),
+        ((0.22, 0.28, 0.485), q_flat_x, "right_tool_drawer"),
+        ((0.34, 0.32, 0.485), q_flat_x, "right_tool_drawer"),
+        ((0.22, 0.40, 0.485), q_flat_x, "right_tool_drawer"),
+        ((0.34, 0.40, 0.485), q_flat_x, "right_tool_drawer"),
+        ((0.28, 0.35, 0.485), q_flat_y, "right_tool_drawer"),
     ]
 
-    cab_x_offset = -0.40 if layout_swapped else 0.0
+    cab_x = -0.38 if layout_swapped else 0.38
+    cab_y = 0.54
     tool_cabinet_slots = [
-        ((cab_x_offset - 0.07, 0.58, 0.92), q_flat_x, "tool_cabinet"),
-        ((cab_x_offset + 0.07, 0.50, 0.92), q_flat_x, "tool_cabinet"),
-        ((cab_x_offset + 0.07, 0.58, 0.92), q_flat_x, "tool_cabinet"),
-        ((cab_x_offset - 0.07, 0.50, 0.92), q_flat_x, "tool_cabinet"),
-        ((cab_x_offset + 0.00, 0.54, 0.92), q_flat_y, "tool_cabinet"),
+        ((cab_x - 0.06, cab_y + 0.04, 0.88), q_flat_x, "tool_cabinet"),
+        ((cab_x + 0.06, cab_y - 0.03, 0.88), q_flat_x, "tool_cabinet"),
+        ((cab_x + 0.06, cab_y + 0.04, 0.88), q_flat_x, "tool_cabinet"),
+        ((cab_x - 0.06, cab_y - 0.03, 0.88), q_flat_x, "tool_cabinet"),
+        ((cab_x, cab_y, 0.88), q_flat_y, "tool_cabinet"),
     ]
 
     return {
@@ -377,22 +378,22 @@ def build_workshop_xml(
         for body in worldbody.iter("body"):
             b_name = body.get("name", "")
             if b_name == "tool_cabinet":
-                body.set("pos", "-0.40 0.58 0.71")
+                body.set("pos", "-0.38 0.54 0.71")
             elif b_name == "workshop_tool_cart":
-                body.set("pos", "-0.92 0.32 0")
+                body.set("pos", "-0.95 0.35 0")
             elif b_name == "workshop_narrow_shelf":
                 body.set("pos", "0.70 0.68 1.05")
             elif b_name == "workshop_parts_tray":
-                body.set("pos", "0.44 0.22 0.71")
+                body.set("pos", "0.42 0.22 0.71")
             elif b_name == "workshop_hardware_bin":
-                body.set("pos", "-0.44 0.22 0.71")
+                body.set("pos", "0.42 0.52 0.71")
 
     # 2. Apply active/inactive surface modifications
     if "MAIN_WORKBENCH_ZONE" not in active_surfaces:
         obs_body = ET.SubElement(
             worldbody,
             "body",
-            {"name": "workbench_surface_obstruction", "pos": "0.0 0.38 0.73"},
+            {"name": "workbench_surface_obstruction", "pos": "0.05 0.32 0.73"},
         )
         ET.SubElement(
             obs_body,
@@ -400,8 +401,8 @@ def build_workshop_xml(
             {
                 "name": "obstruction_crate",
                 "type": "box",
-                "size": "0.26 0.16 0.04",
-                "material": "fixture_steel",
+                "size": "0.24 0.15 0.04",
+                "material": "bench_steel",
             },
         )
         ET.SubElement(
@@ -411,7 +412,7 @@ def build_workshop_xml(
                 "name": "obstruction_warning_tape",
                 "type": "box",
                 "pos": "0 0 0.042",
-                "size": "0.25 0.15 0.002",
+                "size": "0.23 0.14 0.002",
                 "material": "tab_yellow",
             },
         )
@@ -513,16 +514,16 @@ def privileged_actual_storage_region(
     x, y, z = scene.data.xpos[body_id]
 
     is_swapped = scene.variant_name == "F6_LAYOUT_SWAPPED"
-    cab_x_min = -0.65 if is_swapped else -0.25
-    cab_x_max = -0.15 if is_swapped else 0.25
+    cab_x_min = -0.58 if is_swapped else 0.18
+    cab_x_max = -0.18 if is_swapped else 0.58
 
-    if cab_x_min <= x <= cab_x_max and 0.40 <= y <= 0.75 and 0.70 <= z <= 1.20:
+    if cab_x_min <= x <= cab_x_max and 0.40 <= y <= 0.70 and 0.70 <= z <= 1.20:
         return "TOOL_CABINET"
 
-    if -0.55 <= x <= -0.10 and 0.15 <= y <= 0.65 and 0.35 <= z <= 0.65:
+    if -0.50 <= x <= -0.10 and 0.15 <= y <= 0.60 and 0.35 <= z <= 0.65:
         return "LEFT_DRAWER"
 
-    if 0.10 <= x <= 0.55 and 0.15 <= y <= 0.65 and 0.35 <= z <= 0.65:
+    if 0.10 <= x <= 0.50 and 0.15 <= y <= 0.60 and 0.35 <= z <= 0.65:
         return "RIGHT_DRAWER"
 
     if -0.80 <= x <= 0.80 and 0.0 <= y <= 0.80 and 0.65 <= z <= 1.20:
@@ -865,8 +866,8 @@ class WorkshopScene:
 
         # 1. MAIN_WORKBENCH_ZONE: physical workbench body exists in the room
         if mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "workbench") >= 0:
-            center = [0.0, 0.38, 0.68]
-            dim = [0.60, 0.33, 0.05]
+            center = [0.05, 0.32, 0.68]
+            dim = [0.50, 0.32, 0.04]
             proposals.append(
                 {
                     "region_instance_id": self._backend_to_region_id["MAIN_WORKBENCH_ZONE"],
@@ -880,7 +881,7 @@ class WorkshopScene:
 
         # 2. TOOL_CART_TOP: mobile tool cart physically present
         if mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_tool_cart") >= 0:
-            center = [-0.92 if is_swapped else 0.92, 0.32, 0.80]
+            center = [-0.95 if is_swapped else 0.95, 0.35, 0.80]
             dim = [0.32, 0.21, 0.05]
             proposals.append(
                 {
@@ -895,7 +896,7 @@ class WorkshopScene:
 
         # 3. NARROW_WALL_SHELF: wall shelf physically present
         if mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_narrow_shelf") >= 0:
-            center = [0.70 if is_swapped else -0.70, 0.60, 1.05]
+            center = [0.70 if is_swapped else -0.70, 0.68, 1.05]
             dim = [0.24, 0.07, 0.03]
             proposals.append(
                 {
@@ -910,8 +911,8 @@ class WorkshopScene:
 
         # 4. PARTS_TRAY: parts tray physically present
         if mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_parts_tray") >= 0:
-            center = [0.44 if is_swapped else -0.44, 0.22, 0.71]
-            dim = [0.32, 0.22, 0.045]
+            center = [0.42 if is_swapped else -0.42, 0.22, 0.71]
+            dim = [0.28, 0.18, 0.04]
             proposals.append(
                 {
                     "region_instance_id": self._backend_to_region_id["PARTS_TRAY"],
@@ -925,8 +926,8 @@ class WorkshopScene:
 
         # 5. HARDWARE_BIN: hardware bin physically present
         if mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_hardware_bin") >= 0:
-            center = [-0.44 if is_swapped else 0.44, 0.22, 0.71]
-            dim = [0.16, 0.12, 0.08]
+            center = [0.42 if is_swapped else -0.42, 0.52, 0.71]
+            dim = [0.15, 0.11, 0.08]
             proposals.append(
                 {
                     "region_instance_id": self._backend_to_region_id["HARDWARE_BIN"],
@@ -940,8 +941,8 @@ class WorkshopScene:
 
         # 6. TOOLBOX_COMPARTMENT: toolbox compartment physically present
         if mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_toolbox_compartment") >= 0:
-            center = [-0.92 if is_swapped else 0.92, 0.32, 0.85]
-            dim = [0.38, 0.18, 0.14]
+            center = [-0.95 if is_swapped else 0.95, 0.35, 0.85]
+            dim = [0.36, 0.18, 0.14]
             proposals.append(
                 {
                     "region_instance_id": self._backend_to_region_id["TOOLBOX_COMPARTMENT"],
@@ -959,7 +960,7 @@ class WorkshopScene:
         """Return neutral target workpiece localization."""
         return {
             "target_instance_id": self._backend_to_instance_id.get("workshop_frame_joint", "target_0001"),
-            "fixture_center_world_m": [-0.02, 0.32, 0.71],
+            "fixture_center_world_m": [-0.08, 0.30, 0.71],
         }
 
     # --------------------------------------------------------------------------
@@ -999,15 +1000,15 @@ class WorkshopScene:
         all_candidates = [
             {
                 "region_id": "MAIN_WORKBENCH_ZONE",
-                "center_world_m": [0.0, 0.38, 0.68],
-                "dimensions_m": [0.60, 0.33, 0.05],
-                "usable_area_m2": 0.60 * 0.33,
+                "center_world_m": [0.05, 0.32, 0.68],
+                "dimensions_m": [0.50, 0.32, 0.04],
+                "usable_area_m2": 0.50 * 0.32,
             },
             {
                 "region_id": "TOOL_CART_TOP",
                 "center_world_m": [
-                    -0.92 if self.variant_name == "F6_LAYOUT_SWAPPED" else 0.92,
-                    0.32,
+                    -0.95 if self.variant_name == "F6_LAYOUT_SWAPPED" else 0.95,
+                    0.35,
                     0.80,
                 ],
                 "dimensions_m": [0.32, 0.21, 0.05],
@@ -1017,7 +1018,7 @@ class WorkshopScene:
                 "region_id": "NARROW_WALL_SHELF",
                 "center_world_m": [
                     0.70 if self.variant_name == "F6_LAYOUT_SWAPPED" else -0.70,
-                    0.60,
+                    0.68,
                     1.05,
                 ],
                 "dimensions_m": [0.24, 0.07, 0.03],
@@ -1032,34 +1033,34 @@ class WorkshopScene:
             {
                 "region_id": "PARTS_TRAY",
                 "center_world_m": [
-                    0.44 if self.variant_name == "F6_LAYOUT_SWAPPED" else -0.44,
+                    0.42 if self.variant_name == "F6_LAYOUT_SWAPPED" else -0.42,
                     0.22,
                     0.71,
                 ],
-                "dimensions_m": [0.32, 0.22, 0.045],
-                "cavity_volume_m3": 0.30 * 0.20 * 0.035,
+                "dimensions_m": [0.28, 0.18, 0.04],
+                "cavity_volume_m3": 0.26 * 0.16 * 0.035,
                 "is_open": True,
             },
             {
                 "region_id": "HARDWARE_BIN",
                 "center_world_m": [
-                    -0.44 if self.variant_name == "F6_LAYOUT_SWAPPED" else 0.44,
-                    0.22,
+                    0.42 if self.variant_name == "F6_LAYOUT_SWAPPED" else -0.42,
+                    0.52,
                     0.71,
                 ],
-                "dimensions_m": [0.16, 0.12, 0.08],
+                "dimensions_m": [0.15, 0.11, 0.08],
                 "cavity_volume_m3": 0.14 * 0.10 * 0.07,
                 "is_open": True,
             },
             {
                 "region_id": "TOOLBOX_COMPARTMENT",
                 "center_world_m": [
-                    -0.92 if self.variant_name == "F6_LAYOUT_SWAPPED" else 0.92,
-                    0.32,
+                    -0.95 if self.variant_name == "F6_LAYOUT_SWAPPED" else 0.95,
+                    0.35,
                     0.85,
                 ],
-                "dimensions_m": [0.38, 0.18, 0.14],
-                "cavity_volume_m3": 0.36 * 0.16 * 0.12,
+                "dimensions_m": [0.36, 0.18, 0.14],
+                "cavity_volume_m3": 0.34 * 0.16 * 0.12,
                 "is_open": True,
             },
         ]
@@ -1069,7 +1070,7 @@ class WorkshopScene:
         """Privileged oracle helper returning exact workpiece ground truth."""
         return {
             "workpiece_id": "workshop_frame_joint",
-            "fixture_center_world_m": [-0.02, 0.32, 0.71],
+            "fixture_center_world_m": [-0.08, 0.30, 0.71],
             "target_hole_diameter_m": 0.007,
             "target_hole_depth_m": 0.030,
             "required_driver_function": "can_drive_screw",
@@ -1098,10 +1099,10 @@ class WorkshopScene:
         if self.variant_name == "F6_LAYOUT_SWAPPED":
             if "TOOL_CABINET" in config.get("regions", {}):
                 cab_reg = config["regions"]["TOOL_CABINET"]
-                cab_reg["target_world_m"] = [-0.40, 0.55, 0.88]
-                cab_reg["rig_position_world_m"] = [-0.40, -0.75, 1.25]
-                cab_reg["inspection_volume"]["minimum_world_m"] = [-0.70, 0.38, 0.68]
-                cab_reg["inspection_volume"]["maximum_world_m"] = [-0.10, 0.78, 1.18]
+                cab_reg["target_world_m"] = [-0.38, 0.54, 0.88]
+                cab_reg["rig_position_world_m"] = [-0.38, -0.70, 1.25]
+                cab_reg["inspection_volume"]["minimum_world_m"] = [-0.65, 0.35, 0.68]
+                cab_reg["inspection_volume"]["maximum_world_m"] = [-0.15, 0.75, 1.15]
         return config
 
     def get_task_scene_state(self) -> dict[str, Any]:
@@ -1144,7 +1145,7 @@ class WorkshopScene:
             "workshop_joint_seal_free",
         )
         if joint_id >= 0:
-            tray_x = 0.44 if self.variant_name == "F6_LAYOUT_SWAPPED" else -0.44
+            tray_x = 0.42 if self.variant_name == "F6_LAYOUT_SWAPPED" else -0.42
             qpos_adr = self.model.jnt_qposadr[joint_id]
             self.data.qpos[qpos_adr : qpos_adr + 3] = (tray_x, 0.22, 0.73)
             self.data.qpos[qpos_adr + 3 : qpos_adr + 7] = (1.0, 0.0, 0.0, 0.0)
