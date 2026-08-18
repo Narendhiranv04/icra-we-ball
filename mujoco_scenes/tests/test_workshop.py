@@ -330,8 +330,8 @@ class WorkshopSceneTests(unittest.TestCase):
         cab_f0 = scene_f0.data.xpos[mujoco.mj_name2id(scene_f0.model, mujoco.mjtObj.mjOBJ_BODY, "tool_cabinet")]
         cab_f6 = scene_f6.data.xpos[mujoco.mj_name2id(scene_f6.model, mujoco.mjtObj.mjOBJ_BODY, "tool_cabinet")]
         self.assertNotAlmostEqual(cab_f0[0], cab_f6[0], delta=0.2)
-        self.assertAlmostEqual(cab_f0[0], 0.38, delta=0.05)
-        self.assertAlmostEqual(cab_f6[0], -0.38, delta=0.05)
+        self.assertAlmostEqual(cab_f0[0], 0.44, delta=0.05)
+        self.assertAlmostEqual(cab_f6[0], -0.44, delta=0.05)
 
         tray_f0 = scene_f0.data.xpos[mujoco.mj_name2id(scene_f0.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_parts_tray")]
         tray_f6 = scene_f6.data.xpos[mujoco.mj_name2id(scene_f6.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_parts_tray")]
@@ -774,7 +774,9 @@ class WorkshopPrivilegeBoundaryTests(unittest.TestCase):
         renderer.disable_segmentation_rendering()
 
         # Target workpiece coordinates
-        target_top_world = np.array([-0.18, 0.28, 0.749])
+        joint_body_id = mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_frame_joint")
+        joint_pos = scene.data.xpos[joint_body_id]
+        target_top_world = np.array([joint_pos[0] - 0.10, joint_pos[1] - 0.02, joint_pos[2] + 0.023])
         cam_pos = scene.data.cam_xpos[cam_id]
         cam_mat = scene.data.cam_xmat[cam_id].reshape(3, 3)
         fovy = scene.model.cam_fovy[cam_id]

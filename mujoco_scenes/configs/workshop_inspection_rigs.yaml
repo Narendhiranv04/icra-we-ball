@@ -67,40 +67,40 @@ regions:
         fovy_degrees: 56.0
 
   LEFT_DRAWER:
-    target_world_m: [-0.28, -0.05, 0.48]
-    rig_position_world_m: [-0.28, -1.05, 0.88]
+    target_world_m: [-0.28, 0.01, 0.48]
+    rig_position_world_m: [-0.28, -0.99, 0.88]
     up_world: [0.0, 0.0, 1.0]
     near_depth_m: 0.15
     far_depth_m: 1.80
     settle_steps: 80
     boundary_margin_m: 0.025
     inspection_volume:
-      minimum_world_m: [-0.55, -0.35, 0.35]
+      minimum_world_m: [-0.55, -0.30, 0.35]
       maximum_world_m: [-0.05, 0.45, 0.65]
     cameras: *workshop_views
 
   RIGHT_DRAWER:
-    target_world_m: [0.28, -0.05, 0.48]
-    rig_position_world_m: [0.28, -1.05, 0.88]
+    target_world_m: [0.28, 0.01, 0.48]
+    rig_position_world_m: [0.28, -0.99, 0.88]
     up_world: [0.0, 0.0, 1.0]
     near_depth_m: 0.15
     far_depth_m: 1.80
     settle_steps: 80
     boundary_margin_m: 0.025
     inspection_volume:
-      minimum_world_m: [0.05, -0.35, 0.35]
+      minimum_world_m: [0.05, -0.30, 0.35]
       maximum_world_m: [0.55, 0.45, 0.65]
     cameras: *workshop_views
 
   TOOL_CABINET:
-    target_world_m: [0.38, 0.54, 0.88]
-    rig_position_world_m: [0.38, -0.70, 1.25]
+    target_world_m: [0.44, 0.56, 0.86]
+    rig_position_world_m: [0.44, -0.70, 1.25]
     up_world: [0.0, 0.0, 1.0]
     near_depth_m: 0.15
     far_depth_m: 2.20
     settle_steps: 80
     boundary_margin_m: 0.025
     inspection_volume:
-      minimum_world_m: [0.15, 0.35, 0.68]
-      maximum_world_m: [0.65, 0.75, 1.15]
+      minimum_world_m: [0.20, 0.35, 0.68]
+      maximum_world_m: [0.70, 0.75, 1.15]
     cameras: *workshop_views

@@ -83,11 +83,6 @@ ASSET_DEFS: dict[str, dict[str, Any]] = {
         "author": "Poly Haven / Mike van der Valk",
         "roles": ["workshop_tool_cart"],
     },
-    "plastic_container": {
-        "human_readable_name": "Plastic Hardware Storage Bin",
-        "author": "Poly Haven / Mike van der Valk",
-        "roles": ["workshop_hardware_bin"],
-    },
     "metal_toolbox": {
         "human_readable_name": "Metal Tool Box Compartment",
         "author": "Poly Haven / Martin Klekner",
@@ -287,6 +282,88 @@ def generate_workshop_parts_tray(output_dir: Path) -> dict[str, Any]:
         "acquisition_date": "2026-08-18",
         "roles": ["workshop_parts_tray"],
         "processed_parts": [_record_part(obj_path, tex_path, "workshop_parts_tray")],
+    }
+
+
+def generate_workshop_hardware_bin(output_dir: Path) -> dict[str, Any]:
+    """Generate deterministic open industrial hardware storage bin with open front hopper."""
+    # Outer dimensions: length (Y) = 0.15m, width (X) = 0.11m, back height = 0.08m, front lip = 0.038m
+    # Wall thickness: 0.006m, Floor thickness: 0.006m
+    length = 0.15
+    width = 0.11
+    height_back = 0.08
+    height_front = 0.038
+    wall_t = 0.006
+    floor_t = 0.006
+
+    base = trimesh.creation.box(extents=[width, length, floor_t])
+    base.apply_translation([0, 0, floor_t / 2.0])
+
+    wall_h_back = height_back - floor_t
+    back_w = trimesh.creation.box(extents=[width, wall_t, wall_h_back])
+    back_w.apply_translation([0, length / 2.0 - wall_t / 2.0, floor_t + wall_h_back / 2.0])
+
+    wall_h_front = height_front - floor_t
+    front_w = trimesh.creation.box(extents=[width, wall_t, wall_h_front])
+    front_w.apply_translation([0, -length / 2.0 + wall_t / 2.0, floor_t + wall_h_front / 2.0])
+
+    inner_l = length - 2 * wall_t
+    side_back_l = inner_l * 0.5
+    side_back_h = height_back - floor_t
+    left_w_back = trimesh.creation.box(extents=[wall_t, side_back_l, side_back_h])
+    left_w_back.apply_translation([-width / 2.0 + wall_t / 2.0, length / 2.0 - wall_t - side_back_l / 2.0, floor_t + side_back_h / 2.0])
+    right_w_back = trimesh.creation.box(extents=[wall_t, side_back_l, side_back_h])
+    right_w_back.apply_translation([width / 2.0 - wall_t / 2.0, length / 2.0 - wall_t - side_back_l / 2.0, floor_t + side_back_h / 2.0])
+
+    side_front_l = inner_l * 0.5
+    side_front_h = height_front - floor_t
+    left_w_front = trimesh.creation.box(extents=[wall_t, side_front_l, side_front_h])
+    left_w_front.apply_translation([-width / 2.0 + wall_t / 2.0, -length / 2.0 + wall_t + side_front_l / 2.0, floor_t + side_front_h / 2.0])
+    right_w_front = trimesh.creation.box(extents=[wall_t, side_front_l, side_front_h])
+    right_w_front.apply_translation([width / 2.0 - wall_t / 2.0, -length / 2.0 + wall_t + side_front_l / 2.0, floor_t + side_front_h / 2.0])
+
+    bin_mesh = trimesh.util.concatenate([base, back_w, front_w, left_w_back, right_w_back, left_w_front, right_w_front])
+    bin_mesh = _center_and_ground(bin_mesh)
+
+    tex_path = output_dir / "workshop_hardware_bin_diff.png"
+    img = Image.new("RGB", (256, 256), color=(45, 95, 140))
+    draw = ImageDraw.Draw(img)
+    draw.rectangle([8, 8, 247, 247], outline=(30, 70, 110), width=5)
+    img.save(tex_path, format="PNG")
+
+    obj_path = output_dir / "workshop_hardware_bin.obj"
+    mtl_path = output_dir / "workshop_hardware_bin.mtl"
+
+    mtl_content = (
+        "newmtl material_workshop_hardware_bin\n"
+        "Ka 1.000 1.000 1.000\n"
+        "Kd 1.000 1.000 1.000\n"
+        "Ks 0.250 0.250 0.250\n"
+        "Ns 25.000\n"
+        "map_Kd workshop_hardware_bin_diff.png\n"
+    )
+    mtl_path.write_text(mtl_content, encoding="utf-8")
+
+    with obj_path.open("w", encoding="utf-8") as f:
+        f.write("# Open Industrial Hardware Storage Bin\n")
+        f.write(f"mtllib {mtl_path.name}\n")
+        f.write("usemtl material_workshop_hardware_bin\n\n")
+        for v in bin_mesh.vertices:
+            f.write(f"v {v[0]:.6f} {v[1]:.6f} {v[2]:.6f}\n")
+        for face in bin_mesh.faces:
+            f.write(f"f {face[0]+1} {face[1]+1} {face[2]+1}\n")
+
+    return {
+        "asset_id": "workshop_hardware_bin",
+        "human_readable_name": "Open Industrial Hardware Storage Bin",
+        "author": "icra-we-ball project",
+        "license": "CC0-1.0",
+        "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "source": "project-generated procedural mesh",
+        "source_url": "mujoco_scenes/scripts/prepare_workshop_assets.py",
+        "acquisition_date": "2026-08-18",
+        "roles": ["workshop_hardware_bin"],
+        "processed_parts": [_record_part(obj_path, tex_path, "workshop_hardware_bin")],
     }
 
 
@@ -501,6 +578,10 @@ def prepare_assets(
     # Procedural parts tray entry
     tray_entry = generate_workshop_parts_tray(output)
     manifest_entries.append(tray_entry)
+
+    # Procedural hardware storage bin entry
+    bin_entry = generate_workshop_hardware_bin(output)
+    manifest_entries.append(bin_entry)
 
     # Procedural metric hex bolt entry
     bolt_entry = generate_workshop_hex_bolt(output)
