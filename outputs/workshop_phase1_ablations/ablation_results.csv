@@ -1,8 +1,0 @@
-ablation_name,mask_backend,semantic_backend,ablation_flag,passed,total,accuracy
-Full Production Pipeline,production,production,none,3,14,0.2143
-Oracle Masks (Upper Bound),oracle,production,oracle_mask,14,14,1.0
-Oracle Semantics,production,oracle,oracle_semantics,3,14,0.2143
-Semantic-Only Grounding (No Geo),production,production,semantic_only,1,14,0.0714
-No Joint Coupling Checks,production,production,no_joint_coupling,3,14,0.2143
-No Multi-Stage Persistence,production,production,no_persistence,0,14,0.0
-Single Front Camera View,production,production,single_view,4,14,0.2857

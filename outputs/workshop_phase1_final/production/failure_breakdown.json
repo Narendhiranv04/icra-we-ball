@@ -1,0 +1,19 @@
+{
+  "classification_basis": "Dominant first failing production layer, compared with the 14/14 oracle-semantics/perfect-mask gate and the YOLO-semantics/oracle-mask isolation arm.",
+  "failures": [
+    {"variant": "F0_BASE", "layer": "YOLO_REGION_MISS", "reason": "No tray/bin region semantic candidate survived; predicted NO_PARTS_CONTAINER."},
+    {"variant": "F1_TOOL_ALTERNATIVE", "layer": "YOLO_REGION_MISS", "reason": "No tray/bin region semantic candidate survived; predicted NO_PARTS_CONTAINER."},
+    {"variant": "F2_REGION_ALTERNATIVE", "layer": "YOLO_REGION_MISS", "reason": "No tray/bin region semantic candidate survived; predicted NO_PARTS_CONTAINER."},
+    {"variant": "F3_DISTRIBUTED_OBJECTS", "layer": "YOLO_REGION_MISS", "reason": "No tray/bin region semantic candidate survived; predicted NO_PARTS_CONTAINER."},
+    {"variant": "F4_OBJECT_REGION_COUPLING", "layer": "YOLO_REGION_MISS", "reason": "No tray/bin region semantic candidate survived; predicted NO_PARTS_CONTAINER."},
+    {"variant": "F5_DECOY_HEAVY", "layer": "YOLO_REGION_MISS", "reason": "No tray/bin region semantic candidate survived; predicted NO_PARTS_CONTAINER."},
+    {"variant": "F6_LAYOUT_SWAPPED", "layer": "YOLO_REGION_MISS", "reason": "No tray/bin region semantic candidate survived; predicted NO_PARTS_CONTAINER."},
+    {"variant": "I0_NO_VALID_DRIVER", "layer": "YOLO_REGION_MISS", "reason": "Missing container-region semantics dominated the full-production diagnosis."},
+    {"variant": "I1_NO_VALID_FASTENER", "layer": "YOLO_OBJECT_MISCLASSIFICATION", "reason": "YOLO semantic association produced a driver candidate whose observed reach failed before the intended fastener deficit could be established."},
+    {"variant": "I2_NO_WORK_SURFACE", "layer": "YOLO_REGION_MISS", "reason": "Missing container-region semantics dominated the full-production diagnosis."},
+    {"variant": "I4_TOOL_GEOMETRY_FAILURE", "layer": "YOLO_REGION_MISS", "reason": "Missing container-region semantics dominated the full-production diagnosis."},
+    {"variant": "I5_OBJECT_REGION_PACKING_FAILURE", "layer": "YOLO_REGION_MISS", "reason": "Missing container-region semantics prevented the intended packing diagnosis."},
+    {"variant": "I6_GLOBAL_CONFLICT", "layer": "YOLO_REGION_MISS", "reason": "Missing container-region semantics prevented the intended global-conflict diagnosis."}
+  ],
+  "correct_variant": {"variant": "I3_NO_PARTS_CONTAINER", "exact": true}
+}

@@ -1,0 +1,65 @@
+[
+  {
+    "ablation_name": "Full Production Pipeline",
+    "mask_backend": "production",
+    "semantic_backend": "production",
+    "ablation_flag": "none",
+    "passed": 1,
+    "total": 14,
+    "accuracy": 0.0714
+  },
+  {
+    "ablation_name": "Oracle Masks (Upper Bound)",
+    "mask_backend": "oracle",
+    "semantic_backend": "production",
+    "ablation_flag": "oracle_mask",
+    "passed": 0,
+    "total": 14,
+    "accuracy": 0.0
+  },
+  {
+    "ablation_name": "Oracle Semantics + Perfect Masks",
+    "mask_backend": "oracle",
+    "semantic_backend": "oracle",
+    "ablation_flag": "oracle_semantics",
+    "passed": 14,
+    "total": 14,
+    "accuracy": 1.0
+  },
+  {
+    "ablation_name": "Semantic-Only Grounding (No Geo)",
+    "mask_backend": "production",
+    "semantic_backend": "production",
+    "ablation_flag": "semantic_only",
+    "passed": 1,
+    "total": 14,
+    "accuracy": 0.0714
+  },
+  {
+    "ablation_name": "No Joint Coupling Checks",
+    "mask_backend": "production",
+    "semantic_backend": "production",
+    "ablation_flag": "no_joint_coupling",
+    "passed": 1,
+    "total": 14,
+    "accuracy": 0.0714
+  },
+  {
+    "ablation_name": "No Multi-Stage Persistence",
+    "mask_backend": "production",
+    "semantic_backend": "production",
+    "ablation_flag": "no_persistence",
+    "passed": 1,
+    "total": 14,
+    "accuracy": 0.0714
+  },
+  {
+    "ablation_name": "Single Front Camera View",
+    "mask_backend": "production",
+    "semantic_backend": "production",
+    "ablation_flag": "single_front_view",
+    "passed": 1,
+    "total": 14,
+    "accuracy": 0.0714
+  }
+]

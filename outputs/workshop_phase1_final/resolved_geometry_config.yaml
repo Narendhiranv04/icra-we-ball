@@ -1,0 +1,66 @@
+schema_version: 1
+description: "Category-independent RGB-D measurement and relation configuration. This is deterministic verifier configuration, not FM output."
+
+measurement:
+  minimum_object_points: 8
+  robust_lower_percentile: 1.0
+  robust_upper_percentile: 99.0
+  interface_end_fraction: 0.06
+  head_end_fraction: 0.22
+  minimum_interface_points: 8
+  slot_anisotropy_ratio: 3.2
+  slot_max_transverse_length_m: 0.0031
+  hex_radial_symmetry_ratio: 1.25
+
+target:
+  minimum_points: 30
+  minimum_recess_points: 15
+  plane_percentile: 95.0
+  recess_cluster_depth_m: 0.010
+  entry_band_min_m: 0.005
+  entry_band_max_m: 0.020
+
+support_plane:
+  minimum_points: 40
+  histogram_bin_m: 0.003
+  inlier_tolerance_m: 0.0045
+  robust_lower_percentile: 2.0
+  robust_upper_percentile: 98.0
+  minimum_planarity_score: 0.70
+  minimum_upward_alignment: 0.85
+  maximum_thickness_m: 0.012
+  obstruction_clearance_m: 0.012
+
+open_cavity:
+  minimum_point_count: 80
+  minimum_contributing_camera_count: 1
+  minimum_resolvable_vertical_extent_m: 0.006
+  minimum_resolvable_opening_m: 0.009
+  minimum_resolvable_depth_m: 0.006
+  minimum_rim_points: 16
+  minimum_interior_points: 8
+  minimum_interior_points_per_camera: 2
+  minimum_interior_camera_count: 1
+  rim_percentile_z: 86.0
+  angular_bin_count: 12
+  minimum_rim_enclosure_ratio: 0.58
+  minimum_rim_normal_alignment: 0.80
+  rim_shell_minimum_radius: 0.65
+  minimum_rim_shell_fraction: 0.25
+  central_top_radius_fraction: 0.45
+  maximum_central_top_occupancy_fraction: 0.45
+  minimum_filled_top_central_points: 20
+  maximum_filled_top_height_spread_m: 0.002
+  inner_radius_fraction: 0.62
+  planar_rejection_score: 0.94
+  planar_rejection_max_extent_m: 0.030
+  maximum_outlier_fraction: 0.40
+
+relations:
+  grasp_allowance_m: 0.075
+  reach_tolerance_m: 0.003
+  target_shaft_clearance_m: 0.0005
+  target_length_tolerance_m: 0.002
+  packing_edge_clearance_m: 0.010
+  packing_inter_object_clearance_m: 0.006
+  container_clearance_m: 0.003
