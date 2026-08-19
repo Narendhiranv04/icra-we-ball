@@ -12,8 +12,9 @@ functional_requirements:
     accepted_categories:
       - "screwdriver"
       - "power_driver"
-    geometric_constraints:
-      min_reach_m: 0.025
+    required_relations:
+      - "REACHES_TARGET"
+      - "COMPATIBLE_WITH"
 
   - requirement_id: "req_obj_fastener"
     entity_type: "OBJECT"
@@ -23,9 +24,8 @@ functional_requirements:
     accepted_categories:
       - "screw"
       - "bolt"
-    geometric_constraints:
-      min_length_m: 0.022
-      max_diameter_m: 0.009
+    required_relations:
+      - "COMPATIBLE_WITH_TARGET"
 
   - requirement_id: "req_reg_work_surface"
     entity_type: "FUNCTIONAL_REGION"
@@ -36,9 +36,9 @@ functional_requirements:
       - "workbench"
       - "tool_cart"
       - "shelf"
-    geometric_constraints:
-      min_area_m2: 0.015
-      unobstructed: true
+    required_relations:
+      - "PLANAR_SUPPORT"
+      - "FITS_SET_ON"
 
   - requirement_id: "req_reg_parts_container"
     entity_type: "FUNCTIONAL_REGION"
@@ -48,9 +48,9 @@ functional_requirements:
     accepted_categories:
       - "parts_tray"
       - "hardware_bin"
-    geometric_constraints:
-      min_volume_m3: 0.0001
-      open_top: true
+    required_relations:
+      - "OPEN_CAVITY"
+      - "FITS_IN"
 
 vocabulary:
   canonical_labels:

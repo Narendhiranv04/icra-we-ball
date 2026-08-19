@@ -5,6 +5,7 @@ pipeline:
   mask_backend: "production"  # options: production, oracle, connected_component
   semantic_backend: "production"  # options: production, oracle, deterministic_test
   fm_contract_path: "mujoco_scenes/configs/workshop_phase1_fm_contract.yaml"
+  geometry_config_path: "mujoco_scenes/configs/workshop_geometry_inference.yaml"
   requirements_source: "static"  # options: static, fm
   inspection_policy: "fixed"  # options: fixed, fm_ranked, oracle_greedy
   ablation: "none"  # options: none, semantic_only, no_geometry, no_joint_coupling, no_persistence, single_view, single_front_view, oracle_mask, oracle_semantics
@@ -27,16 +28,6 @@ tracking:
   track_match_distance_threshold_m: 0.045
   voxel_size_m: 0.003
   min_cluster_points: 10
-
-grounding:
-  geometry:
-    target_hole_depth_m: 0.030
-    target_hole_diameter_m: 0.007
-    min_driver_reach_m: 0.025
-    min_fastener_length_m: 0.022
-    min_surface_area_m2: 0.015
-    min_container_volume_m3: 0.0001
-    staging_margin_multiplier: 1.20
 
 inspection:
   sequence:

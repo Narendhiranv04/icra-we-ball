@@ -154,8 +154,6 @@ class PrivilegedOracleSemanticBackend(ObjectSemanticBackend):
         if "driver" in best_name or "screwdriver" in best_name:
             if "power" in best_name:
                 best_canonical = "power_driver"
-            elif "flathead" in best_name or "slotted" in best_name:
-                best_canonical = "flathead_driver"
             else:
                 best_canonical = "screwdriver"
         elif "screw" in best_name:
@@ -191,6 +189,10 @@ class PrivilegedOracleSemanticBackend(ObjectSemanticBackend):
                 if np.linalg.norm(r_center - p_center) < 0.05:
                     if hasattr(self.scene, "privileged_backend_name_for_region"):
                         bname = self.scene.privileged_backend_name_for_region(prop["region_instance_id"])
+                        active = set(getattr(self.scene, "active_surfaces", [])) | set(
+                            getattr(self.scene, "active_containers", []))
+                        if bname not in active:
+                            return SemanticEvidence(canonical_label="unknown", raw_label="inactive_region", confidence=0.0)
                         if bname == "MAIN_WORKBENCH_ZONE":
                             return SemanticEvidence(canonical_label="workbench", raw_label=bname, confidence=1.0)
                         elif bname == "TOOL_CART_TOP":

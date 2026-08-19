@@ -9,6 +9,7 @@ import numpy as np
 from scipy.optimize import linear_sum_assignment
 
 from mujoco_scenes.geometry_checker import (
+    MeasurementEvidence,
     backproject_masked_depth,
     gate_points_to_volume,
     remove_sparse_voxel_outliers,
@@ -51,6 +52,27 @@ class PersistentInstanceTracker:
         inst_id = f"object_{self._next_instance_idx:04d}"
         self._next_instance_idx += 1
         return inst_id
+
+    @staticmethod
+    def _measurement_evidence(instance_id: str, stage_index: int,
+                              source_region_id: str,
+                              stage_object: dict[str, Any]) -> MeasurementEvidence:
+        return MeasurementEvidence(
+            instance_name=instance_id,
+            measurement_points=stage_object["points"],
+            measurement_colors=stage_object["colors"],
+            contributing_camera_ids=stage_object["cameras"],
+            points_by_camera=stage_object["points_by_camera"],
+            source_stage=stage_index,
+            source_region=source_region_id,
+            measurement_cloud_path=None,
+            measurement_quality={
+                "quality_is_valid": True,
+                "raw_inside_point_count": len(stage_object["points"]),
+                "outlier_points_removed": 0,
+                "measurement_method": "stage_local_multiview_masked_rgbd",
+            },
+        )
 
     @staticmethod
     def _compute_consensus_semantic_belief(observations: list[dict[str, Any]]) -> dict[str, Any]:
@@ -251,6 +273,9 @@ class PersistentInstanceTracker:
                     track.crop_evidence.update(st_obj["crops_by_camera"])
                     track.semantic_observations.extend(st_obj["semantic_observations"])
                     track.current_semantic_belief = self._compute_consensus_semantic_belief(track.semantic_observations)
+                    track.current_measurement_evidence = self._measurement_evidence(
+                        t_id, stage_index, source_region_id, st_obj)
+                    track.current_geometric_properties = {}
                     affected_tracks.append(track)
 
             for i, st_obj in enumerate(stage_objects):
@@ -269,6 +294,8 @@ class PersistentInstanceTracker:
                         contributing_cameras=st_obj["cameras"],
                         semantic_observations=list(st_obj["semantic_observations"]),
                         current_semantic_belief=sem_belief,
+                        current_measurement_evidence=self._measurement_evidence(
+                            new_id, stage_index, source_region_id, st_obj),
                         overall_confidence=0.9,
                         evidence_count=1,
                         status="ACTIVE",
@@ -291,6 +318,8 @@ class PersistentInstanceTracker:
                     contributing_cameras=st_obj["cameras"],
                     semantic_observations=list(st_obj["semantic_observations"]),
                     current_semantic_belief=sem_belief,
+                    current_measurement_evidence=self._measurement_evidence(
+                        new_id, stage_index, source_region_id, st_obj),
                     overall_confidence=0.9,
                     evidence_count=1,
                     status="ACTIVE",

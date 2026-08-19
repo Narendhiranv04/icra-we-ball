@@ -90,22 +90,13 @@ class KitchenGroundTruthRecorder:
             self._init_video_writer()
 
     def _init_video_writer(self) -> None:
-        """Initialize high-quality video writer with fallbacks."""
+        """Initialize the portable OpenCV MP4 writer."""
         out_str = str(self.output_path)
-        try:
-            import imageio.v2 as imageio
-            self.imageio_writer = imageio.get_writer(
-                out_str,
-                fps=self.fps,
-                codec="libx264",
-                quality=8,
-                pixelformat="yuv420p",
-            )
-        except Exception:
-            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-            self.video_writer = cv2.VideoWriter(
-                out_str, fourcc, float(self.fps), (self.mosaic_width, self.mosaic_height)
-            )
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        self.video_writer = cv2.VideoWriter(
+            out_str, fourcc, float(self.fps),
+            (self.mosaic_width, self.mosaic_height)
+        )
 
     def _draw_text(
         self,

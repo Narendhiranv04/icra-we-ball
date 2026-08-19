@@ -61,13 +61,24 @@ class ManualWorkshopFMContract(RequirementProvider):
 
     def _load_contract(self) -> dict[str, Any]:
         if self.contract_path.is_file():
-            try:
-                with open(self.contract_path, "r", encoding="utf-8") as f:
-                    data = yaml.safe_load(f)
-                    if isinstance(data, dict):
-                        return data
-            except Exception:
-                pass
+            with open(self.contract_path, "r", encoding="utf-8") as f:
+                data = yaml.safe_load(f)
+            if not isinstance(data, dict):
+                raise ValueError("Workshop FM contract must be a mapping")
+            forbidden_fragments = (
+                "min_reach", "minimum_reach", "min_length", "max_diameter",
+                "min_area", "minimum_area", "min_volume", "minimum_volume",
+            )
+            def keys(value: Any) -> list[str]:
+                if isinstance(value, dict):
+                    return [str(k).lower() for k in value] + [item for child in value.values() for item in keys(child)]
+                if isinstance(value, list):
+                    return [item for child in value for item in keys(child)]
+                return []
+            offending = sorted({key for key in keys(data) if any(fragment in key for fragment in forbidden_fragments)})
+            if offending:
+                raise ValueError("FM contract contains deterministic metric thresholds: " + ", ".join(offending))
+            return data
         # Hardcoded safe defaults matching workshop_phase1_fm_contract.yaml
         return {
             "task_instruction": CANONICAL_WORKSHOP_INSTRUCTION,
@@ -79,7 +90,7 @@ class ManualWorkshopFMContract(RequirementProvider):
                     "description": "Tool capable of driving fasteners into the frame joint",
                     "rank": 1,
                     "accepted_categories": ["screwdriver", "power_driver"],
-                    "geometric_constraints": {"min_reach_m": 0.025},
+                    "required_relations": ["REACHES_TARGET", "COMPATIBLE_WITH"],
                 },
                 {
                     "requirement_id": "req_obj_fastener",
@@ -88,7 +99,7 @@ class ManualWorkshopFMContract(RequirementProvider):
                     "description": "Fastener component capable of securing the frame joint",
                     "rank": 2,
                     "accepted_categories": ["screw", "bolt"],
-                    "geometric_constraints": {"min_length_m": 0.022, "max_diameter_m": 0.009},
+                    "required_relations": ["COMPATIBLE_WITH_TARGET"],
                 },
                 {
                     "requirement_id": "req_reg_work_surface",
@@ -97,7 +108,7 @@ class ManualWorkshopFMContract(RequirementProvider):
                     "description": "Nearby unobstructed planar work surface suitable for staging tool and fastener",
                     "rank": 1,
                     "accepted_categories": ["workbench", "tool_cart", "shelf"],
-                    "geometric_constraints": {"min_area_m2": 0.015, "unobstructed": True},
+                    "required_relations": ["PLANAR_SUPPORT", "FITS_SET_ON"],
                 },
                 {
                     "requirement_id": "req_reg_parts_container",
@@ -106,7 +117,7 @@ class ManualWorkshopFMContract(RequirementProvider):
                     "description": "Open container or tray suitable for holding loose small parts",
                     "rank": 2,
                     "accepted_categories": ["parts_tray", "hardware_bin"],
-                    "geometric_constraints": {"min_volume_m3": 0.0001, "open_top": True},
+                    "required_relations": ["OPEN_CAVITY", "FITS_IN"],
                 },
             ],
             "vocabulary": {
@@ -142,6 +153,7 @@ class ManualWorkshopFMContract(RequirementProvider):
                     accepted_categories=list(r.get("accepted_categories", [])),
                     semantic_hints=list(r.get("accepted_categories", [])),
                     geometric_constraints=dict(r.get("geometric_constraints", {})),
+                    required_relations=list(r.get("required_relations", [])),
                     provenance="manual_workshop_fm_contract",
                 )
             )

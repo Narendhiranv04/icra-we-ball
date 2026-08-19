@@ -24,42 +24,14 @@ class FunctionalSatisfactionSearch:
         self,
         driver_track: ObservedObjectTrack,
         fastener_track: ObservedObjectTrack,
-    ) -> tuple[GroundingStatus, str]:
-        """Check if driver interface mates with fastener interface."""
-        d_belief = driver_track.current_semantic_belief
-        f_belief = fastener_track.current_semantic_belief
-
-        d_cat = str(d_belief.get("canonical_label", "")).lower()
-        f_cat = str(f_belief.get("canonical_label", "")).lower()
-        d_raw = str(d_belief.get("raw_label", "")).lower()
-        f_raw = str(f_belief.get("raw_label", "")).lower()
-
-        d_geo = driver_track.current_geometric_properties.get("interface_geometry", "UNKNOWN")
-        f_geo = fastener_track.current_geometric_properties.get("interface_geometry", "UNKNOWN")
-
-        is_slotted_driver = ("flathead" in d_cat or "flathead" in d_raw or "slotted" in d_cat or "slotted" in d_raw or d_geo == "SLOT_LIKE")
-        is_cross_screw = ("phillips" in f_cat or "phillips" in f_raw or "cross" in f_raw or f_geo == "CROSS_RECESS" or f_cat == "screw")
-
-        # Flathead/slotted driver cannot drive cross-recess screw
-        if is_slotted_driver and is_cross_screw:
-            return GroundingStatus.FAIL, "SLOT_DRIVER_MISMATCH_WITH_CROSS_RECESS_SCREW"
-
-        # Wrench/pliers cannot drive machine screw
-        if d_cat in ("wrench", "pliers") or "pliers" in d_raw or "wrench" in d_raw:
-            return GroundingStatus.FAIL, "WRENCH_PLIERS_INCOMPATIBLE_WITH_SCREW"
-
-        # Hex driver with hex bolt
-        if ("hex" in d_cat or "hex" in d_raw) and ("bolt" in f_cat or "bolt" in f_raw):
-            return GroundingStatus.PASS, "COMPATIBLE_HEX_DRIVER_AND_BOLT"
-
-        # Screwdriver / power driver with cross or symmetric bit driving screw
-        if (d_cat in ("screwdriver", "power_driver") or "driver" in d_raw) and ("screw" in f_cat or "screw" in f_raw):
-            return GroundingStatus.PASS, "COMPATIBLE_FASTENER_DRIVER_MATCH"
-
-        if not d_cat or not f_cat or d_cat == "unknown" or f_cat == "unknown":
-            return GroundingStatus.UNKNOWN, "UNKNOWN_INTERFACE_COMPATIBILITY"
-
-        return GroundingStatus.FAIL, f"INTERFACE_MISMATCH_{d_cat.upper()}_VS_{f_cat.upper()}"
+    ) -> tuple[GroundingStatus, dict[str, Any]]:
+        """Check measured local interfaces; semantic names are never read."""
+        relation = self.geometric_grounder.evaluate_compatible_with(driver_track, fastener_track)
+        status = {
+            "TRUE": GroundingStatus.PASS,
+            "FALSE": GroundingStatus.FAIL,
+        }.get(relation["status"], GroundingStatus.UNKNOWN)
+        return status, relation
 
     def search_witness(
         self,
@@ -74,13 +46,13 @@ class FunctionalSatisfactionSearch:
 
         for d in driver_candidates:
             for f in fastener_candidates:
-                prof_status, prof_reason = self.check_profile_compatibility(d, f)
+                prof_status, prof_relation = self.check_profile_compatibility(d, f)
                 if prof_status != GroundingStatus.PASS:
                     evaluated_tuples.append({
                         "driver": d.instance_id,
                         "fastener": f.instance_id,
                         "status": "UNRESOLVED_PROFILE" if prof_status == GroundingStatus.UNKNOWN else "REJECTED_PROFILE_MISMATCH",
-                        "reason": prof_reason,
+                        "relation_evidence": prof_relation,
                     })
                     continue
 
@@ -97,6 +69,16 @@ class FunctionalSatisfactionSearch:
                         continue
 
                     for c in parts_container_candidates:
+                        fits_in = self.geometric_grounder.evaluate_fits_in(f, c)
+                        if fits_in["status"] != "TRUE":
+                            evaluated_tuples.append({
+                                "driver": d.instance_id, "fastener": f.instance_id,
+                                "work_surface": w.region_instance_id,
+                                "parts_container": c.region_instance_id,
+                                "status": "UNRESOLVED_CONTAINER_FIT" if fits_in["status"] == "UNKNOWN" else "REJECTED_CONTAINER_FIT",
+                                "relation_evidence": fits_in,
+                            })
+                            continue
                         conf = float(
                             d.overall_confidence
                             * f.overall_confidence
@@ -111,11 +93,11 @@ class FunctionalSatisfactionSearch:
                             overall_confidence=conf,
                             verification_details={
                                 "packing": pack_details,
-                                "driver_category": d.current_semantic_belief.get("canonical_label"),
-                                "driver_reach_m": d.current_geometric_properties.get("usable_reach_m"),
-                                "fastener_category": f.current_semantic_belief.get("canonical_label"),
-                                "fastener_length_m": f.current_geometric_properties.get("length_m"),
-                                "surface_usable_area_m2": w.current_geometric_properties.get("usable_area_m2"),
+                                "compatible_with": prof_relation,
+                                "fits_in": fits_in,
+                                "driver_usable_length_m": d.current_geometric_properties.get("usable_length_m"),
+                                "fastener_length_m": f.current_geometric_properties.get("total_length_m"),
+                                "surface_support_area_m2": w.current_geometric_properties.get("support_area_m2"),
                             },
                         )
                         valid_witnesses.append(wit)
@@ -176,7 +158,7 @@ class FunctionalSatisfactionSearch:
         if missing_driver and ("wrench" in observed_categories or "pliers" in observed_categories):
             return "NO_VALID_DRIVER"
 
-        if missing_fastener and ("bolt" in observed_categories):
+        if missing_fastener and ({"screw", "bolt"} & observed_categories):
             return "NO_VALID_FASTENER"
 
         if missing_surface:

@@ -64,6 +64,15 @@ def test_fm_contract_loading_and_neutrality():
     assert "CAN_FASTEN" in names
     assert "WORK_SURFACE" in names
     assert "SMALL_PARTS_CONTAINER" in names
+    expected_relations = {
+        "CAN_DRIVE_SCREW": {"REACHES_TARGET", "COMPATIBLE_WITH"},
+        "CAN_FASTEN": {"COMPATIBLE_WITH_TARGET"},
+        "WORK_SURFACE": {"PLANAR_SUPPORT", "FITS_SET_ON"},
+        "SMALL_PARTS_CONTAINER": {"OPEN_CAVITY", "FITS_IN"},
+    }
+    for requirement in reqs:
+        assert set(requirement.required_relations) == expected_relations[requirement.function_name]
+        assert requirement.geometric_constraints == {}
 
     prompts = contract.get_detector_prompts()
     assert len(prompts) >= 10
@@ -305,7 +314,10 @@ def test_no_joint_self_test():
     ctrl_full = WorkshopPhase1InspectionController(scene=scene, ablation=AblationType.NONE, mask_backend=MaskBackendType.ORACLE, semantic_backend=SemanticBackendType.ORACLE)
     res_full = ctrl_full.run_episode()
 
-    ctrl_no_joint = WorkshopPhase1InspectionController(scene=scene, ablation=AblationType.NO_JOINT_COUPLING, mask_backend=MaskBackendType.ORACLE, semantic_backend=SemanticBackendType.ORACLE)
+    # Each episode owns a fresh physical scene; the first controller opens
+    # storage while inspecting and must not leak that state into the ablation.
+    scene_no_joint = WorkshopScene("none", variant="F4_OBJECT_REGION_COUPLING")
+    ctrl_no_joint = WorkshopPhase1InspectionController(scene=scene_no_joint, ablation=AblationType.NO_JOINT_COUPLING, mask_backend=MaskBackendType.ORACLE, semantic_backend=SemanticBackendType.ORACLE)
     res_no_joint = ctrl_no_joint.run_episode()
 
     assert res_full.status == "FEASIBLE"
@@ -331,7 +343,14 @@ def test_semantic_only_self_test():
 def test_config_wiring(tmp_path: Path):
     """Self-test (Sec 85): YAML config actually controls runtime components."""
     custom_cfg = tmp_path / "custom_config.yaml"
+    default_geometry = Path("mujoco_scenes/configs/workshop_geometry_inference.yaml")
+    geometry_data = yaml.safe_load(default_geometry.read_text())
+    geometry_data["relations"]["grasp_allowance_m"] = 0.081
+    geometry_data["relations"]["packing_edge_clearance_m"] = 0.012
+    geometry_path = tmp_path / "geometry.yaml"
+    geometry_path.write_text(yaml.safe_dump(geometry_data))
     cfg_data = {
+        "pipeline": {"geometry_config_path": str(geometry_path)},
         "perception": {
             "detector": {
                 "confidence_threshold": 0.12,
@@ -341,12 +360,6 @@ def test_config_wiring(tmp_path: Path):
         "tracking": {
             "cluster_distance_threshold_m": 0.055,
             "track_match_distance_threshold_m": 0.060,
-        },
-        "grounding": {
-            "geometry": {
-                "min_driver_reach_m": 0.040,
-                "staging_margin_multiplier": 1.35,
-            }
         },
         "inspection": {
             "sequence": ["RIGHT_DRAWER", "LEFT_DRAWER"],
@@ -361,8 +374,8 @@ def test_config_wiring(tmp_path: Path):
 
     assert ctrl.tracker.cluster_distance_threshold_m == 0.055
     assert ctrl.tracker.track_match_distance_threshold_m == 0.060
-    assert ctrl.geometric_grounder.min_driver_reach_m == 0.040
-    assert ctrl.geometric_grounder.staging_margin_multiplier == 1.35
+    assert ctrl.geometric_grounder.config["relations"]["grasp_allowance_m"] == 0.081
+    assert ctrl.geometric_grounder.config["relations"]["packing_edge_clearance_m"] == 0.012
     assert ctrl.inspection_sequence == ["RIGHT_DRAWER", "LEFT_DRAWER"]
     assert ctrl.early_stop_enabled is False
 
@@ -393,6 +406,15 @@ def test_all_14_variants_oracle_semantics_upper_bound(variant: str):
     )
     result = controller.run_episode()
 
+    expected = {
+        "I0_NO_VALID_DRIVER": "NO_VALID_DRIVER",
+        "I1_NO_VALID_FASTENER": "NO_VALID_FASTENER",
+        "I2_NO_WORK_SURFACE": "NO_WORK_SURFACE",
+        "I3_NO_PARTS_CONTAINER": "NO_PARTS_CONTAINER",
+        "I4_TOOL_GEOMETRY_FAILURE": "TOOL_GEOMETRY_FAILURE",
+        "I5_OBJECT_REGION_PACKING_FAILURE": "OBJECT_REGION_PACKING_FAILURE",
+        "I6_GLOBAL_CONFLICT": "GLOBAL_CONFLICT",
+    }
     if variant.startswith("F"):
         assert result.status == "FEASIBLE"
         assert result.witness is not None
@@ -402,4 +424,45 @@ def test_all_14_variants_oracle_semantics_upper_bound(variant: str):
         assert result.witness.parts_container_id.startswith("region_")
     else:
         assert result.status == "INFEASIBLE"
-        assert result.rejection_reason is not None
+        assert result.rejection_reason == expected[variant]
+
+
+def test_geometry_config_and_sources_are_category_free():
+    config_text = Path("mujoco_scenes/configs/workshop_geometry_inference.yaml").read_text().lower()
+    for token in ("workshop_", "stubby", "flathead", "power_driver", "variant_id", "accepted_categories"):
+        assert token not in config_text
+    source = Path("mujoco_scenes/workshop_phase1/geometric_grounding.py").read_text().lower()
+    for token in ('"stubby"', '"flathead"', '"power_driver"', "if category", "if label"):
+        assert token not in source
+
+
+def test_target_unknown_propagates_to_target_relations():
+    grounder = GeometricGrounder()
+    props = {"usable_length_m": 0.2, "total_length_m": 0.04,
+             "shaft_diameter_m": 0.005, "head_interface": "CROSS_LIKE"}
+    assert grounder.evaluate_reaches_target(props)["status"] == "UNKNOWN"
+    assert grounder.evaluate_compatible_with_target(props)["status"] == "UNKNOWN"
+
+
+def test_support_footprint_is_measured_not_roi_sized():
+    grounder = RegionGrounder({"workbench"})
+    x, y = np.meshgrid(np.linspace(-0.10, 0.10, 40), np.linspace(-0.03, 0.03, 20))
+    cloud = np.c_[x.ravel(), y.ravel(), np.full(x.size, 0.7)]
+    measured = grounder._measure_support_plane(cloud)
+    assert measured["predicate"]["status"] == "TRUE"
+    assert 0.17 < measured["support_length_m"] < 0.22
+    assert 0.04 < measured["support_width_m"] < 0.07
+    # A hypothetical 1 m x 1 m selection ROI cannot inflate the measurement.
+    assert measured["support_area_m2"] < 0.02
+
+
+def test_oracle_semantics_use_broad_contract_taxonomy():
+    scene = WorkshopScene("none", variant="I6_GLOBAL_CONFLICT")
+    controller = WorkshopPhase1InspectionController(
+        scene=scene, mask_backend=MaskBackendType.ORACLE,
+        semantic_backend=SemanticBackendType.ORACLE)
+    controller.run_episode()
+    labels = [track.current_semantic_belief.get("canonical_label")
+              for track in controller.tracker.tracks.values()]
+    assert labels.count("screwdriver") >= 2
+    assert "flathead_driver" not in labels

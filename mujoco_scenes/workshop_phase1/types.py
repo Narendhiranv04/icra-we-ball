@@ -44,7 +44,6 @@ class InspectionPolicyType(str, Enum):
 
 class ProposalMode(str, Enum):
     YOLO_ONLY = "YOLO_ONLY"
-    YOLO_PLUS_RGBD_FALLBACK = "YOLO_PLUS_RGBD_FALLBACK"
 
 
 class AblationType(str, Enum):
@@ -136,6 +135,7 @@ class FunctionalRequirement:
     accepted_categories: list[str] = field(default_factory=list)
     semantic_hints: list[str] = field(default_factory=list)
     geometric_constraints: dict[str, Any] = field(default_factory=dict)
+    required_relations: list[str] = field(default_factory=list)
     provenance: str = "default_provider"
 
     def to_dict(self) -> dict[str, Any]:
@@ -149,6 +149,7 @@ class FunctionalRequirement:
             "accepted_categories": list(self.accepted_categories),
             "semantic_hints": list(self.semantic_hints),
             "geometric_constraints": dict(self.geometric_constraints),
+            "required_relations": list(self.required_relations),
             "provenance": self.provenance,
         }
 
@@ -181,6 +182,7 @@ class ViewObservation:
     camera_rotation_world: Any  # np.ndarray (3, 3)
     validation: dict[str, Any] = field(default_factory=dict)
     detected_masks: list[ObservedMask] = field(default_factory=list)
+    region_semantic_detections: list[ObservedMask] = field(default_factory=list)
     segmentation: Any | None = None  # np.ndarray (H, W, 2) int32, strictly oracle-only
 
 
@@ -202,6 +204,7 @@ class ObservedObjectTrack:
     geometric_evidence_history: list[dict[str, Any]] = field(default_factory=list)
     current_semantic_belief: dict[str, Any] = field(default_factory=dict)
     current_geometric_properties: dict[str, Any] = field(default_factory=dict)
+    current_measurement_evidence: Any | None = None
     overall_confidence: float = 1.0
     evidence_count: int = 1
     status: str = "ACTIVE"
@@ -216,6 +219,13 @@ class ObservedObjectTrack:
             "contributing_cameras": list(self.contributing_cameras),
             "semantic_belief": self.current_semantic_belief,
             "geometric_properties": self.current_geometric_properties,
+            "measurement_provenance": ({
+                "source_stage": self.current_measurement_evidence.source_stage,
+                "source_region": self.current_measurement_evidence.source_region,
+                "camera_ids": list(self.current_measurement_evidence.contributing_camera_ids),
+                "point_count": len(self.current_measurement_evidence.measurement_points),
+                "cloud_purpose": self.current_measurement_evidence.cloud_purpose,
+            } if self.current_measurement_evidence is not None else None),
             "overall_confidence": round(self.overall_confidence, 4),
             "evidence_count": self.evidence_count,
             "status": self.status,

@@ -5,9 +5,11 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import shutil
 import sys
 from pathlib import Path
 from typing import Any
+import yaml
 
 # Ensure workspace root is on sys.path
 WORKSPACE_ROOT = Path(__file__).resolve().parent.parent
@@ -76,8 +78,6 @@ def parse_ablation(name: str) -> AblationType:
 
 
 def parse_proposal_mode(name: str) -> ProposalMode:
-    if name == "yolo_plus_rgbd_fallback":
-        return ProposalMode.YOLO_PLUS_RGBD_FALLBACK
     return ProposalMode.YOLO_ONLY
 
 
@@ -152,6 +152,7 @@ def run_benchmark_suite(
     ablation: str = "none",
     output_dir: Path | None = None,
     evaluate: bool = True,
+    detail_variants: set[str] | None = None,
 ) -> dict[str, Any]:
     """Run all specified variants and compile benchmark summary table."""
     results = []
@@ -163,6 +164,9 @@ def run_benchmark_suite(
     print("=" * 80)
 
     for var in variants:
+        variant_output = output_dir
+        if detail_variants is not None and var not in detail_variants:
+            variant_output = None
         res = run_single_variant(
             variant=var,
             robot=robot,
@@ -170,7 +174,7 @@ def run_benchmark_suite(
             semantic_backend=semantic_backend,
             proposal_mode=proposal_mode,
             ablation=ablation,
-            output_dir=output_dir,
+            output_dir=variant_output,
             evaluate=evaluate,
         )
         results.append(res)
@@ -207,12 +211,13 @@ def run_benchmark_suite(
     return summary
 
 
-def run_ablation_suite(output_dir: Path | None = None) -> list[dict[str, Any]]:
+def run_ablation_suite(output_dir: Path | None = None,
+                       concise: bool = False) -> list[dict[str, Any]]:
     """Run full canonical 7-arm ablation suite across all 14 variants (98 total episodes)."""
     ablations = [
         {"name": "Full Production Pipeline", "mask": "production", "sem": "production", "prop": "yolo_only", "abl": "none"},
         {"name": "Oracle Masks (Upper Bound)", "mask": "oracle", "sem": "production", "prop": "yolo_only", "abl": "oracle_mask"},
-        {"name": "Oracle Semantics", "mask": "production", "sem": "oracle", "prop": "yolo_only", "abl": "oracle_semantics"},
+        {"name": "Oracle Semantics + Perfect Masks", "mask": "oracle", "sem": "oracle", "prop": "yolo_only", "abl": "oracle_semantics"},
         {"name": "Semantic-Only Grounding (No Geo)", "mask": "production", "sem": "production", "prop": "yolo_only", "abl": "semantic_only"},
         {"name": "No Joint Coupling Checks", "mask": "production", "sem": "production", "prop": "yolo_only", "abl": "no_joint_coupling"},
         {"name": "No Multi-Stage Persistence", "mask": "production", "sem": "production", "prop": "yolo_only", "abl": "no_persistence"},
@@ -234,6 +239,7 @@ def run_ablation_suite(output_dir: Path | None = None) -> list[dict[str, Any]]:
             ablation=abl["abl"],
             output_dir=abl_out,
             evaluate=True,
+            detail_variants=set() if concise else None,
         )
         suite_results.append({
             "ablation_name": abl["name"],
@@ -262,17 +268,52 @@ def run_ablation_suite(output_dir: Path | None = None) -> list[dict[str, Any]]:
     return suite_results
 
 
+def run_canonical_suite(output_dir: Path) -> dict[str, Any]:
+    """Reproduce all canonical Phase-1 summaries without a scratch script."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    config_root = WORKSPACE_ROOT / "mujoco_scenes" / "configs"
+    shutil.copyfile(config_root / "workshop_phase1_fm_contract.yaml",
+                    output_dir / "resolved_fm_contract.yaml")
+    shutil.copyfile(config_root / "workshop_geometry_inference.yaml",
+                    output_dir / "resolved_geometry_config.yaml")
+    runtime = yaml.safe_load((config_root / "workshop_phase1.yaml").read_text())
+    (output_dir / "resolved_runtime_config.json").write_text(
+        json.dumps(runtime, indent=2), encoding="utf-8")
+    representative = {"F4_OBJECT_REGION_COUPLING", "I1_NO_VALID_FASTENER",
+                      "I4_TOOL_GEOMETRY_FAILURE", "I5_OBJECT_REGION_PACKING_FAILURE",
+                      "I6_GLOBAL_CONFLICT"}
+    oracle = run_benchmark_suite(
+        ALL_WORKSHOP_VARIANTS, mask_backend="oracle", semantic_backend="oracle",
+        ablation="oracle_semantics", output_dir=output_dir / "oracle_upper_bound",
+        detail_variants=representative)
+    oracle_masks = run_benchmark_suite(
+        ALL_WORKSHOP_VARIANTS, mask_backend="oracle", semantic_backend="production",
+        ablation="oracle_mask", output_dir=output_dir / "yolo_oracle_masks",
+        detail_variants=set())
+    production = run_benchmark_suite(
+        ALL_WORKSHOP_VARIANTS, mask_backend="production", semantic_backend="production",
+        ablation="none", output_dir=output_dir / "production", detail_variants=set())
+    ablations = run_ablation_suite(output_dir / "ablations", concise=True)
+    result = {"oracle_upper_bound": oracle["passed_variants"],
+              "yolo_oracle_masks": oracle_masks["passed_variants"],
+              "production": production["passed_variants"], "ablations": ablations}
+    (output_dir / "canonical_run_summary.json").write_text(
+        json.dumps(result, indent=2), encoding="utf-8")
+    return result
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Workshop Phase 1 Grounding Runner")
     parser.add_argument("--variant", type=str, default="F0_BASE", help="Variant name (e.g. F0_BASE or 'all')")
     parser.add_argument("--robot", type=str, default="none", help="Robot type ('none' or 'google_robot')")
     parser.add_argument("--mask-backend", type=str, default="production", choices=["production", "oracle", "connected_component"], help="Mask proposal backend")
     parser.add_argument("--semantic-backend", type=str, default="production", choices=["production", "oracle", "deterministic_test"], help="Semantic grounding backend")
-    parser.add_argument("--proposal-mode", type=str, default="yolo_only", choices=["yolo_only", "yolo_plus_rgbd_fallback"], help="Proposal mode")
+    parser.add_argument("--proposal-mode", type=str, default="yolo_only", choices=["yolo_only"], help="YOLO-World proposals with depth refinement")
     parser.add_argument("--ablation", type=str, default="none", choices=["none", "semantic_only", "no_geometry", "no_joint_coupling", "no_persistence", "single_view", "single_front_view", "oracle_mask", "oracle_semantics", "run_suite"], help="Ablation mode")
     parser.add_argument("--output", type=str, default="outputs/workshop_phase1_final", help="Output directory")
     parser.add_argument("--evaluate", action="store_true", default=True, help="Compute privileged post-hoc metrics")
     parser.add_argument("--list-variants", action="store_true", help="List all variants")
+    parser.add_argument("--canonical", action="store_true", help="Run oracle, oracle-mask, production, and ablation canonical suites")
 
     args = parser.parse_args()
 
@@ -284,7 +325,9 @@ def main() -> None:
 
     out_dir = Path(args.output) if args.output else None
 
-    if args.ablation == "run_suite":
+    if args.canonical:
+        run_canonical_suite(out_dir or Path("outputs/workshop_phase1_final"))
+    elif args.ablation == "run_suite":
         run_ablation_suite(output_dir=out_dir)
     elif args.variant == "all":
         run_benchmark_suite(

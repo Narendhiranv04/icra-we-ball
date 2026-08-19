@@ -1,149 +1,161 @@
-# Workshop (W1) Phase 1 Research Pipeline: Functional Object and Region Grounding
+# Workshop W1 Phase-1 Functional Grounding
 
-This document describes the scientifically hardened Phase 1 research pipeline implemented for the Workshop (W1) benchmark.
+Workshop Phase 1 composes the functional-grounding structure already used in
+the other project domains. Kitchen grounds object functions from semantic
+candidates, point-cloud properties, and geometric relations. Living Room
+grounds region functions from semantic region candidates, region-local
+point-cloud measurements, and object-region relations. Workshop uses the same
+separation jointly: semantic object and region candidates are verified by
+object-target, object-object, and object-region relations before a complete
+assignment is accepted.
 
----
+Phase 1 stops at a verified functional witness or a grounded rejection. It does
+not perform PDDL/PDDLStream planning, robot motion, picking, placing, fastening,
+or physical execution. The Workshop meshes, textures, poses, cameras, variant
+definitions, and inspection rigs are frozen.
 
-## 1. Problem Formulation & Scope
+## Architecture
 
-Phase 1 solves the problem of **joint functional requirement satisfaction and active visual inspection** under strict partial observability, zero simulator oracle leakage, and open-vocabulary semantic grounding:
+The task is converted once into a manual future-FM contract. No live foundation
+model is called. The contract contains broad function descriptions, detector-
+friendly semantic candidate categories, required relation names, and optional
+ranking/inspection priors. It does not contain millimetre thresholds or
+point-cloud verifier parameters.
 
-$$\text{Given: } \mathcal{T} \text{ (Task instruction)} \implies \Phi = \{r_{\text{driver}}, r_{\text{fastener}}, r_{\text{surface}}, r_{\text{container}}\}$$
+YOLO-World is the only production semantic detector. Its `set_classes(...)`
+vocabulary comes from the active contract. It detects broad categories such as
+`screwdriver`, `power_driver`, `screw`, `bolt`, `workbench`, `tool_cart`,
+`shelf`, `parts_tray`, and `hardware_bin`. It is not asked functional-affordance
+sentences and is not supplemented by CLIP, another VLM, or a point-cloud
+semantic classifier.
 
-At stage $k=0$, the agent observes only the initial tabletop using 5 calibrated RGB-D cameras. If no complete functional witness $w = (d, f, s, c)$ can be verified from current evidence, the agent actively selects unopened storage volumes ($\text{TOOL\_CABINET}$, $\text{LEFT\_DRAWER}$, $\text{RIGHT\_DRAWER}$), opens them, captures localized multi-view RGB-D evidence, fuses persistent object instances into a growing observed graph $G_k$, and re-evaluates joint satisfiability until either:
-1. A valid, physically verified functional witness $w^* = (d^*, f^*, s^*, c^*)$ is found (early stopping), OR
-2. All accessible inspection volumes are exhausted and a grounded infeasibility reason is diagnosed.
+Detections are depth-refined inside YOLO boxes, backprojected to world-frame
+points, fused across the current views, and associated with persistent generic
+IDs (`object_XXXX`). Each track also retains a typed, stage-local
+`MeasurementEvidence` record with its source stage/region, camera contributors,
+point count, measurement method, and quality metadata. Persistence accumulates
+semantic/entity history; property extraction uses the latest valid local
+measurement rather than simulator body geometry.
 
-> [!IMPORTANT]
-> **Phase 1 Boundary**: This pipeline performs perception, persistent multi-view tracking, open-vocabulary geometric and semantic grounding, and joint witness search. It does **not** execute manipulation, pick-and-place trajectories, PDDLStream planning, or physics mutations. The frozen Workshop MuJoCo scene assets, meshes, and XMLs are strictly preserved.
+Neutral calibrated region volumes select evidence and are represented by
+generic IDs (`region_XXXX`). Their configured bounds are never treated as
+measured support or cavity dimensions. A dominant observed support plane gives
+the usable oriented footprint. The shared Kitchen open-cavity extractor checks
+rim enclosure, open centre, observed interior, depth, and camera coverage.
+Missing or unreliable geometry remains `UNKNOWN`.
 
----
+## Configuration separation
 
-## 2. Scientifically Hardened Pipeline Architecture
+The manual future-FM contract is
+`mujoco_scenes/configs/workshop_phase1_fm_contract.yaml`. It defines exactly:
 
-```mermaid
-graph TD
-    A[Task Instruction / Functional Requirements] --> B[Dynamic Open-Vocabulary Query Builder]
-    B --> C[Multi-Camera RGB-D Inspection Capture]
-    C --> D[YOLO-World Open-Vocabulary Detector / Oracle Mask Backend]
-    D --> E[Camera-Isolated Multi-View Clustering & Persistent Tracking]
-    E --> F[Growing Observed Evidence Graph]
-    F --> G[Production Semantic Backend: Tool Tip Aspect Ratio Analysis]
-    F --> H[Deterministic Semantic Normalizer: Interface Families]
-    F --> I[Geometric Grounding: PCA Shaft Slicing & Relational Packing]
-    F --> J[Region Grounding: Observable Cavity Depth Openness Verification]
-    G --> K[Joint Functional Search & Bipartite Hungarian Evaluation]
-    H --> K
-    I --> K
-    J --> K
-    K -->|Witness Satisfied| L[Feasible Witness Found: Early Termination]
-    K -->|Unresolved & Regions Remain| M[Active Inspection Decision: Open & Inspect Region]
-    M --> C
-    K -->|Unresolved & Regions Exhausted| N[Exact Grounded Rejection Diagnosis]
-```
+- `CAN_DRIVE_SCREW(driver)`: `REACHES_TARGET`, `COMPATIBLE_WITH`
+- `CAN_FASTEN(fastener)`: `COMPATIBLE_WITH_TARGET`
+- `WORK_SURFACE(region)`: `PLANAR_SUPPORT`, `FITS_SET_ON`
+- `SMALL_PARTS_CONTAINER(region)`: `OPEN_CAVITY`, `FITS_IN`
 
-### 2.1 Core Architectural Principles & Hardening Fixes
+The same file is loaded for F0-F6 and I0-I6. Flathead, stubby, and long manual
+drivers all remain broad semantic `screwdriver` candidates. Screw and bolt both
+remain broad `CAN_FASTEN` candidates. Physical rejection happens downstream.
 
-1. **Zero Semantic Leakage in Oracle Mask Mode**:
-   - `PrivilegedOracleMaskBackend` emits purely spatial masks with neutral predicted label `predicted_label = "object"`. Zero object class names or simulator body names leak from the detector into the pipeline.
-2. **Open-Vocabulary Dynamic Query Building (`OpenVocabularyQueryBuilder`)**:
-   - In production mode, YOLO-World queries are constructed dynamically from functional requirement descriptions and task instructions. No static Workshop dictionary or class list is hardcoded in production detection.
-3. **Decoupled Semantic Property Inference (`ObjectSemanticBackend`)**:
-   - Detection only yields 3D bounding volumes and point clouds. Property inference is delegated to `ObjectSemanticBackend` (`ProductionSemanticBackend` or decoupled `PrivilegedOracleSemanticBackend`).
-4. **Physical Tip Eigenvalue Aspect Ratio Analysis**:
-   - Screwdriver interface families (`CROSS_RECESS` vs `SINGLE_SLOT`) are resolved by computing the distal tool tip transverse covariance matrix $C_t$ and its eigenvalue ratio:
-     $$\text{Aspect Ratio} = \sqrt{\frac{\lambda_{\max}}{\lambda_{\min}}}$$
-   - A flat blade slotted tip exhibits high transverse anisotropy ($\text{ratio} \ge 3.5$), whereas cross/Phillips and hex tips are radially symmetric ($\text{ratio} < 3.5$).
-5. **Deterministic Semantic Normalization (`DeterministicSemanticNormalizer`)**:
-   - Free-form structured text from vision backends is normalized to internal interface families: `CROSS_RECESS`, `SINGLE_SLOT`, `HEX_HEAD`, and `UNKNOWN_INTERFACE`. No Phillips default is assumed for unverified tools.
-6. **Observable Cavity Depth for Container Openness**:
-   - Containers are no longer assumed open. The pipeline computes observed cavity depth $\Delta Z = Z_{\text{rim}} - Z_{\text{floor}}$. A container is grounded as open if and only if $\Delta Z \ge 0.015\,\text{m}$.
-7. **Strict 1-to-1 Bipartite Hungarian Evaluator**:
-   - Post-hoc evaluation uses Hungarian maximum-weight matching on 3D centroid distance ($d \le 0.16\,\text{m}$) against ground truth witness sets. In F4, the ground truth witness is `workshop_power_driver` on `TOOL_CART_TOP` (narrow wall shelf rejected by relational packing).
-8. **Explicit Evidence Graph Edges**:
-   - Grounding evidence is written back into `GrowingObservedGraph` with typed edges: `CANDIDATE_FOR`, `SEMANTICALLY_SATISFIES`, and `GEOMETRICALLY_SATISFIES`.
+Deterministic, category-independent settings live in
+`mujoco_scenes/configs/workshop_geometry_inference.yaml`: robust percentiles,
+point-count/quality gates, plane and cavity resolution, local-interface
+measurement settings, grasp/clearance allowances, and packing margins. Runtime
+detector, tracker, voxel, and inspection settings remain in
+`mujoco_scenes/configs/workshop_phase1.yaml`.
 
----
+## Generic measurements and relations
 
-## 3. Configuration & CLI Controls (`configs/workshop_phase1.yaml`)
+Object measurements use robust PCA and local distal subsets. They record a
+centroid, principal axes, robust dimensions, total/usable length, maximum cross
+section, oriented horizontal footprint, local transverse interface dimensions,
+quality, cameras, stage, and inspection region. Local interfaces are geometric
+descriptors (`CROSS_LIKE`, `SLOT_LIKE`, `HEX_LIKE`, or `UNKNOWN`), never object
+names. No label/category branch sets a reach or dimension, and there is no
+stubby cap or power-driver floor.
 
-The pipeline supports full orthogonal configuration via CLI flags and YAML:
-- `--mask-backend`: `production` (YOLO-World + RGB-D fallback) or `oracle` (simulator geometry masks, `label="object"`).
-- `--semantic-backend`: `production` (tip eigenvalue aspect ratio + PCA) or `oracle` (privileged ground-truth semantics for baseline comparisons).
-- `--requirements-source`: `static` (canonical Workshop requirements) or `fm` (foundation-model generated, raising `FMBackendNotConfiguredError` if unconfigured).
-- `--inspection-policy`: `greedy_cost`, `information_gain`, `oracle_shortest_path`.
-- `--ablation`: `none`, `oracle_mask`, `oracle_semantics`, `semantic_only`, `no_joint_coupling`, `no_persistence`, `single_view`, `run_suite`.
+Target calibration only localizes a target ROI. Multi-view RGB-D points provide
+the front-plane statistic, recess cluster, opening footprint, and recess depth.
+There are no 7 mm/30 mm fallback measurements: unresolved target evidence makes
+target-dependent relations `UNKNOWN`.
 
----
+The verifier exposes a compact relation vocabulary:
 
-## 4. Benchmark Validation (All 14 Variants)
+- `REACHES_TARGET`: observed usable length versus observed recess depth and a
+  configured generic grasp allowance, with a signed margin.
+- `COMPATIBLE_WITH`: measured driver working-end descriptor versus measured
+  fastener head/interface descriptor.
+- `COMPATIBLE_WITH_TARGET`: measured fastener length, shaft cross section, local
+  interface evidence, and observed target opening/depth.
+- `PLANAR_SUPPORT`: observed support-plane normal, planarity, thickness, and
+  footprint.
+- `FITS_SET_ON`: 0/90-degree oriented two-object arrangements with edge and
+  inter-object clearances, non-overlap, tested arrangements, and signed margins.
+- `OPEN_CAVITY`: shared structural rim/open-centre/interior evidence.
+- `FITS_IN`: observed fastener dimensions versus observed opening and cavity.
 
-### 4.1 Oracle Masks Upper-Bound Benchmark (Zero Semantic Leakage)
+Every predicate returns `TRUE`, `FALSE`, or `UNKNOWN`. Semantic and geometry
+combine as: PASS+PASS=PASS; PASS+UNKNOWN and UNKNOWN+PASS=UNKNOWN; any FAIL
+combination is FAIL. Only PASS enters verified witness pools. No detections after
+inspection exhaustion is `INSUFFICIENT_EVIDENCE`, not infeasibility.
 
-Evaluated with `--mask-backend oracle --semantic-backend production`:
+## Joint search and diagnoses
 
-| Variant | Type | Expected Witness / Outcome | Pipeline Result | Rejection Diagnosis | Status |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `F0_BASE` | Feasible | Long Phillips + Med Screw + Workbench + Bin | **FEASIBLE** | None | **PASS (100%)** |
-| `F1_TOOL_ALTERNATIVE` | Feasible | Power Driver + Med Screw + Workbench + Bin | **FEASIBLE** | None | **PASS (100%)** |
-| `F2_REGION_ALTERNATIVE` | Feasible | Long Phillips + Med Screw + Mobile Cart + Bin | **FEASIBLE** | None | **PASS (100%)** |
-| `F3_DISTRIBUTED_OBJECTS` | Feasible | Long Phillips (Cab) + Med Screw (Draw) + Cart + Tray | **FEASIBLE** | None | **PASS (100%)** |
-| `F4_OBJECT_REGION_COUPLING` | Feasible | Power Driver + Med Screw + Cart Top + Tray | **FEASIBLE** | None | **PASS (100%)** |
-| `F5_DECOY_HEAVY` | Feasible | Long Phillips + Med Screw + Workbench + Tray | **FEASIBLE** | None | **PASS (100%)** |
-| `F6_LAYOUT_SWAPPED` | Feasible | Long Phillips + Med Screw + Workbench + Bin | **FEASIBLE** | None | **PASS (100%)** |
-| `I0_NO_VALID_DRIVER` | Infeasible | Distractors only (pliers/wrenches) | **INFEASIBLE** | `NO_VALID_DRIVER` | **PASS (100%)** |
-| `I1_NO_VALID_FASTENER` | Infeasible | Decoy bolts only | **INFEASIBLE** | `NO_VALID_FASTENER` | **PASS (100%)** |
-| `I2_NO_WORK_SURFACE` | Infeasible | Staging surfaces occupied/missing | **INFEASIBLE** | `NO_WORK_SURFACE` | **PASS (100%)** |
-| `I3_NO_PARTS_CONTAINER` | Infeasible | No hardware bin or tray | **INFEASIBLE** | `NO_PARTS_CONTAINER` | **PASS (100%)** |
-| `I4_TOOL_GEOMETRY_FAILURE` | Infeasible | Stubby driver reach $< 0.025\,\text{m}$ | **INFEASIBLE** | `TOOL_GEOMETRY_FAILURE` | **PASS (100%)** |
-| `I5_OBJECT_REGION_PACKING_FAILURE` | Infeasible | Power driver + Screw exceeds Shelf area | **INFEASIBLE** | `OBJECT_REGION_PACKING_FAILURE` | **PASS (100%)** |
-| `I6_GLOBAL_CONFLICT` | Infeasible | Multiple global requirement conflicts | **INFEASIBLE** | `GLOBAL_CONFLICT` | **PASS (100%)** |
+The authoritative path searches every verified
+`(driver, fastener, work_surface, parts_container)` tuple. Ranking proposes; the
+relations decide. F4 selects the cart because the power-driver/screw set fails
+`FITS_SET_ON` for the shelf but passes on the cart. In I5 the same shelf remains
+a semantic work-surface with `PLANAR_SUPPORT=TRUE`; the same packing relation
+fails, producing `OBJECT_REGION_PACKING_FAILURE`. I1 retains semantic screw and
+bolt candidates but none passes `COMPATIBLE_WITH_TARGET`, yielding
+`NO_VALID_FASTENER`. I4 retains the stubby semantic screwdriver but
+`REACHES_TARGET=FALSE`, yielding `TOOL_GEOMETRY_FAILURE`. I6 retains broad local
+candidates, while interface and reach relations eliminate every complete tuple,
+yielding `GLOBAL_CONFLICT`.
 
-**Summary**: **14 / 14 PASSED (100.0%)** (7/7 Feasible witness matches, 7/7 Infeasible exact diagnosis matches).
+Semantic-only selects solely by contract membership. No-joint-coupling selects
+independently verified unary roles without compatibility or packing. No-
+persistence replaces the tracker, semantic cache, and current object evidence at
+each inspection stage. Single-front-view explicitly selects
+`workshop_camera_front`.
 
----
+Oracle-mask and oracle-semantics experiments are separate. Oracle masks provide
+only object instance pixels; YOLO labels are associated independently by IoU,
+and raw YOLO furniture detections remain available to region grounding. Oracle
+semantics is an explicitly privileged upper bound and maps simulator subtypes
+back to the same broad contract taxonomy.
 
-### 4.2 Production Pipeline Benchmark (Honest Scientific Reporting)
+## Reproduction
 
-Evaluated with `--mask-backend production --semantic-backend production` (YOLO-World open-vocabulary proposals + RGB-D fallback + production semantics):
-
-| Metric | Result |
-| :--- | :--- |
-| **Variants Passed** | **3 / 14 (21.4%)** |
-| **Correct Infeasibility Diagnoses** | `I0_NO_VALID_DRIVER`, `I2_NO_WORK_SURFACE`, `I3_NO_PARTS_CONTAINER` |
-| **Failure Modes on Synthetic Renders** | Under-segmentation / 2D bounding box fusion on raw MuJoCo procedural textures without synthetic pre-training domain adaptation. |
-
----
-
-## 5. Complete 7-Arm Ablation Study
-
-The full 7-arm ablation suite was executed across all 14 variants (98 total episodes). Results are logged in `outputs/workshop_phase1_ablations/ablation_results.csv`:
-
-| Ablation Arm | Mask Backend | Semantic Backend | Ablation Flag | Passed / 14 | Accuracy (%) | Primary Failure Mode & Scientific Insight |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Full Production Pipeline** | `production` | `production` | `none` | 3 / 14 | 21.4% | Zero-shot synthetic rendering domain gap in 2D bounding box proposal generation. |
-| **Oracle Masks (Upper Bound)** | `oracle` | `production` | `oracle_mask` | **14 / 14** | **100.0%** | **Validates functional grounding reasoning, tool tip aspect analysis, and joint search logic when visual proposals are clean.** |
-| **Oracle Semantics** | `production` | `oracle` | `oracle_semantics` | 3 / 14 | 21.4% | Shows semantic accuracy alone cannot recover from upstream 2D proposal under-segmentation. |
-| **Semantic-Only (No Geometry)** | `production` | `production` | `semantic_only` | 1 / 14 | 7.1% | Fails geometry-critical variants (I4 tool reach, I5 relational packing) due to missing dimensional filtering. |
-| **No Joint Coupling Checks** | `production` | `production` | `no_joint_coupling` | 3 / 14 | 21.4% | Ignores tool-fastener interface mismatch and surface packing constraints during candidate generation. |
-| **No Multi-Stage Persistence** | `production` | `production` | `no_persistence` | 0 / 14 | 0.0% | **Complete failure (0/14)**: Forgetting objects across inspection stages breaks multi-step search in all variants. |
-| **Single Front Camera View** | `production` | `production` | `single_view` | 4 / 14 | 28.6% | Fails occluded objects inside drawers/cabinets; multi-view fusion is required for comprehensive discovery. |
-
----
-
-## 6. How to Run
+The repository-owned runner generates oracle-semantics/perfect-mask,
+YOLO-semantics/oracle-mask, full-production, and seven-arm ablation summaries:
 
 ```bash
-# Run full 7-arm ablation suite
-python mujoco_scenes/run_workshop_phase1.py --ablation run_suite --output outputs/workshop_phase1_ablations
-
-# Run single variant with production perception
-python mujoco_scenes/run_workshop_phase1.py --variant F0_BASE --mask-backend production --semantic-backend production --evaluate
-
-# Run 14-variant benchmark with oracle masks (upper bound)
-python mujoco_scenes/run_workshop_phase1.py --variant all --mask-backend oracle --semantic-backend production --evaluate
-
-# Run automated test suites
-pytest mujoco_scenes/tests/test_workshop_phase1.py -v
-pytest mujoco_scenes/tests/test_workshop_phase1_no_privileged_leaks.py -v
+MUJOCO_GL=egl PYOPENGL_PLATFORM=egl PYTHONPATH=. \
+  /home/naren/miniconda3/bin/python -m mujoco_scenes.run_workshop_phase1 \
+  --canonical --output outputs/workshop_phase1_final
 ```
+
+Focused and full regressions:
+
+```bash
+MUJOCO_GL=egl PYOPENGL_PLATFORM=egl PYTHONPATH=. \
+  /home/naren/miniconda3/bin/python -m pytest \
+  mujoco_scenes/tests/test_workshop_phase1.py \
+  mujoco_scenes/tests/test_workshop_phase1_no_privileged_leaks.py -v
+
+MUJOCO_GL=egl PYOPENGL_PLATFORM=egl PYTHONPATH=. \
+  /home/naren/miniconda3/bin/python -m pytest mujoco_scenes/tests -q
+```
+
+The controlled oracle-semantics/perfect-mask gate must be 14/14 exact before
+freeze. Real YOLO accuracy is reported honestly and does not change the frozen
+architecture.
+
+## Limitations
+
+The current requirement contract is manual rather than a live FM output.
+Candidate region proposal volumes are calibrated. Observations are simulated
+RGB-D, zero-shot YOLO recall is sensitive to the MuJoCo rendering domain, and
+small local interface structures approach the available depth resolution.

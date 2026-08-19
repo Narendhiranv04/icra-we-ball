@@ -118,18 +118,19 @@ class WorkshopPhase1InspectionController:
             min_cluster_points=track_cfg.get("min_cluster_points", 10),
         )
 
-        # 6. Region Grounder
-        self.region_grounder = RegionGrounder()
+        # 6. Region Grounder. Region semantic categories come only from the
+        # active manual future-FM contract.
+        region_categories = {
+            category
+            for requirement in self.requirements
+            if requirement.entity_type.value in {"REGION", "FUNCTIONAL_REGION"}
+            for category in requirement.accepted_categories
+        }
+        geometry_path = self.raw_config.get("pipeline", {}).get("geometry_config_path")
+        self.region_grounder = RegionGrounder(region_categories, geometry_path)
 
-        # 7. Geometric Grounder & Search
-        geom_cfg = self.raw_config.get("grounding", {}).get("geometry", {})
-        self.geometric_grounder = GeometricGrounder(
-            min_driver_reach_m=geom_cfg.get("min_driver_reach_m", 0.025),
-            min_fastener_length_m=geom_cfg.get("min_fastener_length_m", 0.022),
-            min_surface_area_m2=geom_cfg.get("min_surface_area_m2", 0.015),
-            min_container_volume_m3=geom_cfg.get("min_container_volume_m3", 0.0001),
-            staging_margin_multiplier=geom_cfg.get("staging_margin_multiplier", 1.20),
-        )
+        # 7. Category-free Geometric Grounder & Search
+        self.geometric_grounder = GeometricGrounder(geometry_config_path=geometry_path)
         self.functional_search = FunctionalSatisfactionSearch(geometric_grounder=self.geometric_grounder)
 
         # 8. Observed Evidence Graph
@@ -198,18 +199,9 @@ class WorkshopPhase1InspectionController:
         stage_0_obs = self._capture_and_process_stage(stage_idx=0, source_region_id="INITIAL_WORKBENCH")
 
         # Estimate target recess from RGB-D
-        self.target_evidence = self.geometric_grounder.observe_target_recess(stage_0_obs, scene=self.scene)
-        if self.target_evidence.validity == GroundingStatus.PASS:
-            self.geometric_grounder.target_hole_depth_m = (
-                self.target_evidence.estimated_recess_depth_m
-                if self.target_evidence.estimated_recess_depth_m is not None
-                else 0.030
-            )
-            self.geometric_grounder.target_hole_diameter_m = (
-                self.target_evidence.estimated_opening_diameter_m
-                if self.target_evidence.estimated_opening_diameter_m is not None
-                else 0.007
-            )
+        self.target_evidence = self.geometric_grounder.observe_target_recess(
+            stage_0_obs, scene=self.scene, config=self.geometric_grounder.config)
+        self.geometric_grounder.target_evidence = self.target_evidence
 
         # Discover candidate regions
         self.candidate_regions = self.region_grounder.discover_candidate_regions(self.scene, stage_0_obs)
@@ -304,7 +296,7 @@ class WorkshopPhase1InspectionController:
         if self.ablation == AblationType.SINGLE_VIEW or self.ablation == AblationType.SINGLE_FRONT_VIEW:
             raw_obs = [obs for obs in raw_obs if obs.camera_id == "workshop_camera_front"]
             if not raw_obs:
-                raw_obs = [self.camera_rig.capture_stage_observations(stage_region=source_region_id, capture_segmentation=is_oracle_mask)[0]]
+                raise RuntimeError("SINGLE_FRONT_VIEW requires workshop_camera_front")
 
         # Determine stage inspection volume bounds
         stage_min, stage_max = self._get_stage_volume_bounds(source_region_id)
@@ -317,6 +309,7 @@ class WorkshopPhase1InspectionController:
                 stage_volume_max=stage_max,
                 volume_margin_m=0.08,
             )
+            obs.region_semantic_detections = list(masks)
 
             # If using oracle masks WITH YOLO semantics (ORACLE_MASK ablation), associate YOLO semantic detections by 2D IoU
             if (self.mask_backend_type == MaskBackendType.ORACLE or self.ablation == AblationType.ORACLE_MASK) and self.semantic_backend_type != SemanticBackendType.ORACLE and self.ablation != AblationType.ORACLE_SEMANTICS and self._yolo_aux_backend:
@@ -326,6 +319,9 @@ class WorkshopPhase1InspectionController:
                     stage_volume_max=stage_max,
                     volume_margin_m=0.08,
                 )
+                # Oracle masks replace only object-instance masks. Raw YOLO
+                # furniture detections remain a separate region channel.
+                obs.region_semantic_detections = list(yolo_masks)
                 for om in masks:
                     ox1, oy1, ox2, oy2 = om.bounding_box_xyxy
                     om_area = max(1, (ox2 - ox1) * (oy2 - oy1))
@@ -502,8 +498,11 @@ class WorkshopPhase1InspectionController:
         self.graph.update_from_grounding_results(grounding_results, stage_idx=stage_idx)
         self.graph.snapshot(stage_idx=stage_idx, output_dir=self.output_dir)
 
-        # NO_JOINT_COUPLING ablation: choose independent unary-best candidates without profile/packing check
-        if self.ablation == AblationType.NO_JOINT_COUPLING:
+        # SEMANTIC_ONLY and NO_JOINT_COUPLING choose independent candidates.
+        # The former candidate pools are semantic-only; the latter are
+        # semantic+unary-geometry pools. Neither invokes relational search.
+        if self.ablation in {AblationType.SEMANTIC_ONLY, AblationType.NO_GEOMETRY,
+                             AblationType.NO_JOINT_COUPLING}:
             if driver_candidates and fastener_candidates and surface_candidates and container_candidates:
                 d_best = max(driver_candidates, key=lambda x: x.overall_confidence)
                 f_best = max(fastener_candidates, key=lambda x: x.overall_confidence)
@@ -515,7 +514,8 @@ class WorkshopPhase1InspectionController:
                     work_surface_id=s_best.region_instance_id,
                     parts_container_id=c_best.region_instance_id,
                     overall_confidence=float(d_best.overall_confidence * f_best.overall_confidence),
-                    verification_details={"ablation": "NO_JOINT_COUPLING", "unary_selected": True},
+                    verification_details={"ablation": self.ablation.value, "unary_selected": True,
+                                          "geometry_used_for_decision": self.ablation == AblationType.NO_JOINT_COUPLING},
                 )
                 return wit, None
 
