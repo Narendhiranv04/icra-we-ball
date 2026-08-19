@@ -1,0 +1,515 @@
+{
+  "total_variants": 14,
+  "passed_variants": 0,
+  "accuracy": 0.0,
+  "mask_backend": "oracle",
+  "semantic_backend": "production",
+  "proposal_mode": "yolo_only",
+  "ablation": "oracle_mask",
+  "results": [
+    {
+      "variant": "F0_BASE",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "NO_WORK_SURFACE",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "stages_executed": 4,
+          "total_tracks": 6
+        },
+        "diagnostics": {}
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": false,
+        "expected_status": "FEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": true,
+        "expected_rejection": null,
+        "predicted_rejection": "NO_WORK_SURFACE",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 6,
+        "discovered_gt_objects_count": 6,
+        "total_gt_objects_in_scene": 6,
+        "stages_used": 4,
+        "early_stopped": false
+      }
+    },
+    {
+      "variant": "F1_TOOL_ALTERNATIVE",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "NO_WORK_SURFACE",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "stages_executed": 4,
+          "total_tracks": 6
+        },
+        "diagnostics": {}
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": false,
+        "expected_status": "FEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": true,
+        "expected_rejection": null,
+        "predicted_rejection": "NO_WORK_SURFACE",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 6,
+        "discovered_gt_objects_count": 6,
+        "total_gt_objects_in_scene": 6,
+        "stages_used": 4,
+        "early_stopped": false
+      }
+    },
+    {
+      "variant": "F2_REGION_ALTERNATIVE",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "NO_WORK_SURFACE",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "stages_executed": 4,
+          "total_tracks": 6
+        },
+        "diagnostics": {}
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": false,
+        "expected_status": "FEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": true,
+        "expected_rejection": null,
+        "predicted_rejection": "NO_WORK_SURFACE",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 6,
+        "discovered_gt_objects_count": 6,
+        "total_gt_objects_in_scene": 6,
+        "stages_used": 4,
+        "early_stopped": false
+      }
+    },
+    {
+      "variant": "F3_DISTRIBUTED_OBJECTS",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "NO_WORK_SURFACE",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "stages_executed": 4,
+          "total_tracks": 6
+        },
+        "diagnostics": {}
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": false,
+        "expected_status": "FEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": true,
+        "expected_rejection": null,
+        "predicted_rejection": "NO_WORK_SURFACE",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 6,
+        "discovered_gt_objects_count": 6,
+        "total_gt_objects_in_scene": 6,
+        "stages_used": 4,
+        "early_stopped": false
+      }
+    },
+    {
+      "variant": "F4_OBJECT_REGION_COUPLING",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "NO_WORK_SURFACE",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "stages_executed": 4,
+          "total_tracks": 5
+        },
+        "diagnostics": {}
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": false,
+        "expected_status": "FEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": true,
+        "expected_rejection": null,
+        "predicted_rejection": "NO_WORK_SURFACE",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 5,
+        "discovered_gt_objects_count": 5,
+        "total_gt_objects_in_scene": 5,
+        "stages_used": 4,
+        "early_stopped": false
+      }
+    },
+    {
+      "variant": "F5_DECOY_HEAVY",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "NO_WORK_SURFACE",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "stages_executed": 4,
+          "total_tracks": 10
+        },
+        "diagnostics": {}
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": false,
+        "expected_status": "FEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": true,
+        "expected_rejection": null,
+        "predicted_rejection": "NO_WORK_SURFACE",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 10,
+        "discovered_gt_objects_count": 9,
+        "total_gt_objects_in_scene": 9,
+        "stages_used": 4,
+        "early_stopped": false
+      }
+    },
+    {
+      "variant": "F6_LAYOUT_SWAPPED",
+      "result": {
+        "status": "INSUFFICIENT_EVIDENCE",
+        "rejection_reason": "INSUFFICIENT_EVIDENCE",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "stages_executed": 4,
+          "total_tracks": 4
+        },
+        "diagnostics": {}
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": false,
+        "expected_status": "FEASIBLE",
+        "predicted_status": "INSUFFICIENT_EVIDENCE",
+        "rejection_correct": true,
+        "expected_rejection": null,
+        "predicted_rejection": "INSUFFICIENT_EVIDENCE",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 4,
+        "discovered_gt_objects_count": 4,
+        "total_gt_objects_in_scene": 6,
+        "stages_used": 4,
+        "early_stopped": false
+      }
+    },
+    {
+      "variant": "I0_NO_VALID_DRIVER",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "TOOL_GEOMETRY_FAILURE",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "stages_executed": 4,
+          "total_tracks": 5
+        },
+        "diagnostics": {}
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": true,
+        "expected_status": "INFEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": false,
+        "expected_rejection": "NO_VALID_DRIVER",
+        "predicted_rejection": "TOOL_GEOMETRY_FAILURE",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 5,
+        "discovered_gt_objects_count": 5,
+        "total_gt_objects_in_scene": 5,
+        "stages_used": 4,
+        "early_stopped": false
+      }
+    },
+    {
+      "variant": "I1_NO_VALID_FASTENER",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "TOOL_GEOMETRY_FAILURE",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "stages_executed": 4,
+          "total_tracks": 5
+        },
+        "diagnostics": {}
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": true,
+        "expected_status": "INFEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": false,
+        "expected_rejection": "NO_VALID_FASTENER",
+        "predicted_rejection": "TOOL_GEOMETRY_FAILURE",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 5,
+        "discovered_gt_objects_count": 5,
+        "total_gt_objects_in_scene": 5,
+        "stages_used": 4,
+        "early_stopped": false
+      }
+    },
+    {
+      "variant": "I2_NO_WORK_SURFACE",
+      "result": {
+        "status": "INSUFFICIENT_EVIDENCE",
+        "rejection_reason": "INSUFFICIENT_EVIDENCE",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "stages_executed": 4,
+          "total_tracks": 2
+        },
+        "diagnostics": {}
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": false,
+        "expected_status": "INFEASIBLE",
+        "predicted_status": "INSUFFICIENT_EVIDENCE",
+        "rejection_correct": false,
+        "expected_rejection": "NO_WORK_SURFACE",
+        "predicted_rejection": "INSUFFICIENT_EVIDENCE",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 2,
+        "discovered_gt_objects_count": 2,
+        "total_gt_objects_in_scene": 2,
+        "stages_used": 4,
+        "early_stopped": false
+      }
+    },
+    {
+      "variant": "I3_NO_PARTS_CONTAINER",
+      "result": {
+        "status": "INSUFFICIENT_EVIDENCE",
+        "rejection_reason": "INSUFFICIENT_EVIDENCE",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "stages_executed": 4,
+          "total_tracks": 2
+        },
+        "diagnostics": {}
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": false,
+        "expected_status": "INFEASIBLE",
+        "predicted_status": "INSUFFICIENT_EVIDENCE",
+        "rejection_correct": false,
+        "expected_rejection": "NO_PARTS_CONTAINER",
+        "predicted_rejection": "INSUFFICIENT_EVIDENCE",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 2,
+        "discovered_gt_objects_count": 2,
+        "total_gt_objects_in_scene": 2,
+        "stages_used": 4,
+        "early_stopped": false
+      }
+    },
+    {
+      "variant": "I4_TOOL_GEOMETRY_FAILURE",
+      "result": {
+        "status": "INSUFFICIENT_EVIDENCE",
+        "rejection_reason": "INSUFFICIENT_EVIDENCE",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "stages_executed": 4,
+          "total_tracks": 5
+        },
+        "diagnostics": {}
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": false,
+        "expected_status": "INFEASIBLE",
+        "predicted_status": "INSUFFICIENT_EVIDENCE",
+        "rejection_correct": false,
+        "expected_rejection": "TOOL_GEOMETRY_FAILURE",
+        "predicted_rejection": "INSUFFICIENT_EVIDENCE",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 5,
+        "discovered_gt_objects_count": 5,
+        "total_gt_objects_in_scene": 5,
+        "stages_used": 4,
+        "early_stopped": false
+      }
+    },
+    {
+      "variant": "I5_OBJECT_REGION_PACKING_FAILURE",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "NO_WORK_SURFACE",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "stages_executed": 4,
+          "total_tracks": 2
+        },
+        "diagnostics": {}
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": true,
+        "expected_status": "INFEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": false,
+        "expected_rejection": "OBJECT_REGION_PACKING_FAILURE",
+        "predicted_rejection": "NO_WORK_SURFACE",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 2,
+        "discovered_gt_objects_count": 2,
+        "total_gt_objects_in_scene": 2,
+        "stages_used": 4,
+        "early_stopped": false
+      }
+    },
+    {
+      "variant": "I6_GLOBAL_CONFLICT",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "NO_WORK_SURFACE",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "stages_executed": 4,
+          "total_tracks": 6
+        },
+        "diagnostics": {}
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": true,
+        "expected_status": "INFEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": false,
+        "expected_rejection": "GLOBAL_CONFLICT",
+        "predicted_rejection": "NO_WORK_SURFACE",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 6,
+        "discovered_gt_objects_count": 5,
+        "total_gt_objects_in_scene": 5,
+        "stages_used": 4,
+        "early_stopped": false
+      }
+    }
+  ]
+}
