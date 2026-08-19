@@ -14,14 +14,20 @@
   "perception": {
     "detector": {
       "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
-      "confidence_threshold": 0.05,
+      "confidence_threshold": 0.002,
       "nms_iou_threshold": 0.45,
-      "inference_size": 640,
+      "inference_size": 1280,
       "device": "cpu",
       "max_detections": 100
     },
     "volume_margin_m": 0.08,
-    "min_points_per_mask": 8
+    "min_points_per_mask": 8,
+    "duplicate_suppression": {
+      "box_iou_threshold": 0.65,
+      "mask_overlap_threshold": 0.72,
+      "centroid_distance_m": 0.018,
+      "aabb_overlap_threshold": 0.45
+    }
   },
   "tracking": {
     "cluster_distance_threshold_m": 0.04,
@@ -36,9 +42,5 @@
       "TOOL_CABINET"
     ],
     "early_stop": true
-  },
-  "fm": {
-    "max_requirement_calls_per_episode": 1,
-    "max_search_prior_calls_per_episode": 1
   }
 }

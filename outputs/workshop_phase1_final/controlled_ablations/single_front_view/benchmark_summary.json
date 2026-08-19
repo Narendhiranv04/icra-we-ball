@@ -1,0 +1,2917 @@
+{
+  "total_variants": 14,
+  "passed_variants": 7,
+  "accuracy": 0.5,
+  "mask_backend": "oracle",
+  "semantic_backend": "oracle",
+  "proposal_mode": "yolo_only",
+  "ablation": "single_front_view",
+  "results": [
+    {
+      "variant": "F0_BASE",
+      "result": {
+        "status": "FEASIBLE",
+        "rejection_reason": null,
+        "witness": {
+          "status": "FEASIBLE",
+          "driver": "object_0005",
+          "fastener": "object_0006",
+          "work_surface": "region_0001",
+          "parts_container": "region_0003",
+          "overall_confidence": 0.81,
+          "verification": {
+            "packing": {
+              "relation": "FITS_SET_ON",
+              "status": "TRUE",
+              "tested_arrangements": [
+                {
+                  "driver_orientation_degrees": 0,
+                  "fastener_orientation_degrees": 0,
+                  "arrangement_axis": "LENGTH",
+                  "length_margin_m": 0.22664384687483727,
+                  "width_margin_m": 0.2627303486774027,
+                  "signed_margin_m": 0.22664384687483727,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 0,
+                  "fastener_orientation_degrees": 0,
+                  "arrangement_axis": "WIDTH",
+                  "length_margin_m": 0.27505288634544967,
+                  "width_margin_m": 0.24894469938401895,
+                  "signed_margin_m": 0.24894469938401895,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 0,
+                  "fastener_orientation_degrees": 90,
+                  "arrangement_axis": "LENGTH",
+                  "length_margin_m": 0.26126723705206584,
+                  "width_margin_m": 0.23684257162288744,
+                  "signed_margin_m": 0.23684257162288744,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 0,
+                  "fastener_orientation_degrees": 90,
+                  "arrangement_axis": "WIDTH",
+                  "length_margin_m": 0.27505288634544967,
+                  "width_margin_m": 0.21432130920679032,
+                  "signed_margin_m": 0.21432130920679032,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 90,
+                  "fastener_orientation_degrees": 0,
+                  "arrangement_axis": "LENGTH",
+                  "length_margin_m": 0.4336764373298092,
+                  "width_margin_m": 0.05569775822243074,
+                  "signed_margin_m": 0.05569775822243074,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 90,
+                  "fastener_orientation_degrees": 0,
+                  "arrangement_axis": "WIDTH",
+                  "length_margin_m": 0.45619769974590635,
+                  "width_margin_m": 0.04191210892904691,
+                  "signed_margin_m": 0.04191210892904691,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 90,
+                  "fastener_orientation_degrees": 90,
+                  "arrangement_axis": "LENGTH",
+                  "length_margin_m": 0.46829982750703786,
+                  "width_margin_m": 0.05569775822243074,
+                  "signed_margin_m": 0.05569775822243074,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 90,
+                  "fastener_orientation_degrees": 90,
+                  "arrangement_axis": "WIDTH",
+                  "length_margin_m": 0.4820854768004217,
+                  "width_margin_m": 0.007288718751818319,
+                  "signed_margin_m": 0.007288718751818319,
+                  "fits": true
+                }
+              ],
+              "selected_arrangement": {
+                "driver_orientation_degrees": 0,
+                "fastener_orientation_degrees": 0,
+                "arrangement_axis": "WIDTH",
+                "length_margin_m": 0.27505288634544967,
+                "width_margin_m": 0.24894469938401895,
+                "signed_margin_m": 0.24894469938401895,
+                "fits": true
+              },
+              "support_length_m": 0.5186067392165188,
+              "support_width_m": 0.29925161109349985,
+              "edge_clearance_m": 0.01,
+              "inter_object_clearance_m": 0.006,
+              "method": "oriented_two_rectangle_packing_v2"
+            },
+            "compatible_with": {
+              "relation": "COMPATIBLE_WITH",
+              "status": "TRUE",
+              "driver_interface": "CROSS_LIKE",
+              "fastener_interface": "CROSS_LIKE",
+              "method": "local_interface_descriptor_match_v2"
+            },
+            "fits_in": {
+              "relation": "FITS_IN",
+              "status": "TRUE",
+              "length_margin_m": 0.17369526436220506,
+              "width_margin_m": 0.13577272687240788,
+              "depth_margin_m": 0.01965185577309508,
+              "method": "observed_fastener_vs_observed_cavity_v2"
+            },
+            "driver_usable_length_m": 0.223487954631086,
+            "fastener_length_m": 0.04238698525206287,
+            "surface_support_area_m2": 0.15519390223448978
+          }
+        },
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": true,
+        "metrics": {
+          "stages_executed": 4,
+          "total_tracks": 6
+        },
+        "diagnostics": {}
+      },
+      "eval_metrics": {
+        "overall_pass": true,
+        "status_correct": true,
+        "expected_status": "FEASIBLE",
+        "predicted_status": "FEASIBLE",
+        "rejection_correct": true,
+        "expected_rejection": null,
+        "predicted_rejection": null,
+        "witness_correct": true,
+        "witness_details": {
+          "pred_driver_gt": "workshop_long_phillips_driver",
+          "pred_fastener_gt": "workshop_medium_phillips_screw",
+          "pred_surface_gt": "MAIN_WORKBENCH_ZONE",
+          "pred_container_gt": "PARTS_TRAY",
+          "driver_ok": true,
+          "fastener_ok": true,
+          "surface_ok": true,
+          "container_ok": true
+        },
+        "tracked_objects_count": 6,
+        "discovered_gt_objects_count": 6,
+        "total_gt_objects_in_scene": 6,
+        "stages_used": 4,
+        "early_stopped": false,
+        "semantic_diagnostics": {
+          "categories": {
+            "screwdriver": {
+              "visible_gt_count": 3,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "power_driver": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "screw": {
+              "visible_gt_count": 2,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "bolt": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "wrench": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "pliers": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "workbench": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "tool_cart": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "shelf": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "parts_tray": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "hardware_bin": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            }
+          },
+          "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        }
+      }
+    },
+    {
+      "variant": "F1_TOOL_ALTERNATIVE",
+      "result": {
+        "status": "FEASIBLE",
+        "rejection_reason": null,
+        "witness": {
+          "status": "FEASIBLE",
+          "driver": "object_0003",
+          "fastener": "object_0004",
+          "work_surface": "region_0001",
+          "parts_container": "region_0003",
+          "overall_confidence": 0.81,
+          "verification": {
+            "packing": {
+              "relation": "FITS_SET_ON",
+              "status": "TRUE",
+              "tested_arrangements": [
+                {
+                  "driver_orientation_degrees": 0,
+                  "fastener_orientation_degrees": 0,
+                  "arrangement_axis": "LENGTH",
+                  "length_margin_m": 0.2816502569092034,
+                  "width_margin_m": 0.17936604117075092,
+                  "signed_margin_m": 0.17936604117075092,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 0,
+                  "fastener_orientation_degrees": 0,
+                  "arrangement_axis": "WIDTH",
+                  "length_margin_m": 0.3368019992818372,
+                  "width_margin_m": 0.158969928210696,
+                  "signed_margin_m": 0.158969928210696,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 0,
+                  "fastener_orientation_degrees": 90,
+                  "arrangement_axis": "LENGTH",
+                  "length_margin_m": 0.31640588632178224,
+                  "width_margin_m": 0.17936604117075092,
+                  "signed_margin_m": 0.17936604117075092,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 0,
+                  "fastener_orientation_degrees": 90,
+                  "arrangement_axis": "WIDTH",
+                  "length_margin_m": 0.3368019992818372,
+                  "width_margin_m": 0.12421429879811714,
+                  "signed_margin_m": 0.12421429879811714,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 90,
+                  "fastener_orientation_degrees": 0,
+                  "arrangement_axis": "LENGTH",
+                  "length_margin_m": 0.34361846894227693,
+                  "width_margin_m": 0.11739782913767739,
+                  "signed_margin_m": 0.11739782913767739,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 90,
+                  "fastener_orientation_degrees": 0,
+                  "arrangement_axis": "WIDTH",
+                  "length_margin_m": 0.3987702113149107,
+                  "width_margin_m": 0.09700171617762247,
+                  "signed_margin_m": 0.09700171617762247,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 90,
+                  "fastener_orientation_degrees": 90,
+                  "arrangement_axis": "LENGTH",
+                  "length_margin_m": 0.3783740983548558,
+                  "width_margin_m": 0.11739782913767739,
+                  "signed_margin_m": 0.11739782913767739,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 90,
+                  "fastener_orientation_degrees": 90,
+                  "arrangement_axis": "WIDTH",
+                  "length_margin_m": 0.3987702113149107,
+                  "width_margin_m": 0.06224608676504363,
+                  "signed_margin_m": 0.06224608676504363,
+                  "fits": true
+                }
+              ],
+              "selected_arrangement": {
+                "driver_orientation_degrees": 0,
+                "fastener_orientation_degrees": 0,
+                "arrangement_axis": "LENGTH",
+                "length_margin_m": 0.2816502569092034,
+                "width_margin_m": 0.17936604117075092,
+                "signed_margin_m": 0.17936604117075092,
+                "fits": true
+              },
+              "support_length_m": 0.5185640445312008,
+              "support_width_m": 0.29915987438704095,
+              "edge_clearance_m": 0.01,
+              "inter_object_clearance_m": 0.006,
+              "method": "oriented_two_rectangle_packing_v2"
+            },
+            "compatible_with": {
+              "relation": "COMPATIBLE_WITH",
+              "status": "TRUE",
+              "driver_interface": "CROSS_LIKE",
+              "fastener_interface": "CROSS_LIKE",
+              "method": "local_interface_descriptor_match_v2"
+            },
+            "fits_in": {
+              "relation": "FITS_IN",
+              "status": "TRUE",
+              "length_margin_m": 0.1669967726598494,
+              "width_margin_m": 0.13548644460002277,
+              "depth_margin_m": 0.020192360960743824,
+              "method": "observed_fastener_vs_observed_cavity_v2"
+            },
+            "driver_usable_length_m": 0.1621773062497406,
+            "fastener_length_m": 0.04932553270792488,
+            "surface_support_area_m2": 0.15513355442358992
+          }
+        },
+        "inspection_count": 2,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER"
+        ],
+        "early_stopped": true,
+        "metrics": {
+          "stages_executed": 3,
+          "total_tracks": 4
+        },
+        "diagnostics": {}
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": true,
+        "expected_status": "FEASIBLE",
+        "predicted_status": "FEASIBLE",
+        "rejection_correct": true,
+        "expected_rejection": null,
+        "predicted_rejection": null,
+        "witness_correct": false,
+        "witness_details": {
+          "pred_driver_gt": "workshop_power_driver",
+          "pred_fastener_gt": "workshop_hex_bolt",
+          "pred_surface_gt": "MAIN_WORKBENCH_ZONE",
+          "pred_container_gt": "PARTS_TRAY",
+          "driver_ok": true,
+          "fastener_ok": false,
+          "surface_ok": true,
+          "container_ok": true
+        },
+        "tracked_objects_count": 4,
+        "discovered_gt_objects_count": 4,
+        "total_gt_objects_in_scene": 6,
+        "stages_used": 3,
+        "early_stopped": false,
+        "semantic_diagnostics": {
+          "categories": {
+            "screwdriver": {
+              "visible_gt_count": 2,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "power_driver": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "screw": {
+              "visible_gt_count": 2,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "bolt": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "wrench": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "pliers": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "workbench": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "tool_cart": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "shelf": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "parts_tray": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "hardware_bin": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            }
+          },
+          "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        }
+      }
+    },
+    {
+      "variant": "F2_REGION_ALTERNATIVE",
+      "result": {
+        "status": "FEASIBLE",
+        "rejection_reason": null,
+        "witness": {
+          "status": "FEASIBLE",
+          "driver": "object_0005",
+          "fastener": "object_0006",
+          "work_surface": "region_0002",
+          "parts_container": "region_0003",
+          "overall_confidence": 0.81,
+          "verification": {
+            "packing": {
+              "relation": "FITS_SET_ON",
+              "status": "TRUE",
+              "tested_arrangements": [
+                {
+                  "driver_orientation_degrees": 0,
+                  "fastener_orientation_degrees": 0,
+                  "arrangement_axis": "LENGTH",
+                  "length_margin_m": 0.05339268785880792,
+                  "width_margin_m": 0.2017200419605317,
+                  "signed_margin_m": 0.05339268785880792,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 0,
+                  "fastener_orientation_degrees": 0,
+                  "arrangement_axis": "WIDTH",
+                  "length_margin_m": 0.10180172732942035,
+                  "width_margin_m": 0.18793439266714787,
+                  "signed_margin_m": 0.10180172732942035,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 0,
+                  "fastener_orientation_degrees": 90,
+                  "arrangement_axis": "LENGTH",
+                  "length_margin_m": 0.08801607803603652,
+                  "width_margin_m": 0.17583226490601642,
+                  "signed_margin_m": 0.08801607803603652,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 0,
+                  "fastener_orientation_degrees": 90,
+                  "arrangement_axis": "WIDTH",
+                  "length_margin_m": 0.10180172732942035,
+                  "width_margin_m": 0.15331100248991927,
+                  "signed_margin_m": 0.10180172732942035,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 90,
+                  "fastener_orientation_degrees": 0,
+                  "arrangement_axis": "LENGTH",
+                  "length_margin_m": 0.26042527831377993,
+                  "width_margin_m": -0.005312548494440305,
+                  "signed_margin_m": -0.005312548494440305,
+                  "fits": false
+                },
+                {
+                  "driver_orientation_degrees": 90,
+                  "fastener_orientation_degrees": 0,
+                  "arrangement_axis": "WIDTH",
+                  "length_margin_m": 0.282946540729877,
+                  "width_margin_m": -0.019098197787824133,
+                  "signed_margin_m": -0.019098197787824133,
+                  "fits": false
+                },
+                {
+                  "driver_orientation_degrees": 90,
+                  "fastener_orientation_degrees": 90,
+                  "arrangement_axis": "LENGTH",
+                  "length_margin_m": 0.2950486684910085,
+                  "width_margin_m": -0.005312548494440305,
+                  "signed_margin_m": -0.005312548494440305,
+                  "fits": false
+                },
+                {
+                  "driver_orientation_degrees": 90,
+                  "fastener_orientation_degrees": 90,
+                  "arrangement_axis": "WIDTH",
+                  "length_margin_m": 0.3088343177843923,
+                  "width_margin_m": -0.05372158796505273,
+                  "signed_margin_m": -0.05372158796505273,
+                  "fits": false
+                }
+              ],
+              "selected_arrangement": {
+                "driver_orientation_degrees": 0,
+                "fastener_orientation_degrees": 0,
+                "arrangement_axis": "WIDTH",
+                "length_margin_m": 0.10180172732942035,
+                "width_margin_m": 0.18793439266714787,
+                "signed_margin_m": 0.10180172732942035,
+                "fits": true
+              },
+              "support_length_m": 0.34535558020048945,
+              "support_width_m": 0.2382413043766288,
+              "edge_clearance_m": 0.01,
+              "inter_object_clearance_m": 0.006,
+              "method": "oriented_two_rectangle_packing_v2"
+            },
+            "compatible_with": {
+              "relation": "COMPATIBLE_WITH",
+              "status": "TRUE",
+              "driver_interface": "CROSS_LIKE",
+              "fastener_interface": "CROSS_LIKE",
+              "method": "local_interface_descriptor_match_v2"
+            },
+            "fits_in": {
+              "relation": "FITS_IN",
+              "status": "TRUE",
+              "length_margin_m": 0.17369526436220506,
+              "width_margin_m": 0.13577272687240788,
+              "depth_margin_m": 0.01965185577309508,
+              "method": "observed_fastener_vs_observed_cavity_v2"
+            },
+            "driver_usable_length_m": 0.223487954631086,
+            "fastener_length_m": 0.04238698525206287,
+            "surface_support_area_m2": 0.08227796390071204
+          }
+        },
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": true,
+        "metrics": {
+          "stages_executed": 4,
+          "total_tracks": 6
+        },
+        "diagnostics": {}
+      },
+      "eval_metrics": {
+        "overall_pass": true,
+        "status_correct": true,
+        "expected_status": "FEASIBLE",
+        "predicted_status": "FEASIBLE",
+        "rejection_correct": true,
+        "expected_rejection": null,
+        "predicted_rejection": null,
+        "witness_correct": true,
+        "witness_details": {
+          "pred_driver_gt": "workshop_long_phillips_driver",
+          "pred_fastener_gt": "workshop_medium_phillips_screw",
+          "pred_surface_gt": "TOOL_CART_TOP",
+          "pred_container_gt": "PARTS_TRAY",
+          "driver_ok": true,
+          "fastener_ok": true,
+          "surface_ok": true,
+          "container_ok": true
+        },
+        "tracked_objects_count": 6,
+        "discovered_gt_objects_count": 6,
+        "total_gt_objects_in_scene": 6,
+        "stages_used": 4,
+        "early_stopped": false,
+        "semantic_diagnostics": {
+          "categories": {
+            "screwdriver": {
+              "visible_gt_count": 3,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "power_driver": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "screw": {
+              "visible_gt_count": 2,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "bolt": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "wrench": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "pliers": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "workbench": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "tool_cart": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "shelf": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "parts_tray": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "hardware_bin": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            }
+          },
+          "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        }
+      }
+    },
+    {
+      "variant": "F3_DISTRIBUTED_OBJECTS",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "TOOL_GEOMETRY_FAILURE",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "stages_executed": 4,
+          "total_tracks": 6
+        },
+        "diagnostics": {}
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": false,
+        "expected_status": "FEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": true,
+        "expected_rejection": null,
+        "predicted_rejection": "TOOL_GEOMETRY_FAILURE",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 6,
+        "discovered_gt_objects_count": 6,
+        "total_gt_objects_in_scene": 6,
+        "stages_used": 4,
+        "early_stopped": false,
+        "semantic_diagnostics": {
+          "categories": {
+            "screwdriver": {
+              "visible_gt_count": 3,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "power_driver": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "screw": {
+              "visible_gt_count": 2,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "bolt": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "wrench": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "pliers": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "workbench": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "tool_cart": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "shelf": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "parts_tray": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "hardware_bin": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            }
+          },
+          "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        }
+      }
+    },
+    {
+      "variant": "F4_OBJECT_REGION_COUPLING",
+      "result": {
+        "status": "FEASIBLE",
+        "rejection_reason": null,
+        "witness": {
+          "status": "FEASIBLE",
+          "driver": "object_0003",
+          "fastener": "object_0004",
+          "work_surface": "region_0002",
+          "parts_container": "region_0004",
+          "overall_confidence": 0.81,
+          "verification": {
+            "packing": {
+              "relation": "FITS_SET_ON",
+              "status": "TRUE",
+              "tested_arrangements": [
+                {
+                  "driver_orientation_degrees": 0,
+                  "fastener_orientation_degrees": 0,
+                  "arrangement_axis": "LENGTH",
+                  "length_margin_m": 0.11652748237892958,
+                  "width_margin_m": 0.11133248578952175,
+                  "signed_margin_m": 0.11133248578952175,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 0,
+                  "fastener_orientation_degrees": 0,
+                  "arrangement_axis": "WIDTH",
+                  "length_margin_m": 0.16443621803705563,
+                  "width_margin_m": 0.09344617414980634,
+                  "signed_margin_m": 0.09344617414980634,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 0,
+                  "fastener_orientation_degrees": 90,
+                  "arrangement_axis": "LENGTH",
+                  "length_margin_m": 0.14654990639734022,
+                  "width_margin_m": 0.11133248578952175,
+                  "signed_margin_m": 0.11133248578952175,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 0,
+                  "fastener_orientation_degrees": 90,
+                  "arrangement_axis": "WIDTH",
+                  "length_margin_m": 0.16443621803705563,
+                  "width_margin_m": 0.06342375013139574,
+                  "signed_margin_m": 0.06342375013139574,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 90,
+                  "fastener_orientation_degrees": 0,
+                  "arrangement_axis": "LENGTH",
+                  "length_margin_m": 0.1778510113718796,
+                  "width_margin_m": 0.05000895679657176,
+                  "signed_margin_m": 0.05000895679657176,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 90,
+                  "fastener_orientation_degrees": 0,
+                  "arrangement_axis": "WIDTH",
+                  "length_margin_m": 0.22575974703000562,
+                  "width_margin_m": 0.03212264515685635,
+                  "signed_margin_m": 0.03212264515685635,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 90,
+                  "fastener_orientation_degrees": 90,
+                  "arrangement_axis": "LENGTH",
+                  "length_margin_m": 0.2078734353902902,
+                  "width_margin_m": 0.05000895679657176,
+                  "signed_margin_m": 0.05000895679657176,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 90,
+                  "fastener_orientation_degrees": 90,
+                  "arrangement_axis": "WIDTH",
+                  "length_margin_m": 0.22575974703000562,
+                  "width_margin_m": 0.00210022113844573,
+                  "signed_margin_m": 0.00210022113844573,
+                  "fits": true
+                }
+              ],
+              "selected_arrangement": {
+                "driver_orientation_degrees": 0,
+                "fastener_orientation_degrees": 0,
+                "arrangement_axis": "LENGTH",
+                "length_margin_m": 0.11652748237892958,
+                "width_margin_m": 0.11133248578952175,
+                "signed_margin_m": 0.11133248578952175,
+                "fits": true
+              },
+              "support_length_m": 0.34561089070435347,
+              "support_width_m": 0.2311836294638696,
+              "edge_clearance_m": 0.01,
+              "inter_object_clearance_m": 0.006,
+              "method": "oriented_two_rectangle_packing_v2"
+            },
+            "compatible_with": {
+              "relation": "COMPATIBLE_WITH",
+              "status": "TRUE",
+              "driver_interface": "CROSS_LIKE",
+              "fastener_interface": "CROSS_LIKE",
+              "method": "local_interface_descriptor_match_v2"
+            },
+            "fits_in": {
+              "relation": "FITS_IN",
+              "status": "TRUE",
+              "length_margin_m": 0.17414135757543941,
+              "width_margin_m": 0.1364650595470092,
+              "depth_margin_m": 0.021170975907730222,
+              "method": "observed_fastener_vs_observed_cavity_v2"
+            },
+            "driver_usable_length_m": 0.16167474135608134,
+            "fastener_length_m": 0.04218094779233489,
+            "surface_support_area_m2": 0.07989958009527319
+          }
+        },
+        "inspection_count": 2,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER"
+        ],
+        "early_stopped": true,
+        "metrics": {
+          "stages_executed": 3,
+          "total_tracks": 4
+        },
+        "diagnostics": {}
+      },
+      "eval_metrics": {
+        "overall_pass": true,
+        "status_correct": true,
+        "expected_status": "FEASIBLE",
+        "predicted_status": "FEASIBLE",
+        "rejection_correct": true,
+        "expected_rejection": null,
+        "predicted_rejection": null,
+        "witness_correct": true,
+        "witness_details": {
+          "pred_driver_gt": "workshop_power_driver",
+          "pred_fastener_gt": "workshop_medium_phillips_screw",
+          "pred_surface_gt": "TOOL_CART_TOP",
+          "pred_container_gt": "PARTS_TRAY",
+          "driver_ok": true,
+          "fastener_ok": true,
+          "surface_ok": true,
+          "container_ok": true
+        },
+        "tracked_objects_count": 4,
+        "discovered_gt_objects_count": 4,
+        "total_gt_objects_in_scene": 5,
+        "stages_used": 3,
+        "early_stopped": false,
+        "semantic_diagnostics": {
+          "categories": {
+            "screwdriver": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "power_driver": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "screw": {
+              "visible_gt_count": 2,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "bolt": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "wrench": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "pliers": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "workbench": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "tool_cart": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "shelf": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "parts_tray": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "hardware_bin": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            }
+          },
+          "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        }
+      }
+    },
+    {
+      "variant": "F5_DECOY_HEAVY",
+      "result": {
+        "status": "FEASIBLE",
+        "rejection_reason": null,
+        "witness": {
+          "status": "FEASIBLE",
+          "driver": "object_0007",
+          "fastener": "object_0008",
+          "work_surface": "region_0001",
+          "parts_container": "region_0003",
+          "overall_confidence": 0.81,
+          "verification": {
+            "packing": {
+              "relation": "FITS_SET_ON",
+              "status": "TRUE",
+              "tested_arrangements": [
+                {
+                  "driver_orientation_degrees": 0,
+                  "fastener_orientation_degrees": 0,
+                  "arrangement_axis": "LENGTH",
+                  "length_margin_m": 0.22664384687483727,
+                  "width_margin_m": 0.2627303486774027,
+                  "signed_margin_m": 0.22664384687483727,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 0,
+                  "fastener_orientation_degrees": 0,
+                  "arrangement_axis": "WIDTH",
+                  "length_margin_m": 0.27505288634544967,
+                  "width_margin_m": 0.24894469938401895,
+                  "signed_margin_m": 0.24894469938401895,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 0,
+                  "fastener_orientation_degrees": 90,
+                  "arrangement_axis": "LENGTH",
+                  "length_margin_m": 0.26126723705206584,
+                  "width_margin_m": 0.23684257162288744,
+                  "signed_margin_m": 0.23684257162288744,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 0,
+                  "fastener_orientation_degrees": 90,
+                  "arrangement_axis": "WIDTH",
+                  "length_margin_m": 0.27505288634544967,
+                  "width_margin_m": 0.21432130920679032,
+                  "signed_margin_m": 0.21432130920679032,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 90,
+                  "fastener_orientation_degrees": 0,
+                  "arrangement_axis": "LENGTH",
+                  "length_margin_m": 0.4336764373298092,
+                  "width_margin_m": 0.05569775822243074,
+                  "signed_margin_m": 0.05569775822243074,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 90,
+                  "fastener_orientation_degrees": 0,
+                  "arrangement_axis": "WIDTH",
+                  "length_margin_m": 0.45619769974590635,
+                  "width_margin_m": 0.04191210892904691,
+                  "signed_margin_m": 0.04191210892904691,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 90,
+                  "fastener_orientation_degrees": 90,
+                  "arrangement_axis": "LENGTH",
+                  "length_margin_m": 0.46829982750703786,
+                  "width_margin_m": 0.05569775822243074,
+                  "signed_margin_m": 0.05569775822243074,
+                  "fits": true
+                },
+                {
+                  "driver_orientation_degrees": 90,
+                  "fastener_orientation_degrees": 90,
+                  "arrangement_axis": "WIDTH",
+                  "length_margin_m": 0.4820854768004217,
+                  "width_margin_m": 0.007288718751818319,
+                  "signed_margin_m": 0.007288718751818319,
+                  "fits": true
+                }
+              ],
+              "selected_arrangement": {
+                "driver_orientation_degrees": 0,
+                "fastener_orientation_degrees": 0,
+                "arrangement_axis": "WIDTH",
+                "length_margin_m": 0.27505288634544967,
+                "width_margin_m": 0.24894469938401895,
+                "signed_margin_m": 0.24894469938401895,
+                "fits": true
+              },
+              "support_length_m": 0.5186067392165188,
+              "support_width_m": 0.29925161109349985,
+              "edge_clearance_m": 0.01,
+              "inter_object_clearance_m": 0.006,
+              "method": "oriented_two_rectangle_packing_v2"
+            },
+            "compatible_with": {
+              "relation": "COMPATIBLE_WITH",
+              "status": "TRUE",
+              "driver_interface": "CROSS_LIKE",
+              "fastener_interface": "CROSS_LIKE",
+              "method": "local_interface_descriptor_match_v2"
+            },
+            "fits_in": {
+              "relation": "FITS_IN",
+              "status": "TRUE",
+              "length_margin_m": 0.17369526436220506,
+              "width_margin_m": 0.13577272687240788,
+              "depth_margin_m": 0.01965185577309508,
+              "method": "observed_fastener_vs_observed_cavity_v2"
+            },
+            "driver_usable_length_m": 0.223487954631086,
+            "fastener_length_m": 0.04238698525206287,
+            "surface_support_area_m2": 0.15519390223448978
+          }
+        },
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": true,
+        "metrics": {
+          "stages_executed": 4,
+          "total_tracks": 9
+        },
+        "diagnostics": {}
+      },
+      "eval_metrics": {
+        "overall_pass": true,
+        "status_correct": true,
+        "expected_status": "FEASIBLE",
+        "predicted_status": "FEASIBLE",
+        "rejection_correct": true,
+        "expected_rejection": null,
+        "predicted_rejection": null,
+        "witness_correct": true,
+        "witness_details": {
+          "pred_driver_gt": "workshop_long_phillips_driver",
+          "pred_fastener_gt": "workshop_medium_phillips_screw",
+          "pred_surface_gt": "MAIN_WORKBENCH_ZONE",
+          "pred_container_gt": "PARTS_TRAY",
+          "driver_ok": true,
+          "fastener_ok": true,
+          "surface_ok": true,
+          "container_ok": true
+        },
+        "tracked_objects_count": 9,
+        "discovered_gt_objects_count": 9,
+        "total_gt_objects_in_scene": 9,
+        "stages_used": 4,
+        "early_stopped": false,
+        "semantic_diagnostics": {
+          "categories": {
+            "screwdriver": {
+              "visible_gt_count": 3,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "power_driver": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "screw": {
+              "visible_gt_count": 2,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "bolt": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "wrench": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "pliers": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "workbench": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "tool_cart": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "shelf": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "parts_tray": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "hardware_bin": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            }
+          },
+          "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        }
+      }
+    },
+    {
+      "variant": "F6_LAYOUT_SWAPPED",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "TOOL_GEOMETRY_FAILURE",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "stages_executed": 4,
+          "total_tracks": 4
+        },
+        "diagnostics": {}
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": false,
+        "expected_status": "FEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": true,
+        "expected_rejection": null,
+        "predicted_rejection": "TOOL_GEOMETRY_FAILURE",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 4,
+        "discovered_gt_objects_count": 4,
+        "total_gt_objects_in_scene": 6,
+        "stages_used": 4,
+        "early_stopped": false,
+        "semantic_diagnostics": {
+          "categories": {
+            "screwdriver": {
+              "visible_gt_count": 3,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "power_driver": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "screw": {
+              "visible_gt_count": 2,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "bolt": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "wrench": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "pliers": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "workbench": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "tool_cart": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "shelf": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "parts_tray": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "hardware_bin": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            }
+          },
+          "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        }
+      }
+    },
+    {
+      "variant": "I0_NO_VALID_DRIVER",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "NO_VALID_DRIVER",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "stages_executed": 4,
+          "total_tracks": 5
+        },
+        "diagnostics": {}
+      },
+      "eval_metrics": {
+        "overall_pass": true,
+        "status_correct": true,
+        "expected_status": "INFEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": true,
+        "expected_rejection": "NO_VALID_DRIVER",
+        "predicted_rejection": "NO_VALID_DRIVER",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 5,
+        "discovered_gt_objects_count": 5,
+        "total_gt_objects_in_scene": 5,
+        "stages_used": 4,
+        "early_stopped": false,
+        "semantic_diagnostics": {
+          "categories": {
+            "screwdriver": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "power_driver": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "screw": {
+              "visible_gt_count": 2,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "bolt": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "wrench": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "pliers": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "workbench": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "tool_cart": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "shelf": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "parts_tray": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "hardware_bin": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            }
+          },
+          "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        }
+      }
+    },
+    {
+      "variant": "I1_NO_VALID_FASTENER",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "TOOL_GEOMETRY_FAILURE",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "stages_executed": 4,
+          "total_tracks": 5
+        },
+        "diagnostics": {}
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": true,
+        "expected_status": "INFEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": false,
+        "expected_rejection": "NO_VALID_FASTENER",
+        "predicted_rejection": "TOOL_GEOMETRY_FAILURE",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 5,
+        "discovered_gt_objects_count": 5,
+        "total_gt_objects_in_scene": 5,
+        "stages_used": 4,
+        "early_stopped": false,
+        "semantic_diagnostics": {
+          "categories": {
+            "screwdriver": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "power_driver": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "screw": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "bolt": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "wrench": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "pliers": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "workbench": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "tool_cart": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "shelf": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "parts_tray": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "hardware_bin": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            }
+          },
+          "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        }
+      }
+    },
+    {
+      "variant": "I2_NO_WORK_SURFACE",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "TOOL_GEOMETRY_FAILURE",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "stages_executed": 4,
+          "total_tracks": 2
+        },
+        "diagnostics": {}
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": true,
+        "expected_status": "INFEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": false,
+        "expected_rejection": "NO_WORK_SURFACE",
+        "predicted_rejection": "TOOL_GEOMETRY_FAILURE",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 2,
+        "discovered_gt_objects_count": 2,
+        "total_gt_objects_in_scene": 2,
+        "stages_used": 4,
+        "early_stopped": false,
+        "semantic_diagnostics": {
+          "categories": {
+            "screwdriver": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "power_driver": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "screw": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "bolt": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "wrench": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "pliers": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "workbench": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "tool_cart": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "shelf": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "parts_tray": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "hardware_bin": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            }
+          },
+          "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        }
+      }
+    },
+    {
+      "variant": "I3_NO_PARTS_CONTAINER",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "TOOL_GEOMETRY_FAILURE",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "stages_executed": 4,
+          "total_tracks": 2
+        },
+        "diagnostics": {}
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": true,
+        "expected_status": "INFEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": false,
+        "expected_rejection": "NO_PARTS_CONTAINER",
+        "predicted_rejection": "TOOL_GEOMETRY_FAILURE",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 2,
+        "discovered_gt_objects_count": 2,
+        "total_gt_objects_in_scene": 2,
+        "stages_used": 4,
+        "early_stopped": false,
+        "semantic_diagnostics": {
+          "categories": {
+            "screwdriver": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "power_driver": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "screw": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "bolt": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "wrench": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "pliers": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "workbench": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "tool_cart": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "shelf": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "parts_tray": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "hardware_bin": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            }
+          },
+          "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        }
+      }
+    },
+    {
+      "variant": "I4_TOOL_GEOMETRY_FAILURE",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "TOOL_GEOMETRY_FAILURE",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "stages_executed": 4,
+          "total_tracks": 5
+        },
+        "diagnostics": {}
+      },
+      "eval_metrics": {
+        "overall_pass": true,
+        "status_correct": true,
+        "expected_status": "INFEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": true,
+        "expected_rejection": "TOOL_GEOMETRY_FAILURE",
+        "predicted_rejection": "TOOL_GEOMETRY_FAILURE",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 5,
+        "discovered_gt_objects_count": 5,
+        "total_gt_objects_in_scene": 5,
+        "stages_used": 4,
+        "early_stopped": false,
+        "semantic_diagnostics": {
+          "categories": {
+            "screwdriver": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "power_driver": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "screw": {
+              "visible_gt_count": 2,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "bolt": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "wrench": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "pliers": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "workbench": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "tool_cart": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "shelf": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "parts_tray": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "hardware_bin": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            }
+          },
+          "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        }
+      }
+    },
+    {
+      "variant": "I5_OBJECT_REGION_PACKING_FAILURE",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "OBJECT_REGION_PACKING_FAILURE",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "stages_executed": 4,
+          "total_tracks": 2
+        },
+        "diagnostics": {}
+      },
+      "eval_metrics": {
+        "overall_pass": true,
+        "status_correct": true,
+        "expected_status": "INFEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": true,
+        "expected_rejection": "OBJECT_REGION_PACKING_FAILURE",
+        "predicted_rejection": "OBJECT_REGION_PACKING_FAILURE",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 2,
+        "discovered_gt_objects_count": 2,
+        "total_gt_objects_in_scene": 2,
+        "stages_used": 4,
+        "early_stopped": false,
+        "semantic_diagnostics": {
+          "categories": {
+            "screwdriver": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "power_driver": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "screw": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "bolt": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "wrench": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "pliers": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "workbench": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "tool_cart": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "shelf": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "parts_tray": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "hardware_bin": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            }
+          },
+          "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        }
+      }
+    },
+    {
+      "variant": "I6_GLOBAL_CONFLICT",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "TOOL_GEOMETRY_FAILURE",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "stages_executed": 4,
+          "total_tracks": 5
+        },
+        "diagnostics": {}
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": true,
+        "expected_status": "INFEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": false,
+        "expected_rejection": "GLOBAL_CONFLICT",
+        "predicted_rejection": "TOOL_GEOMETRY_FAILURE",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 5,
+        "discovered_gt_objects_count": 5,
+        "total_gt_objects_in_scene": 5,
+        "stages_used": 4,
+        "early_stopped": false,
+        "semantic_diagnostics": {
+          "categories": {
+            "screwdriver": {
+              "visible_gt_count": 2,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "power_driver": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "screw": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "bolt": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "wrench": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "pliers": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "workbench": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "tool_cart": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "shelf": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "parts_tray": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "hardware_bin": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            }
+          },
+          "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        }
+      }
+    }
+  ]
+}

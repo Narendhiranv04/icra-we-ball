@@ -502,6 +502,21 @@
       "evidence": {
         "stage_index": 0,
         "geometric_evidence": {
+          "relations": [
+            {
+              "relation": "PLANAR_SUPPORT",
+              "status": "TRUE",
+              "method": "dominant_height_plane_observed_footprint_v2",
+              "plane_point_count": 6781,
+              "planarity_score": 0.9999861045866915,
+              "upward_alignment": 0.9999985426486666,
+              "support_thickness_m": 0.00042629241943359375,
+              "configured_roi_used_as_measurement": false
+            }
+          ],
+          "required_unary_relations": [
+            "PLANAR_SUPPORT"
+          ],
           "relation": {
             "relation": "PLANAR_SUPPORT",
             "status": "TRUE",
@@ -640,6 +655,21 @@
       "evidence": {
         "stage_index": 0,
         "geometric_evidence": {
+          "relations": [
+            {
+              "relation": "PLANAR_SUPPORT",
+              "status": "TRUE",
+              "method": "dominant_height_plane_observed_footprint_v2",
+              "plane_point_count": 3600,
+              "planarity_score": 0.9999904976535078,
+              "upward_alignment": 0.9999987101712842,
+              "support_thickness_m": 0.0007584095001220703,
+              "configured_roi_used_as_measurement": false
+            }
+          ],
+          "required_unary_relations": [
+            "PLANAR_SUPPORT"
+          ],
           "relation": {
             "relation": "PLANAR_SUPPORT",
             "status": "TRUE",
@@ -758,6 +788,21 @@
       "evidence": {
         "stage_index": 0,
         "geometric_evidence": {
+          "relations": [
+            {
+              "relation": "PLANAR_SUPPORT",
+              "status": "TRUE",
+              "method": "dominant_height_plane_observed_footprint_v2",
+              "plane_point_count": 1159,
+              "planarity_score": 0.9986147625643041,
+              "upward_alignment": 0.9999916774376023,
+              "support_thickness_m": 0.005654573440551758,
+              "configured_roi_used_as_measurement": false
+            }
+          ],
+          "required_unary_relations": [
+            "PLANAR_SUPPORT"
+          ],
           "relation": {
             "relation": "PLANAR_SUPPORT",
             "status": "TRUE",
@@ -909,6 +954,73 @@
       "evidence": {
         "stage_index": 0,
         "geometric_evidence": {
+          "relations": [
+            {
+              "value": true,
+              "status": "TRUE",
+              "method": "open_cavity_structure_v3",
+              "evidence": {
+                "point_count": 2651,
+                "contributing_camera_count": 5,
+                "definition": "enclosed_rim AND open_centre AND observed_interior_below_rim",
+                "structural_components": {
+                  "ENCLOSED_RIM": "TRUE",
+                  "OPEN_CENTRE": "TRUE",
+                  "INTERIOR_BELOW_RIM": "TRUE"
+                },
+                "vertical_extent_m": 0.032180845737457275,
+                "planarity_score": 0.9609962287948398,
+                "minimum_resolvable_vertical_extent_m": 0.006,
+                "rim_point_count": 372,
+                "top_candidate_point_count": 372,
+                "rim_normal_alignment": 0.9999973196410494,
+                "rim_normal_world": [
+                  -0.0004187660711797095,
+                  0.002277135414204698,
+                  0.9999973196410494
+                ],
+                "estimated_opening_length_m": 0.21841473063248112,
+                "estimated_opening_width_m": 0.14112232274497852,
+                "minimum_resolvable_opening_m": 0.009,
+                "occupied_angular_bins": 12,
+                "angular_bin_count": 12,
+                "rim_enclosure_ratio": 1.0,
+                "rim_shell_fraction": 1.0,
+                "central_top_occupancy_fraction": 0.0,
+                "central_top_point_count": 0,
+                "top_height_spread_m": 0.004590106010436967,
+                "minimum_resolvable_depth_m": 0.006,
+                "interior_point_count": 463,
+                "interior_camera_ids": [
+                  "workshop_camera_left",
+                  "workshop_camera_right",
+                  "workshop_camera_top",
+                  "workshop_camera_front",
+                  "workshop_camera_close"
+                ],
+                "interior_camera_count": 5,
+                "estimated_cavity_depth_m": 0.026059865951538086,
+                "outlier_fraction": 0.0
+              },
+              "source_stage": 0,
+              "source_region": "region_0004",
+              "measurement_cloud_path": null,
+              "contributing_camera_ids": [
+                "workshop_camera_left",
+                "workshop_camera_right",
+                "workshop_camera_top",
+                "workshop_camera_front",
+                "workshop_camera_close"
+              ],
+              "point_count": 2651,
+              "extractor_version": "open_cavity_structure_v3",
+              "cloud_purpose": "MEASUREMENT_EVIDENCE",
+              "relation": "OPEN_CAVITY"
+            }
+          ],
+          "required_unary_relations": [
+            "OPEN_CAVITY"
+          ],
           "relation": {
             "value": true,
             "status": "TRUE",
@@ -968,7 +1080,8 @@
             ],
             "point_count": 2651,
             "extractor_version": "open_cavity_structure_v3",
-            "cloud_purpose": "MEASUREMENT_EVIDENCE"
+            "cloud_purpose": "MEASUREMENT_EVIDENCE",
+            "relation": "OPEN_CAVITY"
           },
           "measured_properties": {
             "support_length_m": 0.21396227653311167,
@@ -1092,6 +1205,21 @@
       "evidence": {
         "stage_index": 0,
         "geometric_evidence": {
+          "relations": [
+            {
+              "relation": "PLANAR_SUPPORT",
+              "status": "TRUE",
+              "method": "dominant_height_plane_observed_footprint_v2",
+              "plane_point_count": 551,
+              "planarity_score": 0.9979426576302495,
+              "upward_alignment": 0.9999990369063915,
+              "support_thickness_m": 0.006653428077697754,
+              "configured_roi_used_as_measurement": false
+            }
+          ],
+          "required_unary_relations": [
+            "PLANAR_SUPPORT"
+          ],
           "relation": {
             "relation": "PLANAR_SUPPORT",
             "status": "TRUE",
@@ -1243,6 +1371,73 @@
       "evidence": {
         "stage_index": 0,
         "geometric_evidence": {
+          "relations": [
+            {
+              "value": true,
+              "status": "TRUE",
+              "method": "open_cavity_structure_v3",
+              "evidence": {
+                "point_count": 2106,
+                "contributing_camera_count": 5,
+                "definition": "enclosed_rim AND open_centre AND observed_interior_below_rim",
+                "structural_components": {
+                  "ENCLOSED_RIM": "TRUE",
+                  "OPEN_CENTRE": "TRUE",
+                  "INTERIOR_BELOW_RIM": "TRUE"
+                },
+                "vertical_extent_m": 0.08014408946037288,
+                "planarity_score": 0.7296022172722485,
+                "minimum_resolvable_vertical_extent_m": 0.006,
+                "rim_point_count": 293,
+                "top_candidate_point_count": 295,
+                "rim_normal_alignment": 0.9999653418822958,
+                "rim_normal_world": [
+                  0.00017183365247475172,
+                  -0.008323791649183981,
+                  0.9999653418822958
+                ],
+                "estimated_opening_length_m": 0.11082341385747507,
+                "estimated_opening_width_m": 0.07250495794198755,
+                "minimum_resolvable_opening_m": 0.009,
+                "occupied_angular_bins": 8,
+                "angular_bin_count": 12,
+                "rim_enclosure_ratio": 0.6666666666666666,
+                "rim_shell_fraction": 0.9932203389830508,
+                "central_top_occupancy_fraction": 0.0,
+                "central_top_point_count": 0,
+                "top_height_spread_m": 0.019335180521011353,
+                "minimum_resolvable_depth_m": 0.006,
+                "interior_point_count": 263,
+                "interior_camera_ids": [
+                  "workshop_camera_left",
+                  "workshop_camera_right",
+                  "workshop_camera_top",
+                  "workshop_camera_front",
+                  "workshop_camera_close"
+                ],
+                "interior_camera_count": 5,
+                "estimated_cavity_depth_m": 0.06809908151626587,
+                "outlier_fraction": 0.0
+              },
+              "source_stage": 0,
+              "source_region": "region_0001",
+              "measurement_cloud_path": null,
+              "contributing_camera_ids": [
+                "workshop_camera_left",
+                "workshop_camera_right",
+                "workshop_camera_top",
+                "workshop_camera_front",
+                "workshop_camera_close"
+              ],
+              "point_count": 2106,
+              "extractor_version": "open_cavity_structure_v3",
+              "cloud_purpose": "MEASUREMENT_EVIDENCE",
+              "relation": "OPEN_CAVITY"
+            }
+          ],
+          "required_unary_relations": [
+            "OPEN_CAVITY"
+          ],
           "relation": {
             "value": true,
             "status": "TRUE",
@@ -1302,7 +1497,8 @@
             ],
             "point_count": 2106,
             "extractor_version": "open_cavity_structure_v3",
-            "cloud_purpose": "MEASUREMENT_EVIDENCE"
+            "cloud_purpose": "MEASUREMENT_EVIDENCE",
+            "relation": "OPEN_CAVITY"
           },
           "measured_properties": {
             "support_length_m": 0.1467501187237436,

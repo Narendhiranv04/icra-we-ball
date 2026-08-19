@@ -1,0 +1,171 @@
+{
+  "ranked_detector_vocabulary": [
+    {
+      "canonical_label": "screwdriver",
+      "detector_label": "hand screwdriver",
+      "aliases": [
+        "screwdriver",
+        "manual screwdriver"
+      ],
+      "rank": [
+        1,
+        0
+      ]
+    },
+    {
+      "canonical_label": "workbench",
+      "detector_label": "workbench",
+      "aliases": [
+        "work table",
+        "wooden table",
+        "table"
+      ],
+      "rank": [
+        1,
+        0
+      ]
+    },
+    {
+      "canonical_label": "power_driver",
+      "detector_label": "power drill",
+      "aliases": [
+        "powered screwdriver",
+        "cordless drill",
+        "power driver",
+        "drill driver"
+      ],
+      "rank": [
+        1,
+        1
+      ]
+    },
+    {
+      "canonical_label": "tool_cart",
+      "detector_label": "tool cart",
+      "aliases": [
+        "cart",
+        "rolling cart",
+        "metal cart"
+      ],
+      "rank": [
+        1,
+        1
+      ]
+    },
+    {
+      "canonical_label": "shelf",
+      "detector_label": "shelf",
+      "aliases": [
+        "wall shelf",
+        "narrow shelf"
+      ],
+      "rank": [
+        1,
+        2
+      ]
+    },
+    {
+      "canonical_label": "screw",
+      "detector_label": "fastener",
+      "aliases": [
+        "screw",
+        "machine screw",
+        "threaded screw"
+      ],
+      "rank": [
+        2,
+        0
+      ]
+    },
+    {
+      "canonical_label": "parts_tray",
+      "detector_label": "parts tray",
+      "aliases": [
+        "tray",
+        "shallow tray"
+      ],
+      "rank": [
+        2,
+        0
+      ]
+    },
+    {
+      "canonical_label": "bolt",
+      "detector_label": "hex bolt",
+      "aliases": [
+        "bolt",
+        "machine bolt"
+      ],
+      "rank": [
+        2,
+        1
+      ]
+    },
+    {
+      "canonical_label": "hardware_bin",
+      "detector_label": "hardware bin",
+      "aliases": [
+        "bin",
+        "plastic bin",
+        "parts bin",
+        "storage bin"
+      ],
+      "rank": [
+        2,
+        1
+      ]
+    },
+    {
+      "canonical_label": "wrench",
+      "detector_label": "adjustable wrench",
+      "aliases": [
+        "wrench",
+        "combination wrench",
+        "spanner"
+      ],
+      "rank": [
+        10000,
+        10000
+      ]
+    },
+    {
+      "canonical_label": "pliers",
+      "detector_label": "pliers",
+      "aliases": [
+        "combination pliers",
+        "locking pliers"
+      ],
+      "rank": [
+        10000,
+        10000
+      ]
+    }
+  ],
+  "detector_classes": [
+    "hand screwdriver",
+    "workbench",
+    "power drill",
+    "tool cart",
+    "shelf",
+    "fastener",
+    "parts tray",
+    "hex bolt",
+    "hardware bin",
+    "adjustable wrench",
+    "pliers"
+  ],
+  "detector_label_to_canonical": {
+    "hand screwdriver": "screwdriver",
+    "workbench": "workbench",
+    "power drill": "power_driver",
+    "tool cart": "tool_cart",
+    "shelf": "shelf",
+    "fastener": "screw",
+    "parts tray": "parts_tray",
+    "hex bolt": "bolt",
+    "hardware bin": "hardware_bin",
+    "adjustable wrench": "wrench",
+    "pliers": "pliers"
+  },
+  "aliases_are_detector_classes": false
+}

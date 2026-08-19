@@ -1,0 +1,23 @@
+{
+  "comparison_scope": "F0_BASE, all executed stages/cameras",
+  "privileged_use": "POST_HOC_EVALUATION_ONLY",
+  "before_definition": "Pre-hardening diagnostic at confidence 0.05, inference size 640, one detector class per canonical category, before global low-confidence recovery, stage-volume crop, and physical-proposal deduplication.",
+  "after_definition": "Canonical frozen full-production F0_BASE result.",
+  "track_count_context": {
+    "legacy_alias-expanded_production_before": 26,
+    "canonical_production_after": 7
+  },
+  "categories": {
+    "screwdriver": {"before": {"visible_gt_count": 3, "yolo_detection_count": 0, "recall": 0.0, "false_positive_count": 0, "duplicate_detections": 0, "association_accuracy": 0.0}, "after": {"visible_gt_count": 3, "yolo_detection_count": 9, "recall": 0.6667, "false_positive_count": 1, "duplicate_detections": 6, "association_accuracy": 0.8889}},
+    "power_driver": {"before": {"visible_gt_count": 0, "yolo_detection_count": 0, "recall": 0.0, "false_positive_count": 0, "duplicate_detections": 0, "association_accuracy": 0.0}, "after": {"visible_gt_count": 0, "yolo_detection_count": 2, "recall": 0.0, "false_positive_count": 2, "duplicate_detections": 0, "association_accuracy": 0.0}},
+    "screw": {"before": {"visible_gt_count": 2, "yolo_detection_count": 0, "recall": 0.0, "false_positive_count": 0, "duplicate_detections": 0, "association_accuracy": 0.0}, "after": {"visible_gt_count": 2, "yolo_detection_count": 0, "recall": 0.0, "false_positive_count": 0, "duplicate_detections": 0, "association_accuracy": 0.0}},
+    "bolt": {"before": {"visible_gt_count": 1, "yolo_detection_count": 0, "recall": 0.0, "false_positive_count": 0, "duplicate_detections": 0, "association_accuracy": 0.0}, "after": {"visible_gt_count": 1, "yolo_detection_count": 2, "recall": 0.0, "false_positive_count": 2, "duplicate_detections": 0, "association_accuracy": 0.0}},
+    "wrench": {"before": {"visible_gt_count": 0, "yolo_detection_count": 0, "recall": 0.0, "false_positive_count": 0, "duplicate_detections": 0, "association_accuracy": 0.0}, "after": {"visible_gt_count": 0, "yolo_detection_count": 2, "recall": 0.0, "false_positive_count": 2, "duplicate_detections": 0, "association_accuracy": 0.0}},
+    "pliers": {"before": {"visible_gt_count": 0, "yolo_detection_count": 0, "recall": 0.0, "false_positive_count": 0, "duplicate_detections": 0, "association_accuracy": 0.0}, "after": {"visible_gt_count": 0, "yolo_detection_count": 0, "recall": 0.0, "false_positive_count": 0, "duplicate_detections": 0, "association_accuracy": 0.0}},
+    "workbench": {"before": {"visible_gt_count": 1, "yolo_detection_count": 5, "recall": 1.0, "false_positive_count": 0, "duplicate_detections": 4, "association_accuracy": 1.0}, "after": {"visible_gt_count": 1, "yolo_detection_count": 5, "recall": 1.0, "false_positive_count": 1, "duplicate_detections": 3, "association_accuracy": 1.0}},
+    "tool_cart": {"before": {"visible_gt_count": 1, "yolo_detection_count": 0, "recall": 0.0, "false_positive_count": 0, "duplicate_detections": 0, "association_accuracy": 0.0}, "after": {"visible_gt_count": 1, "yolo_detection_count": 1, "recall": 1.0, "false_positive_count": 0, "duplicate_detections": 0, "association_accuracy": 1.0}},
+    "shelf": {"before": {"visible_gt_count": 0, "yolo_detection_count": 35, "recall": 0.0, "false_positive_count": 35, "duplicate_detections": 0, "association_accuracy": 0.0}, "after": {"visible_gt_count": 0, "yolo_detection_count": 114, "recall": 0.0, "false_positive_count": 64, "duplicate_detections": 0, "association_accuracy": 0.0}},
+    "parts_tray": {"before": {"visible_gt_count": 1, "yolo_detection_count": 1, "recall": 0.0, "false_positive_count": 1, "duplicate_detections": 0, "association_accuracy": 0.0}, "after": {"visible_gt_count": 1, "yolo_detection_count": 12, "recall": 1.0, "false_positive_count": 0, "duplicate_detections": 5, "association_accuracy": 0.5}},
+    "hardware_bin": {"before": {"visible_gt_count": 1, "yolo_detection_count": 0, "recall": 0.0, "false_positive_count": 0, "duplicate_detections": 0, "association_accuracy": 0.0}, "after": {"visible_gt_count": 1, "yolo_detection_count": 4, "recall": 1.0, "false_positive_count": 0, "duplicate_detections": 2, "association_accuracy": 0.75}}
+  }
+}

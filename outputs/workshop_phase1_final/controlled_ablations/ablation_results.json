@@ -1,0 +1,56 @@
+[
+  {
+    "ablation_name": "Controlled Full Grounding",
+    "mask_backend": "oracle",
+    "semantic_backend": "oracle",
+    "ablation_flag": "none",
+    "passed": 14,
+    "total": 14,
+    "accuracy": 1.0
+  },
+  {
+    "ablation_name": "Controlled Semantic Only",
+    "mask_backend": "oracle",
+    "semantic_backend": "oracle",
+    "ablation_flag": "semantic_only",
+    "passed": 4,
+    "total": 14,
+    "accuracy": 0.2857
+  },
+  {
+    "ablation_name": "Controlled No Geometry",
+    "mask_backend": "oracle",
+    "semantic_backend": "oracle",
+    "ablation_flag": "no_geometry",
+    "passed": 4,
+    "total": 14,
+    "accuracy": 0.2857
+  },
+  {
+    "ablation_name": "Controlled No Joint Coupling",
+    "mask_backend": "oracle",
+    "semantic_backend": "oracle",
+    "ablation_flag": "no_joint_coupling",
+    "passed": 8,
+    "total": 14,
+    "accuracy": 0.5714
+  },
+  {
+    "ablation_name": "Controlled No Persistence",
+    "mask_backend": "oracle",
+    "semantic_backend": "oracle",
+    "ablation_flag": "no_persistence",
+    "passed": 6,
+    "total": 14,
+    "accuracy": 0.4286
+  },
+  {
+    "ablation_name": "Controlled Single Front View",
+    "mask_backend": "oracle",
+    "semantic_backend": "oracle",
+    "ablation_flag": "single_front_view",
+    "passed": 7,
+    "total": 14,
+    "accuracy": 0.5
+  }
+]
