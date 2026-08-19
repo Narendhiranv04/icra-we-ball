@@ -20,6 +20,7 @@ from mujoco_scenes.workshop_phase1.perception import (
 )
 from mujoco_scenes.workshop_phase1.region_grounding import RegionGrounder
 from mujoco_scenes.workshop_phase1.requirements import (
+    FMRequirementProvider,
     ManualWorkshopFMContract,
     RequirementProvider,
 )
@@ -59,38 +60,52 @@ class WorkshopPhase1InspectionController:
         self,
         scene: Any | None = None,
         config_path: Path | str | None = None,
-        ablation: AblationType = AblationType.NONE,
-        mask_backend: MaskBackendType = MaskBackendType.PRODUCTION,
-        semantic_backend: SemanticBackendType = SemanticBackendType.PRODUCTION,
+        ablation: AblationType | None = None,
+        mask_backend: MaskBackendType | None = None,
+        semantic_backend: SemanticBackendType | None = None,
         proposal_mode: ProposalMode = ProposalMode.YOLO_ONLY,
         output_dir: Path | str | None = None,
     ) -> None:
         self.scene = scene
         self.config_path = config_path
-        self.ablation = ablation
-        self.mask_backend_type = mask_backend
-        self.semantic_backend_type = semantic_backend
         self.proposal_mode = proposal_mode
         self.output_dir = Path(output_dir) if output_dir else None
 
         # Load YAML configurations
         self.raw_config = self._load_config(config_path)
+        pipeline_defaults = self.raw_config.get("pipeline", {})
+        self.ablation = ablation or AblationType(str(pipeline_defaults.get("ablation", "none")).upper())
+        self.mask_backend_type = mask_backend or MaskBackendType(str(pipeline_defaults.get("mask_backend", "production")).upper())
+        self.semantic_backend_type = semantic_backend or SemanticBackendType(str(pipeline_defaults.get("semantic_backend", "production")).upper())
+        inspection_policy = str(pipeline_defaults.get("inspection_policy", "fixed")).lower()
+        if inspection_policy != "fixed":
+            raise RuntimeError(f"Inspection policy {inspection_policy!r} is not configured; use 'fixed'.")
 
         # 1. FM Contract
-        fm_contract_path = self.raw_config.get("pipeline", {}).get("fm_contract_path")
-        self.fm_contract = ManualWorkshopFMContract(
-            Path(fm_contract_path) if fm_contract_path else None
+        pipeline_cfg = self.raw_config.get("pipeline", {})
+        fm_contract_path = pipeline_cfg.get("fm_contract_path")
+        requirements_source = str(pipeline_cfg.get("requirements_source", "static")).lower()
+        self.requirement_provider = (
+            FMRequirementProvider() if requirements_source == "fm" else
+            ManualWorkshopFMContract(Path(fm_contract_path) if fm_contract_path else None)
         )
-        self.requirements = self.fm_contract.get_requirements()
-        self.prompts = self.fm_contract.get_detector_prompts()
-        self.alias_to_canonical = self.fm_contract.get_alias_to_canonical_map()
+        self.fm_contract = self.requirement_provider
+        self.requirements = self.requirement_provider.get_requirements()
+        self.detector_vocabulary = self.requirement_provider.get_ranked_detector_vocabulary()
+        self.prompts = [entry["detector_label"] for entry in self.detector_vocabulary]
+        self.detector_label_to_canonical = self.requirement_provider.get_detector_label_to_canonical_map()
+        self.alias_to_canonical = self.requirement_provider.get_alias_to_canonical_map()
 
         # 2. Camera Rig
-        self.camera_rig = MultiViewCameraRig(scene=self.scene) if self.scene is not None else None
+        self.camera_rig = MultiViewCameraRig(
+            scene=self.scene,
+            width=int(pipeline_cfg.get("image_width", 1280)),
+            height=int(pipeline_cfg.get("image_height", 720)),
+        ) if self.scene is not None else None
 
         # 3. Perception Backend
         self.proposal_backend = self._init_proposal_backend()
-        self.proposal_backend.set_vocabulary(self.prompts, self.alias_to_canonical)
+        self.proposal_backend.set_vocabulary(self.prompts, self.detector_label_to_canonical)
 
         # For oracle-mask ablation with YOLO semantics
         self._yolo_aux_backend = None
@@ -102,8 +117,11 @@ class WorkshopPhase1InspectionController:
                 nms_iou_threshold=det_cfg.get("nms_iou_threshold", 0.45),
                 inference_size=det_cfg.get("inference_size", 640),
                 device=det_cfg.get("device", "cpu"),
+                max_detections=det_cfg.get("max_detections", 100),
+                min_points_per_mask=self.raw_config.get("perception", {}).get("min_points_per_mask", 8),
+                **self._duplicate_config(),
             )
-            self._yolo_aux_backend.set_vocabulary(self.prompts, self.alias_to_canonical)
+            self._yolo_aux_backend.set_vocabulary(self.prompts, self.detector_label_to_canonical)
 
         # 4. Semantic Grounder
         self.semantic_backend = self._init_semantic_backend()
@@ -116,6 +134,8 @@ class WorkshopPhase1InspectionController:
             track_match_distance_threshold_m=track_cfg.get("track_match_distance_threshold_m", 0.045),
             voxel_size_m=track_cfg.get("voxel_size_m", 0.003),
             min_cluster_points=track_cfg.get("min_cluster_points", 10),
+            volume_margin_m=self.raw_config.get("perception", {}).get("volume_margin_m", 0.08),
+            min_points_per_mask=self.raw_config.get("perception", {}).get("min_points_per_mask", 8),
         )
 
         # 6. Region Grounder. Region semantic categories come only from the
@@ -126,6 +146,10 @@ class WorkshopPhase1InspectionController:
             if requirement.entity_type.value in {"REGION", "FUNCTIONAL_REGION"}
             for category in requirement.accepted_categories
         }
+        self.region_categories = region_categories
+        self.object_categories = {
+            entry["canonical_label"] for entry in self.detector_vocabulary
+        } - region_categories
         geometry_path = self.raw_config.get("pipeline", {}).get("geometry_config_path")
         self.region_grounder = RegionGrounder(region_categories, geometry_path)
 
@@ -144,6 +168,16 @@ class WorkshopPhase1InspectionController:
         self.trace = InspectionTrace()
         self.target_evidence = TargetGeometryEvidence()
         self.candidate_regions: list[ObservedRegion] = []
+        self.detection_diagnostics: list[dict[str, Any]] = []
+
+    def _duplicate_config(self) -> dict[str, Any]:
+        cfg = self.raw_config.get("perception", {}).get("duplicate_suppression", {})
+        return {
+            "duplicate_box_iou_threshold": cfg.get("box_iou_threshold", 0.65),
+            "duplicate_mask_overlap_threshold": cfg.get("mask_overlap_threshold", 0.72),
+            "duplicate_centroid_distance_m": cfg.get("centroid_distance_m", 0.018),
+            "duplicate_aabb_overlap_threshold": cfg.get("aabb_overlap_threshold", 0.45),
+        }
 
     def _load_config(self, config_path: Path | str | None) -> dict[str, Any]:
         default_path = Path(__file__).resolve().parent.parent / "configs" / "workshop_phase1.yaml"
@@ -172,6 +206,8 @@ class WorkshopPhase1InspectionController:
             inference_size=det_cfg.get("inference_size", 640),
             device=det_cfg.get("device", "cpu"),
             max_detections=det_cfg.get("max_detections", 100),
+            min_points_per_mask=self.raw_config.get("perception", {}).get("min_points_per_mask", 8),
+            **self._duplicate_config(),
         )
 
     def _init_semantic_backend(self) -> ObjectSemanticBackend:
@@ -179,11 +215,32 @@ class WorkshopPhase1InspectionController:
             return PrivilegedOracleSemanticBackend(scene=self.scene)
         return ProductionSemanticBackend()
 
+    @staticmethod
+    def _skipped_geometry_result(entity_id: str, requirement: FunctionalRequirement) -> FunctionGroundingResult:
+        return FunctionGroundingResult(
+            entity_id=entity_id,
+            requirement_id=requirement.requirement_id,
+            function_name=requirement.function_name,
+            semantic_status=GroundingStatus.UNKNOWN,
+            semantic_score=0.0,
+            semantic_evidence={},
+            geometric_status=GroundingStatus.UNKNOWN,
+            geometric_score=0.0,
+            geometric_evidence={"ablation": "GEOMETRY_NOT_INVOKED"},
+            combined_status=GroundingStatus.UNKNOWN,
+            rejection_reasons=[],
+        )
+
     def run_episode(self, scene: Any | None = None) -> EpisodeResult:
         """Run the full Phase 1 incremental inspection loop."""
         if scene is not None:
             self.scene = scene
-            self.camera_rig = MultiViewCameraRig(scene=self.scene)
+            pipeline_cfg = self.raw_config.get("pipeline", {})
+            self.camera_rig = MultiViewCameraRig(
+                scene=self.scene,
+                width=int(pipeline_cfg.get("image_width", 1280)),
+                height=int(pipeline_cfg.get("image_height", 720)),
+            )
             if self.mask_backend_type == MaskBackendType.ORACLE or self.ablation == AblationType.ORACLE_MASK:
                 self.proposal_backend = PrivilegedOracleMaskBackend(scene=self.scene)
             if self.semantic_backend_type == SemanticBackendType.ORACLE or self.ablation == AblationType.ORACLE_SEMANTICS:
@@ -203,9 +260,7 @@ class WorkshopPhase1InspectionController:
             stage_0_obs, scene=self.scene, config=self.geometric_grounder.config)
         self.geometric_grounder.target_evidence = self.target_evidence
 
-        # Discover candidate regions
-        self.candidate_regions = self.region_grounder.discover_candidate_regions(self.scene, stage_0_obs)
-        self.graph.update_from_observed_regions(self.candidate_regions, stage_idx=0)
+        # Candidate regions were discovered and associated during stage capture.
 
         # Evaluate stage 0
         witness, rej_reason = self._evaluate_grounding_and_search(stage_idx=0, source_region_id="INITIAL_WORKBENCH")
@@ -243,6 +298,7 @@ class WorkshopPhase1InspectionController:
             if self.ablation == AblationType.NO_PERSISTENCE:
                 self.tracker.reset()
                 self.semantic_grounder.reset_cache()
+                self.region_grounder.reset_semantic_history()
 
             stage_obs = self._capture_and_process_stage(stage_idx=s_idx, source_region_id=region_name)
             witness, rej_reason = self._evaluate_grounding_and_search(stage_idx=s_idx, source_region_id=region_name)
@@ -302,14 +358,19 @@ class WorkshopPhase1InspectionController:
         stage_min, stage_max = self._get_stage_volume_bounds(source_region_id)
 
         # Run instance proposal on each view
+        perception_cfg = self.raw_config.get("perception", {})
+        volume_margin = float(perception_cfg.get("volume_margin_m", 0.08))
         for obs in raw_obs:
             masks = self.proposal_backend.predict(
                 observation=obs,
                 stage_volume_min=stage_min,
                 stage_volume_max=stage_max,
-                volume_margin_m=0.08,
+                volume_margin_m=volume_margin,
             )
-            obs.region_semantic_detections = list(masks)
+            obs.region_semantic_detections = (
+                [] if is_oracle_mask else
+                [mask for mask in masks if mask.canonical_label.lower() in self.region_categories]
+            )
 
             # If using oracle masks WITH YOLO semantics (ORACLE_MASK ablation), associate YOLO semantic detections by 2D IoU
             if (self.mask_backend_type == MaskBackendType.ORACLE or self.ablation == AblationType.ORACLE_MASK) and self.semantic_backend_type != SemanticBackendType.ORACLE and self.ablation != AblationType.ORACLE_SEMANTICS and self._yolo_aux_backend:
@@ -317,17 +378,24 @@ class WorkshopPhase1InspectionController:
                     observation=obs,
                     stage_volume_min=stage_min,
                     stage_volume_max=stage_max,
-                    volume_margin_m=0.08,
+                    volume_margin_m=volume_margin,
                 )
                 # Oracle masks replace only object-instance masks. Raw YOLO
                 # furniture detections remain a separate region channel.
-                obs.region_semantic_detections = list(yolo_masks)
+                obs.region_semantic_detections = [
+                    mask for mask in yolo_masks
+                    if mask.canonical_label.lower() in self.region_categories
+                ]
+                object_yolo_masks = [
+                    mask for mask in yolo_masks
+                    if mask.canonical_label.lower() in self.object_categories
+                ]
                 for om in masks:
                     ox1, oy1, ox2, oy2 = om.bounding_box_xyxy
                     om_area = max(1, (ox2 - ox1) * (oy2 - oy1))
-                    best_iou = 0.0
+                    best_score = 0.0
                     best_yolo = None
-                    for ym in yolo_masks:
+                    for ym in object_yolo_masks:
                         yx1, yy1, yx2, yy2 = ym.bounding_box_xyxy
                         ix1, iy1 = max(ox1, yx1), max(oy1, yy1)
                         ix2, iy2 = min(ox2, yx2), min(oy2, yy2)
@@ -335,22 +403,41 @@ class WorkshopPhase1InspectionController:
                             inter = (ix2 - ix1) * (iy2 - iy1)
                             union = om_area + (yx2 - yx1) * (yy2 - yy1) - inter
                             iou = inter / max(1, union)
-                            if iou > best_iou:
-                                best_iou = iou
+                            mask_overlap = int(np.count_nonzero(om.binary_mask & ym.binary_mask)) / max(
+                                1, min(int(np.count_nonzero(om.binary_mask)), int(np.count_nonzero(ym.binary_mask))))
+                            distance = float(np.linalg.norm(
+                                np.asarray(om.centroid_world_m) - np.asarray(ym.centroid_world_m)))
+                            proximity = max(0.0, 1.0 - distance / 0.08)
+                            score = 0.35 * iou + 0.35 * mask_overlap + 0.30 * proximity
+                            eligible = iou >= 0.05 or mask_overlap >= 0.20 or distance <= 0.06
+                            if eligible and score > best_score:
+                                best_score = score
                                 best_yolo = ym
 
-                    if best_yolo and best_iou > 0.15:
+                    if best_yolo is not None:
                         om.canonical_label = best_yolo.canonical_label
                         om.raw_label = best_yolo.raw_label
                         om.confidence = best_yolo.confidence
                         om.predicted_label = best_yolo.canonical_label
+                        om.semantic_alternatives = list(best_yolo.semantic_alternatives)
                     else:
                         om.canonical_label = "unknown"
                         om.raw_label = "unknown"
                         om.confidence = 0.0
                         om.predicted_label = "unknown"
 
-            obs.detected_masks = masks
+            obs.detected_masks = (
+                masks if is_oracle_mask else
+                [mask for mask in masks if mask.canonical_label.lower() in self.object_categories]
+            )
+
+            backend_for_diagnostics = self._yolo_aux_backend if self._yolo_aux_backend is not None else self.proposal_backend
+            for record in getattr(backend_for_diagnostics, "last_diagnostics", []):
+                self.detection_diagnostics.append({
+                    **record,
+                    "stage_index": stage_idx,
+                    "source_region_id": source_region_id,
+                })
 
         # Update persistent tracking
         self.tracker.update_with_stage_observations(
@@ -360,6 +447,12 @@ class WorkshopPhase1InspectionController:
             stage_volume_min=stage_min,
             stage_volume_max=stage_max,
         )
+
+        # Region instances are stable; semantic observations accumulate across
+        # every available stage rather than being frozen at the initial view.
+        self.candidate_regions = self.region_grounder.discover_candidate_regions(
+            self.scene, raw_obs, stage_index=stage_idx)
+        self.graph.update_from_observed_regions(self.candidate_regions, stage_idx=stage_idx)
 
         return raw_obs
 
@@ -402,7 +495,9 @@ class WorkshopPhase1InspectionController:
                 s_res = self.semantic_grounder.ground_object_for_requirement(trk, driver_req)
                 if s_res.semantic_status == GroundingStatus.PASS:
                     trk.current_semantic_belief.update(s_res.semantic_evidence)
-                g_res = self.geometric_grounder.ground_object_geometry(trk, driver_req)
+                g_res = (self._skipped_geometry_result(trk.instance_id, driver_req)
+                         if is_semantic_only else
+                         self.geometric_grounder.ground_object_geometry(trk, driver_req))
                 c_status = s_res.semantic_status if is_semantic_only else combine_status(s_res.semantic_status, g_res.geometric_status)
                 f_res = FunctionGroundingResult(
                     entity_id=trk.instance_id,
@@ -426,7 +521,9 @@ class WorkshopPhase1InspectionController:
                 s_res = self.semantic_grounder.ground_object_for_requirement(trk, fastener_req)
                 if s_res.semantic_status == GroundingStatus.PASS:
                     trk.current_semantic_belief.update(s_res.semantic_evidence)
-                g_res = self.geometric_grounder.ground_object_geometry(trk, fastener_req)
+                g_res = (self._skipped_geometry_result(trk.instance_id, fastener_req)
+                         if is_semantic_only else
+                         self.geometric_grounder.ground_object_geometry(trk, fastener_req))
                 c_status = s_res.semantic_status if is_semantic_only else combine_status(s_res.semantic_status, g_res.geometric_status)
                 f_res = FunctionGroundingResult(
                     entity_id=trk.instance_id,
@@ -452,7 +549,9 @@ class WorkshopPhase1InspectionController:
                 s_res = self.semantic_grounder.ground_region_for_requirement(reg, surface_req)
                 if s_res.semantic_status == GroundingStatus.PASS:
                     reg.current_semantic_belief.update(s_res.semantic_evidence)
-                g_res = self.geometric_grounder.ground_region_geometry(reg, surface_req)
+                g_res = (self._skipped_geometry_result(reg.region_instance_id, surface_req)
+                         if is_semantic_only else
+                         self.geometric_grounder.ground_region_geometry(reg, surface_req))
                 c_status = s_res.semantic_status if is_semantic_only else combine_status(s_res.semantic_status, g_res.geometric_status)
                 f_res = FunctionGroundingResult(
                     entity_id=reg.region_instance_id,
@@ -476,7 +575,9 @@ class WorkshopPhase1InspectionController:
                 s_res = self.semantic_grounder.ground_region_for_requirement(reg, container_req)
                 if s_res.semantic_status == GroundingStatus.PASS:
                     reg.current_semantic_belief.update(s_res.semantic_evidence)
-                g_res = self.geometric_grounder.ground_region_geometry(reg, container_req)
+                g_res = (self._skipped_geometry_result(reg.region_instance_id, container_req)
+                         if is_semantic_only else
+                         self.geometric_grounder.ground_region_geometry(reg, container_req))
                 c_status = s_res.semantic_status if is_semantic_only else combine_status(s_res.semantic_status, g_res.geometric_status)
                 f_res = FunctionGroundingResult(
                     entity_id=reg.region_instance_id,
@@ -525,6 +626,7 @@ class WorkshopPhase1InspectionController:
             fastener_candidates=fastener_candidates,
             work_surface_candidates=surface_candidates,
             parts_container_candidates=container_candidates,
+            requirements=self.requirements,
         )
 
         if witness is not None:
@@ -538,6 +640,11 @@ class WorkshopPhase1InspectionController:
             work_surface_candidates=surface_candidates,
             parts_container_candidates=container_candidates,
             evaluated_tuples=evaluated_tuples,
+            grounding_results=grounding_results,
+            has_unresolved_evidence=any(
+                result.combined_status == GroundingStatus.UNKNOWN
+                for result in grounding_results
+            ),
         )
 
         return None, rej_reason

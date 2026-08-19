@@ -55,54 +55,35 @@ functional_requirements:
 vocabulary:
   canonical_labels:
     screwdriver:
-      - "screwdriver"
-      - "hand screwdriver"
-      - "manual screwdriver"
+      detector_label: "hand screwdriver"
+      aliases: ["screwdriver", "manual screwdriver"]
     power_driver:
-      - "power drill"
-      - "powered screwdriver"
-      - "cordless drill"
-      - "power driver"
-      - "drill driver"
+      detector_label: "power drill"
+      aliases: ["powered screwdriver", "cordless drill", "power driver", "drill driver"]
     screw:
-      - "screw"
-      - "machine screw"
-      - "threaded screw"
-      - "fastener"
+      detector_label: "fastener"
+      aliases: ["screw", "machine screw", "threaded screw"]
     bolt:
-      - "bolt"
-      - "hex bolt"
-      - "machine bolt"
+      detector_label: "hex bolt"
+      aliases: ["bolt", "machine bolt"]
     wrench:
-      - "wrench"
-      - "adjustable wrench"
-      - "combination wrench"
-      - "spanner"
+      detector_label: "adjustable wrench"
+      aliases: ["wrench", "combination wrench", "spanner"]
     pliers:
-      - "pliers"
-      - "combination pliers"
-      - "locking pliers"
+      detector_label: "pliers"
+      aliases: ["combination pliers", "locking pliers"]
     workbench:
-      - "workbench"
-      - "work table"
-      - "wooden table"
-      - "table"
+      detector_label: "workbench"
+      aliases: ["work table", "wooden table", "table"]
     tool_cart:
-      - "tool cart"
-      - "cart"
-      - "rolling cart"
-      - "metal cart"
+      detector_label: "tool cart"
+      aliases: ["cart", "rolling cart", "metal cart"]
     shelf:
-      - "shelf"
-      - "wall shelf"
-      - "narrow shelf"
+      detector_label: "shelf"
+      aliases: ["wall shelf", "narrow shelf"]
     parts_tray:
-      - "tray"
-      - "parts tray"
-      - "shallow tray"
+      detector_label: "parts tray"
+      aliases: ["tray", "shallow tray"]
     hardware_bin:
-      - "bin"
-      - "hardware bin"
-      - "plastic bin"
-      - "parts bin"
-      - "storage bin"
+      detector_label: "hardware bin"
+      aliases: ["bin", "plastic bin", "parts bin", "storage bin"]

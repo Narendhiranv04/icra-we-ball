@@ -31,6 +31,14 @@ class RegionGrounder:
         with open(path, encoding="utf-8") as source:
             self.geometry_config = yaml.safe_load(source) or {}
 
+    def reset_semantic_history(self) -> None:
+        """Clear carried region beliefs for the NO_PERSISTENCE ablation."""
+        for region in self._known_regions.values():
+            region.semantic_observations.clear()
+            region.current_semantic_belief = {
+                "canonical_label": "unknown", "raw_label": "unknown", "confidence": 0.0,
+            }
+
     def _measure_support_plane(self, points: np.ndarray) -> dict[str, Any]:
         """Measure the dominant horizontal support from points, never ROI extents."""
         cfg = self.geometry_config.get("support_plane", {})
@@ -87,7 +95,13 @@ class RegionGrounder:
 
         score_by_label: dict[str, float] = defaultdict(float)
         raw_by_label: dict[str, str] = {}
+        unique: dict[tuple[int, str, str], dict[str, Any]] = {}
         for obs in observations:
+            label = obs.get("canonical_label", "unknown").lower()
+            key = (int(obs.get("stage_index", 0)), str(obs.get("camera_id", "")), label)
+            if key not in unique or float(obs.get("confidence", 0.0)) > float(unique[key].get("confidence", 0.0)):
+                unique[key] = obs
+        for obs in unique.values():
             label = obs.get("canonical_label", "unknown").lower()
             conf = float(obs.get("confidence", 1.0))
             score_by_label[label] += conf
@@ -96,37 +110,116 @@ class RegionGrounder:
 
         best_label = max(score_by_label, key=score_by_label.get)
         total_score = sum(score_by_label.values())
-        norm_conf = min(0.99, score_by_label[best_label] / max(1.0, total_score) * min(1.0, 0.5 + 0.25 * len(observations)))
+        norm_conf = min(0.99, score_by_label[best_label] / max(1.0, total_score) * min(1.0, 0.5 + 0.25 * len(unique)))
 
         return {
             "canonical_label": best_label,
             "raw_label": raw_by_label.get(best_label, best_label),
             "confidence": round(norm_conf, 4),
-            "total_observations": len(observations),
+            "total_observations": len(unique),
+            "supporting_view_count": len({obs.get("camera_id") for obs in unique.values()
+                                           if obs.get("canonical_label", "unknown").lower() == best_label}),
         }
 
     def discover_candidate_regions(
         self,
         scene: Any,
         observations: list[ViewObservation],
+        stage_index: int = 0,
     ) -> list[ObservedRegion]:
         """Convert neutral spatial proposals to ObservedRegion instances with visual/depth evidence."""
         proposals = scene.get_candidate_regions()
         observed_regions: list[ObservedRegion] = []
 
-        for prop in proposals:
+        # Assign every YOLO region detection to at most one neutral spatial
+        # proposal using calibrated 2D+3D evidence. Semantics remain YOLO-only.
+        semantic_by_proposal: dict[int, list[dict[str, Any]]] = defaultdict(list)
+        for obs in observations:
+            semantic_detections = obs.region_semantic_detections or obs.detected_masks
+            for detection in semantic_detections:
+                if detection.canonical_label.lower() not in self.region_categories:
+                    continue
+                points, _ = backproject_masked_depth(
+                    obs.depth_m, detection.binary_mask, obs.intrinsics,
+                    obs.camera_position_world, obs.camera_rotation_world, max_depth=3.0)
+                centroid = points.mean(axis=0) if len(points) else None
+                bx1, by1, bx2, by2 = detection.bounding_box_xyxy
+                box_area = max(1, (bx2 - bx1) * (by2 - by1))
+                best: tuple[float, int, dict[str, Any]] | None = None
+                for proposal_index, proposal in enumerate(proposals):
+                    bounds = proposal["proposal_bounds_m"]
+                    p_min = np.asarray(bounds["minimum_world_m"], dtype=float)
+                    p_max = np.asarray(bounds["maximum_world_m"], dtype=float)
+                    inside_fraction = 0.0
+                    if len(points):
+                        inside = np.all((points >= p_min - 0.02) & (points <= p_max + 0.02), axis=1)
+                        inside_fraction = float(np.mean(inside))
+                    center = 0.5 * (p_min + p_max)
+                    diagonal = max(float(np.linalg.norm(p_max - p_min)), 1e-6)
+                    centroid_score = (max(0.0, 1.0 - float(np.linalg.norm(centroid - center)) / diagonal)
+                                      if centroid is not None else 0.0)
+
+                    # Project proposal corners for a complementary 2D signal.
+                    corners = np.array([[x, y, z] for x in (p_min[0], p_max[0])
+                                        for y in (p_min[1], p_max[1])
+                                        for z in (p_min[2], p_max[2])])
+                    local = (corners - obs.camera_position_world) @ obs.camera_rotation_world
+                    z_depth = -local[:, 2]
+                    valid = z_depth > 0.1
+                    overlap = 0.0
+                    if np.count_nonzero(valid) >= 4:
+                        fx, fy = obs.intrinsics[0, 0], obs.intrinsics[1, 1]
+                        cx, cy = obs.intrinsics[0, 2], obs.intrinsics[1, 2]
+                        u = local[valid, 0] * fx / z_depth[valid] + cx
+                        v = -local[valid, 1] * fy / z_depth[valid] + cy
+                        h, w = obs.rgb.shape[:2]
+                        rx1, rx2 = max(0, int(np.min(u))), min(w, int(np.max(u)) + 1)
+                        ry1, ry2 = max(0, int(np.min(v))), min(h, int(np.max(v)) + 1)
+                        intersection = max(0, min(bx2, rx2) - max(bx1, rx1)) * max(0, min(by2, ry2) - max(by1, ry1))
+                        overlap = intersection / box_area
+                    score = 0.55 * inside_fraction + 0.25 * centroid_score + 0.20 * overlap
+                    metrics = {
+                        "point_in_region_fraction": inside_fraction,
+                        "centroid_proximity_score": centroid_score,
+                        "box_fraction_in_projected_region": overlap,
+                        "association_score": score,
+                    }
+                    if best is None or score > best[0]:
+                        best = (score, proposal_index, metrics)
+                if best is not None and best[0] >= 0.12 and (
+                    best[2]["point_in_region_fraction"] >= 0.05
+                    or best[2]["box_fraction_in_projected_region"] >= 0.20
+                ):
+                    semantic_by_proposal[best[1]].append({
+                        "stage_index": stage_index,
+                        "camera_id": obs.camera_id,
+                        "canonical_label": detection.canonical_label,
+                        "raw_label": detection.raw_label,
+                        "confidence": detection.confidence,
+                        "detection_id": detection.detection_id,
+                        "association_metrics": best[2],
+                        "duplicate_group_id": detection.duplicate_group_id,
+                    })
+
+        for proposal_index, prop in enumerate(proposals):
             bounds = prop["proposal_bounds_m"]
             b_min = np.array(bounds["minimum_world_m"], dtype=np.float64)
             b_max = np.array(bounds["maximum_world_m"], dtype=np.float64)
 
-            reg_id = f"region_{self._region_id_counter:04d}"
-            self._region_id_counter += 1
+            proposal_key = repr((tuple(np.round(b_min, 5)), tuple(np.round(b_max, 5))))
+            known = self._known_regions.get(proposal_key)
+            if known is None:
+                reg_id = f"region_{self._region_id_counter:04d}"
+                self._region_id_counter += 1
+            else:
+                reg_id = known.region_instance_id
 
             # Extract point clouds and crops from observations
             region_pts_list = []
             points_by_camera: dict[str, np.ndarray] = {}
             crop_evidence = {}
-            semantic_obs = []
+            semantic_obs = list(known.semantic_observations) if known is not None else []
+            semantic_obs.extend(semantic_by_proposal.get(proposal_index, []))
 
             for obs in observations:
                 full_mask = np.ones(obs.depth_m.shape, dtype=bool)
@@ -179,28 +272,10 @@ class RegionGrounder:
                     if (u_max - u_min) > 10 and (v_max - v_min) > 10:
                         crop_evidence[obs.camera_id] = obs.rgb[v_min:v_max, u_min:u_max].copy()
 
-                        # Associate YOLO region detections overlapping this projected ROI
-                        roi_box = (u_min, v_min, u_max, v_max)
-                        semantic_detections = obs.region_semantic_detections or obs.detected_masks
-                        for d_mask in semantic_detections:
-                            if d_mask.canonical_label.lower() in self.region_categories:
-                                bx1, by1, bx2, by2 = d_mask.bounding_box_xyxy
-                                # Compute box overlap / intersection
-                                ix1, iy1 = max(u_min, bx1), max(v_min, by1)
-                                ix2, iy2 = min(u_max, bx2), min(v_max, by2)
-                                if ix2 > ix1 and iy2 > iy1:
-                                    inter_area = (ix2 - ix1) * (iy2 - iy1)
-                                    box_area = (bx2 - bx1) * (by2 - by1)
-                                    if inter_area / max(1, box_area) > 0.15 or inter_area / max(1, (u_max - u_min) * (v_max - v_min)) > 0.15:
-                                        semantic_obs.append({
-                                            "camera_id": obs.camera_id,
-                                            "canonical_label": d_mask.canonical_label,
-                                            "raw_label": d_mask.raw_label,
-                                            "confidence": d_mask.confidence,
-                                        })
-
             if region_pts_list:
                 all_pts = np.vstack(region_pts_list)
+                if known is not None and known.fused_points is not None and len(known.fused_points):
+                    all_pts = np.vstack([known.fused_points, all_pts])
                 fused_pts, _ = voxel_downsample(all_pts, np.ones_like(all_pts), voxel_size=0.005)
             else:
                 fused_pts = np.empty((0, 3), dtype=np.float32)
@@ -263,5 +338,6 @@ class RegionGrounder:
                 },
             )
             observed_regions.append(region_entry)
+            self._known_regions[proposal_key] = region_entry
 
         return observed_regions

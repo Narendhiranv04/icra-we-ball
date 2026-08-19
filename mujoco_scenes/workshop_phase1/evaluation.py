@@ -26,12 +26,127 @@ class PrivilegedPhase1Evaluator:
     def __init__(self, scene: Any) -> None:
         self.scene = scene
 
+    @staticmethod
+    def _canonical_object_category(name: str) -> str | None:
+        lowered = name.lower()
+        if "power" in lowered and "driver" in lowered:
+            return "power_driver"
+        if "driver" in lowered or "screwdriver" in lowered:
+            return "screwdriver"
+        if "screw" in lowered:
+            return "screw"
+        if "bolt" in lowered:
+            return "bolt"
+        if "wrench" in lowered:
+            return "wrench"
+        if "pliers" in lowered:
+            return "pliers"
+        return None
+
+    @staticmethod
+    def _canonical_region_category(name: str) -> str | None:
+        return {
+            "MAIN_WORKBENCH_ZONE": "workbench",
+            "TOOL_CART_TOP": "tool_cart",
+            "NARROW_WALL_SHELF": "shelf",
+            "PARTS_TRAY": "parts_tray",
+            "HARDWARE_BIN": "hardware_bin",
+        }.get(name)
+
+    def evaluate_semantic_diagnostics(
+        self,
+        detection_records: list[dict[str, Any]],
+        gt_objects: list[dict[str, Any]],
+        regions: list[ObservedRegion],
+        region_to_gt: dict[str, str],
+    ) -> dict[str, Any]:
+        """Post-hoc matching only; results never flow back into grounding."""
+        categories = [
+            "screwdriver", "power_driver", "screw", "bolt", "wrench", "pliers",
+            "workbench", "tool_cart", "shelf", "parts_tray", "hardware_bin",
+        ]
+        rows = {category: {
+            "visible_gt_count": 0, "yolo_detection_count": 0,
+            "matched_gt_count": 0, "false_positive_count": 0,
+            "duplicate_detections": 0, "association_correct_count": 0,
+            "association_evaluated_count": 0,
+        } for category in categories}
+
+        gt_by_category: dict[str, list[dict[str, Any]]] = {category: [] for category in categories}
+        for gt in gt_objects:
+            category = self._canonical_object_category(gt["name"])
+            if category:
+                gt_by_category[category].append(gt)
+        active_names = set(getattr(self.scene, "active_surfaces", [])) | set(
+            getattr(self.scene, "active_containers", []))
+        for name in active_names:
+            category = self._canonical_region_category(name)
+            if category:
+                rows[category]["visible_gt_count"] += 1
+        for category, objects in gt_by_category.items():
+            rows[category]["visible_gt_count"] += len(objects)
+
+        accepted = [record for record in detection_records if record.get("status") == "ACCEPTED"]
+        matched_ids_by_category: dict[str, list[str]] = {category: [] for category in categories}
+        region_detection_matches: dict[tuple[int, str], tuple[str, str]] = {}
+        for region in regions:
+            expected = self._canonical_region_category(region_to_gt.get(region.region_instance_id, ""))
+            for observation in region.semantic_observations:
+                detection_id = observation.get("detection_id")
+                if detection_id and expected:
+                    region_detection_matches[(int(observation.get("stage_index", 0)), detection_id)] = (
+                        expected, region_to_gt[region.region_instance_id])
+
+        for record in accepted:
+            category = record.get("canonical_label")
+            if category not in rows:
+                continue
+            rows[category]["yolo_detection_count"] += 1
+            detection_key = record.get("detection_id")
+            if category in {"workbench", "tool_cart", "shelf", "parts_tray", "hardware_bin"}:
+                match = region_detection_matches.get((int(record.get("stage_index", 0)), detection_key))
+                expected = match[0] if match else None
+                rows[category]["association_evaluated_count"] += int(expected is not None)
+                rows[category]["association_correct_count"] += int(expected == category)
+                if expected is None:
+                    rows[category]["false_positive_count"] += 1
+                elif expected == category:
+                    matched_ids_by_category[category].append(match[1])
+                continue
+            centroid = record.get("centroid_world_m")
+            best = None
+            if centroid is not None:
+                for gt in gt_objects:
+                    distance = float(np.linalg.norm(np.asarray(centroid) - gt["pos"]))
+                    if distance <= 0.16 and (best is None or distance < best[0]):
+                        best = (distance, gt)
+            if best is None:
+                rows[category]["false_positive_count"] += 1
+                continue
+            expected = self._canonical_object_category(best[1]["name"])
+            rows[category]["association_evaluated_count"] += 1
+            rows[category]["association_correct_count"] += int(expected == category)
+            if expected == category:
+                matched_ids_by_category[category].append(best[1]["name"])
+            else:
+                rows[category]["false_positive_count"] += 1
+
+        for category, row in rows.items():
+            matched = matched_ids_by_category[category]
+            row["matched_gt_count"] = len(set(matched))
+            row["duplicate_detections"] = max(0, len(matched) - len(set(matched)))
+            row["recall"] = round(row["matched_gt_count"] / max(1, row["visible_gt_count"]), 4)
+            row["association_accuracy"] = round(
+                row["association_correct_count"] / max(1, row["association_evaluated_count"]), 4)
+        return {"categories": rows, "privileged_use": "POST_HOC_EVALUATION_ONLY"}
+
     def evaluate_episode(
         self,
         result: EpisodeResult,
         tracks: list[ObservedObjectTrack],
         regions: list[ObservedRegion],
         output_dir: Path | None = None,
+        detection_diagnostics: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Evaluate generic predictions against privileged oracle metadata."""
         if mujoco is None:
@@ -195,11 +310,21 @@ class PrivilegedPhase1Evaluator:
             "early_stopped": result.metrics.get("early_stopped", False),
         }
 
+        if detection_diagnostics is not None:
+            metrics["semantic_diagnostics"] = self.evaluate_semantic_diagnostics(
+                detection_diagnostics, gt_objects, regions, region_to_gt)
+
         if output_dir is not None:
             output_dir.mkdir(parents=True, exist_ok=True)
             with open(output_dir / "privileged_eval_mapping.json", "w", encoding="utf-8") as f:
                 json.dump({"track_to_gt": track_to_gt, "region_to_gt": region_to_gt}, f, indent=2)
             with open(output_dir / "evaluation_metrics.json", "w", encoding="utf-8") as f:
                 json.dump(metrics, f, indent=2)
+            if detection_diagnostics is not None:
+                with open(output_dir / "semantic_diagnostics.json", "w", encoding="utf-8") as f:
+                    json.dump({
+                        "detector_records": detection_diagnostics,
+                        "summary": metrics["semantic_diagnostics"],
+                    }, f, indent=2)
 
         return metrics

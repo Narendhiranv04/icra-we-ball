@@ -26,6 +26,22 @@ def _truth(status: str) -> GroundingStatus:
     return {"TRUE": GroundingStatus.PASS, "FALSE": GroundingStatus.FAIL}.get(status, GroundingStatus.UNKNOWN)
 
 
+UNARY_RELATIONS = frozenset({
+    "REACHES_TARGET", "COMPATIBLE_WITH_TARGET", "PLANAR_SUPPORT", "OPEN_CAVITY",
+})
+JOINT_RELATIONS = frozenset({"COMPATIBLE_WITH", "FITS_SET_ON", "FITS_IN"})
+SUPPORTED_RELATIONS = UNARY_RELATIONS | JOINT_RELATIONS
+RELATION_REGISTRY = {
+    "REACHES_TARGET": {"arity": "UNARY", "entity": "OBJECT"},
+    "COMPATIBLE_WITH_TARGET": {"arity": "UNARY", "entity": "OBJECT"},
+    "PLANAR_SUPPORT": {"arity": "UNARY", "entity": "FUNCTIONAL_REGION"},
+    "OPEN_CAVITY": {"arity": "UNARY", "entity": "FUNCTIONAL_REGION"},
+    "COMPATIBLE_WITH": {"arity": "JOINT", "entities": ["OBJECT", "OBJECT"]},
+    "FITS_SET_ON": {"arity": "JOINT", "entities": ["OBJECT", "OBJECT", "FUNCTIONAL_REGION"]},
+    "FITS_IN": {"arity": "JOINT", "entities": ["OBJECT", "FUNCTIONAL_REGION"]},
+}
+
+
 class GeometricGrounder:
     """Measure generic properties first, then evaluate named relations."""
 
@@ -45,6 +61,36 @@ class GeometricGrounder:
         self.geometry_config_path = path
         self.target_evidence = target_evidence or TargetGeometryEvidence()
         self.total_geometric_calls = 0
+        self.relation_call_counts: dict[str, int] = {name: 0 for name in SUPPORTED_RELATIONS}
+
+    @staticmethod
+    def _combine_relation_results(relations: list[dict[str, Any]]) -> GroundingStatus:
+        statuses = [_truth(relation.get("status", "UNKNOWN")) for relation in relations]
+        if any(status == GroundingStatus.FAIL for status in statuses):
+            return GroundingStatus.FAIL
+        if statuses and all(status == GroundingStatus.PASS for status in statuses):
+            return GroundingStatus.PASS
+        return GroundingStatus.UNKNOWN
+
+    def _evaluate_object_unary(self, name: str, properties: dict[str, Any]) -> dict[str, Any]:
+        registry = {
+            "REACHES_TARGET": self.evaluate_reaches_target,
+            "COMPATIBLE_WITH_TARGET": self.evaluate_compatible_with_target,
+        }
+        evaluator = registry.get(name)
+        if evaluator is None:
+            return {"relation": name, "status": "UNKNOWN", "reason": "UNSUPPORTED_OBJECT_UNARY_RELATION"}
+        self.relation_call_counts[name] += 1
+        return evaluator(properties)
+
+    def _evaluate_region_unary(self, name: str, region: ObservedRegion) -> dict[str, Any]:
+        if name not in {"PLANAR_SUPPORT", "OPEN_CAVITY"}:
+            return {"relation": name, "status": "UNKNOWN", "reason": "UNSUPPORTED_REGION_UNARY_RELATION"}
+        self.relation_call_counts[name] += 1
+        relation = dict(region.current_geometric_properties.get("geometric_predicates", {}).get(
+            name, {"status": "UNKNOWN", "reason": "REGION_MEASUREMENT_MISSING"}))
+        relation.setdefault("relation", name)
+        return relation
 
     @staticmethod
     def observe_target_recess(observations: list[ViewObservation], scene: Any | None = None,
@@ -118,7 +164,9 @@ class GeometricGrounder:
             scales = 2.0 * np.sqrt(np.maximum(np.linalg.eigvalsh(np.cov(transverse, rowvar=False))[-2:], 0.0))
             small, large = map(float, np.sort(scales))
             anisotropy = large / max(small, 1e-6)
-            if (anisotropy >= float(cfg.get("slot_anisotropy_ratio", 3.2))
+            if not np.isfinite(anisotropy) or small < float(cfg.get("minimum_resolvable_interface_extent_m", 0.00035)):
+                interface = "UNKNOWN"
+            elif (anisotropy >= float(cfg.get("slot_anisotropy_ratio", 3.2))
                     and large <= float(cfg.get("slot_max_transverse_length_m", 0.0031))):
                 interface = "SLOT_LIKE"
             elif anisotropy <= float(cfg.get("hex_radial_symmetry_ratio", 1.25)):
@@ -237,38 +285,46 @@ class GeometricGrounder:
                 "cloud_purpose": evidence.cloud_purpose,
             } if evidence is not None else {"reason": "LEGACY_SYNTHETIC_TRACK"})
         props = track.current_geometric_properties
-        if requirement.function_name == "CAN_DRIVE_SCREW":
-            relation = self.evaluate_reaches_target(props)
-        elif requirement.function_name == "CAN_FASTEN":
+        # Fastener dimensions are generic observed properties needed by both
+        # COMPATIBLE_WITH_TARGET and the later FITS_IN joint relation.
+        if "COMPATIBLE_WITH_TARGET" in requirement.required_relations or "FITS_IN" in requirement.required_relations:
             evidence = track.current_measurement_evidence
             fastener = self.estimate_fastener_dimensions(
                 evidence.measurement_points if evidence is not None else track.fused_points)
             props.update(fastener)
             props["head_interface"] = fastener.get("interface_geometry", "UNKNOWN")
-            relation = self.evaluate_compatible_with_target(props)
-        else:
-            relation = {"relation": "NONE", "status": "TRUE"}
-        status = _truth(relation["status"])
+        unary_names = [name for name in requirement.required_relations if name in UNARY_RELATIONS]
+        relations = [self._evaluate_object_unary(name, props) for name in unary_names]
+        status = self._combine_relation_results(relations) if unary_names else GroundingStatus.PASS
         return FunctionGroundingResult(entity_id=track.instance_id, requirement_id=requirement.requirement_id,
             function_name=requirement.function_name, semantic_status=GroundingStatus.UNKNOWN, semantic_score=0.0,
             semantic_evidence={}, geometric_status=status, geometric_score=0.95 if status == GroundingStatus.PASS else 0.15,
-            geometric_evidence={"generic_properties": props, "relation": relation}, combined_status=status,
-            rejection_reasons=[] if status == GroundingStatus.PASS else [f"{relation['relation']}_{relation['status']}"])
+            geometric_evidence={"generic_properties": props, "relations": relations,
+                "required_unary_relations": unary_names,
+                "relation": relations[0] if len(relations) == 1 else None}, combined_status=status,
+            rejection_reasons=[] if status == GroundingStatus.PASS else
+                [f"{relation['relation']}_{relation['status']}" for relation in relations
+                 if relation.get("status") != "TRUE"])
 
     def ground_region_geometry(self, region: ObservedRegion, requirement: FunctionalRequirement) -> FunctionGroundingResult:
         self.total_geometric_calls += 1
-        name = "PLANAR_SUPPORT" if requirement.function_name == "WORK_SURFACE" else "OPEN_CAVITY"
-        relation = region.current_geometric_properties.get("geometric_predicates", {}).get(
-            name, {"relation": name, "status": "UNKNOWN", "reason": "REGION_MEASUREMENT_MISSING"})
-        status = _truth(relation.get("status", "UNKNOWN"))
+        unary_names = [name for name in requirement.required_relations if name in UNARY_RELATIONS]
+        relations = [self._evaluate_region_unary(name, region) for name in unary_names]
+        status = self._combine_relation_results(relations) if unary_names else GroundingStatus.PASS
         return FunctionGroundingResult(entity_id=region.region_instance_id, requirement_id=requirement.requirement_id,
             function_name=requirement.function_name, semantic_status=GroundingStatus.UNKNOWN, semantic_score=0.0,
             semantic_evidence={}, geometric_status=status, geometric_score=0.95 if status == GroundingStatus.PASS else 0.15,
-            geometric_evidence={"relation": relation, "measured_properties": region.current_geometric_properties},
-            combined_status=status, rejection_reasons=[] if status == GroundingStatus.PASS else [f"{name}_{relation.get('status', 'UNKNOWN')}"])
+            geometric_evidence={"relations": relations,
+                "required_unary_relations": unary_names,
+                "relation": relations[0] if len(relations) == 1 else None,
+                "measured_properties": region.current_geometric_properties},
+            combined_status=status, rejection_reasons=[] if status == GroundingStatus.PASS else
+                [f"{relation['relation']}_{relation.get('status', 'UNKNOWN')}" for relation in relations
+                 if relation.get("status") != "TRUE"])
 
     def evaluate_fits_set_on(self, driver: ObservedObjectTrack, fastener: ObservedObjectTrack,
                              surface: ObservedRegion) -> dict[str, Any]:
+        self.relation_call_counts["FITS_SET_ON"] += 1
         d, f, s = driver.current_geometric_properties, fastener.current_geometric_properties, surface.current_geometric_properties
         values = (d.get("footprint_length_m"), d.get("footprint_width_m"), f.get("footprint_length_m"),
                   f.get("footprint_width_m"), s.get("support_length_m"), s.get("support_width_m"))
@@ -301,6 +357,7 @@ class GeometricGrounder:
         return result["status"] == "TRUE", result
 
     def evaluate_fits_in(self, fastener: ObservedObjectTrack, container: ObservedRegion) -> dict[str, Any]:
+        self.relation_call_counts["FITS_IN"] += 1
         fp, cp = fastener.current_geometric_properties, container.current_geometric_properties
         length, cross = fp.get("total_length_m"), fp.get("shaft_diameter_m", fp.get("maximum_cross_section_m"))
         opening_l, opening_w, depth = cp.get("opening_length_m"), cp.get("opening_width_m"), cp.get("cavity_depth_m")

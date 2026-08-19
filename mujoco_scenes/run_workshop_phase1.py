@@ -20,6 +20,7 @@ from mujoco_scenes.workshop_phase1.evaluation import PrivilegedPhase1Evaluator
 from mujoco_scenes.workshop_phase1.inspection_controller import (
     WorkshopPhase1InspectionController,
 )
+from mujoco_scenes.workshop_phase1.requirements import ManualWorkshopFMContract
 from mujoco_scenes.workshop_phase1.types import (
     AblationType,
     MaskBackendType,
@@ -125,6 +126,7 @@ def run_single_variant(
             tracks=list(controller.tracker.tracks.values()),
             regions=controller.candidate_regions,
             output_dir=var_out,
+            detection_diagnostics=controller.detection_diagnostics,
         )
 
     print(f"Outcome: {result.status}")
@@ -211,18 +213,26 @@ def run_benchmark_suite(
     return summary
 
 
-def run_ablation_suite(output_dir: Path | None = None,
-                       concise: bool = False) -> list[dict[str, Any]]:
-    """Run full canonical 7-arm ablation suite across all 14 variants (98 total episodes)."""
-    ablations = [
-        {"name": "Full Production Pipeline", "mask": "production", "sem": "production", "prop": "yolo_only", "abl": "none"},
-        {"name": "Oracle Masks (Upper Bound)", "mask": "oracle", "sem": "production", "prop": "yolo_only", "abl": "oracle_mask"},
-        {"name": "Oracle Semantics + Perfect Masks", "mask": "oracle", "sem": "oracle", "prop": "yolo_only", "abl": "oracle_semantics"},
-        {"name": "Semantic-Only Grounding (No Geo)", "mask": "production", "sem": "production", "prop": "yolo_only", "abl": "semantic_only"},
-        {"name": "No Joint Coupling Checks", "mask": "production", "sem": "production", "prop": "yolo_only", "abl": "no_joint_coupling"},
-        {"name": "No Multi-Stage Persistence", "mask": "production", "sem": "production", "prop": "yolo_only", "abl": "no_persistence"},
-        {"name": "Single Front Camera View", "mask": "production", "sem": "production", "prop": "yolo_only", "abl": "single_front_view"},
-    ]
+def run_ablation_suite(output_dir: Path | None = None, concise: bool = False,
+                       controlled: bool = False) -> list[dict[str, Any]]:
+    """Run separately labelled production or controlled-perception ablations."""
+    if controlled:
+        ablations = [
+            {"name": "Controlled Full Grounding", "mask": "oracle", "sem": "oracle", "prop": "yolo_only", "abl": "none"},
+            {"name": "Controlled Semantic Only", "mask": "oracle", "sem": "oracle", "prop": "yolo_only", "abl": "semantic_only"},
+            {"name": "Controlled No Geometry", "mask": "oracle", "sem": "oracle", "prop": "yolo_only", "abl": "no_geometry"},
+            {"name": "Controlled No Joint Coupling", "mask": "oracle", "sem": "oracle", "prop": "yolo_only", "abl": "no_joint_coupling"},
+            {"name": "Controlled No Persistence", "mask": "oracle", "sem": "oracle", "prop": "yolo_only", "abl": "no_persistence"},
+            {"name": "Controlled Single Front View", "mask": "oracle", "sem": "oracle", "prop": "yolo_only", "abl": "single_front_view"},
+        ]
+    else:
+        ablations = [
+            {"name": "Full Production Pipeline", "mask": "production", "sem": "production", "prop": "yolo_only", "abl": "none"},
+            {"name": "Production Semantic Only", "mask": "production", "sem": "production", "prop": "yolo_only", "abl": "semantic_only"},
+            {"name": "Production No Joint Coupling", "mask": "production", "sem": "production", "prop": "yolo_only", "abl": "no_joint_coupling"},
+            {"name": "Production No Persistence", "mask": "production", "sem": "production", "prop": "yolo_only", "abl": "no_persistence"},
+            {"name": "Production Single Front View", "mask": "production", "sem": "production", "prop": "yolo_only", "abl": "single_front_view"},
+        ]
 
     out_base = output_dir or Path("outputs/workshop_phase1_final/ablations")
     out_base.mkdir(parents=True, exist_ok=True)
@@ -268,6 +278,58 @@ def run_ablation_suite(output_dir: Path | None = None,
     return suite_results
 
 
+def aggregate_semantic_diagnostics(summary: dict[str, Any]) -> dict[str, Any]:
+    categories: dict[str, dict[str, Any]] = {}
+    additive = ("visible_gt_count", "yolo_detection_count", "matched_gt_count",
+                "false_positive_count", "duplicate_detections",
+                "association_correct_count", "association_evaluated_count")
+    for result in summary["results"]:
+        rows = result.get("eval_metrics", {}).get("semantic_diagnostics", {}).get("categories", {})
+        for category, row in rows.items():
+            target = categories.setdefault(category, {key: 0 for key in additive})
+            for key in additive:
+                target[key] += int(row.get(key, 0))
+    for row in categories.values():
+        row["recall"] = round(row["matched_gt_count"] / max(1, row["visible_gt_count"]), 4)
+        row["association_accuracy"] = round(
+            row["association_correct_count"] / max(1, row["association_evaluated_count"]), 4)
+    return {"categories": categories, "privileged_use": "POST_HOC_EVALUATION_ONLY"}
+
+
+def production_failure_breakdown(summary: dict[str, Any]) -> dict[str, Any]:
+    failures = []
+    for row in summary["results"]:
+        if row["eval_metrics"].get("overall_pass"):
+            continue
+        result = row["result"]
+        diagnostics = row["eval_metrics"].get("semantic_diagnostics", {}).get("categories", {})
+        if result["status"] == "INSUFFICIENT_EVIDENCE":
+            layer = "INSUFFICIENT_EVIDENCE"
+        elif result["rejection_reason"] in {"NO_WORK_SURFACE", "NO_PARTS_CONTAINER"}:
+            region_detections = sum(diagnostics.get(name, {}).get("yolo_detection_count", 0)
+                                    for name in ("workbench", "tool_cart", "shelf", "parts_tray", "hardware_bin"))
+            layer = "REGION_ASSOCIATION_FAILURE" if region_detections else "DETECTION_MISS"
+        elif row["eval_metrics"].get("tracked_objects_count", 0) == 0:
+            layer = "DETECTION_MISS"
+        elif result["rejection_reason"] in {"TOOL_GEOMETRY_FAILURE", "NO_VALID_DRIVER", "NO_VALID_FASTENER"}:
+            layer = "SEMANTIC_MISCLASSIFICATION"
+        elif result["rejection_reason"] == "OBJECT_REGION_PACKING_FAILURE":
+            layer = "JOINT_RELATION_FALSE"
+        elif result["rejection_reason"] == "GLOBAL_CONFLICT":
+            layer = "JOINT_RELATION_FALSE"
+        else:
+            layer = "OTHER"
+        failures.append({
+            "variant": row["variant"], "layer": layer,
+            "predicted_status": result["status"],
+            "predicted_rejection": result["rejection_reason"],
+            "expected_status": row["eval_metrics"].get("expected_status"),
+            "expected_rejection": row["eval_metrics"].get("expected_rejection"),
+        })
+    return {"classification_basis": "Post-hoc evaluator diagnostics; never used by production decisions.",
+            "failures": failures}
+
+
 def run_canonical_suite(output_dir: Path) -> dict[str, Any]:
     """Reproduce all canonical Phase-1 summaries without a scratch script."""
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -279,6 +341,13 @@ def run_canonical_suite(output_dir: Path) -> dict[str, Any]:
     runtime = yaml.safe_load((config_root / "workshop_phase1.yaml").read_text())
     (output_dir / "resolved_runtime_config.json").write_text(
         json.dumps(runtime, indent=2), encoding="utf-8")
+    contract = ManualWorkshopFMContract(config_root / "workshop_phase1_fm_contract.yaml")
+    (output_dir / "yolo_vocabulary.json").write_text(json.dumps({
+        "ranked_detector_vocabulary": contract.get_ranked_detector_vocabulary(),
+        "detector_classes": contract.get_detector_prompts(),
+        "detector_label_to_canonical": contract.get_detector_label_to_canonical_map(),
+        "aliases_are_detector_classes": False,
+    }, indent=2), encoding="utf-8")
     representative = {"F4_OBJECT_REGION_COUPLING", "I1_NO_VALID_FASTENER",
                       "I4_TOOL_GEOMETRY_FAILURE", "I5_OBJECT_REGION_PACKING_FAILURE",
                       "I6_GLOBAL_CONFLICT"}
@@ -293,10 +362,20 @@ def run_canonical_suite(output_dir: Path) -> dict[str, Any]:
     production = run_benchmark_suite(
         ALL_WORKSHOP_VARIANTS, mask_backend="production", semantic_backend="production",
         ablation="none", output_dir=output_dir / "production", detail_variants=set())
-    ablations = run_ablation_suite(output_dir / "ablations", concise=True)
+    production_diagnostics = aggregate_semantic_diagnostics(production)
+    (output_dir / "production" / "semantic_diagnostics_summary.json").write_text(
+        json.dumps(production_diagnostics, indent=2), encoding="utf-8")
+    (output_dir / "production" / "failure_breakdown.json").write_text(
+        json.dumps(production_failure_breakdown(production), indent=2), encoding="utf-8")
+    production_ablations = run_ablation_suite(
+        output_dir / "production_ablations", concise=True, controlled=False)
+    controlled_ablations = run_ablation_suite(
+        output_dir / "controlled_ablations", concise=True, controlled=True)
     result = {"oracle_upper_bound": oracle["passed_variants"],
               "yolo_oracle_masks": oracle_masks["passed_variants"],
-              "production": production["passed_variants"], "ablations": ablations}
+              "production": production["passed_variants"],
+              "production_ablations": production_ablations,
+              "controlled_ablations": controlled_ablations}
     (output_dir / "canonical_run_summary.json").write_text(
         json.dumps(result, indent=2), encoding="utf-8")
     return result

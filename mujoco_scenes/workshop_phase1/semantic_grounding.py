@@ -192,7 +192,9 @@ class PrivilegedOracleSemanticBackend(ObjectSemanticBackend):
                         active = set(getattr(self.scene, "active_surfaces", [])) | set(
                             getattr(self.scene, "active_containers", []))
                         if bname not in active:
-                            return SemanticEvidence(canonical_label="unknown", raw_label="inactive_region", confidence=0.0)
+                            # Privileged controlled evidence can positively state
+                            # absence. Production never receives this label.
+                            return SemanticEvidence(canonical_label="absent_region", raw_label="inactive_region", confidence=1.0)
                         if bname == "MAIN_WORKBENCH_ZONE":
                             return SemanticEvidence(canonical_label="workbench", raw_label=bname, confidence=1.0)
                         elif bname == "TOOL_CART_TOP":

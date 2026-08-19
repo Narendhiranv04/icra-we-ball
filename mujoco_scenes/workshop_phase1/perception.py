@@ -77,6 +77,11 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
         inference_size: int = 640,
         device: str | None = None,
         max_detections: int = 100,
+        min_points_per_mask: int = 8,
+        duplicate_box_iou_threshold: float = 0.65,
+        duplicate_mask_overlap_threshold: float = 0.72,
+        duplicate_centroid_distance_m: float = 0.018,
+        duplicate_aabb_overlap_threshold: float = 0.45,
     ) -> None:
         self.weights_path = Path(weights_path) if weights_path else find_yolo_world_weights()
         self.confidence_threshold = float(confidence_threshold)
@@ -84,10 +89,16 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
         self.inference_size = int(inference_size)
         self.device = device or "cpu"
         self.max_detections = int(max_detections)
+        self.min_points_per_mask = int(min_points_per_mask)
+        self.duplicate_box_iou_threshold = float(duplicate_box_iou_threshold)
+        self.duplicate_mask_overlap_threshold = float(duplicate_mask_overlap_threshold)
+        self.duplicate_centroid_distance_m = float(duplicate_centroid_distance_m)
+        self.duplicate_aabb_overlap_threshold = float(duplicate_aabb_overlap_threshold)
 
         self._model = None
         self._prompts: list[str] = []
         self._alias_to_canonical: dict[str, str] = {}
+        self.last_diagnostics: list[dict[str, Any]] = []
         self._initialize_model()
 
     def _initialize_model(self) -> None:
@@ -115,6 +126,116 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
                 except Exception:
                     pass
 
+    @staticmethod
+    def _box_iou(a: tuple[int, int, int, int], b: tuple[int, int, int, int]) -> float:
+        ax1, ay1, ax2, ay2 = a
+        bx1, by1, bx2, by2 = b
+        ix1, iy1, ix2, iy2 = max(ax1, bx1), max(ay1, by1), min(ax2, bx2), min(ay2, by2)
+        intersection = max(0, ix2 - ix1) * max(0, iy2 - iy1)
+        union = max(1, (ax2 - ax1) * (ay2 - ay1) + (bx2 - bx1) * (by2 - by1) - intersection)
+        return intersection / union
+
+    @staticmethod
+    def _mask_overlap_over_smaller(a: np.ndarray, b: np.ndarray) -> float:
+        intersection = int(np.count_nonzero(a & b))
+        return intersection / max(1, min(int(np.count_nonzero(a)), int(np.count_nonzero(b))))
+
+    @staticmethod
+    def _aabb_iou(a: dict[str, Any], b: dict[str, Any]) -> float:
+        a_min, a_max = np.asarray(a["minimum_world_m"]), np.asarray(a["maximum_world_m"])
+        b_min, b_max = np.asarray(b["minimum_world_m"]), np.asarray(b["maximum_world_m"])
+        intersection = np.maximum(0.0, np.minimum(a_max, b_max) - np.maximum(a_min, b_min))
+        inter_volume = float(np.prod(intersection))
+        a_volume = float(np.prod(np.maximum(0.0, a_max - a_min)))
+        b_volume = float(np.prod(np.maximum(0.0, b_max - b_min)))
+        return inter_volume / max(1e-12, a_volume + b_volume - inter_volume)
+
+    def suppress_duplicate_proposals(self, proposals: list[ObservedMask]) -> list[ObservedMask]:
+        """Collapse same-camera semantic hypotheses for one physical RGB-D proposal."""
+        if len(proposals) < 2:
+            return proposals
+        ordered = sorted(
+            proposals,
+            key=lambda proposal: (
+                -(proposal.confidence * np.log1p(max(1, proposal.depth_point_count))),
+                -proposal.depth_point_count,
+                proposal.canonical_label,
+                proposal.detection_id,
+            ),
+        )
+        retained: list[ObservedMask] = []
+        group_index = 0
+        for candidate in ordered:
+            duplicate_of: ObservedMask | None = None
+            for accepted in retained:
+                box_iou = self._box_iou(candidate.bounding_box_xyxy, accepted.bounding_box_xyxy)
+                mask_overlap = self._mask_overlap_over_smaller(candidate.binary_mask, accepted.binary_mask)
+                centroid_distance = float(np.linalg.norm(
+                    np.asarray(candidate.centroid_world_m) - np.asarray(accepted.centroid_world_m)))
+                aabb_iou = self._aabb_iou(candidate.cloud_bounds_world_m, accepted.cloud_bounds_world_m)
+                strong_2d = (box_iou >= self.duplicate_box_iou_threshold
+                             or mask_overlap >= self.duplicate_mask_overlap_threshold)
+                strong_3d = (centroid_distance <= self.duplicate_centroid_distance_m
+                             and aabb_iou >= self.duplicate_aabb_overlap_threshold)
+                # Require overlapping image support. This preserves nearby small hardware
+                # whose centroids alone happen to be close.
+                if strong_2d and (strong_3d or mask_overlap >= 0.90):
+                    duplicate_of = accepted
+                    break
+            if duplicate_of is None:
+                group_index += 1
+                candidate.duplicate_group_id = f"{candidate.camera_id}_physical_{group_index:03d}"
+                retained.append(candidate)
+                continue
+            duplicate_of.semantic_alternatives.append({
+                "canonical_label": candidate.canonical_label,
+                "raw_label": candidate.raw_label,
+                "confidence": candidate.confidence,
+                "detection_id": candidate.detection_id,
+            })
+            self.last_diagnostics.append({
+                "camera_id": candidate.camera_id,
+                "detection_id": candidate.detection_id,
+                "raw_label": candidate.raw_label,
+                "canonical_label": candidate.canonical_label,
+                "status": "SUPPRESSED_DUPLICATE",
+                "duplicate_group_id": duplicate_of.duplicate_group_id,
+                "retained_detection_id": duplicate_of.detection_id,
+            })
+        return sorted(retained, key=lambda proposal: proposal.detection_id)
+
+    @staticmethod
+    def _project_volume_crop(
+        observation: ViewObservation,
+        minimum_world_m: np.ndarray,
+        maximum_world_m: np.ndarray,
+    ) -> tuple[int, int, int, int]:
+        """Project the calibrated active-stage volume to a conservative image crop."""
+        corners = np.array([
+            [x, y, z]
+            for x in (minimum_world_m[0], maximum_world_m[0])
+            for y in (minimum_world_m[1], maximum_world_m[1])
+            for z in (minimum_world_m[2], maximum_world_m[2])
+        ])
+        local = (corners - observation.camera_position_world) @ observation.camera_rotation_world
+        depth = -local[:, 2]
+        valid = depth > 0.05
+        height, width = observation.rgb.shape[:2]
+        if np.count_nonzero(valid) < 4:
+            return 0, 0, width, height
+        fx, fy = observation.intrinsics[0, 0], observation.intrinsics[1, 1]
+        cx, cy = observation.intrinsics[0, 2], observation.intrinsics[1, 2]
+        u = local[valid, 0] * fx / depth[valid] + cx
+        v = -local[valid, 1] * fy / depth[valid] + cy
+        padding_x, padding_y = int(0.04 * width), int(0.04 * height)
+        x1 = max(0, int(np.floor(np.min(u))) - padding_x)
+        y1 = max(0, int(np.floor(np.min(v))) - padding_y)
+        x2 = min(width, int(np.ceil(np.max(u))) + padding_x)
+        y2 = min(height, int(np.ceil(np.max(v))) + padding_y)
+        if x2 - x1 < 64 or y2 - y1 < 64:
+            return 0, 0, width, height
+        return x1, y1, x2, y2
+
     def predict(
         self,
         observation: ViewObservation,
@@ -122,6 +243,7 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
         stage_volume_max: np.ndarray,
         volume_margin_m: float = 0.08,
     ) -> list[ObservedMask]:
+        self.last_diagnostics = []
         if self._model is None or not self._prompts:
             return []
 
@@ -129,8 +251,12 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
         depth = observation.depth_m
         height, width = rgb.shape[:2]
 
-        # Explicit PIL Image format with mode RGB
-        pil_image = Image.fromarray(rgb, mode="RGB")
+        crop_x1, crop_y1, crop_x2, crop_y2 = self._project_volume_crop(
+            observation, stage_volume_min, stage_volume_max)
+        detector_rgb = rgb[crop_y1:crop_y2, crop_x1:crop_x2]
+        # Explicit PIL Image format with mode RGB. The calibrated crop improves
+        # resolution for tiny drawer hardware without changing semantic classes.
+        pil_image = Image.fromarray(detector_rgb, mode="RGB")
 
         try:
             results = self._model.predict(
@@ -162,18 +288,33 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
             raw_label = str(result.names[int(cls_id)]) if int(cls_id) in result.names else self._prompts[cls_id] if cls_id < len(self._prompts) else "object"
             canonical_label = self._alias_to_canonical.get(raw_label.lower(), raw_label.lower())
 
-            x1 = max(0, min(width - 1, int(box[0])))
-            y1 = max(0, min(height - 1, int(box[1])))
-            x2 = max(0, min(width, int(box[2]) + 1))
-            y2 = max(0, min(height, int(box[3]) + 1))
+            x1 = max(0, min(width - 1, int(box[0]) + crop_x1))
+            y1 = max(0, min(height - 1, int(box[1]) + crop_y1))
+            x2 = max(0, min(width, int(box[2]) + 1 + crop_x1))
+            y2 = max(0, min(height, int(box[3]) + 1 + crop_y1))
+
+            diagnostic = {
+                "camera_id": observation.camera_id,
+                "detection_id": f"det_{observation.camera_id}_{idx:03d}",
+                "detector_vocabulary": list(self._prompts),
+                "raw_label": raw_label,
+                "canonical_label": canonical_label,
+                "confidence": float(conf),
+                "bounding_box_xyxy": [x1, y1, x2, y2],
+                "detector_crop_xyxy": [crop_x1, crop_y1, crop_x2, crop_y2],
+            }
 
             if (x2 - x1) < 4 or (y2 - y1) < 4:
+                diagnostic.update({"status": "REJECTED_SMALL_BOX"})
+                self.last_diagnostics.append(diagnostic)
                 continue
 
             # Depth-guided foreground mask within bounding box
             roi_depth = depth[y1:y2, x1:x2]
             valid_roi = np.isfinite(roi_depth) & (roi_depth > 0.1) & (roi_depth < 3.0)
-            if np.count_nonzero(valid_roi) < 8:
+            if np.count_nonzero(valid_roi) < self.min_points_per_mask:
+                diagnostic.update({"status": "REJECTED_DEPTH_SUPPORT", "depth_point_count": int(np.count_nonzero(valid_roi))})
+                self.last_diagnostics.append(diagnostic)
                 continue
 
             # Segment foreground within bounding box based on median depth
@@ -196,7 +337,9 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
                 observation.camera_rotation_world,
                 max_depth=3.0,
             )
-            if len(pts) < 8:
+            if len(pts) < self.min_points_per_mask:
+                diagnostic.update({"status": "REJECTED_REFINEMENT", "refined_mask_area": int(np.count_nonzero(bin_mask)), "depth_point_count": len(pts)})
+                self.last_diagnostics.append(diagnostic)
                 continue
 
             gated = gate_points_to_volume(
@@ -205,8 +348,17 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
                 maximum_world_m=stage_volume_max,
                 boundary_margin_m=volume_margin_m,
             )
-            if np.count_nonzero(gated) < 8:
+            if np.count_nonzero(gated) < self.min_points_per_mask:
+                diagnostic.update({"status": "REJECTED_STAGE_VOLUME", "refined_mask_area": int(np.count_nonzero(bin_mask)), "depth_point_count": int(np.count_nonzero(gated))})
+                self.last_diagnostics.append(diagnostic)
                 continue
+
+            gated_points = pts[gated]
+            centroid = gated_points.mean(axis=0)
+            cloud_bounds = {
+                "minimum_world_m": gated_points.min(axis=0).tolist(),
+                "maximum_world_m": gated_points.max(axis=0).tolist(),
+            }
 
             mask_entry = ObservedMask(
                 detection_id=f"det_{observation.camera_id}_{idx:03d}",
@@ -218,10 +370,29 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
                 raw_label=raw_label,
                 predicted_label=canonical_label,
                 backend_name="yolo_world",
+                refined_mask_area=int(np.count_nonzero(bin_mask)),
+                depth_point_count=len(gated_points),
+                centroid_world_m=centroid,
+                cloud_bounds_world_m=cloud_bounds,
             )
             masks.append(mask_entry)
+            diagnostic.update({
+                "status": "ACCEPTED_PRE_DEDUP",
+                "refined_mask_area": mask_entry.refined_mask_area,
+                "depth_point_count": mask_entry.depth_point_count,
+                "centroid_world_m": centroid.tolist(),
+            })
+            self.last_diagnostics.append(diagnostic)
 
-        return masks
+        deduplicated = self.suppress_duplicate_proposals(masks)
+        retained_ids = {mask.detection_id for mask in deduplicated}
+        for record in self.last_diagnostics:
+            if record.get("detection_id") in retained_ids:
+                record["status"] = "ACCEPTED"
+                record["duplicate_group_id"] = next(
+                    mask.duplicate_group_id for mask in deduplicated
+                    if mask.detection_id == record["detection_id"])
+        return deduplicated
 
 
 class PrivilegedOracleMaskBackend(InstanceProposalBackend):
@@ -295,6 +466,7 @@ class PrivilegedOracleMaskBackend(InstanceProposalBackend):
             )
             if np.count_nonzero(gated) < 8:
                 continue
+            gated_points = pts[gated]
 
             masks.append(
                 ObservedMask(
@@ -307,6 +479,13 @@ class PrivilegedOracleMaskBackend(InstanceProposalBackend):
                     raw_label="object",
                     predicted_label="object",
                     backend_name="privileged_oracle",
+                    refined_mask_area=int(np.count_nonzero(bmask)),
+                    depth_point_count=len(gated_points),
+                    centroid_world_m=gated_points.mean(axis=0),
+                    cloud_bounds_world_m={
+                        "minimum_world_m": gated_points.min(axis=0).tolist(),
+                        "maximum_world_m": gated_points.max(axis=0).tolist(),
+                    },
                 )
             )
 

@@ -39,7 +39,17 @@ class RequirementProvider(abc.ABC):
 
     @abc.abstractmethod
     def get_detector_prompts(self) -> list[str]:
-        """Return flattened list of prompt strings for YOLO-World set_classes."""
+        """Return exactly one detector-friendly label per canonical category."""
+        pass
+
+    @abc.abstractmethod
+    def get_ranked_detector_vocabulary(self) -> list[dict[str, Any]]:
+        """Return the one-time FM-owned canonical detector vocabulary in rank order."""
+        pass
+
+    @abc.abstractmethod
+    def get_detector_label_to_canonical_map(self) -> dict[str, str]:
+        """Map the detector's display labels, and only those labels, to canonicals."""
         pass
 
     @abc.abstractmethod
@@ -122,17 +132,17 @@ class ManualWorkshopFMContract(RequirementProvider):
             ],
             "vocabulary": {
                 "canonical_labels": {
-                    "screwdriver": ["screwdriver", "hand screwdriver", "manual screwdriver"],
-                    "power_driver": ["power drill", "powered screwdriver", "cordless drill", "power driver", "drill driver"],
-                    "screw": ["screw", "machine screw", "threaded screw", "fastener"],
-                    "bolt": ["bolt", "hex bolt", "machine bolt"],
-                    "wrench": ["wrench", "adjustable wrench", "combination wrench", "spanner"],
-                    "pliers": ["pliers", "combination pliers", "locking pliers"],
-                    "workbench": ["workbench", "work table", "wooden table", "table"],
-                    "tool_cart": ["tool cart", "cart", "rolling cart", "metal cart"],
-                    "shelf": ["shelf", "wall shelf", "narrow shelf"],
-                    "parts_tray": ["tray", "parts tray", "shallow tray"],
-                    "hardware_bin": ["bin", "hardware bin", "plastic bin", "parts bin", "storage bin"],
+                    "screwdriver": {"detector_label": "hand screwdriver", "aliases": ["screwdriver", "manual screwdriver"]},
+                    "power_driver": {"detector_label": "power drill", "aliases": ["powered screwdriver", "cordless drill", "power driver", "drill driver"]},
+                    "screw": {"detector_label": "fastener", "aliases": ["screw", "machine screw", "threaded screw"]},
+                    "bolt": {"detector_label": "hex bolt", "aliases": ["bolt", "machine bolt"]},
+                    "wrench": {"detector_label": "adjustable wrench", "aliases": ["wrench", "combination wrench", "spanner"]},
+                    "pliers": {"detector_label": "pliers", "aliases": ["combination pliers", "locking pliers"]},
+                    "workbench": {"detector_label": "workbench", "aliases": ["work table", "wooden table", "table"]},
+                    "tool_cart": {"detector_label": "tool cart", "aliases": ["cart", "rolling cart", "metal cart"]},
+                    "shelf": {"detector_label": "shelf", "aliases": ["wall shelf", "narrow shelf"]},
+                    "parts_tray": {"detector_label": "parts tray", "aliases": ["tray", "shallow tray"]},
+                    "hardware_bin": {"detector_label": "hardware bin", "aliases": ["bin", "plastic bin", "parts bin", "storage bin"]},
                 }
             },
         }
@@ -160,24 +170,69 @@ class ManualWorkshopFMContract(RequirementProvider):
         return requirements
 
     def get_semantic_vocabulary(self) -> dict[str, list[str]]:
-        vocab = self._contract_data.get("vocabulary", {})
-        return dict(vocab.get("canonical_labels", {}))
+        entries = self._vocabulary_entries()
+        return {
+            canonical: list(dict.fromkeys([entry["detector_label"], *entry["aliases"]]))
+            for canonical, entry in entries.items()
+        }
+
+    def _vocabulary_entries(self) -> dict[str, dict[str, Any]]:
+        """Normalize both the current schema and legacy list-valued test contracts."""
+        raw = self._contract_data.get("vocabulary", {}).get("canonical_labels", {})
+        entries: dict[str, dict[str, Any]] = {}
+        for canonical, value in raw.items():
+            canonical = str(canonical).strip().lower()
+            if isinstance(value, dict):
+                detector_label = str(value.get("detector_label", canonical.replace("_", " "))).strip()
+                aliases = [str(alias).strip() for alias in value.get("aliases", []) if str(alias).strip()]
+            else:
+                aliases = [str(alias).strip() for alias in (value or []) if str(alias).strip()]
+                detector_label = aliases[0] if aliases else canonical.replace("_", " ")
+            if not detector_label:
+                raise ValueError(f"Canonical category {canonical!r} has an empty detector label")
+            entries[canonical] = {"detector_label": detector_label, "aliases": aliases}
+        return entries
+
+    def get_ranked_detector_vocabulary(self) -> list[dict[str, Any]]:
+        entries = self._vocabulary_entries()
+        rank_by_category: dict[str, tuple[int, int]] = {}
+        for requirement in sorted(self.get_requirements(), key=lambda item: item.rank):
+            for category_index, category in enumerate(requirement.accepted_categories):
+                key = category.lower()
+                rank_by_category.setdefault(key, (requirement.rank, category_index))
+        ordered = sorted(
+            entries,
+            key=lambda key: (*rank_by_category.get(key, (10_000, 10_000)), list(entries).index(key)),
+        )
+        return [
+            {
+                "canonical_label": canonical,
+                "detector_label": entries[canonical]["detector_label"],
+                "aliases": list(entries[canonical]["aliases"]),
+                "rank": list(rank_by_category.get(canonical, (10_000, 10_000))),
+            }
+            for canonical in ordered
+        ]
 
     def get_detector_prompts(self) -> list[str]:
-        vocab = self.get_semantic_vocabulary()
-        prompts: list[str] = []
-        for aliases in vocab.values():
-            for alias in aliases:
-                if alias not in prompts:
-                    prompts.append(alias)
+        prompts = [entry["detector_label"] for entry in self.get_ranked_detector_vocabulary()]
+        if len(prompts) != len(set(label.lower() for label in prompts)):
+            raise ValueError("FM contract detector labels must be unique")
         return prompts
 
+    def get_detector_label_to_canonical_map(self) -> dict[str, str]:
+        return {
+            entry["detector_label"].lower(): entry["canonical_label"]
+            for entry in self.get_ranked_detector_vocabulary()
+        }
+
     def get_alias_to_canonical_map(self) -> dict[str, str]:
-        vocab = self.get_semantic_vocabulary()
+        entries = self._vocabulary_entries()
         mapping: dict[str, str] = {}
-        for canonical, aliases in vocab.items():
+        for canonical, entry in entries.items():
             mapping[canonical.lower()] = canonical
-            for alias in aliases:
+            mapping[entry["detector_label"].lower()] = canonical
+            for alias in entry["aliases"]:
                 mapping[alias.lower()] = canonical
         return mapping
 
@@ -202,6 +257,12 @@ class FMRequirementProvider(RequirementProvider):
         raise FMBackendNotConfiguredError("Live FM backend not configured.")
 
     def get_detector_prompts(self) -> list[str]:
+        raise FMBackendNotConfiguredError("Live FM backend not configured.")
+
+    def get_ranked_detector_vocabulary(self) -> list[dict[str, Any]]:
+        raise FMBackendNotConfiguredError("Live FM backend not configured.")
+
+    def get_detector_label_to_canonical_map(self) -> dict[str, str]:
         raise FMBackendNotConfiguredError("Live FM backend not configured.")
 
     def get_alias_to_canonical_map(self) -> dict[str, str]:

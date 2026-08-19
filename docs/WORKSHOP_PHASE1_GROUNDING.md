@@ -16,29 +16,45 @@ definitions, and inspection rigs are frozen.
 
 ## Architecture
 
-The task is converted once into a manual future-FM contract. No live foundation
-model is called. The contract contains broad function descriptions, detector-
-friendly semantic candidate categories, required relation names, and optional
-ranking/inspection priors. It does not contain millimetre thresholds or
-point-cloud verifier parameters.
+The task is converted once into `ManualWorkshopFMContract`, a deterministic
+surrogate for the single FM response that would occur at episode initialization.
+No live foundation model is called. `FMRequirementProvider` implements the same
+boundary and fails clearly until a real backend exists. The provider exposes
+requirements, ranked canonical categories, one detector display label per
+canonical category, normalization aliases, and required relations. It does not
+contain millimetre thresholds or point-cloud verifier parameters.
 
 YOLO-World is the only production semantic detector. Its `set_classes(...)`
-vocabulary comes from the active contract. It detects broad categories such as
+vocabulary comes exclusively from the active provider. Exactly one detector
+class is installed per canonical category. Aliases such as `manual screwdriver`,
+`cordless drill`, and `shallow tray` normalize external labels but are never
+independent YOLO classes. It detects broad categories such as
 `screwdriver`, `power_driver`, `screw`, `bolt`, `workbench`, `tool_cart`,
 `shelf`, `parts_tray`, and `hardware_bin`. It is not asked functional-affordance
 sentences and is not supplemented by CLIP, another VLM, or a point-cloud
 semantic classifier.
 
-Detections are depth-refined inside YOLO boxes, backprojected to world-frame
-points, fused across the current views, and associated with persistent generic
-IDs (`object_XXXX`). Each track also retains a typed, stage-local
+The active calibrated stage volume is projected to a conservative image crop so
+tiny drawer hardware receives adequate detector resolution. Detections are then
+depth-refined inside YOLO boxes and backprojected to world-frame points.
+Before tracking, same-camera duplicates are suppressed using canonical label,
+box IoU, mask overlap, 3-D centroid distance, and cloud-AABB overlap. Competing
+cross-category hypotheses are retained as uncertainty metadata on one physical
+proposal rather than creating duplicate objects. Proposals are fused across
+views and associated with persistent generic IDs (`object_XXXX`). Each track
+also retains a typed, stage-local
 `MeasurementEvidence` record with its source stage/region, camera contributors,
 point count, measurement method, and quality metadata. Persistence accumulates
 semantic/entity history; property extraction uses the latest valid local
 measurement rather than simulator body geometry.
 
 Neutral calibrated region volumes select evidence and are represented by
-generic IDs (`region_XXXX`). Their configured bounds are never treated as
+stable generic IDs (`region_XXXX`). YOLO remains the semantic source. Refined
+YOLO region pixels are backprojected and assigned to at most one neutral region
+using point-in-volume fraction, 3-D centroid proximity, projected 2-D overlap,
+and multi-view confidence consensus. Evidence accumulates across views and
+inspection stages. Proposal/backend names are not semantic evidence. Configured
+bounds are never treated as
 measured support or cavity dimensions. A dominant observed support plane gives
 the usable oriented footprint. The shared Kitchen open-cavity extractor checks
 rim enclosure, open centre, observed interior, depth, and camera coverage.
@@ -65,6 +81,12 @@ measurement settings, grasp/clearance allowances, and packing margins. Runtime
 detector, tracker, voxel, and inspection settings remain in
 `mujoco_scenes/configs/workshop_phase1.yaml`.
 
+The current detector classes are the provider-owned display strings for the
+eleven canonical categories: `hand screwdriver`, `power drill`, `fastener`,
+`hex bolt`, `adjustable wrench`, `pliers`, `workbench`, `tool cart`, `shelf`,
+`parts tray`, and `hardware bin`. The serialized canonical output records both
+this ordered list and the display-label-to-canonical map.
+
 ## Generic measurements and relations
 
 Object measurements use robust PCA and local distal subsets. They record a
@@ -80,7 +102,7 @@ the front-plane statistic, recess cluster, opening footprint, and recess depth.
 There are no 7 mm/30 mm fallback measurements: unresolved target evidence makes
 target-dependent relations `UNKNOWN`.
 
-The verifier exposes a compact relation vocabulary:
+The verifier exposes a compact relation registry:
 
 - `REACHES_TARGET`: observed usable length versus observed recess depth and a
   configured generic grasp allowance, with a signed margin.
@@ -99,6 +121,11 @@ Every predicate returns `TRUE`, `FALSE`, or `UNKNOWN`. Semantic and geometry
 combine as: PASS+PASS=PASS; PASS+UNKNOWN and UNKNOWN+PASS=UNKNOWN; any FAIL
 combination is FAIL. Only PASS enters verified witness pools. No detections after
 inspection exhaustion is `INSUFFICIENT_EVIDENCE`, not infeasibility.
+The active requirement's `required_relations` list selects which unary and joint
+registry entries execute. Unary relations are `REACHES_TARGET`,
+`COMPATIBLE_WITH_TARGET`, `PLANAR_SUPPORT`, and `OPEN_CAVITY`; joint relations
+are `COMPATIBLE_WITH`, `FITS_SET_ON`, and `FITS_IN`. Removing a relation from a
+provider contract changes verification without a source-code edit.
 
 ## Joint search and diagnoses
 
@@ -114,14 +141,16 @@ bolt candidates but none passes `COMPATIBLE_WITH_TARGET`, yielding
 candidates, while interface and reach relations eliminate every complete tuple,
 yielding `GLOBAL_CONFLICT`.
 
-Semantic-only selects solely by contract membership. No-joint-coupling selects
+Semantic-only selects solely by contract membership and does not invoke the
+point-cloud verifier. No-joint-coupling selects
 independently verified unary roles without compatibility or packing. No-
 persistence replaces the tracker, semantic cache, and current object evidence at
 each inspection stage. Single-front-view explicitly selects
 `workshop_camera_front`.
 
 Oracle-mask and oracle-semantics experiments are separate. Oracle masks provide
-only object instance pixels; YOLO labels are associated independently by IoU,
+only object instance pixels; YOLO labels are associated independently using
+2-D overlap and calibrated 3-D proximity,
 and raw YOLO furniture detections remain available to region grounding. Oracle
 semantics is an explicitly privileged upper bound and maps simulator subtypes
 back to the same broad contract taxonomy.
@@ -129,7 +158,10 @@ back to the same broad contract taxonomy.
 ## Reproduction
 
 The repository-owned runner generates oracle-semantics/perfect-mask,
-YOLO-semantics/oracle-mask, full-production, and seven-arm ablation summaries:
+YOLO-semantics/oracle-mask, full-production, semantic diagnostics, and two
+separately labelled ablation suites. Production ablations retain real YOLO
+perception. Controlled grounding ablations use oracle semantics/masks so
+upstream detector misses do not hide geometry, persistence, or coupling effects:
 
 ```bash
 MUJOCO_GL=egl PYOPENGL_PLATFORM=egl PYTHONPATH=. \
@@ -152,6 +184,24 @@ MUJOCO_GL=egl PYOPENGL_PLATFORM=egl PYTHONPATH=. \
 The controlled oracle-semantics/perfect-mask gate must be 14/14 exact before
 freeze. Real YOLO accuracy is reported honestly and does not change the frozen
 architecture.
+
+## Canonical freeze result
+
+The frozen canonical run records 14/14 for controlled full grounding, 1/14 for
+YOLO semantics with oracle object masks, and 2/14 for full production. The two
+production passes are I3 (`NO_PARTS_CONTAINER`) and I5
+(`OBJECT_REGION_PACKING_FAILURE`). These production results are a perception
+limitation, not a closed production benchmark: screws have zero aggregate
+recall, bolt detections have zero correct associations, and shelf detections
+have a high false-positive rate in the simulated RGB domain. The complete
+variant tables, post-hoc semantic diagnostics, and failure-layer breakdown are
+stored under `outputs/workshop_phase1_final/`.
+
+The production ablation scores are full 2/14, semantic-only 1/14, no-joint
+1/14, no-persistence 0/14, and single-front-view 2/14. With controlled oracle
+perception, the corresponding scientific grounding scores are full 14/14,
+semantic-only 4/14, no-geometry 4/14, no-joint 8/14, no-persistence 6/14, and
+single-front-view 7/14.
 
 ## Limitations
 

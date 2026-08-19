@@ -31,11 +31,15 @@ class PersistentInstanceTracker:
         track_match_distance_threshold_m: float = 0.045,
         voxel_size_m: float = 0.003,
         min_cluster_points: int = 10,
+        volume_margin_m: float = 0.08,
+        min_points_per_mask: int = 8,
     ) -> None:
         self.cluster_distance_threshold_m = cluster_distance_threshold_m
         self.track_match_distance_threshold_m = track_match_distance_threshold_m
         self.voxel_size_m = voxel_size_m
         self.min_cluster_points = min_cluster_points
+        self.volume_margin_m = float(volume_margin_m)
+        self.min_points_per_mask = int(min_points_per_mask)
 
         self._tracks: dict[str, ObservedObjectTrack] = {}
         self._next_instance_idx: int = 1
@@ -82,7 +86,13 @@ class PersistentInstanceTracker:
 
         score_by_label: dict[str, float] = defaultdict(float)
         raw_by_label: dict[str, str] = {}
+        unique: dict[tuple[int, str, str], dict[str, Any]] = {}
         for obs in observations:
+            label = obs.get("canonical_label", "unknown").lower()
+            key = (int(obs.get("stage_index", 0)), str(obs.get("camera_id", "")), label)
+            if key not in unique or float(obs.get("confidence", 0.0)) > float(unique[key].get("confidence", 0.0)):
+                unique[key] = obs
+        for obs in unique.values():
             label = obs.get("canonical_label", "unknown").lower()
             conf = float(obs.get("confidence", 1.0))
             score_by_label[label] += conf
@@ -98,7 +108,9 @@ class PersistentInstanceTracker:
             "canonical_label": best_label,
             "raw_label": raw_by_label.get(best_label, best_label),
             "confidence": round(norm_conf, 4),
-            "total_observations": len(observations),
+            "total_observations": len(unique),
+            "supporting_view_count": len({obs.get("camera_id") for obs in unique.values()
+                                           if obs.get("canonical_label", "unknown").lower() == best_label}),
         }
 
     def update_with_stage_observations(
@@ -124,18 +136,18 @@ class PersistentInstanceTracker:
                     obs.camera_rotation_world,
                     max_depth=3.0,
                 )
-                if len(pts) < 8:
+                if len(pts) < self.min_points_per_mask:
                     continue
 
                 gated = gate_points_to_volume(
                     pts,
                     minimum_world_m=stage_volume_min,
                     maximum_world_m=stage_volume_max,
-                    boundary_margin_m=0.08,
+                    boundary_margin_m=self.volume_margin_m,
                 )
                 pts = pts[gated]
                 pixel_indices = pixel_indices[gated]
-                if len(pts) < 8:
+                if len(pts) < self.min_points_per_mask:
                     continue
 
                 colors = obs.rgb[pixel_indices[:, 0], pixel_indices[:, 1]].astype(np.float32) / 255.0
@@ -226,6 +238,16 @@ class PersistentInstanceTracker:
                     "raw_label": d["mask"].raw_label,
                     "confidence": d["mask"].confidence,
                 })
+                for alternative in d["mask"].semantic_alternatives:
+                    semantic_obs.append({
+                        "stage_index": stage_index,
+                        "camera_id": d["camera_id"],
+                        "canonical_label": alternative["canonical_label"],
+                        "raw_label": alternative["raw_label"],
+                        "confidence": float(alternative["confidence"]) * 0.8,
+                        "is_suppressed_alternative": True,
+                        "physical_proposal_id": d["mask"].duplicate_group_id,
+                    })
 
             stage_objects.append({
                 "points": fused_pts,

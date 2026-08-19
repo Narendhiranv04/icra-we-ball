@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import tempfile
+from dataclasses import replace
 from pathlib import Path
 import numpy as np
 import pytest
@@ -23,6 +24,7 @@ from mujoco_scenes.workshop_phase1.types import (
     ProposalMode,
     RequirementSource,
     SemanticBackendType,
+    TargetGeometryEvidence,
     ViewObservation,
     combine_status,
 )
@@ -75,7 +77,11 @@ def test_fm_contract_loading_and_neutrality():
         assert requirement.geometric_constraints == {}
 
     prompts = contract.get_detector_prompts()
-    assert len(prompts) >= 10
+    assert len(prompts) == 11
+    assert len(prompts) == len(contract.get_semantic_vocabulary())
+    assert prompts == [entry["detector_label"] for entry in contract.get_ranked_detector_vocabulary()]
+    for alias in ("manual screwdriver", "powered screwdriver", "cordless drill", "shallow tray"):
+        assert alias not in prompts
     # Detector prompts must be broad physical names, never variant-specific or simulator strings
     for p in prompts:
         assert "workshop_" not in p
@@ -144,9 +150,10 @@ def test_changing_fm_contract_changes_detector_vocabulary(tmp_path: Path):
     contract = ManualWorkshopFMContract(custom_yaml)
     prompts = contract.get_detector_prompts()
     assert "cup" in prompts
-    assert "drinking cup" in prompts
     assert "bowl" in prompts
-    assert "soup bowl" in prompts
+    assert prompts == ["cup", "bowl"]
+    assert contract.get_alias_to_canonical_map()["drinking cup"] == "cup"
+    assert contract.get_alias_to_canonical_map()["soup bowl"] == "bowl"
     assert "screwdriver" not in prompts
 
 
@@ -158,6 +165,16 @@ def test_no_function_description_prompts():
     for p in prompts:
         for f in forbidden_phrases:
             assert f not in p.lower(), f"Affordance prompt found: {p}"
+
+
+def test_detector_vocabulary_owned_only_by_provider_layer():
+    phase1_dir = Path(__file__).resolve().parent.parent / "workshop_phase1"
+    for source_path in phase1_dir.glob("*.py"):
+        if source_path.name == "requirements.py":
+            continue
+        source = source_path.read_text(encoding="utf-8")
+        assert "set_classes([" not in source
+        assert "detector_classes = [" not in source
 
 
 def test_no_clip_imported_in_phase1():
@@ -323,6 +340,8 @@ def test_no_joint_self_test():
     assert res_full.status == "FEASIBLE"
     assert res_no_joint.status == "FEASIBLE"
     assert res_no_joint.witness.verification_details.get("ablation") == "NO_JOINT_COUPLING"
+    for relation in ("COMPATIBLE_WITH", "FITS_SET_ON", "FITS_IN"):
+        assert ctrl_no_joint.geometric_grounder.relation_call_counts[relation] == 0
 
 
 def test_semantic_only_self_test():
@@ -338,6 +357,8 @@ def test_semantic_only_self_test():
     assert res_full.status == "INFEASIBLE"
     assert res_full.rejection_reason == "TOOL_GEOMETRY_FAILURE"
     assert res_sem.status == "FEASIBLE"
+    assert ctrl_sem.geometric_grounder.total_geometric_calls == 0
+    assert all(count == 0 for count in ctrl_sem.geometric_grounder.relation_call_counts.values())
 
 
 def test_config_wiring(tmp_path: Path):
@@ -350,16 +371,40 @@ def test_config_wiring(tmp_path: Path):
     geometry_path = tmp_path / "geometry.yaml"
     geometry_path.write_text(yaml.safe_dump(geometry_data))
     cfg_data = {
-        "pipeline": {"geometry_config_path": str(geometry_path)},
+        "pipeline": {
+            "geometry_config_path": str(geometry_path),
+            "fm_contract_path": "mujoco_scenes/configs/workshop_phase1_fm_contract.yaml",
+            "requirements_source": "static",
+            "inspection_policy": "fixed",
+            "mask_backend": "production",
+            "semantic_backend": "production",
+            "ablation": "none",
+            "image_width": 640,
+            "image_height": 360,
+        },
         "perception": {
+            "volume_margin_m": 0.031,
+            "min_points_per_mask": 13,
             "detector": {
+                "checkpoint": str(tmp_path / "missing.pt"),
                 "confidence_threshold": 0.12,
                 "nms_iou_threshold": 0.50,
+                "inference_size": 512,
+                "device": "cpu",
+                "max_detections": 17,
+            },
+            "duplicate_suppression": {
+                "box_iou_threshold": 0.61,
+                "mask_overlap_threshold": 0.71,
+                "centroid_distance_m": 0.014,
+                "aabb_overlap_threshold": 0.41,
             }
         },
         "tracking": {
             "cluster_distance_threshold_m": 0.055,
             "track_match_distance_threshold_m": 0.060,
+            "voxel_size_m": 0.004,
+            "min_cluster_points": 12,
         },
         "inspection": {
             "sequence": ["RIGHT_DRAWER", "LEFT_DRAWER"],
@@ -374,10 +419,88 @@ def test_config_wiring(tmp_path: Path):
 
     assert ctrl.tracker.cluster_distance_threshold_m == 0.055
     assert ctrl.tracker.track_match_distance_threshold_m == 0.060
+    assert ctrl.tracker.voxel_size_m == 0.004
+    assert ctrl.tracker.min_cluster_points == 12
+    assert ctrl.tracker.volume_margin_m == 0.031
+    assert ctrl.tracker.min_points_per_mask == 13
+    assert ctrl.camera_rig.width == 640 and ctrl.camera_rig.height == 360
+    assert ctrl.proposal_backend.confidence_threshold == 0.12
+    assert ctrl.proposal_backend.nms_iou_threshold == 0.50
+    assert ctrl.proposal_backend.inference_size == 512
+    assert ctrl.proposal_backend.max_detections == 17
+    assert ctrl.proposal_backend.min_points_per_mask == 13
+    assert ctrl.proposal_backend.duplicate_box_iou_threshold == 0.61
     assert ctrl.geometric_grounder.config["relations"]["grasp_allowance_m"] == 0.081
     assert ctrl.geometric_grounder.config["relations"]["packing_edge_clearance_m"] == 0.012
     assert ctrl.inspection_sequence == ["RIGHT_DRAWER", "LEFT_DRAWER"]
     assert ctrl.early_stop_enabled is False
+
+
+def _proposal(det_id: str, label: str, box: tuple[int, int, int, int],
+              mask: np.ndarray, confidence: float, centroid: list[float]) -> ObservedMask:
+    centre = np.asarray(centroid, dtype=float)
+    return ObservedMask(
+        detection_id=det_id, camera_id="camera", binary_mask=mask,
+        bounding_box_xyxy=box, confidence=confidence,
+        canonical_label=label, raw_label=label, predicted_label=label,
+        refined_mask_area=int(mask.sum()), depth_point_count=int(mask.sum()),
+        centroid_world_m=centre,
+        cloud_bounds_world_m={
+            "minimum_world_m": (centre - 0.01).tolist(),
+            "maximum_world_m": (centre + 0.01).tolist(),
+        },
+    )
+
+
+def test_pretracking_duplicate_suppression_same_object():
+    backend = YOLOWorldProposalBackend(weights_path=Path("/missing/model.pt"))
+    first = np.zeros((80, 80), bool); first[10:50, 10:50] = True
+    second = np.zeros((80, 80), bool); second[11:51, 11:51] = True
+    result = backend.suppress_duplicate_proposals([
+        _proposal("a", "screwdriver", (10, 10, 50, 50), first, 0.8, [0, 0, 0.5]),
+        _proposal("b", "screwdriver", (11, 11, 51, 51), second, 0.6, [0.002, 0, 0.5]),
+    ])
+    assert [item.detection_id for item in result] == ["a"]
+
+
+def test_pretracking_dedup_preserves_distinct_same_category_objects():
+    backend = YOLOWorldProposalBackend(weights_path=Path("/missing/model.pt"))
+    first = np.zeros((80, 80), bool); first[5:20, 5:20] = True
+    second = np.zeros((80, 80), bool); second[50:65, 50:65] = True
+    result = backend.suppress_duplicate_proposals([
+        _proposal("a", "screw", (5, 5, 20, 20), first, 0.8, [0, 0, 0.5]),
+        _proposal("b", "screw", (50, 50, 65, 65), second, 0.7, [0.03, 0, 0.5]),
+    ])
+    assert len(result) == 2
+
+
+def test_pretracking_dedup_keeps_one_cross_category_hypothesis():
+    backend = YOLOWorldProposalBackend(weights_path=Path("/missing/model.pt"))
+    mask = np.zeros((80, 80), bool); mask[10:50, 10:50] = True
+    result = backend.suppress_duplicate_proposals([
+        _proposal("a", "screw", (10, 10, 50, 50), mask, 0.7, [0, 0, 0.5]),
+        _proposal("b", "bolt", (10, 10, 50, 50), mask.copy(), 0.8, [0, 0, 0.5]),
+    ])
+    assert len(result) == 1 and result[0].canonical_label == "bolt"
+    assert result[0].semantic_alternatives[0]["canonical_label"] == "screw"
+
+
+def test_required_relations_drive_unary_verification():
+    contract = ManualWorkshopFMContract()
+    requirement = next(r for r in contract.get_requirements() if r.function_name == "CAN_DRIVE_SCREW")
+    no_relations = replace(requirement, required_relations=[])
+    points = np.c_[np.linspace(0, 0.03, 40), np.zeros(40), np.zeros(40)]
+    track = ObservedObjectTrack(instance_id="object_1", fused_points=points)
+    grounder = GeometricGrounder(target_evidence=TargetGeometryEvidence(
+        estimated_recess_depth_m=0.04, estimated_opening_diameter_m=0.01,
+        validity=GroundingStatus.PASS))
+    required_result = grounder.ground_object_geometry(track, requirement)
+    calls_after_required = grounder.relation_call_counts["REACHES_TARGET"]
+    optional_result = grounder.ground_object_geometry(track, no_relations)
+    assert required_result.geometric_status == GroundingStatus.FAIL
+    assert optional_result.geometric_status == GroundingStatus.PASS
+    assert calls_after_required == 1
+    assert grounder.relation_call_counts["REACHES_TARGET"] == 1
 
 
 @pytest.mark.parametrize("variant", [

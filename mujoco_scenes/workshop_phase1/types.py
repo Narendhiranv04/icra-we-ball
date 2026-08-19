@@ -168,6 +168,12 @@ class ObservedMask:
     predicted_label: str = "object"
     backend_name: str = "yolo_world"
     features: Any | None = None
+    refined_mask_area: int = 0
+    depth_point_count: int = 0
+    centroid_world_m: Any | None = None
+    cloud_bounds_world_m: dict[str, Any] = field(default_factory=dict)
+    duplicate_group_id: str | None = None
+    semantic_alternatives: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
