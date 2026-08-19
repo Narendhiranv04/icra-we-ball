@@ -98,6 +98,12 @@ requirements with 10–15 ranked concrete object or region types. It
 does not claim those types are present, search the scene, verify geometry,
 sequence actions, or execute anything.
 
+The separate [llm3_baseline](llm3_baseline/README.md) folder is a zero-training
+comparison method. A frozen VLM directly proposes observation-bounded scene
+actions, and its bounded executive can return shared motion failures for a new
+proposal. The current command-line path produces validated plans only; live
+MuJoCo skill dispatch remains an explicit integration step.
+
 The complete native server and new-client-PC procedure is in
 [NEW_PC_SETUP.md](inference_server/NEW_PC_SETUP.md).
 

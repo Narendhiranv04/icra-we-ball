@@ -1,0 +1,36 @@
+{
+  "scene": "kitchen",
+  "revision": 0,
+  "visible_entities": [
+    {
+      "id": "mug_1",
+      "kind": "object",
+      "label": "mug",
+      "facts": {}
+    },
+    {
+      "id": "spoon_1",
+      "kind": "object",
+      "label": "spoon",
+      "facts": {}
+    }
+  ],
+  "known_regions": [
+    {
+      "id": "D1",
+      "label": "left drawer",
+      "state": "closed",
+      "inspected": false
+    },
+    {
+      "id": "serving_area",
+      "label": "serving area",
+      "state": "open",
+      "inspected": true
+    }
+  ],
+  "robot": {
+    "holding": null
+  },
+  "goal_satisfied": false
+}

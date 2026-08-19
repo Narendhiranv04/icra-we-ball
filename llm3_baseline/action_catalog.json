@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "scenes": {
+    "kitchen": {
+      "INSPECT": {
+        "description": "Inspect one known region and update visible observations.",
+        "arguments": {
+          "region_id": "region"
+        }
+      },
+      "PICK": {
+        "description": "Pick one currently visible object.",
+        "arguments": {
+          "object_id": "object"
+        }
+      },
+      "PLACE": {
+        "description": "Place the held object in or on a known region.",
+        "arguments": {
+          "object_id": "object",
+          "region_id": "region"
+        }
+      },
+      "POUR": {
+        "description": "Pour from the held source into a visible target object.",
+        "arguments": {
+          "source_id": "object",
+          "target_id": "object"
+        }
+      },
+      "STIR": {
+        "description": "Stir a visible target using the held tool.",
+        "arguments": {
+          "tool_id": "object",
+          "target_id": "object"
+        }
+      }
+    },
+    "living_room": {
+      "INSPECT": {
+        "description": "Inspect one known region and update visible observations.",
+        "arguments": {
+          "region_id": "region"
+        }
+      },
+      "PICK": {
+        "description": "Pick one currently visible object.",
+        "arguments": {
+          "object_id": "object"
+        }
+      },
+      "PLACE": {
+        "description": "Place the held object in or on a known region.",
+        "arguments": {
+          "object_id": "object",
+          "region_id": "region"
+        }
+      },
+      "CLEAN": {
+        "description": "Clean a visible rigid surface using the held object.",
+        "arguments": {
+          "tool_id": "object",
+          "target_id": "object"
+        }
+      }
+    },
+    "workshop": {
+      "INSPECT": {
+        "description": "Inspect one known region and update visible observations.",
+        "arguments": {
+          "region_id": "region"
+        }
+      },
+      "PICK": {
+        "description": "Pick one currently visible object.",
+        "arguments": {
+          "object_id": "object"
+        }
+      },
+      "PLACE": {
+        "description": "Place the held object in or on a known region.",
+        "arguments": {
+          "object_id": "object",
+          "region_id": "region"
+        }
+      },
+      "REMOVE": {
+        "description": "Remove a visible obstruction from a visible target.",
+        "arguments": {
+          "object_id": "object",
+          "target_id": "object"
+        }
+      },
+      "INSERT": {
+        "description": "Insert the held fastener into a visible target.",
+        "arguments": {
+          "fastener_id": "object",
+          "target_id": "object"
+        }
+      },
+      "FASTEN": {
+        "description": "Drive an inserted fastener using the held driver.",
+        "arguments": {
+          "tool_id": "object",
+          "fastener_id": "object",
+          "target_id": "object"
+        }
+      }
+    }
+  }
+}
