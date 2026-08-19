@@ -6,7 +6,6 @@ import argparse
 import csv
 import json
 import sys
-import time
 from pathlib import Path
 from typing import Any
 
@@ -16,14 +15,13 @@ if str(WORKSPACE_ROOT) not in sys.path:
     sys.path.insert(0, str(WORKSPACE_ROOT))
 
 from mujoco_scenes.workshop_phase1.evaluation import PrivilegedPhase1Evaluator
-from mujoco_scenes.workshop_phase1.inspection_controller import WorkshopPhase1InspectionController
-from mujoco_scenes.workshop_phase1.requirements import (
-    FMRequirementProvider,
-    StaticWorkshopRequirementProvider,
+from mujoco_scenes.workshop_phase1.inspection_controller import (
+    WorkshopPhase1InspectionController,
 )
 from mujoco_scenes.workshop_phase1.types import (
     AblationType,
     MaskBackendType,
+    ProposalMode,
     SemanticBackendType,
 )
 from mujoco_scenes.workshop_scene import WorkshopScene
@@ -69,11 +67,18 @@ def parse_ablation(name: str) -> AblationType:
         "no_geometry": AblationType.NO_GEOMETRY,
         "no_joint_coupling": AblationType.NO_JOINT_COUPLING,
         "no_persistence": AblationType.NO_PERSISTENCE,
-        "single_view": AblationType.SINGLE_VIEW,
+        "single_view": AblationType.SINGLE_FRONT_VIEW,
+        "single_front_view": AblationType.SINGLE_FRONT_VIEW,
         "oracle_mask": AblationType.ORACLE_MASK,
         "oracle_semantics": AblationType.ORACLE_SEMANTICS,
     }
     return mapping.get(name.lower(), AblationType.NONE)
+
+
+def parse_proposal_mode(name: str) -> ProposalMode:
+    if name == "yolo_plus_rgbd_fallback":
+        return ProposalMode.YOLO_PLUS_RGBD_FALLBACK
+    return ProposalMode.YOLO_ONLY
 
 
 def run_single_variant(
@@ -81,8 +86,7 @@ def run_single_variant(
     robot: str = "none",
     mask_backend: str = "production",
     semantic_backend: str = "production",
-    requirements_source: str = "static",
-    inspection_policy: str = "fixed",
+    proposal_mode: str = "yolo_only",
     ablation: str = "none",
     output_dir: Path | None = None,
     evaluate: bool = True,
@@ -90,7 +94,7 @@ def run_single_variant(
     """Run Phase 1 pipeline on one variant."""
     print(f"\n==================================================")
     print(f"Running Workshop Phase 1: {variant}")
-    print(f"  Mask: {mask_backend}, Semantics: {semantic_backend}, Reqs: {requirements_source}, Ablation: {ablation}")
+    print(f"  Mask: {mask_backend}, Semantics: {semantic_backend}, Proposal: {proposal_mode}, Ablation: {ablation}")
     print(f"==================================================")
 
     scene = WorkshopScene(robot=robot, variant=variant)
@@ -98,21 +102,20 @@ def run_single_variant(
     m_type = parse_mask_backend(mask_backend)
     s_type = parse_semantic_backend(semantic_backend)
     abl_type = parse_ablation(ablation)
+    prop_mode = parse_proposal_mode(proposal_mode)
 
-    req_provider = FMRequirementProvider() if requirements_source == "fm" else StaticWorkshopRequirementProvider()
     var_out = (output_dir / variant) if output_dir else None
 
     controller = WorkshopPhase1InspectionController(
+        scene=scene,
         mask_backend=m_type,
         semantic_backend=s_type,
         ablation=abl_type,
-        requirements_provider=req_provider,
-        requirements_source=requirements_source,
-        inspection_policy=inspection_policy,
+        proposal_mode=prop_mode,
         output_dir=var_out,
     )
 
-    result = controller.run_episode(scene)
+    result = controller.run_episode()
 
     eval_metrics = {}
     if evaluate:
@@ -120,7 +123,7 @@ def run_single_variant(
         eval_metrics = evaluator.evaluate_episode(
             result=result,
             tracks=list(controller.tracker.tracks.values()),
-            regions=controller.region_grounder._known_regions.values(),
+            regions=controller.candidate_regions,
             output_dir=var_out,
         )
 
@@ -130,7 +133,6 @@ def run_single_variant(
     if result.rejection_reason:
         print(f"  Rejection Reason: {result.rejection_reason}")
     print(f"  Inspected Regions: {result.trace.inspected_regions} (Early stopped: {result.trace.early_stopped})")
-    print(f"  Time: {result.metrics.get('total_inference_time_s', 0):.2f}s")
     if evaluate:
         print(f"  Evaluation Pass: {eval_metrics.get('overall_pass', False)}")
 
@@ -146,8 +148,7 @@ def run_benchmark_suite(
     robot: str = "none",
     mask_backend: str = "production",
     semantic_backend: str = "production",
-    requirements_source: str = "static",
-    inspection_policy: str = "fixed",
+    proposal_mode: str = "yolo_only",
     ablation: str = "none",
     output_dir: Path | None = None,
     evaluate: bool = True,
@@ -158,7 +159,7 @@ def run_benchmark_suite(
 
     print("\n" + "=" * 80)
     print(f"WORKSHOP (W1) PHASE 1 BENCHMARK SUITE ({len(variants)} variants)")
-    print(f"Mask: {mask_backend} | Semantics: {semantic_backend} | Reqs: {requirements_source} | Ablation: {ablation}")
+    print(f"Mask: {mask_backend} | Semantics: {semantic_backend} | Proposal: {proposal_mode} | Ablation: {ablation}")
     print("=" * 80)
 
     for var in variants:
@@ -167,8 +168,7 @@ def run_benchmark_suite(
             robot=robot,
             mask_backend=mask_backend,
             semantic_backend=semantic_backend,
-            requirements_source=requirements_source,
-            inspection_policy=inspection_policy,
+            proposal_mode=proposal_mode,
             ablation=ablation,
             output_dir=output_dir,
             evaluate=evaluate,
@@ -183,7 +183,7 @@ def run_benchmark_suite(
         "accuracy": round(passed_count / max(1, len(variants)), 4),
         "mask_backend": mask_backend,
         "semantic_backend": semantic_backend,
-        "requirements_source": requirements_source,
+        "proposal_mode": proposal_mode,
         "ablation": ablation,
         "results": results,
     }
@@ -208,18 +208,18 @@ def run_benchmark_suite(
 
 
 def run_ablation_suite(output_dir: Path | None = None) -> list[dict[str, Any]]:
-    """Run full ablation suite across all 14 variants."""
+    """Run full canonical 7-arm ablation suite across all 14 variants (98 total episodes)."""
     ablations = [
-        {"name": "Full Production Pipeline", "mask": "production", "sem": "production", "abl": "none"},
-        {"name": "Oracle Masks (Upper Bound)", "mask": "oracle", "sem": "production", "abl": "oracle_mask"},
-        {"name": "Oracle Semantics", "mask": "production", "sem": "oracle", "abl": "oracle_semantics"},
-        {"name": "Semantic-Only Grounding (No Geo)", "mask": "production", "sem": "production", "abl": "semantic_only"},
-        {"name": "No Joint Coupling Checks", "mask": "production", "sem": "production", "abl": "no_joint_coupling"},
-        {"name": "No Multi-Stage Persistence", "mask": "production", "sem": "production", "abl": "no_persistence"},
-        {"name": "Single Front Camera View", "mask": "production", "sem": "production", "abl": "single_view"},
+        {"name": "Full Production Pipeline", "mask": "production", "sem": "production", "prop": "yolo_only", "abl": "none"},
+        {"name": "Oracle Masks (Upper Bound)", "mask": "oracle", "sem": "production", "prop": "yolo_only", "abl": "oracle_mask"},
+        {"name": "Oracle Semantics", "mask": "production", "sem": "oracle", "prop": "yolo_only", "abl": "oracle_semantics"},
+        {"name": "Semantic-Only Grounding (No Geo)", "mask": "production", "sem": "production", "prop": "yolo_only", "abl": "semantic_only"},
+        {"name": "No Joint Coupling Checks", "mask": "production", "sem": "production", "prop": "yolo_only", "abl": "no_joint_coupling"},
+        {"name": "No Multi-Stage Persistence", "mask": "production", "sem": "production", "prop": "yolo_only", "abl": "no_persistence"},
+        {"name": "Single Front Camera View", "mask": "production", "sem": "production", "prop": "yolo_only", "abl": "single_front_view"},
     ]
 
-    out_base = output_dir or Path("outputs/workshop_phase1_ablations")
+    out_base = output_dir or Path("outputs/workshop_phase1_final/ablations")
     out_base.mkdir(parents=True, exist_ok=True)
 
     suite_results = []
@@ -230,6 +230,7 @@ def run_ablation_suite(output_dir: Path | None = None) -> list[dict[str, Any]]:
             variants=ALL_WORKSHOP_VARIANTS,
             mask_backend=abl["mask"],
             semantic_backend=abl["sem"],
+            proposal_mode=abl["prop"],
             ablation=abl["abl"],
             output_dir=abl_out,
             evaluate=True,
@@ -244,7 +245,6 @@ def run_ablation_suite(output_dir: Path | None = None) -> list[dict[str, Any]]:
             "accuracy": summary["accuracy"],
         })
 
-    # Save JSON and CSV
     with open(out_base / "ablation_results.json", "w", encoding="utf-8") as f:
         json.dump(suite_results, f, indent=2)
 
@@ -268,10 +268,9 @@ def main() -> None:
     parser.add_argument("--robot", type=str, default="none", help="Robot type ('none' or 'google_robot')")
     parser.add_argument("--mask-backend", type=str, default="production", choices=["production", "oracle", "connected_component"], help="Mask proposal backend")
     parser.add_argument("--semantic-backend", type=str, default="production", choices=["production", "oracle", "deterministic_test"], help="Semantic grounding backend")
-    parser.add_argument("--requirements-source", type=str, default="static", choices=["static", "fm"], help="Requirement provider")
-    parser.add_argument("--inspection-policy", type=str, default="fixed", choices=["fixed", "fm_ranked", "oracle_greedy"], help="Inspection policy")
-    parser.add_argument("--ablation", type=str, default="none", choices=["none", "semantic_only", "no_geometry", "no_joint_coupling", "no_persistence", "single_view", "oracle_mask", "oracle_semantics", "run_suite"], help="Ablation mode")
-    parser.add_argument("--output", type=str, default="outputs/workshop_phase1", help="Output directory")
+    parser.add_argument("--proposal-mode", type=str, default="yolo_only", choices=["yolo_only", "yolo_plus_rgbd_fallback"], help="Proposal mode")
+    parser.add_argument("--ablation", type=str, default="none", choices=["none", "semantic_only", "no_geometry", "no_joint_coupling", "no_persistence", "single_view", "single_front_view", "oracle_mask", "oracle_semantics", "run_suite"], help="Ablation mode")
+    parser.add_argument("--output", type=str, default="outputs/workshop_phase1_final", help="Output directory")
     parser.add_argument("--evaluate", action="store_true", default=True, help="Compute privileged post-hoc metrics")
     parser.add_argument("--list-variants", action="store_true", help="List all variants")
 
@@ -293,8 +292,7 @@ def main() -> None:
             robot=args.robot,
             mask_backend=args.mask_backend,
             semantic_backend=args.semantic_backend,
-            requirements_source=args.requirements_source,
-            inspection_policy=args.inspection_policy,
+            proposal_mode=args.proposal_mode,
             ablation=args.ablation,
             output_dir=out_dir,
             evaluate=args.evaluate,
@@ -305,8 +303,7 @@ def main() -> None:
             robot=args.robot,
             mask_backend=args.mask_backend,
             semantic_backend=args.semantic_backend,
-            requirements_source=args.requirements_source,
-            inspection_policy=args.inspection_policy,
+            proposal_mode=args.proposal_mode,
             ablation=args.ablation,
             output_dir=out_dir,
             evaluate=args.evaluate,

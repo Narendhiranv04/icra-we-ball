@@ -196,3 +196,33 @@ class ProductionInspectionCapture:
             mujoco.mj_forward(scene.model, scene.data)
 
         return observations
+
+
+class MultiViewCameraRig(ProductionInspectionCapture):
+    """Calibrated multi-view camera rig for incremental stage observations."""
+
+    def __init__(
+        self,
+        scene: Any | None = None,
+        width: int = 1280,
+        height: int = 720,
+        rig_config_path: Path | None = None,
+    ) -> None:
+        super().__init__(width=width, height=height, rig_config_path=rig_config_path)
+        self.scene = scene
+
+    def capture_stage_observations(
+        self,
+        stage_region: str = "INITIAL",
+        scene: Any | None = None,
+        capture_segmentation: bool = False,
+    ) -> list[ViewObservation]:
+        target_scene = scene or self.scene
+        if target_scene is None:
+            raise ValueError("Scene must be provided to capture_stage_observations")
+        return self.capture_stage(
+            scene=target_scene,
+            stage_region=stage_region,
+            capture_segmentation=capture_segmentation,
+        )
+

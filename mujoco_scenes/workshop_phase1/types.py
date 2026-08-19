@@ -10,6 +10,7 @@ from typing import Any
 class EntityType(str, Enum):
     OBJECT = "OBJECT"
     REGION = "REGION"
+    FUNCTIONAL_REGION = "FUNCTIONAL_REGION"
     WORKPIECE = "WORKPIECE"
 
 
@@ -41,6 +42,11 @@ class InspectionPolicyType(str, Enum):
     FM = "FM"
 
 
+class ProposalMode(str, Enum):
+    YOLO_ONLY = "YOLO_ONLY"
+    YOLO_PLUS_RGBD_FALLBACK = "YOLO_PLUS_RGBD_FALLBACK"
+
+
 class AblationType(str, Enum):
     NONE = "NONE"
     SEMANTIC_ONLY = "SEMANTIC_ONLY"
@@ -48,31 +54,46 @@ class AblationType(str, Enum):
     NO_JOINT_COUPLING = "NO_JOINT_COUPLING"
     NO_PERSISTENCE = "NO_PERSISTENCE"
     SINGLE_VIEW = "SINGLE_VIEW"
+    SINGLE_FRONT_VIEW = "SINGLE_FRONT_VIEW"
     ORACLE_MASK = "ORACLE_MASK"
     ORACLE_SEMANTICS = "ORACLE_SEMANTICS"
 
 
+def combine_status(semantic: GroundingStatus, geometry: GroundingStatus) -> GroundingStatus:
+    """Combine semantic and geometric grounding statuses under strict tri-state logic.
+
+    Truth Table:
+    - FAIL + ANYTHING = FAIL
+    - ANYTHING + FAIL = FAIL
+    - PASS + PASS = PASS
+    - PASS + UNKNOWN = UNKNOWN
+    - UNKNOWN + PASS = UNKNOWN
+    - UNKNOWN + UNKNOWN = UNKNOWN
+    """
+    if semantic == GroundingStatus.FAIL or geometry == GroundingStatus.FAIL:
+        return GroundingStatus.FAIL
+    if semantic == GroundingStatus.PASS and geometry == GroundingStatus.PASS:
+        return GroundingStatus.PASS
+    return GroundingStatus.UNKNOWN
+
+
 @dataclass
 class SemanticEvidence:
-    """Open-ended structured semantic evidence extracted from visual crops."""
+    """Semantic evidence extracted from YOLO-World detections."""
 
-    free_text_description: str
-    functional_description: str = ""
-    visible_tool_interface: str = "UNKNOWN"
-    visible_fastener_interface: str = "UNKNOWN"
-    broad_object_type: str = "object"
+    canonical_label: str
+    raw_label: str = ""
     confidence: float = 1.0
-    evidence_crops_provenance: list[str] = field(default_factory=list)
+    source_camera: str = ""
+    evidence_provenance: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "free_text_description": self.free_text_description,
-            "functional_description": self.functional_description,
-            "visible_tool_interface": self.visible_tool_interface,
-            "visible_fastener_interface": self.visible_fastener_interface,
-            "broad_object_type": self.broad_object_type,
+            "canonical_label": self.canonical_label,
+            "raw_label": self.raw_label,
             "confidence": round(self.confidence, 4),
-            "evidence_crops_provenance": list(self.evidence_crops_provenance),
+            "source_camera": self.source_camera,
+            "evidence_provenance": list(self.evidence_provenance),
         }
 
 
@@ -112,6 +133,7 @@ class FunctionalRequirement:
     description: str
     rank: int = 1
     source: RequirementSource = RequirementSource.STATIC
+    accepted_categories: list[str] = field(default_factory=list)
     semantic_hints: list[str] = field(default_factory=list)
     geometric_constraints: dict[str, Any] = field(default_factory=dict)
     provenance: str = "default_provider"
@@ -124,6 +146,7 @@ class FunctionalRequirement:
             "description": self.description,
             "rank": self.rank,
             "source": self.source.value,
+            "accepted_categories": list(self.accepted_categories),
             "semantic_hints": list(self.semantic_hints),
             "geometric_constraints": dict(self.geometric_constraints),
             "provenance": self.provenance,
@@ -139,9 +162,11 @@ class ObservedMask:
     binary_mask: Any  # np.ndarray of shape (H, W) bool
     bounding_box_xyxy: tuple[int, int, int, int]
     confidence: float
-    predicted_label: str
+    canonical_label: str = "object"
+    raw_label: str = "object"
+    predicted_label: str = "object"
     backend_name: str = "yolo_world"
-    features: Any | None = None  # optional visual embedding
+    features: Any | None = None
 
 
 @dataclass
@@ -172,6 +197,7 @@ class ObservedObjectTrack:
     crop_evidence: dict[str, Any] = field(default_factory=dict)  # camera_id -> rgb crop (H, W, 3)
     points_by_camera: dict[str, Any] = field(default_factory=dict)
     contributing_cameras: tuple[str, ...] = field(default_factory=tuple)
+    semantic_observations: list[dict[str, Any]] = field(default_factory=list)
     semantic_evidence_history: list[dict[str, Any]] = field(default_factory=list)
     geometric_evidence_history: list[dict[str, Any]] = field(default_factory=list)
     current_semantic_belief: dict[str, Any] = field(default_factory=dict)
@@ -211,6 +237,7 @@ class ObservedRegion:
     obstruction_evidence: dict[str, Any] = field(default_factory=dict)
     is_open: bool | None = None
     is_open_status: GroundingStatus = GroundingStatus.UNKNOWN
+    semantic_observations: list[dict[str, Any]] = field(default_factory=list)
     current_semantic_belief: dict[str, Any] = field(default_factory=dict)
     current_geometric_properties: dict[str, Any] = field(default_factory=dict)
 
@@ -320,7 +347,7 @@ class InspectionTrace:
 class EpisodeResult:
     """Final outcome of one Phase 1 grounding episode."""
 
-    status: str  # "FEASIBLE" or "INFEASIBLE"
+    status: str  # "FEASIBLE", "INFEASIBLE", "INSUFFICIENT_EVIDENCE"
     rejection_reason: str | None
     witness: FunctionalWitness | None
     trace: InspectionTrace

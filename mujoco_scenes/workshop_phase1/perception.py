@@ -1,7 +1,7 @@
 """Object discovery and instance proposal backends for Workshop Phase 1.
 
-Implements open-vocabulary requirement-driven YOLO-World proposals, zero-weight
-connected-component proposals, and semantic-free oracle segmentation.
+Implements YOLO-World object detection from semantic vocabulary, depth-guided
+mask refinement within bounding boxes, and semantic-free oracle segmentation.
 """
 
 from __future__ import annotations
@@ -12,6 +12,7 @@ from typing import Any
 
 import cv2
 import numpy as np
+from PIL import Image
 
 try:
     import mujoco
@@ -24,88 +25,33 @@ from mujoco_scenes.geometry_checker import (
     reject_depth_discontinuities,
 )
 from mujoco_scenes.workshop_phase1.types import (
-    EntityType,
     FunctionalRequirement,
     ObservedMask,
     ViewObservation,
 )
 
-YOLO_WEIGHTS_PATH = Path(__file__).resolve().parent.parent / "yolov8s-worldv2.pt"
 
-
-class OpenVocabularyQueryBuilder:
-    """Requirement-driven open-vocabulary detector query generator.
-
-    Constructs natural language detector queries dynamically from the active
-    functional requirements and task instruction. Contains ZERO hard-coded
-    Workshop object taxonomies.
-    """
-
-    @staticmethod
-    def build_queries(
-        requirements: list[FunctionalRequirement] | None = None,
-        task_instruction: str = "",
-    ) -> list[str]:
-        """Derive text queries directly from requirement descriptions."""
-        queries: list[str] = []
-
-        if requirements:
-            for req in requirements:
-                if req.entity_type != EntityType.OBJECT:
-                    continue
-                fname = req.function_name.upper()
-                desc = req.description.strip()
-
-                if "DRIVE" in fname or "DRIVER" in fname:
-                    queries.extend([
-                        "tool that can drive or tighten a screw",
-                        "fastener driving hand tool",
-                        "handheld tool",
-                    ])
-                elif "FASTEN" in fname or "FASTENER" in fname:
-                    queries.extend([
-                        "fastener used to secure a joint",
-                        "threaded fastener hardware",
-                        "small hardware fastener",
-                    ])
-                else:
-                    # Natural language fallback directly from requirement description
-                    if desc:
-                        queries.append(desc.lower())
-
-        if task_instruction:
-            # Add general task context terms if relevant
-            lower_inst = task_instruction.lower()
-            if "screw" in lower_inst or "fasten" in lower_inst:
-                if "fastener" not in [q.lower() for q in queries]:
-                    queries.append("fastener")
-                if "tool" not in [q.lower() for q in queries]:
-                    queries.append("tool")
-
-        # Fallback default queries if no object requirements provided
-        if not queries:
-            queries = [
-                "tool that can drive or tighten a screw",
-                "fastener used to secure a joint",
-                "handheld tool",
-                "small hardware fastener",
-            ]
-
-        # Deduplicate while preserving order
-        unique_queries: list[str] = []
-        for q in queries:
-            if q and q not in unique_queries:
-                unique_queries.append(q)
-
-        return unique_queries
+def find_yolo_world_weights() -> Path:
+    """Find canonical YOLO-World weights with precedence order."""
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    candidates = [
+        repo_root / "semantic_model_cache" / "yolov8m-worldv2.pt",
+        repo_root / "mujoco_scenes" / "yolov8m-worldv2.pt",
+        repo_root / "mujoco_scenes" / "yolov8s-worldv2.pt",
+        repo_root / "yolov8s-worldv2.pt",
+    ]
+    for c in candidates:
+        if c.is_file():
+            return c
+    return candidates[0]
 
 
 class InstanceProposalBackend(abc.ABC):
     """Abstract interface for 2D instance proposal from calibrated RGB-D observation."""
 
     @abc.abstractmethod
-    def set_requirements(self, requirements: list[FunctionalRequirement], task_instruction: str = "") -> None:
-        """Update open-vocabulary queries based on current functional requirements."""
+    def set_vocabulary(self, prompts: list[str], alias_to_canonical: dict[str, str]) -> None:
+        """Update detector classes based on semantic vocabulary."""
         pass
 
     @abc.abstractmethod
@@ -121,19 +67,27 @@ class InstanceProposalBackend(abc.ABC):
 
 
 class YOLOWorldProposalBackend(InstanceProposalBackend):
-    """Open-vocabulary object detector + depth-guided foreground segmenter."""
+    """YOLO-World open-vocabulary object detector with depth-guided mask refinement."""
 
     def __init__(
         self,
-        weights_path: Path | None = None,
-        confidence_threshold: float = 0.08,
+        weights_path: Path | str | None = None,
+        confidence_threshold: float = 0.05,
         nms_iou_threshold: float = 0.45,
+        inference_size: int = 640,
+        device: str | None = None,
+        max_detections: int = 100,
     ) -> None:
-        self.weights_path = weights_path or YOLO_WEIGHTS_PATH
-        self.confidence_threshold = confidence_threshold
-        self.nms_iou_threshold = nms_iou_threshold
+        self.weights_path = Path(weights_path) if weights_path else find_yolo_world_weights()
+        self.confidence_threshold = float(confidence_threshold)
+        self.nms_iou_threshold = float(nms_iou_threshold)
+        self.inference_size = int(inference_size)
+        self.device = device or "cpu"
+        self.max_detections = int(max_detections)
+
         self._model = None
-        self._current_queries: list[str] = OpenVocabularyQueryBuilder.build_queries()
+        self._prompts: list[str] = []
+        self._alias_to_canonical: dict[str, str] = {}
         self._initialize_model()
 
     def _initialize_model(self) -> None:
@@ -142,23 +96,22 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
         try:
             from ultralytics import YOLOWorld
             self._model = YOLOWorld(str(self.weights_path))
-            self._model.set_classes(self._current_queries)
         except Exception:
             try:
                 from ultralytics import YOLO
                 self._model = YOLO(str(self.weights_path))
-                self._model.set_classes(self._current_queries)
             except Exception:
                 self._model = None
 
-    def set_requirements(self, requirements: list[FunctionalRequirement], task_instruction: str = "") -> None:
-        """Dynamically update detector classes based on current task requirements."""
-        new_queries = OpenVocabularyQueryBuilder.build_queries(requirements, task_instruction)
-        if new_queries != self._current_queries:
-            self._current_queries = new_queries
-            if self._model is not None:
+    def set_vocabulary(self, prompts: list[str], alias_to_canonical: dict[str, str]) -> None:
+        """Establish detector classes from FM-contract vocabulary."""
+        clean_prompts = [p.strip() for p in prompts if p.strip()]
+        if clean_prompts != self._prompts:
+            self._prompts = clean_prompts
+            self._alias_to_canonical = {k.lower(): v for k, v in alias_to_canonical.items()}
+            if self._model is not None and self._prompts:
                 try:
-                    self._model.set_classes(self._current_queries)
+                    self._model.set_classes(self._prompts)
                 except Exception:
                     pass
 
@@ -169,37 +122,50 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
         stage_volume_max: np.ndarray,
         volume_margin_m: float = 0.08,
     ) -> list[ObservedMask]:
-        if self._model is None:
-            # Fallback to connected-component proposal if weights are unavailable
-            fallback = RGBDConnectedComponentProposalBackend()
-            return fallback.predict(observation, stage_volume_min, stage_volume_max, volume_margin_m)
+        if self._model is None or not self._prompts:
+            return []
 
         rgb = observation.rgb
         depth = observation.depth_m
         height, width = rgb.shape[:2]
 
-        results = self._model.predict(
-            source=rgb,
-            conf=self.confidence_threshold,
-            iou=self.nms_iou_threshold,
-            verbose=False,
-        )
-        boxes = results[0].boxes if results else None
+        # Explicit PIL Image format with mode RGB
+        pil_image = Image.fromarray(rgb, mode="RGB")
+
+        try:
+            results = self._model.predict(
+                source=pil_image,
+                conf=self.confidence_threshold,
+                iou=self.nms_iou_threshold,
+                imgsz=self.inference_size,
+                device=self.device,
+                max_det=self.max_detections,
+                verbose=False,
+            )
+        except Exception:
+            return []
+
+        if not results:
+            return []
+
+        result = results[0]
+        boxes = result.boxes
         if boxes is None or len(boxes) == 0:
-            fallback = RGBDConnectedComponentProposalBackend()
-            return fallback.predict(observation, stage_volume_min, stage_volume_max, volume_margin_m)
+            return []
+
+        xyxy = boxes.xyxy.detach().cpu().numpy()
+        confidences = boxes.conf.detach().cpu().numpy()
+        classes = boxes.cls.detach().cpu().numpy().astype(int)
 
         masks: list[ObservedMask] = []
-        for idx in range(len(boxes)):
-            xyxy = boxes.xyxy[idx].cpu().numpy().astype(int)
-            conf = float(boxes.conf[idx].cpu().numpy())
-            cls_id = int(boxes.cls[idx].cpu().numpy())
-            label = self._current_queries[cls_id] if 0 <= cls_id < len(self._current_queries) else "object"
+        for idx, (box, conf, cls_id) in enumerate(zip(xyxy, confidences, classes)):
+            raw_label = str(result.names[int(cls_id)]) if int(cls_id) in result.names else self._prompts[cls_id] if cls_id < len(self._prompts) else "object"
+            canonical_label = self._alias_to_canonical.get(raw_label.lower(), raw_label.lower())
 
-            x1 = max(0, min(width - 1, xyxy[0]))
-            y1 = max(0, min(height - 1, xyxy[1]))
-            x2 = max(0, min(width, xyxy[2]))
-            y2 = max(0, min(height, xyxy[3]))
+            x1 = max(0, min(width - 1, int(box[0])))
+            y1 = max(0, min(height - 1, int(box[1])))
+            x2 = max(0, min(width, int(box[2]) + 1))
+            y2 = max(0, min(height, int(box[3]) + 1))
 
             if (x2 - x1) < 4 or (y2 - y1) < 4:
                 continue
@@ -207,7 +173,7 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
             # Depth-guided foreground mask within bounding box
             roi_depth = depth[y1:y2, x1:x2]
             valid_roi = np.isfinite(roi_depth) & (roi_depth > 0.1) & (roi_depth < 3.0)
-            if np.count_nonzero(valid_roi) < 10:
+            if np.count_nonzero(valid_roi) < 8:
                 continue
 
             # Segment foreground within bounding box based on median depth
@@ -247,8 +213,10 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
                 camera_id=observation.camera_id,
                 binary_mask=bin_mask,
                 bounding_box_xyxy=(x1, y1, x2, y2),
-                confidence=conf,
-                predicted_label=label,
+                confidence=float(conf),
+                canonical_label=canonical_label,
+                raw_label=raw_label,
+                predicted_label=canonical_label,
                 backend_name="yolo_world",
             )
             masks.append(mask_entry)
@@ -256,8 +224,97 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
         return masks
 
 
+class PrivilegedOracleMaskBackend(InstanceProposalBackend):
+    """Ablation & upper-bound backend using MuJoCo segmentation masks.
+
+    ALLOWED ONLY under explicit oracle/ablation testing.
+    Provides segmentation masks ONLY with neutral label 'object'.
+    Zero semantic typing or body name inspection is performed.
+    """
+
+    def __init__(self, scene: Any) -> None:
+        self.scene = scene
+
+    def set_vocabulary(self, prompts: list[str], alias_to_canonical: dict[str, str]) -> None:
+        pass
+
+    def predict(
+        self,
+        observation: ViewObservation,
+        stage_volume_min: np.ndarray,
+        stage_volume_max: np.ndarray,
+        volume_margin_m: float = 0.08,
+    ) -> list[ObservedMask]:
+        if observation.segmentation is None:
+            return []
+
+        seg = observation.segmentation
+        geom_ids = seg[:, :, 0]
+        unique_gids = np.unique(geom_ids)
+
+        # Collect distinct free-body instances (dofnum == 6)
+        body_to_mask: dict[int, np.ndarray] = {}
+        for gid in unique_gids:
+            if gid < 0 or gid >= self.scene.model.ngeom:
+                continue
+            bid = self.scene.model.geom_bodyid[gid]
+            if self.scene.model.body_dofnum[bid] != 6:
+                continue
+
+            gmask = (geom_ids == gid)
+            if bid not in body_to_mask:
+                body_to_mask[bid] = gmask
+            else:
+                body_to_mask[bid] |= gmask
+
+        masks: list[ObservedMask] = []
+        for bid, bmask in body_to_mask.items():
+            if np.count_nonzero(bmask) < 8:
+                continue
+
+            rows, cols = np.nonzero(bmask)
+            x1, y1 = int(cols.min()), int(rows.min())
+            x2, y2 = int(cols.max() + 1), int(rows.max() + 1)
+
+            pts, _ = backproject_masked_depth(
+                observation.depth_m,
+                bmask,
+                observation.intrinsics,
+                observation.camera_position_world,
+                observation.camera_rotation_world,
+                max_depth=3.0,
+            )
+            if len(pts) < 8:
+                continue
+
+            gated = gate_points_to_volume(
+                pts,
+                minimum_world_m=stage_volume_min,
+                maximum_world_m=stage_volume_max,
+                boundary_margin_m=volume_margin_m,
+            )
+            if np.count_nonzero(gated) < 8:
+                continue
+
+            masks.append(
+                ObservedMask(
+                    detection_id=f"oracle_{observation.camera_id}_b{bid:03d}",
+                    camera_id=observation.camera_id,
+                    binary_mask=bmask,
+                    bounding_box_xyxy=(x1, y1, x2, y2),
+                    confidence=1.0,
+                    canonical_label="object",
+                    raw_label="object",
+                    predicted_label="object",
+                    backend_name="privileged_oracle",
+                )
+            )
+
+        return masks
+
+
 class RGBDConnectedComponentProposalBackend(InstanceProposalBackend):
-    """Zero-weight heuristic proposal backend using depth clustering and 3D spatial gating."""
+    """Diagnostic/ablation backend using depth clustering. NOT used in production."""
 
     def __init__(
         self,
@@ -269,8 +326,7 @@ class RGBDConnectedComponentProposalBackend(InstanceProposalBackend):
         self.max_area_pixels = max_area_pixels
         self.max_physical_span_m = max_physical_span_m
 
-    def set_requirements(self, requirements: list[FunctionalRequirement], task_instruction: str = "") -> None:
-        """Connected component backend is spatial-only and does not consume text queries."""
+    def set_vocabulary(self, prompts: list[str], alias_to_canonical: dict[str, str]) -> None:
         pass
 
     def predict(
@@ -283,12 +339,10 @@ class RGBDConnectedComponentProposalBackend(InstanceProposalBackend):
         depth = observation.depth_m
         height, width = depth.shape[:2]
 
-        # Valid depth mask
         valid_depth = np.isfinite(depth) & (depth > 0.15) & (depth < 2.5)
         if np.count_nonzero(valid_depth) < 100:
             return []
 
-        # Find depth gradients/edges
         sobelx = cv2.Sobel(np.nan_to_num(depth, nan=0.0).astype(np.float32), cv2.CV_32F, 1, 0, ksize=3)
         sobely = cv2.Sobel(np.nan_to_num(depth, nan=0.0).astype(np.float32), cv2.CV_32F, 0, 1, ksize=3)
         grad_mag = np.sqrt(sobelx**2 + sobely**2)
@@ -332,7 +386,6 @@ class RGBDConnectedComponentProposalBackend(InstanceProposalBackend):
             if len(gated_pts) < 15:
                 continue
 
-            # Physical 3D extent check (reject walls, floors, large shelves)
             extents = gated_pts.max(axis=0) - gated_pts.min(axis=0)
             if float(extents.max()) > self.max_physical_span_m:
                 continue
@@ -343,98 +396,11 @@ class RGBDConnectedComponentProposalBackend(InstanceProposalBackend):
                     camera_id=observation.camera_id,
                     binary_mask=comp_mask,
                     bounding_box_xyxy=(x, y, x + w, y + h),
-                    confidence=0.80,
+                    confidence=0.50,
+                    canonical_label="object",
+                    raw_label="object_proposal",
                     predicted_label="object_proposal",
                     backend_name="connected_components",
-                )
-            )
-
-        return masks
-
-
-class PrivilegedOracleMaskBackend(InstanceProposalBackend):
-    """Ablation & upper-bound backend using MuJoCo segmentation masks.
-
-    ALLOWED ONLY under explicit oracle/ablation testing.
-    Provides segmentation masks ONLY with neutral label 'object'.
-    Zero semantic typing or body name inspection is performed.
-    """
-
-    def __init__(self, scene: Any) -> None:
-        self.scene = scene
-
-    def set_requirements(self, requirements: list[FunctionalRequirement], task_instruction: str = "") -> None:
-        pass
-
-    def predict(
-        self,
-        observation: ViewObservation,
-        stage_volume_min: np.ndarray,
-        stage_volume_max: np.ndarray,
-        volume_margin_m: float = 0.08,
-    ) -> list[ObservedMask]:
-        if observation.segmentation is None:
-            return []
-
-        seg = observation.segmentation
-        geom_ids = seg[:, :, 0]
-        unique_gids = np.unique(geom_ids)
-
-        # Collect distinct body instances
-        body_to_mask: dict[int, np.ndarray] = {}
-        for gid in unique_gids:
-            if gid < 0 or gid >= self.scene.model.ngeom:
-                continue
-            bid = self.scene.model.geom_bodyid[gid]
-            # Strictly select pickable free bodies (dofnum == 6)
-            if self.scene.model.body_dofnum[bid] != 6:
-                continue
-
-            gmask = (geom_ids == gid)
-            if bid not in body_to_mask:
-                body_to_mask[bid] = gmask
-            else:
-                body_to_mask[bid] |= gmask
-
-        masks: list[ObservedMask] = []
-        for bid, bmask in body_to_mask.items():
-            if np.count_nonzero(bmask) < 8:
-                continue
-
-            rows, cols = np.nonzero(bmask)
-            x1, y1 = int(cols.min()), int(rows.min())
-            x2, y2 = int(cols.max() + 1), int(rows.max() + 1)
-
-            pts, _ = backproject_masked_depth(
-                observation.depth_m,
-                bmask,
-                observation.intrinsics,
-                observation.camera_position_world,
-                observation.camera_rotation_world,
-                max_depth=3.0,
-            )
-            if len(pts) < 8:
-                continue
-
-            gated = gate_points_to_volume(
-                pts,
-                minimum_world_m=stage_volume_min,
-                maximum_world_m=stage_volume_max,
-                boundary_margin_m=volume_margin_m,
-            )
-            if np.count_nonzero(gated) < 8:
-                continue
-
-            # Pure segmentation without semantic leakage: always label as "object"
-            masks.append(
-                ObservedMask(
-                    detection_id=f"oracle_{observation.camera_id}_b{bid:03d}",
-                    camera_id=observation.camera_id,
-                    binary_mask=bmask,
-                    bounding_box_xyxy=(x1, y1, x2, y2),
-                    confidence=1.0,
-                    predicted_label="object",
-                    backend_name="privileged_oracle",
                 )
             )
 

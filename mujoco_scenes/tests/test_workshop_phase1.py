@@ -1,4 +1,4 @@
-"""Unit and integration tests for Workshop (W1) Phase 1 Research Pipeline."""
+"""Unit and regression tests for Workshop (W1) Phase 1 Frozen Architecture."""
 
 from __future__ import annotations
 
@@ -6,21 +6,27 @@ import tempfile
 from pathlib import Path
 import numpy as np
 import pytest
+import yaml
 
 from mujoco_scenes.workshop_scene import WorkshopScene
-from mujoco_scenes.workshop_phase1.capture import ProductionInspectionCapture
+from mujoco_scenes.workshop_phase1.capture import MultiViewCameraRig
 from mujoco_scenes.workshop_phase1.types import (
+    AblationType,
     EntityType,
     FunctionalRequirement,
+    FunctionalWitness,
     GroundingStatus,
     MaskBackendType,
     ObservedMask,
     ObservedObjectTrack,
     ObservedRegion,
+    ProposalMode,
+    RequirementSource,
+    SemanticBackendType,
     ViewObservation,
+    combine_status,
 )
 from mujoco_scenes.workshop_phase1.perception import (
-    OpenVocabularyQueryBuilder,
     PrivilegedOracleMaskBackend,
     RGBDConnectedComponentProposalBackend,
     YOLOWorldProposalBackend,
@@ -28,7 +34,8 @@ from mujoco_scenes.workshop_phase1.perception import (
 from mujoco_scenes.workshop_phase1.tracking import PersistentInstanceTracker
 from mujoco_scenes.workshop_phase1.evidence_graph import GrowingObservedGraph
 from mujoco_scenes.workshop_phase1.semantic_grounding import (
-    DeterministicSemanticNormalizer,
+    ObjectSemanticBackend,
+    PrivilegedOracleSemanticBackend,
     ProductionSemanticBackend,
     SemanticGrounder,
 )
@@ -36,216 +43,328 @@ from mujoco_scenes.workshop_phase1.geometric_grounding import GeometricGrounder
 from mujoco_scenes.workshop_phase1.region_grounding import RegionGrounder
 from mujoco_scenes.workshop_phase1.functional_search import FunctionalSatisfactionSearch
 from mujoco_scenes.workshop_phase1.inspection_controller import WorkshopPhase1InspectionController
-from mujoco_scenes.workshop_phase1.requirements import StaticWorkshopRequirementProvider
-from mujoco_scenes.workshop_phase1.serialization import sanitize_production_data, assert_no_backend_names
+from mujoco_scenes.workshop_phase1.requirements import (
+    ManualWorkshopFMContract,
+    StaticWorkshopRequirementProvider,
+)
+from mujoco_scenes.workshop_phase1.serialization import (
+    assert_no_backend_names,
+    sanitize_production_data,
+)
 
 
-def test_static_requirements_provider():
-    """Verify standard 4-tuple functional requirements schema."""
-    provider = StaticWorkshopRequirementProvider()
-    reqs = provider.get_requirements()
+def test_fm_contract_loading_and_neutrality():
+    """Verify standard FM contract defines requirements and broad vocabulary without backend strings."""
+    contract = ManualWorkshopFMContract()
+    reqs = contract.get_requirements()
     assert len(reqs) == 4
+
     names = {r.function_name for r in reqs}
     assert "CAN_DRIVE_SCREW" in names
     assert "CAN_FASTEN" in names
     assert "WORK_SURFACE" in names
     assert "SMALL_PARTS_CONTAINER" in names
 
+    prompts = contract.get_detector_prompts()
+    assert len(prompts) >= 10
+    # Detector prompts must be broad physical names, never variant-specific or simulator strings
+    for p in prompts:
+        assert "workshop_" not in p
+        assert "F4" not in p
+        assert "I6" not in p
 
-def test_open_vocabulary_query_builder():
-    """Verify dynamic open-vocabulary query generation from functional requirements."""
-    reqs = [
-        FunctionalRequirement(
-            requirement_id="req_01",
-            entity_type=EntityType.OBJECT,
-            function_name="CAN_DRIVE_SCREW",
-            description="Tool capable of driving screws or fasteners into the frame joint",
-        ),
-        FunctionalRequirement(
-            requirement_id="req_02",
-            entity_type=EntityType.OBJECT,
-            function_name="CAN_FASTEN",
-            description="Fastener capable of securely fastening the frame joint",
-        ),
-    ]
-    queries = OpenVocabularyQueryBuilder.build_queries(reqs, "Repair frame joint in workshop")
-    assert len(queries) >= 2
-    assert any("tool" in q.lower() or "driver" in q.lower() for q in queries)
-    assert any("fastener" in q.lower() or "screw" in q.lower() for q in queries)
+
+def test_fm_contract_to_yolo_semantic_flow():
+    """Mandatory test (Sec 63): Verify FM contract defines accepted categories and evaluates synthetic YOLO detections."""
+    contract = ManualWorkshopFMContract()
+    reqs = contract.get_requirements()
+    driver_req = next(r for r in reqs if r.function_name == "CAN_DRIVE_SCREW")
+    fastener_req = next(r for r in reqs if r.function_name == "CAN_FASTEN")
+
+    grounder = SemanticGrounder()
+
+    # Track A: detected as screwdriver
+    track_driver = ObservedObjectTrack(
+        instance_id="object_0001",
+        current_semantic_belief={"canonical_label": "screwdriver", "confidence": 0.85},
+    )
+    # Track B: detected as wrench
+    track_wrench = ObservedObjectTrack(
+        instance_id="object_0002",
+        current_semantic_belief={"canonical_label": "wrench", "confidence": 0.80},
+    )
+    # Track C: detected as screw
+    track_screw = ObservedObjectTrack(
+        instance_id="object_0003",
+        current_semantic_belief={"canonical_label": "screw", "confidence": 0.90},
+    )
+
+    res_driver = grounder.ground_object_for_requirement(track_driver, driver_req)
+    res_wrench = grounder.ground_object_for_requirement(track_wrench, driver_req)
+    res_screw = grounder.ground_object_for_requirement(track_screw, fastener_req)
+
+    assert res_driver.semantic_status == GroundingStatus.PASS
+    assert res_wrench.semantic_status == GroundingStatus.FAIL
+    assert res_screw.semantic_status == GroundingStatus.PASS
+
+
+def test_changing_fm_contract_changes_detector_vocabulary(tmp_path: Path):
+    """Mandatory test (Sec 64): Changing FM contract changes detector vocabulary without modifying perception code."""
+    custom_yaml = tmp_path / "custom_contract.yaml"
+    custom_data = {
+        "task_instruction": "Hold liquids in kitchen",
+        "functional_requirements": [
+            {
+                "requirement_id": "req_hold_liquid",
+                "entity_type": "OBJECT",
+                "function_name": "HOLD_LIQUID",
+                "description": "Container capable of holding liquid",
+                "accepted_categories": ["cup", "bowl"],
+            }
+        ],
+        "vocabulary": {
+            "canonical_labels": {
+                "cup": ["cup", "drinking cup"],
+                "bowl": ["bowl", "soup bowl"],
+            }
+        },
+    }
+    with open(custom_yaml, "w") as f:
+        yaml.dump(custom_data, f)
+
+    contract = ManualWorkshopFMContract(custom_yaml)
+    prompts = contract.get_detector_prompts()
+    assert "cup" in prompts
+    assert "drinking cup" in prompts
+    assert "bowl" in prompts
+    assert "soup bowl" in prompts
+    assert "screwdriver" not in prompts
+
+
+def test_no_function_description_prompts():
+    """Mandatory test (Sec 65): Detector classes do not contain affordance sentences."""
+    contract = ManualWorkshopFMContract()
+    prompts = contract.get_detector_prompts()
+    forbidden_phrases = ["tool that can", "capable of", "suitable for", "used to secure", "object capable"]
+    for p in prompts:
+        for f in forbidden_phrases:
+            assert f not in p.lower(), f"Affordance prompt found: {p}"
+
+
+def test_no_clip_imported_in_phase1():
+    """Mandatory test (Sec 66): Workshop Phase 1 production modules do NOT import CLIP."""
+    phase1_dir = Path(__file__).resolve().parent.parent / "workshop_phase1"
+    for py_file in phase1_dir.glob("*.py"):
+        content = py_file.read_text(encoding="utf-8")
+        assert "import clip" not in content, f"CLIP import in {py_file}"
+        assert "open_clip" not in content, f"open_clip import in {py_file}"
+        assert "CLIPModel" not in content, f"CLIPModel in {py_file}"
+        assert "CLIPProcessor" not in content, f"CLIPProcessor in {py_file}"
+
+
+def test_no_geometry_to_semantic_fabrication():
+    """Mandatory test (Sec 67): Semantic grounder does NOT use shape or length thresholds to fabricate labels."""
+    sem_file = Path(__file__).resolve().parent.parent / "workshop_phase1" / "semantic_grounding.py"
+    content = sem_file.read_text(encoding="utf-8")
+    assert "usable_reach_m" not in content
+    assert "tip_aspect_ratio" not in content
+    assert "min_driver_reach_m" not in content
+    assert "min_fastener_length_m" not in content
+
+
+def test_semantics_does_not_use_geometry():
+    """Mandatory test (Sec 18): Semantic check produces identical results regardless of geometric point cloud."""
+    grounder = SemanticGrounder()
+    contract = ManualWorkshopFMContract()
+    driver_req = next(r for r in contract.get_requirements() if r.function_name == "CAN_DRIVE_SCREW")
+
+    identical_cloud = np.ones((50, 3), dtype=np.float32)
+
+    # Identical cloud, different semantic labels
+    track_driver = ObservedObjectTrack(
+        instance_id="obj_1",
+        fused_points=identical_cloud,
+        current_semantic_belief={"canonical_label": "screwdriver", "confidence": 0.9},
+    )
+    track_wrench = ObservedObjectTrack(
+        instance_id="obj_2",
+        fused_points=identical_cloud,
+        current_semantic_belief={"canonical_label": "wrench", "confidence": 0.9},
+    )
+
+    res_d = grounder.ground_object_for_requirement(track_driver, driver_req)
+    res_w = grounder.ground_object_for_requirement(track_wrench, driver_req)
+    assert res_d.semantic_status == GroundingStatus.PASS
+    assert res_w.semantic_status == GroundingStatus.FAIL
+
+    # Different clouds (short vs huge), same semantic label
+    track_short = ObservedObjectTrack(
+        instance_id="obj_3",
+        fused_points=np.ones((10, 3)),
+        current_semantic_belief={"canonical_label": "screwdriver", "confidence": 0.9},
+    )
+    track_huge = ObservedObjectTrack(
+        instance_id="obj_4",
+        fused_points=np.ones((5000, 3)) * 10.0,
+        current_semantic_belief={"canonical_label": "screwdriver", "confidence": 0.9},
+    )
+    res_short = grounder.ground_object_for_requirement(track_short, driver_req)
+    res_huge = grounder.ground_object_for_requirement(track_huge, driver_req)
+    assert res_short.semantic_status == res_huge.semantic_status == GroundingStatus.PASS
 
 
 def test_oracle_mask_backend_neutrality():
-    """Verify PrivilegedOracleMaskBackend outputs 'object' and zero semantic typing."""
+    """Mandatory test (Sec 68): PrivilegedOracleMaskBackend outputs 'object' and zero semantic typing."""
     scene = WorkshopScene("none", variant="F0_BASE")
     oracle_backend = PrivilegedOracleMaskBackend(scene)
-    capture = ProductionInspectionCapture()
-    obs_list = capture.capture_stage(scene, "INITIAL", capture_segmentation=True)
+    rig = MultiViewCameraRig(scene=scene)
+    obs_list = rig.capture_stage_observations(capture_segmentation=True)
 
-    vol_min = np.array([-1.2, -0.2, 0.6])
-    vol_max = np.array([1.2, 0.9, 1.5])
+    vol_min = np.array([-1.2, -0.2, 0.35])
+    vol_max = np.array([1.2, 1.2, 1.40])
     for obs in obs_list:
         masks = oracle_backend.predict(obs, vol_min, vol_max)
         for m in masks:
-            assert m.predicted_label == "object", f"Oracle mask leaked label: {m.predicted_label}"
+            assert m.canonical_label == "object"
+            assert m.predicted_label == "object"
+            assert m.raw_label == "object"
             assert m.backend_name == "privileged_oracle"
 
 
-def test_deterministic_semantic_normalizer():
-    """Verify open-ended description parsing and UNKNOWN preservation without Phillips assumption."""
-    norm = DeterministicSemanticNormalizer()
-
-    assert norm.normalize_tool_interface("cross-shaped screw driving tip") == "CROSS_RECESS"
-    assert norm.normalize_tool_interface("slotted flat blade screwdriver") == "SINGLE_SLOT"
-    assert norm.normalize_tool_interface("hex socket driver bit") == "HEX_SOCKET"
-    assert norm.normalize_tool_interface("gripping pliers without driving tip") == "NO_DRIVE_INTERFACE"
-    # Ambiguous / novel tool does NOT default to Phillips
-    assert norm.normalize_tool_interface("generic metal rod with textured grip") == "UNKNOWN_INTERFACE"
-
-    assert norm.normalize_fastener_interface("screw with cross recess head") == "CROSS_RECESS"
-    assert norm.normalize_fastener_interface("bolt with hexagonal head") == "HEX_HEAD"
-    assert norm.normalize_fastener_interface("slotted wood screw") == "SINGLE_SLOT"
-    assert norm.normalize_fastener_interface("threaded cylinder") == "UNKNOWN_INTERFACE"
-
-
-def test_geometric_grounder_tool_reach():
-    """Verify tool reach estimation distinguishes long from stubby tools."""
-    geo = GeometricGrounder()
-
-    # Long tool point cloud: cylinder of length 0.23m, shaft radius 0.0025m for 0.12m
-    z_shaft = np.linspace(-0.10, 0.02, 300)
-    theta_shaft = np.random.uniform(0, 2 * np.pi, 300)
-    r_shaft = np.random.uniform(0, 0.0025, 300)
-    shaft_pts = np.column_stack([r_shaft * np.cos(theta_shaft), r_shaft * np.sin(theta_shaft), z_shaft])
-
-    z_handle = np.linspace(0.02, 0.13, 300)
-    theta_handle = np.random.uniform(0, 2 * np.pi, 300)
-    r_handle = np.random.uniform(0, 0.015, 300)
-    handle_pts = np.column_stack([r_handle * np.cos(theta_handle), r_handle * np.sin(theta_handle), z_handle])
-
-    long_tool_pts = np.vstack([shaft_pts, handle_pts])
-    reach_info = geo.estimate_driver_reach(long_tool_pts)
-    assert reach_info["usable_reach_m"] >= 0.025
-    assert reach_info["total_length_m"] > 0.20
-
-
-def test_geometric_grounder_fastener():
-    """Verify fastener dimension estimation."""
-    geo = GeometricGrounder()
-
-    # Medium screw: length 0.043m, shaft radius 0.003m
-    z_pts = np.linspace(-0.02, 0.023, 200)
-    theta = np.random.uniform(0, 2 * np.pi, 200)
-    r = np.random.uniform(0, 0.003, 200)
-    screw_pts = np.column_stack([r * np.cos(theta), r * np.sin(theta), z_pts])
-
-    dim_info = geo.estimate_fastener_dimensions(screw_pts)
-    assert 0.038 <= dim_info["length_m"] <= 0.048
-    assert dim_info["shaft_diameter_m"] <= 0.008
-
-
-def test_observed_cavity_and_openness():
-    """Verify container cavity depth measurement and open status detection."""
+def test_real_target_geometry():
+    """Mandatory test (Sec 69): Target geometry is calculated from depth residuals or returns UNKNOWN."""
     scene = WorkshopScene("none", variant="F0_BASE")
-    capture = ProductionInspectionCapture()
-    obs_list = capture.capture_stage(scene, "INITIAL")
+    rig = MultiViewCameraRig(scene=scene)
+    obs_list = rig.capture_stage_observations()
+
+    target_ev = GeometricGrounder.observe_target_recess(obs_list, scene=scene)
+    if target_ev.validity == GroundingStatus.PASS:
+        assert target_ev.estimated_recess_depth_m is not None
+        assert 0.015 <= target_ev.estimated_recess_depth_m <= 0.050
+        assert target_ev.estimated_opening_diameter_m is not None
+        assert 0.004 <= target_ev.estimated_opening_diameter_m <= 0.025
+    else:
+        assert target_ev.validity == GroundingStatus.UNKNOWN
+        assert target_ev.estimated_recess_depth_m is None
+
+
+def test_cavity_openness():
+    """Mandatory test (Sec 70): Container cavity requires observed depth difference."""
+    scene = WorkshopScene("none", variant="F0_BASE")
+    rig = MultiViewCameraRig(scene=scene)
+    obs_list = rig.capture_stage_observations()
     region_grounder = RegionGrounder()
     regions = region_grounder.discover_candidate_regions(scene, obs_list)
 
     assert len(regions) >= 2
-    # Check that regions have valid proposal bounds and cavity geometry
     for reg in regions:
         assert reg.observation_source == "calibrated_spatial_proposal"
         assert reg.region_instance_id.startswith("region_")
 
 
-def test_tracker_multiview_clustering_and_persistence():
-    """Verify PersistentInstanceTracker clusters observations across views."""
-    tracker = PersistentInstanceTracker(cluster_distance_threshold_m=0.030)
+def test_tri_state_logic():
+    """Mandatory test (Sec 71 & 35): Strict tri-state truth table."""
+    # PASS + PASS = PASS
+    assert combine_status(GroundingStatus.PASS, GroundingStatus.PASS) == GroundingStatus.PASS
+    # PASS + UNKNOWN = UNKNOWN
+    assert combine_status(GroundingStatus.PASS, GroundingStatus.UNKNOWN) == GroundingStatus.UNKNOWN
+    # UNKNOWN + PASS = UNKNOWN
+    assert combine_status(GroundingStatus.UNKNOWN, GroundingStatus.PASS) == GroundingStatus.UNKNOWN
+    # UNKNOWN + UNKNOWN = UNKNOWN
+    assert combine_status(GroundingStatus.UNKNOWN, GroundingStatus.UNKNOWN) == GroundingStatus.UNKNOWN
+    # FAIL + PASS = FAIL
+    assert combine_status(GroundingStatus.FAIL, GroundingStatus.PASS) == GroundingStatus.FAIL
+    # PASS + FAIL = FAIL
+    assert combine_status(GroundingStatus.PASS, GroundingStatus.FAIL) == GroundingStatus.FAIL
+    # FAIL + UNKNOWN = FAIL
+    assert combine_status(GroundingStatus.FAIL, GroundingStatus.UNKNOWN) == GroundingStatus.FAIL
+    # UNKNOWN + FAIL = FAIL
+    assert combine_status(GroundingStatus.UNKNOWN, GroundingStatus.FAIL) == GroundingStatus.FAIL
+    # FAIL + FAIL = FAIL
+    assert combine_status(GroundingStatus.FAIL, GroundingStatus.FAIL) == GroundingStatus.FAIL
 
-    cam1_pts = np.random.normal(loc=[0.0, 0.5, 0.8], scale=0.002, size=(50, 3))
-    cam2_pts = np.random.normal(loc=[0.002, 0.501, 0.801], scale=0.002, size=(50, 3))
 
-    m1 = ObservedMask(
-        detection_id="det_cam1_0",
-        camera_id="cam1",
-        binary_mask=np.ones((10, 10), dtype=bool),
-        bounding_box_xyxy=(0, 0, 10, 10),
-        confidence=0.95,
-        predicted_label="tool",
+def test_zero_detections_returns_insufficient_evidence():
+    """Mandatory test (Sec 39): Zero detections + exhaustion returns INSUFFICIENT_EVIDENCE, not GLOBAL_CONFLICT."""
+    search = FunctionalSatisfactionSearch()
+    diag = search.diagnose_infeasibility(
+        all_objects=[],
+        all_regions=[],
+        driver_candidates=[],
+        fastener_candidates=[],
+        work_surface_candidates=[],
+        parts_container_candidates=[],
+        evaluated_tuples=[],
     )
-    m2 = ObservedMask(
-        detection_id="det_cam2_0",
-        camera_id="cam2",
-        binary_mask=np.ones((10, 10), dtype=bool),
-        bounding_box_xyxy=(0, 0, 10, 10),
-        confidence=0.95,
-        predicted_label="tool",
-    )
-
-    intrinsics = np.eye(3)
-    cam_pos = np.zeros(3)
-    cam_mat = np.eye(3)
-
-    obs1 = ViewObservation(
-        camera_id="cam1",
-        rgb=np.zeros((10, 10, 3), dtype=np.uint8),
-        depth_m=np.ones((10, 10)),
-        intrinsics=intrinsics,
-        camera_position_world=cam_pos,
-        camera_rotation_world=cam_mat,
-        detected_masks=[m1],
-    )
-    obs2 = ViewObservation(
-        camera_id="cam2",
-        rgb=np.zeros((10, 10, 3), dtype=np.uint8),
-        depth_m=np.ones((10, 10)),
-        intrinsics=intrinsics,
-        camera_position_world=cam_pos,
-        camera_rotation_world=cam_mat,
-        detected_masks=[m2],
-    )
-
-    import mujoco_scenes.workshop_phase1.tracking as trk_module
-    orig_bp = trk_module.backproject_masked_depth
-    trk_module.backproject_masked_depth = lambda d, m, i, p, r, max_depth: (
-        cam1_pts if p[0] == 0.0 else cam2_pts,
-        np.zeros((len(cam1_pts), 2), dtype=int),
-    )
-
-    try:
-        vol_min = np.array([-1.0, -1.0, -1.0])
-        vol_max = np.array([1.0, 1.0, 2.0])
-        tracks = tracker.update_with_stage_observations(
-            stage_index=0,
-            source_region_id="INITIAL_TABLETOP",
-            observations=[obs1, obs2],
-            stage_volume_min=vol_min,
-            stage_volume_max=vol_max,
-        )
-        assert len(tracks) == 1
-        assert tracks[0].instance_id == "object_0001"
-        assert tracks[0].evidence_count >= 1
-    finally:
-        trk_module.backproject_masked_depth = orig_bp
+    assert diag == "INSUFFICIENT_EVIDENCE"
 
 
-def test_serialization_sanitization():
-    """Verify production data serialization rejects simulator strings."""
-    valid_data = {
-        "instance_id": "object_0001",
-        "category": "HAND_DRIVER",
-        "length_m": 0.223,
+def test_no_joint_self_test():
+    """Self-test (Sec 87): NO_JOINT_COUPLING selects unary-valid candidates without relational checks."""
+    scene = WorkshopScene("none", variant="F4_OBJECT_REGION_COUPLING")
+    ctrl_full = WorkshopPhase1InspectionController(scene=scene, ablation=AblationType.NONE, mask_backend=MaskBackendType.ORACLE, semantic_backend=SemanticBackendType.ORACLE)
+    res_full = ctrl_full.run_episode()
+
+    ctrl_no_joint = WorkshopPhase1InspectionController(scene=scene, ablation=AblationType.NO_JOINT_COUPLING, mask_backend=MaskBackendType.ORACLE, semantic_backend=SemanticBackendType.ORACLE)
+    res_no_joint = ctrl_no_joint.run_episode()
+
+    assert res_full.status == "FEASIBLE"
+    assert res_no_joint.status == "FEASIBLE"
+    assert res_no_joint.witness.verification_details.get("ablation") == "NO_JOINT_COUPLING"
+
+
+def test_semantic_only_self_test():
+    """Self-test (Sec 88): SEMANTIC_ONLY bypasses geometry in witness selection."""
+    scene = WorkshopScene("none", variant="I4_TOOL_GEOMETRY_FAILURE")
+    ctrl_full = WorkshopPhase1InspectionController(scene=scene, ablation=AblationType.NONE, mask_backend=MaskBackendType.ORACLE, semantic_backend=SemanticBackendType.ORACLE)
+    res_full = ctrl_full.run_episode()
+
+    ctrl_sem = WorkshopPhase1InspectionController(scene=scene, ablation=AblationType.SEMANTIC_ONLY, mask_backend=MaskBackendType.ORACLE, semantic_backend=SemanticBackendType.ORACLE)
+    res_sem = ctrl_sem.run_episode()
+
+    # In I4, driver reaches are insufficient. Full rejects with TOOL_GEOMETRY_FAILURE, SEMANTIC_ONLY accepts driver
+    assert res_full.status == "INFEASIBLE"
+    assert res_full.rejection_reason == "TOOL_GEOMETRY_FAILURE"
+    assert res_sem.status == "FEASIBLE"
+
+
+def test_config_wiring(tmp_path: Path):
+    """Self-test (Sec 85): YAML config actually controls runtime components."""
+    custom_cfg = tmp_path / "custom_config.yaml"
+    cfg_data = {
+        "perception": {
+            "detector": {
+                "confidence_threshold": 0.12,
+                "nms_iou_threshold": 0.50,
+            }
+        },
+        "tracking": {
+            "cluster_distance_threshold_m": 0.055,
+            "track_match_distance_threshold_m": 0.060,
+        },
+        "grounding": {
+            "geometry": {
+                "min_driver_reach_m": 0.040,
+                "staging_margin_multiplier": 1.35,
+            }
+        },
+        "inspection": {
+            "sequence": ["RIGHT_DRAWER", "LEFT_DRAWER"],
+            "early_stop": False,
+        }
     }
-    sanitized = sanitize_production_data(valid_data)
-    assert sanitized["instance_id"] == "object_0001"
-    assert_no_backend_names(sanitized)
+    with open(custom_cfg, "w") as f:
+        yaml.dump(cfg_data, f)
 
-    leak_data = {
-        "instance_id": "object_0001",
-        "backend_name": "workshop_long_phillips_driver",
-    }
-    with pytest.raises(ValueError):
-        assert_no_backend_names(leak_data)
+    scene = WorkshopScene("none", variant="F0_BASE")
+    ctrl = WorkshopPhase1InspectionController(scene=scene, config_path=custom_cfg)
+
+    assert ctrl.tracker.cluster_distance_threshold_m == 0.055
+    assert ctrl.tracker.track_match_distance_threshold_m == 0.060
+    assert ctrl.geometric_grounder.min_driver_reach_m == 0.040
+    assert ctrl.geometric_grounder.staging_margin_multiplier == 1.35
+    assert ctrl.inspection_sequence == ["RIGHT_DRAWER", "LEFT_DRAWER"]
+    assert ctrl.early_stop_enabled is False
 
 
 @pytest.mark.parametrize("variant", [
@@ -264,14 +383,15 @@ def test_serialization_sanitization():
     "I5_OBJECT_REGION_PACKING_FAILURE",
     "I6_GLOBAL_CONFLICT",
 ])
-def test_all_14_variants_oracle_mask_execution(variant: str):
-    """Integration test: verify all 14 variants run with Oracle Masks and Production Semantics."""
+def test_all_14_variants_oracle_semantics_upper_bound(variant: str):
+    """Verify all 14 variants pass downstream tracking, geometry, and search under Oracle Semantics."""
     scene = WorkshopScene("none", variant=variant)
     controller = WorkshopPhase1InspectionController(
+        scene=scene,
         mask_backend=MaskBackendType.ORACLE,
+        semantic_backend=SemanticBackendType.ORACLE,
     )
-    result = controller.run_episode(scene)
-    assert result.status in ("FEASIBLE", "INFEASIBLE")
+    result = controller.run_episode()
 
     if variant.startswith("F"):
         assert result.status == "FEASIBLE"

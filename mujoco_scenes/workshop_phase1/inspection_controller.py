@@ -1,16 +1,15 @@
-"""Incremental inspection controller and Phase 1 orchestration for Workshop (W1)."""
+"""Active inspection controller, multi-view execution loop, and ablation harness."""
 
 from __future__ import annotations
 
-import time
 from pathlib import Path
 from typing import Any
+import yaml
 
 import numpy as np
 
-from mujoco_scenes.workshop_phase1.capture import ProductionInspectionCapture
+from mujoco_scenes.workshop_phase1.capture import MultiViewCameraRig
 from mujoco_scenes.workshop_phase1.evidence_graph import GrowingObservedGraph
-from mujoco_scenes.workshop_phase1.fm_adapter import FMAdapter
 from mujoco_scenes.workshop_phase1.functional_search import FunctionalSatisfactionSearch
 from mujoco_scenes.workshop_phase1.geometric_grounding import GeometricGrounder
 from mujoco_scenes.workshop_phase1.perception import (
@@ -21,473 +20,524 @@ from mujoco_scenes.workshop_phase1.perception import (
 )
 from mujoco_scenes.workshop_phase1.region_grounding import RegionGrounder
 from mujoco_scenes.workshop_phase1.requirements import (
+    ManualWorkshopFMContract,
     RequirementProvider,
-    StaticWorkshopRequirementProvider,
 )
+from mujoco_scenes.workshop_phase1.tracking import PersistentInstanceTracker
 from mujoco_scenes.workshop_phase1.semantic_grounding import (
     ObjectSemanticBackend,
     PrivilegedOracleSemanticBackend,
     ProductionSemanticBackend,
     SemanticGrounder,
 )
-from mujoco_scenes.workshop_phase1.serialization import write_production_json
-from mujoco_scenes.workshop_phase1.tracking import PersistentInstanceTracker
 from mujoco_scenes.workshop_phase1.types import (
     AblationType,
     EpisodeResult,
+    FunctionalCandidate,
+    FunctionGroundingResult,
     FunctionalRequirement,
     FunctionalWitness,
     GroundingStatus,
     InspectionDecision,
     InspectionTrace,
     MaskBackendType,
+    ObservedMask,
     ObservedObjectTrack,
     ObservedRegion,
+    ProposalMode,
     SemanticBackendType,
+    TargetGeometryEvidence,
+    ViewObservation,
+    combine_status,
 )
-
-INSPECTION_SEQUENCE = ("LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET")
 
 
 class WorkshopPhase1InspectionController:
-    """Orchestrates Phase 1 perception, tracking, grounding, joint search, and incremental inspection."""
+    """Manages multi-view capture, persistent evidence accumulation, and joint functional search."""
 
     def __init__(
         self,
+        scene: Any | None = None,
+        config_path: Path | str | None = None,
+        ablation: AblationType = AblationType.NONE,
         mask_backend: MaskBackendType = MaskBackendType.PRODUCTION,
         semantic_backend: SemanticBackendType = SemanticBackendType.PRODUCTION,
-        ablation: AblationType = AblationType.NONE,
-        requirements_provider: RequirementProvider | None = None,
-        requirements_source: str = "static",
-        inspection_policy: str = "fixed_sequence",
-        output_dir: Path | None = None,
+        proposal_mode: ProposalMode = ProposalMode.YOLO_ONLY,
+        output_dir: Path | str | None = None,
     ) -> None:
+        self.scene = scene
+        self.config_path = config_path
+        self.ablation = ablation
         self.mask_backend_type = mask_backend
         self.semantic_backend_type = semantic_backend
-        self.ablation = ablation
-        self.requirements_source = requirements_source
-        self.inspection_policy = inspection_policy
-        self.requirements_provider = requirements_provider or StaticWorkshopRequirementProvider()
-        self.output_dir = output_dir
+        self.proposal_mode = proposal_mode
+        self.output_dir = Path(output_dir) if output_dir else None
 
-        # Apply ablation overrides
-        if self.ablation == AblationType.ORACLE_MASK:
-            self.mask_backend_type = MaskBackendType.ORACLE
-        elif self.ablation == AblationType.ORACLE_SEMANTICS:
-            self.semantic_backend_type = SemanticBackendType.ORACLE
+        # Load YAML configurations
+        self.raw_config = self._load_config(config_path)
 
-        self.capture = ProductionInspectionCapture()
-        self.tracker = PersistentInstanceTracker()
-        self.graph = GrowingObservedGraph()
+        # 1. FM Contract
+        fm_contract_path = self.raw_config.get("pipeline", {}).get("fm_contract_path")
+        self.fm_contract = ManualWorkshopFMContract(
+            Path(fm_contract_path) if fm_contract_path else None
+        )
+        self.requirements = self.fm_contract.get_requirements()
+        self.prompts = self.fm_contract.get_detector_prompts()
+        self.alias_to_canonical = self.fm_contract.get_alias_to_canonical_map()
+
+        # 2. Camera Rig
+        self.camera_rig = MultiViewCameraRig(scene=self.scene) if self.scene is not None else None
+
+        # 3. Perception Backend
+        self.proposal_backend = self._init_proposal_backend()
+        self.proposal_backend.set_vocabulary(self.prompts, self.alias_to_canonical)
+
+        # For oracle-mask ablation with YOLO semantics
+        self._yolo_aux_backend = None
+        if (self.mask_backend_type == MaskBackendType.ORACLE or self.ablation == AblationType.ORACLE_MASK) and self.semantic_backend_type != SemanticBackendType.ORACLE and self.ablation != AblationType.ORACLE_SEMANTICS:
+            det_cfg = self.raw_config.get("perception", {}).get("detector", {})
+            self._yolo_aux_backend = YOLOWorldProposalBackend(
+                weights_path=det_cfg.get("checkpoint"),
+                confidence_threshold=det_cfg.get("confidence_threshold", 0.05),
+                nms_iou_threshold=det_cfg.get("nms_iou_threshold", 0.45),
+                inference_size=det_cfg.get("inference_size", 640),
+                device=det_cfg.get("device", "cpu"),
+            )
+            self._yolo_aux_backend.set_vocabulary(self.prompts, self.alias_to_canonical)
+
+        # 4. Semantic Grounder
+        self.semantic_backend = self._init_semantic_backend()
+        self.semantic_grounder = SemanticGrounder(backend=self.semantic_backend)
+
+        # 5. Persistent Tracker
+        track_cfg = self.raw_config.get("tracking", {})
+        self.tracker = PersistentInstanceTracker(
+            cluster_distance_threshold_m=track_cfg.get("cluster_distance_threshold_m", 0.040),
+            track_match_distance_threshold_m=track_cfg.get("track_match_distance_threshold_m", 0.045),
+            voxel_size_m=track_cfg.get("voxel_size_m", 0.003),
+            min_cluster_points=track_cfg.get("min_cluster_points", 10),
+        )
+
+        # 6. Region Grounder
         self.region_grounder = RegionGrounder()
-        self.fm_adapter = FMAdapter()
 
-    def _get_proposal_backend(self, scene: Any) -> InstanceProposalBackend:
-        if self.mask_backend_type == MaskBackendType.ORACLE:
-            return PrivilegedOracleMaskBackend(scene)
-        elif self.mask_backend_type == MaskBackendType.CONNECTED_COMPONENT:
+        # 7. Geometric Grounder & Search
+        geom_cfg = self.raw_config.get("grounding", {}).get("geometry", {})
+        self.geometric_grounder = GeometricGrounder(
+            min_driver_reach_m=geom_cfg.get("min_driver_reach_m", 0.025),
+            min_fastener_length_m=geom_cfg.get("min_fastener_length_m", 0.022),
+            min_surface_area_m2=geom_cfg.get("min_surface_area_m2", 0.015),
+            min_container_volume_m3=geom_cfg.get("min_container_volume_m3", 0.0001),
+            staging_margin_multiplier=geom_cfg.get("staging_margin_multiplier", 1.20),
+        )
+        self.functional_search = FunctionalSatisfactionSearch(geometric_grounder=self.geometric_grounder)
+
+        # 8. Observed Evidence Graph
+        self.graph = GrowingObservedGraph()
+
+        # 9. Inspection Policy
+        insp_cfg = self.raw_config.get("inspection", {})
+        self.inspection_sequence = insp_cfg.get("sequence", ["LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"])
+        self.early_stop_enabled = insp_cfg.get("early_stop", True)
+
+        self.trace = InspectionTrace()
+        self.target_evidence = TargetGeometryEvidence()
+        self.candidate_regions: list[ObservedRegion] = []
+
+    def _load_config(self, config_path: Path | str | None) -> dict[str, Any]:
+        default_path = Path(__file__).resolve().parent.parent / "configs" / "workshop_phase1.yaml"
+        target_path = Path(config_path) if config_path else default_path
+        if target_path.is_file():
+            try:
+                with open(target_path, "r", encoding="utf-8") as f:
+                    data = yaml.safe_load(f)
+                    if isinstance(data, dict):
+                        return data
+            except Exception:
+                pass
+        return {}
+
+    def _init_proposal_backend(self) -> InstanceProposalBackend:
+        if self.mask_backend_type == MaskBackendType.ORACLE or self.ablation == AblationType.ORACLE_MASK:
+            return PrivilegedOracleMaskBackend(scene=self.scene)
+        if self.mask_backend_type == MaskBackendType.CONNECTED_COMPONENT:
             return RGBDConnectedComponentProposalBackend()
-        else:
-            return YOLOWorldProposalBackend()
 
-    def _get_semantic_grounder(self, scene: Any) -> SemanticGrounder:
-        if self.semantic_backend_type == SemanticBackendType.ORACLE:
-            backend: ObjectSemanticBackend = PrivilegedOracleSemanticBackend(scene)
-        else:
-            backend = ProductionSemanticBackend()
-        return SemanticGrounder(backend=backend)
-
-    def run_episode(self, scene: Any) -> EpisodeResult:
-        """Run a complete Phase 1 grounding episode on the provided scene."""
-        start_time = time.perf_counter()
-        proposal_backend = self._get_proposal_backend(scene)
-        semantic_grounder = self._get_semantic_grounder(scene)
-
-        # 1. Obtain broad functional requirements
-        if self.requirements_source == "fm":
-            task_desc = getattr(scene, "task_instruction", "Repair frame joint assembly in workshop")
-            fm_reqs = self.fm_adapter.generate_task_requirements(task_desc)
-            # Parse FM output to FunctionalRequirement instances
-            from mujoco_scenes.workshop_phase1.types import EntityType
-            requirements: list[FunctionalRequirement] = []
-            for item in fm_reqs.get("object_functions", []):
-                requirements.append(
-                    FunctionalRequirement(
-                        requirement_id=f"req_{item['name'].lower()}",
-                        entity_type=EntityType.OBJECT,
-                        function_name=item["name"],
-                        description=item["description"],
-                        priority=item.get("rank", 1),
-                    )
-                )
-            for item in fm_reqs.get("region_functions", []):
-                requirements.append(
-                    FunctionalRequirement(
-                        requirement_id=f"req_{item['name'].lower()}",
-                        entity_type=EntityType.FUNCTIONAL_REGION,
-                        function_name=item["name"],
-                        description=item["description"],
-                        priority=item.get("rank", 1),
-                    )
-                )
-        else:
-            requirements = self.requirements_provider.get_requirements()
-
-        req_map = {r.function_name: r for r in requirements}
-        proposal_backend.set_requirements(requirements, getattr(scene, "task_instruction", ""))
-
-        # 2. Register initial scene graph nodes
-        for r_name in INSPECTION_SEQUENCE:
-            self.graph.register_inspection_region_node(r_name, f"Storage container {r_name}")
-        self.graph.register_workpiece_node("workpiece_frame_joint_0001")
-
-        trace = InspectionTrace()
-        stage_idx = 0
-        witness: FunctionalWitness | None = None
-        all_regions: list[ObservedRegion] = []
-        grounding_results_all: list[dict[str, Any]] = []
-        all_evaluated_tuples: list[dict[str, Any]] = []
-
-        is_oracle_mask = (self.mask_backend_type == MaskBackendType.ORACLE)
-
-        # 3. Stage 0: INITIAL observation (tabletop + candidate regions)
-        init_rig = self.capture.get_stage_rig_config("INITIAL")
-        init_vol_cfg = init_rig.get("inspection_volume", init_rig.get("inspection_volume_m", {}))
-        init_vol_min = np.array(init_vol_cfg.get("minimum_world_m", [-1.20, -0.15, 0.60]))
-        init_vol_max = np.array(init_vol_cfg.get("maximum_world_m", [1.20, 0.85, 1.50]))
-
-        init_obs = self.capture.capture_stage(scene, "INITIAL", capture_segmentation=is_oracle_mask)
-        if self.ablation == AblationType.SINGLE_VIEW and init_obs:
-            init_obs = [init_obs[0]]  # Only camera 0
-
-        for obs in init_obs:
-            obs.detected_masks = proposal_backend.predict(obs, init_vol_min, init_vol_max)
-
-        # Observe target recess geometry from RGB-D
-        target_evidence = GeometricGrounder.observe_target_recess(init_obs)
-        geometric_grounder = GeometricGrounder(target_evidence=target_evidence)
-        search_engine = FunctionalSatisfactionSearch(geometric_grounder=geometric_grounder)
-
-        # Discover candidate regions from initial stage
-        all_regions = self.region_grounder.discover_candidate_regions(scene, init_obs)
-        self.graph.update_from_observed_regions(all_regions, stage_idx=0)
-
-        # Track visible tabletop objects
-        affected_tracks = self.tracker.update_with_stage_observations(
-            stage_index=0,
-            source_region_id="INITIAL_TABLETOP",
-            observations=init_obs,
-            stage_volume_min=init_vol_min,
-            stage_volume_max=init_vol_max,
+        det_cfg = self.raw_config.get("perception", {}).get("detector", {})
+        return YOLOWorldProposalBackend(
+            weights_path=det_cfg.get("checkpoint"),
+            confidence_threshold=det_cfg.get("confidence_threshold", 0.05),
+            nms_iou_threshold=det_cfg.get("nms_iou_threshold", 0.45),
+            inference_size=det_cfg.get("inference_size", 640),
+            device=det_cfg.get("device", "cpu"),
+            max_detections=det_cfg.get("max_detections", 100),
         )
-        self.graph.update_from_object_tracks(affected_tracks, stage_idx=0, stage_region_id="INITIAL_TABLETOP")
 
-        trace.steps.append(
-            InspectionDecision(
-                stage_index=0,
-                inspection_region_id="INITIAL",
-                action="INITIAL_SURVEY",
-                rationale="Survey open workspace and identify staging regions and exposed objects",
+    def _init_semantic_backend(self) -> ObjectSemanticBackend:
+        if self.semantic_backend_type == SemanticBackendType.ORACLE or self.ablation == AblationType.ORACLE_SEMANTICS:
+            return PrivilegedOracleSemanticBackend(scene=self.scene)
+        return ProductionSemanticBackend()
+
+    def run_episode(self, scene: Any | None = None) -> EpisodeResult:
+        """Run the full Phase 1 incremental inspection loop."""
+        if scene is not None:
+            self.scene = scene
+            self.camera_rig = MultiViewCameraRig(scene=self.scene)
+            if self.mask_backend_type == MaskBackendType.ORACLE or self.ablation == AblationType.ORACLE_MASK:
+                self.proposal_backend = PrivilegedOracleMaskBackend(scene=self.scene)
+            if self.semantic_backend_type == SemanticBackendType.ORACLE or self.ablation == AblationType.ORACLE_SEMANTICS:
+                self.semantic_backend = PrivilegedOracleSemanticBackend(scene=self.scene)
+                self.semantic_grounder = SemanticGrounder(backend=self.semantic_backend)
+        """Run the full Phase 1 incremental inspection loop."""
+        # Register static workpiece and search regions in evidence graph
+        self.graph.register_workpiece_node()
+        for s_reg in self.inspection_sequence:
+            self.graph.register_inspection_region_node(s_reg, f"Search container {s_reg}")
+
+        # Stage 0: Initial workbench observation
+        stage_0_obs = self._capture_and_process_stage(stage_idx=0, source_region_id="INITIAL_WORKBENCH")
+
+        # Estimate target recess from RGB-D
+        self.target_evidence = self.geometric_grounder.observe_target_recess(stage_0_obs, scene=self.scene)
+        if self.target_evidence.validity == GroundingStatus.PASS:
+            self.geometric_grounder.target_hole_depth_m = (
+                self.target_evidence.estimated_recess_depth_m
+                if self.target_evidence.estimated_recess_depth_m is not None
+                else 0.030
             )
-        )
-
-        # Grounding & search after Stage 0
-        witness, evaluated_tuples, g_res = self._ground_and_search(
-            req_map=req_map,
-            regions=all_regions,
-            semantic_grounder=semantic_grounder,
-            geometric_grounder=geometric_grounder,
-            search_engine=search_engine,
-            stage_idx=0,
-        )
-        grounding_results_all.extend(g_res)
-        all_evaluated_tuples.extend(evaluated_tuples)
-        self.graph.snapshot(stage_idx=0, output_dir=self.output_dir)
-
-        # Determine inspection sequence order
-        if self.inspection_policy == "fm_ranked":
-            descriptors = {r: f"Storage region {r}" for r in INSPECTION_SEQUENCE}
-            active_sequence = self.fm_adapter.generate_inspection_priors("Find repair tools and fasteners", descriptors)
-        else:
-            active_sequence = list(INSPECTION_SEQUENCE)
-
-        if witness is not None:
-            trace.early_stopped = True
-        else:
-            # 4. Incremental inspection over storage containers
-            for reg_name in active_sequence:
-                stage_idx += 1
-                trace.inspected_regions.append(reg_name)
-                trace.steps.append(
-                    InspectionDecision(
-                        stage_index=stage_idx,
-                        inspection_region_id=reg_name,
-                        action="INSPECT",
-                        rationale=f"Open and inspect storage container {reg_name} for missing functional items",
-                    )
-                )
-
-                # Open container in scene
-                scene.open_container(reg_name)
-
-                if self.ablation == AblationType.NO_PERSISTENCE:
-                    self.tracker.reset()
-
-                # Capture fresh calibrated observation
-                stage_rig = self.capture.get_stage_rig_config(reg_name)
-                vol_cfg = stage_rig.get("inspection_volume", stage_rig.get("inspection_volume_m", {}))
-                vol_min = np.array(vol_cfg.get("minimum_world_m", [-1.20, -0.30, 0.35]))
-                vol_max = np.array(vol_cfg.get("maximum_world_m", [1.20, 0.85, 1.50]))
-
-                stage_obs = self.capture.capture_stage(scene, reg_name, capture_segmentation=is_oracle_mask)
-                if self.ablation == AblationType.SINGLE_VIEW and stage_obs:
-                    stage_obs = [stage_obs[0]]
-
-                for obs in stage_obs:
-                    obs.detected_masks = proposal_backend.predict(obs, vol_min, vol_max)
-
-                # Update persistent tracks
-                stage_tracks = self.tracker.update_with_stage_observations(
-                    stage_index=stage_idx,
-                    source_region_id=reg_name,
-                    observations=stage_obs,
-                    stage_volume_min=vol_min,
-                    stage_volume_max=vol_max,
-                )
-                self.graph.update_from_object_tracks(stage_tracks, stage_idx=stage_idx, stage_region_id=reg_name)
-
-                # Re-ground and search
-                witness, evaluated_tuples, g_res = self._ground_and_search(
-                    req_map=req_map,
-                    regions=all_regions,
-                    semantic_grounder=semantic_grounder,
-                    geometric_grounder=geometric_grounder,
-                    search_engine=search_engine,
-                    stage_idx=stage_idx,
-                )
-                grounding_results_all.extend(g_res)
-                all_evaluated_tuples.extend(evaluated_tuples)
-                self.graph.snapshot(stage_idx=stage_idx, output_dir=self.output_dir)
-
-                if witness is not None:
-                    trace.early_stopped = True
-                    break
-
-        total_time = time.perf_counter() - start_time
-        trace.total_stages = stage_idx + 1
-
-        # 5. Final diagnosis
-        all_tracks = list(self.tracker.tracks.values())
-        if witness is not None:
-            status = "FEASIBLE"
-            rejection_reason = None
-        else:
-            status = "INFEASIBLE"
-            drivers, fasteners, surfaces, containers = self._filter_valid_candidates(
-                req_map, all_regions, semantic_grounder, geometric_grounder
-            )
-            rejection_reason = search_engine.diagnose_infeasibility(
-                all_objects=all_tracks,
-                all_regions=all_regions,
-                driver_candidates=drivers,
-                fastener_candidates=fasteners,
-                work_surface_candidates=surfaces,
-                parts_container_candidates=containers,
-                evaluated_tuples=all_evaluated_tuples,
+            self.geometric_grounder.target_hole_diameter_m = (
+                self.target_evidence.estimated_opening_diameter_m
+                if self.target_evidence.estimated_opening_diameter_m is not None
+                else 0.007
             )
 
-        metrics = {
-            "total_inference_time_s": round(total_time, 4),
-            "discovered_object_count": len(all_tracks),
-            "discovered_region_count": len(all_regions),
-            "stages_executed": trace.total_stages,
-            "inspected_storage_regions": trace.inspected_regions,
-            "early_stopped": trace.early_stopped,
-            "semantic_model_calls": semantic_grounder.total_semantic_calls,
-            "geometric_model_calls": geometric_grounder.total_geometric_calls,
-            "fm_requirement_calls": self.fm_adapter.metrics.requirement_calls,
-            "fm_search_prior_calls": self.fm_adapter.metrics.search_prior_calls,
-            "total_fm_calls": self.fm_adapter.metrics.total_calls,
-        }
+        # Discover candidate regions
+        self.candidate_regions = self.region_grounder.discover_candidate_regions(self.scene, stage_0_obs)
+        self.graph.update_from_observed_regions(self.candidate_regions, stage_idx=0)
 
-        result = EpisodeResult(
-            status=status,
-            rejection_reason=rejection_reason,
-            witness=witness,
-            trace=trace,
-            metrics=metrics,
-            diagnostics={
-                "evaluated_tuple_count": len(all_evaluated_tuples),
-                "evaluated_tuples": all_evaluated_tuples,
-            },
-        )
+        # Evaluate stage 0
+        witness, rej_reason = self._evaluate_grounding_and_search(stage_idx=0, source_region_id="INITIAL_WORKBENCH")
 
-        if self.output_dir is not None:
-            self._save_artifacts(
-                requirements=requirements,
-                trace=trace,
-                tracks=all_tracks,
-                regions=all_regions,
-                grounding_results=grounding_results_all,
-                evaluated_tuples=all_evaluated_tuples,
+        if witness is not None and self.early_stop_enabled:
+            self.trace.early_stopped = True
+            self.trace.steps.append(
+                InspectionDecision(
+                    stage_index=0,
+                    inspection_region_id="INITIAL_WORKBENCH",
+                    action="STOP_FEASIBLE",
+                    rationale="Complete verified witness found on initial workbench observation.",
+                )
+            )
+            return EpisodeResult(
+                status="FEASIBLE",
+                rejection_reason=None,
                 witness=witness,
-                rejection_reason=rejection_reason,
-                result=result,
-                metrics=metrics,
+                trace=self.trace,
+                metrics={"stages_executed": 1, "total_tracks": len(self.tracker.tracks)},
             )
 
-        return result
+        # Step through inspection sequence
+        for s_idx, region_name in enumerate(self.inspection_sequence, start=1):
+            self.trace.inspected_regions.append(region_name)
 
-    def _ground_and_search(
+            # Open container in physics
+            if hasattr(self.scene, "open_container"):
+                try:
+                    self.scene.open_container(region_name)
+                except Exception:
+                    pass
+
+            # For NO_PERSISTENCE ablation: reset tracker and caches
+            if self.ablation == AblationType.NO_PERSISTENCE:
+                self.tracker.reset()
+                self.semantic_grounder.reset_cache()
+
+            stage_obs = self._capture_and_process_stage(stage_idx=s_idx, source_region_id=region_name)
+            witness, rej_reason = self._evaluate_grounding_and_search(stage_idx=s_idx, source_region_id=region_name)
+
+            if witness is not None and self.early_stop_enabled:
+                self.trace.early_stopped = True
+                self.trace.steps.append(
+                    InspectionDecision(
+                        stage_index=s_idx,
+                        inspection_region_id=region_name,
+                        action="STOP_FEASIBLE",
+                        rationale=f"Complete verified witness found after inspecting {region_name}.",
+                    )
+                )
+                return EpisodeResult(
+                    status="FEASIBLE",
+                    rejection_reason=None,
+                    witness=witness,
+                    trace=self.trace,
+                    metrics={"stages_executed": s_idx + 1, "total_tracks": len(self.tracker.tracks)},
+                )
+
+            self.trace.steps.append(
+                InspectionDecision(
+                    stage_index=s_idx,
+                    inspection_region_id=region_name,
+                    action="INSPECT",
+                    rationale=f"Witness not yet complete; continue to next region.",
+                )
+            )
+
+        # Exhausted all inspection stages
+        final_status = "INFEASIBLE" if rej_reason != "INSUFFICIENT_EVIDENCE" else "INSUFFICIENT_EVIDENCE"
+        return EpisodeResult(
+            status=final_status,
+            rejection_reason=rej_reason,
+            witness=None,
+            trace=self.trace,
+            metrics={"stages_executed": len(self.inspection_sequence) + 1, "total_tracks": len(self.tracker.tracks)},
+        )
+
+    def _capture_and_process_stage(self, stage_idx: int, source_region_id: str) -> list[ViewObservation]:
+        """Capture multi-view RGB-D and predict instance masks."""
+        is_oracle_mask = (self.mask_backend_type == MaskBackendType.ORACLE or self.ablation == AblationType.ORACLE_MASK)
+        raw_obs = self.camera_rig.capture_stage_observations(
+            stage_region=source_region_id,
+            capture_segmentation=is_oracle_mask,
+        )
+
+        # SINGLE_FRONT_VIEW ablation: filter strictly to front camera
+        if self.ablation == AblationType.SINGLE_VIEW or self.ablation == AblationType.SINGLE_FRONT_VIEW:
+            raw_obs = [obs for obs in raw_obs if obs.camera_id == "workshop_camera_front"]
+            if not raw_obs:
+                raw_obs = [self.camera_rig.capture_stage_observations(stage_region=source_region_id, capture_segmentation=is_oracle_mask)[0]]
+
+        # Determine stage inspection volume bounds
+        stage_min, stage_max = self._get_stage_volume_bounds(source_region_id)
+
+        # Run instance proposal on each view
+        for obs in raw_obs:
+            masks = self.proposal_backend.predict(
+                observation=obs,
+                stage_volume_min=stage_min,
+                stage_volume_max=stage_max,
+                volume_margin_m=0.08,
+            )
+
+            # If using oracle masks WITH YOLO semantics (ORACLE_MASK ablation), associate YOLO semantic detections by 2D IoU
+            if (self.mask_backend_type == MaskBackendType.ORACLE or self.ablation == AblationType.ORACLE_MASK) and self.semantic_backend_type != SemanticBackendType.ORACLE and self.ablation != AblationType.ORACLE_SEMANTICS and self._yolo_aux_backend:
+                yolo_masks = self._yolo_aux_backend.predict(
+                    observation=obs,
+                    stage_volume_min=stage_min,
+                    stage_volume_max=stage_max,
+                    volume_margin_m=0.08,
+                )
+                for om in masks:
+                    ox1, oy1, ox2, oy2 = om.bounding_box_xyxy
+                    om_area = max(1, (ox2 - ox1) * (oy2 - oy1))
+                    best_iou = 0.0
+                    best_yolo = None
+                    for ym in yolo_masks:
+                        yx1, yy1, yx2, yy2 = ym.bounding_box_xyxy
+                        ix1, iy1 = max(ox1, yx1), max(oy1, yy1)
+                        ix2, iy2 = min(ox2, yx2), min(oy2, yy2)
+                        if ix2 > ix1 and iy2 > iy1:
+                            inter = (ix2 - ix1) * (iy2 - iy1)
+                            union = om_area + (yx2 - yx1) * (yy2 - yy1) - inter
+                            iou = inter / max(1, union)
+                            if iou > best_iou:
+                                best_iou = iou
+                                best_yolo = ym
+
+                    if best_yolo and best_iou > 0.15:
+                        om.canonical_label = best_yolo.canonical_label
+                        om.raw_label = best_yolo.raw_label
+                        om.confidence = best_yolo.confidence
+                        om.predicted_label = best_yolo.canonical_label
+                    else:
+                        om.canonical_label = "unknown"
+                        om.raw_label = "unknown"
+                        om.confidence = 0.0
+                        om.predicted_label = "unknown"
+
+            obs.detected_masks = masks
+
+        # Update persistent tracking
+        self.tracker.update_with_stage_observations(
+            stage_index=stage_idx,
+            source_region_id=source_region_id,
+            observations=raw_obs,
+            stage_volume_min=stage_min,
+            stage_volume_max=stage_max,
+        )
+
+        return raw_obs
+
+    def _get_stage_volume_bounds(self, source_region_id: str) -> tuple[np.ndarray, np.ndarray]:
+        if source_region_id == "LEFT_DRAWER":
+            return np.array([-0.65, -0.20, 0.35]), np.array([-0.10, 0.45, 0.75])
+        elif source_region_id == "RIGHT_DRAWER":
+            return np.array([0.10, -0.20, 0.35]), np.array([0.65, 0.45, 0.75])
+        elif source_region_id == "TOOL_CABINET":
+            return np.array([0.10, 0.30, 0.60]), np.array([0.80, 0.95, 1.25])
+        # Default workbench/scene volume
+        return np.array([-1.20, -0.30, 0.35]), np.array([1.20, 1.20, 1.40])
+
+    def _evaluate_grounding_and_search(
         self,
-        req_map: dict[str, FunctionalRequirement],
-        regions: list[ObservedRegion],
-        semantic_grounder: SemanticGrounder,
-        geometric_grounder: GeometricGrounder,
-        search_engine: FunctionalSatisfactionSearch,
         stage_idx: int,
-    ) -> tuple[FunctionalWitness | None, list[dict[str, Any]], list[dict[str, Any]]]:
+        source_region_id: str,
+    ) -> tuple[FunctionalWitness | None, str | None]:
+        """Perform semantic and geometric grounding pass, update graph, and search witness."""
         all_tracks = list(self.tracker.tracks.values())
-        drivers, fasteners, surfaces, containers = self._filter_valid_candidates(
-            req_map, regions, semantic_grounder, geometric_grounder
-        )
+        self.graph.update_from_object_tracks(all_tracks, stage_idx=stage_idx, stage_region_id=source_region_id)
 
-        witness, evaluated_tuples = search_engine.search_witness(
-            driver_candidates=drivers,
-            fastener_candidates=fasteners,
-            work_surface_candidates=surfaces,
-            parts_container_candidates=containers,
-        )
+        driver_req = next((r for r in self.requirements if r.function_name == "CAN_DRIVE_SCREW"), None)
+        fastener_req = next((r for r in self.requirements if r.function_name == "CAN_FASTEN"), None)
+        surface_req = next((r for r in self.requirements if r.function_name == "WORK_SURFACE"), None)
+        container_req = next((r for r in self.requirements if r.function_name == "SMALL_PARTS_CONTAINER"), None)
 
-        # Record grounding entries and graph edges
-        from mujoco_scenes.workshop_phase1.types import FunctionGroundingResult
-        grounding_entries: list[dict[str, Any]] = []
-        typed_results: list[FunctionGroundingResult] = []
+        grounding_results = []
+        driver_candidates = []
+        fastener_candidates = []
+        surface_candidates = []
+        container_candidates = []
 
-        bypass_geo = (self.ablation in (AblationType.SEMANTIC_ONLY, AblationType.NO_GEOMETRY))
+        is_semantic_only = (self.ablation == AblationType.SEMANTIC_ONLY or self.ablation == AblationType.NO_GEOMETRY)
 
+        # Ground objects
         for trk in all_tracks:
-            for req in req_map.values():
-                if req.entity_type.value == "OBJECT":
-                    s_res = semantic_grounder.ground_object_for_requirement(trk, req)
-                    g_res = geometric_grounder.ground_object_geometry(trk, req)
-                    g_status = GroundingStatus.PASS if bypass_geo else g_res.geometric_status
+            # 1. CAN_DRIVE_SCREW
+            if driver_req:
+                s_res = self.semantic_grounder.ground_object_for_requirement(trk, driver_req)
+                if s_res.semantic_status == GroundingStatus.PASS:
+                    trk.current_semantic_belief.update(s_res.semantic_evidence)
+                g_res = self.geometric_grounder.ground_object_geometry(trk, driver_req)
+                c_status = s_res.semantic_status if is_semantic_only else combine_status(s_res.semantic_status, g_res.geometric_status)
+                f_res = FunctionGroundingResult(
+                    entity_id=trk.instance_id,
+                    requirement_id=driver_req.requirement_id,
+                    function_name=driver_req.function_name,
+                    semantic_status=s_res.semantic_status,
+                    semantic_score=s_res.semantic_score,
+                    semantic_evidence=s_res.semantic_evidence,
+                    geometric_status=g_res.geometric_status,
+                    geometric_score=g_res.geometric_score,
+                    geometric_evidence=g_res.geometric_evidence,
+                    combined_status=c_status,
+                    rejection_reasons=s_res.rejection_reasons + g_res.rejection_reasons,
+                )
+                grounding_results.append(f_res)
+                if c_status == GroundingStatus.PASS:
+                    driver_candidates.append(trk)
 
-                    comb_status = (
-                        GroundingStatus.PASS
-                        if (s_res.semantic_status == GroundingStatus.PASS and g_status == GroundingStatus.PASS)
-                        else GroundingStatus.FAIL
-                    )
-                    entry_res = FunctionGroundingResult(
-                        entity_id=trk.instance_id,
-                        requirement_id=req.requirement_id,
-                        function_name=req.function_name,
-                        semantic_status=s_res.semantic_status,
-                        semantic_score=s_res.semantic_score,
-                        semantic_evidence=s_res.semantic_evidence,
-                        geometric_status=g_status,
-                        geometric_score=g_res.geometric_score,
-                        geometric_evidence=g_res.geometric_evidence,
-                        combined_status=comb_status,
-                        rejection_reasons=s_res.rejection_reasons + g_res.rejection_reasons,
-                    )
-                    typed_results.append(entry_res)
-                    grounding_entries.append({
-                        "entity_id": trk.instance_id,
-                        "function": req.function_name,
-                        "semantic_status": s_res.semantic_status.value,
-                        "geometric_status": g_status.value,
-                        "combined_status": comb_status.value,
-                        "rejections": entry_res.rejection_reasons,
-                    })
+            # 2. CAN_FASTEN
+            if fastener_req:
+                s_res = self.semantic_grounder.ground_object_for_requirement(trk, fastener_req)
+                if s_res.semantic_status == GroundingStatus.PASS:
+                    trk.current_semantic_belief.update(s_res.semantic_evidence)
+                g_res = self.geometric_grounder.ground_object_geometry(trk, fastener_req)
+                c_status = s_res.semantic_status if is_semantic_only else combine_status(s_res.semantic_status, g_res.geometric_status)
+                f_res = FunctionGroundingResult(
+                    entity_id=trk.instance_id,
+                    requirement_id=fastener_req.requirement_id,
+                    function_name=fastener_req.function_name,
+                    semantic_status=s_res.semantic_status,
+                    semantic_score=s_res.semantic_score,
+                    semantic_evidence=s_res.semantic_evidence,
+                    geometric_status=g_res.geometric_status,
+                    geometric_score=g_res.geometric_score,
+                    geometric_evidence=g_res.geometric_evidence,
+                    combined_status=c_status,
+                    rejection_reasons=s_res.rejection_reasons + g_res.rejection_reasons,
+                )
+                grounding_results.append(f_res)
+                if c_status == GroundingStatus.PASS:
+                    fastener_candidates.append(trk)
 
-        self.graph.update_from_grounding_results(typed_results, stage_idx=stage_idx)
+        # Ground regions
+        for reg in self.candidate_regions:
+            # 3. WORK_SURFACE
+            if surface_req:
+                s_res = self.semantic_grounder.ground_region_for_requirement(reg, surface_req)
+                if s_res.semantic_status == GroundingStatus.PASS:
+                    reg.current_semantic_belief.update(s_res.semantic_evidence)
+                g_res = self.geometric_grounder.ground_region_geometry(reg, surface_req)
+                c_status = s_res.semantic_status if is_semantic_only else combine_status(s_res.semantic_status, g_res.geometric_status)
+                f_res = FunctionGroundingResult(
+                    entity_id=reg.region_instance_id,
+                    requirement_id=surface_req.requirement_id,
+                    function_name=surface_req.function_name,
+                    semantic_status=s_res.semantic_status,
+                    semantic_score=s_res.semantic_score,
+                    semantic_evidence=s_res.semantic_evidence,
+                    geometric_status=g_res.geometric_status,
+                    geometric_score=g_res.geometric_score,
+                    geometric_evidence=g_res.geometric_evidence,
+                    combined_status=c_status,
+                    rejection_reasons=s_res.rejection_reasons + g_res.rejection_reasons,
+                )
+                grounding_results.append(f_res)
+                if c_status == GroundingStatus.PASS:
+                    surface_candidates.append(reg)
 
-        return witness, evaluated_tuples, grounding_entries
+            # 4. SMALL_PARTS_CONTAINER
+            if container_req:
+                s_res = self.semantic_grounder.ground_region_for_requirement(reg, container_req)
+                if s_res.semantic_status == GroundingStatus.PASS:
+                    reg.current_semantic_belief.update(s_res.semantic_evidence)
+                g_res = self.geometric_grounder.ground_region_geometry(reg, container_req)
+                c_status = s_res.semantic_status if is_semantic_only else combine_status(s_res.semantic_status, g_res.geometric_status)
+                f_res = FunctionGroundingResult(
+                    entity_id=reg.region_instance_id,
+                    requirement_id=container_req.requirement_id,
+                    function_name=container_req.function_name,
+                    semantic_status=s_res.semantic_status,
+                    semantic_score=s_res.semantic_score,
+                    semantic_evidence=s_res.semantic_evidence,
+                    geometric_status=g_res.geometric_status,
+                    geometric_score=g_res.geometric_score,
+                    geometric_evidence=g_res.geometric_evidence,
+                    combined_status=c_status,
+                    rejection_reasons=s_res.rejection_reasons + g_res.rejection_reasons,
+                )
+                grounding_results.append(f_res)
+                if c_status == GroundingStatus.PASS:
+                    container_candidates.append(reg)
 
-    def _filter_valid_candidates(
-        self,
-        req_map: dict[str, FunctionalRequirement],
-        regions: list[ObservedRegion],
-        semantic_grounder: SemanticGrounder,
-        geometric_grounder: GeometricGrounder,
-    ) -> tuple[list[ObservedObjectTrack], list[ObservedObjectTrack], list[ObservedRegion], list[ObservedRegion]]:
-        all_tracks = list(self.tracker.tracks.values())
-        drivers: list[ObservedObjectTrack] = []
-        fasteners: list[ObservedObjectTrack] = []
-        surfaces: list[ObservedRegion] = []
-        containers: list[ObservedRegion] = []
+        self.graph.update_from_grounding_results(grounding_results, stage_idx=stage_idx)
+        self.graph.snapshot(stage_idx=stage_idx, output_dir=self.output_dir)
 
-        bypass_geo = (self.ablation in (AblationType.SEMANTIC_ONLY, AblationType.NO_GEOMETRY))
+        # NO_JOINT_COUPLING ablation: choose independent unary-best candidates without profile/packing check
+        if self.ablation == AblationType.NO_JOINT_COUPLING:
+            if driver_candidates and fastener_candidates and surface_candidates and container_candidates:
+                d_best = max(driver_candidates, key=lambda x: x.overall_confidence)
+                f_best = max(fastener_candidates, key=lambda x: x.overall_confidence)
+                s_best = surface_candidates[0]
+                c_best = container_candidates[0]
+                wit = FunctionalWitness(
+                    driver_id=d_best.instance_id,
+                    fastener_id=f_best.instance_id,
+                    work_surface_id=s_best.region_instance_id,
+                    parts_container_id=c_best.region_instance_id,
+                    overall_confidence=float(d_best.overall_confidence * f_best.overall_confidence),
+                    verification_details={"ablation": "NO_JOINT_COUPLING", "unary_selected": True},
+                )
+                return wit, None
 
-        driver_req = req_map.get("CAN_DRIVE_SCREW")
-        fastener_req = req_map.get("CAN_FASTEN")
-        surface_req = req_map.get("WORK_SURFACE")
-        container_req = req_map.get("SMALL_PARTS_CONTAINER")
-
-        if driver_req:
-            for trk in all_tracks:
-                s_res = semantic_grounder.ground_object_for_requirement(trk, driver_req)
-                g_res = geometric_grounder.ground_object_geometry(trk, driver_req)
-                g_ok = True if bypass_geo else (g_res.geometric_status == GroundingStatus.PASS)
-                if s_res.semantic_status == GroundingStatus.PASS and g_ok:
-                    drivers.append(trk)
-
-        if fastener_req:
-            for trk in all_tracks:
-                s_res = semantic_grounder.ground_object_for_requirement(trk, fastener_req)
-                g_res = geometric_grounder.ground_object_geometry(trk, fastener_req)
-                g_ok = True if bypass_geo else (g_res.geometric_status == GroundingStatus.PASS)
-                if s_res.semantic_status == GroundingStatus.PASS and g_ok:
-                    fasteners.append(trk)
-
-        if surface_req:
-            for reg in regions:
-                s_res = semantic_grounder.ground_region_for_requirement(reg, surface_req)
-                g_res = geometric_grounder.ground_region_geometry(reg, surface_req)
-                g_ok = True if bypass_geo else (g_res.geometric_status == GroundingStatus.PASS)
-                if s_res.semantic_status == GroundingStatus.PASS and g_ok:
-                    surfaces.append(reg)
-
-        if container_req:
-            for reg in regions:
-                s_res = semantic_grounder.ground_region_for_requirement(reg, container_req)
-                g_res = geometric_grounder.ground_region_geometry(reg, container_req)
-                g_ok = True if bypass_geo else (g_res.geometric_status == GroundingStatus.PASS)
-                if s_res.semantic_status == GroundingStatus.PASS and g_ok:
-                    containers.append(reg)
-
-        return drivers, fasteners, surfaces, containers
-
-    def _save_artifacts(
-        self,
-        requirements: list[FunctionalRequirement],
-        trace: InspectionTrace,
-        tracks: list[ObservedObjectTrack],
-        regions: list[ObservedRegion],
-        grounding_results: list[dict[str, Any]],
-        evaluated_tuples: list[dict[str, Any]],
-        witness: FunctionalWitness | None,
-        rejection_reason: str | None,
-        result: EpisodeResult,
-        metrics: dict[str, Any],
-    ) -> None:
-        out = self.output_dir
-        if out is None:
-            return
-        out.mkdir(parents=True, exist_ok=True)
-
-        write_production_json([r.to_dict() for r in requirements], out / "task_requirements.json")
-        write_production_json([s.__dict__ for s in trace.steps], out / "inspection_trace.json")
-        write_production_json([t.to_dict() for t in tracks], out / "tracks.json")
-        write_production_json([r.to_dict() for r in regions], out / "regions.json")
-        write_production_json(grounding_results, out / "grounding_results.json")
-        write_production_json(evaluated_tuples, out / "functional_search.json")
+        # Full joint search
+        witness, evaluated_tuples = self.functional_search.search_witness(
+            driver_candidates=driver_candidates,
+            fastener_candidates=fastener_candidates,
+            work_surface_candidates=surface_candidates,
+            parts_container_candidates=container_candidates,
+        )
 
         if witness is not None:
-            write_production_json(witness.to_dict(), out / "witness.json")
-        else:
-            write_production_json({"status": "INFEASIBLE", "rejection_reason": rejection_reason}, out / "infeasibility.json")
+            return witness, None
 
-        write_production_json(result.to_dict(), out / "episode_summary.json")
-        write_production_json(metrics, out / "timings.json")
+        rej_reason = self.functional_search.diagnose_infeasibility(
+            all_objects=all_tracks,
+            all_regions=self.candidate_regions,
+            driver_candidates=driver_candidates,
+            fastener_candidates=fastener_candidates,
+            work_surface_candidates=surface_candidates,
+            parts_container_candidates=container_candidates,
+            evaluated_tuples=evaluated_tuples,
+        )
+
+        return None, rej_reason

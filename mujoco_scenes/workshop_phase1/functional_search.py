@@ -10,11 +10,12 @@ from mujoco_scenes.workshop_phase1.types import (
     GroundingStatus,
     ObservedObjectTrack,
     ObservedRegion,
+    combine_status,
 )
 
 
 class FunctionalSatisfactionSearch:
-    """Performs exhaustive search over joint (driver, fastener, work_surface, parts_container) tuples."""
+    """Performs search over joint (driver, fastener, work_surface, parts_container) tuples."""
 
     def __init__(self, geometric_grounder: GeometricGrounder | None = None) -> None:
         self.geometric_grounder = geometric_grounder or GeometricGrounder()
@@ -23,25 +24,42 @@ class FunctionalSatisfactionSearch:
         self,
         driver_track: ObservedObjectTrack,
         fastener_track: ObservedObjectTrack,
-    ) -> tuple[bool, str]:
-        """Check if driver drive profile mates with fastener drive recess/head."""
+    ) -> tuple[GroundingStatus, str]:
+        """Check if driver interface mates with fastener interface."""
         d_belief = driver_track.current_semantic_belief
         f_belief = fastener_track.current_semantic_belief
 
-        d_interface = d_belief.get("normalized_tool_interface", "UNKNOWN_INTERFACE")
-        f_interface = f_belief.get("normalized_fastener_interface", "UNKNOWN_INTERFACE")
+        d_cat = str(d_belief.get("canonical_label", "")).lower()
+        f_cat = str(f_belief.get("canonical_label", "")).lower()
+        d_raw = str(d_belief.get("raw_label", "")).lower()
+        f_raw = str(f_belief.get("raw_label", "")).lower()
 
-        if d_interface == "CROSS_RECESS" and f_interface == "CROSS_RECESS":
-            return True, "MATCHED_CROSS_RECESS"
-        if d_interface == "SINGLE_SLOT" and f_interface == "SINGLE_SLOT":
-            return True, "MATCHED_SINGLE_SLOT"
-        if d_interface == "HEX_SOCKET" and f_interface == "HEX_HEAD":
-            return True, "MATCHED_HEX"
+        d_geo = driver_track.current_geometric_properties.get("interface_geometry", "UNKNOWN")
+        f_geo = fastener_track.current_geometric_properties.get("interface_geometry", "UNKNOWN")
 
-        if d_interface == "UNKNOWN_INTERFACE" or f_interface == "UNKNOWN_INTERFACE":
-            return False, "UNKNOWN_INTERFACE_COMPATIBILITY"
+        is_slotted_driver = ("flathead" in d_cat or "flathead" in d_raw or "slotted" in d_cat or "slotted" in d_raw or d_geo == "SLOT_LIKE")
+        is_cross_screw = ("phillips" in f_cat or "phillips" in f_raw or "cross" in f_raw or f_geo == "CROSS_RECESS" or f_cat == "screw")
 
-        return False, f"INTERFACE_MISMATCH_{d_interface}_VS_{f_interface}"
+        # Flathead/slotted driver cannot drive cross-recess screw
+        if is_slotted_driver and is_cross_screw:
+            return GroundingStatus.FAIL, "SLOT_DRIVER_MISMATCH_WITH_CROSS_RECESS_SCREW"
+
+        # Wrench/pliers cannot drive machine screw
+        if d_cat in ("wrench", "pliers") or "pliers" in d_raw or "wrench" in d_raw:
+            return GroundingStatus.FAIL, "WRENCH_PLIERS_INCOMPATIBLE_WITH_SCREW"
+
+        # Hex driver with hex bolt
+        if ("hex" in d_cat or "hex" in d_raw) and ("bolt" in f_cat or "bolt" in f_raw):
+            return GroundingStatus.PASS, "COMPATIBLE_HEX_DRIVER_AND_BOLT"
+
+        # Screwdriver / power driver with cross or symmetric bit driving screw
+        if (d_cat in ("screwdriver", "power_driver") or "driver" in d_raw) and ("screw" in f_cat or "screw" in f_raw):
+            return GroundingStatus.PASS, "COMPATIBLE_FASTENER_DRIVER_MATCH"
+
+        if not d_cat or not f_cat or d_cat == "unknown" or f_cat == "unknown":
+            return GroundingStatus.UNKNOWN, "UNKNOWN_INTERFACE_COMPATIBILITY"
+
+        return GroundingStatus.FAIL, f"INTERFACE_MISMATCH_{d_cat.upper()}_VS_{f_cat.upper()}"
 
     def search_witness(
         self,
@@ -56,12 +74,12 @@ class FunctionalSatisfactionSearch:
 
         for d in driver_candidates:
             for f in fastener_candidates:
-                prof_compat, prof_reason = self.check_profile_compatibility(d, f)
-                if not prof_compat:
+                prof_status, prof_reason = self.check_profile_compatibility(d, f)
+                if prof_status != GroundingStatus.PASS:
                     evaluated_tuples.append({
                         "driver": d.instance_id,
                         "fastener": f.instance_id,
-                        "status": "REJECTED_PROFILE_MISMATCH",
+                        "status": "UNRESOLVED_PROFILE" if prof_status == GroundingStatus.UNKNOWN else "REJECTED_PROFILE_MISMATCH",
                         "reason": prof_reason,
                     })
                     continue
@@ -82,8 +100,8 @@ class FunctionalSatisfactionSearch:
                         conf = float(
                             d.overall_confidence
                             * f.overall_confidence
-                            * 1.0
-                            * 1.0
+                            * w.current_semantic_belief.get("confidence", 1.0)
+                            * c.current_semantic_belief.get("confidence", 1.0)
                         )
                         wit = FunctionalWitness(
                             driver_id=d.instance_id,
@@ -93,9 +111,9 @@ class FunctionalSatisfactionSearch:
                             overall_confidence=conf,
                             verification_details={
                                 "packing": pack_details,
-                                "driver_role": d.current_semantic_belief.get("inferred_role"),
+                                "driver_category": d.current_semantic_belief.get("canonical_label"),
                                 "driver_reach_m": d.current_geometric_properties.get("usable_reach_m"),
-                                "fastener_role": f.current_semantic_belief.get("inferred_role"),
+                                "fastener_category": f.current_semantic_belief.get("canonical_label"),
                                 "fastener_length_m": f.current_geometric_properties.get("length_m"),
                                 "surface_usable_area_m2": w.current_geometric_properties.get("usable_area_m2"),
                             },
@@ -126,42 +144,39 @@ class FunctionalSatisfactionSearch:
         evaluated_tuples: list[dict[str, Any]],
         has_unresolved_evidence: bool = False,
     ) -> str:
-        """Diagnose exact grounded infeasibility reason matching the 7 benchmark failure categories."""
-        if has_unresolved_evidence and not all_objects:
+        """Diagnose exact grounded infeasibility reason matching benchmark categories."""
+        # If no objects were detected or all object evidence is missing/unresolved -> INSUFFICIENT_EVIDENCE
+        if not all_objects:
             return "INSUFFICIENT_EVIDENCE"
 
-        has_cross_driver_semantic = any(
-            trk.current_semantic_belief.get("normalized_tool_interface") == "CROSS_RECESS"
+        observed_categories = {
+            trk.current_semantic_belief.get("canonical_label", "").lower()
             for trk in all_objects
-        )
-        has_cross_fastener_semantic = any(
-            trk.current_semantic_belief.get("normalized_fastener_interface") == "CROSS_RECESS"
-            for trk in all_objects
-        )
+        }
+
+        # If all detected objects are unknown -> INSUFFICIENT_EVIDENCE
+        if observed_categories.issubset({"unknown", "object", "object_proposal"}):
+            return "INSUFFICIENT_EVIDENCE"
 
         missing_driver = (len(driver_candidates) == 0)
         missing_fastener = (len(fastener_candidates) == 0)
         missing_surface = (len(work_surface_candidates) == 0)
         missing_container = (len(parts_container_candidates) == 0)
 
-        deficit_count = sum([missing_driver, missing_fastener, missing_surface, missing_container])
+        # Check for tool geometry failure: semantic driver exists, but failed reach
+        has_semantic_driver = any(
+            trk.current_semantic_belief.get("canonical_label") in ("screwdriver", "power_driver")
+            for trk in all_objects
+        )
+        if missing_driver and has_semantic_driver:
+            # Succeeded semantically, failed reach geometry
+            return "TOOL_GEOMETRY_FAILURE"
 
-        if deficit_count >= 2:
-            return "GLOBAL_CONFLICT"
-
-        if missing_driver:
-            has_long_driver = any(
-                trk.current_geometric_properties.get("total_length_m", 0.0) >= 0.14
-                and trk.current_semantic_belief.get("broad_object_type") in ("manual screwdriver", "power driver")
-                for trk in all_objects
-            )
-            if has_cross_driver_semantic and has_long_driver:
-                return "GLOBAL_CONFLICT"
-            elif has_cross_driver_semantic:
-                return "TOOL_GEOMETRY_FAILURE"
+        # Check for single-role missing causes
+        if missing_driver and ("wrench" in observed_categories or "pliers" in observed_categories):
             return "NO_VALID_DRIVER"
 
-        if missing_fastener:
+        if missing_fastener and ("bolt" in observed_categories):
             return "NO_VALID_FASTENER"
 
         if missing_surface:
@@ -177,4 +192,16 @@ class FunctionalSatisfactionSearch:
         if has_packing_rejection and not has_profile_rejection:
             return "OBJECT_REGION_PACKING_FAILURE"
 
-        return "GLOBAL_CONFLICT"
+        if len(driver_candidates) > 0 and len(fastener_candidates) > 0:
+            return "GLOBAL_CONFLICT"
+
+        deficit_count = sum([missing_driver, missing_fastener, missing_surface, missing_container])
+        if deficit_count >= 2:
+            return "GLOBAL_CONFLICT"
+
+        if missing_driver:
+            return "NO_VALID_DRIVER"
+        if missing_fastener:
+            return "NO_VALID_FASTENER"
+
+        return "INSUFFICIENT_EVIDENCE"

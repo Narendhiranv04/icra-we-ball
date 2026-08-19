@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+from collections import defaultdict
 
 import numpy as np
 from scipy.optimize import linear_sum_assignment
@@ -50,6 +51,33 @@ class PersistentInstanceTracker:
         inst_id = f"object_{self._next_instance_idx:04d}"
         self._next_instance_idx += 1
         return inst_id
+
+    @staticmethod
+    def _compute_consensus_semantic_belief(observations: list[dict[str, Any]]) -> dict[str, Any]:
+        """Aggregate multi-view semantic observations using confidence-weighted voting."""
+        if not observations:
+            return {"canonical_label": "unknown", "raw_label": "unknown", "confidence": 0.0}
+
+        score_by_label: dict[str, float] = defaultdict(float)
+        raw_by_label: dict[str, str] = {}
+        for obs in observations:
+            label = obs.get("canonical_label", "unknown").lower()
+            conf = float(obs.get("confidence", 1.0))
+            score_by_label[label] += conf
+            if label not in raw_by_label:
+                raw_by_label[label] = obs.get("raw_label", label)
+
+        # Pick label with highest total score
+        best_label = max(score_by_label, key=score_by_label.get)
+        total_score = sum(score_by_label.values())
+        norm_conf = min(0.99, score_by_label[best_label] / max(1.0, total_score) * min(1.0, 0.5 + 0.25 * len(observations)))
+
+        return {
+            "canonical_label": best_label,
+            "raw_label": raw_by_label.get(best_label, best_label),
+            "confidence": round(norm_conf, 4),
+            "total_observations": len(observations),
+        }
 
     def update_with_stage_observations(
         self,
@@ -142,7 +170,7 @@ class PersistentInstanceTracker:
             else:
                 clusters.append([det])
 
-        # 3. Fuse points and crops for each cluster
+        # 3. Fuse points and semantic observations for each cluster
         stage_objects: list[dict[str, Any]] = []
         for cluster in clusters:
             all_pts = np.vstack([d["points"] for d in cluster])
@@ -164,13 +192,18 @@ class PersistentInstanceTracker:
             cameras = tuple(sorted(set(d["camera_id"] for d in cluster)))
             pts_by_cam = {}
             crops_by_cam = {}
+            semantic_obs = []
             for d in cluster:
                 pts_by_cam[d["camera_id"]] = d["points"]
                 if d["crop"] is not None and d["crop"].size > 0:
                     crops_by_cam[d["camera_id"]] = d["crop"]
-
-            labels = [d["mask"].predicted_label for d in cluster]
-            consensus_label = max(set(labels), key=labels.count)
+                semantic_obs.append({
+                    "stage_index": stage_index,
+                    "camera_id": d["camera_id"],
+                    "canonical_label": d["mask"].canonical_label,
+                    "raw_label": d["mask"].raw_label,
+                    "confidence": d["mask"].confidence,
+                })
 
             stage_objects.append({
                 "points": fused_pts,
@@ -179,7 +212,7 @@ class PersistentInstanceTracker:
                 "cameras": cameras,
                 "points_by_camera": pts_by_cam,
                 "crops_by_camera": crops_by_cam,
-                "label": consensus_label,
+                "semantic_observations": semantic_obs,
             })
 
         # 4. Associate stage objects with existing persistent tracks using bipartite matching
@@ -216,11 +249,14 @@ class PersistentInstanceTracker:
                     track.contributing_cameras = tuple(sorted(set(track.contributing_cameras + st_obj["cameras"])))
                     track.points_by_camera.update(st_obj["points_by_camera"])
                     track.crop_evidence.update(st_obj["crops_by_camera"])
+                    track.semantic_observations.extend(st_obj["semantic_observations"])
+                    track.current_semantic_belief = self._compute_consensus_semantic_belief(track.semantic_observations)
                     affected_tracks.append(track)
 
             for i, st_obj in enumerate(stage_objects):
                 if i not in matched_stage_indices:
                     new_id = self._allocate_instance_id()
+                    sem_belief = self._compute_consensus_semantic_belief(st_obj["semantic_observations"])
                     new_track = ObservedObjectTrack(
                         instance_id=new_id,
                         first_seen_stage=stage_index,
@@ -231,7 +267,8 @@ class PersistentInstanceTracker:
                         crop_evidence=st_obj["crops_by_camera"],
                         points_by_camera=st_obj["points_by_camera"],
                         contributing_cameras=st_obj["cameras"],
-                        current_semantic_belief={"initial_label": st_obj["label"]},
+                        semantic_observations=list(st_obj["semantic_observations"]),
+                        current_semantic_belief=sem_belief,
                         overall_confidence=0.9,
                         evidence_count=1,
                         status="ACTIVE",
@@ -241,6 +278,7 @@ class PersistentInstanceTracker:
         else:
             for st_obj in stage_objects:
                 new_id = self._allocate_instance_id()
+                sem_belief = self._compute_consensus_semantic_belief(st_obj["semantic_observations"])
                 new_track = ObservedObjectTrack(
                     instance_id=new_id,
                     first_seen_stage=stage_index,
@@ -251,7 +289,8 @@ class PersistentInstanceTracker:
                     crop_evidence=st_obj["crops_by_camera"],
                     points_by_camera=st_obj["points_by_camera"],
                     contributing_cameras=st_obj["cameras"],
-                    current_semantic_belief={"initial_label": st_obj["label"]},
+                    semantic_observations=list(st_obj["semantic_observations"]),
+                    current_semantic_belief=sem_belief,
                     overall_confidence=0.9,
                     evidence_count=1,
                     status="ACTIVE",
