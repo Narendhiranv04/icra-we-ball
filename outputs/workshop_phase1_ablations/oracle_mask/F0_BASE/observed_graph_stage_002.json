@@ -1,0 +1,686 @@
+{
+  "stage_index": 2,
+  "total_nodes": 14,
+  "total_edges": 16,
+  "nodes": [
+    {
+      "node_id": "LEFT_DRAWER",
+      "node_type": "INSPECTION_REGION",
+      "first_seen_stage": 0,
+      "attributes": {
+        "description": "Storage container LEFT_DRAWER"
+      },
+      "provenance": {
+        "source": "scene_configuration"
+      }
+    },
+    {
+      "node_id": "RIGHT_DRAWER",
+      "node_type": "INSPECTION_REGION",
+      "first_seen_stage": 0,
+      "attributes": {
+        "description": "Storage container RIGHT_DRAWER"
+      },
+      "provenance": {
+        "source": "scene_configuration"
+      }
+    },
+    {
+      "node_id": "TOOL_CABINET",
+      "node_type": "INSPECTION_REGION",
+      "first_seen_stage": 0,
+      "attributes": {
+        "description": "Storage container TOOL_CABINET"
+      },
+      "provenance": {
+        "source": "scene_configuration"
+      }
+    },
+    {
+      "node_id": "workpiece_frame_joint_0001",
+      "node_type": "WORKPIECE",
+      "first_seen_stage": 0,
+      "attributes": {
+        "task": "frame_joint_repair"
+      },
+      "provenance": {
+        "source": "task_specification"
+      }
+    },
+    {
+      "node_id": "region_0001",
+      "node_type": "FUNCTIONAL_REGION",
+      "first_seen_stage": 0,
+      "attributes": {
+        "proposal_bounds_m": {
+          "minimum_world_m": [
+            -0.25,
+            0.12,
+            0.66
+          ],
+          "maximum_world_m": [
+            0.25,
+            0.4,
+            0.7000000000000001
+          ]
+        },
+        "support_plane": {
+          "base_height_m": 0.66,
+          "width_m": 0.5,
+          "length_m": 0.28,
+          "planar_area_m2": 0.14
+        },
+        "cavity_geometry": {
+          "is_open": true,
+          "is_open_status": "PASS",
+          "observed_cavity_depth_m": 0.028,
+          "estimated_volume_m3": 0.00392
+        },
+        "obstruction": {
+          "is_obstructed": false,
+          "obstruction_ratio": 0.0
+        },
+        "is_open": true
+      },
+      "provenance": {
+        "observation_source": "calibrated_spatial_proposal"
+      }
+    },
+    {
+      "node_id": "region_0002",
+      "node_type": "FUNCTIONAL_REGION",
+      "first_seen_stage": 0,
+      "attributes": {
+        "proposal_bounds_m": {
+          "minimum_world_m": [
+            0.92,
+            0.29500000000000004,
+            0.775
+          ],
+          "maximum_world_m": [
+            1.24,
+            0.505,
+            0.8250000000000001
+          ]
+        },
+        "support_plane": {
+          "base_height_m": 0.775,
+          "width_m": 0.32,
+          "length_m": 0.21,
+          "planar_area_m2": 0.0672
+        },
+        "cavity_geometry": {
+          "is_open": true,
+          "is_open_status": "PASS",
+          "observed_cavity_depth_m": 0.035,
+          "estimated_volume_m3": 0.002352
+        },
+        "obstruction": {
+          "is_obstructed": false,
+          "obstruction_ratio": 0.0
+        },
+        "is_open": true
+      },
+      "provenance": {
+        "observation_source": "calibrated_spatial_proposal"
+      }
+    },
+    {
+      "node_id": "region_0003",
+      "node_type": "FUNCTIONAL_REGION",
+      "first_seen_stage": 0,
+      "attributes": {
+        "proposal_bounds_m": {
+          "minimum_world_m": [
+            -0.53,
+            0.15,
+            0.68
+          ],
+          "maximum_world_m": [
+            -0.31,
+            0.29000000000000004,
+            0.7120000000000001
+          ]
+        },
+        "support_plane": {
+          "base_height_m": 0.68,
+          "width_m": 0.22,
+          "length_m": 0.14,
+          "planar_area_m2": 0.0308
+        },
+        "cavity_geometry": {
+          "is_open": true,
+          "is_open_status": "PASS",
+          "observed_cavity_depth_m": 0.032,
+          "estimated_volume_m3": 0.000986
+        },
+        "obstruction": {
+          "is_obstructed": false,
+          "obstruction_ratio": 0.0
+        },
+        "is_open": true
+      },
+      "provenance": {
+        "observation_source": "calibrated_spatial_proposal"
+      }
+    },
+    {
+      "node_id": "region_0004",
+      "node_type": "FUNCTIONAL_REGION",
+      "first_seen_stage": 0,
+      "attributes": {
+        "proposal_bounds_m": {
+          "minimum_world_m": [
+            -0.495,
+            0.445,
+            0.68
+          ],
+          "maximum_world_m": [
+            -0.385,
+            0.595,
+            0.7600000000000001
+          ]
+        },
+        "support_plane": {
+          "base_height_m": 0.68,
+          "width_m": 0.11,
+          "length_m": 0.15,
+          "planar_area_m2": 0.0165
+        },
+        "cavity_geometry": {
+          "is_open": true,
+          "is_open_status": "PASS",
+          "observed_cavity_depth_m": 0.0784,
+          "estimated_volume_m3": 0.001294
+        },
+        "obstruction": {
+          "is_obstructed": true,
+          "obstruction_ratio": 1.0,
+          "elevated_point_count": 801
+        },
+        "is_open": true
+      },
+      "provenance": {
+        "observation_source": "calibrated_spatial_proposal"
+      }
+    },
+    {
+      "node_id": "object_0001",
+      "node_type": "OBJECT",
+      "first_seen_stage": 1,
+      "attributes": {
+        "semantic_belief": {
+          "initial_label": "object",
+          "free_text_description": "hand screwdriver with cylindrical handle, elongated narrow shaft, and cross-shaped screw driving tip",
+          "functional_description": "manual screw driving tool",
+          "visible_tool_interface": "cross-shaped screw driving tip",
+          "visible_fastener_interface": "none",
+          "broad_object_type": "manual screwdriver",
+          "confidence": 0.9,
+          "evidence_crops_provenance": [
+            "workshop_camera_left",
+            "workshop_camera_right",
+            "workshop_camera_top",
+            "workshop_camera_front",
+            "workshop_camera_close"
+          ],
+          "normalized_tool_interface": "CROSS_RECESS",
+          "normalized_fastener_interface": "UNKNOWN_INTERFACE",
+          "inferred_role": "CROSS_SCREW_DRIVER"
+        },
+        "geometric_properties": {
+          "usable_reach_m": 0.0244,
+          "total_length_m": 0.1526,
+          "max_radius_m": 0.0157,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.004336,
+          "length_m": 0.1526,
+          "shaft_diameter_m": 0.0136,
+          "head_diameter_m": 0.0313
+        },
+        "point_count": 570
+      },
+      "provenance": {
+        "source_region": "LEFT_DRAWER",
+        "contributing_cameras": [
+          "workshop_camera_close",
+          "workshop_camera_front",
+          "workshop_camera_left",
+          "workshop_camera_right",
+          "workshop_camera_top"
+        ],
+        "evidence_count": 1
+      }
+    },
+    {
+      "node_id": "object_0002",
+      "node_type": "OBJECT",
+      "first_seen_stage": 1,
+      "attributes": {
+        "semantic_belief": {
+          "initial_label": "object",
+          "free_text_description": "slender threaded fastener shaft with cross recess screw head",
+          "functional_description": "screw fastener for joint assembly",
+          "visible_tool_interface": "none",
+          "visible_fastener_interface": "cross recess head",
+          "broad_object_type": "screw fastener",
+          "confidence": 0.93,
+          "evidence_crops_provenance": [
+            "workshop_camera_left",
+            "workshop_camera_right",
+            "workshop_camera_top",
+            "workshop_camera_front",
+            "workshop_camera_close"
+          ],
+          "normalized_tool_interface": "NO_DRIVE_INTERFACE",
+          "normalized_fastener_interface": "CROSS_RECESS",
+          "inferred_role": "COMPATIBLE_SCREW_FASTENER"
+        },
+        "geometric_properties": {
+          "usable_reach_m": 0.0007,
+          "total_length_m": 0.0174,
+          "max_radius_m": 0.0079,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.000226,
+          "length_m": 0.0174,
+          "shaft_diameter_m": 0.0067,
+          "head_diameter_m": 0.0159
+        },
+        "point_count": 56
+      },
+      "provenance": {
+        "source_region": "LEFT_DRAWER",
+        "contributing_cameras": [
+          "workshop_camera_close",
+          "workshop_camera_front",
+          "workshop_camera_left",
+          "workshop_camera_right",
+          "workshop_camera_top"
+        ],
+        "evidence_count": 1
+      }
+    },
+    {
+      "node_id": "req_obj_driver",
+      "node_type": "REQUIREMENT",
+      "first_seen_stage": 1,
+      "attributes": {
+        "function_name": "CAN_DRIVE_SCREW"
+      },
+      "provenance": {
+        "source": "task_requirements"
+      }
+    },
+    {
+      "node_id": "req_obj_fastener",
+      "node_type": "REQUIREMENT",
+      "first_seen_stage": 1,
+      "attributes": {
+        "function_name": "CAN_FASTEN"
+      },
+      "provenance": {
+        "source": "task_requirements"
+      }
+    },
+    {
+      "node_id": "object_0003",
+      "node_type": "OBJECT",
+      "first_seen_stage": 2,
+      "attributes": {
+        "semantic_belief": {
+          "initial_label": "object",
+          "free_text_description": "hand screwdriver with cylindrical handle, elongated narrow shaft, and cross-shaped screw driving tip",
+          "functional_description": "manual screw driving tool",
+          "visible_tool_interface": "cross-shaped screw driving tip",
+          "visible_fastener_interface": "none",
+          "broad_object_type": "manual screwdriver",
+          "confidence": 0.9,
+          "evidence_crops_provenance": [
+            "workshop_camera_left",
+            "workshop_camera_right",
+            "workshop_camera_top",
+            "workshop_camera_front",
+            "workshop_camera_close"
+          ],
+          "normalized_tool_interface": "CROSS_RECESS",
+          "normalized_fastener_interface": "UNKNOWN_INTERFACE",
+          "inferred_role": "CROSS_SCREW_DRIVER"
+        },
+        "geometric_properties": {
+          "usable_reach_m": 0.0125,
+          "total_length_m": 0.104,
+          "max_radius_m": 0.0175,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.003074,
+          "length_m": 0.104,
+          "shaft_diameter_m": 0.0129,
+          "head_diameter_m": 0.035
+        },
+        "point_count": 361
+      },
+      "provenance": {
+        "source_region": "RIGHT_DRAWER",
+        "contributing_cameras": [
+          "workshop_camera_close",
+          "workshop_camera_front",
+          "workshop_camera_left",
+          "workshop_camera_right",
+          "workshop_camera_top"
+        ],
+        "evidence_count": 1
+      }
+    },
+    {
+      "node_id": "object_0004",
+      "node_type": "OBJECT",
+      "first_seen_stage": 2,
+      "attributes": {
+        "semantic_belief": {
+          "initial_label": "object",
+          "free_text_description": "threaded fastener with flat hexagonal bolt head",
+          "functional_description": "bolt fastener requiring external wrench or socket",
+          "visible_tool_interface": "none",
+          "visible_fastener_interface": "hexagonal bolt head",
+          "broad_object_type": "bolt fastener",
+          "confidence": 0.91,
+          "evidence_crops_provenance": [
+            "workshop_camera_left",
+            "workshop_camera_right",
+            "workshop_camera_top",
+            "workshop_camera_front",
+            "workshop_camera_close"
+          ],
+          "normalized_tool_interface": "NO_DRIVE_INTERFACE",
+          "normalized_fastener_interface": "HEX_HEAD",
+          "inferred_role": "HEX_BOLT"
+        },
+        "geometric_properties": {
+          "usable_reach_m": 0.002,
+          "total_length_m": 0.0495,
+          "max_radius_m": 0.009,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.000841,
+          "length_m": 0.0495,
+          "shaft_diameter_m": 0.007,
+          "head_diameter_m": 0.0179
+        },
+        "point_count": 126
+      },
+      "provenance": {
+        "source_region": "RIGHT_DRAWER",
+        "contributing_cameras": [
+          "workshop_camera_close",
+          "workshop_camera_front",
+          "workshop_camera_left",
+          "workshop_camera_right",
+          "workshop_camera_top"
+        ],
+        "evidence_count": 1
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source_id": "object_0001",
+      "target_id": "LEFT_DRAWER",
+      "relation": "OBSERVED_IN",
+      "confidence": 0.9,
+      "evidence": {
+        "stage_index": 1
+      }
+    },
+    {
+      "source_id": "object_0002",
+      "target_id": "LEFT_DRAWER",
+      "relation": "OBSERVED_IN",
+      "confidence": 0.9,
+      "evidence": {
+        "stage_index": 1
+      }
+    },
+    {
+      "source_id": "object_0001",
+      "target_id": "req_obj_driver",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.9,
+      "evidence": {
+        "stage_index": 2,
+        "combined_status": "FAIL",
+        "semantic_status": "PASS",
+        "geometric_status": "FAIL",
+        "rejection_reasons": [
+          "INSUFFICIENT_DRIVER_REACH_0.024M_LESS_THAN_0.025M"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0001",
+      "target_id": "req_obj_driver",
+      "relation": "SEMANTICALLY_SATISFIES",
+      "confidence": 0.9,
+      "evidence": {
+        "stage_index": 2,
+        "semantic_evidence": {
+          "free_text_description": "hand screwdriver with cylindrical handle, elongated narrow shaft, and cross-shaped screw driving tip",
+          "functional_description": "manual screw driving tool",
+          "visible_tool_interface": "cross-shaped screw driving tip",
+          "visible_fastener_interface": "none",
+          "broad_object_type": "manual screwdriver",
+          "confidence": 0.9,
+          "evidence_crops_provenance": [
+            "workshop_camera_left",
+            "workshop_camera_right",
+            "workshop_camera_top",
+            "workshop_camera_front",
+            "workshop_camera_close"
+          ],
+          "normalized_tool_interface": "CROSS_RECESS",
+          "normalized_fastener_interface": "UNKNOWN_INTERFACE",
+          "inferred_role": "CROSS_SCREW_DRIVER"
+        }
+      }
+    },
+    {
+      "source_id": "object_0001",
+      "target_id": "req_obj_fastener",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.05,
+      "evidence": {
+        "stage_index": 2,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "FAIL",
+        "rejection_reasons": [
+          "SEMANTIC_NOT_A_FASTENER",
+          "FASTENER_SHAFT_DIAMETER_0.014M_EXCEEDS_HOLE"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0002",
+      "target_id": "req_obj_driver",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.05,
+      "evidence": {
+        "stage_index": 2,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "FAIL",
+        "rejection_reasons": [
+          "SEMANTIC_TOOL_TYPE_MISMATCH_NOT_SCREWDRIVER",
+          "INSUFFICIENT_DRIVER_REACH_0.001M_LESS_THAN_0.025M"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0002",
+      "target_id": "req_obj_fastener",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.93,
+      "evidence": {
+        "stage_index": 2,
+        "combined_status": "FAIL",
+        "semantic_status": "PASS",
+        "geometric_status": "FAIL",
+        "rejection_reasons": [
+          "FASTENER_TOO_SHORT_0.017M_LESS_THAN_0.022M"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0002",
+      "target_id": "req_obj_fastener",
+      "relation": "SEMANTICALLY_SATISFIES",
+      "confidence": 0.93,
+      "evidence": {
+        "stage_index": 2,
+        "semantic_evidence": {
+          "free_text_description": "slender threaded fastener shaft with cross recess screw head",
+          "functional_description": "screw fastener for joint assembly",
+          "visible_tool_interface": "none",
+          "visible_fastener_interface": "cross recess head",
+          "broad_object_type": "screw fastener",
+          "confidence": 0.93,
+          "evidence_crops_provenance": [
+            "workshop_camera_left",
+            "workshop_camera_right",
+            "workshop_camera_top",
+            "workshop_camera_front",
+            "workshop_camera_close"
+          ],
+          "normalized_tool_interface": "NO_DRIVE_INTERFACE",
+          "normalized_fastener_interface": "CROSS_RECESS",
+          "inferred_role": "COMPATIBLE_SCREW_FASTENER"
+        }
+      }
+    },
+    {
+      "source_id": "object_0003",
+      "target_id": "RIGHT_DRAWER",
+      "relation": "OBSERVED_IN",
+      "confidence": 0.9,
+      "evidence": {
+        "stage_index": 2
+      }
+    },
+    {
+      "source_id": "object_0004",
+      "target_id": "RIGHT_DRAWER",
+      "relation": "OBSERVED_IN",
+      "confidence": 0.9,
+      "evidence": {
+        "stage_index": 2
+      }
+    },
+    {
+      "source_id": "object_0003",
+      "target_id": "req_obj_driver",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.9,
+      "evidence": {
+        "stage_index": 2,
+        "combined_status": "FAIL",
+        "semantic_status": "PASS",
+        "geometric_status": "FAIL",
+        "rejection_reasons": [
+          "INSUFFICIENT_DRIVER_REACH_0.013M_LESS_THAN_0.025M"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0003",
+      "target_id": "req_obj_driver",
+      "relation": "SEMANTICALLY_SATISFIES",
+      "confidence": 0.9,
+      "evidence": {
+        "stage_index": 2,
+        "semantic_evidence": {
+          "free_text_description": "hand screwdriver with cylindrical handle, elongated narrow shaft, and cross-shaped screw driving tip",
+          "functional_description": "manual screw driving tool",
+          "visible_tool_interface": "cross-shaped screw driving tip",
+          "visible_fastener_interface": "none",
+          "broad_object_type": "manual screwdriver",
+          "confidence": 0.9,
+          "evidence_crops_provenance": [
+            "workshop_camera_left",
+            "workshop_camera_right",
+            "workshop_camera_top",
+            "workshop_camera_front",
+            "workshop_camera_close"
+          ],
+          "normalized_tool_interface": "CROSS_RECESS",
+          "normalized_fastener_interface": "UNKNOWN_INTERFACE",
+          "inferred_role": "CROSS_SCREW_DRIVER"
+        }
+      }
+    },
+    {
+      "source_id": "object_0003",
+      "target_id": "req_obj_fastener",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.05,
+      "evidence": {
+        "stage_index": 2,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "FAIL",
+        "rejection_reasons": [
+          "SEMANTIC_NOT_A_FASTENER",
+          "FASTENER_SHAFT_DIAMETER_0.013M_EXCEEDS_HOLE"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0004",
+      "target_id": "req_obj_driver",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.05,
+      "evidence": {
+        "stage_index": 2,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "FAIL",
+        "rejection_reasons": [
+          "SEMANTIC_TOOL_TYPE_MISMATCH_NOT_SCREWDRIVER",
+          "INSUFFICIENT_DRIVER_REACH_0.002M_LESS_THAN_0.025M"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0004",
+      "target_id": "req_obj_fastener",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.15,
+      "evidence": {
+        "stage_index": 2,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "PASS",
+        "rejection_reasons": [
+          "SEMANTIC_BOLT_INCOMPATIBLE_WITH_SCREW_TASK"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0004",
+      "target_id": "req_obj_fastener",
+      "relation": "GEOMETRICALLY_SATISFIES",
+      "confidence": 0.92,
+      "evidence": {
+        "stage_index": 2,
+        "geometric_evidence": {
+          "length_m": 0.0495,
+          "shaft_diameter_m": 0.007,
+          "head_diameter_m": 0.0179,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.000841
+        }
+      }
+    }
+  ]
+}

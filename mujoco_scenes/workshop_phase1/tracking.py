@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 import numpy as np
+from scipy.optimize import linear_sum_assignment
 
 from mujoco_scenes.geometry_checker import (
     backproject_masked_depth,
@@ -24,10 +25,10 @@ class PersistentInstanceTracker:
 
     def __init__(
         self,
-        cluster_distance_threshold_m: float = 0.025,
-        track_match_distance_threshold_m: float = 0.035,
+        cluster_distance_threshold_m: float = 0.040,
+        track_match_distance_threshold_m: float = 0.045,
         voxel_size_m: float = 0.003,
-        min_cluster_points: int = 15,
+        min_cluster_points: int = 10,
     ) -> None:
         self.cluster_distance_threshold_m = cluster_distance_threshold_m
         self.track_match_distance_threshold_m = track_match_distance_threshold_m
@@ -87,30 +88,52 @@ class PersistentInstanceTracker:
                 if len(pts) < 8:
                     continue
 
-                # Sample colors
                 colors = obs.rgb[pixel_indices[:, 0], pixel_indices[:, 1]].astype(np.float32) / 255.0
 
+                x1, y1, x2, y2 = mask.bounding_box_xyxy
+                crop = obs.rgb[max(0, y1):max(0, y2), max(0, x1):max(0, x2)].copy()
+
                 centroid = pts.mean(axis=0)
+                b_min = pts.min(axis=0)
+                b_max = pts.max(axis=0)
+
                 detections_3d.append({
                     "mask": mask,
                     "camera_id": cam_id,
                     "points": pts,
                     "colors": colors,
                     "centroid": centroid,
+                    "b_min": b_min,
+                    "b_max": b_max,
+                    "crop": crop,
                     "obs": obs,
                 })
 
-        # 2. Cluster detections across the 5 views of this stage
+        if not detections_3d:
+            return []
+
+        # 2. Cluster detections across the 5 views of this stage (disallowing same-camera duplicate clustering)
         clusters: list[list[dict[str, Any]]] = []
         for det in detections_3d:
             matched_cluster_idx = None
             min_dist = np.inf
             for c_idx, cluster in enumerate(clusters):
-                # Distance to cluster centroid
+                # Disallow merging if this cluster already has a detection from the SAME camera
+                cluster_cameras = {d["camera_id"] for d in cluster}
+                if det["camera_id"] in cluster_cameras:
+                    continue
+
                 c_pts = np.vstack([d["points"] for d in cluster])
                 c_centroid = c_pts.mean(axis=0)
+                c_min = c_pts.min(axis=0)
+                c_max = c_pts.max(axis=0)
+
                 dist = float(np.linalg.norm(det["centroid"] - c_centroid))
-                if dist < self.cluster_distance_threshold_m and dist < min_dist:
+
+                # Check 3D bounding box overlap
+                overlap = np.all(det["b_max"] >= c_min - 0.015) and np.all(det["b_min"] <= c_max + 0.015)
+
+                if (dist < self.cluster_distance_threshold_m or overlap) and dist < min_dist:
                     min_dist = dist
                     matched_cluster_idx = c_idx
 
@@ -119,7 +142,7 @@ class PersistentInstanceTracker:
             else:
                 clusters.append([det])
 
-        # 3. Fuse points for each cluster
+        # 3. Fuse points and crops for each cluster
         stage_objects: list[dict[str, Any]] = []
         for cluster in clusters:
             all_pts = np.vstack([d["points"] for d in cluster])
@@ -127,24 +150,25 @@ class PersistentInstanceTracker:
             if len(all_pts) < self.min_cluster_points:
                 continue
 
-            # Downsample and outlier removal
             fused_pts, fused_colors = voxel_downsample(all_pts, all_colors, voxel_size=self.voxel_size_m)
             fused_pts, fused_colors, _ = remove_sparse_voxel_outliers(
                 fused_pts,
                 fused_colors,
                 voxel_radius_m=self.voxel_size_m * 2.5,
                 minimum_neighbours=3,
-                minimum_input_points=10,
+                minimum_input_points=6,
             )
             if len(fused_pts) < self.min_cluster_points:
                 continue
 
             cameras = tuple(sorted(set(d["camera_id"] for d in cluster)))
             pts_by_cam = {}
+            crops_by_cam = {}
             for d in cluster:
                 pts_by_cam[d["camera_id"]] = d["points"]
+                if d["crop"] is not None and d["crop"].size > 0:
+                    crops_by_cam[d["camera_id"]] = d["crop"]
 
-            # Predicted label consensus
             labels = [d["mask"].predicted_label for d in cluster]
             consensus_label = max(set(labels), key=labels.count)
 
@@ -154,43 +178,68 @@ class PersistentInstanceTracker:
                 "centroid": fused_pts.mean(axis=0),
                 "cameras": cameras,
                 "points_by_camera": pts_by_cam,
+                "crops_by_camera": crops_by_cam,
                 "label": consensus_label,
-                "cluster": cluster,
             })
 
-        # 4. Associate stage objects with existing persistent tracks
+        # 4. Associate stage objects with existing persistent tracks using bipartite matching
         affected_tracks: list[ObservedObjectTrack] = []
+        existing_track_ids = [t_id for t_id, t in self._tracks.items() if t.fused_points is not None and len(t.fused_points) > 0]
 
-        for st_obj in stage_objects:
-            obj_centroid = st_obj["centroid"]
-            best_track_id = None
-            min_track_dist = np.inf
+        if existing_track_ids and stage_objects:
+            cost_matrix = np.full((len(stage_objects), len(existing_track_ids)), 1e6, dtype=float)
+            for i, st_obj in enumerate(stage_objects):
+                for j, t_id in enumerate(existing_track_ids):
+                    t = self._tracks[t_id]
+                    t_centroid = t.fused_points.mean(axis=0)
+                    dist = float(np.linalg.norm(st_obj["centroid"] - t_centroid))
+                    if dist < self.track_match_distance_threshold_m:
+                        cost_matrix[i, j] = dist
 
-            for t_id, track in self._tracks.items():
-                if track.fused_points is None or len(track.fused_points) == 0:
-                    continue
-                t_centroid = track.fused_points.mean(axis=0)
-                dist = float(np.linalg.norm(obj_centroid - t_centroid))
-                if dist < self.track_match_distance_threshold_m and dist < min_track_dist:
-                    min_track_dist = dist
-                    best_track_id = t_id
+            row_ind, col_ind = linear_sum_assignment(cost_matrix)
+            matched_stage_indices = set()
+            for r, c in zip(row_ind, col_ind):
+                if cost_matrix[r, c] < self.track_match_distance_threshold_m:
+                    matched_stage_indices.add(r)
+                    t_id = existing_track_ids[c]
+                    st_obj = stage_objects[r]
+                    track = self._tracks[t_id]
 
-            if best_track_id is not None:
-                # Update existing track
-                track = self._tracks[best_track_id]
-                combined_pts = np.vstack([track.fused_points, st_obj["points"]])
-                combined_colors = np.vstack([track.fused_colors, st_obj["colors"]])
-                fused_pts, fused_colors = voxel_downsample(combined_pts, combined_colors, voxel_size=self.voxel_size_m)
+                    combined_pts = np.vstack([track.fused_points, st_obj["points"]])
+                    combined_colors = np.vstack([track.fused_colors, st_obj["colors"]])
+                    fused_pts, fused_colors = voxel_downsample(combined_pts, combined_colors, voxel_size=self.voxel_size_m)
 
-                track.fused_points = fused_pts
-                track.fused_colors = fused_colors
-                track.last_seen_stage = stage_index
-                track.evidence_count += 1
-                track.contributing_cameras = tuple(sorted(set(track.contributing_cameras + st_obj["cameras"])))
-                track.points_by_camera.update(st_obj["points_by_camera"])
-                affected_tracks.append(track)
-            else:
-                # Create brand new track with generic ID
+                    track.fused_points = fused_pts
+                    track.fused_colors = fused_colors
+                    track.last_seen_stage = stage_index
+                    track.evidence_count += 1
+                    track.contributing_cameras = tuple(sorted(set(track.contributing_cameras + st_obj["cameras"])))
+                    track.points_by_camera.update(st_obj["points_by_camera"])
+                    track.crop_evidence.update(st_obj["crops_by_camera"])
+                    affected_tracks.append(track)
+
+            for i, st_obj in enumerate(stage_objects):
+                if i not in matched_stage_indices:
+                    new_id = self._allocate_instance_id()
+                    new_track = ObservedObjectTrack(
+                        instance_id=new_id,
+                        first_seen_stage=stage_index,
+                        last_seen_stage=stage_index,
+                        source_inspection_region_id=source_region_id,
+                        fused_points=st_obj["points"],
+                        fused_colors=st_obj["colors"],
+                        crop_evidence=st_obj["crops_by_camera"],
+                        points_by_camera=st_obj["points_by_camera"],
+                        contributing_cameras=st_obj["cameras"],
+                        current_semantic_belief={"initial_label": st_obj["label"]},
+                        overall_confidence=0.9,
+                        evidence_count=1,
+                        status="ACTIVE",
+                    )
+                    self._tracks[new_id] = new_track
+                    affected_tracks.append(new_track)
+        else:
+            for st_obj in stage_objects:
                 new_id = self._allocate_instance_id()
                 new_track = ObservedObjectTrack(
                     instance_id=new_id,
@@ -199,6 +248,7 @@ class PersistentInstanceTracker:
                     source_inspection_region_id=source_region_id,
                     fused_points=st_obj["points"],
                     fused_colors=st_obj["colors"],
+                    crop_evidence=st_obj["crops_by_camera"],
                     points_by_camera=st_obj["points_by_camera"],
                     contributing_cameras=st_obj["cameras"],
                     current_semantic_belief={"initial_label": st_obj["label"]},

@@ -1,0 +1,739 @@
+{
+  "total_variants": 14,
+  "passed_variants": 1,
+  "accuracy": 0.0714,
+  "mask_backend": "production",
+  "semantic_backend": "production",
+  "requirements_source": "static",
+  "ablation": "none",
+  "results": [
+    {
+      "variant": "F0_BASE",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "GLOBAL_CONFLICT",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "total_inference_time_s": 8.752,
+          "discovered_object_count": 0,
+          "discovered_region_count": 4,
+          "stages_executed": 4,
+          "inspected_storage_regions": [
+            "LEFT_DRAWER",
+            "RIGHT_DRAWER",
+            "TOOL_CABINET"
+          ],
+          "early_stopped": false,
+          "semantic_model_calls": 8,
+          "geometric_model_calls": 40,
+          "fm_requirement_calls": 0,
+          "fm_search_prior_calls": 0,
+          "total_fm_calls": 0
+        },
+        "diagnostics": {
+          "evaluated_tuple_count": 0,
+          "evaluated_tuples": []
+        }
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": false,
+        "expected_status": "FEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": true,
+        "expected_rejection": null,
+        "predicted_rejection": "GLOBAL_CONFLICT",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 0,
+        "discovered_gt_objects_count": 0,
+        "total_gt_objects_in_scene": 6,
+        "stages_used": 4,
+        "early_stopped": false
+      }
+    },
+    {
+      "variant": "F1_TOOL_ALTERNATIVE",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "GLOBAL_CONFLICT",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "total_inference_time_s": 5.5828,
+          "discovered_object_count": 0,
+          "discovered_region_count": 4,
+          "stages_executed": 4,
+          "inspected_storage_regions": [
+            "LEFT_DRAWER",
+            "RIGHT_DRAWER",
+            "TOOL_CABINET"
+          ],
+          "early_stopped": false,
+          "semantic_model_calls": 8,
+          "geometric_model_calls": 40,
+          "fm_requirement_calls": 0,
+          "fm_search_prior_calls": 0,
+          "total_fm_calls": 0
+        },
+        "diagnostics": {
+          "evaluated_tuple_count": 0,
+          "evaluated_tuples": []
+        }
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": false,
+        "expected_status": "FEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": true,
+        "expected_rejection": null,
+        "predicted_rejection": "GLOBAL_CONFLICT",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 0,
+        "discovered_gt_objects_count": 0,
+        "total_gt_objects_in_scene": 6,
+        "stages_used": 4,
+        "early_stopped": false
+      }
+    },
+    {
+      "variant": "F2_REGION_ALTERNATIVE",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "GLOBAL_CONFLICT",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "total_inference_time_s": 5.4552,
+          "discovered_object_count": 0,
+          "discovered_region_count": 4,
+          "stages_executed": 4,
+          "inspected_storage_regions": [
+            "LEFT_DRAWER",
+            "RIGHT_DRAWER",
+            "TOOL_CABINET"
+          ],
+          "early_stopped": false,
+          "semantic_model_calls": 8,
+          "geometric_model_calls": 40,
+          "fm_requirement_calls": 0,
+          "fm_search_prior_calls": 0,
+          "total_fm_calls": 0
+        },
+        "diagnostics": {
+          "evaluated_tuple_count": 0,
+          "evaluated_tuples": []
+        }
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": false,
+        "expected_status": "FEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": true,
+        "expected_rejection": null,
+        "predicted_rejection": "GLOBAL_CONFLICT",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 0,
+        "discovered_gt_objects_count": 0,
+        "total_gt_objects_in_scene": 6,
+        "stages_used": 4,
+        "early_stopped": false
+      }
+    },
+    {
+      "variant": "F3_DISTRIBUTED_OBJECTS",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "GLOBAL_CONFLICT",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "total_inference_time_s": 5.5063,
+          "discovered_object_count": 0,
+          "discovered_region_count": 4,
+          "stages_executed": 4,
+          "inspected_storage_regions": [
+            "LEFT_DRAWER",
+            "RIGHT_DRAWER",
+            "TOOL_CABINET"
+          ],
+          "early_stopped": false,
+          "semantic_model_calls": 8,
+          "geometric_model_calls": 40,
+          "fm_requirement_calls": 0,
+          "fm_search_prior_calls": 0,
+          "total_fm_calls": 0
+        },
+        "diagnostics": {
+          "evaluated_tuple_count": 0,
+          "evaluated_tuples": []
+        }
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": false,
+        "expected_status": "FEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": true,
+        "expected_rejection": null,
+        "predicted_rejection": "GLOBAL_CONFLICT",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 0,
+        "discovered_gt_objects_count": 0,
+        "total_gt_objects_in_scene": 6,
+        "stages_used": 4,
+        "early_stopped": false
+      }
+    },
+    {
+      "variant": "F4_OBJECT_REGION_COUPLING",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "GLOBAL_CONFLICT",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "total_inference_time_s": 5.9343,
+          "discovered_object_count": 0,
+          "discovered_region_count": 5,
+          "stages_executed": 4,
+          "inspected_storage_regions": [
+            "LEFT_DRAWER",
+            "RIGHT_DRAWER",
+            "TOOL_CABINET"
+          ],
+          "early_stopped": false,
+          "semantic_model_calls": 10,
+          "geometric_model_calls": 50,
+          "fm_requirement_calls": 0,
+          "fm_search_prior_calls": 0,
+          "total_fm_calls": 0
+        },
+        "diagnostics": {
+          "evaluated_tuple_count": 0,
+          "evaluated_tuples": []
+        }
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": false,
+        "expected_status": "FEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": true,
+        "expected_rejection": null,
+        "predicted_rejection": "GLOBAL_CONFLICT",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 0,
+        "discovered_gt_objects_count": 0,
+        "total_gt_objects_in_scene": 5,
+        "stages_used": 4,
+        "early_stopped": false
+      }
+    },
+    {
+      "variant": "F5_DECOY_HEAVY",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "GLOBAL_CONFLICT",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "total_inference_time_s": 5.3643,
+          "discovered_object_count": 0,
+          "discovered_region_count": 4,
+          "stages_executed": 4,
+          "inspected_storage_regions": [
+            "LEFT_DRAWER",
+            "RIGHT_DRAWER",
+            "TOOL_CABINET"
+          ],
+          "early_stopped": false,
+          "semantic_model_calls": 8,
+          "geometric_model_calls": 40,
+          "fm_requirement_calls": 0,
+          "fm_search_prior_calls": 0,
+          "total_fm_calls": 0
+        },
+        "diagnostics": {
+          "evaluated_tuple_count": 0,
+          "evaluated_tuples": []
+        }
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": false,
+        "expected_status": "FEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": true,
+        "expected_rejection": null,
+        "predicted_rejection": "GLOBAL_CONFLICT",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 0,
+        "discovered_gt_objects_count": 0,
+        "total_gt_objects_in_scene": 9,
+        "stages_used": 4,
+        "early_stopped": false
+      }
+    },
+    {
+      "variant": "F6_LAYOUT_SWAPPED",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "GLOBAL_CONFLICT",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "total_inference_time_s": 5.6904,
+          "discovered_object_count": 0,
+          "discovered_region_count": 4,
+          "stages_executed": 4,
+          "inspected_storage_regions": [
+            "LEFT_DRAWER",
+            "RIGHT_DRAWER",
+            "TOOL_CABINET"
+          ],
+          "early_stopped": false,
+          "semantic_model_calls": 8,
+          "geometric_model_calls": 40,
+          "fm_requirement_calls": 0,
+          "fm_search_prior_calls": 0,
+          "total_fm_calls": 0
+        },
+        "diagnostics": {
+          "evaluated_tuple_count": 0,
+          "evaluated_tuples": []
+        }
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": false,
+        "expected_status": "FEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": true,
+        "expected_rejection": null,
+        "predicted_rejection": "GLOBAL_CONFLICT",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 0,
+        "discovered_gt_objects_count": 0,
+        "total_gt_objects_in_scene": 6,
+        "stages_used": 4,
+        "early_stopped": false
+      }
+    },
+    {
+      "variant": "I0_NO_VALID_DRIVER",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "GLOBAL_CONFLICT",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "total_inference_time_s": 5.4175,
+          "discovered_object_count": 0,
+          "discovered_region_count": 4,
+          "stages_executed": 4,
+          "inspected_storage_regions": [
+            "LEFT_DRAWER",
+            "RIGHT_DRAWER",
+            "TOOL_CABINET"
+          ],
+          "early_stopped": false,
+          "semantic_model_calls": 8,
+          "geometric_model_calls": 40,
+          "fm_requirement_calls": 0,
+          "fm_search_prior_calls": 0,
+          "total_fm_calls": 0
+        },
+        "diagnostics": {
+          "evaluated_tuple_count": 0,
+          "evaluated_tuples": []
+        }
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": true,
+        "expected_status": "INFEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": false,
+        "expected_rejection": "NO_VALID_DRIVER",
+        "predicted_rejection": "GLOBAL_CONFLICT",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 0,
+        "discovered_gt_objects_count": 0,
+        "total_gt_objects_in_scene": 5,
+        "stages_used": 4,
+        "early_stopped": false
+      }
+    },
+    {
+      "variant": "I1_NO_VALID_FASTENER",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "GLOBAL_CONFLICT",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "total_inference_time_s": 5.3328,
+          "discovered_object_count": 0,
+          "discovered_region_count": 4,
+          "stages_executed": 4,
+          "inspected_storage_regions": [
+            "LEFT_DRAWER",
+            "RIGHT_DRAWER",
+            "TOOL_CABINET"
+          ],
+          "early_stopped": false,
+          "semantic_model_calls": 8,
+          "geometric_model_calls": 40,
+          "fm_requirement_calls": 0,
+          "fm_search_prior_calls": 0,
+          "total_fm_calls": 0
+        },
+        "diagnostics": {
+          "evaluated_tuple_count": 0,
+          "evaluated_tuples": []
+        }
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": true,
+        "expected_status": "INFEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": false,
+        "expected_rejection": "NO_VALID_FASTENER",
+        "predicted_rejection": "GLOBAL_CONFLICT",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 0,
+        "discovered_gt_objects_count": 0,
+        "total_gt_objects_in_scene": 5,
+        "stages_used": 4,
+        "early_stopped": false
+      }
+    },
+    {
+      "variant": "I2_NO_WORK_SURFACE",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "GLOBAL_CONFLICT",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "total_inference_time_s": 4.7741,
+          "discovered_object_count": 0,
+          "discovered_region_count": 3,
+          "stages_executed": 4,
+          "inspected_storage_regions": [
+            "LEFT_DRAWER",
+            "RIGHT_DRAWER",
+            "TOOL_CABINET"
+          ],
+          "early_stopped": false,
+          "semantic_model_calls": 6,
+          "geometric_model_calls": 30,
+          "fm_requirement_calls": 0,
+          "fm_search_prior_calls": 0,
+          "total_fm_calls": 0
+        },
+        "diagnostics": {
+          "evaluated_tuple_count": 0,
+          "evaluated_tuples": []
+        }
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": true,
+        "expected_status": "INFEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": false,
+        "expected_rejection": "NO_WORK_SURFACE",
+        "predicted_rejection": "GLOBAL_CONFLICT",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 0,
+        "discovered_gt_objects_count": 0,
+        "total_gt_objects_in_scene": 2,
+        "stages_used": 4,
+        "early_stopped": false
+      }
+    },
+    {
+      "variant": "I3_NO_PARTS_CONTAINER",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "GLOBAL_CONFLICT",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "total_inference_time_s": 4.6632,
+          "discovered_object_count": 0,
+          "discovered_region_count": 2,
+          "stages_executed": 4,
+          "inspected_storage_regions": [
+            "LEFT_DRAWER",
+            "RIGHT_DRAWER",
+            "TOOL_CABINET"
+          ],
+          "early_stopped": false,
+          "semantic_model_calls": 4,
+          "geometric_model_calls": 20,
+          "fm_requirement_calls": 0,
+          "fm_search_prior_calls": 0,
+          "total_fm_calls": 0
+        },
+        "diagnostics": {
+          "evaluated_tuple_count": 0,
+          "evaluated_tuples": []
+        }
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": true,
+        "expected_status": "INFEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": false,
+        "expected_rejection": "NO_PARTS_CONTAINER",
+        "predicted_rejection": "GLOBAL_CONFLICT",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 0,
+        "discovered_gt_objects_count": 0,
+        "total_gt_objects_in_scene": 2,
+        "stages_used": 4,
+        "early_stopped": false
+      }
+    },
+    {
+      "variant": "I4_TOOL_GEOMETRY_FAILURE",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "GLOBAL_CONFLICT",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "total_inference_time_s": 5.3275,
+          "discovered_object_count": 0,
+          "discovered_region_count": 4,
+          "stages_executed": 4,
+          "inspected_storage_regions": [
+            "LEFT_DRAWER",
+            "RIGHT_DRAWER",
+            "TOOL_CABINET"
+          ],
+          "early_stopped": false,
+          "semantic_model_calls": 8,
+          "geometric_model_calls": 40,
+          "fm_requirement_calls": 0,
+          "fm_search_prior_calls": 0,
+          "total_fm_calls": 0
+        },
+        "diagnostics": {
+          "evaluated_tuple_count": 0,
+          "evaluated_tuples": []
+        }
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": true,
+        "expected_status": "INFEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": false,
+        "expected_rejection": "TOOL_GEOMETRY_FAILURE",
+        "predicted_rejection": "GLOBAL_CONFLICT",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 0,
+        "discovered_gt_objects_count": 0,
+        "total_gt_objects_in_scene": 5,
+        "stages_used": 4,
+        "early_stopped": false
+      }
+    },
+    {
+      "variant": "I5_OBJECT_REGION_PACKING_FAILURE",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "GLOBAL_CONFLICT",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "total_inference_time_s": 5.3543,
+          "discovered_object_count": 0,
+          "discovered_region_count": 4,
+          "stages_executed": 4,
+          "inspected_storage_regions": [
+            "LEFT_DRAWER",
+            "RIGHT_DRAWER",
+            "TOOL_CABINET"
+          ],
+          "early_stopped": false,
+          "semantic_model_calls": 8,
+          "geometric_model_calls": 40,
+          "fm_requirement_calls": 0,
+          "fm_search_prior_calls": 0,
+          "total_fm_calls": 0
+        },
+        "diagnostics": {
+          "evaluated_tuple_count": 0,
+          "evaluated_tuples": []
+        }
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": true,
+        "expected_status": "INFEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": false,
+        "expected_rejection": "OBJECT_REGION_PACKING_FAILURE",
+        "predicted_rejection": "GLOBAL_CONFLICT",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 0,
+        "discovered_gt_objects_count": 0,
+        "total_gt_objects_in_scene": 2,
+        "stages_used": 4,
+        "early_stopped": false
+      }
+    },
+    {
+      "variant": "I6_GLOBAL_CONFLICT",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "GLOBAL_CONFLICT",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "total_inference_time_s": 5.5148,
+          "discovered_object_count": 0,
+          "discovered_region_count": 4,
+          "stages_executed": 4,
+          "inspected_storage_regions": [
+            "LEFT_DRAWER",
+            "RIGHT_DRAWER",
+            "TOOL_CABINET"
+          ],
+          "early_stopped": false,
+          "semantic_model_calls": 8,
+          "geometric_model_calls": 40,
+          "fm_requirement_calls": 0,
+          "fm_search_prior_calls": 0,
+          "total_fm_calls": 0
+        },
+        "diagnostics": {
+          "evaluated_tuple_count": 0,
+          "evaluated_tuples": []
+        }
+      },
+      "eval_metrics": {
+        "overall_pass": true,
+        "status_correct": true,
+        "expected_status": "INFEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": true,
+        "expected_rejection": "GLOBAL_CONFLICT",
+        "predicted_rejection": "GLOBAL_CONFLICT",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 0,
+        "discovered_gt_objects_count": 0,
+        "total_gt_objects_in_scene": 5,
+        "stages_used": 4,
+        "early_stopped": false
+      }
+    }
+  ]
+}

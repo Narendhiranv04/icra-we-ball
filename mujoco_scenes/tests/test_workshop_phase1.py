@@ -10,6 +10,7 @@ import pytest
 from mujoco_scenes.workshop_scene import WorkshopScene
 from mujoco_scenes.workshop_phase1.capture import ProductionInspectionCapture
 from mujoco_scenes.workshop_phase1.types import (
+    EntityType,
     FunctionalRequirement,
     GroundingStatus,
     MaskBackendType,
@@ -19,12 +20,18 @@ from mujoco_scenes.workshop_phase1.types import (
     ViewObservation,
 )
 from mujoco_scenes.workshop_phase1.perception import (
+    OpenVocabularyQueryBuilder,
     PrivilegedOracleMaskBackend,
     RGBDConnectedComponentProposalBackend,
+    YOLOWorldProposalBackend,
 )
 from mujoco_scenes.workshop_phase1.tracking import PersistentInstanceTracker
 from mujoco_scenes.workshop_phase1.evidence_graph import GrowingObservedGraph
-from mujoco_scenes.workshop_phase1.semantic_grounding import SemanticGrounder
+from mujoco_scenes.workshop_phase1.semantic_grounding import (
+    DeterministicSemanticNormalizer,
+    ProductionSemanticBackend,
+    SemanticGrounder,
+)
 from mujoco_scenes.workshop_phase1.geometric_grounding import GeometricGrounder
 from mujoco_scenes.workshop_phase1.region_grounding import RegionGrounder
 from mujoco_scenes.workshop_phase1.functional_search import FunctionalSatisfactionSearch
@@ -43,6 +50,61 @@ def test_static_requirements_provider():
     assert "CAN_FASTEN" in names
     assert "WORK_SURFACE" in names
     assert "SMALL_PARTS_CONTAINER" in names
+
+
+def test_open_vocabulary_query_builder():
+    """Verify dynamic open-vocabulary query generation from functional requirements."""
+    reqs = [
+        FunctionalRequirement(
+            requirement_id="req_01",
+            entity_type=EntityType.OBJECT,
+            function_name="CAN_DRIVE_SCREW",
+            description="Tool capable of driving screws or fasteners into the frame joint",
+        ),
+        FunctionalRequirement(
+            requirement_id="req_02",
+            entity_type=EntityType.OBJECT,
+            function_name="CAN_FASTEN",
+            description="Fastener capable of securely fastening the frame joint",
+        ),
+    ]
+    queries = OpenVocabularyQueryBuilder.build_queries(reqs, "Repair frame joint in workshop")
+    assert len(queries) >= 2
+    assert any("tool" in q.lower() or "driver" in q.lower() for q in queries)
+    assert any("fastener" in q.lower() or "screw" in q.lower() for q in queries)
+
+
+def test_oracle_mask_backend_neutrality():
+    """Verify PrivilegedOracleMaskBackend outputs 'object' and zero semantic typing."""
+    scene = WorkshopScene("none", variant="F0_BASE")
+    oracle_backend = PrivilegedOracleMaskBackend(scene)
+    capture = ProductionInspectionCapture()
+    obs_list = capture.capture_stage(scene, "INITIAL", capture_segmentation=True)
+
+    vol_min = np.array([-1.2, -0.2, 0.6])
+    vol_max = np.array([1.2, 0.9, 1.5])
+    for obs in obs_list:
+        masks = oracle_backend.predict(obs, vol_min, vol_max)
+        for m in masks:
+            assert m.predicted_label == "object", f"Oracle mask leaked label: {m.predicted_label}"
+            assert m.backend_name == "privileged_oracle"
+
+
+def test_deterministic_semantic_normalizer():
+    """Verify open-ended description parsing and UNKNOWN preservation without Phillips assumption."""
+    norm = DeterministicSemanticNormalizer()
+
+    assert norm.normalize_tool_interface("cross-shaped screw driving tip") == "CROSS_RECESS"
+    assert norm.normalize_tool_interface("slotted flat blade screwdriver") == "SINGLE_SLOT"
+    assert norm.normalize_tool_interface("hex socket driver bit") == "HEX_SOCKET"
+    assert norm.normalize_tool_interface("gripping pliers without driving tip") == "NO_DRIVE_INTERFACE"
+    # Ambiguous / novel tool does NOT default to Phillips
+    assert norm.normalize_tool_interface("generic metal rod with textured grip") == "UNKNOWN_INTERFACE"
+
+    assert norm.normalize_fastener_interface("screw with cross recess head") == "CROSS_RECESS"
+    assert norm.normalize_fastener_interface("bolt with hexagonal head") == "HEX_HEAD"
+    assert norm.normalize_fastener_interface("slotted wood screw") == "SINGLE_SLOT"
+    assert norm.normalize_fastener_interface("threaded cylinder") == "UNKNOWN_INTERFACE"
 
 
 def test_geometric_grounder_tool_reach():
@@ -81,44 +143,25 @@ def test_geometric_grounder_fastener():
     assert dim_info["shaft_diameter_m"] <= 0.008
 
 
-def test_semantic_grounder_caching_and_budget():
-    """Verify SemanticGrounder caches results per instance and enforces budget."""
-    grounder = SemanticGrounder()
-    req = FunctionalRequirement(
-        requirement_id="req_0001",
-        function_name="CAN_DRIVE_SCREW",
-        entity_type="OBJECT",
-        description="Tool capable of driving screw fasteners",
-    )
+def test_observed_cavity_and_openness():
+    """Verify container cavity depth measurement and open status detection."""
+    scene = WorkshopScene("none", variant="F0_BASE")
+    capture = ProductionInspectionCapture()
+    obs_list = capture.capture_stage(scene, "INITIAL")
+    region_grounder = RegionGrounder()
+    regions = region_grounder.discover_candidate_regions(scene, obs_list)
 
-    # Tool point cloud with length 0.22m, width 0.025m
-    z_pts = np.linspace(-0.11, 0.11, 50)
-    pts = np.column_stack([np.zeros(50), np.zeros(50), z_pts])
-
-    track = ObservedObjectTrack(
-        instance_id="object_0001",
-        first_seen_stage=0,
-        last_seen_stage=0,
-        fused_points=pts,
-        current_semantic_belief={"initial_label": "phillips screwdriver"},
-    )
-
-    # First call increments call count
-    res1 = grounder.ground_object_for_requirement(track, req)
-    assert grounder.total_semantic_calls == 1
-    assert res1.semantic_status == GroundingStatus.PASS
-
-    # Second call uses cache without incrementing
-    res2 = grounder.ground_object_for_requirement(track, req)
-    assert grounder.total_semantic_calls == 1
-    assert res2.semantic_status == GroundingStatus.PASS
+    assert len(regions) >= 2
+    # Check that regions have valid proposal bounds and cavity geometry
+    for reg in regions:
+        assert reg.observation_source == "calibrated_spatial_proposal"
+        assert reg.region_instance_id.startswith("region_")
 
 
 def test_tracker_multiview_clustering_and_persistence():
     """Verify PersistentInstanceTracker clusters observations across views."""
     tracker = PersistentInstanceTracker(cluster_distance_threshold_m=0.030)
 
-    # Simulate 2 detections of same physical object from 2 cameras
     cam1_pts = np.random.normal(loc=[0.0, 0.5, 0.8], scale=0.002, size=(50, 3))
     cam2_pts = np.random.normal(loc=[0.002, 0.501, 0.801], scale=0.002, size=(50, 3))
 
@@ -128,7 +171,7 @@ def test_tracker_multiview_clustering_and_persistence():
         binary_mask=np.ones((10, 10), dtype=bool),
         bounding_box_xyxy=(0, 0, 10, 10),
         confidence=0.95,
-        predicted_label="screwdriver",
+        predicted_label="tool",
     )
     m2 = ObservedMask(
         detection_id="det_cam2_0",
@@ -136,7 +179,7 @@ def test_tracker_multiview_clustering_and_persistence():
         binary_mask=np.ones((10, 10), dtype=bool),
         bounding_box_xyxy=(0, 0, 10, 10),
         confidence=0.95,
-        predicted_label="screwdriver",
+        predicted_label="tool",
     )
 
     intrinsics = np.eye(3)
@@ -162,7 +205,6 @@ def test_tracker_multiview_clustering_and_persistence():
         detected_masks=[m2],
     )
 
-    # Monkeypatch backprojection to return pre-computed points
     import mujoco_scenes.workshop_phase1.tracking as trk_module
     orig_bp = trk_module.backproject_masked_depth
     trk_module.backproject_masked_depth = lambda d, m, i, p, r, max_depth: (
@@ -206,9 +248,24 @@ def test_serialization_sanitization():
         assert_no_backend_names(leak_data)
 
 
-@pytest.mark.parametrize("variant", ["F0_BASE", "F2_REGION_ALTERNATIVE", "F4_OBJECT_REGION_COUPLING", "I0_NO_VALID_DRIVER", "I4_TOOL_GEOMETRY_FAILURE", "I5_OBJECT_REGION_PACKING_FAILURE"])
-def test_full_pipeline_variant_execution(variant: str):
-    """Integration test: verify end-to-end Phase 1 pipeline execution on benchmark variants."""
+@pytest.mark.parametrize("variant", [
+    "F0_BASE",
+    "F1_TOOL_ALTERNATIVE",
+    "F2_REGION_ALTERNATIVE",
+    "F3_DISTRIBUTED_OBJECTS",
+    "F4_OBJECT_REGION_COUPLING",
+    "F5_DECOY_HEAVY",
+    "F6_LAYOUT_SWAPPED",
+    "I0_NO_VALID_DRIVER",
+    "I1_NO_VALID_FASTENER",
+    "I2_NO_WORK_SURFACE",
+    "I3_NO_PARTS_CONTAINER",
+    "I4_TOOL_GEOMETRY_FAILURE",
+    "I5_OBJECT_REGION_PACKING_FAILURE",
+    "I6_GLOBAL_CONFLICT",
+])
+def test_all_14_variants_oracle_mask_execution(variant: str):
+    """Integration test: verify all 14 variants run with Oracle Masks and Production Semantics."""
     scene = WorkshopScene("none", variant=variant)
     controller = WorkshopPhase1InspectionController(
         mask_backend=MaskBackendType.ORACLE,

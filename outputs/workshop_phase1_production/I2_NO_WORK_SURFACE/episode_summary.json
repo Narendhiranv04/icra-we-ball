@@ -1,0 +1,33 @@
+{
+  "status": "INFEASIBLE",
+  "rejection_reason": "GLOBAL_CONFLICT",
+  "witness": null,
+  "inspection_count": 3,
+  "inspected_regions": [
+    "LEFT_DRAWER",
+    "RIGHT_DRAWER",
+    "TOOL_CABINET"
+  ],
+  "early_stopped": false,
+  "metrics": {
+    "total_inference_time_s": 4.7741,
+    "discovered_object_count": 0,
+    "discovered_region_count": 3,
+    "stages_executed": 4,
+    "inspected_storage_regions": [
+      "LEFT_DRAWER",
+      "RIGHT_DRAWER",
+      "TOOL_CABINET"
+    ],
+    "early_stopped": false,
+    "semantic_model_calls": 6,
+    "geometric_model_calls": 30,
+    "fm_requirement_calls": 0,
+    "fm_search_prior_calls": 0,
+    "total_fm_calls": 0
+  },
+  "diagnostics": {
+    "evaluated_tuple_count": 0,
+    "evaluated_tuples": []
+  }
+}

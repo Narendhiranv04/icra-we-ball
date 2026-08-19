@@ -2,23 +2,25 @@
 
 pipeline:
   mask_backend: "production"  # options: production, oracle, connected_component
+  semantic_backend: "production"  # options: production, oracle, deterministic_test
   requirements_source: "static"  # options: static, fm
-  inspection_policy: "fixed"  # options: fixed, fm
+  inspection_policy: "fixed"  # options: fixed, fm_ranked, oracle_greedy
+  ablation: "none"  # options: none, semantic_only, no_geometry, no_joint_coupling, no_persistence, single_view, oracle_mask, oracle_semantics
   image_width: 1280
   image_height: 720
 
 perception:
   yolo_weights: "mujoco_scenes/yolov8s-worldv2.pt"
-  confidence_threshold: 0.12
+  confidence_threshold: 0.08
   nms_iou_threshold: 0.45
   volume_margin_m: 0.08
-  min_points_per_mask: 10
+  min_points_per_mask: 8
 
 tracking:
-  cluster_distance_threshold_m: 0.065
-  track_match_distance_threshold_m: 0.055
+  cluster_distance_threshold_m: 0.025
+  track_match_distance_threshold_m: 0.035
   voxel_size_m: 0.003
-  min_cluster_points: 15
+  min_cluster_points: 12
 
 grounding:
   target_hole_depth_m: 0.030

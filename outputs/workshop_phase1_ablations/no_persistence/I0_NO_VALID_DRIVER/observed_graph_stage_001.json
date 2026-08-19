@@ -1,0 +1,1754 @@
+{
+  "stage_index": 1,
+  "total_nodes": 26,
+  "total_edges": 68,
+  "nodes": [
+    {
+      "node_id": "LEFT_DRAWER",
+      "node_type": "INSPECTION_REGION",
+      "first_seen_stage": 0,
+      "attributes": {
+        "description": "Storage container LEFT_DRAWER"
+      },
+      "provenance": {
+        "source": "scene_configuration"
+      }
+    },
+    {
+      "node_id": "RIGHT_DRAWER",
+      "node_type": "INSPECTION_REGION",
+      "first_seen_stage": 0,
+      "attributes": {
+        "description": "Storage container RIGHT_DRAWER"
+      },
+      "provenance": {
+        "source": "scene_configuration"
+      }
+    },
+    {
+      "node_id": "TOOL_CABINET",
+      "node_type": "INSPECTION_REGION",
+      "first_seen_stage": 0,
+      "attributes": {
+        "description": "Storage container TOOL_CABINET"
+      },
+      "provenance": {
+        "source": "scene_configuration"
+      }
+    },
+    {
+      "node_id": "workpiece_frame_joint_0001",
+      "node_type": "WORKPIECE",
+      "first_seen_stage": 0,
+      "attributes": {
+        "task": "frame_joint_repair"
+      },
+      "provenance": {
+        "source": "task_specification"
+      }
+    },
+    {
+      "node_id": "region_0001",
+      "node_type": "FUNCTIONAL_REGION",
+      "first_seen_stage": 0,
+      "attributes": {
+        "proposal_bounds_m": {
+          "minimum_world_m": [
+            -0.25,
+            0.12,
+            0.66
+          ],
+          "maximum_world_m": [
+            0.25,
+            0.4,
+            0.7000000000000001
+          ]
+        },
+        "support_plane": {
+          "base_height_m": 0.66,
+          "width_m": 0.5,
+          "length_m": 0.28,
+          "planar_area_m2": 0.14
+        },
+        "cavity_geometry": {
+          "is_open": true,
+          "is_open_status": "PASS",
+          "observed_cavity_depth_m": 0.028,
+          "estimated_volume_m3": 0.00392
+        },
+        "obstruction": {
+          "is_obstructed": false,
+          "obstruction_ratio": 0.0
+        },
+        "is_open": true
+      },
+      "provenance": {
+        "observation_source": "calibrated_spatial_proposal"
+      }
+    },
+    {
+      "node_id": "region_0002",
+      "node_type": "FUNCTIONAL_REGION",
+      "first_seen_stage": 0,
+      "attributes": {
+        "proposal_bounds_m": {
+          "minimum_world_m": [
+            0.92,
+            0.29500000000000004,
+            0.775
+          ],
+          "maximum_world_m": [
+            1.24,
+            0.505,
+            0.8250000000000001
+          ]
+        },
+        "support_plane": {
+          "base_height_m": 0.775,
+          "width_m": 0.32,
+          "length_m": 0.21,
+          "planar_area_m2": 0.0672
+        },
+        "cavity_geometry": {
+          "is_open": true,
+          "is_open_status": "PASS",
+          "observed_cavity_depth_m": 0.035,
+          "estimated_volume_m3": 0.002352
+        },
+        "obstruction": {
+          "is_obstructed": false,
+          "obstruction_ratio": 0.0
+        },
+        "is_open": true
+      },
+      "provenance": {
+        "observation_source": "calibrated_spatial_proposal"
+      }
+    },
+    {
+      "node_id": "region_0003",
+      "node_type": "FUNCTIONAL_REGION",
+      "first_seen_stage": 0,
+      "attributes": {
+        "proposal_bounds_m": {
+          "minimum_world_m": [
+            -0.53,
+            0.15,
+            0.68
+          ],
+          "maximum_world_m": [
+            -0.31,
+            0.29000000000000004,
+            0.7120000000000001
+          ]
+        },
+        "support_plane": {
+          "base_height_m": 0.68,
+          "width_m": 0.22,
+          "length_m": 0.14,
+          "planar_area_m2": 0.0308
+        },
+        "cavity_geometry": {
+          "is_open": true,
+          "is_open_status": "PASS",
+          "observed_cavity_depth_m": 0.032,
+          "estimated_volume_m3": 0.000986
+        },
+        "obstruction": {
+          "is_obstructed": false,
+          "obstruction_ratio": 0.0
+        },
+        "is_open": true
+      },
+      "provenance": {
+        "observation_source": "calibrated_spatial_proposal"
+      }
+    },
+    {
+      "node_id": "region_0004",
+      "node_type": "FUNCTIONAL_REGION",
+      "first_seen_stage": 0,
+      "attributes": {
+        "proposal_bounds_m": {
+          "minimum_world_m": [
+            -0.495,
+            0.445,
+            0.68
+          ],
+          "maximum_world_m": [
+            -0.385,
+            0.595,
+            0.7600000000000001
+          ]
+        },
+        "support_plane": {
+          "base_height_m": 0.68,
+          "width_m": 0.11,
+          "length_m": 0.15,
+          "planar_area_m2": 0.0165
+        },
+        "cavity_geometry": {
+          "is_open": true,
+          "is_open_status": "PASS",
+          "observed_cavity_depth_m": 0.0784,
+          "estimated_volume_m3": 0.001294
+        },
+        "obstruction": {
+          "is_obstructed": true,
+          "obstruction_ratio": 1.0,
+          "elevated_point_count": 801
+        },
+        "is_open": true
+      },
+      "provenance": {
+        "observation_source": "calibrated_spatial_proposal"
+      }
+    },
+    {
+      "node_id": "object_0001",
+      "node_type": "OBJECT",
+      "first_seen_stage": 0,
+      "attributes": {
+        "semantic_belief": {
+          "initial_label": "object_proposal"
+        },
+        "geometric_properties": {
+          "usable_reach_m": 0.0,
+          "total_length_m": 0.2732,
+          "max_radius_m": 0.0127,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.005228,
+          "length_m": 0.2732,
+          "shaft_diameter_m": 0.0124,
+          "head_diameter_m": 0.0254
+        },
+        "point_count": 898
+      },
+      "provenance": {
+        "source_region": "INITIAL_TABLETOP",
+        "contributing_cameras": [
+          "workshop_camera_front",
+          "workshop_camera_left",
+          "workshop_camera_right"
+        ],
+        "evidence_count": 1
+      }
+    },
+    {
+      "node_id": "object_0002",
+      "node_type": "OBJECT",
+      "first_seen_stage": 0,
+      "attributes": {
+        "semantic_belief": {
+          "initial_label": "object_proposal"
+        },
+        "geometric_properties": {
+          "usable_reach_m": 0.0,
+          "total_length_m": 0.1077,
+          "max_radius_m": 0.0174,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.001077,
+          "length_m": 0.1077,
+          "shaft_diameter_m": 0.0134,
+          "head_diameter_m": 0.0349
+        },
+        "point_count": 467
+      },
+      "provenance": {
+        "source_region": "INITIAL_TABLETOP",
+        "contributing_cameras": [
+          "workshop_camera_left",
+          "workshop_camera_right"
+        ],
+        "evidence_count": 1
+      }
+    },
+    {
+      "node_id": "object_0003",
+      "node_type": "OBJECT",
+      "first_seen_stage": 0,
+      "attributes": {
+        "semantic_belief": {
+          "initial_label": "object_proposal"
+        },
+        "geometric_properties": {
+          "usable_reach_m": 0.0,
+          "total_length_m": 0.3114,
+          "max_radius_m": 0.009,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.003114,
+          "length_m": 0.3114,
+          "shaft_diameter_m": 0.007,
+          "head_diameter_m": 0.018
+        },
+        "point_count": 703
+      },
+      "provenance": {
+        "source_region": "INITIAL_TABLETOP",
+        "contributing_cameras": [
+          "workshop_camera_left",
+          "workshop_camera_right"
+        ],
+        "evidence_count": 1
+      }
+    },
+    {
+      "node_id": "object_0004",
+      "node_type": "OBJECT",
+      "first_seen_stage": 0,
+      "attributes": {
+        "semantic_belief": {
+          "initial_label": "object_proposal"
+        },
+        "geometric_properties": {
+          "usable_reach_m": 0.045,
+          "total_length_m": 0.2055,
+          "max_radius_m": 0.0534,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.019213,
+          "length_m": 0.2055,
+          "shaft_diameter_m": 0.0445,
+          "head_diameter_m": 0.1068
+        },
+        "point_count": 2763
+      },
+      "provenance": {
+        "source_region": "INITIAL_TABLETOP",
+        "contributing_cameras": [
+          "workshop_camera_front",
+          "workshop_camera_left",
+          "workshop_camera_right",
+          "workshop_camera_top"
+        ],
+        "evidence_count": 1
+      }
+    },
+    {
+      "node_id": "object_0005",
+      "node_type": "OBJECT",
+      "first_seen_stage": 0,
+      "attributes": {
+        "semantic_belief": {
+          "initial_label": "object_proposal"
+        },
+        "geometric_properties": {
+          "usable_reach_m": 0.045,
+          "total_length_m": 0.1745,
+          "max_radius_m": 0.0283,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.000622,
+          "length_m": 0.1745,
+          "shaft_diameter_m": 0.0146,
+          "head_diameter_m": 0.0567
+        },
+        "point_count": 821
+      },
+      "provenance": {
+        "source_region": "INITIAL_TABLETOP",
+        "contributing_cameras": [
+          "workshop_camera_left"
+        ],
+        "evidence_count": 1
+      }
+    },
+    {
+      "node_id": "object_0006",
+      "node_type": "OBJECT",
+      "first_seen_stage": 0,
+      "attributes": {
+        "semantic_belief": {
+          "initial_label": "object_proposal"
+        },
+        "geometric_properties": {
+          "usable_reach_m": 0.0,
+          "total_length_m": 0.2161,
+          "max_radius_m": 0.0157,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.003375,
+          "length_m": 0.2161,
+          "shaft_diameter_m": 0.0133,
+          "head_diameter_m": 0.0315
+        },
+        "point_count": 866
+      },
+      "provenance": {
+        "source_region": "INITIAL_TABLETOP",
+        "contributing_cameras": [
+          "workshop_camera_right"
+        ],
+        "evidence_count": 1
+      }
+    },
+    {
+      "node_id": "object_0007",
+      "node_type": "OBJECT",
+      "first_seen_stage": 0,
+      "attributes": {
+        "semantic_belief": {
+          "initial_label": "object_proposal"
+        },
+        "geometric_properties": {
+          "usable_reach_m": 0.0,
+          "total_length_m": 0.0881,
+          "max_radius_m": 0.0087,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.001527,
+          "length_m": 0.0881,
+          "shaft_diameter_m": 0.0086,
+          "head_diameter_m": 0.0175
+        },
+        "point_count": 152
+      },
+      "provenance": {
+        "source_region": "INITIAL_TABLETOP",
+        "contributing_cameras": [
+          "workshop_camera_top"
+        ],
+        "evidence_count": 1
+      }
+    },
+    {
+      "node_id": "object_0008",
+      "node_type": "OBJECT",
+      "first_seen_stage": 0,
+      "attributes": {
+        "semantic_belief": {
+          "initial_label": "object_proposal"
+        },
+        "geometric_properties": {
+          "usable_reach_m": 0.045,
+          "total_length_m": 0.3094,
+          "max_radius_m": 0.0313,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.000924,
+          "length_m": 0.3094,
+          "shaft_diameter_m": 0.021,
+          "head_diameter_m": 0.0626
+        },
+        "point_count": 1962
+      },
+      "provenance": {
+        "source_region": "INITIAL_TABLETOP",
+        "contributing_cameras": [
+          "workshop_camera_close",
+          "workshop_camera_top"
+        ],
+        "evidence_count": 1
+      }
+    },
+    {
+      "node_id": "object_0009",
+      "node_type": "OBJECT",
+      "first_seen_stage": 0,
+      "attributes": {
+        "semantic_belief": {
+          "initial_label": "object_proposal"
+        },
+        "geometric_properties": {
+          "usable_reach_m": 0.0,
+          "total_length_m": 0.269,
+          "max_radius_m": 0.0081,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.004467,
+          "length_m": 0.269,
+          "shaft_diameter_m": 0.006,
+          "head_diameter_m": 0.0163
+        },
+        "point_count": 536
+      },
+      "provenance": {
+        "source_region": "INITIAL_TABLETOP",
+        "contributing_cameras": [
+          "workshop_camera_top"
+        ],
+        "evidence_count": 1
+      }
+    },
+    {
+      "node_id": "object_0010",
+      "node_type": "OBJECT",
+      "first_seen_stage": 0,
+      "attributes": {
+        "semantic_belief": {
+          "initial_label": "object_proposal"
+        },
+        "geometric_properties": {
+          "usable_reach_m": 0.045,
+          "total_length_m": 0.327,
+          "max_radius_m": 0.1502,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.070383,
+          "length_m": 0.327,
+          "shaft_diameter_m": 0.0839,
+          "head_diameter_m": 0.3004
+        },
+        "point_count": 8646
+      },
+      "provenance": {
+        "source_region": "INITIAL_TABLETOP",
+        "contributing_cameras": [
+          "workshop_camera_top"
+        ],
+        "evidence_count": 1
+      }
+    },
+    {
+      "node_id": "object_0011",
+      "node_type": "OBJECT",
+      "first_seen_stage": 0,
+      "attributes": {
+        "semantic_belief": {
+          "initial_label": "object_proposal"
+        },
+        "geometric_properties": {
+          "usable_reach_m": 0.0,
+          "total_length_m": 0.2682,
+          "max_radius_m": 0.0079,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.00435,
+          "length_m": 0.2682,
+          "shaft_diameter_m": 0.0069,
+          "head_diameter_m": 0.0158
+        },
+        "point_count": 549
+      },
+      "provenance": {
+        "source_region": "INITIAL_TABLETOP",
+        "contributing_cameras": [
+          "workshop_camera_top"
+        ],
+        "evidence_count": 1
+      }
+    },
+    {
+      "node_id": "object_0012",
+      "node_type": "OBJECT",
+      "first_seen_stage": 0,
+      "attributes": {
+        "semantic_belief": {
+          "initial_label": "object_proposal"
+        },
+        "geometric_properties": {
+          "usable_reach_m": 0.017,
+          "total_length_m": 0.1415,
+          "max_radius_m": 0.012,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.00026,
+          "length_m": 0.1415,
+          "shaft_diameter_m": 0.0063,
+          "head_diameter_m": 0.024
+        },
+        "point_count": 237
+      },
+      "provenance": {
+        "source_region": "INITIAL_TABLETOP",
+        "contributing_cameras": [
+          "workshop_camera_top"
+        ],
+        "evidence_count": 1
+      }
+    },
+    {
+      "node_id": "object_0013",
+      "node_type": "OBJECT",
+      "first_seen_stage": 0,
+      "attributes": {
+        "semantic_belief": {
+          "initial_label": "object_proposal"
+        },
+        "geometric_properties": {
+          "usable_reach_m": 0.0155,
+          "total_length_m": 0.1295,
+          "max_radius_m": 0.0052,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.001497,
+          "length_m": 0.1295,
+          "shaft_diameter_m": 0.0039,
+          "head_diameter_m": 0.0105
+        },
+        "point_count": 162
+      },
+      "provenance": {
+        "source_region": "INITIAL_TABLETOP",
+        "contributing_cameras": [
+          "workshop_camera_front",
+          "workshop_camera_top"
+        ],
+        "evidence_count": 1
+      }
+    },
+    {
+      "node_id": "object_0014",
+      "node_type": "OBJECT",
+      "first_seen_stage": 0,
+      "attributes": {
+        "semantic_belief": {
+          "initial_label": "object_proposal",
+          "free_text_description": "slender threaded fastener shaft with cross recess screw head",
+          "functional_description": "screw fastener for joint assembly",
+          "visible_tool_interface": "none",
+          "visible_fastener_interface": "cross recess head",
+          "broad_object_type": "screw fastener",
+          "confidence": 0.93,
+          "evidence_crops_provenance": [
+            "workshop_camera_top",
+            "workshop_camera_close"
+          ],
+          "normalized_tool_interface": "NO_DRIVE_INTERFACE",
+          "normalized_fastener_interface": "CROSS_RECESS",
+          "inferred_role": "COMPATIBLE_SCREW_FASTENER"
+        },
+        "geometric_properties": {
+          "usable_reach_m": 0.0,
+          "total_length_m": 0.0571,
+          "max_radius_m": 0.0106,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.00126,
+          "length_m": 0.0571,
+          "shaft_diameter_m": 0.0075,
+          "head_diameter_m": 0.0212
+        },
+        "point_count": 91
+      },
+      "provenance": {
+        "source_region": "INITIAL_TABLETOP",
+        "contributing_cameras": [
+          "workshop_camera_close",
+          "workshop_camera_top"
+        ],
+        "evidence_count": 1
+      }
+    },
+    {
+      "node_id": "object_0015",
+      "node_type": "OBJECT",
+      "first_seen_stage": 0,
+      "attributes": {
+        "semantic_belief": {
+          "initial_label": "object_proposal",
+          "free_text_description": "metal hand tool with opposing jaws or gripping surfaces but no driving shaft",
+          "functional_description": "gripping or turning tool unsuitable for driving screws",
+          "visible_tool_interface": "none",
+          "visible_fastener_interface": "none",
+          "broad_object_type": "gripping tool",
+          "confidence": 0.88,
+          "evidence_crops_provenance": [
+            "workshop_camera_front"
+          ],
+          "normalized_tool_interface": "NO_DRIVE_INTERFACE",
+          "normalized_fastener_interface": "UNKNOWN_INTERFACE",
+          "inferred_role": "NON_DRIVER_HAND_TOOL"
+        },
+        "geometric_properties": {
+          "usable_reach_m": 0.0,
+          "total_length_m": 0.179,
+          "max_radius_m": 0.0161,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.006502,
+          "length_m": 0.179,
+          "shaft_diameter_m": 0.0111,
+          "head_diameter_m": 0.0323
+        },
+        "point_count": 238
+      },
+      "provenance": {
+        "source_region": "INITIAL_TABLETOP",
+        "contributing_cameras": [
+          "workshop_camera_front"
+        ],
+        "evidence_count": 1
+      }
+    },
+    {
+      "node_id": "object_0016",
+      "node_type": "OBJECT",
+      "first_seen_stage": 0,
+      "attributes": {
+        "semantic_belief": {
+          "initial_label": "object_proposal",
+          "free_text_description": "hand screwdriver with cylindrical handle, elongated narrow shaft, and slotted flat blade tip",
+          "functional_description": "manual screw driving tool",
+          "visible_tool_interface": "slotted flat blade tip",
+          "visible_fastener_interface": "none",
+          "broad_object_type": "manual screwdriver",
+          "confidence": 0.9,
+          "evidence_crops_provenance": [
+            "workshop_camera_front",
+            "workshop_camera_close"
+          ],
+          "normalized_tool_interface": "SINGLE_SLOT",
+          "normalized_fastener_interface": "UNKNOWN_INTERFACE",
+          "inferred_role": "SLOTTED_DRIVER"
+        },
+        "geometric_properties": {
+          "usable_reach_m": 0.0,
+          "total_length_m": 0.1647,
+          "max_radius_m": 0.0099,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.001647,
+          "length_m": 0.1647,
+          "shaft_diameter_m": 0.0061,
+          "head_diameter_m": 0.0199
+        },
+        "point_count": 202
+      },
+      "provenance": {
+        "source_region": "INITIAL_TABLETOP",
+        "contributing_cameras": [
+          "workshop_camera_close",
+          "workshop_camera_front"
+        ],
+        "evidence_count": 1
+      }
+    },
+    {
+      "node_id": "req_obj_driver",
+      "node_type": "REQUIREMENT",
+      "first_seen_stage": 0,
+      "attributes": {
+        "function_name": "CAN_DRIVE_SCREW"
+      },
+      "provenance": {
+        "source": "task_requirements"
+      }
+    },
+    {
+      "node_id": "req_obj_fastener",
+      "node_type": "REQUIREMENT",
+      "first_seen_stage": 0,
+      "attributes": {
+        "function_name": "CAN_FASTEN"
+      },
+      "provenance": {
+        "source": "task_requirements"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source_id": "object_0001",
+      "target_id": "INITIAL_TABLETOP",
+      "relation": "OBSERVED_IN",
+      "confidence": 0.9,
+      "evidence": {
+        "stage_index": 0
+      }
+    },
+    {
+      "source_id": "object_0002",
+      "target_id": "INITIAL_TABLETOP",
+      "relation": "OBSERVED_IN",
+      "confidence": 0.9,
+      "evidence": {
+        "stage_index": 0
+      }
+    },
+    {
+      "source_id": "object_0003",
+      "target_id": "INITIAL_TABLETOP",
+      "relation": "OBSERVED_IN",
+      "confidence": 0.9,
+      "evidence": {
+        "stage_index": 0
+      }
+    },
+    {
+      "source_id": "object_0004",
+      "target_id": "INITIAL_TABLETOP",
+      "relation": "OBSERVED_IN",
+      "confidence": 0.9,
+      "evidence": {
+        "stage_index": 0
+      }
+    },
+    {
+      "source_id": "object_0005",
+      "target_id": "INITIAL_TABLETOP",
+      "relation": "OBSERVED_IN",
+      "confidence": 0.9,
+      "evidence": {
+        "stage_index": 0
+      }
+    },
+    {
+      "source_id": "object_0006",
+      "target_id": "INITIAL_TABLETOP",
+      "relation": "OBSERVED_IN",
+      "confidence": 0.9,
+      "evidence": {
+        "stage_index": 0
+      }
+    },
+    {
+      "source_id": "object_0007",
+      "target_id": "INITIAL_TABLETOP",
+      "relation": "OBSERVED_IN",
+      "confidence": 0.9,
+      "evidence": {
+        "stage_index": 0
+      }
+    },
+    {
+      "source_id": "object_0008",
+      "target_id": "INITIAL_TABLETOP",
+      "relation": "OBSERVED_IN",
+      "confidence": 0.9,
+      "evidence": {
+        "stage_index": 0
+      }
+    },
+    {
+      "source_id": "object_0009",
+      "target_id": "INITIAL_TABLETOP",
+      "relation": "OBSERVED_IN",
+      "confidence": 0.9,
+      "evidence": {
+        "stage_index": 0
+      }
+    },
+    {
+      "source_id": "object_0010",
+      "target_id": "INITIAL_TABLETOP",
+      "relation": "OBSERVED_IN",
+      "confidence": 0.9,
+      "evidence": {
+        "stage_index": 0
+      }
+    },
+    {
+      "source_id": "object_0011",
+      "target_id": "INITIAL_TABLETOP",
+      "relation": "OBSERVED_IN",
+      "confidence": 0.9,
+      "evidence": {
+        "stage_index": 0
+      }
+    },
+    {
+      "source_id": "object_0012",
+      "target_id": "INITIAL_TABLETOP",
+      "relation": "OBSERVED_IN",
+      "confidence": 0.9,
+      "evidence": {
+        "stage_index": 0
+      }
+    },
+    {
+      "source_id": "object_0013",
+      "target_id": "INITIAL_TABLETOP",
+      "relation": "OBSERVED_IN",
+      "confidence": 0.9,
+      "evidence": {
+        "stage_index": 0
+      }
+    },
+    {
+      "source_id": "object_0014",
+      "target_id": "INITIAL_TABLETOP",
+      "relation": "OBSERVED_IN",
+      "confidence": 0.9,
+      "evidence": {
+        "stage_index": 0
+      }
+    },
+    {
+      "source_id": "object_0015",
+      "target_id": "INITIAL_TABLETOP",
+      "relation": "OBSERVED_IN",
+      "confidence": 0.9,
+      "evidence": {
+        "stage_index": 0
+      }
+    },
+    {
+      "source_id": "object_0016",
+      "target_id": "INITIAL_TABLETOP",
+      "relation": "OBSERVED_IN",
+      "confidence": 0.9,
+      "evidence": {
+        "stage_index": 0
+      }
+    },
+    {
+      "source_id": "object_0001",
+      "target_id": "req_obj_driver",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.05,
+      "evidence": {
+        "stage_index": 1,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "FAIL",
+        "rejection_reasons": [
+          "SEMANTIC_TOOL_TYPE_MISMATCH_NOT_SCREWDRIVER",
+          "INSUFFICIENT_DRIVER_REACH_0.000M_LESS_THAN_0.025M"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0001",
+      "target_id": "req_obj_driver",
+      "relation": "GEOMETRICALLY_SATISFIES",
+      "confidence": 0.95,
+      "evidence": {
+        "stage_index": 0,
+        "geometric_evidence": {
+          "usable_reach_m": 0.045,
+          "total_length_m": 0.3052,
+          "max_radius_m": 0.1425,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.95,
+          "planar_footprint_m2": 0.002938
+        }
+      }
+    },
+    {
+      "source_id": "object_0001",
+      "target_id": "req_obj_fastener",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.05,
+      "evidence": {
+        "stage_index": 1,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "FAIL",
+        "rejection_reasons": [
+          "SEMANTIC_NOT_A_FASTENER",
+          "FASTENER_SHAFT_DIAMETER_0.012M_EXCEEDS_HOLE"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0002",
+      "target_id": "req_obj_driver",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.2,
+      "evidence": {
+        "stage_index": 1,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "FAIL",
+        "rejection_reasons": [
+          "SEMANTIC_TOOL_INTERFACE_MISMATCH_SLOTTED_BLADE",
+          "INSUFFICIENT_DRIVER_REACH_0.000M_LESS_THAN_0.025M"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0002",
+      "target_id": "req_obj_fastener",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.05,
+      "evidence": {
+        "stage_index": 1,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "FAIL",
+        "rejection_reasons": [
+          "SEMANTIC_NOT_A_FASTENER",
+          "FASTENER_SHAFT_DIAMETER_0.013M_EXCEEDS_HOLE"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0002",
+      "target_id": "req_obj_fastener",
+      "relation": "GEOMETRICALLY_SATISFIES",
+      "confidence": 0.92,
+      "evidence": {
+        "stage_index": 0,
+        "geometric_evidence": {
+          "length_m": 0.25,
+          "shaft_diameter_m": 0.0054,
+          "head_diameter_m": 0.0192,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.002499
+        }
+      }
+    },
+    {
+      "source_id": "object_0003",
+      "target_id": "req_obj_driver",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.1,
+      "evidence": {
+        "stage_index": 1,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "FAIL",
+        "rejection_reasons": [
+          "SEMANTIC_NOT_A_SCREW_DRIVING_TOOL",
+          "INSUFFICIENT_DRIVER_REACH_0.000M_LESS_THAN_0.025M"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0003",
+      "target_id": "req_obj_fastener",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.05,
+      "evidence": {
+        "stage_index": 1,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "PASS",
+        "rejection_reasons": [
+          "SEMANTIC_NOT_A_FASTENER"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0004",
+      "target_id": "req_obj_driver",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.05,
+      "evidence": {
+        "stage_index": 1,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "PASS",
+        "rejection_reasons": [
+          "SEMANTIC_TOOL_TYPE_MISMATCH_NOT_SCREWDRIVER"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0004",
+      "target_id": "req_obj_driver",
+      "relation": "GEOMETRICALLY_SATISFIES",
+      "confidence": 0.95,
+      "evidence": {
+        "stage_index": 1,
+        "geometric_evidence": {
+          "usable_reach_m": 0.045,
+          "total_length_m": 0.2055,
+          "max_radius_m": 0.0534,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.95,
+          "planar_footprint_m2": 0.019213
+        }
+      }
+    },
+    {
+      "source_id": "object_0004",
+      "target_id": "req_obj_fastener",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.05,
+      "evidence": {
+        "stage_index": 1,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "FAIL",
+        "rejection_reasons": [
+          "SEMANTIC_NOT_A_FASTENER",
+          "FASTENER_SHAFT_DIAMETER_0.044M_EXCEEDS_HOLE"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0005",
+      "target_id": "req_obj_driver",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.2,
+      "evidence": {
+        "stage_index": 1,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "PASS",
+        "rejection_reasons": [
+          "SEMANTIC_TOOL_INTERFACE_MISMATCH_SLOTTED_BLADE"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0005",
+      "target_id": "req_obj_fastener",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.05,
+      "evidence": {
+        "stage_index": 1,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "FAIL",
+        "rejection_reasons": [
+          "SEMANTIC_NOT_A_FASTENER",
+          "FASTENER_SHAFT_DIAMETER_0.015M_EXCEEDS_HOLE"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0006",
+      "target_id": "req_obj_driver",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.1,
+      "evidence": {
+        "stage_index": 1,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "FAIL",
+        "rejection_reasons": [
+          "SEMANTIC_NOT_A_SCREW_DRIVING_TOOL",
+          "INSUFFICIENT_DRIVER_REACH_0.000M_LESS_THAN_0.025M"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0006",
+      "target_id": "req_obj_driver",
+      "relation": "GEOMETRICALLY_SATISFIES",
+      "confidence": 0.95,
+      "evidence": {
+        "stage_index": 0,
+        "geometric_evidence": {
+          "usable_reach_m": 0.045,
+          "total_length_m": 0.2047,
+          "max_radius_m": 0.0567,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.95,
+          "planar_footprint_m2": 0.020437
+        }
+      }
+    },
+    {
+      "source_id": "object_0006",
+      "target_id": "req_obj_fastener",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.05,
+      "evidence": {
+        "stage_index": 1,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "FAIL",
+        "rejection_reasons": [
+          "SEMANTIC_NOT_A_FASTENER",
+          "FASTENER_SHAFT_DIAMETER_0.013M_EXCEEDS_HOLE"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0007",
+      "target_id": "req_obj_driver",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.05,
+      "evidence": {
+        "stage_index": 1,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "FAIL",
+        "rejection_reasons": [
+          "SEMANTIC_TOOL_TYPE_MISMATCH_NOT_SCREWDRIVER",
+          "INSUFFICIENT_DRIVER_REACH_0.000M_LESS_THAN_0.025M"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0007",
+      "target_id": "req_obj_fastener",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.93,
+      "evidence": {
+        "stage_index": 1,
+        "combined_status": "PASS",
+        "semantic_status": "PASS",
+        "geometric_status": "PASS",
+        "rejection_reasons": []
+      }
+    },
+    {
+      "source_id": "object_0007",
+      "target_id": "req_obj_fastener",
+      "relation": "SEMANTICALLY_SATISFIES",
+      "confidence": 0.93,
+      "evidence": {
+        "stage_index": 1,
+        "semantic_evidence": {
+          "free_text_description": "slender threaded fastener shaft with cross recess screw head",
+          "functional_description": "screw fastener for joint assembly",
+          "visible_tool_interface": "none",
+          "visible_fastener_interface": "cross recess head",
+          "broad_object_type": "screw fastener",
+          "confidence": 0.93,
+          "evidence_crops_provenance": [
+            "workshop_camera_left",
+            "workshop_camera_right",
+            "workshop_camera_front",
+            "workshop_camera_close"
+          ],
+          "normalized_tool_interface": "NO_DRIVE_INTERFACE",
+          "normalized_fastener_interface": "CROSS_RECESS",
+          "inferred_role": "COMPATIBLE_SCREW_FASTENER"
+        }
+      }
+    },
+    {
+      "source_id": "object_0007",
+      "target_id": "req_obj_fastener",
+      "relation": "GEOMETRICALLY_SATISFIES",
+      "confidence": 0.92,
+      "evidence": {
+        "stage_index": 1,
+        "geometric_evidence": {
+          "length_m": 0.0881,
+          "shaft_diameter_m": 0.0086,
+          "head_diameter_m": 0.0175,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.001527
+        }
+      }
+    },
+    {
+      "source_id": "object_0008",
+      "target_id": "req_obj_driver",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.05,
+      "evidence": {
+        "stage_index": 1,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "PASS",
+        "rejection_reasons": [
+          "SEMANTIC_TOOL_TYPE_MISMATCH_NOT_SCREWDRIVER"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0008",
+      "target_id": "req_obj_fastener",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.05,
+      "evidence": {
+        "stage_index": 1,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "FAIL",
+        "rejection_reasons": [
+          "SEMANTIC_NOT_A_FASTENER",
+          "FASTENER_SHAFT_DIAMETER_0.021M_EXCEEDS_HOLE"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0009",
+      "target_id": "req_obj_driver",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.05,
+      "evidence": {
+        "stage_index": 1,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "FAIL",
+        "rejection_reasons": [
+          "SEMANTIC_TOOL_TYPE_MISMATCH_NOT_SCREWDRIVER",
+          "INSUFFICIENT_DRIVER_REACH_0.000M_LESS_THAN_0.025M"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0009",
+      "target_id": "req_obj_fastener",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.93,
+      "evidence": {
+        "stage_index": 1,
+        "combined_status": "PASS",
+        "semantic_status": "PASS",
+        "geometric_status": "PASS",
+        "rejection_reasons": []
+      }
+    },
+    {
+      "source_id": "object_0009",
+      "target_id": "req_obj_fastener",
+      "relation": "SEMANTICALLY_SATISFIES",
+      "confidence": 0.93,
+      "evidence": {
+        "stage_index": 1,
+        "semantic_evidence": {
+          "free_text_description": "slender threaded fastener shaft with cross recess screw head",
+          "functional_description": "screw fastener for joint assembly",
+          "visible_tool_interface": "none",
+          "visible_fastener_interface": "cross recess head",
+          "broad_object_type": "screw fastener",
+          "confidence": 0.93,
+          "evidence_crops_provenance": [
+            "workshop_camera_left",
+            "workshop_camera_right",
+            "workshop_camera_front",
+            "workshop_camera_close"
+          ],
+          "normalized_tool_interface": "NO_DRIVE_INTERFACE",
+          "normalized_fastener_interface": "CROSS_RECESS",
+          "inferred_role": "COMPATIBLE_SCREW_FASTENER"
+        }
+      }
+    },
+    {
+      "source_id": "object_0009",
+      "target_id": "req_obj_fastener",
+      "relation": "GEOMETRICALLY_SATISFIES",
+      "confidence": 0.92,
+      "evidence": {
+        "stage_index": 1,
+        "geometric_evidence": {
+          "length_m": 0.269,
+          "shaft_diameter_m": 0.006,
+          "head_diameter_m": 0.0163,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.004467
+        }
+      }
+    },
+    {
+      "source_id": "object_0010",
+      "target_id": "req_obj_driver",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.05,
+      "evidence": {
+        "stage_index": 1,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "PASS",
+        "rejection_reasons": [
+          "SEMANTIC_TOOL_TYPE_MISMATCH_NOT_SCREWDRIVER"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0010",
+      "target_id": "req_obj_fastener",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.93,
+      "evidence": {
+        "stage_index": 1,
+        "combined_status": "FAIL",
+        "semantic_status": "PASS",
+        "geometric_status": "FAIL",
+        "rejection_reasons": [
+          "FASTENER_SHAFT_DIAMETER_0.084M_EXCEEDS_HOLE"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0010",
+      "target_id": "req_obj_fastener",
+      "relation": "SEMANTICALLY_SATISFIES",
+      "confidence": 0.93,
+      "evidence": {
+        "stage_index": 1,
+        "semantic_evidence": {
+          "free_text_description": "slender threaded fastener shaft with cross recess screw head",
+          "functional_description": "screw fastener for joint assembly",
+          "visible_tool_interface": "none",
+          "visible_fastener_interface": "cross recess head",
+          "broad_object_type": "screw fastener",
+          "confidence": 0.93,
+          "evidence_crops_provenance": [
+            "workshop_camera_right",
+            "workshop_camera_close"
+          ],
+          "normalized_tool_interface": "NO_DRIVE_INTERFACE",
+          "normalized_fastener_interface": "CROSS_RECESS",
+          "inferred_role": "COMPATIBLE_SCREW_FASTENER"
+        }
+      }
+    },
+    {
+      "source_id": "object_0010",
+      "target_id": "req_obj_fastener",
+      "relation": "GEOMETRICALLY_SATISFIES",
+      "confidence": 0.92,
+      "evidence": {
+        "stage_index": 0,
+        "geometric_evidence": {
+          "length_m": 0.0276,
+          "shaft_diameter_m": 0.0056,
+          "head_diameter_m": 0.0213,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.000235
+        }
+      }
+    },
+    {
+      "source_id": "object_0011",
+      "target_id": "req_obj_driver",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.05,
+      "evidence": {
+        "stage_index": 1,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "FAIL",
+        "rejection_reasons": [
+          "SEMANTIC_TOOL_TYPE_MISMATCH_NOT_SCREWDRIVER",
+          "INSUFFICIENT_DRIVER_REACH_0.000M_LESS_THAN_0.025M"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0011",
+      "target_id": "req_obj_fastener",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.05,
+      "evidence": {
+        "stage_index": 1,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "PASS",
+        "rejection_reasons": [
+          "SEMANTIC_NOT_A_FASTENER"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0012",
+      "target_id": "req_obj_driver",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.05,
+      "evidence": {
+        "stage_index": 1,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "FAIL",
+        "rejection_reasons": [
+          "SEMANTIC_TOOL_TYPE_MISMATCH_NOT_SCREWDRIVER",
+          "INSUFFICIENT_DRIVER_REACH_0.017M_LESS_THAN_0.025M"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0012",
+      "target_id": "req_obj_fastener",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.05,
+      "evidence": {
+        "stage_index": 1,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "PASS",
+        "rejection_reasons": [
+          "SEMANTIC_NOT_A_FASTENER"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0013",
+      "target_id": "req_obj_driver",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.1,
+      "evidence": {
+        "stage_index": 1,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "FAIL",
+        "rejection_reasons": [
+          "SEMANTIC_NOT_A_SCREW_DRIVING_TOOL",
+          "INSUFFICIENT_DRIVER_REACH_0.015M_LESS_THAN_0.025M"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0013",
+      "target_id": "req_obj_fastener",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.05,
+      "evidence": {
+        "stage_index": 1,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "PASS",
+        "rejection_reasons": [
+          "SEMANTIC_NOT_A_FASTENER"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0014",
+      "target_id": "req_obj_driver",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.05,
+      "evidence": {
+        "stage_index": 0,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "FAIL",
+        "rejection_reasons": [
+          "SEMANTIC_TOOL_TYPE_MISMATCH_NOT_SCREWDRIVER",
+          "INSUFFICIENT_DRIVER_REACH_0.000M_LESS_THAN_0.025M"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0014",
+      "target_id": "req_obj_fastener",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.93,
+      "evidence": {
+        "stage_index": 0,
+        "combined_status": "PASS",
+        "semantic_status": "PASS",
+        "geometric_status": "PASS",
+        "rejection_reasons": []
+      }
+    },
+    {
+      "source_id": "object_0014",
+      "target_id": "req_obj_fastener",
+      "relation": "SEMANTICALLY_SATISFIES",
+      "confidence": 0.93,
+      "evidence": {
+        "stage_index": 0,
+        "semantic_evidence": {
+          "free_text_description": "slender threaded fastener shaft with cross recess screw head",
+          "functional_description": "screw fastener for joint assembly",
+          "visible_tool_interface": "none",
+          "visible_fastener_interface": "cross recess head",
+          "broad_object_type": "screw fastener",
+          "confidence": 0.93,
+          "evidence_crops_provenance": [
+            "workshop_camera_top",
+            "workshop_camera_close"
+          ],
+          "normalized_tool_interface": "NO_DRIVE_INTERFACE",
+          "normalized_fastener_interface": "CROSS_RECESS",
+          "inferred_role": "COMPATIBLE_SCREW_FASTENER"
+        }
+      }
+    },
+    {
+      "source_id": "object_0014",
+      "target_id": "req_obj_fastener",
+      "relation": "GEOMETRICALLY_SATISFIES",
+      "confidence": 0.92,
+      "evidence": {
+        "stage_index": 0,
+        "geometric_evidence": {
+          "length_m": 0.0571,
+          "shaft_diameter_m": 0.0075,
+          "head_diameter_m": 0.0212,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.00126
+        }
+      }
+    },
+    {
+      "source_id": "object_0015",
+      "target_id": "req_obj_driver",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.05,
+      "evidence": {
+        "stage_index": 0,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "FAIL",
+        "rejection_reasons": [
+          "SEMANTIC_TOOL_TYPE_MISMATCH_NOT_SCREWDRIVER",
+          "INSUFFICIENT_DRIVER_REACH_0.000M_LESS_THAN_0.025M"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0015",
+      "target_id": "req_obj_fastener",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.05,
+      "evidence": {
+        "stage_index": 0,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "FAIL",
+        "rejection_reasons": [
+          "SEMANTIC_NOT_A_FASTENER",
+          "FASTENER_SHAFT_DIAMETER_0.011M_EXCEEDS_HOLE"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0016",
+      "target_id": "req_obj_driver",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.2,
+      "evidence": {
+        "stage_index": 0,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "FAIL",
+        "rejection_reasons": [
+          "SEMANTIC_TOOL_INTERFACE_MISMATCH_SLOTTED_BLADE",
+          "INSUFFICIENT_DRIVER_REACH_0.000M_LESS_THAN_0.025M"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0016",
+      "target_id": "req_obj_fastener",
+      "relation": "CANDIDATE_FOR",
+      "confidence": 0.05,
+      "evidence": {
+        "stage_index": 0,
+        "combined_status": "FAIL",
+        "semantic_status": "FAIL",
+        "geometric_status": "PASS",
+        "rejection_reasons": [
+          "SEMANTIC_NOT_A_FASTENER"
+        ]
+      }
+    },
+    {
+      "source_id": "object_0016",
+      "target_id": "req_obj_fastener",
+      "relation": "GEOMETRICALLY_SATISFIES",
+      "confidence": 0.92,
+      "evidence": {
+        "stage_index": 0,
+        "geometric_evidence": {
+          "length_m": 0.1647,
+          "shaft_diameter_m": 0.0061,
+          "head_diameter_m": 0.0199,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.001647
+        }
+      }
+    },
+    {
+      "source_id": "object_0003",
+      "target_id": "req_obj_fastener",
+      "relation": "GEOMETRICALLY_SATISFIES",
+      "confidence": 0.92,
+      "evidence": {
+        "stage_index": 1,
+        "geometric_evidence": {
+          "length_m": 0.3114,
+          "shaft_diameter_m": 0.007,
+          "head_diameter_m": 0.018,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.003114
+        }
+      }
+    },
+    {
+      "source_id": "object_0005",
+      "target_id": "req_obj_driver",
+      "relation": "GEOMETRICALLY_SATISFIES",
+      "confidence": 0.95,
+      "evidence": {
+        "stage_index": 1,
+        "geometric_evidence": {
+          "usable_reach_m": 0.045,
+          "total_length_m": 0.1745,
+          "max_radius_m": 0.0283,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.95,
+          "planar_footprint_m2": 0.000622
+        }
+      }
+    },
+    {
+      "source_id": "object_0008",
+      "target_id": "req_obj_driver",
+      "relation": "GEOMETRICALLY_SATISFIES",
+      "confidence": 0.95,
+      "evidence": {
+        "stage_index": 1,
+        "geometric_evidence": {
+          "usable_reach_m": 0.045,
+          "total_length_m": 0.3094,
+          "max_radius_m": 0.0313,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.95,
+          "planar_footprint_m2": 0.000924
+        }
+      }
+    },
+    {
+      "source_id": "object_0010",
+      "target_id": "req_obj_driver",
+      "relation": "GEOMETRICALLY_SATISFIES",
+      "confidence": 0.95,
+      "evidence": {
+        "stage_index": 1,
+        "geometric_evidence": {
+          "usable_reach_m": 0.045,
+          "total_length_m": 0.327,
+          "max_radius_m": 0.1502,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.95,
+          "planar_footprint_m2": 0.070383
+        }
+      }
+    },
+    {
+      "source_id": "object_0011",
+      "target_id": "req_obj_fastener",
+      "relation": "GEOMETRICALLY_SATISFIES",
+      "confidence": 0.92,
+      "evidence": {
+        "stage_index": 1,
+        "geometric_evidence": {
+          "length_m": 0.2682,
+          "shaft_diameter_m": 0.0069,
+          "head_diameter_m": 0.0158,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.00435
+        }
+      }
+    },
+    {
+      "source_id": "object_0012",
+      "target_id": "req_obj_fastener",
+      "relation": "GEOMETRICALLY_SATISFIES",
+      "confidence": 0.92,
+      "evidence": {
+        "stage_index": 1,
+        "geometric_evidence": {
+          "length_m": 0.1415,
+          "shaft_diameter_m": 0.0063,
+          "head_diameter_m": 0.024,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.00026
+        }
+      }
+    },
+    {
+      "source_id": "object_0013",
+      "target_id": "req_obj_fastener",
+      "relation": "GEOMETRICALLY_SATISFIES",
+      "confidence": 0.92,
+      "evidence": {
+        "stage_index": 1,
+        "geometric_evidence": {
+          "length_m": 0.1295,
+          "shaft_diameter_m": 0.0039,
+          "head_diameter_m": 0.0105,
+          "quality_flag": "HIGH_POINTS",
+          "confidence": 0.92,
+          "planar_footprint_m2": 0.001497
+        }
+      }
+    }
+  ]
+}

@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Any
 
 from mujoco_scenes.workshop_phase1.types import (
+    FunctionGroundingResult,
+    GroundingStatus,
     ObservedObjectTrack,
     ObservedRegion,
 )
@@ -18,7 +20,7 @@ class GraphNode:
     """A node in the observed evidence graph."""
 
     node_id: str
-    node_type: str  # "OBJECT", "FUNCTIONAL_REGION", "INSPECTION_REGION", "WORKPIECE"
+    node_type: str  # "OBJECT", "FUNCTIONAL_REGION", "INSPECTION_REGION", "WORKPIECE", "REQUIREMENT"
     first_seen_stage: int
     attributes: dict[str, Any] = field(default_factory=dict)
     provenance: dict[str, Any] = field(default_factory=dict)
@@ -39,7 +41,7 @@ class GraphEdge:
 
     source_id: str
     target_id: str
-    relation: str  # "OBSERVED_IN", "SUPPORTED_BY", "NEAR", "CANDIDATE_FOR", "SEMANTICALLY_SATISFIES", "GEOMETRICALLY_SATISFIES"
+    relation: str  # "OBSERVED_IN", "SUPPORTED_BY", "CANDIDATE_FOR", "SEMANTICALLY_SATISFIES", "GEOMETRICALLY_SATISFIES"
     confidence: float = 1.0
     evidence: dict[str, Any] = field(default_factory=dict)
 
@@ -103,15 +105,16 @@ class GrowingObservedGraph:
                         "support_plane": reg.support_plane,
                         "cavity_geometry": reg.cavity_geometry,
                         "obstruction": reg.obstruction_evidence,
+                        "is_open": reg.is_open,
                     },
                     provenance={"observation_source": reg.observation_source},
                 )
             else:
-                # Update attributes
                 self._nodes[r_id].attributes.update({
                     "support_plane": reg.support_plane,
                     "cavity_geometry": reg.cavity_geometry,
                     "obstruction": reg.obstruction_evidence,
+                    "is_open": reg.is_open,
                 })
 
     def update_from_object_tracks(
@@ -156,6 +159,60 @@ class GrowingObservedGraph:
                 self._nodes[inst_id].provenance["evidence_count"] = trk.evidence_count
                 self._nodes[inst_id].provenance["contributing_cameras"] = list(trk.contributing_cameras)
 
+    def update_from_grounding_results(
+        self,
+        grounding_results: list[FunctionGroundingResult],
+        stage_idx: int,
+    ) -> None:
+        """Record explicit semantic and geometric satisfaction edges from grounding pass."""
+        for g_res in grounding_results:
+            e_id = g_res.entity_id
+            r_id = g_res.requirement_id
+
+            if r_id not in self._nodes:
+                self._nodes[r_id] = GraphNode(
+                    node_id=r_id,
+                    node_type="REQUIREMENT",
+                    first_seen_stage=stage_idx,
+                    attributes={"function_name": g_res.function_name},
+                    provenance={"source": "task_requirements"},
+                )
+
+            # CANDIDATE_FOR edge
+            self.add_edge(
+                source_id=e_id,
+                target_id=r_id,
+                relation="CANDIDATE_FOR",
+                confidence=g_res.semantic_score,
+                evidence={
+                    "stage_index": stage_idx,
+                    "combined_status": g_res.combined_status.value,
+                    "semantic_status": g_res.semantic_status.value,
+                    "geometric_status": g_res.geometric_status.value,
+                    "rejection_reasons": g_res.rejection_reasons,
+                },
+            )
+
+            # SEMANTICALLY_SATISFIES edge
+            if g_res.semantic_status == GroundingStatus.PASS:
+                self.add_edge(
+                    source_id=e_id,
+                    target_id=r_id,
+                    relation="SEMANTICALLY_SATISFIES",
+                    confidence=g_res.semantic_score,
+                    evidence={"stage_index": stage_idx, "semantic_evidence": g_res.semantic_evidence},
+                )
+
+            # GEOMETRICALLY_SATISFIES edge
+            if g_res.geometric_status == GroundingStatus.PASS:
+                self.add_edge(
+                    source_id=e_id,
+                    target_id=r_id,
+                    relation="GEOMETRICALLY_SATISFIES",
+                    confidence=g_res.geometric_score,
+                    evidence={"stage_index": stage_idx, "geometric_evidence": g_res.geometric_evidence},
+                )
+
     def add_edge(
         self,
         source_id: str,
@@ -164,7 +221,6 @@ class GrowingObservedGraph:
         confidence: float = 1.0,
         evidence: dict[str, Any] | None = None,
     ) -> None:
-        # Avoid exact duplicates
         for edge in self._edges:
             if edge.source_id == source_id and edge.target_id == target_id and edge.relation == relation:
                 edge.confidence = confidence

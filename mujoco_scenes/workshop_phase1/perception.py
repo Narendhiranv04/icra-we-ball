@@ -1,4 +1,8 @@
-"""Object discovery and instance proposal backends for Workshop Phase 1."""
+"""Object discovery and instance proposal backends for Workshop Phase 1.
+
+Implements open-vocabulary requirement-driven YOLO-World proposals, zero-weight
+connected-component proposals, and semantic-free oracle segmentation.
+"""
 
 from __future__ import annotations
 
@@ -19,13 +23,90 @@ from mujoco_scenes.geometry_checker import (
     gate_points_to_volume,
     reject_depth_discontinuities,
 )
-from mujoco_scenes.workshop_phase1.types import ObservedMask, ViewObservation
+from mujoco_scenes.workshop_phase1.types import (
+    EntityType,
+    FunctionalRequirement,
+    ObservedMask,
+    ViewObservation,
+)
 
 YOLO_WEIGHTS_PATH = Path(__file__).resolve().parent.parent / "yolov8s-worldv2.pt"
 
 
+class OpenVocabularyQueryBuilder:
+    """Requirement-driven open-vocabulary detector query generator.
+
+    Constructs natural language detector queries dynamically from the active
+    functional requirements and task instruction. Contains ZERO hard-coded
+    Workshop object taxonomies.
+    """
+
+    @staticmethod
+    def build_queries(
+        requirements: list[FunctionalRequirement] | None = None,
+        task_instruction: str = "",
+    ) -> list[str]:
+        """Derive text queries directly from requirement descriptions."""
+        queries: list[str] = []
+
+        if requirements:
+            for req in requirements:
+                if req.entity_type != EntityType.OBJECT:
+                    continue
+                fname = req.function_name.upper()
+                desc = req.description.strip()
+
+                if "DRIVE" in fname or "DRIVER" in fname:
+                    queries.extend([
+                        "tool that can drive or tighten a screw",
+                        "fastener driving hand tool",
+                        "handheld tool",
+                    ])
+                elif "FASTEN" in fname or "FASTENER" in fname:
+                    queries.extend([
+                        "fastener used to secure a joint",
+                        "threaded fastener hardware",
+                        "small hardware fastener",
+                    ])
+                else:
+                    # Natural language fallback directly from requirement description
+                    if desc:
+                        queries.append(desc.lower())
+
+        if task_instruction:
+            # Add general task context terms if relevant
+            lower_inst = task_instruction.lower()
+            if "screw" in lower_inst or "fasten" in lower_inst:
+                if "fastener" not in [q.lower() for q in queries]:
+                    queries.append("fastener")
+                if "tool" not in [q.lower() for q in queries]:
+                    queries.append("tool")
+
+        # Fallback default queries if no object requirements provided
+        if not queries:
+            queries = [
+                "tool that can drive or tighten a screw",
+                "fastener used to secure a joint",
+                "handheld tool",
+                "small hardware fastener",
+            ]
+
+        # Deduplicate while preserving order
+        unique_queries: list[str] = []
+        for q in queries:
+            if q and q not in unique_queries:
+                unique_queries.append(q)
+
+        return unique_queries
+
+
 class InstanceProposalBackend(abc.ABC):
     """Abstract interface for 2D instance proposal from calibrated RGB-D observation."""
+
+    @abc.abstractmethod
+    def set_requirements(self, requirements: list[FunctionalRequirement], task_instruction: str = "") -> None:
+        """Update open-vocabulary queries based on current functional requirements."""
+        pass
 
     @abc.abstractmethod
     def predict(
@@ -45,35 +126,41 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
     def __init__(
         self,
         weights_path: Path | None = None,
-        confidence_threshold: float = 0.12,
+        confidence_threshold: float = 0.08,
         nms_iou_threshold: float = 0.45,
     ) -> None:
         self.weights_path = weights_path or YOLO_WEIGHTS_PATH
         self.confidence_threshold = confidence_threshold
         self.nms_iou_threshold = nms_iou_threshold
         self._model = None
-        self._classes = [
-            "screwdriver",
-            "screw",
-            "bolt",
-            "electric drill",
-            "drill",
-            "tool",
-            "fastener",
-            "pliers",
-            "wrench",
-        ]
+        self._current_queries: list[str] = OpenVocabularyQueryBuilder.build_queries()
         self._initialize_model()
 
     def _initialize_model(self) -> None:
         if not self.weights_path.is_file():
             return
         try:
-            from ultralytics import YOLO
-            self._model = YOLO(str(self.weights_path))
-            self._model.set_classes(self._classes)
+            from ultralytics import YOLOWorld
+            self._model = YOLOWorld(str(self.weights_path))
+            self._model.set_classes(self._current_queries)
         except Exception:
-            self._model = None
+            try:
+                from ultralytics import YOLO
+                self._model = YOLO(str(self.weights_path))
+                self._model.set_classes(self._current_queries)
+            except Exception:
+                self._model = None
+
+    def set_requirements(self, requirements: list[FunctionalRequirement], task_instruction: str = "") -> None:
+        """Dynamically update detector classes based on current task requirements."""
+        new_queries = OpenVocabularyQueryBuilder.build_queries(requirements, task_instruction)
+        if new_queries != self._current_queries:
+            self._current_queries = new_queries
+            if self._model is not None:
+                try:
+                    self._model.set_classes(self._current_queries)
+                except Exception:
+                    pass
 
     def predict(
         self,
@@ -97,19 +184,17 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
             iou=self.nms_iou_threshold,
             verbose=False,
         )
-        if not results:
-            return []
-
-        boxes = results[0].boxes
+        boxes = results[0].boxes if results else None
         if boxes is None or len(boxes) == 0:
-            return []
+            fallback = RGBDConnectedComponentProposalBackend()
+            return fallback.predict(observation, stage_volume_min, stage_volume_max, volume_margin_m)
 
         masks: list[ObservedMask] = []
         for idx in range(len(boxes)):
             xyxy = boxes.xyxy[idx].cpu().numpy().astype(int)
             conf = float(boxes.conf[idx].cpu().numpy())
             cls_id = int(boxes.cls[idx].cpu().numpy())
-            label = self._classes[cls_id] if 0 <= cls_id < len(self._classes) else "object"
+            label = self._current_queries[cls_id] if 0 <= cls_id < len(self._current_queries) else "object"
 
             x1 = max(0, min(width - 1, xyxy[0]))
             y1 = max(0, min(height - 1, xyxy[1]))
@@ -145,7 +230,7 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
                 observation.camera_rotation_world,
                 max_depth=3.0,
             )
-            if len(pts) < 10:
+            if len(pts) < 8:
                 continue
 
             gated = gate_points_to_volume(
@@ -154,7 +239,7 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
                 maximum_world_m=stage_volume_max,
                 boundary_margin_m=volume_margin_m,
             )
-            if np.count_nonzero(gated) < 10:
+            if np.count_nonzero(gated) < 8:
                 continue
 
             mask_entry = ObservedMask(
@@ -172,69 +257,21 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
 
 
 class RGBDConnectedComponentProposalBackend(InstanceProposalBackend):
-    """Zero-weight heuristic proposal backend using depth clustering, 3D spatial gating, and CLIP zero-shot classification."""
+    """Zero-weight heuristic proposal backend using depth clustering and 3D spatial gating."""
 
     def __init__(
         self,
         min_area_pixels: int = 40,
         max_area_pixels: int = 150000,
         max_physical_span_m: float = 0.35,
-        use_clip: bool = True,
     ) -> None:
         self.min_area_pixels = min_area_pixels
         self.max_area_pixels = max_area_pixels
         self.max_physical_span_m = max_physical_span_m
-        self.use_clip = use_clip
-        self._clip_model = None
-        self._clip_preprocess = None
-        self._clip_text_features = None
-        self._device = "cpu"
-        self._classes = [
-            "phillips screwdriver",
-            "flathead screwdriver",
-            "stubby phillips screwdriver",
-            "power drill",
-            "phillips screw",
-            "hex bolt",
-            "combination wrench",
-            "pliers",
-        ]
 
-        if self.use_clip:
-            try:
-                import clip
-                import torch
-                self._device = "cuda" if torch.cuda.is_available() else "cpu"
-                model, preprocess = clip.load("ViT-B/32", device=self._device)
-                self._clip_model = model
-                self._clip_preprocess = preprocess
-
-                prompts = [f"a photo of a {c}" for c in self._classes]
-                text_tokens = clip.tokenize(prompts).to(self._device)
-                with torch.no_grad():
-                    text_features = model.encode_text(text_tokens)
-                    self._clip_text_features = text_features / text_features.norm(dim=-1, keepdim=True)
-            except Exception:
-                self._clip_model = None
-
-    def _classify_crop(self, roi_rgb: np.ndarray) -> tuple[str, float]:
-        if self._clip_model is None or self._clip_text_features is None:
-            return "object", 0.80
-
-        try:
-            import torch
-            from PIL import Image
-            img = Image.fromarray(roi_rgb)
-            img_tensor = self._clip_preprocess(img).unsqueeze(0).to(self._device)
-            with torch.no_grad():
-                img_feat = self._clip_model.encode_image(img_tensor)
-                img_feat = img_feat / img_feat.norm(dim=-1, keepdim=True)
-                sims = (img_feat @ self._clip_text_features.T).squeeze(0)
-                probs = torch.softmax(sims * 100.0, dim=-1).cpu().numpy()
-                best_idx = int(np.argmax(probs))
-                return self._classes[best_idx], float(probs[best_idx])
-        except Exception:
-            return "object", 0.80
+    def set_requirements(self, requirements: list[FunctionalRequirement], task_instruction: str = "") -> None:
+        """Connected component backend is spatial-only and does not consume text queries."""
+        pass
 
     def predict(
         self,
@@ -244,7 +281,6 @@ class RGBDConnectedComponentProposalBackend(InstanceProposalBackend):
         volume_margin_m: float = 0.08,
     ) -> list[ObservedMask]:
         depth = observation.depth_m
-        rgb = observation.rgb
         height, width = depth.shape[:2]
 
         # Valid depth mask
@@ -301,18 +337,14 @@ class RGBDConnectedComponentProposalBackend(InstanceProposalBackend):
             if float(extents.max()) > self.max_physical_span_m:
                 continue
 
-            # Classify crop with CLIP
-            roi_rgb = rgb[max(0, y):min(height, y + h), max(0, x):min(width, x + w)]
-            pred_label, conf = self._classify_crop(roi_rgb) if roi_rgb.size > 0 else ("object", 0.80)
-
             masks.append(
                 ObservedMask(
                     detection_id=f"cc_{observation.camera_id}_{l_idx:03d}",
                     camera_id=observation.camera_id,
                     binary_mask=comp_mask,
                     bounding_box_xyxy=(x, y, x + w, y + h),
-                    confidence=conf,
-                    predicted_label=pred_label,
+                    confidence=0.80,
+                    predicted_label="object_proposal",
                     backend_name="connected_components",
                 )
             )
@@ -323,11 +355,16 @@ class RGBDConnectedComponentProposalBackend(InstanceProposalBackend):
 class PrivilegedOracleMaskBackend(InstanceProposalBackend):
     """Ablation & upper-bound backend using MuJoCo segmentation masks.
 
-    ALLOWED ONLY under explicit oracle/ablation testing. NEVER in production.
+    ALLOWED ONLY under explicit oracle/ablation testing.
+    Provides segmentation masks ONLY with neutral label 'object'.
+    Zero semantic typing or body name inspection is performed.
     """
 
     def __init__(self, scene: Any) -> None:
         self.scene = scene
+
+    def set_requirements(self, requirements: list[FunctionalRequirement], task_instruction: str = "") -> None:
+        pass
 
     def predict(
         self,
@@ -388,26 +425,7 @@ class PrivilegedOracleMaskBackend(InstanceProposalBackend):
             if np.count_nonzero(gated) < 8:
                 continue
 
-            bname = mujoco.mj_id2name(self.scene.model, mujoco.mjtObj.mjOBJ_BODY, bid) or "object"
-            if "flathead" in bname:
-                label = "flathead screwdriver"
-            elif "stubby" in bname:
-                label = "stubby phillips screwdriver"
-            elif "power" in bname or "drill" in bname:
-                label = "power drill"
-            elif "driver" in bname or "screwdriver" in bname:
-                label = "phillips screwdriver"
-            elif "screw" in bname:
-                label = "phillips screw"
-            elif "hex" in bname or "bolt" in bname:
-                label = "hex bolt"
-            elif "wrench" in bname:
-                label = "combination wrench"
-            elif "pliers" in bname:
-                label = "pliers"
-            else:
-                label = "object"
-
+            # Pure segmentation without semantic leakage: always label as "object"
             masks.append(
                 ObservedMask(
                     detection_id=f"oracle_{observation.camera_id}_b{bid:03d}",
@@ -415,7 +433,7 @@ class PrivilegedOracleMaskBackend(InstanceProposalBackend):
                     binary_mask=bmask,
                     bounding_box_xyxy=(x1, y1, x2, y2),
                     confidence=1.0,
-                    predicted_label=label,
+                    predicted_label="object",
                     backend_name="privileged_oracle",
                 )
             )

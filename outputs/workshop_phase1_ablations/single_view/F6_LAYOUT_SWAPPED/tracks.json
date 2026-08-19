@@ -1,0 +1,625 @@
+[
+  {
+    "instance_id": "object_0001",
+    "first_seen_stage": 0,
+    "last_seen_stage": 3,
+    "source_inspection_region_id": "INITIAL_TABLETOP",
+    "point_count": 1059,
+    "contributing_cameras": [
+      "workshop_camera_left"
+    ],
+    "semantic_belief": {
+      "initial_label": "object_proposal",
+      "free_text_description": "unclassified physical object with ambiguous visual and geometric features",
+      "functional_description": "unknown object",
+      "visible_tool_interface": "UNKNOWN",
+      "visible_fastener_interface": "UNKNOWN",
+      "broad_object_type": "unclassified object",
+      "confidence": 0.5,
+      "evidence_crops_provenance": [
+        "workshop_camera_left"
+      ],
+      "normalized_tool_interface": "UNKNOWN_INTERFACE",
+      "normalized_fastener_interface": "UNKNOWN_INTERFACE",
+      "inferred_role": "NON_DRIVER_HAND_TOOL"
+    },
+    "geometric_properties": {
+      "usable_reach_m": 0.0,
+      "total_length_m": 0.1043,
+      "max_radius_m": 0.0427,
+      "quality_flag": "HIGH_POINTS",
+      "confidence": 0.92,
+      "planar_footprint_m2": 0.006055,
+      "length_m": 0.1043,
+      "shaft_diameter_m": 0.0424,
+      "head_diameter_m": 0.0854
+    },
+    "overall_confidence": 0.9,
+    "evidence_count": 2,
+    "status": "ACTIVE"
+  },
+  {
+    "instance_id": "object_0002",
+    "first_seen_stage": 0,
+    "last_seen_stage": 2,
+    "source_inspection_region_id": "INITIAL_TABLETOP",
+    "point_count": 482,
+    "contributing_cameras": [
+      "workshop_camera_left"
+    ],
+    "semantic_belief": {
+      "initial_label": "object_proposal",
+      "free_text_description": "metal hand tool with opposing jaws or gripping surfaces but no driving shaft",
+      "functional_description": "gripping or turning tool unsuitable for driving screws",
+      "visible_tool_interface": "none",
+      "visible_fastener_interface": "none",
+      "broad_object_type": "gripping tool",
+      "confidence": 0.88,
+      "evidence_crops_provenance": [
+        "workshop_camera_left"
+      ],
+      "normalized_tool_interface": "NO_DRIVE_INTERFACE",
+      "normalized_fastener_interface": "UNKNOWN_INTERFACE",
+      "inferred_role": "NON_DRIVER_HAND_TOOL"
+    },
+    "geometric_properties": {
+      "usable_reach_m": 0.0,
+      "total_length_m": 0.1061,
+      "max_radius_m": 0.0183,
+      "quality_flag": "HIGH_POINTS",
+      "confidence": 0.92,
+      "planar_footprint_m2": 0.001062,
+      "length_m": 0.1061,
+      "shaft_diameter_m": 0.0138,
+      "head_diameter_m": 0.0365
+    },
+    "overall_confidence": 0.9,
+    "evidence_count": 2,
+    "status": "ACTIVE"
+  },
+  {
+    "instance_id": "object_0003",
+    "first_seen_stage": 0,
+    "last_seen_stage": 1,
+    "source_inspection_region_id": "INITIAL_TABLETOP",
+    "point_count": 826,
+    "contributing_cameras": [
+      "workshop_camera_left"
+    ],
+    "semantic_belief": {
+      "initial_label": "object_proposal",
+      "free_text_description": "hand screwdriver with cylindrical handle, elongated narrow shaft, and slotted flat blade tip",
+      "functional_description": "manual screw driving tool",
+      "visible_tool_interface": "slotted flat blade tip",
+      "visible_fastener_interface": "none",
+      "broad_object_type": "manual screwdriver",
+      "confidence": 0.9,
+      "evidence_crops_provenance": [
+        "workshop_camera_left"
+      ],
+      "normalized_tool_interface": "SINGLE_SLOT",
+      "normalized_fastener_interface": "UNKNOWN_INTERFACE",
+      "inferred_role": "SLOTTED_DRIVER"
+    },
+    "geometric_properties": {
+      "usable_reach_m": 0.0,
+      "total_length_m": 0.2587,
+      "max_radius_m": 0.0127,
+      "quality_flag": "HIGH_POINTS",
+      "confidence": 0.92,
+      "planar_footprint_m2": 0.00481,
+      "length_m": 0.2587,
+      "shaft_diameter_m": 0.0118,
+      "head_diameter_m": 0.0254
+    },
+    "overall_confidence": 0.9,
+    "evidence_count": 2,
+    "status": "ACTIVE"
+  },
+  {
+    "instance_id": "object_0004",
+    "first_seen_stage": 0,
+    "last_seen_stage": 0,
+    "source_inspection_region_id": "INITIAL_TABLETOP",
+    "point_count": 90,
+    "contributing_cameras": [
+      "workshop_camera_left"
+    ],
+    "semantic_belief": {
+      "initial_label": "object_proposal",
+      "free_text_description": "hand screwdriver with cylindrical handle, elongated narrow shaft, and cross-shaped screw driving tip",
+      "functional_description": "manual screw driving tool",
+      "visible_tool_interface": "cross-shaped screw driving tip",
+      "visible_fastener_interface": "none",
+      "broad_object_type": "manual screwdriver",
+      "confidence": 0.9,
+      "evidence_crops_provenance": [
+        "workshop_camera_left"
+      ],
+      "normalized_tool_interface": "CROSS_RECESS",
+      "normalized_fastener_interface": "UNKNOWN_INTERFACE",
+      "inferred_role": "CROSS_SCREW_DRIVER"
+    },
+    "geometric_properties": {
+      "usable_reach_m": 0.0088,
+      "total_length_m": 0.1097,
+      "max_radius_m": 0.0045,
+      "quality_flag": "HIGH_POINTS",
+      "confidence": 0.92,
+      "planar_footprint_m2": 0.0001,
+      "length_m": 0.1097,
+      "shaft_diameter_m": 0.0034,
+      "head_diameter_m": 0.0089
+    },
+    "overall_confidence": 0.9,
+    "evidence_count": 1,
+    "status": "ACTIVE"
+  },
+  {
+    "instance_id": "object_0005",
+    "first_seen_stage": 0,
+    "last_seen_stage": 2,
+    "source_inspection_region_id": "INITIAL_TABLETOP",
+    "point_count": 1459,
+    "contributing_cameras": [
+      "workshop_camera_left"
+    ],
+    "semantic_belief": {
+      "initial_label": "object_proposal",
+      "free_text_description": "unclassified physical object with ambiguous visual and geometric features",
+      "functional_description": "unknown object",
+      "visible_tool_interface": "UNKNOWN",
+      "visible_fastener_interface": "UNKNOWN",
+      "broad_object_type": "unclassified object",
+      "confidence": 0.5,
+      "evidence_crops_provenance": [
+        "workshop_camera_left"
+      ],
+      "normalized_tool_interface": "UNKNOWN_INTERFACE",
+      "normalized_fastener_interface": "UNKNOWN_INTERFACE"
+    },
+    "geometric_properties": {
+      "usable_reach_m": 0.045,
+      "total_length_m": 0.1933,
+      "max_radius_m": 0.0495,
+      "quality_flag": "HIGH_POINTS",
+      "confidence": 0.92,
+      "planar_footprint_m2": 0.016331,
+      "length_m": 0.1933,
+      "shaft_diameter_m": 0.0416,
+      "head_diameter_m": 0.0991
+    },
+    "overall_confidence": 0.9,
+    "evidence_count": 2,
+    "status": "ACTIVE"
+  },
+  {
+    "instance_id": "object_0006",
+    "first_seen_stage": 0,
+    "last_seen_stage": 0,
+    "source_inspection_region_id": "INITIAL_TABLETOP",
+    "point_count": 54,
+    "contributing_cameras": [
+      "workshop_camera_left"
+    ],
+    "semantic_belief": {
+      "initial_label": "object_proposal",
+      "free_text_description": "slender threaded fastener shaft with cross recess screw head",
+      "functional_description": "screw fastener for joint assembly",
+      "visible_tool_interface": "none",
+      "visible_fastener_interface": "cross recess head",
+      "broad_object_type": "screw fastener",
+      "confidence": 0.93,
+      "evidence_crops_provenance": [
+        "workshop_camera_left"
+      ],
+      "normalized_tool_interface": "NO_DRIVE_INTERFACE",
+      "normalized_fastener_interface": "CROSS_RECESS",
+      "inferred_role": "COMPATIBLE_SCREW_FASTENER"
+    },
+    "geometric_properties": {
+      "usable_reach_m": 0.0,
+      "total_length_m": 0.0283,
+      "max_radius_m": 0.0101,
+      "quality_flag": "HIGH_POINTS",
+      "confidence": 0.92,
+      "planar_footprint_m2": 0.000188,
+      "length_m": 0.0283,
+      "shaft_diameter_m": 0.0071,
+      "head_diameter_m": 0.0203
+    },
+    "overall_confidence": 0.9,
+    "evidence_count": 1,
+    "status": "ACTIVE"
+  },
+  {
+    "instance_id": "object_0007",
+    "first_seen_stage": 0,
+    "last_seen_stage": 0,
+    "source_inspection_region_id": "INITIAL_TABLETOP",
+    "point_count": 1487,
+    "contributing_cameras": [
+      "workshop_camera_left"
+    ],
+    "semantic_belief": {
+      "initial_label": "object_proposal",
+      "free_text_description": "metal hand tool with opposing jaws or gripping surfaces but no driving shaft",
+      "functional_description": "gripping or turning tool unsuitable for driving screws",
+      "visible_tool_interface": "none",
+      "visible_fastener_interface": "none",
+      "broad_object_type": "gripping tool",
+      "confidence": 0.88,
+      "evidence_crops_provenance": [
+        "workshop_camera_left"
+      ],
+      "normalized_tool_interface": "NO_DRIVE_INTERFACE",
+      "normalized_fastener_interface": "UNKNOWN_INTERFACE",
+      "inferred_role": "NON_DRIVER_HAND_TOOL"
+    },
+    "geometric_properties": {
+      "usable_reach_m": 0.0,
+      "total_length_m": 0.3371,
+      "max_radius_m": 0.0208,
+      "quality_flag": "HIGH_POINTS",
+      "confidence": 0.92,
+      "planar_footprint_m2": 0.003371,
+      "length_m": 0.3371,
+      "shaft_diameter_m": 0.0154,
+      "head_diameter_m": 0.0417
+    },
+    "overall_confidence": 0.9,
+    "evidence_count": 1,
+    "status": "ACTIVE"
+  },
+  {
+    "instance_id": "object_0008",
+    "first_seen_stage": 0,
+    "last_seen_stage": 0,
+    "source_inspection_region_id": "INITIAL_TABLETOP",
+    "point_count": 24,
+    "contributing_cameras": [
+      "workshop_camera_left"
+    ],
+    "semantic_belief": {
+      "initial_label": "object_proposal",
+      "free_text_description": "slender threaded fastener shaft with cross recess screw head",
+      "functional_description": "screw fastener for joint assembly",
+      "visible_tool_interface": "none",
+      "visible_fastener_interface": "cross recess head",
+      "broad_object_type": "screw fastener",
+      "confidence": 0.93,
+      "evidence_crops_provenance": [
+        "workshop_camera_left"
+      ],
+      "normalized_tool_interface": "NO_DRIVE_INTERFACE",
+      "normalized_fastener_interface": "CROSS_RECESS",
+      "inferred_role": "COMPATIBLE_SCREW_FASTENER"
+    },
+    "geometric_properties": {
+      "usable_reach_m": 0.0,
+      "total_length_m": 0.0251,
+      "max_radius_m": 0.0031,
+      "quality_flag": "HIGH_POINTS",
+      "confidence": 0.92,
+      "planar_footprint_m2": 0.0001,
+      "length_m": 0.0251,
+      "shaft_diameter_m": 0.0056,
+      "head_diameter_m": 0.0061
+    },
+    "overall_confidence": 0.9,
+    "evidence_count": 1,
+    "status": "ACTIVE"
+  },
+  {
+    "instance_id": "object_0009",
+    "first_seen_stage": 1,
+    "last_seen_stage": 1,
+    "source_inspection_region_id": "LEFT_DRAWER",
+    "point_count": 1562,
+    "contributing_cameras": [
+      "workshop_camera_left"
+    ],
+    "semantic_belief": {
+      "initial_label": "object_proposal",
+      "free_text_description": "metal hand tool with opposing jaws or gripping surfaces but no driving shaft",
+      "functional_description": "gripping or turning tool unsuitable for driving screws",
+      "visible_tool_interface": "none",
+      "visible_fastener_interface": "none",
+      "broad_object_type": "gripping tool",
+      "confidence": 0.88,
+      "evidence_crops_provenance": [
+        "workshop_camera_left"
+      ],
+      "normalized_tool_interface": "NO_DRIVE_INTERFACE",
+      "normalized_fastener_interface": "UNKNOWN_INTERFACE",
+      "inferred_role": "NON_DRIVER_HAND_TOOL"
+    },
+    "geometric_properties": {
+      "usable_reach_m": 0.0,
+      "total_length_m": 0.2802,
+      "max_radius_m": 0.0237,
+      "quality_flag": "HIGH_POINTS",
+      "confidence": 0.92,
+      "planar_footprint_m2": 0.002802,
+      "length_m": 0.2802,
+      "shaft_diameter_m": 0.0175,
+      "head_diameter_m": 0.0473
+    },
+    "overall_confidence": 0.9,
+    "evidence_count": 1,
+    "status": "ACTIVE"
+  },
+  {
+    "instance_id": "object_0010",
+    "first_seen_stage": 1,
+    "last_seen_stage": 1,
+    "source_inspection_region_id": "LEFT_DRAWER",
+    "point_count": 629,
+    "contributing_cameras": [
+      "workshop_camera_left"
+    ],
+    "semantic_belief": {
+      "initial_label": "object_proposal",
+      "free_text_description": "hand screwdriver with cylindrical handle, elongated narrow shaft, and slotted flat blade tip",
+      "functional_description": "manual screw driving tool",
+      "visible_tool_interface": "slotted flat blade tip",
+      "visible_fastener_interface": "none",
+      "broad_object_type": "manual screwdriver",
+      "confidence": 0.9,
+      "evidence_crops_provenance": [
+        "workshop_camera_left"
+      ],
+      "normalized_tool_interface": "SINGLE_SLOT",
+      "normalized_fastener_interface": "UNKNOWN_INTERFACE",
+      "inferred_role": "SLOTTED_DRIVER"
+    },
+    "geometric_properties": {
+      "usable_reach_m": 0.0,
+      "total_length_m": 0.309,
+      "max_radius_m": 0.0078,
+      "quality_flag": "HIGH_POINTS",
+      "confidence": 0.92,
+      "planar_footprint_m2": 0.00309,
+      "length_m": 0.309,
+      "shaft_diameter_m": 0.0062,
+      "head_diameter_m": 0.0157
+    },
+    "overall_confidence": 0.9,
+    "evidence_count": 1,
+    "status": "ACTIVE"
+  },
+  {
+    "instance_id": "object_0011",
+    "first_seen_stage": 1,
+    "last_seen_stage": 1,
+    "source_inspection_region_id": "LEFT_DRAWER",
+    "point_count": 96,
+    "contributing_cameras": [
+      "workshop_camera_left"
+    ],
+    "semantic_belief": {
+      "initial_label": "object_proposal",
+      "free_text_description": "slender threaded fastener shaft with cross recess screw head",
+      "functional_description": "screw fastener for joint assembly",
+      "visible_tool_interface": "none",
+      "visible_fastener_interface": "cross recess head",
+      "broad_object_type": "screw fastener",
+      "confidence": 0.93,
+      "evidence_crops_provenance": [
+        "workshop_camera_left"
+      ],
+      "normalized_tool_interface": "NO_DRIVE_INTERFACE",
+      "normalized_fastener_interface": "CROSS_RECESS",
+      "inferred_role": "COMPATIBLE_SCREW_FASTENER"
+    },
+    "geometric_properties": {
+      "usable_reach_m": 0.0,
+      "total_length_m": 0.0449,
+      "max_radius_m": 0.0095,
+      "quality_flag": "HIGH_POINTS",
+      "confidence": 0.92,
+      "planar_footprint_m2": 0.000839,
+      "length_m": 0.0449,
+      "shaft_diameter_m": 0.0068,
+      "head_diameter_m": 0.0191
+    },
+    "overall_confidence": 0.9,
+    "evidence_count": 1,
+    "status": "ACTIVE"
+  },
+  {
+    "instance_id": "object_0012",
+    "first_seen_stage": 1,
+    "last_seen_stage": 1,
+    "source_inspection_region_id": "LEFT_DRAWER",
+    "point_count": 821,
+    "contributing_cameras": [
+      "workshop_camera_left"
+    ],
+    "semantic_belief": {
+      "initial_label": "object_proposal",
+      "free_text_description": "metal hand tool with opposing jaws or gripping surfaces but no driving shaft",
+      "functional_description": "gripping or turning tool unsuitable for driving screws",
+      "visible_tool_interface": "none",
+      "visible_fastener_interface": "none",
+      "broad_object_type": "gripping tool",
+      "confidence": 0.88,
+      "evidence_crops_provenance": [
+        "workshop_camera_left"
+      ],
+      "normalized_tool_interface": "NO_DRIVE_INTERFACE",
+      "normalized_fastener_interface": "UNKNOWN_INTERFACE",
+      "inferred_role": "NON_DRIVER_HAND_TOOL"
+    },
+    "geometric_properties": {
+      "usable_reach_m": 0.045,
+      "total_length_m": 0.1745,
+      "max_radius_m": 0.0283,
+      "quality_flag": "HIGH_POINTS",
+      "confidence": 0.92,
+      "planar_footprint_m2": 0.000622,
+      "length_m": 0.1745,
+      "shaft_diameter_m": 0.0146,
+      "head_diameter_m": 0.0567
+    },
+    "overall_confidence": 0.9,
+    "evidence_count": 1,
+    "status": "ACTIVE"
+  },
+  {
+    "instance_id": "object_0013",
+    "first_seen_stage": 2,
+    "last_seen_stage": 2,
+    "source_inspection_region_id": "RIGHT_DRAWER",
+    "point_count": 43,
+    "contributing_cameras": [
+      "workshop_camera_left"
+    ],
+    "semantic_belief": {
+      "initial_label": "object_proposal",
+      "free_text_description": "slender threaded fastener shaft with cross recess screw head",
+      "functional_description": "screw fastener for joint assembly",
+      "visible_tool_interface": "none",
+      "visible_fastener_interface": "cross recess head",
+      "broad_object_type": "screw fastener",
+      "confidence": 0.93,
+      "evidence_crops_provenance": [
+        "workshop_camera_left"
+      ],
+      "normalized_tool_interface": "NO_DRIVE_INTERFACE",
+      "normalized_fastener_interface": "CROSS_RECESS",
+      "inferred_role": "COMPATIBLE_SCREW_FASTENER"
+    },
+    "geometric_properties": {
+      "usable_reach_m": 0.0,
+      "total_length_m": 0.0221,
+      "max_radius_m": 0.0112,
+      "quality_flag": "HIGH_POINTS",
+      "confidence": 0.92,
+      "planar_footprint_m2": 0.000172,
+      "length_m": 0.0221,
+      "shaft_diameter_m": 0.0085,
+      "head_diameter_m": 0.0223
+    },
+    "overall_confidence": 0.9,
+    "evidence_count": 1,
+    "status": "ACTIVE"
+  },
+  {
+    "instance_id": "object_0014",
+    "first_seen_stage": 2,
+    "last_seen_stage": 2,
+    "source_inspection_region_id": "RIGHT_DRAWER",
+    "point_count": 78,
+    "contributing_cameras": [
+      "workshop_camera_left"
+    ],
+    "semantic_belief": {
+      "initial_label": "object_proposal",
+      "free_text_description": "slender threaded fastener shaft with cross recess screw head",
+      "functional_description": "screw fastener for joint assembly",
+      "visible_tool_interface": "none",
+      "visible_fastener_interface": "cross recess head",
+      "broad_object_type": "screw fastener",
+      "confidence": 0.93,
+      "evidence_crops_provenance": [
+        "workshop_camera_left"
+      ],
+      "normalized_tool_interface": "NO_DRIVE_INTERFACE",
+      "normalized_fastener_interface": "CROSS_RECESS",
+      "inferred_role": "COMPATIBLE_SCREW_FASTENER"
+    },
+    "geometric_properties": {
+      "usable_reach_m": 0.0,
+      "total_length_m": 0.0357,
+      "max_radius_m": 0.0088,
+      "quality_flag": "HIGH_POINTS",
+      "confidence": 0.92,
+      "planar_footprint_m2": 0.000357,
+      "length_m": 0.0357,
+      "shaft_diameter_m": 0.006,
+      "head_diameter_m": 0.0177
+    },
+    "overall_confidence": 0.9,
+    "evidence_count": 1,
+    "status": "ACTIVE"
+  },
+  {
+    "instance_id": "object_0015",
+    "first_seen_stage": 2,
+    "last_seen_stage": 2,
+    "source_inspection_region_id": "RIGHT_DRAWER",
+    "point_count": 864,
+    "contributing_cameras": [
+      "workshop_camera_left"
+    ],
+    "semantic_belief": {
+      "initial_label": "object_proposal",
+      "free_text_description": "hand screwdriver with cylindrical handle, elongated narrow shaft, and slotted flat blade tip",
+      "functional_description": "manual screw driving tool",
+      "visible_tool_interface": "slotted flat blade tip",
+      "visible_fastener_interface": "none",
+      "broad_object_type": "manual screwdriver",
+      "confidence": 0.9,
+      "evidence_crops_provenance": [
+        "workshop_camera_left"
+      ],
+      "normalized_tool_interface": "SINGLE_SLOT",
+      "normalized_fastener_interface": "UNKNOWN_INTERFACE",
+      "inferred_role": "SLOTTED_DRIVER"
+    },
+    "geometric_properties": {
+      "usable_reach_m": 0.0,
+      "total_length_m": 0.2152,
+      "max_radius_m": 0.0158,
+      "quality_flag": "HIGH_POINTS",
+      "confidence": 0.92,
+      "planar_footprint_m2": 0.003311,
+      "length_m": 0.2152,
+      "shaft_diameter_m": 0.0132,
+      "head_diameter_m": 0.0315
+    },
+    "overall_confidence": 0.9,
+    "evidence_count": 1,
+    "status": "ACTIVE"
+  },
+  {
+    "instance_id": "object_0016",
+    "first_seen_stage": 2,
+    "last_seen_stage": 2,
+    "source_inspection_region_id": "RIGHT_DRAWER",
+    "point_count": 107,
+    "contributing_cameras": [
+      "workshop_camera_left"
+    ],
+    "semantic_belief": {
+      "initial_label": "object_proposal",
+      "free_text_description": "slender threaded fastener shaft with cross recess screw head",
+      "functional_description": "screw fastener for joint assembly",
+      "visible_tool_interface": "none",
+      "visible_fastener_interface": "cross recess head",
+      "broad_object_type": "screw fastener",
+      "confidence": 0.93,
+      "evidence_crops_provenance": [
+        "workshop_camera_left"
+      ],
+      "normalized_tool_interface": "NO_DRIVE_INTERFACE",
+      "normalized_fastener_interface": "CROSS_RECESS",
+      "inferred_role": "COMPATIBLE_SCREW_FASTENER"
+    },
+    "geometric_properties": {
+      "usable_reach_m": 0.0,
+      "total_length_m": 0.047,
+      "max_radius_m": 0.0101,
+      "quality_flag": "HIGH_POINTS",
+      "confidence": 0.92,
+      "planar_footprint_m2": 0.000864,
+      "length_m": 0.047,
+      "shaft_diameter_m": 0.0087,
+      "head_diameter_m": 0.0202
+    },
+    "overall_confidence": 0.9,
+    "evidence_count": 1,
+    "status": "ACTIVE"
+  }
+]

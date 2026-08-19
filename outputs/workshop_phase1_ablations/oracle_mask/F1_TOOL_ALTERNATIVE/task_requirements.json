@@ -1,0 +1,74 @@
+[
+  {
+    "requirement_id": "req_obj_driver",
+    "entity_type": "OBJECT",
+    "function_name": "CAN_DRIVE_SCREW",
+    "description": "Tool capable of driving fasteners into the frame joint",
+    "rank": 1,
+    "source": "STATIC",
+    "semantic_hints": [
+      "screwdriver",
+      "driver",
+      "drill"
+    ],
+    "geometric_constraints": {
+      "min_reach_m": 0.025
+    },
+    "provenance": "static_workshop_specification"
+  },
+  {
+    "requirement_id": "req_obj_fastener",
+    "entity_type": "OBJECT",
+    "function_name": "CAN_FASTEN",
+    "description": "Fastener component capable of securing the frame joint",
+    "rank": 2,
+    "source": "STATIC",
+    "semantic_hints": [
+      "screw",
+      "fastener",
+      "bolt"
+    ],
+    "geometric_constraints": {
+      "min_length_m": 0.025,
+      "max_diameter_m": 0.008
+    },
+    "provenance": "static_workshop_specification"
+  },
+  {
+    "requirement_id": "req_reg_work_surface",
+    "entity_type": "REGION",
+    "function_name": "WORK_SURFACE",
+    "description": "Nearby unobstructed planar work surface suitable for staging tool and fastener",
+    "rank": 1,
+    "source": "STATIC",
+    "semantic_hints": [
+      "work_surface",
+      "table",
+      "cart",
+      "shelf"
+    ],
+    "geometric_constraints": {
+      "min_area_m2": 0.015,
+      "unobstructed": true
+    },
+    "provenance": "static_workshop_specification"
+  },
+  {
+    "requirement_id": "req_reg_parts_container",
+    "entity_type": "REGION",
+    "function_name": "SMALL_PARTS_CONTAINER",
+    "description": "Open container or tray suitable for holding loose small parts",
+    "rank": 2,
+    "source": "STATIC",
+    "semantic_hints": [
+      "tray",
+      "bin",
+      "container"
+    ],
+    "geometric_constraints": {
+      "min_volume_m3": 0.0001,
+      "open_top": true
+    },
+    "provenance": "static_workshop_specification"
+  }
+]

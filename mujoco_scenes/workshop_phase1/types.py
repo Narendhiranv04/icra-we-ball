@@ -30,9 +30,76 @@ class MaskBackendType(str, Enum):
     CONNECTED_COMPONENT = "CONNECTED_COMPONENT"
 
 
+class SemanticBackendType(str, Enum):
+    PRODUCTION = "PRODUCTION"
+    ORACLE = "ORACLE"
+    DETERMINISTIC_TEST = "DETERMINISTIC_TEST"
+
+
 class InspectionPolicyType(str, Enum):
     FIXED = "FIXED"
     FM = "FM"
+
+
+class AblationType(str, Enum):
+    NONE = "NONE"
+    SEMANTIC_ONLY = "SEMANTIC_ONLY"
+    NO_GEOMETRY = "NO_GEOMETRY"
+    NO_JOINT_COUPLING = "NO_JOINT_COUPLING"
+    NO_PERSISTENCE = "NO_PERSISTENCE"
+    SINGLE_VIEW = "SINGLE_VIEW"
+    ORACLE_MASK = "ORACLE_MASK"
+    ORACLE_SEMANTICS = "ORACLE_SEMANTICS"
+
+
+@dataclass
+class SemanticEvidence:
+    """Open-ended structured semantic evidence extracted from visual crops."""
+
+    free_text_description: str
+    functional_description: str = ""
+    visible_tool_interface: str = "UNKNOWN"
+    visible_fastener_interface: str = "UNKNOWN"
+    broad_object_type: str = "object"
+    confidence: float = 1.0
+    evidence_crops_provenance: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "free_text_description": self.free_text_description,
+            "functional_description": self.functional_description,
+            "visible_tool_interface": self.visible_tool_interface,
+            "visible_fastener_interface": self.visible_fastener_interface,
+            "broad_object_type": self.broad_object_type,
+            "confidence": round(self.confidence, 4),
+            "evidence_crops_provenance": list(self.evidence_crops_provenance),
+        }
+
+
+@dataclass
+class TargetGeometryEvidence:
+    """Geometry of the target workpiece recess observed from tabletop RGB-D."""
+
+    target_position: Any = None  # np.ndarray (3,)
+    estimated_opening_diameter_m: float | None = None
+    estimated_recess_depth_m: float | None = None
+    point_count: int = 0
+    source_views: list[str] = field(default_factory=list)
+    confidence: float = 1.0
+    validity: GroundingStatus = GroundingStatus.UNKNOWN
+    quality_metadata: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "target_position": self.target_position.tolist() if self.target_position is not None else None,
+            "estimated_opening_diameter_m": self.estimated_opening_diameter_m,
+            "estimated_recess_depth_m": self.estimated_recess_depth_m,
+            "point_count": self.point_count,
+            "source_views": list(self.source_views),
+            "confidence": round(self.confidence, 4),
+            "validity": self.validity.value,
+            "quality_metadata": self.quality_metadata,
+        }
 
 
 @dataclass(frozen=True)
@@ -102,6 +169,7 @@ class ObservedObjectTrack:
     source_inspection_region_id: str = "INITIAL"
     fused_points: Any = None  # np.ndarray of shape (N, 3)
     fused_colors: Any = None  # np.ndarray of shape (N, 3)
+    crop_evidence: dict[str, Any] = field(default_factory=dict)  # camera_id -> rgb crop (H, W, 3)
     points_by_camera: dict[str, Any] = field(default_factory=dict)
     contributing_cameras: tuple[str, ...] = field(default_factory=tuple)
     semantic_evidence_history: list[dict[str, Any]] = field(default_factory=list)
@@ -137,9 +205,12 @@ class ObservedRegion:
     observation_source: str
     fused_points: Any | None = None
     fused_colors: Any | None = None
+    crop_evidence: dict[str, Any] = field(default_factory=dict)
     support_plane: dict[str, Any] = field(default_factory=dict)
     cavity_geometry: dict[str, Any] = field(default_factory=dict)
     obstruction_evidence: dict[str, Any] = field(default_factory=dict)
+    is_open: bool | None = None
+    is_open_status: GroundingStatus = GroundingStatus.UNKNOWN
     current_semantic_belief: dict[str, Any] = field(default_factory=dict)
     current_geometric_properties: dict[str, Any] = field(default_factory=dict)
 
@@ -152,6 +223,8 @@ class ObservedRegion:
             "support_plane": self.support_plane,
             "cavity_geometry": self.cavity_geometry,
             "obstruction_evidence": self.obstruction_evidence,
+            "is_open": self.is_open,
+            "is_open_status": self.is_open_status.value,
             "semantic_belief": self.current_semantic_belief,
             "geometric_properties": self.current_geometric_properties,
         }

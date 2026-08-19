@@ -1,0 +1,210 @@
+{
+  "stage_index": 1,
+  "total_nodes": 8,
+  "total_edges": 0,
+  "nodes": [
+    {
+      "node_id": "LEFT_DRAWER",
+      "node_type": "INSPECTION_REGION",
+      "first_seen_stage": 0,
+      "attributes": {
+        "description": "Storage container LEFT_DRAWER"
+      },
+      "provenance": {
+        "source": "scene_configuration"
+      }
+    },
+    {
+      "node_id": "RIGHT_DRAWER",
+      "node_type": "INSPECTION_REGION",
+      "first_seen_stage": 0,
+      "attributes": {
+        "description": "Storage container RIGHT_DRAWER"
+      },
+      "provenance": {
+        "source": "scene_configuration"
+      }
+    },
+    {
+      "node_id": "TOOL_CABINET",
+      "node_type": "INSPECTION_REGION",
+      "first_seen_stage": 0,
+      "attributes": {
+        "description": "Storage container TOOL_CABINET"
+      },
+      "provenance": {
+        "source": "scene_configuration"
+      }
+    },
+    {
+      "node_id": "workpiece_frame_joint_0001",
+      "node_type": "WORKPIECE",
+      "first_seen_stage": 0,
+      "attributes": {
+        "task": "frame_joint_repair"
+      },
+      "provenance": {
+        "source": "task_specification"
+      }
+    },
+    {
+      "node_id": "region_0001",
+      "node_type": "FUNCTIONAL_REGION",
+      "first_seen_stage": 0,
+      "attributes": {
+        "proposal_bounds_m": {
+          "minimum_world_m": [
+            -0.25,
+            0.12,
+            0.66
+          ],
+          "maximum_world_m": [
+            0.25,
+            0.4,
+            0.7000000000000001
+          ]
+        },
+        "support_plane": {
+          "base_height_m": 0.66,
+          "width_m": 0.5,
+          "length_m": 0.28,
+          "planar_area_m2": 0.14
+        },
+        "cavity_geometry": {
+          "is_open": true,
+          "is_open_status": "PASS",
+          "observed_cavity_depth_m": 0.0272,
+          "estimated_volume_m3": 0.003808
+        },
+        "obstruction": {
+          "is_obstructed": true,
+          "obstruction_ratio": 0.8232,
+          "elevated_point_count": 516
+        },
+        "is_open": true
+      },
+      "provenance": {
+        "observation_source": "calibrated_spatial_proposal"
+      }
+    },
+    {
+      "node_id": "region_0002",
+      "node_type": "FUNCTIONAL_REGION",
+      "first_seen_stage": 0,
+      "attributes": {
+        "proposal_bounds_m": {
+          "minimum_world_m": [
+            -0.82,
+            0.645,
+            1.0350000000000001
+          ],
+          "maximum_world_m": [
+            -0.58,
+            0.7150000000000001,
+            1.065
+          ]
+        },
+        "support_plane": {
+          "base_height_m": 1.035,
+          "width_m": 0.24,
+          "length_m": 0.07,
+          "planar_area_m2": 0.0168
+        },
+        "cavity_geometry": {
+          "is_open": true,
+          "is_open_status": "PASS",
+          "observed_cavity_depth_m": 0.021,
+          "estimated_volume_m3": 0.000353
+        },
+        "obstruction": {
+          "is_obstructed": false,
+          "obstruction_ratio": 0.0
+        },
+        "is_open": true
+      },
+      "provenance": {
+        "observation_source": "calibrated_spatial_proposal"
+      }
+    },
+    {
+      "node_id": "region_0003",
+      "node_type": "FUNCTIONAL_REGION",
+      "first_seen_stage": 0,
+      "attributes": {
+        "proposal_bounds_m": {
+          "minimum_world_m": [
+            -0.53,
+            0.15,
+            0.68
+          ],
+          "maximum_world_m": [
+            -0.31,
+            0.29000000000000004,
+            0.7120000000000001
+          ]
+        },
+        "support_plane": {
+          "base_height_m": 0.68,
+          "width_m": 0.22,
+          "length_m": 0.14,
+          "planar_area_m2": 0.0308
+        },
+        "cavity_geometry": {
+          "is_open": true,
+          "is_open_status": "PASS",
+          "observed_cavity_depth_m": 0.032,
+          "estimated_volume_m3": 0.000986
+        },
+        "obstruction": {
+          "is_obstructed": false,
+          "obstruction_ratio": 0.0
+        },
+        "is_open": true
+      },
+      "provenance": {
+        "observation_source": "calibrated_spatial_proposal"
+      }
+    },
+    {
+      "node_id": "region_0004",
+      "node_type": "FUNCTIONAL_REGION",
+      "first_seen_stage": 0,
+      "attributes": {
+        "proposal_bounds_m": {
+          "minimum_world_m": [
+            -0.495,
+            0.445,
+            0.68
+          ],
+          "maximum_world_m": [
+            -0.385,
+            0.595,
+            0.7600000000000001
+          ]
+        },
+        "support_plane": {
+          "base_height_m": 0.68,
+          "width_m": 0.11,
+          "length_m": 0.15,
+          "planar_area_m2": 0.0165
+        },
+        "cavity_geometry": {
+          "is_open": true,
+          "is_open_status": "PASS",
+          "observed_cavity_depth_m": 0.0784,
+          "estimated_volume_m3": 0.001294
+        },
+        "obstruction": {
+          "is_obstructed": true,
+          "obstruction_ratio": 1.0,
+          "elevated_point_count": 801
+        },
+        "is_open": true
+      },
+      "provenance": {
+        "observation_source": "calibrated_spatial_proposal"
+      }
+    }
+  ],
+  "edges": []
+}

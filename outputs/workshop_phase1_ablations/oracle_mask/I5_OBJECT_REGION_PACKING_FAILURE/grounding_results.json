@@ -1,0 +1,116 @@
+[
+  {
+    "entity_id": "object_0001",
+    "function": "CAN_DRIVE_SCREW",
+    "semantic_status": "PASS",
+    "geometric_status": "PASS",
+    "combined_status": "PASS",
+    "rejections": []
+  },
+  {
+    "entity_id": "object_0001",
+    "function": "CAN_FASTEN",
+    "semantic_status": "FAIL",
+    "geometric_status": "FAIL",
+    "combined_status": "FAIL",
+    "rejections": [
+      "SEMANTIC_NOT_A_FASTENER",
+      "FASTENER_SHAFT_DIAMETER_0.034M_EXCEEDS_HOLE"
+    ]
+  },
+  {
+    "entity_id": "object_0002",
+    "function": "CAN_DRIVE_SCREW",
+    "semantic_status": "FAIL",
+    "geometric_status": "FAIL",
+    "combined_status": "FAIL",
+    "rejections": [
+      "SEMANTIC_TOOL_TYPE_MISMATCH_NOT_SCREWDRIVER",
+      "INSUFFICIENT_DRIVER_REACH_0.002M_LESS_THAN_0.025M"
+    ]
+  },
+  {
+    "entity_id": "object_0002",
+    "function": "CAN_FASTEN",
+    "semantic_status": "PASS",
+    "geometric_status": "PASS",
+    "combined_status": "PASS",
+    "rejections": []
+  },
+  {
+    "entity_id": "object_0001",
+    "function": "CAN_DRIVE_SCREW",
+    "semantic_status": "PASS",
+    "geometric_status": "PASS",
+    "combined_status": "PASS",
+    "rejections": []
+  },
+  {
+    "entity_id": "object_0001",
+    "function": "CAN_FASTEN",
+    "semantic_status": "FAIL",
+    "geometric_status": "FAIL",
+    "combined_status": "FAIL",
+    "rejections": [
+      "SEMANTIC_NOT_A_FASTENER",
+      "FASTENER_SHAFT_DIAMETER_0.034M_EXCEEDS_HOLE"
+    ]
+  },
+  {
+    "entity_id": "object_0002",
+    "function": "CAN_DRIVE_SCREW",
+    "semantic_status": "FAIL",
+    "geometric_status": "FAIL",
+    "combined_status": "FAIL",
+    "rejections": [
+      "SEMANTIC_TOOL_TYPE_MISMATCH_NOT_SCREWDRIVER",
+      "INSUFFICIENT_DRIVER_REACH_0.002M_LESS_THAN_0.025M"
+    ]
+  },
+  {
+    "entity_id": "object_0002",
+    "function": "CAN_FASTEN",
+    "semantic_status": "PASS",
+    "geometric_status": "PASS",
+    "combined_status": "PASS",
+    "rejections": []
+  },
+  {
+    "entity_id": "object_0001",
+    "function": "CAN_DRIVE_SCREW",
+    "semantic_status": "PASS",
+    "geometric_status": "PASS",
+    "combined_status": "PASS",
+    "rejections": []
+  },
+  {
+    "entity_id": "object_0001",
+    "function": "CAN_FASTEN",
+    "semantic_status": "FAIL",
+    "geometric_status": "FAIL",
+    "combined_status": "FAIL",
+    "rejections": [
+      "SEMANTIC_NOT_A_FASTENER",
+      "FASTENER_SHAFT_DIAMETER_0.034M_EXCEEDS_HOLE"
+    ]
+  },
+  {
+    "entity_id": "object_0002",
+    "function": "CAN_DRIVE_SCREW",
+    "semantic_status": "FAIL",
+    "geometric_status": "FAIL",
+    "combined_status": "FAIL",
+    "rejections": [
+      "SEMANTIC_TOOL_TYPE_MISMATCH_NOT_SCREWDRIVER",
+      "INSUFFICIENT_DRIVER_REACH_0.002M_LESS_THAN_0.025M"
+    ]
+  },
+  {
+    "entity_id": "object_0002",
+    "function": "CAN_FASTEN",
+    "semantic_status": "PASS",
+    "geometric_status": "PASS",
+    "combined_status": "PASS",
+    "rejections": []
+  }
+]

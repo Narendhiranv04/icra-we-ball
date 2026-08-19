@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
-import json
+import os
 from dataclasses import dataclass
 from typing import Any
+
+
+class FMBackendNotConfiguredError(RuntimeError):
+    """Raised when an FM-backed requirement or search policy is invoked without a configured FM provider."""
+    pass
 
 
 @dataclass
@@ -17,20 +22,29 @@ class FMCallMetrics:
 class FMAdapter:
     """Handles structured generation from Foundation Models with strict budget tracking."""
 
-    def __init__(self) -> None:
+    def __init__(self, api_key: str | None = None) -> None:
+        self.api_key = api_key or os.environ.get("FM_API_KEY")
         self.metrics = FMCallMetrics()
-        self._cached_requirements: dict[str, list[dict[str, Any]]] = {}
+        self._cached_requirements: dict[str, dict[str, Any]] = {}
         self._cached_priors: dict[str, list[str]] = {}
 
     def generate_task_requirements(self, task_instruction: str) -> dict[str, Any]:
-        """Generate structured functional requirements from natural language instruction (max 1 call/ep)."""
+        """Generate structured functional requirements from natural language instruction.
+
+        Raises FMBackendNotConfiguredError when no live FM endpoint or API key is configured.
+        """
+        if not self.api_key:
+            raise FMBackendNotConfiguredError(
+                "FM requirement generation requested (--requirements-source fm), "
+                "but no FM API endpoint/key is configured (FM_API_KEY not set)."
+            )
+
         if task_instruction in self._cached_requirements:
             return self._cached_requirements[task_instruction]
 
         self.metrics.requirement_calls += 1
         self.metrics.total_calls += 1
 
-        # Standard structured requirement schema output
         response = {
             "object_functions": [
                 {
@@ -65,7 +79,16 @@ class FMAdapter:
         task_instruction: str,
         search_region_descriptors: dict[str, str],
     ) -> list[str]:
-        """Rank generic inspection regions prior to search (max 1 call/ep)."""
+        """Rank generic inspection regions prior to search.
+
+        Raises FMBackendNotConfiguredError when no live FM endpoint or API key is configured.
+        """
+        if not self.api_key:
+            raise FMBackendNotConfiguredError(
+                "FM inspection ranking requested (--inspection-policy fm_ranked), "
+                "but no FM API endpoint/key is configured (FM_API_KEY not set)."
+            )
+
         cache_key = f"{task_instruction}:{sorted(search_region_descriptors.items())}"
         if cache_key in self._cached_priors:
             return self._cached_priors[cache_key]
@@ -73,8 +96,6 @@ class FMAdapter:
         self.metrics.search_prior_calls += 1
         self.metrics.total_calls += 1
 
-        # Heuristic/FM ranking prioritizing storage based on task wording
-        # Default priority: LEFT_DRAWER, RIGHT_DRAWER, TOOL_CABINET
         ranked = list(search_region_descriptors.keys())
         self._cached_priors[cache_key] = ranked
         return ranked

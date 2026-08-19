@@ -12,7 +12,6 @@ from mujoco_scenes.workshop_phase1.types import MaskBackendType
 from mujoco_scenes.workshop_phase1.inspection_controller import WorkshopPhase1InspectionController
 from mujoco_scenes.workshop_phase1.serialization import assert_no_backend_names
 
-
 FORBIDDEN_SIMULATOR_METHODS = [
     "get_observed_instances",
     "privileged_get_visible_backend_instances",
@@ -35,6 +34,7 @@ PRODUCTION_MODULES = [
     "mujoco_scenes/workshop_phase1/requirements.py",
     "mujoco_scenes/workshop_phase1/serialization.py",
     "mujoco_scenes/workshop_phase1/inspection_controller.py",
+    "mujoco_scenes/workshop_phase1/perception.py",
 ]
 
 
@@ -49,6 +49,15 @@ def test_static_code_scan_no_forbidden_methods():
         source = file_path.read_text(encoding="utf-8")
         for forbidden in FORBIDDEN_SIMULATOR_METHODS:
             assert forbidden not in source, f"Forbidden oracle reference '{forbidden}' found in production file {rel_path}!"
+
+
+def test_no_static_closed_set_in_perception():
+    """Verify perception.py does not contain static closed-set Workshop taxonomies."""
+    perception_path = Path("/home/naren/RA_iiith/mujoco_scenes/workshop_phase1/perception.py")
+    source = perception_path.read_text(encoding="utf-8")
+    assert "workshop_long_phillips_driver" not in source
+    assert "workshop_power_driver" not in source
+    assert "MAIN_WORKBENCH_ZONE" not in source
 
 
 def test_dynamic_monkeypatch_no_privileged_calls():
@@ -69,7 +78,6 @@ def test_dynamic_monkeypatch_no_privileged_calls():
             mask_backend=MaskBackendType.PRODUCTION,
             output_dir=Path(tmpdir),
         )
-        # Execution must run without invoking any of the trapped methods
         result = controller.run_episode(scene)
         assert result.status in ("FEASIBLE", "INFEASIBLE")
 
@@ -86,7 +94,6 @@ def test_output_json_contains_zero_simulator_names():
         )
         controller.run_episode(scene)
 
-        # Inspect all written production json files
         for json_file in out_dir.glob("*.json"):
             import json
             data = json.loads(json_file.read_text(encoding="utf-8"))
