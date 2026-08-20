@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 import yaml
 
+import cv2
 import numpy as np
 
 from mujoco_scenes.workshop_phase1.capture import MultiViewCameraRig
@@ -91,7 +92,12 @@ class WorkshopPhase1InspectionController:
         )
         self.fm_contract = self.requirement_provider
         self.requirements = self.requirement_provider.get_requirements()
-        self.detector_vocabulary = self.requirement_provider.get_ranked_detector_vocabulary()
+        ranked_vocabulary = self.requirement_provider.get_ranked_detector_vocabulary()
+        vocabulary_budget = int(self.raw_config.get("perception", {}).get(
+            "max_detector_vocabulary_size", 32))
+        if vocabulary_budget <= 0:
+            raise ValueError("perception.max_detector_vocabulary_size must be positive")
+        self.detector_vocabulary = ranked_vocabulary[:vocabulary_budget]
         self.prompts = [entry["detector_label"] for entry in self.detector_vocabulary]
         self.detector_label_to_canonical = self.requirement_provider.get_detector_label_to_canonical_map()
         self.alias_to_canonical = self.requirement_provider.get_alias_to_canonical_map()
@@ -120,6 +126,7 @@ class WorkshopPhase1InspectionController:
                 max_detections=det_cfg.get("max_detections", 100),
                 min_points_per_mask=self.raw_config.get("perception", {}).get("min_points_per_mask", 8),
                 **self._duplicate_config(),
+                **self._multi_scale_config(),
             )
             self._yolo_aux_backend.set_vocabulary(self.prompts, self.detector_label_to_canonical)
 
@@ -179,6 +186,15 @@ class WorkshopPhase1InspectionController:
             "duplicate_aabb_overlap_threshold": cfg.get("aabb_overlap_threshold", 0.45),
         }
 
+    def _multi_scale_config(self) -> dict[str, Any]:
+        cfg = self.raw_config.get("perception", {}).get("multi_scale", {})
+        return {
+            "enable_full_frame": cfg.get("full_frame", True),
+            "enable_stage_crop": cfg.get("stage_crop", True),
+            "enable_stage_tiles": cfg.get("stage_tiles", False),
+            "tile_overlap_fraction": cfg.get("tile_overlap_fraction", 0.15),
+        }
+
     def _load_config(self, config_path: Path | str | None) -> dict[str, Any]:
         default_path = Path(__file__).resolve().parent.parent / "configs" / "workshop_phase1.yaml"
         target_path = Path(config_path) if config_path else default_path
@@ -208,6 +224,7 @@ class WorkshopPhase1InspectionController:
             max_detections=det_cfg.get("max_detections", 100),
             min_points_per_mask=self.raw_config.get("perception", {}).get("min_points_per_mask", 8),
             **self._duplicate_config(),
+            **self._multi_scale_config(),
         )
 
     def _init_semantic_backend(self) -> ObjectSemanticBackend:
@@ -298,7 +315,7 @@ class WorkshopPhase1InspectionController:
             if self.ablation == AblationType.NO_PERSISTENCE:
                 self.tracker.reset()
                 self.semantic_grounder.reset_cache()
-                self.region_grounder.reset_semantic_history()
+                self.region_grounder.reset_persistent_evidence()
 
             stage_obs = self._capture_and_process_stage(stage_idx=s_idx, source_region_id=region_name)
             witness, rej_reason = self._evaluate_grounding_and_search(stage_idx=s_idx, source_region_id=region_name)
@@ -432,12 +449,18 @@ class WorkshopPhase1InspectionController:
             )
 
             backend_for_diagnostics = self._yolo_aux_backend if self._yolo_aux_backend is not None else self.proposal_backend
-            for record in getattr(backend_for_diagnostics, "last_diagnostics", []):
+            current_diagnostics = list(getattr(
+                backend_for_diagnostics, "last_diagnostics", []))
+            for record in current_diagnostics:
                 self.detection_diagnostics.append({
                     **record,
                     "stage_index": stage_idx,
                     "source_region_id": source_region_id,
                 })
+            if (self.output_dir is not None and not is_oracle_mask
+                    and obs.camera_id == "workshop_camera_front" and stage_idx <= 1):
+                self._save_detection_visual(
+                    obs, masks, current_diagnostics, stage_idx, source_region_id)
 
         # Update persistent tracking
         self.tracker.update_with_stage_observations(
@@ -455,6 +478,36 @@ class WorkshopPhase1InspectionController:
         self.graph.update_from_observed_regions(self.candidate_regions, stage_idx=stage_idx)
 
         return raw_obs
+
+    def _save_detection_visual(
+        self, observation: ViewObservation, masks: list[ObservedMask],
+        diagnostics: list[dict[str, Any]], stage_idx: int, source_region_id: str,
+    ) -> None:
+        """Persist a compact RGB-only detector sanity overlay; never used by decisions."""
+        canvas = cv2.cvtColor(observation.rgb, cv2.COLOR_RGB2BGR)
+        for record in diagnostics:
+            if record.get("status") != "SUPPRESSED_DUPLICATE":
+                continue
+            raw = record.get("raw_yolo_bbox_xyxy")
+            if not raw:
+                continue
+            cv2.rectangle(canvas, (raw[0], raw[1]), (raw[2], raw[3]), (0, 0, 255), 1)
+            label = (f"SUPPRESSED {record.get('canonical_label', 'unknown')} "
+                     f"{float(record.get('confidence', 0.0)):.3f}")
+            cv2.putText(canvas, label, (raw[0], min(canvas.shape[0] - 3, raw[3] + 11)),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.32, (0, 0, 255), 1, cv2.LINE_AA)
+        for mask in masks:
+            raw = mask.raw_yolo_bbox_xyxy or mask.bounding_box_xyxy
+            refined = mask.refined_bbox_xyxy or mask.bounding_box_xyxy
+            cv2.rectangle(canvas, (raw[0], raw[1]), (raw[2], raw[3]), (0, 170, 255), 1)
+            cv2.rectangle(canvas, (refined[0], refined[1]), (refined[2], refined[3]), (0, 255, 0), 2)
+            label = f"RETAINED {mask.canonical_label} {mask.confidence:.3f} {mask.inference_source}"
+            cv2.putText(canvas, label, (raw[0], max(12, raw[1] - 3)),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
+        visual_dir = self.output_dir / "representative_visuals"
+        visual_dir.mkdir(parents=True, exist_ok=True)
+        safe_region = source_region_id.lower().replace(" ", "_")
+        cv2.imwrite(str(visual_dir / f"stage_{stage_idx:03d}_{safe_region}_front.jpg"), canvas)
 
     def _get_stage_volume_bounds(self, source_region_id: str) -> tuple[np.ndarray, np.ndarray]:
         if source_region_id == "LEFT_DRAWER":
@@ -641,6 +694,7 @@ class WorkshopPhase1InspectionController:
             parts_container_candidates=container_candidates,
             evaluated_tuples=evaluated_tuples,
             grounding_results=grounding_results,
+            requirements=self.requirements,
             has_unresolved_evidence=any(
                 result.combined_status == GroundingStatus.UNKNOWN
                 for result in grounding_results

@@ -70,82 +70,32 @@ class ManualWorkshopFMContract(RequirementProvider):
         self._contract_data = self._load_contract()
 
     def _load_contract(self) -> dict[str, Any]:
-        if self.contract_path.is_file():
-            with open(self.contract_path, "r", encoding="utf-8") as f:
-                data = yaml.safe_load(f)
-            if not isinstance(data, dict):
-                raise ValueError("Workshop FM contract must be a mapping")
-            forbidden_fragments = (
-                "min_reach", "minimum_reach", "min_length", "max_diameter",
-                "min_area", "minimum_area", "min_volume", "minimum_volume",
-            )
-            def keys(value: Any) -> list[str]:
-                if isinstance(value, dict):
-                    return [str(k).lower() for k in value] + [item for child in value.values() for item in keys(child)]
-                if isinstance(value, list):
-                    return [item for child in value for item in keys(child)]
-                return []
-            offending = sorted({key for key in keys(data) if any(fragment in key for fragment in forbidden_fragments)})
-            if offending:
-                raise ValueError("FM contract contains deterministic metric thresholds: " + ", ".join(offending))
-            return data
-        # Hardcoded safe defaults matching workshop_phase1_fm_contract.yaml
-        return {
-            "task_instruction": CANONICAL_WORKSHOP_INSTRUCTION,
-            "functional_requirements": [
-                {
-                    "requirement_id": "req_obj_driver",
-                    "entity_type": "OBJECT",
-                    "function_name": "CAN_DRIVE_SCREW",
-                    "description": "Tool capable of driving fasteners into the frame joint",
-                    "rank": 1,
-                    "accepted_categories": ["screwdriver", "power_driver"],
-                    "required_relations": ["REACHES_TARGET", "COMPATIBLE_WITH"],
-                },
-                {
-                    "requirement_id": "req_obj_fastener",
-                    "entity_type": "OBJECT",
-                    "function_name": "CAN_FASTEN",
-                    "description": "Fastener component capable of securing the frame joint",
-                    "rank": 2,
-                    "accepted_categories": ["screw", "bolt"],
-                    "required_relations": ["COMPATIBLE_WITH_TARGET"],
-                },
-                {
-                    "requirement_id": "req_reg_work_surface",
-                    "entity_type": "FUNCTIONAL_REGION",
-                    "function_name": "WORK_SURFACE",
-                    "description": "Nearby unobstructed planar work surface suitable for staging tool and fastener",
-                    "rank": 1,
-                    "accepted_categories": ["workbench", "tool_cart", "shelf"],
-                    "required_relations": ["PLANAR_SUPPORT", "FITS_SET_ON"],
-                },
-                {
-                    "requirement_id": "req_reg_parts_container",
-                    "entity_type": "FUNCTIONAL_REGION",
-                    "function_name": "SMALL_PARTS_CONTAINER",
-                    "description": "Open container or tray suitable for holding loose small parts",
-                    "rank": 2,
-                    "accepted_categories": ["parts_tray", "hardware_bin"],
-                    "required_relations": ["OPEN_CAVITY", "FITS_IN"],
-                },
-            ],
-            "vocabulary": {
-                "canonical_labels": {
-                    "screwdriver": {"detector_label": "hand screwdriver", "aliases": ["screwdriver", "manual screwdriver"]},
-                    "power_driver": {"detector_label": "power drill", "aliases": ["powered screwdriver", "cordless drill", "power driver", "drill driver"]},
-                    "screw": {"detector_label": "fastener", "aliases": ["screw", "machine screw", "threaded screw"]},
-                    "bolt": {"detector_label": "hex bolt", "aliases": ["bolt", "machine bolt"]},
-                    "wrench": {"detector_label": "adjustable wrench", "aliases": ["wrench", "combination wrench", "spanner"]},
-                    "pliers": {"detector_label": "pliers", "aliases": ["combination pliers", "locking pliers"]},
-                    "workbench": {"detector_label": "workbench", "aliases": ["work table", "wooden table", "table"]},
-                    "tool_cart": {"detector_label": "tool cart", "aliases": ["cart", "rolling cart", "metal cart"]},
-                    "shelf": {"detector_label": "shelf", "aliases": ["wall shelf", "narrow shelf"]},
-                    "parts_tray": {"detector_label": "parts tray", "aliases": ["tray", "shallow tray"]},
-                    "hardware_bin": {"detector_label": "hardware bin", "aliases": ["bin", "plastic bin", "parts bin", "storage bin"]},
-                }
-            },
-        }
+        if not self.contract_path.is_file():
+            raise FileNotFoundError(
+                f"Manual Workshop FM contract is unavailable: {self.contract_path}")
+        with open(self.contract_path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+        if not isinstance(data, dict):
+            raise ValueError("Workshop FM contract must be a mapping")
+        if not isinstance(data.get("functional_requirements"), list) or not data["functional_requirements"]:
+            raise ValueError("Workshop FM contract requires a non-empty functional_requirements list")
+        canonical = data.get("vocabulary", {}).get("canonical_labels")
+        if not isinstance(canonical, dict) or not canonical:
+            raise ValueError("Workshop FM contract requires vocabulary.canonical_labels")
+        forbidden_fragments = (
+            "min_reach", "minimum_reach", "min_length", "max_diameter",
+            "min_area", "minimum_area", "min_volume", "minimum_volume",
+        )
+        def keys(value: Any) -> list[str]:
+            if isinstance(value, dict):
+                return [str(k).lower() for k in value] + [item for child in value.values() for item in keys(child)]
+            if isinstance(value, list):
+                return [item for child in value for item in keys(child)]
+            return []
+        offending = sorted({key for key in keys(data) if any(fragment in key for fragment in forbidden_fragments)})
+        if offending:
+            raise ValueError("FM contract contains deterministic metric thresholds: " + ", ".join(offending))
+        return data
 
     def get_requirements(self, task_instruction: str = CANONICAL_WORKSHOP_INSTRUCTION) -> list[FunctionalRequirement]:
         raw_reqs = self._contract_data.get("functional_requirements", [])
@@ -180,17 +130,24 @@ class ManualWorkshopFMContract(RequirementProvider):
         """Normalize both the current schema and legacy list-valued test contracts."""
         raw = self._contract_data.get("vocabulary", {}).get("canonical_labels", {})
         entries: dict[str, dict[str, Any]] = {}
-        for canonical, value in raw.items():
+        for insertion_index, (canonical, value) in enumerate(raw.items(), start=1):
             canonical = str(canonical).strip().lower()
             if isinstance(value, dict):
                 detector_label = str(value.get("detector_label", canonical.replace("_", " "))).strip()
                 aliases = [str(alias).strip() for alias in value.get("aliases", []) if str(alias).strip()]
+                detector_rank = (int(value["detector_rank"])
+                                 if "detector_rank" in value else None)
             else:
                 aliases = [str(alias).strip() for alias in (value or []) if str(alias).strip()]
                 detector_label = aliases[0] if aliases else canonical.replace("_", " ")
+                detector_rank = None
             if not detector_label:
                 raise ValueError(f"Canonical category {canonical!r} has an empty detector label")
-            entries[canonical] = {"detector_label": detector_label, "aliases": aliases}
+            entries[canonical] = {
+                "detector_label": detector_label,
+                "aliases": aliases,
+                "detector_rank": detector_rank,
+            }
         return entries
 
     def get_ranked_detector_vocabulary(self) -> list[dict[str, Any]]:
@@ -200,16 +157,24 @@ class ManualWorkshopFMContract(RequirementProvider):
             for category_index, category in enumerate(requirement.accepted_categories):
                 key = category.lower()
                 rank_by_category.setdefault(key, (requirement.rank, category_index))
-        ordered = sorted(
-            entries,
-            key=lambda key: (*rank_by_category.get(key, (10_000, 10_000)), list(entries).index(key)),
-        )
+        explicit_ranks = [entry["detector_rank"] for entry in entries.values()
+                          if entry["detector_rank"] is not None]
+        if len(explicit_ranks) != len(set(explicit_ranks)):
+            raise ValueError("FM contract detector_rank values must be unique")
+        ordered = sorted(entries, key=lambda key: (
+            entries[key]["detector_rank"] if entries[key]["detector_rank"] is not None else 10_000,
+            *rank_by_category.get(key, (10_000, 10_000)),
+            list(entries).index(key),
+        ))
         return [
             {
                 "canonical_label": canonical,
                 "detector_label": entries[canonical]["detector_label"],
                 "aliases": list(entries[canonical]["aliases"]),
-                "rank": list(rank_by_category.get(canonical, (10_000, 10_000))),
+                "detector_rank": (entries[canonical]["detector_rank"]
+                                  if entries[canonical]["detector_rank"] is not None
+                                  else ordered.index(canonical) + 1),
+                "role_rank": list(rank_by_category.get(canonical, (10_000, 10_000))),
             }
             for canonical in ordered
         ]

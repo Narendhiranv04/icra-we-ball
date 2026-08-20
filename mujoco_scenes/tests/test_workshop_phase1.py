@@ -15,6 +15,7 @@ from mujoco_scenes.workshop_phase1.types import (
     AblationType,
     EntityType,
     FunctionalRequirement,
+    FunctionGroundingResult,
     FunctionalWitness,
     GroundingStatus,
     MaskBackendType,
@@ -82,6 +83,13 @@ def test_fm_contract_loading_and_neutrality():
     assert prompts == [entry["detector_label"] for entry in contract.get_ranked_detector_vocabulary()]
     for alias in ("manual screwdriver", "powered screwdriver", "cordless drill", "shallow tray"):
         assert alias not in prompts
+    assert prompts == [
+        "screwdriver", "power drill", "screw", "bolt", "wrench", "pliers",
+        "workbench", "tool cart", "shelf", "parts tray", "hardware bin",
+    ]
+    assert contract.get_detector_label_to_canonical_map()["screw"] == "screw"
+    assert contract.get_detector_label_to_canonical_map()["bolt"] == "bolt"
+    assert contract.get_detector_label_to_canonical_map()["wrench"] == "wrench"
     # Detector prompts must be broad physical names, never variant-specific or simulator strings
     for p in prompts:
         assert "workshop_" not in p
@@ -155,6 +163,26 @@ def test_changing_fm_contract_changes_detector_vocabulary(tmp_path: Path):
     assert contract.get_alias_to_canonical_map()["drinking cup"] == "cup"
     assert contract.get_alias_to_canonical_map()["soup bowl"] == "bowl"
     assert "screwdriver" not in prompts
+
+
+def test_fm_rank_controls_active_yolo_vocabulary_budget(tmp_path: Path):
+    config = yaml.safe_load(Path("mujoco_scenes/configs/workshop_phase1.yaml").read_text())
+    config["perception"]["max_detector_vocabulary_size"] = 4
+    config["perception"]["detector"]["checkpoint"] = str(tmp_path / "missing.pt")
+    path = tmp_path / "runtime.yaml"
+    path.write_text(yaml.safe_dump(config))
+    controller = WorkshopPhase1InspectionController(config_path=path)
+    assert controller.prompts == ["screwdriver", "power drill", "screw", "bolt"]
+    assert controller.proposal_backend._prompts == controller.prompts
+
+
+def test_missing_or_malformed_manual_contract_fails_clearly(tmp_path: Path):
+    with pytest.raises(FileNotFoundError, match="Manual Workshop FM contract"):
+        ManualWorkshopFMContract(tmp_path / "missing.yaml")
+    malformed = tmp_path / "malformed.yaml"
+    malformed.write_text("functional_requirements: []\n")
+    with pytest.raises(ValueError, match="functional_requirements"):
+        ManualWorkshopFMContract(malformed)
 
 
 def test_no_function_description_prompts():
@@ -383,8 +411,15 @@ def test_config_wiring(tmp_path: Path):
             "image_height": 360,
         },
         "perception": {
+            "max_detector_vocabulary_size": 7,
             "volume_margin_m": 0.031,
             "min_points_per_mask": 13,
+            "multi_scale": {
+                "full_frame": False,
+                "stage_crop": True,
+                "stage_tiles": True,
+                "tile_overlap_fraction": 0.20,
+            },
             "detector": {
                 "checkpoint": str(tmp_path / "missing.pt"),
                 "confidence_threshold": 0.12,
@@ -429,6 +464,11 @@ def test_config_wiring(tmp_path: Path):
     assert ctrl.proposal_backend.inference_size == 512
     assert ctrl.proposal_backend.max_detections == 17
     assert ctrl.proposal_backend.min_points_per_mask == 13
+    assert len(ctrl.prompts) == 7
+    assert ctrl.proposal_backend.enable_full_frame is False
+    assert ctrl.proposal_backend.enable_stage_crop is True
+    assert ctrl.proposal_backend.enable_stage_tiles is True
+    assert ctrl.proposal_backend.tile_overlap_fraction == 0.20
     assert ctrl.proposal_backend.duplicate_box_iou_threshold == 0.61
     assert ctrl.geometric_grounder.config["relations"]["grasp_allowance_m"] == 0.081
     assert ctrl.geometric_grounder.config["relations"]["packing_edge_clearance_m"] == 0.012
@@ -483,6 +523,164 @@ def test_pretracking_dedup_keeps_one_cross_category_hypothesis():
     ])
     assert len(result) == 1 and result[0].canonical_label == "bolt"
     assert result[0].semantic_alternatives[0]["canonical_label"] == "screw"
+
+
+class _ArrayTensor:
+    def __init__(self, value):
+        self.value = np.asarray(value)
+    def detach(self):
+        return self
+    def cpu(self):
+        return self
+    def numpy(self):
+        return self.value
+
+
+class _FakeBoxes:
+    def __init__(self):
+        self.xyxy = _ArrayTensor([[1, 2, 9, 10]])
+        self.conf = _ArrayTensor([0.8])
+        self.cls = _ArrayTensor([0])
+    def __len__(self):
+        return 1
+
+
+class _FakeResult:
+    boxes = _FakeBoxes()
+    names = {0: "screw"}
+
+
+class _FakeYOLO:
+    def set_classes(self, prompts):
+        self.prompts = prompts
+    def predict(self, **kwargs):
+        return [_FakeResult()]
+
+
+def _simple_observation(depth_value: float = 1.0) -> ViewObservation:
+    return ViewObservation(
+        camera_id="camera", rgb=np.zeros((80, 100, 3), dtype=np.uint8),
+        depth_m=np.full((80, 100), depth_value, dtype=float),
+        intrinsics=np.array([[50.0, 0, 50.0], [0, 50.0, 40.0], [0, 0, 1.0]]),
+        camera_position_world=np.zeros(3), camera_rotation_world=np.eye(3),
+    )
+
+
+def test_multiscale_boxes_map_to_global_coordinates_and_dedup():
+    backend = YOLOWorldProposalBackend(weights_path=Path("/missing/model.pt"), min_points_per_mask=4)
+    backend._model = _FakeYOLO()
+    backend.set_vocabulary(["screw"], {"screw": "screw"})
+    backend._inference_windows = lambda *_: [
+        ("full_frame", (0, 0, 100, 80)), ("stage_crop", (20, 10, 80, 70)),
+    ]
+    proposals = backend.predict(
+        _simple_observation(), np.array([-10, -10, -10]), np.array([10, 10, 10]))
+    assert len(proposals) == 2
+    assert {proposal.raw_yolo_bbox_xyxy for proposal in proposals} == {
+        (1, 2, 9, 10), (21, 12, 29, 20),
+    }
+    assert {proposal.inference_source for proposal in proposals} == {"full_frame", "stage_crop"}
+
+
+def test_same_object_across_full_and_crop_is_one_physical_proposal():
+    backend = YOLOWorldProposalBackend(weights_path=Path("/missing/model.pt"))
+    mask = np.zeros((80, 80), bool); mask[10:30, 10:30] = True
+    full = _proposal("full", "screwdriver", (10, 10, 30, 30), mask, .8, [0, 0, .5])
+    crop = _proposal("crop", "screwdriver", (11, 10, 31, 30), mask.copy(), .7, [.002, 0, .5])
+    full.inference_source, crop.inference_source = "full_frame", "stage_crop"
+    assert len(backend.suppress_duplicate_proposals([full, crop])) == 1
+
+
+def test_refined_mask_retains_only_accepted_support_and_tracker_reuses_it():
+    backend = YOLOWorldProposalBackend(weights_path=Path("/missing/model.pt"), min_points_per_mask=4)
+    backend._model = _FakeYOLO()
+    backend.set_vocabulary(["screw"], {"screw": "screw"})
+    backend._inference_windows = lambda *_: [("full_frame", (0, 0, 100, 80))]
+    observation = _simple_observation()
+    proposals = backend.predict(observation, np.array([-10, -10, -10]), np.array([10, 10, 10]))
+    assert len(proposals) == 1
+    proposal = proposals[0]
+    assert proposal.gated_points_world_m is not None
+    assert int(proposal.binary_mask.sum()) == len(proposal.gated_points_world_m)
+    assert proposal.refined_bbox_xyxy == proposal.bounding_box_xyxy
+    # If tracking recomputed from depth this would fail after depth is removed.
+    observation.depth_m[:] = np.nan
+    observation.detected_masks = proposals
+    tracker = PersistentInstanceTracker(
+        min_cluster_points=4, min_points_per_mask=4, voxel_size_m=.03)
+    updated = tracker.update_with_stage_observations(
+        0, "TEST", [observation], np.array([-10, -10, -10]), np.array([10, 10, 10]))
+    assert updated
+
+
+def test_region_association_reuses_gated_points_and_weights_quality():
+    class Scene:
+        @staticmethod
+        def get_candidate_regions():
+            return [{"region_instance_id": "neutral", "proposal_bounds_m": {
+                "minimum_world_m": [-.1, -.1, -.1], "maximum_world_m": [.1, .1, .1]}}]
+    observation = _simple_observation()
+    observation.depth_m[:] = np.nan
+    mask = _proposal("tray", "parts_tray", (10, 10, 30, 30), np.zeros((80, 100), bool), .4, [0, 0, 0])
+    mask.gated_points_world_m = np.zeros((20, 3))
+    mask.physical_support_quality = .9
+    observation.region_semantic_detections = [mask]
+    grounder = RegionGrounder({"parts_tray", "shelf"})
+    regions = grounder.discover_candidate_regions(Scene(), [observation], stage_index=1)
+    assert regions[0].semantic_observations[0]["canonical_label"] == "parts_tray"
+    assert regions[0].semantic_observations[0]["association_quality"] > 0
+
+    belief = grounder._compute_consensus_region_semantic([
+        {"stage_index": 0, "camera_id": "front", "canonical_label": "shelf",
+         "raw_label": "shelf", "confidence": .8, "semantic_support": .04},
+        {"stage_index": 0, "camera_id": "front", "canonical_label": "parts_tray",
+         "raw_label": "parts tray", "confidence": .3, "semantic_support": .27},
+    ])
+    assert belief["canonical_label"] == "parts_tray"
+    assert belief["total_observations"] == 1
+
+
+def test_generic_no_valid_driver_diagnosis_has_no_decoy_category_dependency():
+    search = FunctionalSatisfactionSearch()
+    track = ObservedObjectTrack(
+        instance_id="object_1", current_semantic_belief={"canonical_label": "novel_decoy"})
+    result = FunctionGroundingResult(
+        entity_id="object_1", requirement_id="future_driver_role",
+        function_name="CAN_DRIVE_SCREW", semantic_status=GroundingStatus.FAIL,
+        semantic_score=.1, semantic_evidence={"evaluated_label": "novel_decoy"},
+        geometric_status=GroundingStatus.PASS, geometric_score=1.0,
+        geometric_evidence={}, combined_status=GroundingStatus.FAIL)
+    diagnosis = search.diagnose_infeasibility(
+        [track], [], [], [], [], [], [], grounding_results=[result])
+    assert diagnosis == "NO_VALID_DRIVER"
+    source = Path("mujoco_scenes/workshop_phase1/functional_search.py").read_text()
+    assert '"wrench" in observed_categories' not in source
+    assert '"pliers" in observed_categories' not in source
+
+
+def test_no_persistence_clears_region_geometry_history():
+    grounder = RegionGrounder()
+    grounder._known_regions["proposal"] = ObservedRegion(
+        region_instance_id="region_1", proposal_bounds_m={
+            "minimum_world_m": [0, 0, 0], "maximum_world_m": [1, 1, 1]},
+        observation_source="calibrated_spatial_proposal",
+        fused_points=np.ones((20, 3)), semantic_observations=[{"canonical_label": "shelf"}],
+        current_geometric_properties={"support_area_m2": 1.0})
+    grounder.reset_persistent_evidence()
+    retained = grounder._known_regions["proposal"]
+    assert len(retained.fused_points) == 0
+    assert retained.semantic_observations == []
+    assert retained.current_geometric_properties == {}
+
+
+def test_target_compatibility_does_not_depend_on_head_interface():
+    grounder = GeometricGrounder(target_evidence=TargetGeometryEvidence(
+        estimated_recess_depth_m=.03, estimated_opening_diameter_m=.01,
+        validity=GroundingStatus.PASS))
+    relation = grounder.evaluate_compatible_with_target({
+        "total_length_m": .04, "shaft_diameter_m": .005, "head_interface": "HEX_LIKE"})
+    assert relation["status"] == "TRUE"
+    assert "interface_engagement_ok" not in relation
 
 
 def test_required_relations_drive_unary_verification():

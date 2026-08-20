@@ -13,15 +13,21 @@ pipeline:
   image_height: 720
 
 perception:
+  max_detector_vocabulary_size: 32
   detector:
     checkpoint: "semantic_model_cache/yolov8m-worldv2.pt"
-    confidence_threshold: 0.002
-    nms_iou_threshold: 0.45
+    confidence_threshold: 0.01
+    nms_iou_threshold: 0.35
     inference_size: 1280
     device: "cpu"
-    max_detections: 100
+    max_detections: 50
   volume_margin_m: 0.08
   min_points_per_mask: 8
+  multi_scale:
+    full_frame: true
+    stage_crop: true
+    stage_tiles: false
+    tile_overlap_fraction: 0.15
   duplicate_suppression:
     box_iou_threshold: 0.65
     mask_overlap_threshold: 0.72

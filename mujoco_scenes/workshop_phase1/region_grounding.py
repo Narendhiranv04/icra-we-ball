@@ -39,6 +39,21 @@ class RegionGrounder:
                 "canonical_label": "unknown", "raw_label": "unknown", "confidence": 0.0,
             }
 
+    def reset_persistent_evidence(self) -> None:
+        """Retain neutral proposal identities but clear all carried observations."""
+        for region in self._known_regions.values():
+            region.semantic_observations.clear()
+            region.current_semantic_belief = {
+                "canonical_label": "unknown", "raw_label": "unknown", "confidence": 0.0,
+            }
+            region.fused_points = np.empty((0, 3), dtype=np.float32)
+            region.fused_colors = np.empty((0, 3), dtype=np.float32)
+            region.crop_evidence.clear()
+            region.support_plane.clear()
+            region.cavity_geometry.clear()
+            region.obstruction_evidence.clear()
+            region.current_geometric_properties.clear()
+
     def _measure_support_plane(self, points: np.ndarray) -> dict[str, Any]:
         """Measure the dominant horizontal support from points, never ROI extents."""
         cfg = self.geometry_config.get("support_plane", {})
@@ -95,15 +110,15 @@ class RegionGrounder:
 
         score_by_label: dict[str, float] = defaultdict(float)
         raw_by_label: dict[str, str] = {}
-        unique: dict[tuple[int, str, str], dict[str, Any]] = {}
+        unique: dict[tuple[int, str], dict[str, Any]] = {}
         for obs in observations:
-            label = obs.get("canonical_label", "unknown").lower()
-            key = (int(obs.get("stage_index", 0)), str(obs.get("camera_id", "")), label)
-            if key not in unique or float(obs.get("confidence", 0.0)) > float(unique[key].get("confidence", 0.0)):
+            key = (int(obs.get("stage_index", 0)), str(obs.get("camera_id", "")))
+            support = float(obs.get("semantic_support", obs.get("confidence", 0.0)))
+            if key not in unique or support > float(unique[key].get("semantic_support", 0.0)):
                 unique[key] = obs
         for obs in unique.values():
             label = obs.get("canonical_label", "unknown").lower()
-            conf = float(obs.get("confidence", 1.0))
+            conf = float(obs.get("semantic_support", obs.get("confidence", 1.0)))
             score_by_label[label] += conf
             if label not in raw_by_label:
                 raw_by_label[label] = obs.get("raw_label", label)
@@ -133,15 +148,18 @@ class RegionGrounder:
 
         # Assign every YOLO region detection to at most one neutral spatial
         # proposal using calibrated 2D+3D evidence. Semantics remain YOLO-only.
-        semantic_by_proposal: dict[int, list[dict[str, Any]]] = defaultdict(list)
+        best_semantic_by_slot: dict[tuple[int, str], dict[str, Any]] = {}
         for obs in observations:
             semantic_detections = obs.region_semantic_detections or obs.detected_masks
             for detection in semantic_detections:
                 if detection.canonical_label.lower() not in self.region_categories:
                     continue
-                points, _ = backproject_masked_depth(
-                    obs.depth_m, detection.binary_mask, obs.intrinsics,
-                    obs.camera_position_world, obs.camera_rotation_world, max_depth=3.0)
+                if detection.gated_points_world_m is not None:
+                    points = np.asarray(detection.gated_points_world_m)
+                else:
+                    points, _ = backproject_masked_depth(
+                        obs.depth_m, detection.binary_mask, obs.intrinsics,
+                        obs.camera_position_world, obs.camera_rotation_world, max_depth=3.0)
                 centroid = points.mean(axis=0) if len(points) else None
                 bx1, by1, bx2, by2 = detection.bounding_box_xyxy
                 box_area = max(1, (bx2 - bx1) * (by2 - by1))
@@ -190,16 +208,27 @@ class RegionGrounder:
                     best[2]["point_in_region_fraction"] >= 0.05
                     or best[2]["box_fraction_in_projected_region"] >= 0.20
                 ):
-                    semantic_by_proposal[best[1]].append({
+                    association_quality = float(best[0])
+                    record = {
                         "stage_index": stage_index,
                         "camera_id": obs.camera_id,
                         "canonical_label": detection.canonical_label,
                         "raw_label": detection.raw_label,
                         "confidence": detection.confidence,
+                        "association_quality": association_quality,
+                        "semantic_support": float(detection.confidence) * association_quality,
                         "detection_id": detection.detection_id,
                         "association_metrics": best[2],
                         "duplicate_group_id": detection.duplicate_group_id,
-                    })
+                    }
+                    slot = (best[1], obs.camera_id)
+                    if (slot not in best_semantic_by_slot
+                            or record["semantic_support"] > best_semantic_by_slot[slot]["semantic_support"]):
+                        best_semantic_by_slot[slot] = record
+
+        semantic_by_proposal: dict[int, list[dict[str, Any]]] = defaultdict(list)
+        for (proposal_index, _camera), record in best_semantic_by_slot.items():
+            semantic_by_proposal[proposal_index].append(record)
 
         for proposal_index, prop in enumerate(proposals):
             bounds = prop["proposal_bounds_m"]
@@ -288,7 +317,7 @@ class RegionGrounder:
                            "reference_support_plane_z_m": plane_z, "support_plane_points_excluded": True}
             evidence = MeasurementEvidence(instance_name=reg_id, measurement_points=fused_pts,
                 measurement_colors=np.zeros_like(fused_pts), contributing_camera_ids=tuple(points_by_camera),
-                points_by_camera=points_by_camera, source_stage=0, source_region=prop.get("region_instance_id", "CANDIDATE_REGION"),
+                points_by_camera=points_by_camera, source_stage=stage_index, source_region=prop.get("region_instance_id", "CANDIDATE_REGION"),
                 measurement_cloud_path=None, measurement_quality={"quality_is_valid": len(fused_pts) >= 30,
                     "raw_inside_point_count": len(fused_pts), "outlier_points_removed": 0})
             generic = extract_object_properties(evidence, config=self.geometry_config)

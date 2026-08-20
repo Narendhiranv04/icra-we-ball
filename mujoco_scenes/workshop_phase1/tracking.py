@@ -86,16 +86,18 @@ class PersistentInstanceTracker:
 
         score_by_label: dict[str, float] = defaultdict(float)
         raw_by_label: dict[str, str] = {}
-        unique: dict[tuple[int, str, str], dict[str, Any]] = {}
+        unique: dict[tuple[int, str], dict[str, Any]] = {}
         for obs in observations:
-            label = obs.get("canonical_label", "unknown").lower()
-            key = (int(obs.get("stage_index", 0)), str(obs.get("camera_id", "")), label)
-            if key not in unique or float(obs.get("confidence", 0.0)) > float(unique[key].get("confidence", 0.0)):
+            key = (int(obs.get("stage_index", 0)), str(obs.get("camera_id", "")))
+            support = float(obs.get("confidence", 0.0)) * float(obs.get("physical_support_quality", 1.0))
+            old_support = (float(unique[key].get("confidence", 0.0))
+                           * float(unique[key].get("physical_support_quality", 1.0))) if key in unique else -1.0
+            if support > old_support:
                 unique[key] = obs
         for obs in unique.values():
             label = obs.get("canonical_label", "unknown").lower()
             conf = float(obs.get("confidence", 1.0))
-            score_by_label[label] += conf
+            score_by_label[label] += conf * float(obs.get("physical_support_quality", 1.0))
             if label not in raw_by_label:
                 raw_by_label[label] = obs.get("raw_label", label)
 
@@ -128,25 +130,19 @@ class PersistentInstanceTracker:
         for obs in observations:
             cam_id = obs.camera_id
             for mask in obs.detected_masks:
-                pts, pixel_indices = backproject_masked_depth(
-                    obs.depth_m,
-                    mask.binary_mask,
-                    obs.intrinsics,
-                    obs.camera_position_world,
-                    obs.camera_rotation_world,
-                    max_depth=3.0,
-                )
-                if len(pts) < self.min_points_per_mask:
-                    continue
-
-                gated = gate_points_to_volume(
-                    pts,
-                    minimum_world_m=stage_volume_min,
-                    maximum_world_m=stage_volume_max,
-                    boundary_margin_m=self.volume_margin_m,
-                )
-                pts = pts[gated]
-                pixel_indices = pixel_indices[gated]
+                if mask.gated_points_world_m is not None and mask.gated_pixel_indices_yx is not None:
+                    pts = np.asarray(mask.gated_points_world_m)
+                    pixel_indices = np.asarray(mask.gated_pixel_indices_yx, dtype=int)
+                else:
+                    pts, pixel_indices = backproject_masked_depth(
+                        obs.depth_m, mask.binary_mask, obs.intrinsics,
+                        obs.camera_position_world, obs.camera_rotation_world,
+                        max_depth=3.0)
+                    gated = gate_points_to_volume(
+                        pts, minimum_world_m=stage_volume_min,
+                        maximum_world_m=stage_volume_max,
+                        boundary_margin_m=self.volume_margin_m)
+                    pts, pixel_indices = pts[gated], pixel_indices[gated]
                 if len(pts) < self.min_points_per_mask:
                     continue
 
@@ -237,17 +233,11 @@ class PersistentInstanceTracker:
                     "canonical_label": d["mask"].canonical_label,
                     "raw_label": d["mask"].raw_label,
                     "confidence": d["mask"].confidence,
+                    "physical_proposal_id": d["mask"].duplicate_group_id,
+                    "inference_source": d["mask"].inference_source,
+                    "semantic_alternatives": list(d["mask"].semantic_alternatives),
+                    "physical_support_quality": d["mask"].physical_support_quality,
                 })
-                for alternative in d["mask"].semantic_alternatives:
-                    semantic_obs.append({
-                        "stage_index": stage_index,
-                        "camera_id": d["camera_id"],
-                        "canonical_label": alternative["canonical_label"],
-                        "raw_label": alternative["raw_label"],
-                        "confidence": float(alternative["confidence"]) * 0.8,
-                        "is_suppressed_alternative": True,
-                        "physical_proposal_id": d["mask"].duplicate_group_id,
-                    })
 
             stage_objects.append({
                 "points": fused_pts,

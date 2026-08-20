@@ -79,6 +79,10 @@ class PrivilegedPhase1Evaluator:
                 gt_by_category[category].append(gt)
         active_names = set(getattr(self.scene, "active_surfaces", [])) | set(
             getattr(self.scene, "active_containers", []))
+        active_region_categories = {
+            category for name in active_names
+            if (category := self._canonical_region_category(name)) is not None
+        }
         for name in active_names:
             category = self._canonical_region_category(name)
             if category:
@@ -93,7 +97,7 @@ class PrivilegedPhase1Evaluator:
             expected = self._canonical_region_category(region_to_gt.get(region.region_instance_id, ""))
             for observation in region.semantic_observations:
                 detection_id = observation.get("detection_id")
-                if detection_id and expected:
+                if detection_id and expected in active_region_categories:
                     region_detection_matches[(int(observation.get("stage_index", 0)), detection_id)] = (
                         expected, region_to_gt[region.region_instance_id])
 
@@ -313,6 +317,33 @@ class PrivilegedPhase1Evaluator:
         if detection_diagnostics is not None:
             metrics["semantic_diagnostics"] = self.evaluate_semantic_diagnostics(
                 detection_diagnostics, gt_objects, regions, region_to_gt)
+            status_counts: dict[str, int] = {}
+            for record in detection_diagnostics:
+                status = str(record.get("status", "UNKNOWN"))
+                status_counts[status] = status_counts.get(status, 0) + 1
+            accepted = status_counts.get("ACCEPTED", 0)
+            rejected_refinement = sum(
+                count for status, count in status_counts.items()
+                if status in {"REJECTED_DEPTH_SUPPORT", "REJECTED_REFINEMENT",
+                              "REJECTED_NO_COHERENT_COMPONENT"})
+            rejected_volume = status_counts.get("REJECTED_STAGE_VOLUME", 0)
+            evaluated = accepted + rejected_refinement + rejected_volume
+            camera_stages = {
+                (int(record.get("stage_index", 0)), str(record.get("camera_id", "")))
+                for record in detection_diagnostics if record.get("camera_id")
+            }
+            metrics["proposal_quality"] = {
+                "status_counts": status_counts,
+                "accepted_physical_proposals": accepted,
+                "evaluated_camera_stages": len(camera_stages),
+                "average_accepted_proposals_per_camera_stage": round(
+                    accepted / max(1, len(camera_stages)), 4),
+                "mask_refinement_rejection_rate": round(
+                    rejected_refinement / max(1, evaluated), 4),
+                "stage_volume_rejection_rate": round(
+                    rejected_volume / max(1, evaluated), 4),
+                "suppressed_duplicate_count": status_counts.get("SUPPRESSED_DUPLICATE", 0),
+            }
 
         if output_dir is not None:
             output_dir.mkdir(parents=True, exist_ok=True)

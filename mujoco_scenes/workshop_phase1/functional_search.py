@@ -147,6 +147,7 @@ class FunctionalSatisfactionSearch:
         evaluated_tuples: list[dict[str, Any]],
         has_unresolved_evidence: bool = False,
         grounding_results: list[FunctionGroundingResult] | None = None,
+        requirements: list[FunctionalRequirement] | None = None,
     ) -> str:
         """Diagnose exact grounded infeasibility reason matching benchmark categories."""
         # If no objects were detected or all object evidence is missing/unresolved -> INSUFFICIENT_EVIDENCE
@@ -154,18 +155,7 @@ class FunctionalSatisfactionSearch:
             return "INSUFFICIENT_EVIDENCE"
 
         results = grounding_results or []
-        observed_categories = {
-            trk.current_semantic_belief.get("canonical_label", "").lower()
-            for trk in all_objects
-        }
-        observed_categories.update(
-            str(result.semantic_evidence.get("evaluated_label", "")).lower()
-            for result in results
-            if result.semantic_evidence
-        )
-
-        # If all detected objects are unknown -> INSUFFICIENT_EVIDENCE
-        if observed_categories.issubset({"unknown", "object", "object_proposal"}):
+        if results and all(result.semantic_status == GroundingStatus.UNKNOWN for result in results):
             return "INSUFFICIENT_EVIDENCE"
 
         missing_driver = (len(driver_candidates) == 0)
@@ -173,39 +163,44 @@ class FunctionalSatisfactionSearch:
         missing_surface = (len(work_surface_candidates) == 0)
         missing_container = (len(parts_container_candidates) == 0)
 
-        def role_evidence(requirement_id: str) -> dict[str, bool]:
-            role = [result for result in results if result.requirement_id == requirement_id]
+        def role_evidence(function_name: str) -> dict[str, Any]:
+            role = [result for result in results if result.function_name == function_name]
+            unresolved = any(
+                result.semantic_status == GroundingStatus.UNKNOWN
+                or (result.semantic_status == GroundingStatus.PASS
+                    and result.geometric_status == GroundingStatus.UNKNOWN)
+                for result in role)
             return {
                 "semantic_pass": any(result.semantic_status == GroundingStatus.PASS for result in role),
-                "semantic_unknown": any(result.semantic_status == GroundingStatus.UNKNOWN for result in role),
                 "unary_fail": any(result.semantic_status == GroundingStatus.PASS
                                   and result.geometric_status == GroundingStatus.FAIL for result in role),
-                "unary_unknown": any(result.semantic_status == GroundingStatus.PASS
-                                     and result.geometric_status == GroundingStatus.UNKNOWN for result in role),
-                "resolved_negative": bool(role) and all(
-                    result.semantic_status == GroundingStatus.FAIL
-                    or (result.semantic_status == GroundingStatus.PASS
-                        and result.geometric_status == GroundingStatus.FAIL)
+                "unresolved": unresolved,
+                "resolved_negative": bool(role) and not unresolved and all(
+                    result.combined_status == GroundingStatus.FAIL for result in role),
+                "failed_relations": {
+                    relation.get("relation")
                     for result in role
-                ),
+                    for relation in result.geometric_evidence.get("relations", [])
+                    if relation.get("status") == "FALSE"
+                },
             }
 
-        driver_evidence = role_evidence("req_obj_driver")
-        fastener_evidence = role_evidence("req_obj_fastener")
-        surface_evidence = role_evidence("req_reg_work_surface")
-        container_evidence = role_evidence("req_reg_parts_container")
+        driver_evidence = role_evidence("CAN_DRIVE_SCREW")
+        fastener_evidence = role_evidence("CAN_FASTEN")
+        surface_evidence = role_evidence("WORK_SURFACE")
+        container_evidence = role_evidence("SMALL_PARTS_CONTAINER")
 
         # Check for tool geometry failure: semantic driver exists, but failed reach
-        if missing_driver and driver_evidence["semantic_pass"] and driver_evidence["unary_fail"] \
-                and not driver_evidence["unary_unknown"]:
+        if (missing_driver and driver_evidence["semantic_pass"]
+                and "REACHES_TARGET" in driver_evidence["failed_relations"]
+                and not driver_evidence["unresolved"]):
             return "TOOL_GEOMETRY_FAILURE"
 
-        # Check for single-role missing causes
-        if missing_driver and ("wrench" in observed_categories or "pliers" in observed_categories):
+        # Generic required-role failure. No object categories are inspected here.
+        if missing_driver and driver_evidence["resolved_negative"]:
             return "NO_VALID_DRIVER"
 
-        if missing_fastener and fastener_evidence["semantic_pass"] and fastener_evidence["unary_fail"] \
-                and not fastener_evidence["unary_unknown"]:
+        if missing_fastener and fastener_evidence["resolved_negative"]:
             return "NO_VALID_FASTENER"
 
         if missing_surface and surface_evidence["resolved_negative"]:
@@ -215,8 +210,8 @@ class FunctionalSatisfactionSearch:
             return "NO_PARTS_CONTAINER"
 
         unresolved_missing_role = any((
-            missing_driver and (driver_evidence["semantic_unknown"] or driver_evidence["unary_unknown"]),
-            missing_fastener and (fastener_evidence["semantic_unknown"] or fastener_evidence["unary_unknown"]),
+            missing_driver and not driver_evidence["resolved_negative"],
+            missing_fastener and not fastener_evidence["resolved_negative"],
             missing_surface and not surface_evidence["resolved_negative"],
             missing_container and not container_evidence["resolved_negative"],
         ))

@@ -174,6 +174,12 @@ class ObservedMask:
     cloud_bounds_world_m: dict[str, Any] = field(default_factory=dict)
     duplicate_group_id: str | None = None
     semantic_alternatives: list[dict[str, Any]] = field(default_factory=list)
+    raw_yolo_bbox_xyxy: tuple[int, int, int, int] | None = None
+    refined_bbox_xyxy: tuple[int, int, int, int] | None = None
+    gated_points_world_m: Any | None = None
+    gated_pixel_indices_yx: Any | None = None
+    inference_source: str = "full_frame"
+    physical_support_quality: float = 0.0
 
 
 @dataclass

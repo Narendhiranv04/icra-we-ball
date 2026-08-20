@@ -246,18 +246,19 @@ class GeometricGrounder:
         length, shaft = properties.get("total_length_m"), properties.get("shaft_diameter_m")
         opening = self.target_evidence.estimated_opening_diameter_m if self.target_evidence.validity == GroundingStatus.PASS else None
         depth = self.target_evidence.estimated_recess_depth_m if self.target_evidence.validity == GroundingStatus.PASS else None
-        interface = properties.get("head_interface", "UNKNOWN")
-        if any(v is None for v in (length, shaft, opening, depth)) or interface == "UNKNOWN":
-            return {"relation": "COMPATIBLE_WITH_TARGET", "status": "UNKNOWN", "reason": "REQUIRED_MEASUREMENT_MISSING", "interface_geometry": interface}
+        if any(v is None for v in (length, shaft, opening, depth)):
+            return {"relation": "COMPATIBLE_WITH_TARGET", "status": "UNKNOWN", "reason": "REQUIRED_MEASUREMENT_MISSING"}
         cfg = self.config.get("relations", {})
         length_margin = float(length) - float(depth) + float(cfg.get("target_length_tolerance_m", 0.002))
         width_margin = float(opening) - float(shaft) - float(cfg.get("target_shaft_clearance_m", 0.0005))
-        interface_ok = interface in {"CROSS_LIKE", "SLOT_LIKE"}
-        ok = length_margin >= 0.0 and width_margin >= 0.0 and interface_ok
+        maximum_excess = float(cfg.get("target_maximum_length_excess_m", 0.010))
+        excess_margin = maximum_excess - (float(length) - float(depth))
+        ok = length_margin >= 0.0 and width_margin >= 0.0 and excess_margin >= -1e-9
         return {"relation": "COMPATIBLE_WITH_TARGET", "status": "TRUE" if ok else "FALSE",
             "fastener_length_m": float(length), "shaft_cross_section_m": float(shaft), "target_opening_m": float(opening),
-            "target_depth_m": float(depth), "interface_geometry": interface, "interface_engagement_ok": interface_ok,
+            "target_depth_m": float(depth),
             "length_margin_m": length_margin, "width_margin_m": width_margin,
+            "maximum_length_excess_m": maximum_excess, "excess_margin_m": excess_margin,
             "method": "observed_fastener_vs_observed_joint_geometry_v2"}
 
     @staticmethod

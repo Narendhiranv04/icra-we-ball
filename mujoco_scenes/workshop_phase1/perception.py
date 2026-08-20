@@ -82,6 +82,10 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
         duplicate_mask_overlap_threshold: float = 0.72,
         duplicate_centroid_distance_m: float = 0.018,
         duplicate_aabb_overlap_threshold: float = 0.45,
+        enable_full_frame: bool = True,
+        enable_stage_crop: bool = True,
+        enable_stage_tiles: bool = False,
+        tile_overlap_fraction: float = 0.15,
     ) -> None:
         self.weights_path = Path(weights_path) if weights_path else find_yolo_world_weights()
         self.confidence_threshold = float(confidence_threshold)
@@ -94,6 +98,10 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
         self.duplicate_mask_overlap_threshold = float(duplicate_mask_overlap_threshold)
         self.duplicate_centroid_distance_m = float(duplicate_centroid_distance_m)
         self.duplicate_aabb_overlap_threshold = float(duplicate_aabb_overlap_threshold)
+        self.enable_full_frame = bool(enable_full_frame)
+        self.enable_stage_crop = bool(enable_stage_crop)
+        self.enable_stage_tiles = bool(enable_stage_tiles)
+        self.tile_overlap_fraction = float(tile_overlap_fraction)
 
         self._model = None
         self._prompts: list[str] = []
@@ -157,7 +165,8 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
         ordered = sorted(
             proposals,
             key=lambda proposal: (
-                -(proposal.confidence * np.log1p(max(1, proposal.depth_point_count))),
+                -(proposal.confidence * max(0.1, proposal.physical_support_quality)
+                  * np.log1p(max(1, proposal.depth_point_count))),
                 -proposal.depth_point_count,
                 proposal.canonical_label,
                 proposal.detection_id,
@@ -192,13 +201,20 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
                 "raw_label": candidate.raw_label,
                 "confidence": candidate.confidence,
                 "detection_id": candidate.detection_id,
+                "inference_source": candidate.inference_source,
             })
             self.last_diagnostics.append({
                 "camera_id": candidate.camera_id,
                 "detection_id": candidate.detection_id,
                 "raw_label": candidate.raw_label,
                 "canonical_label": candidate.canonical_label,
+                "confidence": candidate.confidence,
                 "status": "SUPPRESSED_DUPLICATE",
+                "raw_yolo_bbox_xyxy": list(
+                    candidate.raw_yolo_bbox_xyxy or candidate.bounding_box_xyxy),
+                "refined_bbox_xyxy": list(
+                    candidate.refined_bbox_xyxy or candidate.bounding_box_xyxy),
+                "inference_source": candidate.inference_source,
                 "duplicate_group_id": duplicate_of.duplicate_group_id,
                 "retained_detection_id": duplicate_of.detection_id,
             })
@@ -247,142 +263,131 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
         if self._model is None or not self._prompts:
             return []
 
-        rgb = observation.rgb
-        depth = observation.depth_m
+        rgb, depth = observation.rgb, observation.depth_m
         height, width = rgb.shape[:2]
-
-        crop_x1, crop_y1, crop_x2, crop_y2 = self._project_volume_crop(
+        windows = self._inference_windows(
             observation, stage_volume_min, stage_volume_max)
-        detector_rgb = rgb[crop_y1:crop_y2, crop_x1:crop_x2]
-        # Explicit PIL Image format with mode RGB. The calibrated crop improves
-        # resolution for tiny drawer hardware without changing semantic classes.
-        pil_image = Image.fromarray(detector_rgb, mode="RGB")
-
-        try:
-            results = self._model.predict(
-                source=pil_image,
-                conf=self.confidence_threshold,
-                iou=self.nms_iou_threshold,
-                imgsz=self.inference_size,
-                device=self.device,
-                max_det=self.max_detections,
-                verbose=False,
-            )
-        except Exception:
-            return []
-
-        if not results:
-            return []
-
-        result = results[0]
-        boxes = result.boxes
-        if boxes is None or len(boxes) == 0:
-            return []
-
-        xyxy = boxes.xyxy.detach().cpu().numpy()
-        confidences = boxes.conf.detach().cpu().numpy()
-        classes = boxes.cls.detach().cpu().numpy().astype(int)
-
         masks: list[ObservedMask] = []
-        for idx, (box, conf, cls_id) in enumerate(zip(xyxy, confidences, classes)):
-            raw_label = str(result.names[int(cls_id)]) if int(cls_id) in result.names else self._prompts[cls_id] if cls_id < len(self._prompts) else "object"
-            canonical_label = self._alias_to_canonical.get(raw_label.lower(), raw_label.lower())
-
-            x1 = max(0, min(width - 1, int(box[0]) + crop_x1))
-            y1 = max(0, min(height - 1, int(box[1]) + crop_y1))
-            x2 = max(0, min(width, int(box[2]) + 1 + crop_x1))
-            y2 = max(0, min(height, int(box[3]) + 1 + crop_y1))
-
-            diagnostic = {
-                "camera_id": observation.camera_id,
-                "detection_id": f"det_{observation.camera_id}_{idx:03d}",
-                "detector_vocabulary": list(self._prompts),
-                "raw_label": raw_label,
-                "canonical_label": canonical_label,
-                "confidence": float(conf),
-                "bounding_box_xyxy": [x1, y1, x2, y2],
-                "detector_crop_xyxy": [crop_x1, crop_y1, crop_x2, crop_y2],
-            }
-
-            if (x2 - x1) < 4 or (y2 - y1) < 4:
-                diagnostic.update({"status": "REJECTED_SMALL_BOX"})
-                self.last_diagnostics.append(diagnostic)
+        global_index = 0
+        for inference_source, (crop_x1, crop_y1, crop_x2, crop_y2) in windows:
+            detector_rgb = rgb[crop_y1:crop_y2, crop_x1:crop_x2]
+            try:
+                results = self._model.predict(
+                    source=Image.fromarray(detector_rgb, mode="RGB"),
+                    conf=self.confidence_threshold,
+                    iou=self.nms_iou_threshold,
+                    imgsz=self.inference_size,
+                    device=self.device,
+                    max_det=self.max_detections,
+                    verbose=False,
+                )
+            except Exception as error:
+                self.last_diagnostics.append({
+                    "camera_id": observation.camera_id,
+                    "inference_source": inference_source,
+                    "status": "INFERENCE_ERROR",
+                    "error_type": type(error).__name__,
+                })
                 continue
-
-            # Depth-guided foreground mask within bounding box
-            roi_depth = depth[y1:y2, x1:x2]
-            valid_roi = np.isfinite(roi_depth) & (roi_depth > 0.1) & (roi_depth < 3.0)
-            if np.count_nonzero(valid_roi) < self.min_points_per_mask:
-                diagnostic.update({"status": "REJECTED_DEPTH_SUPPORT", "depth_point_count": int(np.count_nonzero(valid_roi))})
-                self.last_diagnostics.append(diagnostic)
+            if not results or results[0].boxes is None:
                 continue
+            result, boxes = results[0], results[0].boxes
+            xyxy = boxes.xyxy.detach().cpu().numpy()
+            confidences = boxes.conf.detach().cpu().numpy()
+            classes = boxes.cls.detach().cpu().numpy().astype(int)
+            for box, conf, cls_id in zip(xyxy, confidences, classes):
+                idx = global_index
+                global_index += 1
+                raw_label = (str(result.names[int(cls_id)]) if int(cls_id) in result.names
+                             else self._prompts[cls_id] if cls_id < len(self._prompts) else "object")
+                canonical_label = self._alias_to_canonical.get(raw_label.lower(), raw_label.lower())
 
-            # Segment foreground within bounding box based on median depth
-            med_depth = np.median(roi_depth[valid_roi])
-            depth_thresh = max(0.04, med_depth * 0.08)
-            fg_roi = valid_roi & (np.abs(roi_depth - med_depth) <= depth_thresh)
+                x1 = max(0, min(width - 1, int(np.floor(box[0])) + crop_x1))
+                y1 = max(0, min(height - 1, int(np.floor(box[1])) + crop_y1))
+                x2 = max(0, min(width, int(np.ceil(box[2])) + crop_x1))
+                y2 = max(0, min(height, int(np.ceil(box[3])) + crop_y1))
+                detection_id = f"det_{observation.camera_id}_{inference_source}_{idx:03d}"
 
-            bin_mask = np.zeros((height, width), dtype=bool)
-            bin_mask[y1:y2, x1:x2] = fg_roi
+                diagnostic = {
+                    "camera_id": observation.camera_id,
+                    "detection_id": detection_id,
+                    "detector_vocabulary": list(self._prompts),
+                    "raw_label": raw_label,
+                    "canonical_label": canonical_label,
+                    "confidence": float(conf),
+                    "raw_yolo_bbox_xyxy": [x1, y1, x2, y2],
+                    "detector_crop_xyxy": [crop_x1, crop_y1, crop_x2, crop_y2],
+                    "inference_source": inference_source,
+                }
 
-            # Reject edge depth discontinuities
-            bin_mask = reject_depth_discontinuities(depth, bin_mask, threshold_m=0.03, radius_pixels=2)
+                if (x2 - x1) < 4 or (y2 - y1) < 4:
+                    diagnostic.update({"status": "REJECTED_SMALL_BOX"})
+                    self.last_diagnostics.append(diagnostic)
+                    continue
 
-            # Check 3D back-projection into active inspection volume
-            pts, _ = backproject_masked_depth(
-                depth,
-                bin_mask,
-                observation.intrinsics,
-                observation.camera_position_world,
-                observation.camera_rotation_world,
-                max_depth=3.0,
-            )
-            if len(pts) < self.min_points_per_mask:
-                diagnostic.update({"status": "REJECTED_REFINEMENT", "refined_mask_area": int(np.count_nonzero(bin_mask)), "depth_point_count": len(pts)})
+                bin_mask, support_quality, refinement_reason = self._refine_depth_support(
+                    depth, (x1, y1, x2, y2))
+                if bin_mask is None:
+                    diagnostic.update({"status": refinement_reason})
+                    self.last_diagnostics.append(diagnostic)
+                    continue
+
+                pts, pixel_indices = backproject_masked_depth(
+                    depth, bin_mask, observation.intrinsics,
+                    observation.camera_position_world,
+                    observation.camera_rotation_world, max_depth=3.0)
+                if len(pts) < self.min_points_per_mask:
+                    diagnostic.update({"status": "REJECTED_REFINEMENT", "refined_mask_area": int(bin_mask.sum()), "depth_point_count": len(pts)})
+                    self.last_diagnostics.append(diagnostic)
+                    continue
+
+                gated = gate_points_to_volume(
+                    pts, minimum_world_m=stage_volume_min,
+                    maximum_world_m=stage_volume_max,
+                    boundary_margin_m=volume_margin_m)
+                if np.count_nonzero(gated) < self.min_points_per_mask:
+                    diagnostic.update({"status": "REJECTED_STAGE_VOLUME", "refined_mask_area": int(bin_mask.sum()), "depth_point_count": int(np.count_nonzero(gated))})
+                    self.last_diagnostics.append(diagnostic)
+                    continue
+
+                gated_points = pts[gated]
+                gated_pixels = pixel_indices[gated]
+                final_mask = np.zeros((height, width), dtype=bool)
+                final_mask[gated_pixels[:, 0], gated_pixels[:, 1]] = True
+                rows, cols = np.nonzero(final_mask)
+                refined_box = (int(cols.min()), int(rows.min()), int(cols.max() + 1), int(rows.max() + 1))
+                centroid = gated_points.mean(axis=0)
+                cloud_bounds = {
+                    "minimum_world_m": gated_points.min(axis=0).tolist(),
+                    "maximum_world_m": gated_points.max(axis=0).tolist(),
+                }
+
+                mask_entry = ObservedMask(
+                    detection_id=detection_id, camera_id=observation.camera_id,
+                    binary_mask=final_mask, bounding_box_xyxy=refined_box,
+                    confidence=float(conf), canonical_label=canonical_label,
+                    raw_label=raw_label, predicted_label=canonical_label,
+                    backend_name="yolo_world", refined_mask_area=int(final_mask.sum()),
+                    depth_point_count=len(gated_points), centroid_world_m=centroid,
+                    cloud_bounds_world_m=cloud_bounds,
+                    raw_yolo_bbox_xyxy=(x1, y1, x2, y2),
+                    refined_bbox_xyxy=refined_box,
+                    gated_points_world_m=gated_points,
+                    gated_pixel_indices_yx=gated_pixels,
+                    inference_source=inference_source,
+                    physical_support_quality=support_quality,
+                )
+                masks.append(mask_entry)
+                diagnostic.update({
+                    "status": "ACCEPTED_PRE_DEDUP",
+                    "refined_bbox_xyxy": list(refined_box),
+                    "refined_mask_area": mask_entry.refined_mask_area,
+                    "depth_point_count": mask_entry.depth_point_count,
+                    "centroid_world_m": centroid.tolist(),
+                    "cloud_bounds_world_m": cloud_bounds,
+                    "physical_support_quality": support_quality,
+                })
                 self.last_diagnostics.append(diagnostic)
-                continue
-
-            gated = gate_points_to_volume(
-                pts,
-                minimum_world_m=stage_volume_min,
-                maximum_world_m=stage_volume_max,
-                boundary_margin_m=volume_margin_m,
-            )
-            if np.count_nonzero(gated) < self.min_points_per_mask:
-                diagnostic.update({"status": "REJECTED_STAGE_VOLUME", "refined_mask_area": int(np.count_nonzero(bin_mask)), "depth_point_count": int(np.count_nonzero(gated))})
-                self.last_diagnostics.append(diagnostic)
-                continue
-
-            gated_points = pts[gated]
-            centroid = gated_points.mean(axis=0)
-            cloud_bounds = {
-                "minimum_world_m": gated_points.min(axis=0).tolist(),
-                "maximum_world_m": gated_points.max(axis=0).tolist(),
-            }
-
-            mask_entry = ObservedMask(
-                detection_id=f"det_{observation.camera_id}_{idx:03d}",
-                camera_id=observation.camera_id,
-                binary_mask=bin_mask,
-                bounding_box_xyxy=(x1, y1, x2, y2),
-                confidence=float(conf),
-                canonical_label=canonical_label,
-                raw_label=raw_label,
-                predicted_label=canonical_label,
-                backend_name="yolo_world",
-                refined_mask_area=int(np.count_nonzero(bin_mask)),
-                depth_point_count=len(gated_points),
-                centroid_world_m=centroid,
-                cloud_bounds_world_m=cloud_bounds,
-            )
-            masks.append(mask_entry)
-            diagnostic.update({
-                "status": "ACCEPTED_PRE_DEDUP",
-                "refined_mask_area": mask_entry.refined_mask_area,
-                "depth_point_count": mask_entry.depth_point_count,
-                "centroid_world_m": centroid.tolist(),
-            })
-            self.last_diagnostics.append(diagnostic)
 
         deduplicated = self.suppress_duplicate_proposals(masks)
         retained_ids = {mask.detection_id for mask in deduplicated}
@@ -393,6 +398,100 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
                     mask.duplicate_group_id for mask in deduplicated
                     if mask.detection_id == record["detection_id"])
         return deduplicated
+
+    def _inference_windows(
+        self, observation: ViewObservation,
+        stage_volume_min: np.ndarray, stage_volume_max: np.ndarray,
+    ) -> list[tuple[str, tuple[int, int, int, int]]]:
+        """Return deterministic, calibration-driven inference windows."""
+        height, width = observation.rgb.shape[:2]
+        full = (0, 0, width, height)
+        crop = self._project_volume_crop(observation, stage_volume_min, stage_volume_max)
+        windows: list[tuple[str, tuple[int, int, int, int]]] = []
+        if self.enable_full_frame:
+            windows.append(("full_frame", full))
+        crop_area = max(1, (crop[2] - crop[0]) * (crop[3] - crop[1]))
+        if self.enable_stage_crop and (crop != full or not windows):
+            windows.append(("stage_crop", crop))
+        if self.enable_stage_tiles and crop_area >= 0.18 * width * height:
+            x1, y1, x2, y2 = crop
+            crop_w, crop_h = x2 - x1, y2 - y1
+            tile_w = int(np.ceil(crop_w / (2.0 - self.tile_overlap_fraction)))
+            tile_h = int(np.ceil(crop_h / (2.0 - self.tile_overlap_fraction)))
+            x_starts = (x1, max(x1, x2 - tile_w))
+            y_starts = (y1, max(y1, y2 - tile_h))
+            for row, ty in enumerate(y_starts):
+                for col, tx in enumerate(x_starts):
+                    windows.append((f"tile_{row}{col}", (tx, ty, min(x2, tx + tile_w), min(y2, ty + tile_h))))
+        # Avoid duplicate windows when a projected crop spans the whole frame.
+        unique: list[tuple[str, tuple[int, int, int, int]]] = []
+        seen: set[tuple[int, int, int, int]] = set()
+        for source, window in windows:
+            if window not in seen:
+                seen.add(window)
+                unique.append((source, window))
+        return unique
+
+    def _refine_depth_support(
+        self, depth: np.ndarray, box: tuple[int, int, int, int],
+    ) -> tuple[np.ndarray | None, float, str]:
+        """Extract a coherent foreground component inside an existing YOLO box."""
+        x1, y1, x2, y2 = box
+        roi = depth[y1:y2, x1:x2]
+        valid = np.isfinite(roi) & (roi > 0.1) & (roi < 3.0)
+        valid_count = int(valid.sum())
+        if valid_count < self.min_points_per_mask:
+            return None, 0.0, "REJECTED_DEPTH_SUPPORT"
+        h, w = roi.shape
+        cy1, cy2 = int(0.25 * h), max(int(0.75 * h), int(0.25 * h) + 1)
+        cx1, cx2 = int(0.25 * w), max(int(0.75 * w), int(0.25 * w) + 1)
+        central = valid[cy1:cy2, cx1:cx2]
+        depths = roi[cy1:cy2, cx1:cx2][central]
+        if len(depths) < self.min_points_per_mask:
+            depths = roi[valid]
+        bin_width = 0.008
+        lo, hi = float(depths.min()), float(depths.max())
+        mode_centres: list[float]
+        if hi - lo < bin_width:
+            mode_centres = [float(np.median(depths))]
+        else:
+            edges = np.arange(lo, hi + 2 * bin_width, bin_width)
+            counts, edges = np.histogram(depths, bins=edges)
+            indices = np.argsort(counts)[::-1][:3]
+            mode_centres = [float(0.5 * (edges[index] + edges[index + 1])) for index in indices if counts[index] > 0]
+        nearest = float(np.percentile(roi[valid], 5.0))
+        farthest = float(np.percentile(roi[valid], 95.0))
+        best: tuple[float, np.ndarray] | None = None
+        centre_xy = np.array([0.5 * (w - 1), 0.5 * (h - 1)])
+        for mode in mode_centres:
+            tolerance = max(0.008, 0.012 * mode)
+            candidate = valid & (np.abs(roi - mode) <= tolerance)
+            count, labels, stats, centroids = cv2.connectedComponentsWithStats(candidate.astype(np.uint8), 8)
+            for component in range(1, count):
+                area = int(stats[component, cv2.CC_STAT_AREA])
+                if area < self.min_points_per_mask:
+                    continue
+                component_mask = labels == component
+                distance = float(np.linalg.norm(centroids[component] - centre_xy)) / max(1.0, np.linalg.norm(centre_xy))
+                centre_score = max(0.0, 1.0 - distance)
+                near_score = 1.0 - (mode - nearest) / max(1e-6, farthest - nearest)
+                area_score = min(1.0, area / max(1.0, 0.20 * valid_count))
+                touches = sum(int(value) for value in (
+                    np.any(component_mask[0]), np.any(component_mask[-1]),
+                    np.any(component_mask[:, 0]), np.any(component_mask[:, -1])))
+                edge_penalty = 0.08 * float(touches)
+                score = 0.50 * centre_score + 0.30 * near_score + 0.20 * area_score - edge_penalty
+                if best is None or score > best[0]:
+                    best = (score, component_mask)
+        if best is None:
+            return None, 0.0, "REJECTED_NO_COHERENT_COMPONENT"
+        full = np.zeros(depth.shape, dtype=bool)
+        full[y1:y2, x1:x2] = best[1]
+        cleaned = reject_depth_discontinuities(depth, full, threshold_m=0.03, radius_pixels=1)
+        if int(cleaned.sum()) < self.min_points_per_mask:
+            cleaned = full
+        quality = float(np.clip(best[0], 0.0, 1.0))
+        return cleaned, quality, "ACCEPTED_REFINEMENT"
 
 
 class PrivilegedOracleMaskBackend(InstanceProposalBackend):
@@ -447,7 +546,7 @@ class PrivilegedOracleMaskBackend(InstanceProposalBackend):
             x1, y1 = int(cols.min()), int(rows.min())
             x2, y2 = int(cols.max() + 1), int(rows.max() + 1)
 
-            pts, _ = backproject_masked_depth(
+            pts, pixel_indices = backproject_masked_depth(
                 observation.depth_m,
                 bmask,
                 observation.intrinsics,
@@ -467,25 +566,36 @@ class PrivilegedOracleMaskBackend(InstanceProposalBackend):
             if np.count_nonzero(gated) < 8:
                 continue
             gated_points = pts[gated]
+            gated_pixels = pixel_indices[gated]
+            final_mask = np.zeros_like(bmask, dtype=bool)
+            final_mask[gated_pixels[:, 0], gated_pixels[:, 1]] = True
+            rows, cols = np.nonzero(final_mask)
+            refined_box = (int(cols.min()), int(rows.min()), int(cols.max() + 1), int(rows.max() + 1))
 
             masks.append(
                 ObservedMask(
                     detection_id=f"oracle_{observation.camera_id}_b{bid:03d}",
                     camera_id=observation.camera_id,
-                    binary_mask=bmask,
-                    bounding_box_xyxy=(x1, y1, x2, y2),
+                    binary_mask=final_mask,
+                    bounding_box_xyxy=refined_box,
                     confidence=1.0,
                     canonical_label="object",
                     raw_label="object",
                     predicted_label="object",
                     backend_name="privileged_oracle",
-                    refined_mask_area=int(np.count_nonzero(bmask)),
+                    refined_mask_area=int(np.count_nonzero(final_mask)),
                     depth_point_count=len(gated_points),
                     centroid_world_m=gated_points.mean(axis=0),
                     cloud_bounds_world_m={
                         "minimum_world_m": gated_points.min(axis=0).tolist(),
                         "maximum_world_m": gated_points.max(axis=0).tolist(),
                     },
+                    raw_yolo_bbox_xyxy=(x1, y1, x2, y2),
+                    refined_bbox_xyxy=refined_box,
+                    gated_points_world_m=gated_points,
+                    gated_pixel_indices_yx=gated_pixels,
+                    inference_source="oracle_mask",
+                    physical_support_quality=1.0,
                 )
             )
 

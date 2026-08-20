@@ -79,7 +79,7 @@ def test_dynamic_monkeypatch_no_privileged_calls():
             output_dir=Path(tmpdir),
         )
         result = controller.run_episode(scene)
-        assert result.status in ("FEASIBLE", "INFEASIBLE")
+        assert result.status in ("FEASIBLE", "INFEASIBLE", "INSUFFICIENT_EVIDENCE")
 
 
 def test_output_json_contains_zero_simulator_names():
