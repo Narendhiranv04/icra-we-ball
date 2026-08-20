@@ -121,7 +121,7 @@
               "top_height_spread_m": 0.02096090614795687
             },
             "reason": "INSUFFICIENT_RIM_ENCLOSURE",
-            "source_stage": 0,
+            "source_stage": 1,
             "source_region": "region_0002",
             "measurement_cloud_path": null,
             "contributing_camera_ids": [
@@ -222,7 +222,7 @@
               "top_height_spread_m": 7.253885269165039e-05
             },
             "reason": "FILLED_TOP_SURFACE",
-            "source_stage": 0,
+            "source_stage": 1,
             "source_region": "region_0003",
             "measurement_cloud_path": null,
             "contributing_camera_ids": [
@@ -331,7 +331,7 @@
               "estimated_cavity_depth_m": 0.026056349277496338,
               "outlier_fraction": 0.0
             },
-            "source_stage": 0,
+            "source_stage": 1,
             "source_region": "region_0004",
             "measurement_cloud_path": null,
             "contributing_camera_ids": [
@@ -443,7 +443,7 @@
               "estimated_cavity_depth_m": 0.06818510293960567,
               "outlier_fraction": 0.0
             },
-            "source_stage": 0,
+            "source_stage": 1,
             "source_region": "region_0001",
             "measurement_cloud_path": null,
             "contributing_camera_ids": [
@@ -689,7 +689,7 @@
                   "top_height_spread_m": 0.02096090614795687
                 },
                 "reason": "INSUFFICIENT_RIM_ENCLOSURE",
-                "source_stage": 0,
+                "source_stage": 1,
                 "source_region": "region_0002",
                 "measurement_cloud_path": null,
                 "contributing_camera_ids": [
@@ -861,7 +861,7 @@
                   "top_height_spread_m": 7.253885269165039e-05
                 },
                 "reason": "FILLED_TOP_SURFACE",
-                "source_stage": 0,
+                "source_stage": 1,
                 "source_region": "region_0003",
                 "measurement_cloud_path": null,
                 "contributing_camera_ids": [
@@ -1018,7 +1018,7 @@
                   "estimated_cavity_depth_m": 0.026056349277496338,
                   "outlier_fraction": 0.0
                 },
-                "source_stage": 0,
+                "source_stage": 1,
                 "source_region": "region_0004",
                 "measurement_cloud_path": null,
                 "contributing_camera_ids": [
@@ -1139,7 +1139,7 @@
                 "estimated_cavity_depth_m": 0.026056349277496338,
                 "outlier_fraction": 0.0
               },
-              "source_stage": 0,
+              "source_stage": 1,
               "source_region": "region_0004",
               "measurement_cloud_path": null,
               "contributing_camera_ids": [
@@ -1205,7 +1205,7 @@
               "estimated_cavity_depth_m": 0.026056349277496338,
               "outlier_fraction": 0.0
             },
-            "source_stage": 0,
+            "source_stage": 1,
             "source_region": "region_0004",
             "measurement_cloud_path": null,
             "contributing_camera_ids": [
@@ -1288,7 +1288,7 @@
                   "estimated_cavity_depth_m": 0.026056349277496338,
                   "outlier_fraction": 0.0
                 },
-                "source_stage": 0,
+                "source_stage": 1,
                 "source_region": "region_0004",
                 "measurement_cloud_path": null,
                 "contributing_camera_ids": [
@@ -1435,7 +1435,7 @@
                   "estimated_cavity_depth_m": 0.06818510293960567,
                   "outlier_fraction": 0.0
                 },
-                "source_stage": 0,
+                "source_stage": 1,
                 "source_region": "region_0001",
                 "measurement_cloud_path": null,
                 "contributing_camera_ids": [
@@ -1556,7 +1556,7 @@
                 "estimated_cavity_depth_m": 0.06818510293960567,
                 "outlier_fraction": 0.0
               },
-              "source_stage": 0,
+              "source_stage": 1,
               "source_region": "region_0001",
               "measurement_cloud_path": null,
               "contributing_camera_ids": [
@@ -1622,7 +1622,7 @@
               "estimated_cavity_depth_m": 0.06818510293960567,
               "outlier_fraction": 0.0
             },
-            "source_stage": 0,
+            "source_stage": 1,
             "source_region": "region_0001",
             "measurement_cloud_path": null,
             "contributing_camera_ids": [
@@ -1705,7 +1705,7 @@
                   "estimated_cavity_depth_m": 0.06818510293960567,
                   "outlier_fraction": 0.0
                 },
-                "source_stage": 0,
+                "source_stage": 1,
                 "source_region": "region_0001",
                 "measurement_cloud_path": null,
                 "contributing_camera_ids": [
@@ -2196,10 +2196,10 @@
               "shaft_cross_section_m": 0.0020801653804348066,
               "target_opening_m": 0.0121,
               "target_depth_m": 0.0389,
-              "interface_geometry": "CROSS_LIKE",
-              "interface_engagement_ok": true,
               "length_margin_m": 0.004984573996662354,
               "width_margin_m": 0.009519834619565192,
+              "maximum_length_excess_m": 0.01,
+              "excess_margin_m": 0.007015426003337646,
               "method": "observed_fastener_vs_observed_joint_geometry_v2"
             }
           ],
@@ -2213,10 +2213,10 @@
             "shaft_cross_section_m": 0.0020801653804348066,
             "target_opening_m": 0.0121,
             "target_depth_m": 0.0389,
-            "interface_geometry": "CROSS_LIKE",
-            "interface_engagement_ok": true,
             "length_margin_m": 0.004984573996662354,
             "width_margin_m": 0.009519834619565192,
+            "maximum_length_excess_m": 0.01,
+            "excess_margin_m": 0.007015426003337646,
             "method": "observed_fastener_vs_observed_joint_geometry_v2"
           }
         }

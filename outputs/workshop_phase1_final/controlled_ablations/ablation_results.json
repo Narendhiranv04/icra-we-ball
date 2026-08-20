@@ -18,15 +18,6 @@
     "accuracy": 0.2857
   },
   {
-    "ablation_name": "Controlled No Geometry",
-    "mask_backend": "oracle",
-    "semantic_backend": "oracle",
-    "ablation_flag": "no_geometry",
-    "passed": 4,
-    "total": 14,
-    "accuracy": 0.2857
-  },
-  {
     "ablation_name": "Controlled No Joint Coupling",
     "mask_backend": "oracle",
     "semantic_backend": "oracle",
@@ -40,17 +31,17 @@
     "mask_backend": "oracle",
     "semantic_backend": "oracle",
     "ablation_flag": "no_persistence",
-    "passed": 6,
+    "passed": 7,
     "total": 14,
-    "accuracy": 0.4286
+    "accuracy": 0.5
   },
   {
     "ablation_name": "Controlled Single Front View",
     "mask_backend": "oracle",
     "semantic_backend": "oracle",
     "ablation_flag": "single_front_view",
-    "passed": 7,
+    "passed": 8,
     "total": 14,
-    "accuracy": 0.5
+    "accuracy": 0.5714
   }
 ]

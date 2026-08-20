@@ -55,35 +55,46 @@ functional_requirements:
 vocabulary:
   canonical_labels:
     screwdriver:
-      detector_label: "hand screwdriver"
-      aliases: ["screwdriver", "manual screwdriver"]
+      detector_label: "screwdriver"
+      detector_rank: 1
+      aliases: ["hand screwdriver", "manual screwdriver"]
     power_driver:
       detector_label: "power drill"
+      detector_rank: 2
       aliases: ["powered screwdriver", "cordless drill", "power driver", "drill driver"]
     screw:
-      detector_label: "fastener"
-      aliases: ["screw", "machine screw", "threaded screw"]
+      detector_label: "screw"
+      detector_rank: 3
+      aliases: ["fastener", "machine screw", "threaded screw"]
     bolt:
-      detector_label: "hex bolt"
-      aliases: ["bolt", "machine bolt"]
+      detector_label: "bolt"
+      detector_rank: 4
+      aliases: ["hex bolt", "machine bolt"]
     wrench:
-      detector_label: "adjustable wrench"
-      aliases: ["wrench", "combination wrench", "spanner"]
+      detector_label: "wrench"
+      detector_rank: 5
+      aliases: ["adjustable wrench", "combination wrench", "spanner"]
     pliers:
       detector_label: "pliers"
+      detector_rank: 6
       aliases: ["combination pliers", "locking pliers"]
     workbench:
       detector_label: "workbench"
+      detector_rank: 7
       aliases: ["work table", "wooden table", "table"]
     tool_cart:
       detector_label: "tool cart"
+      detector_rank: 8
       aliases: ["cart", "rolling cart", "metal cart"]
     shelf:
       detector_label: "shelf"
+      detector_rank: 9
       aliases: ["wall shelf", "narrow shelf"]
     parts_tray:
       detector_label: "parts tray"
+      detector_rank: 10
       aliases: ["tray", "shallow tray"]
     hardware_bin:
       detector_label: "hardware bin"
+      detector_rank: 11
       aliases: ["bin", "plastic bin", "parts bin", "storage bin"]

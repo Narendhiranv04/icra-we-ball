@@ -1,0 +1,164 @@
+{
+  "criterion": {
+    "name": "fixed_detector_quality_score",
+    "formula": "0.35*critical_recall + 0.20*small_object_recall + 0.20*region_association + 0.25*association_precision - 0.10*min(FP_per_image/5,1) - 0.05*min(duplicates_per_visible_GT,1)",
+    "uses_final_benchmark_accuracy": false,
+    "development_variants": [
+      "F0_BASE",
+      "F1_TOOL_ALTERNATIVE",
+      "F5_DECOY_HEAVY"
+    ],
+    "per_variant_or_category_thresholds": false,
+    "nms_tie_break": "Within 0.005 selection-score units, choose fewer false positives per image, then lower runtime."
+  },
+  "confidence_trials": [
+    {
+      "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+      "confidence_threshold": 0.01,
+      "nms_iou_threshold": 0.45,
+      "metrics": {
+        "critical_object_recall": 0.4375,
+        "small_object_recall": 0.0,
+        "region_association_accuracy": 0.3393,
+        "semantic_association_precision": 0.3217,
+        "false_positives_per_image": 5.5667,
+        "duplicate_proposals_per_visible_gt": 0.697,
+        "average_accepted_proposals_per_image": 7.1167,
+        "selection_score": 0.166565,
+        "runtime_seconds": 114.83
+      }
+    },
+    {
+      "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+      "confidence_threshold": 0.02,
+      "nms_iou_threshold": 0.45,
+      "metrics": {
+        "critical_object_recall": 0.3125,
+        "small_object_recall": 0.0,
+        "region_association_accuracy": 0.05,
+        "semantic_association_precision": 0.2609,
+        "false_positives_per_image": 3.7333,
+        "duplicate_proposals_per_visible_gt": 0.2424,
+        "average_accepted_proposals_per_image": 4.7833,
+        "selection_score": 0.097806,
+        "runtime_seconds": 120.04
+      }
+    },
+    {
+      "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+      "confidence_threshold": 0.03,
+      "nms_iou_threshold": 0.45,
+      "metrics": {
+        "critical_object_recall": 0.25,
+        "small_object_recall": 0.0,
+        "region_association_accuracy": 0.03,
+        "semantic_association_precision": 0.1852,
+        "false_positives_per_image": 3.15,
+        "duplicate_proposals_per_visible_gt": 0.0606,
+        "average_accepted_proposals_per_image": 3.9833,
+        "selection_score": 0.073766,
+        "runtime_seconds": 108.61
+      }
+    },
+    {
+      "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+      "confidence_threshold": 0.05,
+      "nms_iou_threshold": 0.45,
+      "metrics": {
+        "critical_object_recall": 0.2188,
+        "small_object_recall": 0.0,
+        "region_association_accuracy": 0.0441,
+        "semantic_association_precision": 0.225,
+        "false_positives_per_image": 2.55,
+        "duplicate_proposals_per_visible_gt": 0.0606,
+        "average_accepted_proposals_per_image": 3.2,
+        "selection_score": 0.087607,
+        "runtime_seconds": 111.88
+      }
+    },
+    {
+      "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+      "confidence_threshold": 0.075,
+      "nms_iou_threshold": 0.45,
+      "metrics": {
+        "critical_object_recall": 0.1562,
+        "small_object_recall": 0.0,
+        "region_association_accuracy": 0.0,
+        "semantic_association_precision": 0.16,
+        "false_positives_per_image": 2.2,
+        "duplicate_proposals_per_visible_gt": 0.0606,
+        "average_accepted_proposals_per_image": 2.6167,
+        "selection_score": 0.047657,
+        "runtime_seconds": 110.77
+      }
+    },
+    {
+      "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+      "confidence_threshold": 0.1,
+      "nms_iou_threshold": 0.45,
+      "metrics": {
+        "critical_object_recall": 0.125,
+        "small_object_recall": 0.0,
+        "region_association_accuracy": 0.0,
+        "semantic_association_precision": 0.1875,
+        "false_positives_per_image": 2.0,
+        "duplicate_proposals_per_visible_gt": 0.0606,
+        "average_accepted_proposals_per_image": 2.2667,
+        "selection_score": 0.047595,
+        "runtime_seconds": 115.49
+      }
+    }
+  ],
+  "nms_trials": [
+    {
+      "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+      "confidence_threshold": 0.01,
+      "nms_iou_threshold": 0.35,
+      "metrics": {
+        "critical_object_recall": 0.4375,
+        "small_object_recall": 0.0,
+        "region_association_accuracy": 0.3333,
+        "semantic_association_precision": 0.3217,
+        "false_positives_per_image": 5.1,
+        "duplicate_proposals_per_visible_gt": 0.697,
+        "average_accepted_proposals_per_image": 6.65,
+        "selection_score": 0.165375,
+        "runtime_seconds": 128.62
+      }
+    },
+    {
+      "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+      "confidence_threshold": 0.01,
+      "nms_iou_threshold": 0.45,
+      "metrics": {
+        "critical_object_recall": 0.4375,
+        "small_object_recall": 0.0,
+        "region_association_accuracy": 0.3393,
+        "semantic_association_precision": 0.3217,
+        "false_positives_per_image": 5.5667,
+        "duplicate_proposals_per_visible_gt": 0.697,
+        "average_accepted_proposals_per_image": 7.1167,
+        "selection_score": 0.166565,
+        "runtime_seconds": 114.83
+      }
+    },
+    {
+      "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+      "confidence_threshold": 0.01,
+      "nms_iou_threshold": 0.55,
+      "metrics": {
+        "critical_object_recall": 0.4375,
+        "small_object_recall": 0.0,
+        "region_association_accuracy": 0.3393,
+        "semantic_association_precision": 0.3246,
+        "false_positives_per_image": 6.1,
+        "duplicate_proposals_per_visible_gt": 0.697,
+        "average_accepted_proposals_per_image": 7.65,
+        "selection_score": 0.16727,
+        "runtime_seconds": 112.15
+      }
+    }
+  ],
+  "selected_confidence_threshold": 0.01,
+  "selected_nms_iou_threshold": 0.35
+}

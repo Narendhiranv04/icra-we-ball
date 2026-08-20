@@ -3,97 +3,305 @@
   "failures": [
     {
       "variant": "F0_BASE",
-      "layer": "JOINT_RELATION_FALSE",
+      "root_cause": "DETECTION_MISS",
+      "downstream_effect": "NO_VALID_FASTENER",
+      "supporting_diagnostics": {
+        "visible_unmatched_categories": [
+          "screw",
+          "bolt"
+        ],
+        "zero_detection_categories": [
+          "screw",
+          "bolt"
+        ],
+        "poor_region_associations": [
+          "tool_cart",
+          "parts_tray",
+          "hardware_bin"
+        ]
+      },
       "predicted_status": "INFEASIBLE",
-      "predicted_rejection": "OBJECT_REGION_PACKING_FAILURE",
+      "predicted_rejection": "NO_VALID_FASTENER",
       "expected_status": "FEASIBLE",
       "expected_rejection": null
     },
     {
       "variant": "F1_TOOL_ALTERNATIVE",
-      "layer": "JOINT_RELATION_FALSE",
+      "root_cause": "DETECTION_MISS",
+      "downstream_effect": "NO_VALID_FASTENER",
+      "supporting_diagnostics": {
+        "visible_unmatched_categories": [
+          "screw",
+          "bolt"
+        ],
+        "zero_detection_categories": [
+          "screw",
+          "bolt"
+        ],
+        "poor_region_associations": [
+          "workbench",
+          "tool_cart",
+          "parts_tray",
+          "hardware_bin"
+        ]
+      },
       "predicted_status": "INFEASIBLE",
-      "predicted_rejection": "OBJECT_REGION_PACKING_FAILURE",
+      "predicted_rejection": "NO_VALID_FASTENER",
       "expected_status": "FEASIBLE",
       "expected_rejection": null
     },
     {
       "variant": "F2_REGION_ALTERNATIVE",
-      "layer": "JOINT_RELATION_FALSE",
+      "root_cause": "DETECTION_MISS",
+      "downstream_effect": "NO_VALID_FASTENER",
+      "supporting_diagnostics": {
+        "visible_unmatched_categories": [
+          "screw",
+          "bolt"
+        ],
+        "zero_detection_categories": [
+          "screw",
+          "bolt"
+        ],
+        "poor_region_associations": [
+          "tool_cart",
+          "hardware_bin"
+        ]
+      },
       "predicted_status": "INFEASIBLE",
-      "predicted_rejection": "OBJECT_REGION_PACKING_FAILURE",
+      "predicted_rejection": "NO_VALID_FASTENER",
       "expected_status": "FEASIBLE",
       "expected_rejection": null
     },
     {
       "variant": "F3_DISTRIBUTED_OBJECTS",
-      "layer": "JOINT_RELATION_FALSE",
+      "root_cause": "DETECTION_MISS",
+      "downstream_effect": "NO_VALID_FASTENER",
+      "supporting_diagnostics": {
+        "visible_unmatched_categories": [
+          "screw",
+          "bolt"
+        ],
+        "zero_detection_categories": [
+          "screw",
+          "bolt"
+        ],
+        "poor_region_associations": [
+          "tool_cart",
+          "parts_tray",
+          "hardware_bin"
+        ]
+      },
       "predicted_status": "INFEASIBLE",
-      "predicted_rejection": "OBJECT_REGION_PACKING_FAILURE",
+      "predicted_rejection": "NO_VALID_FASTENER",
       "expected_status": "FEASIBLE",
       "expected_rejection": null
     },
     {
       "variant": "F4_OBJECT_REGION_COUPLING",
-      "layer": "JOINT_RELATION_FALSE",
+      "root_cause": "DETECTION_MISS",
+      "downstream_effect": "NO_VALID_FASTENER",
+      "supporting_diagnostics": {
+        "visible_unmatched_categories": [
+          "screwdriver",
+          "screw",
+          "bolt"
+        ],
+        "zero_detection_categories": [
+          "screwdriver",
+          "screw",
+          "bolt"
+        ],
+        "poor_region_associations": [
+          "tool_cart",
+          "shelf",
+          "hardware_bin"
+        ]
+      },
       "predicted_status": "INFEASIBLE",
-      "predicted_rejection": "OBJECT_REGION_PACKING_FAILURE",
+      "predicted_rejection": "NO_VALID_FASTENER",
       "expected_status": "FEASIBLE",
       "expected_rejection": null
     },
     {
       "variant": "F5_DECOY_HEAVY",
-      "layer": "JOINT_RELATION_FALSE",
+      "root_cause": "DETECTION_MISS",
+      "downstream_effect": "NO_VALID_FASTENER",
+      "supporting_diagnostics": {
+        "visible_unmatched_categories": [
+          "screw",
+          "bolt"
+        ],
+        "zero_detection_categories": [
+          "screw",
+          "bolt"
+        ],
+        "poor_region_associations": [
+          "tool_cart",
+          "parts_tray",
+          "hardware_bin"
+        ]
+      },
       "predicted_status": "INFEASIBLE",
-      "predicted_rejection": "OBJECT_REGION_PACKING_FAILURE",
+      "predicted_rejection": "NO_VALID_FASTENER",
       "expected_status": "FEASIBLE",
       "expected_rejection": null
     },
     {
       "variant": "F6_LAYOUT_SWAPPED",
-      "layer": "OTHER",
-      "predicted_status": "FEASIBLE",
-      "predicted_rejection": null,
+      "root_cause": "DETECTION_MISS",
+      "downstream_effect": "TOOL_GEOMETRY_FAILURE",
+      "supporting_diagnostics": {
+        "visible_unmatched_categories": [
+          "screw",
+          "bolt"
+        ],
+        "zero_detection_categories": [
+          "screw",
+          "bolt"
+        ],
+        "poor_region_associations": [
+          "workbench",
+          "tool_cart",
+          "parts_tray"
+        ]
+      },
+      "predicted_status": "INFEASIBLE",
+      "predicted_rejection": "TOOL_GEOMETRY_FAILURE",
       "expected_status": "FEASIBLE",
       "expected_rejection": null
     },
     {
       "variant": "I0_NO_VALID_DRIVER",
-      "layer": "JOINT_RELATION_FALSE",
+      "root_cause": "DETECTION_MISS",
+      "downstream_effect": "TOOL_GEOMETRY_FAILURE",
+      "supporting_diagnostics": {
+        "visible_unmatched_categories": [
+          "screw",
+          "bolt"
+        ],
+        "zero_detection_categories": [
+          "screw",
+          "bolt"
+        ],
+        "poor_region_associations": [
+          "tool_cart",
+          "parts_tray",
+          "hardware_bin"
+        ]
+      },
       "predicted_status": "INFEASIBLE",
-      "predicted_rejection": "GLOBAL_CONFLICT",
+      "predicted_rejection": "TOOL_GEOMETRY_FAILURE",
       "expected_status": "INFEASIBLE",
       "expected_rejection": "NO_VALID_DRIVER"
     },
     {
       "variant": "I1_NO_VALID_FASTENER",
-      "layer": "JOINT_RELATION_FALSE",
+      "root_cause": "DETECTION_MISS",
+      "downstream_effect": "TOOL_GEOMETRY_FAILURE",
+      "supporting_diagnostics": {
+        "visible_unmatched_categories": [
+          "screwdriver",
+          "screw",
+          "bolt"
+        ],
+        "zero_detection_categories": [
+          "screw",
+          "bolt"
+        ],
+        "poor_region_associations": [
+          "tool_cart",
+          "parts_tray",
+          "hardware_bin"
+        ]
+      },
       "predicted_status": "INFEASIBLE",
-      "predicted_rejection": "GLOBAL_CONFLICT",
+      "predicted_rejection": "TOOL_GEOMETRY_FAILURE",
       "expected_status": "INFEASIBLE",
       "expected_rejection": "NO_VALID_FASTENER"
     },
     {
       "variant": "I2_NO_WORK_SURFACE",
-      "layer": "JOINT_RELATION_FALSE",
+      "root_cause": "DETECTION_MISS",
+      "downstream_effect": "TOOL_GEOMETRY_FAILURE",
+      "supporting_diagnostics": {
+        "visible_unmatched_categories": [
+          "screw"
+        ],
+        "zero_detection_categories": [
+          "screw"
+        ],
+        "poor_region_associations": [
+          "hardware_bin"
+        ]
+      },
       "predicted_status": "INFEASIBLE",
-      "predicted_rejection": "GLOBAL_CONFLICT",
+      "predicted_rejection": "TOOL_GEOMETRY_FAILURE",
       "expected_status": "INFEASIBLE",
       "expected_rejection": "NO_WORK_SURFACE"
     },
     {
-      "variant": "I4_TOOL_GEOMETRY_FAILURE",
-      "layer": "JOINT_RELATION_FALSE",
+      "variant": "I3_NO_PARTS_CONTAINER",
+      "root_cause": "DETECTION_MISS",
+      "downstream_effect": "TOOL_GEOMETRY_FAILURE",
+      "supporting_diagnostics": {
+        "visible_unmatched_categories": [
+          "screw"
+        ],
+        "zero_detection_categories": [
+          "screw"
+        ],
+        "poor_region_associations": [
+          "tool_cart"
+        ]
+      },
       "predicted_status": "INFEASIBLE",
-      "predicted_rejection": "GLOBAL_CONFLICT",
+      "predicted_rejection": "TOOL_GEOMETRY_FAILURE",
       "expected_status": "INFEASIBLE",
-      "expected_rejection": "TOOL_GEOMETRY_FAILURE"
+      "expected_rejection": "NO_PARTS_CONTAINER"
+    },
+    {
+      "variant": "I5_OBJECT_REGION_PACKING_FAILURE",
+      "root_cause": "DETECTION_MISS",
+      "downstream_effect": "NO_VALID_FASTENER",
+      "supporting_diagnostics": {
+        "visible_unmatched_categories": [
+          "screw"
+        ],
+        "zero_detection_categories": [
+          "screw"
+        ],
+        "poor_region_associations": [
+          "shelf",
+          "hardware_bin"
+        ]
+      },
+      "predicted_status": "INFEASIBLE",
+      "predicted_rejection": "NO_VALID_FASTENER",
+      "expected_status": "INFEASIBLE",
+      "expected_rejection": "OBJECT_REGION_PACKING_FAILURE"
     },
     {
       "variant": "I6_GLOBAL_CONFLICT",
-      "layer": "JOINT_RELATION_FALSE",
+      "root_cause": "DETECTION_MISS",
+      "downstream_effect": "TOOL_GEOMETRY_FAILURE",
+      "supporting_diagnostics": {
+        "visible_unmatched_categories": [
+          "screw",
+          "bolt"
+        ],
+        "zero_detection_categories": [
+          "screw",
+          "bolt"
+        ],
+        "poor_region_associations": [
+          "tool_cart",
+          "parts_tray",
+          "hardware_bin"
+        ]
+      },
       "predicted_status": "INFEASIBLE",
-      "predicted_rejection": "OBJECT_REGION_PACKING_FAILURE",
+      "predicted_rejection": "TOOL_GEOMETRY_FAILURE",
       "expected_status": "INFEASIBLE",
       "expected_rejection": "GLOBAL_CONFLICT"
     }

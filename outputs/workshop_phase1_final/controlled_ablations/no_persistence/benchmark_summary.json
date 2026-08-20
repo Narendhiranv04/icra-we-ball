@@ -1,7 +1,7 @@
 {
   "total_variants": 14,
-  "passed_variants": 6,
-  "accuracy": 0.4286,
+  "passed_variants": 7,
+  "accuracy": 0.5,
   "mask_backend": "oracle",
   "semantic_backend": "oracle",
   "proposal_mode": "yolo_only",
@@ -28,72 +28,72 @@
                   "driver_orientation_degrees": 0,
                   "fastener_orientation_degrees": 0,
                   "arrangement_axis": "LENGTH",
-                  "length_margin_m": 0.22525676059102692,
-                  "width_margin_m": 0.2628815511590202,
-                  "signed_margin_m": 0.22525676059102692,
+                  "length_margin_m": 0.22478983734075117,
+                  "width_margin_m": 0.26175438555159153,
+                  "signed_margin_m": 0.22478983734075117,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 0,
                   "fastener_orientation_degrees": 0,
                   "arrangement_axis": "WIDTH",
-                  "length_margin_m": 0.2745206722178685,
-                  "width_margin_m": 0.24152104323891962,
-                  "signed_margin_m": 0.24152104323891962,
+                  "length_margin_m": 0.27405374896759277,
+                  "width_margin_m": 0.24039387763149098,
+                  "signed_margin_m": 0.24039387763149098,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 0,
                   "fastener_orientation_degrees": 90,
                   "arrangement_axis": "LENGTH",
-                  "length_margin_m": 0.253160164297768,
-                  "width_margin_m": 0.23621780284595498,
-                  "signed_margin_m": 0.23621780284595498,
+                  "length_margin_m": 0.25269324104749225,
+                  "width_margin_m": 0.23509063723852633,
+                  "signed_margin_m": 0.23509063723852633,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 0,
                   "fastener_orientation_degrees": 90,
                   "arrangement_axis": "WIDTH",
-                  "length_margin_m": 0.2745206722178685,
-                  "width_margin_m": 0.21361763953217858,
-                  "signed_margin_m": 0.21361763953217858,
+                  "length_margin_m": 0.27405374896759277,
+                  "width_margin_m": 0.21249047392474993,
+                  "signed_margin_m": 0.21249047392474993,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 90,
                   "fastener_orientation_degrees": 0,
                   "arrangement_axis": "LENGTH",
-                  "length_margin_m": 0.4330091450349796,
-                  "width_margin_m": 0.05512916671506747,
-                  "signed_margin_m": 0.05512916671506747,
+                  "length_margin_m": 0.43254222178470386,
+                  "width_margin_m": 0.05400200110763882,
+                  "signed_margin_m": 0.05400200110763882,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 90,
                   "fastener_orientation_degrees": 0,
                   "arrangement_axis": "WIDTH",
-                  "length_margin_m": 0.455609308348756,
-                  "width_margin_m": 0.03376865879496692,
-                  "signed_margin_m": 0.03376865879496692,
+                  "length_margin_m": 0.45514238509848026,
+                  "width_margin_m": 0.03264149318753827,
+                  "signed_margin_m": 0.03264149318753827,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 90,
                   "fastener_orientation_degrees": 90,
                   "arrangement_axis": "LENGTH",
-                  "length_margin_m": 0.46091254874172066,
-                  "width_margin_m": 0.05512916671506747,
-                  "signed_margin_m": 0.05512916671506747,
+                  "length_margin_m": 0.4604456254914449,
+                  "width_margin_m": 0.05400200110763882,
+                  "signed_margin_m": 0.05400200110763882,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 90,
                   "fastener_orientation_degrees": 90,
                   "arrangement_axis": "WIDTH",
-                  "length_margin_m": 0.4822730566618212,
-                  "width_margin_m": 0.0058652550882258465,
-                  "signed_margin_m": 0.0058652550882258465,
+                  "length_margin_m": 0.48180613341154543,
+                  "width_margin_m": 0.004738089480797198,
+                  "signed_margin_m": 0.004738089480797198,
                   "fits": true
                 }
               ],
@@ -101,13 +101,13 @@
                 "driver_orientation_degrees": 0,
                 "fastener_orientation_degrees": 0,
                 "arrangement_axis": "WIDTH",
-                "length_margin_m": 0.2745206722178685,
-                "width_margin_m": 0.24152104323891962,
-                "signed_margin_m": 0.24152104323891962,
+                "length_margin_m": 0.27405374896759277,
+                "width_margin_m": 0.24039387763149098,
+                "signed_margin_m": 0.24039387763149098,
                 "fits": true
               },
-              "support_length_m": 0.5188732199755977,
-              "support_width_m": 0.2994817144727966,
+              "support_length_m": 0.5184062967253219,
+              "support_width_m": 0.29835454886536794,
               "edge_clearance_m": 0.01,
               "inter_object_clearance_m": 0.006,
               "method": "oriented_two_rectangle_packing_v2"
@@ -122,14 +122,14 @@
             "fits_in": {
               "relation": "FITS_IN",
               "status": "TRUE",
-              "length_margin_m": 0.17436524257448685,
-              "width_margin_m": 0.13875333698693737,
-              "depth_margin_m": 0.021916171694374827,
+              "length_margin_m": 0.17520889192265623,
+              "width_margin_m": 0.14135528313618634,
+              "depth_margin_m": 0.021846350813484912,
               "method": "observed_fastener_vs_observed_cavity_v2"
             },
             "driver_usable_length_m": 0.2242572391571665,
             "fastener_length_m": 0.04331650990617439,
-            "surface_support_area_m2": 0.1553930415123125
+            "surface_support_area_m2": 0.15466887678844948
           }
         },
         "inspection_count": 3,
@@ -294,6 +294,15 @@
             }
           },
           "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        },
+        "proposal_quality": {
+          "status_counts": {},
+          "accepted_physical_proposals": 0,
+          "evaluated_camera_stages": 0,
+          "average_accepted_proposals_per_camera_stage": 0.0,
+          "mask_refinement_rejection_rate": 0.0,
+          "stage_volume_rejection_rate": 0.0,
+          "suppressed_duplicate_count": 0
         }
       }
     },
@@ -318,72 +327,72 @@
                   "driver_orientation_degrees": 0,
                   "fastener_orientation_degrees": 0,
                   "arrangement_axis": "LENGTH",
-                  "length_margin_m": 0.22525676059102692,
-                  "width_margin_m": 0.2628815511590202,
-                  "signed_margin_m": 0.22525676059102692,
+                  "length_margin_m": 0.22478983734075117,
+                  "width_margin_m": 0.26175438555159153,
+                  "signed_margin_m": 0.22478983734075117,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 0,
                   "fastener_orientation_degrees": 0,
                   "arrangement_axis": "WIDTH",
-                  "length_margin_m": 0.2745206722178685,
-                  "width_margin_m": 0.24152104323891962,
-                  "signed_margin_m": 0.24152104323891962,
+                  "length_margin_m": 0.27405374896759277,
+                  "width_margin_m": 0.24039387763149098,
+                  "signed_margin_m": 0.24039387763149098,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 0,
                   "fastener_orientation_degrees": 90,
                   "arrangement_axis": "LENGTH",
-                  "length_margin_m": 0.253160164297768,
-                  "width_margin_m": 0.23621780284595498,
-                  "signed_margin_m": 0.23621780284595498,
+                  "length_margin_m": 0.25269324104749225,
+                  "width_margin_m": 0.23509063723852633,
+                  "signed_margin_m": 0.23509063723852633,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 0,
                   "fastener_orientation_degrees": 90,
                   "arrangement_axis": "WIDTH",
-                  "length_margin_m": 0.2745206722178685,
-                  "width_margin_m": 0.21361763953217858,
-                  "signed_margin_m": 0.21361763953217858,
+                  "length_margin_m": 0.27405374896759277,
+                  "width_margin_m": 0.21249047392474993,
+                  "signed_margin_m": 0.21249047392474993,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 90,
                   "fastener_orientation_degrees": 0,
                   "arrangement_axis": "LENGTH",
-                  "length_margin_m": 0.4330091450349796,
-                  "width_margin_m": 0.05512916671506747,
-                  "signed_margin_m": 0.05512916671506747,
+                  "length_margin_m": 0.43254222178470386,
+                  "width_margin_m": 0.05400200110763882,
+                  "signed_margin_m": 0.05400200110763882,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 90,
                   "fastener_orientation_degrees": 0,
                   "arrangement_axis": "WIDTH",
-                  "length_margin_m": 0.455609308348756,
-                  "width_margin_m": 0.03376865879496692,
-                  "signed_margin_m": 0.03376865879496692,
+                  "length_margin_m": 0.45514238509848026,
+                  "width_margin_m": 0.03264149318753827,
+                  "signed_margin_m": 0.03264149318753827,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 90,
                   "fastener_orientation_degrees": 90,
                   "arrangement_axis": "LENGTH",
-                  "length_margin_m": 0.46091254874172066,
-                  "width_margin_m": 0.05512916671506747,
-                  "signed_margin_m": 0.05512916671506747,
+                  "length_margin_m": 0.4604456254914449,
+                  "width_margin_m": 0.05400200110763882,
+                  "signed_margin_m": 0.05400200110763882,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 90,
                   "fastener_orientation_degrees": 90,
                   "arrangement_axis": "WIDTH",
-                  "length_margin_m": 0.4822730566618212,
-                  "width_margin_m": 0.0058652550882258465,
-                  "signed_margin_m": 0.0058652550882258465,
+                  "length_margin_m": 0.48180613341154543,
+                  "width_margin_m": 0.004738089480797198,
+                  "signed_margin_m": 0.004738089480797198,
                   "fits": true
                 }
               ],
@@ -391,13 +400,13 @@
                 "driver_orientation_degrees": 0,
                 "fastener_orientation_degrees": 0,
                 "arrangement_axis": "WIDTH",
-                "length_margin_m": 0.2745206722178685,
-                "width_margin_m": 0.24152104323891962,
-                "signed_margin_m": 0.24152104323891962,
+                "length_margin_m": 0.27405374896759277,
+                "width_margin_m": 0.24039387763149098,
+                "signed_margin_m": 0.24039387763149098,
                 "fits": true
               },
-              "support_length_m": 0.5188732199755977,
-              "support_width_m": 0.2994817144727966,
+              "support_length_m": 0.5184062967253219,
+              "support_width_m": 0.29835454886536794,
               "edge_clearance_m": 0.01,
               "inter_object_clearance_m": 0.006,
               "method": "oriented_two_rectangle_packing_v2"
@@ -412,14 +421,14 @@
             "fits_in": {
               "relation": "FITS_IN",
               "status": "TRUE",
-              "length_margin_m": 0.17436524257448685,
-              "width_margin_m": 0.13875333698693737,
-              "depth_margin_m": 0.021916171694374827,
+              "length_margin_m": 0.17520889192265623,
+              "width_margin_m": 0.14135528313618634,
+              "depth_margin_m": 0.021846350813484912,
               "method": "observed_fastener_vs_observed_cavity_v2"
             },
             "driver_usable_length_m": 0.2242572391571665,
             "fastener_length_m": 0.04331650990617439,
-            "surface_support_area_m2": 0.1553930415123125
+            "surface_support_area_m2": 0.15466887678844948
           }
         },
         "inspection_count": 3,
@@ -584,6 +593,15 @@
             }
           },
           "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        },
+        "proposal_quality": {
+          "status_counts": {},
+          "accepted_physical_proposals": 0,
+          "evaluated_camera_stages": 0,
+          "average_accepted_proposals_per_camera_stage": 0.0,
+          "mask_refinement_rejection_rate": 0.0,
+          "stage_volume_rejection_rate": 0.0,
+          "suppressed_duplicate_count": 0
         }
       }
     },
@@ -608,72 +626,72 @@
                   "driver_orientation_degrees": 0,
                   "fastener_orientation_degrees": 0,
                   "arrangement_axis": "LENGTH",
-                  "length_margin_m": 0.052034806076003484,
-                  "width_margin_m": 0.199562202625828,
-                  "signed_margin_m": 0.052034806076003484,
+                  "length_margin_m": 0.052297682439075135,
+                  "width_margin_m": 0.19908802892570318,
+                  "signed_margin_m": 0.052297682439075135,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 0,
                   "fastener_orientation_degrees": 0,
                   "arrangement_axis": "WIDTH",
-                  "length_margin_m": 0.10129871770284511,
-                  "width_margin_m": 0.17820169470572744,
-                  "signed_margin_m": 0.10129871770284511,
+                  "length_margin_m": 0.10156159406591676,
+                  "width_margin_m": 0.17772752100560263,
+                  "signed_margin_m": 0.10156159406591676,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 0,
                   "fastener_orientation_degrees": 90,
                   "arrangement_axis": "LENGTH",
-                  "length_margin_m": 0.07993820978274456,
-                  "width_margin_m": 0.17289845431276277,
-                  "signed_margin_m": 0.07993820978274456,
+                  "length_margin_m": 0.08020108614581621,
+                  "width_margin_m": 0.17242428061263795,
+                  "signed_margin_m": 0.08020108614581621,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 0,
                   "fastener_orientation_degrees": 90,
                   "arrangement_axis": "WIDTH",
-                  "length_margin_m": 0.10129871770284511,
-                  "width_margin_m": 0.15029829099898637,
-                  "signed_margin_m": 0.10129871770284511,
+                  "length_margin_m": 0.10156159406591676,
+                  "width_margin_m": 0.14982411729886155,
+                  "signed_margin_m": 0.10156159406591676,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 90,
                   "fastener_orientation_degrees": 0,
                   "arrangement_axis": "LENGTH",
-                  "length_margin_m": 0.2597871905199562,
-                  "width_margin_m": -0.008190181818124736,
-                  "signed_margin_m": -0.008190181818124736,
+                  "length_margin_m": 0.26005006688302784,
+                  "width_margin_m": -0.00866435551824955,
+                  "signed_margin_m": -0.00866435551824955,
                   "fits": false
                 },
                 {
                   "driver_orientation_degrees": 90,
                   "fastener_orientation_degrees": 0,
                   "arrangement_axis": "WIDTH",
-                  "length_margin_m": 0.2823873538337326,
-                  "width_margin_m": -0.029550689738225288,
-                  "signed_margin_m": -0.029550689738225288,
+                  "length_margin_m": 0.28265023019680424,
+                  "width_margin_m": -0.0300248634383501,
+                  "signed_margin_m": -0.0300248634383501,
                   "fits": false
                 },
                 {
                   "driver_orientation_degrees": 90,
                   "fastener_orientation_degrees": 90,
                   "arrangement_axis": "LENGTH",
-                  "length_margin_m": 0.28769059422669724,
-                  "width_margin_m": -0.008190181818124736,
-                  "signed_margin_m": -0.008190181818124736,
+                  "length_margin_m": 0.2879534705897689,
+                  "width_margin_m": -0.00866435551824955,
+                  "signed_margin_m": -0.00866435551824955,
                   "fits": false
                 },
                 {
                   "driver_orientation_degrees": 90,
                   "fastener_orientation_degrees": 90,
                   "arrangement_axis": "WIDTH",
-                  "length_margin_m": 0.3090511021467978,
-                  "width_margin_m": -0.05745409344496637,
-                  "signed_margin_m": -0.05745409344496637,
+                  "length_margin_m": 0.30931397850986947,
+                  "width_margin_m": -0.05792826714509118,
+                  "signed_margin_m": -0.05792826714509118,
                   "fits": false
                 }
               ],
@@ -681,13 +699,13 @@
                 "driver_orientation_degrees": 0,
                 "fastener_orientation_degrees": 0,
                 "arrangement_axis": "WIDTH",
-                "length_margin_m": 0.10129871770284511,
-                "width_margin_m": 0.17820169470572744,
-                "signed_margin_m": 0.10129871770284511,
+                "length_margin_m": 0.10156159406591676,
+                "width_margin_m": 0.17772752100560263,
+                "signed_margin_m": 0.10156159406591676,
                 "fits": true
               },
-              "support_length_m": 0.34565126546057423,
-              "support_width_m": 0.23616236593960438,
+              "support_length_m": 0.3459141418236459,
+              "support_width_m": 0.23568819223947957,
               "edge_clearance_m": 0.01,
               "inter_object_clearance_m": 0.006,
               "method": "oriented_two_rectangle_packing_v2"
@@ -702,14 +720,14 @@
             "fits_in": {
               "relation": "FITS_IN",
               "status": "TRUE",
-              "length_margin_m": 0.17436524257448685,
-              "width_margin_m": 0.13875333698693737,
-              "depth_margin_m": 0.021916171694374827,
+              "length_margin_m": 0.17520889192265623,
+              "width_margin_m": 0.14135528313618634,
+              "depth_margin_m": 0.021846350813484912,
               "method": "observed_fastener_vs_observed_cavity_v2"
             },
             "driver_usable_length_m": 0.2242572391571665,
             "fastener_length_m": 0.04331650990617439,
-            "surface_support_area_m2": 0.08162982064118747
+            "surface_support_area_m2": 0.08152787875648605
           }
         },
         "inspection_count": 3,
@@ -874,6 +892,15 @@
             }
           },
           "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        },
+        "proposal_quality": {
+          "status_counts": {},
+          "accepted_physical_proposals": 0,
+          "evaluated_camera_stages": 0,
+          "average_accepted_proposals_per_camera_stage": 0.0,
+          "mask_refinement_rejection_rate": 0.0,
+          "stage_volume_rejection_rate": 0.0,
+          "suppressed_duplicate_count": 0
         }
       }
     },
@@ -1036,6 +1063,15 @@
             }
           },
           "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        },
+        "proposal_quality": {
+          "status_counts": {},
+          "accepted_physical_proposals": 0,
+          "evaluated_camera_stages": 0,
+          "average_accepted_proposals_per_camera_stage": 0.0,
+          "mask_refinement_rejection_rate": 0.0,
+          "stage_volume_rejection_rate": 0.0,
+          "suppressed_duplicate_count": 0
         }
       }
     },
@@ -1060,72 +1096,72 @@
                   "driver_orientation_degrees": 0,
                   "fastener_orientation_degrees": 0,
                   "arrangement_axis": "LENGTH",
-                  "length_margin_m": 0.0835420166523808,
-                  "width_margin_m": 0.08843429553488692,
-                  "signed_margin_m": 0.0835420166523808,
+                  "length_margin_m": 0.08298431918542969,
+                  "width_margin_m": 0.08847855731659025,
+                  "signed_margin_m": 0.08298431918542969,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 0,
                   "fastener_orientation_degrees": 0,
                   "arrangement_axis": "WIDTH",
-                  "length_margin_m": 0.13121469194001223,
-                  "width_margin_m": 0.06868295163139639,
-                  "signed_margin_m": 0.06868295163139639,
+                  "length_margin_m": 0.13065699447306112,
+                  "width_margin_m": 0.06872721341309972,
+                  "signed_margin_m": 0.06872721341309972,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 0,
                   "fastener_orientation_degrees": 90,
                   "arrangement_axis": "LENGTH",
-                  "length_margin_m": 0.11146334803652168,
-                  "width_margin_m": 0.08843429553488692,
-                  "signed_margin_m": 0.08843429553488692,
+                  "length_margin_m": 0.11090565056957057,
+                  "width_margin_m": 0.08847855731659025,
+                  "signed_margin_m": 0.08847855731659025,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 0,
                   "fastener_orientation_degrees": 90,
                   "arrangement_axis": "WIDTH",
-                  "length_margin_m": 0.13121469194001223,
-                  "width_margin_m": 0.040761620247255506,
-                  "signed_margin_m": 0.040761620247255506,
+                  "length_margin_m": 0.13065699447306112,
+                  "width_margin_m": 0.04080588202895884,
+                  "signed_margin_m": 0.04080588202895884,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 90,
                   "fastener_orientation_degrees": 0,
                   "arrangement_axis": "LENGTH",
-                  "length_margin_m": 0.15025051976822537,
-                  "width_margin_m": 0.021725792419042367,
-                  "signed_margin_m": 0.021725792419042367,
+                  "length_margin_m": 0.14969282230127426,
+                  "width_margin_m": 0.0217700542007457,
+                  "signed_margin_m": 0.0217700542007457,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 90,
                   "fastener_orientation_degrees": 0,
                   "arrangement_axis": "WIDTH",
-                  "length_margin_m": 0.1979231950558568,
-                  "width_margin_m": 0.0019744485155518306,
-                  "signed_margin_m": 0.0019744485155518306,
+                  "length_margin_m": 0.19736549758890568,
+                  "width_margin_m": 0.0020187102972551614,
+                  "signed_margin_m": 0.0020187102972551614,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 90,
                   "fastener_orientation_degrees": 90,
                   "arrangement_axis": "LENGTH",
-                  "length_margin_m": 0.17817185115236625,
-                  "width_margin_m": 0.021725792419042367,
-                  "signed_margin_m": 0.021725792419042367,
+                  "length_margin_m": 0.17761415368541514,
+                  "width_margin_m": 0.0217700542007457,
+                  "signed_margin_m": 0.0217700542007457,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 90,
                   "fastener_orientation_degrees": 90,
                   "arrangement_axis": "WIDTH",
-                  "length_margin_m": 0.1979231950558568,
-                  "width_margin_m": -0.02594688286858905,
-                  "signed_margin_m": -0.02594688286858905,
+                  "length_margin_m": 0.19736549758890568,
+                  "width_margin_m": -0.025902621086885718,
+                  "signed_margin_m": -0.025902621086885718,
                   "fits": false
                 }
               ],
@@ -1133,13 +1169,13 @@
                 "driver_orientation_degrees": 0,
                 "fastener_orientation_degrees": 90,
                 "arrangement_axis": "LENGTH",
-                "length_margin_m": 0.11146334803652168,
-                "width_margin_m": 0.08843429553488692,
-                "signed_margin_m": 0.08843429553488692,
+                "length_margin_m": 0.11090565056957057,
+                "width_margin_m": 0.08847855731659025,
+                "signed_margin_m": 0.08847855731659025,
                 "fits": true
               },
-              "support_length_m": 0.34565126546057423,
-              "support_width_m": 0.23616236593960438,
+              "support_length_m": 0.3450935679936231,
+              "support_width_m": 0.2362066277213077,
               "edge_clearance_m": 0.01,
               "inter_object_clearance_m": 0.006,
               "method": "oriented_two_rectangle_packing_v2"
@@ -1154,14 +1190,14 @@
             "fits_in": {
               "relation": "FITS_IN",
               "status": "TRUE",
-              "length_margin_m": 0.17502609718329126,
-              "width_margin_m": 0.13660240239857607,
-              "depth_margin_m": 0.021073122394758944,
+              "length_margin_m": 0.17525451121633295,
+              "width_margin_m": 0.13370385270520616,
+              "depth_margin_m": 0.02122693218060184,
               "method": "observed_fastener_vs_observed_cavity_v2"
             },
             "driver_usable_length_m": 0.1942014146877211,
             "fastener_length_m": 0.042030817967661074,
-            "surface_support_area_m2": 0.08162982064118747
+            "surface_support_area_m2": 0.08151338794408752
           }
         },
         "inspection_count": 2,
@@ -1325,6 +1361,15 @@
             }
           },
           "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        },
+        "proposal_quality": {
+          "status_counts": {},
+          "accepted_physical_proposals": 0,
+          "evaluated_camera_stages": 0,
+          "average_accepted_proposals_per_camera_stage": 0.0,
+          "mask_refinement_rejection_rate": 0.0,
+          "stage_volume_rejection_rate": 0.0,
+          "suppressed_duplicate_count": 0
         }
       }
     },
@@ -1349,72 +1394,72 @@
                   "driver_orientation_degrees": 0,
                   "fastener_orientation_degrees": 0,
                   "arrangement_axis": "LENGTH",
-                  "length_margin_m": 0.22525676059102692,
-                  "width_margin_m": 0.2628815511590202,
-                  "signed_margin_m": 0.22525676059102692,
+                  "length_margin_m": 0.22478983734075117,
+                  "width_margin_m": 0.26175438555159153,
+                  "signed_margin_m": 0.22478983734075117,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 0,
                   "fastener_orientation_degrees": 0,
                   "arrangement_axis": "WIDTH",
-                  "length_margin_m": 0.2745206722178685,
-                  "width_margin_m": 0.24152104323891962,
-                  "signed_margin_m": 0.24152104323891962,
+                  "length_margin_m": 0.27405374896759277,
+                  "width_margin_m": 0.24039387763149098,
+                  "signed_margin_m": 0.24039387763149098,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 0,
                   "fastener_orientation_degrees": 90,
                   "arrangement_axis": "LENGTH",
-                  "length_margin_m": 0.253160164297768,
-                  "width_margin_m": 0.23621780284595498,
-                  "signed_margin_m": 0.23621780284595498,
+                  "length_margin_m": 0.25269324104749225,
+                  "width_margin_m": 0.23509063723852633,
+                  "signed_margin_m": 0.23509063723852633,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 0,
                   "fastener_orientation_degrees": 90,
                   "arrangement_axis": "WIDTH",
-                  "length_margin_m": 0.2745206722178685,
-                  "width_margin_m": 0.21361763953217858,
-                  "signed_margin_m": 0.21361763953217858,
+                  "length_margin_m": 0.27405374896759277,
+                  "width_margin_m": 0.21249047392474993,
+                  "signed_margin_m": 0.21249047392474993,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 90,
                   "fastener_orientation_degrees": 0,
                   "arrangement_axis": "LENGTH",
-                  "length_margin_m": 0.4330091450349796,
-                  "width_margin_m": 0.05512916671506747,
-                  "signed_margin_m": 0.05512916671506747,
+                  "length_margin_m": 0.43254222178470386,
+                  "width_margin_m": 0.05400200110763882,
+                  "signed_margin_m": 0.05400200110763882,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 90,
                   "fastener_orientation_degrees": 0,
                   "arrangement_axis": "WIDTH",
-                  "length_margin_m": 0.455609308348756,
-                  "width_margin_m": 0.03376865879496692,
-                  "signed_margin_m": 0.03376865879496692,
+                  "length_margin_m": 0.45514238509848026,
+                  "width_margin_m": 0.03264149318753827,
+                  "signed_margin_m": 0.03264149318753827,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 90,
                   "fastener_orientation_degrees": 90,
                   "arrangement_axis": "LENGTH",
-                  "length_margin_m": 0.46091254874172066,
-                  "width_margin_m": 0.05512916671506747,
-                  "signed_margin_m": 0.05512916671506747,
+                  "length_margin_m": 0.4604456254914449,
+                  "width_margin_m": 0.05400200110763882,
+                  "signed_margin_m": 0.05400200110763882,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 90,
                   "fastener_orientation_degrees": 90,
                   "arrangement_axis": "WIDTH",
-                  "length_margin_m": 0.4822730566618212,
-                  "width_margin_m": 0.0058652550882258465,
-                  "signed_margin_m": 0.0058652550882258465,
+                  "length_margin_m": 0.48180613341154543,
+                  "width_margin_m": 0.004738089480797198,
+                  "signed_margin_m": 0.004738089480797198,
                   "fits": true
                 }
               ],
@@ -1422,13 +1467,13 @@
                 "driver_orientation_degrees": 0,
                 "fastener_orientation_degrees": 0,
                 "arrangement_axis": "WIDTH",
-                "length_margin_m": 0.2745206722178685,
-                "width_margin_m": 0.24152104323891962,
-                "signed_margin_m": 0.24152104323891962,
+                "length_margin_m": 0.27405374896759277,
+                "width_margin_m": 0.24039387763149098,
+                "signed_margin_m": 0.24039387763149098,
                 "fits": true
               },
-              "support_length_m": 0.5188732199755977,
-              "support_width_m": 0.2994817144727966,
+              "support_length_m": 0.5184062967253219,
+              "support_width_m": 0.29835454886536794,
               "edge_clearance_m": 0.01,
               "inter_object_clearance_m": 0.006,
               "method": "oriented_two_rectangle_packing_v2"
@@ -1443,14 +1488,14 @@
             "fits_in": {
               "relation": "FITS_IN",
               "status": "TRUE",
-              "length_margin_m": 0.17436524257448685,
-              "width_margin_m": 0.13875333698693737,
-              "depth_margin_m": 0.021916171694374827,
+              "length_margin_m": 0.17520889192265623,
+              "width_margin_m": 0.14135528313618634,
+              "depth_margin_m": 0.021846350813484912,
               "method": "observed_fastener_vs_observed_cavity_v2"
             },
             "driver_usable_length_m": 0.2242572391571665,
             "fastener_length_m": 0.04331650990617439,
-            "surface_support_area_m2": 0.1553930415123125
+            "surface_support_area_m2": 0.15466887678844948
           }
         },
         "inspection_count": 3,
@@ -1615,6 +1660,15 @@
             }
           },
           "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        },
+        "proposal_quality": {
+          "status_counts": {},
+          "accepted_physical_proposals": 0,
+          "evaluated_camera_stages": 0,
+          "average_accepted_proposals_per_camera_stage": 0.0,
+          "mask_refinement_rejection_rate": 0.0,
+          "stage_volume_rejection_rate": 0.0,
+          "suppressed_duplicate_count": 0
         }
       }
     },
@@ -1639,72 +1693,72 @@
                   "driver_orientation_degrees": 0,
                   "fastener_orientation_degrees": 0,
                   "arrangement_axis": "LENGTH",
-                  "length_margin_m": 0.2924308764961423,
-                  "width_margin_m": 0.25374841930880454,
-                  "signed_margin_m": 0.25374841930880454,
+                  "length_margin_m": 0.2919204277917862,
+                  "width_margin_m": 0.25396164597419735,
+                  "signed_margin_m": 0.25396164597419735,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 0,
                   "fastener_orientation_degrees": 0,
                   "arrangement_axis": "WIDTH",
-                  "length_margin_m": 0.33929504399417365,
-                  "width_margin_m": 0.23405068380433278,
-                  "signed_margin_m": 0.23405068380433278,
+                  "length_margin_m": 0.3387845952898175,
+                  "width_margin_m": 0.23426391046972558,
+                  "signed_margin_m": 0.23426391046972558,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 0,
                   "fastener_orientation_degrees": 90,
                   "arrangement_axis": "LENGTH",
-                  "length_margin_m": 0.3195973084897018,
-                  "width_margin_m": 0.23861133532641823,
-                  "signed_margin_m": 0.23861133532641823,
+                  "length_margin_m": 0.3190868597853457,
+                  "width_margin_m": 0.23882456199181104,
+                  "signed_margin_m": 0.23882456199181104,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 0,
                   "fastener_orientation_degrees": 90,
                   "arrangement_axis": "WIDTH",
-                  "length_margin_m": 0.33929504399417365,
-                  "width_margin_m": 0.2068842518107732,
-                  "signed_margin_m": 0.2068842518107732,
+                  "length_margin_m": 0.3387845952898175,
+                  "width_margin_m": 0.207097478476166,
+                  "signed_margin_m": 0.207097478476166,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 90,
                   "fastener_orientation_degrees": 0,
                   "arrangement_axis": "LENGTH",
-                  "length_margin_m": 0.42628407191638984,
-                  "width_margin_m": 0.11989522388855699,
-                  "signed_margin_m": 0.11989522388855699,
+                  "length_margin_m": 0.4257736232120337,
+                  "width_margin_m": 0.1201084505539498,
+                  "signed_margin_m": 0.1201084505539498,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 90,
                   "fastener_orientation_degrees": 0,
                   "arrangement_axis": "WIDTH",
-                  "length_margin_m": 0.45801115543203486,
-                  "width_margin_m": 0.1001974883840852,
-                  "signed_margin_m": 0.1001974883840852,
+                  "length_margin_m": 0.45750070672767873,
+                  "width_margin_m": 0.100410715049478,
+                  "signed_margin_m": 0.100410715049478,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 90,
                   "fastener_orientation_degrees": 90,
                   "arrangement_axis": "LENGTH",
-                  "length_margin_m": 0.4534505039099494,
-                  "width_margin_m": 0.11989522388855699,
-                  "signed_margin_m": 0.11989522388855699,
+                  "length_margin_m": 0.4529400552055933,
+                  "width_margin_m": 0.1201084505539498,
+                  "signed_margin_m": 0.1201084505539498,
                   "fits": true
                 },
                 {
                   "driver_orientation_degrees": 90,
                   "fastener_orientation_degrees": 90,
                   "arrangement_axis": "WIDTH",
-                  "length_margin_m": 0.4731482394144212,
-                  "width_margin_m": 0.07303105639052564,
-                  "signed_margin_m": 0.07303105639052564,
+                  "length_margin_m": 0.47263779071006506,
+                  "width_margin_m": 0.07324428305591844,
+                  "signed_margin_m": 0.07324428305591844,
                   "fits": true
                 }
               ],
@@ -1712,13 +1766,13 @@
                 "driver_orientation_degrees": 0,
                 "fastener_orientation_degrees": 0,
                 "arrangement_axis": "LENGTH",
-                "length_margin_m": 0.2924308764961423,
-                "width_margin_m": 0.25374841930880454,
-                "signed_margin_m": 0.25374841930880454,
+                "length_margin_m": 0.2919204277917862,
+                "width_margin_m": 0.25396164597419735,
+                "signed_margin_m": 0.25396164597419735,
                 "fits": true
               },
-              "support_length_m": 0.5188753229300662,
-              "support_width_m": 0.29947550282444957,
+              "support_length_m": 0.5183648742257101,
+              "support_width_m": 0.2996887294898424,
               "edge_clearance_m": 0.01,
               "inter_object_clearance_m": 0.006,
               "method": "oriented_two_rectangle_packing_v2"
@@ -1733,14 +1787,14 @@
             "fits_in": {
               "relation": "FITS_IN",
               "status": "TRUE",
-              "length_margin_m": 0.17428345662022998,
-              "width_margin_m": 0.13855262672403837,
-              "depth_margin_m": 0.021056711224935624,
+              "length_margin_m": 0.1751484112727713,
+              "width_margin_m": 0.13602615583173097,
+              "depth_margin_m": 0.020869862584493686,
               "method": "observed_fastener_vs_observed_cavity_v2"
             },
             "driver_usable_length_m": 0.15986452551386315,
             "fastener_length_m": 0.04141883979110596,
-            "surface_support_area_m2": 0.15539044823768022
+            "surface_support_area_m2": 0.155348110568865
           }
         },
         "inspection_count": 1,
@@ -1903,14 +1957,23 @@
             }
           },
           "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        },
+        "proposal_quality": {
+          "status_counts": {},
+          "accepted_physical_proposals": 0,
+          "evaluated_camera_stages": 0,
+          "average_accepted_proposals_per_camera_stage": 0.0,
+          "mask_refinement_rejection_rate": 0.0,
+          "stage_volume_rejection_rate": 0.0,
+          "suppressed_duplicate_count": 0
         }
       }
     },
     {
       "variant": "I0_NO_VALID_DRIVER",
       "result": {
-        "status": "INSUFFICIENT_EVIDENCE",
-        "rejection_reason": "INSUFFICIENT_EVIDENCE",
+        "status": "INFEASIBLE",
+        "rejection_reason": "NO_VALID_DRIVER",
         "witness": null,
         "inspection_count": 3,
         "inspected_regions": [
@@ -1926,13 +1989,13 @@
         "diagnostics": {}
       },
       "eval_metrics": {
-        "overall_pass": false,
-        "status_correct": false,
+        "overall_pass": true,
+        "status_correct": true,
         "expected_status": "INFEASIBLE",
-        "predicted_status": "INSUFFICIENT_EVIDENCE",
-        "rejection_correct": false,
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": true,
         "expected_rejection": "NO_VALID_DRIVER",
-        "predicted_rejection": "INSUFFICIENT_EVIDENCE",
+        "predicted_rejection": "NO_VALID_DRIVER",
         "witness_correct": false,
         "witness_details": {},
         "tracked_objects_count": 1,
@@ -2065,6 +2128,15 @@
             }
           },
           "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        },
+        "proposal_quality": {
+          "status_counts": {},
+          "accepted_physical_proposals": 0,
+          "evaluated_camera_stages": 0,
+          "average_accepted_proposals_per_camera_stage": 0.0,
+          "mask_refinement_rejection_rate": 0.0,
+          "stage_volume_rejection_rate": 0.0,
+          "suppressed_duplicate_count": 0
         }
       }
     },
@@ -2227,6 +2299,15 @@
             }
           },
           "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        },
+        "proposal_quality": {
+          "status_counts": {},
+          "accepted_physical_proposals": 0,
+          "evaluated_camera_stages": 0,
+          "average_accepted_proposals_per_camera_stage": 0.0,
+          "mask_refinement_rejection_rate": 0.0,
+          "stage_volume_rejection_rate": 0.0,
+          "suppressed_duplicate_count": 0
         }
       }
     },
@@ -2389,6 +2470,15 @@
             }
           },
           "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        },
+        "proposal_quality": {
+          "status_counts": {},
+          "accepted_physical_proposals": 0,
+          "evaluated_camera_stages": 0,
+          "average_accepted_proposals_per_camera_stage": 0.0,
+          "mask_refinement_rejection_rate": 0.0,
+          "stage_volume_rejection_rate": 0.0,
+          "suppressed_duplicate_count": 0
         }
       }
     },
@@ -2551,6 +2641,15 @@
             }
           },
           "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        },
+        "proposal_quality": {
+          "status_counts": {},
+          "accepted_physical_proposals": 0,
+          "evaluated_camera_stages": 0,
+          "average_accepted_proposals_per_camera_stage": 0.0,
+          "mask_refinement_rejection_rate": 0.0,
+          "stage_volume_rejection_rate": 0.0,
+          "suppressed_duplicate_count": 0
         }
       }
     },
@@ -2558,7 +2657,7 @@
       "variant": "I4_TOOL_GEOMETRY_FAILURE",
       "result": {
         "status": "INFEASIBLE",
-        "rejection_reason": "NO_VALID_FASTENER",
+        "rejection_reason": "NO_VALID_DRIVER",
         "witness": null,
         "inspection_count": 3,
         "inspected_regions": [
@@ -2580,7 +2679,7 @@
         "predicted_status": "INFEASIBLE",
         "rejection_correct": false,
         "expected_rejection": "TOOL_GEOMETRY_FAILURE",
-        "predicted_rejection": "NO_VALID_FASTENER",
+        "predicted_rejection": "NO_VALID_DRIVER",
         "witness_correct": false,
         "witness_details": {},
         "tracked_objects_count": 1,
@@ -2713,6 +2812,15 @@
             }
           },
           "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        },
+        "proposal_quality": {
+          "status_counts": {},
+          "accepted_physical_proposals": 0,
+          "evaluated_camera_stages": 0,
+          "average_accepted_proposals_per_camera_stage": 0.0,
+          "mask_refinement_rejection_rate": 0.0,
+          "stage_volume_rejection_rate": 0.0,
+          "suppressed_duplicate_count": 0
         }
       }
     },
@@ -2875,6 +2983,15 @@
             }
           },
           "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        },
+        "proposal_quality": {
+          "status_counts": {},
+          "accepted_physical_proposals": 0,
+          "evaluated_camera_stages": 0,
+          "average_accepted_proposals_per_camera_stage": 0.0,
+          "mask_refinement_rejection_rate": 0.0,
+          "stage_volume_rejection_rate": 0.0,
+          "suppressed_duplicate_count": 0
         }
       }
     },
@@ -3037,6 +3154,15 @@
             }
           },
           "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        },
+        "proposal_quality": {
+          "status_counts": {},
+          "accepted_physical_proposals": 0,
+          "evaluated_camera_stages": 0,
+          "average_accepted_proposals_per_camera_stage": 0.0,
+          "mask_refinement_rejection_rate": 0.0,
+          "stage_volume_rejection_rate": 0.0,
+          "suppressed_duplicate_count": 0
         }
       }
     }

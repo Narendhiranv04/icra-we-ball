@@ -10,8 +10,8 @@
     {
       "variant": "F0_BASE",
       "result": {
-        "status": "INSUFFICIENT_EVIDENCE",
-        "rejection_reason": "INSUFFICIENT_EVIDENCE",
+        "status": "INFEASIBLE",
+        "rejection_reason": "NO_VALID_FASTENER",
         "witness": null,
         "inspection_count": 3,
         "inspected_regions": [
@@ -22,7 +22,7 @@
         "early_stopped": false,
         "metrics": {
           "stages_executed": 4,
-          "total_tracks": 1
+          "total_tracks": 2
         },
         "diagnostics": {}
       },
@@ -30,14 +30,14 @@
         "overall_pass": false,
         "status_correct": false,
         "expected_status": "FEASIBLE",
-        "predicted_status": "INSUFFICIENT_EVIDENCE",
+        "predicted_status": "INFEASIBLE",
         "rejection_correct": true,
         "expected_rejection": null,
-        "predicted_rejection": "INSUFFICIENT_EVIDENCE",
+        "predicted_rejection": "NO_VALID_FASTENER",
         "witness_correct": false,
         "witness_details": {},
-        "tracked_objects_count": 1,
-        "discovered_gt_objects_count": 1,
+        "tracked_objects_count": 2,
+        "discovered_gt_objects_count": 2,
         "total_gt_objects_in_scene": 6,
         "stages_used": 4,
         "early_stopped": false,
@@ -45,23 +45,23 @@
           "categories": {
             "screwdriver": {
               "visible_gt_count": 3,
-              "yolo_detection_count": 9,
+              "yolo_detection_count": 8,
               "matched_gt_count": 2,
-              "false_positive_count": 1,
-              "duplicate_detections": 6,
-              "association_correct_count": 8,
-              "association_evaluated_count": 9,
+              "false_positive_count": 4,
+              "duplicate_detections": 2,
+              "association_correct_count": 4,
+              "association_evaluated_count": 8,
               "recall": 0.6667,
-              "association_accuracy": 0.8889
+              "association_accuracy": 0.5
             },
             "power_driver": {
               "visible_gt_count": 0,
-              "yolo_detection_count": 2,
+              "yolo_detection_count": 3,
               "matched_gt_count": 0,
-              "false_positive_count": 2,
+              "false_positive_count": 3,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 2,
+              "association_evaluated_count": 3,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
@@ -78,12 +78,12 @@
             },
             "bolt": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 2,
+              "yolo_detection_count": 0,
               "matched_gt_count": 0,
-              "false_positive_count": 2,
+              "false_positive_count": 0,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 2,
+              "association_evaluated_count": 0,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
@@ -94,70 +94,70 @@
               "false_positive_count": 2,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 1,
+              "association_evaluated_count": 2,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
             "pliers": {
               "visible_gt_count": 0,
-              "yolo_detection_count": 0,
+              "yolo_detection_count": 1,
               "matched_gt_count": 0,
-              "false_positive_count": 0,
+              "false_positive_count": 1,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 0,
+              "association_evaluated_count": 1,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
             "workbench": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 5,
+              "yolo_detection_count": 3,
               "matched_gt_count": 1,
-              "false_positive_count": 1,
-              "duplicate_detections": 3,
-              "association_correct_count": 4,
-              "association_evaluated_count": 4,
-              "recall": 1.0,
-              "association_accuracy": 1.0
-            },
-            "tool_cart": {
-              "visible_gt_count": 1,
-              "yolo_detection_count": 1,
-              "matched_gt_count": 1,
-              "false_positive_count": 0,
+              "false_positive_count": 2,
               "duplicate_detections": 0,
               "association_correct_count": 1,
               "association_evaluated_count": 1,
               "recall": 1.0,
               "association_accuracy": 1.0
             },
-            "shelf": {
-              "visible_gt_count": 0,
-              "yolo_detection_count": 114,
-              "matched_gt_count": 0,
-              "false_positive_count": 101,
-              "duplicate_detections": 0,
-              "association_correct_count": 0,
-              "association_evaluated_count": 13,
-              "recall": 0.0,
-              "association_accuracy": 0.0
-            },
-            "parts_tray": {
+            "tool_cart": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 12,
+              "yolo_detection_count": 1,
               "matched_gt_count": 0,
-              "false_positive_count": 12,
+              "false_positive_count": 1,
               "duplicate_detections": 0,
               "association_correct_count": 0,
               "association_evaluated_count": 0,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
+            "shelf": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 92,
+              "matched_gt_count": 0,
+              "false_positive_count": 91,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 1,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "parts_tray": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 25,
+              "matched_gt_count": 0,
+              "false_positive_count": 23,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 2,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
             "hardware_bin": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 4,
+              "yolo_detection_count": 1,
               "matched_gt_count": 0,
-              "false_positive_count": 4,
+              "false_positive_count": 1,
               "duplicate_detections": 0,
               "association_correct_count": 0,
               "association_evaluated_count": 0,
@@ -166,14 +166,28 @@
             }
           },
           "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        },
+        "proposal_quality": {
+          "status_counts": {
+            "ACCEPTED": 136,
+            "ACCEPTED_PRE_DEDUP": 70,
+            "SUPPRESSED_DUPLICATE": 70,
+            "REJECTED_STAGE_VOLUME": 99
+          },
+          "accepted_physical_proposals": 136,
+          "evaluated_camera_stages": 20,
+          "average_accepted_proposals_per_camera_stage": 6.8,
+          "mask_refinement_rejection_rate": 0.0,
+          "stage_volume_rejection_rate": 0.4213,
+          "suppressed_duplicate_count": 70
         }
       }
     },
     {
       "variant": "F1_TOOL_ALTERNATIVE",
       "result": {
-        "status": "INSUFFICIENT_EVIDENCE",
-        "rejection_reason": "INSUFFICIENT_EVIDENCE",
+        "status": "INFEASIBLE",
+        "rejection_reason": "NO_VALID_FASTENER",
         "witness": null,
         "inspection_count": 3,
         "inspected_regions": [
@@ -184,7 +198,7 @@
         "early_stopped": false,
         "metrics": {
           "stages_executed": 4,
-          "total_tracks": 1
+          "total_tracks": 2
         },
         "diagnostics": {}
       },
@@ -192,14 +206,14 @@
         "overall_pass": false,
         "status_correct": false,
         "expected_status": "FEASIBLE",
-        "predicted_status": "INSUFFICIENT_EVIDENCE",
+        "predicted_status": "INFEASIBLE",
         "rejection_correct": true,
         "expected_rejection": null,
-        "predicted_rejection": "INSUFFICIENT_EVIDENCE",
+        "predicted_rejection": "NO_VALID_FASTENER",
         "witness_correct": false,
         "witness_details": {},
-        "tracked_objects_count": 1,
-        "discovered_gt_objects_count": 1,
+        "tracked_objects_count": 2,
+        "discovered_gt_objects_count": 2,
         "total_gt_objects_in_scene": 6,
         "stages_used": 4,
         "early_stopped": false,
@@ -207,23 +221,23 @@
           "categories": {
             "screwdriver": {
               "visible_gt_count": 2,
-              "yolo_detection_count": 13,
+              "yolo_detection_count": 5,
               "matched_gt_count": 2,
-              "false_positive_count": 5,
-              "duplicate_detections": 6,
-              "association_correct_count": 8,
-              "association_evaluated_count": 11,
+              "false_positive_count": 1,
+              "duplicate_detections": 2,
+              "association_correct_count": 4,
+              "association_evaluated_count": 5,
               "recall": 1.0,
-              "association_accuracy": 0.7273
+              "association_accuracy": 0.8
             },
             "power_driver": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 3,
+              "yolo_detection_count": 6,
               "matched_gt_count": 1,
-              "false_positive_count": 1,
-              "duplicate_detections": 1,
-              "association_correct_count": 2,
-              "association_evaluated_count": 3,
+              "false_positive_count": 2,
+              "duplicate_detections": 3,
+              "association_correct_count": 4,
+              "association_evaluated_count": 6,
               "recall": 1.0,
               "association_accuracy": 0.6667
             },
@@ -240,244 +254,38 @@
             },
             "bolt": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 1,
+              "yolo_detection_count": 0,
               "matched_gt_count": 0,
-              "false_positive_count": 1,
+              "false_positive_count": 0,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 1,
+              "association_evaluated_count": 0,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
             "wrench": {
               "visible_gt_count": 0,
-              "yolo_detection_count": 2,
+              "yolo_detection_count": 0,
               "matched_gt_count": 0,
-              "false_positive_count": 2,
+              "false_positive_count": 0,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 1,
+              "association_evaluated_count": 0,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
             "pliers": {
               "visible_gt_count": 0,
-              "yolo_detection_count": 0,
+              "yolo_detection_count": 1,
               "matched_gt_count": 0,
-              "false_positive_count": 0,
+              "false_positive_count": 1,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 0,
+              "association_evaluated_count": 1,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
             "workbench": {
-              "visible_gt_count": 1,
-              "yolo_detection_count": 5,
-              "matched_gt_count": 1,
-              "false_positive_count": 1,
-              "duplicate_detections": 3,
-              "association_correct_count": 4,
-              "association_evaluated_count": 4,
-              "recall": 1.0,
-              "association_accuracy": 1.0
-            },
-            "tool_cart": {
-              "visible_gt_count": 1,
-              "yolo_detection_count": 1,
-              "matched_gt_count": 1,
-              "false_positive_count": 0,
-              "duplicate_detections": 0,
-              "association_correct_count": 1,
-              "association_evaluated_count": 1,
-              "recall": 1.0,
-              "association_accuracy": 1.0
-            },
-            "shelf": {
-              "visible_gt_count": 0,
-              "yolo_detection_count": 111,
-              "matched_gt_count": 0,
-              "false_positive_count": 98,
-              "duplicate_detections": 0,
-              "association_correct_count": 0,
-              "association_evaluated_count": 13,
-              "recall": 0.0,
-              "association_accuracy": 0.0
-            },
-            "parts_tray": {
-              "visible_gt_count": 1,
-              "yolo_detection_count": 12,
-              "matched_gt_count": 0,
-              "false_positive_count": 12,
-              "duplicate_detections": 0,
-              "association_correct_count": 0,
-              "association_evaluated_count": 0,
-              "recall": 0.0,
-              "association_accuracy": 0.0
-            },
-            "hardware_bin": {
-              "visible_gt_count": 1,
-              "yolo_detection_count": 4,
-              "matched_gt_count": 0,
-              "false_positive_count": 4,
-              "duplicate_detections": 0,
-              "association_correct_count": 0,
-              "association_evaluated_count": 0,
-              "recall": 0.0,
-              "association_accuracy": 0.0
-            }
-          },
-          "privileged_use": "POST_HOC_EVALUATION_ONLY"
-        }
-      }
-    },
-    {
-      "variant": "F2_REGION_ALTERNATIVE",
-      "result": {
-        "status": "INSUFFICIENT_EVIDENCE",
-        "rejection_reason": "INSUFFICIENT_EVIDENCE",
-        "witness": null,
-        "inspection_count": 3,
-        "inspected_regions": [
-          "LEFT_DRAWER",
-          "RIGHT_DRAWER",
-          "TOOL_CABINET"
-        ],
-        "early_stopped": false,
-        "metrics": {
-          "stages_executed": 4,
-          "total_tracks": 1
-        },
-        "diagnostics": {}
-      },
-      "eval_metrics": {
-        "overall_pass": false,
-        "status_correct": false,
-        "expected_status": "FEASIBLE",
-        "predicted_status": "INSUFFICIENT_EVIDENCE",
-        "rejection_correct": true,
-        "expected_rejection": null,
-        "predicted_rejection": "INSUFFICIENT_EVIDENCE",
-        "witness_correct": false,
-        "witness_details": {},
-        "tracked_objects_count": 1,
-        "discovered_gt_objects_count": 1,
-        "total_gt_objects_in_scene": 6,
-        "stages_used": 4,
-        "early_stopped": false,
-        "semantic_diagnostics": {
-          "categories": {
-            "screwdriver": {
-              "visible_gt_count": 3,
-              "yolo_detection_count": 7,
-              "matched_gt_count": 2,
-              "false_positive_count": 0,
-              "duplicate_detections": 5,
-              "association_correct_count": 7,
-              "association_evaluated_count": 7,
-              "recall": 0.6667,
-              "association_accuracy": 1.0
-            },
-            "power_driver": {
-              "visible_gt_count": 0,
-              "yolo_detection_count": 1,
-              "matched_gt_count": 0,
-              "false_positive_count": 1,
-              "duplicate_detections": 0,
-              "association_correct_count": 0,
-              "association_evaluated_count": 1,
-              "recall": 0.0,
-              "association_accuracy": 0.0
-            },
-            "screw": {
-              "visible_gt_count": 2,
-              "yolo_detection_count": 0,
-              "matched_gt_count": 0,
-              "false_positive_count": 0,
-              "duplicate_detections": 0,
-              "association_correct_count": 0,
-              "association_evaluated_count": 0,
-              "recall": 0.0,
-              "association_accuracy": 0.0
-            },
-            "bolt": {
-              "visible_gt_count": 1,
-              "yolo_detection_count": 2,
-              "matched_gt_count": 0,
-              "false_positive_count": 2,
-              "duplicate_detections": 0,
-              "association_correct_count": 0,
-              "association_evaluated_count": 2,
-              "recall": 0.0,
-              "association_accuracy": 0.0
-            },
-            "wrench": {
-              "visible_gt_count": 0,
-              "yolo_detection_count": 1,
-              "matched_gt_count": 0,
-              "false_positive_count": 1,
-              "duplicate_detections": 0,
-              "association_correct_count": 0,
-              "association_evaluated_count": 1,
-              "recall": 0.0,
-              "association_accuracy": 0.0
-            },
-            "pliers": {
-              "visible_gt_count": 0,
-              "yolo_detection_count": 0,
-              "matched_gt_count": 0,
-              "false_positive_count": 0,
-              "duplicate_detections": 0,
-              "association_correct_count": 0,
-              "association_evaluated_count": 0,
-              "recall": 0.0,
-              "association_accuracy": 0.0
-            },
-            "workbench": {
-              "visible_gt_count": 0,
-              "yolo_detection_count": 3,
-              "matched_gt_count": 0,
-              "false_positive_count": 1,
-              "duplicate_detections": 2,
-              "association_correct_count": 2,
-              "association_evaluated_count": 2,
-              "recall": 0.0,
-              "association_accuracy": 1.0
-            },
-            "tool_cart": {
-              "visible_gt_count": 1,
-              "yolo_detection_count": 1,
-              "matched_gt_count": 1,
-              "false_positive_count": 0,
-              "duplicate_detections": 0,
-              "association_correct_count": 1,
-              "association_evaluated_count": 1,
-              "recall": 1.0,
-              "association_accuracy": 1.0
-            },
-            "shelf": {
-              "visible_gt_count": 0,
-              "yolo_detection_count": 124,
-              "matched_gt_count": 0,
-              "false_positive_count": 109,
-              "duplicate_detections": 0,
-              "association_correct_count": 0,
-              "association_evaluated_count": 15,
-              "recall": 0.0,
-              "association_accuracy": 0.0
-            },
-            "parts_tray": {
-              "visible_gt_count": 1,
-              "yolo_detection_count": 20,
-              "matched_gt_count": 0,
-              "false_positive_count": 20,
-              "duplicate_detections": 0,
-              "association_correct_count": 0,
-              "association_evaluated_count": 0,
-              "recall": 0.0,
-              "association_accuracy": 0.0
-            },
-            "hardware_bin": {
               "visible_gt_count": 1,
               "yolo_detection_count": 3,
               "matched_gt_count": 0,
@@ -487,17 +295,251 @@
               "association_evaluated_count": 0,
               "recall": 0.0,
               "association_accuracy": 0.0
+            },
+            "tool_cart": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 2,
+              "matched_gt_count": 0,
+              "false_positive_count": 2,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "shelf": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 88,
+              "matched_gt_count": 0,
+              "false_positive_count": 87,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 1,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "parts_tray": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 25,
+              "matched_gt_count": 0,
+              "false_positive_count": 22,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 3,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "hardware_bin": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 1,
+              "matched_gt_count": 0,
+              "false_positive_count": 1,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
             }
           },
           "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        },
+        "proposal_quality": {
+          "status_counts": {
+            "ACCEPTED": 131,
+            "ACCEPTED_PRE_DEDUP": 74,
+            "SUPPRESSED_DUPLICATE": 74,
+            "REJECTED_STAGE_VOLUME": 97
+          },
+          "accepted_physical_proposals": 131,
+          "evaluated_camera_stages": 20,
+          "average_accepted_proposals_per_camera_stage": 6.55,
+          "mask_refinement_rejection_rate": 0.0,
+          "stage_volume_rejection_rate": 0.4254,
+          "suppressed_duplicate_count": 74
+        }
+      }
+    },
+    {
+      "variant": "F2_REGION_ALTERNATIVE",
+      "result": {
+        "status": "INFEASIBLE",
+        "rejection_reason": "NO_VALID_FASTENER",
+        "witness": null,
+        "inspection_count": 3,
+        "inspected_regions": [
+          "LEFT_DRAWER",
+          "RIGHT_DRAWER",
+          "TOOL_CABINET"
+        ],
+        "early_stopped": false,
+        "metrics": {
+          "stages_executed": 4,
+          "total_tracks": 2
+        },
+        "diagnostics": {}
+      },
+      "eval_metrics": {
+        "overall_pass": false,
+        "status_correct": false,
+        "expected_status": "FEASIBLE",
+        "predicted_status": "INFEASIBLE",
+        "rejection_correct": true,
+        "expected_rejection": null,
+        "predicted_rejection": "NO_VALID_FASTENER",
+        "witness_correct": false,
+        "witness_details": {},
+        "tracked_objects_count": 2,
+        "discovered_gt_objects_count": 2,
+        "total_gt_objects_in_scene": 6,
+        "stages_used": 4,
+        "early_stopped": false,
+        "semantic_diagnostics": {
+          "categories": {
+            "screwdriver": {
+              "visible_gt_count": 3,
+              "yolo_detection_count": 7,
+              "matched_gt_count": 2,
+              "false_positive_count": 4,
+              "duplicate_detections": 1,
+              "association_correct_count": 3,
+              "association_evaluated_count": 7,
+              "recall": 0.6667,
+              "association_accuracy": 0.4286
+            },
+            "power_driver": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 3,
+              "matched_gt_count": 0,
+              "false_positive_count": 3,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 3,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "screw": {
+              "visible_gt_count": 2,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "bolt": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "wrench": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 2,
+              "matched_gt_count": 0,
+              "false_positive_count": 2,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 2,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "pliers": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 1,
+              "matched_gt_count": 0,
+              "false_positive_count": 1,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 1,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "workbench": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 1,
+              "matched_gt_count": 0,
+              "false_positive_count": 1,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "tool_cart": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 1,
+              "matched_gt_count": 0,
+              "false_positive_count": 1,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "shelf": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 90,
+              "matched_gt_count": 0,
+              "false_positive_count": 87,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 3,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "parts_tray": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 28,
+              "matched_gt_count": 0,
+              "false_positive_count": 27,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 1,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "hardware_bin": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 2,
+              "matched_gt_count": 0,
+              "false_positive_count": 2,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            }
+          },
+          "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        },
+        "proposal_quality": {
+          "status_counts": {
+            "ACCEPTED": 135,
+            "ACCEPTED_PRE_DEDUP": 84,
+            "SUPPRESSED_DUPLICATE": 84,
+            "REJECTED_STAGE_VOLUME": 106
+          },
+          "accepted_physical_proposals": 135,
+          "evaluated_camera_stages": 20,
+          "average_accepted_proposals_per_camera_stage": 6.75,
+          "mask_refinement_rejection_rate": 0.0,
+          "stage_volume_rejection_rate": 0.4398,
+          "suppressed_duplicate_count": 84
         }
       }
     },
     {
       "variant": "F3_DISTRIBUTED_OBJECTS",
       "result": {
-        "status": "INSUFFICIENT_EVIDENCE",
-        "rejection_reason": "INSUFFICIENT_EVIDENCE",
+        "status": "INFEASIBLE",
+        "rejection_reason": "NO_VALID_FASTENER",
         "witness": null,
         "inspection_count": 3,
         "inspected_regions": [
@@ -516,10 +558,10 @@
         "overall_pass": false,
         "status_correct": false,
         "expected_status": "FEASIBLE",
-        "predicted_status": "INSUFFICIENT_EVIDENCE",
+        "predicted_status": "INFEASIBLE",
         "rejection_correct": true,
         "expected_rejection": null,
-        "predicted_rejection": "INSUFFICIENT_EVIDENCE",
+        "predicted_rejection": "NO_VALID_FASTENER",
         "witness_correct": false,
         "witness_details": {},
         "tracked_objects_count": 1,
@@ -531,23 +573,23 @@
           "categories": {
             "screwdriver": {
               "visible_gt_count": 3,
-              "yolo_detection_count": 12,
-              "matched_gt_count": 3,
-              "false_positive_count": 1,
-              "duplicate_detections": 8,
-              "association_correct_count": 11,
-              "association_evaluated_count": 12,
-              "recall": 1.0,
-              "association_accuracy": 0.9167
+              "yolo_detection_count": 5,
+              "matched_gt_count": 1,
+              "false_positive_count": 2,
+              "duplicate_detections": 2,
+              "association_correct_count": 3,
+              "association_evaluated_count": 5,
+              "recall": 0.3333,
+              "association_accuracy": 0.6
             },
             "power_driver": {
               "visible_gt_count": 0,
-              "yolo_detection_count": 2,
+              "yolo_detection_count": 4,
               "matched_gt_count": 0,
-              "false_positive_count": 2,
+              "false_positive_count": 4,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 2,
+              "association_evaluated_count": 4,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
@@ -564,12 +606,12 @@
             },
             "bolt": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 2,
+              "yolo_detection_count": 0,
               "matched_gt_count": 0,
-              "false_positive_count": 2,
+              "false_positive_count": 0,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 2,
+              "association_evaluated_count": 0,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
@@ -580,70 +622,70 @@
               "false_positive_count": 2,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 1,
+              "association_evaluated_count": 2,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
             "pliers": {
               "visible_gt_count": 0,
-              "yolo_detection_count": 0,
+              "yolo_detection_count": 1,
               "matched_gt_count": 0,
-              "false_positive_count": 0,
+              "false_positive_count": 1,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 0,
+              "association_evaluated_count": 1,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
             "workbench": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 5,
+              "yolo_detection_count": 2,
               "matched_gt_count": 1,
               "false_positive_count": 1,
-              "duplicate_detections": 3,
-              "association_correct_count": 4,
-              "association_evaluated_count": 4,
-              "recall": 1.0,
-              "association_accuracy": 1.0
-            },
-            "tool_cart": {
-              "visible_gt_count": 1,
-              "yolo_detection_count": 1,
-              "matched_gt_count": 1,
-              "false_positive_count": 0,
               "duplicate_detections": 0,
               "association_correct_count": 1,
               "association_evaluated_count": 1,
               "recall": 1.0,
               "association_accuracy": 1.0
             },
-            "shelf": {
-              "visible_gt_count": 0,
-              "yolo_detection_count": 111,
-              "matched_gt_count": 0,
-              "false_positive_count": 98,
-              "duplicate_detections": 0,
-              "association_correct_count": 0,
-              "association_evaluated_count": 13,
-              "recall": 0.0,
-              "association_accuracy": 0.0
-            },
-            "parts_tray": {
+            "tool_cart": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 12,
+              "yolo_detection_count": 1,
               "matched_gt_count": 0,
-              "false_positive_count": 12,
+              "false_positive_count": 1,
               "duplicate_detections": 0,
               "association_correct_count": 0,
               "association_evaluated_count": 0,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
+            "shelf": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 89,
+              "matched_gt_count": 0,
+              "false_positive_count": 88,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 1,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "parts_tray": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 25,
+              "matched_gt_count": 0,
+              "false_positive_count": 23,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 2,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
             "hardware_bin": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 4,
+              "yolo_detection_count": 1,
               "matched_gt_count": 0,
-              "false_positive_count": 4,
+              "false_positive_count": 1,
               "duplicate_detections": 0,
               "association_correct_count": 0,
               "association_evaluated_count": 0,
@@ -652,6 +694,20 @@
             }
           },
           "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        },
+        "proposal_quality": {
+          "status_counts": {
+            "ACCEPTED": 130,
+            "ACCEPTED_PRE_DEDUP": 72,
+            "SUPPRESSED_DUPLICATE": 72,
+            "REJECTED_STAGE_VOLUME": 88
+          },
+          "accepted_physical_proposals": 130,
+          "evaluated_camera_stages": 20,
+          "average_accepted_proposals_per_camera_stage": 6.5,
+          "mask_refinement_rejection_rate": 0.0,
+          "stage_volume_rejection_rate": 0.4037,
+          "suppressed_duplicate_count": 72
         }
       }
     },
@@ -693,25 +749,25 @@
           "categories": {
             "screwdriver": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 6,
-              "matched_gt_count": 1,
-              "false_positive_count": 5,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
               "duplicate_detections": 0,
-              "association_correct_count": 1,
-              "association_evaluated_count": 4,
-              "recall": 1.0,
-              "association_accuracy": 0.25
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
             },
             "power_driver": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 3,
+              "yolo_detection_count": 6,
               "matched_gt_count": 1,
-              "false_positive_count": 2,
-              "duplicate_detections": 0,
-              "association_correct_count": 1,
-              "association_evaluated_count": 3,
+              "false_positive_count": 1,
+              "duplicate_detections": 4,
+              "association_correct_count": 5,
+              "association_evaluated_count": 6,
               "recall": 1.0,
-              "association_accuracy": 0.3333
+              "association_accuracy": 0.8333
             },
             "screw": {
               "visible_gt_count": 2,
@@ -726,23 +782,23 @@
             },
             "bolt": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 1,
-              "matched_gt_count": 0,
-              "false_positive_count": 1,
-              "duplicate_detections": 0,
-              "association_correct_count": 0,
-              "association_evaluated_count": 1,
-              "recall": 0.0,
-              "association_accuracy": 0.0
-            },
-            "wrench": {
-              "visible_gt_count": 0,
               "yolo_detection_count": 0,
               "matched_gt_count": 0,
               "false_positive_count": 0,
               "duplicate_detections": 0,
               "association_correct_count": 0,
               "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "wrench": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 1,
+              "matched_gt_count": 0,
+              "false_positive_count": 1,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 1,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
@@ -759,42 +815,42 @@
             },
             "workbench": {
               "visible_gt_count": 0,
-              "yolo_detection_count": 4,
+              "yolo_detection_count": 2,
               "matched_gt_count": 0,
               "false_positive_count": 2,
-              "duplicate_detections": 2,
-              "association_correct_count": 2,
-              "association_evaluated_count": 2,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
               "recall": 0.0,
-              "association_accuracy": 1.0
+              "association_accuracy": 0.0
             },
             "tool_cart": {
               "visible_gt_count": 1,
               "yolo_detection_count": 1,
-              "matched_gt_count": 1,
-              "false_positive_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 1,
               "duplicate_detections": 0,
-              "association_correct_count": 1,
-              "association_evaluated_count": 1,
-              "recall": 1.0,
-              "association_accuracy": 1.0
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
             },
             "shelf": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 127,
+              "yolo_detection_count": 86,
               "matched_gt_count": 0,
-              "false_positive_count": 113,
+              "false_positive_count": 82,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 14,
+              "association_evaluated_count": 4,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
             "parts_tray": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 20,
+              "yolo_detection_count": 31,
               "matched_gt_count": 0,
-              "false_positive_count": 20,
+              "false_positive_count": 31,
               "duplicate_detections": 0,
               "association_correct_count": 0,
               "association_evaluated_count": 0,
@@ -803,9 +859,9 @@
             },
             "hardware_bin": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 4,
+              "yolo_detection_count": 3,
               "matched_gt_count": 0,
-              "false_positive_count": 4,
+              "false_positive_count": 3,
               "duplicate_detections": 0,
               "association_correct_count": 0,
               "association_evaluated_count": 0,
@@ -814,14 +870,28 @@
             }
           },
           "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        },
+        "proposal_quality": {
+          "status_counts": {
+            "ACCEPTED": 130,
+            "REJECTED_STAGE_VOLUME": 112,
+            "ACCEPTED_PRE_DEDUP": 84,
+            "SUPPRESSED_DUPLICATE": 84
+          },
+          "accepted_physical_proposals": 130,
+          "evaluated_camera_stages": 20,
+          "average_accepted_proposals_per_camera_stage": 6.5,
+          "mask_refinement_rejection_rate": 0.0,
+          "stage_volume_rejection_rate": 0.4628,
+          "suppressed_duplicate_count": 84
         }
       }
     },
     {
       "variant": "F5_DECOY_HEAVY",
       "result": {
-        "status": "INSUFFICIENT_EVIDENCE",
-        "rejection_reason": "INSUFFICIENT_EVIDENCE",
+        "status": "INFEASIBLE",
+        "rejection_reason": "NO_VALID_FASTENER",
         "witness": null,
         "inspection_count": 3,
         "inspected_regions": [
@@ -840,10 +910,10 @@
         "overall_pass": false,
         "status_correct": false,
         "expected_status": "FEASIBLE",
-        "predicted_status": "INSUFFICIENT_EVIDENCE",
+        "predicted_status": "INFEASIBLE",
         "rejection_correct": true,
         "expected_rejection": null,
-        "predicted_rejection": "INSUFFICIENT_EVIDENCE",
+        "predicted_rejection": "NO_VALID_FASTENER",
         "witness_correct": false,
         "witness_details": {},
         "tracked_objects_count": 3,
@@ -855,25 +925,25 @@
           "categories": {
             "screwdriver": {
               "visible_gt_count": 3,
-              "yolo_detection_count": 12,
-              "matched_gt_count": 3,
-              "false_positive_count": 5,
-              "duplicate_detections": 4,
-              "association_correct_count": 7,
-              "association_evaluated_count": 12,
-              "recall": 1.0,
-              "association_accuracy": 0.5833
+              "yolo_detection_count": 4,
+              "matched_gt_count": 2,
+              "false_positive_count": 0,
+              "duplicate_detections": 2,
+              "association_correct_count": 4,
+              "association_evaluated_count": 4,
+              "recall": 0.6667,
+              "association_accuracy": 1.0
             },
             "power_driver": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 5,
+              "yolo_detection_count": 7,
               "matched_gt_count": 1,
-              "false_positive_count": 1,
-              "duplicate_detections": 3,
-              "association_correct_count": 4,
-              "association_evaluated_count": 5,
+              "false_positive_count": 6,
+              "duplicate_detections": 0,
+              "association_correct_count": 1,
+              "association_evaluated_count": 7,
               "recall": 1.0,
-              "association_accuracy": 0.8
+              "association_accuracy": 0.1429
             },
             "screw": {
               "visible_gt_count": 2,
@@ -888,86 +958,86 @@
             },
             "bolt": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 1,
+              "yolo_detection_count": 0,
               "matched_gt_count": 0,
-              "false_positive_count": 1,
-              "duplicate_detections": 0,
-              "association_correct_count": 0,
-              "association_evaluated_count": 1,
-              "recall": 0.0,
-              "association_accuracy": 0.0
-            },
-            "wrench": {
-              "visible_gt_count": 1,
-              "yolo_detection_count": 5,
-              "matched_gt_count": 1,
-              "false_positive_count": 4,
-              "duplicate_detections": 0,
-              "association_correct_count": 1,
-              "association_evaluated_count": 4,
-              "recall": 1.0,
-              "association_accuracy": 0.25
-            },
-            "pliers": {
-              "visible_gt_count": 1,
-              "yolo_detection_count": 1,
-              "matched_gt_count": 0,
-              "false_positive_count": 1,
-              "duplicate_detections": 0,
-              "association_correct_count": 0,
-              "association_evaluated_count": 1,
-              "recall": 0.0,
-              "association_accuracy": 0.0
-            },
-            "workbench": {
-              "visible_gt_count": 1,
-              "yolo_detection_count": 2,
-              "matched_gt_count": 1,
               "false_positive_count": 0,
-              "duplicate_detections": 1,
-              "association_correct_count": 2,
-              "association_evaluated_count": 2,
-              "recall": 1.0,
-              "association_accuracy": 1.0
-            },
-            "tool_cart": {
-              "visible_gt_count": 1,
-              "yolo_detection_count": 1,
-              "matched_gt_count": 1,
-              "false_positive_count": 0,
-              "duplicate_detections": 0,
-              "association_correct_count": 1,
-              "association_evaluated_count": 1,
-              "recall": 1.0,
-              "association_accuracy": 1.0
-            },
-            "shelf": {
-              "visible_gt_count": 0,
-              "yolo_detection_count": 111,
-              "matched_gt_count": 0,
-              "false_positive_count": 97,
-              "duplicate_detections": 0,
-              "association_correct_count": 0,
-              "association_evaluated_count": 14,
-              "recall": 0.0,
-              "association_accuracy": 0.0
-            },
-            "parts_tray": {
-              "visible_gt_count": 1,
-              "yolo_detection_count": 12,
-              "matched_gt_count": 0,
-              "false_positive_count": 12,
               "duplicate_detections": 0,
               "association_correct_count": 0,
               "association_evaluated_count": 0,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
+            "wrench": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "pliers": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 6,
+              "matched_gt_count": 1,
+              "false_positive_count": 3,
+              "duplicate_detections": 2,
+              "association_correct_count": 3,
+              "association_evaluated_count": 6,
+              "recall": 1.0,
+              "association_accuracy": 0.5
+            },
+            "workbench": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 3,
+              "matched_gt_count": 1,
+              "false_positive_count": 2,
+              "duplicate_detections": 0,
+              "association_correct_count": 1,
+              "association_evaluated_count": 1,
+              "recall": 1.0,
+              "association_accuracy": 1.0
+            },
+            "tool_cart": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 1,
+              "matched_gt_count": 0,
+              "false_positive_count": 1,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "shelf": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 89,
+              "matched_gt_count": 0,
+              "false_positive_count": 87,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 2,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "parts_tray": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 25,
+              "matched_gt_count": 0,
+              "false_positive_count": 23,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 2,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
             "hardware_bin": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 4,
+              "yolo_detection_count": 1,
               "matched_gt_count": 0,
-              "false_positive_count": 4,
+              "false_positive_count": 1,
               "duplicate_detections": 0,
               "association_correct_count": 0,
               "association_evaluated_count": 0,
@@ -976,6 +1046,20 @@
             }
           },
           "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        },
+        "proposal_quality": {
+          "status_counts": {
+            "ACCEPTED": 136,
+            "ACCEPTED_PRE_DEDUP": 73,
+            "SUPPRESSED_DUPLICATE": 73,
+            "REJECTED_STAGE_VOLUME": 106
+          },
+          "accepted_physical_proposals": 136,
+          "evaluated_camera_stages": 20,
+          "average_accepted_proposals_per_camera_stage": 6.8,
+          "mask_refinement_rejection_rate": 0.0,
+          "stage_volume_rejection_rate": 0.438,
+          "suppressed_duplicate_count": 73
         }
       }
     },
@@ -1017,23 +1101,23 @@
           "categories": {
             "screwdriver": {
               "visible_gt_count": 3,
-              "yolo_detection_count": 11,
+              "yolo_detection_count": 5,
               "matched_gt_count": 2,
               "false_positive_count": 1,
-              "duplicate_detections": 8,
-              "association_correct_count": 10,
-              "association_evaluated_count": 10,
+              "duplicate_detections": 2,
+              "association_correct_count": 4,
+              "association_evaluated_count": 5,
               "recall": 0.6667,
-              "association_accuracy": 1.0
+              "association_accuracy": 0.8
             },
             "power_driver": {
               "visible_gt_count": 0,
-              "yolo_detection_count": 0,
+              "yolo_detection_count": 1,
               "matched_gt_count": 0,
-              "false_positive_count": 0,
+              "false_positive_count": 1,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 0,
+              "association_evaluated_count": 1,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
@@ -1050,12 +1134,12 @@
             },
             "bolt": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 1,
+              "yolo_detection_count": 0,
               "matched_gt_count": 0,
-              "false_positive_count": 1,
+              "false_positive_count": 0,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 1,
+              "association_evaluated_count": 0,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
@@ -1066,7 +1150,7 @@
               "false_positive_count": 2,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 1,
+              "association_evaluated_count": 2,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
@@ -1084,13 +1168,13 @@
             "workbench": {
               "visible_gt_count": 1,
               "yolo_detection_count": 3,
-              "matched_gt_count": 1,
-              "false_positive_count": 1,
-              "duplicate_detections": 1,
-              "association_correct_count": 2,
-              "association_evaluated_count": 2,
-              "recall": 1.0,
-              "association_accuracy": 1.0
+              "matched_gt_count": 0,
+              "false_positive_count": 3,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
             },
             "tool_cart": {
               "visible_gt_count": 1,
@@ -1105,31 +1189,31 @@
             },
             "shelf": {
               "visible_gt_count": 0,
-              "yolo_detection_count": 106,
+              "yolo_detection_count": 79,
               "matched_gt_count": 0,
-              "false_positive_count": 92,
+              "false_positive_count": 75,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 14,
+              "association_evaluated_count": 4,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
             "parts_tray": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 18,
+              "yolo_detection_count": 31,
               "matched_gt_count": 1,
-              "false_positive_count": 12,
-              "duplicate_detections": 1,
-              "association_correct_count": 2,
-              "association_evaluated_count": 6,
+              "false_positive_count": 23,
+              "duplicate_detections": 2,
+              "association_correct_count": 3,
+              "association_evaluated_count": 8,
               "recall": 1.0,
-              "association_accuracy": 0.3333
+              "association_accuracy": 0.375
             },
             "hardware_bin": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 4,
+              "yolo_detection_count": 1,
               "matched_gt_count": 1,
-              "false_positive_count": 3,
+              "false_positive_count": 0,
               "duplicate_detections": 0,
               "association_correct_count": 1,
               "association_evaluated_count": 1,
@@ -1138,6 +1222,20 @@
             }
           },
           "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        },
+        "proposal_quality": {
+          "status_counts": {
+            "ACCEPTED_PRE_DEDUP": 60,
+            "ACCEPTED": 122,
+            "SUPPRESSED_DUPLICATE": 60,
+            "REJECTED_STAGE_VOLUME": 83
+          },
+          "accepted_physical_proposals": 122,
+          "evaluated_camera_stages": 20,
+          "average_accepted_proposals_per_camera_stage": 6.1,
+          "mask_refinement_rejection_rate": 0.0,
+          "stage_volume_rejection_rate": 0.4049,
+          "suppressed_duplicate_count": 60
         }
       }
     },
@@ -1179,12 +1277,12 @@
           "categories": {
             "screwdriver": {
               "visible_gt_count": 0,
-              "yolo_detection_count": 8,
+              "yolo_detection_count": 7,
               "matched_gt_count": 0,
-              "false_positive_count": 8,
+              "false_positive_count": 7,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 8,
+              "association_evaluated_count": 7,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
@@ -1212,20 +1310,20 @@
             },
             "bolt": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 2,
+              "yolo_detection_count": 0,
               "matched_gt_count": 0,
-              "false_positive_count": 2,
+              "false_positive_count": 0,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 2,
+              "association_evaluated_count": 0,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
             "wrench": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 1,
+              "yolo_detection_count": 0,
               "matched_gt_count": 0,
-              "false_positive_count": 1,
+              "false_positive_count": 0,
               "duplicate_detections": 0,
               "association_correct_count": 0,
               "association_evaluated_count": 0,
@@ -1234,64 +1332,64 @@
             },
             "pliers": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 1,
+              "yolo_detection_count": 3,
               "matched_gt_count": 1,
-              "false_positive_count": 0,
-              "duplicate_detections": 0,
-              "association_correct_count": 1,
-              "association_evaluated_count": 1,
+              "false_positive_count": 1,
+              "duplicate_detections": 1,
+              "association_correct_count": 2,
+              "association_evaluated_count": 3,
               "recall": 1.0,
-              "association_accuracy": 1.0
+              "association_accuracy": 0.6667
             },
             "workbench": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 5,
+              "yolo_detection_count": 3,
               "matched_gt_count": 1,
-              "false_positive_count": 1,
-              "duplicate_detections": 3,
-              "association_correct_count": 4,
-              "association_evaluated_count": 4,
+              "false_positive_count": 2,
+              "duplicate_detections": 0,
+              "association_correct_count": 1,
+              "association_evaluated_count": 1,
               "recall": 1.0,
               "association_accuracy": 1.0
             },
             "tool_cart": {
               "visible_gt_count": 1,
               "yolo_detection_count": 1,
-              "matched_gt_count": 1,
-              "false_positive_count": 0,
-              "duplicate_detections": 0,
-              "association_correct_count": 1,
-              "association_evaluated_count": 1,
-              "recall": 1.0,
-              "association_accuracy": 1.0
-            },
-            "shelf": {
-              "visible_gt_count": 0,
-              "yolo_detection_count": 109,
               "matched_gt_count": 0,
-              "false_positive_count": 96,
-              "duplicate_detections": 0,
-              "association_correct_count": 0,
-              "association_evaluated_count": 13,
-              "recall": 0.0,
-              "association_accuracy": 0.0
-            },
-            "parts_tray": {
-              "visible_gt_count": 1,
-              "yolo_detection_count": 12,
-              "matched_gt_count": 0,
-              "false_positive_count": 12,
+              "false_positive_count": 1,
               "duplicate_detections": 0,
               "association_correct_count": 0,
               "association_evaluated_count": 0,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
+            "shelf": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 90,
+              "matched_gt_count": 0,
+              "false_positive_count": 89,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 1,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "parts_tray": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 25,
+              "matched_gt_count": 0,
+              "false_positive_count": 23,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 2,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
             "hardware_bin": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 4,
+              "yolo_detection_count": 1,
               "matched_gt_count": 0,
-              "false_positive_count": 4,
+              "false_positive_count": 1,
               "duplicate_detections": 0,
               "association_correct_count": 0,
               "association_evaluated_count": 0,
@@ -1300,6 +1398,20 @@
             }
           },
           "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        },
+        "proposal_quality": {
+          "status_counts": {
+            "ACCEPTED": 131,
+            "ACCEPTED_PRE_DEDUP": 66,
+            "SUPPRESSED_DUPLICATE": 66,
+            "REJECTED_STAGE_VOLUME": 92
+          },
+          "accepted_physical_proposals": 131,
+          "evaluated_camera_stages": 20,
+          "average_accepted_proposals_per_camera_stage": 6.55,
+          "mask_refinement_rejection_rate": 0.0,
+          "stage_volume_rejection_rate": 0.4126,
+          "suppressed_duplicate_count": 66
         }
       }
     },
@@ -1341,23 +1453,23 @@
           "categories": {
             "screwdriver": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 6,
-              "matched_gt_count": 1,
-              "false_positive_count": 4,
-              "duplicate_detections": 1,
-              "association_correct_count": 2,
-              "association_evaluated_count": 6,
-              "recall": 1.0,
-              "association_accuracy": 0.3333
+              "yolo_detection_count": 5,
+              "matched_gt_count": 0,
+              "false_positive_count": 5,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 5,
+              "recall": 0.0,
+              "association_accuracy": 0.0
             },
             "power_driver": {
               "visible_gt_count": 0,
-              "yolo_detection_count": 1,
+              "yolo_detection_count": 0,
               "matched_gt_count": 0,
-              "false_positive_count": 1,
+              "false_positive_count": 0,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 1,
+              "association_evaluated_count": 0,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
@@ -1374,12 +1486,12 @@
             },
             "bolt": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 2,
+              "yolo_detection_count": 0,
               "matched_gt_count": 0,
-              "false_positive_count": 2,
+              "false_positive_count": 0,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 2,
+              "association_evaluated_count": 0,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
@@ -1390,70 +1502,70 @@
               "false_positive_count": 1,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 0,
+              "association_evaluated_count": 1,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
             "pliers": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 1,
+              "yolo_detection_count": 3,
               "matched_gt_count": 1,
-              "false_positive_count": 0,
-              "duplicate_detections": 0,
-              "association_correct_count": 1,
-              "association_evaluated_count": 1,
+              "false_positive_count": 1,
+              "duplicate_detections": 1,
+              "association_correct_count": 2,
+              "association_evaluated_count": 3,
               "recall": 1.0,
-              "association_accuracy": 1.0
+              "association_accuracy": 0.6667
             },
             "workbench": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 4,
+              "yolo_detection_count": 3,
               "matched_gt_count": 1,
-              "false_positive_count": 1,
-              "duplicate_detections": 2,
-              "association_correct_count": 3,
-              "association_evaluated_count": 3,
+              "false_positive_count": 2,
+              "duplicate_detections": 0,
+              "association_correct_count": 1,
+              "association_evaluated_count": 1,
               "recall": 1.0,
               "association_accuracy": 1.0
             },
             "tool_cart": {
               "visible_gt_count": 1,
               "yolo_detection_count": 1,
-              "matched_gt_count": 1,
-              "false_positive_count": 0,
-              "duplicate_detections": 0,
-              "association_correct_count": 1,
-              "association_evaluated_count": 1,
-              "recall": 1.0,
-              "association_accuracy": 1.0
-            },
-            "shelf": {
-              "visible_gt_count": 0,
-              "yolo_detection_count": 112,
               "matched_gt_count": 0,
-              "false_positive_count": 99,
-              "duplicate_detections": 0,
-              "association_correct_count": 0,
-              "association_evaluated_count": 13,
-              "recall": 0.0,
-              "association_accuracy": 0.0
-            },
-            "parts_tray": {
-              "visible_gt_count": 1,
-              "yolo_detection_count": 14,
-              "matched_gt_count": 0,
-              "false_positive_count": 14,
+              "false_positive_count": 1,
               "duplicate_detections": 0,
               "association_correct_count": 0,
               "association_evaluated_count": 0,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
+            "shelf": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 86,
+              "matched_gt_count": 0,
+              "false_positive_count": 85,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 1,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "parts_tray": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 26,
+              "matched_gt_count": 0,
+              "false_positive_count": 24,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 2,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
             "hardware_bin": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 4,
+              "yolo_detection_count": 1,
               "matched_gt_count": 0,
-              "false_positive_count": 4,
+              "false_positive_count": 1,
               "duplicate_detections": 0,
               "association_correct_count": 0,
               "association_evaluated_count": 0,
@@ -1462,6 +1574,20 @@
             }
           },
           "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        },
+        "proposal_quality": {
+          "status_counts": {
+            "ACCEPTED": 126,
+            "ACCEPTED_PRE_DEDUP": 66,
+            "SUPPRESSED_DUPLICATE": 66,
+            "REJECTED_STAGE_VOLUME": 93
+          },
+          "accepted_physical_proposals": 126,
+          "evaluated_camera_stages": 20,
+          "average_accepted_proposals_per_camera_stage": 6.3,
+          "mask_refinement_rejection_rate": 0.0,
+          "stage_volume_rejection_rate": 0.4247,
+          "suppressed_duplicate_count": 66
         }
       }
     },
@@ -1503,14 +1629,14 @@
           "categories": {
             "screwdriver": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 3,
+              "yolo_detection_count": 2,
               "matched_gt_count": 1,
-              "false_positive_count": 0,
-              "duplicate_detections": 2,
-              "association_correct_count": 3,
-              "association_evaluated_count": 3,
+              "false_positive_count": 1,
+              "duplicate_detections": 0,
+              "association_correct_count": 1,
+              "association_evaluated_count": 2,
               "recall": 1.0,
-              "association_accuracy": 1.0
+              "association_accuracy": 0.5
             },
             "power_driver": {
               "visible_gt_count": 0,
@@ -1536,23 +1662,23 @@
             },
             "bolt": {
               "visible_gt_count": 0,
-              "yolo_detection_count": 2,
-              "matched_gt_count": 0,
-              "false_positive_count": 2,
-              "duplicate_detections": 0,
-              "association_correct_count": 0,
-              "association_evaluated_count": 1,
-              "recall": 0.0,
-              "association_accuracy": 0.0
-            },
-            "wrench": {
-              "visible_gt_count": 0,
               "yolo_detection_count": 0,
               "matched_gt_count": 0,
               "false_positive_count": 0,
               "duplicate_detections": 0,
               "association_correct_count": 0,
               "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "wrench": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 2,
+              "matched_gt_count": 0,
+              "false_positive_count": 2,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 2,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
@@ -1569,14 +1695,14 @@
             },
             "workbench": {
               "visible_gt_count": 0,
-              "yolo_detection_count": 2,
+              "yolo_detection_count": 1,
               "matched_gt_count": 0,
-              "false_positive_count": 0,
-              "duplicate_detections": 2,
-              "association_correct_count": 2,
-              "association_evaluated_count": 2,
+              "false_positive_count": 1,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
               "recall": 0.0,
-              "association_accuracy": 1.0
+              "association_accuracy": 0.0
             },
             "tool_cart": {
               "visible_gt_count": 0,
@@ -1591,31 +1717,31 @@
             },
             "shelf": {
               "visible_gt_count": 0,
-              "yolo_detection_count": 106,
+              "yolo_detection_count": 81,
               "matched_gt_count": 0,
-              "false_positive_count": 94,
+              "false_positive_count": 78,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 12,
+              "association_evaluated_count": 3,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
             "parts_tray": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 22,
+              "yolo_detection_count": 29,
               "matched_gt_count": 0,
-              "false_positive_count": 22,
+              "false_positive_count": 28,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 0,
+              "association_evaluated_count": 1,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
             "hardware_bin": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 4,
+              "yolo_detection_count": 2,
               "matched_gt_count": 0,
-              "false_positive_count": 4,
+              "false_positive_count": 2,
               "duplicate_detections": 0,
               "association_correct_count": 0,
               "association_evaluated_count": 0,
@@ -1624,6 +1750,20 @@
             }
           },
           "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        },
+        "proposal_quality": {
+          "status_counts": {
+            "ACCEPTED": 117,
+            "ACCEPTED_PRE_DEDUP": 64,
+            "SUPPRESSED_DUPLICATE": 64,
+            "REJECTED_STAGE_VOLUME": 62
+          },
+          "accepted_physical_proposals": 117,
+          "evaluated_camera_stages": 20,
+          "average_accepted_proposals_per_camera_stage": 5.85,
+          "mask_refinement_rejection_rate": 0.0,
+          "stage_volume_rejection_rate": 0.3464,
+          "suppressed_duplicate_count": 64
         }
       }
     },
@@ -1665,14 +1805,14 @@
           "categories": {
             "screwdriver": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 6,
+              "yolo_detection_count": 2,
               "matched_gt_count": 1,
-              "false_positive_count": 3,
-              "duplicate_detections": 2,
-              "association_correct_count": 3,
-              "association_evaluated_count": 4,
+              "false_positive_count": 1,
+              "duplicate_detections": 0,
+              "association_correct_count": 1,
+              "association_evaluated_count": 2,
               "recall": 1.0,
-              "association_accuracy": 0.75
+              "association_accuracy": 0.5
             },
             "power_driver": {
               "visible_gt_count": 0,
@@ -1698,23 +1838,23 @@
             },
             "bolt": {
               "visible_gt_count": 0,
-              "yolo_detection_count": 1,
+              "yolo_detection_count": 0,
               "matched_gt_count": 0,
-              "false_positive_count": 1,
+              "false_positive_count": 0,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 1,
+              "association_evaluated_count": 0,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
             "wrench": {
               "visible_gt_count": 0,
-              "yolo_detection_count": 1,
+              "yolo_detection_count": 2,
               "matched_gt_count": 0,
-              "false_positive_count": 1,
+              "false_positive_count": 2,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 0,
+              "association_evaluated_count": 2,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
@@ -1731,45 +1871,45 @@
             },
             "workbench": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 2,
-              "matched_gt_count": 1,
-              "false_positive_count": 0,
-              "duplicate_detections": 1,
-              "association_correct_count": 2,
-              "association_evaluated_count": 2,
-              "recall": 1.0,
-              "association_accuracy": 1.0
+              "yolo_detection_count": 4,
+              "matched_gt_count": 0,
+              "false_positive_count": 4,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
             },
             "tool_cart": {
               "visible_gt_count": 1,
               "yolo_detection_count": 1,
-              "matched_gt_count": 1,
-              "false_positive_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 1,
               "duplicate_detections": 0,
-              "association_correct_count": 1,
-              "association_evaluated_count": 1,
-              "recall": 1.0,
-              "association_accuracy": 1.0
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
             },
             "shelf": {
               "visible_gt_count": 0,
-              "yolo_detection_count": 105,
+              "yolo_detection_count": 92,
               "matched_gt_count": 0,
-              "false_positive_count": 91,
+              "false_positive_count": 89,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 14,
+              "association_evaluated_count": 3,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
             "parts_tray": {
               "visible_gt_count": 0,
-              "yolo_detection_count": 5,
+              "yolo_detection_count": 19,
               "matched_gt_count": 0,
-              "false_positive_count": 5,
+              "false_positive_count": 17,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 0,
+              "association_evaluated_count": 2,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
@@ -1786,6 +1926,20 @@
             }
           },
           "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        },
+        "proposal_quality": {
+          "status_counts": {
+            "ACCEPTED": 120,
+            "ACCEPTED_PRE_DEDUP": 51,
+            "SUPPRESSED_DUPLICATE": 51,
+            "REJECTED_STAGE_VOLUME": 67
+          },
+          "accepted_physical_proposals": 120,
+          "evaluated_camera_stages": 20,
+          "average_accepted_proposals_per_camera_stage": 6.0,
+          "mask_refinement_rejection_rate": 0.0,
+          "stage_volume_rejection_rate": 0.3583,
+          "suppressed_duplicate_count": 51
         }
       }
     },
@@ -1827,23 +1981,23 @@
           "categories": {
             "screwdriver": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 6,
+              "yolo_detection_count": 5,
               "matched_gt_count": 0,
-              "false_positive_count": 6,
+              "false_positive_count": 5,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 6,
+              "association_evaluated_count": 5,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
             "power_driver": {
               "visible_gt_count": 0,
-              "yolo_detection_count": 1,
+              "yolo_detection_count": 0,
               "matched_gt_count": 0,
-              "false_positive_count": 1,
+              "false_positive_count": 0,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 1,
+              "association_evaluated_count": 0,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
@@ -1860,6 +2014,17 @@
             },
             "bolt": {
               "visible_gt_count": 1,
+              "yolo_detection_count": 0,
+              "matched_gt_count": 0,
+              "false_positive_count": 0,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 0,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "wrench": {
+              "visible_gt_count": 0,
               "yolo_detection_count": 2,
               "matched_gt_count": 0,
               "false_positive_count": 2,
@@ -1869,29 +2034,7 @@
               "recall": 0.0,
               "association_accuracy": 0.0
             },
-            "wrench": {
-              "visible_gt_count": 0,
-              "yolo_detection_count": 1,
-              "matched_gt_count": 0,
-              "false_positive_count": 1,
-              "duplicate_detections": 0,
-              "association_correct_count": 0,
-              "association_evaluated_count": 0,
-              "recall": 0.0,
-              "association_accuracy": 0.0
-            },
             "pliers": {
-              "visible_gt_count": 1,
-              "yolo_detection_count": 1,
-              "matched_gt_count": 1,
-              "false_positive_count": 0,
-              "duplicate_detections": 0,
-              "association_correct_count": 1,
-              "association_evaluated_count": 1,
-              "recall": 1.0,
-              "association_accuracy": 1.0
-            },
-            "workbench": {
               "visible_gt_count": 1,
               "yolo_detection_count": 3,
               "matched_gt_count": 1,
@@ -1902,44 +2045,55 @@
               "recall": 1.0,
               "association_accuracy": 1.0
             },
-            "tool_cart": {
+            "workbench": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 1,
+              "yolo_detection_count": 2,
               "matched_gt_count": 1,
-              "false_positive_count": 0,
+              "false_positive_count": 1,
               "duplicate_detections": 0,
               "association_correct_count": 1,
               "association_evaluated_count": 1,
               "recall": 1.0,
               "association_accuracy": 1.0
             },
-            "shelf": {
-              "visible_gt_count": 0,
-              "yolo_detection_count": 118,
-              "matched_gt_count": 0,
-              "false_positive_count": 105,
-              "duplicate_detections": 0,
-              "association_correct_count": 0,
-              "association_evaluated_count": 13,
-              "recall": 0.0,
-              "association_accuracy": 0.0
-            },
-            "parts_tray": {
+            "tool_cart": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 14,
+              "yolo_detection_count": 1,
               "matched_gt_count": 0,
-              "false_positive_count": 14,
+              "false_positive_count": 1,
               "duplicate_detections": 0,
               "association_correct_count": 0,
               "association_evaluated_count": 0,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
+            "shelf": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 91,
+              "matched_gt_count": 0,
+              "false_positive_count": 90,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 1,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "parts_tray": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 25,
+              "matched_gt_count": 0,
+              "false_positive_count": 23,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 2,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
             "hardware_bin": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 4,
+              "yolo_detection_count": 1,
               "matched_gt_count": 0,
-              "false_positive_count": 4,
+              "false_positive_count": 1,
               "duplicate_detections": 0,
               "association_correct_count": 0,
               "association_evaluated_count": 0,
@@ -1948,6 +2102,20 @@
             }
           },
           "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        },
+        "proposal_quality": {
+          "status_counts": {
+            "ACCEPTED": 130,
+            "ACCEPTED_PRE_DEDUP": 64,
+            "SUPPRESSED_DUPLICATE": 64,
+            "REJECTED_STAGE_VOLUME": 94
+          },
+          "accepted_physical_proposals": 130,
+          "evaluated_camera_stages": 20,
+          "average_accepted_proposals_per_camera_stage": 6.5,
+          "mask_refinement_rejection_rate": 0.0,
+          "stage_volume_rejection_rate": 0.4196,
+          "suppressed_duplicate_count": 64
         }
       }
     },
@@ -2000,14 +2168,14 @@
             },
             "power_driver": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 2,
+              "yolo_detection_count": 7,
               "matched_gt_count": 1,
-              "false_positive_count": 0,
-              "duplicate_detections": 1,
-              "association_correct_count": 2,
-              "association_evaluated_count": 2,
+              "false_positive_count": 1,
+              "duplicate_detections": 5,
+              "association_correct_count": 6,
+              "association_evaluated_count": 7,
               "recall": 1.0,
-              "association_accuracy": 1.0
+              "association_accuracy": 0.8571
             },
             "screw": {
               "visible_gt_count": 1,
@@ -2022,9 +2190,9 @@
             },
             "bolt": {
               "visible_gt_count": 0,
-              "yolo_detection_count": 2,
+              "yolo_detection_count": 0,
               "matched_gt_count": 0,
-              "false_positive_count": 2,
+              "false_positive_count": 0,
               "duplicate_detections": 0,
               "association_correct_count": 0,
               "association_evaluated_count": 0,
@@ -2055,13 +2223,13 @@
             },
             "workbench": {
               "visible_gt_count": 0,
-              "yolo_detection_count": 3,
-              "matched_gt_count": 0,
-              "false_positive_count": 1,
-              "duplicate_detections": 2,
-              "association_correct_count": 2,
-              "association_evaluated_count": 2,
-              "recall": 0.0,
+              "yolo_detection_count": 4,
+              "matched_gt_count": 1,
+              "false_positive_count": 3,
+              "duplicate_detections": 0,
+              "association_correct_count": 1,
+              "association_evaluated_count": 1,
+              "recall": 1.0,
               "association_accuracy": 1.0
             },
             "tool_cart": {
@@ -2077,20 +2245,20 @@
             },
             "shelf": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 108,
+              "yolo_detection_count": 81,
               "matched_gt_count": 0,
-              "false_positive_count": 96,
+              "false_positive_count": 78,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 12,
+              "association_evaluated_count": 3,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
             "parts_tray": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 20,
+              "yolo_detection_count": 31,
               "matched_gt_count": 0,
-              "false_positive_count": 20,
+              "false_positive_count": 31,
               "duplicate_detections": 0,
               "association_correct_count": 0,
               "association_evaluated_count": 0,
@@ -2099,9 +2267,9 @@
             },
             "hardware_bin": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 3,
+              "yolo_detection_count": 2,
               "matched_gt_count": 0,
-              "false_positive_count": 3,
+              "false_positive_count": 2,
               "duplicate_detections": 0,
               "association_correct_count": 0,
               "association_evaluated_count": 0,
@@ -2110,14 +2278,28 @@
             }
           },
           "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        },
+        "proposal_quality": {
+          "status_counts": {
+            "ACCEPTED": 125,
+            "REJECTED_STAGE_VOLUME": 86,
+            "ACCEPTED_PRE_DEDUP": 67,
+            "SUPPRESSED_DUPLICATE": 67
+          },
+          "accepted_physical_proposals": 125,
+          "evaluated_camera_stages": 20,
+          "average_accepted_proposals_per_camera_stage": 6.25,
+          "mask_refinement_rejection_rate": 0.0,
+          "stage_volume_rejection_rate": 0.4076,
+          "suppressed_duplicate_count": 67
         }
       }
     },
     {
       "variant": "I6_GLOBAL_CONFLICT",
       "result": {
-        "status": "INSUFFICIENT_EVIDENCE",
-        "rejection_reason": "INSUFFICIENT_EVIDENCE",
+        "status": "INFEASIBLE",
+        "rejection_reason": "NO_VALID_DRIVER",
         "witness": null,
         "inspection_count": 3,
         "inspected_regions": [
@@ -2128,21 +2310,21 @@
         "early_stopped": false,
         "metrics": {
           "stages_executed": 4,
-          "total_tracks": 1
+          "total_tracks": 2
         },
         "diagnostics": {}
       },
       "eval_metrics": {
         "overall_pass": false,
-        "status_correct": false,
+        "status_correct": true,
         "expected_status": "INFEASIBLE",
-        "predicted_status": "INSUFFICIENT_EVIDENCE",
+        "predicted_status": "INFEASIBLE",
         "rejection_correct": false,
         "expected_rejection": "GLOBAL_CONFLICT",
-        "predicted_rejection": "INSUFFICIENT_EVIDENCE",
+        "predicted_rejection": "NO_VALID_DRIVER",
         "witness_correct": false,
         "witness_details": {},
-        "tracked_objects_count": 1,
+        "tracked_objects_count": 2,
         "discovered_gt_objects_count": 1,
         "total_gt_objects_in_scene": 5,
         "stages_used": 4,
@@ -2151,23 +2333,23 @@
           "categories": {
             "screwdriver": {
               "visible_gt_count": 2,
-              "yolo_detection_count": 9,
+              "yolo_detection_count": 8,
               "matched_gt_count": 1,
               "false_positive_count": 5,
-              "duplicate_detections": 3,
-              "association_correct_count": 4,
-              "association_evaluated_count": 9,
+              "duplicate_detections": 2,
+              "association_correct_count": 3,
+              "association_evaluated_count": 8,
               "recall": 0.5,
-              "association_accuracy": 0.4444
+              "association_accuracy": 0.375
             },
             "power_driver": {
               "visible_gt_count": 0,
-              "yolo_detection_count": 2,
+              "yolo_detection_count": 1,
               "matched_gt_count": 0,
-              "false_positive_count": 2,
+              "false_positive_count": 1,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 2,
+              "association_evaluated_count": 1,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
@@ -2184,12 +2366,12 @@
             },
             "bolt": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 2,
+              "yolo_detection_count": 0,
               "matched_gt_count": 0,
-              "false_positive_count": 2,
+              "false_positive_count": 0,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 2,
+              "association_evaluated_count": 0,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
@@ -2200,70 +2382,70 @@
               "false_positive_count": 2,
               "duplicate_detections": 0,
               "association_correct_count": 0,
-              "association_evaluated_count": 1,
+              "association_evaluated_count": 2,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
             "pliers": {
-              "visible_gt_count": 1,
-              "yolo_detection_count": 0,
-              "matched_gt_count": 0,
-              "false_positive_count": 0,
-              "duplicate_detections": 0,
-              "association_correct_count": 0,
-              "association_evaluated_count": 0,
-              "recall": 0.0,
-              "association_accuracy": 0.0
-            },
-            "workbench": {
               "visible_gt_count": 1,
               "yolo_detection_count": 5,
               "matched_gt_count": 1,
               "false_positive_count": 1,
               "duplicate_detections": 3,
               "association_correct_count": 4,
-              "association_evaluated_count": 4,
+              "association_evaluated_count": 5,
               "recall": 1.0,
-              "association_accuracy": 1.0
+              "association_accuracy": 0.8
             },
-            "tool_cart": {
+            "workbench": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 1,
+              "yolo_detection_count": 2,
               "matched_gt_count": 1,
-              "false_positive_count": 0,
+              "false_positive_count": 1,
               "duplicate_detections": 0,
               "association_correct_count": 1,
               "association_evaluated_count": 1,
               "recall": 1.0,
               "association_accuracy": 1.0
             },
-            "shelf": {
-              "visible_gt_count": 0,
-              "yolo_detection_count": 111,
-              "matched_gt_count": 0,
-              "false_positive_count": 99,
-              "duplicate_detections": 0,
-              "association_correct_count": 0,
-              "association_evaluated_count": 12,
-              "recall": 0.0,
-              "association_accuracy": 0.0
-            },
-            "parts_tray": {
+            "tool_cart": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 14,
+              "yolo_detection_count": 1,
               "matched_gt_count": 0,
-              "false_positive_count": 14,
+              "false_positive_count": 1,
               "duplicate_detections": 0,
               "association_correct_count": 0,
               "association_evaluated_count": 0,
               "recall": 0.0,
               "association_accuracy": 0.0
             },
+            "shelf": {
+              "visible_gt_count": 0,
+              "yolo_detection_count": 93,
+              "matched_gt_count": 0,
+              "false_positive_count": 92,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 1,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
+            "parts_tray": {
+              "visible_gt_count": 1,
+              "yolo_detection_count": 25,
+              "matched_gt_count": 0,
+              "false_positive_count": 23,
+              "duplicate_detections": 0,
+              "association_correct_count": 0,
+              "association_evaluated_count": 2,
+              "recall": 0.0,
+              "association_accuracy": 0.0
+            },
             "hardware_bin": {
               "visible_gt_count": 1,
-              "yolo_detection_count": 4,
+              "yolo_detection_count": 1,
               "matched_gt_count": 0,
-              "false_positive_count": 4,
+              "false_positive_count": 1,
               "duplicate_detections": 0,
               "association_correct_count": 0,
               "association_evaluated_count": 0,
@@ -2272,6 +2454,20 @@
             }
           },
           "privileged_use": "POST_HOC_EVALUATION_ONLY"
+        },
+        "proposal_quality": {
+          "status_counts": {
+            "ACCEPTED": 138,
+            "ACCEPTED_PRE_DEDUP": 69,
+            "SUPPRESSED_DUPLICATE": 69,
+            "REJECTED_STAGE_VOLUME": 98
+          },
+          "accepted_physical_proposals": 138,
+          "evaluated_camera_stages": 20,
+          "average_accepted_proposals_per_camera_stage": 6.9,
+          "mask_refinement_rejection_rate": 0.0,
+          "stage_volume_rejection_rate": 0.4153,
+          "suppressed_duplicate_count": 69
         }
       }
     }

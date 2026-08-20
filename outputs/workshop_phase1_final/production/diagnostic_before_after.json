@@ -1,23 +1,54 @@
 {
-  "comparison_scope": "F0_BASE, all executed stages/cameras",
-  "privileged_use": "POST_HOC_EVALUATION_ONLY",
-  "before_definition": "Pre-hardening diagnostic at confidence 0.05, inference size 640, one detector class per canonical category, before global low-confidence recovery, stage-volume crop, and physical-proposal deduplication.",
-  "after_definition": "Canonical frozen full-production F0_BASE result.",
-  "track_count_context": {
-    "legacy_alias-expanded_production_before": 26,
-    "canonical_production_after": 7
+  "scope": "Post-hoc detector diagnostics only; never used by production decisions.",
+  "historical_operating_point": {
+    "confidence_threshold": 0.002,
+    "max_detections": 100,
+    "full_production_score": "2/14",
+    "screw_recall": 0.0,
+    "shelf_failure": "Thousands of aggregate detections with approximately 0.003 association accuracy"
   },
-  "categories": {
-    "screwdriver": {"before": {"visible_gt_count": 3, "yolo_detection_count": 0, "recall": 0.0, "false_positive_count": 0, "duplicate_detections": 0, "association_accuracy": 0.0}, "after": {"visible_gt_count": 3, "yolo_detection_count": 9, "recall": 0.6667, "false_positive_count": 1, "duplicate_detections": 6, "association_accuracy": 0.8889}},
-    "power_driver": {"before": {"visible_gt_count": 0, "yolo_detection_count": 0, "recall": 0.0, "false_positive_count": 0, "duplicate_detections": 0, "association_accuracy": 0.0}, "after": {"visible_gt_count": 0, "yolo_detection_count": 2, "recall": 0.0, "false_positive_count": 2, "duplicate_detections": 0, "association_accuracy": 0.0}},
-    "screw": {"before": {"visible_gt_count": 2, "yolo_detection_count": 0, "recall": 0.0, "false_positive_count": 0, "duplicate_detections": 0, "association_accuracy": 0.0}, "after": {"visible_gt_count": 2, "yolo_detection_count": 0, "recall": 0.0, "false_positive_count": 0, "duplicate_detections": 0, "association_accuracy": 0.0}},
-    "bolt": {"before": {"visible_gt_count": 1, "yolo_detection_count": 0, "recall": 0.0, "false_positive_count": 0, "duplicate_detections": 0, "association_accuracy": 0.0}, "after": {"visible_gt_count": 1, "yolo_detection_count": 2, "recall": 0.0, "false_positive_count": 2, "duplicate_detections": 0, "association_accuracy": 0.0}},
-    "wrench": {"before": {"visible_gt_count": 0, "yolo_detection_count": 0, "recall": 0.0, "false_positive_count": 0, "duplicate_detections": 0, "association_accuracy": 0.0}, "after": {"visible_gt_count": 0, "yolo_detection_count": 2, "recall": 0.0, "false_positive_count": 2, "duplicate_detections": 0, "association_accuracy": 0.0}},
-    "pliers": {"before": {"visible_gt_count": 0, "yolo_detection_count": 0, "recall": 0.0, "false_positive_count": 0, "duplicate_detections": 0, "association_accuracy": 0.0}, "after": {"visible_gt_count": 0, "yolo_detection_count": 0, "recall": 0.0, "false_positive_count": 0, "duplicate_detections": 0, "association_accuracy": 0.0}},
-    "workbench": {"before": {"visible_gt_count": 1, "yolo_detection_count": 5, "recall": 1.0, "false_positive_count": 0, "duplicate_detections": 4, "association_accuracy": 1.0}, "after": {"visible_gt_count": 1, "yolo_detection_count": 5, "recall": 1.0, "false_positive_count": 1, "duplicate_detections": 3, "association_accuracy": 1.0}},
-    "tool_cart": {"before": {"visible_gt_count": 1, "yolo_detection_count": 0, "recall": 0.0, "false_positive_count": 0, "duplicate_detections": 0, "association_accuracy": 0.0}, "after": {"visible_gt_count": 1, "yolo_detection_count": 1, "recall": 1.0, "false_positive_count": 0, "duplicate_detections": 0, "association_accuracy": 1.0}},
-    "shelf": {"before": {"visible_gt_count": 0, "yolo_detection_count": 35, "recall": 0.0, "false_positive_count": 35, "duplicate_detections": 0, "association_accuracy": 0.0}, "after": {"visible_gt_count": 0, "yolo_detection_count": 114, "recall": 0.0, "false_positive_count": 64, "duplicate_detections": 0, "association_accuracy": 0.0}},
-    "parts_tray": {"before": {"visible_gt_count": 1, "yolo_detection_count": 1, "recall": 0.0, "false_positive_count": 1, "duplicate_detections": 0, "association_accuracy": 0.0}, "after": {"visible_gt_count": 1, "yolo_detection_count": 12, "recall": 1.0, "false_positive_count": 0, "duplicate_detections": 5, "association_accuracy": 0.5}},
-    "hardware_bin": {"before": {"visible_gt_count": 1, "yolo_detection_count": 0, "recall": 0.0, "false_positive_count": 0, "duplicate_detections": 0, "association_accuracy": 0.0}, "after": {"visible_gt_count": 1, "yolo_detection_count": 4, "recall": 1.0, "false_positive_count": 0, "duplicate_detections": 2, "association_accuracy": 0.75}}
+  "final_operating_point": {
+    "checkpoint": "YOLO-World medium-v2",
+    "confidence_threshold": 0.01,
+    "nms_iou_threshold": 0.35,
+    "max_detections_per_inference_pass": 50,
+    "multi_scale": ["full_frame", "stage_crop"],
+    "average_accepted_physical_proposals_per_camera_stage": 6.4536,
+    "suppressed_duplicate_proposals": 964,
+    "full_production_score": "1/14"
+  },
+  "screw_root_cause": {
+    "final_result": "DETECTION_MISS caused by LOW_CONFIDENCE_FILTER, not NMS, max_det, crop removal, depth refinement, stage-volume gating, or tracking",
+    "selected_threshold_observations": 0,
+    "f0_low_threshold_probe": {
+      "probe_confidence_only": 0.001,
+      "maximum_screw_confidence": 0.001051,
+      "raw_screw_hypotheses": 2,
+      "retained_screw_proposals": 0,
+      "correct_screw_associations": 0,
+      "explanation": "The only physical screw hypothesis was removed during cross-label physical dedup; no correct screw association survived even below the frozen threshold."
+    },
+    "exact_fix_attempted": "Direct screw class, calibrated crop enlargement, optional generic tiling trial, global threshold study, refined RGB-D support, and physical dedup.",
+    "remaining_limitation": "Official zero-shot YOLO-World does not assign useful screw confidence or correct physical association in the frozen rendered domain."
+  },
+  "bolt_root_cause": {
+    "selected_threshold_observations": 0,
+    "f0_low_threshold_probe": {
+      "maximum_bolt_confidence": 0.001475,
+      "retained_bolt_proposals": 3,
+      "correct_bolt_associations": 0
+    },
+    "remaining_limitation": "Below-threshold bolt hypotheses are semantic false positives rather than useful bolt detections."
+  },
+  "shelf_root_cause": {
+    "historical": "Very low threshold admitted widespread shelf hallucinations without adequate physical association weighting.",
+    "final": {
+      "accepted_shelf_proposals": 1227,
+      "correctly_associated_shelves": 0,
+      "false_positive_shelf_proposals": 1142,
+      "association_accuracy": 0.0
+    },
+    "exact_fix_attempted": "Global confidence/NMS calibration, cross-scale physical dedup, gated-point reuse, association-quality weighting, and one winning region hypothesis per camera/stage.",
+    "remaining_limitation": "The aggregate count is substantially cleaner per image but shelf remains an uncontrolled YOLO semantic confusion and is not solved."
   }
 }

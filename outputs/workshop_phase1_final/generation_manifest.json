@@ -1,19 +1,22 @@
 {
-  "code_commit": "7148b4b77b05c99d06140698a091767b02bf24dc",
-  "starting_and_remote_commit": "c6b59ac5d593448650611afa88105b1d9204a13f",
+  "code_commit": "0fb43acc36bef6e554e05f1bc232efc01afbe3ec",
+  "starting_commit": "6ca9a921248aa839e039cdf927d8e5ed1776401f",
+  "starting_remote_commit": "6ca9a921248aa839e039cdf927d8e5ed1776401f",
   "physical_scene_baseline": "f9a4f44d21ef4fc80a668dd0815bb58d6f1e2d0d",
   "branch": "naren/workshop_phase1_grounding",
   "generated_at_timezone": "2026-08-20 Asia/Kolkata",
-  "canonical_command": "MUJOCO_GL=egl PYOPENGL_PLATFORM=egl PYTHONPATH=. /home/naren/miniconda3/bin/python mujoco_scenes/run_workshop_phase1.py --canonical",
+  "calibration_command": "MUJOCO_GL=egl PYOPENGL_PLATFORM=egl PYTHONPATH=. /home/naren/miniconda3/bin/python mujoco_scenes/run_workshop_phase1.py --calibrate-detector --output /tmp/workshop_final_calibration",
+  "canonical_command": "MUJOCO_GL=egl PYOPENGL_PLATFORM=egl PYTHONPATH=. /home/naren/miniconda3/bin/python mujoco_scenes/run_workshop_phase1.py --canonical --output outputs/workshop_phase1_final",
   "canonical_scores": {
     "oracle_upper_bound": "14/14",
-    "yolo_semantics_oracle_masks": "1/14",
-    "full_production": "2/14"
+    "yolo_semantics_oracle_masks": "0/14",
+    "full_production": "1/14"
   },
   "tests": {
-    "focused_workshop_phase1": "42 passed in 219.44s",
-    "workshop_scene_regression": "43 passed in 33.10s",
-    "full_mujoco_scenes": "670 passed, 5 subtests passed, 1 unrelated Kitchen PyAV failure in 313.96s"
+    "focused_workshop_phase1_final": "51 passed in 263.19s",
+    "workshop_scene_regression": "43 passed in 48.09s",
+    "full_mujoco_scenes": "679 passed, 5 subtests passed, 1 unrelated Kitchen PyAV failure in 424.26s"
   },
-  "post_hoc_normalization": "Evaluator-only region matching was keyed by physical privileged region identity before artifact freeze so unique-match recall cannot exceed 1.0; no production decision or canonical outcome changed."
+  "post_hoc_normalization": "Evaluator-only region matching was restricted to active privileged region identities so recall cannot exceed 1.0; no production decision or canonical outcome changed.",
+  "physical_scene_diff": "empty for Workshop XML, meshes, textures, scene, variants, inspection rigs, poses, and cameras"
 }

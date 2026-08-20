@@ -1,0 +1,79 @@
+{
+  "development_split": [
+    "F0_BASE",
+    "F1_TOOL_ALTERNATIVE",
+    "F5_DECOY_HEAVY"
+  ],
+  "held_out_variants": [
+    "F2_REGION_ALTERNATIVE",
+    "F3_DISTRIBUTED_OBJECTS",
+    "F4_OBJECT_REGION_COUPLING",
+    "F6_LAYOUT_SWAPPED",
+    "I0_NO_VALID_DRIVER",
+    "I1_NO_VALID_FASTENER",
+    "I2_NO_WORK_SURFACE",
+    "I3_NO_PARTS_CONTAINER",
+    "I4_TOOL_GEOMETRY_FAILURE",
+    "I5_OBJECT_REGION_PACKING_FAILURE",
+    "I6_GLOBAL_CONFLICT"
+  ],
+  "selection_criterion": {
+    "name": "fixed_detector_quality_score",
+    "formula": "0.35*critical_recall + 0.20*small_object_recall + 0.20*region_association + 0.25*association_precision - 0.10*min(FP_per_image/5,1) - 0.05*min(duplicates_per_visible_GT,1)",
+    "uses_final_benchmark_accuracy": false,
+    "development_variants": [
+      "F0_BASE",
+      "F1_TOOL_ALTERNATIVE",
+      "F5_DECOY_HEAVY"
+    ],
+    "per_variant_or_category_thresholds": false,
+    "nms_tie_break": "Within 0.005 selection-score units, choose fewer false positives per image, then lower runtime."
+  },
+  "selected": {
+    "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+    "confidence_threshold": 0.01,
+    "nms_iou_threshold": 0.35,
+    "metrics": {
+      "critical_object_recall": 0.4375,
+      "small_object_recall": 0.0,
+      "region_association_accuracy": 0.3333,
+      "semantic_association_precision": 0.3217,
+      "false_positives_per_image": 5.1,
+      "duplicate_proposals_per_visible_gt": 0.697,
+      "average_accepted_proposals_per_image": 6.65,
+      "selection_score": 0.165375,
+      "runtime_seconds": 128.62
+    }
+  },
+  "multi_scale": {
+    "full_frame": true,
+    "stage_crop": true,
+    "stage_tiles": false,
+    "tile_overlap_fraction": 0.15
+  },
+  "multi_scale_comparison": {
+    "full_frame_plus_stage_crop": {
+      "critical_object_recall": 0.4375,
+      "small_object_recall": 0.0,
+      "region_association_accuracy": 0.3333,
+      "semantic_association_precision": 0.3217,
+      "false_positives_per_image": 5.1,
+      "duplicate_proposals_per_visible_gt": 0.697,
+      "average_accepted_proposals_per_image": 6.65,
+      "runtime_seconds": 128.62
+    },
+    "full_frame_plus_stage_crop_plus_generic_2x2_tiles": {
+      "critical_object_recall": 0.3438,
+      "small_object_recall": 0.0,
+      "region_association_accuracy": 0.625,
+      "semantic_association_precision": 0.2727,
+      "false_positives_per_image": 10.4167,
+      "duplicate_proposals_per_visible_gt": 0.7273,
+      "average_accepted_proposals_per_image": 12.3,
+      "runtime_seconds": 267.7
+    },
+    "selected_stage_tiles": false,
+    "selection_reason": "Tiles did not improve small-object recall, reduced critical-object recall, and materially increased false positives and runtime; retain full frame plus stage crop."
+  },
+  "final_configuration_frozen_before_held_out_evaluation": true
+}
