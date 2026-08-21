@@ -44,6 +44,13 @@ WORKSHOP_ALTERNATIVES_CONFIG = ROOT / "configs" / "workshop_joint_alternatives.y
 
 WORKSHOP_REGIONS = ("LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET")
 
+# Frozen Workshop-only spawn selected from the base-standoff audit.  The
+# shared Kitchen/Living-Room default in scene_loader remains unchanged.
+WORKSHOP_GOOGLE_BASE_POSE = {
+    "pos": "0 -0.75 0.06205",
+    "quat": "0.7071068 0 0 0.7071068",
+}
+
 WORKSHOP_ALL_FUNCTIONAL_WORK_SURFACES = (
     "MAIN_WORKBENCH_ZONE",
     "TOOL_CART_TOP",
@@ -624,7 +631,9 @@ def build_workshop_xml(
 
     # 5. Inject Google Robot if requested
     if robot == ROBOT_GOOGLE:
-        _inject_google_robot(root, _google_robot_dir())
+        _inject_google_robot(
+            root, _google_robot_dir(), base_pose=WORKSHOP_GOOGLE_BASE_POSE
+        )
         for object_name in present_pickable_objects:
             ET.SubElement(
                 equality,

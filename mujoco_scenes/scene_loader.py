@@ -1212,7 +1212,11 @@ def _prefix_google_robot(robot_root: ET.Element) -> None:
             element.set("material", material_names[material])
 
 
-def _inject_google_robot(root: ET.Element, google_dir: Path) -> None:
+def _inject_google_robot(
+    root: ET.Element,
+    google_dir: Path,
+    base_pose: dict[str, str] | None = None,
+) -> None:
     """Merge and adapt Menagerie's Google Robot into the kitchen model."""
     robot_root = ET.parse(google_dir / "robot.xml").getroot()
     _prefix_google_robot(robot_root)
@@ -1231,8 +1235,9 @@ def _inject_google_robot(root: ET.Element, google_dir: Path) -> None:
     if robot_body is None:
         raise RuntimeError("Menagerie Google Robot base_link body is missing")
     robot_body = copy.deepcopy(robot_body)
-    robot_body.set("pos", GOOGLE_BASE_POSE["pos"])
-    robot_body.set("quat", GOOGLE_BASE_POSE["quat"])
+    resolved_base_pose = GOOGLE_BASE_POSE if base_pose is None else base_pose
+    robot_body.set("pos", resolved_base_pose["pos"])
+    robot_body.set("quat", resolved_base_pose["quat"])
 
     joint_specs = (
         ("google:base_forward_joint", "slide", "1 0 0", "-1 1.25", "750"),

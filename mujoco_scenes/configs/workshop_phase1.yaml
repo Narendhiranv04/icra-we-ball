@@ -15,8 +15,8 @@ pipeline:
 perception:
   max_detector_vocabulary_size: 32
   detector:
-    checkpoint: "semantic_model_cache/yolov8m-worldv2.pt"
-    confidence_threshold: 0.01
+    checkpoint: "mujoco_scenes/yolov8s-worldv2.pt"
+    confidence_threshold: 0.075
     nms_iou_threshold: 0.35
     inference_size: 1280
     device: "cpu"
