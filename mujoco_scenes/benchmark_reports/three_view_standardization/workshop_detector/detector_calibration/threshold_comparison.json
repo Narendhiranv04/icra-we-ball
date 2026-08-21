@@ -1,0 +1,173 @@
+{
+  "criterion": {
+    "name": "fixed_detector_quality_score",
+    "formula": "0.35*critical_recall + 0.20*small_object_recall + 0.20*region_association + 0.25*association_precision - 0.10*min(FP_per_image/5,1) - 0.05*min(duplicates_per_visible_GT,1)",
+    "uses_final_benchmark_accuracy": false,
+    "development_variants": [
+      "F0_BASE",
+      "F1_TOOL_ALTERNATIVE",
+      "F5_DECOY_HEAVY"
+    ],
+    "per_variant_or_category_thresholds": false,
+    "nms_tie_break": "Within 0.005 selection-score units, choose fewer false positives per image, then lower runtime."
+  },
+  "confidence_trials": [
+    {
+      "checkpoint": "mujoco_scenes/yolov8s-worldv2.pt",
+      "confidence_threshold": 0.01,
+      "nms_iou_threshold": 0.45,
+      "stage_tiles": false,
+      "metrics": {
+        "critical_object_recall": 0.3438,
+        "small_object_recall": 0.0,
+        "region_association_accuracy": 0.0,
+        "semantic_association_precision": 0.5417,
+        "false_positives_per_image": 0.5238,
+        "duplicate_proposals_per_visible_gt": 0.2121,
+        "average_accepted_proposals_per_image": 1.1429,
+        "selection_score": 0.234648,
+        "runtime_seconds": 43.11
+      }
+    },
+    {
+      "checkpoint": "mujoco_scenes/yolov8s-worldv2.pt",
+      "confidence_threshold": 0.02,
+      "nms_iou_threshold": 0.45,
+      "stage_tiles": false,
+      "metrics": {
+        "critical_object_recall": 0.3438,
+        "small_object_recall": 0.0,
+        "region_association_accuracy": 0.0,
+        "semantic_association_precision": 0.7273,
+        "false_positives_per_image": 0.2,
+        "duplicate_proposals_per_visible_gt": 0.0606,
+        "average_accepted_proposals_per_image": 0.7333,
+        "selection_score": 0.295101,
+        "runtime_seconds": 41.5
+      }
+    },
+    {
+      "checkpoint": "mujoco_scenes/yolov8s-worldv2.pt",
+      "confidence_threshold": 0.03,
+      "nms_iou_threshold": 0.45,
+      "stage_tiles": false,
+      "metrics": {
+        "critical_object_recall": 0.25,
+        "small_object_recall": 0.0,
+        "region_association_accuracy": 0.0,
+        "semantic_association_precision": 0.8,
+        "false_positives_per_image": 0.125,
+        "duplicate_proposals_per_visible_gt": 0.0606,
+        "average_accepted_proposals_per_image": 0.625,
+        "selection_score": 0.28197,
+        "runtime_seconds": 47.01
+      }
+    },
+    {
+      "checkpoint": "mujoco_scenes/yolov8s-worldv2.pt",
+      "confidence_threshold": 0.05,
+      "nms_iou_threshold": 0.45,
+      "stage_tiles": false,
+      "metrics": {
+        "critical_object_recall": 0.25,
+        "small_object_recall": 0.0,
+        "region_association_accuracy": 0.0,
+        "semantic_association_precision": 1.0,
+        "false_positives_per_image": 0.0,
+        "duplicate_proposals_per_visible_gt": 0.0606,
+        "average_accepted_proposals_per_image": 0.6667,
+        "selection_score": 0.33447,
+        "runtime_seconds": 42.69
+      }
+    },
+    {
+      "checkpoint": "mujoco_scenes/yolov8s-worldv2.pt",
+      "confidence_threshold": 0.075,
+      "nms_iou_threshold": 0.45,
+      "stage_tiles": false,
+      "metrics": {
+        "critical_object_recall": 0.25,
+        "small_object_recall": 0.0,
+        "region_association_accuracy": 0.0,
+        "semantic_association_precision": 1.0,
+        "false_positives_per_image": 0.0,
+        "duplicate_proposals_per_visible_gt": 0.0303,
+        "average_accepted_proposals_per_image": 0.5,
+        "selection_score": 0.335985,
+        "runtime_seconds": 42.72
+      }
+    },
+    {
+      "checkpoint": "mujoco_scenes/yolov8s-worldv2.pt",
+      "confidence_threshold": 0.1,
+      "nms_iou_threshold": 0.45,
+      "stage_tiles": false,
+      "metrics": {
+        "critical_object_recall": 0.125,
+        "small_object_recall": 0.0,
+        "region_association_accuracy": 0.0,
+        "semantic_association_precision": 1.0,
+        "false_positives_per_image": 0.0,
+        "duplicate_proposals_per_visible_gt": 0.0,
+        "average_accepted_proposals_per_image": 0.3333,
+        "selection_score": 0.29375,
+        "runtime_seconds": 44.25
+      }
+    }
+  ],
+  "nms_trials": [
+    {
+      "checkpoint": "mujoco_scenes/yolov8s-worldv2.pt",
+      "confidence_threshold": 0.075,
+      "nms_iou_threshold": 0.35,
+      "stage_tiles": false,
+      "metrics": {
+        "critical_object_recall": 0.25,
+        "small_object_recall": 0.0,
+        "region_association_accuracy": 0.0,
+        "semantic_association_precision": 1.0,
+        "false_positives_per_image": 0.0,
+        "duplicate_proposals_per_visible_gt": 0.0,
+        "average_accepted_proposals_per_image": 0.3333,
+        "selection_score": 0.3375,
+        "runtime_seconds": 42.48
+      }
+    },
+    {
+      "checkpoint": "mujoco_scenes/yolov8s-worldv2.pt",
+      "confidence_threshold": 0.075,
+      "nms_iou_threshold": 0.45,
+      "stage_tiles": false,
+      "metrics": {
+        "critical_object_recall": 0.25,
+        "small_object_recall": 0.0,
+        "region_association_accuracy": 0.0,
+        "semantic_association_precision": 1.0,
+        "false_positives_per_image": 0.0,
+        "duplicate_proposals_per_visible_gt": 0.0303,
+        "average_accepted_proposals_per_image": 0.5,
+        "selection_score": 0.335985,
+        "runtime_seconds": 42.72
+      }
+    },
+    {
+      "checkpoint": "mujoco_scenes/yolov8s-worldv2.pt",
+      "confidence_threshold": 0.075,
+      "nms_iou_threshold": 0.55,
+      "stage_tiles": false,
+      "metrics": {
+        "critical_object_recall": 0.25,
+        "small_object_recall": 0.0,
+        "region_association_accuracy": 0.0,
+        "semantic_association_precision": 1.0,
+        "false_positives_per_image": 0.0,
+        "duplicate_proposals_per_visible_gt": 0.0303,
+        "average_accepted_proposals_per_image": 0.5,
+        "selection_score": 0.335985,
+        "runtime_seconds": 43.61
+      }
+    }
+  ],
+  "selected_confidence_threshold": 0.075,
+  "selected_nms_iou_threshold": 0.35
+}

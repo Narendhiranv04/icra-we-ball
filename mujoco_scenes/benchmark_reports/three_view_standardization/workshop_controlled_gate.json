@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "viewpoint_count": 3,
+  "roles": ["ISO_LEFT", "ISO_RIGHT", "DETAIL"],
+  "result": "14/14",
+  "rows": [
+    {"variant": "F0_BASE", "status": "FEASIBLE"},
+    {"variant": "F1_TOOL_ALTERNATIVE", "status": "FEASIBLE"},
+    {"variant": "F2_REGION_ALTERNATIVE", "status": "FEASIBLE"},
+    {"variant": "F3_DISTRIBUTED_OBJECTS", "status": "FEASIBLE"},
+    {"variant": "F4_OBJECT_REGION_COUPLING", "status": "FEASIBLE"},
+    {"variant": "F5_DECOY_HEAVY", "status": "FEASIBLE"},
+    {"variant": "F6_LAYOUT_SWAPPED", "status": "FEASIBLE"},
+    {"variant": "I0_NO_VALID_DRIVER", "status": "INFEASIBLE", "reason": "NO_VALID_DRIVER"},
+    {"variant": "I1_NO_VALID_FASTENER", "status": "INFEASIBLE", "reason": "NO_VALID_FASTENER"},
+    {"variant": "I2_NO_WORK_SURFACE", "status": "INFEASIBLE", "reason": "NO_WORK_SURFACE"},
+    {"variant": "I3_NO_PARTS_CONTAINER", "status": "INFEASIBLE", "reason": "NO_PARTS_CONTAINER"},
+    {"variant": "I4_TOOL_GEOMETRY_FAILURE", "status": "INFEASIBLE", "reason": "TOOL_GEOMETRY_FAILURE"},
+    {"variant": "I5_OBJECT_REGION_PACKING_FAILURE", "status": "INFEASIBLE", "reason": "OBJECT_REGION_PACKING_FAILURE"},
+    {"variant": "I6_GLOBAL_CONFLICT", "status": "INFEASIBLE", "reason": "GLOBAL_CONFLICT"}
+  ],
+  "command": "pytest mujoco_scenes/tests/test_workshop_phase1.py::test_all_14_variants_oracle_semantics_upper_bound -q",
+  "elapsed_seconds": 105.0
+}

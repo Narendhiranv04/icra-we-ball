@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "method": "offline_fixed_template_calibration",
+  "canonical_roles": ["ISO_LEFT", "ISO_RIGHT", "DETAIL"],
+  "minimum_object_contributing_viewpoints": 2,
+  "workshop_development_variants": [
+    "F0_BASE",
+    "F1_TOOL_ALTERNATIVE",
+    "F5_DECOY_HEAVY",
+    "F3_DISTRIBUTED_OBJECTS",
+    "F4_OBJECT_REGION_COUPLING"
+  ],
+  "workshop_base_standoff_sweep": [
+    {"base_y_m": -1.25, "repair_target_distance_m": 1.861951, "horizontal_distance_m": 1.756417},
+    {"base_y_m": -1.00, "repair_target_distance_m": 1.629221, "horizontal_distance_m": 1.507481},
+    {"base_y_m": -0.85, "repair_target_distance_m": 1.492267, "horizontal_distance_m": 1.358308},
+    {"base_y_m": -0.75, "repair_target_distance_m": 1.402449, "horizontal_distance_m": 1.258968, "selected": true},
+    {"base_y_m": -0.65, "repair_target_distance_m": 1.314101, "horizontal_distance_m": 1.159741}
+  ],
+  "selected_workshop_base_pose": {
+    "pos": [0.0, -0.75, 0.06205],
+    "quat": [0.7071068, 0.0, 0.0, 0.7071068],
+    "selection_reason": "closest audited neutral standoff retaining clearance from the workbench and all inspection volumes"
+  },
+  "collision_audit": {
+    "variants_checked": ["F0_BASE", "F6_LAYOUT_SWAPPED"],
+    "robot_contacts_at_neutral_pose": 0,
+    "status": "PASS"
+  },
+  "resolution": {
+    "workshop_source": [1280, 720],
+    "kitchen_source": [1280, 960],
+    "living_room_source": [1280, 960],
+    "1920x1080_tested": false,
+    "reason": "the higher-resolution comparison was not completed; retain established source resolutions and do not claim a measured 1920x1080 benefit"
+  },
+  "detector": {
+    "checkpoint": "mujoco_scenes/yolov8s-worldv2.pt",
+    "confidence_threshold": 0.075,
+    "nms_iou_threshold": 0.35,
+    "inference_size": 1280,
+    "stage_vocabulary": {
+      "INITIAL": "OBJECT_PLUS_REGION",
+      "HIDDEN_STORAGE": "OBJECT_ONLY"
+    }
+  }
+}

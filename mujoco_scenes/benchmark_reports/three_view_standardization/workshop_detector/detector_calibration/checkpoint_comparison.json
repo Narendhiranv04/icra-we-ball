@@ -1,0 +1,52 @@
+{
+  "criterion": {
+    "name": "fixed_detector_quality_score",
+    "formula": "0.35*critical_recall + 0.20*small_object_recall + 0.20*region_association + 0.25*association_precision - 0.10*min(FP_per_image/5,1) - 0.05*min(duplicates_per_visible_GT,1)",
+    "uses_final_benchmark_accuracy": false,
+    "development_variants": [
+      "F0_BASE",
+      "F1_TOOL_ALTERNATIVE",
+      "F5_DECOY_HEAVY"
+    ],
+    "per_variant_or_category_thresholds": false,
+    "nms_tie_break": "Within 0.005 selection-score units, choose fewer false positives per image, then lower runtime."
+  },
+  "trials": [
+    {
+      "checkpoint": "mujoco_scenes/yolov8s-worldv2.pt",
+      "confidence_threshold": 0.03,
+      "nms_iou_threshold": 0.45,
+      "stage_tiles": false,
+      "metrics": {
+        "critical_object_recall": 0.25,
+        "small_object_recall": 0.0,
+        "region_association_accuracy": 0.0,
+        "semantic_association_precision": 0.8,
+        "false_positives_per_image": 0.125,
+        "duplicate_proposals_per_visible_gt": 0.0606,
+        "average_accepted_proposals_per_image": 0.625,
+        "selection_score": 0.28197,
+        "runtime_seconds": 47.01
+      }
+    },
+    {
+      "checkpoint": "semantic_model_cache/yolov8m-worldv2.pt",
+      "confidence_threshold": 0.03,
+      "nms_iou_threshold": 0.45,
+      "stage_tiles": false,
+      "metrics": {
+        "critical_object_recall": 0.2188,
+        "small_object_recall": 0.0,
+        "region_association_accuracy": 0.0,
+        "semantic_association_precision": 0.6667,
+        "false_positives_per_image": 0.2941,
+        "duplicate_proposals_per_visible_gt": 0.1515,
+        "average_accepted_proposals_per_image": 0.8824,
+        "selection_score": 0.229772,
+        "runtime_seconds": 61.14
+      }
+    }
+  ],
+  "selected_checkpoint": "mujoco_scenes/yolov8s-worldv2.pt",
+  "larger_checkpoint_note": "Official large-v2 download was attempted but was unavailable from this environment; small-v2 versus medium-v2 still tests capacity within the same model family."
+}
