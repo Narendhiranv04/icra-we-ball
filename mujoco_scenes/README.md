@@ -152,7 +152,11 @@ docker run --rm \
 
 ## Five-view object point clouds and timing
 
-The geometry checker uses the five fixed cameras (`left_shoulder`, `right_shoulder`,
+The canonical functional-grounding geometry checker uses the three calibrated
+viewpoint roles (`ISO_LEFT`, `ISO_RIGHT`, and `DETAIL`). See
+[`../docs/RGBD_THREE_VIEW_STANDARD.md`](../docs/RGBD_THREE_VIEW_STANDARD.md).
+
+Legacy recorders may still use the five fixed project cameras (`left_shoulder`, `right_shoulder`,
 `overhead`, `side`, and `front`). For every currently catalogued object instance
 it renders RGB, metric depth, and MuJoCo geometry segmentation; back-projects
 masked pixels; transforms them through the live camera pose into the MuJoCo world

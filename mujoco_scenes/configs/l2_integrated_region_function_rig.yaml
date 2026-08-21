@@ -1,45 +1,24 @@
-schema_version: 2
+schema_version: 3
 camera_slots:
-  room_left: l2_camera_left
-  room_right: l2_camera_right
-  room_high: l2_camera_top
-  room_front: l2_camera_front
-  room_rear: l2_camera_close
-
+  ISO_LEFT: l2_camera_left
+  ISO_RIGHT: l2_camera_right
+  DETAIL: l2_camera_top
 capture:
+  region_geometry: GENERAL
   target_world_m: [0.0, 0.20, 0.65]
   up_world: [0.0, 0.0, 1.0]
   near_depth_m: 0.15
   far_depth_m: 7.0
   settle_steps: 500
   cameras:
-    room_left:
-      position_world_m: [-3.05, -2.72, 2.25]
-      look_at_world_m: [0.0, 0.25, 0.65]
-      fovy_degrees: 74.0
-    room_right:
-      position_world_m: [3.05, -2.72, 2.25]
-      look_at_world_m: [0.0, 0.25, 0.65]
-      fovy_degrees: 74.0
-    room_high:
-      position_world_m: [0.0, -0.25, 4.65]
-      look_at_world_m: [0.0, 0.20, 0.30]
-      fovy_degrees: 72.0
-    room_front:
-      position_world_m: [0.0, -2.75, 1.45]
-      look_at_world_m: [0.0, -1.66, 0.72]
-      fovy_degrees: 56.0
-    room_rear:
-      position_world_m: [0.0, -0.72, 1.45]
-      look_at_world_m: [0.0, -1.72, 0.72]
-      fovy_degrees: 62.0
-
+    ISO_LEFT: {position_world_m: [-3.05, -2.72, 2.25], look_at_world_m: [0.0, 0.25, 0.65], fovy_degrees: 74.0}
+    ISO_RIGHT: {position_world_m: [3.05, -2.72, 2.25], look_at_world_m: [0.0, 0.25, 0.65], fovy_degrees: 74.0}
+    DETAIL: {position_world_m: [0.0, -0.25, 4.65], look_at_world_m: [0.0, 0.20, 0.30], fovy_degrees: 72.0}
 view_validation:
-  minimum_valid_rig_cameras: 4
+  minimum_valid_rig_cameras: 3
   minimum_entity_camera_count: 2
   minimum_valid_depth_pixels: 500
   maximum_target_angle_degrees: 12.0
-
 processing:
   voxel_size_m: 0.003
   plane_band_m: 0.009
@@ -48,17 +27,12 @@ processing:
   minimum_seating_points: 300
   payload_primary_component_radius_m: 0.25
   robust_percentiles: [2.0, 98.0]
-
-# The runner resolves these neutral gates tightly around the current physical
-# support proxies. Ranks are fixed across every variant and encode only a
-# deterministic proposal order, never functional validity.
 region_selectors:
   surface_01: {candidate_rank: 2, volume: {}}
   surface_02: {candidate_rank: 1, volume: {}}
   surface_03: {candidate_rank: 3, volume: {}}
   surface_04: {candidate_rank: 4, volume: {}}
   surface_05: {candidate_rank: 5, volume: {}}
-
 seating_selectors:
   target_01: {volume: {}}
   target_02: {volume: {}}

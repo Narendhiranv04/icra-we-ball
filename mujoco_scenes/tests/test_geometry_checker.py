@@ -105,29 +105,20 @@ class GeometryCheckerTests(unittest.TestCase):
         )
         np.testing.assert_array_equal(inside, [True, False])
 
-    def test_every_region_has_five_distinct_facing_views(self):
+    def test_kitchen_uses_three_canonical_distinct_facing_views(self):
         config = load_inspection_rig_config()
         self.assertEqual(
             set(config["regions"]),
             {"INITIAL", "D1", "D2", "C2", "B1", "C1"},
         )
         for region in config["regions"].values():
-            self.assertEqual(len(region["cameras"]), 5)
+            self.assertEqual(
+                set(region["cameras"]), {"ISO_LEFT", "ISO_RIGHT", "DETAIL"}
+            )
 
-    def test_living_room_has_scene_specific_five_view_rigs(self):
-        config = load_inspection_rig_config(
-            LIVING_ROOM_INSPECTION_RIG_CONFIG
-        )
-        self.assertEqual(
-            config["inspection_sequence"],
-            ["LEFT_DRAWER", "RIGHT_DRAWER"],
-        )
-        self.assertEqual(
-            set(config["regions"]),
-            {"INITIAL", "LEFT_DRAWER", "RIGHT_DRAWER"},
-        )
-        for region in config["regions"].values():
-            self.assertEqual(len(region["cameras"]), 5)
+    def test_legacy_noncanonical_living_rig_is_rejected_by_canonical_loader(self):
+        with self.assertRaisesRegex(ValueError, "viewpoint roles"):
+            load_inspection_rig_config(LIVING_ROOM_INSPECTION_RIG_CONFIG)
 
     def test_voxel_fusion_removes_duplicate_samples(self):
         points = np.array(

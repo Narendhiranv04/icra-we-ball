@@ -1,106 +1,77 @@
-schema_version: 1
+schema_version: 2
 inspection_sequence: [LEFT_DRAWER, RIGHT_DRAWER, TOOL_CABINET]
-
 camera_slots:
-  left: workshop_camera_left
-  right: workshop_camera_right
-  top: workshop_camera_top
-  front: workshop_camera_front
-  close: workshop_camera_close
-
+  ISO_LEFT: workshop_camera_left
+  ISO_RIGHT: workshop_camera_right
+  DETAIL: workshop_camera_top
+viewpoint_roles:
+  ISO_LEFT: {azimuth_sign: LEFT, elevation: OBLIQUE}
+  ISO_RIGHT: {azimuth_sign: RIGHT, elevation: OBLIQUE}
+  DETAIL: {horizontal_region: TOP_DOWN, vertical_region: FRONT_HIGH, general_region: TOP_FRONT}
 view_validation:
-  minimum_valid_rig_cameras: 5
+  minimum_valid_rig_cameras: 3
   minimum_object_camera_count: 2
   maximum_target_angle_degrees: 8.0
   minimum_valid_depth_pixels: 150
-
 processing:
   mask_erosion_pixels: 0
   depth_discontinuity_m: 0.040
   depth_discontinuity_radius_pixels: 1
   voxel_size_m: 0.003
-  outlier_removal:
-    enabled: true
-    voxel_radius_m: 0.012
-    minimum_neighbours: 2
-    minimum_input_points: 30
-  primary_component_filter:
-    enabled: false
-    minimum_component_fraction: 0.60
-
-evidence_acceptance:
-  minimum_object_points: 20
-  minimum_inside_fraction: 0.55
-
+  outlier_removal: {enabled: true, voxel_radius_m: 0.012, minimum_neighbours: 2, minimum_input_points: 30}
+  primary_component_filter: {enabled: false, minimum_component_fraction: 0.60}
+evidence_acceptance: {minimum_object_points: 20, minimum_inside_fraction: 0.55}
 regions:
   INITIAL:
-    target_world_m: [0.0, 0.35, 0.85]
-    rig_position_world_m: [0.0, -1.25, 1.45]
-    up_world: [0.0, 0.0, 1.0]
-    near_depth_m: 0.20
-    far_depth_m: 2.80
-    settle_steps: 50
-    boundary_margin_m: 0.025
-    inspection_volume:
-      minimum_world_m: [-1.20, -0.15, 0.60]
-      maximum_world_m: [1.20, 0.85, 1.50]
-    cameras: &workshop_views
-      left:
-        position_offset_m: [-0.36, 0.00, 0.12]
-        look_at_offset_m: [-0.10, 0.00, 0.00]
-        fovy_degrees: 62.0
-      right:
-        position_offset_m: [0.36, 0.00, 0.12]
-        look_at_offset_m: [0.10, 0.00, 0.00]
-        fovy_degrees: 62.0
-      top:
-        position_offset_m: [0.00, 0.20, 0.65]
-        look_at_offset_m: [0.00, 0.00, -0.05]
-        fovy_degrees: 64.0
-      front:
-        position_offset_m: [-0.15, 0.08, 0.20]
-        look_at_offset_m: [0.05, 0.00, 0.00]
-        fovy_degrees: 60.0
-      close:
-        position_offset_m: [0.15, 0.12, 0.25]
-        look_at_offset_m: [-0.05, 0.00, 0.00]
-        fovy_degrees: 56.0
-
-  LEFT_DRAWER:
-    target_world_m: [-0.28, 0.01, 0.48]
-    rig_position_world_m: [-0.28, -0.99, 0.88]
-    up_world: [0.0, 0.0, 1.0]
-    near_depth_m: 0.15
-    far_depth_m: 1.80
-    settle_steps: 80
-    boundary_margin_m: 0.025
-    inspection_volume:
-      minimum_world_m: [-0.55, -0.30, 0.35]
-      maximum_world_m: [-0.05, 0.45, 0.65]
-    cameras: *workshop_views
-
-  RIGHT_DRAWER:
-    target_world_m: [0.28, 0.01, 0.48]
-    rig_position_world_m: [0.28, -0.99, 0.88]
-    up_world: [0.0, 0.0, 1.0]
-    near_depth_m: 0.15
-    far_depth_m: 1.80
-    settle_steps: 80
-    boundary_margin_m: 0.025
-    inspection_volume:
-      minimum_world_m: [0.05, -0.30, 0.35]
-      maximum_world_m: [0.55, 0.45, 0.65]
-    cameras: *workshop_views
-
-  TOOL_CABINET:
-    target_world_m: [0.44, 0.56, 0.83]
-    rig_position_world_m: [0.44, -0.70, 1.22]
+    region_geometry: GENERAL
+    target_world_m: [0.0, 0.35, 0.86]
+    rig_position_world_m: [0.0, -1.05, 1.35]
     up_world: [0.0, 0.0, 1.0]
     near_depth_m: 0.15
     far_depth_m: 2.20
+    settle_steps: 50
+    boundary_margin_m: 0.025
+    inspection_volume: {minimum_world_m: [-1.20, -0.15, 0.60], maximum_world_m: [1.20, 0.85, 1.50]}
+    cameras:
+      ISO_LEFT: {position_offset_m: [-0.36, 0.0, 0.12], look_at_offset_m: [-0.10, 0.0, 0.0], fovy_degrees: 70.0}
+      ISO_RIGHT: {position_offset_m: [0.36, 0.0, 0.12], look_at_offset_m: [0.10, 0.0, 0.0], fovy_degrees: 70.0}
+      DETAIL: {position_offset_m: [0.0, 0.20, 0.65], look_at_offset_m: [0.0, 0.0, -0.05], fovy_degrees: 72.0}
+  LEFT_DRAWER:
+    region_geometry: HORIZONTAL_OPEN_TOP
+    target_world_m: [-0.28, 0.01, 0.48]
+    rig_position_world_m: [-0.28, -0.75, 0.88]
+    up_world: [0.0, 0.0, 1.0]
+    near_depth_m: 0.10
+    far_depth_m: 1.25
     settle_steps: 80
     boundary_margin_m: 0.025
-    inspection_volume:
-      minimum_world_m: [0.20, 0.35, 0.65]
-      maximum_world_m: [0.70, 0.75, 1.12]
-    cameras: *workshop_views
+    inspection_volume: {minimum_world_m: [-0.55, -0.30, 0.35], maximum_world_m: [-0.05, 0.45, 0.65]}
+    cameras: &drawer_views
+      ISO_LEFT: {position_offset_m: [-0.36, 0.0, 0.12], look_at_offset_m: [-0.10, 0.0, 0.0], fovy_degrees: 62.0}
+      ISO_RIGHT: {position_offset_m: [0.36, 0.0, 0.12], look_at_offset_m: [0.10, 0.0, 0.0], fovy_degrees: 62.0}
+      DETAIL: {position_offset_m: [0.0, 0.20, 0.65], look_at_offset_m: [0.0, 0.0, -0.05], fovy_degrees: 64.0}
+  RIGHT_DRAWER:
+    region_geometry: HORIZONTAL_OPEN_TOP
+    target_world_m: [0.28, 0.01, 0.48]
+    rig_position_world_m: [0.28, -0.75, 0.88]
+    up_world: [0.0, 0.0, 1.0]
+    near_depth_m: 0.10
+    far_depth_m: 1.25
+    settle_steps: 80
+    boundary_margin_m: 0.025
+    inspection_volume: {minimum_world_m: [0.05, -0.30, 0.35], maximum_world_m: [0.55, 0.45, 0.65]}
+    cameras: *drawer_views
+  TOOL_CABINET:
+    region_geometry: VERTICAL_FRONT_ACCESS
+    target_world_m: [0.44, 0.56, 0.83]
+    rig_position_world_m: [0.44, -0.70, 1.22]
+    up_world: [0.0, 0.0, 1.0]
+    near_depth_m: 0.10
+    far_depth_m: 1.45
+    settle_steps: 80
+    boundary_margin_m: 0.025
+    inspection_volume: {minimum_world_m: [0.20, 0.35, 0.65], maximum_world_m: [0.70, 0.75, 1.12]}
+    cameras:
+      ISO_LEFT: {position_offset_m: [-0.36, 0.0, 0.12], look_at_offset_m: [-0.10, 0.0, 0.0], fovy_degrees: 76.0}
+      ISO_RIGHT: {position_offset_m: [0.36, 0.0, 0.12], look_at_offset_m: [0.10, 0.0, 0.0], fovy_degrees: 76.0}
+      DETAIL: {position_offset_m: [0.15, 0.12, 0.25], look_at_offset_m: [-0.05, 0.0, 0.0], fovy_degrees: 76.0}

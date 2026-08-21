@@ -1,4 +1,4 @@
-"""Five-view RGB-D object point-cloud reconstruction for MuJoCo scenes."""
+"""Calibrated multi-view RGB-D object reconstruction for MuJoCo scenes."""
 
 from __future__ import annotations
 
@@ -19,12 +19,11 @@ except ModuleNotFoundError:  # Allow the pure geometry helpers to be unit tested
     mujoco = None
 
 
+CANONICAL_VIEWPOINT_ROLES = ("ISO_LEFT", "ISO_RIGHT", "DETAIL")
 DEFAULT_FUSION_CAMERAS = (
     "left_shoulder_camera",
     "right_shoulder_camera",
     "overhead_camera",
-    "side_camera",
-    "front_camera",
 )
 INSPECTION_RIG_CONFIG_PATH = (
     Path(__file__).resolve().parent / "configs" / "inspection_rigs.yaml"
@@ -116,7 +115,7 @@ class RegionInspection:
 
 @dataclass
 class PointCloudRun:
-    """Outputs and wall-clock timings from one five-view reconstruction."""
+    """Outputs and wall-clock timings from one multi-view reconstruction."""
 
     clouds: dict[str, ObjectPointCloud]
     cameras: tuple[str, ...]
@@ -183,14 +182,17 @@ def load_inspection_rig_config(
             + ", ".join(sorted(missing))
         )
     camera_slots = config.get("camera_slots", {})
-    if len(camera_slots) != 5:
-        raise ValueError("Inspection rig must map exactly five camera slots")
+    if set(camera_slots) != set(CANONICAL_VIEWPOINT_ROLES):
+        raise ValueError(
+            "Canonical inspection rig must map exactly the viewpoint roles "
+            + ", ".join(CANONICAL_VIEWPOINT_ROLES)
+        )
     for region_id in required_regions:
         region = config["regions"][region_id]
         cameras = region.get("cameras", {})
         if set(cameras) != set(camera_slots):
             raise ValueError(
-                f"Region {region_id} must configure all five camera slots"
+                f"Region {region_id} must configure every canonical viewpoint role"
             )
         minimum = np.asarray(
             region["inspection_volume"]["minimum_world_m"], dtype=float
@@ -844,7 +846,7 @@ class GeometryChecker:
         stage_output_dir: str | Path | None = None,
         rig_config: str | Path | dict[str, Any] | None = None,
     ) -> PointCloudRun:
-        """Capture one fresh, region-facing five-view measurement stage.
+        """Capture one fresh, region-facing calibrated measurement stage.
 
         Unlike :meth:`run`, this path positions a virtual camera rig, validates
         every view, gates points to the requested region, and emits typed
@@ -1134,7 +1136,9 @@ class GeometryChecker:
             if capture.validation.get("usable", False)
         )
         minimum_rig_cameras = int(
-            validation_config.get("minimum_valid_rig_cameras", 5)
+            validation_config.get(
+                "minimum_valid_rig_cameras", len(CANONICAL_VIEWPOINT_ROLES)
+            )
         )
         minimum_object_cameras = int(
             validation_config.get("minimum_object_camera_count", 2)

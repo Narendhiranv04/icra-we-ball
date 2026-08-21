@@ -1,4 +1,4 @@
-"""Capture the workshop with the shared five-view RGB-D pipeline."""
+"""Capture the workshop with the canonical three-view RGB-D pipeline."""
 
 from __future__ import annotations
 

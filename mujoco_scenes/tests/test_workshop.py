@@ -477,15 +477,22 @@ class WorkshopSceneTests(unittest.TestCase):
                     f"Rejection reason mismatch in {var_name}",
                 )
 
-    def test_workshop_has_five_views_for_each_observation_stage(self):
+    def test_workshop_has_three_canonical_views_for_each_observation_stage(self):
         config = load_inspection_rig_config(WORKSHOP_INSPECTION_RIG_CONFIG)
         self.assertEqual(
             config["inspection_sequence"],
             ["LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"],
         )
-        self.assertEqual(set(config["camera_slots"].values()), set(WORKSHOP_CAMERAS))
+        self.assertEqual(
+            set(config["camera_slots"]), {"ISO_LEFT", "ISO_RIGHT", "DETAIL"}
+        )
         for region in config["regions"].values():
-            self.assertEqual(len(region["cameras"]), 5)
+            self.assertEqual(set(region["cameras"]), set(config["camera_slots"]))
+            transforms = {
+                (*camera["position_offset_m"], *camera["look_at_offset_m"])
+                for camera in region["cameras"].values()
+            }
+            self.assertEqual(len(transforms), 3)
 
     def test_open_drawers_produce_fresh_region_gated_rgbd_evidence(self):
         scene = WorkshopScene("none", variant="F0_BASE")

@@ -365,11 +365,30 @@ class WorkshopPhase1InspectionController:
             capture_segmentation=is_oracle_mask,
         )
 
-        # SINGLE_FRONT_VIEW ablation: filter strictly to front camera
+        # Historical SINGLE_FRONT_VIEW is the cross-environment DETAIL ablation.
         if self.ablation == AblationType.SINGLE_VIEW or self.ablation == AblationType.SINGLE_FRONT_VIEW:
-            raw_obs = [obs for obs in raw_obs if obs.camera_id == "workshop_camera_front"]
+            raw_obs = [obs for obs in raw_obs if obs.camera_id == "DETAIL"]
             if not raw_obs:
-                raise RuntimeError("SINGLE_FRONT_VIEW requires workshop_camera_front")
+                raise RuntimeError("Single-view ablation requires canonical DETAIL")
+
+        # Reuse the one-time FM/manual contract output, but hidden-storage
+        # stages search for objects only. No FM call or ranking is repeated.
+        stage_prompts = (
+            self.prompts
+            if source_region_id == "INITIAL"
+            else [
+                entry["detector_label"]
+                for entry in self.detector_vocabulary
+                if entry["canonical_label"] in self.object_categories
+            ]
+        )
+        self.proposal_backend.set_vocabulary(
+            stage_prompts, self.detector_label_to_canonical
+        )
+        if self._yolo_aux_backend is not None:
+            self._yolo_aux_backend.set_vocabulary(
+                stage_prompts, self.detector_label_to_canonical
+            )
 
         # Determine stage inspection volume bounds
         stage_min, stage_max = self._get_stage_volume_bounds(source_region_id)
@@ -458,7 +477,7 @@ class WorkshopPhase1InspectionController:
                     "source_region_id": source_region_id,
                 })
             if (self.output_dir is not None and not is_oracle_mask
-                    and obs.camera_id == "workshop_camera_front" and stage_idx <= 1):
+                    and obs.camera_id == "DETAIL" and stage_idx <= 1):
                 self._save_detection_visual(
                     obs, masks, current_diagnostics, stage_idx, source_region_id)
 

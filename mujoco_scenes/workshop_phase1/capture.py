@@ -14,6 +14,7 @@ except ModuleNotFoundError:
     mujoco = None
 
 from mujoco_scenes.geometry_checker import (
+    CANONICAL_VIEWPOINT_ROLES,
     camera_intrinsics,
     look_at_camera_rotation,
     validate_camera_view,
@@ -41,6 +42,11 @@ class ProductionInspectionCapture:
         if self.rig_config_path.is_file():
             with open(self.rig_config_path, "r", encoding="utf-8") as f:
                 self._configuration = yaml.safe_load(f)
+        roles = set(self._configuration.get("camera_slots", {}))
+        if roles != set(CANONICAL_VIEWPOINT_ROLES):
+            raise ValueError(
+                "Workshop rig must configure ISO_LEFT, ISO_RIGHT, and DETAIL"
+            )
 
     def get_stage_rig_config(self, stage_region: str) -> dict[str, Any]:
         """Return rig parameters for the specified inspection stage."""
@@ -56,7 +62,7 @@ class ProductionInspectionCapture:
         renderer: Any | None = None,
         capture_segmentation: bool = False,
     ) -> list[ViewObservation]:
-        """Position the 5-camera rig, capture calibrated RGB-D views without segmentation rendering, and restore camera state."""
+        """Capture the three canonical calibrated RGB-D viewpoints."""
         if mujoco is None:
             raise RuntimeError("MuJoCo is not available for capture.")
 
@@ -70,13 +76,7 @@ class ProductionInspectionCapture:
         for _ in range(max(0, settle_steps)):
             mujoco.mj_step(scene.model, scene.data)
 
-        camera_slots = self._configuration.get("camera_slots", {
-            "left": "workshop_camera_left",
-            "right": "workshop_camera_right",
-            "top": "workshop_camera_top",
-            "front": "workshop_camera_front",
-            "close": "workshop_camera_close",
-        })
+        camera_slots = self._configuration["camera_slots"]
 
         target_base = np.asarray(region["target_world_m"], dtype=np.float64)
         rig_position = np.asarray(region["rig_position_world_m"], dtype=np.float64)
@@ -170,7 +170,7 @@ class ProductionInspectionCapture:
                 )
 
                 obs = ViewObservation(
-                    camera_id=model_cam_name,
+                    camera_id=logical_name,
                     rgb=rgb,
                     depth_m=depth,
                     intrinsics=intrinsics,
@@ -225,4 +225,3 @@ class MultiViewCameraRig(ProductionInspectionCapture):
             stage_region=stage_region,
             capture_segmentation=capture_segmentation,
         )
-

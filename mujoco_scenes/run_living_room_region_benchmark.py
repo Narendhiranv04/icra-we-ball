@@ -284,6 +284,10 @@ def _copy_compact_variant(source: Path, destination: Path) -> None:
 
 
 def _write_report_docs(report_dir: Path, rows: list[dict], metrics: dict) -> None:
+    def metric(name: str) -> str:
+        value = metrics.get(name)
+        return "N/A" if value is None else f"{float(value):.3f}"
+
     table = [
         "| Variant | Oracle | Production | Semantic-only | Geometry-only |",
         "|---|---:|---:|---:|---:|",
@@ -297,7 +301,7 @@ def _write_report_docs(report_dir: Path, rows: list[dict], metrics: dict) -> Non
 
 Fixed goal: **{L2_INTEGRATED_GOAL}**
 
-This frozen benchmark performs one INITIAL five-view RGB-D observation. It
+This frozen benchmark performs one INITIAL three-view RGB-D observation. It
 grounds only spatial destination-region functions from RGB semantics, measured
 support geometry, two-object set packing, and seat-relative context. Objects
 are payload operands; there is no object-function grounding. The production
@@ -320,11 +324,11 @@ benchmark.
 
 {chr(10).join(table)}
 
-Overall accuracy: {metrics['overall_feasibility_accuracy']:.3f}. Feasible
-recall: {metrics['feasible_recall']:.3f}. Infeasible recall:
-{metrics['infeasible_recall']:.3f}. Selected allocation validity:
-{metrics['functional_region_allocation_validity']:.3f}. F3 greedy-fail/global-
-succeed diagnostic: {metrics['f3_greedy_fails_global_succeeds']:.3f}.
+Overall accuracy: {metric('overall_feasibility_accuracy')}. Feasible
+recall: {metric('feasible_recall')}. Infeasible recall:
+{metric('infeasible_recall')}. Selected allocation validity:
+{metric('functional_region_allocation_validity')}. F3 greedy-fail/global-
+succeed diagnostic: {metric('f3_greedy_fails_global_succeeds')}.
 F0/F6 production complete-solution counts:
 {metrics['production_complete_solution_count_F0']} /
 {metrics['production_complete_solution_count_F6']}.

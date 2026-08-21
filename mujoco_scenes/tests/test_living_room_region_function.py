@@ -245,7 +245,7 @@ def test_one_initial_rgbd_capture_observes_all_entities(tmp_path, monkeypatch):
         width=320,
         height=240,
     ).capture(tmp_path / "observation")
-    assert len(observation.cameras) == 5
+    assert set(observation.cameras) == {"ISO_LEFT", "ISO_RIGHT", "DETAIL"}
     assert len(observation.payloads) == 6
     assert len(observation.seats) == 2
     assert sorted(observation.seats) == ["seat_0001", "seat_0002"]
@@ -384,7 +384,7 @@ def test_candidate_supports_do_not_intersect_each_other_or_seating(scene_name):
             assert not overlaps(first, seat), (first_name, seat_name)
 
 
-def test_integrated_camera_rig_has_five_distinct_calibrated_views(tmp_path):
+def test_integrated_camera_rig_has_three_distinct_calibrated_views(tmp_path):
     rig_paths = []
     ranks = []
     for scene_name in L2_INTEGRATED_SCENES:
@@ -392,12 +392,14 @@ def test_integrated_camera_rig_has_five_distinct_calibrated_views(tmp_path):
         config = yaml.safe_load(path.read_text())
         rig_paths.append(tuple(config["camera_slots"].values()))
         ranks.append(tuple(row["candidate_rank"] for row in config["region_selectors"].values()))
-        assert len(config["capture"]["cameras"]) == 5
+        assert set(config["capture"]["cameras"]) == {
+            "ISO_LEFT", "ISO_RIGHT", "DETAIL"
+        }
         positions = {
             tuple(row["position_world_m"])
             for row in config["capture"]["cameras"].values()
         }
-        assert len(positions) == 5
+        assert len(positions) == 3
         assert all(row["volume"] for row in config["region_selectors"].values())
     assert len(set(rig_paths)) == 1
     assert len(set(ranks)) == 1

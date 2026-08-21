@@ -982,7 +982,7 @@ def _segmentation_visual(segmentation: np.ndarray) -> Image.Image:
 
 
 class L2RegionEvidenceCapture:
-    """Render a fresh five-view candidate-region observation."""
+    """Render a fresh calibrated candidate-region observation."""
 
     def __init__(
         self,
