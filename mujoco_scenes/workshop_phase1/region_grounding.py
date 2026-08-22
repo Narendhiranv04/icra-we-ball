@@ -161,26 +161,51 @@ class RegionGrounder:
                         obs.depth_m, detection.binary_mask, obs.intrinsics,
                         obs.camera_position_world, obs.camera_rotation_world, max_depth=3.0)
                 centroid = points.mean(axis=0) if len(points) else None
-                bx1, by1, bx2, by2 = detection.bounding_box_xyxy
+                # Region semantics describe the whole support/container. The
+                # depth-refined mask can collapse to only the nearest vertical
+                # face (for example, the front of a tool cart), so use YOLO's
+                # full-object box for calibrated 2D proposal association while
+                # retaining the refined mask for all RGB-D measurements.
+                bx1, by1, bx2, by2 = (
+                    detection.raw_yolo_bbox_xyxy or detection.bounding_box_xyxy
+                )
                 box_area = max(1, (bx2 - bx1) * (by2 - by1))
                 best: tuple[float, int, dict[str, Any]] | None = None
                 for proposal_index, proposal in enumerate(proposals):
                     bounds = proposal["proposal_bounds_m"]
                     p_min = np.asarray(bounds["minimum_world_m"], dtype=float)
                     p_max = np.asarray(bounds["maximum_world_m"], dtype=float)
+                    association_cfg = self.geometry_config.get(
+                        "region_semantic_association", {})
+                    minimum_padding = np.asarray(
+                        association_cfg.get("minimum_padding_world_m", [0.0, 0.0, 0.0]),
+                        dtype=float,
+                    )
+                    maximum_padding = np.asarray(
+                        association_cfg.get("maximum_padding_world_m", [0.0, 0.0, 0.0]),
+                        dtype=float,
+                    )
+                    association_min = p_min - minimum_padding
+                    association_max = p_max + maximum_padding
                     inside_fraction = 0.0
                     if len(points):
-                        inside = np.all((points >= p_min - 0.02) & (points <= p_max + 0.02), axis=1)
+                        inside = np.all(
+                            (points >= association_min - 0.02)
+                            & (points <= association_max + 0.02), axis=1)
                         inside_fraction = float(np.mean(inside))
-                    center = 0.5 * (p_min + p_max)
-                    diagonal = max(float(np.linalg.norm(p_max - p_min)), 1e-6)
+                    center = 0.5 * (association_min + association_max)
+                    diagonal = max(float(np.linalg.norm(
+                        association_max - association_min)), 1e-6)
                     centroid_score = (max(0.0, 1.0 - float(np.linalg.norm(centroid - center)) / diagonal)
                                       if centroid is not None else 0.0)
 
                     # Project proposal corners for a complementary 2D signal.
-                    corners = np.array([[x, y, z] for x in (p_min[0], p_max[0])
-                                        for y in (p_min[1], p_max[1])
-                                        for z in (p_min[2], p_max[2])])
+                    corners = np.array([
+                        [x, y, z]
+                        for x in (association_min[0], association_max[0])
+                        for y in (association_min[1], association_max[1])
+                        for z in (association_min[2], association_max[2])
+                    ])
                     local = (corners - obs.camera_position_world) @ obs.camera_rotation_world
                     z_depth = -local[:, 2]
                     valid = z_depth > 0.1
@@ -301,10 +326,19 @@ class RegionGrounder:
                     if (u_max - u_min) > 10 and (v_max - v_min) > 10:
                         crop_evidence[obs.camera_id] = obs.rgb[v_min:v_max, u_min:u_max].copy()
 
-            if region_pts_list:
-                all_pts = np.vstack(region_pts_list)
-                if known is not None and known.fused_points is not None and len(known.fused_points):
-                    all_pts = np.vstack([known.fused_points, all_pts])
+            current_point_count = sum(len(points) for points in region_pts_list)
+            if known is not None and current_point_count < 30:
+                # A region-specific close-up may not re-observe distant initial
+                # regions. Preserve the last valid measurement instead of
+                # replacing its geometry with sparse/empty evidence.
+                observed_regions.append(known)
+                continue
+
+            persistent_parts = list(region_pts_list)
+            if known is not None and known.fused_points is not None and len(known.fused_points):
+                persistent_parts.insert(0, known.fused_points)
+            if persistent_parts:
+                all_pts = np.vstack(persistent_parts)
                 fused_pts, _ = voxel_downsample(all_pts, np.ones_like(all_pts), voxel_size=0.005)
             else:
                 fused_pts = np.empty((0, 3), dtype=np.float32)

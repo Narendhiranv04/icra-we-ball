@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 from pathlib import Path
 from typing import Any
 
@@ -14,7 +15,6 @@ except ModuleNotFoundError:
     mujoco = None
 
 from mujoco_scenes.geometry_checker import (
-    CANONICAL_VIEWPOINT_ROLES,
     camera_intrinsics,
     look_at_camera_rotation,
     validate_camera_view,
@@ -42,11 +42,14 @@ class ProductionInspectionCapture:
         if self.rig_config_path.is_file():
             with open(self.rig_config_path, "r", encoding="utf-8") as f:
                 self._configuration = yaml.safe_load(f)
-        roles = set(self._configuration.get("camera_slots", {}))
-        if roles != set(CANONICAL_VIEWPOINT_ROLES):
-            raise ValueError(
-                "Workshop rig must configure ISO_LEFT, ISO_RIGHT, and DETAIL"
-            )
+        roles = list(self._configuration.get("camera_slots", {}))
+        if len(roles) < 3 or len(roles) != len(set(roles)):
+            raise ValueError("Workshop rig must configure at least three unique camera slots")
+        for region_name, region in self._configuration.get("regions", {}).items():
+            if set(region.get("cameras", {})) != set(roles):
+                raise ValueError(
+                    f"Workshop rig region {region_name} must configure every camera slot"
+                )
 
     def get_stage_rig_config(self, stage_region: str) -> dict[str, Any]:
         """Return rig parameters for the specified inspection stage."""
@@ -62,11 +65,19 @@ class ProductionInspectionCapture:
         renderer: Any | None = None,
         capture_segmentation: bool = False,
     ) -> list[ViewObservation]:
-        """Capture the three canonical calibrated RGB-D viewpoints."""
+        """Capture every calibrated RGB-D viewpoint configured by the active rig."""
         if mujoco is None:
             raise RuntimeError("MuJoCo is not available for capture.")
 
-        regions_cfg = self._configuration.get("regions", {})
+        configuration = copy.deepcopy(self._configuration)
+        variant_name = str(getattr(scene, "variant_name", ""))
+        variant_override = configuration.get("variant_overrides", {}).get(variant_name, {})
+        for region_name, region_override in variant_override.get("regions", {}).items():
+            if region_name not in configuration.get("regions", {}):
+                continue
+            configuration["regions"][region_name].update(region_override)
+
+        regions_cfg = configuration.get("regions", {})
         if stage_region not in regions_cfg:
             stage_region = "INITIAL"
         region = regions_cfg[stage_region]
@@ -76,7 +87,7 @@ class ProductionInspectionCapture:
         for _ in range(max(0, settle_steps)):
             mujoco.mj_step(scene.model, scene.data)
 
-        camera_slots = self._configuration["camera_slots"]
+        camera_slots = configuration["camera_slots"]
 
         target_base = np.asarray(region["target_world_m"], dtype=np.float64)
         rig_position = np.asarray(region["rig_position_world_m"], dtype=np.float64)

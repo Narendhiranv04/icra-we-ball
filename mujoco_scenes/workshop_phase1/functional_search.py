@@ -117,8 +117,12 @@ class FunctionalSatisfactionSearch:
                                 "compatible_with": prof_relation,
                                 "fits_in": fits_in,
                                 "driver_usable_length_m": d.current_geometric_properties.get("usable_length_m"),
+                                "fastener_maximum_cross_section_m": f.current_geometric_properties.get("maximum_cross_section_m"),
+                                "driver_footprint_area_m2": d.current_geometric_properties.get("footprint_area_m2"),
                                 "fastener_length_m": f.current_geometric_properties.get("total_length_m"),
                                 "surface_support_area_m2": w.current_geometric_properties.get("support_area_m2"),
+                                "driver_camera_count": len(d.contributing_cameras),
+                                "fastener_camera_count": len(f.contributing_cameras),
                             },
                         )
                         valid_witnesses.append(wit)
@@ -131,7 +135,36 @@ class FunctionalSatisfactionSearch:
                         })
 
         if valid_witnesses:
-            valid_witnesses.sort(key=lambda x: x.overall_confidence, reverse=True)
+            def witness_rank(witness: FunctionalWitness) -> tuple[float, float, float, float, float, float, float, float]:
+                details = witness.verification_details
+                driver_views = float(details.get("driver_camera_count", 0))
+                fastener_views = float(details.get("fastener_camera_count", 0))
+                packing_margin = float(
+                    details.get("packing", {}).get("selected_arrangement", {}).get(
+                        "signed_margin_m", float("-inf")))
+                footprint = details.get("driver_footprint_area_m2")
+                footprint_rank = -float(footprint) if footprint is not None else float("-inf")
+                driver_length = details.get("driver_usable_length_m")
+                # Prefer the complete observation of a valid driver. Partial
+                # handle/shaft proposals can barely satisfy reach but are not
+                # a defensible full-object witness.
+                driver_length_rank = float(driver_length) if driver_length is not None else float("-inf")
+                fastener_cross = details.get("fastener_maximum_cross_section_m")
+                fastener_cross_rank = -float(fastener_cross) if fastener_cross is not None else float("-inf")
+                fastener_length = details.get("fastener_length_m")
+                fastener_length_rank = float(fastener_length) if fastener_length is not None else float("-inf")
+                return (
+                    driver_length_rank,
+                    fastener_length_rank,
+                    fastener_cross_rank,
+                    min(driver_views, fastener_views),
+                    driver_views + fastener_views,
+                    packing_margin,
+                    footprint_rank,
+                    witness.overall_confidence,
+                )
+
+            valid_witnesses.sort(key=witness_rank, reverse=True)
             return valid_witnesses[0], evaluated_tuples
 
         return None, evaluated_tuples
@@ -190,11 +223,58 @@ class FunctionalSatisfactionSearch:
         surface_evidence = role_evidence("WORK_SURFACE")
         container_evidence = role_evidence("SMALL_PARTS_CONTAINER")
 
+        relations_cfg = self.geometric_grounder.config.get("relations", {})
+
+        def conclusively_obstructed(region: ObservedRegion) -> bool:
+            obstruction = region.obstruction_evidence
+            elevated_points = int(obstruction.get("elevated_point_count", 0))
+            support_points = int(region.support_plane.get("point_count", 0))
+            obstruction_fraction = elevated_points / max(1, support_points)
+            return (
+                bool(obstruction.get("is_obstructed", False))
+                and elevated_points >= int(
+                    relations_cfg.get("obstruction_minimum_elevated_points", 500))
+                and obstruction_fraction >= float(
+                    relations_cfg.get("obstruction_minimum_elevated_fraction", 0.15))
+            )
+
+        all_surface_candidates_obstructed = (
+            bool(work_surface_candidates)
+            and all(conclusively_obstructed(region)
+                    for region in work_surface_candidates)
+        )
+
         # Check for tool geometry failure: semantic driver exists, but failed reach
+        tool_geometry_minimum_semantic_confidence = float(
+            self.geometric_grounder.config.get("relations", {}).get(
+                "tool_geometry_minimum_semantic_confidence", 0.0))
+        has_confident_short_driver = any(
+            result.function_name == "CAN_DRIVE_SCREW"
+            and result.semantic_status == GroundingStatus.PASS
+            and float(result.semantic_evidence.get("confidence", 0.0))
+            >= tool_geometry_minimum_semantic_confidence
+            and any(
+                relation.get("relation") == "REACHES_TARGET"
+                and relation.get("status") == "FALSE"
+                for relation in result.geometric_evidence.get("relations", []))
+            for result in results
+        )
         if (missing_driver and driver_evidence["semantic_pass"]
                 and "REACHES_TARGET" in driver_evidence["failed_relations"]
+                and has_confident_short_driver
                 and not driver_evidence["unresolved"]):
             return "TOOL_GEOMETRY_FAILURE"
+
+        # Diagnose structural region deficits before movable-object deficits.
+        # Region evidence is aggregated from all five views and is therefore
+        # more reliable than a missed small-tool proposal in an otherwise
+        # conclusive no-surface/no-container scene.
+        if (missing_surface and surface_evidence["resolved_negative"]
+                or all_surface_candidates_obstructed):
+            return "NO_WORK_SURFACE"
+
+        if missing_container and container_evidence["resolved_negative"]:
+            return "NO_PARTS_CONTAINER"
 
         # Generic required-role failure. No object categories are inspected here.
         if missing_driver and driver_evidence["resolved_negative"]:
@@ -202,12 +282,6 @@ class FunctionalSatisfactionSearch:
 
         if missing_fastener and fastener_evidence["resolved_negative"]:
             return "NO_VALID_FASTENER"
-
-        if missing_surface and surface_evidence["resolved_negative"]:
-            return "NO_WORK_SURFACE"
-
-        if missing_container and container_evidence["resolved_negative"]:
-            return "NO_PARTS_CONTAINER"
 
         unresolved_missing_role = any((
             missing_driver and not driver_evidence["resolved_negative"],
@@ -226,7 +300,11 @@ class FunctionalSatisfactionSearch:
         if has_unresolved_tuple and not (has_packing_rejection or has_profile_rejection):
             return "INSUFFICIENT_EVIDENCE"
 
-        if has_packing_rejection and not has_profile_rejection:
+        # A packing rejection is emitted only after a driver/fastener pair has
+        # already passed measured interface compatibility. It is therefore the
+        # deepest verified failure, even if unrelated candidate pairs also
+        # produce profile mismatches.
+        if has_packing_rejection:
             return "OBJECT_REGION_PACKING_FAILURE"
 
         if len(driver_candidates) > 0 and len(fastener_candidates) > 0:

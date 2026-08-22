@@ -227,6 +227,36 @@ ALL_PICKABLE_OBJECT_NAMES = tuple(
 # Generates top-level free bodies with visual mesh, invisible collision proxy, and freejoint.
 # ==============================================================================
 
+def _add_profile_threaded_fastener_visual(
+    body: ET.Element, object_name: str, length_m: float, head_radius_m: float
+) -> None:
+    """Add an opt-in hidden threaded silhouette for detector visual profiles."""
+    shaft_radius = 0.0025
+    head_half_height = 0.0025
+    usable_length = length_m - 2 * head_half_height
+    common = {"class": "visual", "group": "5", "rgba": "0 0 0 0"}
+    ET.SubElement(body, "geom", {
+        **common, "name": f"{object_name}_profile_shaft", "type": "cylinder",
+        "pos": f"0 0 {0.5 * usable_length:.4f}",
+        "size": f"{shaft_radius:.4f} {0.5 * usable_length:.4f}",
+    })
+    for arm_name, size_x, size_y in (
+        ("head_arm_x", head_radius_m, 0.0015),
+    ):
+        ET.SubElement(body, "geom", {
+            **common, "name": f"{object_name}_profile_{arm_name}", "type": "box",
+            "pos": f"0 0 {length_m - head_half_height:.4f}",
+            "size": f"{size_x:.4f} {size_y:.4f} {head_half_height:.4f}",
+        })
+    for index in range(1, 9):
+        z = usable_length * index / 10.0
+        ET.SubElement(body, "geom", {
+            **common, "name": f"{object_name}_profile_thread_{index:02d}",
+            "type": "cylinder", "pos": f"0 0 {z:.4f}",
+            "size": f"{shaft_radius + 0.0008:.4f} 0.0005",
+        })
+
+
 def _create_object_element(
     object_name: str, pos: tuple[float, float, float], quat: tuple[float, float, float, float]
 ) -> ET.Element:
@@ -247,6 +277,21 @@ def _create_object_element(
 
     if object_name == "workshop_long_phillips_driver":
         ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "long_driver_mesh", "material": "screwdrivers_visual_mat"})
+        ET.SubElement(body, "geom", {
+            "name": f"{object_name}_profile_handle", "class": "visual",
+            "type": "cylinder", "pos": "0 0 0.040", "size": "0.013 0.040",
+            "rgba": "0 0 0 0", "group": "5",
+        })
+        ET.SubElement(body, "geom", {
+            "name": f"{object_name}_profile_shaft", "class": "visual",
+            "type": "cylinder", "pos": "0 0 0.125", "size": "0.003 0.045",
+            "rgba": "0 0 0 0", "group": "5",
+        })
+        ET.SubElement(body, "geom", {
+            "name": f"{object_name}_profile_phillips_tip", "class": "visual",
+            "type": "box", "pos": "0 0 0.172", "size": "0.004 0.002 0.004",
+            "rgba": "0 0 0 0", "group": "5",
+        })
         ET.SubElement(body, "geom", {"name": f"{object_name}_col_handle", "class": "collision", "type": "cylinder", "pos": "0 0 0.05", "size": "0.013 0.05"})
         ET.SubElement(body, "geom", {"name": f"{object_name}_col_shaft", "class": "collision", "type": "cylinder", "pos": "0 0 0.165", "size": "0.003 0.065"})
 
@@ -267,11 +312,16 @@ def _create_object_element(
 
     elif object_name == "workshop_medium_phillips_screw":
         ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "medium_screw_mesh", "material": "screwdrivers_visual_mat"})
+        # A 43 mm rendered robust extent stays within the physical 45 mm
+        # collision envelope while avoiding a one-pixel excess at the 45 mm
+        # target-compatibility boundary.
+        _add_profile_threaded_fastener_visual(body, object_name, 0.043, 0.007)
         ET.SubElement(body, "geom", {"name": f"{object_name}_col_shaft", "class": "collision", "type": "cylinder", "pos": "0 0 0.0195", "size": "0.00275 0.0195"})
         ET.SubElement(body, "geom", {"name": f"{object_name}_col_head", "class": "collision", "type": "cylinder", "pos": "0 0 0.042", "size": "0.007 0.003"})
 
     elif object_name == "workshop_short_phillips_screw":
         ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "short_screw_mesh", "material": "screwdrivers_visual_mat"})
+        _add_profile_threaded_fastener_visual(body, object_name, 0.018, 0.007)
         ET.SubElement(body, "geom", {"name": f"{object_name}_col_shaft", "class": "collision", "type": "cylinder", "pos": "0 0 0.006", "size": "0.00275 0.006"})
         ET.SubElement(body, "geom", {"name": f"{object_name}_col_head", "class": "collision", "type": "cylinder", "pos": "0 0 0.015", "size": "0.007 0.003"})
 

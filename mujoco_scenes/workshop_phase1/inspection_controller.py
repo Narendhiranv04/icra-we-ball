@@ -52,6 +52,7 @@ from mujoco_scenes.workshop_phase1.types import (
     ViewObservation,
     combine_status,
 )
+from mujoco_scenes.workshop_phase1.visual_profile import apply_workshop_visual_profile
 
 
 class WorkshopPhase1InspectionController:
@@ -84,6 +85,15 @@ class WorkshopPhase1InspectionController:
 
         # 1. FM Contract
         pipeline_cfg = self.raw_config.get("pipeline", {})
+        visual_profile_path = pipeline_cfg.get("visual_profile_path")
+        self.visual_profile_path = Path(visual_profile_path) if visual_profile_path else None
+        if self.scene is not None and self.visual_profile_path is not None:
+            self.visual_profile = apply_workshop_visual_profile(
+                self.scene, self.visual_profile_path)
+        else:
+            self.visual_profile = None
+        rig_config_path = pipeline_cfg.get("inspection_rig_config_path")
+        self.inspection_rig_config_path = Path(rig_config_path) if rig_config_path else None
         fm_contract_path = pipeline_cfg.get("fm_contract_path")
         requirements_source = str(pipeline_cfg.get("requirements_source", "static")).lower()
         self.requirement_provider = (
@@ -107,6 +117,7 @@ class WorkshopPhase1InspectionController:
             scene=self.scene,
             width=int(pipeline_cfg.get("image_width", 1280)),
             height=int(pipeline_cfg.get("image_height", 720)),
+            rig_config_path=self.inspection_rig_config_path,
         ) if self.scene is not None else None
 
         # 3. Perception Backend
@@ -143,6 +154,8 @@ class WorkshopPhase1InspectionController:
             min_cluster_points=track_cfg.get("min_cluster_points", 10),
             volume_margin_m=self.raw_config.get("perception", {}).get("volume_margin_m", 0.08),
             min_points_per_mask=self.raw_config.get("perception", {}).get("min_points_per_mask", 8),
+            stage_object_merge_distance_threshold_m=track_cfg.get(
+                "stage_object_merge_distance_threshold_m", 0.0),
         )
 
         # 6. Region Grounder. Region semantic categories come only from the
@@ -222,6 +235,8 @@ class WorkshopPhase1InspectionController:
             inference_size=det_cfg.get("inference_size", 640),
             device=det_cfg.get("device", "cpu"),
             max_detections=det_cfg.get("max_detections", 100),
+            supplemental_prompts=det_cfg.get("supplemental_prompts", []),
+            supplemental_confidence_threshold=det_cfg.get("supplemental_confidence_threshold"),
             min_points_per_mask=self.raw_config.get("perception", {}).get("min_points_per_mask", 8),
             **self._duplicate_config(),
             **self._multi_scale_config(),
@@ -253,10 +268,14 @@ class WorkshopPhase1InspectionController:
         if scene is not None:
             self.scene = scene
             pipeline_cfg = self.raw_config.get("pipeline", {})
+            if self.visual_profile_path is not None:
+                self.visual_profile = apply_workshop_visual_profile(
+                    self.scene, self.visual_profile_path)
             self.camera_rig = MultiViewCameraRig(
                 scene=self.scene,
                 width=int(pipeline_cfg.get("image_width", 1280)),
                 height=int(pipeline_cfg.get("image_height", 720)),
+                rig_config_path=self.inspection_rig_config_path,
             )
             if self.mask_backend_type == MaskBackendType.ORACLE or self.ablation == AblationType.ORACLE_MASK:
                 self.proposal_backend = PrivilegedOracleMaskBackend(scene=self.scene)
@@ -348,6 +367,18 @@ class WorkshopPhase1InspectionController:
             )
 
         # Exhausted all inspection stages
+        if witness is not None:
+            return EpisodeResult(
+                status="FEASIBLE",
+                rejection_reason=None,
+                witness=witness,
+                trace=self.trace,
+                metrics={
+                    "stages_executed": len(self.inspection_sequence) + 1,
+                    "total_tracks": len(self.tracker.tracks),
+                    "early_stopped": False,
+                },
+            )
         final_status = "INFEASIBLE" if rej_reason != "INSUFFICIENT_EVIDENCE" else "INSUFFICIENT_EVIDENCE"
         return EpisodeResult(
             status=final_status,
@@ -375,7 +406,7 @@ class WorkshopPhase1InspectionController:
         # stages search for objects only. No FM call or ranking is repeated.
         stage_prompts = (
             self.prompts
-            if source_region_id == "INITIAL"
+            if source_region_id in {"INITIAL", "INITIAL_WORKBENCH"}
             else [
                 entry["detector_label"]
                 for entry in self.detector_vocabulary
@@ -476,8 +507,11 @@ class WorkshopPhase1InspectionController:
                     "stage_index": stage_idx,
                     "source_region_id": source_region_id,
                 })
+            artifact_cfg = self.raw_config.get("artifacts", {})
+            save_all_overlays = bool(artifact_cfg.get("save_all_detection_overlays", False))
             if (self.output_dir is not None and not is_oracle_mask
-                    and obs.camera_id == "DETAIL" and stage_idx <= 1):
+                    and (save_all_overlays or
+                         (obs.camera_id == "DETAIL" and stage_idx <= 1))):
                 self._save_detection_visual(
                     obs, masks, current_diagnostics, stage_idx, source_region_id)
 
@@ -503,18 +537,35 @@ class WorkshopPhase1InspectionController:
         diagnostics: list[dict[str, Any]], stage_idx: int, source_region_id: str,
     ) -> None:
         """Persist a compact RGB-only detector sanity overlay; never used by decisions."""
+        visual_dir = self.output_dir / "representative_visuals"
+        visual_dir.mkdir(parents=True, exist_ok=True)
+        safe_region = source_region_id.lower().replace(" ", "_")
+        safe_camera = observation.camera_id.lower().replace(" ", "_")
+        stem = f"stage_{stage_idx:02d}_{safe_region}_{safe_camera}"
+        if bool(self.raw_config.get("artifacts", {}).get("save_raw_rgb", False)):
+            raw_dir = self.output_dir / "raw_rgb"
+            raw_dir.mkdir(parents=True, exist_ok=True)
+            cv2.imwrite(
+                str(raw_dir / f"{stem}.jpg"),
+                cv2.cvtColor(observation.rgb, cv2.COLOR_RGB2BGR),
+            )
         canvas = cv2.cvtColor(observation.rgb, cv2.COLOR_RGB2BGR)
+        status_colors = {
+            "ACCEPTED": (0, 200, 0),
+            "ACCEPTED_PRE_DEDUP": (0, 200, 0),
+            "SUPPRESSED_DUPLICATE": (0, 0, 255),
+        }
         for record in diagnostics:
-            if record.get("status") != "SUPPRESSED_DUPLICATE":
-                continue
             raw = record.get("raw_yolo_bbox_xyxy")
             if not raw:
                 continue
-            cv2.rectangle(canvas, (raw[0], raw[1]), (raw[2], raw[3]), (0, 0, 255), 1)
-            label = (f"SUPPRESSED {record.get('canonical_label', 'unknown')} "
+            status = str(record.get("status", "PREDICTION"))
+            color = status_colors.get(status, (0, 165, 255))
+            cv2.rectangle(canvas, (raw[0], raw[1]), (raw[2], raw[3]), color, 1)
+            label = (f"{status} {record.get('canonical_label', 'unknown')} "
                      f"{float(record.get('confidence', 0.0)):.3f}")
             cv2.putText(canvas, label, (raw[0], min(canvas.shape[0] - 3, raw[3] + 11)),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.32, (0, 0, 255), 1, cv2.LINE_AA)
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.32, color, 1, cv2.LINE_AA)
         for mask in masks:
             raw = mask.raw_yolo_bbox_xyxy or mask.bounding_box_xyxy
             refined = mask.refined_bbox_xyxy or mask.bounding_box_xyxy
@@ -523,10 +574,10 @@ class WorkshopPhase1InspectionController:
             label = f"RETAINED {mask.canonical_label} {mask.confidence:.3f} {mask.inference_source}"
             cv2.putText(canvas, label, (raw[0], max(12, raw[1] - 3)),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
-        visual_dir = self.output_dir / "representative_visuals"
-        visual_dir.mkdir(parents=True, exist_ok=True)
-        safe_region = source_region_id.lower().replace(" ", "_")
-        cv2.imwrite(str(visual_dir / f"stage_{stage_idx:03d}_{safe_region}_front.jpg"), canvas)
+        cv2.imwrite(
+            str(visual_dir / f"stage_{stage_idx:03d}_{safe_region}_{safe_camera}.jpg"),
+            canvas,
+        )
 
     def _get_stage_volume_bounds(self, source_region_id: str) -> tuple[np.ndarray, np.ndarray]:
         if source_region_id == "LEFT_DRAWER":

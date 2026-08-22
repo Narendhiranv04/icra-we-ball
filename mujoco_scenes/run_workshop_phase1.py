@@ -127,6 +127,17 @@ def run_single_variant(
 
     result = controller.run_episode()
 
+    if var_out is not None:
+        var_out.mkdir(parents=True, exist_ok=True)
+        with open(var_out / "episode_result.json", "w", encoding="utf-8") as f:
+            json.dump(result.to_dict(), f, indent=2)
+        with open(var_out / "all_bbox_predictions.json", "w", encoding="utf-8") as f:
+            json.dump({
+                "coordinate_format": "xyxy_pixels",
+                "includes_rejected_and_suppressed_proposals": True,
+                "detector_records": controller.detection_diagnostics,
+            }, f, indent=2)
+
     eval_metrics = {}
     if evaluate:
         evaluator = PrivilegedPhase1Evaluator(scene)

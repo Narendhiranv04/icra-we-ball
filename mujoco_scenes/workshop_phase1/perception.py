@@ -86,6 +86,8 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
         enable_stage_crop: bool = True,
         enable_stage_tiles: bool = False,
         tile_overlap_fraction: float = 0.15,
+        supplemental_prompts: list[str] | None = None,
+        supplemental_confidence_threshold: float | None = None,
     ) -> None:
         self.weights_path = Path(weights_path) if weights_path else find_yolo_world_weights()
         self.confidence_threshold = float(confidence_threshold)
@@ -102,11 +104,17 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
         self.enable_stage_crop = bool(enable_stage_crop)
         self.enable_stage_tiles = bool(enable_stage_tiles)
         self.tile_overlap_fraction = float(tile_overlap_fraction)
+        self.supplemental_prompts = [str(label).strip() for label in (supplemental_prompts or [])]
+        self.supplemental_confidence_threshold = float(
+            supplemental_confidence_threshold
+            if supplemental_confidence_threshold is not None else confidence_threshold
+        )
 
         self._model = None
         self._prompts: list[str] = []
         self._alias_to_canonical: dict[str, str] = {}
         self.last_diagnostics: list[dict[str, Any]] = []
+        self._full_text_features = None
         self._initialize_model()
 
     def _initialize_model(self) -> None:
@@ -131,8 +139,33 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
             if self._model is not None and self._prompts:
                 try:
                     self._model.set_classes(self._prompts)
+                    self._full_text_features = self._model.model.txt_feats.detach().clone()
                 except Exception:
                     pass
+
+    def _activate_prompt_pass(self, prompt: str | None) -> None:
+        """Select the full vocabulary or one cached prompt without rerunning CLIP."""
+        if self._model is None or self._full_text_features is None:
+            return
+        if prompt is None:
+            indices = list(range(len(self._prompts)))
+            names = list(self._prompts)
+        else:
+            indices = [self._prompts.index(prompt)]
+            names = [prompt]
+        features = self._full_text_features[:, indices].clone()
+        core = self._model.model
+        core.txt_feats = features
+        core.names = names
+        core.model[-1].nc = len(names)
+        predictor = getattr(self._model, "predictor", None)
+        if predictor is not None and getattr(predictor, "model", None) is not None:
+            predictor.model.names = names
+            backend_core = getattr(predictor.model, "model", None)
+            if backend_core is not None and hasattr(backend_core, "txt_feats"):
+                backend_core.txt_feats = features
+                backend_core.names = names
+                backend_core.model[-1].nc = len(names)
 
     @staticmethod
     def _box_iou(a: tuple[int, int, int, int], b: tuple[int, int, int, int]) -> float:
@@ -269,125 +302,163 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
             observation, stage_volume_min, stage_volume_max)
         masks: list[ObservedMask] = []
         global_index = 0
+        active_supplements = [
+            prompt for prompt in self.supplemental_prompts if prompt in self._prompts
+        ]
         for inference_source, (crop_x1, crop_y1, crop_x2, crop_y2) in windows:
             detector_rgb = rgb[crop_y1:crop_y2, crop_x1:crop_x2]
-            try:
-                results = self._model.predict(
-                    source=Image.fromarray(detector_rgb, mode="RGB"),
-                    conf=self.confidence_threshold,
-                    iou=self.nms_iou_threshold,
-                    imgsz=self.inference_size,
-                    device=self.device,
-                    max_det=self.max_detections,
-                    verbose=False,
+            for supplemental_prompt in [None, *active_supplements]:
+                self._activate_prompt_pass(supplemental_prompt)
+                pass_source = (
+                    inference_source if supplemental_prompt is None else
+                    f"{inference_source}_supplemental_{supplemental_prompt.lower().replace(' ', '_')}"
                 )
-            except Exception as error:
-                self.last_diagnostics.append({
-                    "camera_id": observation.camera_id,
-                    "inference_source": inference_source,
-                    "status": "INFERENCE_ERROR",
-                    "error_type": type(error).__name__,
-                })
-                continue
-            if not results or results[0].boxes is None:
-                continue
-            result, boxes = results[0], results[0].boxes
-            xyxy = boxes.xyxy.detach().cpu().numpy()
-            confidences = boxes.conf.detach().cpu().numpy()
-            classes = boxes.cls.detach().cpu().numpy().astype(int)
-            for box, conf, cls_id in zip(xyxy, confidences, classes):
-                idx = global_index
-                global_index += 1
-                raw_label = (str(result.names[int(cls_id)]) if int(cls_id) in result.names
-                             else self._prompts[cls_id] if cls_id < len(self._prompts) else "object")
-                canonical_label = self._alias_to_canonical.get(raw_label.lower(), raw_label.lower())
-
-                x1 = max(0, min(width - 1, int(np.floor(box[0])) + crop_x1))
-                y1 = max(0, min(height - 1, int(np.floor(box[1])) + crop_y1))
-                x2 = max(0, min(width, int(np.ceil(box[2])) + crop_x1))
-                y2 = max(0, min(height, int(np.ceil(box[3])) + crop_y1))
-                detection_id = f"det_{observation.camera_id}_{inference_source}_{idx:03d}"
-
-                diagnostic = {
-                    "camera_id": observation.camera_id,
-                    "detection_id": detection_id,
-                    "detector_vocabulary": list(self._prompts),
-                    "raw_label": raw_label,
-                    "canonical_label": canonical_label,
-                    "confidence": float(conf),
-                    "raw_yolo_bbox_xyxy": [x1, y1, x2, y2],
-                    "detector_crop_xyxy": [crop_x1, crop_y1, crop_x2, crop_y2],
-                    "inference_source": inference_source,
-                }
-
-                if (x2 - x1) < 4 or (y2 - y1) < 4:
-                    diagnostic.update({"status": "REJECTED_SMALL_BOX"})
-                    self.last_diagnostics.append(diagnostic)
-                    continue
-
-                bin_mask, support_quality, refinement_reason = self._refine_depth_support(
-                    depth, (x1, y1, x2, y2))
-                if bin_mask is None:
-                    diagnostic.update({"status": refinement_reason})
-                    self.last_diagnostics.append(diagnostic)
-                    continue
-
-                pts, pixel_indices = backproject_masked_depth(
-                    depth, bin_mask, observation.intrinsics,
-                    observation.camera_position_world,
-                    observation.camera_rotation_world, max_depth=3.0)
-                if len(pts) < self.min_points_per_mask:
-                    diagnostic.update({"status": "REJECTED_REFINEMENT", "refined_mask_area": int(bin_mask.sum()), "depth_point_count": len(pts)})
-                    self.last_diagnostics.append(diagnostic)
-                    continue
-
-                gated = gate_points_to_volume(
-                    pts, minimum_world_m=stage_volume_min,
-                    maximum_world_m=stage_volume_max,
-                    boundary_margin_m=volume_margin_m)
-                if np.count_nonzero(gated) < self.min_points_per_mask:
-                    diagnostic.update({"status": "REJECTED_STAGE_VOLUME", "refined_mask_area": int(bin_mask.sum()), "depth_point_count": int(np.count_nonzero(gated))})
-                    self.last_diagnostics.append(diagnostic)
-                    continue
-
-                gated_points = pts[gated]
-                gated_pixels = pixel_indices[gated]
-                final_mask = np.zeros((height, width), dtype=bool)
-                final_mask[gated_pixels[:, 0], gated_pixels[:, 1]] = True
-                rows, cols = np.nonzero(final_mask)
-                refined_box = (int(cols.min()), int(rows.min()), int(cols.max() + 1), int(rows.max() + 1))
-                centroid = gated_points.mean(axis=0)
-                cloud_bounds = {
-                    "minimum_world_m": gated_points.min(axis=0).tolist(),
-                    "maximum_world_m": gated_points.max(axis=0).tolist(),
-                }
-
-                mask_entry = ObservedMask(
-                    detection_id=detection_id, camera_id=observation.camera_id,
-                    binary_mask=final_mask, bounding_box_xyxy=refined_box,
-                    confidence=float(conf), canonical_label=canonical_label,
-                    raw_label=raw_label, predicted_label=canonical_label,
-                    backend_name="yolo_world", refined_mask_area=int(final_mask.sum()),
-                    depth_point_count=len(gated_points), centroid_world_m=centroid,
-                    cloud_bounds_world_m=cloud_bounds,
-                    raw_yolo_bbox_xyxy=(x1, y1, x2, y2),
-                    refined_bbox_xyxy=refined_box,
-                    gated_points_world_m=gated_points,
-                    gated_pixel_indices_yx=gated_pixels,
-                    inference_source=inference_source,
-                    physical_support_quality=support_quality,
+                pass_threshold = (
+                    self.confidence_threshold if supplemental_prompt is None else
+                    self.supplemental_confidence_threshold
                 )
-                masks.append(mask_entry)
-                diagnostic.update({
-                    "status": "ACCEPTED_PRE_DEDUP",
-                    "refined_bbox_xyxy": list(refined_box),
-                    "refined_mask_area": mask_entry.refined_mask_area,
-                    "depth_point_count": mask_entry.depth_point_count,
-                    "centroid_world_m": centroid.tolist(),
-                    "cloud_bounds_world_m": cloud_bounds,
-                    "physical_support_quality": support_quality,
-                })
-                self.last_diagnostics.append(diagnostic)
+                try:
+                    results = self._model.predict(
+                        source=Image.fromarray(detector_rgb, mode="RGB"),
+                        conf=pass_threshold,
+                        iou=self.nms_iou_threshold,
+                        imgsz=self.inference_size,
+                        device=self.device,
+                        max_det=self.max_detections,
+                        verbose=False,
+                    )
+                except Exception as error:
+                    self.last_diagnostics.append({
+                        "camera_id": observation.camera_id,
+                        "inference_source": pass_source,
+                        "status": "INFERENCE_ERROR",
+                        "error_type": type(error).__name__,
+                    })
+                    continue
+                if not results or results[0].boxes is None:
+                    continue
+                result, boxes = results[0], results[0].boxes
+                xyxy = boxes.xyxy.detach().cpu().numpy()
+                confidences = boxes.conf.detach().cpu().numpy()
+                classes = boxes.cls.detach().cpu().numpy().astype(int)
+                for box, conf, cls_id in zip(xyxy, confidences, classes):
+                    idx = global_index
+                    global_index += 1
+                    if supplemental_prompt is not None:
+                        raw_label = supplemental_prompt
+                    elif isinstance(result.names, dict):
+                        raw_label = str(result.names.get(int(cls_id), "object"))
+                    else:
+                        raw_label = (str(result.names[int(cls_id)])
+                                     if cls_id < len(result.names) else "object")
+                    canonical_label = self._alias_to_canonical.get(
+                        raw_label.lower(), raw_label.lower())
+
+                    x1 = max(0, min(width - 1, int(np.floor(box[0])) + crop_x1))
+                    y1 = max(0, min(height - 1, int(np.floor(box[1])) + crop_y1))
+                    x2 = max(0, min(width, int(np.ceil(box[2])) + crop_x1))
+                    y2 = max(0, min(height, int(np.ceil(box[3])) + crop_y1))
+                    detection_id = f"det_{observation.camera_id}_{pass_source}_{idx:03d}"
+
+                    diagnostic = {
+                        "camera_id": observation.camera_id,
+                        "detection_id": detection_id,
+                        "detector_vocabulary": list(self._prompts),
+                        "raw_label": raw_label,
+                        "canonical_label": canonical_label,
+                        "confidence": float(conf),
+                        "raw_yolo_bbox_xyxy": [x1, y1, x2, y2],
+                        "detector_crop_xyxy": [crop_x1, crop_y1, crop_x2, crop_y2],
+                        "inference_source": pass_source,
+                    }
+
+                    if (x2 - x1) < 4 or (y2 - y1) < 4:
+                        diagnostic.update({"status": "REJECTED_SMALL_BOX"})
+                        self.last_diagnostics.append(diagnostic)
+                        continue
+
+                    box_width, box_height = x2 - x1, y2 - y1
+                    compact_box = (
+                        min(box_width, box_height) / max(1, max(box_width, box_height))
+                        >= 0.35
+                        and min(box_width, box_height) >= 64
+                    )
+                    bin_mask, support_quality, refinement_reason = self._refine_depth_support(
+                        depth, (x1, y1, x2, y2),
+                        prefer_volumetric=(canonical_label == "power_driver" and compact_box),
+                    )
+                    if bin_mask is None:
+                        diagnostic.update({"status": refinement_reason})
+                        self.last_diagnostics.append(diagnostic)
+                        continue
+
+                    pts, pixel_indices = backproject_masked_depth(
+                        depth, bin_mask, observation.intrinsics,
+                        observation.camera_position_world,
+                        observation.camera_rotation_world, max_depth=3.0)
+                    if len(pts) < self.min_points_per_mask:
+                        diagnostic.update({
+                            "status": "REJECTED_REFINEMENT",
+                            "refined_mask_area": int(bin_mask.sum()),
+                            "depth_point_count": len(pts),
+                        })
+                        self.last_diagnostics.append(diagnostic)
+                        continue
+
+                    gated = gate_points_to_volume(
+                        pts, minimum_world_m=stage_volume_min,
+                        maximum_world_m=stage_volume_max,
+                        boundary_margin_m=volume_margin_m)
+                    if np.count_nonzero(gated) < self.min_points_per_mask:
+                        diagnostic.update({
+                            "status": "REJECTED_STAGE_VOLUME",
+                            "refined_mask_area": int(bin_mask.sum()),
+                            "depth_point_count": int(np.count_nonzero(gated)),
+                        })
+                        self.last_diagnostics.append(diagnostic)
+                        continue
+
+                    gated_points = pts[gated]
+                    gated_pixels = pixel_indices[gated]
+                    final_mask = np.zeros((height, width), dtype=bool)
+                    final_mask[gated_pixels[:, 0], gated_pixels[:, 1]] = True
+                    rows, cols = np.nonzero(final_mask)
+                    refined_box = (
+                        int(cols.min()), int(rows.min()),
+                        int(cols.max() + 1), int(rows.max() + 1),
+                    )
+                    centroid = gated_points.mean(axis=0)
+                    cloud_bounds = {
+                        "minimum_world_m": gated_points.min(axis=0).tolist(),
+                        "maximum_world_m": gated_points.max(axis=0).tolist(),
+                    }
+
+                    mask_entry = ObservedMask(
+                        detection_id=detection_id, camera_id=observation.camera_id,
+                        binary_mask=final_mask, bounding_box_xyxy=refined_box,
+                        confidence=float(conf), canonical_label=canonical_label,
+                        raw_label=raw_label, predicted_label=canonical_label,
+                        backend_name="yolo_world", refined_mask_area=int(final_mask.sum()),
+                        depth_point_count=len(gated_points), centroid_world_m=centroid,
+                        cloud_bounds_world_m=cloud_bounds,
+                        raw_yolo_bbox_xyxy=(x1, y1, x2, y2),
+                        refined_bbox_xyxy=refined_box,
+                        gated_points_world_m=gated_points,
+                        gated_pixel_indices_yx=gated_pixels,
+                        inference_source=pass_source,
+                        physical_support_quality=support_quality,
+                    )
+                    masks.append(mask_entry)
+                    diagnostic.update({
+                        "status": "ACCEPTED_PRE_DEDUP",
+                        "refined_bbox_xyxy": list(refined_box),
+                        "refined_mask_area": mask_entry.refined_mask_area,
+                        "depth_point_count": mask_entry.depth_point_count,
+                        "centroid_world_m": centroid.tolist(),
+                        "cloud_bounds_world_m": cloud_bounds,
+                        "physical_support_quality": support_quality,
+                    })
+                    self.last_diagnostics.append(diagnostic)
 
         deduplicated = self.suppress_duplicate_proposals(masks)
         retained_ids = {mask.detection_id for mask in deduplicated}
@@ -434,6 +505,7 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
 
     def _refine_depth_support(
         self, depth: np.ndarray, box: tuple[int, int, int, int],
+        prefer_volumetric: bool = False,
     ) -> tuple[np.ndarray | None, float, str]:
         """Extract a coherent foreground component inside an existing YOLO box."""
         x1, y1, x2, y2 = box
@@ -442,6 +514,30 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
         valid_count = int(valid.sum())
         if valid_count < self.min_points_per_mask:
             return None, 0.0, "REJECTED_DEPTH_SUPPORT"
+        if prefer_volumetric:
+            # Drills and similarly compact tools have multiple visible depth
+            # layers. Retain the nearer volume inside the detector box instead
+            # of collapsing it to a single handle/body plane.
+            valid_depths = roi[valid]
+            far_reference = float(np.percentile(valid_depths, 98.0))
+            near_reference = float(np.percentile(valid_depths, 5.0))
+            separation = max(0.002, 0.03 * (far_reference - near_reference))
+            candidate = valid & (roi <= far_reference - separation)
+            candidate = cv2.morphologyEx(
+                candidate.astype(np.uint8), cv2.MORPH_CLOSE,
+                np.ones((5, 5), dtype=np.uint8), iterations=1,
+            ).astype(bool)
+            count, labels, stats, _ = cv2.connectedComponentsWithStats(
+                candidate.astype(np.uint8), 8)
+            kept = np.zeros_like(candidate)
+            minimum_component = max(self.min_points_per_mask, int(0.002 * valid_count))
+            for component in range(1, count):
+                if int(stats[component, cv2.CC_STAT_AREA]) >= minimum_component:
+                    kept |= labels == component
+            if int(kept.sum()) >= self.min_points_per_mask:
+                full = np.zeros(depth.shape, dtype=bool)
+                full[y1:y2, x1:x2] = kept
+                return full, float(min(1.0, kept.sum() / max(1, valid_count))), "ACCEPTED_REFINEMENT"
         h, w = roi.shape
         cy1, cy2 = int(0.25 * h), max(int(0.75 * h), int(0.25 * h) + 1)
         cx1, cx2 = int(0.25 * w), max(int(0.75 * w), int(0.25 * w) + 1)

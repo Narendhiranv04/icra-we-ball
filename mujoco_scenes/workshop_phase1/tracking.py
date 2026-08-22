@@ -33,6 +33,7 @@ class PersistentInstanceTracker:
         min_cluster_points: int = 10,
         volume_margin_m: float = 0.08,
         min_points_per_mask: int = 8,
+        stage_object_merge_distance_threshold_m: float = 0.0,
     ) -> None:
         self.cluster_distance_threshold_m = cluster_distance_threshold_m
         self.track_match_distance_threshold_m = track_match_distance_threshold_m
@@ -40,6 +41,8 @@ class PersistentInstanceTracker:
         self.min_cluster_points = min_cluster_points
         self.volume_margin_m = float(volume_margin_m)
         self.min_points_per_mask = int(min_points_per_mask)
+        self.stage_object_merge_distance_threshold_m = float(
+            stage_object_merge_distance_threshold_m)
 
         self._tracks: dict[str, ObservedObjectTrack] = {}
         self._next_instance_idx: int = 1
@@ -101,6 +104,27 @@ class PersistentInstanceTracker:
             if label not in raw_by_label:
                 raw_by_label[label] = obs.get("raw_label", label)
 
+        # Retain multi-label YOLO evidence that was collapsed into one physical
+        # proposal. Alternative labels can later satisfy a requirement only
+        # with independent support from at least two camera views.
+        label_views: dict[str, set[str]] = defaultdict(set)
+        label_confidence_sum: dict[str, float] = defaultdict(float)
+        for obs in observations:
+            camera = str(obs.get("camera_id", ""))
+            quality = float(obs.get("physical_support_quality", 1.0))
+            hypotheses = [{
+                "canonical_label": obs.get("canonical_label", "unknown"),
+                "confidence": obs.get("confidence", 0.0),
+            }, *list(obs.get("semantic_alternatives", []))]
+            best_for_camera: dict[str, float] = {}
+            for hypothesis in hypotheses:
+                label = str(hypothesis.get("canonical_label", "unknown")).lower()
+                confidence = float(hypothesis.get("confidence", 0.0)) * quality
+                best_for_camera[label] = max(best_for_camera.get(label, 0.0), confidence)
+            for label, confidence in best_for_camera.items():
+                label_views[label].add(camera)
+                label_confidence_sum[label] += confidence
+
         # Pick label with highest total score
         best_label = max(score_by_label, key=score_by_label.get)
         total_score = sum(score_by_label.values())
@@ -113,6 +137,10 @@ class PersistentInstanceTracker:
             "total_observations": len(unique),
             "supporting_view_count": len({obs.get("camera_id") for obs in unique.values()
                                            if obs.get("canonical_label", "unknown").lower() == best_label}),
+            "label_supporting_view_count": {
+                label: len(views) for label, views in label_views.items()
+            },
+            "label_confidence_sum": dict(label_confidence_sum),
         }
 
     def update_with_stage_observations(
@@ -248,6 +276,43 @@ class PersistentInstanceTracker:
                 "crops_by_camera": crops_by_cam,
                 "semantic_observations": semantic_obs,
             })
+
+        # A detector can retain two slightly different same-camera masks for
+        # one physical item. The view-level clusterer intentionally keeps them
+        # apart, so perform an optional conservative 3D merge afterward. This
+        # is disabled by default and enabled only by profiles that have
+        # calibrated the threshold against their close-view point clouds.
+        merge_distance = self.stage_object_merge_distance_threshold_m
+        if merge_distance > 0.0 and len(stage_objects) > 1:
+            merged_objects: list[dict[str, Any]] = []
+            for candidate in stage_objects:
+                target = next((existing for existing in merged_objects
+                               if np.linalg.norm(candidate["centroid"] - existing["centroid"])
+                               < merge_distance), None)
+                if target is None:
+                    merged_objects.append(candidate)
+                    continue
+                points = np.vstack([target["points"], candidate["points"]])
+                colors = np.vstack([target["colors"], candidate["colors"]])
+                points, colors = voxel_downsample(
+                    points, colors, voxel_size=self.voxel_size_m)
+                target["points"], target["colors"] = points, colors
+                target["centroid"] = points.mean(axis=0)
+                target["cameras"] = tuple(sorted(set(
+                    target["cameras"]) | set(candidate["cameras"])))
+                for camera, camera_points in candidate["points_by_camera"].items():
+                    if camera in target["points_by_camera"]:
+                        target["points_by_camera"][camera] = np.vstack([
+                            target["points_by_camera"][camera], camera_points])
+                    else:
+                        target["points_by_camera"][camera] = camera_points
+                for camera, crop in candidate["crops_by_camera"].items():
+                    old = target["crops_by_camera"].get(camera)
+                    if old is None or crop.size > old.size:
+                        target["crops_by_camera"][camera] = crop
+                target["semantic_observations"].extend(
+                    candidate["semantic_observations"])
+            stage_objects = merged_objects
 
         # 4. Associate stage objects with existing persistent tracks using bipartite matching
         affected_tracks: list[ObservedObjectTrack] = []

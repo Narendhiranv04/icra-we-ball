@@ -254,6 +254,12 @@ class SemanticGrounder:
 
         canonical_label = evidence_obj.canonical_label.lower().strip()
         accepted_categories = [c.lower().strip() for c in requirement.accepted_categories]
+        label_views = track.current_semantic_belief.get("label_supporting_view_count", {})
+        supported_alternative = next(
+            (label for label in accepted_categories
+             if label != canonical_label and int(label_views.get(label, 0)) >= 2),
+            None,
+        )
 
         rejections: list[str] = []
 
@@ -261,16 +267,21 @@ class SemanticGrounder:
             status = GroundingStatus.UNKNOWN
             score = 0.50
             rejections.append("SEMANTIC_LABEL_UNKNOWN")
-        elif canonical_label in accepted_categories:
+        elif canonical_label in accepted_categories or supported_alternative is not None:
             status = GroundingStatus.PASS
             score = max(0.60, evidence_obj.confidence)
+            if supported_alternative is not None:
+                evidence_dict["consensus_alternative_label"] = supported_alternative
+                evidence_dict["consensus_alternative_supporting_views"] = int(
+                    label_views[supported_alternative]
+                )
         else:
             status = GroundingStatus.FAIL
             score = 0.10
             rejections.append(f"SEMANTIC_CATEGORY_MISMATCH_{canonical_label.upper()}_NOT_ACCEPTED")
 
         evidence_dict["accepted_categories"] = list(requirement.accepted_categories)
-        evidence_dict["evaluated_label"] = canonical_label
+        evidence_dict["evaluated_label"] = supported_alternative or canonical_label
 
         return FunctionGroundingResult(
             entity_id=track.instance_id,

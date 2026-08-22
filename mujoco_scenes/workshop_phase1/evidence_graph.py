@@ -189,6 +189,7 @@ class GrowingObservedGraph:
                     "combined_status": g_res.combined_status.value,
                     "semantic_status": g_res.semantic_status.value,
                     "geometric_status": g_res.geometric_status.value,
+                    "geometric_evidence": g_res.geometric_evidence,
                     "rejection_reasons": g_res.rejection_reasons,
                 },
             )

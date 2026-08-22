@@ -167,6 +167,7 @@ class GeometricGrounder:
             if not np.isfinite(anisotropy) or small < float(cfg.get("minimum_resolvable_interface_extent_m", 0.00035)):
                 interface = "UNKNOWN"
             elif (anisotropy >= float(cfg.get("slot_anisotropy_ratio", 3.2))
+                    and large >= float(cfg.get("slot_min_transverse_length_m", 0.0))
                     and large <= float(cfg.get("slot_max_transverse_length_m", 0.0031))):
                 interface = "SLOT_LIKE"
             elif anisotropy <= float(cfg.get("hex_radial_symmetry_ratio", 1.25)):
@@ -198,7 +199,13 @@ class GeometricGrounder:
         head_endpoint = self._endpoint_descriptor(
             pts, float(cfg.get("head_end_fraction", 0.22)))
         ends = [e for e in endpoint["ends"] if e["status"] == "MEASURED"]
-        smaller = min(ends, key=lambda e: e["transverse_length_m"]) if ends else None
+        resolved_ends = [
+            e for e in ends if e.get("interface_geometry") != "UNKNOWN"
+        ]
+        smaller = min(
+            resolved_ends or ends,
+            key=lambda e: e["transverse_length_m"],
+        ) if ends else None
         head_ends = [e for e in head_endpoint["ends"] if e["status"] == "MEASURED"]
         larger = max(head_ends, key=lambda e: e["transverse_length_m"]) if head_ends else None
         return {"property_status": "MEASURED", "point_count": len(pts), "centroid_world_m": centre.tolist(),
@@ -232,33 +239,117 @@ class GeometricGrounder:
 
     def evaluate_reaches_target(self, properties: dict[str, Any]) -> dict[str, Any]:
         length = properties.get("usable_length_m")
+        cross_section = properties.get("maximum_cross_section_m")
         depth = self.target_evidence.estimated_recess_depth_m if self.target_evidence.validity == GroundingStatus.PASS else None
         cfg = self.config.get("relations", {})
         grasp, tolerance = float(cfg.get("grasp_allowance_m", 0.075)), float(cfg.get("reach_tolerance_m", 0.003))
+        maximum_driver_length = float(cfg.get("maximum_driver_length_m", 1.0))
+        maximum_driver_cross_section = float(
+            cfg.get("maximum_driver_cross_section_m", 1.0))
+        slender_ratio_max = float(
+            cfg.get("slender_driver_max_cross_section_ratio", 1.0))
+        compact_ratio_min = float(
+            cfg.get("compact_driver_min_cross_section_ratio", 1.0))
+        compact_minimum_cross_section = float(
+            cfg.get("compact_driver_minimum_cross_section_m", 0.0))
+        compact_maximum_cross_section = float(
+            cfg.get("compact_driver_maximum_cross_section_m", 1.0))
+        compact_partial_maximum_length = float(
+            cfg.get("compact_driver_partial_maximum_length_m", 0.0))
+        compact_full_minimum_length = float(
+            cfg.get("compact_driver_full_minimum_length_m", 0.0))
+        compact_maximum_length = float(
+            cfg.get("compact_driver_maximum_length_m", 1.0))
         if length is None or depth is None:
             return {"relation": "REACHES_TARGET", "status": "UNKNOWN", "reason": "REQUIRED_MEASUREMENT_MISSING", "usable_length_m": length, "target_recess_depth_m": depth}
         margin = float(length) - grasp - float(depth) + tolerance
-        return {"relation": "REACHES_TARGET", "status": "TRUE" if margin >= 0.0 else "FALSE",
+        maximum_length_margin = maximum_driver_length - float(length)
+        maximum_cross_section_margin = (
+            maximum_driver_cross_section - float(cross_section)
+            if cross_section is not None else float("-inf")
+        )
+        cross_section_ratio = (
+            float(cross_section) / max(float(length), 1e-9)
+            if cross_section is not None else float("inf")
+        )
+        slender_shape = (
+            cross_section_ratio <= slender_ratio_max
+            and maximum_length_margin >= 0.0
+            and maximum_cross_section_margin >= 0.0
+        )
+        compact_shape = (
+            cross_section_ratio >= compact_ratio_min
+            and (
+                float(length) <= compact_partial_maximum_length
+                or compact_full_minimum_length <= float(length)
+                <= compact_maximum_length
+            )
+            and cross_section is not None
+            and compact_minimum_cross_section <= float(cross_section)
+            <= compact_maximum_cross_section
+        )
+        plausible_driver_shape = slender_shape or compact_shape
+        ok = margin >= 0.0 and plausible_driver_shape
+        return {"relation": "REACHES_TARGET", "status": "TRUE" if ok else "FALSE",
             "usable_length_m": float(length), "target_recess_depth_m": float(depth), "grasp_allowance_m": grasp,
-            "tolerance_m": tolerance, "signed_margin_m": margin, "method": "observed_length_vs_observed_target_depth_v2"}
+            "tolerance_m": tolerance, "signed_margin_m": margin,
+            "maximum_driver_length_m": maximum_driver_length,
+            "maximum_length_margin_m": maximum_length_margin,
+            "maximum_observed_cross_section_m": cross_section,
+            "maximum_driver_cross_section_m": maximum_driver_cross_section,
+            "maximum_cross_section_margin_m": maximum_cross_section_margin,
+            "observed_cross_section_ratio": cross_section_ratio,
+            "slender_driver_max_cross_section_ratio": slender_ratio_max,
+            "compact_driver_min_cross_section_ratio": compact_ratio_min,
+            "compact_driver_minimum_cross_section_m": compact_minimum_cross_section,
+            "compact_driver_maximum_cross_section_m": compact_maximum_cross_section,
+            "compact_driver_partial_maximum_length_m": compact_partial_maximum_length,
+            "compact_driver_full_minimum_length_m": compact_full_minimum_length,
+            "compact_driver_maximum_length_m": compact_maximum_length,
+            "plausible_driver_shape": plausible_driver_shape,
+            "method": "observed_length_vs_observed_target_depth_v2"}
 
     def evaluate_compatible_with_target(self, properties: dict[str, Any]) -> dict[str, Any]:
         length, shaft = properties.get("total_length_m"), properties.get("shaft_diameter_m")
+        maximum_cross_section = properties.get("maximum_cross_section_m")
         opening = self.target_evidence.estimated_opening_diameter_m if self.target_evidence.validity == GroundingStatus.PASS else None
         depth = self.target_evidence.estimated_recess_depth_m if self.target_evidence.validity == GroundingStatus.PASS else None
         if any(v is None for v in (length, shaft, opening, depth)):
             return {"relation": "COMPATIBLE_WITH_TARGET", "status": "UNKNOWN", "reason": "REQUIRED_MEASUREMENT_MISSING"}
         cfg = self.config.get("relations", {})
+        contributing_cameras = properties.get(
+            "measurement_provenance", {}).get("camera_ids", [])
+        minimum_fastener_camera_count = int(
+            cfg.get("minimum_fastener_camera_count", 0))
+        if len(contributing_cameras) < minimum_fastener_camera_count:
+            return {
+                "relation": "COMPATIBLE_WITH_TARGET", "status": "FALSE",
+                "reason": "INSUFFICIENT_INDEPENDENT_CAMERA_EVIDENCE",
+                "contributing_camera_count": len(contributing_cameras),
+                "minimum_fastener_camera_count": minimum_fastener_camera_count,
+            }
         length_margin = float(length) - float(depth) + float(cfg.get("target_length_tolerance_m", 0.002))
         width_margin = float(opening) - float(shaft) - float(cfg.get("target_shaft_clearance_m", 0.0005))
         maximum_excess = float(cfg.get("target_maximum_length_excess_m", 0.010))
+        maximum_fastener_cross_section = float(
+            cfg.get("maximum_fastener_cross_section_m", 0.028))
         excess_margin = maximum_excess - (float(length) - float(depth))
-        ok = length_margin >= 0.0 and width_margin >= 0.0 and excess_margin >= -1e-9
+        cross_section_margin = (
+            maximum_fastener_cross_section - float(maximum_cross_section)
+            if maximum_cross_section is not None else float("inf")
+        )
+        ok = (length_margin >= 0.0 and width_margin >= 0.0
+              and excess_margin >= -1e-9 and cross_section_margin >= 0.0)
         return {"relation": "COMPATIBLE_WITH_TARGET", "status": "TRUE" if ok else "FALSE",
             "fastener_length_m": float(length), "shaft_cross_section_m": float(shaft), "target_opening_m": float(opening),
             "target_depth_m": float(depth),
             "length_margin_m": length_margin, "width_margin_m": width_margin,
             "maximum_length_excess_m": maximum_excess, "excess_margin_m": excess_margin,
+            "maximum_observed_cross_section_m": maximum_cross_section,
+            "maximum_fastener_cross_section_m": maximum_fastener_cross_section,
+            "cross_section_margin_m": cross_section_margin,
+            "contributing_camera_count": len(contributing_cameras),
+            "minimum_fastener_camera_count": minimum_fastener_camera_count,
             "method": "observed_fastener_vs_observed_joint_geometry_v2"}
 
     @staticmethod
@@ -326,13 +417,34 @@ class GeometricGrounder:
     def evaluate_fits_set_on(self, driver: ObservedObjectTrack, fastener: ObservedObjectTrack,
                              surface: ObservedRegion) -> dict[str, Any]:
         self.relation_call_counts["FITS_SET_ON"] += 1
+        obstruction_points = int(
+            surface.obstruction_evidence.get("elevated_point_count", 0))
+        support_points = int(surface.support_plane.get("point_count", 0))
+        relations_cfg = self.config.get("relations", {})
+        obstruction_fraction = obstruction_points / max(1, support_points)
+        materially_obstructed = (
+            bool(surface.obstruction_evidence.get("is_obstructed", False))
+            and obstruction_points >= int(
+                relations_cfg.get("obstruction_minimum_elevated_points", 500))
+            and obstruction_fraction >= float(
+                relations_cfg.get("obstruction_minimum_elevated_fraction", 0.15))
+        )
+        if materially_obstructed:
+            return {
+                "relation": "FITS_SET_ON",
+                "status": "FALSE",
+                "reason": "SURFACE_OBSTRUCTED",
+                "obstruction_evidence": surface.obstruction_evidence,
+                "obstruction_fraction": obstruction_fraction,
+                "method": "observed_obstruction_gate_v1",
+            }
         d, f, s = driver.current_geometric_properties, fastener.current_geometric_properties, surface.current_geometric_properties
         values = (d.get("footprint_length_m"), d.get("footprint_width_m"), f.get("footprint_length_m"),
                   f.get("footprint_width_m"), s.get("support_length_m"), s.get("support_width_m"))
         if any(value is None for value in values):
             return {"relation": "FITS_SET_ON", "status": "UNKNOWN", "reason": "MEASURED_FOOTPRINT_MISSING"}
         dl, dw, fl, fw, sl, sw = map(float, values)
-        cfg = self.config.get("relations", {})
+        cfg = relations_cfg
         edge, gap = float(cfg.get("packing_edge_clearance_m", 0.006)), float(cfg.get("packing_inter_object_clearance_m", 0.006))
         tested = []
         for drot in (0, 90):
