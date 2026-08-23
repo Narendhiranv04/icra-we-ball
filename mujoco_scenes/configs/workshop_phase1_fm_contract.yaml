@@ -1,7 +1,7 @@
-schema_version: 1
-description: "Manual surrogate contract representing one-time FM output at episode start for Workshop W1."
+schema_version: 2
+description: "Manual surrogate contract for the fixed-object Workshop W2 benchmark."
 
-task_instruction: "Repair the loose frame joint using an appropriate tool and fastener. Arrange the required tool and hardware on a suitable nearby work surface, and keep loose small parts in a suitable container."
+task_instruction: "Find the compatible screw and first compatible driver encountered, insert the screw tip-down into the workbench hole, and drive it fully."
 
 functional_requirements:
   - requirement_id: "req_obj_driver"
@@ -23,34 +23,8 @@ functional_requirements:
     rank: 2
     accepted_categories:
       - "screw"
-      - "bolt"
     required_relations:
       - "COMPATIBLE_WITH_TARGET"
-
-  - requirement_id: "req_reg_work_surface"
-    entity_type: "FUNCTIONAL_REGION"
-    function_name: "WORK_SURFACE"
-    description: "Nearby unobstructed planar work surface suitable for staging tool and fastener"
-    rank: 1
-    accepted_categories:
-      - "workbench"
-      - "tool_cart"
-      - "shelf"
-    required_relations:
-      - "PLANAR_SUPPORT"
-      - "FITS_SET_ON"
-
-  - requirement_id: "req_reg_parts_container"
-    entity_type: "FUNCTIONAL_REGION"
-    function_name: "SMALL_PARTS_CONTAINER"
-    description: "Open container or tray suitable for holding loose small parts"
-    rank: 2
-    accepted_categories:
-      - "parts_tray"
-      - "hardware_bin"
-    required_relations:
-      - "OPEN_CAVITY"
-      - "FITS_IN"
 
 vocabulary:
   canonical_labels:
@@ -66,35 +40,7 @@ vocabulary:
       detector_label: "screw"
       detector_rank: 3
       aliases: ["fastener", "machine screw", "threaded screw"]
-    bolt:
-      detector_label: "bolt"
+    hammer:
+      detector_label: "wooden hammer"
       detector_rank: 4
-      aliases: ["hex bolt", "machine bolt"]
-    wrench:
-      detector_label: "wrench"
-      detector_rank: 5
-      aliases: ["adjustable wrench", "combination wrench", "spanner"]
-    pliers:
-      detector_label: "pliers"
-      detector_rank: 6
-      aliases: ["combination pliers", "locking pliers"]
-    workbench:
-      detector_label: "workbench"
-      detector_rank: 7
-      aliases: ["work table", "wooden table", "table"]
-    tool_cart:
-      detector_label: "tool cart"
-      detector_rank: 8
-      aliases: ["cart", "rolling cart", "metal cart"]
-    shelf:
-      detector_label: "shelf"
-      detector_rank: 9
-      aliases: ["wall shelf", "narrow shelf"]
-    parts_tray:
-      detector_label: "parts tray"
-      detector_rank: 10
-      aliases: ["tray", "shallow tray"]
-    hardware_bin:
-      detector_label: "hardware bin"
-      detector_rank: 11
-      aliases: ["bin", "plastic bin", "parts bin", "storage bin"]
+      aliases: ["hammer", "mallet", "wood mallet"]

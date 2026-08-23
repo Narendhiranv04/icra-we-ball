@@ -1,57 +1,54 @@
 schema_version: 1
 task_id: l2_integrated_living_room_region_function_phase1
 requirement_entity_kind: REGION
-natural_language_goal: "Prepare the living room for two people watching television. Place one refreshment set within easy reach of each person's seating position, and place the TV remote and game controller together on a suitable shared surface accessible to both people."
+natural_language_goal: "Prepare the living room for two people watching television. Place one cup and one saucer on each person's fixed individual side table, and place the TV remote on the fixed shared coffee table."
 specification_source: manual_future_fm_contract
 generated_from_foundation_model: false
 
 payload_groups:
-  personal_refreshment_sets:
+  personal_cup_saucer_sets:
     count: 2
     each_requires:
-      drink: 1
-      snack_container: 1
+      cup: 1
+      saucer: 1
     grouping_policy: MINIMUM_TOTAL_OBSERVED_CENTROID_DISTANCE
     target_assignment_policy: OBSERVED_X_ORDER
     target_role: seating_position
-  shared_control_set:
+  shared_remote:
     count: 1
     each_requires:
       tv_remote: 1
-      game_controller: 1
     grouping_policy: ALL_REQUIRED_ROLES
 
 function_groups:
-  personal_refreshment:
-    function_id: PERSONAL_REFRESHMENT_REGION
+  personal_cup_saucer:
+    function_id: PERSONAL_CUP_SAUCER_REGION
     candidate_entity_kind: REGION
-    region_role: personal_refreshment_region
+    region_role: personal_cup_saucer_region
     usage_policy: DEDICATED_REGION_PER_TARGET
     target_assignment_policy: TARGET_SPECIFIC
     target_role: seating_position
     required_target_count: 2
-    payload_groups: [personal_refreshment_sets]
+    payload_groups: [personal_cup_saucer_sets]
     required_relations: [PLANAR_SUPPORT, FITS_SET_ON, NEAR_SEAT]
-  shared_controls:
-    function_id: SHARED_CONTROLS_REGION
+  shared_remote:
+    function_id: SHARED_REMOTE_REGION
     candidate_entity_kind: REGION
-    region_role: shared_controls_region
+    region_role: shared_remote_region
     usage_policy: SHARED_REGION_REQUIRED
     target_role: both_seating_positions
-    payload_groups: [shared_control_set]
+    payload_groups: [shared_remote]
     required_relations:
-      [PLANAR_SUPPORT, FITS_SET_ON, ACCESSIBLE_FROM_BOTH_SEATS]
+      [PLANAR_SUPPORT, FITS_ON, ACCESSIBLE_FROM_BOTH_SEATS]
 
 allow_cross_function_region_sharing: false
 
 semantic_requirements:
   region_roles:
-    personal_refreshment_region:
+    personal_cup_saucer_region:
       accepted_categories:
         side_table: 1
         end_table: 1
-        accent_table: 1
-        small_serving_table: 1
       rejected_categories:
         coffee_table: 1
         rug: 1
@@ -62,11 +59,14 @@ semantic_requirements:
         armchair: 1
         sofa: 1
         staging_table: 1
-    shared_controls_region:
+    shared_remote_region:
       accepted_categories:
         coffee_table: 1
         central_table: 1
-        side_table: 2
+        # Open-vocabulary detectors often call a low central coffee table a
+        # side table.  Central accessibility supplies the disambiguating
+        # functional evidence; missing-side-table variants remain infeasible.
+        side_table: 1
       rejected_categories:
         end_table: 1
         accent_table: 1
@@ -80,12 +80,14 @@ semantic_requirements:
         sofa: 1
         staging_table: 1
   payload_roles:
-    drink: [mug, cup]
-    snack_container: [bowl, ramekin]
+    cup: [cup]
+    saucer: [saucer, plate]
     tv_remote: [remote_control]
-    game_controller: [game_controller, controller]
   seating_categories: [armchair, chair, sofa]
-  minimum_supporting_views: 2
+  # Thin horizontal saucers have one strong frontal observation in the fixed
+  # five-view rig; require one independent view while retaining confidence,
+  # association, and winning-margin gates.
+  minimum_supporting_views: 1
   minimum_mean_confidence: 0.03
   minimum_winning_score_margin: 0.015
 

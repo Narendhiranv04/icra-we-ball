@@ -219,6 +219,10 @@ def run_sequential_inspection(
     semantic_vocabulary_path: str | Path | None = None,
     semantic_confidence_threshold: float | None = None,
     semantic_min_supporting_views: int | None = None,
+    semantic_minimum_mean_confidence: float | None = None,
+    semantic_maximum_conflicting_view_fraction: float | None = None,
+    semantic_winner_policy: str | None = None,
+    semantic_device: str | None = None,
     grounding_mode: str = "auto",
     pairing_strategy: str | None = None,
     save_semantic_overlays: bool = False,
@@ -269,6 +273,18 @@ def run_sequential_inspection(
         semantic_config["fusion"]["minimum_supporting_views"] = int(
             semantic_min_supporting_views
         )
+    if semantic_minimum_mean_confidence is not None:
+        semantic_config["fusion"]["minimum_mean_confidence"] = float(
+            semantic_minimum_mean_confidence
+        )
+    if semantic_maximum_conflicting_view_fraction is not None:
+        semantic_config["fusion"][
+            "maximum_conflicting_view_fraction"
+        ] = float(semantic_maximum_conflicting_view_fraction)
+    if semantic_winner_policy is not None:
+        semantic_config["fusion"]["winner_policy"] = semantic_winner_policy
+    if semantic_device is not None:
+        semantic_config["detector"]["device"] = semantic_device
     if semantic_detector is None:
         semantic_detector = create_semantic_detector(
             semantic_config,
@@ -353,6 +369,16 @@ def run_sequential_inspection(
                     "minimum_supporting_views"
                 ]
             ),
+            "semantic_minimum_mean_confidence": semantic_config["fusion"][
+                "minimum_mean_confidence"
+            ],
+            "semantic_maximum_conflicting_view_fraction": semantic_config[
+                "fusion"
+            ].get("maximum_conflicting_view_fraction"),
+            "semantic_winner_policy": semantic_config["fusion"].get(
+                "winner_policy"
+            ),
+            "semantic_device": semantic_config["detector"].get("device"),
             "save_semantic_overlays": save_semantic_overlays,
         },
     )

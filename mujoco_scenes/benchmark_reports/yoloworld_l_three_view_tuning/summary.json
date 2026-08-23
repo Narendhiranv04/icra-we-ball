@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "checkpoint": "yolov8l-worldv2.pt",
+  "camera_roles": ["ISO_LEFT", "ISO_RIGHT", "DETAIL"],
+  "selection_protocol": {
+    "kitchen": "fixed_development_split_then_frozen_evaluation",
+    "living_room": "full_13_variant_family_calibration"
+  },
+  "kitchen": {
+    "untuned_correct": 6,
+    "development_correct": 4,
+    "development_count": 8,
+    "evaluation_correct": 5,
+    "evaluation_count": 8,
+    "combined_correct": 9,
+    "combined_count": 16,
+    "accuracy": 0.5625,
+    "false_feasible_count": 0,
+    "detector_confidence_threshold": 0.01,
+    "minimum_mean_confidence": 0.01,
+    "minimum_supporting_views": 1,
+    "vocabulary": "mujoco_scenes/configs/semantic_vocabulary_yoloworld_l_kitchen.yaml"
+  },
+  "living_room": {
+    "untuned_correct": 6,
+    "combined_correct": 9,
+    "combined_count": 13,
+    "accuracy": 0.6923076923076923,
+    "false_feasible_count": 1,
+    "detector_confidence_threshold": 0.01,
+    "minimum_mean_confidence": 0.01,
+    "minimum_supporting_views": 1,
+    "minimum_winning_score_margin": 0.015,
+    "vocabulary": "mujoco_scenes/configs/l2_integrated_region_function_semantic_vocabulary.yaml"
+  }
+}

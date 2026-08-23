@@ -6,6 +6,7 @@ import json
 import hashlib
 import csv
 import math
+import os
 import re
 import shutil
 import subprocess
@@ -3793,6 +3794,8 @@ class ObservedStateRun:
         return image
 
     def _update_growth_gif(self) -> None:
+        if os.environ.get("MUJOCO_SKIP_GRAPH_MEDIA") == "1":
+            return
         frames = []
         for path in sorted(self.stages_dir.glob("*/overview.png")):
             with Image.open(path) as image:

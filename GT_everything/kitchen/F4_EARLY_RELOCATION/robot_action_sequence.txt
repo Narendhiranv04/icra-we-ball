@@ -1,0 +1,38 @@
+Environment: kitchen
+Variant: F4_EARLY_RELOCATION
+Execution profile: ASSISTED_DETERMINISTIC_DEMONSTRATION
+
+001. OPEN(D2)  # Open container D2 to access required task kitchenware
+002. PICK(s1i_compact_kettle)  # Pick water_source (s1i_compact_kettle) to dispense hot water
+003. POUR(s1i_compact_kettle, ab3_narrow_deep_cup)  # Pour hot water from s1i_compact_kettle into coffee target ab3_narrow_deep_cup
+004. POUR(s1i_compact_kettle, s1i_wide_shallow_cup)  # Pour hot water from s1i_compact_kettle into coffee target s1i_wide_shallow_cup
+005. POUR(s1i_compact_kettle, ab3_medium_deep_mug)  # Pour hot water from s1i_compact_kettle into coffee target ab3_medium_deep_mug
+006. PLACE(s1i_compact_kettle, countertop)  # Return water_source (s1i_compact_kettle) to safe countertop support
+007. PICK(s1i_compact_coffee_jar)  # Pick coffee_source (s1i_compact_coffee_jar) to dispense coffee grounds
+008. POUR(s1i_compact_coffee_jar, ab3_narrow_deep_cup)  # Pour coffee grounds from s1i_compact_coffee_jar into coffee target ab3_narrow_deep_cup
+009. POUR(s1i_compact_coffee_jar, s1i_wide_shallow_cup)  # Pour coffee grounds from s1i_compact_coffee_jar into coffee target s1i_wide_shallow_cup
+010. POUR(s1i_compact_coffee_jar, ab3_medium_deep_mug)  # Pour coffee grounds from s1i_compact_coffee_jar into coffee target ab3_medium_deep_mug
+011. PLACE(s1i_compact_coffee_jar, countertop)  # Return coffee_source (s1i_compact_coffee_jar) to safe countertop support
+012. PICK(s1i_final_long_narrow_spoon_2)  # Pick coffee stirring tool s1i_final_long_narrow_spoon_2 for sequential preparation
+013. STIR(s1i_final_long_narrow_spoon_2, ab3_narrow_deep_cup)  # Stir coffee in ab3_narrow_deep_cup using assigned tool s1i_final_long_narrow_spoon_2
+014. STIR(s1i_final_long_narrow_spoon_2, s1i_wide_shallow_cup)  # Stir coffee in s1i_wide_shallow_cup using assigned tool s1i_final_long_narrow_spoon_2
+015. STIR(s1i_final_long_narrow_spoon_2, ab3_medium_deep_mug)  # Stir coffee in ab3_medium_deep_mug using assigned tool s1i_final_long_narrow_spoon_2
+016. PLACE(s1i_final_long_narrow_spoon_2, countertop)  # Set stirring tool s1i_final_long_narrow_spoon_2 on countertop after coffee stirring completion
+017. PICK(ab3_narrow_deep_cup)  # Pick prepared coffee vessel ab3_narrow_deep_cup for serving
+018. PLACE(ab3_narrow_deep_cup, serving_area)  # Place coffee vessel ab3_narrow_deep_cup in serving area
+019. PICK(s1i_wide_shallow_cup)  # Pick prepared coffee vessel s1i_wide_shallow_cup for serving
+020. PLACE(s1i_wide_shallow_cup, serving_area)  # Place coffee vessel s1i_wide_shallow_cup in serving area
+021. PICK(ab3_medium_deep_mug)  # Pick prepared coffee vessel ab3_medium_deep_mug for serving
+022. PLACE(ab3_medium_deep_mug, serving_area)  # Place coffee vessel ab3_medium_deep_mug in serving area
+023. PICK(ab3_deep_bowl)  # Pick soup bowl ab3_deep_bowl for serving
+024. PLACE(ab3_deep_bowl, serving_area)  # Place soup bowl ab3_deep_bowl in serving area
+025. PICK(s1i_final_long_narrow_spoon)  # Pick dedicated soup utensil s1i_final_long_narrow_spoon for ab3_deep_bowl
+026. PLACE_SERVING_UTENSIL(s1i_final_long_narrow_spoon, ab3_deep_bowl)  # Place soup utensil s1i_final_long_narrow_spoon with served soup bowl ab3_deep_bowl
+027. PICK(ab3_shallow_bowl)  # Pick soup bowl ab3_shallow_bowl for serving
+028. PLACE(ab3_shallow_bowl, serving_area)  # Place soup bowl ab3_shallow_bowl in serving area
+029. PICK(s1i_final_long_narrow_spoon_2)  # Pick dedicated soup utensil s1i_final_long_narrow_spoon_2 for ab3_shallow_bowl
+030. PLACE_SERVING_UTENSIL(s1i_final_long_narrow_spoon_2, ab3_shallow_bowl)  # Place soup utensil s1i_final_long_narrow_spoon_2 with served soup bowl ab3_shallow_bowl
+031. PICK(s1i_narrow_deep_bowl)  # Pick soup bowl s1i_narrow_deep_bowl for serving
+032. PLACE(s1i_narrow_deep_bowl, serving_area)  # Place soup bowl s1i_narrow_deep_bowl in serving area
+033. PICK(ab3_partial_spoon)  # Pick dedicated soup utensil ab3_partial_spoon for s1i_narrow_deep_bowl
+034. PLACE_SERVING_UTENSIL(ab3_partial_spoon, s1i_narrow_deep_bowl)  # Place soup utensil ab3_partial_spoon with served soup bowl s1i_narrow_deep_bowl

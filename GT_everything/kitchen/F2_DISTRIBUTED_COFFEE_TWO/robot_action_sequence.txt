@@ -1,0 +1,50 @@
+Environment: kitchen
+Variant: F2_DISTRIBUTED_COFFEE_TWO
+Execution profile: ASSISTED_DETERMINISTIC_DEMONSTRATION
+
+001. OPEN(D1)  # Open container D1 to access required task kitchenware
+002. OPEN(D2)  # Open container D2 to access required task kitchenware
+003. OPEN(C2)  # Open container C2 to access required task kitchenware
+004. OPEN(B1)  # Open container B1 to access required task kitchenware
+005. OPEN(C1)  # Open container C1 to access required task kitchenware
+006. PICK(feas_coffee_wide_very_deep_cup)  # Retrieve target vessel feas_coffee_wide_very_deep_cup from C2 for countertop staging
+007. PLACE(feas_coffee_wide_very_deep_cup, countertop)  # Stage target vessel feas_coffee_wide_very_deep_cup on countertop for safe pouring and stirring
+008. PICK(ab3_deep_bowl)  # Retrieve target vessel ab3_deep_bowl from B1 for countertop staging
+009. PLACE(ab3_deep_bowl, countertop)  # Stage target vessel ab3_deep_bowl on countertop for safe pouring and stirring
+010. PICK(s1i_narrow_deep_bowl)  # Retrieve target vessel s1i_narrow_deep_bowl from C1 for countertop staging
+011. PLACE(s1i_narrow_deep_bowl, countertop)  # Stage target vessel s1i_narrow_deep_bowl on countertop for safe pouring and stirring
+012. PICK(s1i_compact_kettle)  # Pick water_source (s1i_compact_kettle) to dispense hot water
+013. POUR(s1i_compact_kettle, feas_coffee_small_shallow_cup)  # Pour hot water from s1i_compact_kettle into coffee target feas_coffee_small_shallow_cup
+014. POUR(s1i_compact_kettle, feas_coffee_wide_very_deep_cup)  # Pour hot water from s1i_compact_kettle into coffee target feas_coffee_wide_very_deep_cup
+015. POUR(s1i_compact_kettle, ab3_medium_deep_mug)  # Pour hot water from s1i_compact_kettle into coffee target ab3_medium_deep_mug
+016. PLACE(s1i_compact_kettle, countertop)  # Return water_source (s1i_compact_kettle) to safe countertop support
+017. PICK(s1i_compact_coffee_jar)  # Pick coffee_source (s1i_compact_coffee_jar) to dispense coffee grounds
+018. POUR(s1i_compact_coffee_jar, feas_coffee_small_shallow_cup)  # Pour coffee grounds from s1i_compact_coffee_jar into coffee target feas_coffee_small_shallow_cup
+019. POUR(s1i_compact_coffee_jar, feas_coffee_wide_very_deep_cup)  # Pour coffee grounds from s1i_compact_coffee_jar into coffee target feas_coffee_wide_very_deep_cup
+020. POUR(s1i_compact_coffee_jar, ab3_medium_deep_mug)  # Pour coffee grounds from s1i_compact_coffee_jar into coffee target ab3_medium_deep_mug
+021. PLACE(s1i_compact_coffee_jar, countertop)  # Return coffee_source (s1i_compact_coffee_jar) to safe countertop support
+022. PICK(ab3_partial_spoon)  # Pick coffee stirring tool ab3_partial_spoon for sequential preparation
+023. STIR(ab3_partial_spoon, feas_coffee_small_shallow_cup)  # Stir coffee in feas_coffee_small_shallow_cup using assigned tool ab3_partial_spoon
+024. PLACE(ab3_partial_spoon, countertop)  # Set stirring tool ab3_partial_spoon on countertop after coffee stirring completion
+025. PICK(s1i_c2_soup_spoon)  # Pick coffee stirring tool s1i_c2_soup_spoon for sequential preparation
+026. STIR(s1i_c2_soup_spoon, feas_coffee_wide_very_deep_cup)  # Stir coffee in feas_coffee_wide_very_deep_cup using assigned tool s1i_c2_soup_spoon
+027. STIR(s1i_c2_soup_spoon, ab3_medium_deep_mug)  # Stir coffee in ab3_medium_deep_mug using assigned tool s1i_c2_soup_spoon
+028. PLACE(s1i_c2_soup_spoon, countertop)  # Set stirring tool s1i_c2_soup_spoon on countertop after coffee stirring completion
+029. PICK(feas_coffee_small_shallow_cup)  # Pick prepared coffee vessel feas_coffee_small_shallow_cup for serving
+030. PLACE(feas_coffee_small_shallow_cup, serving_area)  # Place coffee vessel feas_coffee_small_shallow_cup in serving area
+031. PICK(feas_coffee_wide_very_deep_cup)  # Pick prepared coffee vessel feas_coffee_wide_very_deep_cup for serving
+032. PLACE(feas_coffee_wide_very_deep_cup, serving_area)  # Place coffee vessel feas_coffee_wide_very_deep_cup in serving area
+033. PICK(ab3_medium_deep_mug)  # Pick prepared coffee vessel ab3_medium_deep_mug for serving
+034. PLACE(ab3_medium_deep_mug, serving_area)  # Place coffee vessel ab3_medium_deep_mug in serving area
+035. PICK(ab3_shallow_bowl)  # Pick soup bowl ab3_shallow_bowl for serving
+036. PLACE(ab3_shallow_bowl, serving_area)  # Place soup bowl ab3_shallow_bowl in serving area
+037. PICK(s1i_oversized_spoon)  # Pick dedicated soup utensil s1i_oversized_spoon for ab3_shallow_bowl
+038. PLACE_SERVING_UTENSIL(s1i_oversized_spoon, ab3_shallow_bowl)  # Place soup utensil s1i_oversized_spoon with served soup bowl ab3_shallow_bowl
+039. PICK(ab3_deep_bowl)  # Pick soup bowl ab3_deep_bowl for serving
+040. PLACE(ab3_deep_bowl, serving_area)  # Place soup bowl ab3_deep_bowl in serving area
+041. PICK(ab3_partial_spoon)  # Pick dedicated soup utensil ab3_partial_spoon for ab3_deep_bowl
+042. PLACE_SERVING_UTENSIL(ab3_partial_spoon, ab3_deep_bowl)  # Place soup utensil ab3_partial_spoon with served soup bowl ab3_deep_bowl
+043. PICK(s1i_narrow_deep_bowl)  # Pick soup bowl s1i_narrow_deep_bowl for serving
+044. PLACE(s1i_narrow_deep_bowl, serving_area)  # Place soup bowl s1i_narrow_deep_bowl in serving area
+045. PICK(s1i_c2_soup_spoon)  # Pick dedicated soup utensil s1i_c2_soup_spoon for s1i_narrow_deep_bowl
+046. PLACE_SERVING_UTENSIL(s1i_c2_soup_spoon, s1i_narrow_deep_bowl)  # Place soup utensil s1i_c2_soup_spoon with served soup bowl s1i_narrow_deep_bowl

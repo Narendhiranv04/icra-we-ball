@@ -3,7 +3,7 @@ schema_version: 1
 pipeline:
   mask_backend: production
   semantic_backend: production
-  fm_contract_path: mujoco_scenes/configs/workshop_phase1_fm_contract_yoloworld_l.yaml
+  fm_contract_path: mujoco_scenes/configs/workshop_phase1_fm_contract.yaml
   geometry_config_path: mujoco_scenes/configs/workshop_geometry_inference_yoloworld_l.yaml
   inspection_rig_config_path: mujoco_scenes/configs/workshop_inspection_rigs_yoloworld_l_five_view_close.yaml
   visual_profile_path: mujoco_scenes/configs/workshop_visual_profile_yoloworld_l.yaml
@@ -17,7 +17,7 @@ perception:
   detector:
     checkpoint: yolov8l-worldv2.pt
     confidence_threshold: 0.01
-    supplemental_prompts: ["Phillips screwdriver", "cordless power drill", "Phillips head screw", "hex bolt"]
+    supplemental_prompts: ["Phillips screwdriver", "cordless power drill", "Phillips head screw", "wooden hammer"]
     supplemental_confidence_threshold: 0.001
     nms_iou_threshold: 0.35
     inference_size: 1280
@@ -43,7 +43,7 @@ tracking:
   stage_object_merge_distance_threshold_m: 0.015
 inspection:
   sequence: [LEFT_DRAWER, RIGHT_DRAWER, TOOL_CABINET]
-  early_stop: false
+  early_stop: true
 artifacts:
   save_all_detection_overlays: true
   save_all_bbox_predictions: true

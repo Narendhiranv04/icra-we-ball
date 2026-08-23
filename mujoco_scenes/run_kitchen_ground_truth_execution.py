@@ -111,6 +111,17 @@ def write_json(path: Path, payload: Any) -> None:
     temp.replace(path)
 
 
+def count_true_flag(value: Any, flag: str) -> int:
+    """Count true audit flags recursively in an execution result."""
+    if isinstance(value, dict):
+        return int(value.get(flag) is True) + sum(
+            count_true_flag(child, flag) for child in value.values()
+        )
+    if isinstance(value, list):
+        return sum(count_true_flag(child, flag) for child in value)
+    return 0
+
+
 def validate_feasible_final_state(
     assignment,
     final_state: OracleWorldState,
@@ -185,6 +196,8 @@ def run_variant_ground_truth(
     camera_resolution: tuple[int, int] = (640, 360),
     no_overlay: bool = False,
     inspection_order: list[str] | None = None,
+    assisted_suite: bool = False,
+    strict_robot_execution: bool = False,
 ) -> dict[str, Any]:
     """Execute ground-truth workflow for a single variant."""
     config = load_variants_config()
@@ -291,7 +304,11 @@ def run_variant_ground_truth(
         recorder.telemetry.infeasible_reason = assignment.failure_reason or infeasible_reason
 
     dispatcher = KitchenGroundTruthExecutionDispatcher(
-        scene, assignment, step_callback=recorder.step_callback
+        scene,
+        assignment,
+        step_callback=recorder.step_callback,
+        assisted_suite=assisted_suite,
+        allow_assisted_pick_recovery=not strict_robot_execution,
     )
 
     # Initial frame capture
@@ -417,10 +434,39 @@ def run_variant_ground_truth(
     )
     write_json(variant_out_dir / "camera_manifest.json", camera_manifest)
 
+    assisted_action_count = sum(
+        count_true_flag(entry.get("physical_result", {}), "assisted_execution")
+        for entry in execution_trace
+    )
+    direct_payload_pose_write_count = sum(
+        count_true_flag(entry.get("physical_result", {}), "direct_payload_pose_write")
+        for entry in execution_trace
+    )
+    direct_object_qpos_write_count = sum(
+        count_true_flag(entry.get("physical_result", {}), "direct_object_qpos_write")
+        for entry in execution_trace
+    )
+    if strict_robot_execution and (
+        assisted_action_count
+        or direct_payload_pose_write_count
+        or direct_object_qpos_write_count
+    ):
+        overall_success = False
+        physical_execution_success = False
+        execution_outcome = "STRICT_EXECUTION_AUDIT_FAILED"
+        failure_detail = "ASSISTED_OR_DIRECT_PAYLOAD_MOTION_DETECTED"
+
     summary = {
         "variant_id": variant_id,
         "scene_name": scene_name,
         "execution_mode": "GROUND_TRUTH_ORACLE",
+        "execution_profile": (
+            "ASSISTED_DETERMINISTIC_DEMONSTRATION"
+            if assisted_suite else (
+                "STRICT_ROBOT_PHYSICAL_PRIMITIVES"
+                if strict_robot_execution else "PHYSICAL_PRIMITIVES_WITH_ASSISTED_RECOVERY"
+            )
+        ),
         "intended_outcome": intended_outcome,
         "execution_outcome": execution_outcome,
         "failure_reason": assignment.failure_reason if not assignment.is_feasible else failure_detail,
@@ -434,6 +480,9 @@ def run_variant_ground_truth(
         "sim_duration_s": float(scene.data.time),
         "video_path": str(video_path) if record else None,
         "video_recorded": bool(record and video_path.exists() and video_path.stat().st_size > 0),
+        "assisted_action_count": assisted_action_count,
+        "direct_payload_pose_write_count": direct_payload_pose_write_count,
+        "direct_object_qpos_write_count": direct_object_qpos_write_count,
         "success": overall_success,
     }
     write_json(variant_out_dir / "summary.json", summary)
@@ -517,8 +566,29 @@ def main() -> int:
         default=1.0,
         help="Execution speed multiplier (default: 1.0).",
     )
+    parser.add_argument(
+        "--assisted-suite",
+        action="store_true",
+        help=(
+            "Use deterministic articulation, grasp-weld, placement, POUR and "
+            "STIR proxies for fast all-variant GT closure. Artifacts explicitly "
+            "label direct payload pose writes and do not claim fluid dynamics."
+        ),
+    )
+    parser.add_argument(
+        "--strict-robot-execution",
+        action="store_true",
+        help=(
+            "Require the robot physical-primitives path. Disable missed-grasp "
+            "pose-write recovery and fail the run if any assisted action or "
+            "direct payload pose write is detected."
+        ),
+    )
 
     args = parser.parse_args()
+
+    if args.assisted_suite and args.strict_robot_execution:
+        parser.error("--assisted-suite and --strict-robot-execution are mutually exclusive")
 
     if args.list_variants:
         print_variant_list()
@@ -559,6 +629,8 @@ def main() -> int:
                 fps=args.fps,
                 camera_resolution=args.camera_resolution,
                 no_overlay=args.no_overlay,
+                assisted_suite=args.assisted_suite,
+                strict_robot_execution=args.strict_robot_execution,
             )
             suite_results.append(summary)
             if not summary.get("success", False):
@@ -581,6 +653,14 @@ def main() -> int:
     if len(variants_to_run) > 1 or args.variant.lower() == "all":
         suite_summary = {
             "execution_mode": "GROUND_TRUTH_ORACLE",
+            "execution_profile": (
+                "ASSISTED_DETERMINISTIC_DEMONSTRATION"
+                if args.assisted_suite else (
+                    "STRICT_ROBOT_PHYSICAL_PRIMITIVES"
+                    if args.strict_robot_execution
+                    else "PHYSICAL_PRIMITIVES_WITH_ASSISTED_RECOVERY"
+                )
+            ),
             "total_variants_executed": len(suite_results),
             "passed_variants": sum(1 for r in suite_results if r.get("success", False)),
             "failed_variants": sum(1 for r in suite_results if not r.get("success", False)),

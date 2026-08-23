@@ -1469,30 +1469,30 @@ outside Git under `runs/`.
 ## Living-room region-function Phase 1
 
 The integrated living-room benchmark complements kitchen object-function
-grounding with REGION-only functional grounding. Every F0--F6 and I0--I5
-variant uses the exact same movie-night instruction and six initially observed
-payloads: two mugs, two snack bowls, a TV remote, and a game controller. One
-deterministic five-view RGB-D observation creates evidence records for both
-seating targets and all five neutral candidate-region proposals. There is no
+grounding with REGION-only functional grounding. All six feasible and four
+infeasible variants use the exact same instruction and five payloads: two
+cups, two saucers, and a TV remote. One deterministic five-view RGB-D
+observation creates evidence records for both seating targets and the three
+fixed table proposals. There is no
 inspection sequence,
 hidden-region search, robot, object-function predicate, symbolic planning, or
 action execution.
 
 The integrated family uses a sparse furniture-scale room made from documented
 Poly Haven chair and table visuals with separate analytic collision and RGB-D
-measurement proxies. Six payloads are arranged on a dedicated staging console
-rather than cluttering candidate surfaces. Exact source, licence, author,
+measurement proxies. Payloads not explicitly pre-positioned by a variant begin
+on a dedicated staging console. Exact source, licence, author,
 scale, transform, and hash provenance is stored in
 `assets/living_room_realistic/manifest.json`; visual mesh dimensions are not
 production evidence.
 
 The future-FM contract is
 `configs/l2_integrated_region_function_task.yaml`. It asks for two distinct
-`PERSONAL_REFRESHMENT_REGION` assignments, one per observed seat and complete
-drink/snack set, plus one `SHARED_CONTROLS_REGION` holding the remote and
-controller together. Cross-function region sharing is disabled. Compatibility
-requires RGB semantic support, measured `PLANAR_SUPPORT`, measured two-object
-`FITS_SET_ON`, and either target-specific `NEAR_SEAT` or
+`PERSONAL_CUP_SAUCER_REGION` assignments, one per observed seat and complete
+cup/saucer set, plus one `SHARED_REMOTE_REGION` for the remote. Cross-function
+region sharing is disabled. Compatibility requires RGB semantic support,
+measured `PLANAR_SUPPORT`, two-object `FITS_SET_ON` for each personal pair,
+single-object `FITS_ON` for the remote, and either target-specific `NEAR_SEAT` or
 `ACCESSIBLE_FROM_BOTH_SEATS`. Required UNKNOWN evidence never forms an edge.
 An exhaustive deterministic solver evaluates the complete three-slot
 allocation, preventing greedy target coverage and cross-function conflicts.
@@ -1505,7 +1505,7 @@ MUJOCO_SEMANTIC_PROCESS_ISOLATION=1 \
 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 \
 MALLOC_ARENA_MAX=2 \
 .venv/bin/python -m mujoco_scenes.run_living_room_region_function \
-  --scene L2_integrated_living_room_region_function_F0_BASE \
+  --scene L2_integrated_living_room_region_function_F0_ALL_OBJECTS_IN_STAGING \
   --no-robot --runs-root runs --run-id living_region_f0 \
   --semantic-model semantic_model_cache/yolov8m-worldv2.pt \
   --width 1280 --height 960

@@ -16,6 +16,8 @@ import mujoco
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
+from .live_mosaic_viewer import LiveMosaicViewer
+
 
 FIVE_PROJECT_CAMERAS = (
     "left_shoulder_camera",
@@ -76,6 +78,15 @@ class KitchenGroundTruthRecorder:
         self.total_frames_captured = 0
         self.wall_start_time = time.perf_counter()
         self.aborted_by_user = False
+        self.live_viewer = (
+            LiveMosaicViewer(
+                self.mosaic_width,
+                self.mosaic_height,
+                self.fps,
+                "Kitchen Ground Truth Execution (5 Cameras)",
+            )
+            if self.show else None
+        )
 
         # Initialize MuJoCo renderer for camera tile size
         self.renderer = mujoco.Renderer(
@@ -90,22 +101,17 @@ class KitchenGroundTruthRecorder:
             self._init_video_writer()
 
     def _init_video_writer(self) -> None:
-        """Initialize high-quality video writer with fallbacks."""
+        """Initialize the MP4 writer using the installed OpenCV backend."""
         out_str = str(self.output_path)
-        try:
-            import imageio.v2 as imageio
-            self.imageio_writer = imageio.get_writer(
-                out_str,
-                fps=self.fps,
-                codec="libx264",
-                quality=8,
-                pixelformat="yuv420p",
-            )
-        except Exception:
-            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-            self.video_writer = cv2.VideoWriter(
-                out_str, fourcc, float(self.fps), (self.mosaic_width, self.mosaic_height)
-            )
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        self.video_writer = cv2.VideoWriter(
+            out_str, fourcc, float(self.fps),
+            (self.mosaic_width, self.mosaic_height),
+        )
+        if not self.video_writer.isOpened():
+            self.video_writer.release()
+            self.video_writer = None
+            raise RuntimeError(f"Could not open MP4 writer for {out_str}")
 
     def _draw_text(
         self,
@@ -254,12 +260,8 @@ class KitchenGroundTruthRecorder:
                 self.video_writer.write(mosaic_bgr)
 
         # Show live GUI
-        if self.show:
-            mosaic_bgr = cv2.cvtColor(mosaic_rgb, cv2.COLOR_RGB2BGR)
-            cv2.imshow("Kitchen Ground Truth Execution (5 Cameras)", mosaic_bgr)
-            key = cv2.waitKey(1) & 0xFF
-            if key in (27, ord("q"), ord("Q")):
-                self.aborted_by_user = True
+        if self.live_viewer is not None:
+            self.live_viewer.show(mosaic_rgb)
 
         return mosaic_rgb
 
@@ -289,11 +291,9 @@ class KitchenGroundTruthRecorder:
                 pass
             self.video_writer = None
 
-        if self.show:
-            try:
-                cv2.destroyAllWindows()
-            except Exception:
-                pass
+        if self.live_viewer is not None:
+            self.live_viewer.close()
+            self.live_viewer = None
 
         if hasattr(self, "renderer") and self.renderer is not None:
             try:

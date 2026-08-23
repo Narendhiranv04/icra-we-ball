@@ -1,0 +1,19 @@
+{
+  "complete_global_assignment_exists": false,
+  "direct_signature_applicable": true,
+  "direct_signature_match_count": 1,
+  "direct_signature_rows": [
+    {
+      "actual_observed_region_count": 2,
+      "direct_cause": "MISSING_SHARED_TABLE",
+      "expected_absent_regions": [
+        "SHARED_TABLE"
+      ],
+      "expected_observed_region_count": 2
+    }
+  ],
+  "production_status": "INFEASIBLE",
+  "schema_version": 1,
+  "target_agnostic_status": "INFEASIBLE",
+  "variant": "I0_NO_SHARED_TABLE"
+}

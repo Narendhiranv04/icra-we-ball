@@ -1,0 +1,21 @@
+{
+  "complete_global_assignment_exists": false,
+  "direct_signature_applicable": true,
+  "direct_signature_match_count": 1,
+  "direct_signature_rows": [
+    {
+      "actual_observed_region_count": 0,
+      "direct_cause": "MISSING_ALL_TABLES",
+      "expected_absent_regions": [
+        "PERSONAL_TABLE_LEFT",
+        "PERSONAL_TABLE_RIGHT",
+        "SHARED_TABLE"
+      ],
+      "expected_observed_region_count": 0
+    }
+  ],
+  "production_status": "INFEASIBLE",
+  "schema_version": 1,
+  "target_agnostic_status": "INFEASIBLE",
+  "variant": "I3_NO_TABLES"
+}

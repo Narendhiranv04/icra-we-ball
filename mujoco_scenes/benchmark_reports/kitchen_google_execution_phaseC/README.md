@@ -1,5 +1,13 @@
 # Kitchen Google-Robot Phase C completion evidence
 
+> **Later all-variant closure:** Phase C was already complete for its scoped
+> POUR/STIR operators; the failure documented below was in the subsequent
+> Phase-B serving tail. The later GT demonstration pipeline closes that tail
+> across all 16 Kitchen variants using an explicitly assisted execution
+> profile. See
+> [`docs/KITCHEN_LIVING_ROOM_PIPELINE_READINESS.md`](../../../docs/KITCHEN_LIVING_ROOM_PIPELINE_READINESS.md)
+> and `runs/kitchen_ground_truth_execution_assisted_suite/suite_summary.json`.
+
 Implementation commit: `5ff90a1aadee3e1ae3ad36f238e97ecf12272c6f`
 
 Phase C is complete for the requested scope: POUR and STIR targets are limited

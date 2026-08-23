@@ -36,7 +36,90 @@ from mujoco_scenes.run_kitchen_ground_truth_execution import (
     discover_variant_names,
     load_variants_config,
 )
+from mujoco_scenes.kitchen_ground_truth_execution import (
+    KitchenGroundTruthExecutionDispatcher,
+)
 from mujoco_scenes.scene_loader import KitchenScene
+
+
+def test_assisted_pick_recovery_activates_matching_payload_weld(monkeypatch):
+    """A declared fallback PICK must be a live, exclusive held state.
+
+    This is the regression for F2's old POUR_SOURCE_NOT_HELD failure: the old
+    fallback changed the executor's Python state but did not select and enable
+    the object-specific MuJoCo equality.
+    """
+    scene = KitchenScene(
+        "S1_integrated_kitchen_object_function_feasibility_F2",
+        include_robot=True,
+        robot="google",
+    )
+    assignment = solve_ground_truth_assignment(
+        scene, "F2_DISTRIBUTED_COFFEE_TWO", "FEASIBLE"
+    )
+    dispatcher = KitchenGroundTruthExecutionDispatcher(scene, assignment)
+    source = assignment.sources["water_source"]
+    monkeypatch.setattr(
+        dispatcher.phase_b,
+        "pick",
+        lambda _object_id: {"success": False, "status": "FORCED_TEST_MISS"},
+    )
+
+    result = dispatcher.pick(source)
+
+    assert result["success"]
+    assert result["status"] == "ASSISTED_PICK_WELD_VERIFIED"
+    assert result["assisted_execution"] is True
+    assert result["assistance_reason"] == "FORCED_TEST_MISS"
+    assert result["held_state"]["validation_status"] == "TRUE"
+    assert result["held_state"]["exclusive_payload_weld"] is True
+
+
+def test_strict_pick_does_not_teleport_payload_after_physical_miss(monkeypatch):
+    """Strict final-paper execution must expose a grasp miss, not hide it."""
+    scene = KitchenScene(
+        "S1_integrated_kitchen_object_function_feasibility_F2",
+        include_robot=True,
+        robot="google",
+    )
+    assignment = solve_ground_truth_assignment(
+        scene, "F2_DISTRIBUTED_COFFEE_TWO", "FEASIBLE"
+    )
+    dispatcher = KitchenGroundTruthExecutionDispatcher(
+        scene, assignment, allow_assisted_pick_recovery=False
+    )
+    monkeypatch.setattr(
+        dispatcher.phase_b,
+        "pick",
+        lambda _object_id: {"success": False, "status": "FORCED_TEST_MISS"},
+    )
+
+    result = dispatcher.pick(assignment.sources["water_source"])
+
+    assert not result["success"]
+    assert result["status"] == "FORCED_TEST_MISS"
+    assert "assisted_execution" not in result
+    assert "direct_payload_pose_write" not in result
+
+
+def test_f0_relocated_targets_use_physically_validated_role_slots():
+    scene = KitchenScene(
+        "S1_integrated_kitchen_object_function_feasibility_F0",
+        include_robot=True,
+        robot="google",
+    )
+    assignment = solve_ground_truth_assignment(scene, "F0_REUSE_ONE", "FEASIBLE")
+    dispatcher = KitchenGroundTruthExecutionDispatcher(scene, assignment)
+
+    assert dispatcher._get_candidate_staging_spots("s1i_wide_shallow_cup")[0] == (
+        -0.10, -0.32
+    )
+    assert dispatcher._get_candidate_staging_spots("ab3_deep_bowl")[0] == (
+        0.25, -0.10
+    )
+    assert dispatcher._get_candidate_staging_spots("s1i_narrow_deep_bowl")[0] == (
+        -0.05, -0.22
+    )
 
 
 # ── 1. Variant Discovery Tests ────────────────────────────────────────────────

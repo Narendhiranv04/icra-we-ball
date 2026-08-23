@@ -1,17 +1,17 @@
 # Living-room Region-Function Phase 1
 
-Fixed goal: **Prepare the living room for two people watching television. Place one refreshment set within easy reach of each person's seating position, and place the TV remote and game controller together on a suitable shared surface accessible to both people.**
+Fixed goal: **Prepare the living room for two people watching television. Place one cup and one saucer on each person's fixed individual side table, and place the TV remote on the fixed shared coffee table.**
 
 This frozen benchmark performs one INITIAL five-view RGB-D observation. It
 grounds only spatial destination-region functions from RGB semantics, measured
 support geometry, two-object set packing, and seat-relative context. Objects
 are payload operands; there is no object-function grounding. The production
-solver exhaustively allocates two distinct personal regions and one separate
-shared-controls region. It emits COMPLETE or controlled-set INFEASIBLE and
+solver exhaustively allocates the two fixed individual tables and the separate
+fixed shared table. It emits COMPLETE or controlled-set INFEASIBLE and
 stops before planning or execution.
 
 The scene uses documented CC0 Poly Haven furniture visuals at real-world scale
-with independent analytic collision and RGB-D measurement proxies. Six payload
+with independent analytic collision and RGB-D measurement proxies. Five payload
 objects occupy a separate staging console, preserving a sparse destination
 layout and reliable one-to-one instance association. Visual mesh dimensions
 are never consumed by production inference.
@@ -25,28 +25,22 @@ benchmark.
 
 | Variant | Oracle | Production | Semantic-only | Geometry-only |
 |---|---:|---:|---:|---:|
-| F0_BASE | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
-| F1_LAYOUT_SWAPPED | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
-| F2_INSTANCE_ORDER_PERMUTED | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
-| F3_GLOBAL_MATCHING_REQUIRED | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
-| F4_PERSONAL_GEOMETRY_ALTERNATIVE | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
-| F5_SHARED_ALTERNATIVE | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
-| F6_DECOY_SURPLUS | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
-| I0_PERSONAL_SEMANTIC_DEFICIT | INFEASIBLE | INFEASIBLE | COMPLETE | COMPLETE |
-| I1_PERSONAL_GEOMETRY_DEFICIT | INFEASIBLE | INFEASIBLE | COMPLETE | INFEASIBLE |
-| I2_PERSONAL_TARGET_COVERAGE_FAILURE | INFEASIBLE | INFEASIBLE | COMPLETE | INFEASIBLE |
-| I3_SHARED_FIT_FAILURE | INFEASIBLE | INFEASIBLE | COMPLETE | COMPLETE |
-| I4_SHARED_CONTEXT_FAILURE | INFEASIBLE | INFEASIBLE | COMPLETE | COMPLETE |
-| I5_CROSS_FUNCTION_CONFLICT | INFEASIBLE | INFEASIBLE | COMPLETE | COMPLETE |
+| F0_ALL_OBJECTS_IN_STAGING | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
+| F1_LEFT_SAUCER_PREPLACED | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
+| F2_LEFT_SAUCER_ON_SHARED | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
+| F3_LEFT_CUP_ON_SHARED | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
+| F4_SAUCER_PREPLACED_CUP_ON_SHARED | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
+| F5_LEFT_PAIR_ON_SHARED | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
+| I0_NO_SHARED_TABLE | INFEASIBLE | INFEASIBLE | INFEASIBLE | INFEASIBLE |
+| I1_NO_LEFT_PERSONAL_TABLE | INFEASIBLE | INFEASIBLE | INFEASIBLE | INFEASIBLE |
+| I2_NO_PERSONAL_TABLES | INFEASIBLE | INFEASIBLE | INFEASIBLE | INFEASIBLE |
+| I3_NO_TABLES | INFEASIBLE | INFEASIBLE | INFEASIBLE | INFEASIBLE |
 
 Overall accuracy: 1.000. Feasible
 recall: 1.000. Infeasible recall:
 1.000. Selected allocation validity:
-1.000. F3 greedy-fail/global-
-succeed diagnostic: 1.000.
-F0/F6 production complete-solution counts:
-1 /
-4.
+1.000. F0 production complete-
+solution count: 1.
 
 Each variant directory contains the compact witness, compatibility matrix,
 oracle comparison, and representative RGB/semantic/mask overviews. Raw RGB-D

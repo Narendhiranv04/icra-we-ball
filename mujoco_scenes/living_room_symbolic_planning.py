@@ -13,6 +13,8 @@ from pathlib import Path
 import re
 from typing import Any
 
+import numpy as np
+
 from .symbolic_planning_core import (
     Atom,
     SymbolicAction,
@@ -27,6 +29,8 @@ PRODUCTION_INPUTS = (
     "functional_region_witness.json",
     "region_assignments.json",
     "task_requirements.json",
+    "payload_registry.json",
+    "region_registry.json",
 )
 OBJECT_ID = re.compile(r"^object_[0-9]+$")
 REGION_ID = re.compile(r"^region_[0-9]+$")
@@ -91,6 +95,8 @@ def compile_living_room_problem(variant_dir: str | Path) -> LivingRoomCompilatio
     witness = _load_json(variant_path / "functional_region_witness.json")
     assignments_record = _load_json(variant_path / "region_assignments.json")
     requirements = _load_json(variant_path / "task_requirements.json")
+    payload_registry = _load_json(variant_path / "payload_registry.json").get("objects", {})
+    region_registry = _load_json(variant_path / "region_registry.json").get("regions", {})
     status = str(witness.get("status", "UNKNOWN"))
     if status != "COMPLETE":
         _reject(
@@ -126,12 +132,13 @@ def compile_living_room_problem(variant_dir: str | Path) -> LivingRoomCompilatio
             _reject("SELECTED_EDGE_NOT_TRUE", status, repr(assignment.get("slot_id")))
         required_relations = (
             requirements.get("function_groups", {})
-            .get("personal_refreshment" if function_id == "PERSONAL_REFRESHMENT_REGION" else "shared_controls", {})
+            .get("personal_cup_saucer" if function_id == "PERSONAL_CUP_SAUCER_REGION" else "shared_remote", {})
             .get("required_relations", [])
         )
         if any(evidence.get(relation) != "TRUE" for relation in required_relations):
             _reject("SELECTED_EDGE_NOT_TRUE", status, repr(assignment.get("slot_id")))
-        if not isinstance(payload_ids, list) or len(payload_ids) != 2:
+        expected_payload_count = 2 if function_id == "PERSONAL_CUP_SAUCER_REGION" else 1
+        if not isinstance(payload_ids, list) or len(payload_ids) != expected_payload_count:
             _reject("INVALID_PAYLOAD_GROUP", status, repr(payload_ids))
         for object_id in payload_ids:
             if not isinstance(object_id, str) or not OBJECT_ID.fullmatch(object_id):
@@ -147,13 +154,13 @@ def compile_living_room_problem(variant_dir: str | Path) -> LivingRoomCompilatio
                     "slot_id": str(assignment.get("slot_id")),
                 }
             )
-        if function_id == "PERSONAL_REFRESHMENT_REGION":
+        if function_id == "PERSONAL_CUP_SAUCER_REGION":
             personal.append(assignment)
-        elif function_id == "SHARED_CONTROLS_REGION":
+        elif function_id == "SHARED_REMOTE_REGION":
             shared.append(assignment)
         else:
             _reject("UNKNOWN_FUNCTION", status, str(function_id))
-    if len(seen_payloads) != 6:
+    if len(seen_payloads) != 5:
         _reject("INCOMPLETE_PAYLOAD_COVERAGE", status, str(sorted(seen_payloads)))
     if len(personal) != 2 or len(shared) != 1:
         _reject("INVALID_FUNCTION_COVERAGE", status, "Expected 2 personal + 1 shared")
@@ -161,10 +168,10 @@ def compile_living_room_problem(variant_dir: str | Path) -> LivingRoomCompilatio
         _reject("PERSONAL_REGIONS_NOT_DISTINCT", status, "Personal regions must differ")
     shared_payloads = [
         binding for binding in bindings
-        if binding["function_id"] == "SHARED_CONTROLS_REGION"
+        if binding["function_id"] == "SHARED_REMOTE_REGION"
     ]
     if len({item["region_id"] for item in shared_payloads}) != 1:
-        _reject("SHARED_REGION_MISMATCH", status, "Controls must share a destination")
+        _reject("SHARED_REGION_MISMATCH", status, "Remote must have one shared destination")
 
     objects = sorted(seen_payloads)
     regions = sorted({binding["region_id"] for binding in bindings})
@@ -172,6 +179,34 @@ def compile_living_room_problem(variant_dir: str | Path) -> LivingRoomCompilatio
     initial_atoms.update(("object", object_id) for object_id in objects)
     initial_atoms.update(("available", object_id) for object_id in objects)
     initial_atoms.update(("region", region_id) for region_id in regions)
+    initial_object_regions: dict[str, str] = {}
+    for object_id in objects:
+        centroid = np.asarray(
+            payload_registry.get(object_id, {}).get("observed_centroid_world_m", []),
+            dtype=float,
+        )
+        if centroid.shape != (3,):
+            continue
+        for region_id in regions:
+            geometry = region_registry.get(region_id, {}).get("geometry", {})
+            center = np.asarray(geometry.get("centroid_world_m", {}).get("value", []), dtype=float)
+            axis = np.asarray(geometry.get("principal_axis_world", {}).get("value", []), dtype=float)
+            length = geometry.get("support_length_m", {}).get("value")
+            width = geometry.get("support_width_m", {}).get("value")
+            if center.shape != (3,) or axis.shape != (3,) or length is None or width is None:
+                continue
+            axis_xy = axis[:2] / max(float(np.linalg.norm(axis[:2])), 1e-9)
+            orthogonal = np.array([-axis_xy[1], axis_xy[0]])
+            delta = centroid[:2] - center[:2]
+            inside = (
+                abs(float(delta @ axis_xy)) <= float(length) / 2 + 0.025
+                and abs(float(delta @ orthogonal)) <= float(width) / 2 + 0.025
+                and -0.025 <= float(centroid[2] - center[2]) <= 0.20
+            )
+            if inside:
+                initial_object_regions[object_id] = region_id
+                initial_atoms.add(("on", object_id, region_id))
+                break
     goals = frozenset(
         ("on", binding["object_id"], binding["region_id"])
         for binding in bindings
@@ -185,7 +220,14 @@ def compile_living_room_problem(variant_dir: str | Path) -> LivingRoomCompilatio
                 frozenset({("available", object_id), ("hand_empty",)}),
                 frozenset(),
                 frozenset({("holding", object_id)}),
-                frozenset({("available", object_id), ("hand_empty",)}),
+                frozenset(
+                    {("available", object_id), ("hand_empty",)}
+                    | {
+                        ("on", object_id, region_id)
+                        for region_id in regions
+                        if initial_object_regions.get(object_id) == region_id
+                    }
+                ),
             )
         )
         for region_id in regions:
@@ -216,7 +258,8 @@ def compile_living_room_problem(variant_dir: str | Path) -> LivingRoomCompilatio
         "initial_atoms": [list(atom) for atom in sorted(initial_atoms)],
         "goal_atoms": [list(atom) for atom in sorted(goals)],
         "operator_vocabulary": ["PICK", "PLACE"],
-        "initial_location_abstraction": "AVAILABLE_WITHOUT_FABRICATED_SOURCE_REGION",
+        "initial_location_abstraction": "OBSERVED_SUPPORT_MEMBERSHIP_OR_STAGING_AVAILABLE",
+        "initial_object_regions": initial_object_regions,
         "allocation_policy": "USE_EXACT_PHASE1_WITNESS_SELECTION_NO_REALLOCATION",
     }
     return LivingRoomCompilation(problem, symbolic, manifest)
@@ -254,6 +297,10 @@ def render_problem_pddl(compilation: LivingRoomCompilation) -> str:
     objects = " ".join(symbolic["objects"])
     regions = " ".join(symbolic["regions"])
     initial = ["(hand-empty)"] + [f"(available {item})" for item in symbolic["objects"]]
+    initial.extend(
+        f"(on {object_id} {region_id})"
+        for object_id, region_id in sorted(symbolic.get("initial_object_regions", {}).items())
+    )
     goals = [f"(on {atom[1]} {atom[2]})" for atom in symbolic["goal_atoms"]]
     lines = [
         "(define (problem living-room-witness-placement)",

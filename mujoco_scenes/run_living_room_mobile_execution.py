@@ -10,7 +10,7 @@ from .living_room_mobile_execution import run_mobile_execution
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--variant", help="Living-room variant code (e.g. F0_BASE)")
+    parser.add_argument("--variant", help="Living-room variant code (e.g. F0_ALL_OBJECTS_IN_STAGING)")
     parser.add_argument("--phase1-dir", required=True)
     parser.add_argument("--phase2-dir", required=True)
     parser.add_argument("--output-dir", required=True)

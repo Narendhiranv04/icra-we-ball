@@ -1,0 +1,234 @@
+{
+  "camera_count": 5,
+  "schema_version": 1,
+  "variants": [
+    {
+      "expected_inspection_regions": [
+        "LEFT_DRAWER"
+      ],
+      "image": "docs/workshop_variant_visualizations/F0_MANUAL_FIRST_ONE_REGION/five_camera_open_storage.png",
+      "intended_outcome": "FEASIBLE",
+      "rejection_reason": null,
+      "selected_driver": "workshop_long_phillips_driver",
+      "storage_contents": {
+        "LEFT_DRAWER": [
+          "workshop_long_phillips_driver",
+          "workshop_medium_phillips_screw"
+        ],
+        "RIGHT_DRAWER": [
+          "workshop_power_driver"
+        ],
+        "TOOL_CABINET": [
+          "workshop_wooden_hammer"
+        ]
+      },
+      "variant_id": "F0_MANUAL_FIRST_ONE_REGION"
+    },
+    {
+      "expected_inspection_regions": [
+        "LEFT_DRAWER"
+      ],
+      "image": "docs/workshop_variant_visualizations/F1_POWER_FIRST_ONE_REGION/five_camera_open_storage.png",
+      "intended_outcome": "FEASIBLE",
+      "rejection_reason": null,
+      "selected_driver": "workshop_power_driver",
+      "storage_contents": {
+        "LEFT_DRAWER": [
+          "workshop_power_driver",
+          "workshop_medium_phillips_screw"
+        ],
+        "RIGHT_DRAWER": [
+          "workshop_long_phillips_driver"
+        ],
+        "TOOL_CABINET": [
+          "workshop_wooden_hammer"
+        ]
+      },
+      "variant_id": "F1_POWER_FIRST_ONE_REGION"
+    },
+    {
+      "expected_inspection_regions": [
+        "LEFT_DRAWER",
+        "RIGHT_DRAWER"
+      ],
+      "image": "docs/workshop_variant_visualizations/F2_MANUAL_FIRST_TWO_REGIONS/five_camera_open_storage.png",
+      "intended_outcome": "FEASIBLE",
+      "rejection_reason": null,
+      "selected_driver": "workshop_long_phillips_driver",
+      "storage_contents": {
+        "LEFT_DRAWER": [
+          "workshop_medium_phillips_screw",
+          "workshop_wooden_hammer"
+        ],
+        "RIGHT_DRAWER": [
+          "workshop_long_phillips_driver"
+        ],
+        "TOOL_CABINET": [
+          "workshop_power_driver"
+        ]
+      },
+      "variant_id": "F2_MANUAL_FIRST_TWO_REGIONS"
+    },
+    {
+      "expected_inspection_regions": [
+        "LEFT_DRAWER",
+        "RIGHT_DRAWER"
+      ],
+      "image": "docs/workshop_variant_visualizations/F3_POWER_FIRST_TWO_REGIONS/five_camera_open_storage.png",
+      "intended_outcome": "FEASIBLE",
+      "rejection_reason": null,
+      "selected_driver": "workshop_power_driver",
+      "storage_contents": {
+        "LEFT_DRAWER": [
+          "workshop_medium_phillips_screw",
+          "workshop_wooden_hammer"
+        ],
+        "RIGHT_DRAWER": [
+          "workshop_power_driver"
+        ],
+        "TOOL_CABINET": [
+          "workshop_long_phillips_driver"
+        ]
+      },
+      "variant_id": "F3_POWER_FIRST_TWO_REGIONS"
+    },
+    {
+      "expected_inspection_regions": [
+        "LEFT_DRAWER",
+        "RIGHT_DRAWER",
+        "TOOL_CABINET"
+      ],
+      "image": "docs/workshop_variant_visualizations/F4_MANUAL_FIRST_THREE_REGIONS/five_camera_open_storage.png",
+      "intended_outcome": "FEASIBLE",
+      "rejection_reason": null,
+      "selected_driver": "workshop_long_phillips_driver",
+      "storage_contents": {
+        "LEFT_DRAWER": [
+          "workshop_wooden_hammer"
+        ],
+        "RIGHT_DRAWER": [
+          "workshop_long_phillips_driver"
+        ],
+        "TOOL_CABINET": [
+          "workshop_medium_phillips_screw",
+          "workshop_power_driver"
+        ]
+      },
+      "variant_id": "F4_MANUAL_FIRST_THREE_REGIONS"
+    },
+    {
+      "expected_inspection_regions": [
+        "LEFT_DRAWER",
+        "RIGHT_DRAWER",
+        "TOOL_CABINET"
+      ],
+      "image": "docs/workshop_variant_visualizations/F5_POWER_FIRST_THREE_REGIONS/five_camera_open_storage.png",
+      "intended_outcome": "FEASIBLE",
+      "rejection_reason": null,
+      "selected_driver": "workshop_power_driver",
+      "storage_contents": {
+        "LEFT_DRAWER": [
+          "workshop_power_driver"
+        ],
+        "RIGHT_DRAWER": [
+          "workshop_wooden_hammer"
+        ],
+        "TOOL_CABINET": [
+          "workshop_medium_phillips_screw",
+          "workshop_long_phillips_driver"
+        ]
+      },
+      "variant_id": "F5_POWER_FIRST_THREE_REGIONS"
+    },
+    {
+      "expected_inspection_regions": [
+        "LEFT_DRAWER",
+        "RIGHT_DRAWER",
+        "TOOL_CABINET"
+      ],
+      "image": "docs/workshop_variant_visualizations/F6_MANUAL_ONLY/five_camera_open_storage.png",
+      "intended_outcome": "FEASIBLE",
+      "rejection_reason": null,
+      "selected_driver": "workshop_long_phillips_driver",
+      "storage_contents": {
+        "LEFT_DRAWER": [
+          "workshop_wooden_hammer"
+        ],
+        "RIGHT_DRAWER": [
+          "workshop_medium_phillips_screw"
+        ],
+        "TOOL_CABINET": [
+          "workshop_long_phillips_driver"
+        ]
+      },
+      "variant_id": "F6_MANUAL_ONLY"
+    },
+    {
+      "expected_inspection_regions": [
+        "LEFT_DRAWER",
+        "RIGHT_DRAWER",
+        "TOOL_CABINET"
+      ],
+      "image": "docs/workshop_variant_visualizations/F7_POWER_ONLY/five_camera_open_storage.png",
+      "intended_outcome": "FEASIBLE",
+      "rejection_reason": null,
+      "selected_driver": "workshop_power_driver",
+      "storage_contents": {
+        "LEFT_DRAWER": [
+          "workshop_wooden_hammer"
+        ],
+        "RIGHT_DRAWER": [
+          "workshop_medium_phillips_screw"
+        ],
+        "TOOL_CABINET": [
+          "workshop_power_driver"
+        ]
+      },
+      "variant_id": "F7_POWER_ONLY"
+    },
+    {
+      "expected_inspection_regions": [
+        "LEFT_DRAWER",
+        "RIGHT_DRAWER",
+        "TOOL_CABINET"
+      ],
+      "image": "docs/workshop_variant_visualizations/I0_NO_DRIVER/five_camera_open_storage.png",
+      "intended_outcome": "INFEASIBLE",
+      "rejection_reason": "NO_COMPATIBLE_DRIVER",
+      "selected_driver": null,
+      "storage_contents": {
+        "LEFT_DRAWER": [
+          "workshop_medium_phillips_screw"
+        ],
+        "RIGHT_DRAWER": [
+          "workshop_wooden_hammer"
+        ],
+        "TOOL_CABINET": []
+      },
+      "variant_id": "I0_NO_DRIVER"
+    },
+    {
+      "expected_inspection_regions": [
+        "LEFT_DRAWER",
+        "RIGHT_DRAWER",
+        "TOOL_CABINET"
+      ],
+      "image": "docs/workshop_variant_visualizations/I1_NO_SCREW/five_camera_open_storage.png",
+      "intended_outcome": "INFEASIBLE",
+      "rejection_reason": "NO_COMPATIBLE_SCREW",
+      "selected_driver": null,
+      "storage_contents": {
+        "LEFT_DRAWER": [
+          "workshop_long_phillips_driver"
+        ],
+        "RIGHT_DRAWER": [
+          "workshop_power_driver"
+        ],
+        "TOOL_CABINET": [
+          "workshop_wooden_hammer"
+        ]
+      },
+      "variant_id": "I1_NO_SCREW"
+    }
+  ]
+}

@@ -1,0 +1,150 @@
+{
+  "allocation_policy": "USE_EXACT_PHASE1_WITNESS_SELECTION_NO_REALLOCATION",
+  "compilation_status": "SUCCESS",
+  "goal_atoms": [
+    [
+      "on",
+      "object_0001",
+      "region_0001"
+    ],
+    [
+      "on",
+      "object_0002",
+      "region_0002"
+    ],
+    [
+      "on",
+      "object_0003",
+      "region_0003"
+    ],
+    [
+      "on",
+      "object_0004",
+      "region_0001"
+    ],
+    [
+      "on",
+      "object_0005",
+      "region_0003"
+    ]
+  ],
+  "initial_atoms": [
+    [
+      "available",
+      "object_0001"
+    ],
+    [
+      "available",
+      "object_0002"
+    ],
+    [
+      "available",
+      "object_0003"
+    ],
+    [
+      "available",
+      "object_0004"
+    ],
+    [
+      "available",
+      "object_0005"
+    ],
+    [
+      "hand_empty"
+    ],
+    [
+      "object",
+      "object_0001"
+    ],
+    [
+      "object",
+      "object_0002"
+    ],
+    [
+      "object",
+      "object_0003"
+    ],
+    [
+      "object",
+      "object_0004"
+    ],
+    [
+      "object",
+      "object_0005"
+    ],
+    [
+      "on",
+      "object_0004",
+      "region_0002"
+    ],
+    [
+      "region",
+      "region_0001"
+    ],
+    [
+      "region",
+      "region_0002"
+    ],
+    [
+      "region",
+      "region_0003"
+    ]
+  ],
+  "initial_location_abstraction": "OBSERVED_SUPPORT_MEMBERSHIP_OR_STAGING_AVAILABLE",
+  "initial_object_regions": {
+    "object_0004": "region_0002"
+  },
+  "objects": [
+    "object_0001",
+    "object_0002",
+    "object_0003",
+    "object_0004",
+    "object_0005"
+  ],
+  "operator_vocabulary": [
+    "PICK",
+    "PLACE"
+  ],
+  "planner_invoked": false,
+  "regions": [
+    "region_0001",
+    "region_0002",
+    "region_0003"
+  ],
+  "schema_version": 1,
+  "source_phase1_status": "COMPLETE",
+  "source_variant": "F2_LEFT_SAUCER_ON_SHARED",
+  "task_id": "l2_integrated_living_room_region_function_phase1",
+  "witness_selected_bindings": [
+    {
+      "function_id": "PERSONAL_CUP_SAUCER_REGION",
+      "object_id": "object_0001",
+      "region_id": "region_0001",
+      "slot_id": "personal_table_slot_1"
+    },
+    {
+      "function_id": "SHARED_REMOTE_REGION",
+      "object_id": "object_0002",
+      "region_id": "region_0002",
+      "slot_id": "shared_remote_slot"
+    },
+    {
+      "function_id": "PERSONAL_CUP_SAUCER_REGION",
+      "object_id": "object_0003",
+      "region_id": "region_0003",
+      "slot_id": "personal_table_slot_2"
+    },
+    {
+      "function_id": "PERSONAL_CUP_SAUCER_REGION",
+      "object_id": "object_0004",
+      "region_id": "region_0001",
+      "slot_id": "personal_table_slot_1"
+    },
+    {
+      "function_id": "PERSONAL_CUP_SAUCER_REGION",
+      "object_id": "object_0005",
+      "region_id": "region_0003",
+      "slot_id": "personal_table_slot_2"
+    }
+  ]
+}

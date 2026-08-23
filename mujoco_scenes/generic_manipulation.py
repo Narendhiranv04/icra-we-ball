@@ -44,7 +44,7 @@ SELF_COLLISION_TOLERANCE = 0.003
 SELF_COLLISION_COMPARISON_EPSILON = 0.0002
 ENVIRONMENT_COLLISION_TOLERANCE = 0.002
 TRAVERSABLE_GROUND_GEOMS = frozenset(
-    ("floor", "a2_floor", "a2_rug_surface", "a2_rug_border")
+    ("floor", "a2_floor", "a2_rug_surface", "a2_rug_border", "workshop_floor_geom")
 )
 COLLISION_GUARD_INTERVAL = 5
 SPOON_PIVOT_RELAXATION = 0.30

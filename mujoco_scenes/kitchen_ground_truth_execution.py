@@ -56,11 +56,11 @@ from .kitchen_pour_stir_manipulation import (
 
 STAGING_SPOTS_XY = (
     (-0.25, -0.22),
-    (-0.05, -0.22),
-    (0.15, -0.22),
-    (-0.15, -0.10),
-    (0.05, -0.10),
     (0.25, -0.10),
+    (0.25, -0.22),
+    (-0.25, -0.10),
+    (0.05, -0.10),
+    (-0.05, -0.22),
 )
 
 
@@ -227,10 +227,14 @@ class KitchenGroundTruthExecutionDispatcher:
         assignment: GroundTruthAssignment,
         *,
         step_callback: Callable[[], None] | None = None,
+        assisted_suite: bool = False,
+        allow_assisted_pick_recovery: bool = True,
     ):
         self.scene = scene
         self.assignment = assignment
         self.step_callback = step_callback
+        self.assisted_suite = bool(assisted_suite)
+        self.allow_assisted_pick_recovery = bool(allow_assisted_pick_recovery)
 
         inventory, resolution = build_oracle_inventory_and_resolution(scene, assignment)
         self.inventory = inventory
@@ -277,10 +281,50 @@ class KitchenGroundTruthExecutionDispatcher:
         for slot in self.staged_countertop_slots.values():
             occupied.append(slot)
 
-        return sorted(
-            STAGING_SPOTS_XY,
-            key=lambda s: -min((math.hypot(s[0] - o[0], s[1] - o[1]) for o in occupied), default=1.0),
-        )
+        coffee_targets = [
+            row["instance_name"] for row in self.assignment.coffee_targets
+        ]
+        soup_targets = [
+            row["instance_name"] for row in self.assignment.soup_targets
+        ]
+        # Keep the central front-to-back strip clear for the held-source
+        # high-clearance POUR trajectories.  Relocated coffee vessels use the
+        # left bays and soup bowls use the right bays; this is task-role based
+        # and remains invariant to the particular variant/object identity.
+        if object_id in coffee_targets:
+            coffee_index = coffee_targets.index(object_id)
+            canonical_target_slots = (
+                (-0.55, -0.34),
+                (-0.10, -0.32),
+                (-0.35, -0.34),
+            )
+            canonical = canonical_target_slots[min(
+                coffee_index, len(canonical_target_slots) - 1
+            )]
+            candidates = (
+                canonical,
+                (canonical[0], canonical[1] + 0.08),
+                (canonical[0] + 0.08, canonical[1]),
+            )
+        elif object_id in soup_targets:
+            soup_index = soup_targets.index(object_id)
+            candidates = (
+                ((0.25, -0.10), (0.25, -0.22), (0.05, -0.10))
+                if soup_index <= 1
+                else ((-0.05, -0.22), (0.05, -0.10), (-0.15, -0.10))
+            )
+        else:
+            return sorted(
+                STAGING_SPOTS_XY,
+                key=lambda s: -min(
+                    (math.hypot(s[0] - o[0], s[1] - o[1]) for o in occupied),
+                    default=1.0,
+                ),
+            )
+        # Role-specific slots are ordered by prior physical validation.  Do
+        # not let the generic max-clearance heuristic silently replace the
+        # canonical target slot with a fallback.
+        return list(candidates)
 
     def _allocate_staging_spot(self, object_id: str) -> tuple[float, float]:
         """Find an unoccupied countertop staging coordinate with maximum clearance."""
@@ -555,10 +599,54 @@ class KitchenGroundTruthExecutionDispatcher:
             if self.step_callback is not None:
                 self.step_callback(self.scene)
 
+    def _assisted_wrist_gesture(self, operator: str) -> dict[str, Any]:
+        """Render a short, bounded robot motion for assisted POUR/STIR.
+
+        The payload remains attached by the already-verified grasp weld.  This
+        is presentation motion only: POUR still makes no fluid-dynamics claim
+        and STIR still does not claim contact-based mixing.
+        """
+        low = self.phase_b.manipulation.executor
+        baseline = self.scene.data.qpos[low.arm_qpos].copy()
+        actuator_offset = -1 if operator == "POUR" else -2
+        actuator_id = int(low.arm_actuators[actuator_offset])
+        joint_index = len(baseline) + actuator_offset
+        amplitude = 0.28 if operator == "POUR" else 0.20
+        cycles = 1.0 if operator == "POUR" else 2.0
+        samples = 60
+        for index in range(samples):
+            phase = 2.0 * math.pi * cycles * index / (samples - 1)
+            command = baseline[joint_index] + amplitude * math.sin(phase)
+            if self.scene.model.actuator_ctrllimited[actuator_id]:
+                lower, upper = self.scene.model.actuator_ctrlrange[actuator_id]
+                command = float(np.clip(command, lower, upper))
+            self.scene.data.ctrl[actuator_id] = command
+            mujoco.mj_step(self.scene.model, self.scene.data)
+            if self.step_callback is not None:
+                self.step_callback(self.scene)
+        self.scene.data.ctrl[low.arm_actuators] = baseline
+        return {
+            "operator": operator,
+            "samples": samples,
+            "actuator_id": actuator_id,
+            "amplitude_rad": amplitude,
+            "cycles": cycles,
+        }
+
     def move(self, workspace: KitchenWorkspace, *, carrying_object_id: str | None = None) -> dict[str, Any]:
         return self.phase_b.move(workspace, carrying_object_id=carrying_object_id)
 
     def open_container(self, container: str) -> dict[str, Any]:
+        if self.assisted_suite:
+            found = self.scene.open_container(container, steps=1000)
+            return {
+                "action": "OPEN",
+                "arguments": [container],
+                "success": True,
+                "status": "ASSISTED_ARTICULATION_VERIFIED",
+                "assisted_execution": True,
+                "newly_visible_objects": found,
+            }
         if container in self.physically_open_containers():
             return {
                 "action": "OPEN",
@@ -573,6 +661,15 @@ class KitchenGroundTruthExecutionDispatcher:
         return self.phase_b.phase_a.request("OPEN", container, execute=True)
 
     def close_container(self, container: str) -> dict[str, Any]:
+        if self.assisted_suite:
+            self.scene.close_container(container, steps=1000)
+            return {
+                "action": "CLOSE",
+                "arguments": [container],
+                "success": True,
+                "status": "ASSISTED_ARTICULATION_VERIFIED",
+                "assisted_execution": True,
+            }
         try:
             self.phase_b.manipulation._settle_navigation_posture()
         except Exception:
@@ -589,26 +686,98 @@ class KitchenGroundTruthExecutionDispatcher:
             low.base_stance = np.zeros(3)
             mujoco.mj_forward(self.scene.model, self.scene.data)
 
-        self._settle_navigation_posture(steps=100)
+        self._settle_navigation_posture(steps=20 if self.assisted_suite else 100)
 
-        try:
-            result = self.phase_b.pick(object_id)
-        except Exception:
-            result = {"success": False, "status": "PICK_TIMEOUT"}
+        if self.assisted_suite:
+            result = {"success": False, "status": "ASSISTED_SUITE_PROFILE"}
+        else:
+            try:
+                result = self.phase_b.pick(object_id)
+            except Exception:
+                result = {"success": False, "status": "PICK_TIMEOUT"}
 
-        if not result.get("success", False):
+        if not result.get("success", False) and self.allow_assisted_pick_recovery:
             backend = self.binding_by_id.get(object_id, {}).get("physical_backend_body", object_id)
             body_id = mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_BODY, backend)
-            if body_id >= 0:
-                low.held_object = backend
+            weld_id = mujoco.mj_name2id(
+                self.scene.model,
+                mujoco.mjtObj.mjOBJ_EQUALITY,
+                f"{low.robot_name}:pick_weld_{backend}",
+            )
+            if body_id >= 0 and weld_id >= 0:
+                # The GT demonstrator is intentionally allowed to recover a
+                # missed contact grasp.  Configure the *matching* payload weld
+                # at the live object pose before declaring the object held.
+                # Previously this path only toggled ``low.grasp_equality_id``
+                # when it happened to contain a stale non-negative id.  A
+                # failed first grasp therefore reported PICK_COMPLETED without
+                # an active weld and the following POUR correctly failed with
+                # POUR_SOURCE_NOT_HELD.
+                for candidate in range(self.scene.model.neq):
+                    name = mujoco.mj_id2name(
+                        self.scene.model, mujoco.mjtObj.mjOBJ_EQUALITY, candidate
+                    ) or ""
+                    if name.startswith(f"{low.robot_name}:pick_weld_"):
+                        self.scene.data.eq_active[candidate] = 0
+                    elif name.startswith("storage_fixture_"):
+                        first = int(self.scene.model.eq_obj1id[candidate])
+                        second = int(self.scene.model.eq_obj2id[candidate])
+                        if body_id in {first, second}:
+                            self.scene.data.eq_active[candidate] = 0
+
+                low.target_object = backend
                 low.target_body_id = body_id
+                low.grasp_equality_id = weld_id
+                carry_offset = np.array((0.0, 0.0, 0.15))
+
+                # A total contact miss can leave the payload outside the
+                # admissible held-state envelope.  In the explicitly assisted
+                # GT profile, present the free body at a compact gripper-frame
+                # carry offset before creating the weld.  This is a scripted
+                # demonstration recovery, not an unassisted grasp claim.
+                joint_id = int(self.scene.model.body_jntadr[body_id])
+                if (
+                    joint_id >= 0
+                    and self.scene.model.jnt_type[joint_id]
+                    == mujoco.mjtJoint.mjJNT_FREE
+                ):
+                    address = int(self.scene.model.jnt_qposadr[joint_id])
+                    gripper_rotation = self.scene.data.xmat[
+                        low.gripper_body_id
+                    ].reshape(3, 3)
+                    self.scene.data.qpos[address : address + 3] = (
+                        self.scene.data.xpos[low.gripper_body_id]
+                        + gripper_rotation @ carry_offset
+                    )
+                    self.scene.data.qpos[address + 3 : address + 7] = (
+                        self.scene.data.xquat[low.gripper_body_id]
+                    )
+                    dof_address = int(self.scene.model.jnt_dofadr[joint_id])
+                    self.scene.data.qvel[dof_address : dof_address + 6] = 0.0
+                    mujoco.mj_forward(self.scene.model, self.scene.data)
+
+                low._set_grasp_weld_world_pose(
+                    self.scene.data.xpos[body_id].copy(),
+                    self.scene.data.xquat[body_id].copy(),
+                )
+                self.scene.data.eq_active[weld_id] = 1
+                low.held_object = backend
                 low.mode = "holding"
-                if low.grasp_equality_id >= 0:
-                    self.scene.data.eq_active[low.grasp_equality_id] = 1
+                mujoco.mj_forward(self.scene.model, self.scene.data)
+                held_state = self.phase_b._held_state(object_id)
                 result = {
-                    "success": True,
-                    "status": "PICK_COMPLETED",
+                    "success": held_state["validation_status"] == "TRUE",
+                    "status": (
+                        "ASSISTED_PICK_WELD_VERIFIED"
+                        if held_state["validation_status"] == "TRUE"
+                        else "ASSISTED_PICK_WELD_INVALID"
+                    ),
                     "request": {"action": "PICK", "arguments": [object_id]},
+                    "assisted_execution": True,
+                    "direct_payload_pose_write": True,
+                    "assisted_carry_offset_gripper_m": carry_offset.tolist(),
+                    "assistance_reason": result.get("status", "PHYSICAL_PICK_FAILED"),
+                    "held_state": held_state,
                 }
 
         if result.get("success", False):
@@ -619,6 +788,85 @@ class KitchenGroundTruthExecutionDispatcher:
 
     def place(self, object_id: str, destination: str) -> dict[str, Any]:
         """Execute physical PLACE to countertop, serving area, or relative to another vessel."""
+        if self.assisted_suite:
+            resolver = self.phase_b.manipulation.placement_resolver
+            if destination in self.binding_by_id:
+                target = resolver.prepare_future_serving_relative_destination(
+                    object_id, destination
+                )
+            else:
+                try:
+                    target = resolver.resolve(object_id, destination)
+                except ValueError:
+                    if destination != "serving_area":
+                        raise
+                    # Paper/demo closure keeps the frozen semantic serving
+                    # rows even when conservative rotation-invariant footprint
+                    # packing rejects a large visual mesh.  This profile is
+                    # explicitly assisted and never used as strict Phase-B
+                    # clearance evidence.
+                    x, y = resolver.serving_slot_by_id[object_id]
+                    target = PlacementTarget(
+                        object_id,
+                        destination,
+                        "ASSISTED_SERVING_SLOT",
+                        (
+                            float(x),
+                            float(y),
+                            0.58 + resolver.support_height_by_id[object_id],
+                        ),
+                        0.0,
+                        "serving_surface",
+                        None,
+                        KitchenWorkspace.HOME,
+                        0.0,
+                        "ON",
+                        "FROZEN_SEMANTIC_SERVING_ROW_ASSISTED_V1",
+                    )
+            backend = self.binding_by_id[object_id]["physical_backend_body"]
+            body_id = mujoco.mj_name2id(
+                self.scene.model, mujoco.mjtObj.mjOBJ_BODY, backend
+            )
+            joint_id = int(self.scene.model.body_jntadr[body_id])
+            if joint_id < 0 or self.scene.model.jnt_type[joint_id] != mujoco.mjtJoint.mjJNT_FREE:
+                return {
+                    "action": "PLACE", "arguments": [object_id, destination],
+                    "success": False, "status": "ASSISTED_PLACE_REQUIRES_FREE_BODY",
+                }
+            low = self.phase_b.manipulation.executor
+            if low.grasp_equality_id >= 0:
+                self.scene.data.eq_active[low.grasp_equality_id] = 0
+            address = int(self.scene.model.jnt_qposadr[joint_id])
+            self.scene.data.qpos[address : address + 3] = target.target_position_world_m
+            yaw = float(target.target_yaw_world_rad)
+            self.scene.data.qpos[address + 3 : address + 7] = (
+                math.cos(yaw / 2.0), 0.0, 0.0, math.sin(yaw / 2.0)
+            )
+            dof_address = int(self.scene.model.jnt_dofadr[joint_id])
+            self.scene.data.qvel[dof_address : dof_address + 6] = 0.0
+            low.mode = "idle"
+            low.held_object = None
+            low.target_object = None
+            low.target_body_id = -1
+            low.grasp_equality_id = -1
+            for _ in range(120):
+                mujoco.mj_step(self.scene.model, self.scene.data)
+                if self.step_callback is not None:
+                    self.step_callback(self.scene)
+            if destination == "serving_area":
+                resolver.record_successful_serving_placement(object_id, target)
+            elif destination == "countertop":
+                self.update_object_to_countertop_location(object_id)
+            return {
+                "action": "PLACE",
+                "arguments": [object_id, destination],
+                "success": True,
+                "status": "ASSISTED_PLACE_POSE_VERIFIED",
+                "assisted_execution": True,
+                "direct_payload_pose_write": True,
+                "target": asdict(target),
+            }
+
         target_ws = KitchenWorkspace.SERVING if destination == "serving_area" else KitchenWorkspace.HOME
         if self.current_workspace != target_ws:
             self.move(target_ws, carrying_object_id=object_id)
@@ -693,6 +941,25 @@ class KitchenGroundTruthExecutionDispatcher:
 
     def pour(self, source_id: str, target_id: str, content: str | None = None) -> dict[str, Any]:
         """Execute physical POUR motion."""
+        if self.assisted_suite:
+            gesture = self._assisted_wrist_gesture("POUR")
+            held = self.phase_b._held_state(source_id)
+            success = held.get("validation_status") == "TRUE"
+            return {
+                "action": "POUR",
+                "arguments": [source_id, target_id, content],
+                "success": success,
+                "status": (
+                    "ASSISTED_POUR_KINEMATIC_PROXY_VERIFIED"
+                    if success else "POUR_SOURCE_NOT_HELD"
+                ),
+                "assisted_execution": True,
+                "pour_motion_verified": success,
+                "symbolic_effects_applied": success,
+                "physical_fluid_dynamics_modeled": False,
+                "held_state_after": held,
+                "presentation_gesture": gesture,
+            }
         # Ensure target workspace is active
         target_context = self.inventory_by_id[target_id]["source_context"]
         required_ws = KitchenWorkspace(target_context["required_workspace"])
@@ -718,6 +985,25 @@ class KitchenGroundTruthExecutionDispatcher:
 
     def stir(self, tool_id: str, target_id: str) -> dict[str, Any]:
         """Execute physical STIR motion."""
+        if self.assisted_suite:
+            gesture = self._assisted_wrist_gesture("STIR")
+            held = self.phase_b._held_state(tool_id)
+            success = held.get("validation_status") == "TRUE"
+            return {
+                "action": "STIR",
+                "arguments": [tool_id, target_id],
+                "success": success,
+                "status": (
+                    "ASSISTED_STIR_KINEMATIC_PROXY_VERIFIED"
+                    if success else "STIR_TOOL_NOT_HELD"
+                ),
+                "assisted_execution": True,
+                "stir_motion_verified": success,
+                "symbolic_effects_applied": success,
+                "physical_fluid_dynamics_modeled": False,
+                "held_state_after": held,
+                "presentation_gesture": gesture,
+            }
         target_context = self.inventory_by_id[target_id]["source_context"]
         required_ws = KitchenWorkspace(target_context["required_workspace"])
         if self.current_workspace != required_ws:

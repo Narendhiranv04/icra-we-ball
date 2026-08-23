@@ -10,22 +10,16 @@ from mujoco_scenes.living_room_symbolic_planning import (
     run_living_room_symbolic_pipeline,
 )
 from mujoco_scenes.symbolic_planning_core import deterministic_astar, independent_replay
+from mujoco_scenes.living_room_variants import load_living_room_variants
 
 
 ROOT = Path(__file__).parents[1] / "benchmark_reports" / "living_room_region_feasibility_phase1" / "variants"
-FEASIBLE = [
-    "F0_BASE", "F1_LAYOUT_SWAPPED", "F2_INSTANCE_ORDER_PERMUTED",
-    "F3_GLOBAL_MATCHING_REQUIRED", "F4_PERSONAL_GEOMETRY_ALTERNATIVE",
-    "F5_SHARED_ALTERNATIVE", "F6_DECOY_SURPLUS",
-]
-INFEASIBLE = [
-    "I0_PERSONAL_SEMANTIC_DEFICIT", "I1_PERSONAL_GEOMETRY_DEFICIT",
-    "I2_PERSONAL_TARGET_COVERAGE_FAILURE", "I3_SHARED_FIT_FAILURE",
-    "I4_SHARED_CONTEXT_FAILURE", "I5_CROSS_FUNCTION_CONFLICT",
-]
+VARIANTS = load_living_room_variants()
+FEASIBLE = [name for name, spec in VARIANTS.items() if spec["intended_outcome"] == "FEASIBLE"]
+INFEASIBLE = [name for name, spec in VARIANTS.items() if spec["intended_outcome"] == "INFEASIBLE"]
 
 
-def _copy_variant(tmp_path, name="F0_BASE"):
+def _copy_variant(tmp_path, name="F0_ALL_OBJECTS_IN_STAGING"):
     target = tmp_path / name
     target.mkdir()
     for source in (ROOT / name).glob("*.json"):
@@ -36,16 +30,19 @@ def _copy_variant(tmp_path, name="F0_BASE"):
 @pytest.mark.parametrize("variant", FEASIBLE)
 def test_complete_variants_compile_plan_replay_deterministically(variant):
     compiled = compile_living_room_problem(ROOT / variant)
-    assert len(compiled.symbolic["objects"]) == 6
-    assert len(compiled.problem.goal_atoms) == 6
+    assert len(compiled.symbolic["objects"]) == 5
+    assert len(compiled.problem.goal_atoms) == 5
     assert all(item.startswith("object_") for item in compiled.symbolic["objects"])
     assert all(item.startswith("region_") for item in compiled.symbolic["regions"])
     goals = [(atom[1], atom[2]) for atom in compiled.symbolic["goal_atoms"]]
-    assert len({object_id for object_id, _ in goals}) == 6
+    assert len({object_id for object_id, _ in goals}) == 5
     first = deterministic_astar(compiled.problem)
     second = deterministic_astar(compiled.problem)
     assert first.plan == second.plan
-    assert len(first.plan) == 12
+    assert len(first.plan) == (
+        8 if variant in {"F1_LEFT_SAUCER_PREPLACED", "F4_SAUCER_PREPLACED_CUP_ON_SHARED"}
+        else 10
+    )
     assert {action.name for action in first.plan} == {"pick", "place"}
     assert independent_replay(compiled.problem, first.plan)["goal_status"] == "GOAL_SATISFIED"
 
@@ -61,8 +58,8 @@ def test_infeasible_variants_reject_before_planning(tmp_path, variant):
     assert (output / "phase1_source_manifest.json").exists()
 
 
-def test_bindings_are_exact_witness_selection_including_f6():
-    for variant in ("F0_BASE", "F6_DECOY_SURPLUS"):
+def test_bindings_are_exact_witness_selection_including_f5():
+    for variant in ("F0_ALL_OBJECTS_IN_STAGING", "F5_LEFT_PAIR_ON_SHARED"):
         witness = json.loads((ROOT / variant / "functional_region_witness.json").read_text())
         expected = sorted(
             (object_id, assignment["region_id"])
@@ -107,10 +104,12 @@ def test_compiler_does_not_read_oracle(monkeypatch):
         assert "comparison" not in self.name.lower()
         return original(self, *args, **kwargs)
     monkeypatch.setattr(Path, "read_text", guarded)
-    compile_living_room_problem(ROOT / "F0_BASE")
+    compile_living_room_problem(ROOT / "F0_ALL_OBJECTS_IN_STAGING")
 
 
-def test_initial_state_has_available_not_fabricated_staging_location():
-    compiled = compile_living_room_problem(ROOT / "F0_BASE")
-    assert sum(atom[0] == "available" for atom in compiled.problem.initial_atoms) == 6
+def test_initial_state_tracks_observed_preplacement_without_fabrication():
+    compiled = compile_living_room_problem(ROOT / "F0_ALL_OBJECTS_IN_STAGING")
+    assert sum(atom[0] == "available" for atom in compiled.problem.initial_atoms) == 5
     assert not any(atom[0] == "on" for atom in compiled.problem.initial_atoms)
+    preplaced = compile_living_room_problem(ROOT / "F1_LEFT_SAUCER_PREPLACED")
+    assert sum(atom[0] == "on" for atom in preplaced.problem.initial_atoms) == 1

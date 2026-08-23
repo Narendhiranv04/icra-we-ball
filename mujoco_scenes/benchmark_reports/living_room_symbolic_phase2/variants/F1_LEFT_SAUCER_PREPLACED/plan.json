@@ -1,0 +1,82 @@
+{
+  "actions": [
+    {
+      "arguments": {
+        "object": "object_0002"
+      },
+      "cost": 1,
+      "operator": "PICK",
+      "step": 0
+    },
+    {
+      "arguments": {
+        "object": "object_0002",
+        "region": "region_0001"
+      },
+      "cost": 1,
+      "operator": "PLACE",
+      "step": 1
+    },
+    {
+      "arguments": {
+        "object": "object_0003"
+      },
+      "cost": 1,
+      "operator": "PICK",
+      "step": 2
+    },
+    {
+      "arguments": {
+        "object": "object_0003",
+        "region": "region_0002"
+      },
+      "cost": 1,
+      "operator": "PLACE",
+      "step": 3
+    },
+    {
+      "arguments": {
+        "object": "object_0004"
+      },
+      "cost": 1,
+      "operator": "PICK",
+      "step": 4
+    },
+    {
+      "arguments": {
+        "object": "object_0004",
+        "region": "region_0003"
+      },
+      "cost": 1,
+      "operator": "PLACE",
+      "step": 5
+    },
+    {
+      "arguments": {
+        "object": "object_0005"
+      },
+      "cost": 1,
+      "operator": "PICK",
+      "step": 6
+    },
+    {
+      "arguments": {
+        "object": "object_0005",
+        "region": "region_0003"
+      },
+      "cost": 1,
+      "operator": "PLACE",
+      "step": 7
+    }
+  ],
+  "search_statistics": {
+    "algorithm": "deterministic_astar_symbolic_state_search",
+    "expanded_states": 272,
+    "frontier_peak": 317,
+    "generated_states": 796,
+    "plan_cost": 8,
+    "plan_length": 8,
+    "search_time_ms": 2.036836012848653,
+    "visited_states": 588
+  }
+}

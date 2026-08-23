@@ -159,9 +159,14 @@ def run_predicted_variant(
     height: int,
     semantic_backend: str,
     semantic_model: str | None,
+    semantic_config: str | None,
     semantic_vocabulary: str | None,
     semantic_confidence_threshold: float,
     semantic_min_supporting_views: int,
+    semantic_minimum_mean_confidence: float | None,
+    semantic_maximum_conflicting_view_fraction: float | None,
+    semantic_winner_policy: str | None,
+    semantic_device: str | None,
     save_semantic_overlays: bool,
 ) -> tuple[dict[str, Any], Path]:
     """Run production prediction without receiving any oracle result."""
@@ -179,9 +184,16 @@ def run_predicted_variant(
         stop_on_complete=True,
         semantic_backend=semantic_backend,
         semantic_model=semantic_model,
+        semantic_config_path=semantic_config,
         semantic_vocabulary_path=semantic_vocabulary,
         semantic_confidence_threshold=semantic_confidence_threshold,
         semantic_min_supporting_views=semantic_min_supporting_views,
+        semantic_minimum_mean_confidence=semantic_minimum_mean_confidence,
+        semantic_maximum_conflicting_view_fraction=(
+            semantic_maximum_conflicting_view_fraction
+        ),
+        semantic_winner_policy=semantic_winner_policy,
+        semantic_device=semantic_device,
         grounding_mode="joint",
         save_semantic_overlays=save_semantic_overlays,
     )
@@ -367,6 +379,7 @@ def run_benchmark(arguments: argparse.Namespace) -> Path:
             height=arguments.height,
             semantic_backend=arguments.semantic_detector,
             semantic_model=arguments.semantic_model,
+            semantic_config=arguments.semantic_config,
             semantic_vocabulary=arguments.semantic_vocabulary,
             semantic_confidence_threshold=(
                 arguments.semantic_confidence_threshold
@@ -374,6 +387,14 @@ def run_benchmark(arguments: argparse.Namespace) -> Path:
             semantic_min_supporting_views=(
                 arguments.semantic_min_supporting_views
             ),
+            semantic_minimum_mean_confidence=(
+                arguments.semantic_minimum_mean_confidence
+            ),
+            semantic_maximum_conflicting_view_fraction=(
+                arguments.semantic_maximum_conflicting_view_fraction
+            ),
+            semantic_winner_policy=arguments.semantic_winner_policy,
+            semantic_device=arguments.semantic_device,
             save_semantic_overlays=arguments.save_semantic_overlays,
         )
         variant_payload = {
@@ -469,11 +490,33 @@ def main() -> None:
     parser.add_argument("--semantic-detector", default="yolo_world")
     parser.add_argument("--semantic-model", default=None)
     parser.add_argument(
+        "--semantic-config",
+        default=None,
+        help="Semantic-grounding YAML; defaults to configs/semantic_grounding.yaml",
+    )
+    parser.add_argument(
         "--semantic-vocabulary",
         default="mujoco_scenes/configs/semantic_vocabulary.yaml",
     )
     parser.add_argument("--semantic-confidence-threshold", type=float, default=0.03)
     parser.add_argument("--semantic-min-supporting-views", type=int, default=2)
+    parser.add_argument(
+        "--semantic-minimum-mean-confidence", type=float, default=None
+    )
+    parser.add_argument(
+        "--semantic-maximum-conflicting-view-fraction",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--semantic-winner-policy",
+        choices=(
+            "weighted_score_then_supporting_views",
+            "supporting_views_then_weighted_score",
+        ),
+        default=None,
+    )
+    parser.add_argument("--semantic-device", default=None)
     parser.add_argument("--save-semantic-overlays", action="store_true")
     arguments = parser.parse_args()
     output = run_benchmark(arguments)

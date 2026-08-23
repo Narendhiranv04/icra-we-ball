@@ -1,10 +1,8 @@
-"""Integrated Workshop (W1) Joint Object and Region Function Benchmark Scene.
+"""Workshop fixed-pair position/presence benchmark scene.
 
-Provides authoritative, config-driven variant construction for the 14-variant
-workshop benchmark suite, independent dynamic free-body pickable objects,
-deterministic storage slot allocation, physical layout profiles, physical
-realization of active functional regions, generic production observation identities,
-strict privilege boundaries, and scene-level oracle auditing.
+Provides the redesigned 10-variant scene, articulated storage, four fixed
+movable-object identities, production-safe observations, oracle auditing, and
+an optional interactive robot Actions panel.
 """
 
 from __future__ import annotations
@@ -149,7 +147,16 @@ PRIVILEGED_WORKSHOP_ORACLE_SPECS: dict[str, dict[str, Any]] = {
         "tip_profile": WORKSHOP_TARGET_RECESS_PROFILE,
         "tip_width_m": 0.006,
         "bounding_area_m2": 0.163054 * 0.165,  # Compact 12V side-rest planar footprint: ~0.026904 m^2
-        "mass": 0.60,
+        # Compact powered screwdriver; light enough for the single-arm
+        # platform to carry without the grasp constraint sagging.
+        "mass": 0.25,
+    },
+    "workshop_wooden_hammer": {
+        "kind": "wooden_hammer",
+        "functions": ["can_strike"],
+        "reach_m": 0.16,
+        "bounding_area_m2": 0.22 * 0.09,
+        "mass": 0.35,
     },
     "workshop_medium_phillips_screw": {
         "kind": "medium_screw",
@@ -215,10 +222,11 @@ INITIAL_OBJECTS = (
     ("workshop_frame_joint", "fixture_held_frame_joint"),
 )
 
-ALL_PICKABLE_OBJECT_NAMES = tuple(
-    name
-    for name in PRIVILEGED_WORKSHOP_ORACLE_SPECS.keys()
-    if name != "workshop_frame_joint"
+ALL_PICKABLE_OBJECT_NAMES = (
+    "workshop_long_phillips_driver",
+    "workshop_power_driver",
+    "workshop_medium_phillips_screw",
+    "workshop_wooden_hammer",
 )
 
 
@@ -276,6 +284,8 @@ def _create_object_element(
     ET.SubElement(body, "inertial", {"pos": "0 0 0.05", "mass": str(mass), "diaginertia": "0.001 0.001 0.001"})
 
     if object_name == "workshop_long_phillips_driver":
+        ET.SubElement(body, "site", {"name": f"{object_name}_handle_site", "pos": "0 0 0.045", "size": "0.004", "rgba": "0 0 0 0"})
+        ET.SubElement(body, "site", {"name": f"{object_name}_tip_site", "pos": "0 0 0.230", "size": "0.003", "rgba": "0.2 0.8 1 0.5"})
         ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "long_driver_mesh", "material": "screwdrivers_visual_mat"})
         ET.SubElement(body, "geom", {
             "name": f"{object_name}_profile_handle", "class": "visual",
@@ -306,11 +316,20 @@ def _create_object_element(
         ET.SubElement(body, "geom", {"name": f"{object_name}_col_shaft", "class": "collision", "type": "cylinder", "pos": "0 0 0.15", "size": "0.003 0.05"})
 
     elif object_name == "workshop_power_driver":
+        ET.SubElement(body, "site", {"name": f"{object_name}_handle_site", "pos": "0 0 0.060", "size": "0.006", "rgba": "0 0 0 0"})
+        ET.SubElement(body, "site", {"name": f"{object_name}_tip_site", "pos": "0 0 0.210", "size": "0.004", "rgba": "0.2 0.8 1 0.5"})
         ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "power_driver_mesh", "material": "drill_visual_mat"})
         ET.SubElement(body, "geom", {"name": f"{object_name}_col_body", "class": "collision", "type": "box", "pos": "0 0 0.13", "size": "0.080 0.024 0.035"})
         ET.SubElement(body, "geom", {"name": f"{object_name}_col_handle", "class": "collision", "type": "box", "pos": "0 0 0.06", "size": "0.025 0.020 0.060"})
 
+    elif object_name == "workshop_wooden_hammer":
+        ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "wooden_hammer_mesh", "material": "wooden_hammer_visual_mat"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col_handle", "class": "collision", "type": "cylinder", "pos": "0 0 0.095", "size": "0.011 0.095"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col_head", "class": "collision", "type": "box", "pos": "0 0 0.205", "size": "0.045 0.022 0.025"})
+
     elif object_name == "workshop_medium_phillips_screw":
+        ET.SubElement(body, "site", {"name": f"{object_name}_tip_site", "pos": "0 0 0", "size": "0.002", "rgba": "0.1 1 0.2 0.5"})
+        ET.SubElement(body, "site", {"name": f"{object_name}_head_site", "pos": "0 0 0.045", "size": "0.004", "rgba": "0.2 0.8 1 0.5"})
         ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "medium_screw_mesh", "material": "screwdrivers_visual_mat"})
         # A 43 mm rendered robust extent stays within the physical 45 mm
         # collision envelope while avoiding a one-pixel excess at the 45 mm
@@ -360,23 +379,37 @@ def _get_object_storage_pose(
     q_drill_side = (0.7071, -0.7071, 0.0, 0.0) # lies flat on side
 
     if region_id == "TOOL_CABINET":
-        cab_x = -0.49 if layout_swapped else 0.44
+        cab_x = -0.75 if layout_swapped else 0.44
         cab_y = 0.56
-        shelf_z = 0.8260
+        # Lower shelf top after the cabinet accessibility redesign. The extra
+        # roof clearance admits the horizontal gripper/wrist around upright
+        # tools while the powered driver still fits on the lower floor.
+        shelf_z = 0.7660
         floor_z = 0.6880
         cab_slots_xy = [
-            (cab_x, cab_y + 0.03),
+            (cab_x, cab_y - 0.11),
             (cab_x, cab_y - 0.03),
-            (cab_x, cab_y - 0.08),
+            (cab_x, cab_y + 0.03),
             (cab_x - 0.04, cab_y - 0.03),
             (cab_x + 0.04, cab_y - 0.03),
         ]
         base_x, base_y = cab_slots_xy[min(slot_idx, len(cab_slots_xy) - 1)]
 
         if obj_name == "workshop_long_phillips_driver":
-            return (base_x - 0.115, base_y, shelf_z + 0.013), q_along_x, "tool_cabinet"
+            # Stand the driver on the interior shelf, well behind the door
+            # plane.  The former door-parented pose made it appear to float on
+            # the cabinet face as the door opened.
+            return (
+                cab_x + (0.12 if slot_idx > 0 else -0.10),
+                cab_y - 0.025,
+                shelf_z + 0.001,
+            ), q_flat, "tool_cabinet"
         elif obj_name == "workshop_medium_phillips_screw":
-            return (base_x - 0.0225, base_y, shelf_z + 0.007), q_along_x, "tool_cabinet"
+            # Stand the screw on the shelf. Cabinet retrieval grips its shaft
+            # horizontally below the head so the wrist clears the roof.
+            return (
+                cab_x - 0.10, cab_y - 0.025, shelf_z + 0.001
+            ), q_flat, "tool_cabinet"
         elif obj_name == "workshop_short_phillips_screw":
             return (base_x - 0.009, base_y, shelf_z + 0.007), q_along_x, "tool_cabinet"
         elif obj_name == "workshop_stubby_phillips_driver":
@@ -384,7 +417,16 @@ def _get_object_storage_pose(
         elif obj_name == "workshop_hex_bolt":
             return (base_x - 0.025, base_y, shelf_z + 0.009), q_along_x, "tool_cabinet"
         elif obj_name == "workshop_power_driver":
-            return (base_x, cab_y - 0.08, floor_z + 0.024), q_drill_side, "tool_cabinet"
+            if slot_idx == 0:
+                # A selected/sole power driver occupies the accessible centre
+                # of the upper shelf for a straight horizontal retrieval.
+                return (cab_x, cab_y - 0.03, shelf_z + 0.024), q_drill_side, "tool_cabinet"
+            # When it shares the cabinet with the target screw it is an
+            # unselected alternative; park it separately on the lower floor
+            # so it cannot obstruct the screw's gripper corridor.
+            return (cab_x + 0.12, cab_y - 0.03, floor_z + 0.024), q_drill_side, "tool_cabinet"
+        elif obj_name == "workshop_wooden_hammer":
+            return (cab_x, cab_y - 0.025, shelf_z + 0.001), q_flat, "tool_cabinet"
         elif obj_name == "workshop_pliers":
             return (base_x - 0.095, base_y, shelf_z + 0.010), q_pliers_x, "tool_cabinet"
         elif obj_name == "workshop_combination_wrench":
@@ -406,17 +448,24 @@ def _get_object_storage_pose(
         if obj_name == "workshop_flathead_screwdriver":
             return (base_x, base_y + 0.110, floor_z + 0.014), q_along_y, "left_tool_drawer"
         elif obj_name == "workshop_long_phillips_driver":
-            return (base_x, base_y + 0.115, floor_z + 0.013), q_along_y, "left_tool_drawer"
+            # Long tools lie across the drawer, not toward its front. This
+            # keeps the physical handle-pull corridor clear and presents the
+            # handle to a vertical, top-down grasp after extraction.
+            return (-0.40, 0.430, floor_z + 0.013), q_along_x, "left_tool_drawer"
         elif obj_name == "workshop_stubby_phillips_driver":
             return (base_x, base_y + 0.055, floor_z + 0.015), q_along_y, "left_tool_drawer"
         elif obj_name == "workshop_medium_phillips_screw":
-            return (base_x, base_y + 0.0225, floor_z + 0.007), q_along_y, "left_tool_drawer"
+            return (-0.20, 0.300, floor_z + 0.007), q_along_x, "left_tool_drawer"
         elif obj_name == "workshop_short_phillips_screw":
             return (base_x, base_y + 0.009, floor_z + 0.007), q_along_y, "left_tool_drawer"
         elif obj_name == "workshop_hex_bolt":
             return (base_x, base_y + 0.025, floor_z + 0.009), q_along_y, "left_tool_drawer"
         elif obj_name == "workshop_power_driver":
-            return (-0.28, 0.22, floor_z + 0.024), q_drill_side, "left_tool_drawer"
+            # Rest on the drill's flat side; the picker yaws its vertical
+            # wrist so the fingers close across (not along) the handle.
+            return (-0.36, 0.380, floor_z + 0.024), q_drill_side, "left_tool_drawer"
+        elif obj_name == "workshop_wooden_hammer":
+            return (-0.38, 0.430, floor_z + 0.012), q_along_x, "left_tool_drawer"
         elif obj_name == "workshop_pliers":
             return (base_x, base_y + 0.095, floor_z + 0.010), q_along_y, "left_tool_drawer"
         elif obj_name == "workshop_combination_wrench":
@@ -440,15 +489,17 @@ def _get_object_storage_pose(
         elif obj_name == "workshop_flathead_screwdriver":
             return (base_x, base_y + 0.110, floor_z + 0.014), q_along_y, "right_tool_drawer"
         elif obj_name == "workshop_long_phillips_driver":
-            return (base_x, base_y + 0.115, floor_z + 0.013), q_along_y, "right_tool_drawer"
+            return (0.16, 0.430, floor_z + 0.013), q_along_x, "right_tool_drawer"
         elif obj_name == "workshop_medium_phillips_screw":
-            return (base_x, base_y + 0.0225, floor_z + 0.007), q_along_y, "right_tool_drawer"
+            return (0.36, 0.300, floor_z + 0.007), q_along_x, "right_tool_drawer"
         elif obj_name == "workshop_short_phillips_screw":
             return (base_x, base_y + 0.009, floor_z + 0.007), q_along_y, "right_tool_drawer"
         elif obj_name == "workshop_hex_bolt":
             return (base_x, base_y + 0.025, floor_z + 0.009), q_along_y, "right_tool_drawer"
         elif obj_name == "workshop_power_driver":
-            return (0.28, 0.22, floor_z + 0.024), q_drill_side, "right_tool_drawer"
+            return (0.34, 0.380, floor_z + 0.024), q_drill_side, "right_tool_drawer"
+        elif obj_name == "workshop_wooden_hammer":
+            return (0.16, 0.430, floor_z + 0.012), q_along_x, "right_tool_drawer"
         elif obj_name == "workshop_pliers":
             return (base_x, base_y + 0.095, floor_z + 0.010), q_along_y, "right_tool_drawer"
         elif obj_name == "workshop_combination_wrench":
@@ -485,7 +536,7 @@ def _get_storage_slots(
     ]
 
     # Tool Cabinet: shelf top Z = 0.8260m, inner X in [cab_x-0.137, cab_x+0.137], inner Y in [cab_y-0.094, cab_y+0.084]
-    cab_x = -0.49 if layout_swapped else 0.44
+    cab_x = -0.75 if layout_swapped else 0.44
     cab_y = 0.56
     tool_cabinet_slots = [
         ((cab_x - 0.115, cab_y + 0.03, 0.839), q_flat_x, "tool_cabinet"),
@@ -512,7 +563,7 @@ def _load_workshop_variants_config() -> dict[str, Any]:
 # ==============================================================================
 
 def build_workshop_xml(
-    robot: str = ROBOT_GOOGLE, variant: str = "F0_BASE"
+    robot: str = ROBOT_GOOGLE, variant: str = "F0_MANUAL_FIRST_ONE_REGION"
 ) -> str:
     """Build the complete, variant-faithful MuJoCo XML string."""
     if robot not in {ROBOT_GOOGLE, ROBOT_NONE}:
@@ -529,7 +580,7 @@ def build_workshop_xml(
     storage_contents = var_spec.get("storage_contents", {})
     active_surfaces = set(var_spec.get("active_surfaces", []))
     active_containers = set(var_spec.get("active_containers", []))
-    is_swapped = variant == "F6_LAYOUT_SWAPPED"
+    is_swapped = False
 
     root = ET.parse(WORKSHOP_BASE).getroot()
     worldbody = root.find("worldbody")
@@ -541,9 +592,9 @@ def build_workshop_xml(
         for body in worldbody.iter("body"):
             b_name = body.get("name", "")
             if b_name == "tool_cabinet":
-                body.set("pos", "-0.49 0.56 0.68")
+                body.set("pos", "-0.75 0.56 0.68")
             elif b_name == "workshop_tool_cart":
-                body.set("pos", "-1.08 0.40 0")
+                body.set("pos", "-1.28 0.40 0")
             elif b_name == "workshop_parts_tray":
                 body.set("pos", "0.42 0.22 0.68")
             elif b_name == "workshop_hardware_bin":
@@ -654,6 +705,9 @@ def build_workshop_xml(
     equality = root.find("equality")
     if equality is None:
         equality = ET.SubElement(root, "equality")
+    contact = root.find("contact")
+    if contact is None:
+        contact = ET.SubElement(root, "contact")
 
     present_pickable_objects: set[str] = set()
 
@@ -684,6 +738,22 @@ def build_workshop_xml(
         _inject_google_robot(
             root, _google_robot_dir(), base_pose=WORKSHOP_GOOGLE_BASE_POSE
         )
+        for region_id, moving_body in (
+            ("LEFT_DRAWER", "left_tool_drawer"),
+            ("RIGHT_DRAWER", "right_tool_drawer"),
+            ("TOOL_CABINET", "tool_cabinet_door"),
+        ):
+            ET.SubElement(
+                equality,
+                "weld",
+                {
+                    "name": f"workshop_handle_grasp_weld_{region_id}",
+                    "body1": "google:link_gripper",
+                    "body2": moving_body,
+                    "active": "false",
+                    "solref": "0.02 1",
+                },
+            )
         for object_name in present_pickable_objects:
             ET.SubElement(
                 equality,
@@ -693,9 +763,50 @@ def build_workshop_xml(
                     "body1": "google:link_gripper",
                     "body2": object_name,
                     "active": "false",
-                    "solref": "0.01 1",
+                    "solref": (
+                        "0.002 1"
+                        if object_name == "workshop_power_driver"
+                        else "0.01 1"
+                    ),
                 },
             )
+            ET.SubElement(
+                equality,
+                "weld",
+                {
+                    "name": f"workshop_alignment_weld_{object_name}",
+                    "body1": "workshop_frame_joint",
+                    "body2": object_name,
+                    "active": "false",
+                    # The joint guide must dominate the compliant hand grasp:
+                    # small fasteners and the driver stay concentrically
+                    # vertical while the wrist supplies the visible motion.
+                    "solref": "0.005 1",
+                },
+            )
+            ET.SubElement(
+                equality,
+                "weld",
+                {
+                    "name": f"workshop_staging_weld_{object_name}",
+                    "body1": "workbench",
+                    "body2": object_name,
+                    "active": "false",
+                    "solref": "0.08 1",
+                },
+            )
+            if object_name == "workshop_medium_phillips_screw":
+                ET.SubElement(
+                    equality,
+                    "weld",
+                    {
+                        "name": "workshop_installed_fastener_weld",
+                        "body1": "workshop_frame_joint",
+                        "body2": object_name,
+                        "active": "false",
+                        "solref": "0.01 1",
+                    },
+                )
 
     return ET.tostring(root, encoding="unicode")
 
@@ -785,19 +896,6 @@ def privileged_validate_variant_feasibility(
     target_joint_depth = WORKSHOP_TARGET_HOLE_DEPTH_M
     radial_clearance = WORKSHOP_TARGET_RADIAL_CLEARANCE_M
 
-    # Derive candidate regions strictly from compiled physical MjModel
-    physical_surface_ids = set(privileged_actual_work_surface_regions(scene))
-    physical_container_ids = set(privileged_actual_parts_container_regions(scene))
-
-    candidate_surfaces = [
-        s for s in scene.privileged_get_work_surface_specs()
-        if s["region_id"] in physical_surface_ids
-    ]
-    candidate_containers = [
-        c for c in scene.privileged_get_parts_container_specs()
-        if c["region_id"] in physical_container_ids
-    ]
-
     # Find present drivers and fasteners
     present_drivers = []
     present_fasteners = []
@@ -812,7 +910,8 @@ def privileged_validate_variant_feasibility(
         if "can_fasten" in fns:
             present_fasteners.append((name, spec))
 
-    # Evaluate 4-tuples: (driver, fastener, surface, container)
+    # Evaluate only the two variable functional roles.  The workbench repair
+    # hole is a fixed task target, not a VLM-selected alternative region.
     valid_witnesses = []
 
     for d_name, d_spec in present_drivers:
@@ -827,31 +926,14 @@ def privileged_validate_variant_feasibility(
             d_reach = d_spec.get("reach_m", 0.0)
             req_reach = f_spec.get("required_tool_reach_m", 0.025)
             driver_reaches = d_reach >= req_reach
-            req_set_area = (d_spec.get("bounding_area_m2", 0.01) + f_spec.get("bounding_area_m2", 0.001)) * 1.2
-
-            for surf in candidate_surfaces:
-                usable_area = surf.get("usable_area_m2", 0.0)
-                fits_surface = usable_area >= req_set_area
-
-                for cont in candidate_containers:
-                    fits_container = cont.get("is_open", True) and cont.get("cavity_volume_m3", 0.0) > 0.0
-
-                    if (
-                        fits_hole
-                        and reaches_joint
-                        and tip_mates
-                        and driver_reaches
-                        and fits_surface
-                        and fits_container
-                    ):
-                        valid_witnesses.append(
-                            {
-                                "driver": d_name,
-                                "fastener": f_name,
-                                "work_surface": surf["region_id"],
-                                "parts_container": cont["region_id"],
-                            }
-                        )
+            if fits_hole and reaches_joint and tip_mates and driver_reaches:
+                valid_witnesses.append(
+                    {
+                        "driver": d_name,
+                        "fastener": f_name,
+                        "insertion_target": "MAIN_WORKBENCH_ZONE",
+                    }
+                )
 
     if valid_witnesses:
         return {
@@ -866,17 +948,13 @@ def privileged_validate_variant_feasibility(
     rejection_reason = "GLOBAL_CONFLICT"
 
     if not present_drivers:
-        rejection_reason = "NO_VALID_DRIVER"
+        rejection_reason = "NO_COMPATIBLE_DRIVER"
     elif not any(
         (f_spec.get("shaft_diameter_m", 0.01) + 2.0 * radial_clearance) <= target_hole_diam
         and f_spec.get("length_m", 0.0) >= target_joint_depth
         for _, f_spec in present_fasteners
     ):
-        rejection_reason = "NO_VALID_FASTENER"
-    elif not candidate_surfaces:
-        rejection_reason = "NO_WORK_SURFACE"
-    elif not candidate_containers:
-        rejection_reason = "NO_PARTS_CONTAINER"
+        rejection_reason = "NO_COMPATIBLE_SCREW"
     else:
         all_drivers_short = bool(present_drivers) and all(
             d_spec.get("reach_m", 0.0) < 0.025 for _, d_spec in present_drivers
@@ -884,22 +962,7 @@ def privileged_validate_variant_feasibility(
         if all_drivers_short:
             rejection_reason = "TOOL_GEOMETRY_FAILURE"
         else:
-            max_surf_area = max((s.get("usable_area_m2", 0.0) for s in candidate_surfaces), default=0.0)
-            mating_pairs = [
-                (d_name, d_spec, f_name, f_spec)
-                for d_name, d_spec in present_drivers
-                for f_name, f_spec in present_fasteners
-                if (f_spec.get("shaft_diameter_m", 0.01) + 2.0 * radial_clearance) <= target_hole_diam
-                and f_spec.get("length_m", 0.0) >= target_joint_depth
-                and d_spec.get("tip_profile", "").upper() == f_spec.get("recess_profile", "").upper()
-            ]
-            valid_tool_sets = [
-                (d_spec.get("bounding_area_m2", 0.01) + f_spec.get("bounding_area_m2", 0.001)) * 1.2
-                for _, d_spec, _, f_spec in mating_pairs
-                if d_spec.get("reach_m", 0.0) >= f_spec.get("required_tool_reach_m", 0.025)
-            ]
-            if valid_tool_sets and all(set_area > max_surf_area for set_area in valid_tool_sets):
-                rejection_reason = "OBJECT_REGION_PACKING_FAILURE"
+            rejection_reason = "INCOMPATIBLE_DRIVER_SCREW_INTERFACE"
 
     return {
         "status": "INFEASIBLE",
@@ -926,11 +989,10 @@ class WorkshopObservationState:
 class WorkshopScene:
     """Workshop geometry plus bounded closed-region observation API."""
 
-    scene_name = "W1_workshop_joint_alternatives"
+    scene_name = "W2_workshop_fixed_pair_position_presence"
     goal = (
-        "Repair the loose frame joint using an appropriate tool and fastener. "
-        "Arrange the required tool and hardware on a suitable nearby work surface, "
-        "and keep loose small parts in a suitable container."
+        "Find the compatible screw and first compatible driver encountered; "
+        "insert the screw tip-down into the workbench hole and drive it fully."
     )
     point_cloud_cameras = WORKSHOP_CAMERAS
     perception_render_geom_groups = (0, 1, 2)
@@ -941,7 +1003,7 @@ class WorkshopScene:
     default_inspection_order = WORKSHOP_REGIONS
     inspection_interference: dict[str, str] = {}
 
-    def __init__(self, robot: str = ROBOT_GOOGLE, variant: str = "F0_BASE"):
+    def __init__(self, robot: str = ROBOT_GOOGLE, variant: str = "F0_MANUAL_FIRST_ONE_REGION"):
         if robot not in {ROBOT_GOOGLE, ROBOT_NONE}:
             raise ValueError("Workshop supports robot google or none")
 
@@ -1214,7 +1276,7 @@ class WorkshopScene:
             {
                 "region_id": "TOOL_CART_TOP",
                 "center_world_m": [
-                    -1.08 if self.variant_name == "F6_LAYOUT_SWAPPED" else 1.08,
+                    -1.28 if self.variant_name == "F6_LAYOUT_SWAPPED" else 1.28,
                     0.40,
                     0.80,
                 ],
@@ -1272,9 +1334,20 @@ class WorkshopScene:
 
     def privileged_get_target_joint_specification(self) -> dict[str, Any]:
         """Privileged oracle helper returning exact workpiece ground truth."""
+        entry_site = mujoco.mj_name2id(
+            self.model, mujoco.mjtObj.mjOBJ_SITE, "workshop_target_hole_entry"
+        )
+        seated_site = mujoco.mj_name2id(
+            self.model, mujoco.mjtObj.mjOBJ_SITE, "workshop_target_hole_seated_tip"
+        )
+        if entry_site < 0 or seated_site < 0:
+            raise RuntimeError("Workshop target-hole landmarks are missing")
         return {
             "workpiece_id": "workshop_frame_joint",
             "fixture_center_world_m": [-0.15, 0.50, 0.68],
+            "hole_entry_center_world_m": self.data.site_xpos[entry_site].tolist(),
+            "seated_fastener_tip_world_m": self.data.site_xpos[seated_site].tolist(),
+            "hole_axis_world": [0.0, 0.0, 1.0],
             "target_hole_diameter_m": WORKSHOP_TARGET_HOLE_DIAMETER_M,
             "target_hole_depth_m": WORKSHOP_TARGET_HOLE_DEPTH_M,
             "target_radial_clearance_m": WORKSHOP_TARGET_RADIAL_CLEARANCE_M,
@@ -1304,8 +1377,8 @@ class WorkshopScene:
         if self.variant_name == "F6_LAYOUT_SWAPPED":
             if "TOOL_CABINET" in config.get("regions", {}):
                 cab_reg = config["regions"]["TOOL_CABINET"]
-                cab_reg["target_world_m"] = [-0.49, 0.56, 0.83]
-                cab_reg["rig_position_world_m"] = [-0.49, -0.70, 1.22]
+                cab_reg["target_world_m"] = [-0.75, 0.56, 0.83]
+                cab_reg["rig_position_world_m"] = [-0.75, -0.70, 1.22]
                 cab_reg["inspection_volume"]["minimum_world_m"] = [-0.75, 0.35, 0.65]
                 cab_reg["inspection_volume"]["maximum_world_m"] = [-0.25, 0.75, 1.12]
         return config
@@ -1410,9 +1483,19 @@ class WorkshopScene:
         finally:
             renderer.close()
 
-    def launch_viewer(self, camera: str = FREE_CAMERA) -> None:
+    def launch_viewer(
+        self,
+        camera: str = FREE_CAMERA,
+        *,
+        actions_panel: bool = True,
+    ) -> None:
         if camera != FREE_CAMERA and camera not in WORKSHOP_CAMERAS:
             raise ValueError(f"Unknown workshop camera: {camera}")
+        if self.robot_name == ROBOT_GOOGLE and actions_panel:
+            from .workshop_actions import launch_workshop_action_viewer
+
+            launch_workshop_action_viewer(self, camera)
+            return
         with mujoco.viewer.launch_passive(self.model, self.data) as viewer:
             if camera == FREE_CAMERA:
                 mujoco.mjv_defaultFreeCamera(self.model, viewer.cam)
@@ -1513,9 +1596,14 @@ def list_variants() -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--robot", choices=(ROBOT_GOOGLE, ROBOT_NONE), default=ROBOT_GOOGLE)
-    parser.add_argument("--variant", default="F0_BASE", help="Workshop variant to initialize.")
+    parser.add_argument("--variant", default="F0_MANUAL_FIRST_ONE_REGION", help="Workshop variant to initialize.")
     parser.add_argument("--list-variants", action="store_true", help="List all available variants.")
     parser.add_argument("--viewer", action="store_true")
+    parser.add_argument(
+        "--no-actions-panel",
+        action="store_true",
+        help="Open only the passive MuJoCo viewer without Workshop controls.",
+    )
     parser.add_argument("--camera", default=FREE_CAMERA)
     parser.add_argument("--open", choices=WORKSHOP_REGIONS + ("ALL",), action="append", default=[])
     parser.add_argument("--render", type=str, default=None, help="Render frame to PNG file.")
@@ -1544,7 +1632,10 @@ def main() -> None:
         print(f"Rendered view from {cam} saved to {arguments.render}")
 
     if arguments.viewer:
-        scene.launch_viewer(arguments.camera)
+        scene.launch_viewer(
+            arguments.camera,
+            actions_panel=not arguments.no_actions_panel,
+        )
 
 
 if __name__ == "__main__":

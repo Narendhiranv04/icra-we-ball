@@ -41,6 +41,8 @@ class PrivilegedPhase1Evaluator:
             return "wrench"
         if "pliers" in lowered:
             return "pliers"
+        if "hammer" in lowered or "mallet" in lowered:
+            return "hammer"
         return None
 
     @staticmethod
@@ -62,7 +64,7 @@ class PrivilegedPhase1Evaluator:
     ) -> dict[str, Any]:
         """Post-hoc matching only; results never flow back into grounding."""
         categories = [
-            "screwdriver", "power_driver", "screw", "bolt", "wrench", "pliers",
+            "screwdriver", "power_driver", "screw", "hammer",
             "workbench", "tool_cart", "shelf", "parts_tray", "hardware_bin",
         ]
         rows = {category: {
@@ -244,51 +246,21 @@ class PrivilegedPhase1Evaluator:
         if result.status == "FEASIBLE" and result.witness is not None and expected_status == "FEASIBLE":
             pred_d_gt = track_to_gt.get(result.witness.driver_id)
             pred_f_gt = track_to_gt.get(result.witness.fastener_id)
-            pred_s_gt = region_to_gt.get(result.witness.work_surface_id)
-            pred_c_gt = region_to_gt.get(result.witness.parts_container_id)
-
-            if variant_name == "F4_OBJECT_REGION_COUPLING":
-                d_ok = (pred_d_gt == "workshop_power_driver")
-                f_ok = (pred_f_gt == "workshop_medium_phillips_screw")
-                s_ok = (pred_s_gt == "TOOL_CART_TOP")  # NARROW_WALL_SHELF fails packing
-                c_ok = (pred_c_gt in ("PARTS_TRAY", "HARDWARE_BIN"))
-            elif variant_name == "F1_TOOL_ALTERNATIVE":
-                d_ok = (pred_d_gt in ("workshop_power_driver", "workshop_long_phillips_driver"))
-                f_ok = (pred_f_gt == "workshop_medium_phillips_screw")
-                s_ok = (pred_s_gt in ("MAIN_WORKBENCH_ZONE", "TOOL_CART_TOP"))
-                c_ok = (pred_c_gt in ("HARDWARE_BIN", "PARTS_TRAY"))
-            elif variant_name == "F2_REGION_ALTERNATIVE":
-                d_ok = (pred_d_gt in ("workshop_long_phillips_driver", "workshop_power_driver"))
-                f_ok = (pred_f_gt == "workshop_medium_phillips_screw")
-                s_ok = (pred_s_gt == "TOOL_CART_TOP")  # Workbench is obstructed
-                c_ok = (pred_c_gt in ("HARDWARE_BIN", "PARTS_TRAY"))
-            elif variant_name == "F3_DISTRIBUTED_OBJECTS":
-                d_ok = (pred_d_gt in ("workshop_long_phillips_driver", "workshop_power_driver"))
-                f_ok = (pred_f_gt == "workshop_medium_phillips_screw")
-                s_ok = (pred_s_gt in ("TOOL_CART_TOP", "MAIN_WORKBENCH_ZONE"))
-                c_ok = (pred_c_gt in ("PARTS_TRAY", "HARDWARE_BIN"))
-            elif variant_name == "F5_DECOY_HEAVY":
-                d_ok = (pred_d_gt in ("workshop_long_phillips_driver", "workshop_power_driver"))
-                f_ok = (pred_f_gt == "workshop_medium_phillips_screw")
-                s_ok = (pred_s_gt in ("MAIN_WORKBENCH_ZONE", "TOOL_CART_TOP"))
-                c_ok = (pred_c_gt in ("PARTS_TRAY", "HARDWARE_BIN"))
-            elif variant_name == "F6_LAYOUT_SWAPPED":
-                d_ok = (pred_d_gt in ("workshop_long_phillips_driver", "workshop_power_driver"))
-                f_ok = (pred_f_gt == "workshop_medium_phillips_screw")
-                s_ok = (pred_s_gt in ("MAIN_WORKBENCH_ZONE", "TOOL_CART_TOP"))
-                c_ok = (pred_c_gt in ("HARDWARE_BIN", "PARTS_TRAY"))
-            else:  # F0_BASE
-                d_ok = (pred_d_gt in ("workshop_long_phillips_driver", "workshop_power_driver"))
-                f_ok = (pred_f_gt == "workshop_medium_phillips_screw")
-                s_ok = (pred_s_gt in ("MAIN_WORKBENCH_ZONE", "TOOL_CART_TOP"))
-                c_ok = (pred_c_gt in ("HARDWARE_BIN", "PARTS_TRAY"))
+            expected_solution = variant_meta.get("expected_solution", {})
+            expected_driver = expected_solution.get("driver")
+            expected_fastener = expected_solution.get(
+                "fastener", "workshop_medium_phillips_screw")
+            d_ok = pred_d_gt == expected_driver
+            f_ok = pred_f_gt == expected_fastener
+            s_ok = result.witness.work_surface_id == "MAIN_WORKBENCH_ZONE"
+            c_ok = result.witness.parts_container_id is None
 
             witness_correct = bool(d_ok and f_ok and s_ok and c_ok)
             witness_details = {
                 "pred_driver_gt": pred_d_gt,
                 "pred_fastener_gt": pred_f_gt,
-                "pred_surface_gt": pred_s_gt,
-                "pred_container_gt": pred_c_gt,
+                "fixed_insertion_target": result.witness.work_surface_id,
+                "parts_container": result.witness.parts_container_id,
                 "driver_ok": d_ok,
                 "fastener_ok": f_ok,
                 "surface_ok": s_ok,

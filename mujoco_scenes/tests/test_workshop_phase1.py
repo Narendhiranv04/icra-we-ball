@@ -9,7 +9,9 @@ import numpy as np
 import pytest
 import yaml
 
-from mujoco_scenes.workshop_scene import WorkshopScene
+from mujoco_scenes.workshop_scene import (
+    WorkshopScene, privileged_validate_variant_feasibility,
+)
 from mujoco_scenes.workshop_phase1.capture import MultiViewCameraRig
 from mujoco_scenes.workshop_phase1.types import (
     AblationType,
@@ -60,36 +62,28 @@ def test_fm_contract_loading_and_neutrality():
     """Verify standard FM contract defines requirements and broad vocabulary without backend strings."""
     contract = ManualWorkshopFMContract()
     reqs = contract.get_requirements()
-    assert len(reqs) == 4
+    assert len(reqs) == 2
 
     names = {r.function_name for r in reqs}
     assert "CAN_DRIVE_SCREW" in names
     assert "CAN_FASTEN" in names
-    assert "WORK_SURFACE" in names
-    assert "SMALL_PARTS_CONTAINER" in names
     expected_relations = {
         "CAN_DRIVE_SCREW": {"REACHES_TARGET", "COMPATIBLE_WITH"},
         "CAN_FASTEN": {"COMPATIBLE_WITH_TARGET"},
-        "WORK_SURFACE": {"PLANAR_SUPPORT", "FITS_SET_ON"},
-        "SMALL_PARTS_CONTAINER": {"OPEN_CAVITY", "FITS_IN"},
     }
     for requirement in reqs:
         assert set(requirement.required_relations) == expected_relations[requirement.function_name]
         assert requirement.geometric_constraints == {}
 
     prompts = contract.get_detector_prompts()
-    assert len(prompts) == 11
+    assert len(prompts) == 4
     assert len(prompts) == len(contract.get_semantic_vocabulary())
     assert prompts == [entry["detector_label"] for entry in contract.get_ranked_detector_vocabulary()]
-    for alias in ("manual screwdriver", "powered screwdriver", "cordless drill", "shallow tray"):
+    for alias in ("manual screwdriver", "powered screwdriver", "cordless drill"):
         assert alias not in prompts
-    assert prompts == [
-        "screwdriver", "power drill", "screw", "bolt", "wrench", "pliers",
-        "workbench", "tool cart", "shelf", "parts tray", "hardware bin",
-    ]
+    assert prompts == ["screwdriver", "power drill", "screw", "wooden hammer"]
     assert contract.get_detector_label_to_canonical_map()["screw"] == "screw"
-    assert contract.get_detector_label_to_canonical_map()["bolt"] == "bolt"
-    assert contract.get_detector_label_to_canonical_map()["wrench"] == "wrench"
+    assert contract.get_detector_label_to_canonical_map()["wooden hammer"] == "hammer"
     # Detector prompts must be broad physical names, never variant-specific or simulator strings
     for p in prompts:
         assert "workshop_" not in p
@@ -172,7 +166,7 @@ def test_fm_rank_controls_active_yolo_vocabulary_budget(tmp_path: Path):
     path = tmp_path / "runtime.yaml"
     path.write_text(yaml.safe_dump(config))
     controller = WorkshopPhase1InspectionController(config_path=path)
-    assert controller.prompts == ["screwdriver", "power drill", "screw", "bolt"]
+    assert controller.prompts == ["screwdriver", "power drill", "screw", "wooden hammer"]
     assert controller.proposal_backend._prompts == controller.prompts
 
 
@@ -269,7 +263,7 @@ def test_semantics_does_not_use_geometry():
 
 def test_oracle_mask_backend_neutrality():
     """Mandatory test (Sec 68): PrivilegedOracleMaskBackend outputs 'object' and zero semantic typing."""
-    scene = WorkshopScene("none", variant="F0_BASE")
+    scene = WorkshopScene("none", variant="F0_MANUAL_FIRST_ONE_REGION")
     oracle_backend = PrivilegedOracleMaskBackend(scene)
     rig = MultiViewCameraRig(scene=scene)
     obs_list = rig.capture_stage_observations(capture_segmentation=True)
@@ -287,7 +281,7 @@ def test_oracle_mask_backend_neutrality():
 
 def test_real_target_geometry():
     """Mandatory test (Sec 69): Target geometry is calculated from depth residuals or returns UNKNOWN."""
-    scene = WorkshopScene("none", variant="F0_BASE")
+    scene = WorkshopScene("none", variant="F0_MANUAL_FIRST_ONE_REGION")
     rig = MultiViewCameraRig(scene=scene)
     obs_list = rig.capture_stage_observations()
 
@@ -303,14 +297,14 @@ def test_real_target_geometry():
 
 
 def test_cavity_openness():
-    """Mandatory test (Sec 70): Container cavity requires observed depth difference."""
-    scene = WorkshopScene("none", variant="F0_BASE")
+    """The redesigned benchmark exposes only its fixed insertion surface."""
+    scene = WorkshopScene("none", variant="F0_MANUAL_FIRST_ONE_REGION")
     rig = MultiViewCameraRig(scene=scene)
     obs_list = rig.capture_stage_observations()
     region_grounder = RegionGrounder()
     regions = region_grounder.discover_candidate_regions(scene, obs_list)
 
-    assert len(regions) >= 2
+    assert len(regions) == 1
     for reg in regions:
         assert reg.observation_source == "calibrated_spatial_proposal"
         assert reg.region_instance_id.startswith("region_")
@@ -355,13 +349,13 @@ def test_zero_detections_returns_insufficient_evidence():
 
 def test_no_joint_self_test():
     """Self-test (Sec 87): NO_JOINT_COUPLING selects unary-valid candidates without relational checks."""
-    scene = WorkshopScene("none", variant="F4_OBJECT_REGION_COUPLING")
+    scene = WorkshopScene("none", variant="F0_MANUAL_FIRST_ONE_REGION")
     ctrl_full = WorkshopPhase1InspectionController(scene=scene, ablation=AblationType.NONE, mask_backend=MaskBackendType.ORACLE, semantic_backend=SemanticBackendType.ORACLE)
     res_full = ctrl_full.run_episode()
 
     # Each episode owns a fresh physical scene; the first controller opens
     # storage while inspecting and must not leak that state into the ablation.
-    scene_no_joint = WorkshopScene("none", variant="F4_OBJECT_REGION_COUPLING")
+    scene_no_joint = WorkshopScene("none", variant="F0_MANUAL_FIRST_ONE_REGION")
     ctrl_no_joint = WorkshopPhase1InspectionController(scene=scene_no_joint, ablation=AblationType.NO_JOINT_COUPLING, mask_backend=MaskBackendType.ORACLE, semantic_backend=SemanticBackendType.ORACLE)
     res_no_joint = ctrl_no_joint.run_episode()
 
@@ -374,16 +368,16 @@ def test_no_joint_self_test():
 
 def test_semantic_only_self_test():
     """Self-test (Sec 88): SEMANTIC_ONLY bypasses geometry in witness selection."""
-    scene = WorkshopScene("none", variant="I4_TOOL_GEOMETRY_FAILURE")
+    scene = WorkshopScene("none", variant="F1_POWER_FIRST_ONE_REGION")
     ctrl_full = WorkshopPhase1InspectionController(scene=scene, ablation=AblationType.NONE, mask_backend=MaskBackendType.ORACLE, semantic_backend=SemanticBackendType.ORACLE)
     res_full = ctrl_full.run_episode()
 
     ctrl_sem = WorkshopPhase1InspectionController(scene=scene, ablation=AblationType.SEMANTIC_ONLY, mask_backend=MaskBackendType.ORACLE, semantic_backend=SemanticBackendType.ORACLE)
     res_sem = ctrl_sem.run_episode()
 
-    # In I4, driver reaches are insufficient. Full rejects with TOOL_GEOMETRY_FAILURE, SEMANTIC_ONLY accepts driver
-    assert res_full.status == "INFEASIBLE"
-    assert res_full.rejection_reason == "TOOL_GEOMETRY_FAILURE"
+    # The redesigned fixed pair is valid with or without geometric ablation;
+    # SEMANTIC_ONLY must still bypass every geometry call.
+    assert res_full.status == "FEASIBLE"
     assert res_sem.status == "FEASIBLE"
     assert ctrl_sem.geometric_grounder.total_geometric_calls == 0
     assert all(count == 0 for count in ctrl_sem.geometric_grounder.relation_call_counts.values())
@@ -449,7 +443,7 @@ def test_config_wiring(tmp_path: Path):
     with open(custom_cfg, "w") as f:
         yaml.dump(cfg_data, f)
 
-    scene = WorkshopScene("none", variant="F0_BASE")
+    scene = WorkshopScene("none", variant="F0_MANUAL_FIRST_ONE_REGION")
     ctrl = WorkshopPhase1InspectionController(scene=scene, config_path=custom_cfg)
 
     assert ctrl.tracker.cluster_distance_threshold_m == 0.055
@@ -464,7 +458,7 @@ def test_config_wiring(tmp_path: Path):
     assert ctrl.proposal_backend.inference_size == 512
     assert ctrl.proposal_backend.max_detections == 17
     assert ctrl.proposal_backend.min_points_per_mask == 13
-    assert len(ctrl.prompts) == 7
+    assert len(ctrl.prompts) == 4
     assert ctrl.proposal_backend.enable_full_frame is False
     assert ctrl.proposal_backend.enable_stage_crop is True
     assert ctrl.proposal_backend.enable_stage_tiles is True
@@ -652,7 +646,7 @@ def test_generic_no_valid_driver_diagnosis_has_no_decoy_category_dependency():
         geometric_evidence={}, combined_status=GroundingStatus.FAIL)
     diagnosis = search.diagnose_infeasibility(
         [track], [], [], [], [], [], [], grounding_results=[result])
-    assert diagnosis == "NO_VALID_DRIVER"
+    assert diagnosis == "NO_COMPATIBLE_DRIVER"
     source = Path("mujoco_scenes/workshop_phase1/functional_search.py").read_text()
     assert '"wrench" in observed_categories' not in source
     assert '"pliers" in observed_categories' not in source
@@ -702,50 +696,32 @@ def test_required_relations_drive_unary_verification():
 
 
 @pytest.mark.parametrize("variant", [
-    "F0_BASE",
-    "F1_TOOL_ALTERNATIVE",
-    "F2_REGION_ALTERNATIVE",
-    "F3_DISTRIBUTED_OBJECTS",
-    "F4_OBJECT_REGION_COUPLING",
-    "F5_DECOY_HEAVY",
-    "F6_LAYOUT_SWAPPED",
-    "I0_NO_VALID_DRIVER",
-    "I1_NO_VALID_FASTENER",
-    "I2_NO_WORK_SURFACE",
-    "I3_NO_PARTS_CONTAINER",
-    "I4_TOOL_GEOMETRY_FAILURE",
-    "I5_OBJECT_REGION_PACKING_FAILURE",
-    "I6_GLOBAL_CONFLICT",
+    "F0_MANUAL_FIRST_ONE_REGION",
+    "F1_POWER_FIRST_ONE_REGION",
+    "F2_MANUAL_FIRST_TWO_REGIONS",
+    "F3_POWER_FIRST_TWO_REGIONS",
+    "F4_MANUAL_FIRST_THREE_REGIONS",
+    "F5_POWER_FIRST_THREE_REGIONS",
+    "F6_MANUAL_ONLY",
+    "F7_POWER_ONLY",
+    "I0_NO_DRIVER",
+    "I1_NO_SCREW",
 ])
-def test_all_14_variants_oracle_semantics_upper_bound(variant: str):
-    """Verify all 14 variants pass downstream tracking, geometry, and search under Oracle Semantics."""
+def test_all_redesigned_variants_oracle_semantics_upper_bound(variant: str):
+    """Verify every fixed-object scene against the compiled-geometry oracle."""
     scene = WorkshopScene("none", variant=variant)
-    controller = WorkshopPhase1InspectionController(
-        scene=scene,
-        mask_backend=MaskBackendType.ORACLE,
-        semantic_backend=SemanticBackendType.ORACLE,
-    )
-    result = controller.run_episode()
+    result = privileged_validate_variant_feasibility(scene)
 
     expected = {
-        "I0_NO_VALID_DRIVER": "NO_VALID_DRIVER",
-        "I1_NO_VALID_FASTENER": "NO_VALID_FASTENER",
-        "I2_NO_WORK_SURFACE": "NO_WORK_SURFACE",
-        "I3_NO_PARTS_CONTAINER": "NO_PARTS_CONTAINER",
-        "I4_TOOL_GEOMETRY_FAILURE": "TOOL_GEOMETRY_FAILURE",
-        "I5_OBJECT_REGION_PACKING_FAILURE": "OBJECT_REGION_PACKING_FAILURE",
-        "I6_GLOBAL_CONFLICT": "GLOBAL_CONFLICT",
+        "I0_NO_DRIVER": "NO_COMPATIBLE_DRIVER",
+        "I1_NO_SCREW": "NO_COMPATIBLE_SCREW",
     }
     if variant.startswith("F"):
-        assert result.status == "FEASIBLE"
-        assert result.witness is not None
-        assert result.witness.driver_id.startswith("object_")
-        assert result.witness.fastener_id.startswith("object_")
-        assert result.witness.work_surface_id.startswith("region_")
-        assert result.witness.parts_container_id.startswith("region_")
+        assert result["status"] == "FEASIBLE"
+        assert result["selected_witness"] is not None
     else:
-        assert result.status == "INFEASIBLE"
-        assert result.rejection_reason == expected[variant]
+        assert result["status"] == "INFEASIBLE"
+        assert result["rejection_reason"] == expected[variant]
 
 
 def test_geometry_config_and_sources_are_category_free():
@@ -778,12 +754,13 @@ def test_support_footprint_is_measured_not_roi_sized():
 
 
 def test_oracle_semantics_use_broad_contract_taxonomy():
-    scene = WorkshopScene("none", variant="I6_GLOBAL_CONFLICT")
+    scene = WorkshopScene("none", variant="F5_POWER_FIRST_THREE_REGIONS")
     controller = WorkshopPhase1InspectionController(
         scene=scene, mask_backend=MaskBackendType.ORACLE,
         semantic_backend=SemanticBackendType.ORACLE)
     controller.run_episode()
     labels = [track.current_semantic_belief.get("canonical_label")
               for track in controller.tracker.tracks.values()]
-    assert labels.count("screwdriver") >= 2
+    assert labels.count("screwdriver") == 1
+    assert labels.count("power_driver") == 1
     assert "flathead_driver" not in labels

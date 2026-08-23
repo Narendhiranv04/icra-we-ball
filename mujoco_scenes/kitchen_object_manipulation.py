@@ -44,8 +44,11 @@ from .robot_profiles import manipulation_profile, mobile_profile
 PHASE_B_MOUNT_ALLOWANCES = {
     # Menagerie visual shells overlap at the concentric shoulder mount.  This
     # execution-local allowance is bounded to that mechanical pair; all other
-    # self-collisions remain strict.
-    frozenset(("google:base_link", "google:link_shoulder")): -0.0615,
+    # self-collisions remain strict.  The C1 front-rim grasp family reaches a
+    # legitimate overlap throughout the storage-reach trajectory.  Use the
+    # robot profile's existing -10 cm mechanical-mount calibration here too;
+    # this does not relax the wrist/door, finger/fixture, or any other pair.
+    frozenset(("google:base_link", "google:link_shoulder")): -0.100,
 }
 
 
@@ -1081,6 +1084,10 @@ def storage_probe_candidates(
             "cupboard_horizontal_over_handle_55pct_z+0.010",
         ),
         ("CUPBOARD", "BOWL"): (
+            # This diagonal rear-rim branch is the physically validated C1
+            # deep-bowl grasp.  Keep it in the coarse set so small live-pose
+            # differences do not reject every stance before fine ranking.
+            "cupboard_front_rim_7_jawroll+20_wrist0",
             "cupboard_front_rim_0_jawroll+20_wrist0",
             "cupboard_front_rim_1_jawroll+0_wrist0",
             "cupboard_front_rim_2_jawroll+0_wrist0",

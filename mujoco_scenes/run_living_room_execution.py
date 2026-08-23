@@ -6,11 +6,11 @@ Usage examples:
 
   # One feasible variant with video recording
   MUJOCO_GL=egl PYOPENGL_PLATFORM=egl python -m mujoco_scenes.run_living_room_execution \\
-    --variant F0_BASE --record
+    --variant F0_ALL_OBJECTS_IN_STAGING --record
 
   # One variant with live visualization and recording
   MUJOCO_GL=glfw python -m mujoco_scenes.run_living_room_execution \\
-    --variant F0_BASE --show --record
+    --variant F0_ALL_OBJECTS_IN_STAGING --show --record
 
   # Dry-run sequence generation and stance reachability check for all variants
   python -m mujoco_scenes.run_living_room_execution --variant all --dry-run
@@ -40,8 +40,8 @@ from .living_room_region_function import EXPECTED_VARIANTS, INTEGRATED_PREFIX
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_PHASE1_ROOT = ROOT / "runs/living_room_region_phase1/living_room_region_phase1_final_closure_v3_20260809"
-FALLBACK_PHASE1_ROOT = ROOT / "mujoco_scenes/benchmark_reports/living_room_region_feasibility_phase1/variants"
+DEFAULT_PHASE1_ROOT = ROOT / "mujoco_scenes/benchmark_reports/living_room_region_feasibility_phase1/variants"
+FALLBACK_PHASE1_ROOT = DEFAULT_PHASE1_ROOT
 DEFAULT_PHASE2_ROOT = ROOT / "mujoco_scenes/benchmark_reports/living_room_symbolic_phase2/variants"
 DEFAULT_OUTPUT_ROOT = ROOT / "runs/living_room_execution"
 
@@ -152,6 +152,7 @@ def execute_variant(
     tile_height: int = 360,
     start_task_action: int = 0,
     max_task_actions: int | None = None,
+    assisted_suite: bool = False,
 ) -> dict[str, Any]:
     """Execute a single variant with optional 5-camera recording."""
     variant = normalize_variant_name(variant_id)
@@ -212,6 +213,7 @@ def execute_variant(
             start_task_action=start_task_action,
             max_task_actions=max_task_actions,
             recorder=recorder,
+            assisted_suite=assisted_suite,
         )
 
         # Write camera manifest if recorded
@@ -257,6 +259,7 @@ def run_suite(
     tile_width: int = 640,
     tile_height: int = 360,
     fail_fast: bool = False,
+    assisted_suite: bool = False,
 ) -> dict[str, Any]:
     """Execute a suite of variants and produce aggregated benchmark summaries."""
     output_root.mkdir(parents=True, exist_ok=True)
@@ -277,6 +280,7 @@ def run_suite(
                 fps=fps,
                 tile_width=tile_width,
                 tile_height=tile_height,
+                assisted_suite=assisted_suite,
             )
             results.append(res)
         except Exception as error:
@@ -370,7 +374,7 @@ def main() -> None:
     parser.add_argument(
         "--variant",
         default="all",
-        help="Variant to run (e.g. F0_BASE, F1_LAYOUT_SWAPPED, etc.) or 'all' (default: all).",
+        help="Variant to run (e.g. F0_ALL_OBJECTS_IN_STAGING) or 'all' (default: all).",
     )
     parser.add_argument(
         "--only-feasible",
@@ -439,6 +443,16 @@ def main() -> None:
         action="store_true",
         help="Stop on first failure during multi-variant execution.",
     )
+    parser.add_argument(
+        "--assisted-suite",
+        action="store_true",
+        help=(
+            "Accept a structurally valid ON relation when only residual "
+            "settling speed or final yaw misses the strict postcondition; "
+            "support, boundary, non-overlap, penetration, height, release "
+            "and floor checks remain mandatory."
+        ),
+    )
 
     args = parser.parse_args()
 
@@ -468,6 +482,7 @@ def main() -> None:
             tile_width=tile_w,
             tile_height=tile_h,
             fail_fast=args.fail_fast,
+            assisted_suite=args.assisted_suite,
         )
         if not summary.get("all_passed"):
             sys.exit(1)
@@ -486,6 +501,7 @@ def main() -> None:
             tile_height=tile_h,
             start_task_action=args.start_task_action,
             max_task_actions=args.max_task_actions,
+            assisted_suite=args.assisted_suite,
         )
         if result.get("status") not in {"SUCCESS", "INFEASIBLE_CONFIRMED"}:
             sys.exit(1)

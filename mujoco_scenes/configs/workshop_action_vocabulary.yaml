@@ -1,0 +1,44 @@
+schema_version: 1
+domain: workshop_frame_joint_repair
+execution_contract: ASSISTED_GT_DEMONSTRATION
+operators:
+  MOVE_TO:
+    arguments: [destination]
+    preconditions: []
+    effects: [robot_at(destination)]
+  OPEN_STORAGE:
+    arguments: [storage_region]
+    preconditions: [robot_at(storage_region), closed(storage_region), hand_empty]
+    effects: [open(storage_region)]
+  INSPECT_STORAGE:
+    arguments: [storage_region]
+    preconditions: [robot_at(storage_region), open(storage_region)]
+    effects: [inspected(storage_region)]
+  CLOSE_STORAGE:
+    arguments: [storage_region]
+    preconditions: [robot_at(storage_region), open(storage_region), hand_empty]
+    effects: [closed(storage_region)]
+  PICK:
+    arguments: [object, source]
+    preconditions: [robot_at(source), hand_empty, at(object,source), accessible(object)]
+    effects: [holding(object), not_at(object,source)]
+  PLACE_ON_SURFACE:
+    arguments: [object, work_surface]
+    preconditions: [robot_at(work_surface), holding(object), valid_work_surface(work_surface)]
+    effects: [hand_empty, at(object,work_surface)]
+  INSERT_FASTENER:
+    arguments: [fastener, target_joint]
+    preconditions: [robot_at(target_joint), holding(fastener), compatible_with_fixed_target(fastener,target_joint)]
+    effects: [hand_empty, inserted(fastener,target_joint)]
+  DRIVE_FASTENER:
+    arguments: [driver, fastener, target_joint]
+    preconditions: [robot_at(target_joint), holding(driver), inserted(fastener,target_joint), compatible(driver,fastener,target_joint)]
+    effects: [repaired(target_joint)]
+  VERIFY_REPAIR:
+    arguments: [target_joint]
+    preconditions: [robot_at(target_joint), repaired(target_joint), hand_empty]
+    effects: [verified(target_joint)]
+  TERMINATE_INFEASIBLE:
+    arguments: [rejection_reason]
+    preconditions: [all_storage_inspected, hand_empty]
+    effects: [terminated(rejection_reason)]

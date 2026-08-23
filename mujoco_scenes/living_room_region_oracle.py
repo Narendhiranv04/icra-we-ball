@@ -87,18 +87,12 @@ def _fits_pair(
     return best >= 0.0, best
 
 
-def _variant_categories(code: str) -> dict[str, str]:
-    categories = {
+def _variant_categories(_code: str) -> dict[str, str]:
+    return {
         "a2_personal_left_top": "side_table",
         "a2_personal_right_top": "side_table",
-        "a2_shared_drink_top": "side_table",
         "a2_control_table_top": "coffee_table",
-        "a2_rug_surface": "rug",
     }
-    if code == "I0_PERSONAL_SEMANTIC_DEFICIT":
-        categories["a2_personal_right_top"] = "coffee_table"
-        categories["a2_shared_drink_top"] = "coffee_table"
-    return categories
 
 
 def evaluate_privileged_oracle(scene, task: dict[str, Any]) -> dict[str, Any]:
@@ -107,13 +101,13 @@ def evaluate_privileged_oracle(scene, task: dict[str, Any]) -> dict[str, Any]:
     region_names = [
         "a2_personal_left_top",
         "a2_personal_right_top",
-        "a2_shared_drink_top",
         "a2_control_table_top",
-        "a2_rug_surface",
     ]
     categories = _variant_categories(code)
     regions = {}
     for index, name in enumerate(region_names, 1):
+        if mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_GEOM, name) < 0:
+            continue
         center, half = _geom_record(scene, name)
         regions[f"oracle_region_{index:04d}"] = {
             "construction_geom": name,
@@ -142,10 +136,7 @@ def evaluate_privileged_oracle(scene, task: dict[str, Any]) -> dict[str, Any]:
             _body_collision_footprint(scene, "a2_snack_right"),
         ],
     ]
-    controls = [
-        _body_collision_footprint(scene, "a2_remote_payload"),
-        _body_collision_footprint(scene, "a2_controller_payload"),
-    ]
+    controls = [_body_collision_footprint(scene, "a2_remote_payload")]
     edge = float(
         task["geometric_requirements"]["payload_set_region"]
         ["edge_clearance_margin_m"]
@@ -164,11 +155,11 @@ def evaluate_privileged_oracle(scene, task: dict[str, Any]) -> dict[str, Any]:
     )
     personal_accepted = set(
         task["semantic_requirements"]["region_roles"]
-        ["personal_refreshment_region"]["accepted_categories"]
+        ["personal_cup_saucer_region"]["accepted_categories"]
     )
     shared_accepted = set(
         task["semantic_requirements"]["region_roles"]
-        ["shared_controls_region"]["accepted_categories"]
+        ["shared_remote_region"]["accepted_categories"]
     )
     personal_rows, shared_rows = [], []
     for slot, (seat, payloads) in enumerate(
@@ -190,7 +181,7 @@ def evaluate_privileged_oracle(scene, task: dict[str, Any]) -> dict[str, Any]:
             )
             personal_rows.append(
                 {
-                    "slot_id": f"personal_refreshment_slot_{slot}",
+                    "slot_id": f"personal_table_slot_{slot}",
                     "region_id": region_id,
                     "valid": valid,
                     "semantic": region["category"] in personal_accepted,
@@ -202,9 +193,12 @@ def evaluate_privileged_oracle(scene, task: dict[str, Any]) -> dict[str, Any]:
             )
     for region_id, region in regions.items():
         dimensions = (region["support_length_m"], region["support_width_m"])
-        fits, fit_margin = _fits_pair(
-            controls, dimensions, edge=edge, between=between
+        length, width = controls[0]
+        fit_margin = max(
+            min(dimensions[0] - length - 2 * edge, dimensions[1] - width - 2 * edge),
+            min(dimensions[0] - width - 2 * edge, dimensions[1] - length - 2 * edge),
         )
+        fits = fit_margin >= 0.0
         distances = [
             float(
                 np.linalg.norm(
@@ -219,7 +213,7 @@ def evaluate_privileged_oracle(scene, task: dict[str, Any]) -> dict[str, Any]:
         )
         shared_rows.append(
             {
-                "slot_id": "shared_controls_slot",
+                "slot_id": "shared_remote_slot",
                 "region_id": region_id,
                 "valid": valid,
                 "semantic": region["category"] in shared_accepted,
@@ -231,13 +225,13 @@ def evaluate_privileged_oracle(scene, task: dict[str, Any]) -> dict[str, Any]:
         )
     options = {
         slot: [row for row in personal_rows if row["slot_id"] == slot and row["valid"]]
-        for slot in ("personal_refreshment_slot_1", "personal_refreshment_slot_2")
+        for slot in ("personal_table_slot_1", "personal_table_slot_2")
     }
     shared_options = [row for row in shared_rows if row["valid"]]
     solutions = []
     for first, second, shared in itertools.product(
-        options["personal_refreshment_slot_1"],
-        options["personal_refreshment_slot_2"],
+        options["personal_table_slot_1"],
+        options["personal_table_slot_2"],
         shared_options,
     ):
         ids = [first["region_id"], second["region_id"], shared["region_id"]]
@@ -259,8 +253,8 @@ def evaluate_privileged_oracle(scene, task: dict[str, Any]) -> dict[str, Any]:
             "instantiated_collision_geom_world_aabb_evaluation_only"
         ),
         "payload_footprints_m": {
-            "refreshment_sets": refreshment_footprints,
-            "shared_controls": controls,
+            "cup_saucer_sets": refreshment_footprints,
+            "shared_remote": controls,
         },
         "production_consumed_this_artifact": False,
     }

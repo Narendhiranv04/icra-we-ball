@@ -46,7 +46,7 @@ def _personal(slot, target, region, rank=1, status="TRUE"):
     return {
         "slot_id": slot,
         "seating_target_id": target,
-        "payload_ids": [f"{slot}_drink", f"{slot}_snack"],
+        "payload_ids": [f"{slot}_cup", f"{slot}_saucer"],
         "region_id": region,
         "candidate_rank": rank,
         "semantic_role_status": status,
@@ -61,14 +61,14 @@ def _personal(slot, target, region, rank=1, status="TRUE"):
 
 def _shared(region, rank=3, status="TRUE"):
     return {
-        "slot_id": "shared_controls_slot",
-        "payload_ids": ["remote", "controller"],
+        "slot_id": "shared_remote_slot",
+        "payload_ids": ["remote"],
         "seating_target_ids": ["seat_a", "seat_b"],
         "region_id": region,
         "candidate_rank": rank,
         "semantic_role_status": status,
         "PLANAR_SUPPORT": status,
-        "FITS_SET_ON": status,
+        "FITS_ON": status,
         "ACCESSIBLE_FROM_BOTH_SEATS": status,
         "compatibility_status": status,
         "fit_margin_m": 0.1,
@@ -87,19 +87,19 @@ def test_fixed_task_contract_is_region_only_and_has_exact_goal():
 
 
 def test_usage_and_region_sharing_policies_are_declarative():
-    assert TASK["function_groups"]["personal_refreshment"]["usage_policy"] == "DEDICATED_REGION_PER_TARGET"
-    assert TASK["function_groups"]["shared_controls"]["usage_policy"] == "SHARED_REGION_REQUIRED"
+    assert TASK["function_groups"]["personal_cup_saucer"]["usage_policy"] == "DEDICATED_REGION_PER_TARGET"
+    assert TASK["function_groups"]["shared_remote"]["usage_policy"] == "SHARED_REGION_REQUIRED"
     assert TASK["allow_cross_function_region_sharing"] is False
 
 
 @pytest.mark.parametrize("scene_name", L2_INTEGRATED_SCENES)
-def test_every_integrated_scene_compiles_with_five_cameras_and_six_payloads(scene_name):
+def test_every_integrated_scene_compiles_with_five_cameras_and_five_payloads(scene_name):
     model = mujoco.MjModel.from_xml_string(build_l2_region_xml(scene_name, "none"))
     assert model.ncam == 5
     assert sum(
         model.jnt_type[index] == mujoco.mjtJoint.mjJNT_FREE
         for index in range(model.njnt)
-    ) == 6
+    ) == 5
 
 
 @pytest.mark.parametrize("scene_name", L2_INTEGRATED_SCENES)
@@ -139,14 +139,14 @@ def test_greedy_diagnostic_fails_where_global_solver_reassigns():
     assert solver.solve()["status"] == "COMPLETE"
 
 
-def test_personal_regions_are_distinct_and_controls_share_one_region():
+def test_personal_regions_are_distinct_and_remote_uses_shared_region():
     result = GlobalRegionAllocationSolver(
         [_personal("a", "seat_a", "left"), _personal("b", "seat_b", "right")],
         [_shared("center")], allow_cross_function_region_sharing=False,
     ).solve()
     assert result["status"] == "COMPLETE"
     assert result["distinct_selected_region_count"] == 3
-    assert len([row for row in result["assignments"] if row["function_id"] == "SHARED_CONTROLS_REGION"]) == 1
+    assert len([row for row in result["assignments"] if row["function_id"] == "SHARED_REMOTE_REGION"]) == 1
 
 
 def test_cross_function_region_conflict_is_infeasible():
@@ -198,8 +198,8 @@ def test_resolved_proposals_are_opaque_and_do_not_encode_validity(tmp_path):
     text = path.read_text(encoding="utf-8")
     assert "region_selectors" in text
     assert "expected_valid:" not in text
-    assert "PERSONAL_REFRESHMENT_REGION" not in text
-    assert "SHARED_CONTROLS_REGION" not in text
+    assert "PERSONAL_CUP_SAUCER_REGION" not in text
+    assert "SHARED_REMOTE_REGION" not in text
     config = yaml.safe_load(text)
     assert config["region_proposal_provenance"] == REGION_PROPOSAL_PROVENANCE
 
@@ -245,11 +245,13 @@ def test_one_initial_rgbd_capture_observes_all_entities(tmp_path, monkeypatch):
         width=320,
         height=240,
     ).capture(tmp_path / "observation")
-    assert set(observation.cameras) == {"ISO_LEFT", "ISO_RIGHT", "DETAIL"}
-    assert len(observation.payloads) == 6
+    assert set(observation.cameras) == {
+        "room_left", "room_right", "room_high", "room_front", "room_rear"
+    }
+    assert len(observation.payloads) == 5
     assert len(observation.seats) == 2
     assert sorted(observation.seats) == ["seat_0001", "seat_0002"]
-    assert len(observation.regions) == 5
+    assert len(observation.regions) == 3
     metadata = (tmp_path / "observation" / "inspection_metadata.json").read_text()
     assert "INITIAL_SINGLE_MULTI_VIEW_CAPTURE" in metadata
     metadata_record = json.loads(metadata)
@@ -289,37 +291,17 @@ def test_integrated_room_is_sparse_scaled_and_has_canonical_spawn():
     root = build_l2_region_xml(L2_INTEGRATED_SCENES[0], "none")
     assert "integrated_realistic_visual" in root
     assert "l2_canonical_robot_spawn" in root
-    assert INTEGRATED_ROOM_LAYOUT["chair_left"][0] < -1.0
-    assert INTEGRATED_ROOM_LAYOUT["chair_right"][0] > 1.0
+    assert INTEGRATED_ROOM_LAYOUT["chair_left"][0] < -0.9
+    assert INTEGRATED_ROOM_LAYOUT["chair_right"][0] > 0.9
     assert INTEGRATED_ROOM_LAYOUT["staging_table"][1] < -1.5
     assert INTEGRATED_ROOM_LAYOUT["media_console"][1] > 2.0
 
 
-def test_f0_accent_and_i3_control_use_natural_isotropic_wooden_table():
-    for scene_name, body_name, top_name in (
-        (L2_INTEGRATED_SCENES[0], "a2_shared_drink_trap", "a2_shared_drink_top"),
-        (
-            next(name for name in L2_INTEGRATED_SCENES if "I3_SHARED_FIT_FAILURE" in name),
-            "a2_control_table",
-            "a2_control_table_top",
-        ),
-    ):
-        root = ET.fromstring(build_l2_region_xml(scene_name, "none"))
-        top = root.find(f".//geom[@name='{top_name}']")
-        half = np.fromstring(top.get("size"), sep=" ")
-        assert half[0] == pytest.approx(0.150)
-        assert half[1] == pytest.approx(0.150)
-        body = root.find(f".//body[@name='{body_name}']")
-        visuals = [
-            geom for geom in body.findall("geom")
-            if "integrated_realistic_visual" in geom.get("name", "")
-        ]
-        assert visuals
-        for visual in visuals:
-            mesh = root.find(f".//mesh[@name='{visual.get('mesh')}']")
-            scale = np.fromstring(mesh.get("scale"), sep=" ")
-            assert np.max(scale) / np.min(scale) <= 1.15
-            assert np.allclose(scale, [1.0, 1.0, 1.0])
+def test_alternate_support_and_game_controller_are_removed():
+    root = ET.fromstring(build_l2_region_xml(L2_INTEGRATED_SCENES[0], "none"))
+    assert root.find(".//body[@name='a2_shared_drink_trap']") is None
+    assert root.find(".//body[@name='a2_controller_payload']") is None
+    assert root.find(".//geom[@name='a2_shared_drink_top']") is None
 
 
 def test_google_robot_f0_spawn_has_clearance_and_faces_workspace():
@@ -334,7 +316,7 @@ def test_integrated_payloads_are_spaced_without_xy_overlap():
     scene = L2LivingRoomRegionScene(L2_INTEGRATED_SCENES[0], robot="none")
     body_names = (
         "a2_drink_left", "a2_snack_left", "a2_drink_right",
-        "a2_snack_right", "a2_remote_payload", "a2_controller_payload",
+        "a2_snack_right", "a2_remote_payload",
     )
     centers = []
     for name in body_names:
@@ -353,7 +335,7 @@ def test_candidate_supports_do_not_intersect_each_other_or_seating(scene_name):
     root = ET.fromstring(build_l2_region_xml(scene_name, "none"))
     support_names = (
         "a2_personal_left_top", "a2_personal_right_top",
-        "a2_shared_drink_top", "a2_control_table_top",
+        "a2_control_table_top",
     )
     seat_names = tuple(
         f"a2_seat_{side}_{part}"
@@ -367,7 +349,10 @@ def test_candidate_supports_do_not_intersect_each_other_or_seating(scene_name):
         half = np.fromstring(geom.get("size"), sep=" ")[:2]
         return center - half, center + half
 
-    supports = {name: rectangle(name) for name in support_names}
+    supports = {
+        name: rectangle(name) for name in support_names
+        if root.find(f".//geom[@name='{name}']") is not None
+    }
     seats = {name: rectangle(name) for name in seat_names}
 
     def overlaps(first, second):
@@ -384,7 +369,7 @@ def test_candidate_supports_do_not_intersect_each_other_or_seating(scene_name):
             assert not overlaps(first, seat), (first_name, seat_name)
 
 
-def test_integrated_camera_rig_has_three_distinct_calibrated_views(tmp_path):
+def test_integrated_camera_rig_has_five_distinct_calibrated_views(tmp_path):
     rig_paths = []
     ranks = []
     for scene_name in L2_INTEGRATED_SCENES:
@@ -393,27 +378,38 @@ def test_integrated_camera_rig_has_three_distinct_calibrated_views(tmp_path):
         rig_paths.append(tuple(config["camera_slots"].values()))
         ranks.append(tuple(row["candidate_rank"] for row in config["region_selectors"].values()))
         assert set(config["capture"]["cameras"]) == {
-            "ISO_LEFT", "ISO_RIGHT", "DETAIL"
+            "room_left", "room_right", "room_high", "room_front", "room_rear"
         }
         positions = {
             tuple(row["position_world_m"])
             for row in config["capture"]["cameras"].values()
         }
-        assert len(positions) == 3
+        assert len(positions) == 5
         assert all(row["volume"] for row in config["region_selectors"].values())
     assert len(set(rig_paths)) == 1
-    assert len(set(ranks)) == 1
+    assert all(rank == tuple(range(1, len(rank) + 1)) for rank in ranks)
 
 
-def test_f6_surplus_is_physically_distinct_and_has_more_oracle_solutions():
-    by_code = {
-        variant_code(name): evaluate_privileged_oracle(
-            L2LivingRoomRegionScene(name, robot="none"), TASK
-        )
-        for name in L2_INTEGRATED_SCENES
-        if variant_code(name) in {"F0_BASE", "F6_DECOY_SURPLUS"}
+def test_variant_family_changes_only_object_locations_or_table_presence():
+    expected_counts = {
+        "I0_NO_SHARED_TABLE": 2,
+        "I1_NO_LEFT_PERSONAL_TABLE": 2,
+        "I2_NO_PERSONAL_TABLES": 1,
+        "I3_NO_TABLES": 0,
     }
-    assert by_code["F6_DECOY_SURPLUS"]["complete_solution_count"] > by_code["F0_BASE"]["complete_solution_count"]
+    for scene_name in L2_INTEGRATED_SCENES:
+        root = ET.fromstring(build_l2_region_xml(scene_name, "none"))
+        assert root.find(".//body[@name='a2_shared_drink_trap']") is None
+        assert root.find(".//body[@name='a2_controller_payload']") is None
+        present = sum(
+            root.find(f".//geom[@name='{name}']") is not None
+            for name in (
+                "a2_personal_left_top", "a2_personal_right_top",
+                "a2_control_table_top",
+            )
+        )
+        code = variant_code(scene_name)
+        assert present == (3 if code.startswith("F") else expected_counts[code])
 
 
 def test_oracle_payload_footprints_come_from_instantiated_geometry():
@@ -439,4 +435,4 @@ def test_task_payload_grouping_is_observation_based_not_id_order():
     source = inspect.getsource(IntegratedLivingRoomRegionRun._build_compatibility)
     assert "observed_centroid_world_m" in source
     assert "itertools.permutations" in source
-    assert "MINIMUM_TOTAL_OBSERVED_CENTROID_DISTANCE" == TASK["payload_groups"]["personal_refreshment_sets"]["grouping_policy"]
+    assert "MINIMUM_TOTAL_OBSERVED_CENTROID_DISTANCE" == TASK["payload_groups"]["personal_cup_saucer_sets"]["grouping_policy"]

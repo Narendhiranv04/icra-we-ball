@@ -10,15 +10,16 @@ and Workshop production perception regressions remain.
 | Environment / gate | Previous | Three-view result |
 |---|---:|---:|
 | Kitchen canonical feasibility | 15/16 | 11/16 (0.6875) |
-| Living Room integrated region function | 13/13 | 6/13 (0.4615) |
+| Living Room integrated region function | Retired 13-variant family | Superseded by the fixed 10-variant five-view report |
 | Workshop controlled oracle masks + semantics | 14/14 | 14/14 |
 | Workshop YOLO semantics + oracle masks | 0/14 | 0/14 |
 | Workshop full production | 1/14 | 0/14 |
 
 Kitchen retains 1.0 infeasible recall and 1.0 distinct soup-assignment
-validity, but feasible recall falls to 0.5. Living Room retains 1.0 infeasible
-recall and valid three-view measurement provenance, but feasible recall is
-0.0. Those are major regressions and are not silently accepted.
+validity, but feasible recall falls to 0.5. The old Living Room result is no
+longer a current benchmark because its alternate supports and controller
+payload were removed. Current results are in
+`../living_room_region_feasibility_phase1/`.
 
 ## Workshop calibration outcome
 

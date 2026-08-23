@@ -19,9 +19,8 @@ DEFAULT_FM_CONTRACT_PATH = (
 )
 
 CANONICAL_WORKSHOP_INSTRUCTION = (
-    "Repair the loose frame joint using an appropriate tool and fastener. "
-    "Arrange the required tool and hardware on a suitable nearby work surface, "
-    "and keep loose small parts in a suitable container."
+    "Find the compatible screw and first compatible driver encountered, "
+    "insert the screw tip-down into the workbench hole, and drive it fully."
 )
 
 
@@ -61,7 +60,7 @@ class RequirementProvider(abc.ABC):
 class ManualWorkshopFMContract(RequirementProvider):
     """Manual surrogate contract representing the one-time FM output at episode start.
 
-    Loads the structured contract from YAML (identical across all 14 variants).
+    Loads the structured contract from YAML (identical across all 10 variants).
     Zero variant-specific labels or backend simulator names are included.
     """
 

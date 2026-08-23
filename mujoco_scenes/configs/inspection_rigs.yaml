@@ -1,43 +1,83 @@
-schema_version: 2
+schema_version: 1
 inspection_sequence: [D1, D2, C2, B1, C1]
+
 camera_slots:
-  ISO_LEFT: left_shoulder_camera
-  ISO_RIGHT: right_shoulder_camera
-  DETAIL: overhead_camera
-viewpoint_roles:
-  ISO_LEFT: {azimuth_sign: LEFT, elevation: OBLIQUE}
-  ISO_RIGHT: {azimuth_sign: RIGHT, elevation: OBLIQUE}
-  DETAIL: {horizontal_region: TOP_DOWN, vertical_region: FRONT_HIGH, general_region: TOP_FRONT}
+  inspection_left: left_shoulder_camera
+  inspection_right: right_shoulder_camera
+  inspection_top: overhead_camera
+  inspection_front: side_camera
+  inspection_close: front_camera
+
 view_validation:
-  minimum_valid_rig_cameras: 3
+  minimum_valid_rig_cameras: 5
   minimum_object_camera_count: 2
   maximum_target_angle_degrees: 8.0
   minimum_valid_depth_pixels: 200
+
 processing:
   mask_erosion_pixels: 0
   depth_discontinuity_m: 0.060
   depth_discontinuity_radius_pixels: 1
   voxel_size_m: 0.003
-  outlier_removal: {enabled: true, voxel_radius_m: 0.012, minimum_neighbours: 2, minimum_input_points: 40}
-  primary_component_filter: {enabled: false, minimum_component_fraction: 0.60}
-evidence_acceptance: {minimum_object_points: 20, minimum_inside_fraction: 0.55}
+  outlier_removal:
+    enabled: true
+    voxel_radius_m: 0.012
+    minimum_neighbours: 2
+    minimum_input_points: 40
+  primary_component_filter:
+    enabled: false
+    minimum_component_fraction: 0.60
+
+evidence_acceptance:
+  minimum_object_points: 20
+  minimum_inside_fraction: 0.55
+
+# Positions and offsets are world-frame metres. Each camera is aimed at
+# target_world_m + look_at_offset_m. Inspection volumes are selection gates
+# only; they are never used to calculate object dimensions or properties.
 regions:
   INITIAL:
-    region_geometry: GENERAL
     target_world_m: [0.0, -0.27, 0.70]
+    # Preserve discriminative pixels on thin tabletop utensils while all five
+    # views still cover the full initial inspection volume.
     rig_position_world_m: [0.0, -0.88, 1.02]
     up_world: [0.0, 0.0, 1.0]
     near_depth_m: 0.20
     far_depth_m: 2.20
     settle_steps: 50
     boundary_margin_m: 0.015
-    inspection_volume: {minimum_world_m: [-0.72, -0.48, 0.56], maximum_world_m: [0.65, -0.05, 0.92]}
+    inspection_volume:
+      minimum_world_m: [-0.72, -0.48, 0.56]
+      maximum_world_m: [0.65, -0.05, 0.92]
     cameras:
-      ISO_LEFT: {position_offset_m: [-0.30, 0.0, 0.08], look_at_offset_m: [-0.12, 0.0, 0.0], fovy_degrees: 58.0}
-      ISO_RIGHT: {position_offset_m: [0.30, 0.0, 0.08], look_at_offset_m: [0.12, 0.0, 0.0], fovy_degrees: 58.0}
-      DETAIL: {position_offset_m: [0.0, 0.10, 0.38], look_at_offset_m: [0.0, 0.0, -0.03], fovy_degrees: 62.0}
+      inspection_left:
+        position_offset_m: [-0.30, 0.00, 0.08]
+        look_at_offset_m: [-0.12, 0.00, 0.00]
+        fovy_degrees: 58.0
+      inspection_right:
+        position_offset_m: [0.30, 0.00, 0.08]
+        look_at_offset_m: [0.12, 0.00, 0.00]
+        fovy_degrees: 58.0
+      inspection_top:
+        position_offset_m: [0.00, 0.10, 0.38]
+        look_at_offset_m: [0.00, 0.00, -0.03]
+        fovy_degrees: 62.0
+      inspection_front:
+        # A second oblique view from the utensil side keeps fork tines
+        # separated in RGB while the independent overhead slot preserves
+        # rim/interior coverage for cavity geometry.
+        position_offset_m: [0.32, 0.02, 0.10]
+        look_at_offset_m: [0.12, 0.00, 0.00]
+        fovy_degrees: 58.0
+      inspection_close:
+        # A distinct closer left-oblique view.  This must not duplicate the
+        # right camera: independent viewpoint support is what makes the
+        # five-view semantic and geometric fusion meaningful.
+        position_offset_m: [-0.10, 0.08, 0.22]
+        look_at_offset_m: [0.12, 0.00, 0.00]
+        fovy_degrees: 62.0
+
   D1:
-    region_geometry: HORIZONTAL_OPEN_TOP
     target_world_m: [-0.47, -0.54, 0.42]
     rig_position_world_m: [-0.47, -1.02, 0.88]
     up_world: [0.0, 0.0, 1.0]
@@ -45,13 +85,34 @@ regions:
     far_depth_m: 1.40
     settle_steps: 80
     boundary_margin_m: 0.018
-    inspection_volume: {minimum_world_m: [-0.70, -0.75, 0.37], maximum_world_m: [-0.25, -0.35, 0.52]}
-    cameras: &drawer
-      ISO_LEFT: {position_offset_m: [-0.20, 0.0, 0.12], look_at_offset_m: [0.0, 0.0, 0.0], fovy_degrees: 58.0}
-      ISO_RIGHT: {position_offset_m: [0.20, 0.0, 0.12], look_at_offset_m: [0.0, 0.0, 0.0], fovy_degrees: 58.0}
-      DETAIL: {position_offset_m: [0.0, 0.20, 0.35], look_at_offset_m: [0.0, 0.0, 0.0], fovy_degrees: 58.0}
+    inspection_volume:
+      minimum_world_m: [-0.70, -0.75, 0.37]
+      maximum_world_m: [-0.25, -0.35, 0.52]
+    cameras:
+      inspection_left:
+        position_offset_m: [-0.20, 0.00, 0.12]
+        look_at_offset_m: [0.00, 0.00, 0.00]
+        fovy_degrees: 58.0
+      inspection_right:
+        position_offset_m: [0.20, 0.00, 0.12]
+        look_at_offset_m: [0.00, 0.00, 0.00]
+        fovy_degrees: 58.0
+      inspection_top:
+        position_offset_m: [0.00, 0.20, 0.35]
+        look_at_offset_m: [0.00, 0.00, 0.00]
+        fovy_degrees: 58.0
+      inspection_front:
+        position_offset_m: [-0.05, 0.20, 0.35]
+        look_at_offset_m: [0.00, 0.00, 0.00]
+        fovy_degrees: 58.0
+      inspection_close:
+        position_offset_m: [0.05, 0.20, 0.35]
+        look_at_offset_m: [0.00, 0.00, 0.00]
+        fovy_degrees: 58.0
+
   D2:
-    region_geometry: HORIZONTAL_OPEN_TOP
+    # Mirror the proven D1 drawer framing around the kitchen centreline.
+    # The former target looked over the open tray toward countertop sources.
     target_world_m: [0.47, -0.54, 0.42]
     rig_position_world_m: [0.47, -1.02, 0.88]
     up_world: [0.0, 0.0, 1.0]
@@ -59,10 +120,32 @@ regions:
     far_depth_m: 1.40
     settle_steps: 80
     boundary_margin_m: 0.018
-    inspection_volume: {minimum_world_m: [0.25, -0.75, 0.37], maximum_world_m: [0.70, -0.35, 0.52]}
-    cameras: *drawer
+    inspection_volume:
+      minimum_world_m: [0.25, -0.75, 0.37]
+      maximum_world_m: [0.70, -0.35, 0.52]
+    cameras:
+      inspection_left:
+        position_offset_m: [-0.20, 0.00, 0.12]
+        look_at_offset_m: [0.00, 0.00, 0.00]
+        fovy_degrees: 58.0
+      inspection_right:
+        position_offset_m: [0.20, 0.00, 0.12]
+        look_at_offset_m: [0.00, 0.00, 0.00]
+        fovy_degrees: 58.0
+      inspection_top:
+        position_offset_m: [0.00, 0.20, 0.35]
+        look_at_offset_m: [0.00, 0.00, 0.00]
+        fovy_degrees: 58.0
+      inspection_front:
+        position_offset_m: [0.05, 0.20, 0.35]
+        look_at_offset_m: [0.00, 0.00, 0.00]
+        fovy_degrees: 58.0
+      inspection_close:
+        position_offset_m: [-0.05, 0.20, 0.35]
+        look_at_offset_m: [0.00, 0.00, 0.00]
+        fovy_degrees: 58.0
+
   C2:
-    region_geometry: VERTICAL_FRONT_ACCESS
     target_world_m: [0.35, 0.57, 0.96]
     rig_position_world_m: [0.35, -0.18, 1.06]
     up_world: [0.0, 0.0, 1.0]
@@ -70,13 +153,34 @@ regions:
     far_depth_m: 1.50
     settle_steps: 80
     boundary_margin_m: 0.020
-    inspection_volume: {minimum_world_m: [0.12, 0.43, 0.72], maximum_world_m: [0.58, 0.84, 1.19]}
-    cameras: &cupboard
-      ISO_LEFT: {position_offset_m: [-0.20, 0.0, 0.02], look_at_offset_m: [-0.09, 0.0, 0.0], fovy_degrees: 58.0}
-      ISO_RIGHT: {position_offset_m: [0.20, 0.0, 0.02], look_at_offset_m: [0.09, 0.0, 0.0], fovy_degrees: 58.0}
-      DETAIL: {position_offset_m: [0.0, -0.10, 0.12], look_at_offset_m: [0.0, 0.03, -0.04], fovy_degrees: 56.0}
+    inspection_volume:
+      minimum_world_m: [0.12, 0.43, 0.72]
+      maximum_world_m: [0.58, 0.84, 1.19]
+    cameras:
+      inspection_left:
+        position_offset_m: [-0.20, 0.00, 0.02]
+        look_at_offset_m: [-0.09, 0.00, 0.00]
+        fovy_degrees: 58.0
+      inspection_right:
+        position_offset_m: [0.20, 0.00, 0.02]
+        look_at_offset_m: [0.09, 0.00, 0.00]
+        fovy_degrees: 58.0
+      inspection_top:
+        position_offset_m: [0.00, 0.05, 0.25]
+        look_at_offset_m: [0.00, 0.02, -0.05]
+        fovy_degrees: 60.0
+      inspection_front:
+        position_offset_m: [-0.10, -0.10, -0.08]
+        look_at_offset_m: [-0.05, 0.03, -0.04]
+        fovy_degrees: 56.0
+      inspection_close:
+        # A second elevated oblique view exposes thin utensil bowls and
+        # handles that become nearly edge-on in the frontal C2 views.
+        position_offset_m: [0.12, 0.05, 0.25]
+        look_at_offset_m: [0.05, 0.02, -0.05]
+        fovy_degrees: 60.0
+
   B1:
-    region_geometry: HORIZONTAL_OPEN_TOP
     target_world_m: [0.45, 0.18, 0.61]
     rig_position_world_m: [0.45, -0.30, 1.18]
     up_world: [0.0, 0.0, 1.0]
@@ -84,10 +188,32 @@ regions:
     far_depth_m: 1.30
     settle_steps: 80
     boundary_margin_m: 0.015
-    inspection_volume: {minimum_world_m: [0.30, 0.04, 0.55], maximum_world_m: [0.72, 0.33, 0.82]}
-    cameras: *drawer
+    inspection_volume:
+      minimum_world_m: [0.30, 0.04, 0.55]
+      maximum_world_m: [0.72, 0.33, 0.82]
+    cameras:
+      inspection_left:
+        position_offset_m: [-0.20, 0.00, 0.12]
+        look_at_offset_m: [0.00, 0.00, 0.00]
+        fovy_degrees: 58.0
+      inspection_right:
+        position_offset_m: [0.20, 0.00, 0.12]
+        look_at_offset_m: [0.00, 0.00, 0.00]
+        fovy_degrees: 58.0
+      inspection_top:
+        position_offset_m: [0.00, 0.20, 0.35]
+        look_at_offset_m: [0.00, 0.00, 0.00]
+        fovy_degrees: 58.0
+      inspection_front:
+        position_offset_m: [-0.10, -0.08, 0.08]
+        look_at_offset_m: [0.00, 0.00, 0.00]
+        fovy_degrees: 58.0
+      inspection_close:
+        position_offset_m: [0.10, 0.28, 0.15]
+        look_at_offset_m: [0.00, 0.00, 0.00]
+        fovy_degrees: 58.0
+
   C1:
-    region_geometry: VERTICAL_FRONT_ACCESS
     target_world_m: [-0.35, 0.57, 0.96]
     rig_position_world_m: [-0.35, -0.18, 1.06]
     up_world: [0.0, 0.0, 1.0]
@@ -95,5 +221,27 @@ regions:
     far_depth_m: 1.50
     settle_steps: 80
     boundary_margin_m: 0.020
-    inspection_volume: {minimum_world_m: [-0.58, 0.43, 0.72], maximum_world_m: [-0.12, 0.84, 1.19]}
-    cameras: *cupboard
+    inspection_volume:
+      minimum_world_m: [-0.58, 0.43, 0.72]
+      maximum_world_m: [-0.12, 0.84, 1.19]
+    cameras:
+      inspection_left:
+        position_offset_m: [-0.20, 0.00, 0.02]
+        look_at_offset_m: [-0.09, 0.00, 0.00]
+        fovy_degrees: 58.0
+      inspection_right:
+        position_offset_m: [0.20, 0.00, 0.02]
+        look_at_offset_m: [0.09, 0.00, 0.00]
+        fovy_degrees: 58.0
+      inspection_top:
+        position_offset_m: [0.00, 0.05, 0.25]
+        look_at_offset_m: [0.00, 0.02, -0.05]
+        fovy_degrees: 60.0
+      inspection_front:
+        position_offset_m: [-0.10, -0.10, -0.08]
+        look_at_offset_m: [-0.05, 0.03, -0.04]
+        fovy_degrees: 56.0
+      inspection_close:
+        position_offset_m: [0.10, 0.13, -0.06]
+        look_at_offset_m: [0.05, 0.04, -0.02]
+        fovy_degrees: 56.0

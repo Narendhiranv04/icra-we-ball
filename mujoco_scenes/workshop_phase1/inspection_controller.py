@@ -727,19 +727,18 @@ class WorkshopPhase1InspectionController:
         # semantic+unary-geometry pools. Neither invokes relational search.
         if self.ablation in {AblationType.SEMANTIC_ONLY, AblationType.NO_GEOMETRY,
                              AblationType.NO_JOINT_COUPLING}:
-            if driver_candidates and fastener_candidates and surface_candidates and container_candidates:
+            if driver_candidates and fastener_candidates:
                 d_best = max(driver_candidates, key=lambda x: x.overall_confidence)
                 f_best = max(fastener_candidates, key=lambda x: x.overall_confidence)
-                s_best = surface_candidates[0]
-                c_best = container_candidates[0]
                 wit = FunctionalWitness(
                     driver_id=d_best.instance_id,
                     fastener_id=f_best.instance_id,
-                    work_surface_id=s_best.region_instance_id,
-                    parts_container_id=c_best.region_instance_id,
+                    work_surface_id="MAIN_WORKBENCH_ZONE",
+                    parts_container_id=None,
                     overall_confidence=float(d_best.overall_confidence * f_best.overall_confidence),
                     verification_details={"ablation": self.ablation.value, "unary_selected": True,
-                                          "geometry_used_for_decision": self.ablation == AblationType.NO_JOINT_COUPLING},
+                                          "geometry_used_for_decision": self.ablation == AblationType.NO_JOINT_COUPLING,
+                                          "fixed_insertion_target": "MAIN_WORKBENCH_ZONE"},
                 )
                 return wit, None
 

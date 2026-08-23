@@ -1,0 +1,15 @@
+Environment: kitchen
+Variant: F3_DISTRIBUTED_COFFEE_THREE
+Intended outcome: FEASIBLE
+Feasible: True
+Failure reason: NONE
+
+FUNCTION -> OBJECT ASSIGNMENTS
+coffee_source -> s1i_compact_coffee_jar
+water_source -> s1i_compact_kettle
+STIR_COFFEE(feas_coffee_small_shallow_cup) -> ab3_partial_spoon
+STIR_COFFEE(feas_coffee_wide_very_deep_cup) -> feas_c2_medium_spoon
+STIR_COFFEE(feas_coffee_extra_deep_mug) -> s1i_oversized_spoon
+SERVING_UTENSIL(ab3_shallow_bowl) -> s1i_oversized_spoon
+SERVING_UTENSIL(ab3_deep_bowl) -> ab3_partial_spoon
+SERVING_UTENSIL(s1i_narrow_deep_bowl) -> feas_c2_medium_spoon

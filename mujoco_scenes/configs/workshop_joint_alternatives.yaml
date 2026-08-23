@@ -1,9 +1,9 @@
-schema_version: 1
-task_id: w1_fastening_region_and_object_alternatives
+schema_version: 2
+task_id: w2_fixed_pair_position_presence_fastening
 goal_instruction: >-
-  Repair the loose frame joint using an appropriate tool and fastener found in
-  the observed workshop regions. Arrange the required tool and hardware on a
-  suitable nearby work surface, and keep loose small parts in a suitable container.
+  Find the compatible screw and first compatible driver encountered in the
+  fixed storage search order. Insert the screw tip-down with its head on top,
+  then drive it fully into the workbench repair hole.
 specification_source: manual_future_fm_contract
 generated_from_foundation_model: false
 
@@ -17,7 +17,11 @@ functional_methods:
     tool_function: can_drive_screw
     fastener_function: can_fasten
     geometric_checks: [fits_hole, reaches_joint, tool_mates]
-    region_checks: [fits_work_surface, fits_parts_container]
+    allowed_driver_instances: [workshop_long_phillips_driver, workshop_power_driver]
+    required_fastener_instance: workshop_medium_phillips_screw
+    distractor_instances: [workshop_wooden_hammer]
+    selection_rule: first_compatible_driver_observed
+    region_checks: [fixed_main_workbench_access]
 
 evidence_contract:
   semantic_functions_source: foundation_model_visible_state_only

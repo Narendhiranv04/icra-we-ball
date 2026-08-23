@@ -1,0 +1,90 @@
+schema_version: 1
+task: >-
+  Place one cup and one saucer on each of two fixed personal side tables and
+  place the TV remote on the fixed shared coffee table.
+
+objects:
+  left_cup: a2_drink_left
+  right_cup: a2_drink_right
+  left_saucer: a2_snack_left
+  right_saucer: a2_snack_right
+  remote: a2_remote_payload
+
+regions:
+  PERSONAL_TABLE_LEFT: a2_personal_left
+  PERSONAL_TABLE_RIGHT: a2_personal_right
+  SHARED_TABLE: a2_control_table
+
+canonical_assignment:
+  PERSONAL_CUP_SAUCER_REGION_LEFT: [a2_drink_left, a2_snack_left]
+  PERSONAL_CUP_SAUCER_REGION_RIGHT: [a2_drink_right, a2_snack_right]
+  SHARED_REMOTE_REGION: [a2_remote_payload]
+
+variants:
+  F0_ALL_OBJECTS_IN_STAGING:
+    intended_outcome: FEASIBLE
+    description: All five objects begin in the staging area.
+    object_locations: {}
+    absent_regions: []
+
+  F1_LEFT_SAUCER_PREPLACED:
+    intended_outcome: FEASIBLE
+    description: The left saucer is already correctly placed on the left personal table.
+    object_locations: {a2_snack_left: PERSONAL_TABLE_LEFT}
+    absent_regions: []
+
+  F2_LEFT_SAUCER_ON_SHARED:
+    intended_outcome: FEASIBLE
+    description: The left saucer begins on the shared table and must be moved to a personal table.
+    object_locations: {a2_snack_left: SHARED_TABLE}
+    absent_regions: []
+
+  F3_LEFT_CUP_ON_SHARED:
+    intended_outcome: FEASIBLE
+    description: The left cup begins on the shared table and must be moved to a personal table.
+    object_locations: {a2_drink_left: SHARED_TABLE}
+    absent_regions: []
+
+  F4_SAUCER_PREPLACED_CUP_ON_SHARED:
+    intended_outcome: FEASIBLE
+    description: The left saucer is correctly preplaced while the left cup begins on the shared table.
+    object_locations:
+      a2_snack_left: PERSONAL_TABLE_LEFT
+      a2_drink_left: SHARED_TABLE
+    absent_regions: []
+
+  F5_LEFT_PAIR_ON_SHARED:
+    intended_outcome: FEASIBLE
+    description: The left cup and left saucer both begin on the shared table and must be moved.
+    object_locations:
+      a2_drink_left: SHARED_TABLE
+      a2_snack_left: SHARED_TABLE
+    absent_regions: []
+
+  I0_NO_SHARED_TABLE:
+    intended_outcome: INFEASIBLE
+    description: The required shared table is absent.
+    object_locations: {}
+    absent_regions: [SHARED_TABLE]
+    rejection_reason: MISSING_SHARED_TABLE
+
+  I1_NO_LEFT_PERSONAL_TABLE:
+    intended_outcome: INFEASIBLE
+    description: One of the two required personal tables is absent.
+    object_locations: {}
+    absent_regions: [PERSONAL_TABLE_LEFT]
+    rejection_reason: MISSING_PERSONAL_TABLE
+
+  I2_NO_PERSONAL_TABLES:
+    intended_outcome: INFEASIBLE
+    description: Both required personal tables are absent.
+    object_locations: {}
+    absent_regions: [PERSONAL_TABLE_LEFT, PERSONAL_TABLE_RIGHT]
+    rejection_reason: MISSING_BOTH_PERSONAL_TABLES
+
+  I3_NO_TABLES:
+    intended_outcome: INFEASIBLE
+    description: All three placement tables are absent.
+    object_locations: {}
+    absent_regions: [PERSONAL_TABLE_LEFT, PERSONAL_TABLE_RIGHT, SHARED_TABLE]
+    rejection_reason: MISSING_ALL_TABLES

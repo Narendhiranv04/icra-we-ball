@@ -6,7 +6,7 @@
   ],
   "base_halfheight_m": 0.15,
   "base_position_world_m": [
-    -2.031325641042953e-24,
+    2.3485950182810164e-23,
     -2.48,
     0.06205
   ],
@@ -37,16 +37,8 @@
       "geom": "a2_staging_top"
     },
     {
-      "clearance_m": 0.6998235818251676,
+      "clearance_m": 0.6953753162337016,
       "geom": "a2_remote_body"
-    },
-    {
-      "clearance_m": 0.7672256534994527,
-      "geom": "a2_controller_dpad_v"
-    },
-    {
-      "clearance_m": 0.7785692030111784,
-      "geom": "a2_controller_dpad_h"
     },
     {
       "clearance_m": 1.0527622613304326,
@@ -59,11 +51,19 @@
     {
       "clearance_m": 1.9099311915746329,
       "geom": "a2_control_leg_fl"
+    },
+    {
+      "clearance_m": 1.9099311915746329,
+      "geom": "a2_control_leg_fr"
+    },
+    {
+      "clearance_m": 2.3845244395183105,
+      "geom": "a2_control_leg_bl"
     }
   ],
   "robot": "google",
   "robot_contacts": [],
-  "scene_name": "L2_integrated_living_room_region_function_F0_BASE",
+  "scene_name": "L2_integrated_living_room_region_function_F0_ALL_OBJECTS_IN_STAGING",
   "schema_version": 1,
   "settle_steps": 10,
   "validation_scope": "SPAWN_ONLY_NO_ROBOT_EXECUTION",

@@ -323,12 +323,12 @@ class FunctionalCandidate:
 
 @dataclass
 class FunctionalWitness:
-    """A jointly feasible 4-tuple fulfilling all functional prerequisites."""
+    """A compatible driver/screw witness for the fixed workbench target."""
 
     driver_id: str
     fastener_id: str
     work_surface_id: str
-    parts_container_id: str
+    parts_container_id: str | None
     overall_confidence: float
     verification_details: dict[str, Any] = field(default_factory=dict)
 

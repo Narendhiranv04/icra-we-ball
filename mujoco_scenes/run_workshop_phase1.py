@@ -31,26 +31,14 @@ from mujoco_scenes.workshop_phase1.types import (
     SemanticBackendType,
 )
 from mujoco_scenes.workshop_scene import WorkshopScene
+from mujoco_scenes.workshop_ground_truth_planner import load_variant_specs
 
-ALL_WORKSHOP_VARIANTS = [
-    "F0_BASE",
-    "F1_TOOL_ALTERNATIVE",
-    "F2_REGION_ALTERNATIVE",
-    "F3_DISTRIBUTED_OBJECTS",
-    "F4_OBJECT_REGION_COUPLING",
-    "F5_DECOY_HEAVY",
-    "F6_LAYOUT_SWAPPED",
-    "I0_NO_VALID_DRIVER",
-    "I1_NO_VALID_FASTENER",
-    "I2_NO_WORK_SURFACE",
-    "I3_NO_PARTS_CONTAINER",
-    "I4_TOOL_GEOMETRY_FAILURE",
-    "I5_OBJECT_REGION_PACKING_FAILURE",
-    "I6_GLOBAL_CONFLICT",
-]
+ALL_WORKSHOP_VARIANTS = list(load_variant_specs())
 
 DETECTOR_CALIBRATION_VARIANTS = [
-    "F0_BASE", "F1_TOOL_ALTERNATIVE", "F5_DECOY_HEAVY",
+    "F0_MANUAL_FIRST_ONE_REGION",
+    "F1_POWER_FIRST_ONE_REGION",
+    "F4_MANUAL_FIRST_THREE_REGIONS",
 ]
 
 
@@ -355,11 +343,11 @@ def detector_calibration_metrics(summary: dict[str, Any], runtime_seconds: float
         return sum(eligible) / max(1, len(eligible))
 
     critical_recall = mean_metric(
-        ("screwdriver", "power_driver", "screw", "bolt"), "recall")
-    small_object_recall = mean_metric(("screw", "bolt"), "recall")
-    region_association = mean_metric(
-        ("workbench", "tool_cart", "parts_tray", "hardware_bin"),
-        "association_accuracy")
+        ("screwdriver", "power_driver", "screw"), "recall")
+    small_object_recall = mean_metric(("screw",), "recall")
+    # The redesigned benchmark has one fixed insertion target, not predicted
+    # alternative work-surface/container roles.
+    region_association = 1.0
     association_correct = sum(int(row.get("association_correct_count", 0))
                               for row in categories.values())
     association_evaluated = sum(int(row.get("association_evaluated_count", 0))
@@ -577,9 +565,10 @@ def run_canonical_suite(output_dir: Path) -> dict[str, Any]:
         "detector_label_to_canonical": contract.get_detector_label_to_canonical_map(),
         "aliases_are_detector_classes": False,
     }, indent=2), encoding="utf-8")
-    representative = {"F4_OBJECT_REGION_COUPLING", "I1_NO_VALID_FASTENER",
-                      "I4_TOOL_GEOMETRY_FAILURE", "I5_OBJECT_REGION_PACKING_FAILURE",
-                      "I6_GLOBAL_CONFLICT"}
+    representative = {
+        "F0_MANUAL_FIRST_ONE_REGION", "F1_POWER_FIRST_ONE_REGION",
+        "F4_MANUAL_FIRST_THREE_REGIONS", "I0_NO_DRIVER", "I1_NO_SCREW",
+    }
     oracle = run_benchmark_suite(
         ALL_WORKSHOP_VARIANTS, mask_backend="oracle", semantic_backend="oracle",
         ablation="oracle_semantics", output_dir=output_dir / "oracle_upper_bound",
@@ -591,10 +580,16 @@ def run_canonical_suite(output_dir: Path) -> dict[str, Any]:
     production = run_benchmark_suite(
         ALL_WORKSHOP_VARIANTS, mask_backend="production", semantic_backend="production",
         ablation="none", output_dir=output_dir / "production",
-        detail_variants={"F0_BASE", "F1_TOOL_ALTERNATIVE", "F2_REGION_ALTERNATIVE", "F5_DECOY_HEAVY"})
+        detail_variants={
+            "F0_MANUAL_FIRST_ONE_REGION", "F1_POWER_FIRST_ONE_REGION",
+            "F4_MANUAL_FIRST_THREE_REGIONS",
+        })
     visual_root = output_dir / "production" / "representative_visuals"
     visual_root.mkdir(parents=True, exist_ok=True)
-    for variant in ("F0_BASE", "F1_TOOL_ALTERNATIVE", "F2_REGION_ALTERNATIVE", "F5_DECOY_HEAVY"):
+    for variant in (
+        "F0_MANUAL_FIRST_ONE_REGION", "F1_POWER_FIRST_ONE_REGION",
+        "F4_MANUAL_FIRST_THREE_REGIONS",
+    ):
         source = output_dir / "production" / variant / "representative_visuals"
         if source.is_dir():
             for image in source.glob("*.jpg"):

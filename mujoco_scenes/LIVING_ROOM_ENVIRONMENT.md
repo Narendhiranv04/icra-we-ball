@@ -50,20 +50,20 @@ household assets and coherent furniture-scale simulation, not photorealism.
 
 The authoritative `L2_integrated_living_room_region_function_*` family uses a
 separate sparse, furniture-scale layout. Two identical Poly Haven lounge
-chairs are the seating targets; two side tables, an accent table, a coffee
-table, and a configurable alternate table are the five neutral candidate
-regions. A media console and TV establish the viewing context. A separate
-south staging console holds the six payload operands in three visually
-separated pairs so INITIAL RGB detection does not depend on cluttered placement
-on the candidate regions.
+chairs are the seating targets; exactly two fixed individual side tables and
+one fixed shared coffee table are the exhaustive neutral candidate regions. A
+media console and TV establish the viewing context. A separate south staging
+console holds the five payloads: two cups, two saucers, and one TV remote.
 
 The external visual furniture is documented with exact hashes and dimensions
 in `assets/living_room_realistic/manifest.json`. Independent invisible box
 proxies provide contact, instance masks, and stage-local RGB-D evidence. The
 visual meshes and catalogue dimensions never enter production compatibility.
-All thirteen variants retain the same task requirements and deterministic
-candidate ranks. They alter physical furniture size, pose, or appearance
-instead of inference thresholds or candidate order.
+All ten variants retain the same task requirements and fixed furniture poses.
+The six feasible variants alter only initial cup/saucer region membership. The
+four infeasible variants remove the shared table, one personal table, both
+personal tables, or all three tables. There is no alternate support or game
+controller in this integrated family.
 
 The `L1_living_room` scene is a separate, rigid-only MuJoCo environment for
 Google Robot navigation and manipulation experiments. It does not replace or
@@ -864,7 +864,7 @@ The integrated living-room execution pipeline executes the frozen Phase-2
 3. **No Action Order Rewrite**: The frozen Phase-2 `PICK`/`PLACE` order is
    strictly preserved. `MOVE` actions are conditionally inserted only when the
    robot's current base pose cannot achieve collision-free IK reachability.
-4. **Clean Infeasible Termination**: Infeasible variants (I0–I5) terminate
+4. **Clean Infeasible Termination**: Infeasible variants (I0–I3) terminate
    cleanly as `INFEASIBLE_CONFIRMED` without initiating fake manipulation.
 5. **Synchronized 5-Camera Recording**: Continuously captures all 5 living-room
    project cameras (`l2_camera_left`, `l2_camera_right`, `l2_camera_top`,
@@ -879,7 +879,7 @@ python -m mujoco_scenes.run_living_room_execution --list-variants
 
 # Execute a single variant with 5-camera continuous recording
 MUJOCO_GL=egl PYOPENGL_PLATFORM=egl python -m mujoco_scenes.run_living_room_execution \
-  --variant F0_BASE --record
+  --variant F0_ALL_OBJECTS_IN_STAGING --record
 
 # Execute all variants (feasible and infeasible)
 MUJOCO_GL=egl PYOPENGL_PLATFORM=egl python -m mujoco_scenes.run_living_room_execution \

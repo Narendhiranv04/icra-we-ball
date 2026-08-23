@@ -4,7 +4,7 @@ This tracked report compiles the frozen production-only Region-Function Phase-1
 witnesses into minimal classical placement problems. It does not rerun MuJoCo,
 RGB-D perception, semantic detection, geometry, or functional allocation.
 
-For every `COMPLETE` witness, the compiler maps all six generic payload IDs to
+For every `COMPLETE` witness, the compiler maps all five generic payload IDs to
 the exact generic region IDs selected by Phase 1. The initial abstraction is
 `AVAILABLE(object)` plus `HAND_EMPTY`; no unobserved staging surface is
 fabricated. Deterministic A* searches grounded `PICK` and `PLACE` operators.

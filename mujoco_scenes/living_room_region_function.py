@@ -20,9 +20,14 @@ from mujoco_scenes.region_ablation2 import (
     _tri_and,
     _value,
     evaluate_control_accessibility,
+    evaluate_fits_on,
     evaluate_fits_set_on,
     evaluate_near_seat,
     load_ablation2_task,
+)
+from mujoco_scenes.living_room_variants import (
+    PREFIX as INTEGRATED_PREFIX,
+    load_living_room_variants,
 )
 
 
@@ -35,7 +40,6 @@ DEFAULT_INTEGRATED_RIG_CONFIG = (
     ROOT / "configs" / "l2_integrated_region_function_rig.yaml"
 )
 PRODUCTION_MODE = "joint"
-INTEGRATED_PREFIX = "L2_integrated_living_room_region_function_"
 REGION_PROPOSAL_PROVENANCE = {
     "region_proposal_source": "SIMULATOR_DERIVED_NEUTRAL_SPATIAL_GATE",
     "region_proposal_encodes_function": False,
@@ -46,19 +50,10 @@ REGION_PROPOSAL_PROVENANCE = {
 
 
 EXPECTED_VARIANTS = {
-    "F0_BASE": "COMPLETE",
-    "F1_LAYOUT_SWAPPED": "COMPLETE",
-    "F2_INSTANCE_ORDER_PERMUTED": "COMPLETE",
-    "F3_GLOBAL_MATCHING_REQUIRED": "COMPLETE",
-    "F4_PERSONAL_GEOMETRY_ALTERNATIVE": "COMPLETE",
-    "F5_SHARED_ALTERNATIVE": "COMPLETE",
-    "F6_DECOY_SURPLUS": "COMPLETE",
-    "I0_PERSONAL_SEMANTIC_DEFICIT": "INFEASIBLE",
-    "I1_PERSONAL_GEOMETRY_DEFICIT": "INFEASIBLE",
-    "I2_PERSONAL_TARGET_COVERAGE_FAILURE": "INFEASIBLE",
-    "I3_SHARED_FIT_FAILURE": "INFEASIBLE",
-    "I4_SHARED_CONTEXT_FAILURE": "INFEASIBLE",
-    "I5_CROSS_FUNCTION_CONFLICT": "INFEASIBLE",
+    variant_id: (
+        "COMPLETE" if spec["intended_outcome"] == "FEASIBLE" else "INFEASIBLE"
+    )
+    for variant_id, spec in load_living_room_variants().items()
 }
 
 
@@ -98,14 +93,18 @@ def write_resolved_integrated_rig(scene_name: str, destination: Path) -> Path:
     support_names = (
         "a2_personal_left_top",
         "a2_personal_right_top",
-        "a2_shared_drink_top",
         "a2_control_table_top",
-        "a2_rug_surface",
     )
-    for selector_id, geom_name in zip(
-        config["region_selectors"], support_names
-    ):
+    selectors = list(config["region_selectors"])
+    config["region_selectors"] = {}
+    for selector_id, geom_name in zip(selectors, support_names):
         geom = root.find(f".//geom[@name='{geom_name}']")
+        if geom is None:
+            continue
+        config["region_selectors"][selector_id] = {
+            "candidate_rank": len(config["region_selectors"]) + 1,
+            "volume": {},
+        }
         center = [float(value) for value in geom.get("pos").split()]
         half = [float(value) for value in geom.get("size").split()]
         margin_xy = 0.045
@@ -152,7 +151,7 @@ def _status_for_mode(row: dict[str, Any], mode: str, *, personal: bool) -> str:
     if mode == "semantic_only":
         keys = ["semantic_role_status"]
     elif mode == "geometry_only":
-        keys = ["PLANAR_SUPPORT", "FITS_SET_ON"]
+        keys = ["PLANAR_SUPPORT", "FITS_SET_ON" if personal else "FITS_ON"]
         keys.append("NEAR_SEAT" if personal else "ACCESSIBLE_FROM_BOTH_SEATS")
     elif mode == "joint":
         return row["compatibility_status"]
@@ -170,12 +169,14 @@ class GlobalRegionAllocationSolver:
         shared_rows: list[dict[str, Any]],
         *,
         allow_cross_function_region_sharing: bool,
+        required_personal_slot_ids: list[str] | None = None,
     ):
         self.personal_rows = personal_rows
         self.shared_rows = shared_rows
         self.allow_cross_function_region_sharing = (
             allow_cross_function_region_sharing
         )
+        self.required_personal_slot_ids = required_personal_slot_ids
 
     @staticmethod
     def _edge_score(row: dict[str, Any]) -> float:
@@ -186,7 +187,14 @@ class GlobalRegionAllocationSolver:
         return sum(float(value) for value in margins if value is not None)
 
     def solve(self, mode: str = PRODUCTION_MODE) -> dict[str, Any]:
-        slot_ids = sorted({row["slot_id"] for row in self.personal_rows})
+        # Required slots come from the fixed task contract, not from whichever
+        # semantic rows happened to be observed.  Otherwise a missed payload
+        # could erase a requirement and produce a vacuous COMPLETE result.
+        slot_ids = (
+            list(self.required_personal_slot_ids)
+            if self.required_personal_slot_ids is not None
+            else sorted({row["slot_id"] for row in self.personal_rows})
+        )
         choices = {
             slot_id: [
                 row
@@ -239,7 +247,7 @@ class GlobalRegionAllocationSolver:
             selected = solutions[0]
             assignments = [
                 {
-                    "function_id": "PERSONAL_REFRESHMENT_REGION",
+                    "function_id": "PERSONAL_CUP_SAUCER_REGION",
                     "slot_id": row["slot_id"],
                     "seating_target_id": row["seating_target_id"],
                     "payload_ids": row["payload_ids"],
@@ -249,8 +257,8 @@ class GlobalRegionAllocationSolver:
             ]
             assignments.append(
                 {
-                    "function_id": "SHARED_CONTROLS_REGION",
-                    "slot_id": "shared_controls_slot",
+                    "function_id": "SHARED_REMOTE_REGION",
+                    "slot_id": "shared_remote_slot",
                     "seating_target_ids": selected["shared"][
                         "seating_target_ids"
                     ],
@@ -276,7 +284,7 @@ class GlobalRegionAllocationSolver:
             slot: sorted({row["region_id"] for row in rows})
             for slot, rows in choices.items()
         }
-        adjacency["shared_controls_slot"] = sorted(
+        adjacency["shared_remote_slot"] = sorted(
             {row["region_id"] for row in shared}
         )
         return {
@@ -373,12 +381,12 @@ class GlobalRegionAllocationSolver:
                 "status": "INFEASIBLE",
                 "policy": "greedy_target_specific",
                 "assignments": assignments,
-                "blocked_slot": "shared_controls_slot",
+                "blocked_slot": "shared_remote_slot",
                 "diagnostic_only": True,
             }
         assignments.append(
             {
-                "slot_id": "shared_controls_slot",
+                "slot_id": "shared_remote_slot",
                 "region_id": shared[0]["region_id"],
             }
         )
@@ -440,37 +448,35 @@ class IntegratedLivingRoomRegionRun(RegionAblation2Run):
 
     def _build_compatibility(self) -> None:
         payloads = self._required_payloads()
-        personal_group = self.task["payload_groups"][
-            "personal_refreshment_sets"
-        ]
+        personal_group = self.task["payload_groups"]["personal_cup_saucer_sets"]
         required_count = int(personal_group["count"])
-        drinks = payloads.get("drink", [])
-        snacks = payloads.get("snack_container", [])
-        if len(drinks) < required_count or len(snacks) < required_count:
+        cups = payloads.get("cup", [])
+        saucers = payloads.get("saucer", [])
+        if len(cups) < required_count or len(saucers) < required_count:
             bundles = []
         else:
             candidates = []
-            for selected_drinks in itertools.permutations(drinks, required_count):
-                for selected_snacks in itertools.permutations(snacks, required_count):
-                    pairs = list(zip(selected_drinks, selected_snacks))
+            for selected_cups in itertools.permutations(cups, required_count):
+                for selected_saucers in itertools.permutations(saucers, required_count):
+                    pairs = list(zip(selected_cups, selected_saucers))
                     distance = sum(
                         float(
                             np.linalg.norm(
                                 np.asarray(
-                                    self.payload_registry[drink][
+                                    self.payload_registry[cup][
                                         "observed_centroid_world_m"
                                     ],
                                     dtype=float,
                                 )[:2]
                                 - np.asarray(
-                                    self.payload_registry[snack][
+                                    self.payload_registry[saucer][
                                         "observed_centroid_world_m"
                                     ],
                                     dtype=float,
                                 )[:2]
                             )
                         )
-                        for drink, snack in pairs
+                        for cup, saucer in pairs
                     )
                     canonical = tuple(sorted(tuple(sorted(pair)) for pair in pairs))
                     candidates.append((distance, canonical, pairs))
@@ -494,10 +500,10 @@ class IntegratedLivingRoomRegionRun(RegionAblation2Run):
             ),
         )
         personal_role = self.task["semantic_requirements"]["region_roles"][
-            "personal_refreshment_region"
+            "personal_cup_saucer_region"
         ]
         shared_role = self.task["semantic_requirements"]["region_roles"][
-            "shared_controls_region"
+            "shared_remote_region"
         ]
         maximum_near = float(
             self.task["geometric_requirements"]["personal_context"]
@@ -535,8 +541,8 @@ class IntegratedLivingRoomRegionRun(RegionAblation2Run):
                 )
                 self.personal_rows.append(
                     {
-                        "function_id": "PERSONAL_REFRESHMENT_REGION",
-                        "slot_id": f"personal_refreshment_slot_{slot_index}",
+                        "function_id": "PERSONAL_CUP_SAUCER_REGION",
+                        "slot_id": f"personal_table_slot_{slot_index}",
                         "payload_ids": list(bundle),
                         "seating_target_id": seat_id,
                         "region_id": region_id,
@@ -564,10 +570,8 @@ class IntegratedLivingRoomRegionRun(RegionAblation2Run):
                         ["provenance"]["evidence_path"],
                     }
                 )
-        controls = payloads.get("tv_remote", [])[:1] + payloads.get(
-            "game_controller", []
-        )[:1]
-        if len(controls) == 2:
+        controls = payloads.get("tv_remote", [])[:1]
+        if len(controls) == 1:
             for region_id, region in self.region_registry.items():
                 semantic = _semantic_role(
                     region["semantics"],
@@ -579,8 +583,8 @@ class IntegratedLivingRoomRegionRun(RegionAblation2Run):
                     "UNKNOWN" if planar_value is None
                     else "TRUE" if planar_value else "FALSE"
                 )
-                fit = evaluate_fits_set_on(
-                    [self.payload_registry[item]["geometry"] for item in controls],
+                fit = evaluate_fits_on(
+                    self.payload_registry[controls[0]]["geometry"],
                     region["geometry"], task_config=self.task,
                 )
                 access = evaluate_control_accessibility(
@@ -595,8 +599,8 @@ class IntegratedLivingRoomRegionRun(RegionAblation2Run):
                 )
                 self.shared_rows.append(
                     {
-                        "function_id": "SHARED_CONTROLS_REGION",
-                        "slot_id": "shared_controls_slot",
+                        "function_id": "SHARED_REMOTE_REGION",
+                        "slot_id": "shared_remote_slot",
                         "payload_ids": controls,
                         "seating_target_ids": sorted(self.seating_registry),
                         "region_id": region_id,
@@ -606,10 +610,10 @@ class IntegratedLivingRoomRegionRun(RegionAblation2Run):
                         ),
                         "semantic_role_status": semantic["status"],
                         "PLANAR_SUPPORT": planar,
-                        "FITS_SET_ON": fit["status"],
+                        "FITS_ON": fit["status"],
                         "ACCESSIBLE_FROM_BOTH_SEATS": access["status"],
                         "compatibility_status": status,
-                        "fit_margin_m": fit.get("signed_clearance_margin_m"),
+                        "fit_margin_m": fit.get("signed_fit_margin_m"),
                         "context_margin_m": access.get("signed_margin_m"),
                         "fit_evidence": fit,
                         "context_evidence": {
@@ -632,6 +636,9 @@ class IntegratedLivingRoomRegionRun(RegionAblation2Run):
             allow_cross_function_region_sharing=bool(
                 self.task["allow_cross_function_region_sharing"]
             ),
+            required_personal_slot_ids=[
+                "personal_table_slot_1", "personal_table_slot_2"
+            ],
         )
         self.diagnostics = {
             mode: solver.solve(mode)
@@ -672,8 +679,8 @@ class IntegratedLivingRoomRegionRun(RegionAblation2Run):
         )
         matrix = {
             "schema_version": 1,
-            "personal_refreshment_rows": self.personal_rows,
-            "shared_controls_rows": self.shared_rows,
+            "personal_cup_saucer_rows": self.personal_rows,
+            "shared_remote_rows": self.shared_rows,
             "unknown_edges_admitted": False,
         }
         _atomic_json(self.run_dir / "compatibility_matrix.json", matrix)
@@ -692,7 +699,7 @@ class IntegratedLivingRoomRegionRun(RegionAblation2Run):
         for assignment in assignments:
             rows = (
                 self.personal_rows
-                if assignment["function_id"] == "PERSONAL_REFRESHMENT_REGION"
+                if assignment["function_id"] == "PERSONAL_CUP_SAUCER_REGION"
                 else self.shared_rows
             )
             row = next(

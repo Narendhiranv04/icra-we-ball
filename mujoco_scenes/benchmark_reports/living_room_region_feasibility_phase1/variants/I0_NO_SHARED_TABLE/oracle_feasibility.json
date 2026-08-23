@@ -1,0 +1,135 @@
+{
+  "artifact_classification": "PRIVILEGED_ORACLE_EVALUATION_ONLY",
+  "complete_solution_count": 0,
+  "example_solution": null,
+  "payload_footprints_m": {
+    "cup_saucer_sets": [
+      [
+        [
+          0.15913031517073478,
+          0.11023119583677898
+        ],
+        [
+          0.19005756098657384,
+          0.19005143348224918
+        ]
+      ],
+      [
+        [
+          0.1590628388448664,
+          0.11008423854416183
+        ],
+        [
+          0.19084279714932206,
+          0.19084107773537595
+        ]
+      ]
+    ],
+    "shared_remote": [
+      [
+        0.21000019394348673,
+        0.07600000000000007
+      ]
+    ]
+  },
+  "payload_geometry_source": "instantiated_collision_geom_world_aabb_evaluation_only",
+  "personal_compatibility": [
+    {
+      "distance_m": 0.7424284477308234,
+      "fit_margin_m": 0.18471737068097185,
+      "fits": true,
+      "near_margin_m": 0.45757155226917656,
+      "region_id": "oracle_region_0001",
+      "semantic": true,
+      "slot_id": "personal_table_slot_1",
+      "valid": true
+    },
+    {
+      "distance_m": 2.7006665843824558,
+      "fit_margin_m": 0.18471737068097185,
+      "fits": true,
+      "near_margin_m": -1.5006665843824558,
+      "region_id": "oracle_region_0002",
+      "semantic": true,
+      "slot_id": "personal_table_slot_1",
+      "valid": false
+    },
+    {
+      "distance_m": 2.7006665843824558,
+      "fit_margin_m": 0.18407468372046223,
+      "fits": true,
+      "near_margin_m": -1.5006665843824558,
+      "region_id": "oracle_region_0001",
+      "semantic": true,
+      "slot_id": "personal_table_slot_2",
+      "valid": false
+    },
+    {
+      "distance_m": 0.7424284477308234,
+      "fit_margin_m": 0.18407468372046223,
+      "fits": true,
+      "near_margin_m": 0.45757155226917656,
+      "region_id": "oracle_region_0002",
+      "semantic": true,
+      "slot_id": "personal_table_slot_2",
+      "valid": true
+    }
+  ],
+  "production_consumed_this_artifact": false,
+  "regions": {
+    "oracle_region_0001": {
+      "category": "side_table",
+      "centroid_world_m": [
+        -1.72,
+        1.02,
+        0.535
+      ],
+      "construction_geom": "a2_personal_left_top",
+      "support_length_m": 0.55,
+      "support_width_m": 0.45
+    },
+    "oracle_region_0002": {
+      "category": "side_table",
+      "centroid_world_m": [
+        1.72,
+        1.02,
+        0.535
+      ],
+      "construction_geom": "a2_personal_right_top",
+      "support_length_m": 0.55,
+      "support_width_m": 0.45
+    }
+  },
+  "scene_name": "L2_integrated_living_room_region_function_I0_NO_SHARED_TABLE",
+  "schema_version": 1,
+  "shared_compatibility": [
+    {
+      "access_margin_m": -1.0506665843824559,
+      "distances_to_seats_m": [
+        0.7424284477308234,
+        2.7006665843824558
+      ],
+      "fit_margin_m": 0.29999980605651333,
+      "fits": true,
+      "region_id": "oracle_region_0001",
+      "semantic": true,
+      "slot_id": "shared_remote_slot",
+      "valid": false
+    },
+    {
+      "access_margin_m": -1.0506665843824559,
+      "distances_to_seats_m": [
+        2.7006665843824558,
+        0.7424284477308234
+      ],
+      "fit_margin_m": 0.29999980605651333,
+      "fits": true,
+      "region_id": "oracle_region_0002",
+      "semantic": true,
+      "slot_id": "shared_remote_slot",
+      "valid": false
+    }
+  ],
+  "status": "INFEASIBLE",
+  "variant": "I0_NO_SHARED_TABLE"
+}

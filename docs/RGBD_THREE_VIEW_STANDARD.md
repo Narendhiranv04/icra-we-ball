@@ -2,11 +2,13 @@
 
 ## Frozen observation contract
 
-Each observation stage acquires three calibrated RGB-D viewpoints: symmetric
-left- and right-isometric views and a region-oriented detail view. The roles
-are `ISO_LEFT`, `ISO_RIGHT`, and `DETAIL`. They are observations, not a
-requirement for three physical cameras; one movable calibrated sensor could
-acquire them sequentially.
+Kitchen and Living Room use the restored five-view RGB-D contract. Kitchen
+uses `inspection_left`, `inspection_right`, `inspection_top`,
+`inspection_front`, and `inspection_close`; Living Room uses `room_left`,
+`room_right`, `room_high`, `room_front`, and `room_rear`. Workshop retains its
+separately calibrated three-view `ISO_LEFT`, `ISO_RIGHT`, `DETAIL` contract.
+These are observations, not a requirement for five physical cameras; one
+movable calibrated sensor could acquire them sequentially.
 
 The same aligned RGB-D observations support both perception branches. RGB is
 passed to YOLO and semantic consensus, while accepted masked depth pixels are
@@ -16,7 +18,7 @@ multi-view coverage is trusted only when at least two viewpoints contribute;
 otherwise the corresponding property remains `UNKNOWN`. No object is required
 to appear in all three views.
 
-`DETAIL` depends only on access geometry:
+For Workshop, `DETAIL` depends only on access geometry:
 
 - horizontal/open-top region: high, downward view;
 - vertical/front-access region: elevated frontal view;
@@ -29,8 +31,8 @@ to inspect; it does not learn or plan viewpoints.
 
 | Environment | Initial stage | Fresh hidden-region stages |
 |---|---|---|
-| Kitchen | three work-area views | three region-centred views after D1, D2, C2, B1, or C1 is opened |
-| Living Room | three room views | none in the canonical integrated region-function task |
+| Kitchen | five work-area views | five region-centred views after D1, D2, C2, B1, or C1 is opened |
+| Living Room | five room views | none in the canonical integrated region-function task |
 | Workshop | three work-area views | three region-centred views after LEFT_DRAWER, RIGHT_DRAWER, or TOOL_CABINET is opened |
 
 Opening a Kitchen or Workshop storage region triggers exactly one fresh
@@ -80,3 +82,20 @@ The canonical configs are:
 
 Calibration and benchmark evidence is recorded under
 `mujoco_scenes/benchmark_reports/three_view_standardization/`.
+
+## YOLO-World L adaptation
+
+The L checkpoint has a separately frozen profile; it does not replace the
+medium-checkpoint baseline. The active Kitchen and Living Room profiles use
+the restored five-view geometry above.
+
+- Kitchen: confidence 0.01, mean confidence 0.01, one supporting semantic
+  view, view-count-first fusion, and the L-specific five-view vocabulary.
+- Living Room: confidence 0.01, mean confidence 0.01, one supporting semantic
+  view, and winning-score margin 0.015. The standard Living Room vocabulary is
+  retained because both concise and descriptive alternatives reduced recall.
+
+The earlier three-view calibration remains in
+`mujoco_scenes/benchmark_reports/yoloworld_l_three_view_tuning/`. The one-view
+semantic setting does not weaken geometry: RGB-D geometric properties still
+require the multi-view support defined by this standard.

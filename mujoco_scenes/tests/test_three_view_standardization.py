@@ -33,27 +33,27 @@ def _world_pose(region: dict, role: str) -> tuple[np.ndarray, np.ndarray]:
     )
 
 
-def test_kitchen_and_workshop_have_exact_canonical_roles():
-    for path in (
-        ROOT / "configs" / "inspection_rigs.yaml",
-        WORKSHOP_INSPECTION_RIG_CONFIG,
-    ):
-        config = load_inspection_rig_config(path)
-        assert tuple(config["camera_slots"]) == CANONICAL_VIEWPOINT_ROLES
-        assert config["view_validation"]["minimum_valid_rig_cameras"] == 3
-        assert config["view_validation"]["minimum_object_camera_count"] == 2
-        assert all(
-            set(region["cameras"]) == set(CANONICAL_VIEWPOINT_ROLES)
-            for region in config["regions"].values()
-        )
+def test_kitchen_has_five_views_and_workshop_keeps_three():
+    kitchen = load_inspection_rig_config(
+        ROOT / "configs" / "inspection_rigs.yaml"
+    )
+    assert len(kitchen["camera_slots"]) == 5
+    assert kitchen["view_validation"]["minimum_valid_rig_cameras"] == 5
+    assert all(
+        set(region["cameras"]) == set(kitchen["camera_slots"])
+        for region in kitchen["regions"].values()
+    )
+    workshop = load_inspection_rig_config(WORKSHOP_INSPECTION_RIG_CONFIG)
+    assert tuple(workshop["camera_slots"]) == CANONICAL_VIEWPOINT_ROLES
+    assert workshop["view_validation"]["minimum_valid_rig_cameras"] == 3
 
 
-def test_living_room_is_one_initial_three_view_capture():
+def test_living_room_is_one_initial_five_view_capture():
     config = yaml.safe_load(
         (ROOT / "configs" / "l2_integrated_region_function_rig.yaml").read_text()
     )
-    assert set(config["camera_slots"]) == set(CANONICAL_VIEWPOINT_ROLES)
-    assert set(config["capture"]["cameras"]) == set(CANONICAL_VIEWPOINT_ROLES)
+    assert len(config["camera_slots"]) == 5
+    assert set(config["capture"]["cameras"]) == set(config["camera_slots"])
     assert "inspection_sequence" not in config
 
 

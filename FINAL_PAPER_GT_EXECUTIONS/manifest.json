@@ -1,0 +1,41 @@
+{
+  "all_execution_runs_successful": true,
+  "environment_counts": {
+    "kitchen": 1,
+    "living_room": 0,
+    "workshop": 0
+  },
+  "purpose": "Final-paper natural-speed five-view GT robot executions",
+  "records": [
+    {
+      "environment": "kitchen",
+      "execution_success": true,
+      "timing": {
+        "environment": "kitchen",
+        "recorded_summary_reported_wall_s": null,
+        "recording_overhead_wall_s": 0.7717437089999999,
+        "simulation_duration_s": 15.280000000001772,
+        "speed_policy": "NATURAL_SIMULATION_TIME_NO_POSTPROCESS_SPEEDUP",
+        "unrecorded_summary_reported_wall_s": null,
+        "variant": "F0_REUSE_ONE",
+        "video_duration_s": 7.35,
+        "video_fps": "20/1",
+        "with_recording_wall_s": 5.716705708,
+        "without_recording_wall_s": 4.944961999
+      },
+      "variant": "F0_REUSE_ONE",
+      "video": "kitchen/F0_REUSE_ONE/robot_execution_5cam.mp4",
+      "video_metadata": {
+        "duration_s": 7.35,
+        "frame_count": 147,
+        "frame_rate": "20/1",
+        "height": 720,
+        "size_bytes": 2394787,
+        "width": 1920
+      },
+      "video_sha256": "ca4314dd1b01a8e6aba31283476af9ce2e72d3b23ba79bb71743397615c0d632"
+    }
+  ],
+  "schema_version": 1,
+  "total_variants": 1
+}

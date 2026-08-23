@@ -1,0 +1,11 @@
+Environment: kitchen
+Variant: I3_ONLY_TWO_SOUP_TOOLS
+Intended outcome: INFEASIBLE
+Feasible: False
+Failure reason: INSUFFICIENT_DISTINCT_SOUP_TOOLS
+
+FUNCTION -> OBJECT ASSIGNMENTS
+STIR_COFFEE(ab3_narrow_deep_cup) -> s1i_final_long_narrow_spoon_2
+STIR_COFFEE(s1i_wide_shallow_cup) -> s1i_final_long_narrow_spoon_2
+STIR_COFFEE(ab3_medium_deep_mug) -> s1i_final_long_narrow_spoon_2
+COMPLETE_GLOBAL_ASSIGNMENT -> NONE

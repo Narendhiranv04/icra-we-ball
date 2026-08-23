@@ -20,10 +20,19 @@ except ModuleNotFoundError:  # Allow the pure geometry helpers to be unit tested
 
 
 CANONICAL_VIEWPOINT_ROLES = ("ISO_LEFT", "ISO_RIGHT", "DETAIL")
+KITCHEN_VIEWPOINT_ROLES = (
+    "inspection_left",
+    "inspection_right",
+    "inspection_top",
+    "inspection_front",
+    "inspection_close",
+)
 DEFAULT_FUSION_CAMERAS = (
     "left_shoulder_camera",
     "right_shoulder_camera",
     "overhead_camera",
+    "side_camera",
+    "front_camera",
 )
 INSPECTION_RIG_CONFIG_PATH = (
     Path(__file__).resolve().parent / "configs" / "inspection_rigs.yaml"
@@ -182,10 +191,11 @@ def load_inspection_rig_config(
             + ", ".join(sorted(missing))
         )
     camera_slots = config.get("camera_slots", {})
-    if set(camera_slots) != set(CANONICAL_VIEWPOINT_ROLES):
+    if len(camera_slots) < 3 or len(set(camera_slots.values())) != len(
+        camera_slots
+    ):
         raise ValueError(
-            "Canonical inspection rig must map exactly the viewpoint roles "
-            + ", ".join(CANONICAL_VIEWPOINT_ROLES)
+            "Inspection rig must map at least three distinct viewpoint roles"
         )
     for region_id in required_regions:
         region = config["regions"][region_id]

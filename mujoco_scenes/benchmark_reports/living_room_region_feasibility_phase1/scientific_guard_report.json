@@ -46,7 +46,7 @@
     {
       "evidence": "payload registry count",
       "evidence_type": "runtime_artifacts",
-      "guard": "all_six_payload_records_created",
+      "guard": "all_five_payload_records_created",
       "status": "PASS"
     },
     {
@@ -58,7 +58,7 @@
     {
       "evidence": "region registry count",
       "evidence_type": "runtime_artifacts",
-      "guard": "all_five_region_measurements_created",
+      "guard": "region_measurement_count_matches_present_tables",
       "status": "PASS"
     },
     {
@@ -116,9 +116,9 @@
       "status": "PASS"
     },
     {
-      "evidence": "F3 greedy/global comparison",
-      "evidence_type": "diagnostic_modes",
-      "guard": "global_allocation_not_greedy",
+      "evidence": "all feasible variants expose exactly two personal tables and one shared table",
+      "evidence_type": "resolved_rigs",
+      "guard": "fixed_three_region_contract",
       "status": "PASS"
     },
     {
@@ -128,9 +128,9 @@
       "status": "PASS"
     },
     {
-      "evidence": "candidate ranks",
+      "evidence": "candidate count equals present table count",
       "evidence_type": "resolved_rigs",
-      "guard": "stable_candidate_ranks_all_variants",
+      "guard": "candidate_count_tracks_table_absence",
       "status": "PASS"
     },
     {
@@ -152,19 +152,13 @@
       "status": "PASS"
     },
     {
-      "evidence": "F6 versus F0 joint exhaustive complete solution counts",
-      "evidence_type": "production_compatibility_matrix",
-      "guard": "f6_has_production_side_solution_surplus",
-      "status": "PASS"
-    },
-    {
-      "evidence": "semantic TRUE, planar TRUE, access TRUE, FITS_SET_ON FALSE row",
+      "evidence": "all three required placement tables absent",
       "evidence_type": "controlled_failure_diagnostics",
-      "guard": "i3_direct_shared_fit_failure_is_observed",
+      "guard": "i3_all_tables_missing_is_observed",
       "status": "PASS"
     },
     {
-      "evidence": "I0-I5 direct row or allocation-graph failure signatures",
+      "evidence": "I0-I3 direct missing-table signatures",
       "evidence_type": "controlled_failure_diagnostics",
       "guard": "all_controlled_infeasible_causes_directly_supported",
       "status": "PASS"

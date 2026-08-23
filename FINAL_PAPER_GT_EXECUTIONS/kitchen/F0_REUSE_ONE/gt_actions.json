@@ -1,0 +1,779 @@
+{
+  "actions": [
+    {
+      "action_index": 1,
+      "action_instance_id": "act_001_open_D1",
+      "arguments": [
+        "D1"
+      ],
+      "effects": {
+        "container_open": "D1"
+      },
+      "operator": "OPEN",
+      "preconditions": {
+        "container_closed": "D1"
+      },
+      "reason": "Open container D1 to access required task kitchenware"
+    },
+    {
+      "action_index": 2,
+      "action_instance_id": "act_002_open_C2",
+      "arguments": [
+        "C2"
+      ],
+      "effects": {
+        "container_open": "C2"
+      },
+      "operator": "OPEN",
+      "preconditions": {
+        "container_closed": "C2"
+      },
+      "reason": "Open container C2 to access required task kitchenware"
+    },
+    {
+      "action_index": 3,
+      "action_instance_id": "act_003_open_B1",
+      "arguments": [
+        "B1"
+      ],
+      "effects": {
+        "container_open": "B1"
+      },
+      "operator": "OPEN",
+      "preconditions": {
+        "container_closed": "B1"
+      },
+      "reason": "Open container B1 to access required task kitchenware"
+    },
+    {
+      "action_index": 4,
+      "action_instance_id": "act_004_open_C1",
+      "arguments": [
+        "C1"
+      ],
+      "effects": {
+        "container_open": "C1"
+      },
+      "operator": "OPEN",
+      "preconditions": {
+        "container_closed": "C1"
+      },
+      "reason": "Open container C1 to access required task kitchenware"
+    },
+    {
+      "action_index": 5,
+      "action_instance_id": "act_005_pick_s1i_wide_shallow_cup",
+      "arguments": [
+        "s1i_wide_shallow_cup"
+      ],
+      "effects": {
+        "holding": "s1i_wide_shallow_cup"
+      },
+      "operator": "PICK",
+      "preconditions": {
+        "hand_empty": true,
+        "object_accessible": "s1i_wide_shallow_cup"
+      },
+      "reason": "Retrieve target vessel s1i_wide_shallow_cup from C2 for countertop staging"
+    },
+    {
+      "action_index": 6,
+      "action_instance_id": "act_006_place_s1i_wide_shallow_cup_countertop",
+      "arguments": [
+        "s1i_wide_shallow_cup",
+        "countertop"
+      ],
+      "effects": {
+        "hand_empty": true,
+        "object_at": {
+          "s1i_wide_shallow_cup": "countertop"
+        }
+      },
+      "operator": "PLACE",
+      "preconditions": {
+        "holding": "s1i_wide_shallow_cup"
+      },
+      "reason": "Stage target vessel s1i_wide_shallow_cup on countertop for safe pouring and stirring"
+    },
+    {
+      "action_index": 7,
+      "action_instance_id": "act_007_pick_ab3_deep_bowl",
+      "arguments": [
+        "ab3_deep_bowl"
+      ],
+      "effects": {
+        "holding": "ab3_deep_bowl"
+      },
+      "operator": "PICK",
+      "preconditions": {
+        "hand_empty": true,
+        "object_accessible": "ab3_deep_bowl"
+      },
+      "reason": "Retrieve target vessel ab3_deep_bowl from B1 for countertop staging"
+    },
+    {
+      "action_index": 8,
+      "action_instance_id": "act_008_place_ab3_deep_bowl_countertop",
+      "arguments": [
+        "ab3_deep_bowl",
+        "countertop"
+      ],
+      "effects": {
+        "hand_empty": true,
+        "object_at": {
+          "ab3_deep_bowl": "countertop"
+        }
+      },
+      "operator": "PLACE",
+      "preconditions": {
+        "holding": "ab3_deep_bowl"
+      },
+      "reason": "Stage target vessel ab3_deep_bowl on countertop for safe pouring and stirring"
+    },
+    {
+      "action_index": 9,
+      "action_instance_id": "act_009_pick_s1i_narrow_deep_bowl",
+      "arguments": [
+        "s1i_narrow_deep_bowl"
+      ],
+      "effects": {
+        "holding": "s1i_narrow_deep_bowl"
+      },
+      "operator": "PICK",
+      "preconditions": {
+        "hand_empty": true,
+        "object_accessible": "s1i_narrow_deep_bowl"
+      },
+      "reason": "Retrieve target vessel s1i_narrow_deep_bowl from C1 for countertop staging"
+    },
+    {
+      "action_index": 10,
+      "action_instance_id": "act_010_place_s1i_narrow_deep_bowl_countertop",
+      "arguments": [
+        "s1i_narrow_deep_bowl",
+        "countertop"
+      ],
+      "effects": {
+        "hand_empty": true,
+        "object_at": {
+          "s1i_narrow_deep_bowl": "countertop"
+        }
+      },
+      "operator": "PLACE",
+      "preconditions": {
+        "holding": "s1i_narrow_deep_bowl"
+      },
+      "reason": "Stage target vessel s1i_narrow_deep_bowl on countertop for safe pouring and stirring"
+    },
+    {
+      "action_index": 11,
+      "action_instance_id": "act_011_pick_s1i_compact_kettle",
+      "arguments": [
+        "s1i_compact_kettle"
+      ],
+      "effects": {
+        "holding": "s1i_compact_kettle"
+      },
+      "operator": "PICK",
+      "preconditions": {
+        "hand_empty": true,
+        "object_accessible": "s1i_compact_kettle"
+      },
+      "reason": "Pick water_source (s1i_compact_kettle) to dispense hot water"
+    },
+    {
+      "action_index": 12,
+      "action_instance_id": "act_012_pour_s1i_compact_kettle_ab3_narrow_deep_cup",
+      "arguments": [
+        "s1i_compact_kettle",
+        "ab3_narrow_deep_cup"
+      ],
+      "effects": {
+        "poured": [
+          "s1i_compact_kettle",
+          "ab3_narrow_deep_cup"
+        ]
+      },
+      "operator": "POUR",
+      "preconditions": {
+        "holding": "s1i_compact_kettle",
+        "target_accessible": "ab3_narrow_deep_cup"
+      },
+      "reason": "Pour hot water from s1i_compact_kettle into coffee target ab3_narrow_deep_cup"
+    },
+    {
+      "action_index": 13,
+      "action_instance_id": "act_013_pour_s1i_compact_kettle_s1i_wide_shallow_cup",
+      "arguments": [
+        "s1i_compact_kettle",
+        "s1i_wide_shallow_cup"
+      ],
+      "effects": {
+        "poured": [
+          "s1i_compact_kettle",
+          "s1i_wide_shallow_cup"
+        ]
+      },
+      "operator": "POUR",
+      "preconditions": {
+        "holding": "s1i_compact_kettle",
+        "target_accessible": "s1i_wide_shallow_cup"
+      },
+      "reason": "Pour hot water from s1i_compact_kettle into coffee target s1i_wide_shallow_cup"
+    },
+    {
+      "action_index": 14,
+      "action_instance_id": "act_014_pour_s1i_compact_kettle_ab3_medium_deep_mug",
+      "arguments": [
+        "s1i_compact_kettle",
+        "ab3_medium_deep_mug"
+      ],
+      "effects": {
+        "poured": [
+          "s1i_compact_kettle",
+          "ab3_medium_deep_mug"
+        ]
+      },
+      "operator": "POUR",
+      "preconditions": {
+        "holding": "s1i_compact_kettle",
+        "target_accessible": "ab3_medium_deep_mug"
+      },
+      "reason": "Pour hot water from s1i_compact_kettle into coffee target ab3_medium_deep_mug"
+    },
+    {
+      "action_index": 15,
+      "action_instance_id": "act_015_place_s1i_compact_kettle_countertop",
+      "arguments": [
+        "s1i_compact_kettle",
+        "countertop"
+      ],
+      "effects": {
+        "hand_empty": true,
+        "object_at": {
+          "s1i_compact_kettle": "countertop"
+        }
+      },
+      "operator": "PLACE",
+      "preconditions": {
+        "holding": "s1i_compact_kettle"
+      },
+      "reason": "Return water_source (s1i_compact_kettle) to safe countertop support"
+    },
+    {
+      "action_index": 16,
+      "action_instance_id": "act_016_pick_s1i_compact_coffee_jar",
+      "arguments": [
+        "s1i_compact_coffee_jar"
+      ],
+      "effects": {
+        "holding": "s1i_compact_coffee_jar"
+      },
+      "operator": "PICK",
+      "preconditions": {
+        "hand_empty": true,
+        "object_accessible": "s1i_compact_coffee_jar"
+      },
+      "reason": "Pick coffee_source (s1i_compact_coffee_jar) to dispense coffee grounds"
+    },
+    {
+      "action_index": 17,
+      "action_instance_id": "act_017_pour_s1i_compact_coffee_jar_ab3_narrow_deep_cup",
+      "arguments": [
+        "s1i_compact_coffee_jar",
+        "ab3_narrow_deep_cup"
+      ],
+      "effects": {
+        "poured": [
+          "s1i_compact_coffee_jar",
+          "ab3_narrow_deep_cup"
+        ]
+      },
+      "operator": "POUR",
+      "preconditions": {
+        "holding": "s1i_compact_coffee_jar",
+        "target_accessible": "ab3_narrow_deep_cup"
+      },
+      "reason": "Pour coffee grounds from s1i_compact_coffee_jar into coffee target ab3_narrow_deep_cup"
+    },
+    {
+      "action_index": 18,
+      "action_instance_id": "act_018_pour_s1i_compact_coffee_jar_s1i_wide_shallow_cup",
+      "arguments": [
+        "s1i_compact_coffee_jar",
+        "s1i_wide_shallow_cup"
+      ],
+      "effects": {
+        "poured": [
+          "s1i_compact_coffee_jar",
+          "s1i_wide_shallow_cup"
+        ]
+      },
+      "operator": "POUR",
+      "preconditions": {
+        "holding": "s1i_compact_coffee_jar",
+        "target_accessible": "s1i_wide_shallow_cup"
+      },
+      "reason": "Pour coffee grounds from s1i_compact_coffee_jar into coffee target s1i_wide_shallow_cup"
+    },
+    {
+      "action_index": 19,
+      "action_instance_id": "act_019_pour_s1i_compact_coffee_jar_ab3_medium_deep_mug",
+      "arguments": [
+        "s1i_compact_coffee_jar",
+        "ab3_medium_deep_mug"
+      ],
+      "effects": {
+        "poured": [
+          "s1i_compact_coffee_jar",
+          "ab3_medium_deep_mug"
+        ]
+      },
+      "operator": "POUR",
+      "preconditions": {
+        "holding": "s1i_compact_coffee_jar",
+        "target_accessible": "ab3_medium_deep_mug"
+      },
+      "reason": "Pour coffee grounds from s1i_compact_coffee_jar into coffee target ab3_medium_deep_mug"
+    },
+    {
+      "action_index": 20,
+      "action_instance_id": "act_020_place_s1i_compact_coffee_jar_countertop",
+      "arguments": [
+        "s1i_compact_coffee_jar",
+        "countertop"
+      ],
+      "effects": {
+        "hand_empty": true,
+        "object_at": {
+          "s1i_compact_coffee_jar": "countertop"
+        }
+      },
+      "operator": "PLACE",
+      "preconditions": {
+        "holding": "s1i_compact_coffee_jar"
+      },
+      "reason": "Return coffee_source (s1i_compact_coffee_jar) to safe countertop support"
+    },
+    {
+      "action_index": 21,
+      "action_instance_id": "act_021_pick_s1i_final_long_narrow_spoon",
+      "arguments": [
+        "s1i_final_long_narrow_spoon"
+      ],
+      "effects": {
+        "holding": "s1i_final_long_narrow_spoon"
+      },
+      "operator": "PICK",
+      "preconditions": {
+        "hand_empty": true,
+        "object_accessible": "s1i_final_long_narrow_spoon"
+      },
+      "reason": "Pick coffee stirring tool s1i_final_long_narrow_spoon for sequential preparation"
+    },
+    {
+      "action_index": 22,
+      "action_instance_id": "act_022_stir_s1i_final_long_narrow_spoon_ab3_narrow_deep_cup",
+      "arguments": [
+        "s1i_final_long_narrow_spoon",
+        "ab3_narrow_deep_cup"
+      ],
+      "effects": {
+        "stirred": [
+          "s1i_final_long_narrow_spoon",
+          "ab3_narrow_deep_cup"
+        ]
+      },
+      "operator": "STIR",
+      "preconditions": {
+        "holding": "s1i_final_long_narrow_spoon",
+        "target_accessible": "ab3_narrow_deep_cup"
+      },
+      "reason": "Stir coffee in ab3_narrow_deep_cup using assigned tool s1i_final_long_narrow_spoon"
+    },
+    {
+      "action_index": 23,
+      "action_instance_id": "act_023_stir_s1i_final_long_narrow_spoon_s1i_wide_shallow_cup",
+      "arguments": [
+        "s1i_final_long_narrow_spoon",
+        "s1i_wide_shallow_cup"
+      ],
+      "effects": {
+        "stirred": [
+          "s1i_final_long_narrow_spoon",
+          "s1i_wide_shallow_cup"
+        ]
+      },
+      "operator": "STIR",
+      "preconditions": {
+        "holding": "s1i_final_long_narrow_spoon",
+        "target_accessible": "s1i_wide_shallow_cup"
+      },
+      "reason": "Stir coffee in s1i_wide_shallow_cup using assigned tool s1i_final_long_narrow_spoon"
+    },
+    {
+      "action_index": 24,
+      "action_instance_id": "act_024_stir_s1i_final_long_narrow_spoon_ab3_medium_deep_mug",
+      "arguments": [
+        "s1i_final_long_narrow_spoon",
+        "ab3_medium_deep_mug"
+      ],
+      "effects": {
+        "stirred": [
+          "s1i_final_long_narrow_spoon",
+          "ab3_medium_deep_mug"
+        ]
+      },
+      "operator": "STIR",
+      "preconditions": {
+        "holding": "s1i_final_long_narrow_spoon",
+        "target_accessible": "ab3_medium_deep_mug"
+      },
+      "reason": "Stir coffee in ab3_medium_deep_mug using assigned tool s1i_final_long_narrow_spoon"
+    },
+    {
+      "action_index": 25,
+      "action_instance_id": "act_025_place_s1i_final_long_narrow_spoon_countertop",
+      "arguments": [
+        "s1i_final_long_narrow_spoon",
+        "countertop"
+      ],
+      "effects": {
+        "hand_empty": true,
+        "object_at": {
+          "s1i_final_long_narrow_spoon": "countertop"
+        }
+      },
+      "operator": "PLACE",
+      "preconditions": {
+        "holding": "s1i_final_long_narrow_spoon"
+      },
+      "reason": "Set stirring tool s1i_final_long_narrow_spoon on countertop after coffee stirring completion"
+    },
+    {
+      "action_index": 26,
+      "action_instance_id": "act_026_pick_ab3_narrow_deep_cup",
+      "arguments": [
+        "ab3_narrow_deep_cup"
+      ],
+      "effects": {
+        "holding": "ab3_narrow_deep_cup"
+      },
+      "operator": "PICK",
+      "preconditions": {
+        "hand_empty": true,
+        "object_accessible": "ab3_narrow_deep_cup"
+      },
+      "reason": "Pick prepared coffee vessel ab3_narrow_deep_cup for serving"
+    },
+    {
+      "action_index": 27,
+      "action_instance_id": "act_027_place_ab3_narrow_deep_cup_serving_area",
+      "arguments": [
+        "ab3_narrow_deep_cup",
+        "serving_area"
+      ],
+      "effects": {
+        "hand_empty": true,
+        "object_at": {
+          "ab3_narrow_deep_cup": "serving_area"
+        },
+        "served": "ab3_narrow_deep_cup"
+      },
+      "operator": "PLACE",
+      "preconditions": {
+        "holding": "ab3_narrow_deep_cup"
+      },
+      "reason": "Place coffee vessel ab3_narrow_deep_cup in serving area"
+    },
+    {
+      "action_index": 28,
+      "action_instance_id": "act_028_pick_s1i_wide_shallow_cup",
+      "arguments": [
+        "s1i_wide_shallow_cup"
+      ],
+      "effects": {
+        "holding": "s1i_wide_shallow_cup"
+      },
+      "operator": "PICK",
+      "preconditions": {
+        "hand_empty": true,
+        "object_accessible": "s1i_wide_shallow_cup"
+      },
+      "reason": "Pick prepared coffee vessel s1i_wide_shallow_cup for serving"
+    },
+    {
+      "action_index": 29,
+      "action_instance_id": "act_029_place_s1i_wide_shallow_cup_serving_area",
+      "arguments": [
+        "s1i_wide_shallow_cup",
+        "serving_area"
+      ],
+      "effects": {
+        "hand_empty": true,
+        "object_at": {
+          "s1i_wide_shallow_cup": "serving_area"
+        },
+        "served": "s1i_wide_shallow_cup"
+      },
+      "operator": "PLACE",
+      "preconditions": {
+        "holding": "s1i_wide_shallow_cup"
+      },
+      "reason": "Place coffee vessel s1i_wide_shallow_cup in serving area"
+    },
+    {
+      "action_index": 30,
+      "action_instance_id": "act_030_pick_ab3_medium_deep_mug",
+      "arguments": [
+        "ab3_medium_deep_mug"
+      ],
+      "effects": {
+        "holding": "ab3_medium_deep_mug"
+      },
+      "operator": "PICK",
+      "preconditions": {
+        "hand_empty": true,
+        "object_accessible": "ab3_medium_deep_mug"
+      },
+      "reason": "Pick prepared coffee vessel ab3_medium_deep_mug for serving"
+    },
+    {
+      "action_index": 31,
+      "action_instance_id": "act_031_place_ab3_medium_deep_mug_serving_area",
+      "arguments": [
+        "ab3_medium_deep_mug",
+        "serving_area"
+      ],
+      "effects": {
+        "hand_empty": true,
+        "object_at": {
+          "ab3_medium_deep_mug": "serving_area"
+        },
+        "served": "ab3_medium_deep_mug"
+      },
+      "operator": "PLACE",
+      "preconditions": {
+        "holding": "ab3_medium_deep_mug"
+      },
+      "reason": "Place coffee vessel ab3_medium_deep_mug in serving area"
+    },
+    {
+      "action_index": 32,
+      "action_instance_id": "act_032_pick_ab3_shallow_bowl",
+      "arguments": [
+        "ab3_shallow_bowl"
+      ],
+      "effects": {
+        "holding": "ab3_shallow_bowl"
+      },
+      "operator": "PICK",
+      "preconditions": {
+        "hand_empty": true,
+        "object_accessible": "ab3_shallow_bowl"
+      },
+      "reason": "Pick soup bowl ab3_shallow_bowl for serving"
+    },
+    {
+      "action_index": 33,
+      "action_instance_id": "act_033_place_ab3_shallow_bowl_serving_area",
+      "arguments": [
+        "ab3_shallow_bowl",
+        "serving_area"
+      ],
+      "effects": {
+        "hand_empty": true,
+        "object_at": {
+          "ab3_shallow_bowl": "serving_area"
+        },
+        "served": "ab3_shallow_bowl"
+      },
+      "operator": "PLACE",
+      "preconditions": {
+        "holding": "ab3_shallow_bowl"
+      },
+      "reason": "Place soup bowl ab3_shallow_bowl in serving area"
+    },
+    {
+      "action_index": 34,
+      "action_instance_id": "act_034_pick_s1i_final_long_narrow_spoon",
+      "arguments": [
+        "s1i_final_long_narrow_spoon"
+      ],
+      "effects": {
+        "holding": "s1i_final_long_narrow_spoon"
+      },
+      "operator": "PICK",
+      "preconditions": {
+        "hand_empty": true,
+        "object_accessible": "s1i_final_long_narrow_spoon"
+      },
+      "reason": "Pick dedicated soup utensil s1i_final_long_narrow_spoon for ab3_shallow_bowl"
+    },
+    {
+      "action_index": 35,
+      "action_instance_id": "act_035_place_serving_utensil_s1i_final_long_narrow_spoon_ab3_shallow_bowl",
+      "arguments": [
+        "s1i_final_long_narrow_spoon",
+        "ab3_shallow_bowl"
+      ],
+      "effects": {
+        "hand_empty": true,
+        "utensil_paired": [
+          "s1i_final_long_narrow_spoon",
+          "ab3_shallow_bowl"
+        ]
+      },
+      "operator": "PLACE_SERVING_UTENSIL",
+      "preconditions": {
+        "holding": "s1i_final_long_narrow_spoon"
+      },
+      "reason": "Place soup utensil s1i_final_long_narrow_spoon with served soup bowl ab3_shallow_bowl"
+    },
+    {
+      "action_index": 36,
+      "action_instance_id": "act_036_pick_ab3_deep_bowl",
+      "arguments": [
+        "ab3_deep_bowl"
+      ],
+      "effects": {
+        "holding": "ab3_deep_bowl"
+      },
+      "operator": "PICK",
+      "preconditions": {
+        "hand_empty": true,
+        "object_accessible": "ab3_deep_bowl"
+      },
+      "reason": "Pick soup bowl ab3_deep_bowl for serving"
+    },
+    {
+      "action_index": 37,
+      "action_instance_id": "act_037_place_ab3_deep_bowl_serving_area",
+      "arguments": [
+        "ab3_deep_bowl",
+        "serving_area"
+      ],
+      "effects": {
+        "hand_empty": true,
+        "object_at": {
+          "ab3_deep_bowl": "serving_area"
+        },
+        "served": "ab3_deep_bowl"
+      },
+      "operator": "PLACE",
+      "preconditions": {
+        "holding": "ab3_deep_bowl"
+      },
+      "reason": "Place soup bowl ab3_deep_bowl in serving area"
+    },
+    {
+      "action_index": 38,
+      "action_instance_id": "act_038_pick_s1i_oversized_spoon",
+      "arguments": [
+        "s1i_oversized_spoon"
+      ],
+      "effects": {
+        "holding": "s1i_oversized_spoon"
+      },
+      "operator": "PICK",
+      "preconditions": {
+        "hand_empty": true,
+        "object_accessible": "s1i_oversized_spoon"
+      },
+      "reason": "Pick dedicated soup utensil s1i_oversized_spoon for ab3_deep_bowl"
+    },
+    {
+      "action_index": 39,
+      "action_instance_id": "act_039_place_serving_utensil_s1i_oversized_spoon_ab3_deep_bowl",
+      "arguments": [
+        "s1i_oversized_spoon",
+        "ab3_deep_bowl"
+      ],
+      "effects": {
+        "hand_empty": true,
+        "utensil_paired": [
+          "s1i_oversized_spoon",
+          "ab3_deep_bowl"
+        ]
+      },
+      "operator": "PLACE_SERVING_UTENSIL",
+      "preconditions": {
+        "holding": "s1i_oversized_spoon"
+      },
+      "reason": "Place soup utensil s1i_oversized_spoon with served soup bowl ab3_deep_bowl"
+    },
+    {
+      "action_index": 40,
+      "action_instance_id": "act_040_pick_s1i_narrow_deep_bowl",
+      "arguments": [
+        "s1i_narrow_deep_bowl"
+      ],
+      "effects": {
+        "holding": "s1i_narrow_deep_bowl"
+      },
+      "operator": "PICK",
+      "preconditions": {
+        "hand_empty": true,
+        "object_accessible": "s1i_narrow_deep_bowl"
+      },
+      "reason": "Pick soup bowl s1i_narrow_deep_bowl for serving"
+    },
+    {
+      "action_index": 41,
+      "action_instance_id": "act_041_place_s1i_narrow_deep_bowl_serving_area",
+      "arguments": [
+        "s1i_narrow_deep_bowl",
+        "serving_area"
+      ],
+      "effects": {
+        "hand_empty": true,
+        "object_at": {
+          "s1i_narrow_deep_bowl": "serving_area"
+        },
+        "served": "s1i_narrow_deep_bowl"
+      },
+      "operator": "PLACE",
+      "preconditions": {
+        "holding": "s1i_narrow_deep_bowl"
+      },
+      "reason": "Place soup bowl s1i_narrow_deep_bowl in serving area"
+    },
+    {
+      "action_index": 42,
+      "action_instance_id": "act_042_pick_s1i_c2_soup_spoon",
+      "arguments": [
+        "s1i_c2_soup_spoon"
+      ],
+      "effects": {
+        "holding": "s1i_c2_soup_spoon"
+      },
+      "operator": "PICK",
+      "preconditions": {
+        "hand_empty": true,
+        "object_accessible": "s1i_c2_soup_spoon"
+      },
+      "reason": "Pick dedicated soup utensil s1i_c2_soup_spoon for s1i_narrow_deep_bowl"
+    },
+    {
+      "action_index": 43,
+      "action_instance_id": "act_043_place_serving_utensil_s1i_c2_soup_spoon_s1i_narrow_deep_bowl",
+      "arguments": [
+        "s1i_c2_soup_spoon",
+        "s1i_narrow_deep_bowl"
+      ],
+      "effects": {
+        "hand_empty": true,
+        "utensil_paired": [
+          "s1i_c2_soup_spoon",
+          "s1i_narrow_deep_bowl"
+        ]
+      },
+      "operator": "PLACE_SERVING_UTENSIL",
+      "preconditions": {
+        "holding": "s1i_c2_soup_spoon"
+      },
+      "reason": "Place soup utensil s1i_c2_soup_spoon with served soup bowl s1i_narrow_deep_bowl"
+    }
+  ],
+  "total_actions": 43
+}

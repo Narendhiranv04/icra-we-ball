@@ -164,6 +164,8 @@ class PrivilegedOracleSemanticBackend(ObjectSemanticBackend):
             best_canonical = "wrench"
         elif "pliers" in best_name:
             best_canonical = "pliers"
+        elif "hammer" in best_name or "mallet" in best_name:
+            best_canonical = "hammer"
 
         return SemanticEvidence(
             canonical_label=best_canonical,

@@ -497,6 +497,11 @@ class InitialEvidenceCapture:
                     & np.isin(segmentation[..., 0], geom_ids)
                     for index, geom_ids in enumerate(free_groups)
                 }
+                payload_union = (
+                    np.any(np.stack(list(payload_masks.values())), axis=0)
+                    if payload_masks
+                    else np.zeros(depth.shape, dtype=bool)
+                )
                 region_masks = {}
                 region_points = {}
                 for selector_id, selector in self.config[
@@ -508,6 +513,15 @@ class InitialEvidenceCapture:
                         depth.shape,
                         selector["volume"],
                     )
+                    # Measure the fixed support surface, not a movable object
+                    # resting above it.  Instance masks come from rendered
+                    # segmentation and are used only to remove payload pixels
+                    # from the neutral region gate before plane extraction.
+                    if self.config["processing"].get(
+                        "exclude_payload_points_from_regions", False
+                    ):
+                        mask &= ~payload_union
+                        selected = world[mask[pixels[:, 0], pixels[:, 1]]]
                     region_masks[selector_id] = mask
                     region_points[selector_id] = selected
                 seat_masks = {}

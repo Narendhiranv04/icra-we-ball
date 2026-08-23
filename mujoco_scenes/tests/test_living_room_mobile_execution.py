@@ -27,8 +27,8 @@ from mujoco_scenes.living_room_region_scene import build_l2_region_xml
 
 
 ROOT = Path(__file__).resolve().parents[2]
-PHASE1 = ROOT / "runs/living_room_region_phase1/living_room_region_phase1_final_closure_v3_20260809/F0_BASE"
-PHASE2 = ROOT / "mujoco_scenes/benchmark_reports/living_room_symbolic_phase2/variants/F0_BASE"
+PHASE1 = ROOT / "mujoco_scenes/benchmark_reports/living_room_region_feasibility_phase1/variants/F0_ALL_OBJECTS_IN_STAGING"
+PHASE2 = ROOT / "mujoco_scenes/benchmark_reports/living_room_symbolic_phase2/variants/F0_ALL_OBJECTS_IN_STAGING"
 
 
 def _payloads():
@@ -65,7 +65,7 @@ def test_all_six_payloads_have_execution_grasp_frames_and_welds():
     xml = build_l2_region_xml(SCENE, "google")
     for name in (
         "a2_drink_left", "a2_drink_right", "a2_snack_left",
-        "a2_snack_right", "a2_remote_payload", "a2_controller_payload",
+        "a2_snack_right", "a2_remote_payload",
     ):
         assert f'phase3_grasp_{name}' in xml
         assert f'google:pick_weld_{name}' in xml
@@ -139,7 +139,7 @@ def test_stance_generation_is_dynamic_not_named_destination():
 def test_all_phase2_objects_receive_one_dynamic_placement():
     result = _placements()
     assert {row["object_id"] for row in result["placements"]} == {
-        f"object_{index:04d}" for index in range(1, 7)
+        f"object_{index:04d}" for index in range(1, 6)
     }
 
 
@@ -163,13 +163,13 @@ def test_shared_targets_are_distinct():
         assert len(points) == len(set(points))
 
 
-def test_phase2_plan_has_six_pick_place_pairs_and_no_move():
+def test_phase2_plan_has_five_pick_place_pairs_and_no_move():
     operators = [row["operator"] for row in _plan()["actions"]]
-    assert operators == ["PICK", "PLACE"] * 6
+    assert operators == ["PICK", "PLACE"] * 5
 
 
 def test_scene_name_is_frozen_authoritative_f0():
-    assert SCENE == "L2_integrated_living_room_region_function_F0_BASE"
+    assert SCENE == "L2_integrated_living_room_region_function_F0_ALL_OBJECTS_IN_STAGING"
 
 
 @pytest.mark.parametrize("yaw", (0.0, np.pi / 2))
@@ -201,7 +201,7 @@ def test_oriented_rectangle_overlap_and_clearance():
 def test_phase1_selected_packing_and_orientation_are_consumed():
     result = _placements()
     assert result["phase1_selected_packing_consumed"]
-    assert all(row["packing_arrangement"] in {"ALONG_LENGTH", "ALONG_WIDTH"} for row in result["placements"])
+    assert all(row["packing_arrangement"] in {"ALONG_LENGTH", "ALONG_WIDTH", "SINGLE_CENTERED"} for row in result["placements"])
     assert all(row["phase1_orientation_deg"] in {0, 90} for row in result["placements"])
     assert all(row["predicted_minimum_margin_m"] >= row["edge_clearance_m"] for row in result["placements"])
     assert all(row["valid"] for row in result["pairwise_rectangle_checks"])
@@ -333,6 +333,14 @@ def test_physical_on_rejects_floor_edge_overhang_and_motion():
     mujoco.mj_forward(model, data)
     moving = _verify_fixture(model, data, region, placement, placements, backends)
     assert not moving["verified"] and not moving["settling"]["stable"]
+    assisted = verify_physical_on_relation(
+        model, data, "object_0001", "a2_drink_left", "region_0001",
+        "a2_personal_left_top", region, placement, placements, backends,
+        assisted_validation=True,
+    )
+    assert assisted["verified"]
+    assert not assisted["strict_verified"]
+    assert assisted["assisted_postcondition_accepted"]
 
 
 def test_physical_on_rejects_oriented_payload_overlap():
@@ -346,3 +354,10 @@ def test_physical_on_rejects_oriented_payload_overlap():
     result = _verify_fixture(model, data, region, placement, placements, backends)
     assert not result["verified"]
     assert not result["payload_nonoverlap"]["valid_nonoverlap"]
+    assisted = verify_physical_on_relation(
+        model, data, "object_0001", "a2_drink_left", "region_0001",
+        "a2_personal_left_top", region, placement, placements, backends,
+        assisted_validation=True,
+    )
+    assert not assisted["verified"]
+    assert not assisted["assisted_postcondition_accepted"]

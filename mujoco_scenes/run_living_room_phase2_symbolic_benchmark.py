@@ -17,6 +17,7 @@ from .living_room_symbolic_planning import (
     SOURCE_PHASE1_COMMIT,
     run_living_room_symbolic_pipeline,
 )
+from .living_room_variants import load_living_room_variants
 
 
 DEFAULT_PHASE1 = Path(__file__).parent / "benchmark_reports" / "living_room_region_feasibility_phase1"
@@ -51,15 +52,21 @@ def _guards(source_root: Path, output_root: Path, rows: list[dict]) -> dict:
         "infeasible_witnesses_rejected": all(row["compilation_status"] == "REJECTED" for row in infeasible),
         "infeasible_rejection_reason_exact": all(row["reason"] == "FUNCTIONAL_WITNESS_NOT_COMPLETE" for row in infeasible),
         "planner_not_invoked_for_infeasible": all(not row["planner_invoked"] for row in infeasible),
-        "six_payload_goals": all(row["goal_count"] == 6 for row in feasible),
+        "five_payload_goals": all(row["goal_count"] == 5 for row in feasible),
         "all_feasible_plans_succeed": all(row["planning_status"] == "SUCCESS" for row in feasible),
         "all_replays_goal_satisfied": all(row["goal_status"] == "GOAL_SATISFIED" for row in feasible),
         "unit_plan_costs": all(row["plan_cost"] == row["plan_length"] for row in feasible),
-        "optimal_twelve_action_plans": all(row["plan_length"] == 12 for row in feasible),
+        "optimal_actions_skip_preplaced_objects": all(
+            row["plan_length"] == (8 if row["variant"] in {
+                "F1_LEFT_SAUCER_PREPLACED",
+                "F4_SAUCER_PREPLACED_CUP_ON_SHARED",
+            } else 10)
+            for row in feasible
+        ),
         "operator_subset_pick_place": all(set(row["operators"]) <= {"PICK", "PLACE"} for row in feasible),
         "generic_payload_ids_only": all(row["generic_ids_only"] for row in feasible),
         "exact_witness_bindings_preserved": all(row["binding_preserved"] for row in feasible),
-        "f6_uses_selected_witness": next(row for row in rows if row["variant"] == "F6_DECOY_SURPLUS")["binding_preserved"],
+        "f5_uses_selected_witness": next(row for row in rows if row["variant"] == "F5_LEFT_PAIR_ON_SHARED")["binding_preserved"],
         "deterministic_repeatability": all(row["repeatable"] for row in feasible),
         "compiler_has_no_oracle_import": "oracle" not in "\n".join(line for line in module_text.splitlines() if line.startswith(("import ", "from "))).lower(),
         "compiler_has_no_mujoco_import": "mujoco" not in "\n".join(line for line in module_text.splitlines() if line.startswith(("import ", "from "))).lower(),
@@ -82,8 +89,10 @@ def _guards(source_root: Path, output_root: Path, rows: list[dict]) -> dict:
 def run_benchmark(source_root: Path, output_root: Path) -> dict[str, Any]:
     variants_root = source_root / "variants"
     variant_dirs = sorted(path for path in variants_root.iterdir() if path.is_dir())
-    if len(variant_dirs) != 13:
-        raise RuntimeError(f"Expected 13 frozen variants, found {len(variant_dirs)}")
+    expected_variants = set(load_living_room_variants())
+    variant_dirs = [path for path in variant_dirs if path.name in expected_variants]
+    if {path.name for path in variant_dirs} != expected_variants:
+        raise RuntimeError("Frozen Phase-1 variants do not match the 10-variant contract")
     rows = []
     for variant_dir in variant_dirs:
         variant_output = output_root / "variants" / variant_dir.name
@@ -193,7 +202,7 @@ This tracked report compiles the frozen production-only Region-Function Phase-1
 witnesses into minimal classical placement problems. It does not rerun MuJoCo,
 RGB-D perception, semantic detection, geometry, or functional allocation.
 
-For every `COMPLETE` witness, the compiler maps all six generic payload IDs to
+For every `COMPLETE` witness, the compiler maps all five generic payload IDs to
 the exact generic region IDs selected by Phase 1. The initial abstraction is
 `AVAILABLE(object)` plus `HAND_EMPTY`; no unobserved staging surface is
 fabricated. Deterministic A* searches grounded `PICK` and `PLACE` operators.

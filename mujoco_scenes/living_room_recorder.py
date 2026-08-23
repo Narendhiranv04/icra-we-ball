@@ -16,6 +16,8 @@ import mujoco
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
+from .live_mosaic_viewer import LiveMosaicViewer
+
 
 L2_FIVE_CAMERAS = (
     "l2_camera_left",
@@ -76,7 +78,15 @@ class LivingRoomRecorder:
         self.total_frames_captured = 0
         self.wall_start_time = time.perf_counter()
         self.aborted_by_user = False
-        self.gui_available = True
+        self.live_viewer = (
+            LiveMosaicViewer(
+                self.mosaic_width,
+                self.mosaic_height,
+                self.fps,
+                "Living Room Mobile Execution (5 Cameras)",
+            )
+            if self.show else None
+        )
 
         # Initialize MuJoCo renderer for camera tile size
         self.renderer = mujoco.Renderer(
@@ -255,16 +265,8 @@ class LivingRoomRecorder:
                 self.video_writer.write(mosaic_bgr)
 
         # Show live GUI if requested
-        if self.show and self.gui_available:
-            try:
-                mosaic_bgr = cv2.cvtColor(mosaic_rgb, cv2.COLOR_RGB2BGR)
-                cv2.imshow("Living Room Mobile Execution (5 Cameras)", mosaic_bgr)
-                key = cv2.waitKey(1) & 0xFF
-                if key in (27, ord("q"), ord("Q")):
-                    self.aborted_by_user = True
-            except Exception as error:
-                print(f"WARNING: OpenCV GUI unavailable ({error}); continuing with recording only.")
-                self.gui_available = False
+        if self.live_viewer is not None:
+            self.live_viewer.show(mosaic_rgb)
 
         return mosaic_rgb
 
@@ -294,11 +296,9 @@ class LivingRoomRecorder:
                 pass
             self.video_writer = None
 
-        if self.show:
-            try:
-                cv2.destroyAllWindows()
-            except Exception:
-                pass
+        if self.live_viewer is not None:
+            self.live_viewer.close()
+            self.live_viewer = None
 
         if hasattr(self, "renderer") and self.renderer is not None:
             try:

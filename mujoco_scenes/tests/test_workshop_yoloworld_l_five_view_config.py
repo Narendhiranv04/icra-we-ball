@@ -12,7 +12,7 @@ from mujoco_scenes.workshop_phase1.requirements import ManualWorkshopFMContract
 ROOT = Path(__file__).resolve().parents[2]
 RIG_PATH = ROOT / "mujoco_scenes/configs/workshop_inspection_rigs_yoloworld_l_five_view_close.yaml"
 PHASE_PATH = ROOT / "mujoco_scenes/configs/workshop_phase1_yoloworld_l_five_view_close.yaml"
-CONTRACT_PATH = ROOT / "mujoco_scenes/configs/workshop_phase1_fm_contract_yoloworld_l.yaml"
+CONTRACT_PATH = ROOT / "mujoco_scenes/configs/workshop_phase1_fm_contract.yaml"
 VISUAL_PATH = ROOT / "mujoco_scenes/configs/workshop_visual_profile_yoloworld_l.yaml"
 GEOMETRY_PATH = ROOT / "mujoco_scenes/configs/workshop_geometry_inference_yoloworld_l.yaml"
 
@@ -38,7 +38,7 @@ class TestWorkshopYoloWorldLFiveViewConfig(unittest.TestCase):
         self.assertEqual(config["pipeline"]["geometry_config_path"], str(GEOMETRY_PATH.relative_to(ROOT)))
         self.assertIn("cordless power drill", config["perception"]["detector"]["supplemental_prompts"])
         self.assertIn("Phillips head screw", config["perception"]["detector"]["supplemental_prompts"])
-        self.assertFalse(config["inspection"]["early_stop"])
+        self.assertTrue(config["inspection"]["early_stop"])
         self.assertTrue(config["artifacts"]["save_all_detection_overlays"])
         self.assertTrue(config["artifacts"]["save_all_bbox_predictions"])
         self.assertTrue(config["artifacts"]["save_raw_rgb"])
@@ -57,15 +57,6 @@ class TestWorkshopYoloWorldLFiveViewConfig(unittest.TestCase):
         }
         self.assertTrue(driver_names.isdisjoint(profile.get("geoms", {})))
         self.assertEqual(
-            set(profile["variant_overrides"]),
-            {"F3_DISTRIBUTED_OBJECTS", "F6_LAYOUT_SWAPPED"},
-        )
-        for override in profile["variant_overrides"].values():
-            self.assertEqual(
-                override["geoms"]["workshop_long_phillips_driver_vis"]["rgba"],
-                [0.0, 0.0, 0.0, 0.0],
-            )
-        self.assertEqual(
             profile["geom_prefixes"]["workshop_medium_phillips_screw_profile_"]["rgba"],
             [0.24, 0.27, 0.31, 1.0],
         )
@@ -79,12 +70,9 @@ class TestWorkshopYoloWorldLFiveViewConfig(unittest.TestCase):
         entries = contract.get_ranked_detector_vocabulary()
         self.assertEqual(
             {entry["canonical_label"] for entry in entries},
-            {
-                "screwdriver", "power_driver", "screw", "bolt", "wrench", "pliers",
-                "workbench", "tool_cart", "shelf", "parts_tray", "hardware_bin",
-            },
+            {"screwdriver", "power_driver", "screw", "hammer"},
         )
-        self.assertEqual(len(contract.get_detector_prompts()), 11)
+        self.assertEqual(len(contract.get_detector_prompts()), 4)
 
     def test_l_geometry_rejects_oversized_driver_fragments(self):
         geometry = yaml.safe_load(GEOMETRY_PATH.read_text(encoding="utf-8"))

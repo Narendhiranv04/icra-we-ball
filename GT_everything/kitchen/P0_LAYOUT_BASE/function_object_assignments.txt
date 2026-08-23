@@ -1,0 +1,15 @@
+Environment: kitchen
+Variant: P0_LAYOUT_BASE
+Intended outcome: FEASIBLE
+Feasible: True
+Failure reason: NONE
+
+FUNCTION -> OBJECT ASSIGNMENTS
+coffee_source -> s1i_compact_coffee_jar_2
+water_source -> s1i_compact_kettle
+STIR_COFFEE(ab3_narrow_deep_cup) -> s1i_final_long_narrow_spoon
+STIR_COFFEE(s1i_wide_shallow_cup) -> s1i_final_long_narrow_spoon
+STIR_COFFEE(ab3_medium_deep_mug) -> s1i_final_long_narrow_spoon
+SERVING_UTENSIL(ab3_shallow_bowl) -> s1i_final_long_narrow_spoon
+SERVING_UTENSIL(ab3_deep_bowl) -> s1i_oversized_spoon
+SERVING_UTENSIL(s1i_narrow_deep_bowl) -> s1i_c2_soup_spoon

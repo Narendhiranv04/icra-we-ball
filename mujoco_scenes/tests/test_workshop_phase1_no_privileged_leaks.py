@@ -62,7 +62,7 @@ def test_no_static_closed_set_in_perception():
 
 def test_dynamic_monkeypatch_no_privileged_calls():
     """Dynamic test: monkeypatch all privileged methods on WorkshopScene to raise RuntimeError and verify production execution succeeds."""
-    scene = WorkshopScene("none", variant="F0_BASE")
+    scene = WorkshopScene("none", variant="F0_MANUAL_FIRST_ONE_REGION")
 
     def forbidden_trap(*args, **kwargs):
         raise RuntimeError("PRIVILEGE VIOLATION: Production code attempted to call a privileged oracle method!")
@@ -84,7 +84,7 @@ def test_dynamic_monkeypatch_no_privileged_calls():
 
 def test_output_json_contains_zero_simulator_names():
     """Verify that all production JSON dumps contain generic IDs only and zero simulator backend body strings."""
-    scene = WorkshopScene("none", variant="F0_BASE")
+    scene = WorkshopScene("none", variant="F0_MANUAL_FIRST_ONE_REGION")
 
     with tempfile.TemporaryDirectory() as tmpdir:
         out_dir = Path(tmpdir)

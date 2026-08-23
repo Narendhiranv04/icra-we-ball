@@ -21,6 +21,10 @@ from mujoco_scenes.scene_loader import (
     _load_google_binary_assets,
     _load_object_binary_assets,
 )
+from mujoco_scenes.living_room_variants import (
+    PREFIX as LIVING_ROOM_VARIANT_PREFIX,
+    load_living_room_variants,
+)
 
 
 ROOT = Path(__file__).resolve().parent
@@ -43,20 +47,9 @@ L2_ABLATION3_SCENES = (
     "L2_living_room_region_ablation3_valid",
     "L2_living_room_region_ablation3_permuted",
 )
-L2_INTEGRATED_SCENES = (
-    "L2_integrated_living_room_region_function_F0_BASE",
-    "L2_integrated_living_room_region_function_F1_LAYOUT_SWAPPED",
-    "L2_integrated_living_room_region_function_F2_INSTANCE_ORDER_PERMUTED",
-    "L2_integrated_living_room_region_function_F3_GLOBAL_MATCHING_REQUIRED",
-    "L2_integrated_living_room_region_function_F4_PERSONAL_GEOMETRY_ALTERNATIVE",
-    "L2_integrated_living_room_region_function_F5_SHARED_ALTERNATIVE",
-    "L2_integrated_living_room_region_function_F6_DECOY_SURPLUS",
-    "L2_integrated_living_room_region_function_I0_PERSONAL_SEMANTIC_DEFICIT",
-    "L2_integrated_living_room_region_function_I1_PERSONAL_GEOMETRY_DEFICIT",
-    "L2_integrated_living_room_region_function_I2_PERSONAL_TARGET_COVERAGE_FAILURE",
-    "L2_integrated_living_room_region_function_I3_SHARED_FIT_FAILURE",
-    "L2_integrated_living_room_region_function_I4_SHARED_CONTEXT_FAILURE",
-    "L2_integrated_living_room_region_function_I5_CROSS_FUNCTION_CONFLICT",
+L2_INTEGRATED_SCENES = tuple(
+    LIVING_ROOM_VARIANT_PREFIX + variant_id
+    for variant_id in load_living_room_variants()
 )
 L2_SCENES = (
     L2_ABLATION1_SCENES
@@ -92,21 +85,19 @@ L2_ABLATION3_GOAL = (
 )
 L2_INTEGRATED_GOAL = (
     "Prepare the living room for two people watching television. Place one "
-    "refreshment set within easy reach of each person's seating position, "
-    "and place the TV remote and game controller together on a suitable "
-    "shared surface accessible to both people."
+    "cup and one saucer on each person's fixed individual side table, and "
+    "place the TV remote on the fixed shared coffee table."
 )
 
 # Canonical integrated-room construction coordinates.  They are used only to
 # build the rendered simulator and opaque evidence gates; production grounding
 # receives RGB-D, masks, calibration, and measured point clouds instead.
 INTEGRATED_ROOM_LAYOUT = {
-    "chair_left": (-1.15, 1.25),
-    "chair_right": (1.15, 1.25),
-    "side_table_left": (-1.88, 1.18),
-    "side_table_right": (1.88, 1.18),
-    "accent_table": (-0.90, 0.05),
-    "coffee_table": (0.0, 0.56),
+    "chair_left": (-0.98, 1.08),
+    "chair_right": (0.98, 1.08),
+    "side_table_left": (-1.72, 1.02),
+    "side_table_right": (1.72, 1.02),
+    "coffee_table": (0.0, 0.62),
     "media_console": (0.0, 2.43),
     "staging_table": (0.0, -1.72),
     "rug": (0.0, 0.58),
@@ -162,6 +153,7 @@ def _apply_movie_night_visuals(root: ET.Element, ablation2: bool) -> None:
         ("material", {"name": "movie_walnut_mat", "texture": "movie_walnut", "roughness": "0.55"}),
         ("material", {"name": "movie_oak_mat", "texture": "movie_oak", "roughness": "0.58"}),
         ("material", {"name": "movie_remote_charcoal_mat", "texture": "movie_remote_charcoal", "roughness": "0.68"}),
+        ("material", {"name": "movie_saucer_mat", "rgba": "0.92 0.94 0.96 1", "roughness": "0.38"}),
         ("material", {"name": "movie_rug_mat", "rgba": "0.36 0.34 0.30 1", "roughness": "0.94"}),
         ("material", {"name": "movie_lamp_mat", "rgba": "0.63 0.57 0.48 1", "roughness": "0.50"}),
         ("material", {"name": "movie_pot_mat", "rgba": "0.45 0.25 0.15 1", "roughness": "0.72"}),
@@ -584,6 +576,9 @@ def _configure_integrated_base_room(root: ET.Element) -> None:
         },
     )
     worldbody = root.find("worldbody")
+    # The redesigned benchmark has exactly three placement regions.  The old
+    # alternate support and game controller are not part of the scene.
+    _remove_world_bodies(root, {"a2_shared_drink_trap", "a2_controller_payload"})
     _remove_world_bodies(
         root,
         {
@@ -599,7 +594,6 @@ def _configure_integrated_base_room(root: ET.Element) -> None:
         "a2_seat_right",
         "a2_personal_left",
         "a2_personal_right",
-        "a2_shared_drink_trap",
         "a2_control_table",
         "a2_media_wall",
     ):
@@ -665,23 +659,6 @@ def _configure_integrated_base_room(root: ET.Element) -> None:
             root, body_name, "side_table_01", (x, y, 0.0), (1.0, 1.0, 1.0)
         )
 
-    x, y = INTEGRATED_ROOM_LAYOUT["accent_table"]
-    # Compact, isotropically scaled accent table. Its observed top is a little
-    # too small for a two-item refreshment set, so F0 has one complete physical
-    # allocation rather than an accidental second solution.
-    _set_box_geom(
-        root, "a2_shared_drink_top", (x, y, 0.401),
-        (0.150, 0.150, 0.014),
-    )
-    for geom in root.find(".//body[@name='a2_shared_drink_trap']").findall("geom"):
-        if geom.get("name") != "a2_shared_drink_top":
-            geom.set("rgba", "0 0 0 0")
-            geom.set("group", "3")
-    _set_realistic_visual(
-        root, "a2_shared_drink_trap", "WoodenTable_02",
-        (x, y, 0.0), (1.0, 1.0, 1.0),
-    )
-
     x, y = INTEGRATED_ROOM_LAYOUT["coffee_table"]
     _set_box_geom(root, "a2_control_table_top", (x, y, 0.377), (0.578, 0.365, 0.016))
     for geom in root.find(".//body[@name='a2_control_table']").findall("geom"):
@@ -728,14 +705,13 @@ def _configure_integrated_base_room(root: ET.Element) -> None:
         root, "a2_staging", "chinese_console_table", (x, y, 0.0), (0.80, 1.45, 1.10)
     )
 
-    # Six payloads are arranged as two observed proximity pairs plus controls.
+    # Five payloads: two cup/saucer pairs and one shared TV remote.
     payload_positions = {
         "a2_drink_left": (-0.50, -1.80, 0.810),
-        "a2_snack_left": (-0.23, -1.80, 0.765),
+        "a2_snack_left": (-0.23, -1.80, 0.737),
         "a2_drink_right": (0.18, -1.80, 0.810),
-        "a2_snack_right": (0.45, -1.80, 0.765),
-        "a2_remote_payload": (-0.20, -1.58, 0.755),
-        "a2_controller_payload": (0.25, -1.57, 0.770),
+        "a2_snack_right": (0.45, -1.80, 0.737),
+        "a2_remote_payload": (0.0, -1.58, 0.755),
     }
     for body_name, position in payload_positions.items():
         body = root.find(f".//body[@name='{body_name}']")
@@ -748,13 +724,39 @@ def _configure_integrated_base_room(root: ET.Element) -> None:
     )
     second_mug_visual.set("mesh", "movie_ycb_mug")
     second_mug_visual.set("material", "movie_ycb_mug_mat")
+    # Replace the old bowl visuals with shallow saucers while retaining the
+    # stable free bodies and collision-backed manipulation interfaces.
+    for body_name in ("a2_snack_left", "a2_snack_right"):
+        body = root.find(f".//body[@name='{body_name}']")
+        for geom in list(body.findall("geom")):
+            if geom.get("contype", "1") == "0":
+                body.remove(geom)
+            else:
+                geom.set("type", "cylinder")
+                geom.set("size", "0.095 0.008")
+                geom.set("rgba", "0 0 0 0")
+                geom.set("group", "3")
+                geom.set("contype", "1")
+                geom.set("conaffinity", "1")
+                geom.set("condim", "4")
+                geom.set("friction", "0.9 0.02 0.002")
+                geom.set("solref", "0.002 1")
+                geom.set("solimp", "0.95 0.99 0.001")
+                geom.attrib.pop("mesh", None)
+                geom.attrib.pop("material", None)
+        ET.SubElement(body, "geom", {
+            "name": f"{body_name}_saucer_visual",
+            "type": "cylinder", "size": "0.095 0.010",
+            "material": "movie_saucer_mat", "contype": "0",
+            "conaffinity": "0", "mass": "0", "group": "2",
+        })
 
     camera_specs = {
         "l2_camera_left": ((-3.05, -2.72, 2.25), (0.0, 0.25, 0.65), 74.0),
         "l2_camera_right": ((3.05, -2.72, 2.25), (0.0, 0.25, 0.65), 74.0),
         "l2_camera_top": ((0.0, -0.25, 4.65), (0.0, 0.20, 0.30), 72.0),
         "l2_camera_front": ((0.0, -2.75, 1.45), (0.0, -1.66, 0.72), 56.0),
-        "l2_camera_close": ((0.0, -0.72, 1.45), (0.0, -1.72, 0.72), 62.0),
+        "l2_camera_close": ((-1.70, 2.50, 1.75), (-0.80, 0.82, 0.50), 65.0),
     }
     for camera_name, (position, target, fovy) in camera_specs.items():
         camera = root.find(f".//camera[@name='{camera_name}']")
@@ -867,127 +869,39 @@ def _integrated_scene_code(scene_name: str) -> str:
 
 
 def _configure_integrated_scene(root: ET.Element, scene_name: str) -> None:
-    """Apply controlled physical changes to the canonical apartment."""
-    code = scene_name.removeprefix(
-        "L2_integrated_living_room_region_function_"
-    )
-    if code == "F1_LAYOUT_SWAPPED":
-        # The task remains unchanged while the alternate accent support and
-        # the two observed refreshment pairs exchange sides.
-        _translate_body_geoms(root, "a2_shared_drink_trap", (0.90, 0.05))
-        for first, second in (
-            ("a2_drink_left", "a2_drink_right"),
-            ("a2_snack_left", "a2_snack_right"),
-        ):
-            first_body = root.find(f".//body[@name='{first}']")
-            second_body = root.find(f".//body[@name='{second}']")
-            first_position = first_body.get("pos")
-            first_body.set("pos", second_body.get("pos"))
-            second_body.set("pos", first_position)
-    elif code == "F2_INSTANCE_ORDER_PERMUTED":
-        first_drink = root.find(".//body[@name='a2_drink_left']")
-        first_snack = root.find(".//body[@name='a2_snack_left']")
-        drink_position = first_drink.get("pos")
-        first_drink.set("pos", first_snack.get("pos"))
-        first_snack.set("pos", drink_position)
-        worldbody = root.find("worldbody")
-        movable = [
-            child
-            for child in list(worldbody)
-            if child.tag == "body" and child.find("freejoint") is not None
-        ]
-        for child in movable:
-            worldbody.remove(child)
-        for child in reversed(movable):
-            worldbody.append(child)
-    elif code == "F3_GLOBAL_MATCHING_REQUIRED":
-        # surface_02 becomes physically compatible with both seats.  Stable
-        # ranks make a naive slot-order greedy choice strand seat_0002, while
-        # exhaustive matching assigns surface_01 to seat_0001 first.
-        _translate_body_geoms(root, "a2_personal_right", (0.0, 1.16))
-    elif code == "F4_PERSONAL_GEOMETRY_ALTERNATIVE":
-        _set_box_geom(root, "a2_personal_left_top", (-1.88, 1.18, 0.382), (0.143, 0.143, 0.014))
-        _set_realistic_visual(
-            root, "a2_personal_left", "WoodenTable_02",
-            (-1.88, 1.18, 0.0), (0.95, 0.95, 0.95),
-        )
-        _translate_body_geoms(root, "a2_shared_drink_trap", (-1.55, 0.55))
-        _set_box_geom(
-            root, "a2_shared_drink_top", (-1.55, 0.55, 0.468),
-            (0.170, 0.162, 0.014),
-        )
-        # The alternative remains physically compact, but uses the same
-        # category-faithful side-table scan as the canonical candidates.  Its
-        # semantic evidence must therefore come from RGB appearance rather
-        # than a function-specific detector label.
-        _set_realistic_visual(
-            root, "a2_shared_drink_trap", "side_table_01",
-            (-1.55, 0.55, 0.0), (0.60, 0.72, 0.88),
-        )
-    elif code == "F5_SHARED_ALTERNATIVE":
-        _translate_body_geoms(root, "a2_control_table", (2.45, 0.10))
-        _set_box_geom(root, "a2_shared_drink_top", (0.0, 1.05, 0.535), (0.275, 0.225, 0.016))
-        _set_realistic_visual(
-            root, "a2_shared_drink_trap", "side_table_01",
-            (0.0, 1.05, 0.0), (1.0, 1.0, 1.0),
-        )
-    elif code == "F6_DECOY_SURPLUS":
-        # A central, flexible side table creates additional complete personal
-        # assignments while the ordinary coffee-table shared solution remains.
-        # Move the coffee table forward so the central table does not occlude
-        # its RGB appearance in the room-facing semantic views.
-        _translate_body_geoms(root, "a2_control_table", (0.0, 0.20))
-        _set_box_geom(root, "a2_shared_drink_top", (0.0, 1.16, 0.535), (0.275, 0.225, 0.016))
-        _set_realistic_visual(
-            root, "a2_shared_drink_trap", "side_table_01",
-            (0.0, 1.16, 0.0), (1.0, 1.0, 1.0),
-        )
-    elif code == "I0_PERSONAL_SEMANTIC_DEFICIT":
-        # Two geometrically adequate, category-faithful coffee tables remain
-        # near seat_0002, but the observed coffee-table category is excluded
-        # from the personal role.  Canonical proportions avoid turning the
-        # semantic deficit into an ambiguous side-table appearance.
-        _set_box_geom(root, "a2_personal_right_top", (2.25, 1.15, 0.377), (0.578, 0.365, 0.016))
-        _set_realistic_visual(
-            root, "a2_personal_right", "CoffeeTable_01",
-            (2.25, 1.15, 0.0), (0.75, 0.75, 0.75),
-        )
-        _set_box_geom(root, "a2_shared_drink_top", (1.55, 0.15, 0.377), (0.578, 0.365, 0.016))
-        _set_realistic_visual(
-            root, "a2_shared_drink_trap", "CoffeeTable_01",
-            (1.55, 0.15, 0.0), (0.75, 0.75, 0.75),
-        )
-    elif code == "I1_PERSONAL_GEOMETRY_DEFICIT":
-        for body_name, top_name, (x, y) in (
-            ("a2_personal_left", "a2_personal_left_top", (-1.88, 1.18)),
-            ("a2_personal_right", "a2_personal_right_top", (1.88, 1.18)),
-            ("a2_shared_drink_trap", "a2_shared_drink_top", (-0.90, 0.05)),
-        ):
-            _set_box_geom(root, top_name, (x, y, 0.362), (0.135, 0.135, 0.014))
-            _set_realistic_visual(
-                root, body_name, "WoodenTable_02", (x, y, 0.0),
-                (0.90, 0.90, 0.90),
-            )
-    elif code == "I2_PERSONAL_TARGET_COVERAGE_FAILURE":
-        _translate_body_geoms(root, "a2_personal_right", (-1.45, 0.45))
-        _translate_body_geoms(root, "a2_shared_drink_trap", (-2.05, 0.65))
-    elif code == "I3_SHARED_FIT_FAILURE":
-        # Natural, compact and isotropic: semantic/planar/access evidence can
-        # pass while two-control packing fails for the intended physical cause.
-        _set_box_geom(
-            root, "a2_control_table_top", (0.0, 0.56, 0.401),
-            (0.150, 0.150, 0.014),
-        )
-        _set_realistic_visual(
-            root, "a2_control_table", "WoodenTable_02",
-            (0.0, 0.56, 0.0), (1.0, 1.0, 1.0),
-        )
-    elif code == "I4_SHARED_CONTEXT_FAILURE":
-        _translate_body_geoms(root, "a2_control_table", (2.45, 0.15))
-    elif code == "I5_CROSS_FUNCTION_CONFLICT":
-        _translate_body_geoms(root, "a2_control_table", (2.45, 0.15))
-        _translate_body_geoms(root, "a2_personal_right", (0.0, 1.10))
-        _translate_body_geoms(root, "a2_shared_drink_trap", (-2.45, 0.10))
+    """Apply only object-location or table-presence changes."""
+    code = scene_name.removeprefix(LIVING_ROOM_VARIANT_PREFIX)
+    spec = load_living_room_variants()[code]
+    # The fixed benchmark has exactly three inspectable destination regions.
+    # Remove the decorative rug as well: because the shared coffee table sits
+    # above it, large full-frame rug detections can otherwise overlap the
+    # table's segmentation mask and incorrectly win semantic association.
+    _remove_world_bodies(root, {"a2_rug"})
+    region_bodies = {
+        "PERSONAL_TABLE_LEFT": "a2_personal_left",
+        "PERSONAL_TABLE_RIGHT": "a2_personal_right",
+        "SHARED_TABLE": "a2_control_table",
+    }
+    for region_id in spec.get("absent_regions", []):
+        _remove_world_bodies(root, {region_bodies[region_id]})
+
+    placements = {
+        "PERSONAL_TABLE_LEFT": {
+            "a2_drink_left": (-1.80, 1.02, 0.622),
+            "a2_snack_left": (-1.72, 0.90, 0.561),
+        },
+        "PERSONAL_TABLE_RIGHT": {
+            "a2_drink_right": (1.62, 1.02, 0.622),
+            "a2_snack_right": (1.80, 1.02, 0.561),
+        },
+        "SHARED_TABLE": {
+            "a2_drink_left": (-0.16, 0.62, 0.464),
+            "a2_snack_left": (0.20, 0.40, 0.403),
+        },
+    }
+    for body_name, region_id in spec.get("object_locations", {}).items():
+        body = root.find(f".//body[@name='{body_name}']")
+        body.set("pos", " ".join(map(str, placements[region_id][body_name])))
 
 
 def _add_integrated_execution_annotations(root: ET.Element) -> None:
@@ -1000,10 +914,9 @@ def _add_integrated_execution_annotations(root: ET.Element) -> None:
     grasp_frames = {
         "a2_drink_left": ((0.0, 0.0, 0.035), "0.006"),
         "a2_drink_right": ((0.0, 0.0, 0.035), "0.006"),
-        "a2_snack_left": ((0.0, 0.0, 0.020), "0.006"),
-        "a2_snack_right": ((0.0, 0.0, 0.020), "0.006"),
+        "a2_snack_left": ((0.0, 0.0, 0.010), "0.006"),
+        "a2_snack_right": ((0.0, 0.0, 0.010), "0.006"),
         "a2_remote_payload": ((0.0, 0.0, 0.020), "0.005"),
-        "a2_controller_payload": ((0.0, 0.0, 0.026), "0.005"),
     }
     for body_name, (position, size) in grasp_frames.items():
         body = root.find(f".//body[@name='{body_name}']")
@@ -1219,18 +1132,30 @@ class L2LivingRoomRegionScene:
                 # Translational and angular damping have different units.
                 # Applying 2.0 to the tiny rotational inertias of scanned
                 # mugs made the explicit dynamics unstable on first support
-                # contact.  These values dissipate free-body drift without
-                # producing negative numerical damping.
+                # contact. A bounded 0.30 angular value removes residual
+                # free-payload edge-roll while remaining far below that
+                # unstable setting. Strict execution still reports any final
+                # yaw drift; the optional GT assistance profile can accept it
+                # only when every structural ON-relation check passes.
+                angular_damping = 0.30
                 self.model.dof_damping[dof_address:dof_address + 6] = (
-                    0.25, 0.25, 0.25, 0.02, 0.02, 0.02
+                    0.25, 0.25, 0.25,
+                    angular_damping, angular_damping, angular_damping,
                 )
         mujoco.mj_forward(self.model, self.data)
         for _ in range(600):
             mujoco.mj_step(self.model, self.data)
         print(f"  Robot: {robot}")
+        integrated_support_count = sum(
+            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, name) >= 0
+            for name in (
+                "a2_personal_left_top", "a2_personal_right_top",
+                "a2_control_table_top",
+            )
+        )
         print(
             "  Candidate supports: "
-            f"{2 if scene_name in L2_ABLATION3_SCENES else 5 if scene_name in L2_ABLATION2_SCENES + L2_INTEGRATED_SCENES else 3}"
+            f"{integrated_support_count if scene_name in L2_INTEGRATED_SCENES else 2 if scene_name in L2_ABLATION3_SCENES else 5 if scene_name in L2_ABLATION2_SCENES else 3}"
         )
         print("  Scene ready.\n")
 
@@ -1294,12 +1219,25 @@ class L2LivingRoomRegionScene:
             + L2_INTEGRATED_SCENES
         ):
             ablation3 = self.scene_name in L2_ABLATION3_SCENES
+            integrated = self.scene_name in L2_INTEGRATED_SCENES
+            if integrated:
+                region_count = sum(
+                    mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, name) >= 0
+                    for name in (
+                        "a2_personal_left_top", "a2_personal_right_top",
+                        "a2_control_table_top",
+                    )
+                )
+                payload_count = 5
+            else:
+                region_count = 2 if ablation3 else 5
+                payload_count = 2 if ablation3 else 6
             print(
-                f"Candidate regions:  {2 if ablation3 else 5}, "
+                f"Candidate regions:  {region_count}, "
                 "all visible initially"
             )
             print(
-                f"Fixed payloads:      {2 if ablation3 else 6}, "
+                f"Fixed payloads:      {payload_count}, "
                 "discovered from RGB-D evidence"
             )
             print("Seating targets:     2, spatially distinct")
