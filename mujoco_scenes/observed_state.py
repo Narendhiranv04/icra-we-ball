@@ -202,6 +202,7 @@ class ObservedStateRun:
         grounding_mode: str = "geometry-only",
         pairing_strategy: str | None = None,
         save_semantic_overlays: bool = False,
+        record_oracle_diagnostics: bool = True,
         run_config: dict[str, Any] | None = None,
     ):
         self.run_dir = Path(run_dir).resolve()
@@ -254,6 +255,7 @@ class ObservedStateRun:
                 / "semantic_grounding.yaml"
             )
         self.save_semantic_overlays = bool(save_semantic_overlays)
+        self.record_oracle_diagnostics = bool(record_oracle_diagnostics)
         if isinstance(task_requirements, dict):
             task_source = "inline"
         else:
@@ -319,6 +321,7 @@ class ObservedStateRun:
             "grounding_mode": grounding_mode,
             "pairing_strategy": self.pairing_strategy,
             "semantic_detector_enabled": self.semantic_enabled,
+            "record_oracle_diagnostics": self.record_oracle_diagnostics,
             "task_requirements": task_source,
             "task_id": self.task_requirements["task_id"],
             **(run_config or {}),
@@ -335,7 +338,11 @@ class ObservedStateRun:
                     "specification_source": self.task_requirements.get(
                         "specification_source"
                     ),
-                    "generated_from_foundation_model": False,
+                    "generated_from_foundation_model": bool(
+                        self.task_requirements.get(
+                            "generated_from_foundation_model", False
+                        )
+                    ),
                 },
             )
         _atomic_json(
@@ -362,6 +369,7 @@ class ObservedStateRun:
         grounding_mode: str = "geometry-only",
         pairing_strategy: str | None = None,
         save_semantic_overlays: bool = False,
+        record_oracle_diagnostics: bool = True,
         run_config: dict[str, Any] | None = None,
     ) -> "ObservedStateRun":
         if run_id is None:
@@ -386,6 +394,7 @@ class ObservedStateRun:
             grounding_mode=grounding_mode,
             pairing_strategy=pairing_strategy,
             save_semantic_overlays=save_semantic_overlays,
+            record_oracle_diagnostics=record_oracle_diagnostics,
             run_config=run_config,
         )
 
@@ -667,11 +676,6 @@ class ObservedStateRun:
                 if is_new
                 else existing["source_region"]
             )
-            oracle_source_region = (
-                self._oracle_source_region(scene, instance_id)
-                if is_new
-                else existing.get("oracle_source_region")
-            )
             quality_is_valid = bool(
                 evidenced.measurement_quality.get(
                     "quality_is_valid", False
@@ -717,8 +721,6 @@ class ObservedStateRun:
                 ),
                 "source_region": source_region,
                 "source_region_basis": "REGION_GATED_OBSERVATION",
-                "oracle_source_region": oracle_source_region,
-                "oracle_source_region_usage": "EVALUATION_ONLY",
                 "first_seen_stage": stage if is_new else existing["first_seen_stage"],
                 "last_seen_stage": stage,
                 "observation_count": (
@@ -760,6 +762,13 @@ class ObservedStateRun:
                 ),
                 **measured,
             }
+            if self.record_oracle_diagnostics:
+                record["oracle_source_region"] = (
+                    self._oracle_source_region(scene, instance_id)
+                    if is_new
+                    else existing.get("oracle_source_region")
+                )
+                record["oracle_source_region_usage"] = "EVALUATION_ONLY"
             record["geometry"] = {
                 "centroid_world_m": deepcopy(
                     record.get("centroid_world_m", {})

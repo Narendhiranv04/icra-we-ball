@@ -230,12 +230,18 @@ class KitchenGroundTruthRecorder:
 
     def capture_frame(self, force: bool = False) -> np.ndarray | None:
         """Capture and compose all 5 cameras + status panel into one mosaic frame."""
+        if not self.show and not self.record and not force:
+            return None
         current_sim_time = float(self.scene.data.time)
         if not force and self.last_capture_sim_time >= 0.0:
             if (current_sim_time - self.last_capture_sim_time) < (self.frame_interval_sim - 1e-5):
                 return None
 
-        mujoco.mj_forward(self.scene.model, self.scene.data)
+        # Rendering is observational. ``step_callback`` is invoked immediately
+        # after ``mj_step``, so the current kinematic state is already valid.
+        # Calling ``mj_forward`` here recomputes contact/solver warm-start state
+        # between controller steps and made --show/--record follow a different
+        # physical trajectory from the unrecorded pass.
 
         # Render 5 cameras
         cam_frames = [self._render_camera(cam) for cam in FIVE_PROJECT_CAMERAS]
@@ -271,6 +277,8 @@ class KitchenGroundTruthRecorder:
 
     def hold_final_frame(self, duration_s: float = 1.5) -> None:
         """Hold the final mosaic frame in video recording and GUI."""
+        if not self.show and not self.record:
+            return
         steps = int(round(duration_s * self.fps))
         for _ in range(steps):
             self.capture_frame(force=True)

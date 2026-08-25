@@ -121,6 +121,7 @@ def run_fixed_order_inspection(
     adapter: Any,
     observe: Callable[[str, str | None], tuple[Any, Path]],
     stop_on_complete: bool,
+    completion_predicate: Callable[[ObservedStateRun], bool] | None = None,
 ) -> ObservedStateRun:
     """Run the common closed-initial, fixed-order observation loop."""
     sequence = tuple(sequence)
@@ -129,7 +130,10 @@ def run_fixed_order_inspection(
     print(f"  Witness: {_witness_status(session)}")
     print(f"  Saved: {stage_dir}")
 
-    if stop_on_complete and _witness_status(session) == "COMPLETE":
+    complete = completion_predicate or (
+        lambda current: _witness_status(current) == "COMPLETE"
+    )
+    if stop_on_complete and complete(session):
         session.append_event(
             {
                 "event": "INSPECTION_STOPPED_COMPLETE",
@@ -166,7 +170,7 @@ def run_fixed_order_inspection(
         )
         print(f"  Witness: {_witness_status(session)}")
         print(f"  Saved: {stage_dir}")
-        if stop_on_complete and _witness_status(session) == "COMPLETE":
+        if stop_on_complete and complete(session):
             remaining = list(sequence[sequence_index + 1:])
             session.append_event(
                 {
@@ -180,7 +184,7 @@ def run_fixed_order_inspection(
             )
             return session
 
-    if stop_on_complete and _witness_status(session) != "COMPLETE":
+    if stop_on_complete and not complete(session):
         final_witness_status = _witness_status(session)
         session.append_event(
             {
@@ -226,6 +230,8 @@ def run_sequential_inspection(
     grounding_mode: str = "auto",
     pairing_strategy: str | None = None,
     save_semantic_overlays: bool = False,
+    completion_predicate: Callable[[ObservedStateRun], bool] | None = None,
+    record_oracle_diagnostics: bool = True,
 ) -> ObservedStateRun:
     """Observe closed reset, then inspect and persist one region at a time."""
     available_regions = tuple(scene.get_region_observation_states().keys())
@@ -336,6 +342,7 @@ def run_sequential_inspection(
         grounding_mode=grounding_mode,
         pairing_strategy=pairing_strategy,
         save_semantic_overlays=save_semantic_overlays,
+        record_oracle_diagnostics=record_oracle_diagnostics,
         run_config={
             "mode": "sequential_inspection",
             "inspection_sequence": list(sequence),
@@ -408,6 +415,7 @@ def run_sequential_inspection(
         adapter=adapter,
         observe=observe,
         stop_on_complete=stop_on_complete,
+        completion_predicate=completion_predicate,
     )
     print(f"[OBSERVED STATE] Run complete: {session.run_dir}\n")
     return session

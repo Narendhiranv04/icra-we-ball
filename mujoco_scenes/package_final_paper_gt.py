@@ -19,10 +19,13 @@ from .export_gt_everything import (
     _write_text,
 )
 from .living_room_variants import load_living_room_variant_contract
+from .final_paper_variant_labels import paper_variant_label, resolve_variant_name
+from .generate_expected_gt_action_catalogue import format_actions, normalized_action
 from .workshop_ground_truth_planner import load_variant_specs
 
 
 ENVIRONMENTS = ("kitchen", "living_room", "workshop")
+EXPECTED_GT_ROOT = Path(__file__).resolve().parents[1] / "EXPECTED_GT_ACTIONS"
 
 
 def _read_seconds(path: Path) -> float:
@@ -165,6 +168,109 @@ def _action_source(environment: str, source: Path) -> Path:
     }[environment]
 
 
+def _expected_action_payload(
+    environment: str,
+    variant: str,
+    paper_variant: str,
+    recorded: Path,
+    summary: dict[str, Any],
+) -> dict[str, Any]:
+    catalogue_path = (
+        EXPECTED_GT_ROOT / environment / paper_variant / "expected_gt_actions.json"
+    )
+    if catalogue_path.exists():
+        return _read(catalogue_path)
+    source = _action_source(environment, recorded)
+    if source.exists():
+        actions = _read(source).get("actions", [])
+    else:
+        actions = [{
+            "operator": "TERMINATE_INFEASIBLE",
+            "arguments": [summary.get("reason", "FUNCTIONAL_WITNESS_NOT_COMPLETE")],
+        }]
+    normalized = [normalized_action(action) for action in actions]
+    return {
+        "schema_version": 1,
+        "environment": environment,
+        "variant": paper_variant,
+        "internal_variant": variant,
+        "intended_outcome": summary.get("intended_outcome", "UNKNOWN"),
+        "description": "Expected actions captured from the executed GT plan.",
+        "total_actions": len(normalized),
+        "actions": normalized,
+    }
+
+
+def _executed_actions(
+    environment: str, source: Path, summary: dict[str, Any]
+) -> list[dict[str, Any]]:
+    if environment == "living_room":
+        physical_path = source / "physical_execution.json"
+        if not physical_path.exists():
+            return [normalized_action({
+                "operator": "TERMINATE_INFEASIBLE",
+                "arguments": [summary.get("reason", "FUNCTIONAL_WITNESS_NOT_COMPLETE")],
+            })]
+        return [
+            normalized_action(action)
+            for action in _read(physical_path).get("actions", [])
+        ]
+    trace_path = source / "execution_trace.json"
+    if not trace_path.exists():
+        return []
+    trace = _read(trace_path).get("actions", [])
+    if environment == "workshop":
+        return [
+            normalized_action(row["action"])
+            for row in trace if isinstance(row.get("action"), dict)
+        ]
+    return [normalized_action(row) for row in trace]
+
+
+def _comparison_signature(action: dict[str, Any]) -> tuple[str, str]:
+    return (
+        str(action.get("operator", "UNKNOWN")).upper(),
+        json.dumps(action.get("arguments", []), sort_keys=True),
+    )
+
+
+def _compare_actions(
+    environment: str,
+    expected: list[dict[str, Any]],
+    executed: list[dict[str, Any]],
+) -> dict[str, Any]:
+    compared_executed = (
+        [action for action in executed if action.get("operator") != "MOVE"]
+        if environment == "living_room" else executed
+    )
+    expected_signatures = [_comparison_signature(action) for action in expected]
+    executed_signatures = [_comparison_signature(action) for action in compared_executed]
+    first_mismatch = None
+    for index in range(max(len(expected_signatures), len(executed_signatures))):
+        expected_item = expected_signatures[index] if index < len(expected_signatures) else None
+        executed_item = executed_signatures[index] if index < len(executed_signatures) else None
+        if expected_item != executed_item:
+            first_mismatch = {
+                "action_index": index + 1,
+                "expected": expected_item,
+                "executed": executed_item,
+            }
+            break
+    return {
+        "schema_version": 1,
+        "comparison_policy": (
+            "EXACT_GT_TASK_SEQUENCE_IGNORING_INSERTED_MOVE_ACTIONS"
+            if environment == "living_room"
+            else "EXACT_ACTION_SEQUENCE"
+        ),
+        "expected_action_count": len(expected),
+        "executed_action_count": len(executed),
+        "compared_executed_action_count": len(compared_executed),
+        "exact_match": expected_signatures == executed_signatures,
+        "first_mismatch": first_mismatch,
+    }
+
+
 def _assignment_source(environment: str, source: Path) -> Path | None:
     name = {
         "kitchen": "gt_assignment.json",
@@ -179,6 +285,16 @@ def _builders(environment: str):
         "living_room": (_living_texts, _living_objects_regions),
         "workshop": (_workshop_texts, _workshop_objects_regions),
     }[environment]
+
+
+def _paper_text(text: str, internal_variant: str, paper_variant: str) -> str:
+    """Expose the concise paper label while retaining traceability."""
+    marker = f"Variant: {internal_variant}"
+    replacement = (
+        f"Variant: {paper_variant}\nInternal variant: {internal_variant}"
+        if paper_variant != internal_variant else marker
+    )
+    return text.replace(marker, replacement, 1)
 
 
 def _variants(recorded_root: Path, environment: str) -> list[str]:
@@ -294,6 +410,7 @@ def package(
             else _variants(recorded_root, environment)
         )
         for variant in variants:
+            paper_variant = paper_variant_label(environment, variant)
             recorded = recorded_root / environment / variant
             unrecorded = unrecorded_root / environment / variant
             recorded_summary = _read(_summary_path(environment, recorded))
@@ -304,7 +421,22 @@ def package(
             _validate_physical_execution_contract(
                 environment, unrecorded, unrecorded_summary
             )
-            destination = output_root / environment / variant
+            expected_payload = _expected_action_payload(
+                environment, variant, paper_variant, recorded, recorded_summary
+            )
+            executed_actions = _executed_actions(
+                environment, recorded, recorded_summary
+            )
+            action_comparison = _compare_actions(
+                environment, expected_payload.get("actions", []), executed_actions
+            )
+            if not action_comparison["exact_match"]:
+                raise RuntimeError(
+                    f"{environment} {paper_variant} executed GT action sequence "
+                    f"does not match the expected catalogue: "
+                    f"{action_comparison['first_mismatch']}"
+                )
+            destination = output_root / environment / paper_variant
             if destination.exists():
                 if not replace_existing:
                     raise FileExistsError(
@@ -319,9 +451,64 @@ def package(
             video_metadata = _probe(video)
 
             actions, assignments = text_builder(variant, recorded)
-            _write_text(destination / "gt_actions.txt", actions)
-            _write_text(destination / "function_object_assignments.txt", assignments)
-            _write_text(destination / "objects_and_regions.txt", objects_builder(recorded, variant))
+            _write_text(
+                destination / "gt_actions.txt",
+                _paper_text(actions, variant, paper_variant),
+            )
+            _write_text(
+                destination / "function_object_assignments.txt",
+                _paper_text(assignments, variant, paper_variant),
+            )
+            _write_text(
+                destination / "objects_and_regions.txt",
+                _paper_text(objects_builder(recorded, variant), variant, paper_variant),
+            )
+            _write_json(destination / "expected_gt_actions.json", expected_payload)
+            _write_text(
+                destination / "expected_gt_actions.txt",
+                format_actions(
+                    environment,
+                    paper_variant,
+                    variant,
+                    str(expected_payload.get("intended_outcome", "UNKNOWN")),
+                    str(expected_payload.get("description", "")),
+                    expected_payload.get("actions", []),
+                ),
+            )
+            executed_payload = {
+                "schema_version": 1,
+                "environment": environment,
+                "variant": paper_variant,
+                "internal_variant": variant,
+                "total_actions": len(executed_actions),
+                "actions": executed_actions,
+            }
+            _write_json(destination / "executed_gt_actions.json", executed_payload)
+            _write_text(
+                destination / "executed_gt_actions.txt",
+                format_actions(
+                    environment,
+                    paper_variant,
+                    variant,
+                    str(expected_payload.get("intended_outcome", "UNKNOWN")),
+                    "Actions observed in the recorded physical execution trace.",
+                    executed_actions,
+                ),
+            )
+            _write_json(destination / "gt_action_comparison.json", action_comparison)
+            _write_text(
+                destination / "gt_action_comparison.txt",
+                "\n".join([
+                    f"Environment: {environment}",
+                    f"Variant: {paper_variant}",
+                    f"Internal variant: {variant}",
+                    f"Comparison policy: {action_comparison['comparison_policy']}",
+                    f"Expected actions: {action_comparison['expected_action_count']}",
+                    f"Executed actions: {action_comparison['executed_action_count']}",
+                    f"Compared executed actions: {action_comparison['compared_executed_action_count']}",
+                    f"Exact match: {str(action_comparison['exact_match']).upper()}",
+                ]),
+            )
 
             recorded_wall = _read_seconds(
                 timings_root / environment / f"{variant}_with_recording_seconds.txt"
@@ -331,7 +518,8 @@ def package(
             )
             camera_manifest = _read(recorded / "camera_manifest.json")
             timing = {
-                "variant": variant,
+                "variant": paper_variant,
+                "internal_variant": variant,
                 "environment": environment,
                 "with_recording_wall_s": recorded_wall,
                 "without_recording_wall_s": unrecorded_wall,
@@ -352,7 +540,8 @@ def package(
                 destination / "timing.txt",
                 "\n".join([
                     f"Environment: {environment}",
-                    f"Variant: {variant}",
+                    f"Variant: {paper_variant}",
+                    f"Internal variant: {variant}",
                     f"Without recording wall time: {unrecorded_wall:.3f} s",
                     f"With recording wall time: {recorded_wall:.3f} s",
                     f"Recording overhead: {recorded_wall - unrecorded_wall:.3f} s",
@@ -360,7 +549,10 @@ def package(
                     "Playback policy: natural simulation time; no speed-up or setpts transform",
                 ]),
             )
-            shutil.copy2(_summary_path(environment, recorded), destination / "execution_summary.json")
+            packaged_summary = dict(recorded_summary)
+            packaged_summary["paper_variant"] = paper_variant
+            packaged_summary["internal_variant"] = variant
+            _write_json(destination / "execution_summary.json", packaged_summary)
             action_source = _action_source(environment, recorded)
             if action_source.exists():
                 shutil.copy2(action_source, destination / "gt_actions.json")
@@ -383,12 +575,16 @@ def package(
                 row for row in records
                 if not (
                     row.get("environment") == environment
-                    and row.get("variant") == variant
+                    and (
+                        row.get("variant") == paper_variant
+                        or row.get("source_variant") == variant
+                    )
                 )
             ]
             records.append({
                 "environment": environment,
-                "variant": variant,
+                "variant": paper_variant,
+                "source_variant": variant,
                 "video": str(video.relative_to(output_root)),
                 "video_sha256": _sha256(video),
                 "video_metadata": video_metadata,
@@ -398,6 +594,7 @@ def package(
                     if "success" in recorded_summary
                     else recorded_summary.get("status") in {"SUCCESS", "INFEASIBLE_CONFIRMED"}
                 ),
+                "gt_action_sequence_exact_match": action_comparison["exact_match"],
             })
 
     manifest = {
@@ -409,6 +606,9 @@ def package(
             for environment in ENVIRONMENTS
         },
         "all_execution_runs_successful": all(row["execution_success"] for row in records),
+        "all_gt_action_sequences_exact_match": all(
+            row.get("gt_action_sequence_exact_match", False) for row in records
+        ),
         "records": records,
     }
     _write_json(output_root / "manifest.json", manifest)
@@ -420,6 +620,17 @@ This is the single packaged evidence tree for Kitchen, Living Room, and
 Workshop. Each variant contains a natural-speed merged five-camera MP4, the GT
 action sequence, function/object assignments, initial object/region placement,
 execution summary, and wall-clock timings with and without recording.
+
+Each directory also contains the predeclared expected GT actions, the actions
+observed in the physical execution trace, and an exact sequence-comparison
+report. Packaging fails if those GT task sequences differ. Living Room permits
+planner-inserted MOVE actions between its frozen PICK/PLACE task actions; those
+navigation actions remain visible in the executed trace and are excluded only
+from the exact GT task-order comparison.
+
+Paper-facing directories and manifest entries use K1-K12, L1-L10, and W1-W10.
+The descriptive implementation identifier is retained as `source_variant` in
+the manifest and `internal_variant` in timing metadata for reproducibility.
 
 Videos are captured directly during physics execution at the configured FPS.
 No frame dropping for speed-up, FFmpeg `setpts`, or postprocessing time scaling
@@ -448,7 +659,7 @@ def main() -> int:
         parser.error("--environment and --variant must be supplied together")
     environments = (args.environment,) if args.environment else ENVIRONMENTS
     selected = (
-        {args.environment: [args.variant]}
+        {args.environment: [resolve_variant_name(args.environment, args.variant)]}
         if args.environment and args.variant else None
     )
     manifest = package(

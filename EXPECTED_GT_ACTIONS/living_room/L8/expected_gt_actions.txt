@@ -1,0 +1,8 @@
+Environment: living_room
+Variant: L8
+Internal variant: I1_NO_LEFT_PERSONAL_TABLE
+Intended outcome: INFEASIBLE
+Description: One of the two required personal tables is absent. Grounding termination: FUNCTIONAL_WITNESS_NOT_COMPLETE.
+Expected GT actions: 1
+
+001. TERMINATE_INFEASIBLE(FUNCTIONAL_WITNESS_NOT_COMPLETE)  # No complete functional region assignment exists.

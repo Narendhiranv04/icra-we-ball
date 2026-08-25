@@ -19,7 +19,7 @@ usage() {
   printf 'Run GT variants twice, record five views, and package final evidence.\n'
   printf '\nUsage:\n'
   printf '  %s [--replace-final]\n' "$0"
-  printf '  %s --environment {kitchen|living_room|workshop} --variant NAME [--replace-variant]\n' "$0"
+  printf '  %s --environment {kitchen|living_room|workshop} --variant {K1|L1|W1|...} [--replace-variant]\n' "$0"
   printf '\nOptions:\n'
   printf '  --show  Display the five-view mosaic during both timing and recorded passes.\n'
 }
@@ -101,8 +101,8 @@ readarray -t WORKSHOP_VARIANTS < <(
   "$PYTHON_BIN" -c 'from mujoco_scenes.workshop_ground_truth_planner import load_variant_specs; print("\n".join(load_variant_specs()))'
 )
 
-[[ "${#KITCHEN_VARIANTS[@]}" -eq 16 ]] || {
-  printf 'Expected 16 Kitchen variants, found %d.\n' "${#KITCHEN_VARIANTS[@]}" >&2
+[[ "${#KITCHEN_VARIANTS[@]}" -eq 12 ]] || {
+  printf 'Expected 12 Kitchen variants, found %d.\n' "${#KITCHEN_VARIANTS[@]}" >&2
   exit 1
 }
 [[ "${#LIVING_VARIANTS[@]}" -eq 10 ]] || {
@@ -114,7 +114,23 @@ readarray -t WORKSHOP_VARIANTS < <(
   exit 1
 }
 
+printf 'Refreshing expected GT action catalogue...\n'
+env MUJOCO_GL=egl PYOPENGL_PLATFORM=egl "$PYTHON_BIN" \
+  -m mujoco_scenes.generate_expected_gt_action_catalogue \
+  --output-root "$REPO_ROOT/EXPECTED_GT_ACTIONS"
+
 if [[ -n "$SELECTED_VARIANT" ]]; then
+  case "$SELECTED_ENVIRONMENT" in
+    kitchen|living_room|workshop) ;;
+    *) printf 'Unknown environment: %s\n' "$SELECTED_ENVIRONMENT" >&2; exit 2 ;;
+  esac
+  REQUESTED_VARIANT="$SELECTED_VARIANT"
+  SELECTED_VARIANT="$("$PYTHON_BIN" -c \
+    'from mujoco_scenes.final_paper_variant_labels import resolve_variant_name; import sys; print(resolve_variant_name(sys.argv[1], sys.argv[2]))' \
+    "$SELECTED_ENVIRONMENT" "$SELECTED_VARIANT")"
+  PAPER_VARIANT="$("$PYTHON_BIN" -c \
+    'from mujoco_scenes.final_paper_variant_labels import paper_variant_label; import sys; print(paper_variant_label(sys.argv[1], sys.argv[2]))' \
+    "$SELECTED_ENVIRONMENT" "$SELECTED_VARIANT")"
   case "$SELECTED_ENVIRONMENT" in
     kitchen) SELECTED_VARIANTS=("${KITCHEN_VARIANTS[@]}") ;;
     living_room) SELECTED_VARIANTS=("${LIVING_VARIANTS[@]}") ;;
@@ -126,12 +142,12 @@ if [[ -n "$SELECTED_VARIANT" ]]; then
     [[ "$candidate" == "$SELECTED_VARIANT" ]] && variant_found=1
   done
   [[ "$variant_found" -eq 1 ]] || {
-    printf 'Unknown %s variant: %s\n' "$SELECTED_ENVIRONMENT" "$SELECTED_VARIANT" >&2
+    printf 'Unknown %s variant: %s\n' "$SELECTED_ENVIRONMENT" "$REQUESTED_VARIANT" >&2
     exit 2
   }
-  if [[ -e "$FINAL_ROOT/$SELECTED_ENVIRONMENT/$SELECTED_VARIANT" && "$REPLACE_VARIANT" -ne 1 ]]; then
+  if [[ -e "$FINAL_ROOT/$SELECTED_ENVIRONMENT/$PAPER_VARIANT" && "$REPLACE_VARIANT" -ne 1 ]]; then
     printf 'Refusing to overwrite existing final variant: %s\n' \
-      "$FINAL_ROOT/$SELECTED_ENVIRONMENT/$SELECTED_VARIANT" >&2
+      "$FINAL_ROOT/$SELECTED_ENVIRONMENT/$PAPER_VARIANT" >&2
     printf '%s\n' 'Re-run with --replace-variant to replace only this variant.' >&2
     exit 1
   fi
@@ -261,7 +277,7 @@ if [[ -n "$SELECTED_VARIANT" ]]; then
   [[ "$REPLACE_VARIANT" -eq 1 ]] && package_args+=(--replace-existing)
   "$PYTHON_BIN" -m mujoco_scenes.package_final_paper_gt "${package_args[@]}"
   printf '\nFinal paper variant created at: %s\n' \
-    "$FINAL_ROOT/$SELECTED_ENVIRONMENT/$SELECTED_VARIANT"
+    "$FINAL_ROOT/$SELECTED_ENVIRONMENT/$PAPER_VARIANT"
   exit 0
 fi
 

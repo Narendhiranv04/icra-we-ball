@@ -113,6 +113,37 @@ def run_single_variant(
         config_path=config_path,
     )
 
+    if var_out is not None:
+        var_out.mkdir(parents=True, exist_ok=True)
+        raw_decomposition = getattr(
+            controller.requirement_provider, "raw_decomposition", None
+        )
+        if raw_decomposition is not None:
+            with open(
+                var_out / "vlm_requirement_decomposition.json", "w", encoding="utf-8"
+            ) as file:
+                json.dump(raw_decomposition, file, indent=2)
+            with open(
+                var_out / "normalized_task_requirements.json", "w", encoding="utf-8"
+            ) as file:
+                json.dump(
+                    {
+                        "requirements": [
+                            requirement.to_dict()
+                            for requirement in controller.requirements
+                        ],
+                        "detector_vocabulary": controller.detector_vocabulary,
+                        "normalization_boundary": (
+                            "VLM natural language mapped through the reviewed "
+                            "Workshop ontology; unknown output fails closed"
+                        ),
+                        "planning_started": False,
+                        "execution_started": False,
+                    },
+                    file,
+                    indent=2,
+                )
+
     result = controller.run_episode()
 
     if var_out is not None:

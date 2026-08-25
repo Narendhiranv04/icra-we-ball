@@ -133,9 +133,10 @@ def _valid_edge(
 def _coffee_cover(
     targets: list[dict[str, Any]],
     edges: list[dict[str, Any]],
+    required_count: int = 2,
 ) -> dict[str, Any] | None:
     options = []
-    for chosen_targets in combinations(targets, 3):
+    for chosen_targets in combinations(targets, required_count):
         per_target = [
             sorted(
                 (
@@ -171,10 +172,11 @@ def _coffee_cover(
 def _soup_matching(
     targets: list[dict[str, Any]],
     edges: list[dict[str, Any]],
+    required_count: int = 2,
 ) -> tuple[dict[str, Any] | None, int]:
     full = []
     maximum = 0
-    for chosen_targets in combinations(targets, min(3, len(targets))):
+    for chosen_targets in combinations(targets, min(required_count, len(targets))):
         per_target = [
             sorted(
                 (
@@ -194,7 +196,7 @@ def _soup_matching(
             if len(tool_ids) != len(set(tool_ids)):
                 continue
             maximum = max(maximum, len(selected))
-        if len(chosen_targets) != 3 or any(not items for items in per_target):
+        if len(chosen_targets) != required_count or any(not items for items in per_target):
             continue
         for selected in product(*per_target):
             tools = [edge["tool_id"] for edge in selected]
@@ -216,8 +218,18 @@ def _soup_matching(
 def evaluate_oracle_subset(
     instances: Iterable[dict[str, Any]],
     geometry_config: dict[str, Any],
+    *,
+    benchmark_config: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     instances = list(instances)
+    benchmark = benchmark_config or load_feasibility_benchmark_config()
+    counts = benchmark.get("required_counts", {})
+    coffee_count = int(counts.get("coffee_containers", 2))
+    soup_count = int(counts.get("soup_containers", 2))
+    soup_utensil_count = int(counts.get("soup_utensils", soup_count))
+    role_kinds = benchmark.get("role_object_kinds", {})
+    coffee_tool_kinds = set(role_kinds.get("coffee_stirrer", []))
+    soup_tool_kinds = set(role_kinds.get("soup_eating_utensil", []))
     coffee_targets = [
         item for item in instances
         if item["semantic_class"] == "coffee_container"
@@ -230,23 +242,41 @@ def evaluate_oracle_subset(
         item for item in instances
         if item["semantic_class"] == "spoon"
     ]
+    coffee_tools = [
+        item for item in tools
+        if not coffee_tool_kinds or item["object_kind"] in coffee_tool_kinds
+    ]
+    soup_tools = [
+        item for item in tools
+        if not soup_tool_kinds or item["object_kind"] in soup_tool_kinds
+    ]
     coffee_edges = [
-        edge for tool in tools for target in coffee_targets
+        edge for tool in coffee_tools for target in coffee_targets
         if (edge := _valid_edge(tool, target, geometry_config))
         is not None
     ]
     soup_edges = [
-        edge for tool in tools for target in soup_targets
+        edge for tool in soup_tools for target in soup_targets
         if (edge := _valid_edge(tool, target, geometry_config))
         is not None
     ]
-    coffee = _coffee_cover(coffee_targets, coffee_edges)
-    soup, soup_cardinality = _soup_matching(soup_targets, soup_edges)
-    outcome = "FEASIBLE" if coffee is not None and soup is not None else "INFEASIBLE"
-    if len(coffee_targets) < 3:
+    coffee = _coffee_cover(coffee_targets, coffee_edges, coffee_count)
+    soup, soup_cardinality = _soup_matching(soup_targets, soup_edges, soup_count)
+    kinds = {item["object_kind"] for item in instances}
+    water_sources = set(benchmark.get("required_sources", {}).get("water_source", []))
+    coffee_sources = set(benchmark.get("required_sources", {}).get("coffee_source", []))
+    has_water_source = not water_sources or bool(kinds & water_sources)
+    has_coffee_source = not coffee_sources or bool(kinds & coffee_sources)
+    outcome = "FEASIBLE" if (
+        coffee is not None and soup is not None
+        and has_water_source and has_coffee_source
+    ) else "INFEASIBLE"
+    if len(coffee_targets) < coffee_count:
         failure = "INSUFFICIENT_COFFEE_CONTAINERS"
-    elif len(soup_targets) < 3:
+    elif len(soup_targets) < soup_count:
         failure = "INSUFFICIENT_SOUP_CONTAINERS"
+    elif not coffee_tools:
+        failure = "MISSING_COFFEE_STIRRER"
     elif any(
         not any(edge["target_id"] == target["oracle_object_id"] for edge in coffee_edges)
         for target in coffee_targets
@@ -258,9 +288,13 @@ def evaluate_oracle_subset(
         distinct_tools = len({edge["tool_id"] for edge in soup_edges})
         failure = (
             "NO_COMPLETE_SOUP_MATCHING"
-            if soup_cardinality < len(soup_targets) and distinct_tools >= 3
+            if soup_cardinality < soup_count and distinct_tools >= soup_utensil_count
             else "INSUFFICIENT_DISTINCT_SOUP_TOOLS"
         )
+    elif not has_water_source:
+        failure = "MISSING_WATER_SOURCE"
+    elif not has_coffee_source:
+        failure = "MISSING_COFFEE_SOURCE"
     else:
         failure = None
     return {
@@ -280,6 +314,8 @@ def evaluate_oracle_subset(
             soup["assignments"] if soup else []
         ),
         "oracle_soup_matching_size": soup_cardinality,
+        "water_source_present": has_water_source,
+        "coffee_source_present": has_coffee_source,
         "oracle_failure_reason": failure,
     }
 
@@ -312,6 +348,7 @@ def evaluate_oracle_variant(
                 if item["region"] in cumulative_regions
             ),
             geometry_config,
+            benchmark_config=benchmark,
         )
         stages.append({
             "stage_index": stage_index,

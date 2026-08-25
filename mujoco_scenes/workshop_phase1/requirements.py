@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import abc
 from pathlib import Path
+import re
 from typing import Any
 import yaml
 
@@ -28,7 +29,12 @@ class RequirementProvider(abc.ABC):
     """Abstract interface for extracting broad task functional requirements."""
 
     @abc.abstractmethod
-    def get_requirements(self, task_instruction: str = CANONICAL_WORKSHOP_INSTRUCTION) -> list[FunctionalRequirement]:
+    def get_requirements(
+        self,
+        task_instruction: str = CANONICAL_WORKSHOP_INSTRUCTION,
+        *,
+        observation_images: list[str | Path] | None = None,
+    ) -> list[FunctionalRequirement]:
         pass
 
     @abc.abstractmethod
@@ -96,7 +102,12 @@ class ManualWorkshopFMContract(RequirementProvider):
             raise ValueError("FM contract contains deterministic metric thresholds: " + ", ".join(offending))
         return data
 
-    def get_requirements(self, task_instruction: str = CANONICAL_WORKSHOP_INSTRUCTION) -> list[FunctionalRequirement]:
+    def get_requirements(
+        self,
+        task_instruction: str = CANONICAL_WORKSHOP_INSTRUCTION,
+        *,
+        observation_images: list[str | Path] | None = None,
+    ) -> list[FunctionalRequirement]:
         raw_reqs = self._contract_data.get("functional_requirements", [])
         requirements: list[FunctionalRequirement] = []
         for r in raw_reqs:
@@ -206,28 +217,232 @@ StaticWorkshopRequirementProvider = ManualWorkshopFMContract
 
 
 class FMRequirementProvider(RequirementProvider):
-    """Generates requirements via live Foundation Model when configured."""
+    """One-shot VLM generation guarded by the reviewed Workshop ontology.
 
-    def __init__(self, fm_adapter: FMAdapter | None = None) -> None:
+    Qwen may use natural phrases. Only phrases that map to the manual contract's
+    known functions, semantic categories, and qualitative relations cross into
+    production grounding. Unknown, incomplete, or ambiguous output fails closed.
+    """
+
+    def __init__(
+        self,
+        fm_adapter: FMAdapter | None = None,
+        ontology_contract: ManualWorkshopFMContract | None = None,
+    ) -> None:
         self.fm_adapter = fm_adapter or FMAdapter()
-
-    def get_requirements(self, task_instruction: str = CANONICAL_WORKSHOP_INSTRUCTION) -> list[FunctionalRequirement]:
-        raise FMBackendNotConfiguredError(
-            "Live FM requirement generation requested, but no FM endpoint is configured. "
-            "Phase 1 runs deterministically with ManualWorkshopFMContract."
+        self.ontology_contract = ontology_contract or ManualWorkshopFMContract()
+        self.raw_decomposition: dict[str, Any] | None = None
+        self._requirements: list[FunctionalRequirement] | None = None
+        self._category_rank: dict[str, int] = {}
+        normalization = self.ontology_contract._contract_data.get(
+            "fm_normalization", {}
+        )
+        self._function_aliases = self._normalized_alias_table(
+            normalization.get("function_aliases", {})
+        )
+        self._relation_aliases = self._normalized_alias_table(
+            normalization.get("relation_aliases", {})
         )
 
-    def get_semantic_vocabulary(self) -> dict[str, list[str]]:
-        raise FMBackendNotConfiguredError("Live FM backend not configured.")
+    @staticmethod
+    def _phrase(value: object) -> str:
+        return " ".join(re.findall(r"[a-z0-9]+", str(value).casefold()))
 
-    def get_detector_prompts(self) -> list[str]:
-        raise FMBackendNotConfiguredError("Live FM backend not configured.")
+    @classmethod
+    def _normalized_alias_table(
+        cls, raw: object
+    ) -> dict[str, tuple[str, ...]]:
+        if not isinstance(raw, dict):
+            raise ValueError("fm_normalization alias tables must be mappings")
+        result: dict[str, tuple[str, ...]] = {}
+        for canonical, aliases in raw.items():
+            if not isinstance(aliases, list) or not aliases:
+                raise ValueError(f"FM normalization aliases missing for {canonical}")
+            normalized = tuple(cls._phrase(alias) for alias in aliases)
+            if not all(normalized):
+                raise ValueError(f"FM normalization contains an empty alias for {canonical}")
+            result[str(canonical)] = normalized
+        return result
+
+    @staticmethod
+    def _contains_phrase(text: str, alias: str) -> bool:
+        return text == alias or f" {alias} " in f" {text} "
+
+    def _map_category(self, phrase: object) -> str | None:
+        normalized = self._phrase(phrase)
+        aliases = self.ontology_contract.get_alias_to_canonical_map()
+        exact = {self._phrase(alias): canonical for alias, canonical in aliases.items()}
+        if normalized in exact:
+            return exact[normalized]
+        matches = {
+            canonical
+            for alias, canonical in exact.items()
+            if self._contains_phrase(normalized, alias)
+            or self._contains_phrase(alias, normalized)
+        }
+        return next(iter(matches)) if len(matches) == 1 else None
+
+    def _map_function(
+        self, raw: dict[str, Any], categories: list[str]
+    ) -> str:
+        text = self._phrase(f"{raw['function']} {raw['description']}")
+        expected = {
+            requirement.function_name: set(requirement.accepted_categories)
+            for requirement in self.ontology_contract.get_requirements()
+        }
+        scores: dict[str, int] = {}
+        for function_name, accepted in expected.items():
+            score = 5 * len(set(categories) & accepted)
+            score += sum(
+                1
+                for alias in self._function_aliases.get(function_name, ())
+                if self._contains_phrase(text, alias)
+            )
+            scores[function_name] = score
+        best = max(scores.values(), default=0)
+        winners = [name for name, score in scores.items() if score == best and score > 0]
+        if len(winners) != 1:
+            raise ValueError(
+                f"VLM function phrase {raw['function']!r} cannot be mapped uniquely; "
+                f"ontology scores={scores}"
+            )
+        return winners[0]
+
+    def _map_relations(self, properties: list[str]) -> set[str]:
+        mapped: set[str] = set()
+        for property_text in properties:
+            normalized = self._phrase(property_text)
+            for relation, aliases in self._relation_aliases.items():
+                if any(self._contains_phrase(normalized, alias) for alias in aliases):
+                    mapped.add(relation)
+            words = set(normalized.split())
+            if words & {"reach", "reaches", "access", "accessible"}:
+                mapped.add("REACHES_TARGET")
+            compatibility = words & {
+                "fit", "fits", "match", "matches", "compatible", "compatibility",
+                "thread", "threads", "suitable",
+            }
+            if compatibility and words & {"hole", "workbench", "target"}:
+                mapped.add("COMPATIBLE_WITH_TARGET")
+            if (
+                compatibility or words & {"torque", "interface"}
+            ) and words & {"screw", "recess", "head", "interface"}:
+                mapped.add("COMPATIBLE_WITH")
+        return mapped
+
+    def _ensure_generated(
+        self,
+        task_instruction: str = CANONICAL_WORKSHOP_INSTRUCTION,
+        *,
+        observation_images: list[str | Path] | None = None,
+    ) -> None:
+        if self._requirements is not None:
+            return
+        document = self.fm_adapter.generate_task_requirements(
+            task_instruction, observation_images=observation_images or []
+        )
+        self.raw_decomposition = document
+        if document.get("status") != "SUPPORTED":
+            raise ValueError(
+                "VLM marked the Workshop task unsupported: "
+                f"{document.get('unsupported_reason', 'no reason')}"
+            )
+
+        expected_by_function = {
+            requirement.function_name: requirement
+            for requirement in self.ontology_contract.get_requirements()
+        }
+        normalized: dict[str, FunctionalRequirement] = {}
+        raw_requirements = document["functional_requirements"]
+        for raw in raw_requirements:
+            if raw["entity_kind"] != "OBJECT":
+                raise ValueError(
+                    f"Workshop VLM role {raw['id']!r} must describe an OBJECT"
+                )
+            categories: list[str] = []
+            for candidate in raw["candidate_objects"]:
+                canonical = self._map_category(candidate["label"])
+                if canonical is not None and canonical not in categories:
+                    categories.append(canonical)
+                    self._category_rank.setdefault(canonical, len(self._category_rank) + 1)
+            function_name = self._map_function(raw, categories)
+            if function_name in normalized:
+                raise ValueError(f"VLM emitted duplicate role {function_name}")
+            expected = expected_by_function[function_name]
+            if raw["required_count"] != 1:
+                raise ValueError(
+                    f"VLM role {function_name} required_count must be 1 for Workshop"
+                )
+            mapped_relations = self._map_relations(raw["required_properties"])
+            missing_relations = set(expected.required_relations) - mapped_relations
+            if missing_relations:
+                raise ValueError(
+                    f"VLM role {function_name} omitted required qualitative properties: "
+                    f"{sorted(missing_relations)}"
+                )
+            normalized[function_name] = FunctionalRequirement(
+                requirement_id=expected.requirement_id,
+                entity_type=expected.entity_type,
+                function_name=function_name,
+                description=raw["description"],
+                rank=expected.rank,
+                source=RequirementSource.FM,
+                accepted_categories=list(expected.accepted_categories),
+                semantic_hints=[
+                    candidate["label"] for candidate in raw["candidate_objects"]
+                ],
+                geometric_constraints={},
+                required_relations=list(expected.required_relations),
+                provenance="qwen_vlm_normalized_by_workshop_ontology",
+            )
+        missing_functions = set(expected_by_function) - set(normalized)
+        extra_functions = set(normalized) - set(expected_by_function)
+        if missing_functions or extra_functions:
+            raise ValueError(
+                "VLM decomposition does not match the implemented Workshop scope: "
+                f"missing={sorted(missing_functions)}, extra={sorted(extra_functions)}"
+            )
+        self._requirements = sorted(normalized.values(), key=lambda item: item.rank)
+
+    def get_requirements(
+        self,
+        task_instruction: str = CANONICAL_WORKSHOP_INSTRUCTION,
+        *,
+        observation_images: list[str | Path] | None = None,
+    ) -> list[FunctionalRequirement]:
+        self._ensure_generated(
+            task_instruction, observation_images=observation_images
+        )
+        return list(self._requirements or [])
+
+    def get_semantic_vocabulary(self) -> dict[str, list[str]]:
+        self._ensure_generated()
+        return self.ontology_contract.get_semantic_vocabulary()
 
     def get_ranked_detector_vocabulary(self) -> list[dict[str, Any]]:
-        raise FMBackendNotConfiguredError("Live FM backend not configured.")
+        self._ensure_generated()
+        entries = self.ontology_contract.get_ranked_detector_vocabulary()
+        # Relevant VLM alternatives retain their generated order. Benchmark-
+        # observable negative controls remain after them so detector evaluation
+        # is stable and does not silently remove the hammer distractor.
+        return sorted(
+            entries,
+            key=lambda entry: (
+                self._category_rank.get(entry["canonical_label"], 10_000),
+                entry["detector_rank"],
+            ),
+        )
+
+    def get_detector_prompts(self) -> list[str]:
+        return [
+            entry["detector_label"]
+            for entry in self.get_ranked_detector_vocabulary()
+        ]
 
     def get_detector_label_to_canonical_map(self) -> dict[str, str]:
-        raise FMBackendNotConfiguredError("Live FM backend not configured.")
+        self._ensure_generated()
+        return self.ontology_contract.get_detector_label_to_canonical_map()
 
     def get_alias_to_canonical_map(self) -> dict[str, str]:
-        raise FMBackendNotConfiguredError("Live FM backend not configured.")
+        self._ensure_generated()
+        return self.ontology_contract.get_alias_to_canonical_map()

@@ -1,0 +1,199 @@
+"""Tests for image-conditioned Workshop Qwen requirement generation."""
+
+from __future__ import annotations
+
+import base64
+import json
+
+import pytest
+
+from mujoco_scenes.run_workshop_vlm_requirements import build_result
+from mujoco_scenes.workshop_phase1.fm_adapter import (
+    FMAdapter,
+    FMBackendNotConfiguredError,
+    FMResponseValidationError,
+    validate_requirement_response,
+)
+from mujoco_scenes.workshop_phase1.requirements import FMRequirementProvider
+from mujoco_scenes.workshop_phase1.types import RequirementSource
+
+
+PNG_1X1 = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+)
+
+
+@pytest.fixture
+def observation_image(tmp_path):
+    path = tmp_path / "workshop_initial.png"
+    path.write_bytes(PNG_1X1)
+    return path
+
+
+def candidate(label: str, description: str) -> dict:
+    return {
+        "label": label,
+        "visual_description": description,
+        "suitability_reason": "Visually plausible but not geometrically verified.",
+    }
+
+
+def natural_decomposition() -> dict:
+    return {
+        "status": "SUPPORTED",
+        "task_summary": "Choose a compatible driver and threaded fastener.",
+        "functional_requirements": [
+            {
+                "id": "rotating_tool",
+                "entity_kind": "OBJECT",
+                "function": "tighten a screw",
+                "description": "A device that rotates the screw into the repair joint.",
+                "required_count": 1,
+                "candidate_objects": [
+                    candidate("Phillips screwdriver", "hand tool on the workbench")
+                ],
+                "required_properties": [
+                    "must reach the screw head",
+                    "tip must fit the screw head and transmit torque",
+                ],
+            },
+            {
+                "id": "threaded_joiner",
+                "entity_kind": "OBJECT",
+                "function": "secure the joint",
+                "description": "A threaded component that holds the repair joint.",
+                "required_count": 1,
+                "candidate_objects": [
+                    candidate("Phillips screw", "small threaded fastener in the tray")
+                ],
+                "required_properties": [
+                    "must fit the workbench target hole and thread into the hole"
+                ],
+            },
+        ],
+        "unsupported_reason": "",
+    }
+
+
+class FakeTransport:
+    def __init__(self, document: dict) -> None:
+        self.document = document
+        self.calls = 0
+        self.payload = None
+
+    def complete(self, payload):
+        self.calls += 1
+        self.payload = payload
+        return {"choices": [{"message": {"content": json.dumps(self.document)}}]}
+
+
+def provider_for(document: dict) -> tuple[FMRequirementProvider, FakeTransport]:
+    transport = FakeTransport(document)
+    adapter = FMAdapter(
+        base_url="http://unused/v1", model="qwen35-9b", transport=transport
+    )
+    return FMRequirementProvider(adapter), transport
+
+
+def test_adapter_builds_multimodal_planning_free_request(observation_image):
+    provider, transport = provider_for(natural_decomposition())
+    provider.get_requirements(observation_images=[observation_image])
+    payload = transport.payload
+    assert payload["model"] == "qwen35-9b"
+    assert payload["chat_template_kwargs"] == {"enable_thinking": False}
+    assert payload["response_format"]["type"] == "json_schema"
+    prompt = payload["messages"][0]["content"].lower()
+    assert "infer the complete set" in prompt
+    assert "do not produce an action sequence" in prompt
+    assert "candidate_objects" in prompt
+    assert payload["messages"][1]["content"][1]["type"] == "image_url"
+
+
+def test_prompt_does_not_contain_expected_answers(observation_image):
+    provider, transport = provider_for(natural_decomposition())
+    provider.get_requirements(observation_images=[observation_image])
+    text = transport.payload["messages"][1]["content"][0]["text"]
+    system = transport.payload["messages"][0]["content"]
+    request = json.loads(text)
+    assert set(request) == {"task_instruction", "request"}
+    assert "role_envelopes" not in text
+    combined = f"{system}\n{text}"
+    assert "CAN_DRIVE_SCREW" not in combined
+    assert "REACHES_TARGET" not in combined
+    assert "screwdriver" not in combined.casefold()
+    assert "power drill" not in combined.casefold()
+
+
+def test_model_roles_and_visible_candidates_normalize_once(observation_image):
+    provider, transport = provider_for(natural_decomposition())
+    requirements = provider.get_requirements(observation_images=[observation_image])
+    assert transport.calls == 1
+    assert [requirement.function_name for requirement in requirements] == [
+        "CAN_DRIVE_SCREW", "CAN_FASTEN",
+    ]
+    assert all(requirement.source == RequirementSource.FM for requirement in requirements)
+    assert requirements[0].accepted_categories == ["screwdriver", "power_driver"]
+    assert requirements[0].semantic_hints == ["Phillips screwdriver"]
+    assert set(requirements[0].required_relations) == {
+        "REACHES_TARGET", "COMPATIBLE_WITH",
+    }
+
+    # The reviewed detector vocabulary can include unseen alternatives for later search.
+    assert provider.get_detector_prompts() == [
+        "screwdriver", "screw", "power drill", "wooden hammer",
+    ]
+    assert transport.calls == 1
+
+
+def test_result_records_image_provenance_and_no_execution(observation_image):
+    provider, transport = provider_for(natural_decomposition())
+    result = build_result(
+        provider, "Find and install a compatible screw", [observation_image]
+    )
+    assert result["fm_calls"] == 1
+    assert result["initial_observation_images"][0]["sha256"]
+    assert result["planning_started"] is False
+    assert result["execution_started"] is False
+    assert transport.calls == 1
+
+
+def test_missing_geometric_property_fails_post_response(observation_image):
+    document = natural_decomposition()
+    document["functional_requirements"][0]["required_properties"] = [
+        "must reach the screw head"
+    ]
+    provider, _ = provider_for(document)
+    with pytest.raises(ValueError, match="omitted required qualitative properties"):
+        provider.get_requirements(observation_images=[observation_image])
+
+
+def test_transport_schema_rejects_old_candidate_types_and_extra_fields():
+    document = natural_decomposition()
+    document["actions"] = []
+    with pytest.raises(FMResponseValidationError, match="fields must be exactly"):
+        validate_requirement_response(document)
+
+    document = natural_decomposition()
+    role = document["functional_requirements"][0]
+    role["candidate_types"] = ["screwdriver"]
+    with pytest.raises(FMResponseValidationError, match="invalid fields"):
+        validate_requirement_response(document)
+
+
+def test_image_required_before_network(monkeypatch):
+    for variable in ("TAMP_FM_BASE_URL", "FM_BASE_URL", "TAMP_FM_MODEL", "FM_MODEL"):
+        monkeypatch.delenv(variable, raising=False)
+    adapter = FMAdapter()
+    with pytest.raises(ValueError, match="initial-observation image"):
+        adapter.generate_task_requirements(
+            "Find a compatible screw and driver", observation_images=[]
+        )
+
+def test_missing_endpoint_after_image_validation(observation_image, monkeypatch):
+    for variable in ("TAMP_FM_BASE_URL", "FM_BASE_URL", "TAMP_FM_MODEL", "FM_MODEL"):
+        monkeypatch.delenv(variable, raising=False)
+    with pytest.raises(FMBackendNotConfiguredError, match="TAMP_FM_BASE_URL"):
+        FMAdapter().generate_task_requirements(
+            "Find a compatible screw and driver",
+            observation_images=[observation_image],
+        )

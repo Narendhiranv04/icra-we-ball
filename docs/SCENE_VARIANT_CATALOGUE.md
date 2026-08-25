@@ -1,14 +1,14 @@
 # Integrated Scene Variant Catalogue
 
-This document is the paper-facing catalogue of the **36 controlled scene
+This document is the paper-facing catalogue of the **32 controlled scene
 configurations** used by the three main integrated environments:
 
 | Environment | Variants | Feasible | Infeasible |
 | --- | ---: | ---: | ---: |
-| Kitchen | 16 | 10 | 6 |
+| Kitchen | 12 | 6 | 6 |
 | Living Room | 10 | 6 | 4 |
 | Workshop | 10 | 8 | 2 |
-| **Total** | **36** | **24** | **12** |
+| **Total** | **32** | **20** | **12** |
 
 These are authored benchmark configurations, not every mathematical
 permutation of all objects. Each variant keeps the task instruction fixed and
@@ -56,7 +56,37 @@ object/region assignment exists.
 
 ---
 
-# 1. Kitchen: 16 variants
+# 1. Kitchen: current 12-variant suite
+
+The current task prepares coffee and soup for two people: two coffee vessels,
+two soup bowls, one reusable coffee stirrer, two distinct soup utensils, one
+kettle, and one coffee jar. Variants change only required-object region
+placement or remove one required item. There are no decoys, compatibility
+traps, surplus-count cases, or layout-swap controls.
+
+| Paper label | Internal variant | Outcome | Controlled change |
+| --- | --- | --- | --- |
+| `K1` | `F0_ALL_VISIBLE` | Feasible | All required objects visible |
+| `K2` | `F1_HIDDEN_COFFEE_VESSEL` | Feasible | Second coffee vessel in C2 |
+| `K3` | `F2_HIDDEN_SOUP_BOWL` | Feasible | Second soup bowl in B1 |
+| `K4` | `F3_HIDDEN_VESSELS_MIXED` | Feasible | Coffee vessel in C2; soup bowl in B1 |
+| `K5` | `F4_TOOLS_IN_DRAWERS` | Feasible | Coffee spoon in D1; soup utensil in D2 |
+| `K6` | `F5_FULL_DISTRIBUTED_SEARCH` | Feasible | One required object in every storage region |
+| `K7` | `I0_MISSING_COFFEE_VESSEL` | Infeasible | One coffee vessel absent |
+| `K8` | `I1_MISSING_SOUP_BOWL` | Infeasible | One soup bowl absent |
+| `K9` | `I2_MISSING_COFFEE_SPOON` | Infeasible | Reusable coffee spoon absent |
+| `K10` | `I3_MISSING_SOUP_UTENSIL` | Infeasible | One soup utensil absent |
+| `K11` | `I4_MISSING_KETTLE` | Infeasible | Kettle absent |
+| `K12` | `I5_MISSING_COFFEE_JAR` | Infeasible | Coffee jar absent |
+
+The authoritative layouts are in
+[`kitchen_feasibility_variants.yaml`](../mujoco_scenes/configs/kitchen_feasibility_variants.yaml).
+
+## Archived prior 16-variant catalogue (superseded)
+
+The material below documents the retired three-serving research suite and is
+retained only for interpreting previously generated benchmark reports. Its
+variant IDs are not accepted by the current runner.
 
 ## Task and feasibility rule
 
@@ -297,18 +327,18 @@ shared table. `STAGING` is the initial source area, not a candidate destination.
 
 ## Living Room variant matrix
 
-| Variant | Outcome | Initial object/region change | Reason or required correction |
-| --- | --- | --- | --- |
-| `F0_ALL_OBJECTS_IN_STAGING` | FEASIBLE | All five objects in `STAGING` | Move both cup/saucer pairs to their individual tables and the remote to `SHARED`. |
-| `F1_LEFT_SAUCER_PREPLACED` | FEASIBLE | Left saucer on `PL`; all others in `STAGING` | Saucer is already correct, so only four objects require placement. |
-| `F2_LEFT_SAUCER_ON_SHARED` | FEASIBLE | Left saucer on `SHARED`; all others in `STAGING` | Move that saucer to `PL`; place the remaining objects normally. |
-| `F3_LEFT_CUP_ON_SHARED` | FEASIBLE | Left cup on `SHARED`; all others in `STAGING` | Move that cup to `PL`; place the remaining objects normally. |
-| `F4_SAUCER_PREPLACED_CUP_ON_SHARED` | FEASIBLE | Left saucer on `PL`, left cup on `SHARED` | Keep the correct saucer and move the cup to `PL`. |
-| `F5_LEFT_PAIR_ON_SHARED` | FEASIBLE | Left cup and saucer on `SHARED` | Move both to `PL`. |
-| `I0_NO_SHARED_TABLE` | INFEASIBLE | `SHARED` absent | No destination exists for the remote. |
-| `I1_NO_LEFT_PERSONAL_TABLE` | INFEASIBLE | `PL` absent | Only one individual table exists for two required personal sets. |
-| `I2_NO_PERSONAL_TABLES` | INFEASIBLE | `PL` and `PR` absent | Neither cup/saucer set has an individual destination. |
-| `I3_NO_TABLES` | INFEASIBLE | `PL`, `PR`, and `SHARED` absent | No required destination table exists. |
+| Paper label | Internal variant | Outcome | Initial object/region change | Reason or required correction |
+| --- | --- | --- | --- | --- |
+| `L1` | `F0_ALL_OBJECTS_IN_STAGING` | FEASIBLE | All five objects in `STAGING` | Move both cup/saucer pairs to their individual tables and the remote to `SHARED`. |
+| `L2` | `F1_LEFT_SAUCER_PREPLACED` | FEASIBLE | Left saucer on `PL`; all others in `STAGING` | Saucer is already correct, so only four objects require placement. |
+| `L3` | `F2_LEFT_SAUCER_ON_SHARED` | FEASIBLE | Left saucer on `SHARED`; all others in `STAGING` | Move that saucer to `PL`; place the remaining objects normally. |
+| `L4` | `F3_LEFT_CUP_ON_SHARED` | FEASIBLE | Left cup on `SHARED`; all others in `STAGING` | Move that cup to `PL`; place the remaining objects normally. |
+| `L5` | `F4_SAUCER_PREPLACED_CUP_ON_SHARED` | FEASIBLE | Left saucer on `PL`, left cup on `SHARED` | Keep the correct saucer and move the cup to `PL`. |
+| `L6` | `F5_LEFT_PAIR_ON_SHARED` | FEASIBLE | Left cup and saucer on `SHARED` | Move both to `PL`. |
+| `L7` | `I0_NO_SHARED_TABLE` | INFEASIBLE | `SHARED` absent | No destination exists for the remote. |
+| `L8` | `I1_NO_LEFT_PERSONAL_TABLE` | INFEASIBLE | `PL` absent | Only one individual table exists for two required personal sets. |
+| `L9` | `I2_NO_PERSONAL_TABLES` | INFEASIBLE | `PL` and `PR` absent | Neither cup/saucer set has an individual destination. |
+| `L10` | `I3_NO_TABLES` | INFEASIBLE | `PL`, `PR`, and `SHARED` absent | No required destination table exists. |
 
 ## Living Room snapshots
 
@@ -522,19 +552,19 @@ moves the tool cabinet body to `(-0.49, 0.56, 0.68)`.
 
 The recommended aggregate statement is:
 
-> We evaluate 36 controlled physical scene configurations across three
-> environments: 16 Kitchen, 10 Living Room, and 10 Workshop variants. The set
-> contains 24 feasible configurations with at least one complete global
+> We evaluate 32 controlled physical scene configurations across three
+> environments: 12 Kitchen, 10 Living Room, and 10 Workshop variants. The set
+> contains 20 feasible configurations with at least one complete global
 > assignment and 12 controlled infeasible configurations for which exhaustive
 > inspection yields no complete assignment. Variants test object and region
 > redistribution, spatial permutation, semantic and geometric alternatives,
 > target coverage, distinct matching, capacity, context, decoy robustness, and
 > global assignment conflicts.
 
-Do not describe all 36 as permutations. Workshop variants alter only the
+Do not describe all 32 as permutations. Workshop variants alter only the
 positions or presence of a fixed manual driver, power driver, screw, and hammer
 distractor. Living Room varies only initial object region or required-table
-presence; Kitchen retains its documented semantic/geometric perturbations.
+presence; Kitchen varies only required-object placement or absence.
 
 ## Source-of-truth note
 

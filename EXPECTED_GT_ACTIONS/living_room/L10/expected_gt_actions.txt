@@ -1,0 +1,8 @@
+Environment: living_room
+Variant: L10
+Internal variant: I3_NO_TABLES
+Intended outcome: INFEASIBLE
+Description: All three placement tables are absent. Grounding termination: FUNCTIONAL_WITNESS_NOT_COMPLETE.
+Expected GT actions: 1
+
+001. TERMINATE_INFEASIBLE(FUNCTIONAL_WITNESS_NOT_COMPLETE)  # No complete functional region assignment exists.

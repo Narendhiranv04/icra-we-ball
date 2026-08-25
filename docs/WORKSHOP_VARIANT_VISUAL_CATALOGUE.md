@@ -25,18 +25,18 @@ The three fixed inspectable storage regions are searched in this order:
 
 A variant changes only the storage position or presence of the four fixed objects. Search stops as soon as both a screw and a compatible driver have been observed. If both drivers have been observed, the driver encountered first in inspection order is selected. Feasibility never changes because of furniture, surface, container, or obstruction changes.
 
-| Variant | Left drawer | Right drawer | Tool cabinet | Regions inspected | Result / selected tool |
-|---|---|---|---|---:|---|
-| `F0_MANUAL_FIRST_ONE_REGION` | Manual driver, screw | Power driver | Hammer | 1 | Feasible / manual |
-| `F1_POWER_FIRST_ONE_REGION` | Power driver, screw | Manual driver | Hammer | 1 | Feasible / power |
-| `F2_MANUAL_FIRST_TWO_REGIONS` | Screw, hammer | Manual driver | Power driver | 2 | Feasible / manual |
-| `F3_POWER_FIRST_TWO_REGIONS` | Screw, hammer | Power driver | Manual driver | 2 | Feasible / power |
-| `F4_MANUAL_FIRST_THREE_REGIONS` | Hammer | Manual driver | Screw, power driver | 3 | Feasible / manual |
-| `F5_POWER_FIRST_THREE_REGIONS` | Power driver | Hammer | Screw, manual driver | 3 | Feasible / power |
-| `F6_MANUAL_ONLY` | Hammer | Screw | Manual driver | 3 | Feasible / manual; power driver absent |
-| `F7_POWER_ONLY` | Hammer | Screw | Power driver | 3 | Feasible / power; manual driver absent |
-| `I0_NO_DRIVER` | Screw | Hammer | Empty | 3 | Infeasible: `NO_COMPATIBLE_DRIVER` |
-| `I1_NO_SCREW` | Manual driver | Power driver | Hammer | 3 | Infeasible: `NO_COMPATIBLE_SCREW` |
+| Paper label | Internal variant | Left drawer | Right drawer | Tool cabinet | Regions inspected | Result / selected tool |
+|---|---|---|---|---|---:|---|
+| `W1` | `F0_MANUAL_FIRST_ONE_REGION` | Manual driver, screw | Power driver | Hammer | 1 | Feasible / manual |
+| `W2` | `F1_POWER_FIRST_ONE_REGION` | Power driver, screw | Manual driver | Hammer | 1 | Feasible / power |
+| `W3` | `F2_MANUAL_FIRST_TWO_REGIONS` | Screw, hammer | Manual driver | Power driver | 2 | Feasible / manual |
+| `W4` | `F3_POWER_FIRST_TWO_REGIONS` | Screw, hammer | Power driver | Manual driver | 2 | Feasible / power |
+| `W5` | `F4_MANUAL_FIRST_THREE_REGIONS` | Hammer | Manual driver | Screw, power driver | 3 | Feasible / manual |
+| `W6` | `F5_POWER_FIRST_THREE_REGIONS` | Power driver | Hammer | Screw, manual driver | 3 | Feasible / power |
+| `W7` | `F6_MANUAL_ONLY` | Hammer | Screw | Manual driver | 3 | Feasible / manual; power driver absent |
+| `W8` | `F7_POWER_ONLY` | Hammer | Screw | Power driver | 3 | Feasible / power; manual driver absent |
+| `W9` | `I0_NO_DRIVER` | Screw | Hammer | Empty | 3 | Infeasible: `NO_COMPATIBLE_DRIVER` |
+| `W10` | `I1_NO_SCREW` | Manual driver | Power driver | Hammer | 3 | Infeasible: `NO_COMPATIBLE_SCREW` |
 
 “Feasible” means that the observed objects contain at least one geometrically compatible driver–screw pair and the full insertion sequence can be executed. “Infeasible” means that exhaustive inspection proves a required movable role is absent. It does not mean that perception failed or that a work surface/container alternative happened to be unavailable.
 

@@ -2,7 +2,8 @@
 
 Status: **Kitchen GT execution closed; Living-Room grounding/planning
 revalidated for the fixed-table variant family; final physical videos pending
-regeneration; VLM planner integration pending**.
+regeneration; Qwen function/property integration implemented; VLM action
+planner integration pending**.
 
 This statement applies to the ground-truth demonstration pipeline. It does not
 claim that every Kitchen manipulation is an unassisted contact-rich motion or
@@ -119,10 +120,19 @@ MUJOCO_GL=egl PYOPENGL_PLATFORM=egl .venv/bin/python \
   --variant all --assisted-suite --record
 ```
 
-## Remaining VLM integration boundary
+## VLM integration boundary
 
-The remaining integration replaces the privileged/deterministic plan producer,
-not the action executors:
+The planning-free, image-conditioned Qwen function/property integration for
+Workshop, Kitchen, and Living Room is now implemented. Kitchen and Living Room usage and review
+steps are documented in
+[`KITCHEN_LIVING_ROOM_VLM_REQUIREMENTS_INTEGRATION.md`](KITCHEN_LIVING_ROOM_VLM_REQUIREMENTS_INTEGRATION.md).
+It preserves Qwen's raw role/property/candidate output and performs a separate
+post-response ontology audit. A normalized task contract is produced only when
+that audit passes. It deliberately starts no search, allocation, action
+planning, or execution.
+
+The remaining integration replaces the privileged/deterministic **action-plan
+producer**, not the action executors:
 
 1. The VLM consumes the observation registry, region state, functional witness,
    and task instruction.

@@ -25,6 +25,7 @@ from .kitchen_feasibility_oracle import (
     _soup_matching,
     _valid_edge,
     evaluate_oracle_subset,
+    load_feasibility_benchmark_config,
 )
 from .kitchen_ground_truth_state import CONTAINER_NAMES, OracleWorldState
 from .scene_loader import CONTAINER_JOINTS
@@ -91,6 +92,7 @@ def _deterministic_coffee_cover(
     targets: list[dict[str, Any]],
     edges: list[dict[str, Any]],
     instance_by_oracle_id: dict[str, dict[str, Any]] | None = None,
+    required_count: int = 2,
 ) -> dict[str, Any] | None:
     region_rank = {"INITIAL": 0, "D1": 1, "D2": 2, "C2": 3, "B1": 4, "C1": 5}
     target_by_id = {t["oracle_object_id"]: t for t in targets}
@@ -107,7 +109,7 @@ def _deterministic_coffee_cover(
         )
 
     options = []
-    for chosen_targets in combinations(targets, 3):
+    for chosen_targets in combinations(targets, required_count):
         per_target = [
             sorted(
                 (edge for edge in edges if edge["target_id"] == target["oracle_object_id"]),
@@ -160,6 +162,7 @@ def _deterministic_soup_matching(
     targets: list[dict[str, Any]],
     edges: list[dict[str, Any]],
     instance_by_oracle_id: dict[str, dict[str, Any]] | None = None,
+    required_count: int = 2,
 ) -> tuple[dict[str, Any] | None, int]:
     region_rank = {"INITIAL": 0, "D1": 1, "D2": 2, "C2": 3, "B1": 4, "C1": 5}
     target_by_id = {t["oracle_object_id"]: t for t in targets}
@@ -175,7 +178,7 @@ def _deterministic_soup_matching(
     options = []
     max_cardinality = 0
 
-    for chosen_targets in combinations(targets, min(3, len(targets))):
+    for chosen_targets in combinations(targets, min(required_count, len(targets))):
         c_target_ids = [t["oracle_object_id"] for t in chosen_targets]
         for tool_perm in combinations(tool_ids, len(c_target_ids)):
             from itertools import permutations
@@ -240,6 +243,14 @@ def solve_ground_truth_assignment(
 ) -> GroundTruthAssignment:
     """Solve the privileged ground-truth task assignment deterministically."""
     geometry_config = load_geometry_config()
+    benchmark = load_feasibility_benchmark_config()
+    counts = benchmark.get("required_counts", {})
+    coffee_count = int(counts.get("coffee_containers", 2))
+    soup_count = int(counts.get("soup_containers", 2))
+    soup_utensil_count = int(counts.get("soup_utensils", soup_count))
+    role_kinds = benchmark.get("role_object_kinds", {})
+    coffee_tool_kinds = set(role_kinds.get("coffee_stirrer", []))
+    soup_tool_kinds = set(role_kinds.get("soup_eating_utensil", []))
 
     # Build instance records preserving both oracle_id and MuJoCo instance_name
     raw_records = scene._object_instance_records
@@ -274,6 +285,14 @@ def solve_ground_truth_assignment(
     coffee_candidates = [i for i in instances if i["semantic_class"] == "coffee_container"]
     soup_candidates = [i for i in instances if i["semantic_class"] == "soup_container"]
     tool_candidates = [i for i in instances if i["semantic_class"] == "spoon"]
+    coffee_tool_candidates = [
+        item for item in tool_candidates
+        if not coffee_tool_kinds or item["object_kind"] in coffee_tool_kinds
+    ]
+    soup_tool_candidates = [
+        item for item in tool_candidates
+        if not soup_tool_kinds or item["object_kind"] in soup_tool_kinds
+    ]
 
     region_order = {"INITIAL": 0, "D1": 1, "D2": 2, "C2": 3, "B1": 4, "C1": 5}
     def instance_rank_key(item):
@@ -294,47 +313,66 @@ def solve_ground_truth_assignment(
 
     # Valid edges
     coffee_edges = [
-        edge for tool in tool_candidates for target in coffee_candidates
+        edge for tool in coffee_tool_candidates for target in coffee_candidates
         if (edge := _valid_edge(tool, target, geometry_config)) is not None
     ]
     soup_edges = [
-        edge for tool in tool_candidates for target in soup_candidates
+        edge for tool in soup_tool_candidates for target in soup_candidates
         if (edge := _valid_edge(tool, target, geometry_config)) is not None
     ]
 
     coffee_cover_result = _deterministic_coffee_cover(
-        coffee_candidates, coffee_edges, instance_by_oracle_id
+        coffee_candidates, coffee_edges, instance_by_oracle_id, coffee_count
     )
     soup_matching_result, soup_cardinality = _deterministic_soup_matching(
-        soup_candidates, soup_edges, instance_by_oracle_id
+        soup_candidates, soup_edges, instance_by_oracle_id, soup_count
     )
-
-    is_feasible = (
-        len(coffee_candidates) >= 3
-        and len(soup_candidates) >= 3
-        and coffee_cover_result is not None
-        and soup_matching_result is not None
-    )
-
-    failure_reason = None
-    if len(coffee_candidates) < 3:
-        failure_reason = "INSUFFICIENT_COFFEE_CONTAINERS"
-    elif len(soup_candidates) < 3:
-        failure_reason = "INSUFFICIENT_SOUP_CONTAINERS"
-    elif any(
-        not any(edge["target_id"] == target["oracle_object_id"] for edge in coffee_edges)
-        for target in coffee_candidates
-    ):
-        failure_reason = "UNCOVERED_COFFEE_TARGET"
-    elif coffee_cover_result is None:
-        failure_reason = "NO_COMPLETE_COFFEE_TOOL_COVER"
-    elif soup_matching_result is None:
-        distinct_tools = len({edge["tool_id"] for edge in soup_edges})
-        failure_reason = (
-            "NO_COMPLETE_SOUP_MATCHING"
-            if soup_cardinality < len(soup_candidates) and distinct_tools >= 3
-            else "INSUFFICIENT_DISTINCT_SOUP_TOOLS"
+    # Multiple complete soup matchings can have identical aggregate geometry
+    # margins, leaving their pairing dependent on scene-record insertion order.
+    # Resolve that tie using the reviewed soup-tool preference order paired
+    # with the stable target name order.  This preserves the K1/K2-proven
+    # oversized->deep and partial->shallow pairing in hidden/distributed scenes.
+    if soup_matching_result is not None:
+        preferred_tool_kinds = list(
+            role_kinds.get("soup_eating_utensil", [])
         )
+        preferred_tools = sorted(
+            {
+                edge["tool_id"] for edge in soup_edges
+                if edge["tool_id"] in instance_by_oracle_id
+            },
+            key=lambda tool_id: (
+                preferred_tool_kinds.index(
+                    instance_by_oracle_id[tool_id]["object_kind"]
+                )
+                if instance_by_oracle_id[tool_id]["object_kind"]
+                in preferred_tool_kinds
+                else len(preferred_tool_kinds),
+                instance_by_oracle_id[tool_id]["instance_name"],
+            ),
+        )
+        preferred_targets = sorted(
+            {
+                edge["target_id"] for edge in soup_matching_result["assignments"]
+            },
+            key=lambda target_id: instance_by_oracle_id[target_id]["instance_name"],
+        )
+        preferred_assignment = []
+        for target_id, tool_id in zip(preferred_targets, preferred_tools):
+            edge = next(
+                (
+                    candidate for candidate in soup_edges
+                    if candidate["target_id"] == target_id
+                    and candidate["tool_id"] == tool_id
+                ),
+                None,
+            )
+            if edge is None:
+                preferred_assignment = []
+                break
+            preferred_assignment.append(deepcopy(edge))
+        if len(preferred_assignment) == soup_count:
+            soup_matching_result["assignments"] = preferred_assignment
 
     # Resolve sources
     sources = {}
@@ -349,6 +387,41 @@ def solve_ground_truth_assignment(
                 sources["coffee_source"] = name
         elif "jar" in kind and "coffee_source" not in sources:
             sources["coffee_source"] = name
+
+    is_feasible = (
+        len(coffee_candidates) >= coffee_count
+        and len(soup_candidates) >= soup_count
+        and coffee_cover_result is not None
+        and soup_matching_result is not None
+        and "water_source" in sources
+        and "coffee_source" in sources
+    )
+
+    failure_reason = None
+    if len(coffee_candidates) < coffee_count:
+        failure_reason = "INSUFFICIENT_COFFEE_CONTAINERS"
+    elif len(soup_candidates) < soup_count:
+        failure_reason = "INSUFFICIENT_SOUP_CONTAINERS"
+    elif not coffee_tool_candidates:
+        failure_reason = "MISSING_COFFEE_STIRRER"
+    elif any(
+        not any(edge["target_id"] == target["oracle_object_id"] for edge in coffee_edges)
+        for target in coffee_candidates
+    ):
+        failure_reason = "UNCOVERED_COFFEE_TARGET"
+    elif coffee_cover_result is None:
+        failure_reason = "NO_COMPLETE_COFFEE_TOOL_COVER"
+    elif soup_matching_result is None:
+        distinct_tools = len({edge["tool_id"] for edge in soup_edges})
+        failure_reason = (
+            "NO_COMPLETE_SOUP_MATCHING"
+            if soup_cardinality < soup_count and distinct_tools >= soup_utensil_count
+            else "INSUFFICIENT_DISTINCT_SOUP_TOOLS"
+        )
+    elif "water_source" not in sources:
+        failure_reason = "MISSING_WATER_SOURCE"
+    elif "coffee_source" not in sources:
+        failure_reason = "MISSING_COFFEE_SOURCE"
 
     # Map assignments back to MuJoCo instance names
     coffee_assignments = []
@@ -375,7 +448,7 @@ def solve_ground_truth_assignment(
             for edge in coffee_cover_result["assignments"]
         ]
     else:
-        selected_coffee_targets = coffee_candidates[:3]
+        selected_coffee_targets = coffee_candidates[:coffee_count]
 
     soup_assignments = []
     soup_utensils_by_target = {}
@@ -401,7 +474,7 @@ def solve_ground_truth_assignment(
             for edge in soup_matching_result["assignments"]
         ]
     else:
-        selected_soup_targets = soup_candidates[:3]
+        selected_soup_targets = soup_candidates[:soup_count]
 
     return GroundTruthAssignment(
         variant_id=variant_id,
@@ -513,10 +586,9 @@ def generate_ground_truth_plan(
                 {"container_open": container},
             )
 
-    # Phase B: RETRIEVE / STAGE TARGETS
-    # Bring any cup/bowl required for manipulation out of storage onto countertop
-    staged_targets = []
-    for vessel_id in coffee_target_ids + soup_target_ids:
+    # Phase B: RETRIEVE / STAGE COFFEE TARGETS
+    # Coffee vessels need countertop access for pouring and stirring.
+    for vessel_id in coffee_target_ids:
         loc = initial_state.object_locations.get(vessel_id)
         if loc in CONTAINER_NAMES:
             add_action(
@@ -533,7 +605,16 @@ def generate_ground_truth_plan(
                 {"holding": vessel_id},
                 {"object_at": {vessel_id: "countertop"}, "hand_empty": True},
             )
-            staged_targets.append(vessel_id)
+
+    # Hidden soup bowls need no countertop staging. Keep them in their already
+    # opened storage until the soup-serving phase, then transfer each directly
+    # into the serving area immediately before its utensil. This matches the
+    # K1/K2 bowl->utensil timing and avoids leaving a light bowl exposed to all
+    # intervening pour/stir/base motions.
+    directly_served_soup_targets = {
+        bowl_id for bowl_id in soup_target_ids
+        if initial_state.object_locations.get(bowl_id) in CONTAINER_NAMES
+    }
 
     # Phase C: POUR
     # Pour water and coffee into all coffee targets
@@ -618,25 +699,52 @@ def generate_ground_truth_plan(
             {"object_at": {cup_id: "serving_area"}, "served": cup_id, "hand_empty": True},
         )
 
-    # Serve soup bowls and pair with dedicated soup utensils
-    for bowl_id in soup_target_ids:
+    # Serve soup bowls and pair with dedicated soup utensils.  A bowl retrieved
+    # directly into the serving area must receive its utensil before another
+    # visible bowl is transferred into the neighbouring serving slot.  K1/K2
+    # already get this clearance-preserving deep-bowl-first order naturally;
+    # enforce it for K3 and every distributed variant as well.
+    soup_service_order = [
+        bowl_id for bowl_id in soup_target_ids
+        if bowl_id in directly_served_soup_targets
+    ] + [
+        bowl_id for bowl_id in soup_target_ids
+        if bowl_id not in directly_served_soup_targets
+    ]
+    for bowl_id in soup_service_order:
         utensil_id = assignment.soup_utensils_by_target[bowl_id]
 
-        # Serve bowl
-        add_action(
-            "PICK",
-            [bowl_id],
-            f"Pick soup bowl {bowl_id} for serving",
-            {"hand_empty": True, "object_accessible": bowl_id},
-            {"holding": bowl_id},
-        )
-        add_action(
-            "PLACE",
-            [bowl_id, "serving_area"],
-            f"Place soup bowl {bowl_id} in serving area",
-            {"holding": bowl_id},
-            {"object_at": {bowl_id: "serving_area"}, "served": bowl_id, "hand_empty": True},
-        )
+        if bowl_id in directly_served_soup_targets:
+            source_container = initial_state.object_locations.get(bowl_id)
+            add_action(
+                "PICK",
+                [bowl_id],
+                f"Retrieve soup bowl {bowl_id} from {source_container} for direct serving",
+                {"hand_empty": True, "object_accessible": bowl_id},
+                {"holding": bowl_id},
+            )
+            add_action(
+                "PLACE",
+                [bowl_id, "serving_area"],
+                f"Place retrieved soup bowl {bowl_id} directly in serving area",
+                {"holding": bowl_id},
+                {"object_at": {bowl_id: "serving_area"}, "served": bowl_id, "hand_empty": True},
+            )
+        else:
+            add_action(
+                "PICK",
+                [bowl_id],
+                f"Pick soup bowl {bowl_id} for serving",
+                {"hand_empty": True, "object_accessible": bowl_id},
+                {"holding": bowl_id},
+            )
+            add_action(
+                "PLACE",
+                [bowl_id, "serving_area"],
+                f"Place soup bowl {bowl_id} in serving area",
+                {"holding": bowl_id},
+                {"object_at": {bowl_id: "serving_area"}, "served": bowl_id, "hand_empty": True},
+            )
 
         # Serve utensil beside bowl
         add_action(

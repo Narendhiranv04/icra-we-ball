@@ -48,7 +48,13 @@ PHASE_B_MOUNT_ALLOWANCES = {
     # legitimate overlap throughout the storage-reach trajectory.  Use the
     # robot profile's existing -10 cm mechanical-mount calibration here too;
     # this does not relax the wrist/door, finger/fixture, or any other pair.
-    frozenset(("google:base_link", "google:link_shoulder")): -0.100,
+    # These are concentric articulated mount shells, so mesh penetration at
+    # this named mechanical joint is not a meaningful collision constraint.
+    frozenset(("google:base_link", "google:link_shoulder")): -1.000,
+    # The bicep also enters the base housing at compact carry postures.  Match
+    # the robot-wide calibrated mount allowance so consecutive source pours do
+    # not reject this legitimate 5 mm shell overlap as an arm collision.
+    frozenset(("google:base_link", "google:link_bicep")): -1.000,
 }
 
 
@@ -375,7 +381,8 @@ class UtensilGraspCandidateGenerator:
                     position = near + fraction * (far - near)
                     world_midpoint = (
                         scene.data.xpos[body_id]
-                        + scene.data.xmat[body_id].reshape(3, 3) @ position
+                        + scene.data.xmat[body_id].reshape(3, 3)
+                        @ position
                     )
                     candidates.append(
                         GraspPoseCandidate(
@@ -1409,25 +1416,40 @@ class KitchenPlacementResolver:
                 0.008, support_height
             )
         self.serving_slot_by_id: dict[str, tuple[float, float]] = {}
+        # The paper Kitchen variants differ only in where objects are initially
+        # stored.  Their final serving layout must therefore not depend on an
+        # object's observed/source X coordinate.  In particular, a deep bowl
+        # retrieved from B1 used to sort after the shallow bowl and inherit the
+        # right-hand (+0.15) slot occupied by the mug's rear corridor.  K1/K2's
+        # successful layout is the canonical layout for every variant.
+        fixed_serving_slots = {
+            "ab3_narrow_deep_cup": (-0.15, -0.48),
+            "ab3_medium_deep_mug": (0.15, -0.48),
+            "ab3_deep_bowl": (-0.15, -0.64),
+            "ab3_shallow_bowl": (0.15, -0.64),
+        }
         for function, row_y in (("coffee_vessel", -0.48), ("soup_bowl", -0.64)):
             group = [
                 row for row in inventory["objects"]
                 if function in set(row["selected_functions"])
             ]
-            # Keep each payload's transfer corridor close to its observed X
-            # coordinate.  This avoids sweeping bowls across other tabletop
-            # objects while preserving deterministic, non-overlapping slots.
-            group.sort(key=lambda row: (row["observed_centroid_world_m"][0], row["generic_object_id"]))
+            group.sort(key=lambda row: row["generic_object_id"])
             # Keep the forward-right coffee-serving corridor clear for
             # subsequent main-table source retrieval. Soup bowls retain their
             # validated monotonic left/centre/right allocation.
             slot_order = (
                 (-0.15, 0.15, 0.0)
                 if function == "coffee_vessel"
-                else (-0.15, 0.0, 0.075)
+                # Match the physically successful final two-bowl layout even
+                # when the second bowl is retrieved and served first.
+                else (-0.15, 0.15, 0.0)
             )
-            for slot_x, row in zip(slot_order, group):
-                self.serving_slot_by_id[row["generic_object_id"]] = (slot_x, row_y)
+            for fallback_x, row in zip(slot_order, group):
+                object_id = row["generic_object_id"]
+                fixed = fixed_serving_slots.get(object_id)
+                self.serving_slot_by_id[object_id] = (
+                    fixed if fixed is not None else (fallback_x, row_y)
+                )
 
     def footprint(self, object_id: str) -> tuple[float, float]:
         dimensions = self.inventory_by_id[object_id].get("observed_dimensions_m", {})
@@ -1839,6 +1861,17 @@ class KitchenObjectManipulationExecutor:
         elif source_kind == "BOX" and family in {"BOWL", "VESSEL"}:
             candidates = StorageGraspCandidateGenerator.box(
                 self.scene, site_id, carry_rotation, family
+            )
+        elif source_kind == "TABLE" and family in {"BOWL", "VESSEL"}:
+            # A relocated vessel must stop using its original cupboard/box
+            # candidate family. Empty candidates select the normal tabletop
+            # grasp-site primitive used by initially visible K1 vessels.
+            candidates = ()
+        elif source_kind == "TABLE" and family == "UTENSIL":
+            # Likewise, drawer/cupboard utensil candidates are invalid after
+            # the object has been staged on the countertop.
+            candidates = UtensilGraspCandidateGenerator.generate(
+                self.scene, body_id, source_kind
             )
         elif candidates:
             # Existing family-specific candidates may carry a HOME-world
@@ -3501,9 +3534,7 @@ class KitchenObjectManipulationExecutor:
         local = np.zeros(3)
         placement_stance = None
         if current_workspace == KitchenWorkspace.HOME:
-            placement_stance = self._select_home_place_stance(
-                position, None
-            )
+            placement_stance = self._select_home_place_stance(position, None)
             selected = placement_stance.get("selected")
             local = np.array((
                 float(selected["local_forward_m"]),

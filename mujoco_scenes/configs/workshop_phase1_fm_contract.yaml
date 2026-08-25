@@ -3,6 +3,44 @@ description: "Manual surrogate contract for the fixed-object Workshop W2 benchma
 
 task_instruction: "Find the compatible screw and first compatible driver encountered, insert the screw tip-down into the workbench hole, and drive it fully."
 
+# Post-response aliases only. This block is never included in the VLM prompt.
+# It is the deterministic, reviewable boundary that audits the model's natural
+# wording against predicates implemented by the geometric verifier.
+fm_normalization:
+  function_aliases:
+    CAN_DRIVE_SCREW:
+      - "drive a screw"
+      - "drive screws"
+      - "turn a screw"
+      - "tighten a screw"
+      - "screw driving"
+      - "apply torque to a screw"
+    CAN_FASTEN:
+      - "fasten the joint"
+      - "secure the joint"
+      - "threaded fastener"
+      - "fastening component"
+      - "screw fastener"
+  relation_aliases:
+    REACHES_TARGET:
+      - "reach the target"
+      - "reach the screw head"
+      - "reach the workpiece"
+      - "sufficient reach"
+      - "access the screw head"
+    COMPATIBLE_WITH:
+      - "compatible with the screw"
+      - "match the screw recess"
+      - "fit the screw head"
+      - "matching drive interface"
+      - "transmit torque to the screw"
+    COMPATIBLE_WITH_TARGET:
+      - "compatible with the target hole"
+      - "fit the target hole"
+      - "fit the workbench hole"
+      - "thread into the hole"
+      - "suitable for the repair hole"
+
 functional_requirements:
   - requirement_id: "req_obj_driver"
     entity_type: "OBJECT"
@@ -31,15 +69,15 @@ vocabulary:
     screwdriver:
       detector_label: "screwdriver"
       detector_rank: 1
-      aliases: ["hand screwdriver", "manual screwdriver"]
+      aliases: ["hand screwdriver", "manual screwdriver", "Phillips screwdriver", "cross-head screwdriver"]
     power_driver:
       detector_label: "power drill"
       detector_rank: 2
-      aliases: ["powered screwdriver", "cordless drill", "power driver", "drill driver"]
+      aliases: ["powered screwdriver", "electric screwdriver", "cordless screwdriver", "cordless drill", "power driver", "drill driver", "power drill"]
     screw:
       detector_label: "screw"
       detector_rank: 3
-      aliases: ["fastener", "machine screw", "threaded screw"]
+      aliases: ["fastener", "machine screw", "threaded screw", "Phillips screw", "cross-head screw"]
     hammer:
       detector_label: "wooden hammer"
       detector_rank: 4

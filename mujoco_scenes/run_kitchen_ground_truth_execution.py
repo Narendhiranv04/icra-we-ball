@@ -3,7 +3,7 @@
 Usage examples:
   # One variant with live visualization and recording
   MUJOCO_GL=glfw python -m mujoco_scenes.run_kitchen_ground_truth_execution \\
-    --variant F2_DISTRIBUTED_COFFEE_TWO --show --record
+    --variant F2_HIDDEN_SOUP_BOWL --show --record
 
   # All variants with live visualization and recording
   MUJOCO_GL=glfw python -m mujoco_scenes.run_kitchen_ground_truth_execution \\
@@ -15,7 +15,7 @@ Usage examples:
 
   # Dry-run sequence generation and preflight verification
   python -m mujoco_scenes.run_kitchen_ground_truth_execution \\
-    --variant F2_DISTRIBUTED_COFFEE_TWO --dry-run
+    --variant F2_HIDDEN_SOUP_BOWL --dry-run
 """
 
 from __future__ import annotations
@@ -25,6 +25,7 @@ from copy import deepcopy
 import json
 from pathlib import Path
 import sys
+import traceback
 import time
 from typing import Any
 
@@ -380,6 +381,14 @@ def run_variant_ground_truth(
             physical_execution_success = False
             failure_detail = action_result.get("status", "ACTION_FAILED")
             print(f"  └─ Physical action FAILED: {failure_detail}")
+            diagnostic = action_result.get("message")
+            if diagnostic:
+                print(f"     Diagnostic: {diagnostic}")
+            if action_result.get("primary_placement_failure"):
+                print(
+                    "     Primary placement failure: "
+                    f"{action_result['primary_placement_failure']}"
+                )
             break
 
     # 8. Post-Execution & Task Validation
@@ -503,8 +512,8 @@ def main() -> int:
     parser.add_argument(
         "--variant",
         type=str,
-        default="F1_INITIAL_COMPLETE",
-        help="Variant name (e.g. 'F2_DISTRIBUTED_COFFEE_TWO') or 'all' to run every variant.",
+        default="F0_ALL_VISIBLE",
+        help="Variant name (e.g. 'F2_HIDDEN_SOUP_BOWL') or 'all' to run every variant.",
     )
     parser.add_argument(
         "--list-variants",
@@ -640,6 +649,7 @@ def main() -> int:
                     break
         except Exception as error:
             print(f"\n[EXCEPTION] Error executing variant {variant_name}: {error}", file=sys.stderr)
+            traceback.print_exc()
             overall_suite_success = False
             suite_results.append({
                 "variant_id": variant_name,

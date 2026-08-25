@@ -44,3 +44,7 @@ Privileged scene metadata is used only to construct variants, validate compiled 
 The manual requirement provider, semantic grounding, geometric compatibility search, first-observed selection, planner handoff, and physical GT execution use the same two-role schema. The complete GT suite passes 10/10 variants and 266/266 actions. Live VLM/FM requirement generation and new-model prediction artifacts are the remaining model-facing integration work; retired frozen predictions are intentionally not replayed.
 
 See [WORKSHOP_VARIANT_VISUAL_CATALOGUE.md](WORKSHOP_VARIANT_VISUAL_CATALOGUE.md) for all scene variants and [WORKSHOP_PIPELINE_READINESS.md](WORKSHOP_PIPELINE_READINESS.md) for execution details.
+
+The planning-free live Qwen requirements integration and its exact server,
+tunnel, validation, prompt-tuning, and grounding-smoke steps are documented in
+[WORKSHOP_VLM_REQUIREMENTS_INTEGRATION.md](WORKSHOP_VLM_REQUIREMENTS_INTEGRATION.md).

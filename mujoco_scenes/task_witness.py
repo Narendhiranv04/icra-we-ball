@@ -222,7 +222,9 @@ def _validate_joint_task_requirements(
                 )
             aliases_seen.update(preference["detector_aliases"])
         unary = role.get("unary_geometry")
-        if not isinstance(unary, list) or not unary:
+        if not isinstance(unary, list) or (
+            not unary and not role.get("allow_empty_geometry", False)
+        ):
             raise ValueError(f"Role '{role_name}' needs unary_geometry")
         role["geometric_requirements"] = [
             _normalize_joint_unary_requirement(

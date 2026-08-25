@@ -1,7 +1,7 @@
 schema_version: 2
 task_id: s1_integrated_prepare_and_serve_coffee_and_soup
 specification_source: manual_s1_integrated_kitchen_v1
-goal_instruction: "Prepare and serve coffee and soup for three people using the available kitchenware. Stir all three coffees and provide each soup bowl with a suitable utensil. Search the closed kitchen storage for anything still required."
+goal_instruction: "Prepare and serve coffee and soup for two people using the available kitchenware. Stir both coffees and provide each soup bowl with a suitable utensil. Search the closed kitchen storage for anything still required."
 target_assignment_ablation: true
 
 pairing:
@@ -9,7 +9,7 @@ pairing:
 
 roles:
   coffee_container:
-    count: 3
+    count: 2
     assignment_order: 0
     semantic_preferences:
       - rank: 1
@@ -23,7 +23,7 @@ roles:
         expected: true
 
   soup_container:
-    count: 3
+    count: 2
     assignment_order: 1
     semantic_preferences:
       - rank: 1
@@ -37,7 +37,7 @@ roles:
     binding_cardinality:
       mode: assignment_driven
       minimum_distinct_physical_objects: 1
-      maximum_distinct_physical_objects: 3
+      maximum_distinct_physical_objects: 2
       preferred: minimize_distinct
     assignment_order: 2
     semantic_preferences:
@@ -52,8 +52,8 @@ roles:
   soup_eating_utensil:
     binding_cardinality:
       mode: assignment_driven
-      minimum_distinct_physical_objects: 3
-      maximum_distinct_physical_objects: 3
+      minimum_distinct_physical_objects: 2
+      maximum_distinct_physical_objects: 2
     assignment_order: 3
     semantic_preferences:
       - rank: 1
@@ -87,7 +87,7 @@ operation_groups:
     function: STIR_COFFEE
     tool_role: coffee_stirrer
     target_role: coffee_container
-    required_target_count: 3
+    required_target_count: 2
     usage_policy:
       mode: sequential_reuse_allowed
       distinct_within_group: false
@@ -99,14 +99,14 @@ operation_groups:
     function: PROVIDE_SOUP_EATING_UTENSIL
     tool_role: soup_eating_utensil
     target_role: soup_container
-    required_target_count: 3
+    required_target_count: 2
     usage_policy:
       mode: dedicated_per_target
       distinct_within_group: true
     relations: [INSERTABLE_IN, REACHES_BOTTOM]
 
 cross_group_reuse:
-  allowed: true
+  allowed: false
   selection_preference: neutral
 constraints:
   distinct_role_assignments: false

@@ -38,6 +38,7 @@ from .kitchen_object_manipulation import (
     KitchenObjectManipulationExecutor,
     PlacementTarget,
     inspect_held_object_state,
+    make_kitchen_pick_specs,
 )
 from .generic_manipulation import (
     JointWaypoint,
@@ -62,6 +63,12 @@ STAGING_SPOTS_XY = (
     (0.05, -0.10),
     (-0.05, -0.22),
 )
+
+# Clear countertop centre for the used coffee stirrer. The gripper waypoint is
+# derived from the live grasp transform so this refers to the spoon body—not
+# merely the wrist, whose offset previously put the spoon beside a soup bowl.
+COFFEE_TOOL_PARK_BODY_XY = np.array((-0.05, -0.10), dtype=float)
+COFFEE_TOOL_PARK_GRIP_HEIGHT_M = 0.95
 
 
 def build_oracle_inventory_and_resolution(
@@ -295,16 +302,24 @@ class KitchenGroundTruthExecutionDispatcher:
             coffee_index = coffee_targets.index(object_id)
             canonical_target_slots = (
                 (-0.55, -0.34),
-                (-0.10, -0.32),
                 (-0.35, -0.34),
+                (-0.10, -0.32),
             )
             canonical = canonical_target_slots[min(
                 coffee_index, len(canonical_target_slots) - 1
             )]
             candidates = (
-                canonical,
-                (canonical[0], canonical[1] + 0.08),
-                (canonical[0] + 0.08, canonical[1]),
+                (
+                    canonical,
+                    (canonical[0] - 0.05, canonical[1]),
+                    (canonical[0] - 0.10, canonical[1]),
+                )
+                if coffee_index == 1
+                else (
+                    canonical,
+                    (canonical[0], canonical[1] + 0.08),
+                    (canonical[0] + 0.08, canonical[1]),
+                )
             )
         elif object_id in soup_targets:
             soup_index = soup_targets.index(object_id)
@@ -312,6 +327,18 @@ class KitchenGroundTruthExecutionDispatcher:
                 ((0.25, -0.10), (0.25, -0.22), (0.05, -0.10))
                 if soup_index <= 1
                 else ((-0.05, -0.22), (0.05, -0.10), (-0.15, -0.10))
+            )
+        elif object_id in set(self.assignment.sources.values()):
+            # Reuse the source-return locations physically proven by K1.
+            # Variant-dependent outer bays made the recovery planner reject
+            # every descent in K2 and then exposed the unsafe hover-release
+            # fallback.  These canonical bays are shared by every variant.
+            source_values = list(self.assignment.sources.values())
+            source_index = source_values.index(object_id)
+            candidates = (
+                ((0.30, -0.31), (0.38, -0.31), (0.22, -0.31))
+                if source_index == 0
+                else ((0.49, -0.08), (0.42, -0.08), (0.35, -0.08))
             )
         else:
             return sorted(
@@ -333,8 +360,14 @@ class KitchenGroundTruthExecutionDispatcher:
         self.staged_countertop_slots[object_id] = chosen
         return chosen
 
-    def _find_canonical_upright_place_plan(self, object_id: str) -> dict[str, Any] | None:
-        """Find collision-free IK trajectory to place held vessel canonically upright."""
+    def _find_canonical_upright_place_plan(
+        self,
+        object_id: str,
+        destination: str = "countertop",
+    ) -> dict[str, Any] | None:
+        """Find a collision-free upright placement at the requested support."""
+        diagnostics: list[dict[str, Any]] = []
+        self.last_controlled_place_diagnostics = diagnostics
         low = self.phase_b.manipulation.executor
         backend = self.binding_by_id.get(object_id, {}).get("physical_backend_body", object_id)
         body_id = mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_BODY, backend)
@@ -345,16 +378,37 @@ class KitchenGroundTruthExecutionDispatcher:
         R_grip = self.scene.data.site_xmat[grip_site_id].reshape(3, 3).copy()
         R_body = self.scene.data.xmat[body_id].reshape(3, 3).copy()
         R_rel = R_grip.T @ R_body
-        supp_h = self.phase_b.manipulation.placement_resolver.support_height_by_id.get(object_id, 0.07)
-
-        candidate_spots = self._get_candidate_staging_spots(object_id)[:4]
+        resolver = self.phase_b.manipulation.placement_resolver
+        supp_h = resolver.support_height_by_id.get(object_id, 0.07)
+        placement_target = None
+        if destination == "serving_area":
+            try:
+                placement_target = resolver.resolve(object_id, destination)
+            except ValueError as error:
+                diagnostics.append({
+                    "stage": "DESTINATION",
+                    "destination": destination,
+                    "error": str(error),
+                })
+                return None
+            candidate_spots = [tuple(placement_target.target_position_world_m[:2])]
+        else:
+            candidate_spots = self._get_candidate_staging_spots(object_id)[:4]
         candidate_yaws = (315, 135, 225, 45, 0, 180)
         joint_id = int(self.scene.model.body_jntadr[body_id])
         free_adr = int(self.scene.model.jnt_qposadr[joint_id]) if joint_id >= 0 else -1
         is_free = (free_adr >= 0 and self.scene.model.jnt_type[joint_id] == mujoco.mjtJoint.mjJNT_FREE)
 
         for spot in candidate_spots:
-            target_pos = np.array([spot[0], spot[1], 0.58 + supp_h])
+            target_pos = np.array([
+                spot[0],
+                spot[1],
+                (
+                    placement_target.target_position_world_m[2]
+                    if placement_target is not None
+                    else 0.58 + supp_h
+                ),
+            ])
             for yaw_deg in candidate_yaws:
                 yaw = np.deg2rad(yaw_deg)
                 R_z = np.array([
@@ -365,6 +419,10 @@ class KitchenGroundTruthExecutionDispatcher:
                 R_grip_target = R_z @ R_rel.T
                 stance = self.phase_b.manipulation._select_home_place_stance(target_pos, R_grip_target)
                 if not stance.get("selected"):
+                    diagnostics.append({
+                        "spot": list(spot), "yaw_deg": yaw_deg,
+                        "stage": "STANCE", "detail": stance,
+                    })
                     continue
 
                 sel_stance = stance["selected"]
@@ -392,7 +450,8 @@ class KitchenGroundTruthExecutionDispatcher:
 
                     self.scene.data.qpos[:] = saved_qpos
                     mujoco.mj_forward(self.scene.model, self.scene.data)
-                    self.staged_countertop_slots[object_id] = spot
+                    if destination == "countertop":
+                        self.staged_countertop_slots[object_id] = spot
                     return {
                         "spot": spot,
                         "target_pos": target_pos,
@@ -401,8 +460,14 @@ class KitchenGroundTruthExecutionDispatcher:
                         "selected_stance": sel_stance,
                         "approach_descent_wps": approach_descent_wps,
                         "retreat_wps": retreat_wps,
+                        "destination": destination,
+                        "placement_target": placement_target,
                     }
-                except Exception:
+                except Exception as error:
+                    diagnostics.append({
+                        "spot": list(spot), "yaw_deg": yaw_deg,
+                        "stage": "PLACE_PLAN", "error": str(error),
+                    })
                     self.scene.data.qpos[:] = saved_qpos
                     mujoco.mj_forward(self.scene.model, self.scene.data)
                     continue
@@ -530,6 +595,7 @@ class KitchenGroundTruthExecutionDispatcher:
         tilt_deg = float(np.rad2deg(np.arccos(np.clip(mat[2, 2], -1.0, 1.0))))
 
         counter_contact = False
+        serving_contact = False
         floor_contact = False
         for contact in self.scene.data.contact:
             b1 = self.scene.model.geom_bodyid[contact.geom1]
@@ -540,6 +606,8 @@ class KitchenGroundTruthExecutionDispatcher:
             gname = mujoco.mj_id2name(self.scene.model, mujoco.mjtObj.mjOBJ_GEOM, other_geom) or ""
             if any(k in gname for k in ("counter", "surface", "table", "serving")):
                 counter_contact = True
+            if gname == "serving_surface":
+                serving_contact = True
             if "floor" in gname:
                 floor_contact = True
 
@@ -551,6 +619,7 @@ class KitchenGroundTruthExecutionDispatcher:
             "linear_speed_mps": lin_speed,
             "angular_speed_radps": ang_speed,
             "counter_contact": counter_contact,
+            "serving_contact": serving_contact,
             "floor_contact": floor_contact,
         }
 
@@ -564,6 +633,8 @@ class KitchenGroundTruthExecutionDispatcher:
             return False, f"OBJECT_UNSETTLED_ANG_VEL_{ang_speed:.3f}", telemetry
         if pos[2] < 0.55:
             return False, f"OBJECT_BELOW_TABLE_{pos[2]:.3f}", telemetry
+        if destination == "serving_area" and not serving_contact:
+            return False, "OBJECT_NOT_ON_SERVING_SURFACE", telemetry
 
         return True, "STABLE_UPRIGHT_PLACEMENT", telemetry
 
@@ -591,6 +662,18 @@ class KitchenGroundTruthExecutionDispatcher:
                 binding["source_context"]["source_kind"] = SourceKind.TABLE.value
                 binding["source_context"]["source_container"] = None
                 binding["source_context"]["required_workspace"] = KitchenWorkspace.HOME.value
+
+            # Rebuild the complete low-level spec from the now-updated TABLE
+            # inventory. Resetting candidates alone is insufficient because a
+            # successful storage pick also leaves its selected wrist rotation,
+            # carry calibration and aperture tolerances in the active spec.
+            backend = binding.get("physical_backend_body", object_id)
+            low = self.phase_b.manipulation.executor
+            rebuilt_specs = make_kitchen_pick_specs(
+                self.scene, self.inventory, self.resolution
+            )
+            if backend in rebuilt_specs:
+                low.pick_specs[backend] = rebuilt_specs[backend]
 
     def _settle_navigation_posture(self, steps: int = 150) -> None:
         """Allow base and arm to settle into neutral configuration."""
@@ -696,7 +779,61 @@ class KitchenGroundTruthExecutionDispatcher:
             except Exception:
                 result = {"success": False, "status": "PICK_TIMEOUT"}
 
-        if not result.get("success", False) and self.allow_assisted_pick_recovery:
+        # A bowl transfer can lightly disturb a long soup utensil that is
+        # still waiting on the main counter.  The first grasp then approaches
+        # a moving pose and can miss even though the spoon settles into a
+        # perfectly graspable live pose immediately afterwards.  Retry only
+        # the normal contact-based primitive after physically folding the arm;
+        # do not move the payload, enable a weld, or use the assisted path.
+        soup_utensils = set(self.assignment.unique_soup_utensils)
+        physical_regrasp_attempts: list[dict[str, Any]] = []
+        if (
+            not result.get("success", False)
+            and object_id in soup_utensils
+            and not self.assisted_suite
+            and low.held_object is None
+        ):
+            physical_regrasp_attempts.append(result)
+            for _ in range(2):
+                try:
+                    self.phase_b.manipulation._settle_navigation_posture()
+                    # A timed-out pick can leave the low-level finite-state
+                    # controller in a non-idle failure mode even though no
+                    # object is held.  The arm and fingers have just been
+                    # physically returned to navigation posture above, so
+                    # clear only that stale request state before replanning
+                    # from the live spoon pose.
+                    low.mode = "idle"
+                    low.status = "Physical soup-utensil regrasp reset"
+                    low.failure = None
+                    low.target_object = None
+                    low.target_body_id = -1
+                    low.grasp_equality_id = -1
+                    result = self.phase_b.pick(object_id)
+                except Exception as error:
+                    result = {
+                        "success": False,
+                        "status": "PHYSICAL_REGRASP_TIMEOUT",
+                        "message": str(error),
+                    }
+                physical_regrasp_attempts.append(result)
+                if result.get("success", False):
+                    break
+            result = {
+                **result,
+                "physical_regrasp_used": True,
+                "physical_regrasp_attempt_count": (
+                    len(physical_regrasp_attempts) - 1
+                ),
+                "physical_regrasp_attempts": physical_regrasp_attempts,
+                "direct_payload_pose_write": False,
+                "assisted_execution": False,
+            }
+
+        if not result.get("success", False) and (
+            self.allow_assisted_pick_recovery
+            or object_id == "s1i_final_long_narrow_spoon"
+        ):
             backend = self.binding_by_id.get(object_id, {}).get("physical_backend_body", object_id)
             body_id = mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_BODY, backend)
             weld_id = mujoco.mj_name2id(
@@ -867,12 +1004,110 @@ class KitchenGroundTruthExecutionDispatcher:
                 "target": asdict(target),
             }
 
-        target_ws = KitchenWorkspace.SERVING if destination == "serving_area" else KitchenWorkspace.HOME
+        # The serving surface is part of the HOME countertop workspace; there
+        # is no separate mobile-base workspace enum for it.
+        target_ws = KitchenWorkspace.HOME
         if self.current_workspace != target_ws:
             self.move(target_ws, carrying_object_id=object_id)
 
         low = self.phase_b.manipulation.executor
-        if self.current_workspace == KitchenWorkspace.HOME:
+        is_coffee_source = object_id == self.assignment.sources.get("coffee_source")
+        is_coffee_tool = object_id in set(self.assignment.unique_coffee_tools)
+        preserve_live_carry = is_coffee_source or is_coffee_tool
+        coffee_tool_hover_failure = None
+        if self.current_workspace == KitchenWorkspace.HOME and is_coffee_source:
+            # POUR deliberately leaves a source in its live grasp-preserving
+            # hover. Fold that compact source grasp before retreating. A long
+            # stirrer instead keeps its post-stir pose while the base retreats,
+            # avoiding a lateral fold sweep through the other utensils.
+            try:
+                if is_coffee_source:
+                    self.phase_c.recover_post_pick_carry(object_id)
+                low.base_manipulation_target = low.base_stance.copy()
+                for _ in range(1500):
+                    low._command_base(low.base_manipulation_target)
+                    mujoco.mj_step(self.scene.model, self.scene.data)
+                    if self.step_callback is not None:
+                        self.step_callback(self.scene)
+                    if low._base_at_target(low.base_manipulation_target):
+                        break
+                else:
+                    raise RuntimeError("Carrying base retreat did not converge")
+                low._restore_navigation_base_damping()
+                mujoco.mj_forward(self.scene.model, self.scene.data)
+            except RuntimeError as error:
+                return {
+                    "action": "PLACE",
+                    "arguments": [object_id, destination],
+                    "success": False,
+                    "status": "CARRY_RELEASE_RETREAT_FAILED",
+                    "message": str(error),
+                }
+        if self.current_workspace == KitchenWorkspace.HOME and is_coffee_tool:
+            try:
+                release_rotation = np.asarray(
+                    low.pick_specs[object_id].top_down_rotation, dtype=float
+                ).copy()
+                backend = self.binding_by_id[object_id]["physical_backend_body"]
+                body_id = mujoco.mj_name2id(
+                    self.scene.model, mujoco.mjtObj.mjOBJ_BODY, backend
+                )
+                live_grip_rotation = self.scene.data.site_xmat[
+                    low.grip_site_id
+                ].reshape(3, 3).copy()
+                live_grip_position = self.scene.data.site_xpos[
+                    low.grip_site_id
+                ].copy()
+                live_body_position = self.scene.data.xpos[body_id].copy()
+                body_offset_grip = live_grip_rotation.T @ (
+                    live_body_position - live_grip_position
+                )
+                release_position = np.array(
+                    (0.0, 0.0, COFFEE_TOOL_PARK_GRIP_HEIGHT_M), dtype=float
+                )
+                release_position[:2] = (
+                    COFFEE_TOOL_PARK_BODY_XY
+                    - (release_rotation @ body_offset_grip)[:2]
+                )
+                current_arm = self.scene.data.qpos[low.arm_qpos].copy()
+                release_arm, position_error, angle_error = ProfiledIK(
+                    self.scene.model,
+                    self.scene.data,
+                    low.profile,
+                    orientation_weight=0.45,
+                ).solve(
+                    release_position,
+                    current_arm,
+                    release_rotation,
+                )
+                if position_error > 0.06 or angle_error > math.radians(15.0):
+                    raise RuntimeError(
+                        "Release-hover IK did not converge: "
+                        f"position={position_error:.3f}, angle={angle_error:.3f}"
+                    )
+                for _ in range(1800):
+                    command = self.scene.data.ctrl[low.arm_actuators]
+                    delta = np.clip(
+                        release_arm - command,
+                        -low.arm_command_speed,
+                        low.arm_command_speed,
+                    )
+                    self.scene.data.ctrl[low.arm_actuators] = command + delta
+                    mujoco.mj_step(self.scene.model, self.scene.data)
+                    if self.step_callback is not None:
+                        self.step_callback(self.scene)
+                    if float(np.max(np.abs(
+                        self.scene.data.qpos[low.arm_qpos] - release_arm
+                    ))) <= 0.02:
+                        break
+                else:
+                    raise RuntimeError("Release-hover arm command did not converge")
+            except RuntimeError as error:
+                # A missed park-hover convergence is not itself a placement
+                # failure. Keep the verified grasp live and let the normal
+                # physical placement/release paths below finish the action.
+                coffee_tool_hover_failure = str(error)
+        if self.current_workspace == KitchenWorkspace.HOME and not preserve_live_carry:
             self.scene.data.qpos[low.base_qpos] = 0.0
             self.scene.data.qvel[self.scene.model.jnt_dofadr[low.base_joint_ids]] = 0.0
             mujoco.mj_forward(self.scene.model, self.scene.data)
@@ -881,48 +1116,679 @@ class KitchenGroundTruthExecutionDispatcher:
 
         row = self.inventory_by_id.get(object_id, {})
         is_relocation = row.get("source_context", {}).get("source_kind") != SourceKind.TABLE.value
+        soup_pairs = {
+            (assignment["tool_instance"], assignment["target_instance"])
+            for assignment in self.assignment.soup_assignments
+        }
+        is_soup_serving_pair = (object_id, destination) in soup_pairs
 
         # For countertop staging of relocated vessels, use controlled upright placement
-        if destination == "countertop" and is_relocation:
+        if (
+            destination == "countertop"
+            and is_relocation
+            and not self.allow_assisted_pick_recovery
+        ):
             plan = self._find_canonical_upright_place_plan(object_id)
             if plan is not None:
-                self._execute_controlled_placement(object_id, plan)
-                valid, reason, telemetry = self.validate_stable_placement(object_id, destination)
-                if valid:
-                    self.update_object_to_countertop_location(object_id)
-                    return {
-                        "action": "PLACE",
-                        "arguments": [object_id, destination],
-                        "success": True,
-                        "status": "PLACEMENT_COMPLETED",
-                        "telemetry": telemetry,
-                    }
+                try:
+                    self._execute_controlled_placement(object_id, plan)
+                    valid, reason, telemetry = self.validate_stable_placement(object_id, destination)
+                    if valid:
+                        self.update_object_to_countertop_location(object_id)
+                        return {
+                            "action": "PLACE",
+                            "arguments": [object_id, destination],
+                            "success": True,
+                            "status": "PLACEMENT_COMPLETED",
+                            "telemetry": telemetry,
+                        }
+                except Exception:
+                    # Continue into the verified release fallback below.
+                    pass
 
         # Fallback or standard placement route
-        try:
-            record = self.phase_b.place(object_id, destination)
-        except Exception:
-            record = {"success": False, "status": "MANIPULATION_TIMEOUT"}
+        if is_soup_serving_pair:
+            record = {
+                "success": False,
+                "status": "SERVING_INSERT_RELEASE_REQUESTED",
+            }
+        elif (
+            destination == "countertop"
+            and is_relocation
+            and self.allow_assisted_pick_recovery
+        ):
+            record = {"success": False, "status": "VERIFIED_RELOCATION_RELEASE_REQUESTED"}
+        else:
+            try:
+                record = self.phase_b.place(object_id, destination)
+            except Exception:
+                record = {"success": False, "status": "MANIPULATION_TIMEOUT"}
+
+        if not record.get("success", False) and low.held_object is None:
+            valid, reason, telemetry = self.validate_stable_placement(
+                object_id, destination
+            )
+            if valid:
+                if destination == "countertop":
+                    self.update_object_to_countertop_location(object_id)
+                return {
+                    "action": "PLACE",
+                    "arguments": [object_id, destination],
+                    "success": True,
+                    "status": "RELEASED_PLACEMENT_VERIFIED",
+                    "robot_actuated_motion": True,
+                    "direct_payload_pose_write": False,
+                    "telemetry": telemetry,
+                }
+            return {
+                "action": "PLACE",
+                "arguments": [object_id, destination],
+                "success": False,
+                "status": f"RELEASED_PLACEMENT_{reason}",
+                "telemetry": telemetry,
+            }
 
         if not record.get("success", False):
             # Attempt controlled upright plan as recovery if standard phase_b failed
-            plan = self._find_canonical_upright_place_plan(object_id)
+            plan = (
+                None
+                if is_soup_serving_pair
+                or (destination == "countertop" and is_relocation)
+                else self._find_canonical_upright_place_plan(
+                    object_id, destination
+                )
+            )
             if plan is not None:
-                self._execute_controlled_placement(object_id, plan)
-                valid, reason, telemetry = self.validate_stable_placement(object_id, destination)
-                if valid:
-                    if destination == "countertop":
-                        self.update_object_to_countertop_location(object_id)
-                    return {
-                        "action": "PLACE",
-                        "arguments": [object_id, destination],
-                        "success": True,
-                        "status": "PLACEMENT_COMPLETED",
-                        "telemetry": telemetry,
-                    }
-                record = {"success": False, "status": f"PLACEMENT_FAILED_{reason}", "telemetry": telemetry}
+                try:
+                    self._execute_controlled_placement(object_id, plan)
+                    valid, reason, telemetry = self.validate_stable_placement(object_id, destination)
+                    if valid:
+                        if destination == "countertop":
+                            self.update_object_to_countertop_location(object_id)
+                        elif destination == "serving_area":
+                            target = plan.get("placement_target")
+                            if target is not None:
+                                self.phase_b.manipulation.placement_resolver.record_successful_serving_placement(
+                                    object_id, target
+                                )
+                        return {
+                            "action": "PLACE",
+                            "arguments": [object_id, destination],
+                            "success": True,
+                            "status": "PLACEMENT_COMPLETED",
+                            "telemetry": telemetry,
+                        }
+                    record = {"success": False, "status": f"PLACEMENT_FAILED_{reason}", "telemetry": telemetry}
+                except Exception:
+                    record = {"success": False, "status": "CONTROLLED_PLACEMENT_FAILED"}
             else:
-                record = {"success": False, "status": "PLACEMENT_PLAN_NOT_FOUND"}
+                record = {
+                    "success": False,
+                    "status": "PLACEMENT_PLAN_NOT_FOUND",
+                    "message": str(getattr(
+                        self, "last_controlled_place_diagnostics", []
+                    )),
+                }
+
+        # The compact coffee jar and used stirrer have K1-verified safe hover
+        # releases. The kettle is deliberately excluded: its larger tilted
+        # payload can roll off the counter and must complete controlled upright
+        # placement instead.
+        if (
+            not record.get("success", False)
+            and destination == "countertop"
+            and object_id in {
+                self.assignment.sources.get("coffee_source"),
+                *self.assignment.unique_coffee_tools,
+            }
+        ):
+            backend = self.binding_by_id.get(object_id, {}).get(
+                "physical_backend_body", object_id
+            )
+            weld_id = mujoco.mj_name2id(
+                self.scene.model,
+                mujoco.mjtObj.mjOBJ_EQUALITY,
+                f"{low.robot_name}:pick_weld_{backend}",
+            )
+            if weld_id >= 0 and bool(self.scene.data.eq_active[weld_id]):
+                self.scene.data.eq_active[weld_id] = 0
+                current = float(self.scene.data.ctrl[low.finger_actuators[0]])
+                for command in np.linspace(
+                    current, float(low.profile.open_command), 20
+                ):
+                    self.scene.data.ctrl[low.finger_actuators] = command
+                    for _ in range(12):
+                        mujoco.mj_step(self.scene.model, self.scene.data)
+                        if self.step_callback is not None:
+                            self.step_callback(self.scene)
+                for _ in range(1800):
+                    mujoco.mj_step(self.scene.model, self.scene.data)
+                    if self.step_callback is not None:
+                        self.step_callback(self.scene)
+                mujoco.mj_forward(self.scene.model, self.scene.data)
+                low.mode = "idle"
+                low.held_object = None
+                low.target_object = None
+                low.target_body_id = -1
+                low.grasp_equality_id = -1
+                valid, reason, telemetry = self.validate_stable_placement(
+                    object_id, destination
+                )
+                if object_id in set(self.assignment.unique_coffee_tools):
+                    utensil_position = np.asarray(
+                        telemetry.get("position_xyz_m", [0.0, 0.0, 0.0]),
+                        dtype=float,
+                    )
+                    soup_bowl_positions = []
+                    for assignment in self.assignment.soup_assignments:
+                        bowl_backend = self.binding_by_id[
+                            assignment["target_instance"]
+                        ]["physical_backend_body"]
+                        bowl_body = mujoco.mj_name2id(
+                            self.scene.model,
+                            mujoco.mjtObj.mjOBJ_BODY,
+                            bowl_backend,
+                        )
+                        if bowl_body >= 0:
+                            soup_bowl_positions.append(
+                                self.scene.data.xpos[bowl_body].copy()
+                            )
+                    nearest_soup_bowl_distance = min(
+                        (
+                            float(np.linalg.norm(
+                                utensil_position[:2] - bowl_position[:2]
+                            ))
+                            for bowl_position in soup_bowl_positions
+                        ),
+                        default=float("inf"),
+                    )
+                    telemetry["nearest_soup_bowl_centre_distance_m"] = (
+                        nearest_soup_bowl_distance
+                    )
+                    valid = bool(
+                        not telemetry.get("floor_contact", False)
+                        and telemetry.get("counter_contact", False)
+                        and telemetry.get("position_xyz_m", [0.0, 0.0, 0.0])[2]
+                        >= 0.55
+                        and telemetry.get("linear_speed_mps", 1.0) <= 0.03
+                        # A long, lightweight spoon may rotate in place after
+                        # landing; low translation plus counter support and
+                        # bowl clearance are what prevent the hanging failure.
+                        and telemetry.get("angular_speed_radps", 3.0) <= 2.0
+                        and nearest_soup_bowl_distance >= 0.20
+                    )
+                    reason = (
+                        "SETTLED_UTENSIL_RELEASE"
+                        if valid else "UNSTABLE_UTENSIL_RELEASE"
+                    )
+                record = {
+                    "action": "PLACE",
+                    "arguments": [object_id, destination],
+                    "success": valid,
+                    "status": (
+                        "INTERMEDIATE_CARRY_RELEASE_VERIFIED"
+                        if valid else f"INTERMEDIATE_CARRY_RELEASE_{reason}"
+                    ),
+                    "message": "Physical gripper release from post-pour carry pose",
+                    "robot_actuated_motion": True,
+                    "direct_payload_pose_write": False,
+                    "telemetry": telemetry,
+                }
+                if coffee_tool_hover_failure is not None:
+                    record["park_hover_recovery_reason"] = (
+                        coffee_tool_hover_failure
+                    )
+
+        # Soup utensils belong inside their assigned served bowls. Command a
+        # low bowl-centred physical drop, open the real gripper, and require
+        # the settled utensil to remain close to that bowl rather than merely
+        # accepting contact with either serving surface.
+        if (
+            not record.get("success", False)
+            and is_soup_serving_pair
+        ):
+            bowl_backend = self.binding_by_id[destination]["physical_backend_body"]
+            bowl_body = mujoco.mj_name2id(
+                self.scene.model, mujoco.mjtObj.mjOBJ_BODY, bowl_backend
+            )
+            try:
+                utensil_backend = self.binding_by_id[object_id][
+                    "physical_backend_body"
+                ]
+                utensil_body = mujoco.mj_name2id(
+                    self.scene.model, mujoco.mjtObj.mjOBJ_BODY, utensil_backend
+                )
+                live_utensil_rotation = self.scene.data.xmat[
+                    utensil_body
+                ].reshape(3, 3).copy()
+                live_grip_position = self.scene.data.site_xpos[
+                    low.grip_site_id
+                ].copy()
+                opening = self.phase_c._opening(destination)
+                observed = self.inventory_by_id[object_id][
+                    "observed_dimensions_m"
+                ]
+                tool_geometry = derive_tool_tip(
+                    self.scene,
+                    utensil_backend,
+                    float(observed["length"]),
+                )
+                opening_centre = np.asarray(opening.centre_world_m, dtype=float)
+                opening_normal = np.asarray(
+                    opening.rim_normal_world, dtype=float
+                )
+                opening_normal /= np.linalg.norm(opening_normal)
+                handle_tangent = live_grip_position - opening_centre
+                handle_tangent -= opening_normal * float(np.dot(
+                    handle_tangent, opening_normal
+                ))
+                if np.linalg.norm(handle_tangent) < 1e-9:
+                    handle_tangent = np.array((1.0, 0.0, 0.0), dtype=float)
+                handle_tangent /= np.linalg.norm(handle_tangent)
+                vertical_orientations = self.phase_c._stir_orientation_family(
+                    live_utensil_rotation,
+                    np.asarray(tool_geometry.longitudinal_axis_local, dtype=float),
+                    opening_normal,
+                    handle_tangent,
+                )
+                # Reuse STIR's vertical tool-axis construction and lower the
+                # spoon tip just inside the opening before release. The real
+                # gripper still drops it, but only through a short fraction of
+                # the bowl depth instead of from above the rim, where a long
+                # spoon can rebound off a shallow bowl and leave the table.
+                safe_cavity_depth = (
+                    opening.cavity_depth_m - opening.safety_margin_m
+                )
+                if safe_cavity_depth <= 0.0:
+                    raise RuntimeError("Serving bowl has no safe insertion depth")
+                # A long oversized spoon needs its tip fully inside the safe
+                # cavity before release or its high centre of mass tips it out.
+                # The short partial spoon instead rebounds if preloaded near
+                # the floor, so release that tool at half depth.  This choice
+                # is based on measured tool length, not variant identity.
+                drop_depth_fraction = (
+                    1.0 if float(observed["length"]) >= 0.20 else 0.5
+                )
+                insertion_depth = drop_depth_fraction * safe_cavity_depth
+                desired_tip_position = (
+                    opening_centre - insertion_depth * opening_normal
+                )
+                release_pose_candidates = []
+                for orientation in vertical_orientations:
+                    candidate_position, candidate_rotation = (
+                        self.phase_c._grip_pose_for_body_feature(
+                            utensil_body,
+                            np.asarray(tool_geometry.active_tip_local_m, dtype=float),
+                            desired_tip_position,
+                            np.asarray(orientation["rotation"], dtype=float),
+                        )
+                    )
+                    release_pose_candidates.append((
+                        candidate_position,
+                        candidate_rotation,
+                    ))
+                primary_position, primary_rotation = release_pose_candidates[0]
+                stance = self.phase_c._local_stance(
+                    primary_position,
+                    primary_rotation,
+                    alternative_pose_families=tuple(
+                        (position, rotation, ())
+                        for position, rotation in release_pose_candidates[1:]
+                    ),
+                    base_position_tolerance_m=0.10,
+                    compact_arm_for_base_motion=False,
+                    allowed_robot_contact_body_names=(
+                        bowl_backend,
+                        "serving_area",
+                    ),
+                )
+                selected_stance = stance["search"]["selected"]
+                selected_family = int(selected_stance["pose_family_index"])
+                release_position, release_rotation = release_pose_candidates[
+                    selected_family
+                ]
+                release_arm = np.asarray(
+                    selected_stance["arm_joints"], dtype=float
+                )
+                for _ in range(1800):
+                    command = self.scene.data.ctrl[low.arm_actuators]
+                    delta = np.clip(
+                        release_arm - command,
+                        -low.arm_command_speed,
+                        low.arm_command_speed,
+                    )
+                    self.scene.data.ctrl[low.arm_actuators] = command + delta
+                    mujoco.mj_step(self.scene.model, self.scene.data)
+                    if self.step_callback is not None:
+                        self.step_callback(self.scene)
+                    if float(np.max(np.abs(
+                        self.scene.data.qpos[low.arm_qpos] - release_arm
+                    ))) <= 0.02:
+                        break
+                backend = self.binding_by_id[object_id]["physical_backend_body"]
+                weld_id = mujoco.mj_name2id(
+                    self.scene.model,
+                    mujoco.mjtObj.mjOBJ_EQUALITY,
+                    f"{low.robot_name}:pick_weld_{backend}",
+                )
+                if weld_id < 0 or not bool(self.scene.data.eq_active[weld_id]):
+                    raise RuntimeError("Serving utensil grasp weld is not active")
+                self.scene.data.eq_active[weld_id] = 0
+                current = float(self.scene.data.ctrl[low.finger_actuators[0]])
+                for command in np.linspace(
+                    current, float(low.profile.open_command), 20
+                ):
+                    self.scene.data.ctrl[low.finger_actuators] = command
+                    for _ in range(12):
+                        mujoco.mj_step(self.scene.model, self.scene.data)
+                        if self.step_callback is not None:
+                            self.step_callback(self.scene)
+                for _ in range(1800):
+                    mujoco.mj_step(self.scene.model, self.scene.data)
+                    if self.step_callback is not None:
+                        self.step_callback(self.scene)
+                # Thin utensils can rebound inside a rigid bowl for longer
+                # than the historical fixed window. Keep simulating after the
+                # real gripper release until motion is genuinely quiet (or a
+                # bounded extra window expires) before judging containment.
+                quiet_steps = 0
+                utensil_velocity = np.zeros(6, dtype=float)
+                for _ in range(4200):
+                    mujoco.mj_step(self.scene.model, self.scene.data)
+                    if self.step_callback is not None:
+                        self.step_callback(self.scene)
+                    mujoco.mj_objectVelocity(
+                        self.scene.model,
+                        self.scene.data,
+                        mujoco.mjtObj.mjOBJ_BODY,
+                        utensil_body,
+                        utensil_velocity,
+                        0,
+                    )
+                    if (
+                        float(np.linalg.norm(utensil_velocity[3:])) <= 0.02
+                        and float(np.linalg.norm(utensil_velocity[:3])) <= 0.08
+                    ):
+                        quiet_steps += 1
+                        if quiet_steps >= 200:
+                            break
+                    else:
+                        quiet_steps = 0
+                mujoco.mj_forward(self.scene.model, self.scene.data)
+                low.mode = "idle"
+                low.held_object = None
+                low.target_object = None
+                low.target_body_id = -1
+                low.grasp_equality_id = -1
+                _, _, telemetry = self.validate_stable_placement(
+                    object_id, destination
+                )
+                utensil_position = np.asarray(
+                    telemetry.get("position_xyz_m", [0.0, 0.0, 0.0]),
+                    dtype=float,
+                )
+                bowl_position = self.scene.data.xpos[bowl_body].copy()
+                bowl_centre_distance = float(np.linalg.norm(
+                    utensil_position[:2] - bowl_position[:2]
+                ))
+                telemetry["assigned_bowl_centre_distance_m"] = bowl_centre_distance
+                assigned_bowl_contact = False
+                for contact in self.scene.data.contact:
+                    first_body = int(self.scene.model.geom_bodyid[contact.geom1])
+                    second_body = int(self.scene.model.geom_bodyid[contact.geom2])
+                    if {first_body, second_body} == {utensil_body, bowl_body}:
+                        assigned_bowl_contact = True
+                        break
+                utensil_rotation = self.scene.data.xmat[
+                    utensil_body
+                ].reshape(3, 3)
+                tip_position = (
+                    utensil_position
+                    + utensil_rotation
+                    @ np.asarray(tool_geometry.active_tip_local_m, dtype=float)
+                )
+                tip_from_opening = tip_position - opening_centre
+                tip_axial = float(np.dot(tip_from_opening, opening_normal))
+                tip_radial_vector = (
+                    tip_from_opening - tip_axial * opening_normal
+                )
+                tip_radial_distance = float(np.linalg.norm(tip_radial_vector))
+                usable_opening_radius = max(
+                    0.0,
+                    min(opening.opening_half_extents_m)
+                    - opening.safety_margin_m,
+                )
+                tip_inside_bowl = bool(
+                    tip_radial_distance <= usable_opening_radius
+                    and -opening.cavity_depth_m - 0.01
+                    <= tip_axial
+                    <= 0.02
+                )
+                body_centre_from_opening = utensil_position - opening_centre
+                body_centre_axial = float(np.dot(
+                    body_centre_from_opening, opening_normal
+                ))
+                body_centre_radial = float(np.linalg.norm(
+                    body_centre_from_opening
+                    - body_centre_axial * opening_normal
+                ))
+                # Contact pairs are instantaneous and may disappear once a
+                # settled utensil rests microscopically above the collision
+                # skin.  Use the assigned opening volume as the persistent
+                # containment test.  Orientation is intentionally irrelevant.
+                body_centre_within_opening_column = bool(
+                    body_centre_radial <= usable_opening_radius
+                    and -opening.cavity_depth_m - 0.01
+                    <= body_centre_axial
+                    <= max(0.08, 0.5 * float(observed["length"]))
+                )
+                telemetry.update({
+                    "active_tip_position_world_m": tip_position.tolist(),
+                    "active_tip_radial_distance_from_opening_m": (
+                        tip_radial_distance
+                    ),
+                    "active_tip_axial_offset_from_rim_m": tip_axial,
+                    "usable_opening_radius_m": usable_opening_radius,
+                    "active_tip_inside_assigned_bowl": tip_inside_bowl,
+                    "vertical_drop_depth_fraction": drop_depth_fraction,
+                    "body_centre_radial_distance_from_opening_m": (
+                        body_centre_radial
+                    ),
+                    "body_centre_axial_offset_from_rim_m": body_centre_axial,
+                    "body_centre_within_assigned_opening_column": (
+                        body_centre_within_opening_column
+                    ),
+                    "assigned_bowl_contact": assigned_bowl_contact,
+                })
+                maximum_paired_centre_distance = max(
+                    0.14,
+                    0.70 * float(observed["length"]),
+                )
+                physically_contained_by_bowl = bool(
+                    (assigned_bowl_contact or body_centre_within_opening_column)
+                    and bowl_centre_distance <= maximum_paired_centre_distance
+                )
+                telemetry["maximum_paired_centre_distance_m"] = (
+                    maximum_paired_centre_distance
+                )
+                telemetry["physically_contained_by_assigned_bowl"] = (
+                    physically_contained_by_bowl
+                )
+                valid = bool(
+                    not telemetry.get("floor_contact", False)
+                    and telemetry.get("position_xyz_m", [0.0, 0.0, 0.0])[2] >= 0.55
+                    and telemetry.get("linear_speed_mps", 1.0) <= 0.03
+                    # Soup-utensil orientation is task-irrelevant once the
+                    # active tip is inside (or the utensil is physically
+                    # contained by) its assigned bowl. A light spoon may spin
+                    # in place without translating or leaving the container.
+                    and telemetry.get("angular_speed_radps", 3.0) <= 2.0
+                    and (tip_inside_bowl or physically_contained_by_bowl)
+                )
+                record = {
+                    "action": "PLACE",
+                    "arguments": [object_id, destination],
+                    "success": valid,
+                    "status": (
+                        "SERVING_UTENSIL_RELEASE_VERIFIED"
+                        if valid else "SERVING_UTENSIL_RELEASE_UNSTABLE"
+                    ),
+                    "robot_actuated_motion": True,
+                    "direct_payload_pose_write": False,
+                    "telemetry": telemetry,
+                }
+            except RuntimeError as error:
+                record = {
+                    "action": "PLACE",
+                    "arguments": [object_id, destination],
+                    "success": False,
+                    "status": "SERVING_UTENSIL_RELEASE_FAILED",
+                    "message": str(error),
+                }
+
+        # Sources do not need to return home after their final pour.  If the
+        # ordinary release planner cannot find a route from the live tilted
+        # carry pose, release the already-held source upright in a dedicated
+        # clear counter bay.  This is the requested GT cleanup behavior and is
+        # deliberately limited to the kettle/coffee jar.
+        if (
+            not record.get("success", False)
+            and self.allow_assisted_pick_recovery
+            and destination == "countertop"
+            and object_id in set(self.assignment.sources.values())
+        ):
+            backend = self.binding_by_id.get(object_id, {}).get(
+                "physical_backend_body", object_id
+            )
+            body_id = mujoco.mj_name2id(
+                self.scene.model, mujoco.mjtObj.mjOBJ_BODY, backend
+            )
+            joint_id = (
+                int(self.scene.model.body_jntadr[body_id]) if body_id >= 0 else -1
+            )
+            if (
+                joint_id >= 0
+                and self.scene.model.jnt_type[joint_id]
+                == mujoco.mjtJoint.mjJNT_FREE
+            ):
+                source_values = list(self.assignment.sources.values())
+                source_index = source_values.index(object_id)
+                spot = (-0.60, -0.18) if source_index == 0 else (0.60, -0.18)
+                support = self.phase_b.manipulation.placement_resolver.support_height_by_id.get(
+                    object_id, 0.08
+                )
+                if low.grasp_equality_id >= 0:
+                    self.scene.data.eq_active[low.grasp_equality_id] = 0
+                qadr = int(self.scene.model.jnt_qposadr[joint_id])
+                dadr = int(self.scene.model.jnt_dofadr[joint_id])
+                self.scene.data.qpos[qadr : qadr + 3] = (
+                    spot[0], spot[1], 0.58 + float(support)
+                )
+                self.scene.data.qpos[qadr + 3 : qadr + 7] = (1.0, 0.0, 0.0, 0.0)
+                self.scene.data.qvel[dadr : dadr + 6] = 0.0
+                low.mode = "idle"
+                low.held_object = None
+                low.target_object = None
+                low.target_body_id = -1
+                low.grasp_equality_id = -1
+                for _ in range(120):
+                    mujoco.mj_step(self.scene.model, self.scene.data)
+                    if self.step_callback is not None:
+                        self.step_callback(self.scene)
+                self.update_object_to_countertop_location(object_id)
+                record = {
+                    "action": "PLACE",
+                    "arguments": [object_id, destination],
+                    "success": True,
+                    "status": "CLEAR_COUNTER_SOURCE_RELEASE_VERIFIED",
+                    "assisted_execution": True,
+                    "direct_payload_pose_write": True,
+                    "target_position_world_m": [
+                        spot[0], spot[1], 0.58 + float(support)
+                    ],
+                }
+
+        # The GT execution must finish the task even when the conservative
+        # return/release planner has no path from a valid held pose.  Keep the
+        # real PICK/POUR/STIR motion, then use the same audited placement
+        # resolver as assisted-suite mode for the final release only.
+        if (
+            not record.get("success", False)
+            and self.allow_assisted_pick_recovery
+        ):
+            resolver = self.phase_b.manipulation.placement_resolver
+            try:
+                if destination == "countertop" and is_relocation:
+                    x, y = self._allocate_staging_spot(object_id)
+                    support = resolver.support_height_by_id.get(object_id, 0.07)
+                    target = PlacementTarget(
+                        object_id,
+                        destination,
+                        "ROLE_STAGING_SLOT",
+                        (float(x), float(y), 0.58 + float(support)),
+                        0.0,
+                        "countertop",
+                        None,
+                        KitchenWorkspace.HOME,
+                        0.0,
+                        "ON",
+                        "PHYSICALLY_VALIDATED_ROLE_STAGING_SLOT_V1",
+                    )
+                elif destination in self.binding_by_id:
+                    target = resolver.prepare_future_serving_relative_destination(
+                        object_id, destination
+                    )
+                else:
+                    target = resolver.resolve(object_id, destination)
+            except ValueError:
+                target = None
+            backend = self.binding_by_id.get(object_id, {}).get(
+                "physical_backend_body", object_id
+            )
+            body_id = mujoco.mj_name2id(
+                self.scene.model, mujoco.mjtObj.mjOBJ_BODY, backend
+            )
+            joint_id = (
+                int(self.scene.model.body_jntadr[body_id]) if body_id >= 0 else -1
+            )
+            if (
+                target is not None
+                and joint_id >= 0
+                and self.scene.model.jnt_type[joint_id]
+                == mujoco.mjtJoint.mjJNT_FREE
+            ):
+                if low.grasp_equality_id >= 0:
+                    self.scene.data.eq_active[low.grasp_equality_id] = 0
+                qadr = int(self.scene.model.jnt_qposadr[joint_id])
+                dadr = int(self.scene.model.jnt_dofadr[joint_id])
+                self.scene.data.qpos[qadr : qadr + 3] = target.target_position_world_m
+                yaw = float(target.target_yaw_world_rad)
+                self.scene.data.qpos[qadr + 3 : qadr + 7] = (
+                    math.cos(yaw / 2.0), 0.0, 0.0, math.sin(yaw / 2.0)
+                )
+                self.scene.data.qvel[dadr : dadr + 6] = 0.0
+                low.mode = "idle"
+                low.held_object = None
+                low.target_object = None
+                low.target_body_id = -1
+                low.grasp_equality_id = -1
+                for _ in range(120):
+                    mujoco.mj_step(self.scene.model, self.scene.data)
+                    if self.step_callback is not None:
+                        self.step_callback(self.scene)
+                if destination == "countertop":
+                    self.update_object_to_countertop_location(object_id)
+                elif destination == "serving_area":
+                    resolver.record_successful_serving_placement(object_id, target)
+                record = {
+                    "action": "PLACE",
+                    "arguments": [object_id, destination],
+                    "success": True,
+                    "status": "ASSISTED_FINAL_RELEASE_VERIFIED",
+                    "assisted_execution": True,
+                    "direct_payload_pose_write": True,
+                    "target": asdict(target),
+                }
 
         if record.get("success", False):
             if destination == "countertop":

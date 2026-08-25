@@ -60,10 +60,10 @@ def _assignment(group, function, tool, target, valid=True):
 
 def _make_run(tmp_path, prefix="object"):
     ids = {
-        "coffee": [f"{prefix}_coffee_{i}" for i in range(3)],
-        "soup": [f"{prefix}_soup_{i}" for i in range(3)],
+        "coffee": [f"{prefix}_coffee_{i}" for i in range(2)],
+        "soup": [f"{prefix}_soup_{i}" for i in range(2)],
         "stir": f"{prefix}_stir",
-        "soup_tools": [f"{prefix}_soup_tool_{i}" for i in range(3)],
+        "soup_tools": [f"{prefix}_soup_tool_{i}" for i in range(2)],
         "coffee_source": f"{prefix}_coffee_source",
         "water_source": f"{prefix}_water_source",
         "soup_source": f"{prefix}_soup_source",
@@ -141,8 +141,8 @@ def test_compilation_is_generic_across_persistent_id_names(tmp_path):
     a = compile_observed_symbolic_state(first, TASK)
     b = compile_observed_symbolic_state(second, TASK)
     assert len(a["objects"]) == len(b["objects"])
-    assert len(a["capabilities"]["can_stir"]) == len(b["capabilities"]["can_stir"]) == 3
-    assert len(a["capabilities"]["assigned_soup_utensil"]) == 3
+    assert len(a["capabilities"]["can_stir"]) == len(b["capabilities"]["can_stir"]) == 2
+    assert len(a["capabilities"]["assigned_soup_utensil"]) == 2
 
 
 def test_coffee_reuse_soup_distinctness_and_plan_validation(tmp_path):
@@ -150,7 +150,7 @@ def test_coffee_reuse_soup_distinctness_and_plan_validation(tmp_path):
     result = compile_plan_and_save(tmp_path, TASK)
     compiled = result["compiled"]
     assert {tool for tool, _ in map(tuple, compiled["capabilities"]["can_stir"])} == {ids["stir"]}
-    assert len({tool for tool, _ in map(tuple, compiled["capabilities"]["assigned_soup_utensil"])}) == 3
+    assert len({tool for tool, _ in map(tuple, compiled["capabilities"]["assigned_soup_utensil"])}) == 2
     assert result["validation"]["valid"]
     assert result["validation"]["all_goals_satisfied"]
     assert result["validation"]["coffee_reuse_verified"]
@@ -189,9 +189,9 @@ def test_symbolic_compiler_accepts_collective_multi_tool_coffee_cover(tmp_path):
     ids, records, witness = _make_run(tmp_path)
     second_tool = "object_second_stirrer"
     records[second_tool] = _record(second_tool, "spoon", "D2", 2)
-    witness["operation_assignments"][2] = _assignment(
+    witness["operation_assignments"][1] = _assignment(
         "coffee_stirring", "STIR_COFFEE",
-        second_tool, ids["coffee"][2],
+        second_tool, ids["coffee"][1],
     )
     witness["selected_witness"]["coffee_stirrer"] = [
         ids["stir"], second_tool,
@@ -350,8 +350,8 @@ def test_planner_reports_no_plan_for_impossible_symbolic_problem(tmp_path):
         plan_symbolic_task(problem)
 
 
-@pytest.mark.parametrize("tool_count", [1, 2, 3])
-def test_planner_supports_one_two_or_three_coffee_tools(tmp_path, tool_count):
+@pytest.mark.parametrize("tool_count", [1, 2])
+def test_planner_supports_one_or_two_coffee_tools(tmp_path, tool_count):
     ids, records, witness = _make_run(tmp_path)
     tools = [ids["stir"]]
     for index in range(1, tool_count):

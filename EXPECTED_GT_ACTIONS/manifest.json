@@ -1,0 +1,294 @@
+{
+  "records": [
+    {
+      "description": "All required objects are initially visible.",
+      "environment": "kitchen",
+      "intended_outcome": "FEASIBLE",
+      "internal_variant": "F0_ALL_VISIBLE",
+      "text": "kitchen/K1/expected_gt_actions.txt",
+      "total_actions": 24,
+      "variant": "K1"
+    },
+    {
+      "description": "The second coffee vessel is in cupboard C2.",
+      "environment": "kitchen",
+      "intended_outcome": "FEASIBLE",
+      "internal_variant": "F1_HIDDEN_COFFEE_VESSEL",
+      "text": "kitchen/K2/expected_gt_actions.txt",
+      "total_actions": 27,
+      "variant": "K2"
+    },
+    {
+      "description": "The second soup bowl is in box B1.",
+      "environment": "kitchen",
+      "intended_outcome": "FEASIBLE",
+      "internal_variant": "F2_HIDDEN_SOUP_BOWL",
+      "text": "kitchen/K3/expected_gt_actions.txt",
+      "total_actions": 25,
+      "variant": "K3"
+    },
+    {
+      "description": "The second coffee vessel is in C2 and the second soup bowl is in B1.",
+      "environment": "kitchen",
+      "intended_outcome": "FEASIBLE",
+      "internal_variant": "F3_HIDDEN_VESSELS_MIXED",
+      "text": "kitchen/K4/expected_gt_actions.txt",
+      "total_actions": 28,
+      "variant": "K4"
+    },
+    {
+      "description": "The coffee stirrer and one soup utensil are in drawers D1 and D2.",
+      "environment": "kitchen",
+      "intended_outcome": "FEASIBLE",
+      "internal_variant": "F4_TOOLS_IN_DRAWERS",
+      "text": "kitchen/K5/expected_gt_actions.txt",
+      "total_actions": 26,
+      "variant": "K5"
+    },
+    {
+      "description": "One required object is distributed through each storage region.",
+      "environment": "kitchen",
+      "intended_outcome": "FEASIBLE",
+      "internal_variant": "F5_FULL_DISTRIBUTED_SEARCH",
+      "text": "kitchen/K6/expected_gt_actions.txt",
+      "total_actions": 31,
+      "variant": "K6"
+    },
+    {
+      "description": "The second coffee vessel is absent; otherwise identical to F3.",
+      "environment": "kitchen",
+      "intended_outcome": "INFEASIBLE",
+      "internal_variant": "I0_MISSING_COFFEE_VESSEL",
+      "text": "kitchen/K7/expected_gt_actions.txt",
+      "total_actions": 6,
+      "variant": "K7"
+    },
+    {
+      "description": "The second soup bowl is absent; otherwise identical to F3.",
+      "environment": "kitchen",
+      "intended_outcome": "INFEASIBLE",
+      "internal_variant": "I1_MISSING_SOUP_BOWL",
+      "text": "kitchen/K8/expected_gt_actions.txt",
+      "total_actions": 6,
+      "variant": "K8"
+    },
+    {
+      "description": "The reusable coffee stirrer is absent; otherwise identical to F5.",
+      "environment": "kitchen",
+      "intended_outcome": "INFEASIBLE",
+      "internal_variant": "I2_MISSING_COFFEE_SPOON",
+      "text": "kitchen/K9/expected_gt_actions.txt",
+      "total_actions": 6,
+      "variant": "K9"
+    },
+    {
+      "description": "One of the two required soup utensils is absent; otherwise identical to F5.",
+      "environment": "kitchen",
+      "intended_outcome": "INFEASIBLE",
+      "internal_variant": "I3_MISSING_SOUP_UTENSIL",
+      "text": "kitchen/K10/expected_gt_actions.txt",
+      "total_actions": 6,
+      "variant": "K10"
+    },
+    {
+      "description": "The kettle is absent; otherwise identical to F5.",
+      "environment": "kitchen",
+      "intended_outcome": "INFEASIBLE",
+      "internal_variant": "I4_MISSING_KETTLE",
+      "text": "kitchen/K11/expected_gt_actions.txt",
+      "total_actions": 6,
+      "variant": "K11"
+    },
+    {
+      "description": "The coffee jar is absent; otherwise identical to F5.",
+      "environment": "kitchen",
+      "intended_outcome": "INFEASIBLE",
+      "internal_variant": "I5_MISSING_COFFEE_JAR",
+      "text": "kitchen/K12/expected_gt_actions.txt",
+      "total_actions": 6,
+      "variant": "K12"
+    },
+    {
+      "description": "All five objects begin in the staging area.",
+      "environment": "living_room",
+      "intended_outcome": "FEASIBLE",
+      "internal_variant": "F0_ALL_OBJECTS_IN_STAGING",
+      "text": "living_room/L1/expected_gt_actions.txt",
+      "total_actions": 10,
+      "variant": "L1"
+    },
+    {
+      "description": "The left saucer is already correctly placed on the left personal table.",
+      "environment": "living_room",
+      "intended_outcome": "FEASIBLE",
+      "internal_variant": "F1_LEFT_SAUCER_PREPLACED",
+      "text": "living_room/L2/expected_gt_actions.txt",
+      "total_actions": 8,
+      "variant": "L2"
+    },
+    {
+      "description": "The left saucer begins on the shared table and must be moved to a personal table.",
+      "environment": "living_room",
+      "intended_outcome": "FEASIBLE",
+      "internal_variant": "F2_LEFT_SAUCER_ON_SHARED",
+      "text": "living_room/L3/expected_gt_actions.txt",
+      "total_actions": 10,
+      "variant": "L3"
+    },
+    {
+      "description": "The left cup begins on the shared table and must be moved to a personal table.",
+      "environment": "living_room",
+      "intended_outcome": "FEASIBLE",
+      "internal_variant": "F3_LEFT_CUP_ON_SHARED",
+      "text": "living_room/L4/expected_gt_actions.txt",
+      "total_actions": 10,
+      "variant": "L4"
+    },
+    {
+      "description": "The left saucer is correctly preplaced while the left cup begins on the shared table.",
+      "environment": "living_room",
+      "intended_outcome": "FEASIBLE",
+      "internal_variant": "F4_SAUCER_PREPLACED_CUP_ON_SHARED",
+      "text": "living_room/L5/expected_gt_actions.txt",
+      "total_actions": 8,
+      "variant": "L5"
+    },
+    {
+      "description": "The left cup and left saucer both begin on the shared table and must be moved.",
+      "environment": "living_room",
+      "intended_outcome": "FEASIBLE",
+      "internal_variant": "F5_LEFT_PAIR_ON_SHARED",
+      "text": "living_room/L6/expected_gt_actions.txt",
+      "total_actions": 10,
+      "variant": "L6"
+    },
+    {
+      "description": "The required shared table is absent. Grounding termination: FUNCTIONAL_WITNESS_NOT_COMPLETE.",
+      "environment": "living_room",
+      "intended_outcome": "INFEASIBLE",
+      "internal_variant": "I0_NO_SHARED_TABLE",
+      "text": "living_room/L7/expected_gt_actions.txt",
+      "total_actions": 1,
+      "variant": "L7"
+    },
+    {
+      "description": "One of the two required personal tables is absent. Grounding termination: FUNCTIONAL_WITNESS_NOT_COMPLETE.",
+      "environment": "living_room",
+      "intended_outcome": "INFEASIBLE",
+      "internal_variant": "I1_NO_LEFT_PERSONAL_TABLE",
+      "text": "living_room/L8/expected_gt_actions.txt",
+      "total_actions": 1,
+      "variant": "L8"
+    },
+    {
+      "description": "Both required personal tables are absent. Grounding termination: FUNCTIONAL_WITNESS_NOT_COMPLETE.",
+      "environment": "living_room",
+      "intended_outcome": "INFEASIBLE",
+      "internal_variant": "I2_NO_PERSONAL_TABLES",
+      "text": "living_room/L9/expected_gt_actions.txt",
+      "total_actions": 1,
+      "variant": "L9"
+    },
+    {
+      "description": "All three placement tables are absent. Grounding termination: FUNCTIONAL_WITNESS_NOT_COMPLETE.",
+      "environment": "living_room",
+      "intended_outcome": "INFEASIBLE",
+      "internal_variant": "I3_NO_TABLES",
+      "text": "living_room/L10/expected_gt_actions.txt",
+      "total_actions": 1,
+      "variant": "L10"
+    },
+    {
+      "description": "Manual driver and screw are both in the first region; search stops after one inspection.",
+      "environment": "workshop",
+      "intended_outcome": "FEASIBLE",
+      "internal_variant": "F0_MANUAL_FIRST_ONE_REGION",
+      "text": "workshop/W1/expected_gt_actions.txt",
+      "total_actions": 28,
+      "variant": "W1"
+    },
+    {
+      "description": "Power driver and screw are both in the first region; search stops after one inspection.",
+      "environment": "workshop",
+      "intended_outcome": "FEASIBLE",
+      "internal_variant": "F1_POWER_FIRST_ONE_REGION",
+      "text": "workshop/W2/expected_gt_actions.txt",
+      "total_actions": 28,
+      "variant": "W2"
+    },
+    {
+      "description": "Screw in the left drawer; the first driver found is the manual driver in the right drawer.",
+      "environment": "workshop",
+      "intended_outcome": "FEASIBLE",
+      "internal_variant": "F2_MANUAL_FIRST_TWO_REGIONS",
+      "text": "workshop/W3/expected_gt_actions.txt",
+      "total_actions": 33,
+      "variant": "W3"
+    },
+    {
+      "description": "Screw in the left drawer; the first driver found is the power driver in the right drawer.",
+      "environment": "workshop",
+      "intended_outcome": "FEASIBLE",
+      "internal_variant": "F3_POWER_FIRST_TWO_REGIONS",
+      "text": "workshop/W4/expected_gt_actions.txt",
+      "total_actions": 33,
+      "variant": "W4"
+    },
+    {
+      "description": "Manual driver is found second; the screw is only found in the third region.",
+      "environment": "workshop",
+      "intended_outcome": "FEASIBLE",
+      "internal_variant": "F4_MANUAL_FIRST_THREE_REGIONS",
+      "text": "workshop/W5/expected_gt_actions.txt",
+      "total_actions": 34,
+      "variant": "W5"
+    },
+    {
+      "description": "Power driver is found first; the screw is only found in the third region.",
+      "environment": "workshop",
+      "intended_outcome": "FEASIBLE",
+      "internal_variant": "F5_POWER_FIRST_THREE_REGIONS",
+      "text": "workshop/W6/expected_gt_actions.txt",
+      "total_actions": 34,
+      "variant": "W6"
+    },
+    {
+      "description": "Power driver absent; manual driver and screw remain sufficient.",
+      "environment": "workshop",
+      "intended_outcome": "FEASIBLE",
+      "internal_variant": "F6_MANUAL_ONLY",
+      "text": "workshop/W7/expected_gt_actions.txt",
+      "total_actions": 37,
+      "variant": "W7"
+    },
+    {
+      "description": "Manual driver absent; power driver and screw remain sufficient.",
+      "environment": "workshop",
+      "intended_outcome": "FEASIBLE",
+      "internal_variant": "F7_POWER_ONLY",
+      "text": "workshop/W8/expected_gt_actions.txt",
+      "total_actions": 37,
+      "variant": "W8"
+    },
+    {
+      "description": "Screw and hammer present; both compatible drivers absent.",
+      "environment": "workshop",
+      "intended_outcome": "INFEASIBLE",
+      "internal_variant": "I0_NO_DRIVER",
+      "text": "workshop/W9/expected_gt_actions.txt",
+      "total_actions": 13,
+      "variant": "W9"
+    },
+    {
+      "description": "Both compatible drivers and hammer present; required screw absent.",
+      "environment": "workshop",
+      "intended_outcome": "INFEASIBLE",
+      "internal_variant": "I1_NO_SCREW",
+      "text": "workshop/W10/expected_gt_actions.txt",
+      "total_actions": 13,
+      "variant": "W10"
+    }
+  ],
+  "schema_version": 1,
+  "total_variants": 32
+}

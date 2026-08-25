@@ -394,13 +394,13 @@ def test_c2_spoon_stands_above_shelf_with_bowl_up_and_wall_clearance():
 def test_integrated_manual_specification_has_function_scoped_usage():
     task = load_task_requirements(TASK_PATH)
     assert task["goal_instruction"] == (
-        "Prepare and serve coffee and soup for three people using the "
-        "available kitchenware. Stir all three coffees and provide each "
+        "Prepare and serve coffee and soup for two people using the "
+        "available kitchenware. Stir both coffees and provide each "
         "soup bowl with a suitable utensil. Search the closed kitchen "
         "storage for anything still required."
     )
-    assert task["roles"]["coffee_container"]["count"] == 3
-    assert task["roles"]["soup_container"]["count"] == 3
+    assert task["roles"]["coffee_container"]["count"] == 2
+    assert task["roles"]["soup_container"]["count"] == 2
     coffee = task["operation_groups"]["coffee_stirring"]
     soup = task["operation_groups"]["soup_serving"]
     assert not coffee["usage_policy"]["same_tool_must_cover_all_targets"]
@@ -408,7 +408,7 @@ def test_integrated_manual_specification_has_function_scoped_usage():
         "minimize_distinct_tools"
     )
     assert soup["usage_policy"]["distinct_within_group"]
-    assert task["cross_group_reuse"]["allowed"]
+    assert not task["cross_group_reuse"]["allowed"]
     soup_labels = {
         preference["canonical_label"]
         for preference in task["roles"]["soup_eating_utensil"][
@@ -421,11 +421,11 @@ def test_integrated_manual_specification_has_function_scoped_usage():
 def test_primary_progression_requires_c1_all_target_spoon():
     initial = ["short", "medium", "wide", "fork", "marker"]
     checkpoints = [
-        (initial, "INCOMPLETE", "INCOMPLETE"),
-        (initial + ["oversized"], "INCOMPLETE", "INCOMPLETE"),
-        (initial + ["oversized", "partial"], "INCOMPLETE", "INCOMPLETE"),
-        (initial + ["oversized", "partial", "soup_long"], "INCOMPLETE", "COMPLETE"),
-        (initial + ["oversized", "partial", "soup_long", "near_miss"], "INCOMPLETE", "COMPLETE"),
+        (initial, "INCOMPLETE", "COMPLETE"),
+        (initial + ["oversized"], "INCOMPLETE", "COMPLETE"),
+        (initial + ["oversized", "partial"], "COMPLETE", "COMPLETE"),
+        (initial + ["oversized", "partial", "soup_long"], "COMPLETE", "COMPLETE"),
+        (initial + ["oversized", "partial", "soup_long", "near_miss"], "COMPLETE", "COMPLETE"),
     ]
     for tools, expected_global, expected_soup in checkpoints:
         result = _evaluate(tools)
@@ -434,7 +434,7 @@ def test_primary_progression_requires_c1_all_target_spoon():
     complete = _evaluate(checkpoints[-1][0] + ["final"])
     assert complete["status"] == "COMPLETE"
     assert _groups(complete)["coffee_stirring"]["status"] == "COMPLETE"
-    assert complete["distinct_physical_tool_count"] == 3
+    assert complete["distinct_physical_tool_count"] == 4
     coffee_tools = {
         item["utensil_object_id"]
         for item in complete["operation_assignments"]
@@ -445,22 +445,22 @@ def test_primary_progression_requires_c1_all_target_spoon():
         for item in complete["operation_assignments"]
         if item["function_group_id"] == "soup_serving"
     }
-    assert coffee_tools == {"final"}
-    assert len(soup_tools) == 3
-    assert "final" in soup_tools
+    assert coffee_tools == {"final", "medium"}
+    assert len(soup_tools) == 2
+    assert "final" not in soup_tools
 
 
 def test_partial_count_and_semantics_cannot_control_production():
     tools = ["short", "medium", "wide", "fork", "marker"]
     assert _evaluate(tools, "joint-target-specific")["status"] == "INCOMPLETE"
-    assert _evaluate(tools, "semantic-only")["status"] == "COMPLETE"
+    assert _evaluate(tools, "semantic-only")["status"] == "INCOMPLETE"
     assert _evaluate(tools, "geometry-only")["status"] == "COMPLETE"
-    assert _evaluate(tools, "joint-target-agnostic-count")["status"] == "COMPLETE"
+    assert _evaluate(tools, "joint-target-agnostic-count")["status"] == "INCOMPLETE"
 
 
-def test_exhaustion_roster_never_fabricates_reusable_coverage():
+def test_two_serving_roster_completes_without_third_target():
     result = _evaluate(
         ["short", "medium", "wide", "fork", "marker", "oversized", "partial", "soup_long", "near_miss"]
     )
-    assert result["status"] == "INCOMPLETE"
-    assert _groups(result)["coffee_stirring"]["status"] == "INCOMPLETE"
+    assert result["status"] == "COMPLETE"
+    assert _groups(result)["coffee_stirring"]["status"] == "COMPLETE"

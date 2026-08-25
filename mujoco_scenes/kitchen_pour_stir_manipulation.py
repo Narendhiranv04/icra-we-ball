@@ -183,10 +183,17 @@ def derive_pour_spec(scene, backend_body: str, family: str) -> PourSpec:
     elif family == "KETTLE":
         outlet = _visual_mesh_outlet_local(scene.model, body_id)
         provenance = "PHYSICAL_VISUAL_MESH_UPPER_RADIAL_EXTREMUM"
-        tilts = tuple(math.radians(value) for value in (10.0, 12.5, 15.0))
+        # The former 10-degree motion was almost visually indistinguishable
+        # from an approach.  Start with a clear but still modest kettle pour.
+        tilts = tuple(math.radians(value) for value in (22.5, 27.5, 32.5))
     else:
         raise ValueError(f"Unsupported pour family: {family}")
-    return PourSpec(family, tuple(float(v) for v in outlet), provenance, tilts, 0.35)
+    # Keep both source families brisk; the tilt remains long enough to read
+    # clearly in the rendered execution without stalling at the target.
+    dwell_time_s = 0.18
+    return PourSpec(
+        family, tuple(float(v) for v in outlet), provenance, tilts, dwell_time_s
+    )
 
 
 def derive_tool_tip(scene, backend_body: str, observed_length_m: float) -> ToolTipGeometry:

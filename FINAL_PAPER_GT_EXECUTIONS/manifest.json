@@ -1,7 +1,8 @@
 {
   "all_execution_runs_successful": true,
+  "all_gt_action_sequences_exact_match": false,
   "environment_counts": {
-    "kitchen": 1,
+    "kitchen": 4,
     "living_room": 0,
     "workshop": 0
   },
@@ -34,8 +35,101 @@
         "width": 1920
       },
       "video_sha256": "ca4314dd1b01a8e6aba31283476af9ce2e72d3b23ba79bb71743397615c0d632"
+    },
+    {
+      "environment": "kitchen",
+      "execution_success": true,
+      "gt_action_sequence_exact_match": true,
+      "source_variant": "F0_ALL_VISIBLE",
+      "timing": {
+        "environment": "kitchen",
+        "internal_variant": "F0_ALL_VISIBLE",
+        "recorded_summary_reported_wall_s": null,
+        "recording_overhead_wall_s": 58.76364621699997,
+        "simulation_duration_s": 509.1740000017031,
+        "speed_policy": "NATURAL_SIMULATION_TIME_NO_POSTPROCESS_SPEEDUP",
+        "unrecorded_summary_reported_wall_s": null,
+        "variant": "K1",
+        "video_duration_s": 493.35,
+        "video_fps": "20/1",
+        "with_recording_wall_s": 853.039794905,
+        "without_recording_wall_s": 794.276148688
+      },
+      "variant": "K1",
+      "video": "kitchen/K1/robot_execution_5cam.mp4",
+      "video_metadata": {
+        "duration_s": 493.35,
+        "frame_count": 9867,
+        "frame_rate": "20/1",
+        "height": 1080,
+        "size_bytes": 258544074,
+        "width": 2880
+      },
+      "video_sha256": "bd606af50934aa804c8acc7d08a1cb265b77cd58f0312e4ae060e1996eb1c000"
+    },
+    {
+      "environment": "kitchen",
+      "execution_success": true,
+      "gt_action_sequence_exact_match": true,
+      "source_variant": "F1_HIDDEN_COFFEE_VESSEL",
+      "timing": {
+        "environment": "kitchen",
+        "internal_variant": "F1_HIDDEN_COFFEE_VESSEL",
+        "recorded_summary_reported_wall_s": null,
+        "recording_overhead_wall_s": 137.4547420529999,
+        "simulation_duration_s": 588.0839999999174,
+        "speed_policy": "NATURAL_SIMULATION_TIME_NO_POSTPROCESS_SPEEDUP",
+        "unrecorded_summary_reported_wall_s": null,
+        "variant": "K2",
+        "video_duration_s": 572.25,
+        "video_fps": "20/1",
+        "with_recording_wall_s": 1062.462270565,
+        "without_recording_wall_s": 925.007528512
+      },
+      "variant": "K2",
+      "video": "kitchen/K2/robot_execution_5cam.mp4",
+      "video_metadata": {
+        "duration_s": 572.25,
+        "frame_count": 11445,
+        "frame_rate": "20/1",
+        "height": 1080,
+        "size_bytes": 305237507,
+        "width": 2880
+      },
+      "video_sha256": "c25b5be776b1ef74060b0024b1e9ebf98b27a6e19aa93bcb18ada644557579a3"
+    },
+    {
+      "environment": "kitchen",
+      "execution_success": true,
+      "gt_action_sequence_exact_match": true,
+      "source_variant": "F2_HIDDEN_SOUP_BOWL",
+      "timing": {
+        "environment": "kitchen",
+        "internal_variant": "F2_HIDDEN_SOUP_BOWL",
+        "recorded_summary_reported_wall_s": null,
+        "recording_overhead_wall_s": 554.3241484399999,
+        "simulation_duration_s": 670.9299999979584,
+        "speed_policy": "NATURAL_SIMULATION_TIME_NO_POSTPROCESS_SPEEDUP",
+        "unrecorded_summary_reported_wall_s": null,
+        "variant": "K3",
+        "video_duration_s": 655.1,
+        "video_fps": "20/1",
+        "with_recording_wall_s": 1026.644741444,
+        "without_recording_wall_s": 472.320593004
+      },
+      "variant": "K3",
+      "video": "kitchen/K3/robot_execution_5cam.mp4",
+      "video_metadata": {
+        "duration_s": 655.1,
+        "frame_count": 13102,
+        "frame_rate": "20/1",
+        "height": 1080,
+        "size_bytes": 350892855,
+        "width": 2880
+      },
+      "video_sha256": "8c5a6d63adaa21a7cf2b34645751a2f8ddb3372ef37ec3134aa914fe23468f47"
     }
   ],
   "schema_version": 1,
-  "total_variants": 1
+  "total_variants": 4
 }

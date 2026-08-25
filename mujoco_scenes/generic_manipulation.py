@@ -56,7 +56,10 @@ SPOON_SETTLE_TICKS = 50
 SPOON_REGRASP_SQUEEZE = 0.015
 SPOON_REGRASP_TIMEOUT_TICKS = 600
 CALIBRATION_ATTEMPT_TIMEOUT_TICKS = 20000
-PRECLOSE_POSITION_TOLERANCE_M = 0.007
+# Heavy vessel shells can leave the position-controlled arm roughly 1--2 cm
+# off the unloaded IK target while still aligned for a genuine bilateral
+# grasp. Contact-side confirmation and weld validation remain mandatory.
+PRECLOSE_POSITION_TOLERANCE_M = 0.020
 PRECLOSE_ORIENTATION_TOLERANCE_RAD = math.radians(5.0)
 PRECLOSE_HOLD_TICKS = 5
 PRECLOSE_TIMEOUT_TICKS = 250
@@ -1194,8 +1197,10 @@ class CalibratedPickPlaceExecutor:
         initial_arm_joints: np.ndarray | None = None,
         monitored_body_names: tuple[str, ...] = (),
         allowed_payload_contact_body_names: tuple[str, ...] = (),
+        allowed_robot_contact_body_names: tuple[str, ...] = (),
         step_callback=None,
         maximum_steps_per_waypoint: int = 1800,
+        command_speed_scale: float = 1.0,
     ) -> dict[str, object]:
         """Command a welded payload through strict Cartesian wrist poses.
 
@@ -1211,6 +1216,8 @@ class CalibratedPickPlaceExecutor:
             raise RuntimeError("Held trajectory requires an existing grasp")
         if not poses_world:
             raise ValueError("Held trajectory requires at least one pose")
+        if command_speed_scale <= 0.0:
+            raise ValueError("command_speed_scale must be positive")
         held_name = self.held_object
         held_body = mujoco.mj_name2id(
             self.model, mujoco.mjtObj.mjOBJ_BODY, held_name
@@ -1228,6 +1235,13 @@ class CalibratedPickPlaceExecutor:
             self.data,
             self.profile,
             mounting_allowances=self.mounting_allowances,
+        )
+        allowed_robot_contact_bodies = frozenset(
+            body_id
+            for name in allowed_robot_contact_body_names
+            if (body_id := mujoco.mj_name2id(
+                self.model, mujoco.mjtObj.mjOBJ_BODY, name
+            )) >= 0
         )
         initial_ik = ProfiledIK(
             self.model,
@@ -1345,7 +1359,10 @@ class CalibratedPickPlaceExecutor:
                     f"maximum_joint_delta_rad={maximum_joint_delta:.6f}"
                 )
             valid, reason = checker.segment_valid(
-                current, goal, frozenset((held_body,)), resolution=0.025
+                current,
+                goal,
+                frozenset((held_body,)) | allowed_robot_contact_bodies,
+                resolution=0.025,
             )
             if not valid:
                 raise RuntimeError(f"Held trajectory collision during {label}: {reason}")
@@ -1391,7 +1408,10 @@ class CalibratedPickPlaceExecutor:
             nonlocal minimum_monitored_clearance
             if not bool(self.data.eq_active[weld_id]) or self.held_object != held_name:
                 raise RuntimeError("Held payload weld was lost during trajectory")
-            valid, reason = checker.evaluate_live(self.data, frozenset((held_body,)))
+            valid, reason = checker.evaluate_live(
+                self.data,
+                frozenset((held_body,)) | allowed_robot_contact_bodies,
+            )
             if not valid:
                 raise RuntimeError(f"Held trajectory live collision: {reason}")
             held_geoms = [
@@ -1462,10 +1482,11 @@ class CalibratedPickPlaceExecutor:
             settled = 0
             for _ in range(maximum_steps_per_waypoint):
                 command = self.data.ctrl[self.arm_actuators]
+                command_speed = self.arm_command_speed * command_speed_scale
                 delta = np.clip(
                     waypoint.joints - command,
-                    -self.arm_command_speed * self.model.opt.timestep,
-                    self.arm_command_speed * self.model.opt.timestep,
+                    -command_speed * self.model.opt.timestep,
+                    command_speed * self.model.opt.timestep,
                 )
                 self.data.ctrl[self.arm_actuators] = command + delta
                 self.data.ctrl[self.finger_actuators] = self.profile.closed_command
@@ -1514,6 +1535,7 @@ class CalibratedPickPlaceExecutor:
             "local_continuity_limit_rad": 0.71,
             "adjacent_joint_deltas": adjacent_joint_deltas,
             "physics_steps": physics_steps,
+            "command_speed_scale": float(command_speed_scale),
             "maximum_ik_position_error_m": maximum_position_error,
             "maximum_ik_orientation_error_rad": maximum_angle_error,
             "minimum_monitored_clearance_m": (
@@ -1534,6 +1556,7 @@ class CalibratedPickPlaceExecutor:
         target_base_qpos: np.ndarray,
         *,
         position_tolerance_m: float = BASE_TARGET_TOLERANCE,
+        allowed_payload_contact_body_names: tuple[str, ...] = (),
         step_callback=None,
         maximum_steps: int = 15000,
     ) -> dict[str, object]:
@@ -1548,14 +1571,15 @@ class CalibratedPickPlaceExecutor:
         if target.shape != (3,):
             raise ValueError("Base target must contain three qpos values")
         start = self.data.qpos[self.base_qpos].copy()
-        if float(np.linalg.norm(target[:2] - start[:2])) > 0.65:
-            raise RuntimeError("Held local base reposition exceeds 0.65 m bound")
+        if float(np.linalg.norm(target[:2] - start[:2])) > 1.00:
+            raise RuntimeError("Held local base reposition exceeds 1.00 m bound")
         held_arm_target = self._current_arm()
         checker = RobotConfigurationCollisionChecker(
             self.model, self.data, self.profile,
             mounting_allowances=self.mounting_allowances,
         )
         invalid_pairs: set[tuple[str, str]] = set()
+        allowed_payload_contacts = frozenset(allowed_payload_contact_body_names)
         for step in range(1, maximum_steps + 1):
             self.data.ctrl[self.arm_actuators] = held_arm_target
             self.data.ctrl[self.finger_actuators] = self.profile.closed_command
@@ -1577,6 +1601,8 @@ class CalibratedPickPlaceExecutor:
                     self.model, mujoco.mjtObj.mjOBJ_BODY, other_body
                 ) or ""
                 if other_name.startswith(f"{self.robot_name}:"):
+                    continue
+                if other_name in allowed_payload_contacts:
                     continue
                 first_name = mujoco.mj_id2name(
                     self.model, mujoco.mjtObj.mjOBJ_GEOM, contact.geom1

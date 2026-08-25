@@ -292,10 +292,26 @@ def compile_observed_symbolic_state(
     region_states[initial_region]["open"] = True
 
     selected = witness.get("selected_witness") or {}
-    coffee_targets = list(selected.get("coffee_container", []))
-    soup_targets = list(selected.get("soup_container", []))
-    if len(coffee_targets) != 3 or len(soup_targets) != 3:
-        raise SymbolicCompilationError("Witness must bind three coffee and three soup targets")
+    target_requirements = symbolic.get("target_requirements", {})
+    coffee_requirement = target_requirements.get("coffee")
+    soup_requirement = target_requirements.get("soup")
+    if not isinstance(coffee_requirement, dict) or not isinstance(soup_requirement, dict):
+        raise SymbolicCompilationError(
+            "Kitchen planner requires VLM planning targets for coffee and soup"
+        )
+    coffee_role = str(coffee_requirement.get("witness_role", ""))
+    soup_role = str(soup_requirement.get("witness_role", ""))
+    coffee_group = str(coffee_requirement.get("requires_operation_group", ""))
+    soup_group = str(soup_requirement.get("requires_operation_group", ""))
+    coffee_targets = list(selected.get(coffee_role, []))
+    soup_targets = list(selected.get(soup_role, []))
+    required_coffee = int(task["roles"][coffee_role]["count"])
+    required_soup = int(task["roles"][soup_role]["count"])
+    if len(coffee_targets) != required_coffee or len(soup_targets) != required_soup:
+        raise SymbolicCompilationError(
+            "Witness must bind "
+            f"{required_coffee} coffee and {required_soup} soup targets"
+        )
     function_bound_objects = {
         object_id
         for object_ids in selected.values()
@@ -306,6 +322,22 @@ def compile_observed_symbolic_state(
     source_capabilities: dict[str, str] = {}
     used_sources: set[str] = set()
     for role, requirement in symbolic.get("source_roles", {}).items():
+        witness_role = requirement.get("witness_role")
+        if isinstance(witness_role, str) and witness_role:
+            candidates = list(selected.get(witness_role, []))
+            if len(candidates) != int(requirement.get("count", 1)):
+                raise SymbolicCompilationError(
+                    f"Source role {role} lacks its verified VLM witness role {witness_role}"
+                )
+            chosen = candidates[0]
+            if chosen in used_sources:
+                raise SymbolicCompilationError(
+                    f"Physical source object {chosen} was assigned to multiple source roles"
+                )
+            used_sources.add(chosen)
+            source_bindings[role] = chosen
+            source_capabilities[chosen] = str(requirement["provides"])
+            continue
         labels = {
             str(value).strip().lower()
             for value in requirement.get("accepted_semantic_labels", [])
@@ -367,11 +399,9 @@ def compile_observed_symbolic_state(
         source_bindings[role] = chosen
         source_capabilities[chosen] = str(requirement["provides"])
 
-    # Some targets can be observed already containing material (the primary
-    # scene's soup bowls are visibly pre-filled). This is declarative task
-    # state, not a hidden simulator lookup: target identity still comes from
-    # the validated witness and the content type comes from the replaceable
-    # ground-truth functional specification.
+    # Some target-role types can begin with visible contents. In the integrated
+    # Kitchen path this declaration comes from Qwen's one-call planning graph;
+    # physical target identities still come only from the verified witness.
     initial_target_contents: set[tuple[str, str]] = set()
     declared_contents = set(map(str, symbolic.get("contents", [])))
     for requirement in symbolic.get("target_requirements", {}).values():
@@ -385,8 +415,8 @@ def compile_observed_symbolic_state(
                 )
             initial_target_contents.update((target, content) for target in targets)
 
-    coffee_assignments = _verified_assignments(witness, "coffee_stirring")
-    soup_assignments = _verified_assignments(witness, "soup_serving")
+    coffee_assignments = _verified_assignments(witness, coffee_group)
+    soup_assignments = _verified_assignments(witness, soup_group)
     can_stir = sorted({
         (item["utensil_object_id"], item["target_object_id"])
         for item in coffee_assignments
@@ -882,7 +912,9 @@ def validate_symbolic_plan(
         "grounding_consistency": coffee_compliance and soup_compliance,
         "coffee_distinct_tool_count": len({tool for tool, _ in problem.can_stir}),
         "coffee_reuse_verified": len({tool for tool, _ in problem.can_stir}) == 1,
-        "soup_distinctness_verified": len(soup_tools) == len(set(soup_tools)) == 3,
+        "soup_distinctness_verified": (
+            len(soup_tools) == len(set(soup_tools)) == len(problem.soup_targets)
+        ),
         "steps": steps,
     }
 

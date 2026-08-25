@@ -1,0 +1,192 @@
+{
+  "actions": [
+    {
+      "arguments": [
+        "s1i_compact_kettle"
+      ],
+      "operator": "PICK",
+      "reason": "Pick water_source (s1i_compact_kettle) to dispense hot water"
+    },
+    {
+      "arguments": [
+        "s1i_compact_kettle",
+        "ab3_narrow_deep_cup"
+      ],
+      "operator": "POUR",
+      "reason": "Pour hot water from s1i_compact_kettle into coffee target ab3_narrow_deep_cup"
+    },
+    {
+      "arguments": [
+        "s1i_compact_kettle",
+        "ab3_medium_deep_mug"
+      ],
+      "operator": "POUR",
+      "reason": "Pour hot water from s1i_compact_kettle into coffee target ab3_medium_deep_mug"
+    },
+    {
+      "arguments": [
+        "s1i_compact_kettle",
+        "countertop"
+      ],
+      "operator": "PLACE",
+      "reason": "Return water_source (s1i_compact_kettle) to safe countertop support"
+    },
+    {
+      "arguments": [
+        "s1i_compact_coffee_jar"
+      ],
+      "operator": "PICK",
+      "reason": "Pick coffee_source (s1i_compact_coffee_jar) to dispense coffee grounds"
+    },
+    {
+      "arguments": [
+        "s1i_compact_coffee_jar",
+        "ab3_narrow_deep_cup"
+      ],
+      "operator": "POUR",
+      "reason": "Pour coffee grounds from s1i_compact_coffee_jar into coffee target ab3_narrow_deep_cup"
+    },
+    {
+      "arguments": [
+        "s1i_compact_coffee_jar",
+        "ab3_medium_deep_mug"
+      ],
+      "operator": "POUR",
+      "reason": "Pour coffee grounds from s1i_compact_coffee_jar into coffee target ab3_medium_deep_mug"
+    },
+    {
+      "arguments": [
+        "s1i_compact_coffee_jar",
+        "countertop"
+      ],
+      "operator": "PLACE",
+      "reason": "Return coffee_source (s1i_compact_coffee_jar) to safe countertop support"
+    },
+    {
+      "arguments": [
+        "s1i_final_long_narrow_spoon"
+      ],
+      "operator": "PICK",
+      "reason": "Pick coffee stirring tool s1i_final_long_narrow_spoon for sequential preparation"
+    },
+    {
+      "arguments": [
+        "s1i_final_long_narrow_spoon",
+        "ab3_narrow_deep_cup"
+      ],
+      "operator": "STIR",
+      "reason": "Stir coffee in ab3_narrow_deep_cup using assigned tool s1i_final_long_narrow_spoon"
+    },
+    {
+      "arguments": [
+        "s1i_final_long_narrow_spoon",
+        "ab3_medium_deep_mug"
+      ],
+      "operator": "STIR",
+      "reason": "Stir coffee in ab3_medium_deep_mug using assigned tool s1i_final_long_narrow_spoon"
+    },
+    {
+      "arguments": [
+        "s1i_final_long_narrow_spoon",
+        "countertop"
+      ],
+      "operator": "PLACE",
+      "reason": "Set stirring tool s1i_final_long_narrow_spoon on countertop after coffee stirring completion"
+    },
+    {
+      "arguments": [
+        "ab3_narrow_deep_cup"
+      ],
+      "operator": "PICK",
+      "reason": "Pick prepared coffee vessel ab3_narrow_deep_cup for serving"
+    },
+    {
+      "arguments": [
+        "ab3_narrow_deep_cup",
+        "serving_area"
+      ],
+      "operator": "PLACE",
+      "reason": "Place coffee vessel ab3_narrow_deep_cup in serving area"
+    },
+    {
+      "arguments": [
+        "ab3_medium_deep_mug"
+      ],
+      "operator": "PICK",
+      "reason": "Pick prepared coffee vessel ab3_medium_deep_mug for serving"
+    },
+    {
+      "arguments": [
+        "ab3_medium_deep_mug",
+        "serving_area"
+      ],
+      "operator": "PLACE",
+      "reason": "Place coffee vessel ab3_medium_deep_mug in serving area"
+    },
+    {
+      "arguments": [
+        "ab3_deep_bowl"
+      ],
+      "operator": "PICK",
+      "reason": "Pick soup bowl ab3_deep_bowl for serving"
+    },
+    {
+      "arguments": [
+        "ab3_deep_bowl",
+        "serving_area"
+      ],
+      "operator": "PLACE",
+      "reason": "Place soup bowl ab3_deep_bowl in serving area"
+    },
+    {
+      "arguments": [
+        "s1i_oversized_spoon"
+      ],
+      "operator": "PICK",
+      "reason": "Pick dedicated soup utensil s1i_oversized_spoon for ab3_deep_bowl"
+    },
+    {
+      "arguments": [
+        "s1i_oversized_spoon",
+        "ab3_deep_bowl"
+      ],
+      "operator": "PLACE_SERVING_UTENSIL",
+      "reason": "Place soup utensil s1i_oversized_spoon with served soup bowl ab3_deep_bowl"
+    },
+    {
+      "arguments": [
+        "ab3_shallow_bowl"
+      ],
+      "operator": "PICK",
+      "reason": "Pick soup bowl ab3_shallow_bowl for serving"
+    },
+    {
+      "arguments": [
+        "ab3_shallow_bowl",
+        "serving_area"
+      ],
+      "operator": "PLACE",
+      "reason": "Place soup bowl ab3_shallow_bowl in serving area"
+    },
+    {
+      "arguments": [
+        "ab3_partial_spoon"
+      ],
+      "operator": "PICK",
+      "reason": "Pick dedicated soup utensil ab3_partial_spoon for ab3_shallow_bowl"
+    },
+    {
+      "arguments": [
+        "ab3_partial_spoon",
+        "ab3_shallow_bowl"
+      ],
+      "operator": "PLACE_SERVING_UTENSIL",
+      "reason": "Place soup utensil ab3_partial_spoon with served soup bowl ab3_shallow_bowl"
+    }
+  ],
+  "environment": "kitchen",
+  "internal_variant": "F0_ALL_VISIBLE",
+  "schema_version": 1,
+  "total_actions": 24,
+  "variant": "K1"
+}
