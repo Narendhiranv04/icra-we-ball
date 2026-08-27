@@ -53,14 +53,9 @@ def compile_workshop_requirements_from_graph(
             if "driver" in name.lower() or "drive" in name.lower()
             else ("CAN_FASTEN" if "fastener" in name.lower() or "screw" in name.lower() or "fasten" in name.lower() else name)
         )
-        if func_name == "CAN_DRIVE_SCREW":
-            req_rels = ["REACHES_TARGET", "COMPATIBLE_WITH"]
-        elif func_name == "CAN_FASTEN":
-            req_rels = ["COMPATIBLE_WITH_TARGET"]
-        else:
-            req_rels = [
-                r.predicate for r in graph.relations if r.subject_role == name
-            ]
+        req_rels = [
+            r.predicate for r in graph.relations if r.subject_role == name
+        ]
 
         source = RequirementSource.FM if "VLM" in graph.source else RequirementSource.STATIC
         requirements.append(
@@ -393,14 +388,17 @@ class WorkshopDomainAdapter:
     def observe_after_open(self, region: str) -> None:
         self._capture_and_evaluate(region)
 
-    def evaluate_satisfaction(self) -> SatisfactionResult:
+    def evaluate_satisfaction(self, search_exhausted: bool = False) -> SatisfactionResult:
         from ..grounding import ground_graph
 
-        ground_result = ground_graph(self.specification, self.graph)
+        ground_result = ground_graph(
+            self.specification, self.graph, {"search_exhausted": search_exhausted}
+        )
         if not ground_result.complete or not ground_result.assignment:
-            return SatisfactionResult(
-                satisfied=False,
+            return GraphGroundingResult(
+                status=ground_result.status,
                 complete=False,
+                assignment=None,
                 missing_roles=ground_result.missing_roles,
                 unsatisfied_relations=ground_result.unsatisfied_relations,
                 unresolved_constraints=ground_result.unresolved_constraints,
@@ -411,7 +409,6 @@ class WorkshopDomainAdapter:
                     "observed_object_count": len(self.graph.objects),
                     "reason": self._rejection_reason,
                 },
-                status=ground_result.status,
             )
 
         driver_id = ground_result.assignment.get("driver", ground_result.assignment.get("CAN_DRIVE_SCREW"))
@@ -442,12 +439,14 @@ class WorkshopDomainAdapter:
             source_ids={"driver": driver_id, "fastener": fastener_id},
         )
         self.dispatcher.assignment = self.physical_assignment
-        return SatisfactionResult(
-            satisfied=True,
+        return GraphGroundingResult(
+            status="COMPLETE",
             complete=True,
             assignment=assignment,
+            missing_roles=(),
+            unsatisfied_relations=(),
+            unresolved_constraints=(),
             evidence={"grounding": ground_result.to_dict(), "stage": self._stage},
-            status="COMPLETE",
         )
 
     @staticmethod

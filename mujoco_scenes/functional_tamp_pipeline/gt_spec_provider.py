@@ -253,62 +253,64 @@ class GTSpecProvider(FunctionalSpecProvider):
             )
 
         # Explicit target nodes
-        nodes["cup_saucer_payload_target"] = FunctionalRole(
-            name="cup_saucer_payload_target",
+        nodes["CUP_SAUCER_SET"] = FunctionalRole(
+            name="CUP_SAUCER_SET",
             entity_kind="OBJECT",
             count=2,
-            semantic_categories=("cup", "saucer"),
+            semantic_categories=("cup_saucer_set", "cup", "saucer"),
             binding_policy="DISTINCT",
             verification_mode="SEMANTIC_ONLY",
         )
-        nodes["remote_payload_target"] = FunctionalRole(
-            name="remote_payload_target",
+        nodes["REMOTE"] = FunctionalRole(
+            name="REMOTE",
             entity_kind="OBJECT",
             count=1,
             semantic_categories=("remote_control", "tv_remote"),
             binding_policy="DISTINCT",
             verification_mode="SEMANTIC_ONLY",
         )
-        nodes["seating_target"] = FunctionalRole(
-            name="seating_target",
+        nodes["SEATING_POSITION"] = FunctionalRole(
+            name="SEATING_POSITION",
             entity_kind="FIXED_TARGET",
             count=2,
-            semantic_categories=("armchair", "chair", "sofa"),
+            semantic_categories=("armchair", "chair", "sofa", "seating_position"),
             binding_policy="DISTINCT",
             verification_mode="SEMANTIC_ONLY",
         )
-        nodes["seating_pair_target"] = FunctionalRole(
-            name="seating_pair_target",
+        nodes["SEATING_PAIR"] = FunctionalRole(
+            name="SEATING_PAIR",
             entity_kind="FIXED_TARGET",
             count=1,
-            semantic_categories=("armchair", "chair", "sofa"),
+            semantic_categories=("armchair", "chair", "sofa", "seating_pair"),
             binding_policy="SHARED",
             verification_mode="SEMANTIC_ONLY",
         )
 
-        # Explicit relations with valid endpoints
-        relations.append(FunctionalRelation(
-            subject_role="PERSONAL_CUP_SAUCER_REGION",
-            predicate="FITS_SET_ON",
-            object_role="cup_saucer_payload_target",
-            expected=True,
-        ))
-        relations.append(FunctionalRelation(
-            subject_role="PERSONAL_CUP_SAUCER_REGION",
-            predicate="NEAR_SEAT",
-            object_role="seating_target",
-            expected=True,
-        ))
+        operation_groups = [
+            OperationGroup(
+                id="personal_support_group",
+                function="SUPPORT_DRINKWARE",
+                tool_role="PERSONAL_CUP_SAUCER_REGION",
+                target_role="CUP_SAUCER_SET",
+                usage_policy="DEDICATED_PER_TARGET",
+                required_relations=("FITS_SET_ON", "NEAR_SEAT"),
+                required_target_count=2,
+                distinct_within_group=True,
+                same_tool_must_cover_all_targets=False,
+            )
+        ]
+
+        # Explicit relations for shared region
         relations.append(FunctionalRelation(
             subject_role="SHARED_REMOTE_REGION",
             predicate="FITS_ON",
-            object_role="remote_payload_target",
+            object_role="REMOTE",
             expected=True,
         ))
         relations.append(FunctionalRelation(
             subject_role="SHARED_REMOTE_REGION",
             predicate="ACCESSIBLE_FROM_BOTH_SEATS",
-            object_role="seating_pair_target",
+            object_role="SEATING_PAIR",
             expected=True,
         ))
 
@@ -320,6 +322,8 @@ class GTSpecProvider(FunctionalSpecProvider):
             task_instruction=task_instruction or contract["natural_language_goal"],
             nodes=nodes,
             relations=tuple(relations),
+            operation_groups=tuple(operation_groups),
+            cross_group_reuse_allowed=False,
             detector_vocabulary=tuple(dict.fromkeys(vocabulary)),
             candidate_regions=(),
             region_ranking=(),

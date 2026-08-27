@@ -364,6 +364,10 @@ class FMRequirementProvider(RequirementProvider):
         self.region_ranking = tuple(WORKSHOP_SEARCH_REGIONS.keys())
         self.candidate_regions = tuple(WORKSHOP_SEARCH_REGIONS.keys())
 
+        expected_by_function = {
+            requirement.function_name: requirement
+            for requirement in self.ontology_contract.get_requirements()
+        }
         normalized: dict[str, FunctionalRequirement] = {}
         raw_requirements = document["functional_requirements"]
         for raw in raw_requirements:
@@ -377,39 +381,48 @@ class FMRequirementProvider(RequirementProvider):
                 if canonical is not None and canonical not in categories:
                     categories.append(canonical)
                     self._category_rank.setdefault(canonical, len(self._category_rank) + 1)
+            if not categories:
+                raise ValueError(
+                    f"VLM_SPEC_FAILED: VLM candidates for role {raw['id']!r} could not be mapped to supported categories"
+                )
             function_name = self._map_function(raw, categories)
             if function_name in normalized:
                 raise ValueError(f"VLM_SPEC_FAILED: VLM emitted duplicate role {function_name}")
+            if function_name not in expected_by_function:
+                raise ValueError(f"VLM_SPEC_FAILED: VLM emitted unexpected function {function_name}")
+            expected = expected_by_function[function_name]
             if raw["required_count"] != 1:
                 raise ValueError(
                     f"VLM_SPEC_FAILED: VLM role {function_name} required_count must be 1 for Workshop"
                 )
             mapped_relations = self._map_relations(raw["required_properties"])
-            # Derive accepted categories directly from VLM candidates mapped via ontology aliases
-            role_categories = categories if categories else (
-                ["screwdriver", "power_driver"] if function_name == "CAN_DRIVE_SCREW"
-                else (["screw"] if function_name == "CAN_FASTEN" else [])
-            )
+            missing_relations = set(expected.required_relations) - mapped_relations
+            if missing_relations:
+                raise ValueError(
+                    f"VLM role {function_name} omitted required qualitative properties: "
+                    f"{sorted(missing_relations)}"
+                )
+
             normalized[function_name] = FunctionalRequirement(
                 requirement_id=raw["id"],
                 entity_type=EntityType.OBJECT,
                 function_name=function_name,
                 description=raw["description"],
-                rank=len(normalized) + 1,
+                rank=expected.rank,
                 source=RequirementSource.FM,
-                accepted_categories=list(dict.fromkeys(role_categories)),
+                accepted_categories=list(expected.accepted_categories),
                 semantic_hints=[
                     candidate["label"] for candidate in raw["candidate_objects"]
                 ],
                 geometric_constraints={},
-                required_relations=list(mapped_relations),
+                required_relations=list(expected.required_relations),
                 provenance="qwen_vlm_normalized_by_workshop_ontology",
             )
 
         if not normalized:
             raise ValueError("VLM_SPEC_FAILED: No functional requirements produced by VLM")
 
-        self._requirements = list(normalized.values())
+        self._requirements = sorted(normalized.values(), key=lambda item: item.rank)
 
     def generate_inspection_policy(
         self,

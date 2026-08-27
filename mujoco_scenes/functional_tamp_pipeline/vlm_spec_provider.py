@@ -116,7 +116,19 @@ class VLMSpecProvider(FunctionalSpecProvider):
                     expected=True,
                 ))
 
-        vocabulary = tuple(provider.get_detector_prompts())
+        # Derive detector vocabulary strictly from G_F role categories and generic aliases
+        role_categories = set()
+        for node in nodes.values():
+            if node.entity_kind == "OBJECT":
+                role_categories.update(node.semantic_categories)
+
+        detector_map = provider.get_detector_label_to_canonical_map()
+        prompts = []
+        for prompt, canonical in detector_map.items():
+            if canonical in role_categories and prompt not in prompts:
+                prompts.append(prompt)
+        vocabulary = tuple(prompts)
+
         return FunctionalRequirementGraph(
             domain="workshop",
             task_instruction=task_instruction,
@@ -131,6 +143,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
                 "detector_label_to_canonical": provider.get_detector_label_to_canonical_map(),
                 "alias_to_canonical": provider.get_alias_to_canonical_map(),
                 "raw_decomposition": provider.raw_decomposition,
+                "evaluation_negative_controls": ["wooden hammer"],
             },
         )
 
@@ -183,10 +196,16 @@ class VLMSpecProvider(FunctionalSpecProvider):
                     ))
 
             binding = "REUSABLE" if card.get("preferred") == "minimize_distinct" else "DISTINCT"
+            min_c = card.get("minimum_distinct_physical_objects", role.get("min_count"))
+            max_c = card.get("maximum_distinct_physical_objects", role.get("max_count"))
+            pref = card.get("preferred", role.get("preference"))
             nodes[name] = FunctionalRole(
                 name=name,
                 entity_kind="OBJECT",
-                count=int(role.get("count", card.get("minimum_distinct_physical_objects", 1))),
+                count=int(role.get("count", min_c if min_c is not None else 1)),
+                min_count=int(min_c) if min_c is not None else None,
+                max_count=int(max_c) if max_c is not None else None,
+                preference=str(pref) if pref is not None else None,
                 semantic_categories=categories,
                 unary_predicates=tuple(unary_preds),
                 numeric_constraints=tuple(numeric_reqs),
@@ -202,6 +221,9 @@ class VLMSpecProvider(FunctionalSpecProvider):
                 usage_policy = "SEQUENTIAL_REUSE_ALLOWED"
             else:
                 usage_policy = "DEDICATED_PER_TARGET"
+            distinct_within = bool(policy.get("distinct_within_group", policy.get("distinct_tools_within_group", usage_policy == "DEDICATED_PER_TARGET")))
+            same_tool_covers_all = bool(policy.get("same_tool_must_cover_all_targets", False))
+            selection_pref = policy.get("selection_preference")
             operation_groups.append(OperationGroup(
                 id=gid,
                 function=str(grp["function"]),
@@ -210,12 +232,15 @@ class VLMSpecProvider(FunctionalSpecProvider):
                 required_target_count=int(grp["required_target_count"]),
                 usage_policy=usage_policy,
                 required_relations=tuple(map(str, grp.get("relations", ()))),
+                distinct_within_group=distinct_within,
+                same_tool_must_cover_all_targets=same_tool_covers_all,
+                selection_preference=str(selection_pref) if selection_pref is not None else None,
             ))
 
         order = tuple(raw["inspection_order"])
-        object_vocab = vocabularies["object"]
+        object_vocab = vocabularies["object"].get("canonical_labels", vocabularies["object"])
         prompts = tuple(dict.fromkeys(
-            phrase for phrases in object_vocab.values() for phrase in phrases
+            phrase for phrases in object_vocab.values() if isinstance(phrases, (list, tuple)) for phrase in phrases
         ))
         return FunctionalRequirementGraph(
             domain="kitchen",
@@ -242,93 +267,118 @@ class VLMSpecProvider(FunctionalSpecProvider):
         from mujoco_scenes.environment_vlm_requirements import EnvironmentVLMRequirementProvider
 
         provider = EnvironmentVLMRequirementProvider("living_room")
-        result = provider.generate(
+        result = provider.generate_canonical(
             task_instruction,
             observation_images=observation_images,
-            require_reviewed_contract=False,
         )
         requirements = result["normalized_requirements"]
         nodes: dict[str, FunctionalRole] = {}
         relations: list[FunctionalRelation] = []
+        operation_groups: list[OperationGroup] = []
+
+        all_categories: list[str] = []
+        has_seating_relation = False
 
         for row in requirements:
             func_id = row["function"]
             binding = "SHARED" if "SHARED" in func_id else "DISTINCT"
+            count = int(row["vlm_required_count"])
+            cats = tuple(row["accepted_categories"])
+            all_categories.extend(cats)
+            unary = tuple(
+                prop for prop in row["required_properties"] if prop == "PLANAR_SUPPORT"
+            )
             nodes[func_id] = FunctionalRole(
                 name=func_id,
                 entity_kind="REGION",
-                count=int(row["vlm_required_count"]),
-                semantic_categories=tuple(row["accepted_categories"]),
-                unary_predicates=tuple(
-                    prop for prop in row["required_properties"] if prop == "PLANAR_SUPPORT"
-                ),
+                count=count,
+                semantic_categories=cats,
+                unary_predicates=unary,
                 binding_policy=binding,
                 verification_mode="SEMANTIC_AND_GEOMETRIC",
                 description=row.get("description", ""),
                 semantic_hints=tuple(row.get("semantic_hints", ())),
             )
 
-        # Target nodes
-        nodes["cup_saucer_payload_target"] = FunctionalRole(
-            name="cup_saucer_payload_target",
-            entity_kind="OBJECT",
-            count=2,
-            semantic_categories=("cup", "saucer"),
-            binding_policy="DISTINCT",
-            verification_mode="SEMANTIC_ONLY",
-        )
-        nodes["remote_payload_target"] = FunctionalRole(
-            name="remote_payload_target",
-            entity_kind="OBJECT",
-            count=1,
-            semantic_categories=("remote_control", "tv_remote"),
-            binding_policy="DISTINCT",
-            verification_mode="SEMANTIC_ONLY",
-        )
-        nodes["seating_target"] = FunctionalRole(
-            name="seating_target",
-            entity_kind="FIXED_TARGET",
-            count=2,
-            semantic_categories=("armchair", "chair", "sofa"),
-            binding_policy="DISTINCT",
-            verification_mode="SEMANTIC_ONLY",
-        )
-        nodes["seating_pair_target"] = FunctionalRole(
-            name="seating_pair_target",
-            entity_kind="FIXED_TARGET",
-            count=1,
-            semantic_categories=("armchair", "chair", "sofa"),
-            binding_policy="SHARED",
-            verification_mode="SEMANTIC_ONLY",
-        )
+            req_rels = [prop for prop in row["required_properties"] if prop != "PLANAR_SUPPORT"]
+            if any("SEAT" in r for r in req_rels):
+                has_seating_relation = True
 
-        for row in requirements:
-            func_id = row["function"]
-            for rel in row["required_properties"]:
-                if rel in {"PLANAR_SUPPORT"}:
-                    continue
-                if "SEAT" in rel:
-                    target_role = "seating_pair_target" if "BOTH" in rel else "seating_target"
-                elif "SET" in rel or "SAUCER" in func_id:
-                    target_role = "cup_saucer_payload_target"
-                else:
-                    target_role = "remote_payload_target"
-
-                relations.append(FunctionalRelation(
-                    subject_role=func_id,
-                    predicate=rel,
-                    object_role=target_role,
-                    expected=True,
+            if "SHARED" in func_id:
+                nodes["REMOTE"] = FunctionalRole(
+                    name="REMOTE",
+                    entity_kind="OBJECT",
+                    count=count,
+                    semantic_categories=("remote_control", "tv_remote"),
+                    binding_policy="DISTINCT",
+                    verification_mode="SEMANTIC_ONLY",
+                )
+                nodes["SEATING_PAIR"] = FunctionalRole(
+                    name="SEATING_PAIR",
+                    entity_kind="FIXED_TARGET",
+                    count=1,
+                    semantic_categories=("armchair", "chair", "sofa", "seating_pair"),
+                    binding_policy="SHARED",
+                    verification_mode="SEMANTIC_ONLY",
+                )
+                for rel in req_rels:
+                    target_role = "SEATING_PAIR" if "SEAT" in rel else "REMOTE"
+                    relations.append(FunctionalRelation(
+                        subject_role=func_id,
+                        predicate=rel,
+                        object_role=target_role,
+                        expected=True,
+                    ))
+            else:
+                nodes["CUP_SAUCER_SET"] = FunctionalRole(
+                    name="CUP_SAUCER_SET",
+                    entity_kind="OBJECT",
+                    count=count,
+                    semantic_categories=("cup_saucer_set", "cup", "saucer"),
+                    binding_policy="DISTINCT",
+                    verification_mode="SEMANTIC_ONLY",
+                )
+                nodes["SEATING_POSITION"] = FunctionalRole(
+                    name="SEATING_POSITION",
+                    entity_kind="FIXED_TARGET",
+                    count=count,
+                    semantic_categories=("armchair", "chair", "sofa", "seating_position"),
+                    binding_policy="DISTINCT",
+                    verification_mode="SEMANTIC_ONLY",
+                )
+                operation_groups.append(OperationGroup(
+                    id=f"{func_id.lower()}_group",
+                    tool_role=func_id,
+                    target_role="CUP_SAUCER_SET",
+                    usage_policy="DEDICATED_PER_TARGET",
+                    required_relations=tuple(req_rels),
+                    required_target_count=count,
+                    distinct_within_group=True,
+                    same_tool_must_cover_all_targets=False,
                 ))
 
-        vocabulary = tuple(
-            row["detector_label"] for row in result["ranked_detector_vocabulary"]
-        )
+        for n in nodes.values():
+            if n.entity_kind == "OBJECT":
+                all_categories.extend(n.semantic_categories)
+        if has_seating_relation:
+            all_categories.extend(["armchair", "chair", "sofa"])
+
+        aliases = provider._vocabulary_aliases()
+        prompts: list[str] = []
+        for cat in all_categories:
+            if cat in aliases:
+                prompts.extend(aliases[cat])
+            else:
+                prompts.append(cat.replace("_", " "))
+        vocabulary = tuple(dict.fromkeys(prompts))
+
         return FunctionalRequirementGraph(
             domain="living_room",
             task_instruction=task_instruction,
             nodes=nodes,
             relations=tuple(relations),
+            operation_groups=tuple(operation_groups),
+            cross_group_reuse_allowed=False,
             detector_vocabulary=vocabulary,
             candidate_regions=(),
             region_ranking=(),

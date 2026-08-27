@@ -129,6 +129,14 @@ def compile_vlm_functional_graph(
             "semantic_preferences": preferences,
             "unary_geometry": unary,
         }
+        if "binding_cardinality" in row:
+            roles[role_id]["binding_cardinality"] = dict(row["binding_cardinality"])
+        elif "min_count" in row or "max_count" in row or "preference" in row:
+            roles[role_id]["binding_cardinality"] = {
+                "minimum_distinct_physical_objects": row.get("min_count", row.get("required_count", 1)),
+                "maximum_distinct_physical_objects": row.get("max_count", row.get("required_count", 1)),
+                "preferred": row.get("preference"),
+            }
 
     relations = []
     relation_index = set()

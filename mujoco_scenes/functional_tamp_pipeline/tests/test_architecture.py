@@ -808,7 +808,7 @@ def test_living_room_scene_graph_builder_ignores_production_result_assignments()
                 {"region_id": "region_1", "slot_id": "personal_table_slot_1", "FITS_SET_ON": "TRUE", "NEAR_SEAT": "TRUE", "fit_evidence": {}, "context_evidence": {}},
             ]
             self.shared_rows = [
-                {"region_id": "region_2", "slot_id": "shared_remote_slot", "FITS_ON": "TRUE", "ACCESSIBLE_FROM_BOTH_SEATS": "TRUE", "fit_evidence": {}, "context_evidence": {}},
+                {"region_id": "region_2", "slot_id": "shared_remote_slot", "payload_ids": ["tv_remote"], "FITS_ON": "TRUE", "ACCESSIBLE_FROM_BOTH_SEATS": "TRUE", "fit_evidence": {}, "context_evidence": {}},
             ]
             # Deliberately inject bogus production_result
             self.production_result = {
@@ -820,10 +820,10 @@ def test_living_room_scene_graph_builder_ignores_production_result_assignments()
     assert "region_1" in graph_o.nodes
     assert "region_2" in graph_o.nodes
     assert "bogus_region" not in graph_o.nodes
-    rel_p = graph_o.get_relation("FITS_SET_ON", "region_1", "cup_saucer_payload_target")
+    rel_p = graph_o.get_relation("FITS_SET_ON", "region_1", "personal_table_slot_1")
     assert rel_p is not None
     assert rel_p.status == "TRUE"
-    rel_s = graph_o.get_relation("ACCESSIBLE_FROM_BOTH_SEATS", "region_2", "seating_pair_target")
+    rel_s = graph_o.get_relation("ACCESSIBLE_FROM_BOTH_SEATS", "region_2", "SEATING_PAIR")
     assert rel_s is not None
     assert rel_s.status == "TRUE"
 
@@ -902,6 +902,256 @@ def test_workshop_sync_common_graph_calls_real_geometric_grounder_methods() -> N
     rel_compat = adapter.graph.get_relation("COMPATIBLE_WITH", "driver_1", "fastener_1")
     assert rel_compat is not None
     assert rel_compat.status == "TRUE"
+
+
+# Suite 23: Living Room planar support parsing
+def test_living_planar_support_parsing() -> None:
+    from mujoco_scenes.functional_tamp_pipeline.domains.living_room import parse_planar_support
+
+    assert parse_planar_support({"PLANAR_SUPPORT": {"value": False, "status": "DERIVED"}}) == "FALSE"
+    assert parse_planar_support({"PLANAR_SUPPORT": {"value": True, "status": "DERIVED"}}) == "TRUE"
+    assert parse_planar_support({"PLANAR_SUPPORT": {"status": "UNKNOWN"}}) == "UNKNOWN"
+    assert parse_planar_support({"PLANAR_SUPPORT": {"value": None}}) == "UNKNOWN"
+    assert parse_planar_support({"PLANAR_SUPPORT": False}) == "FALSE"
+    assert parse_planar_support({"PLANAR_SUPPORT": True}) == "TRUE"
+    assert parse_planar_support({}) == "UNKNOWN"
+    assert parse_planar_support(False) == "FALSE"
+    assert parse_planar_support(True) == "TRUE"
+
+
+# Suite 24: Living Room target-specific edges coexist without overwriting
+def test_living_target_specific_seat_edges_coexist() -> None:
+    from mujoco_scenes.functional_tamp_pipeline.domains.living_room import build_living_room_observed_scene_graph
+
+    class MockRun:
+        def __init__(self):
+            self.region_registry = {
+                "region_A": {"geometry": {"PLANAR_SUPPORT": True}, "semantics": {"canonical_label": "side_table"}},
+            }
+            self.seating_registry = {
+                "seat_left": {"geometry": {}},
+                "seat_right": {"geometry": {}},
+            }
+            self.personal_rows = [
+                {
+                    "region_id": "region_A",
+                    "slot_id": "bundle_1",
+                    "seating_target_id": "seat_left",
+                    "payload_ids": ["cup_1", "saucer_1"],
+                    "FITS_SET_ON": "TRUE",
+                    "NEAR_SEAT": "TRUE",
+                    "fit_evidence": {},
+                    "context_evidence": {},
+                },
+                {
+                    "region_id": "region_A",
+                    "slot_id": "bundle_2",
+                    "seating_target_id": "seat_right",
+                    "payload_ids": ["cup_2", "saucer_2"],
+                    "FITS_SET_ON": "FALSE",
+                    "NEAR_SEAT": "FALSE",
+                    "fit_evidence": {},
+                    "context_evidence": {},
+                },
+            ]
+            self.shared_rows = []
+
+    run = MockRun()
+    graph_o = build_living_room_observed_scene_graph(run)
+
+    # Verify both seat relations coexist on region_A
+    rel_left = graph_o.get_relation("NEAR_SEAT", "region_A", "seat_left")
+    rel_right = graph_o.get_relation("NEAR_SEAT", "region_A", "seat_right")
+    assert rel_left is not None
+    assert rel_left.status == "TRUE"
+    assert rel_right is not None
+    assert rel_right.status == "FALSE"
+
+    # Verify both bundle fit relations coexist on region_A
+    rel_b1 = graph_o.get_relation("FITS_SET_ON", "region_A", "bundle_1")
+    rel_b2 = graph_o.get_relation("FITS_SET_ON", "region_A", "bundle_2")
+    assert rel_b1 is not None
+    assert rel_b1.status == "TRUE"
+    assert rel_b2 is not None
+    assert rel_b2.status == "FALSE"
+
+
+# Suite 25: Living Room VLM anti-oracle respects VLM counts and omitted relations
+def test_living_room_vlm_anti_oracle_count_and_relations() -> None:
+    from mujoco_scenes.environment_vlm_requirements import EnvironmentVLMRequirementProvider
+
+    # VLM emits 1 personal support role and omits NEAR_SEAT
+    mock_doc = {
+        "status": "SUPPORTED",
+        "task_summary": "Single drink placement",
+        "unsupported_reason": "",
+        "functional_requirements": [
+            {
+                "id": "personal_table",
+                "entity_kind": "REGION",
+                "function": "support a cup and saucer",
+                "description": "one side table for coffee",
+                "required_count": 1,
+                "candidate_objects": [{"label": "side table", "visual_description": "table", "suitability_reason": "fits set"}],
+                "required_properties": ["planar support", "fit the complete set"],
+            },
+        ],
+    }
+
+    class FakeAdapter:
+        last_observation_images = []
+        last_raw_requirement_response = {}
+        last_raw_inspection_response = {}
+        metrics = MagicMock(total_calls=1)
+
+        def generate_task_requirements(self, *args, **kwargs):
+            return mock_doc
+
+    provider = EnvironmentVLMRequirementProvider("living_room", fm_adapter=FakeAdapter())
+    result = provider.generate_canonical("place cup and saucer", observation_images=[Path("/fake/image.png")])
+    records = result["normalized_requirements"]
+    assert len(records) == 1
+    # Check count is preserved as 1 (not forced to 2 from GT)
+    assert records[0]["vlm_required_count"] == 1
+    # Check required_properties does not contain NEAR_SEAT since VLM omitted it
+    assert "NEAR_SEAT" not in records[0]["required_properties"]
+    assert "FITS_SET_ON" in records[0]["required_properties"]
+    assert "PLANAR_SUPPORT" in records[0]["required_properties"]
+
+
+# Suite 26: Workshop VLM unmapped category fails closed
+def test_workshop_vlm_unmapped_category_fails_closed() -> None:
+    from mujoco_scenes.workshop_phase1.requirements import FMRequirementProvider
+
+    mock_doc = {
+        "status": "SUPPORTED",
+        "task_summary": "Workshop unmapped tool",
+        "unsupported_reason": "",
+        "functional_requirements": [
+            {
+                "id": "driver_tool",
+                "entity_kind": "OBJECT",
+                "function": "drive screws into wood",
+                "description": "mysterious alien tool",
+                "required_count": 1,
+                "candidate_objects": [{"label": "alien_blaster_9000", "visual_description": "shiny", "suitability_reason": "drives"}],
+                "required_properties": ["reaches target recess"],
+            },
+        ],
+    }
+
+    class FakeAdapter:
+        last_observation_images = []
+        last_raw_requirement_response = {}
+        last_raw_inspection_response = {}
+        metrics = MagicMock(total_calls=1)
+
+        def generate_task_requirements(self, *args, **kwargs):
+            return mock_doc
+
+    provider = FMRequirementProvider(fm_adapter=FakeAdapter())
+    with pytest.raises(ValueError, match="VLM_SPEC_FAILED"):
+        provider.get_requirements("repair joint", observation_images=[Path("/fake/image.png")])
+
+
+# Suite 27: Workshop legacy compiler derives relations strictly from G_F
+def test_workshop_compiler_derives_relations_strictly_from_gf() -> None:
+    from mujoco_scenes.functional_tamp_pipeline.domains.workshop import compile_workshop_requirements_from_graph
+
+    role_driver = FunctionalRole(
+        name="driver",
+        entity_kind="OBJECT",
+        count=1,
+        semantic_categories=("screwdriver",),
+        unary_predicates=("CAN_DRIVE_SCREW",),
+    )
+    # Only declare REACHES_TARGET in G_F (omit COMPATIBLE_WITH)
+    g_f = FunctionalRequirementGraph(
+        domain="workshop",
+        task_instruction="repair",
+        nodes={"driver": role_driver},
+        relations=(
+            FunctionalRelation(subject_role="driver", predicate="REACHES_TARGET", object_role="repair_target", expected=True),
+        ),
+        detector_vocabulary=("screwdriver",),
+    )
+
+    reqs = compile_workshop_requirements_from_graph(g_f)
+    assert len(reqs) == 1
+    assert reqs[0].required_relations == ["REACHES_TARGET"]
+    assert "COMPATIBLE_WITH" not in reqs[0].required_relations
+
+
+# Suite 28: Kitchen VLM variable cardinality and OperationGroup roundtrip
+def test_kitchen_vlm_variable_cardinality_and_policies_roundtrip(monkeypatch) -> None:
+    from mujoco_scenes.functional_tamp_pipeline.vlm_spec_provider import VLMSpecProvider
+    from mujoco_scenes.workshop_phase1.fm_adapter import FMAdapter
+    from mujoco_scenes.tests.test_kitchen_vlm_functional_graph import qwen_graph
+
+    mock_kitchen_raw = qwen_graph()
+    mock_kitchen_raw["inspection_order"] = ["D1", "D2", "C2", "B1", "C1"]
+    mock_kitchen_raw["candidate_regions"] = [{"region_id": r, "description": r} for r in ["D1", "D2", "C2", "B1", "C1"]]
+    # Add variable cardinality to mixing_implement
+    for r in mock_kitchen_raw["roles"]:
+        if r["id"] == "mixing_implement":
+            r["binding_cardinality"] = {
+                "mode": "assignment_driven",
+                "minimum_distinct_physical_objects": 1,
+                "maximum_distinct_physical_objects": 2,
+                "preferred": "minimize_distinct",
+            }
+
+    monkeypatch.setattr(
+        FMAdapter, "generate_kitchen_functional_graph",
+        lambda *args, **kwargs: mock_kitchen_raw
+    )
+
+    spec = VLMSpecProvider().provide("kitchen", "prepare coffee and soup", observation_images=[])
+    assert spec.domain == "kitchen"
+    stirrer = spec.nodes.get("mixing_implement")
+    assert stirrer is not None
+    assert stirrer.min_count == 1
+    assert stirrer.max_count == 2
+    assert stirrer.preference == "minimize_distinct"
+
+    # Check operation group policies
+    assert len(spec.operation_groups) >= 1
+    coffee_grp = next(g for g in spec.operation_groups if "mix" in g.id)
+    assert coffee_grp.usage_policy == "SEQUENTIAL_REUSE_ALLOWED"
+    assert coffee_grp.selection_preference == "minimize_distinct_tools"
+
+
+# Suite 29: Search-stage missing roles: INCOMPLETE before exhaustion, INFEASIBLE after
+def test_search_missing_role_incomplete_before_exhaustion_infeasible_after() -> None:
+    from mujoco_scenes.functional_tamp_pipeline.grounding import ground_graph
+
+    role_missing = FunctionalRole(
+        name="rare_tool",
+        entity_kind="OBJECT",
+        count=1,
+        semantic_categories=("rare_tool",),
+        unary_predicates=(),
+    )
+    g_f = FunctionalRequirementGraph(
+        domain="test",
+        task_instruction="find tool",
+        nodes={"rare_tool": role_missing},
+        relations=(),
+        detector_vocabulary=("rare_tool",),
+    )
+    g_o = ObservedSceneGraph()  # empty
+
+    # Before search exhaustion
+    res_incomplete = ground_graph(g_f, g_o, {"search_exhausted": False})
+    assert res_incomplete.status == "INCOMPLETE"
+    assert not res_incomplete.complete
+    assert "rare_tool" in res_incomplete.missing_roles
+
+    # After search exhaustion
+    res_infeasible = ground_graph(g_f, g_o, {"search_exhausted": True})
+    assert res_infeasible.status == "INFEASIBLE"
+    assert not res_infeasible.complete
+    assert "rare_tool" in res_infeasible.missing_roles
 
 
 

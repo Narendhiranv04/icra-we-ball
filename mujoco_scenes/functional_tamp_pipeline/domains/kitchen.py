@@ -227,25 +227,35 @@ def compile_kitchen_contract_from_graph(graph: FunctionalRequirementGraph) -> di
 
 def build_kitchen_observed_scene_graph(session: Any) -> ObservedSceneGraph:
     """Build canonical ObservedSceneGraph G_O from kitchen inspection session evidence."""
+    from ..scene_graph import ObservedNode, ObservedObject, ObservedRelation, ObservedSceneGraph
+
     graph_o = ObservedSceneGraph()
     for obj_id, record in sorted(session.registry.get("objects", {}).items()):
-        canonical = record.get("semantic_classification", {}).get("canonical_label")
+        semantics = record.get("semantics", {}) or record.get("semantic_classification", {})
+        canonical = (
+            semantics.get("validated", {}).get("canonical_label")
+            or semantics.get("latest_observation", {}).get("canonical_label")
+            or semantics.get("canonical_label")
+        )
         unary_preds = {
-            k: "TRUE" if v else "FALSE"
-            for k, v in record.get("unary_predicates", {}).items()
+            k: v.get("status", "TRUE" if v.get("value") else "FALSE") if isinstance(v, dict) else ("TRUE" if v else "FALSE")
+            for k, v in record.get("geometric_predicates", {}).items()
         }
-        # Populate standard kitchen geometric predicates if properties are present
-        geom_props = record.get("geometric_properties", {})
-        if "open_cavity" in geom_props:
-            unary_preds["OPEN_CAVITY"] = "TRUE" if geom_props["open_cavity"].get("value") else "FALSE"
-        if "elongated" in geom_props:
-            unary_preds["ELONGATED_OBJECT"] = "TRUE" if geom_props["elongated"].get("value") else "FALSE"
+        geom_props_raw = record.get("geometric_properties", {})
+        geom_props = {
+            k: v.get("value", v) if isinstance(v, dict) else v
+            for k, v in geom_props_raw.items()
+        }
+        if "open_cavity" in geom_props_raw and "OPEN_CAVITY" not in unary_preds:
+            unary_preds["OPEN_CAVITY"] = "TRUE" if geom_props_raw["open_cavity"].get("value") else "FALSE"
+        if "elongated" in geom_props_raw and "ELONGATED_OBJECT" not in unary_preds:
+            unary_preds["ELONGATED_OBJECT"] = "TRUE" if geom_props_raw["elongated"].get("value") else "FALSE"
 
         node = ObservedNode(
             instance_id=obj_id,
             entity_kind="OBJECT",
             canonical_category=canonical,
-            semantic_labels=dict(record.get("semantic_classification", {})),
+            semantic_labels=dict(semantics),
             source_region=record.get("source_region"),
             geometry=dict(geom_props),
             unary_properties=dict(geom_props),
@@ -255,7 +265,24 @@ def build_kitchen_observed_scene_graph(session: Any) -> ObservedSceneGraph:
         )
         graph_o.add_node(node)
 
-    # Check pairwise relations recorded in session stage runs or evaluate them
+    # Load evaluated pairwise relations from stage artifacts if available
+    for stage_dir in sorted(session.run_dir.glob("stages/*")):
+        pair_path = stage_dir / "pair_relation_evaluations.json"
+        if pair_path.is_file():
+            try:
+                pair_data = json.loads(pair_path.read_text(encoding="utf-8"))
+                for item in pair_data.get("relations", []):
+                    graph_o.add_relation(ObservedRelation(
+                        subject_id=item["source_object_id"],
+                        predicate=item["relation"],
+                        object_id=item["target_object_id"],
+                        status=str(item.get("status", "UNKNOWN")),
+                        evidence=dict(item.get("evidence", {})),
+                    ))
+            except Exception:
+                pass
+
+    # Check remaining pairwise relations or evaluate them directly
     from mujoco_scenes.geometry_properties import pairwise_relation_evaluation
 
     obj_ids = sorted(session.registry.get("objects", {}).keys())
@@ -266,14 +293,15 @@ def build_kitchen_observed_scene_graph(session: Any) -> ObservedSceneGraph:
             s_rec = session.registry["objects"][s_id]
             t_rec = session.registry["objects"][t_id]
             for rel_name in ("INSERTABLE_IN", "REACHES_BOTTOM"):
-                eval_res = pairwise_relation_evaluation(rel_name, s_rec, t_rec, session.config)
-                graph_o.add_relation(ObservedRelation(
-                    subject_id=s_id,
-                    predicate=rel_name,
-                    object_id=t_id,
-                    status=str(eval_res.get("status", "UNKNOWN")),
-                    evidence=dict(eval_res),
-                ))
+                if graph_o.get_relation(rel_name, s_id, t_id) is None:
+                    eval_res = pairwise_relation_evaluation(rel_name, s_rec, t_rec, session.config)
+                    graph_o.add_relation(ObservedRelation(
+                        subject_id=s_id,
+                        predicate=rel_name,
+                        object_id=t_id,
+                        status=str(eval_res.get("status", "UNKNOWN")),
+                        evidence=dict(eval_res),
+                    ))
 
     return graph_o
 
@@ -336,7 +364,7 @@ def run_to_plan(
         graph_o.mark_region_inspected(r)
 
     # Canonical graph grounding decides the assignment authority
-    ground_result = ground_graph(specification, graph_o)
+    ground_result = ground_graph(specification, graph_o, {"search_exhausted": True})
 
     (output_dir / "observed_scene_graph.json").write_text(
         json.dumps(graph_o.to_dict(), indent=2, sort_keys=True) + "\n",

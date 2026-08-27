@@ -16,6 +16,7 @@ from mujoco_scenes.region_ablation import create_region_semantic_detector
 from mujoco_scenes.region_ablation2 import DEFAULT_EVALUATION_CONFIG
 
 from ..models import FunctionalSpecification, PipelineResult
+from ..scene_graph import ObservedNode, ObservedObject, ObservedRelation, ObservedSceneGraph
 
 
 TASK = (
@@ -25,11 +26,36 @@ TASK = (
 LOCAL_MODEL = Path(__file__).resolve().parents[3] / "semantic_model_cache/yolov8m-worldv2.pt"
 
 
+def parse_planar_support(geometry_or_prop: Any) -> str:
+    """Parse PLANAR_SUPPORT evidence into strict ternary status ('TRUE', 'FALSE', 'UNKNOWN')."""
+    if isinstance(geometry_or_prop, dict):
+        prop = geometry_or_prop.get("PLANAR_SUPPORT", geometry_or_prop)
+        if isinstance(prop, dict):
+            status = prop.get("status")
+            if status == "UNKNOWN":
+                return "UNKNOWN"
+            val = prop.get("value")
+            if val is None:
+                return "UNKNOWN"
+            return "TRUE" if bool(val) else "FALSE"
+        elif isinstance(prop, bool):
+            return "TRUE" if prop else "FALSE"
+        elif isinstance(prop, str):
+            return prop if prop in {"TRUE", "FALSE", "UNKNOWN"} else "UNKNOWN"
+        return "UNKNOWN"
+    elif isinstance(geometry_or_prop, bool):
+        return "TRUE" if geometry_or_prop else "FALSE"
+    elif isinstance(geometry_or_prop, str):
+        return geometry_or_prop if geometry_or_prop in {"TRUE", "FALSE", "UNKNOWN"} else "UNKNOWN"
+    return "UNKNOWN"
+
+
 def compile_living_room_task_from_graph(graph: FunctionalRequirementGraph) -> dict[str, Any]:
     """Deterministically compile living room task contract from G_F."""
     function_groups = {}
     semantic_region_roles = {}
 
+    personal_count = 2
     for name, node in graph.nodes.items():
         if node.entity_kind == "REGION":
             role_key = name.lower()
@@ -39,6 +65,7 @@ def compile_living_room_task_from_graph(graph: FunctionalRequirementGraph) -> di
             if node.shared:
                 req_rels.extend(["FITS_ON", "ACCESSIBLE_FROM_BOTH_SEATS"])
             else:
+                personal_count = node.count
                 req_rels.extend(["FITS_SET_ON", "NEAR_SEAT"])
 
             function_groups[name.lower()] = {
@@ -68,7 +95,7 @@ def compile_living_room_task_from_graph(graph: FunctionalRequirementGraph) -> di
         "specification_source": graph.source,
         "payload_groups": {
             "personal_cup_saucer_sets": {
-                "count": 2,
+                "count": personal_count,
                 "each_requires": {"cup": 1, "saucer": 1},
                 "grouping_policy": "MINIMUM_TOTAL_OBSERVED_CENTROID_DISTANCE",
                 "target_assignment_policy": "OBSERVED_X_ORDER",
@@ -145,12 +172,11 @@ def build_living_room_observed_scene_graph(run: Any) -> ObservedSceneGraph:
     graph_o = ObservedSceneGraph()
     region_reg = getattr(run, "region_registry", {}) or getattr(run, "region_evidence", {})
 
-    for region_id, reg_data in region_reg.items():
+    for region_id, reg_data in sorted(region_reg.items()):
         semantics = reg_data.get("semantics", {}) or reg_data.get("semantic_classification", {})
         canonical = semantics.get("canonical_label")
         geometry = reg_data.get("geometry", {})
-        planar_val = geometry.get("PLANAR_SUPPORT")
-        planar_str = "TRUE" if planar_val else ("FALSE" if planar_val is False else "UNKNOWN")
+        planar_str = parse_planar_support(geometry)
 
         node = ObservedNode(
             instance_id=region_id,
@@ -162,64 +188,108 @@ def build_living_room_observed_scene_graph(run: Any) -> ObservedSceneGraph:
         )
         graph_o.add_node(node)
 
-    # Add target nodes to G_O
+    # Add payload bundle nodes and seat nodes from personal_rows
+    personal_rows = getattr(run, "personal_rows", [])
+    seen_slots: set[str] = set()
+    seen_seats: set[str] = set()
+    for row in personal_rows:
+        slot_id = row["slot_id"]
+        seat_id = row.get("seating_target_id")
+        if slot_id not in seen_slots:
+            seen_slots.add(slot_id)
+            graph_o.add_node(ObservedNode(
+                instance_id=slot_id,
+                entity_kind="OBJECT",
+                canonical_category="cup_saucer_set",
+                unary_properties={"payload_ids": list(row.get("payload_ids", []))},
+            ))
+        if seat_id and seat_id not in seen_seats:
+            seen_seats.add(seat_id)
+            seat_evidence = getattr(run, "seating_registry", {}).get(seat_id, {})
+            graph_o.add_node(ObservedNode(
+                instance_id=seat_id,
+                entity_kind="FIXED_TARGET",
+                canonical_category="seating_position",
+                geometry=dict(seat_evidence.get("geometry", {})),
+            ))
+
+    # Add shared remote node and seating pair node from shared_rows
+    shared_rows = getattr(run, "shared_rows", [])
+    remote_ids: list[str] = []
+    for row in shared_rows:
+        p_ids = row.get("payload_ids", [])
+        if p_ids:
+            remote_ids.extend(p_ids)
+    remote_id = remote_ids[0] if remote_ids else "tv_remote"
     graph_o.add_node(ObservedNode(
-        instance_id="cup_saucer_payload_target",
-        entity_kind="OBJECT",
-        canonical_category="cup_saucer",
-    ))
-    graph_o.add_node(ObservedNode(
-        instance_id="remote_payload_target",
+        instance_id=remote_id,
         entity_kind="OBJECT",
         canonical_category="tv_remote",
     ))
     graph_o.add_node(ObservedNode(
-        instance_id="seating_target",
+        instance_id="SEATING_PAIR",
         entity_kind="FIXED_TARGET",
-        canonical_category="seating",
+        canonical_category="seating_pair",
     ))
     graph_o.add_node(ObservedNode(
-        instance_id="seating_pair_target",
+        instance_id="seating_pair",
         entity_kind="FIXED_TARGET",
         canonical_category="seating_pair",
     ))
 
-    # Populate relations from raw personal_rows
-    for row in getattr(run, "personal_rows", []):
+    # Populate relations from personal_rows
+    for row in personal_rows:
         reg_id = row["region_id"]
+        slot_id = row["slot_id"]
+        seat_id = row.get("seating_target_id")
         fits_set_on = str(row.get("FITS_SET_ON", "UNKNOWN"))
         near_seat = str(row.get("NEAR_SEAT", "UNKNOWN"))
         graph_o.add_relation(ObservedRelation(
             subject_id=reg_id,
             predicate="FITS_SET_ON",
-            object_id="cup_saucer_payload_target",
+            object_id=slot_id,
             status=fits_set_on,
             evidence=dict(row.get("fit_evidence", {})),
         ))
         graph_o.add_relation(ObservedRelation(
             subject_id=reg_id,
             predicate="NEAR_SEAT",
-            object_id="seating_target",
+            object_id=slot_id,
             status=near_seat,
             evidence=dict(row.get("context_evidence", {})),
         ))
+        if seat_id:
+            graph_o.add_relation(ObservedRelation(
+                subject_id=reg_id,
+                predicate="NEAR_SEAT",
+                object_id=seat_id,
+                status=near_seat,
+                evidence=dict(row.get("context_evidence", {})),
+            ))
 
-    # Populate relations from raw shared_rows
-    for row in getattr(run, "shared_rows", []):
+    # Populate relations from shared_rows
+    for row in shared_rows:
         reg_id = row["region_id"]
         fits_on = str(row.get("FITS_ON", "UNKNOWN"))
         accessible = str(row.get("ACCESSIBLE_FROM_BOTH_SEATS", "UNKNOWN"))
         graph_o.add_relation(ObservedRelation(
             subject_id=reg_id,
             predicate="FITS_ON",
-            object_id="remote_payload_target",
+            object_id=remote_id,
             status=fits_on,
             evidence=dict(row.get("fit_evidence", {})),
         ))
         graph_o.add_relation(ObservedRelation(
             subject_id=reg_id,
             predicate="ACCESSIBLE_FROM_BOTH_SEATS",
-            object_id="seating_pair_target",
+            object_id="SEATING_PAIR",
+            status=accessible,
+            evidence=dict(row.get("context_evidence", {})),
+        ))
+        graph_o.add_relation(ObservedRelation(
+            subject_id=reg_id,
+            predicate="ACCESSIBLE_FROM_BOTH_SEATS",
+            object_id="seating_pair",
             status=accessible,
             evidence=dict(row.get("context_evidence", {})),
         ))
@@ -259,7 +329,7 @@ def run_to_plan(
     ).run(scene)
 
     graph_o = build_living_room_observed_scene_graph(run)
-    ground_result = ground_graph(specification, graph_o)
+    ground_result = ground_graph(specification, graph_o, {"search_exhausted": True})
 
     (output_dir / "observed_scene_graph.json").write_text(
         json.dumps(graph_o.to_dict(), indent=2, sort_keys=True) + "\n",
@@ -280,48 +350,78 @@ def run_to_plan(
 
     # Sync canonical assignment phi into planner input
     personal_regions = ground_result.assignment.get(
-        "personal_cup_saucer_region", ground_result.assignment.get("personal_cup_saucer", [])
+        "PERSONAL_CUP_SAUCER_REGION",
+        ground_result.assignment.get(
+            "personal_cup_saucer_region", ground_result.assignment.get("personal_cup_saucer", [])
+        ),
     )
     if isinstance(personal_regions, str):
         personal_regions = [personal_regions]
     shared_region = ground_result.assignment.get(
-        "shared_remote_region", ground_result.assignment.get("shared_remote")
+        "SHARED_REMOTE_REGION",
+        ground_result.assignment.get(
+            "shared_remote_region", ground_result.assignment.get("shared_remote")
+        ),
     )
     if isinstance(shared_region, list) and shared_region:
         shared_region = shared_region[0]
 
     canonical_assignments = []
     for idx, reg_id in enumerate(personal_regions, start=1):
-        matching_row = next((r for r in getattr(run, "personal_rows", []) if r["region_id"] == reg_id and r["slot_id"] == f"personal_table_slot_{idx}"), None)
+        slot_id = f"personal_table_slot_{idx}"
+        matching_row = next((r for r in getattr(run, "personal_rows", []) if r["region_id"] == reg_id and r["slot_id"] == slot_id), None)
         if not matching_row:
             matching_row = next((r for r in getattr(run, "personal_rows", []) if r["region_id"] == reg_id), {})
+
+        # Extract actual evidence from G_O nodes and edges
+        reg_node = graph_o.nodes.get(reg_id)
+        planar = reg_node.unary_predicates.get("PLANAR_SUPPORT", "UNKNOWN") if reg_node else "UNKNOWN"
+        fit_rel = graph_o.get_relation("FITS_SET_ON", reg_id, slot_id)
+        fits_set_on = fit_rel.status if fit_rel else "UNKNOWN"
+        seat_id = matching_row.get("seating_target_id", "")
+        near_rel = graph_o.get_relation("NEAR_SEAT", reg_id, seat_id) or graph_o.get_relation("NEAR_SEAT", reg_id, slot_id)
+        near_seat = near_rel.status if near_rel else "UNKNOWN"
+        sem_status = matching_row.get("semantic_role_status", "UNKNOWN")
+        comp_status = "TRUE" if (planar == "TRUE" and fits_set_on == "TRUE" and near_seat == "TRUE" and sem_status == "TRUE") else ("FALSE" if "FALSE" in (planar, fits_set_on, near_seat, sem_status) else "UNKNOWN")
+
         canonical_assignments.append({
             "function_id": "PERSONAL_CUP_SAUCER_REGION",
-            "slot_id": f"personal_table_slot_{idx}",
+            "slot_id": slot_id,
             "region_id": reg_id,
             "payload_ids": matching_row.get("payload_ids", [f"cup_{idx}", f"saucer_{idx}"]),
             "selected_compatibility_evidence": {
-                "compatibility_status": "TRUE",
-                "FITS_SET_ON": "TRUE",
-                "NEAR_SEAT": "TRUE",
-                "PLANAR_SUPPORT": "TRUE",
-                "semantic_role_status": "TRUE",
+                "compatibility_status": comp_status,
+                "FITS_SET_ON": fits_set_on,
+                "NEAR_SEAT": near_seat,
+                "PLANAR_SUPPORT": planar,
+                "semantic_role_status": sem_status,
             },
         })
 
     if shared_region:
         matching_shared = next((r for r in getattr(run, "shared_rows", []) if r["region_id"] == shared_region), {})
+        remote_id = matching_shared.get("payload_ids", ["tv_remote"])[0] if matching_shared.get("payload_ids") else "tv_remote"
+
+        reg_node = graph_o.nodes.get(shared_region)
+        planar = reg_node.unary_predicates.get("PLANAR_SUPPORT", "UNKNOWN") if reg_node else "UNKNOWN"
+        fit_rel = graph_o.get_relation("FITS_ON", shared_region, remote_id)
+        fits_on = fit_rel.status if fit_rel else "UNKNOWN"
+        acc_rel = graph_o.get_relation("ACCESSIBLE_FROM_BOTH_SEATS", shared_region, "SEATING_PAIR") or graph_o.get_relation("ACCESSIBLE_FROM_BOTH_SEATS", shared_region, "seating_pair")
+        access = acc_rel.status if acc_rel else "UNKNOWN"
+        sem_status = matching_shared.get("semantic_role_status", "UNKNOWN")
+        comp_status = "TRUE" if (planar == "TRUE" and fits_on == "TRUE" and access == "TRUE" and sem_status == "TRUE") else ("FALSE" if "FALSE" in (planar, fits_on, access, sem_status) else "UNKNOWN")
+
         canonical_assignments.append({
             "function_id": "SHARED_REMOTE_REGION",
             "slot_id": "shared_remote_slot",
             "region_id": shared_region,
             "payload_ids": matching_shared.get("payload_ids", ["tv_remote_1"]),
             "selected_compatibility_evidence": {
-                "compatibility_status": "TRUE",
-                "FITS_ON": "TRUE",
-                "ACCESSIBLE_FROM_BOTH_SEATS": "TRUE",
-                "PLANAR_SUPPORT": "TRUE",
-                "semantic_role_status": "TRUE",
+                "compatibility_status": comp_status,
+                "FITS_ON": fits_on,
+                "ACCESSIBLE_FROM_BOTH_SEATS": access,
+                "PLANAR_SUPPORT": planar,
+                "semantic_role_status": sem_status,
             },
         })
 

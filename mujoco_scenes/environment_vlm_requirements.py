@@ -263,6 +263,18 @@ class EnvironmentVLMRequirementProvider:
             if spec["role_id"] in matched
         ], issues
 
+    def generate_canonical(
+        self,
+        instruction: str | None = None,
+        *,
+        observation_images: list[str | Path] | None = None,
+    ) -> dict[str, Any]:
+        return self.generate(
+            instruction,
+            observation_images=observation_images,
+            canonical=True,
+        )
+
     def generate(
         self,
         instruction: str | None = None,
@@ -270,6 +282,7 @@ class EnvironmentVLMRequirementProvider:
         observation_images: list[str | Path] | None = None,
         require_reviewed_contract: bool = False,
         include_inspection_policy: bool = False,
+        canonical: bool = False,
     ) -> dict[str, Any]:
         if self.raw_decomposition is not None:
             if require_reviewed_contract and not self.ready_for_grounding:
@@ -280,7 +293,6 @@ class EnvironmentVLMRequirementProvider:
             return self.result()
         task_instruction = instruction or self.instruction
         self.task_instruction = task_instruction
-        specs = self._role_specs()
         document = self.fm_adapter.generate_task_requirements(
             task_instruction, observation_images=observation_images or []
         )
@@ -301,92 +313,153 @@ class EnvironmentVLMRequirementProvider:
         raw_requirements = document["functional_requirements"]
         normalized_records = []
         category_rank: dict[str, int] = {}
-        assigned, issues = self._assign_roles(raw_requirements, specs)
-        for spec, raw_group in assigned:
-            raw = {
-                "id": raw_group[0]["id"],
-                "entity_kind": spec["entity_kind"],
-                "function": " / ".join(item["function"] for item in raw_group),
-                "description": " ".join(item["description"] for item in raw_group),
-                "required_count": sum(item["required_count"] for item in raw_group),
-                "candidate_objects": [
-                    candidate
-                    for item in raw_group
-                    for candidate in item["candidate_objects"]
-                ],
-                "required_properties": list(dict.fromkeys(
-                    property_text
-                    for item in raw_group
-                    for property_text in item["required_properties"]
-                )),
-            }
-            categories = self._candidate_categories(raw)
-            for canonical in categories:
-                if canonical in spec["categories"]:
-                    category_rank.setdefault(canonical, len(category_rank) + 1)
-            properties = self._map_properties(raw["required_properties"])
-            missing_properties = set(spec["properties"]) - properties
-            if missing_properties:
-                issues.append(
-                    f"VLM role {spec['role_id']} omitted required properties: "
-                    f"{sorted(missing_properties)}"
-                )
-            count_matches = raw["required_count"] == spec["required_count"]
-            if not count_matches:
-                issues.append(
-                    f"VLM role {spec['role_id']} required_count={raw['required_count']} "
-                    f"but reviewed minimum is {spec['required_count']}"
-                )
-            vlm_categories = list(dict.fromkeys(categories)) if categories else list(spec["categories"])
-            vlm_properties = list(dict.fromkeys(properties)) if properties else list(spec["properties"])
-            normalized_records.append(
-                {
-                    "role_id": spec["role_id"],
-                    "raw_vlm_role_id": raw["id"],
-                    "raw_vlm_role_ids": [item["id"] for item in raw_group],
-                    "entity_kind": spec["entity_kind"],
-                    "function": spec["canonical_function"],
-                    "raw_function": raw["function"],
-                    "vlm_required_count": raw["required_count"],
-                    "reviewed_required_count": spec["required_count"],
-                    "description": raw["description"],
-                    "accepted_categories": vlm_categories,
-                    "mapped_visible_candidates": [
-                        {
-                            **deepcopy(candidate),
-                            "canonical_category": self._map_category(candidate["label"]),
-                            "accepted_for_role": (
-                                self._map_category(candidate["label"])
-                                in vlm_categories
-                            ),
-                        }
-                        for candidate in raw["candidate_objects"]
-                    ],
-                    "required_properties": vlm_properties,
-                    "semantic_hints": [
-                        candidate["label"] for candidate in raw["candidate_objects"]
-                    ],
-                    "source": "FM",
-                    "provenance": "qwen_vlm_normalized_by_reviewed_ontology",
-                    "normalization_status": (
-                        "COMPLETE"
-                        if not missing_properties and count_matches
-                        else "REVIEW_REQUIRED"
-                    ),
-                    "missing_reviewed_properties": sorted(missing_properties),
-                }
-            )
+        issues: list[str] = []
 
-        self.normalization_issues = issues
-        self.ready_for_grounding = not issues
-        if self.ready_for_grounding:
-            normalized_task = deepcopy(self.manual_task)
-            normalized_task["specification_source"] = (
-                "qwen_vlm_normalized_by_reviewed_ontology"
-            )
-            normalized_task["generated_from_foundation_model"] = True
-            self.normalized_task = normalized_task
+        if not canonical:
+            specs = self._role_specs()
+            assigned, issues = self._assign_roles(raw_requirements, specs)
+            for spec, raw_group in assigned:
+                raw = {
+                    "id": raw_group[0]["id"],
+                    "entity_kind": spec["entity_kind"],
+                    "function": " / ".join(item["function"] for item in raw_group),
+                    "description": " ".join(item["description"] for item in raw_group),
+                    "required_count": sum(item["required_count"] for item in raw_group),
+                    "candidate_objects": [
+                        candidate
+                        for item in raw_group
+                        for candidate in item["candidate_objects"]
+                    ],
+                    "required_properties": list(dict.fromkeys(
+                        property_text
+                        for item in raw_group
+                        for property_text in item["required_properties"]
+                    )),
+                }
+                categories = self._candidate_categories(raw)
+                for canonical_cat in categories:
+                    if canonical_cat in spec["categories"]:
+                        category_rank.setdefault(canonical_cat, len(category_rank) + 1)
+                properties = self._map_properties(raw["required_properties"])
+                missing_properties = set(spec["properties"]) - properties
+                if missing_properties:
+                    issues.append(
+                        f"VLM role {spec['role_id']} omitted required properties: "
+                        f"{sorted(missing_properties)}"
+                    )
+                count_matches = raw["required_count"] == spec["required_count"]
+                if not count_matches:
+                    issues.append(
+                        f"VLM role {spec['role_id']} required_count={raw['required_count']} "
+                        f"but reviewed minimum is {spec['required_count']}"
+                    )
+                normalized_records.append(
+                    {
+                        "role_id": spec["role_id"],
+                        "raw_vlm_role_id": raw["id"],
+                        "raw_vlm_role_ids": [item["id"] for item in raw_group],
+                        "entity_kind": spec["entity_kind"],
+                        "function": spec["canonical_function"],
+                        "raw_function": raw["function"],
+                        "vlm_required_count": raw["required_count"],
+                        "reviewed_required_count": spec["required_count"],
+                        "description": raw["description"],
+                        "accepted_categories": list(spec["categories"]),
+                        "visible_candidate_objects": [
+                            candidate
+                            for item in raw_group
+                            for candidate in item["candidate_objects"]
+                        ],
+                        "mapped_visible_candidates": [
+                            {
+                                **deepcopy(candidate),
+                                "canonical_category": self._map_category(candidate["label"]),
+                                "accepted_for_role": (
+                                    self._map_category(candidate["label"])
+                                    in spec["categories"]
+                                ),
+                            }
+                            for candidate in raw["candidate_objects"]
+                        ],
+                        "required_properties": list(spec["properties"]),
+                        "semantic_hints": [
+                            candidate["label"] for candidate in raw["candidate_objects"]
+                        ],
+                        "source": "FM",
+                        "provenance": "qwen_vlm_normalized_by_reviewed_ontology",
+                        "normalization_status": (
+                            "COMPLETE"
+                            if not missing_properties and count_matches
+                            else "REVIEW_REQUIRED"
+                        ),
+                        "missing_reviewed_properties": sorted(missing_properties),
+                    }
+                )
+            self.normalization_issues = issues
+            self.ready_for_grounding = not issues
+            if self.ready_for_grounding:
+                normalized_task = deepcopy(self.manual_task)
+                normalized_task["specification_source"] = (
+                    "qwen_vlm_normalized_by_reviewed_ontology"
+                )
+                normalized_task["generated_from_foundation_model"] = True
+                self.normalized_task = normalized_task
+            else:
+                self.normalized_task = None
         else:
+            language_roles = self.environment_config.get("roles", {})
+            for raw in raw_requirements:
+                categories = self._candidate_categories(raw)
+                properties = self._map_properties(raw.get("required_properties", []))
+                matched_role_id = raw["id"]
+                canonical_func = raw.get("function", "").upper().replace(" ", "_")
+                best_score = 0.0
+                for r_id, r_cfg in language_roles.items():
+                    func_text = f"{raw.get('function', '')} {raw.get('description', '')}"
+                    score = max(
+                        (_phrase_score(func_text, alias) for alias in r_cfg.get("function_aliases", [])),
+                        default=0.0,
+                    )
+                    if score > best_score and score >= 0.35:
+                        best_score = score
+                        matched_role_id = r_id
+                        canonical_func = "PERSONAL_CUP_SAUCER_REGION" if r_id == "personal_cup_saucer" else ("SHARED_REMOTE_REGION" if r_id == "shared_remote" else r_id.upper())
+
+                for canonical_cat in categories:
+                    category_rank.setdefault(canonical_cat, len(category_rank) + 1)
+
+                normalized_records.append(
+                    {
+                        "role_id": matched_role_id,
+                        "raw_vlm_role_id": raw["id"],
+                        "raw_vlm_role_ids": [raw["id"]],
+                        "entity_kind": raw.get("entity_kind", "REGION"),
+                        "function": canonical_func,
+                        "raw_function": raw.get("function", ""),
+                        "vlm_required_count": int(raw.get("required_count", 1)),
+                        "description": raw.get("description", ""),
+                        "accepted_categories": list(categories),
+                        "mapped_visible_candidates": [
+                            {
+                                **deepcopy(candidate),
+                                "canonical_category": self._map_category(candidate["label"]),
+                                "accepted_for_role": (
+                                    self._map_category(candidate["label"]) in categories
+                                ),
+                            }
+                            for candidate in raw.get("candidate_objects", [])
+                        ],
+                        "required_properties": sorted(properties),
+                        "semantic_hints": [
+                            candidate["label"] for candidate in raw.get("candidate_objects", [])
+                        ],
+                        "source": "FM",
+                        "provenance": "qwen_vlm_normalized_by_generic_ontology",
+                        "normalization_status": "COMPLETE",
+                    }
+                )
+            self.normalization_issues = []
+            self.ready_for_grounding = True
             self.normalized_task = None
 
         self.normalized_requirements = normalized_records

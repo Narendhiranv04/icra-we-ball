@@ -333,8 +333,9 @@ def ground_graph(
                 missing_roles_definitive.append(role_name)
 
     if missing_roles_definitive:
+        search_exhausted = bool(context.get("search_exhausted", False))
         return GraphGroundingResult(
-            status="INFEASIBLE",
+            status="INFEASIBLE" if search_exhausted else "INCOMPLETE",
             complete=False,
             assignment=None,
             missing_roles=tuple(missing_roles_definitive),
