@@ -42,10 +42,12 @@ def search_until_satisfied(
         emit(f"[SEARCH] Functional satisfaction: {result.status}")
         if result.satisfied:
             return result, tuple(inspected)
-    return SatisfactionResult(
-        satisfied=False,
-        assignment=None,
-        missing_requirements=result.missing_requirements,
-        evidence=result.evidence,
+    return GraphGroundingResult(
         status=result.status if result.status in {"INCOMPLETE", "INFEASIBLE"} else "INFEASIBLE",
+        complete=False,
+        assignment=None,
+        missing_roles=result.missing_roles,
+        unsatisfied_relations=result.unsatisfied_relations,
+        unresolved_constraints=result.unresolved_constraints,
+        evidence=result.evidence,
     ), tuple(inspected)

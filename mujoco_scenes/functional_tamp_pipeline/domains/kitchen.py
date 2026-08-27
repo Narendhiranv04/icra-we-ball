@@ -136,15 +136,19 @@ def compile_kitchen_contract_from_graph(graph: FunctionalRequirementGraph) -> di
                 "value": c.threshold,
                 "unit": c.unit,
             })
+        min_c = node.minimum_count
+        max_c = node.maximum_count
         cardinality = {
             "mode": "assignment_driven",
-            "minimum_distinct_physical_objects": 1 if node.reusable else node.count,
-            "maximum_distinct_physical_objects": node.count,
+            "minimum_distinct_physical_objects": min_c,
+            "maximum_distinct_physical_objects": max_c,
         }
-        if node.reusable:
+        if node.preference:
+            cardinality["preferred"] = node.preference
+        elif node.reusable:
             cardinality["preferred"] = "minimize_distinct"
         roles_dict[name] = {
-            "count": node.count,
+            "count": max_c,
             "binding_cardinality": cardinality,
             "semantic_preferences": pref,
             "unary_geometry": unary,
@@ -333,6 +337,15 @@ def run_to_plan(
 
     # Canonical graph grounding decides the assignment authority
     ground_result = ground_graph(specification, graph_o)
+
+    (output_dir / "observed_scene_graph.json").write_text(
+        json.dumps(graph_o.to_dict(), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    (output_dir / "graph_grounding_result.json").write_text(
+        json.dumps(ground_result.to_dict(), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
 
     if not ground_result.complete or not ground_result.assignment:
         return PipelineResult(

@@ -69,6 +69,7 @@ def run_pipeline(
         print("[1/5] Functional specification", flush=True)
         specification = provider_for_mode(mode).provide(domain, TASK, images)
         _write_json(run_dir / "functional_specification.json", specification.to_dict())
+        _write_json(run_dir / "functional_requirement_graph.json", specification.to_dict())
         print("[2/5] Initial perception", flush=True)
         print("[3/5] Functional grounding and ranked region search", flush=True)
         result = run_to_plan(
@@ -111,6 +112,7 @@ def run_pipeline(
             domain, TASK, images
         )
         _write_json(run_dir / "functional_specification.json", specification.to_dict())
+        _write_json(run_dir / "functional_requirement_graph.json", specification.to_dict())
         print("[2/5] Initial perception", flush=True)
         print("[3/5] Global functional grounding", flush=True)
         result = run_to_plan(
@@ -144,6 +146,7 @@ def run_pipeline(
     task = WorkshopDomainAdapter.task_instruction
     specification = provider.provide(domain, task, images)
     _write_json(run_dir / "functional_specification.json", specification.to_dict())
+    _write_json(run_dir / "functional_requirement_graph.json", specification.to_dict())
 
     adapter = WorkshopDomainAdapter(
         internal_variant,
@@ -160,6 +163,7 @@ def run_pipeline(
     _write_json(run_dir / "detection_diagnostics.json", {
         "records": adapter.controller.detection_diagnostics,
     })
+    _write_json(run_dir / "graph_grounding_result.json", satisfaction.to_dict())
     _write_json(run_dir / "satisfaction.json", {
         "satisfied": satisfaction.satisfied,
         "status": satisfaction.status,

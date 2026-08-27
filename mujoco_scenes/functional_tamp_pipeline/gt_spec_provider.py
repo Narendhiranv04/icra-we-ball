@@ -134,7 +134,10 @@ class GTSpecProvider(FunctionalSpecProvider):
 
         for name, raw in contract["roles"].items():
             cardinality = raw.get("binding_cardinality", {})
-            count = int(raw.get("count", cardinality.get("minimum_distinct_physical_objects", 1)))
+            min_count = cardinality.get("minimum_distinct_physical_objects")
+            max_count = cardinality.get("maximum_distinct_physical_objects")
+            preferred = cardinality.get("preferred")
+            count = int(raw.get("count", max_count or min_count or 1))
             categories = tuple(
                 item["canonical_label"] for item in raw.get("semantic_preferences", [])
             )
@@ -154,11 +157,14 @@ class GTSpecProvider(FunctionalSpecProvider):
                         unit=str(item.get("unit", "m")),
                     ))
 
-            binding = "REUSABLE" if cardinality.get("preferred") == "minimize_distinct" else "DISTINCT"
+            binding = "REUSABLE" if preferred == "minimize_distinct" else "DISTINCT"
             nodes[name] = FunctionalRole(
                 name=name,
                 entity_kind="OBJECT",
                 count=count,
+                min_count=min_count,
+                max_count=max_count,
+                preference=preferred,
                 semantic_categories=categories,
                 unary_predicates=tuple(unary_preds),
                 numeric_constraints=tuple(numeric_reqs),
@@ -194,6 +200,9 @@ class GTSpecProvider(FunctionalSpecProvider):
                 required_target_count=int(grp["required_target_count"]),
                 usage_policy=usage_policy,
                 required_relations=tuple(map(str, grp.get("relations", ()))),
+                distinct_within_group=bool(policy.get("distinct_within_group", True)),
+                same_tool_must_cover_all_targets=bool(policy.get("same_tool_must_cover_all_targets", False)),
+                selection_preference=str(policy.get("selection_preference", "")),
             ))
 
         regions = ("D1", "D2", "C2", "B1", "C1")

@@ -69,6 +69,9 @@ class FunctionalRole:
     name: str
     entity_kind: str = "OBJECT"  # "OBJECT", "REGION", "FIXED_TARGET"
     count: int = 1
+    min_count: int | None = None
+    max_count: int | None = None
+    preference: str | None = None  # e.g. "minimize_distinct"
     semantic_categories: tuple[str, ...] = ()
     unary_predicates: tuple[str, ...] = ()
     numeric_constraints: tuple[NumericConstraint, ...] = ()
@@ -77,10 +80,18 @@ class FunctionalRole:
     description: str = ""
     semantic_hints: tuple[str, ...] = ()
 
+    @property
+    def minimum_count(self) -> int:
+        return self.min_count if self.min_count is not None else self.count
+
+    @property
+    def maximum_count(self) -> int:
+        return self.max_count if self.max_count is not None else self.count
+
     # Backward compatibility properties & aliases
     @property
     def distinct(self) -> bool:
-        return self.binding_policy == "DISTINCT" or self.count > 1
+        return self.binding_policy == "DISTINCT" or self.maximum_count > 1
 
     @property
     def reusable(self) -> bool:
@@ -103,6 +114,9 @@ class FunctionalRole:
             "name": self.name,
             "entity_kind": self.entity_kind,
             "count": self.count,
+            "min_count": self.min_count,
+            "max_count": self.max_count,
+            "preference": self.preference,
             "semantic_categories": list(self.semantic_categories),
             "unary_predicates": list(self.unary_predicates),
             "numeric_constraints": [c.to_dict() for c in self.numeric_constraints],
@@ -129,10 +143,16 @@ class FunctionalRole:
                 binding = "SHARED"
             else:
                 binding = "DISTINCT"
+        count = int(data.get("count", 1))
+        min_c = data.get("min_count")
+        max_c = data.get("max_count")
         return cls(
             name=str(data["name"]),
             entity_kind=str(data.get("entity_kind", "OBJECT")),
-            count=int(data.get("count", 1)),
+            count=count,
+            min_count=int(min_c) if min_c is not None else None,
+            max_count=int(max_c) if max_c is not None else None,
+            preference=str(data["preference"]) if data.get("preference") else None,
             semantic_categories=tuple(map(str, data.get("semantic_categories", ()))),
             unary_predicates=tuple(map(str, data.get("unary_predicates", data.get("unary_properties", ())))),
             numeric_constraints=constraints,
@@ -154,6 +174,9 @@ class OperationGroup:
     required_target_count: int
     usage_policy: str  # "SEQUENTIAL_REUSE_ALLOWED", "DEDICATED_PER_TARGET"
     required_relations: tuple[str, ...] = ()
+    distinct_within_group: bool = True
+    same_tool_must_cover_all_targets: bool = False
+    selection_preference: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -168,6 +191,9 @@ class OperationGroup:
             required_target_count=int(data["required_target_count"]),
             usage_policy=str(data["usage_policy"]),
             required_relations=tuple(map(str, data.get("required_relations", ()))),
+            distinct_within_group=bool(data.get("distinct_within_group", True)),
+            same_tool_must_cover_all_targets=bool(data.get("same_tool_must_cover_all_targets", False)),
+            selection_preference=str(data["selection_preference"]) if data.get("selection_preference") else None,
         )
 
 
@@ -204,10 +230,19 @@ class FunctionalRequirementGraph:
     def validate(self) -> None:
         """Validate structural integrity of the functional requirement graph."""
         for name, node in self.nodes.items():
-            if node.count < 1:
-                raise ValueError(f"Invalid functional graph: role {name!r} count must be >= 1, got {node.count}")
+            if node.minimum_count < 1:
+                raise ValueError(
+                    f"Invalid functional graph: role {name!r} minimum count must be >= 1, got {node.minimum_count}"
+                )
+            if node.maximum_count < node.minimum_count:
+                raise ValueError(
+                    f"Invalid functional graph: role {name!r} max_count ({node.maximum_count}) "
+                    f"< min_count ({node.minimum_count})"
+                )
             if node.binding_policy not in {"DISTINCT", "REUSABLE", "SHARED"}:
-                raise ValueError(f"Invalid functional graph: role {name!r} has unknown binding_policy {node.binding_policy!r}")
+                raise ValueError(
+                    f"Invalid functional graph: role {name!r} has unknown binding_policy {node.binding_policy!r}"
+                )
 
         for rel in self.relations:
             if rel.subject_role not in self.nodes:
@@ -223,7 +258,12 @@ class FunctionalRequirementGraph:
             if not rel.predicate:
                 raise ValueError(f"Invalid functional graph: relation has empty predicate: {rel}")
 
+        seen_op_ids: set[str] = set()
         for grp in self.operation_groups:
+            if grp.id in seen_op_ids:
+                raise ValueError(f"Invalid functional graph: duplicate operation group id {grp.id!r}")
+            seen_op_ids.add(grp.id)
+
             if grp.tool_role not in self.nodes:
                 raise ValueError(
                     f"Invalid functional graph: operation group {grp.id!r} tool_role "
@@ -239,9 +279,23 @@ class FunctionalRequirementGraph:
                     f"Invalid functional graph: operation group {grp.id!r} usage_policy "
                     f"{grp.usage_policy!r} not supported"
                 )
+            target_node = self.nodes[grp.target_role]
+            if grp.required_target_count > target_node.maximum_count:
+                raise ValueError(
+                    f"Invalid functional graph: operation group {grp.id!r} required_target_count "
+                    f"{grp.required_target_count} exceeds target role {grp.target_role!r} max_count {target_node.maximum_count}"
+                )
 
-        if len(self.region_ranking) != len(set(self.region_ranking)):
-            raise ValueError(f"Invalid functional graph: duplicate regions in region_ranking: {self.region_ranking}")
+        if self.candidate_regions and self.region_ranking:
+            if len(self.region_ranking) != len(set(self.region_ranking)):
+                raise ValueError(
+                    f"Invalid functional graph: duplicate regions in region_ranking: {self.region_ranking}"
+                )
+            if set(self.region_ranking) != set(self.candidate_regions):
+                raise ValueError(
+                    f"Invalid functional graph: region_ranking {self.region_ranking} "
+                    f"must match candidate_regions {self.candidate_regions}"
+                )
 
     def to_dict(self) -> dict[str, Any]:
         return {

@@ -35,35 +35,34 @@ class VLMSpecProvider(FunctionalSpecProvider):
     @staticmethod
     def _workshop(task_instruction: str, observation_images: list[Path]) -> FunctionalRequirementGraph:
         from mujoco_scenes.workshop_phase1.requirements import FMRequirementProvider
+        from mujoco_scenes.workshop_scene import WORKSHOP_SEARCH_REGIONS
 
         provider = FMRequirementProvider()
         requirements = tuple(provider.get_requirements(
             task_instruction, observation_images=observation_images
         ))
-        if observation_images:
-            try:
-                provider.generate_inspection_policy(
-                    task_instruction, observation_images=observation_images
-                )
-            except Exception:
-                pass
-        ranking = tuple(provider.region_ranking)
-        if not ranking:
-            raise ValueError("VLM_SPEC_FAILED: VLM failed to provide region ranking for Workshop")
+        ranking = tuple(provider.generate_inspection_policy(
+            task_instruction, observation_images=observation_images
+        ))
 
+        candidate_regions = tuple(WORKSHOP_SEARCH_REGIONS.keys())
         nodes: dict[str, FunctionalRole] = {}
         relations: list[FunctionalRelation] = []
 
         driver_role_name = None
         fastener_role_name = None
+        driver_req = None
+        fastener_req = None
 
         for requirement in requirements:
             func_name = requirement.function_name
             role_id = "driver" if func_name == "CAN_DRIVE_SCREW" else ("fastener" if func_name == "CAN_FASTEN" else requirement.requirement_id)
             if func_name == "CAN_DRIVE_SCREW":
                 driver_role_name = role_id
+                driver_req = requirement
             elif func_name == "CAN_FASTEN":
                 fastener_role_name = role_id
+                fastener_req = requirement
 
             role = FunctionalRole(
                 name=role_id,
@@ -92,33 +91,39 @@ class VLMSpecProvider(FunctionalSpecProvider):
             description="Target repair hole on the workpiece",
         )
 
-        if driver_id in nodes and fastener_id in nodes:
-            relations.append(FunctionalRelation(
-                subject_role=driver_id,
-                predicate="COMPATIBLE_WITH",
-                object_role=fastener_id,
-                expected=True,
-            ))
-            relations.append(FunctionalRelation(
-                subject_role=driver_id,
-                predicate="REACHES_TARGET",
-                object_role=target_id,
-                expected=True,
-            ))
-            relations.append(FunctionalRelation(
-                subject_role=fastener_id,
-                predicate="COMPATIBLE_WITH_TARGET",
-                object_role=target_id,
-                expected=True,
-            ))
+        if driver_req:
+            if "COMPATIBLE_WITH" in driver_req.required_relations and fastener_id in nodes:
+                relations.append(FunctionalRelation(
+                    subject_role=driver_id,
+                    predicate="COMPATIBLE_WITH",
+                    object_role=fastener_id,
+                    expected=True,
+                ))
+            if "REACHES_TARGET" in driver_req.required_relations:
+                relations.append(FunctionalRelation(
+                    subject_role=driver_id,
+                    predicate="REACHES_TARGET",
+                    object_role=target_id,
+                    expected=True,
+                ))
 
+        if fastener_req:
+            if "COMPATIBLE_WITH_TARGET" in fastener_req.required_relations:
+                relations.append(FunctionalRelation(
+                    subject_role=fastener_id,
+                    predicate="COMPATIBLE_WITH_TARGET",
+                    object_role=target_id,
+                    expected=True,
+                ))
+
+        vocabulary = tuple(provider.get_detector_prompts())
         return FunctionalRequirementGraph(
             domain="workshop",
             task_instruction=task_instruction,
             nodes=nodes,
             relations=tuple(relations),
-            detector_vocabulary=tuple(provider.get_detector_prompts()),
-            candidate_regions=ranking,
+            detector_vocabulary=vocabulary,
+            candidate_regions=candidate_regions,
             region_ranking=ranking,
             source="VLM_FUNCTIONAL_SPEC",
             raw_requirements=requirements,

@@ -14,8 +14,15 @@ from mujoco_scenes.workshop_phase1.inspection_controller import WorkshopPhase1In
 from mujoco_scenes.workshop_phase1.types import MaskBackendType, SemanticBackendType
 from mujoco_scenes.workshop_scene import WORKSHOP_REGIONS, WorkshopScene
 
-from ..models import FunctionalSpecification, SatisfactionResult
-from ..scene_graph import ObservedObject, ObservedSceneGraph
+from ..models import (
+    FunctionalRelation,
+    FunctionalRequirementGraph,
+    FunctionalRole,
+    FunctionalSpecification,
+    SatisfactionResult,
+)
+from ..scene_graph import ObservedNode, ObservedObject, ObservedRelation, ObservedSceneGraph
+from mujoco_scenes.workshop_phase1.types import EntityType, FunctionalRequirement, RequirementSource
 
 
 TARGET = "workshop_frame_joint"
@@ -31,6 +38,46 @@ SEMANTIC_ENTITY_HANDLES = {
     "power_drill": "workshop_power_driver",
     "screw": "workshop_medium_phillips_screw",
 }
+
+
+def compile_workshop_requirements_from_graph(
+    graph: FunctionalRequirementGraph,
+) -> list[FunctionalRequirement]:
+    """Deterministically compile legacy Workshop requirements from G_F."""
+    requirements: list[FunctionalRequirement] = []
+    for rank, (name, role) in enumerate(graph.nodes.items(), start=1):
+        if role.entity_kind != "OBJECT":
+            continue
+        func_name = (
+            "CAN_DRIVE_SCREW"
+            if "driver" in name.lower() or "drive" in name.lower()
+            else ("CAN_FASTEN" if "fastener" in name.lower() or "screw" in name.lower() or "fasten" in name.lower() else name)
+        )
+        if func_name == "CAN_DRIVE_SCREW":
+            req_rels = ["REACHES_TARGET", "COMPATIBLE_WITH"]
+        elif func_name == "CAN_FASTEN":
+            req_rels = ["COMPATIBLE_WITH_TARGET"]
+        else:
+            req_rels = [
+                r.predicate for r in graph.relations if r.subject_role == name
+            ]
+
+        source = RequirementSource.FM if "VLM" in graph.source else RequirementSource.STATIC
+        requirements.append(
+            FunctionalRequirement(
+                requirement_id=f"req_{name}",
+                entity_type=EntityType.OBJECT,
+                function_name=func_name,
+                description=role.description or f"Role {name}",
+                rank=rank,
+                source=source,
+                accepted_categories=list(role.semantic_categories),
+                semantic_hints=list(role.semantic_hints),
+                required_relations=req_rels,
+                provenance="compiled_from_functional_requirement_graph",
+            )
+        )
+    return requirements
 
 
 def _action(
@@ -173,7 +220,7 @@ class WorkshopDomainAdapter:
 
     def _configure_from_specification(self) -> None:
         controller = self.controller
-        controller.requirements = list(self.specification.raw_requirements)
+        controller.requirements = compile_workshop_requirements_from_graph(self.specification)
         controller.inspection_sequence = list(self.specification.region_ranking)
         mapping = dict(self.specification.metadata.get("detector_label_to_canonical", {}))
         alias_mapping = dict(self.specification.metadata.get("alias_to_canonical", {}))
@@ -279,45 +326,42 @@ class WorkshopDomainAdapter:
         self.graph.update_objects(objects, self._stage)
 
         # Evaluate and store all pairwise relations into G_O
-        target_evidence = self.controller.target_evidence or getattr(self.controller.geometric_grounder, "target_evidence", None)
         for d in drivers:
-            if target_evidence:
-                reach_eval = self.controller.geometric_grounder.verify_driver_target_reach(
-                    d.current_geometric_properties, target_evidence
-                )
-                reach_status = "TRUE" if reach_eval.get("status") == "PASS" or reach_eval.get("reaches") else "FALSE"
-                self.graph.add_relation(ObservedRelation(
-                    subject_id=d.instance_id,
-                    predicate="REACHES_TARGET",
-                    object_id="repair_target",
-                    status=reach_status,
-                    evidence=dict(reach_eval),
-                ))
+            reach_eval = self.controller.geometric_grounder.evaluate_reaches_target(
+                d.current_geometric_properties
+            )
+            reach_status = reach_eval.get("status", "UNKNOWN")
+            self.graph.add_relation(ObservedRelation(
+                subject_id=d.instance_id,
+                predicate="REACHES_TARGET",
+                object_id="repair_target",
+                status=reach_status,
+                evidence=dict(reach_eval),
+            ))
 
         for f in fasteners:
-            if target_evidence:
-                f_target_eval = self.controller.geometric_grounder.verify_fastener_target_compatibility(
-                    f.current_geometric_properties, target_evidence
-                )
-                f_status = "TRUE" if f_target_eval.get("status") == "PASS" or f_target_eval.get("compatible") else "FALSE"
-                self.graph.add_relation(ObservedRelation(
-                    subject_id=f.instance_id,
-                    predicate="COMPATIBLE_WITH_TARGET",
-                    object_id="repair_target",
-                    status=f_status,
-                    evidence=dict(f_target_eval),
-                ))
+            f_target_eval = self.controller.geometric_grounder.evaluate_compatible_with_target(
+                f.current_geometric_properties
+            )
+            f_status = f_target_eval.get("status", "UNKNOWN")
+            self.graph.add_relation(ObservedRelation(
+                subject_id=f.instance_id,
+                predicate="COMPATIBLE_WITH_TARGET",
+                object_id="repair_target",
+                status=f_status,
+                evidence=dict(f_target_eval),
+            ))
 
         for d in drivers:
             for f in fasteners:
-                prof_status, prof_rel = self.controller.functional_search.check_profile_compatibility(d, f)
-                rel_status = "TRUE" if prof_status.value == "PASS" else ("FALSE" if prof_status.value == "FAIL" else "UNKNOWN")
+                compat_eval = GeometricGrounder.evaluate_compatible_with(d, f)
+                rel_status = compat_eval.get("status", "UNKNOWN")
                 self.graph.add_relation(ObservedRelation(
                     subject_id=d.instance_id,
                     predicate="COMPATIBLE_WITH",
                     object_id=f.instance_id,
                     status=rel_status,
-                    evidence=dict(prof_rel),
+                    evidence=dict(compat_eval),
                 ))
 
     def observe_initial(self) -> None:

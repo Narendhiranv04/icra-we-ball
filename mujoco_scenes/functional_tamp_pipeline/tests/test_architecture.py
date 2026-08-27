@@ -547,3 +547,361 @@ def test_every_paper_variant_resolves_to_a_backing_scene_contract() -> None:
             assert paper_variant_label(domain, internal) == short
             assert internal in backing[domain]
 
+
+# Suite 14: Operation-group relation skipping in Cartesian check
+def test_ground_graph_skips_operation_managed_edges_in_cartesian_check() -> None:
+    # Tool and target roles with 2 tools and 2 targets
+    role_tool = FunctionalRole(name="stirrer", count=2, semantic_categories=("spoon",), binding_policy="DISTINCT")
+    role_target = FunctionalRole(name="cup", count=2, semantic_categories=("cup",), binding_policy="DISTINCT")
+    
+    # Operation group specifies INSERTABLE_IN
+    op_group = OperationGroup(
+        id="stirring_group",
+        function="stir",
+        tool_role="stirrer",
+        target_role="cup",
+        required_target_count=2,
+        usage_policy="DEDICATED_PER_TARGET",
+        required_relations=("INSERTABLE_IN",),
+    )
+    # Also explicitly add INSERTABLE_IN in relations (which would fail if all-pairs Cartesian check were run)
+    explicit_rel = FunctionalRelation(subject_role="stirrer", predicate="INSERTABLE_IN", object_role="cup")
+
+    g_f = FunctionalRequirementGraph(
+        domain="kitchen",
+        task_instruction="stir cups",
+        nodes={"stirrer": role_tool, "cup": role_target},
+        relations=(explicit_rel,),
+        operation_groups=(op_group,),
+    )
+
+    # In G_O, tool1 fits cup1 only, tool2 fits cup2 only (NOT all pairs)
+    g_o = ObservedSceneGraph()
+    g_o.add_node(ObservedNode(instance_id="t1", canonical_category="spoon"))
+    g_o.add_node(ObservedNode(instance_id="t2", canonical_category="spoon"))
+    g_o.add_node(ObservedNode(instance_id="c1", canonical_category="cup"))
+    g_o.add_node(ObservedNode(instance_id="c2", canonical_category="cup"))
+
+    g_o.add_relation(ObservedRelation(subject_id="t1", predicate="INSERTABLE_IN", object_id="c1", status="TRUE"))
+    g_o.add_relation(ObservedRelation(subject_id="t1", predicate="INSERTABLE_IN", object_id="c2", status="FALSE"))
+    g_o.add_relation(ObservedRelation(subject_id="t2", predicate="INSERTABLE_IN", object_id="c2", status="TRUE"))
+    g_o.add_relation(ObservedRelation(subject_id="t2", predicate="INSERTABLE_IN", object_id="c1", status="FALSE"))
+
+    # If managed relations were double-checked as Cartesian all-pairs, it would fail.
+    # Because it is skipped, DEDICATED_PER_TARGET matches (t1->c1, t2->c2) and succeeds!
+    res = ground_graph(g_f, g_o)
+    assert res.complete is True
+    assert res.status == "COMPLETE"
+
+
+# Suite 15: Variable cardinality with preferred = "minimize_distinct"
+def test_ground_graph_variable_cardinality_prefers_min_count() -> None:
+    role_tool = FunctionalRole(
+        name="stirrer",
+        min_count=1,
+        max_count=2,
+        preference="minimize_distinct",
+        semantic_categories=("spoon",),
+        binding_policy="REUSABLE",
+    )
+    role_target = FunctionalRole(name="cup", count=2, semantic_categories=("cup",), binding_policy="DISTINCT")
+    op_group = OperationGroup(
+        id="stirring",
+        function="stir",
+        tool_role="stirrer",
+        target_role="cup",
+        required_target_count=2,
+        usage_policy="SEQUENTIAL_REUSE_ALLOWED",
+        required_relations=("INSERTABLE_IN",),
+        same_tool_must_cover_all_targets=False,
+    )
+
+    g_f = FunctionalRequirementGraph(
+        domain="kitchen",
+        task_instruction="stir cups",
+        nodes={"stirrer": role_tool, "cup": role_target},
+        operation_groups=(op_group,),
+    )
+
+    # 2 spoons available. spoon_1 fits both cups.
+    g_o = ObservedSceneGraph()
+    g_o.add_node(ObservedNode(instance_id="s1", canonical_category="spoon"))
+    g_o.add_node(ObservedNode(instance_id="s2", canonical_category="spoon"))
+    g_o.add_node(ObservedNode(instance_id="c1", canonical_category="cup"))
+    g_o.add_node(ObservedNode(instance_id="c2", canonical_category="cup"))
+
+    g_o.add_relation(ObservedRelation(subject_id="s1", predicate="INSERTABLE_IN", object_id="c1", status="TRUE"))
+    g_o.add_relation(ObservedRelation(subject_id="s1", predicate="INSERTABLE_IN", object_id="c2", status="TRUE"))
+    g_o.add_relation(ObservedRelation(subject_id="s2", predicate="INSERTABLE_IN", object_id="c1", status="TRUE"))
+    g_o.add_relation(ObservedRelation(subject_id="s2", predicate="INSERTABLE_IN", object_id="c2", status="TRUE"))
+
+    res = ground_graph(g_f, g_o)
+    assert res.complete is True
+    # Should assign exactly 1 spoon because preference is "minimize_distinct"
+    assert res.assignment["stirrer"] == "s1"
+
+
+# Suite 16: same_tool_must_cover_all_targets semantics
+def test_ground_graph_same_tool_must_cover_all_targets_true_vs_false() -> None:
+    role_tool = FunctionalRole(name="stirrer", min_count=1, max_count=2, semantic_categories=("spoon",), binding_policy="REUSABLE")
+    role_target = FunctionalRole(name="cup", count=2, semantic_categories=("cup",), binding_policy="DISTINCT")
+
+    # When same_tool_must_cover_all_targets is True
+    op_strict = OperationGroup(
+        id="stirring", function="stir", tool_role="stirrer", target_role="cup",
+        required_target_count=2, usage_policy="SEQUENTIAL_REUSE_ALLOWED",
+        required_relations=("INSERTABLE_IN",), same_tool_must_cover_all_targets=True,
+    )
+    g_f_strict = FunctionalRequirementGraph(
+        domain="kitchen", task_instruction="stir",
+        nodes={"stirrer": role_tool, "cup": role_target}, operation_groups=(op_strict,),
+    )
+
+    # s1 fits c1 only, s2 fits c2 only (no single spoon fits both)
+    g_o = ObservedSceneGraph()
+    g_o.add_node(ObservedNode(instance_id="s1", canonical_category="spoon"))
+    g_o.add_node(ObservedNode(instance_id="s2", canonical_category="spoon"))
+    g_o.add_node(ObservedNode(instance_id="c1", canonical_category="cup"))
+    g_o.add_node(ObservedNode(instance_id="c2", canonical_category="cup"))
+    g_o.add_relation(ObservedRelation(subject_id="s1", predicate="INSERTABLE_IN", object_id="c1", status="TRUE"))
+    g_o.add_relation(ObservedRelation(subject_id="s1", predicate="INSERTABLE_IN", object_id="c2", status="FALSE"))
+    g_o.add_relation(ObservedRelation(subject_id="s2", predicate="INSERTABLE_IN", object_id="c1", status="FALSE"))
+    g_o.add_relation(ObservedRelation(subject_id="s2", predicate="INSERTABLE_IN", object_id="c2", status="TRUE"))
+
+    res_strict = ground_graph(g_f_strict, g_o)
+    assert res_strict.complete is False
+    assert res_strict.status == "INFEASIBLE"
+
+    # When same_tool_must_cover_all_targets is False
+    op_lax = OperationGroup(
+        id="stirring", function="stir", tool_role="stirrer", target_role="cup",
+        required_target_count=2, usage_policy="SEQUENTIAL_REUSE_ALLOWED",
+        required_relations=("INSERTABLE_IN",), same_tool_must_cover_all_targets=False,
+    )
+    g_f_lax = FunctionalRequirementGraph(
+        domain="kitchen", task_instruction="stir",
+        nodes={"stirrer": role_tool, "cup": role_target}, operation_groups=(op_lax,),
+    )
+    res_lax = ground_graph(g_f_lax, g_o)
+    assert res_lax.complete is True
+    assert set(res_lax.assignment["stirrer"]) == {"s1", "s2"}
+
+
+# Suite 17: FunctionalRelation.expected = False semantics
+def test_ground_graph_expected_false_relation_semantics() -> None:
+    role_a = FunctionalRole(name="driver", semantic_categories=("screwdriver",))
+    role_b = FunctionalRole(name="fastener", semantic_categories=("screw",))
+    # Expect driver NOT to be incompatible
+    rel_not_incompatible = FunctionalRelation(
+        subject_role="driver", predicate="INCOMPATIBLE_WITH", object_role="fastener", expected=False,
+    )
+    g_f = FunctionalRequirementGraph(
+        domain="workshop", task_instruction="repair",
+        nodes={"driver": role_a, "fastener": role_b}, relations=(rel_not_incompatible,),
+    )
+
+    # When observed relation is FALSE, expected=False is satisfied!
+    g_o_ok = ObservedSceneGraph()
+    g_o_ok.add_node(ObservedNode(instance_id="d1", canonical_category="screwdriver"))
+    g_o_ok.add_node(ObservedNode(instance_id="f1", canonical_category="screw"))
+    g_o_ok.add_relation(ObservedRelation(subject_id="d1", predicate="INCOMPATIBLE_WITH", object_id="f1", status="FALSE"))
+
+    res_ok = ground_graph(g_f, g_o_ok)
+    assert res_ok.complete is True
+    assert res_ok.status == "COMPLETE"
+
+    # When observed relation is TRUE, expected=False fails
+    g_o_bad = ObservedSceneGraph()
+    g_o_bad.add_node(ObservedNode(instance_id="d1", canonical_category="screwdriver"))
+    g_o_bad.add_node(ObservedNode(instance_id="f1", canonical_category="screw"))
+    g_o_bad.add_relation(ObservedRelation(subject_id="d1", predicate="INCOMPATIBLE_WITH", object_id="f1", status="TRUE"))
+
+    res_bad = ground_graph(g_f, g_o_bad)
+    assert res_bad.complete is False
+    assert res_bad.status == "INFEASIBLE"
+
+
+# Suite 18: UNKNOWN candidate nodes return INCOMPLETE, not INFEASIBLE
+def test_ground_graph_unknown_candidate_returns_incomplete_not_infeasible() -> None:
+    role_d = FunctionalRole(
+        name="driver",
+        semantic_categories=("screwdriver",),
+        unary_predicates=("CAN_DRIVE_SCREW",),
+    )
+    g_f = FunctionalRequirementGraph(
+        domain="workshop", task_instruction="repair",
+        nodes={"driver": role_d},
+    )
+
+    # Node has UNKNOWN predicate CAN_DRIVE_SCREW
+    g_o = ObservedSceneGraph()
+    g_o.add_node(ObservedNode(
+        instance_id="obj_unknown",
+        canonical_category="screwdriver",
+        unary_predicates={"CAN_DRIVE_SCREW": "UNKNOWN"},
+    ))
+
+    res = ground_graph(g_f, g_o)
+    assert res.complete is False
+    assert res.status == "INCOMPLETE"
+
+
+# Suite 19: FunctionalRequirementGraph validation strengthening
+def test_functional_graph_validate_checks_min_max_and_region_ranking() -> None:
+    # 1. min_count < 1
+    role_invalid_min = FunctionalRole(name="r1", min_count=0, max_count=2)
+    with pytest.raises(ValueError, match="minimum count must be >= 1"):
+        FunctionalRequirementGraph(domain="test", task_instruction="t", nodes={"r1": role_invalid_min}).validate()
+
+    # 2. max_count < min_count
+    role_invalid_max = FunctionalRole(name="r2", min_count=3, max_count=1)
+    with pytest.raises(ValueError, match="max_count .* < min_count"):
+        FunctionalRequirementGraph(domain="test", task_instruction="t", nodes={"r2": role_invalid_max}).validate()
+
+    # 3. region_ranking mismatch with candidate_regions
+    role_valid = FunctionalRole(name="r3", count=1)
+    with pytest.raises(ValueError, match="region_ranking .* must match candidate_regions"):
+        FunctionalRequirementGraph(
+            domain="workshop", task_instruction="t", nodes={"r3": role_valid},
+            candidate_regions=("A", "B"), region_ranking=("A", "C"),
+        ).validate()
+
+    # 4. duplicate regions in region_ranking
+    with pytest.raises(ValueError, match="duplicate regions in region_ranking"):
+        FunctionalRequirementGraph(
+            domain="workshop", task_instruction="t", nodes={"r3": role_valid},
+            candidate_regions=("A", "B"), region_ranking=("A", "A"),
+        ).validate()
+
+
+# Suite 20: Workshop requirements compilation derivation from graph
+def test_compile_workshop_requirements_from_graph_derivation() -> None:
+    from mujoco_scenes.functional_tamp_pipeline.domains.workshop import compile_workshop_requirements_from_graph
+
+    role_d = FunctionalRole(name="driver", semantic_categories=("screwdriver", "power_driver"), description="Driver tool")
+    role_f = FunctionalRole(name="fastener", semantic_categories=("screw",), description="Fastener screw")
+    role_t = FunctionalRole(name="repair_target", entity_kind="FIXED_TARGET")
+
+    g_f = FunctionalRequirementGraph(
+        domain="workshop", task_instruction="repair",
+        nodes={"driver": role_d, "fastener": role_f, "repair_target": role_t},
+    )
+
+    reqs = compile_workshop_requirements_from_graph(g_f)
+    assert len(reqs) == 2
+    req_names = [r.function_name for r in reqs]
+    assert "CAN_DRIVE_SCREW" in req_names
+    assert "CAN_FASTEN" in req_names
+
+
+# Suite 21: Living room G_O builder ignores production_result assignments
+def test_living_room_scene_graph_builder_ignores_production_result_assignments() -> None:
+    from mujoco_scenes.functional_tamp_pipeline.domains.living_room import build_living_room_observed_scene_graph
+
+    class MockRun:
+        def __init__(self):
+            self.region_registry = {
+                "region_1": {"geometry": {"PLANAR_SUPPORT": True}, "semantics": {"canonical_label": "side_table"}},
+                "region_2": {"geometry": {"PLANAR_SUPPORT": True}, "semantics": {"canonical_label": "coffee_table"}},
+            }
+            self.personal_rows = [
+                {"region_id": "region_1", "slot_id": "personal_table_slot_1", "FITS_SET_ON": "TRUE", "NEAR_SEAT": "TRUE", "fit_evidence": {}, "context_evidence": {}},
+            ]
+            self.shared_rows = [
+                {"region_id": "region_2", "slot_id": "shared_remote_slot", "FITS_ON": "TRUE", "ACCESSIBLE_FROM_BOTH_SEATS": "TRUE", "fit_evidence": {}, "context_evidence": {}},
+            ]
+            # Deliberately inject bogus production_result
+            self.production_result = {
+                "assignments": [{"slot_id": "bogus_slot", "region_id": "bogus_region"}],
+            }
+
+    run = MockRun()
+    graph_o = build_living_room_observed_scene_graph(run)
+    assert "region_1" in graph_o.nodes
+    assert "region_2" in graph_o.nodes
+    assert "bogus_region" not in graph_o.nodes
+    rel_p = graph_o.get_relation("FITS_SET_ON", "region_1", "cup_saucer_payload_target")
+    assert rel_p is not None
+    assert rel_p.status == "TRUE"
+    rel_s = graph_o.get_relation("ACCESSIBLE_FROM_BOTH_SEATS", "region_2", "seating_pair_target")
+    assert rel_s is not None
+    assert rel_s.status == "TRUE"
+
+
+# Suite 22: Workshop sync common graph calls real GeometricGrounder methods
+def test_workshop_sync_common_graph_calls_real_geometric_grounder_methods() -> None:
+    from mujoco_scenes.functional_tamp_pipeline.domains.workshop import WorkshopDomainAdapter
+    from mujoco_scenes.workshop_phase1.types import ObservedObjectTrack
+
+    internal_variant = resolve_variant_name("workshop", "W1")
+    spec = GTSpecProvider().provide("workshop", "task")
+    adapter = WorkshopDomainAdapter(internal_variant, spec)
+    adapter.graph = ObservedSceneGraph()
+    adapter._stage = 0
+
+    # Add mock driver track and fastener track
+    driver_track = ObservedObjectTrack(
+        instance_id="driver_1",
+        source_inspection_region_id="RIGHT_DRAWER",
+        first_seen_stage=0,
+        last_seen_stage=0,
+    )
+    driver_track.current_semantic_belief = {"canonical_label": "screwdriver"}
+    driver_track.current_geometric_properties = {
+        "usable_length_m": 0.15,
+        "maximum_cross_section_m": 0.02,
+        "shaft_clearance_diameter_m": 0.004,
+        "tip_profile": "phillips_ph1",
+        "tip_diameter_m": 0.004,
+        "working_end_interface": "phillips_ph1",
+    }
+
+    fastener_track = ObservedObjectTrack(
+        instance_id="fastener_1",
+        source_inspection_region_id="LEFT_DRAWER",
+        first_seen_stage=0,
+        last_seen_stage=0,
+    )
+    fastener_track.current_semantic_belief = {"canonical_label": "screw"}
+    fastener_track.current_geometric_properties = {
+        "recess_profile": "phillips_ph1",
+        "head_interface": "phillips_ph1",
+        "recess_diameter_m": 0.004,
+        "shaft_diameter_m": 0.003,
+        "thread_major_diameter_m": 0.003,
+        "head_diameter_m": 0.006,
+        "maximum_cross_section_m": 0.006,
+        "total_length_m": 0.015,
+    }
+
+    adapter.controller.tracker._tracks = {
+        "driver_1": driver_track,
+        "fastener_1": fastener_track,
+    }
+
+    # Set mock target recess evidence
+    from mujoco_scenes.workshop_phase1.types import GroundingStatus
+    target_evidence = MagicMock()
+    target_evidence.validity = GroundingStatus.PASS
+    target_evidence.estimated_opening_diameter_m = 0.008
+    target_evidence.estimated_recess_depth_m = 0.012
+    adapter.controller.geometric_grounder.target_evidence = target_evidence
+
+    # Run _sync_common_graph
+    adapter._sync_common_graph()
+
+    # Check that relations were populated using the real GeometricGrounder methods
+    rel_reach = adapter.graph.get_relation("REACHES_TARGET", "driver_1", "repair_target")
+    assert rel_reach is not None
+    assert rel_reach.status == "TRUE"
+
+    rel_fastener = adapter.graph.get_relation("COMPATIBLE_WITH_TARGET", "fastener_1", "repair_target")
+    assert rel_fastener is not None
+    assert rel_fastener.status == "TRUE"
+
+    rel_compat = adapter.graph.get_relation("COMPATIBLE_WITH", "driver_1", "fastener_1")
+    assert rel_compat is not None
+    assert rel_compat.status == "TRUE"
+
+
+

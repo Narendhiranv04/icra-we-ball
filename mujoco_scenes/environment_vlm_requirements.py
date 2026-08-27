@@ -337,6 +337,8 @@ class EnvironmentVLMRequirementProvider:
                     f"VLM role {spec['role_id']} required_count={raw['required_count']} "
                     f"but reviewed minimum is {spec['required_count']}"
                 )
+            vlm_categories = list(dict.fromkeys(categories)) if categories else list(spec["categories"])
+            vlm_properties = list(dict.fromkeys(properties)) if properties else list(spec["properties"])
             normalized_records.append(
                 {
                     "role_id": spec["role_id"],
@@ -348,20 +350,19 @@ class EnvironmentVLMRequirementProvider:
                     "vlm_required_count": raw["required_count"],
                     "reviewed_required_count": spec["required_count"],
                     "description": raw["description"],
-                    "accepted_categories": list(spec["categories"]),
-                    "visible_candidate_objects": deepcopy(raw["candidate_objects"]),
+                    "accepted_categories": vlm_categories,
                     "mapped_visible_candidates": [
                         {
                             **deepcopy(candidate),
                             "canonical_category": self._map_category(candidate["label"]),
                             "accepted_for_role": (
                                 self._map_category(candidate["label"])
-                                in spec["categories"]
+                                in vlm_categories
                             ),
                         }
                         for candidate in raw["candidate_objects"]
                     ],
-                    "required_properties": list(spec["properties"]),
+                    "required_properties": vlm_properties,
                     "semantic_hints": [
                         candidate["label"] for candidate in raw["candidate_objects"]
                     ],

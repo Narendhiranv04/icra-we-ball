@@ -139,38 +139,90 @@ def compile_living_room_task_from_graph(graph: FunctionalRequirementGraph) -> di
 
 
 def build_living_room_observed_scene_graph(run: Any) -> ObservedSceneGraph:
-    """Build canonical ObservedSceneGraph G_O from Living Room perception run."""
+    """Build canonical ObservedSceneGraph G_O from raw Living Room perception run."""
     from ..scene_graph import ObservedNode, ObservedRelation, ObservedSceneGraph
 
     graph_o = ObservedSceneGraph()
-    for region_id, reg_data in getattr(run, "region_evidence", {}).items():
-        canonical = reg_data.get("semantic_classification", {}).get("canonical_label")
-        unary_preds = {"PLANAR_SUPPORT": "TRUE" if reg_data.get("is_planar", True) else "FALSE"}
+    region_reg = getattr(run, "region_registry", {}) or getattr(run, "region_evidence", {})
+
+    for region_id, reg_data in region_reg.items():
+        semantics = reg_data.get("semantics", {}) or reg_data.get("semantic_classification", {})
+        canonical = semantics.get("canonical_label")
+        geometry = reg_data.get("geometry", {})
+        planar_val = geometry.get("PLANAR_SUPPORT")
+        planar_str = "TRUE" if planar_val else ("FALSE" if planar_val is False else "UNKNOWN")
+
         node = ObservedNode(
             instance_id=region_id,
             entity_kind="REGION",
             canonical_category=canonical,
-            semantic_labels=dict(reg_data.get("semantic_classification", {})),
-            unary_predicates=unary_preds,
+            semantic_labels=dict(semantics),
+            unary_predicates={"PLANAR_SUPPORT": planar_str},
+            geometry=dict(geometry),
         )
         graph_o.add_node(node)
 
     # Add target nodes to G_O
-    graph_o.add_node(ObservedNode(instance_id="cup_saucer_payload_target", entity_kind="OBJECT", canonical_category="cup_saucer"))
-    graph_o.add_node(ObservedNode(instance_id="remote_payload_target", entity_kind="OBJECT", canonical_category="tv_remote"))
-    graph_o.add_node(ObservedNode(instance_id="seating_target", entity_kind="FIXED_TARGET", canonical_category="seating"))
-    graph_o.add_node(ObservedNode(instance_id="seating_pair_target", entity_kind="FIXED_TARGET", canonical_category="seating_pair"))
+    graph_o.add_node(ObservedNode(
+        instance_id="cup_saucer_payload_target",
+        entity_kind="OBJECT",
+        canonical_category="cup_saucer",
+    ))
+    graph_o.add_node(ObservedNode(
+        instance_id="remote_payload_target",
+        entity_kind="OBJECT",
+        canonical_category="tv_remote",
+    ))
+    graph_o.add_node(ObservedNode(
+        instance_id="seating_target",
+        entity_kind="FIXED_TARGET",
+        canonical_category="seating",
+    ))
+    graph_o.add_node(ObservedNode(
+        instance_id="seating_pair_target",
+        entity_kind="FIXED_TARGET",
+        canonical_category="seating_pair",
+    ))
 
-    # Populate relations from run.production_result
-    for alloc in run.production_result.get("assignments", []):
-        slot = alloc["slot_id"]
-        reg_id = alloc["region_id"]
-        if "personal" in slot.lower():
-            graph_o.add_relation(ObservedRelation(subject_id=reg_id, predicate="FITS_SET_ON", object_id="cup_saucer_payload_target", status="TRUE"))
-            graph_o.add_relation(ObservedRelation(subject_id=reg_id, predicate="NEAR_SEAT", object_id="seating_target", status="TRUE"))
-        elif "shared" in slot.lower():
-            graph_o.add_relation(ObservedRelation(subject_id=reg_id, predicate="FITS_ON", object_id="remote_payload_target", status="TRUE"))
-            graph_o.add_relation(ObservedRelation(subject_id=reg_id, predicate="ACCESSIBLE_FROM_BOTH_SEATS", object_id="seating_pair_target", status="TRUE"))
+    # Populate relations from raw personal_rows
+    for row in getattr(run, "personal_rows", []):
+        reg_id = row["region_id"]
+        fits_set_on = str(row.get("FITS_SET_ON", "UNKNOWN"))
+        near_seat = str(row.get("NEAR_SEAT", "UNKNOWN"))
+        graph_o.add_relation(ObservedRelation(
+            subject_id=reg_id,
+            predicate="FITS_SET_ON",
+            object_id="cup_saucer_payload_target",
+            status=fits_set_on,
+            evidence=dict(row.get("fit_evidence", {})),
+        ))
+        graph_o.add_relation(ObservedRelation(
+            subject_id=reg_id,
+            predicate="NEAR_SEAT",
+            object_id="seating_target",
+            status=near_seat,
+            evidence=dict(row.get("context_evidence", {})),
+        ))
+
+    # Populate relations from raw shared_rows
+    for row in getattr(run, "shared_rows", []):
+        reg_id = row["region_id"]
+        fits_on = str(row.get("FITS_ON", "UNKNOWN"))
+        accessible = str(row.get("ACCESSIBLE_FROM_BOTH_SEATS", "UNKNOWN"))
+        graph_o.add_relation(ObservedRelation(
+            subject_id=reg_id,
+            predicate="FITS_ON",
+            object_id="remote_payload_target",
+            status=fits_on,
+            evidence=dict(row.get("fit_evidence", {})),
+        ))
+        graph_o.add_relation(ObservedRelation(
+            subject_id=reg_id,
+            predicate="ACCESSIBLE_FROM_BOTH_SEATS",
+            object_id="seating_pair_target",
+            status=accessible,
+            evidence=dict(row.get("context_evidence", {})),
+        ))
 
     return graph_o
 
@@ -209,6 +261,15 @@ def run_to_plan(
     graph_o = build_living_room_observed_scene_graph(run)
     ground_result = ground_graph(specification, graph_o)
 
+    (output_dir / "observed_scene_graph.json").write_text(
+        json.dumps(graph_o.to_dict(), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    (output_dir / "graph_grounding_result.json").write_text(
+        json.dumps(ground_result.to_dict(), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
     if not ground_result.complete or not ground_result.assignment:
         return PipelineResult(
             domain="living_room", variant=variant_label, mode=mode,
@@ -216,6 +277,64 @@ def run_to_plan(
                 ground_result.unsatisfied_relations or ground_result.missing_roles or "NO_GLOBAL_REGION_ASSIGNMENT"
             ),
         )
+
+    # Sync canonical assignment phi into planner input
+    personal_regions = ground_result.assignment.get(
+        "personal_cup_saucer_region", ground_result.assignment.get("personal_cup_saucer", [])
+    )
+    if isinstance(personal_regions, str):
+        personal_regions = [personal_regions]
+    shared_region = ground_result.assignment.get(
+        "shared_remote_region", ground_result.assignment.get("shared_remote")
+    )
+    if isinstance(shared_region, list) and shared_region:
+        shared_region = shared_region[0]
+
+    canonical_assignments = []
+    for idx, reg_id in enumerate(personal_regions, start=1):
+        matching_row = next((r for r in getattr(run, "personal_rows", []) if r["region_id"] == reg_id and r["slot_id"] == f"personal_table_slot_{idx}"), None)
+        if not matching_row:
+            matching_row = next((r for r in getattr(run, "personal_rows", []) if r["region_id"] == reg_id), {})
+        canonical_assignments.append({
+            "function_id": "PERSONAL_CUP_SAUCER_REGION",
+            "slot_id": f"personal_table_slot_{idx}",
+            "region_id": reg_id,
+            "payload_ids": matching_row.get("payload_ids", [f"cup_{idx}", f"saucer_{idx}"]),
+            "selected_compatibility_evidence": {
+                "compatibility_status": "TRUE",
+                "FITS_SET_ON": "TRUE",
+                "NEAR_SEAT": "TRUE",
+                "PLANAR_SUPPORT": "TRUE",
+                "semantic_role_status": "TRUE",
+            },
+        })
+
+    if shared_region:
+        matching_shared = next((r for r in getattr(run, "shared_rows", []) if r["region_id"] == shared_region), {})
+        canonical_assignments.append({
+            "function_id": "SHARED_REMOTE_REGION",
+            "slot_id": "shared_remote_slot",
+            "region_id": shared_region,
+            "payload_ids": matching_shared.get("payload_ids", ["tv_remote_1"]),
+            "selected_compatibility_evidence": {
+                "compatibility_status": "TRUE",
+                "FITS_ON": "TRUE",
+                "ACCESSIBLE_FROM_BOTH_SEATS": "TRUE",
+                "PLANAR_SUPPORT": "TRUE",
+                "semantic_role_status": "TRUE",
+            },
+        })
+
+    # Overwrite phase1 artifacts with canonical phi before invoking symbolic planner
+    (phase1 / "region_assignments.json").write_text(
+        json.dumps({"assignments": canonical_assignments}, indent=2), encoding="utf-8"
+    )
+    (phase1 / "functional_region_witness.json").write_text(
+        json.dumps({
+            "status": "COMPLETE",
+            "functional_requirements": canonical_assignments,
+        }, indent=2), encoding="utf-8"
+    )
 
     plan_dir = output_dir / "action_sequence"
     planning = run_living_room_symbolic_pipeline(phase1, plan_dir)
@@ -225,7 +344,7 @@ def run_to_plan(
         "operator": row["operator"],
         "arguments": list(row["arguments"].values()),
     } for index, row in enumerate(plan_payload["actions"]))
-    assignment = {row["slot_id"]: row["region_id"] for row in run.production_result["assignments"]}
+    assignment = {row["slot_id"]: row["region_id"] for row in canonical_assignments}
     return PipelineResult(
         domain="living_room", variant=variant_label, mode=mode,
         status="ACTION_SEQUENCE_READY", assignment=assignment, plan=actions,
