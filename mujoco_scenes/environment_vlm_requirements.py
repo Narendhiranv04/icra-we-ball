@@ -348,7 +348,7 @@ class EnvironmentVLMRequirementProvider:
                     "vlm_required_count": raw["required_count"],
                     "reviewed_required_count": spec["required_count"],
                     "description": raw["description"],
-                    "accepted_categories": list(categories) if categories else list(spec["categories"]),
+                    "accepted_categories": list(spec["categories"]),
                     "visible_candidate_objects": deepcopy(raw["candidate_objects"]),
                     "mapped_visible_candidates": [
                         {
@@ -361,7 +361,7 @@ class EnvironmentVLMRequirementProvider:
                         }
                         for candidate in raw["candidate_objects"]
                     ],
-                    "required_properties": list(properties) if properties else list(spec["properties"]),
+                    "required_properties": list(spec["properties"]),
                     "semantic_hints": [
                         candidate["label"] for candidate in raw["candidate_objects"]
                     ],
@@ -378,40 +378,16 @@ class EnvironmentVLMRequirementProvider:
 
         self.normalization_issues = issues
         self.ready_for_grounding = not issues
-        function_groups = {}
-        for rec in normalized_records:
-            func_id = rec["function"]
-            policy = "SHARED_REGION_REQUIRED" if "SHARED" in func_id else "DEDICATED_REGION_PER_TARGET"
-            function_groups[func_id] = {
-                "function_id": func_id,
-                "region_role": rec["role_id"],
-                "required_target_count": rec["vlm_required_count"],
-                "usage_policy": policy,
-                "required_relations": rec["required_properties"],
-            }
-        self.normalized_task = {
-            "schema_version": 2,
-            "task_id": f"vlm_{self.environment}_functional_graph",
-            "specification_source": "qwen_vlm_normalized_by_reviewed_ontology",
-            "generated_from_foundation_model": True,
-            "natural_language_goal": self.task_instruction,
-            "function_groups": function_groups,
-            "semantic_requirements": {
-                "region_roles": {
-                    rec["role_id"]: {
-                        "accepted_categories": rec["accepted_categories"],
-                        "rejected_categories": [],
-                    }
-                    for rec in normalized_records
-                },
-                "payload_roles": self.manual_task.get("semantic_requirements", {}).get("payload_roles", {}),
-                "seating_categories": self.manual_task.get("semantic_requirements", {}).get("seating_categories", []),
-                "accepted_parent_categories": self.manual_task.get("semantic_requirements", {}).get("accepted_parent_categories", []),
-                "rejected_parent_categories": self.manual_task.get("semantic_requirements", {}).get("rejected_parent_categories", []),
-                "payload_categories": self.manual_task.get("semantic_requirements", {}).get("payload_categories", []),
-            },
-            "geometric_requirements": self.manual_task.get("geometric_requirements", {}),
-        }
+        if self.ready_for_grounding:
+            normalized_task = deepcopy(self.manual_task)
+            normalized_task["specification_source"] = (
+                "qwen_vlm_normalized_by_reviewed_ontology"
+            )
+            normalized_task["generated_from_foundation_model"] = True
+            self.normalized_task = normalized_task
+        else:
+            self.normalized_task = None
+
         self.normalized_requirements = normalized_records
 
         vocabulary_entries = []

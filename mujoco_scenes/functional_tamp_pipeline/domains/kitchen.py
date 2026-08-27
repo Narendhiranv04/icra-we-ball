@@ -116,6 +116,164 @@ def scene_for_variant(internal_variant: str) -> KitchenScene:
     )
 
 
+def compile_kitchen_contract_from_graph(graph: FunctionalRequirementGraph) -> dict[str, Any]:
+    """Deterministically compile legacy kitchen contract from G_F without reading raw_requirements."""
+    roles_dict = {}
+    for name, node in graph.nodes.items():
+        if name in {"coffee_source", "water_source", "soup_source"}:
+            continue
+        pref = [
+            {"rank": i + 1, "canonical_label": cat, "detector_aliases": []}
+            for i, cat in enumerate(node.semantic_categories)
+        ]
+        unary = []
+        for p in node.unary_predicates:
+            unary.append({"predicate": p, "expected": True})
+        for c in node.numeric_constraints:
+            unary.append({
+                "property": c.property_name,
+                "operator": c.operator,
+                "value": c.threshold,
+                "unit": c.unit,
+            })
+        cardinality = {
+            "mode": "assignment_driven",
+            "minimum_distinct_physical_objects": 1 if node.reusable else node.count,
+            "maximum_distinct_physical_objects": node.count,
+        }
+        if node.reusable:
+            cardinality["preferred"] = "minimize_distinct"
+        roles_dict[name] = {
+            "count": node.count,
+            "binding_cardinality": cardinality,
+            "semantic_preferences": pref,
+            "unary_geometry": unary,
+        }
+
+    relations_list = [
+        {
+            "predicate": r.predicate,
+            "subject_role": r.subject_role,
+            "object_role": r.object_role,
+            "expected": r.expected,
+        }
+        for r in graph.relations
+    ]
+
+    op_groups_dict = {}
+    for grp in graph.operation_groups:
+        op_groups_dict[grp.id] = {
+            "function": grp.function,
+            "tool_role": grp.tool_role,
+            "target_role": grp.target_role,
+            "required_target_count": grp.required_target_count,
+            "usage_policy": {
+                "mode": grp.usage_policy.lower(),
+                "distinct_within_group": grp.usage_policy == "DEDICATED_PER_TARGET",
+            },
+            "relations": list(grp.required_relations),
+        }
+
+    symbolic_task = graph.metadata.get("symbolic_task")
+    if not symbolic_task:
+        symbolic_task = {
+            "schema_version": 1,
+            "home_region": "countertop",
+            "initial_observation_region": "countertop",
+            "contents": ["coffee", "water", "soup"],
+            "source_roles": {
+                "coffee_source": {"accepted_semantic_labels": ["coffee_source"], "provides": "coffee", "count": 1},
+                "water_source": {"accepted_semantic_labels": ["kettle"], "provides": "water", "count": 1},
+            },
+            "target_requirements": {
+                "coffee": {
+                    "witness_role": "coffee_container",
+                    "required_contents": ["coffee", "water"],
+                    "requires_operation_group": "coffee_stirring",
+                    "final_goal": "served",
+                },
+                "soup": {
+                    "witness_role": "soup_container",
+                    "required_contents": ["soup"],
+                    "initial_contents": ["soup"],
+                    "requires_operation_group": "soup_serving",
+                    "final_goal": "served",
+                },
+            },
+            "causal_dependencies": [
+                ["coffee_contents_present", "coffee_stirred"],
+                ["coffee_stirred", "coffee_served"],
+                ["soup_content_present", "soup_utensil_placed"],
+                ["soup_utensil_placed", "soup_served"],
+            ],
+        }
+
+    return {
+        "schema_version": 2,
+        "task_id": "s1_integrated_prepare_and_serve_coffee_and_soup",
+        "specification_source": graph.source,
+        "goal_instruction": graph.task_instruction,
+        "roles": roles_dict,
+        "relations": relations_list,
+        "operation_groups": op_groups_dict,
+        "cross_group_reuse": {"allowed": graph.cross_group_reuse_allowed},
+        "symbolic_task": symbolic_task,
+    }
+
+
+def build_kitchen_observed_scene_graph(session: Any) -> ObservedSceneGraph:
+    """Build canonical ObservedSceneGraph G_O from kitchen inspection session evidence."""
+    graph_o = ObservedSceneGraph()
+    for obj_id, record in sorted(session.registry.get("objects", {}).items()):
+        canonical = record.get("semantic_classification", {}).get("canonical_label")
+        unary_preds = {
+            k: "TRUE" if v else "FALSE"
+            for k, v in record.get("unary_predicates", {}).items()
+        }
+        # Populate standard kitchen geometric predicates if properties are present
+        geom_props = record.get("geometric_properties", {})
+        if "open_cavity" in geom_props:
+            unary_preds["OPEN_CAVITY"] = "TRUE" if geom_props["open_cavity"].get("value") else "FALSE"
+        if "elongated" in geom_props:
+            unary_preds["ELONGATED_OBJECT"] = "TRUE" if geom_props["elongated"].get("value") else "FALSE"
+
+        node = ObservedNode(
+            instance_id=obj_id,
+            entity_kind="OBJECT",
+            canonical_category=canonical,
+            semantic_labels=dict(record.get("semantic_classification", {})),
+            source_region=record.get("source_region"),
+            geometry=dict(geom_props),
+            unary_properties=dict(geom_props),
+            unary_predicates=unary_preds,
+            first_seen_stage=int(record.get("first_seen_stage", 0)),
+            last_seen_stage=int(record.get("last_seen_stage", 0)),
+        )
+        graph_o.add_node(node)
+
+    # Check pairwise relations recorded in session stage runs or evaluate them
+    from mujoco_scenes.geometry_properties import pairwise_relation_evaluation
+
+    obj_ids = sorted(session.registry.get("objects", {}).keys())
+    for s_id in obj_ids:
+        for t_id in obj_ids:
+            if s_id == t_id:
+                continue
+            s_rec = session.registry["objects"][s_id]
+            t_rec = session.registry["objects"][t_id]
+            for rel_name in ("INSERTABLE_IN", "REACHES_BOTTOM"):
+                eval_res = pairwise_relation_evaluation(rel_name, s_rec, t_rec, session.config)
+                graph_o.add_relation(ObservedRelation(
+                    subject_id=s_id,
+                    predicate=rel_name,
+                    object_id=t_id,
+                    status=str(eval_res.get("status", "UNKNOWN")),
+                    evidence=dict(eval_res),
+                ))
+
+    return graph_o
+
+
 def run_to_plan(
     *,
     variant_label: str,
@@ -125,7 +283,11 @@ def run_to_plan(
     output_dir: Path,
     scene: KitchenScene | None = None,
 ) -> PipelineResult:
+    from ..grounding import ground_graph
+
     scene = scene or scene_for_variant(internal_variant)
+    contract = compile_kitchen_contract_from_graph(specification)
+
     vocabulary_path: Path
     if "object_vocabulary" in specification.metadata:
         vocabulary_path = output_dir / "object_vocabulary.yaml"
@@ -156,7 +318,6 @@ def run_to_plan(
         ),
         record_oracle_diagnostics=False,
     )
-    witness = session.latest_witness or {}
     events = [
         json.loads(line) for line in session.events_path.read_text(encoding="utf-8").splitlines()
         if line.strip()
@@ -164,14 +325,27 @@ def run_to_plan(
     opened = tuple(
         event["region_id"] for event in events if event.get("event") == "REGION_OPENED"
     )
-    if witness.get("status") != "COMPLETE":
+
+    # Populate canonical ObservedSceneGraph from session evidence
+    graph_o = build_kitchen_observed_scene_graph(session)
+    for r in opened:
+        graph_o.mark_region_inspected(r)
+
+    # Canonical graph grounding decides the assignment authority
+    ground_result = ground_graph(specification, graph_o)
+
+    if not ground_result.complete or not ground_result.assignment:
         return PipelineResult(
             domain="kitchen", variant=variant_label, mode=mode,
-            status="INFEASIBLE", inspected_regions=opened,
-            failure_reason=str(witness.get("reason", "NO_COMPLETE_FUNCTIONAL_WITNESS")),
+            status=ground_result.status, inspected_regions=opened,
+            failure_reason=str(ground_result.unsatisfied_relations or ground_result.missing_roles or "NO_COMPLETE_FUNCTIONAL_WITNESS"),
         )
+
+    # Compile observed symbolic state from graph grounding assignment
     compiled = compile_observed_symbolic_state(session.run_dir, contract)
-    assignments = compiled["role_assignments"]
+    assignments = ground_result.assignment
+    compiled["role_assignments"] = assignments
+
     planned = plan_with_common_astar(
         KitchenPlanningCompiler(), assignments,
         {"compiled_observed_state": compiled},

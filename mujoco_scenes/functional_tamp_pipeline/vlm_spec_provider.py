@@ -22,12 +22,15 @@ class VLMSpecProvider(FunctionalSpecProvider):
         observation_images: list[Path] | None = None,
     ) -> FunctionalRequirementGraph:
         if domain == "workshop":
-            return self._workshop(task_instruction, observation_images or [])
-        if domain == "kitchen":
-            return self._kitchen(task_instruction, observation_images or [])
-        if domain == "living_room":
-            return self._living_room(task_instruction, observation_images or [])
-        raise NotImplementedError(f"VLM specification adapter is not implemented for {domain}")
+            graph = self._workshop(task_instruction, observation_images or [])
+        elif domain == "kitchen":
+            graph = self._kitchen(task_instruction, observation_images or [])
+        elif domain == "living_room":
+            graph = self._living_room(task_instruction, observation_images or [])
+        else:
+            raise NotImplementedError(f"VLM specification adapter is not implemented for {domain}")
+        graph.validate()
+        return graph
 
     @staticmethod
     def _workshop(task_instruction: str, observation_images: list[Path]) -> FunctionalRequirementGraph:
@@ -37,6 +40,13 @@ class VLMSpecProvider(FunctionalSpecProvider):
         requirements = tuple(provider.get_requirements(
             task_instruction, observation_images=observation_images
         ))
+        if observation_images:
+            try:
+                provider.generate_inspection_policy(
+                    task_instruction, observation_images=observation_images
+                )
+            except Exception:
+                pass
         ranking = tuple(provider.region_ranking)
         if not ranking:
             raise ValueError("VLM_SPEC_FAILED: VLM failed to provide region ranking for Workshop")
@@ -44,10 +54,19 @@ class VLMSpecProvider(FunctionalSpecProvider):
         nodes: dict[str, FunctionalRole] = {}
         relations: list[FunctionalRelation] = []
 
+        driver_role_name = None
+        fastener_role_name = None
+
         for requirement in requirements:
             func_name = requirement.function_name
+            role_id = "driver" if func_name == "CAN_DRIVE_SCREW" else ("fastener" if func_name == "CAN_FASTEN" else requirement.requirement_id)
+            if func_name == "CAN_DRIVE_SCREW":
+                driver_role_name = role_id
+            elif func_name == "CAN_FASTEN":
+                fastener_role_name = role_id
+
             role = FunctionalRole(
-                name=func_name,
+                name=role_id,
                 entity_kind="OBJECT",
                 count=1,
                 semantic_categories=tuple(requirement.accepted_categories),
@@ -57,16 +76,41 @@ class VLMSpecProvider(FunctionalSpecProvider):
                 description=requirement.description,
                 semantic_hints=tuple(requirement.semantic_hints),
             )
-            nodes[func_name] = role
+            nodes[role_id] = role
 
-            for rel_name in requirement.required_relations:
-                target_role = "CAN_FASTEN" if func_name == "CAN_DRIVE_SCREW" else "CAN_DRIVE_SCREW"
-                relations.append(FunctionalRelation(
-                    subject_role=func_name,
-                    predicate=rel_name,
-                    object_role=target_role,
-                    expected=True,
-                ))
+        driver_id = driver_role_name or "driver"
+        fastener_id = fastener_role_name or "fastener"
+        target_id = "repair_target"
+
+        nodes[target_id] = FunctionalRole(
+            name=target_id,
+            entity_kind="FIXED_TARGET",
+            count=1,
+            semantic_categories=("repair_target", "workshop_frame_joint", "recess"),
+            binding_policy="DISTINCT",
+            verification_mode="GEOMETRIC_ONLY",
+            description="Target repair hole on the workpiece",
+        )
+
+        if driver_id in nodes and fastener_id in nodes:
+            relations.append(FunctionalRelation(
+                subject_role=driver_id,
+                predicate="COMPATIBLE_WITH",
+                object_role=fastener_id,
+                expected=True,
+            ))
+            relations.append(FunctionalRelation(
+                subject_role=driver_id,
+                predicate="REACHES_TARGET",
+                object_role=target_id,
+                expected=True,
+            ))
+            relations.append(FunctionalRelation(
+                subject_role=fastener_id,
+                predicate="COMPATIBLE_WITH_TARGET",
+                object_role=target_id,
+                expected=True,
+            ))
 
         return FunctionalRequirementGraph(
             domain="workshop",
@@ -174,7 +218,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
             nodes=nodes,
             relations=tuple(relations),
             operation_groups=tuple(operation_groups),
-            cross_group_reuse_allowed=bool(contract.get("cross_group_reuse", {}).get("allowed", True)),
+            cross_group_reuse_allowed=bool(contract.get("cross_group_reuse", {}).get("allowed", False)),
             detector_vocabulary=prompts,
             candidate_regions=tuple(KITCHEN_OBSERVABLE_REGIONS),
             region_ranking=order,
@@ -184,6 +228,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
                 "object_vocabulary": object_vocab,
                 "raw_decomposition": raw,
                 "normalization_trace": trace,
+                "symbolic_task": contract.get("symbolic_task", {}),
             },
         )
 
@@ -203,7 +248,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
 
         for row in requirements:
             func_id = row["function"]
-            binding = "SHARED" if func_id == "SHARED_REMOTE_REGION" else "DISTINCT"
+            binding = "SHARED" if "SHARED" in func_id else "DISTINCT"
             nodes[func_id] = FunctionalRole(
                 name=func_id,
                 entity_kind="REGION",
@@ -217,8 +262,53 @@ class VLMSpecProvider(FunctionalSpecProvider):
                 description=row.get("description", ""),
                 semantic_hints=tuple(row.get("semantic_hints", ())),
             )
+
+        # Target nodes
+        nodes["cup_saucer_payload_target"] = FunctionalRole(
+            name="cup_saucer_payload_target",
+            entity_kind="OBJECT",
+            count=2,
+            semantic_categories=("cup", "saucer"),
+            binding_policy="DISTINCT",
+            verification_mode="SEMANTIC_ONLY",
+        )
+        nodes["remote_payload_target"] = FunctionalRole(
+            name="remote_payload_target",
+            entity_kind="OBJECT",
+            count=1,
+            semantic_categories=("remote_control", "tv_remote"),
+            binding_policy="DISTINCT",
+            verification_mode="SEMANTIC_ONLY",
+        )
+        nodes["seating_target"] = FunctionalRole(
+            name="seating_target",
+            entity_kind="FIXED_TARGET",
+            count=2,
+            semantic_categories=("armchair", "chair", "sofa"),
+            binding_policy="DISTINCT",
+            verification_mode="SEMANTIC_ONLY",
+        )
+        nodes["seating_pair_target"] = FunctionalRole(
+            name="seating_pair_target",
+            entity_kind="FIXED_TARGET",
+            count=1,
+            semantic_categories=("armchair", "chair", "sofa"),
+            binding_policy="SHARED",
+            verification_mode="SEMANTIC_ONLY",
+        )
+
+        for row in requirements:
+            func_id = row["function"]
             for rel in row["required_properties"]:
-                target_role = "seating" if "SEAT" in rel else "payload"
+                if rel in {"PLANAR_SUPPORT"}:
+                    continue
+                if "SEAT" in rel:
+                    target_role = "seating_pair_target" if "BOTH" in rel else "seating_target"
+                elif "SET" in rel or "SAUCER" in func_id:
+                    target_role = "cup_saucer_payload_target"
+                else:
+                    target_role = "remote_payload_target"
+
                 relations.append(FunctionalRelation(
                     subject_role=func_id,
                     predicate=rel,
@@ -245,4 +335,5 @@ class VLMSpecProvider(FunctionalSpecProvider):
                 "normalization_audit": result["reviewed_ontology_audit"],
             },
         )
+
 

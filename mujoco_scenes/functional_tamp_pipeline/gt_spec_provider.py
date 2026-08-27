@@ -23,12 +23,15 @@ class GTSpecProvider(FunctionalSpecProvider):
         observation_images: list[Path] | None = None,
     ) -> FunctionalRequirementGraph:
         if domain == "workshop":
-            return self._workshop(task_instruction)
-        if domain == "kitchen":
-            return self._kitchen(task_instruction)
-        if domain == "living_room":
-            return self._living_room(task_instruction)
-        raise NotImplementedError(f"GT specification adapter is not implemented for {domain}")
+            graph = self._workshop(task_instruction)
+        elif domain == "kitchen":
+            graph = self._kitchen(task_instruction)
+        elif domain == "living_room":
+            graph = self._living_room(task_instruction)
+        else:
+            raise NotImplementedError(f"GT specification adapter is not implemented for {domain}")
+        graph.validate()
+        return graph
 
     @staticmethod
     def _workshop(task_instruction: str) -> FunctionalRequirementGraph:
@@ -39,30 +42,55 @@ class GTSpecProvider(FunctionalSpecProvider):
         nodes: dict[str, FunctionalRole] = {}
         relations: list[FunctionalRelation] = []
 
-        for requirement in requirements:
-            role = FunctionalRole(
-                name=requirement.function_name,
-                entity_kind="OBJECT",
-                count=1,
-                semantic_categories=tuple(requirement.accepted_categories),
-                unary_predicates=(requirement.function_name,),
-                binding_policy="DISTINCT",
-                verification_mode="SEMANTIC_AND_GEOMETRIC",
-                description=requirement.description,
-            )
-            nodes[requirement.function_name] = role
+        # Functional roles for driver and fastener
+        nodes["driver"] = FunctionalRole(
+            name="driver",
+            entity_kind="OBJECT",
+            count=1,
+            semantic_categories=("screwdriver", "power_drill", "Phillips screwdriver", "cordless power drill"),
+            unary_predicates=("CAN_DRIVE_SCREW",),
+            binding_policy="DISTINCT",
+            verification_mode="SEMANTIC_AND_GEOMETRIC",
+            description="Tool capable of driving a screw into the workpiece",
+        )
+        nodes["fastener"] = FunctionalRole(
+            name="fastener",
+            entity_kind="OBJECT",
+            count=1,
+            semantic_categories=("screw", "Phillips screw"),
+            unary_predicates=("CAN_FASTEN",),
+            binding_policy="DISTINCT",
+            verification_mode="SEMANTIC_AND_GEOMETRIC",
+            description="Fastener capable of threading into the workpiece hole",
+        )
+        # Fixed repair target on the workpiece
+        nodes["repair_target"] = FunctionalRole(
+            name="repair_target",
+            entity_kind="FIXED_TARGET",
+            count=1,
+            semantic_categories=("repair_target", "workshop_frame_joint", "recess"),
+            binding_policy="DISTINCT",
+            verification_mode="GEOMETRIC_ONLY",
+            description="Target repair hole on the workpiece",
+        )
 
-        # Workshop required relations between driver and fastener
+        # Semantically correct Workshop relations
         relations.append(FunctionalRelation(
-            subject_role="CAN_DRIVE_SCREW",
+            subject_role="driver",
             predicate="COMPATIBLE_WITH",
-            object_role="CAN_FASTEN",
+            object_role="fastener",
             expected=True,
         ))
         relations.append(FunctionalRelation(
-            subject_role="CAN_DRIVE_SCREW",
+            subject_role="driver",
             predicate="REACHES_TARGET",
-            object_role="CAN_FASTEN",
+            object_role="repair_target",
+            expected=True,
+        ))
+        relations.append(FunctionalRelation(
+            subject_role="fastener",
+            predicate="COMPATIBLE_WITH_TARGET",
+            object_role="repair_target",
             expected=True,
         ))
 
@@ -175,7 +203,7 @@ class GTSpecProvider(FunctionalSpecProvider):
             nodes=nodes,
             relations=tuple(relations),
             operation_groups=tuple(operation_groups),
-            cross_group_reuse_allowed=bool(contract.get("cross_group_reuse", {}).get("allowed", True)),
+            cross_group_reuse_allowed=bool(contract.get("cross_group_reuse", {}).get("allowed", False)),
             detector_vocabulary=tuple(dict.fromkeys(vocabulary)),
             candidate_regions=regions,
             region_ranking=regions,
@@ -184,6 +212,7 @@ class GTSpecProvider(FunctionalSpecProvider):
             metadata={
                 "semantic_vocabulary_path": str(root / "configs" / "semantic_vocabulary.yaml"),
                 "contract_path": str(contract_path),
+                "symbolic_task": contract.get("symbolic_task", {}),
             },
         )
 
@@ -196,6 +225,7 @@ class GTSpecProvider(FunctionalSpecProvider):
         vocabulary: list[str] = []
         relations: list[FunctionalRelation] = []
 
+        # Region support roles
         for group in contract["function_groups"].values():
             role_name = group["region_role"]
             semantic = contract["semantic_requirements"]["region_roles"][role_name]
@@ -212,14 +242,66 @@ class GTSpecProvider(FunctionalSpecProvider):
                 binding_policy=binding,
                 verification_mode="SEMANTIC_AND_GEOMETRIC",
             )
-            for rel in group.get("required_relations", []):
-                target_role = "seating" if "SEAT" in rel else "payload"
-                relations.append(FunctionalRelation(
-                    subject_role=func_id,
-                    predicate=rel,
-                    object_role=target_role,
-                    expected=True,
-                ))
+
+        # Explicit target nodes
+        nodes["cup_saucer_payload_target"] = FunctionalRole(
+            name="cup_saucer_payload_target",
+            entity_kind="OBJECT",
+            count=2,
+            semantic_categories=("cup", "saucer"),
+            binding_policy="DISTINCT",
+            verification_mode="SEMANTIC_ONLY",
+        )
+        nodes["remote_payload_target"] = FunctionalRole(
+            name="remote_payload_target",
+            entity_kind="OBJECT",
+            count=1,
+            semantic_categories=("remote_control", "tv_remote"),
+            binding_policy="DISTINCT",
+            verification_mode="SEMANTIC_ONLY",
+        )
+        nodes["seating_target"] = FunctionalRole(
+            name="seating_target",
+            entity_kind="FIXED_TARGET",
+            count=2,
+            semantic_categories=("armchair", "chair", "sofa"),
+            binding_policy="DISTINCT",
+            verification_mode="SEMANTIC_ONLY",
+        )
+        nodes["seating_pair_target"] = FunctionalRole(
+            name="seating_pair_target",
+            entity_kind="FIXED_TARGET",
+            count=1,
+            semantic_categories=("armchair", "chair", "sofa"),
+            binding_policy="SHARED",
+            verification_mode="SEMANTIC_ONLY",
+        )
+
+        # Explicit relations with valid endpoints
+        relations.append(FunctionalRelation(
+            subject_role="PERSONAL_CUP_SAUCER_REGION",
+            predicate="FITS_SET_ON",
+            object_role="cup_saucer_payload_target",
+            expected=True,
+        ))
+        relations.append(FunctionalRelation(
+            subject_role="PERSONAL_CUP_SAUCER_REGION",
+            predicate="NEAR_SEAT",
+            object_role="seating_target",
+            expected=True,
+        ))
+        relations.append(FunctionalRelation(
+            subject_role="SHARED_REMOTE_REGION",
+            predicate="FITS_ON",
+            object_role="remote_payload_target",
+            expected=True,
+        ))
+        relations.append(FunctionalRelation(
+            subject_role="SHARED_REMOTE_REGION",
+            predicate="ACCESSIBLE_FROM_BOTH_SEATS",
+            object_role="seating_pair_target",
+            expected=True,
+        ))
 
         for labels in contract["semantic_requirements"]["payload_roles"].values():
             vocabulary.extend(labels)
@@ -241,4 +323,5 @@ class GTSpecProvider(FunctionalSpecProvider):
                 ),
             },
         )
+
 

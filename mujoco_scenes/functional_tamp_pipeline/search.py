@@ -47,5 +47,5 @@ def search_until_satisfied(
         assignment=None,
         missing_requirements=result.missing_requirements,
         evidence=result.evidence,
-        status="INFEASIBLE",
+        status=result.status if result.status in {"INCOMPLETE", "INFEASIBLE"} else "INFEASIBLE",
     ), tuple(inspected)

@@ -201,6 +201,48 @@ class FunctionalRequirementGraph:
     def get_incoming_relations(self, object_role: str) -> tuple[FunctionalRelation, ...]:
         return tuple(r for r in self.relations if r.object_role == object_role)
 
+    def validate(self) -> None:
+        """Validate structural integrity of the functional requirement graph."""
+        for name, node in self.nodes.items():
+            if node.count < 1:
+                raise ValueError(f"Invalid functional graph: role {name!r} count must be >= 1, got {node.count}")
+            if node.binding_policy not in {"DISTINCT", "REUSABLE", "SHARED"}:
+                raise ValueError(f"Invalid functional graph: role {name!r} has unknown binding_policy {node.binding_policy!r}")
+
+        for rel in self.relations:
+            if rel.subject_role not in self.nodes:
+                raise ValueError(
+                    f"Invalid functional graph: relation subject {rel.subject_role!r} "
+                    f"not in nodes ({list(self.nodes.keys())})"
+                )
+            if rel.object_role not in self.nodes:
+                raise ValueError(
+                    f"Invalid functional graph: relation object {rel.object_role!r} "
+                    f"not in nodes ({list(self.nodes.keys())})"
+                )
+            if not rel.predicate:
+                raise ValueError(f"Invalid functional graph: relation has empty predicate: {rel}")
+
+        for grp in self.operation_groups:
+            if grp.tool_role not in self.nodes:
+                raise ValueError(
+                    f"Invalid functional graph: operation group {grp.id!r} tool_role "
+                    f"{grp.tool_role!r} not in nodes ({list(self.nodes.keys())})"
+                )
+            if grp.target_role not in self.nodes:
+                raise ValueError(
+                    f"Invalid functional graph: operation group {grp.id!r} target_role "
+                    f"{grp.target_role!r} not in nodes ({list(self.nodes.keys())})"
+                )
+            if grp.usage_policy not in {"SEQUENTIAL_REUSE_ALLOWED", "DEDICATED_PER_TARGET"}:
+                raise ValueError(
+                    f"Invalid functional graph: operation group {grp.id!r} usage_policy "
+                    f"{grp.usage_policy!r} not supported"
+                )
+
+        if len(self.region_ranking) != len(set(self.region_ranking)):
+            raise ValueError(f"Invalid functional graph: duplicate regions in region_ranking: {self.region_ranking}")
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "domain": self.domain,
@@ -240,7 +282,7 @@ class FunctionalRequirementGraph:
             OperationGroup.from_dict(g)
             for g in data.get("operation_groups", ())
         )
-        return cls(
+        graph = cls(
             domain=str(data["domain"]),
             task_instruction=str(data["task_instruction"]),
             nodes=nodes,
@@ -253,6 +295,7 @@ class FunctionalRequirementGraph:
             source=str(data.get("source", "UNKNOWN")),
             metadata=dict(data.get("metadata", {})),
         )
+        return graph
 
 
 # Backward-compatible alias

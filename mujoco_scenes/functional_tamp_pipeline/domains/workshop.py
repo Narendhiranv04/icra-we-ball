@@ -213,10 +213,21 @@ class WorkshopDomainAdapter:
         if self._registered:
             return
         self.controller.graph.register_workpiece_node()
+        self.graph.add_node(ObservedNode(
+            instance_id="repair_target",
+            entity_kind="FIXED_TARGET",
+            canonical_category="repair_target",
+            unary_properties={"target": "workbench_hole"},
+        ))
         for region in self.specification.candidate_regions:
             self.controller.graph.register_inspection_region_node(
                 region, f"Search container {region}"
             )
+            self.graph.add_node(ObservedNode(
+                instance_id=region,
+                entity_kind="REGION",
+                canonical_category=region,
+            ))
             self.graph.regions[region] = {"inspected": False}
         self._registered = True
 
@@ -242,9 +253,11 @@ class WorkshopDomainAdapter:
 
     def _sync_common_graph(self) -> None:
         objects = []
+        drivers = []
+        fasteners = []
         for track in self.controller.tracker.tracks.values():
             canonical = track.current_semantic_belief.get("canonical_label")
-            objects.append(ObservedObject(
+            node = ObservedObject(
                 instance_id=track.instance_id,
                 entity_kind="OBJECT",
                 canonical_category=canonical,
@@ -253,27 +266,59 @@ class WorkshopDomainAdapter:
                 geometry=dict(track.current_geometric_properties),
                 unary_properties=dict(track.current_geometric_properties),
                 unary_predicates={
-                    "CAN_DRIVE_SCREW": "TRUE" if canonical in {"screwdriver", "power_driver", "power_drill"} else "UNKNOWN",
-                    "CAN_FASTEN": "TRUE" if canonical in {"screw", "phillips_screw"} else "UNKNOWN",
+                    "CAN_DRIVE_SCREW": "TRUE" if canonical in {"screwdriver", "power_driver", "power_drill", "Phillips screwdriver", "cordless power drill"} else "UNKNOWN",
+                    "CAN_FASTEN": "TRUE" if canonical in {"screw", "phillips_screw", "Phillips screw"} else "UNKNOWN",
                 },
                 last_seen_stage=track.last_seen_stage,
-            ))
+            )
+            objects.append(node)
+            if canonical in {"screwdriver", "power_driver", "power_drill", "Phillips screwdriver", "cordless power drill"}:
+                drivers.append(track)
+            if canonical in {"screw", "phillips_screw", "Phillips screw"}:
+                fasteners.append(track)
         self.graph.update_objects(objects, self._stage)
-        if self._witness is not None:
-            self.graph.add_relation(ObservedRelation(
-                subject_id=self._witness.driver_id,
-                predicate="COMPATIBLE_WITH",
-                object_id=self._witness.fastener_id,
-                status="TRUE",
-                evidence=dict(self._witness.verification_details),
-            ))
-            self.graph.add_relation(ObservedRelation(
-                subject_id=self._witness.driver_id,
-                predicate="REACHES_TARGET",
-                object_id=self._witness.fastener_id,
-                status="TRUE",
-                evidence=dict(self._witness.verification_details),
-            ))
+
+        # Evaluate and store all pairwise relations into G_O
+        target_evidence = self.controller.target_evidence or getattr(self.controller.geometric_grounder, "target_evidence", None)
+        for d in drivers:
+            if target_evidence:
+                reach_eval = self.controller.geometric_grounder.verify_driver_target_reach(
+                    d.current_geometric_properties, target_evidence
+                )
+                reach_status = "TRUE" if reach_eval.get("status") == "PASS" or reach_eval.get("reaches") else "FALSE"
+                self.graph.add_relation(ObservedRelation(
+                    subject_id=d.instance_id,
+                    predicate="REACHES_TARGET",
+                    object_id="repair_target",
+                    status=reach_status,
+                    evidence=dict(reach_eval),
+                ))
+
+        for f in fasteners:
+            if target_evidence:
+                f_target_eval = self.controller.geometric_grounder.verify_fastener_target_compatibility(
+                    f.current_geometric_properties, target_evidence
+                )
+                f_status = "TRUE" if f_target_eval.get("status") == "PASS" or f_target_eval.get("compatible") else "FALSE"
+                self.graph.add_relation(ObservedRelation(
+                    subject_id=f.instance_id,
+                    predicate="COMPATIBLE_WITH_TARGET",
+                    object_id="repair_target",
+                    status=f_status,
+                    evidence=dict(f_target_eval),
+                ))
+
+        for d in drivers:
+            for f in fasteners:
+                prof_status, prof_rel = self.controller.functional_search.check_profile_compatibility(d, f)
+                rel_status = "TRUE" if prof_status.value == "PASS" else ("FALSE" if prof_status.value == "FAIL" else "UNKNOWN")
+                self.graph.add_relation(ObservedRelation(
+                    subject_id=d.instance_id,
+                    predicate="COMPATIBLE_WITH",
+                    object_id=f.instance_id,
+                    status=rel_status,
+                    evidence=dict(prof_rel),
+                ))
 
     def observe_initial(self) -> None:
         self._register_graph()
@@ -305,38 +350,37 @@ class WorkshopDomainAdapter:
         self._capture_and_evaluate(region)
 
     def evaluate_satisfaction(self) -> SatisfactionResult:
-        if self._witness is None:
+        from ..grounding import ground_graph
+
+        ground_result = ground_graph(self.specification, self.graph)
+        if not ground_result.complete or not ground_result.assignment:
             return SatisfactionResult(
                 satisfied=False,
-                missing_requirements=(self._rejection_reason or "INSUFFICIENT_EVIDENCE",),
+                complete=False,
+                missing_roles=ground_result.missing_roles,
+                unsatisfied_relations=ground_result.unsatisfied_relations,
+                unresolved_constraints=ground_result.unresolved_constraints,
                 evidence={
                     "stage": self._stage,
+                    "grounding_status": ground_result.status,
+                    "grounding_evidence": ground_result.evidence,
                     "observed_object_count": len(self.graph.objects),
                     "reason": self._rejection_reason,
                 },
-                status="INCOMPLETE",
+                status=ground_result.status,
             )
-        assignment = self._resolve_witness()
-        return SatisfactionResult(
-            satisfied=True,
-            assignment=assignment,
-            evidence={"witness": self._witness.to_dict(), "stage": self._stage},
-            status="COMPLETE",
-        )
 
-    def _resolve_witness(self) -> dict[str, str]:
-        witness = self._witness
-        if witness is None:
-            raise RuntimeError("Cannot resolve an absent Workshop witness")
-        driver_track = self.controller.tracker.tracks[witness.driver_id]
-        fastener_track = self.controller.tracker.tracks[witness.fastener_id]
+        driver_id = ground_result.assignment.get("driver", ground_result.assignment.get("CAN_DRIVE_SCREW"))
+        fastener_id = ground_result.assignment.get("fastener", ground_result.assignment.get("CAN_FASTEN"))
+        driver_track = self.controller.tracker.tracks[driver_id]
+        fastener_track = self.controller.tracker.tracks[fastener_id]
         driver = self._physical_handle(driver_track, role="driver")
         fastener = self._physical_handle(fastener_track, role="fastener")
         assignment = {
             "driver": driver,
             "fastener": fastener,
-            "driver_track": witness.driver_id,
-            "fastener_track": witness.fastener_id,
+            "driver_track": driver_id,
+            "fastener_track": fastener_id,
             "driver_source": self._source(driver_track.source_inspection_region_id),
             "fastener_source": self._source(fastener_track.source_inspection_region_id),
             "work_surface": SURFACE,
@@ -350,11 +394,17 @@ class WorkshopDomainAdapter:
             fastener=fastener,
             work_surface=SURFACE,
             target_joint=TARGET,
-            assignment_source="LIVE_FUNCTIONAL_GROUNDING",
-            source_ids={"driver": witness.driver_id, "fastener": witness.fastener_id},
+            assignment_source="CANONICAL_GRAPH_GROUNDING",
+            source_ids={"driver": driver_id, "fastener": fastener_id},
         )
         self.dispatcher.assignment = self.physical_assignment
-        return assignment
+        return SatisfactionResult(
+            satisfied=True,
+            complete=True,
+            assignment=assignment,
+            evidence={"grounding": ground_result.to_dict(), "stage": self._stage},
+            status="COMPLETE",
+        )
 
     @staticmethod
     def _source(source: str) -> str:
