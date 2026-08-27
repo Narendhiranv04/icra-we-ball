@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from .models import FunctionalSpecification
+from .models import FunctionalRequirementGraph, FunctionalSpecification
 
 
 class FunctionalSpecProvider(ABC):
@@ -15,8 +15,8 @@ class FunctionalSpecProvider(ABC):
         domain: str,
         task_instruction: str,
         observation_images: list[Path] | None = None,
-    ) -> FunctionalSpecification:
-        """Return a normalized specification; never a physical assignment."""
+    ) -> FunctionalRequirementGraph:
+        """Return a normalized functional requirement graph; never a physical assignment."""
 
 
 def provider_for_mode(mode: str) -> FunctionalSpecProvider:

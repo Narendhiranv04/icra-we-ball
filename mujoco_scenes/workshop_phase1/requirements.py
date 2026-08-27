@@ -216,12 +216,19 @@ class ManualWorkshopFMContract(RequirementProvider):
 StaticWorkshopRequirementProvider = ManualWorkshopFMContract
 
 
-class FMRequirementProvider(RequirementProvider):
-    """One-shot VLM generation guarded by the reviewed Workshop ontology.
+WORKSHOP_SEARCH_REGIONS = {
+    "LEFT_DRAWER": "left storage drawer below workbench",
+    "RIGHT_DRAWER": "right storage drawer below workbench",
+    "TOOL_CABINET": "tall tool cabinet to the right of workbench",
+}
 
-    Qwen may use natural phrases. Only phrases that map to the manual contract's
-    known functions, semantic categories, and qualitative relations cross into
-    production grounding. Unknown, incomplete, or ambiguous output fails closed.
+
+class FMRequirementProvider(RequirementProvider):
+    """One-shot VLM generation guarded by generic Workshop ontology mapping.
+
+    Qwen may use natural phrases. Only phrases that map to known functions,
+    semantic categories, and qualitative relations cross into production grounding.
+    Unknown, incomplete, or ambiguous output fails closed.
     """
 
     def __init__(
@@ -232,6 +239,8 @@ class FMRequirementProvider(RequirementProvider):
         self.fm_adapter = fm_adapter or FMAdapter()
         self.ontology_contract = ontology_contract or ManualWorkshopFMContract()
         self.raw_decomposition: dict[str, Any] | None = None
+        self.region_ranking: tuple[str, ...] = ()
+        self.candidate_regions: tuple[str, ...] = ()
         self._requirements: list[FunctionalRequirement] | None = None
         self._category_rank: dict[str, int] = {}
         normalization = self.ontology_contract._contract_data.get(
@@ -303,7 +312,7 @@ class FMRequirementProvider(RequirementProvider):
         winners = [name for name, score in scores.items() if score == best and score > 0]
         if len(winners) != 1:
             raise ValueError(
-                f"VLM function phrase {raw['function']!r} cannot be mapped uniquely; "
+                f"VLM_SPEC_FAILED: VLM function phrase {raw['function']!r} cannot be mapped uniquely; "
                 f"ontology scores={scores}"
             )
         return winners[0]
@@ -338,26 +347,37 @@ class FMRequirementProvider(RequirementProvider):
     ) -> None:
         if self._requirements is not None:
             return
+        images = list(observation_images or [])
         document = self.fm_adapter.generate_task_requirements(
-            task_instruction, observation_images=observation_images or []
+            task_instruction, observation_images=images
         )
         self.raw_decomposition = document
         if document.get("status") != "SUPPORTED":
             raise ValueError(
-                "VLM marked the Workshop task unsupported: "
+                "VLM_SPEC_FAILED: VLM marked the Workshop task unsupported: "
                 f"{document.get('unsupported_reason', 'no reason')}"
             )
 
-        expected_by_function = {
-            requirement.function_name: requirement
-            for requirement in self.ontology_contract.get_requirements()
-        }
+        # Generate VLM inspection policy for Workshop regions
+        if images:
+            priors = self.fm_adapter.generate_inspection_priors(
+                task_instruction,
+                WORKSHOP_SEARCH_REGIONS,
+                observation_images=images,
+            )
+            order = tuple(item["region_id"] for item in priors.get("inspection_order", []))
+            self.region_ranking = order
+            self.candidate_regions = tuple(WORKSHOP_SEARCH_REGIONS.keys())
+        else:
+            self.region_ranking = tuple(WORKSHOP_SEARCH_REGIONS.keys())
+            self.candidate_regions = tuple(WORKSHOP_SEARCH_REGIONS.keys())
+
         normalized: dict[str, FunctionalRequirement] = {}
         raw_requirements = document["functional_requirements"]
         for raw in raw_requirements:
             if raw["entity_kind"] != "OBJECT":
                 raise ValueError(
-                    f"Workshop VLM role {raw['id']!r} must describe an OBJECT"
+                    f"VLM_SPEC_FAILED: Workshop VLM role {raw['id']!r} must describe an OBJECT"
                 )
             categories: list[str] = []
             for candidate in raw["candidate_objects"]:
@@ -367,42 +387,36 @@ class FMRequirementProvider(RequirementProvider):
                     self._category_rank.setdefault(canonical, len(self._category_rank) + 1)
             function_name = self._map_function(raw, categories)
             if function_name in normalized:
-                raise ValueError(f"VLM emitted duplicate role {function_name}")
-            expected = expected_by_function[function_name]
+                raise ValueError(f"VLM_SPEC_FAILED: VLM emitted duplicate role {function_name}")
             if raw["required_count"] != 1:
                 raise ValueError(
-                    f"VLM role {function_name} required_count must be 1 for Workshop"
+                    f"VLM_SPEC_FAILED: VLM role {function_name} required_count must be 1 for Workshop"
                 )
             mapped_relations = self._map_relations(raw["required_properties"])
-            missing_relations = set(expected.required_relations) - mapped_relations
-            if missing_relations:
-                raise ValueError(
-                    f"VLM role {function_name} omitted required qualitative properties: "
-                    f"{sorted(missing_relations)}"
-                )
+            # Derive accepted categories directly from VLM candidates if mapped, else ontology fallback for mapped function
+            role_categories = categories if categories else list(
+                self.ontology_contract.get_alias_to_canonical_map().values()
+            )
             normalized[function_name] = FunctionalRequirement(
-                requirement_id=expected.requirement_id,
-                entity_type=expected.entity_type,
+                requirement_id=raw["id"],
+                entity_type=EntityType.OBJECT,
                 function_name=function_name,
                 description=raw["description"],
-                rank=expected.rank,
+                rank=len(normalized) + 1,
                 source=RequirementSource.FM,
-                accepted_categories=list(expected.accepted_categories),
+                accepted_categories=list(dict.fromkeys(role_categories)),
                 semantic_hints=[
                     candidate["label"] for candidate in raw["candidate_objects"]
                 ],
                 geometric_constraints={},
-                required_relations=list(expected.required_relations),
+                required_relations=list(mapped_relations),
                 provenance="qwen_vlm_normalized_by_workshop_ontology",
             )
-        missing_functions = set(expected_by_function) - set(normalized)
-        extra_functions = set(normalized) - set(expected_by_function)
-        if missing_functions or extra_functions:
-            raise ValueError(
-                "VLM decomposition does not match the implemented Workshop scope: "
-                f"missing={sorted(missing_functions)}, extra={sorted(extra_functions)}"
-            )
-        self._requirements = sorted(normalized.values(), key=lambda item: item.rank)
+
+        if not normalized:
+            raise ValueError("VLM_SPEC_FAILED: No functional requirements produced by VLM")
+
+        self._requirements = list(normalized.values())
 
     def get_requirements(
         self,

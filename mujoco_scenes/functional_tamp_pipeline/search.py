@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from typing import Any, Protocol
 
-from .models import FunctionalSpecification, SatisfactionResult
+from .models import (
+    FunctionalRequirementGraph,
+    FunctionalSpecification,
+    GraphGroundingResult,
+    SatisfactionResult,
+)
 
 
 class SearchDomain(Protocol):

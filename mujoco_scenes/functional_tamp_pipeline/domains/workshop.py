@@ -243,15 +243,37 @@ class WorkshopDomainAdapter:
     def _sync_common_graph(self) -> None:
         objects = []
         for track in self.controller.tracker.tracks.values():
+            canonical = track.current_semantic_belief.get("canonical_label")
             objects.append(ObservedObject(
                 instance_id=track.instance_id,
+                entity_kind="OBJECT",
+                canonical_category=canonical,
                 semantic_labels=dict(track.current_semantic_belief),
-                region=track.source_inspection_region_id,
+                source_region=track.source_inspection_region_id,
                 geometry=dict(track.current_geometric_properties),
                 unary_properties=dict(track.current_geometric_properties),
+                unary_predicates={
+                    "CAN_DRIVE_SCREW": "TRUE" if canonical in {"screwdriver", "power_driver", "power_drill"} else "UNKNOWN",
+                    "CAN_FASTEN": "TRUE" if canonical in {"screw", "phillips_screw"} else "UNKNOWN",
+                },
                 last_seen_stage=track.last_seen_stage,
             ))
         self.graph.update_objects(objects, self._stage)
+        if self._witness is not None:
+            self.graph.add_relation(ObservedRelation(
+                subject_id=self._witness.driver_id,
+                predicate="COMPATIBLE_WITH",
+                object_id=self._witness.fastener_id,
+                status="TRUE",
+                evidence=dict(self._witness.verification_details),
+            ))
+            self.graph.add_relation(ObservedRelation(
+                subject_id=self._witness.driver_id,
+                predicate="REACHES_TARGET",
+                object_id=self._witness.fastener_id,
+                status="TRUE",
+                evidence=dict(self._witness.verification_details),
+            ))
 
     def observe_initial(self) -> None:
         self._register_graph()

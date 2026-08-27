@@ -5,7 +5,13 @@ from __future__ import annotations
 from pathlib import Path
 import yaml
 
-from .models import FunctionalRole, FunctionalSpecification
+from .models import (
+    FunctionalRelation,
+    FunctionalRequirementGraph,
+    FunctionalRole,
+    NumericConstraint,
+    OperationGroup,
+)
 from .spec_provider import FunctionalSpecProvider
 
 
@@ -15,7 +21,7 @@ class GTSpecProvider(FunctionalSpecProvider):
         domain: str,
         task_instruction: str,
         observation_images: list[Path] | None = None,
-    ) -> FunctionalSpecification:
+    ) -> FunctionalRequirementGraph:
         if domain == "workshop":
             return self._workshop(task_instruction)
         if domain == "kitchen":
@@ -25,29 +31,51 @@ class GTSpecProvider(FunctionalSpecProvider):
         raise NotImplementedError(f"GT specification adapter is not implemented for {domain}")
 
     @staticmethod
-    def _workshop(task_instruction: str) -> FunctionalSpecification:
+    def _workshop(task_instruction: str) -> FunctionalRequirementGraph:
         from mujoco_scenes.workshop_phase1.requirements import ManualWorkshopFMContract
 
         provider = ManualWorkshopFMContract()
         requirements = tuple(provider.get_requirements(task_instruction))
-        roles = tuple(
-            FunctionalRole(
+        nodes: dict[str, FunctionalRole] = {}
+        relations: list[FunctionalRelation] = []
+
+        for requirement in requirements:
+            role = FunctionalRole(
                 name=requirement.function_name,
+                entity_kind="OBJECT",
+                count=1,
                 semantic_categories=tuple(requirement.accepted_categories),
-                unary_properties=tuple(requirement.geometric_constraints),
-                required_relations=tuple(requirement.required_relations),
+                unary_predicates=(requirement.function_name,),
+                binding_policy="DISTINCT",
+                verification_mode="SEMANTIC_AND_GEOMETRIC",
+                description=requirement.description,
             )
-            for requirement in requirements
-        )
+            nodes[requirement.function_name] = role
+
+        # Workshop required relations between driver and fastener
+        relations.append(FunctionalRelation(
+            subject_role="CAN_DRIVE_SCREW",
+            predicate="COMPATIBLE_WITH",
+            object_role="CAN_FASTEN",
+            expected=True,
+        ))
+        relations.append(FunctionalRelation(
+            subject_role="CAN_DRIVE_SCREW",
+            predicate="REACHES_TARGET",
+            object_role="CAN_FASTEN",
+            expected=True,
+        ))
+
         vocabulary = (
             "screwdriver", "power drill", "screw", "wooden hammer",
             "Phillips screwdriver", "cordless power drill", "Phillips screw",
         )
         ranking = ("LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET")
-        return FunctionalSpecification(
+        return FunctionalRequirementGraph(
             domain="workshop",
             task_instruction=task_instruction,
-            roles=roles,
+            nodes=nodes,
+            relations=tuple(relations),
             detector_vocabulary=vocabulary,
             candidate_regions=ranking,
             region_ranking=ranking,
@@ -60,17 +88,22 @@ class GTSpecProvider(FunctionalSpecProvider):
         )
 
     @staticmethod
-    def _kitchen(task_instruction: str) -> FunctionalSpecification:
+    def _kitchen(task_instruction: str) -> FunctionalRequirementGraph:
         root = Path(__file__).resolve().parents[1]
         contract_path = root / "configs" / "s1_integrated_kitchen_object_function.yaml"
         contract = yaml.safe_load(contract_path.read_text(encoding="utf-8"))
-        roles = []
-        vocabulary = []
-        relations_by_role: dict[str, list[str]] = {}
-        for relation in contract.get("relations", []):
-            relations_by_role.setdefault(relation["subject_role"], []).append(
-                relation["predicate"]
-            )
+        nodes: dict[str, FunctionalRole] = {}
+        vocabulary: list[str] = []
+        relations: list[FunctionalRelation] = []
+
+        for rel in contract.get("relations", []):
+            relations.append(FunctionalRelation(
+                subject_role=rel["subject_role"],
+                predicate=rel["predicate"],
+                object_role=rel["object_role"],
+                expected=bool(rel.get("expected", True)),
+            ))
+
         for name, raw in contract["roles"].items():
             cardinality = raw.get("binding_cardinality", {})
             count = int(raw.get("count", cardinality.get("minimum_distinct_physical_objects", 1)))
@@ -79,26 +112,70 @@ class GTSpecProvider(FunctionalSpecProvider):
             )
             for item in raw.get("semantic_preferences", []):
                 vocabulary.extend([item["canonical_label"], *item.get("detector_aliases", [])])
-            roles.append(FunctionalRole(
+
+            unary_preds = []
+            numeric_reqs = []
+            for item in raw.get("unary_geometry", []):
+                if "predicate" in item:
+                    unary_preds.append(str(item["predicate"]))
+                elif "property" in item:
+                    numeric_reqs.append(NumericConstraint(
+                        property_name=str(item["property"]),
+                        operator=str(item.get("operator", ">=")),
+                        threshold=float(item["value"]),
+                        unit=str(item.get("unit", "m")),
+                    ))
+
+            binding = "REUSABLE" if cardinality.get("preferred") == "minimize_distinct" else "DISTINCT"
+            nodes[name] = FunctionalRole(
                 name=name,
+                entity_kind="OBJECT",
                 count=count,
                 semantic_categories=categories,
-                unary_properties=tuple(
-                    item["predicate"] for item in raw.get("unary_geometry", [])
-                ),
-                required_relations=tuple(relations_by_role.get(name, [])),
-                distinct=count > 1,
-                reusable=cardinality.get("preferred") == "minimize_distinct",
-            ))
-        for name, raw in contract["symbolic_task"]["source_roles"].items():
+                unary_predicates=tuple(unary_preds),
+                numeric_constraints=tuple(numeric_reqs),
+                binding_policy=binding,
+                verification_mode="SEMANTIC_AND_GEOMETRIC" if unary_preds or numeric_reqs else "SEMANTIC_ONLY",
+            )
+
+        for name, raw in contract.get("symbolic_task", {}).get("source_roles", {}).items():
             labels = tuple(raw["accepted_semantic_labels"])
             vocabulary.extend(labels)
-            roles.append(FunctionalRole(name=name, count=int(raw["count"]), semantic_categories=labels))
+            nodes[name] = FunctionalRole(
+                name=name,
+                entity_kind="OBJECT",
+                count=int(raw.get("count", 1)),
+                semantic_categories=labels,
+                binding_policy="DISTINCT",
+                verification_mode="SEMANTIC_ONLY",
+            )
+
+        operation_groups: list[OperationGroup] = []
+        for gid, grp in contract.get("operation_groups", {}).items():
+            policy = grp.get("usage_policy", {})
+            mode_str = policy.get("mode", "sequential_reuse_allowed").upper()
+            if mode_str == "SEQUENTIAL_REUSE_ALLOWED":
+                usage_policy = "SEQUENTIAL_REUSE_ALLOWED"
+            else:
+                usage_policy = "DEDICATED_PER_TARGET"
+            operation_groups.append(OperationGroup(
+                id=gid,
+                function=str(grp["function"]),
+                tool_role=str(grp["tool_role"]),
+                target_role=str(grp["target_role"]),
+                required_target_count=int(grp["required_target_count"]),
+                usage_policy=usage_policy,
+                required_relations=tuple(map(str, grp.get("relations", ()))),
+            ))
+
         regions = ("D1", "D2", "C2", "B1", "C1")
-        return FunctionalSpecification(
+        return FunctionalRequirementGraph(
             domain="kitchen",
-            task_instruction=task_instruction or contract["goal_instruction"],
-            roles=tuple(roles),
+            task_instruction=task_instruction or contract.get("goal_instruction", ""),
+            nodes=nodes,
+            relations=tuple(relations),
+            operation_groups=tuple(operation_groups),
+            cross_group_reuse_allowed=bool(contract.get("cross_group_reuse", {}).get("allowed", True)),
             detector_vocabulary=tuple(dict.fromkeys(vocabulary)),
             candidate_regions=regions,
             region_ranking=regions,
@@ -111,34 +188,51 @@ class GTSpecProvider(FunctionalSpecProvider):
         )
 
     @staticmethod
-    def _living_room(task_instruction: str) -> FunctionalSpecification:
+    def _living_room(task_instruction: str) -> FunctionalRequirementGraph:
         root = Path(__file__).resolve().parents[1]
         contract_path = root / "configs" / "l2_integrated_region_function_task.yaml"
         contract = yaml.safe_load(contract_path.read_text(encoding="utf-8"))
-        roles = []
-        vocabulary = []
+        nodes: dict[str, FunctionalRole] = {}
+        vocabulary: list[str] = []
+        relations: list[FunctionalRelation] = []
+
         for group in contract["function_groups"].values():
             role_name = group["region_role"]
             semantic = contract["semantic_requirements"]["region_roles"][role_name]
             categories = tuple(semantic["accepted_categories"])
             vocabulary.extend(categories)
-            roles.append(FunctionalRole(
-                name=group["function_id"],
+            func_id = group["function_id"]
+            binding = "SHARED" if group["usage_policy"] == "SHARED_REGION_REQUIRED" else "DISTINCT"
+            nodes[func_id] = FunctionalRole(
+                name=func_id,
+                entity_kind="REGION",
                 count=int(group.get("required_target_count", 1)),
                 semantic_categories=categories,
-                unary_properties=("PLANAR_SUPPORT",),
-                required_relations=tuple(group["required_relations"]),
-                distinct=group["usage_policy"] == "DEDICATED_REGION_PER_TARGET",
-                shared=group["usage_policy"] == "SHARED_REGION_REQUIRED",
-            ))
+                unary_predicates=("PLANAR_SUPPORT",),
+                binding_policy=binding,
+                verification_mode="SEMANTIC_AND_GEOMETRIC",
+            )
+            for rel in group.get("required_relations", []):
+                target_role = "seating" if "SEAT" in rel else "payload"
+                relations.append(FunctionalRelation(
+                    subject_role=func_id,
+                    predicate=rel,
+                    object_role=target_role,
+                    expected=True,
+                ))
+
         for labels in contract["semantic_requirements"]["payload_roles"].values():
             vocabulary.extend(labels)
         vocabulary.extend(contract["semantic_requirements"]["seating_categories"])
-        return FunctionalSpecification(
+        return FunctionalRequirementGraph(
             domain="living_room",
             task_instruction=task_instruction or contract["natural_language_goal"],
-            roles=tuple(roles), detector_vocabulary=tuple(dict.fromkeys(vocabulary)),
-            candidate_regions=(), region_ranking=(), source="GT_FUNCTIONAL_SPEC_ONLY",
+            nodes=nodes,
+            relations=tuple(relations),
+            detector_vocabulary=tuple(dict.fromkeys(vocabulary)),
+            candidate_regions=(),
+            region_ranking=(),
+            source="GT_FUNCTIONAL_SPEC_ONLY",
             raw_requirements=(contract,),
             metadata={
                 "contract_path": str(contract_path),
@@ -147,3 +241,4 @@ class GTSpecProvider(FunctionalSpecProvider):
                 ),
             },
         )
+

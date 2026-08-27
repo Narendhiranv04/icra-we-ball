@@ -38,14 +38,15 @@ def run_to_plan(
         vocabulary_path=specification.metadata["semantic_vocabulary_path"],
     )
     scene = L2LivingRoomRegionScene(name, robot="none")
-    task_config = specification.metadata.get("contract_path")
-    if mode == "vlm":
-        task_path = output_dir / "normalized_vlm_task.yaml"
+    if specification.raw_requirements:
+        task_path = output_dir / "functional_task_contract.yaml"
         task_path.write_text(
             yaml.safe_dump(specification.raw_requirements[0], sort_keys=False),
             encoding="utf-8",
         )
         task_config = str(task_path)
+    else:
+        task_config = str(specification.metadata.get("contract_path"))
     run = IntegratedLivingRoomRegionRun(
         phase1, scene_name=name,
         task_config=task_config,

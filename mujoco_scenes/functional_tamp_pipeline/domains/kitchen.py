@@ -126,9 +126,8 @@ def run_to_plan(
     scene: KitchenScene | None = None,
 ) -> PipelineResult:
     scene = scene or scene_for_variant(internal_variant)
-    contract = specification.raw_requirements[0]
     vocabulary_path: Path
-    if mode == "vlm":
+    if "object_vocabulary" in specification.metadata:
         vocabulary_path = output_dir / "object_vocabulary.yaml"
         vocabulary_path.parent.mkdir(parents=True, exist_ok=True)
         vocabulary_path.write_text(
