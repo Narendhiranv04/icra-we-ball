@@ -165,7 +165,7 @@ class FunctionalRole:
 
 @dataclass(frozen=True)
 class OperationGroup:
-    """Structure for repeated / multi-target tool operations (e.g. Kitchen)."""
+    """Structure for repeated / multi-target tool operations (e.g. Kitchen, Living Room)."""
 
     id: str
     function: str
@@ -174,6 +174,8 @@ class OperationGroup:
     required_target_count: int
     usage_policy: str  # "SEQUENTIAL_REUSE_ALLOWED", "DEDICATED_PER_TARGET"
     required_relations: tuple[str, ...] = ()
+    context_role: str | None = None
+    context_relations: tuple[str, ...] = ()
     distinct_within_group: bool = True
     same_tool_must_cover_all_targets: bool = False
     selection_preference: str | None = None
@@ -191,6 +193,8 @@ class OperationGroup:
             required_target_count=int(data["required_target_count"]),
             usage_policy=str(data["usage_policy"]),
             required_relations=tuple(map(str, data.get("required_relations", ()))),
+            context_role=str(data["context_role"]) if data.get("context_role") else None,
+            context_relations=tuple(map(str, data.get("context_relations", ()))),
             distinct_within_group=bool(data.get("distinct_within_group", True)),
             same_tool_must_cover_all_targets=bool(data.get("same_tool_must_cover_all_targets", False)),
             selection_preference=str(data["selection_preference"]) if data.get("selection_preference") else None,
@@ -273,6 +277,11 @@ class FunctionalRequirementGraph:
                 raise ValueError(
                     f"Invalid functional graph: operation group {grp.id!r} target_role "
                     f"{grp.target_role!r} not in nodes ({list(self.nodes.keys())})"
+                )
+            if grp.context_role and grp.context_role not in self.nodes:
+                raise ValueError(
+                    f"Invalid functional graph: operation group {grp.id!r} context_role "
+                    f"{grp.context_role!r} not in nodes ({list(self.nodes.keys())})"
                 )
             if grp.usage_policy not in {"SEQUENTIAL_REUSE_ALLOWED", "DEDICATED_PER_TARGET"}:
                 raise ValueError(
@@ -363,6 +372,7 @@ class GraphGroundingResult:
     status: str  # "COMPLETE", "INCOMPLETE", "INFEASIBLE"
     complete: bool
     assignment: dict[str, Any] | None = None
+    operation_bindings: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     missing_roles: tuple[str, ...] = ()
     unsatisfied_relations: tuple[dict[str, Any], ...] = ()
     unresolved_constraints: tuple[str, ...] = ()
@@ -383,12 +393,26 @@ class GraphGroundingResult:
             "complete": self.complete,
             "satisfied": self.satisfied,
             "assignment": self.assignment,
+            "operation_bindings": self.operation_bindings,
             "missing_roles": list(self.missing_roles),
             "missing_requirements": list(self.missing_requirements),
             "unsatisfied_relations": list(self.unsatisfied_relations),
             "unresolved_constraints": list(self.unresolved_constraints),
             "evidence": self.evidence,
         }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> GraphGroundingResult:
+        return cls(
+            status=str(data["status"]),
+            complete=bool(data.get("complete", data.get("satisfied", False))),
+            assignment=dict(data["assignment"]) if data.get("assignment") is not None else None,
+            operation_bindings=dict(data.get("operation_bindings", {})),
+            missing_roles=tuple(map(str, data.get("missing_roles", ()))),
+            unsatisfied_relations=tuple(dict(r) for r in data.get("unsatisfied_relations", ())),
+            unresolved_constraints=tuple(map(str, data.get("unresolved_constraints", ()))),
+            evidence=dict(data.get("evidence", {})),
+        )
 
 
 # Backward-compatible alias

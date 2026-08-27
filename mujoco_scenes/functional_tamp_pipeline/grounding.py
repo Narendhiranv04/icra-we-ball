@@ -208,15 +208,17 @@ def _evaluate_operation_group(
     selected_tools: list[str],
     selected_targets: list[str],
     graph_o: ObservedSceneGraph,
-) -> tuple[str, list[dict[str, Any]]]:
-    """Evaluate an operation group pairing between selected tools and targets.
-    Returns (status, diagnostics) where status in {'TRUE', 'FALSE', 'UNKNOWN'}.
+    selected_contexts: list[str] | None = None,
+) -> tuple[str, list[dict[str, Any]], list[dict[str, Any]]]:
+    """Evaluate an operation group pairing between selected tools and targets (and optional context).
+    Returns (status, diagnostics, matching) where status in {'TRUE', 'FALSE', 'UNKNOWN'}
+    and matching is a list of binding dicts: [{'tool_id': u, 'target_id': t, 'context': {...}}].
     """
     required_relations = grp.required_relations or ("INSERTABLE_IN", "REACHES_BOTTOM")
     diagnostics = []
 
-    # Helper to check if tool u satisfies all required relations with target t
-    def check_pair(u_id: str, t_id: str) -> str:
+    # Helper to check if tool u satisfies all required relations with target t and optional context c
+    def check_pair(u_id: str, t_id: str, c_id: str | None = None) -> tuple[str, dict[str, Any]]:
         statuses = []
         for pred in required_relations:
             rel = graph_o.get_relation(pred, u_id, t_id)
@@ -230,64 +232,111 @@ def _evaluate_operation_group(
                     "predicate": pred,
                     "status": rel_status,
                 })
+
+        if grp.context_role and c_id is not None:
+            for pred in grp.context_relations:
+                rel = graph_o.get_relation(pred, u_id, c_id)
+                rel_status = rel.status if rel else "UNKNOWN"
+                statuses.append(rel_status)
+                if rel_status != "TRUE":
+                    diagnostics.append({
+                        "group": grp.id,
+                        "tool": u_id,
+                        "context_id": c_id,
+                        "predicate": pred,
+                        "status": rel_status,
+                    })
+
+        context_dict = {grp.context_role: c_id} if (grp.context_role and c_id is not None) else {}
+        binding = {"tool_id": u_id, "target_id": t_id, "context": context_dict}
+
         if "FALSE" in statuses:
-            return "FALSE"
+            return "FALSE", binding
         if "UNKNOWN" in statuses:
-            return "UNKNOWN"
-        return "TRUE"
+            return "UNKNOWN", binding
+        return "TRUE", binding
 
     if grp.usage_policy == "DEDICATED_PER_TARGET":
         num_targets = len(selected_targets)
         if len(selected_tools) < num_targets:
-            return "FALSE", diagnostics
+            return "FALSE", diagnostics, []
 
         has_unknown_matching = False
-        valid_matching_found = False
+        sorted_tools = sorted(selected_tools)
 
-        for tool_perm in permutations(selected_tools, num_targets):
-            perm_statuses = [check_pair(u, t) for u, t in zip(tool_perm, selected_targets)]
+        for tool_perm in permutations(sorted_tools, num_targets):
+            perm_checks = []
+            for i in range(num_targets):
+                u = tool_perm[i]
+                t = selected_targets[i]
+                c = selected_contexts[i] if (selected_contexts and i < len(selected_contexts)) else None
+                perm_checks.append(check_pair(u, t, c))
+
+            perm_statuses = [chk[0] for chk in perm_checks]
             if all(s == "TRUE" for s in perm_statuses):
-                valid_matching_found = True
-                break
+                matching = [chk[1] for chk in perm_checks]
+                return "TRUE", [], matching
             if all(s in {"TRUE", "UNKNOWN"} for s in perm_statuses) and "UNKNOWN" in perm_statuses:
                 has_unknown_matching = True
 
-        if valid_matching_found:
-            return "TRUE", []
         if has_unknown_matching:
-            return "UNKNOWN", diagnostics
-        return "FALSE", diagnostics
+            return "UNKNOWN", diagnostics, []
+        return "FALSE", diagnostics, []
 
     else:  # SEQUENTIAL_REUSE_ALLOWED
+        sorted_tools = sorted(selected_tools)
         if grp.same_tool_must_cover_all_targets:
             # Must find a single tool that satisfies all targets
             has_unknown_single = False
-            for u in selected_tools:
-                tool_statuses = [check_pair(u, t) for t in selected_targets]
-                if all(s == "TRUE" for s in tool_statuses):
-                    return "TRUE", []
-                if all(s in {"TRUE", "UNKNOWN"} for s in tool_statuses) and "UNKNOWN" in tool_statuses:
+            for u in sorted_tools:
+                tool_checks = []
+                for i, t in enumerate(selected_targets):
+                    c = selected_contexts[i] if (selected_contexts and i < len(selected_contexts)) else None
+                    tool_checks.append(check_pair(u, t, c))
+                statuses = [chk[0] for chk in tool_checks]
+                if all(s == "TRUE" for s in statuses):
+                    matching = [chk[1] for chk in tool_checks]
+                    return "TRUE", [], matching
+                if all(s in {"TRUE", "UNKNOWN"} for s in statuses) and "UNKNOWN" in statuses:
                     has_unknown_single = True
             if has_unknown_single:
-                return "UNKNOWN", diagnostics
-            return "FALSE", diagnostics
+                return "UNKNOWN", diagnostics, []
+            return "FALSE", diagnostics, []
         else:
             # Each target must be satisfied by at least one selected tool
-            target_statuses = []
-            for t in selected_targets:
-                tool_statuses = [check_pair(u, t) for u in selected_tools]
-                if "TRUE" in tool_statuses:
+            target_matching: list[dict[str, Any]] = []
+            target_statuses: list[str] = []
+            for i, t in enumerate(selected_targets):
+                c = selected_contexts[i] if (selected_contexts and i < len(selected_contexts)) else None
+                found_true_tool = False
+                has_unknown_tool = False
+                chosen_binding: dict[str, Any] | None = None
+                for u in sorted_tools:
+                    st, b = check_pair(u, t, c)
+                    if st == "TRUE":
+                        found_true_tool = True
+                        chosen_binding = b
+                        break
+                    elif st == "UNKNOWN":
+                        has_unknown_tool = True
+                        if chosen_binding is None:
+                            chosen_binding = b
+
+                if found_true_tool and chosen_binding is not None:
                     target_statuses.append("TRUE")
-                elif "UNKNOWN" in tool_statuses:
+                    target_matching.append(chosen_binding)
+                elif has_unknown_tool:
                     target_statuses.append("UNKNOWN")
+                    if chosen_binding is not None:
+                        target_matching.append(chosen_binding)
                 else:
                     target_statuses.append("FALSE")
 
             if all(s == "TRUE" for s in target_statuses):
-                return "TRUE", []
+                return "TRUE", [], target_matching
             if all(s in {"TRUE", "UNKNOWN"} for s in target_statuses) and "UNKNOWN" in target_statuses:
-                return "UNKNOWN", diagnostics
-            return "FALSE", diagnostics
+                return "UNKNOWN", diagnostics, []
+            return "FALSE", diagnostics, []
 
 
 def ground_graph(
@@ -299,6 +348,7 @@ def ground_graph(
     graph_f.validate()
     context = domain_context or {}
     roles = graph_f.nodes
+    search_exhausted = bool(context.get("search_exhausted", True))
 
     # Step 1: Find candidate nodes for each role (both TRUE and UNKNOWN)
     role_candidates_true: dict[str, list[str]] = {}
@@ -333,11 +383,11 @@ def ground_graph(
                 missing_roles_definitive.append(role_name)
 
     if missing_roles_definitive:
-        search_exhausted = bool(context.get("search_exhausted", False))
         return GraphGroundingResult(
             status="INFEASIBLE" if search_exhausted else "INCOMPLETE",
             complete=False,
             assignment=None,
+            operation_bindings={},
             missing_roles=tuple(missing_roles_definitive),
             unsatisfied_relations=(),
             unresolved_constraints=tuple(missing_roles_definitive),
@@ -350,6 +400,9 @@ def ground_graph(
         req_rels = grp.required_relations or ("INSERTABLE_IN", "REACHES_BOTTOM")
         for pred in req_rels:
             operation_managed_edges.add((grp.tool_role, pred, grp.target_role))
+        if grp.context_role:
+            for pred in grp.context_relations:
+                operation_managed_edges.add((grp.tool_role, pred, grp.context_role))
 
     # Role count schedules respecting preferences (e.g. minimize_distinct)
     role_names = sorted(roles.keys())
@@ -368,7 +421,7 @@ def ground_graph(
 
     unsatisfied_relations_recorded: list[dict[str, Any]] = []
     unresolved_relations_recorded: list[dict[str, Any]] = []
-    valid_assignments: list[dict[str, Any]] = []
+    valid_assignments: list[tuple[dict[str, Any], dict[str, list[dict[str, Any]]]]] = []
     has_unknown_combination = bool(missing_roles_potential)
 
     for count_config in all_count_configs:
@@ -438,13 +491,18 @@ def ground_graph(
 
             # Evaluate Operation Groups
             combo_status = "UNKNOWN" if combo_has_unknown_node else "TRUE"
+            combo_op_bindings: dict[str, list[dict[str, Any]]] = {}
             for grp in graph_f.operation_groups:
                 tools = assignment_map.get(grp.tool_role, [])
                 targets = assignment_map.get(grp.target_role, [])
+                contexts = assignment_map.get(grp.context_role, []) if grp.context_role else None
                 tool_list = [tools] if isinstance(tools, str) else list(tools)
                 target_list = [targets] if isinstance(targets, str) else list(targets)
+                context_list = ([contexts] if isinstance(contexts, str) else list(contexts)) if contexts is not None else None
 
-                grp_stat, grp_diags = _evaluate_operation_group(grp, tool_list, target_list, graph_o)
+                grp_stat, grp_diags, grp_matching = _evaluate_operation_group(
+                    grp, tool_list, target_list, graph_o, context_list
+                )
                 if grp_stat == "FALSE":
                     combo_status = "FALSE"
                     unsatisfied_relations_recorded.extend(grp_diags)
@@ -453,6 +511,8 @@ def ground_graph(
                     if combo_status != "FALSE":
                         combo_status = "UNKNOWN"
                     unresolved_relations_recorded.extend(grp_diags)
+                else:
+                    combo_op_bindings[grp.id] = grp_matching
 
             if combo_status == "FALSE":
                 continue
@@ -525,7 +585,7 @@ def ground_graph(
                     break
 
             if combo_status == "TRUE":
-                valid_assignments.append(assignment_map)
+                valid_assignments.append((assignment_map, combo_op_bindings))
                 # If we found a valid assignment for the preferred minimal count configuration, stop searching larger counts
                 break
             elif combo_status == "UNKNOWN":
@@ -535,40 +595,73 @@ def ground_graph(
             break
 
     if valid_assignments:
-        valid_assignments.sort(key=lambda a: sorted(str(v) for v in a.values()))
-        chosen = valid_assignments[0]
+        valid_assignments.sort(key=lambda a: sorted(str(v) for v in a[0].values()))
+        chosen_assignment, chosen_bindings = valid_assignments[0]
         return GraphGroundingResult(
             status="COMPLETE",
             complete=True,
-            assignment=chosen,
+            assignment=chosen_assignment,
+            operation_bindings=chosen_bindings,
             missing_roles=(),
             unsatisfied_relations=(),
             unresolved_constraints=(),
             evidence={"valid_assignment_count": len(valid_assignments)},
         )
 
-    if has_unknown_combination:
+    if not search_exhausted:
+        # During active search, uninspected regions can bring new candidates
+        unres = list(missing_roles_potential) + list(missing_roles_definitive)
+        unres.extend(r.get("predicate", "UNSATISFIED") for r in unsatisfied_relations_recorded)
+        unres.extend(r.get("predicate", "UNKNOWN") for r in unresolved_relations_recorded)
+        return GraphGroundingResult(
+            status="INCOMPLETE",
+            complete=False,
+            assignment=None,
+            operation_bindings={},
+            missing_roles=tuple(dict.fromkeys(missing_roles_potential + missing_roles_definitive)),
+            unsatisfied_relations=tuple(unsatisfied_relations_recorded),
+            unresolved_constraints=tuple(dict.fromkeys(unres)),
+            evidence={
+                "search_exhausted": False,
+                "unresolved_relations": unresolved_relations_recorded,
+                "unsatisfied_relations": unsatisfied_relations_recorded,
+            },
+        )
+
+    # Search is exhausted: check if failure was due to unresolved UNKNOWN evidence vs definitive FALSE
+    if has_unknown_combination or missing_roles_potential or unresolved_relations_recorded:
         unres = list(missing_roles_potential)
         unres.extend(r.get("predicate", "UNKNOWN") for r in unresolved_relations_recorded)
         return GraphGroundingResult(
             status="INCOMPLETE",
             complete=False,
             assignment=None,
+            operation_bindings={},
             missing_roles=tuple(missing_roles_potential),
             unsatisfied_relations=tuple(unsatisfied_relations_recorded),
             unresolved_constraints=tuple(dict.fromkeys(unres)),
-            evidence={"unresolved_relations": unresolved_relations_recorded},
+            evidence={
+                "search_exhausted": True,
+                "unresolved_relations": unresolved_relations_recorded,
+            },
         )
 
     return GraphGroundingResult(
         status="INFEASIBLE",
         complete=False,
         assignment=None,
-        missing_roles=(),
+        operation_bindings={},
+        missing_roles=tuple(missing_roles_definitive),
         unsatisfied_relations=tuple(unsatisfied_relations_recorded),
         unresolved_constraints=tuple(
-            dict.fromkeys(r.get("predicate", "UNSATISFIED") for r in unsatisfied_relations_recorded)
+            dict.fromkeys(
+                list(missing_roles_definitive)
+                + [r.get("predicate", "UNSATISFIED") for r in unsatisfied_relations_recorded]
+            )
         ),
-        evidence={"unsatisfied_relations": unsatisfied_relations_recorded},
+        evidence={
+            "search_exhausted": True,
+            "unsatisfied_relations": unsatisfied_relations_recorded,
+        },
     )
 

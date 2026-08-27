@@ -50,6 +50,7 @@ def search_until_satisfied(
         status=final_result.status if final_result.status in {"INCOMPLETE", "INFEASIBLE"} else "INFEASIBLE",
         complete=False,
         assignment=None,
+        operation_bindings=final_result.operation_bindings,
         missing_roles=final_result.missing_roles,
         unsatisfied_relations=final_result.unsatisfied_relations,
         unresolved_constraints=final_result.unresolved_constraints,

@@ -33,11 +33,17 @@ class VLMSpecProvider(FunctionalSpecProvider):
         return graph
 
     @staticmethod
-    def _workshop(task_instruction: str, observation_images: list[Path]) -> FunctionalRequirementGraph:
-        from mujoco_scenes.workshop_phase1.requirements import FMRequirementProvider
-        from mujoco_scenes.workshop_scene import WORKSHOP_SEARCH_REGIONS
+    def _workshop(
+        task_instruction: str,
+        observation_images: list[Path],
+        provider: FMRequirementProvider | None = None,
+    ) -> FunctionalRequirementGraph:
+        from mujoco_scenes.workshop_phase1.requirements import (
+            FMRequirementProvider, WORKSHOP_SEARCH_REGIONS,
+        )
 
-        provider = FMRequirementProvider()
+        if provider is None:
+            provider = FMRequirementProvider()
         requirements = tuple(provider.get_requirements(
             task_instruction, observation_images=observation_images
         ))
@@ -81,15 +87,22 @@ class VLMSpecProvider(FunctionalSpecProvider):
         fastener_id = fastener_role_name or "fastener"
         target_id = "repair_target"
 
-        nodes[target_id] = FunctionalRole(
-            name=target_id,
-            entity_kind="FIXED_TARGET",
-            count=1,
-            semantic_categories=("repair_target", "workshop_frame_joint", "recess"),
-            binding_policy="DISTINCT",
-            verification_mode="GEOMETRIC_ONLY",
-            description="Target repair hole on the workpiece",
-        )
+        needs_target = False
+        if driver_req and "REACHES_TARGET" in driver_req.required_relations:
+            needs_target = True
+        if fastener_req and "COMPATIBLE_WITH_TARGET" in fastener_req.required_relations:
+            needs_target = True
+
+        if needs_target:
+            nodes[target_id] = FunctionalRole(
+                name=target_id,
+                entity_kind="FIXED_TARGET",
+                count=1,
+                semantic_categories=("repair_target", "workshop_frame_joint", "recess"),
+                binding_policy="DISTINCT",
+                verification_mode="GEOMETRIC_ONLY",
+                description="Target repair hole on the workpiece",
+            )
 
         if driver_req:
             if "COMPATIBLE_WITH" in driver_req.required_relations and fastener_id in nodes:
@@ -99,7 +112,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
                     object_role=fastener_id,
                     expected=True,
                 ))
-            if "REACHES_TARGET" in driver_req.required_relations:
+            if "REACHES_TARGET" in driver_req.required_relations and target_id in nodes:
                 relations.append(FunctionalRelation(
                     subject_role=driver_id,
                     predicate="REACHES_TARGET",
@@ -108,7 +121,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
                 ))
 
         if fastener_req:
-            if "COMPATIBLE_WITH_TARGET" in fastener_req.required_relations:
+            if "COMPATIBLE_WITH_TARGET" in fastener_req.required_relations and target_id in nodes:
                 relations.append(FunctionalRelation(
                     subject_role=fastener_id,
                     predicate="COMPATIBLE_WITH_TARGET",
@@ -346,12 +359,17 @@ class VLMSpecProvider(FunctionalSpecProvider):
                     binding_policy="DISTINCT",
                     verification_mode="SEMANTIC_ONLY",
                 )
+                target_req_rels = tuple(r for r in req_rels if "SEAT" not in r)
+                context_rels = tuple(r for r in req_rels if "SEAT" in r)
                 operation_groups.append(OperationGroup(
                     id=f"{func_id.lower()}_group",
+                    function="SUPPORT_DRINKWARE",
                     tool_role=func_id,
                     target_role="CUP_SAUCER_SET",
                     usage_policy="DEDICATED_PER_TARGET",
-                    required_relations=tuple(req_rels),
+                    required_relations=target_req_rels,
+                    context_role="SEATING_POSITION" if context_rels else None,
+                    context_relations=context_rels,
                     required_target_count=count,
                     distinct_within_group=True,
                     same_tool_must_cover_all_targets=False,

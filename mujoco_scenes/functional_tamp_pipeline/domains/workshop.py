@@ -19,6 +19,7 @@ from ..models import (
     FunctionalRequirementGraph,
     FunctionalRole,
     FunctionalSpecification,
+    GraphGroundingResult,
     SatisfactionResult,
 )
 from ..scene_graph import ObservedNode, ObservedObject, ObservedRelation, ObservedSceneGraph
@@ -399,6 +400,7 @@ class WorkshopDomainAdapter:
                 status=ground_result.status,
                 complete=False,
                 assignment=None,
+                operation_bindings=ground_result.operation_bindings,
                 missing_roles=ground_result.missing_roles,
                 unsatisfied_relations=ground_result.unsatisfied_relations,
                 unresolved_constraints=ground_result.unresolved_constraints,
@@ -443,6 +445,7 @@ class WorkshopDomainAdapter:
             status="COMPLETE",
             complete=True,
             assignment=assignment,
+            operation_bindings=ground_result.operation_bindings,
             missing_roles=(),
             unsatisfied_relations=(),
             unresolved_constraints=(),

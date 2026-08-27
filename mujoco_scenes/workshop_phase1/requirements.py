@@ -364,19 +364,15 @@ class FMRequirementProvider(RequirementProvider):
         self.region_ranking = tuple(WORKSHOP_SEARCH_REGIONS.keys())
         self.candidate_regions = tuple(WORKSHOP_SEARCH_REGIONS.keys())
 
-        expected_by_function = {
-            requirement.function_name: requirement
-            for requirement in self.ontology_contract.get_requirements()
-        }
         normalized: dict[str, FunctionalRequirement] = {}
         raw_requirements = document["functional_requirements"]
-        for raw in raw_requirements:
-            if raw["entity_kind"] != "OBJECT":
+        for rank_idx, raw in enumerate(raw_requirements, start=1):
+            if raw.get("entity_kind") != "OBJECT":
                 raise ValueError(
                     f"VLM_SPEC_FAILED: Workshop VLM role {raw['id']!r} must describe an OBJECT"
                 )
             categories: list[str] = []
-            for candidate in raw["candidate_objects"]:
+            for candidate in raw.get("candidate_objects", []):
                 canonical = self._map_category(candidate["label"])
                 if canonical is not None and canonical not in categories:
                     categories.append(canonical)
@@ -388,34 +384,25 @@ class FMRequirementProvider(RequirementProvider):
             function_name = self._map_function(raw, categories)
             if function_name in normalized:
                 raise ValueError(f"VLM_SPEC_FAILED: VLM emitted duplicate role {function_name}")
-            if function_name not in expected_by_function:
-                raise ValueError(f"VLM_SPEC_FAILED: VLM emitted unexpected function {function_name}")
-            expected = expected_by_function[function_name]
-            if raw["required_count"] != 1:
+            if raw.get("required_count", 1) != 1:
                 raise ValueError(
                     f"VLM_SPEC_FAILED: VLM role {function_name} required_count must be 1 for Workshop"
                 )
-            mapped_relations = self._map_relations(raw["required_properties"])
-            missing_relations = set(expected.required_relations) - mapped_relations
-            if missing_relations:
-                raise ValueError(
-                    f"VLM role {function_name} omitted required qualitative properties: "
-                    f"{sorted(missing_relations)}"
-                )
+            mapped_relations = self._map_relations(raw.get("required_properties", []))
 
             normalized[function_name] = FunctionalRequirement(
                 requirement_id=raw["id"],
                 entity_type=EntityType.OBJECT,
                 function_name=function_name,
-                description=raw["description"],
-                rank=expected.rank,
+                description=raw.get("description", ""),
+                rank=rank_idx,
                 source=RequirementSource.FM,
-                accepted_categories=list(expected.accepted_categories),
+                accepted_categories=list(categories),
                 semantic_hints=[
-                    candidate["label"] for candidate in raw["candidate_objects"]
+                    candidate["label"] for candidate in raw.get("candidate_objects", [])
                 ],
                 geometric_constraints={},
-                required_relations=list(expected.required_relations),
+                required_relations=list(mapped_relations),
                 provenance="qwen_vlm_normalized_by_workshop_ontology",
             )
 

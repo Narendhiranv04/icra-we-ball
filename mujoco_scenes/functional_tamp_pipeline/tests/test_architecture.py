@@ -1154,4 +1154,174 @@ def test_search_missing_role_incomplete_before_exhaustion_infeasible_after() -> 
     assert "rare_tool" in res_infeasible.missing_roles
 
 
+# Suite 30: OperationGroup context matching and operation_bindings
+def test_operation_group_context_matching_and_operation_bindings() -> None:
+    role_tool = FunctionalRole(name="personal_support", count=2, semantic_categories=("table_region",), binding_policy="DISTINCT")
+    role_target = FunctionalRole(name="cup_saucer_set", count=2, semantic_categories=("cup_saucer_set",), binding_policy="DISTINCT")
+    role_context = FunctionalRole(name="seating_position", count=2, entity_kind="FIXED_TARGET", semantic_categories=("chair",), binding_policy="DISTINCT")
+
+    op_group = OperationGroup(
+        id="personal_support_group",
+        function="SUPPORT_DRINKWARE",
+        tool_role="personal_support",
+        target_role="cup_saucer_set",
+        usage_policy="DEDICATED_PER_TARGET",
+        required_relations=("FITS_SET_ON",),
+        context_role="seating_position",
+        context_relations=("NEAR_SEAT",),
+        required_target_count=2,
+    )
+    g_f = FunctionalRequirementGraph(
+        domain="living_room",
+        task_instruction="set up personal drinks",
+        nodes={"personal_support": role_tool, "cup_saucer_set": role_target, "seating_position": role_context},
+        operation_groups=(op_group,),
+    )
+
+    g_o = ObservedSceneGraph()
+    g_o.add_node(ObservedNode(instance_id="region_0001", canonical_category="table_region"))
+    g_o.add_node(ObservedNode(instance_id="region_0003", canonical_category="table_region"))
+    g_o.add_node(ObservedNode(instance_id="slot_1", canonical_category="cup_saucer_set"))
+    g_o.add_node(ObservedNode(instance_id="slot_2", canonical_category="cup_saucer_set"))
+    g_o.add_node(ObservedNode(instance_id="seat_left", canonical_category="chair", entity_kind="FIXED_TARGET"))
+    g_o.add_node(ObservedNode(instance_id="seat_right", canonical_category="chair", entity_kind="FIXED_TARGET"))
+
+    # region_0001 satisfies slot_1 and seat_left; region_0003 satisfies slot_2 and seat_right
+    g_o.add_relation(ObservedRelation(subject_id="region_0001", predicate="FITS_SET_ON", object_id="slot_1", status="TRUE"))
+    g_o.add_relation(ObservedRelation(subject_id="region_0001", predicate="NEAR_SEAT", object_id="seat_left", status="TRUE"))
+    g_o.add_relation(ObservedRelation(subject_id="region_0001", predicate="NEAR_SEAT", object_id="seat_right", status="FALSE"))
+
+    g_o.add_relation(ObservedRelation(subject_id="region_0003", predicate="FITS_SET_ON", object_id="slot_2", status="TRUE"))
+    g_o.add_relation(ObservedRelation(subject_id="region_0003", predicate="NEAR_SEAT", object_id="seat_right", status="TRUE"))
+    g_o.add_relation(ObservedRelation(subject_id="region_0003", predicate="NEAR_SEAT", object_id="seat_left", status="FALSE"))
+
+    res = ground_graph(g_f, g_o)
+    assert res.complete is True
+    assert res.status == "COMPLETE"
+    assert "personal_support_group" in res.operation_bindings
+    bindings = res.operation_bindings["personal_support_group"]
+    assert len(bindings) == 2
+    assert bindings[0] == {"tool_id": "region_0001", "target_id": "slot_1", "context": {"seating_position": "seat_left"}}
+    assert bindings[1] == {"tool_id": "region_0003", "target_id": "slot_2", "context": {"seating_position": "seat_right"}}
+
+
+# Suite 31: GraphGroundingResult serialization roundtrip
+def test_graph_grounding_result_serialization_roundtrip() -> None:
+    res = GraphGroundingResult(
+        status="COMPLETE",
+        complete=True,
+        assignment={"tool": "t1", "target": "s1"},
+        operation_bindings={"op1": [{"tool_id": "t1", "target_id": "s1", "context": {"seat": "c1"}}]},
+        missing_roles=(),
+        unsatisfied_relations=(),
+        unresolved_constraints=(),
+        evidence={"confidence": 0.99},
+    )
+    d = res.to_dict()
+    assert d["operation_bindings"]["op1"][0]["tool_id"] == "t1"
+    reconstructed = GraphGroundingResult.from_dict(d)
+    assert reconstructed.status == "COMPLETE"
+    assert reconstructed.complete is True
+    assert reconstructed.assignment == {"tool": "t1", "target": "s1"}
+    assert reconstructed.operation_bindings == res.operation_bindings
+    assert reconstructed.evidence == res.evidence
+
+
+# Suite 32: Living room observed scene graph no duplicate seating pair or fake relations
+def test_living_room_observed_graph_no_duplicate_seating_pair_or_fake_near_seat() -> None:
+    from mujoco_scenes.functional_tamp_pipeline.domains.living_room import build_living_room_observed_scene_graph
+
+    mock_run = MagicMock()
+    mock_run.region_registry = {
+        "region_0001": {
+            "semantics": {"canonical_label": "coffee_table"},
+            "geometry": {"unary_region": {"PLANAR_SUPPORT": "TRUE"}},
+        }
+    }
+    mock_run.personal_rows = [
+        {
+            "region_id": "region_0001",
+            "slot_id": "personal_table_slot_1",
+            "seating_target_id": "seat_left",
+            "payload_ids": ["cup_1", "saucer_1"],
+            "FITS_SET_ON": "TRUE",
+            "NEAR_SEAT": "TRUE",
+        }
+    ]
+    mock_run.shared_rows = [
+        {
+            "region_id": "region_0001",
+            "payload_ids": ["tv_remote"],
+            "FITS_ON": "TRUE",
+            "ACCESSIBLE_FROM_BOTH_SEATS": "TRUE",
+        }
+    ]
+    mock_run.seating_registry = {"seat_left": {"geometry": {}}}
+
+    graph_o = build_living_room_observed_scene_graph(mock_run)
+    # Check single uppercase SEATING_PAIR
+    assert "SEATING_PAIR" in graph_o.nodes
+    assert "seating_pair" not in graph_o.nodes
+
+    # Check no NEAR_SEAT relation to slot_id
+    for rel in graph_o.relations.values():
+        if rel.predicate == "NEAR_SEAT":
+            assert rel.object_id == "seat_left"
+            assert not rel.object_id.startswith("personal_table_slot")
+
+
+# Suite 33: Workshop VLM omitted target relation omits repair_target node
+def test_workshop_vlm_omitted_target_relation_omits_repair_target_node() -> None:
+    from mujoco_scenes.functional_tamp_pipeline.vlm_spec_provider import VLMSpecProvider
+    from mujoco_scenes.workshop_phase1.fm_adapter import FMAdapter
+
+    mock_workshop_doc = {
+        "status": "SUPPORTED",
+        "task_summary": "Workshop driver fastener pair without frame target",
+        "unsupported_reason": "",
+        "functional_requirements": [
+            {
+                "id": "driver_req",
+                "entity_kind": "OBJECT",
+                "function": "drive screws",
+                "description": "screwdriver",
+                "required_count": 1,
+                "candidate_objects": [{"label": "screwdriver", "visual_description": "screwdriver", "suitability_reason": "drives"}],
+                "required_properties": ["compatible with phillips screw"],
+            },
+            {
+                "id": "fastener_req",
+                "entity_kind": "OBJECT",
+                "function": "fasten wood",
+                "description": "phillips screw",
+                "required_count": 1,
+                "candidate_objects": [{"label": "screw", "visual_description": "screw", "suitability_reason": "threads"}],
+                "required_properties": [],
+            },
+        ],
+    }
+
+    class FakeAdapter:
+        last_observation_images = []
+        last_raw_requirement_response = {}
+        last_raw_inspection_response = {}
+        metrics = MagicMock(total_calls=1)
+
+        def generate_task_requirements(self, *args, **kwargs):
+            return mock_workshop_doc
+
+        def generate_inspection_priors(self, *args, **kwargs):
+            return {"inspection_order": [{"region_id": "LEFT_DRAWER"}, {"region_id": "RIGHT_DRAWER"}, {"region_id": "TOOL_CABINET"}]}
+
+    from mujoco_scenes.workshop_phase1.requirements import FMRequirementProvider
+    provider = FMRequirementProvider(fm_adapter=FakeAdapter())
+    graph = VLMSpecProvider._workshop("repair joint", [Path("/fake/img.png")], provider=provider)
+
+    assert "repair_target" not in graph.nodes
+    for rel in graph.relations:
+        assert rel.object_role != "repair_target"
+        assert rel.subject_role != "repair_target"
+
+
+
 

@@ -293,7 +293,7 @@ def build_kitchen_observed_scene_graph(session: Any) -> ObservedSceneGraph:
             s_rec = session.registry["objects"][s_id]
             t_rec = session.registry["objects"][t_id]
             for rel_name in ("INSERTABLE_IN", "REACHES_BOTTOM"):
-                if graph_o.get_relation(rel_name, s_id, t_id) is None:
+                if not graph_o.get_relation(rel_name, s_id, t_id):
                     eval_res = pairwise_relation_evaluation(rel_name, s_rec, t_rec, session.config)
                     graph_o.add_relation(ObservedRelation(
                         subject_id=s_id,
@@ -330,6 +330,11 @@ def run_to_plan(
         )
     else:
         vocabulary_path = Path(specification.metadata["semantic_vocabulary_path"])
+
+    phase1_dir = output_dir / "observed_search" / "phase1"
+    if phase1_dir.exists():
+        import shutil
+        shutil.rmtree(phase1_dir, ignore_errors=True)
 
     session = run_sequential_inspection(
         scene,
