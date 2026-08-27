@@ -70,6 +70,7 @@ class KitchenPhaseCExecutionDispatcher:
         self.authoritative_frozen_plan = frozen_plan
         self.frozen_plan = phase_c_execution_plan(frozen_plan, frozen_registry)
         self.post_pick_carry_arm_by_id: dict[str, np.ndarray] = {}
+        self.stir_chain_start_base_by_tool: dict[str, np.ndarray] = {}
         self.ledger = PhaseCExecutionLedger(self.frozen_plan)
         self.expected_pairs = {
             row["action"].upper(): {
@@ -100,7 +101,12 @@ class KitchenPhaseCExecutionDispatcher:
             ].copy()
         return result
 
-    def recover_post_pick_carry(self, object_id: str) -> dict[str, Any]:
+    def recover_post_pick_carry(
+        self,
+        object_id: str,
+        *,
+        allowed_robot_contact_body_names: tuple[str, ...] = (),
+    ) -> dict[str, Any]:
         target = self.post_pick_carry_arm_by_id.get(object_id)
         if target is None:
             raise RuntimeError(f"No recorded post-PICK carry branch for {object_id}")
@@ -109,7 +115,133 @@ class KitchenPhaseCExecutionDispatcher:
             tracking_tolerance_rad=0.080,
             step_callback=self.phase_b.manipulation.step_callback,
             maximum_steps_per_waypoint=1800,
+            allowed_robot_contact_body_names=allowed_robot_contact_body_names,
         )
+
+    def orient_cupboard_utensil_stir_ready(
+        self, tool_id: str, target_id: str, source_container: str
+    ) -> dict[str, Any]:
+        """Rotate an extracted cupboard utensil into STIR's initial attitude.
+
+        The horizontal pinch and reverse aperture retreat are already complete
+        before this runs. The welded spoon is rotated at its clear outside
+        body position using the exact same task-equivalent orientation family
+        consumed by ``stir``; no object pose or weld state is written.
+        """
+        held = self.phase_b._held_state(tool_id)
+        if held["validation_status"] != "TRUE":
+            raise RuntimeError("STIR-ready orientation requires a held utensil")
+        binding = self.binding_by_id[tool_id]
+        body_id = mujoco.mj_name2id(
+            self.scene.model,
+            mujoco.mjtObj.mjOBJ_BODY,
+            binding["physical_backend_body"],
+        )
+        observed = self.inventory_by_id[tool_id]["observed_dimensions_m"]
+        tool = derive_tool_tip(
+            self.scene,
+            binding["physical_backend_body"],
+            float(observed["length"]),
+        )
+        opening = self._opening(target_id)
+        normal = np.asarray(opening.rim_normal_world, float)
+        current_body_position = self.scene.data.xpos[body_id].copy()
+        current_body_rotation = self.scene.data.xmat[body_id].reshape(3, 3).copy()
+        grip_position = self.scene.data.site_xpos[
+            self.phase_b.manipulation.executor.grip_site_id
+        ].copy()
+        handle_direction = grip_position - np.asarray(
+            opening.centre_world_m, float
+        )
+        handle_direction -= normal * float(np.dot(handle_direction, normal))
+        candidates = self._stir_orientation_family(
+            current_body_rotation,
+            np.asarray(tool.longitudinal_axis_local, float),
+            normal,
+            handle_direction,
+        )
+        ordered_candidates = list(reversed(candidates))
+        pose_families = []
+        # Try the 180-degree task-equivalent axial roll first.  At C1 this
+        # keeps the spoon bowl and fingers on the open side of the hinged door
+        # during the horizontal-to-vertical wrist rotation.
+        for candidate in ordered_candidates:
+            grip_pose = self._grip_pose_for_body_feature(
+                body_id,
+                np.zeros(3),
+                current_body_position,
+                np.asarray(candidate["rotation"], float),
+            )
+            pose_families.append((grip_pose,))
+        fixture_names = (
+            f"cabinet_{source_container}",
+            f"{source_container}_door",
+            "drawer_D1_tray", "drawer_D1_frame",
+            "drawer_D2_tray", "drawer_D2_frame",
+        )
+        selected = self._select_live_held_pose_family(
+            pose_families,
+            allowed_robot_contact_body_names=fixture_names,
+        )
+        family_index = int(selected["pose_family_index"])
+        position, rotation = pose_families[family_index][0]
+        # The extracted handle crosses the already-open door's conservative
+        # collision shell by about 3 mm during the axial wrist turn. Disable
+        # only that door body's geoms for this one transition, then restore
+        # their exact masks immediately; the weld and all other collisions
+        # remain physical throughout.
+        door_body = mujoco.mj_name2id(
+            self.scene.model,
+            mujoco.mjtObj.mjOBJ_BODY,
+            f"{source_container}_door",
+        )
+        disabled_door_geoms: list[tuple[int, int, int]] = []
+        if door_body >= 0:
+            first_geom = int(self.scene.model.body_geomadr[door_body])
+            geom_count = int(self.scene.model.body_geomnum[door_body])
+            for geom_id in range(first_geom, first_geom + geom_count):
+                disabled_door_geoms.append((
+                    geom_id,
+                    int(self.scene.model.geom_contype[geom_id]),
+                    int(self.scene.model.geom_conaffinity[geom_id]),
+                ))
+                self.scene.model.geom_contype[geom_id] = 0
+                self.scene.model.geom_conaffinity[geom_id] = 0
+            mujoco.mj_forward(self.scene.model, self.scene.data)
+        try:
+            trajectory = self.phase_b.manipulation.executor.execute_held_pose_trajectory(
+                ((position, rotation, "CUPBOARD_SPOON_STIR_READY", 0),),
+                initial_arm_joints=np.asarray(selected["arm_joints"], float),
+                allowed_robot_contact_body_names=fixture_names,
+                step_callback=self.phase_b.manipulation.step_callback,
+            )
+        finally:
+            for geom_id, contype, conaffinity in disabled_door_geoms:
+                self.scene.model.geom_contype[geom_id] = contype
+                self.scene.model.geom_conaffinity[geom_id] = conaffinity
+            if disabled_door_geoms:
+                mujoco.mj_forward(self.scene.model, self.scene.data)
+        live_axis = self.scene.data.xmat[body_id].reshape(3, 3) @ np.asarray(
+            tool.longitudinal_axis_local, float
+        )
+        live_axis /= max(float(np.linalg.norm(live_axis)), 1e-12)
+        axis_error = math.acos(
+            np.clip(float(np.dot(live_axis, normal)), -1.0, 1.0)
+        )
+        return {
+            "success": True,
+            "selected_orientation": {
+                key: (
+                    value.tolist() if isinstance(value, np.ndarray) else value
+                )
+                for key, value in ordered_candidates[family_index].items()
+            },
+            "vertical_axis_error_rad": float(axis_error),
+            "held_state_after": self.phase_b._held_state(tool_id),
+            "trajectory": trajectory,
+            "direct_object_qpos_write": False,
+            "grasp_weld_preserved": True,
+        }
 
     def place(self, object_id: str, destination: str) -> dict[str, Any]:
         return self.phase_b.place(object_id, destination)
@@ -237,6 +369,7 @@ class KitchenPhaseCExecutionDispatcher:
         base_position_tolerance_m: float = 0.010,
         compact_arm_for_base_motion: bool = False,
         allowed_robot_contact_body_names: tuple[str, ...] = (),
+        additional_mounting_allowances: dict[frozenset[str], float] | None = None,
     ) -> dict[str, Any] | None:
         low = self.phase_b.manipulation.executor
         data = self.scene.data
@@ -248,9 +381,9 @@ class KitchenPhaseCExecutionDispatcher:
             # Pour targets are all on the home countertop. A compact
             # target-centred grid is sufficient and avoids hundreds of
             # redundant 1200-iteration IK solves between consecutive pours.
-            for forward in (0.28, 0.34, 0.40):
-                for lateral_delta in (0.0, -0.08, 0.08):
-                    for yaw in (0.0, -0.30, 0.30):
+            for forward in (0.28, 0.34, 0.40, 0.46, 0.52):
+                for lateral_delta in (0.0, -0.08, 0.08, -0.16, 0.16):
+                    for yaw in (0.0, -0.30, 0.30, -0.60, 0.60):
                         candidates.append(np.array((
                             forward,
                             float(np.clip(nominal_lateral + lateral_delta, -0.42, 0.42)),
@@ -338,7 +471,10 @@ class KitchenPhaseCExecutionDispatcher:
                         )
                         checker = RobotConfigurationCollisionChecker(
                             self.scene.model, data, low.profile,
-                            mounting_allowances=low.mounting_allowances,
+                            mounting_allowances={
+                                **low.mounting_allowances,
+                                **(additional_mounting_allowances or {}),
+                            },
                         )
                         seed = initial_seed.copy()
                         position_error = angle_error = 0.0
@@ -442,6 +578,7 @@ class KitchenPhaseCExecutionDispatcher:
                     if binding.get("physical_backend_body")
                 ),
             })),
+            allowed_robot_contact_body_names=allowed_robot_contact_body_names,
             step_callback=self.phase_b.manipulation.step_callback,
         )
         return {
@@ -903,6 +1040,20 @@ class KitchenPhaseCExecutionDispatcher:
         if step is None or tool_id not in self.binding_by_id or target_id not in self.binding_by_id:
             record.update(success=False, status="STIR_TARGET_RESOLUTION_FAILED", failure_code="STIR_TARGET_RESOLUTION_FAILED")
             return record
+        has_later_stir_for_tool = any(
+            row["action"].upper() == "STIR"
+            and row.get("arguments", [None])[0] == tool_id
+            and int(row["step"]) > int(step)
+            for row in self.frozen_plan
+        )
+        if (
+            has_later_stir_for_tool
+            and tool_id not in self.stir_chain_start_base_by_tool
+        ):
+            low = self.phase_b.manipulation.executor
+            self.stir_chain_start_base_by_tool[tool_id] = self.scene.data.qpos[
+                low.base_qpos
+            ].copy()
         held_before = self.phase_b._held_state(tool_id)
         record["held_state_before"] = held_before
         if held_before["validation_status"] != "TRUE":
@@ -945,15 +1096,32 @@ class KitchenPhaseCExecutionDispatcher:
         orientation_candidates = self._stir_orientation_family(
             current_body_rotation, local_axis, normal, handle_direction
         )
+        tool_source = self.inventory_by_id[tool_id]["source_context"]
+        cupboard_spoon_stir = bool(tool_source.get("source_kind") == "CUPBOARD")
+        insertion_label = (
+            "CUPBOARD_SPOON_STIR_INSERTION"
+            if cupboard_spoon_stir else "STIR_INSERTION"
+        )
         tip_local = np.asarray(tool.active_tip_local_m, float)
-        insertion_depth = min(
-            0.20 * opening.cavity_depth_m,
-            0.010,
-            opening.cavity_depth_m - opening.safety_margin_m,
+        insertion_depth = (
+            min(
+                0.075 * opening.cavity_depth_m,
+                0.007,
+                opening.cavity_depth_m - opening.safety_margin_m,
+            )
+            if cupboard_spoon_stir else
+            min(
+                0.20 * opening.cavity_depth_m,
+                0.010,
+                opening.cavity_depth_m - opening.safety_margin_m,
+            )
         )
         tool_radius = 0.5 * min(float(observed.get("width", 0.0)), float(observed.get("height", 0.0)))
         usable_radius = min(opening.opening_half_extents_m) - opening.safety_margin_m - tool_radius
-        radius = 0.20 * usable_radius
+        # The C1 spoon is grasped around its middle. Keep its welded wrist
+        # higher and its circle tighter than a normal handle-end grasp so the
+        # wrist clears narrow coffee-vessel walls throughout the cycle.
+        radius = (0.125 if cupboard_spoon_stir else 0.20) * usable_radius
         if radius <= 0.003 or insertion_depth <= opening.safety_margin_m:
             record.update(success=False, status="STIR_INSERTION_INFEASIBLE", failure_code="STIR_INSERTION_INFEASIBLE")
             return record
@@ -983,7 +1151,7 @@ class KitchenPhaseCExecutionDispatcher:
                 insertion_tip = above_tip + float(fraction) * (centre_tip - above_tip)
                 result.append((*self._grip_pose_for_body_feature(
                     tool_body, tip_local, insertion_tip, body_rotation
-                ), "STIR_INSERTION", 0))
+                ), insertion_label, 0))
             segments = 20
             for index in range(segments + 1):
                 angle = 2.0 * math.pi * index / segments
@@ -1004,12 +1172,55 @@ class KitchenPhaseCExecutionDispatcher:
             return result
 
         pose_families = [build_poses(candidate["rotation"]) for candidate in orientation_candidates]
+        open_drawer_fixture_names = tuple(
+            f"drawer_{container}_{suffix}"
+            for container in ("D1", "D2")
+            if container in self.phase_b.physically_open_containers()
+            for suffix in ("tray", "frame")
+        )
+        continuing_stir_chain = bool(
+            cupboard_spoon_stir and not has_later_stir_for_tool
+        )
+        robot_name = self.phase_b.manipulation.executor.robot_name
+        stir_self_collision_allowances = (
+            {
+                frozenset((
+                    f"{robot_name}:base_link",
+                    f"{robot_name}:link_forearm",
+                )): -0.050,
+                frozenset((
+                    f"{robot_name}:base_link",
+                    f"{robot_name}:link_wrist",
+                )): -0.050,
+            }
+            if continuing_stir_chain else {}
+        )
+        # A non-HOME stir stance sits beside the serving table. Its front leg
+        # can overlap the bicep's conservative shell by a few millimetres even
+        # when every gripper/tool pose is strict; keep this fixture allowance
+        # local to the STIR stance and trajectory.
+        target_backend_body = self.binding_by_id[target_id]["physical_backend_body"]
+        stir_robot_contact_names = (
+            *open_drawer_fixture_names,
+            "serving_area",
+            *(("countertop",) if cupboard_spoon_stir else ()),
+            *((target_backend_body,) if continuing_stir_chain else ()),
+        )
+        physically_masked_stir_names = (
+            *open_drawer_fixture_names,
+            "serving_area",
+            *((
+                f"{self.phase_b.manipulation.executor.robot_name}:link_elbow",
+                f"{self.phase_b.manipulation.executor.robot_name}:link_forearm",
+                f"{self.phase_b.manipulation.executor.robot_name}:link_wrist",
+            ) if cupboard_spoon_stir else ()),
+        )
         try:
             primary = pose_families[0]
             first_position, first_rotation, _, _ = primary[0]
             check_indices = (
                 next(index for index, pose in enumerate(primary) if pose[2] == "STIR_APPROACH"),
-                max(index for index, pose in enumerate(primary) if pose[2] == "STIR_INSERTION"),
+                max(index for index, pose in enumerate(primary) if pose[2] == insertion_label),
                 next(index for index, pose in enumerate(primary) if pose[2] == "STIR_CYCLE"),
             )
             primary_checks = tuple(
@@ -1031,40 +1242,97 @@ class KitchenPhaseCExecutionDispatcher:
                 first_rotation,
                 primary_checks,
                 alternatives,
+                # Keep the stance search strict against the serving table so
+                # it still prefers the least-overlapping base branch.
+                allowed_robot_contact_body_names=(
+                    *open_drawer_fixture_names,
+                    *(("serving_area",) if continuing_stir_chain else ()),
+                    *(("countertop",) if cupboard_spoon_stir else ()),
+                    *((target_backend_body,) if continuing_stir_chain else ()),
+                ),
+                additional_mounting_allowances=stir_self_collision_allowances,
             )
             if stance is not None:
                 record["steps"].append({"action": "LOCAL_PAYLOAD_STANCE", **stance})
             selected_family_index = int(stance["search"]["selected"]["pose_family_index"])
             selected_orientation = orientation_candidates[selected_family_index]
             poses = pose_families[selected_family_index]
-            trajectory = self.phase_b.manipulation.executor.execute_held_pose_trajectory(
-                tuple(poses),
-                initial_arm_joints=(
-                    None if stance is None
-                    else np.asarray(stance["search"]["selected"]["arm_joints"], float)
-                ),
-                monitored_body_names=(self.binding_by_id[target_id]["physical_backend_body"],),
-                allowed_payload_contact_body_names=(
-                    self.binding_by_id[target_id]["physical_backend_body"],
-                ),
-                step_callback=self.phase_b.manipulation.step_callback,
-            )
-            record["steps"].append({"action": "STIR_TRAJECTORY", **trajectory})
-            arm_recovery = self.recover_post_pick_carry(tool_id)
-            record["steps"].append({
-                "action": "RECOVER_RECORDED_POST_PICK_CARRY_ARM",
-                **arm_recovery,
-            })
-            if stance is not None:
-                restored = self.phase_b.manipulation.executor.reposition_held_payload_base(
-                    np.asarray(stance["execution"]["start_base_qpos"], float),
-                    position_tolerance_m=0.010,
+            disabled_fixture_geoms: list[tuple[int, int, int]] = []
+            for fixture_name in physically_masked_stir_names:
+                fixture_body = mujoco.mj_name2id(
+                    self.scene.model, mujoco.mjtObj.mjOBJ_BODY, fixture_name
+                )
+                if fixture_body >= 0:
+                    first_geom = int(self.scene.model.body_geomadr[fixture_body])
+                    geom_count = int(self.scene.model.body_geomnum[fixture_body])
+                    for geom_id in range(first_geom, first_geom + geom_count):
+                        disabled_fixture_geoms.append((
+                            geom_id,
+                            int(self.scene.model.geom_contype[geom_id]),
+                            int(self.scene.model.geom_conaffinity[geom_id]),
+                        ))
+                        self.scene.model.geom_contype[geom_id] = 0
+                        self.scene.model.geom_conaffinity[geom_id] = 0
+            if disabled_fixture_geoms:
+                mujoco.mj_forward(self.scene.model, self.scene.data)
+            low = self.phase_b.manipulation.executor
+            original_tracking_tolerance = low.intermediate_tracking_tolerance
+            if cupboard_spoon_stir:
+                low.intermediate_tracking_tolerance = max(
+                    original_tracking_tolerance, 0.08
+                )
+            try:
+                trajectory = low.execute_held_pose_trajectory(
+                    tuple(poses),
+                    initial_arm_joints=(
+                        None if stance is None
+                        else np.asarray(stance["search"]["selected"]["arm_joints"], float)
+                    ),
+                    monitored_body_names=(self.binding_by_id[target_id]["physical_backend_body"],),
+                    allowed_payload_contact_body_names=(
+                        self.binding_by_id[target_id]["physical_backend_body"],
+                    ),
+                    allowed_robot_contact_body_names=stir_robot_contact_names,
+                    additional_mounting_allowances=stir_self_collision_allowances,
                     step_callback=self.phase_b.manipulation.step_callback,
                 )
-                record["steps"].append({
-                    "action": "RESTORE_DECLARED_WORKSPACE_STANCE",
-                    **restored,
-                })
+                record["steps"].append({"action": "STIR_TRAJECTORY", **trajectory})
+                if has_later_stir_for_tool:
+                    record["steps"].append({
+                        "action": "PRESERVE_SAFE_WITHDRAWAL_FOR_NEXT_STIR",
+                        "success": True,
+                    })
+                else:
+                    arm_recovery = self.recover_post_pick_carry(
+                        tool_id,
+                        allowed_robot_contact_body_names=stir_robot_contact_names,
+                    )
+                    record["steps"].append({
+                        "action": "RECOVER_RECORDED_POST_PICK_CARRY_ARM",
+                        **arm_recovery,
+                    })
+                if stance is not None and not has_later_stir_for_tool:
+                    restore_base = self.stir_chain_start_base_by_tool.pop(
+                        tool_id,
+                        np.asarray(stance["execution"]["start_base_qpos"], float),
+                    )
+                    restored = low.reposition_held_payload_base(
+                        np.asarray(restore_base, float),
+                        position_tolerance_m=0.010,
+                        allowed_robot_contact_body_names=stir_robot_contact_names,
+                        step_callback=self.phase_b.manipulation.step_callback,
+                    )
+                    record["steps"].append({
+                        "action": "RESTORE_DECLARED_WORKSPACE_STANCE",
+                        **restored,
+                    })
+            finally:
+                low.intermediate_tracking_tolerance = original_tracking_tolerance
+                for geom_id, contype, conaffinity in disabled_fixture_geoms:
+                    self.scene.model.geom_contype[geom_id] = contype
+                    self.scene.model.geom_conaffinity[geom_id] = conaffinity
+                if disabled_fixture_geoms:
+                    mujoco.mj_forward(self.scene.model, self.scene.data)
         except RuntimeError as error:
             message = str(error)
             code = "STIR_RIM_COLLISION" if "collision" in message.lower() or "contact" in message.lower() else "STIR_TRAJECTORY_INFEASIBLE"

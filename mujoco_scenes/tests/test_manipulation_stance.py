@@ -167,18 +167,18 @@ def test_first_contact_synchrony_accepts_centred_and_rejects_asymmetric_sweep():
     assert unilateral["right"] is None
 
 
-def test_cupboard_utensil_probe_uses_horizontal_over_handle_grasp():
+def test_cupboard_utensil_probe_uses_declined_inward_handle_grasp():
     candidates = tuple(
-        _candidate(f"cupboard_{approach}_{fraction}pct_z+0.010")
-        for approach in ("horizontal_over_handle", "front_vertical_jaws")
+        _candidate(f"cupboard_{approach}_{fraction}pct_z+0.005")
+        for approach in ("declined_inward_over_handle", "front_vertical_jaws")
         for fraction in (55, 65, 75, 85)
     )
     selected = storage_probe_candidates(candidates, "CUPBOARD", "UTENSIL")
     identifiers = {row.candidate_id for row in selected}
-    assert any("horizontal_over_handle" in item for item in identifiers)
+    assert any("declined_inward_over_handle" in item for item in identifiers)
     assert not any("front_vertical" in item for item in identifiers)
     assert identifiers == {
-        "cupboard_horizontal_over_handle_55pct_z+0.010"
+        "cupboard_declined_inward_over_handle_55pct_z+0.005"
     }
 
 

@@ -650,6 +650,7 @@ class SceneConfig:
     optimal_search_order: list
     optimal_inspections: int
     notes: str = ""
+    container_slot_overrides: dict = field(default_factory=dict)
 
 
 INTEGRATED_PRIMARY_SCENE = "S1_integrated_kitchen_object_function_primary"
@@ -846,6 +847,9 @@ def load_all_configs() -> dict[str, SceneConfig]:
             optimal_search_order=cfg.get("optimal_search_order", []),
             optimal_inspections=cfg.get("optimal_inspections", 0),
             notes=cfg.get("notes", ""),
+            container_slot_overrides=copy.deepcopy(
+                cfg.get("container_slot_overrides", {})
+            ),
         )
         configs[name] = sc
     if KITCHEN_FEASIBILITY_VARIANTS.exists():
@@ -884,6 +888,10 @@ def load_all_configs() -> dict[str, SceneConfig]:
                         "container_contents"
                     ].items()
                 }
+            if "container_slot_overrides" in variant:
+                derived.container_slot_overrides = copy.deepcopy(
+                    variant["container_slot_overrides"]
+                )
             derived.optimal_search_order = list(
                 benchmark.get(
                     "inspection_order", derived.optimal_search_order
@@ -1714,10 +1722,23 @@ def build_scene_xml(
                 print(f"  [WARNING] Container {container_id} full, cannot place {obj_name}.")
                 continue
             slot_rel_pos = np.array(allocated_slots[i], dtype=float)
+            configured_slot = (
+                config.container_slot_overrides
+                .get(container_id, {})
+                .get(obj_name)
+            )
+            if configured_slot is not None:
+                if len(configured_slot) != 3:
+                    raise ValueError(
+                        "Container slot override must be [x, y, support_z]: "
+                        f"{container_id}/{obj_name}={configured_slot}"
+                    )
+                slot_rel_pos = np.asarray(configured_slot, dtype=float)
             if (
                 is_integrated_kitchen_scene(config.name)
                 and container_id == "C2"
                 and obj_name != "s1i_c2_soup_spoon"
+                and configured_slot is None
             ):
                 # Reserve the left half of C2's shelf for the vessel so the
                 # upright utensil has a separate, unobstructed central-right

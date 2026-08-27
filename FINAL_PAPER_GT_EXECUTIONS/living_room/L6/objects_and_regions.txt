@@ -1,0 +1,16 @@
+Environment: living_room
+Variant: L6
+Internal variant: F5_LEFT_PAIR_ON_SHARED
+Snapshot: initial state before GT execution
+
+MOVABLE OBJECTS
+object_0001 | semantic=cup | backend=a2_drink_left | initial_region=SHARED_TABLE | initial_xyz_m=[-0.1600, 0.6200, 0.4640] | GT_destination=region_0001
+object_0002 | semantic=tv_remote | backend=a2_remote_payload | initial_region=INITIAL_OBJECT_STAGING_ZONE | initial_xyz_m=[0.0000, -1.5800, 0.7550] | GT_destination=region_0002
+object_0003 | semantic=cup | backend=a2_drink_right | initial_region=INITIAL_OBJECT_STAGING_ZONE | initial_xyz_m=[0.1800, -1.8000, 0.8100] | GT_destination=region_0003
+object_0004 | semantic=saucer | backend=a2_snack_left | initial_region=SHARED_TABLE | initial_xyz_m=[0.2000, 0.4000, 0.4030] | GT_destination=region_0001
+object_0005 | semantic=saucer | backend=a2_snack_right | initial_region=INITIAL_OBJECT_STAGING_ZONE | initial_xyz_m=[0.4500, -1.8000, 0.7370] | GT_destination=region_0003
+
+INSPECTED/PLACEMENT REGIONS
+region_0001 | logical_region=PERSONAL_TABLE_LEFT | support=a2_personal_left_top | centroid_xyz_m=[-1.7200, 1.0200, 0.5350]
+region_0002 | logical_region=SHARED_TABLE | support=a2_control_table_top | centroid_xyz_m=[0.0000, 0.6200, 0.3770]
+region_0003 | logical_region=PERSONAL_TABLE_RIGHT | support=a2_personal_right_top | centroid_xyz_m=[1.7200, 1.0200, 0.5350]

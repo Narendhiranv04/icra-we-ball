@@ -1,4 +1,4 @@
-"""Render one labelled five-camera open-storage snapshot per Workshop variant."""
+"""Render one labelled five-camera closed-start snapshot per Workshop variant."""
 
 from __future__ import annotations
 
@@ -29,12 +29,23 @@ def _font(size: int, bold: bool = False) -> ImageFont.ImageFont:
     return ImageFont.load_default()
 
 
-def render_variant(variant_id: str, output_root: Path, width: int, height: int) -> dict:
+def render_variant(
+    variant_id: str,
+    output_root: Path,
+    width: int,
+    height: int,
+    *,
+    open_storage: bool = False,
+) -> dict:
     spec = load_variant_specs()[variant_id]
     assignment = solve_gt_assignment(variant_id)
     scene = WorkshopScene(robot="none", variant=variant_id)
-    for region in WORKSHOP_REGIONS:
-        scene.open_container(region, steps=700)
+    # A catalogue image is also used as the scene-start reference.  Storage
+    # must therefore remain closed unless an explicitly requested inspection
+    # preview is being rendered.
+    if open_storage:
+        for region in WORKSHOP_REGIONS:
+            scene.open_container(region, steps=700)
 
     labels = ("LEFT", "RIGHT", "TOP", "FRONT", "CLOSE")
     frames = []
@@ -84,6 +95,7 @@ def render_variant(variant_id: str, output_root: Path, width: int, height: int) 
         "intended_outcome": outcome,
         "expected_inspection_regions": spec["expected_inspection_regions"],
         "storage_contents": spec["storage_contents"],
+        "storage_state": "OPEN" if open_storage else "CLOSED",
         "selected_driver": assignment.driver,
         "rejection_reason": assignment.rejection_reason,
         "image": str(image_path.relative_to(ROOT)),
@@ -95,12 +107,30 @@ def main() -> int:
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--width", type=int, default=480)
     parser.add_argument("--height", type=int, default=270)
+    parser.add_argument(
+        "--open-storage",
+        action="store_true",
+        help="Render an explicit inspection preview with storage opened.",
+    )
     args = parser.parse_args()
     records = []
     for variant_id in load_variant_specs():
         print(f"Rendering {variant_id}", flush=True)
-        records.append(render_variant(variant_id, args.output_root, args.width, args.height))
-    manifest = {"schema_version": 1, "camera_count": 5, "variants": records}
+        records.append(
+            render_variant(
+                variant_id,
+                args.output_root,
+                args.width,
+                args.height,
+                open_storage=args.open_storage,
+            )
+        )
+    manifest = {
+        "schema_version": 1,
+        "camera_count": 5,
+        "snapshot_storage_state": "OPEN" if args.open_storage else "CLOSED",
+        "variants": records,
+    }
     args.output_root.mkdir(parents=True, exist_ok=True)
     (args.output_root / "manifest.json").write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"

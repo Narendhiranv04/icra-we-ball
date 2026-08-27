@@ -131,6 +131,33 @@ def test_carried_move_folds_held_payload_when_rotation_requires_compact_pose():
     assert dispatcher.phase_a._move.call_count == 2
 
 
+def test_empty_move_folds_arm_when_rotation_requires_compact_pose():
+    dispatcher = object.__new__(KitchenPhaseBExecutionDispatcher)
+    dispatcher.phase_a = Mock()
+    dispatcher.phase_a.current_workspace = KitchenWorkspace.HOME
+    dispatcher.phase_a._move.side_effect = [
+        RuntimeError(
+            "Final base rotation is in collision; move the arm to its "
+            "compact navigation pose before moving"
+        ),
+        {"success": True, "status": "OK"},
+    ]
+    dispatcher.manipulation = Mock()
+    dispatcher.manipulation._settle_navigation_posture.return_value = 42
+
+    result = dispatcher.move(KitchenWorkspace.LEFT_SIDE)
+
+    assert result["success"] is True
+    assert result["empty_navigation_preparation"] == {
+        "performed": True,
+        "physics_steps": 42,
+        "empty_gripper_navigation_fold": True,
+        "direct_object_qpos_write": False,
+    }
+    dispatcher.manipulation._settle_navigation_posture.assert_called_once_with()
+    assert dispatcher.phase_a._move.call_count == 2
+
+
 def test_redundant_move_is_omitted():
     dispatcher = object.__new__(KitchenPhaseBExecutionDispatcher)
     dispatcher.phase_a = Mock()

@@ -2,9 +2,9 @@
   "all_execution_runs_successful": true,
   "all_gt_action_sequences_exact_match": false,
   "environment_counts": {
-    "kitchen": 4,
-    "living_room": 0,
-    "workshop": 0
+    "kitchen": 6,
+    "living_room": 7,
+    "workshop": 2
   },
   "purpose": "Final-paper natural-speed five-view GT robot executions",
   "records": [
@@ -37,35 +37,97 @@
       "video_sha256": "ca4314dd1b01a8e6aba31283476af9ce2e72d3b23ba79bb71743397615c0d632"
     },
     {
+      "environment": "living_room",
+      "execution_success": true,
+      "gt_action_sequence_exact_match": true,
+      "source_variant": "F0_ALL_OBJECTS_IN_STAGING",
+      "timing": {
+        "environment": "living_room",
+        "internal_variant": "F0_ALL_OBJECTS_IN_STAGING",
+        "recorded_summary_reported_wall_s": 457.02492920900113,
+        "recording_overhead_wall_s": 0.021999456000003192,
+        "simulation_duration_s": 276.23200000059086,
+        "speed_policy": "NATURAL_SIMULATION_TIME_NO_POSTPROCESS_SPEEDUP",
+        "unrecorded_summary_reported_wall_s": 456.9593452699992,
+        "variant": "L1",
+        "video_duration_s": 278.0,
+        "video_fps": "20/1",
+        "with_recording_wall_s": 458.401176159,
+        "without_recording_wall_s": 458.379176703
+      },
+      "variant": "L1",
+      "video": "living_room/L1/robot_execution_5cam.mp4",
+      "video_metadata": {
+        "duration_s": 278.0,
+        "frame_count": 5560,
+        "frame_rate": "20/1",
+        "height": 1088,
+        "size_bytes": 73258519,
+        "width": 2880
+      },
+      "video_sha256": "83a9e77c722f7a807157e53975b8a0b097f567a8459b86e806f06b0929fb5e38"
+    },
+    {
+      "environment": "living_room",
+      "execution_success": true,
+      "gt_action_sequence_exact_match": true,
+      "source_variant": "F2_LEFT_SAUCER_ON_SHARED",
+      "timing": {
+        "environment": "living_room",
+        "internal_variant": "F2_LEFT_SAUCER_ON_SHARED",
+        "recorded_summary_reported_wall_s": 447.3067737620004,
+        "recording_overhead_wall_s": -6.577847531000032,
+        "simulation_duration_s": 270.3140000005626,
+        "speed_policy": "NATURAL_SIMULATION_TIME_NO_POSTPROCESS_SPEEDUP",
+        "unrecorded_summary_reported_wall_s": 453.822805445001,
+        "variant": "L3",
+        "video_duration_s": 272.1,
+        "video_fps": "20/1",
+        "with_recording_wall_s": 448.75419171,
+        "without_recording_wall_s": 455.332039241
+      },
+      "variant": "L3",
+      "video": "living_room/L3/robot_execution_5cam.mp4",
+      "video_metadata": {
+        "duration_s": 272.1,
+        "frame_count": 5442,
+        "frame_rate": "20/1",
+        "height": 1088,
+        "size_bytes": 66362220,
+        "width": 2880
+      },
+      "video_sha256": "8fb51eb9d0f6ef6648f1e24eea441faadb88a3654d2fef4dd4ee5c24321baca6"
+    },
+    {
       "environment": "kitchen",
       "execution_success": true,
       "gt_action_sequence_exact_match": true,
-      "source_variant": "F0_ALL_VISIBLE",
+      "source_variant": "F4_TOOLS_IN_DRAWERS",
       "timing": {
         "environment": "kitchen",
-        "internal_variant": "F0_ALL_VISIBLE",
+        "internal_variant": "F4_TOOLS_IN_DRAWERS",
         "recorded_summary_reported_wall_s": null,
-        "recording_overhead_wall_s": 58.76364621699997,
-        "simulation_duration_s": 509.1740000017031,
+        "recording_overhead_wall_s": 71.15758114700009,
+        "simulation_duration_s": 558.5020000006169,
         "speed_policy": "NATURAL_SIMULATION_TIME_NO_POSTPROCESS_SPEEDUP",
         "unrecorded_summary_reported_wall_s": null,
-        "variant": "K1",
-        "video_duration_s": 493.35,
+        "variant": "K5",
+        "video_duration_s": 542.65,
         "video_fps": "20/1",
-        "with_recording_wall_s": 853.039794905,
-        "without_recording_wall_s": 794.276148688
+        "with_recording_wall_s": 962.469163585,
+        "without_recording_wall_s": 891.311582438
       },
-      "variant": "K1",
-      "video": "kitchen/K1/robot_execution_5cam.mp4",
+      "variant": "K5",
+      "video": "kitchen/K5/robot_execution_5cam.mp4",
       "video_metadata": {
-        "duration_s": 493.35,
-        "frame_count": 9867,
+        "duration_s": 542.65,
+        "frame_count": 10853,
         "frame_rate": "20/1",
         "height": 1080,
-        "size_bytes": 258544074,
+        "size_bytes": 284877960,
         "width": 2880
       },
-      "video_sha256": "bd606af50934aa804c8acc7d08a1cb265b77cd58f0312e4ae060e1996eb1c000"
+      "video_sha256": "74e1be92bba9ab51e0fdb1014506d9a91fc722064e1323e633b6025131073dfc"
     },
     {
       "environment": "kitchen",
@@ -76,27 +138,27 @@
         "environment": "kitchen",
         "internal_variant": "F1_HIDDEN_COFFEE_VESSEL",
         "recorded_summary_reported_wall_s": null,
-        "recording_overhead_wall_s": 137.4547420529999,
-        "simulation_duration_s": 588.0839999999174,
+        "recording_overhead_wall_s": -10.131539058000044,
+        "simulation_duration_s": 634.8019999988127,
         "speed_policy": "NATURAL_SIMULATION_TIME_NO_POSTPROCESS_SPEEDUP",
         "unrecorded_summary_reported_wall_s": null,
         "variant": "K2",
-        "video_duration_s": 572.25,
+        "video_duration_s": 618.9,
         "video_fps": "20/1",
-        "with_recording_wall_s": 1062.462270565,
-        "without_recording_wall_s": 925.007528512
+        "with_recording_wall_s": 1195.494581102,
+        "without_recording_wall_s": 1205.62612016
       },
       "variant": "K2",
       "video": "kitchen/K2/robot_execution_5cam.mp4",
       "video_metadata": {
-        "duration_s": 572.25,
-        "frame_count": 11445,
+        "duration_s": 618.9,
+        "frame_count": 12378,
         "frame_rate": "20/1",
         "height": 1080,
-        "size_bytes": 305237507,
+        "size_bytes": 332969651,
         "width": 2880
       },
-      "video_sha256": "c25b5be776b1ef74060b0024b1e9ebf98b27a6e19aa93bcb18ada644557579a3"
+      "video_sha256": "c219afd0f388cf0a58949b277fd22c2f928f274883497559738ca3931055b29a"
     },
     {
       "environment": "kitchen",
@@ -107,29 +169,308 @@
         "environment": "kitchen",
         "internal_variant": "F2_HIDDEN_SOUP_BOWL",
         "recorded_summary_reported_wall_s": null,
-        "recording_overhead_wall_s": 554.3241484399999,
-        "simulation_duration_s": 670.9299999979584,
+        "recording_overhead_wall_s": -35.219834021999986,
+        "simulation_duration_s": 672.9379999979109,
         "speed_policy": "NATURAL_SIMULATION_TIME_NO_POSTPROCESS_SPEEDUP",
         "unrecorded_summary_reported_wall_s": null,
         "variant": "K3",
-        "video_duration_s": 655.1,
+        "video_duration_s": 657.1,
         "video_fps": "20/1",
-        "with_recording_wall_s": 1026.644741444,
-        "without_recording_wall_s": 472.320593004
+        "with_recording_wall_s": 1235.28368116,
+        "without_recording_wall_s": 1270.503515182
       },
       "variant": "K3",
       "video": "kitchen/K3/robot_execution_5cam.mp4",
       "video_metadata": {
-        "duration_s": 655.1,
-        "frame_count": 13102,
+        "duration_s": 657.1,
+        "frame_count": 13142,
         "frame_rate": "20/1",
         "height": 1080,
-        "size_bytes": 350892855,
+        "size_bytes": 354431576,
         "width": 2880
       },
-      "video_sha256": "8c5a6d63adaa21a7cf2b34645751a2f8ddb3372ef37ec3134aa914fe23468f47"
+      "video_sha256": "2155a0b5bc4fd0722c3d792ba8ed57b049d7f6a797f6c8743728e378864c2ab5"
+    },
+    {
+      "environment": "kitchen",
+      "execution_success": true,
+      "gt_action_sequence_exact_match": true,
+      "source_variant": "F3_HIDDEN_VESSELS_MIXED",
+      "timing": {
+        "environment": "kitchen",
+        "internal_variant": "F3_HIDDEN_VESSELS_MIXED",
+        "recorded_summary_reported_wall_s": null,
+        "recording_overhead_wall_s": -94.89369820699994,
+        "simulation_duration_s": 723.8439999967071,
+        "speed_policy": "NATURAL_SIMULATION_TIME_NO_POSTPROCESS_SPEEDUP",
+        "unrecorded_summary_reported_wall_s": null,
+        "variant": "K4",
+        "video_duration_s": 708.05,
+        "video_fps": "20/1",
+        "with_recording_wall_s": 1387.317860763,
+        "without_recording_wall_s": 1482.21155897
+      },
+      "variant": "K4",
+      "video": "kitchen/K4/robot_execution_5cam.mp4",
+      "video_metadata": {
+        "duration_s": 708.05,
+        "frame_count": 14161,
+        "frame_rate": "20/1",
+        "height": 1080,
+        "size_bytes": 383065147,
+        "width": 2880
+      },
+      "video_sha256": "a7242faa616ede55eff19af1fc2bd0dcb239f54ec8d375297b6522f4a80bc2ad"
+    },
+    {
+      "environment": "living_room",
+      "execution_success": true,
+      "gt_action_sequence_exact_match": true,
+      "source_variant": "F1_LEFT_SAUCER_PREPLACED",
+      "timing": {
+        "environment": "living_room",
+        "internal_variant": "F1_LEFT_SAUCER_PREPLACED",
+        "recorded_summary_reported_wall_s": 311.77285560699966,
+        "recording_overhead_wall_s": 13.740477889000033,
+        "simulation_duration_s": 223.5040000003391,
+        "speed_policy": "NATURAL_SIMULATION_TIME_NO_POSTPROCESS_SPEEDUP",
+        "unrecorded_summary_reported_wall_s": 298.1457792439978,
+        "variant": "L2",
+        "video_duration_s": 225.25,
+        "video_fps": "20/1",
+        "with_recording_wall_s": 312.818241723,
+        "without_recording_wall_s": 299.077763834
+      },
+      "variant": "L2",
+      "video": "living_room/L2/robot_execution_5cam.mp4",
+      "video_metadata": {
+        "duration_s": 225.25,
+        "frame_count": 4505,
+        "frame_rate": "20/1",
+        "height": 1080,
+        "size_bytes": 163074772,
+        "width": 2880
+      },
+      "video_sha256": "9347fd72b0aafcfd283745d0f7acfee029d0f5d4b530b64b36913c864337ca3a"
+    },
+    {
+      "environment": "living_room",
+      "execution_success": true,
+      "gt_action_sequence_exact_match": true,
+      "source_variant": "F4_SAUCER_PREPLACED_CUP_ON_SHARED",
+      "timing": {
+        "environment": "living_room",
+        "internal_variant": "F4_SAUCER_PREPLACED_CUP_ON_SHARED",
+        "recorded_summary_reported_wall_s": 354.8713292809989,
+        "recording_overhead_wall_s": 19.33450788500005,
+        "simulation_duration_s": 232.17000000038047,
+        "speed_policy": "NATURAL_SIMULATION_TIME_NO_POSTPROCESS_SPEEDUP",
+        "unrecorded_summary_reported_wall_s": 335.5395460080035,
+        "variant": "L5",
+        "video_duration_s": 234.0,
+        "video_fps": "20/1",
+        "with_recording_wall_s": 355.90492669,
+        "without_recording_wall_s": 336.570418805
+      },
+      "variant": "L5",
+      "video": "living_room/L5/robot_execution_5cam.mp4",
+      "video_metadata": {
+        "duration_s": 234.0,
+        "frame_count": 4680,
+        "frame_rate": "20/1",
+        "height": 1080,
+        "size_bytes": 167888953,
+        "width": 2880
+      },
+      "video_sha256": "55cafc123c48688692587d40bfbb40f08c3d65a0e7b2d29f4f64686ca2a5d698"
+    },
+    {
+      "environment": "living_room",
+      "execution_success": true,
+      "gt_action_sequence_exact_match": true,
+      "source_variant": "F3_LEFT_CUP_ON_SHARED",
+      "timing": {
+        "environment": "living_room",
+        "internal_variant": "F3_LEFT_CUP_ON_SHARED",
+        "recorded_summary_reported_wall_s": 400.51677430699783,
+        "recording_overhead_wall_s": 15.740878725000016,
+        "simulation_duration_s": 261.6380000005212,
+        "speed_policy": "NATURAL_SIMULATION_TIME_NO_POSTPROCESS_SPEEDUP",
+        "unrecorded_summary_reported_wall_s": 384.8731394790011,
+        "variant": "L4",
+        "video_duration_s": 263.5,
+        "video_fps": "20/1",
+        "with_recording_wall_s": 401.684074923,
+        "without_recording_wall_s": 385.943196198
+      },
+      "variant": "L4",
+      "video": "living_room/L4/robot_execution_5cam.mp4",
+      "video_metadata": {
+        "duration_s": 263.5,
+        "frame_count": 5270,
+        "frame_rate": "20/1",
+        "height": 1080,
+        "size_bytes": 188649258,
+        "width": 2880
+      },
+      "video_sha256": "93c150928cee7474802f6c23e5bb14049dc425c292c7fa448a04b2ebe99ad477"
+    },
+    {
+      "environment": "living_room",
+      "execution_success": true,
+      "gt_action_sequence_exact_match": true,
+      "source_variant": "F5_LEFT_PAIR_ON_SHARED",
+      "timing": {
+        "environment": "living_room",
+        "internal_variant": "F5_LEFT_PAIR_ON_SHARED",
+        "recorded_summary_reported_wall_s": 420.1991296589986,
+        "recording_overhead_wall_s": 8.218332001999954,
+        "simulation_duration_s": 277.8940000005988,
+        "speed_policy": "NATURAL_SIMULATION_TIME_NO_POSTPROCESS_SPEEDUP",
+        "unrecorded_summary_reported_wall_s": 411.9807360870036,
+        "variant": "L6",
+        "video_duration_s": 279.7,
+        "video_fps": "20/1",
+        "with_recording_wall_s": 421.221573989,
+        "without_recording_wall_s": 413.003241987
+      },
+      "variant": "L6",
+      "video": "living_room/L6/robot_execution_5cam.mp4",
+      "video_metadata": {
+        "duration_s": 279.7,
+        "frame_count": 5594,
+        "frame_rate": "20/1",
+        "height": 1080,
+        "size_bytes": 198389044,
+        "width": 2880
+      },
+      "video_sha256": "795a4243991047cdf19679f970150577074e5a4fcb5c942c6aea5dcb828274d6"
+    },
+    {
+      "environment": "kitchen",
+      "execution_success": true,
+      "gt_action_sequence_exact_match": true,
+      "source_variant": "F0_ALL_VISIBLE",
+      "timing": {
+        "environment": "kitchen",
+        "internal_variant": "F0_ALL_VISIBLE",
+        "recorded_summary_reported_wall_s": null,
+        "recording_overhead_wall_s": 123.20486340399998,
+        "simulation_duration_s": 542.516000000995,
+        "speed_policy": "NATURAL_SIMULATION_TIME_NO_POSTPROCESS_SPEEDUP",
+        "unrecorded_summary_reported_wall_s": null,
+        "variant": "K1",
+        "video_duration_s": 526.65,
+        "video_fps": "20/1",
+        "with_recording_wall_s": 923.726740221,
+        "without_recording_wall_s": 800.521876817
+      },
+      "variant": "K1",
+      "video": "kitchen/K1/robot_execution_5cam.mp4",
+      "video_metadata": {
+        "duration_s": 526.65,
+        "frame_count": 10533,
+        "frame_rate": "20/1",
+        "height": 1080,
+        "size_bytes": 278128736,
+        "width": 2880
+      },
+      "video_sha256": "f49d2f00c9220cb6dffe180a0e79bfd38f15180fe440c316a8bbf0eb5f7c5084"
+    },
+    {
+      "environment": "living_room",
+      "execution_success": true,
+      "gt_action_sequence_exact_match": true,
+      "source_variant": "I0_NO_SHARED_TABLE",
+      "timing": {
+        "environment": "living_room",
+        "internal_variant": "I0_NO_SHARED_TABLE",
+        "recorded_summary_reported_wall_s": 1.0988976809999258,
+        "recording_overhead_wall_s": 0.04002186100000005,
+        "simulation_duration_s": 1.2000000000000008,
+        "speed_policy": "NATURAL_SIMULATION_TIME_NO_POSTPROCESS_SPEEDUP",
+        "unrecorded_summary_reported_wall_s": 1.0800815019997572,
+        "variant": "L7",
+        "video_duration_s": 1.0,
+        "video_fps": "20/1",
+        "with_recording_wall_s": 1.946769338,
+        "without_recording_wall_s": 1.906747477
+      },
+      "variant": "L7",
+      "video": "living_room/L7/robot_execution_5cam.mp4",
+      "video_metadata": {
+        "duration_s": 1.0,
+        "frame_count": 20,
+        "frame_rate": "20/1",
+        "height": 1080,
+        "size_bytes": 569870,
+        "width": 2880
+      },
+      "video_sha256": "df1db8971c93619d3302fb9ab290e706ac9614a112606b5e5fa72a4b58739159"
+    },
+    {
+      "environment": "workshop",
+      "execution_success": true,
+      "gt_action_sequence_exact_match": true,
+      "source_variant": "F0_MANUAL_FIRST_ONE_REGION",
+      "timing": {
+        "environment": "workshop",
+        "internal_variant": "F0_MANUAL_FIRST_ONE_REGION",
+        "recorded_summary_reported_wall_s": null,
+        "recording_overhead_wall_s": 121.065063824,
+        "simulation_duration_s": null,
+        "speed_policy": "NATURAL_SIMULATION_TIME_NO_POSTPROCESS_SPEEDUP",
+        "unrecorded_summary_reported_wall_s": null,
+        "variant": "W1",
+        "video_duration_s": 452.55,
+        "video_fps": "20/1",
+        "with_recording_wall_s": 144.666518891,
+        "without_recording_wall_s": 23.601455067
+      },
+      "variant": "W1",
+      "video": "workshop/W1/robot_execution_5cam.mp4",
+      "video_metadata": {
+        "duration_s": 452.55,
+        "frame_count": 9051,
+        "frame_rate": "20/1",
+        "height": 720,
+        "size_bytes": 167763779,
+        "width": 1920
+      },
+      "video_sha256": "01ffdeafa57a176f95ce18c7a6f2cc3a2ca4bb29f8bd6dcfe9d9112a8a128670"
+    },
+    {
+      "environment": "workshop",
+      "execution_success": true,
+      "gt_action_sequence_exact_match": true,
+      "source_variant": "F1_POWER_FIRST_ONE_REGION",
+      "timing": {
+        "environment": "workshop",
+        "internal_variant": "F1_POWER_FIRST_ONE_REGION",
+        "recorded_summary_reported_wall_s": null,
+        "recording_overhead_wall_s": 0.5984421040000143,
+        "simulation_duration_s": null,
+        "speed_policy": "NATURAL_SIMULATION_TIME_NO_POSTPROCESS_SPEEDUP",
+        "unrecorded_summary_reported_wall_s": null,
+        "variant": "W2",
+        "video_duration_s": 439.55,
+        "video_fps": "20/1",
+        "with_recording_wall_s": 440.508411175,
+        "without_recording_wall_s": 439.909969071
+      },
+      "variant": "W2",
+      "video": "workshop/W2/robot_execution_5cam.mp4",
+      "video_metadata": {
+        "duration_s": 439.55,
+        "frame_count": 8791,
+        "frame_rate": "20/1",
+        "height": 1080,
+        "size_bytes": 292794678,
+        "width": 2880
+      },
+      "video_sha256": "809068bac5bd8291e29c2a2835b8b3625496a9821e2401c1011f1100389e6087"
     }
   ],
   "schema_version": 1,
-  "total_variants": 4
+  "total_variants": 15
 }

@@ -40,9 +40,7 @@ class WorkshopAssignment:
 def load_action_vocabulary() -> dict[str, Any]:
     payload = yaml.safe_load(ACTION_VOCABULARY.read_text(encoding="utf-8"))
     if not payload or set(payload.get("operators", {})) != {
-        "MOVE_TO", "OPEN_STORAGE", "INSPECT_STORAGE", "CLOSE_STORAGE", "PICK",
-        "PLACE_ON_SURFACE", "INSERT_FASTENER",
-        "DRIVE_FASTENER", "VERIFY_REPAIR", "TERMINATE_INFEASIBLE",
+        "OPEN", "PICK", "PLACE", "SCREW",
     }:
         raise ValueError("Workshop action vocabulary is missing required operators")
     return payload
@@ -105,67 +103,40 @@ def generate_gt_plan(assignment: WorkshopAssignment) -> list[dict[str, Any]]:
 
     driver_source = _source_of(spec, assignment.driver) if assignment.driver else None
     fastener_source = _source_of(spec, assignment.fastener) if assignment.fastener else None
-    inspection_regions = list(spec["expected_inspection_regions"])
-    robot_at = "HOME"
-    for region in inspection_regions:
-        add("MOVE_TO", region, reason="Visit the next storage region in the fixed search order.")
-        robot_at = region
-        add("OPEN_STORAGE", region, reason="Expose the fixed object set in this region.")
-        add("INSPECT_STORAGE", region, reason="Observe the screw, compatible drivers, or hammer distractor.")
-        add("CLOSE_STORAGE", region, reason="Restore the inspected storage region before continuing search.")
+    for region in spec["expected_inspection_regions"]:
+        add(
+            "OPEN", region,
+            reason="Open this storage region once for inspection; it remains open.",
+        )
 
+    # Infeasibility is the observation result after the final OPEN.  It is not
+    # an additional domain action, so the public workshop vocabulary stays
+    # generalizable across all object/container arguments.
     if not assignment.is_feasible:
-        add("TERMINATE_INFEASIBLE", assignment.rejection_reason or "UNKNOWN",
-            reason="All three regions were inspected and the required screw-driver pair is absent.")
         return plan
 
     assert assignment.driver and assignment.fastener and assignment.work_surface
     assert driver_source and fastener_source
-    if robot_at != driver_source:
-        add("MOVE_TO", driver_source, reason="Move to the first compatible driver observed during search.")
-    add("OPEN_STORAGE", driver_source, reason="Make the selected driver accessible.")
-    add("PICK", assignment.driver, driver_source, reason="Acquire the first compatible driver encountered.")
-    add("MOVE_TO", assignment.work_surface, reason="Carry the selected driver to the fixed main workbench staging area.")
-    add("PLACE_ON_SURFACE", assignment.driver, assignment.work_surface,
-        reason="Stage the selected driver safely while retrieving the screw.")
-    add("MOVE_TO", driver_source, reason="Return empty-handed to the driver's source.")
-    add("CLOSE_STORAGE", driver_source, reason="Close the driver's source after retrieval.")
-
-    if driver_source != fastener_source:
-        add("MOVE_TO", fastener_source, reason="Move to the observed compatible screw.")
-    add("OPEN_STORAGE", fastener_source, reason="Make the compatible screw accessible.")
-    add("PICK", assignment.fastener, fastener_source, reason="Acquire the single compatible workbench screw.")
-    if fastener_source in {"LEFT_DRAWER", "RIGHT_DRAWER"}:
-        add("MOVE_TO", assignment.work_surface,
-            reason="Carry the screw to a stable workbench staging pose before restoring the extracted drawer.")
-        add("PLACE_ON_SURFACE", assignment.fastener, assignment.work_surface,
-            reason="Stage the screw so the gripper is free to close its source drawer.")
-        add("MOVE_TO", fastener_source,
-            reason="Return empty-handed to the screw's source drawer.")
-        add("CLOSE_STORAGE", fastener_source,
-            reason="Close the extracted drawer before entering the repair workspace.")
-        add("MOVE_TO", assignment.work_surface,
-            reason="Return to the staged screw after the drawer is closed.")
-        add("PICK", assignment.fastener, assignment.work_surface,
-            reason="Reacquire the staged screw for insertion.")
-    add("MOVE_TO", assignment.target_joint, reason="Carry the fastener to the loose frame joint.")
-    add("INSERT_FASTENER", assignment.fastener, assignment.target_joint,
-        reason="Place it perfectly tip-down with the screw head/recess on top.")
-    if fastener_source == "TOOL_CABINET":
-        add("MOVE_TO", fastener_source,
-            reason="Return empty-handed after insertion to restore the cabinet.")
-        add("CLOSE_STORAGE", fastener_source,
-            reason="Close the cabinet after retrieving and inserting the screw.")
-    add("MOVE_TO", assignment.work_surface, reason="Return to the selected staged driver.")
-    add("PICK", assignment.driver, assignment.work_surface, reason="Acquire the staged driver for fastening.")
-    add("MOVE_TO", assignment.target_joint, reason="Bring the compatible driver to the inserted fastener.")
-    add("DRIVE_FASTENER", assignment.driver, assignment.fastener, assignment.target_joint,
-        reason=("Hold the powered driver steady while its motor turns and advances the screw."
+    add(
+        "PICK", assignment.fastener, fastener_source,
+        reason="Acquire the discovered compatible screw directly from its open source.",
+    )
+    add(
+        "PLACE", assignment.fastener, assignment.target_joint,
+        reason="Place the screw tip-down directly in the frame-joint hole.",
+    )
+    add(
+        "PICK", assignment.driver, driver_source,
+        reason="Acquire the first compatible driver observed during inspection.",
+    )
+    add(
+        "SCREW", assignment.driver, assignment.fastener, assignment.target_joint,
+        reason=("Drive the inserted screw with the selected power driver."
                 if assignment.driver == POWER_DRIVER else
-                "Rotate the manual driver in visible ratchet strokes while the screw advances."))
-    add("MOVE_TO", assignment.work_surface, reason="Return the driver to the selected work surface.")
-    add("PLACE_ON_SURFACE", assignment.driver, assignment.work_surface,
-        reason="Leave the used driver safely on the main workbench.")
-    add("MOVE_TO", assignment.target_joint, reason="Move to the repaired joint for terminal inspection.")
-    add("VERIFY_REPAIR", assignment.target_joint, reason="Verify the intended repair and terminal organization.")
+                "Drive the inserted screw with the selected manual Phillips driver."),
+    )
+    add(
+        "PLACE", assignment.driver, assignment.work_surface,
+        reason="Return the used driver to the workbench after fastening.",
+    )
     return plan

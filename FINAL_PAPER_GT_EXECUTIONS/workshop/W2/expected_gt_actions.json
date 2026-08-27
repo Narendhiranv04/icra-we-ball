@@ -1,0 +1,59 @@
+{
+  "actions": [
+    {
+      "arguments": [
+        "LEFT_DRAWER"
+      ],
+      "operator": "OPEN",
+      "reason": "Open this storage region once for inspection; it remains open."
+    },
+    {
+      "arguments": [
+        "workshop_medium_phillips_screw",
+        "LEFT_DRAWER"
+      ],
+      "operator": "PICK",
+      "reason": "Acquire the discovered compatible screw directly from its open source."
+    },
+    {
+      "arguments": [
+        "workshop_medium_phillips_screw",
+        "workshop_frame_joint"
+      ],
+      "operator": "PLACE",
+      "reason": "Place the screw tip-down directly in the frame-joint hole."
+    },
+    {
+      "arguments": [
+        "workshop_power_driver",
+        "LEFT_DRAWER"
+      ],
+      "operator": "PICK",
+      "reason": "Acquire the first compatible driver observed during inspection."
+    },
+    {
+      "arguments": [
+        "workshop_power_driver",
+        "workshop_medium_phillips_screw",
+        "workshop_frame_joint"
+      ],
+      "operator": "SCREW",
+      "reason": "Drive the inserted screw with the selected power driver."
+    },
+    {
+      "arguments": [
+        "workshop_power_driver",
+        "MAIN_WORKBENCH_ZONE"
+      ],
+      "operator": "PLACE",
+      "reason": "Return the used driver to the workbench after fastening."
+    }
+  ],
+  "description": "Power driver and screw are both in the first region; search stops after one inspection.",
+  "environment": "workshop",
+  "intended_outcome": "FEASIBLE",
+  "internal_variant": "F1_POWER_FIRST_ONE_REGION",
+  "schema_version": 1,
+  "total_actions": 6,
+  "variant": "W2"
+}

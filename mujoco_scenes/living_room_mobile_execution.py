@@ -15,7 +15,7 @@ import math
 import shutil
 import subprocess
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -74,6 +74,10 @@ GRASP_Z_OFFSET = {
     "saucer": 0.003,
     "tv_remote": 0.002,
 }
+# Saucers are thin horizontal payloads.  Keep their grasp conservative: the
+# gripper descends vertically, closes, then lifts vertically before transport.
+SAUCER_BACKENDS = frozenset(("a2_snack_left", "a2_snack_right"))
+SAUCER_VERTICAL_LIFT_M = 0.12
 LINEAR_SETTLE_THRESHOLD_M_S = 0.02
 ANGULAR_SETTLE_THRESHOLD_RAD_S = 0.12
 CONTACT_PENETRATION_TOLERANCE_M = 0.005
@@ -418,11 +422,10 @@ def allocate_observed_placements(
             base_yaw = math.atan2(float(axis[1]), float(axis[0]))
             raw_yaw = base_yaw + math.radians(int(orientations[index]))
             # A rectangular footprint is invariant under a 180-degree turn.
-            # Canonicalize that exact geometric equivalence so manipulation
-            # never attempts an unnecessary pi wrist rotation.
-            yaw = raw_yaw % math.pi
-            if yaw > 1e-6:
-                yaw -= math.pi
+            # Keep the representative nearest zero so the execution wrist
+            # never attempts an unnecessary pi rotation (which can make a
+            # valid shared-table remote placement unreachable).
+            yaw = (raw_yaw + math.pi / 2.0) % math.pi - math.pi / 2.0
             if object_id in destination and fixed_footprints:
                 candidates = [point.copy()]
                 for u in (-0.32, 0.0, 0.32):
@@ -512,6 +515,57 @@ def _angle_delta(target: float, current: float) -> float:
     return math.atan2(math.sin(target - current), math.cos(target - current))
 
 
+def saucer_pick_spec_for_stance(
+    spec: SimplePickSpec,
+    target_world: np.ndarray,
+    stance: BasePose,
+) -> SimplePickSpec:
+    """Return the conservative vertical saucer pick profile.
+
+    ``target_world`` and ``stance`` are retained in the adapter signature so
+    stance selection remains uniform with the other payloads.  They do not
+    affect this profile: the final approach is the shared top-down descent,
+    followed by a pure vertical lift-off waypoint and then the carry pose.
+    """
+    return replace(
+        spec,
+        top_down_rotation=None,
+        approach_offset_world_m=None,
+        retreat_route_offsets_world_m=((0.0, 0.0, SAUCER_VERTICAL_LIFT_M),),
+        retreat_to_carry_after_route=True,
+    )
+
+
+def gripper_rotation_for_object_target(
+    model: mujoco.MjModel,
+    data: mujoco.MjData,
+    backend_body: str,
+    desired_object_rotation: np.ndarray,
+) -> np.ndarray:
+    """Preserve the pick grasp offset while aligning the held body on place.
+
+    The pick gripper can be yawed to approach a saucer from the selected
+    stance.  The equality weld preserves that gripper-to-object rotation, so
+    the place command must solve for the gripper rotation that produces the
+    requested object rotation rather than reusing the object's target matrix
+    as if every pick had used the default wrist frame.
+    """
+    body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, backend_body)
+    gripper_id = mujoco.mj_name2id(
+        model, mujoco.mjtObj.mjOBJ_BODY,
+        manipulation_profile("google").gripper_body,
+    )
+    if body_id < 0 or gripper_id < 0:
+        raise RuntimeError(f"Missing held-body rotation entities for {backend_body}")
+    desired = np.asarray(desired_object_rotation, dtype=float)
+    if desired.shape != (3, 3) or not np.all(np.isfinite(desired)):
+        raise ValueError("desired_object_rotation must be a finite 3x3 matrix")
+    gripper_rotation = data.xmat[gripper_id].reshape(3, 3)
+    object_rotation = data.xmat[body_id].reshape(3, 3)
+    object_relative_to_gripper = gripper_rotation.T @ object_rotation
+    return desired @ object_relative_to_gripper.T
+
+
 @dataclass(frozen=True)
 class ManipulationCandidate:
     base_pose: BasePose
@@ -553,6 +607,27 @@ def make_pick_specs(payload_registry: dict[str, Any], resolution: dict[str, Any]
     for row in resolution["objects"]:
         role = row["semantic_role"]
         backend = row["backend_body"]
+        kwargs = {}
+        # MuJoCo's weld is intentionally compliant.  Give every living-room
+        # payload a short hold at the final support pose before opening the
+        # fingers, so the payload's complete grasp transform has converged and
+        # it is not released while still offset above the support.
+        kwargs["place_pre_release_settle_ticks"] = 600
+        if role == "saucer":
+            kwargs = {
+                "close_grace_ticks": 700,
+                # The saucer's bilateral contact window is short because its
+                # rim is thin and the support surface is close below it.
+                "contact_confirm_ticks": 1,
+                # Let the welded saucer settle at the final support pose
+                # before releasing it; then leave immediately on the upward
+                # retreat so the open fingers cannot disturb it.
+                "place_pre_release_settle_ticks": 600,
+                # Let the position actuators reach the open command while the
+                # gripper remains at the settled support pose, then retreat.
+                "place_release_settle_ticks": 160,
+                "post_release_settle_max_steps": 10000,
+            }
         specs[backend] = SimplePickSpec(
             label=f"Phase3 {role}",
             grasp_site=f"phase3_grasp_{backend}",
@@ -560,6 +635,7 @@ def make_pick_specs(payload_registry: dict[str, Any], resolution: dict[str, Any]
             grasp_z_offset=GRASP_Z_OFFSET[role],
             place_supported=True,
             final_tracking_tolerance=0.065,
+            **kwargs,
         )
     return specs
 
@@ -599,7 +675,12 @@ def validate_manipulation_at_pose(
     )
     local_grasp_height = float(model.site_pos[grasp_site_id, 2]) + spec.grasp_z_offset
     target[2] += local_grasp_height
-    pregrasp = target + np.array((0.0, 0.0, 0.10))
+    pregrasp_offset = (
+        np.asarray(spec.approach_offset_world_m, dtype=float)
+        if spec.approach_offset_world_m is not None
+        else np.array((0.0, 0.0, 0.10))
+    )
+    pregrasp = target + pregrasp_offset
     carry = _carry_position(pose, target)
     ik = ProfiledIK(model, spare, profile)
     checker = RobotConfigurationCollisionChecker(model, spare, profile)
@@ -610,9 +691,14 @@ def validate_manipulation_at_pose(
         if mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, name) >= 0
     )
     allowed = frozenset((0, body_id, *interaction_ids))
-    rot = profile.top_down_rotation if target_rotation is None else target_rotation
+    if target_rotation is not None:
+        rot = target_rotation
+    elif spec.top_down_rotation is not None:
+        rot = spec.top_down_rotation
+    else:
+        rot = profile.top_down_rotation
     carry_joints, carry_error, carry_angle = ik.solve(
-        carry, profile.home_seed, profile.top_down_rotation
+        carry, profile.home_seed, rot
     )
     pre_joints, pre_error, pre_angle = ik.solve(
         pregrasp, carry_joints, rot
@@ -1176,6 +1262,7 @@ def run_mobile_execution(
         current_feasible = False
         found_stance = False
         selected_path: list[BasePose] | None = None
+        selected_spec: SimplePickSpec | None = None
         tested = []
         # Static reachability is deliberately conservative and deterministic;
         # execution still re-runs full path IK/collision in the manipulator.
@@ -1192,6 +1279,7 @@ def run_mobile_execution(
                 "base_collision_free": base_collision_free,
             }
             if base_ok:
+                action_spec = specs[backend]
                 if operator == "PLACE":
                     yaw = float(placement_by_object[object_id]["yaw_world_rad"])
                     rz = np.array(((math.cos(yaw), -math.sin(yaw), 0.0),
@@ -1199,10 +1287,18 @@ def run_mobile_execution(
                                    (0.0, 0.0, 1.0)))
                     rot = rz @ manipulation_profile("google").top_down_rotation
                 else:
-                    rot = manipulation_profile("google").top_down_rotation
+                    if backend in SAUCER_BACKENDS:
+                        action_spec = saucer_pick_spec_for_stance(
+                            action_spec, target, pose
+                        )
+                    rot = (
+                        manipulation_profile("google").top_down_rotation
+                        if action_spec.top_down_rotation is None
+                        else action_spec.top_down_rotation
+                    )
 
                 ik_result = validate_manipulation_at_pose(
-                    scene.model, scene.data, pose, backend, target, specs[backend],
+                    scene.model, scene.data, pose, backend, target, action_spec,
                     target_rotation=rot,
                 )
                 record["manipulation_validation"] = ik_result
@@ -1222,6 +1318,7 @@ def run_mobile_execution(
                 current_feasible = index == 0
                 found_stance = True
                 selected_path = candidate_path
+                selected_spec = action_spec
                 break
         if not found_stance:
             reasons = [row.get("path_rejection_reason", "base collision") for row in tested if not row["base_clearance_candidate"]]
@@ -1286,6 +1383,10 @@ def run_mobile_execution(
                 recorder.capture_frame(force=True)
 
             carry = _carry_position(selected, target)
+            if operator == "PICK":
+                if selected_spec is None:
+                    raise RuntimeError("Pick stance did not produce a manipulation specification")
+                specs[backend] = selected_spec
             spec = specs[backend]
             specs[backend] = SimplePickSpec(**{**spec.__dict__, "carry_position": carry})
             picker = CalibratedPickPlaceExecutor(
@@ -1309,7 +1410,10 @@ def run_mobile_execution(
                 rz = np.array(((math.cos(yaw), -math.sin(yaw), 0.0),
                                (math.sin(yaw), math.cos(yaw), 0.0),
                                (0.0, 0.0, 1.0)))
-                picker.request_place_world(target, rz @ picker.profile.top_down_rotation)
+                place_rotation = gripper_rotation_for_object_target(
+                    picker.model, picker.data, backend, rz
+                )
+                picker.request_place_world(target, place_rotation)
             steps = 0
             while picker.mode not in {"holding" if operator == "PICK" else "idle", "failed"}:
                 picker.update()
@@ -1319,9 +1423,21 @@ def run_mobile_execution(
                 steps += 1
                 if steps > 60000:
                     picker._fail("MANIPULATION_TIMEOUT")
-            execution_log.append({"operator": operator, "object_id": object_id, "backend_body": backend, "result": "SUCCESS" if picker.failure is None else "FAILED", "failure": picker.failure, "physics_steps": steps})
+            execution_log.append({
+                "operator": operator,
+                "arguments": (
+                    [object_id, arguments["region"]]
+                    if operator == "PLACE"
+                    else [object_id]
+                ),
+                "object_id": object_id,
+                "backend_body": backend,
+                "result": "SUCCESS" if picker.failure is None else "FAILED",
+                "failure": picker.failure,
+                "physics_steps": steps,
+            })
             if operator == "PLACE" and picker.failure is None:
-                if assisted_suite:
+                if assisted_suite or backend in PAYLOAD_BACKENDS:
                     # Once a payload has been physically released onto its
                     # assigned support, damp residual scanned-mesh edge roll
                     # so later robot motions cannot drift an already validated
@@ -1332,13 +1448,14 @@ def run_mobile_execution(
                     placed_joint = int(scene.model.body_jntadr[placed_body])
                     placed_dof = int(scene.model.jnt_dofadr[placed_joint])
                     scene.model.dof_damping[placed_dof : placed_dof + 6] = (
-                        0.75, 0.75, 0.75, 1.0, 1.0, 1.0
+                        10.0, 10.0, 10.0, 10.0, 10.0, 10.0
                     )
-                    execution_log[-1]["assisted_post_release_damping"] = {
-                        "translational": 0.75,
-                        "angular": 1.0,
+                    execution_log[-1]["post_release_damping"] = {
+                        "translational": 10.0,
+                        "angular": 10.0,
                         "pose_write": False,
                         "velocity_write": False,
+                        "payload_stabilization": True,
                     }
                 # Release transients differ by payload inertia and support
                 # contact. Require a bounded run of genuinely settled live
@@ -1349,7 +1466,11 @@ def run_mobile_execution(
                 )
                 stable_steps = 0
                 settle_steps = 0
-                for settle_steps in range(1, 2001):
+                settle_limit = max(
+                    200,
+                    int(picker.pick_specs[backend].post_release_settle_max_steps),
+                )
+                for settle_steps in range(1, settle_limit + 1):
                     mujoco.mj_step(scene.model, scene.data)
                     if step_callback is not None:
                         step_callback()
@@ -1377,7 +1498,7 @@ def run_mobile_execution(
                     "physics_steps": settle_steps,
                     "required_consecutive_stable_steps": 25,
                     "consecutive_stable_steps": stable_steps,
-                    "maximum_physics_steps": 2000,
+                    "maximum_physics_steps": settle_limit,
                 }
                 placed_objects.add(object_id)
                 verification = verify_physical_on_relation(

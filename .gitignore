@@ -32,3 +32,15 @@ mujoco_scenes/weights/
 # Reproducible third-party source bundles; processed redistributable assets
 # and their provenance manifest remain tracked.
 mujoco_scenes/assets/.cache/
+
+# Large local execution recordings
+FINAL_PAPER_GT_EXECUTIONS/**/robot_execution_5cam.mp4
+
+# Local environments / model caches
+.venv/
+semantic_model_cache/
+weights/
+
+# Large locally downloaded models
+mujoco_scenes/weights/clip/ViT-B-32.pt
+yolov8x-worldv2.pt

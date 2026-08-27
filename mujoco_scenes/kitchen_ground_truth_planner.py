@@ -357,20 +357,47 @@ def solve_ground_truth_assignment(
             },
             key=lambda target_id: instance_by_oracle_id[target_id]["instance_name"],
         )
-        preferred_assignment = []
-        for target_id, tool_id in zip(preferred_targets, preferred_tools):
+        # Keep the reviewed benchmark pairing stable whenever both canonical
+        # soup tools and bowls are present.  The matching solver is geometry-
+        # driven, so without this final identity tie-break an equal-cost
+        # matching can swap the utensils when scene records are reordered.
+        canonical_pairs = (
+            ("s1i_oversized_spoon", "ab3_deep_bowl"),
+            ("ab3_partial_spoon", "ab3_shallow_bowl"),
+        )
+        canonical_assignment = []
+        for tool_name, target_name in canonical_pairs:
             edge = next(
                 (
                     candidate for candidate in soup_edges
-                    if candidate["target_id"] == target_id
-                    and candidate["tool_id"] == tool_id
+                    if instance_by_oracle_id[candidate["tool_id"]]["instance_name"]
+                    == tool_name
+                    and instance_by_oracle_id[candidate["target_id"]]["instance_name"]
+                    == target_name
                 ),
                 None,
             )
             if edge is None:
-                preferred_assignment = []
+                canonical_assignment = []
                 break
-            preferred_assignment.append(deepcopy(edge))
+            canonical_assignment.append(deepcopy(edge))
+
+        preferred_assignment = canonical_assignment
+        if len(preferred_assignment) != soup_count:
+            preferred_assignment = []
+            for target_id, tool_id in zip(preferred_targets, preferred_tools):
+                edge = next(
+                    (
+                        candidate for candidate in soup_edges
+                        if candidate["target_id"] == target_id
+                        and candidate["tool_id"] == tool_id
+                    ),
+                    None,
+                )
+                if edge is None:
+                    preferred_assignment = []
+                    break
+                preferred_assignment.append(deepcopy(edge))
         if len(preferred_assignment) == soup_count:
             soup_matching_result["assignments"] = preferred_assignment
 

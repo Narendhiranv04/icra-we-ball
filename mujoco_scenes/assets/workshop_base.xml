@@ -118,11 +118,6 @@
             size="0.04 0.04 0.32"/>
       <geom name="workbench_leg_br_col" class="collision" type="box" pos="0.56 0.28 0.32"
             size="0.04 0.04 0.32"/>
-      <!-- Clean under-bench cabinet housing for the drawers -->
-      <geom name="drawer_housing_left" class="visual" type="box" pos="-0.28 0.02 0.44"
-            size="0.20 0.24 0.18" material="cabinet_body_mat"/>
-      <geom name="drawer_housing_right" class="visual" type="box" pos="0.28 0.02 0.44"
-            size="0.20 0.24 0.18" material="cabinet_body_mat"/>
     </body>
 
     <!-- Perforated Industrial Pegboard behind Workbench (Clean, proportionate background) -->
@@ -149,8 +144,8 @@
             size="0.30 0.20 0.38"/>
     </body>
 
-    <!-- Clean Sleek Industrial Frame Fixture & Workpiece Target Joint (Anchored at Back-Left-Center) -->
-    <body name="workshop_frame_fixture" pos="-0.15 0.50 0.68">
+    <!-- Frame-joint station at the workbench's front-left working area. -->
+    <body name="workshop_frame_fixture" pos="-0.34 0.34 0.68">
       <!-- Split fixture base visual: solid bottom slab (0..8mm) + hollow top slab (8..16mm) surrounding target hole -->
       <geom name="fixture_base_bottom_vis" class="visual" type="box" pos="0 0 0.004"
             size="0.16 0.10 0.004" material="fixture_anodized"/>
@@ -270,72 +265,74 @@
             size="0.055 0.003 0.019"/>
     </body>
 
-    <!-- Storage Region 1: LEFT_DRAWER (Prismatic sliding drawer) -->
-    <body name="left_tool_drawer" pos="-0.28 0.35 0.46">
-      <joint name="left_tool_drawer_slide" type="slide" axis="0 -1 0"
-             range="0 0.55" limited="true" damping="8"/>
-      <geom name="left_drawer_floor" class="visual" type="box" pos="0 0 0"
-            size="0.16 0.20 0.012" material="cabinet_interior_mat"/>
-      <geom name="left_drawer_front" class="visual" type="box" pos="0 -0.20 0.05"
-            size="0.18 0.012 0.07" material="cabinet_face_mat"/>
-      <geom name="left_drawer_back" class="visual" type="box" pos="0 0.19 0.04"
-            size="0.16 0.01 0.04" material="cabinet_interior_mat"/>
-      <geom name="left_drawer_side_l" class="visual" type="box" pos="-0.15 0 0.04"
-            size="0.01 0.19 0.04" material="cabinet_interior_mat"/>
-      <geom name="left_drawer_side_r" class="visual" type="box" pos="0.15 0 0.04"
-            size="0.01 0.19 0.04" material="cabinet_interior_mat"/>
-      <geom name="left_drawer_handle" class="visual" type="capsule"
-            fromto="-0.05 -0.22 0.05 0.05 -0.22 0.05" size="0.008"
-            material="polished_steel"/>
-      <geom name="left_drawer_handle_col" class="collision" type="capsule"
-            fromto="-0.05 -0.22 0.05 0.05 -0.22 0.05" size="0.008"/>
-      <site name="left_drawer_handle_grasp" pos="0 -0.22 0.05"
-            size="0.005" rgba="0 0 0 0"/>
-      <!-- Invisible collision proxies -->
-      <geom name="left_drawer_col_floor" class="collision" type="box" pos="0 0 0"
-            size="0.16 0.20 0.012"/>
-      <geom name="left_drawer_col_front" class="collision" type="box" pos="0 -0.205 0.05"
-            size="0.17 0.008 0.06"/>
-      <geom name="left_drawer_col_back" class="collision" type="box" pos="0 0.205 0.04"
-            size="0.16 0.008 0.04"/>
-      <geom name="left_drawer_col_side_l" class="collision" type="box" pos="-0.165 0 0.04"
-            size="0.008 0.20 0.04"/>
-      <geom name="left_drawer_col_side_r" class="collision" type="box" pos="0.165 0 0.04"
-            size="0.008 0.20 0.04"/>
+    <!-- Storage Regions 1-2: Kitchen-equivalent enclosed sliding drawers.
+         These are direct copies of the kitchen D1/D2 mechanism: a rigid
+         carcass, shallow tray, centered U-handle, and a 0.25 m pull-out. The
+         workshop palette is the only adaptation. -->
+    <body name="left_tool_drawer_frame" pos="-0.28 0.155 0.524">
+      <geom name="left_drawer_back" class="visual" type="box" size="0.18 0.005 0.06" pos="0 0.14 0" material="cabinet_body_mat"/>
+      <geom name="left_drawer_side_l" class="visual" type="box" size="0.005 0.14 0.06" pos="-0.18 0 0" material="cabinet_body_mat"/>
+      <geom name="left_drawer_side_r" class="visual" type="box" size="0.005 0.14 0.06" pos="0.18 0 0" material="cabinet_body_mat"/>
+      <geom name="left_drawer_shell_bottom" class="visual" type="box" size="0.18 0.14 0.005" pos="0 0 -0.06" material="cabinet_body_mat"/>
+      <geom name="left_drawer_shell_top" class="visual" type="box" size="0.18 0.14 0.008" pos="0 0 0.072" material="cabinet_body_mat"/>
+      <geom name="left_drawer_back_col" class="collision" type="box" size="0.18 0.005 0.06" pos="0 0.14 0"/>
+      <geom name="left_drawer_shell_side_l_col" class="collision" type="box" size="0.005 0.14 0.06" pos="-0.18 0 0"/>
+      <geom name="left_drawer_shell_side_r_col" class="collision" type="box" size="0.005 0.14 0.06" pos="0.18 0 0"/>
+      <geom name="left_drawer_shell_bottom_col" class="collision" type="box" size="0.18 0.14 0.005" pos="0 0 -0.06"/>
+      <geom name="left_drawer_shell_top_col" class="collision" type="box" size="0.18 0.14 0.008" pos="0 0 0.072"/>
+      <body name="left_tool_drawer" pos="0 0 0">
+        <joint name="left_tool_drawer_slide" type="slide" axis="0 -1 0" range="0 0.25" limited="true" damping="2"/>
+        <geom name="left_drawer_floor" class="visual" type="box" size="0.17 0.13 0.003" pos="0 0 -0.055" material="cabinet_interior_mat"/>
+        <geom name="left_drawer_tray_side_l" class="visual" type="box" size="0.004 0.13 0.03" pos="-0.166 0 -0.025" material="cabinet_interior_mat"/>
+        <geom name="left_drawer_tray_side_r" class="visual" type="box" size="0.004 0.13 0.03" pos="0.166 0 -0.025" material="cabinet_interior_mat"/>
+        <geom name="left_drawer_tray_back" class="visual" type="box" size="0.17 0.004 0.03" pos="0 0.126 -0.025" material="cabinet_interior_mat"/>
+        <geom name="left_drawer_front" class="visual" type="box" size="0.185 0.008 0.065" pos="0 -0.14 0" material="cabinet_face_mat"/>
+        <geom name="left_drawer_handle_left" class="visual" type="capsule" size="0.007" fromto="-0.075 -0.148 0 -0.075 -0.205 0" material="polished_steel"/>
+        <geom name="left_drawer_handle_right" class="visual" type="capsule" size="0.007" fromto="0.075 -0.148 0 0.075 -0.205 0" material="polished_steel"/>
+        <geom name="left_drawer_handle_bar" class="visual" type="capsule" size="0.008" fromto="-0.075 -0.205 0 0.075 -0.205 0" material="polished_steel"/>
+        <site name="left_drawer_handle_grasp" pos="0 -0.205 0" size="0.012" rgba="0 0 0 0" group="5"/>
+        <site name="left_drawer_interior" pos="0 0 -0.04" size="0.15 0.10 0.01" type="box" rgba="0 0 1 0.1" group="4"/>
+        <geom name="left_drawer_col_floor" class="collision" type="box" size="0.17 0.13 0.003" pos="0 0 -0.055"/>
+        <geom name="left_drawer_col_side_l" class="collision" type="box" size="0.004 0.13 0.03" pos="-0.166 0 -0.025"/>
+        <geom name="left_drawer_col_side_r" class="collision" type="box" size="0.004 0.13 0.03" pos="0.166 0 -0.025"/>
+        <geom name="left_drawer_col_front" class="collision" type="box" size="0.185 0.008 0.065" pos="0 -0.14 0"/>
+        <geom name="left_drawer_handle_left_col" class="collision" type="capsule" size="0.007" fromto="-0.075 -0.148 0 -0.075 -0.205 0"/>
+        <geom name="left_drawer_handle_right_col" class="collision" type="capsule" size="0.007" fromto="0.075 -0.148 0 0.075 -0.205 0"/>
+        <geom name="left_drawer_handle_col" class="collision" type="capsule" size="0.008" fromto="-0.075 -0.205 0 0.075 -0.205 0"/>
+      </body>
     </body>
 
-    <!-- Storage Region 2: RIGHT_DRAWER (Prismatic sliding drawer) -->
-    <body name="right_tool_drawer" pos="0.28 0.35 0.46">
-      <joint name="right_tool_drawer_slide" type="slide" axis="0 -1 0"
-             range="0 0.55" limited="true" damping="8"/>
-      <geom name="right_drawer_floor" class="visual" type="box" pos="0 0 0"
-            size="0.16 0.20 0.012" material="cabinet_interior_mat"/>
-      <geom name="right_drawer_front" class="visual" type="box" pos="0 -0.20 0.05"
-            size="0.18 0.012 0.07" material="cabinet_face_mat"/>
-      <geom name="right_drawer_back" class="visual" type="box" pos="0 0.19 0.04"
-            size="0.16 0.01 0.04" material="cabinet_interior_mat"/>
-      <geom name="right_drawer_side_l" class="visual" type="box" pos="-0.15 0 0.04"
-            size="0.01 0.19 0.04" material="cabinet_interior_mat"/>
-      <geom name="right_drawer_side_r" class="visual" type="box" pos="0.15 0 0.04"
-            size="0.01 0.19 0.04" material="cabinet_interior_mat"/>
-      <geom name="right_drawer_handle" class="visual" type="capsule"
-            fromto="-0.05 -0.22 0.05 0.05 -0.22 0.05" size="0.008"
-            material="polished_steel"/>
-      <geom name="right_drawer_handle_col" class="collision" type="capsule"
-            fromto="-0.05 -0.22 0.05 0.05 -0.22 0.05" size="0.008"/>
-      <site name="right_drawer_handle_grasp" pos="0 -0.22 0.05"
-            size="0.005" rgba="0 0 0 0"/>
-      <!-- Invisible collision proxies -->
-      <geom name="right_drawer_col_floor" class="collision" type="box" pos="0 0 0"
-            size="0.16 0.20 0.012"/>
-      <geom name="right_drawer_col_front" class="collision" type="box" pos="0 -0.205 0.05"
-            size="0.17 0.008 0.06"/>
-      <geom name="right_drawer_col_back" class="collision" type="box" pos="0 0.205 0.04"
-            size="0.16 0.008 0.04"/>
-      <geom name="right_drawer_col_side_l" class="collision" type="box" pos="-0.165 0 0.04"
-            size="0.008 0.20 0.04"/>
-      <geom name="right_drawer_col_side_r" class="collision" type="box" pos="0.165 0 0.04"
-            size="0.008 0.20 0.04"/>
+    <body name="right_tool_drawer_frame" pos="0.28 0.155 0.524">
+      <geom name="right_drawer_back" class="visual" type="box" size="0.18 0.005 0.06" pos="0 0.14 0" material="cabinet_body_mat"/>
+      <geom name="right_drawer_side_l" class="visual" type="box" size="0.005 0.14 0.06" pos="-0.18 0 0" material="cabinet_body_mat"/>
+      <geom name="right_drawer_side_r" class="visual" type="box" size="0.005 0.14 0.06" pos="0.18 0 0" material="cabinet_body_mat"/>
+      <geom name="right_drawer_shell_bottom" class="visual" type="box" size="0.18 0.14 0.005" pos="0 0 -0.06" material="cabinet_body_mat"/>
+      <geom name="right_drawer_shell_top" class="visual" type="box" size="0.18 0.14 0.008" pos="0 0 0.072" material="cabinet_body_mat"/>
+      <geom name="right_drawer_back_col" class="collision" type="box" size="0.18 0.005 0.06" pos="0 0.14 0"/>
+      <geom name="right_drawer_shell_side_l_col" class="collision" type="box" size="0.005 0.14 0.06" pos="-0.18 0 0"/>
+      <geom name="right_drawer_shell_side_r_col" class="collision" type="box" size="0.005 0.14 0.06" pos="0.18 0 0"/>
+      <geom name="right_drawer_shell_bottom_col" class="collision" type="box" size="0.18 0.14 0.005" pos="0 0 -0.06"/>
+      <geom name="right_drawer_shell_top_col" class="collision" type="box" size="0.18 0.14 0.008" pos="0 0 0.072"/>
+      <body name="right_tool_drawer" pos="0 0 0">
+        <joint name="right_tool_drawer_slide" type="slide" axis="0 -1 0" range="0 0.25" limited="true" damping="2"/>
+        <geom name="right_drawer_floor" class="visual" type="box" size="0.17 0.13 0.003" pos="0 0 -0.055" material="cabinet_interior_mat"/>
+        <geom name="right_drawer_tray_side_l" class="visual" type="box" size="0.004 0.13 0.03" pos="-0.166 0 -0.025" material="cabinet_interior_mat"/>
+        <geom name="right_drawer_tray_side_r" class="visual" type="box" size="0.004 0.13 0.03" pos="0.166 0 -0.025" material="cabinet_interior_mat"/>
+        <geom name="right_drawer_tray_back" class="visual" type="box" size="0.17 0.004 0.03" pos="0 0.126 -0.025" material="cabinet_interior_mat"/>
+        <geom name="right_drawer_front" class="visual" type="box" size="0.185 0.008 0.065" pos="0 -0.14 0" material="cabinet_face_mat"/>
+        <geom name="right_drawer_handle_left" class="visual" type="capsule" size="0.007" fromto="-0.075 -0.148 0 -0.075 -0.205 0" material="polished_steel"/>
+        <geom name="right_drawer_handle_right" class="visual" type="capsule" size="0.007" fromto="0.075 -0.148 0 0.075 -0.205 0" material="polished_steel"/>
+        <geom name="right_drawer_handle_bar" class="visual" type="capsule" size="0.008" fromto="-0.075 -0.205 0 0.075 -0.205 0" material="polished_steel"/>
+        <site name="right_drawer_handle_grasp" pos="0 -0.205 0" size="0.012" rgba="0 0 0 0" group="5"/>
+        <site name="right_drawer_interior" pos="0 0 -0.04" size="0.15 0.10 0.01" type="box" rgba="0 0 1 0.1" group="4"/>
+        <geom name="right_drawer_col_floor" class="collision" type="box" size="0.17 0.13 0.003" pos="0 0 -0.055"/>
+        <geom name="right_drawer_col_side_l" class="collision" type="box" size="0.004 0.13 0.03" pos="-0.166 0 -0.025"/>
+        <geom name="right_drawer_col_side_r" class="collision" type="box" size="0.004 0.13 0.03" pos="0.166 0 -0.025"/>
+        <geom name="right_drawer_col_front" class="collision" type="box" size="0.185 0.008 0.065" pos="0 -0.14 0"/>
+        <geom name="right_drawer_handle_left_col" class="collision" type="capsule" size="0.007" fromto="-0.075 -0.148 0 -0.075 -0.205 0"/>
+        <geom name="right_drawer_handle_right_col" class="collision" type="capsule" size="0.007" fromto="0.075 -0.148 0 0.075 -0.205 0"/>
+        <geom name="right_drawer_handle_col" class="collision" type="capsule" size="0.008" fromto="-0.075 -0.205 0 0.075 -0.205 0"/>
+      </body>
     </body>
 
     <!-- Storage Region 3: TOOL_CABINET (Compact Tabletop Cabinet placed neatly at Back-Right) -->
@@ -409,11 +406,16 @@
             xyaxes="0.78488 -0.61964 0 0.16643 0.21081 0.96325" fovy="28"/>
   </worldbody>
 
+  <contact>
+    <exclude body1="left_tool_drawer_frame" body2="left_tool_drawer"/>
+    <exclude body1="right_tool_drawer_frame" body2="right_tool_drawer"/>
+  </contact>
+
   <actuator>
     <position name="left_tool_drawer_actuator"
-              joint="left_tool_drawer_slide" kp="300" ctrlrange="0 0.55"/>
+              joint="left_tool_drawer_slide" kp="10000" ctrlrange="0 0.25"/>
     <position name="right_tool_drawer_actuator"
-              joint="right_tool_drawer_slide" kp="300" ctrlrange="0 0.55"/>
+              joint="right_tool_drawer_slide" kp="10000" ctrlrange="0 0.25"/>
     <position name="tool_cabinet_door_actuator"
               joint="tool_cabinet_door_hinge" kp="300" ctrlrange="0 1.57"/>
   </actuator>

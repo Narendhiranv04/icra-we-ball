@@ -1,0 +1,17 @@
+Environment: living_room
+Variant: L6
+Internal variant: F5_LEFT_PAIR_ON_SHARED
+Intended outcome: FEASIBLE
+Description: The left cup and left saucer both begin on the shared table and must be moved.
+Expected GT actions: 10
+
+001. PICK(object_0001)
+002. PLACE(object_0001, region_0001)
+003. PICK(object_0002)
+004. PLACE(object_0002, region_0002)
+005. PICK(object_0003)
+006. PLACE(object_0003, region_0003)
+007. PICK(object_0004)
+008. PLACE(object_0004, region_0001)
+009. PICK(object_0005)
+010. PLACE(object_0005, region_0003)

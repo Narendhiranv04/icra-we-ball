@@ -42,15 +42,15 @@ A variant changes only the storage position or presence of the four fixed object
 
 ## Ground-truth execution semantics
 
-For a feasible variant, the GT controller opens each required storage region with a front-facing approach, searches it, retrieves the selected driver and screw, closes every opened region, and uses the fixed main workbench target. Objects staged on the workbench are held at their established support-contact pose so they cannot roll or drift while the robot performs another action.
+For a feasible variant, the GT controller opens each required storage region once with the generic `OPEN(region)` action, searches it, retrieves the selected driver and screw, and uses the fixed main workbench target. Opened storage remains open; no close action is part of Workshop GT. Objects staged on the workbench are held at their established support-contact pose so they cannot roll or drift while the robot performs another action.
 
-The screw is aligned vertically over the repair hole, inserted tip-first, and driven gradually. Manual execution uses visible alternating driver rotation; power execution keeps the power-driver casing stationary while the screw rotates and advances. The terminal validator checks inspection coverage, closed storage, screw verticality, head-above-tip orientation, installed depth, driver–screw compatibility, and the selected driving mode.
+The screw is aligned vertically over the repair hole, inserted tip-first, and driven gradually. Manual execution uses visible alternating driver rotation; power execution keeps the power-driver casing stationary while the screw rotates and advances. The terminal validator checks inspection coverage, screw verticality, head-above-tip orientation, installed depth, driver–screw compatibility, and the selected driving mode.
 
-For an infeasible variant, all three storage regions are inspected and closed. No insertion action is attempted, and the exact missing-role reason is reported.
+For an infeasible variant, all three storage regions are inspected once. No insertion action is attempted, and the exact missing-role reason is reported.
 
 ## Five-camera snapshots
 
-Every image shows the same five cameras—`LEFT`, `RIGHT`, `TOP`, `FRONT`, and `CLOSE`—with all three storage regions opened solely to make the variant contents auditable. The status panel lists the expected search depth and GT decision.
+Every image shows the initial closed scene in the same five cameras—`LEFT`, `RIGHT`, `TOP`, `FRONT`, and `CLOSE`. The robot must execute `OPEN(region)` to expose a storage region; use `--open-storage` only when deliberately producing an inspection preview. The status panel lists the expected search depth and GT decision.
 
 ### F0 — manual, one-region search
 

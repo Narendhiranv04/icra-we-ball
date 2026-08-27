@@ -201,6 +201,43 @@ def test_integrated_scene_family_has_three_visible_and_three_stored_targets():
     assert all(-0.40 <= y <= -0.05 for _x, y, _z in positions)
 
 
+def test_f3_hidden_mug_uses_c2_upper_shelf_only():
+    configs = load_all_configs()
+    f3 = configs["S1_integrated_kitchen_object_function_feasibility_F3"]
+    f1 = configs["S1_integrated_kitchen_object_function_feasibility_F1"]
+
+    assert f3.container_slot_overrides == {
+        "C2": {"ab3_medium_deep_mug": [-0.10, 0.0, -0.032]}
+    }
+    assert f1.container_slot_overrides == {}
+
+    scene = KitchenScene(
+        "S1_integrated_kitchen_object_function_feasibility_F3",
+        include_robot=False,
+        robot="none",
+    )
+    mug_id = mujoco.mj_name2id(
+        scene.model, mujoco.mjtObj.mjOBJ_BODY, "ab3_medium_deep_mug"
+    )
+    cabinet_id = mujoco.mj_name2id(
+        scene.model, mujoco.mjtObj.mjOBJ_BODY, "cabinet_C2"
+    )
+    shelf_id = mujoco.mj_name2id(
+        scene.model, mujoco.mjtObj.mjOBJ_GEOM, "C2_shelf"
+    )
+    relative_z = float(scene.data.xpos[mug_id, 2] - scene.data.xpos[cabinet_id, 2])
+    shelf_top_relative_z = float(
+        scene.data.geom_xpos[shelf_id, 2]
+        + scene.model.geom_size[shelf_id, 2]
+        - scene.data.xpos[cabinet_id, 2]
+    )
+    assert np.isclose(
+        relative_z - shelf_top_relative_z,
+        0.05488,
+        atol=0.005,
+    )
+
+
 def test_seeded_integrated_layout_is_deterministic_capacity_safe_and_varied():
     configs = load_all_configs()
     first = load_all_configs()[

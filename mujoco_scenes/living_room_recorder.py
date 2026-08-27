@@ -101,24 +101,43 @@ class LivingRoomRecorder:
             self._init_video_writer()
 
     def _init_video_writer(self) -> None:
-        """Initialize streaming video writer with fallbacks."""
+        """Initialize a writer compatible with the installed video backend.
+
+        OpenCV is deliberately preferred here.  Recent ImageIO releases can
+        select the PyAV plugin, whose ``write`` signature differs from the
+        older ImageIO/FFmpeg writer and rejects legacy ``quality`` or
+        ``pixelformat`` arguments only when the first frame is appended.  The
+        OpenCV MP4 writer is available in the execution environment and keeps
+        recording deterministic; ImageIO remains a fallback for environments
+        where OpenCV cannot open an MP4 writer.
+        """
         out_str = str(self.output_path)
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        self.video_writer = cv2.VideoWriter(
+            out_str,
+            fourcc,
+            float(self.fps),
+            (self.mosaic_width, self.mosaic_height),
+        )
+        if self.video_writer is not None and self.video_writer.isOpened():
+            return
+        if self.video_writer is not None:
+            self.video_writer.release()
+        self.video_writer = None
+
         try:
             import imageio.v2 as imageio
+
             self.imageio_writer = imageio.get_writer(
                 out_str,
                 fps=self.fps,
                 codec="libx264",
-                quality=8,
-                pixelformat="yuv420p",
             )
         except Exception:
-            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-            self.video_writer = cv2.VideoWriter(
-                out_str, fourcc, float(self.fps), (self.mosaic_width, self.mosaic_height)
+            self.imageio_writer = None
+            raise RuntimeError(
+                f"Could not open an MP4 writer for {out_str}"
             )
-            if self.video_writer is not None and not self.video_writer.isOpened():
-                self.video_writer = None
 
     def _draw_text(
         self,

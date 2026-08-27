@@ -68,7 +68,7 @@ class WorkshopRecorder:
             return "workshop_camera_right_drawer_detail"
         if "TOOL_CABINET" in joined:
             return "workshop_camera_cabinet_detail"
-        if operator in {"INSERT_FASTENER", "DRIVE_FASTENER", "VERIFY_REPAIR"} or "workshop_frame_joint" in joined:
+        if operator in {"PLACE", "SCREW"} or "workshop_frame_joint" in joined:
             return "workshop_camera_repair_detail"
         return "workshop_camera_close"
 

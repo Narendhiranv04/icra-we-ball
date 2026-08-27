@@ -99,9 +99,9 @@ class GeometricGrounder:
         cfg = (config or {}).get("target", {})
         if scene is not None and hasattr(scene, "get_target_workpiece_specification"):
             spec = scene.get_target_workpiece_specification()
-            centre = np.asarray(spec.get("fixture_center_world_m", [-0.15, 0.50, 0.68]), float)
+            centre = np.asarray(spec.get("fixture_center_world_m", [-0.34, 0.34, 0.68]), float)
         else:
-            centre = np.asarray([-0.15, 0.50, 0.68], float)
+            centre = np.asarray([-0.34, 0.34, 0.68], float)
         lower, upper = centre - [0.12, 0.12, 0.10], centre + [0.12, 0.12, 0.15]
         clouds, cameras = [], []
         for observation in observations:

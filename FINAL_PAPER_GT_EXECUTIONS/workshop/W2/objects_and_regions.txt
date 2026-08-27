@@ -1,0 +1,16 @@
+Environment: workshop
+Variant: W2
+Internal variant: F1_POWER_FIRST_ONE_REGION
+Snapshot: initial fixed-pair storage configuration
+
+OBJECTS GROUPED BY INITIAL REGION
+REGION LEFT_DRAWER
+  - workshop_medium_phillips_screw
+  - workshop_power_driver
+REGION RIGHT_DRAWER
+  - workshop_long_phillips_driver
+REGION TOOL_CABINET
+  - workshop_wooden_hammer
+
+FIXED TASK REGION
+MAIN_WORKBENCH_ZONE -> workshop_frame_joint

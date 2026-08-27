@@ -18,17 +18,8 @@ from .workshop_ground_truth_planner import (
     solve_gt_assignment,
 )
 from .workshop_ground_truth_state import initial_workshop_state
-from .workshop_scene import WORKSHOP_CAMERAS, WORKSHOP_REGIONS, WorkshopObservationState
+from .workshop_scene import WORKSHOP_CAMERAS, WORKSHOP_REGIONS
 
-
-DESTINATIONS = (
-    "HOME",
-    "LEFT_DRAWER",
-    "RIGHT_DRAWER",
-    "TOOL_CABINET",
-    "MAIN_WORKBENCH_ZONE",
-    "workshop_frame_joint",
-)
 
 OBJECT_LABELS = {
     "workshop_long_phillips_driver": "Manual Phillips driver",
@@ -124,7 +115,7 @@ def launch_workshop_action_viewer(scene, camera: str = "free") -> None:
         log.configure(state="disabled")
 
     def refresh_state() -> None:
-        location.set(f"Robot at: {world.robot_at}")
+        location.set("Navigation: implicit in the selected generic action")
         held.set(f"Holding: {world.held_object or 'nothing'}")
         storage.set(
             "Storage: " + ", ".join(
@@ -145,7 +136,7 @@ def launch_workshop_action_viewer(scene, camera: str = "free") -> None:
             try:
                 candidate = factory()
                 check_assignment = assignment
-                if candidate["operator"] == "DRIVE_FASTENER" and world.held_object in COMPATIBLE_DRIVERS:
+                if candidate["operator"] == "SCREW" and world.held_object in COMPATIBLE_DRIVERS:
                     check_assignment = replace(
                         assignment,
                         driver=world.held_object,
@@ -175,7 +166,7 @@ def launch_workshop_action_viewer(scene, camera: str = "free") -> None:
         nonlocal assignment, dispatcher, busy, action_count, gt_index
         if busy:
             return False
-        if candidate["operator"] == "DRIVE_FASTENER" and world.held_object in COMPATIBLE_DRIVERS:
+        if candidate["operator"] == "SCREW" and world.held_object in COMPATIBLE_DRIVERS:
             # Interactive exploration may deliberately choose the other valid
             # driver. The benchmark GT assignment itself remains unchanged.
             assignment = replace(
@@ -223,31 +214,15 @@ def launch_workshop_action_viewer(scene, camera: str = "free") -> None:
         button.grid(row=row, column=column, sticky="ew", padx=3, pady=3)
         action_buttons.append((button, factory))
 
-    move_box = ttk.LabelFrame(body, text="Move", padding=8)
-    move_box.grid(row=4, column=0, sticky="ew", pady=4)
-    move_box.columnconfigure((0, 1), weight=1)
-    for index, destination in enumerate(DESTINATIONS):
-        label = destination.replace("workshop_frame_joint", "Repair joint").replace("_", " ").title()
-        add_button(move_box, label, lambda value=destination: _action("MOVE_TO", value), index // 2, index % 2)
-
-    storage_box = ttk.LabelFrame(body, text="Storage", padding=8)
-    storage_box.grid(row=5, column=0, sticky="ew", pady=4)
-    storage_box.columnconfigure((0, 1, 2), weight=1)
+    storage_box = ttk.LabelFrame(body, text="Open once to inspect", padding=8)
+    storage_box.grid(row=4, column=0, sticky="ew", pady=4)
+    storage_box.columnconfigure((0, 1), weight=1)
     for row, region in enumerate(WORKSHOP_REGIONS):
         ttk.Label(storage_box, text=region.replace("_", " ").title()).grid(row=row, column=0, sticky="w")
-        add_button(storage_box, "Open", lambda value=region: _action("OPEN_STORAGE", value), row, 1)
-        inspect_button = ttk.Button(
-            storage_box,
-            text="Inspect",
-            command=lambda value=region: execute(_action("INSPECT_STORAGE", value)),
-        )
-        inspect_button.grid(row=row, column=2, sticky="ew", padx=3, pady=3)
-        action_buttons.append((inspect_button, lambda value=region: _action("INSPECT_STORAGE", value)))
-        add_button(storage_box, "Close", lambda value=region: _action("CLOSE_STORAGE", value), row, 3)
-    storage_box.columnconfigure(3, weight=1)
+        add_button(storage_box, "Open", lambda value=region: _action("OPEN", value), row, 1)
 
     pick_box = ttk.LabelFrame(body, text="Pick object from its current location", padding=8)
-    pick_box.grid(row=6, column=0, sticky="ew", pady=4)
+    pick_box.grid(row=5, column=0, sticky="ew", pady=4)
     pick_box.columnconfigure((0, 1), weight=1)
     for index, (object_name, label) in enumerate(OBJECT_LABELS.items()):
         factory = lambda value=object_name: _action(
@@ -256,27 +231,27 @@ def launch_workshop_action_viewer(scene, camera: str = "free") -> None:
         add_button(pick_box, label, factory, index // 2, index % 2)
 
     task_box = ttk.LabelFrame(body, text="Place / fasten", padding=8)
-    task_box.grid(row=7, column=0, sticky="ew", pady=4)
+    task_box.grid(row=6, column=0, sticky="ew", pady=4)
     task_box.columnconfigure((0, 1), weight=1)
     add_button(
         task_box,
         "Place held object on workbench",
-        lambda: _action("PLACE_ON_SURFACE", world.held_object or "NONE", "MAIN_WORKBENCH_ZONE"),
+        lambda: _action("PLACE", world.held_object or "NONE", "MAIN_WORKBENCH_ZONE"),
         0,
         0,
     )
     add_button(
         task_box,
-        "Insert held screw vertically",
-        lambda: _action("INSERT_FASTENER", world.held_object or "NONE", "workshop_frame_joint"),
+        "Place held screw at frame joint",
+        lambda: _action("PLACE", world.held_object or "NONE", "workshop_frame_joint"),
         0,
         1,
     )
     add_button(
         task_box,
-        "Drive inserted screw",
+        "Screw inserted fastener",
         lambda: _action(
-            "DRIVE_FASTENER",
+            "SCREW",
             world.held_object or "NONE",
             COMPATIBLE_SCREW,
             "workshop_frame_joint",
@@ -284,16 +259,8 @@ def launch_workshop_action_viewer(scene, camera: str = "free") -> None:
         1,
         0,
     )
-    add_button(
-        task_box,
-        "Verify repair",
-        lambda: _action("VERIFY_REPAIR", "workshop_frame_joint"),
-        1,
-        1,
-    )
-
     sequence_box = ttk.LabelFrame(body, text="Ground-truth sequence", padding=8)
-    sequence_box.grid(row=8, column=0, sticky="ew", pady=4)
+    sequence_box.grid(row=7, column=0, sticky="ew", pady=4)
     sequence_box.columnconfigure((0, 1), weight=1)
 
     def next_gt_action() -> None:
@@ -316,7 +283,7 @@ def launch_workshop_action_viewer(scene, camera: str = "free") -> None:
     )
 
     controls = ttk.Frame(body)
-    controls.grid(row=9, column=0, sticky="ew", pady=4)
+    controls.grid(row=8, column=0, sticky="ew", pady=4)
     controls.columnconfigure((0, 1), weight=1)
 
     def reset() -> None:
@@ -324,9 +291,10 @@ def launch_workshop_action_viewer(scene, camera: str = "free") -> None:
         if busy:
             return
         scene.model.eq_data[:] = initial_eq_data
-        mujoco.mj_resetData(scene.model, scene.data)
-        mujoco.mj_forward(scene.model, scene.data)
-        scene.state = WorkshopObservationState()
+        # Use WorkshopScene's reset contract so both kitchen-equivalent
+        # drawers are explicitly restored closed before the action panel
+        # presents the first OPEN action.
+        scene.reset()
         assignment = gt_assignment
         world = initial_workshop_state(spec["storage_contents"])
         dispatcher = WorkshopExecutionDispatcher(

@@ -309,7 +309,10 @@ def run_variant_ground_truth(
         assignment,
         step_callback=recorder.step_callback,
         assisted_suite=assisted_suite,
-        allow_assisted_pick_recovery=not strict_robot_execution,
+        # Normal final-paper runs must expose failed physical grasps/releases.
+        # Pose-write recovery is available only in the explicitly labelled
+        # assisted-suite profile.
+        allow_assisted_pick_recovery=assisted_suite,
     )
 
     # Initial frame capture

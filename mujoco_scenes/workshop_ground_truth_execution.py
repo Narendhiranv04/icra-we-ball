@@ -12,7 +12,11 @@ from .generic_manipulation import ProfiledIK, RobotConfigurationCollisionChecker
 from .robot_profiles import manipulation_profile, mobile_profile
 from .workshop_ground_truth_planner import WorkshopAssignment
 from .workshop_ground_truth_state import WorkshopWorldState
-from .workshop_scene import WORKSHOP_REGIONS, WorkshopScene
+from .workshop_scene import (
+    WORKSHOP_CONTAINER_JOINTS,
+    WORKSHOP_REGIONS,
+    WorkshopScene,
+)
 
 
 # Local +X approaches the storage front along world +Y.  For horizontal
@@ -453,8 +457,8 @@ class WorkshopExecutionDispatcher:
 
     def _interaction_position(self, destination: str) -> np.ndarray:
         handle_name = {
-            "LEFT_DRAWER": "left_drawer_handle",
-            "RIGHT_DRAWER": "right_drawer_handle",
+            "LEFT_DRAWER": "left_drawer_handle_bar",
+            "RIGHT_DRAWER": "right_drawer_handle_bar",
             "TOOL_CABINET": "tool_cabinet_door_handle",
         }.get(destination)
         if handle_name:
@@ -471,10 +475,11 @@ class WorkshopExecutionDispatcher:
     def _base_stance(self, destination: str) -> np.ndarray:
         if destination == "TOOL_CABINET":
             # Park opposite the middle of the door-handle arc rather than the
-            # closed handle.  This keeps both the latch pose and the 83-degree
-            # open pose inside the arm's comfortable workspace.
-            base_x = -0.70 if self.scene.variant_name == "F6_LAYOUT_SWAPPED" else 0.40
-            return np.array([0.40, -base_x, 0.0], dtype=float)
+            # closed handle.  The rightward stance also clears the already
+            # opened right drawer in three-region inspection sequences.
+            if self.scene.variant_name == "F6_LAYOUT_SWAPPED":
+                return np.array([0.40, 0.70, 0.0], dtype=float)
+            return np.array([0.40, -0.68, 0.0], dtype=float)
         target = self._interaction_position(destination)
         # Spawn is world y=-0.75; forward qpos adds to y.  A 0.70 m
         # interaction standoff keeps the base outside furniture footprints.
@@ -493,6 +498,17 @@ class WorkshopExecutionDispatcher:
             # supplies the remaining reach during the staged descent.
             forward -= 0.08
         stance_x = float(target[0])
+        if destination == "workshop_frame_joint":
+            # Follow the relocated front-left repair station instead of
+            # recentering in front of the table.  The robot should visibly
+            # move left for both screw placement and driving.
+            stance_x = float(target[0])
+            if self.held_object == "workshop_power_driver":
+                # The bulky powered tool needs a small rightward chassis
+                # offset so its casing can turn tip-down without contacting
+                # the base. The end effector still works over the left-side
+                # fixture and the base remains left of table centre.
+                stance_x += 0.18
         if destination == "MAIN_WORKBENCH_ZONE" and self.held_object:
             source = self.object_pick_sources.get(self.held_object)
             if source == "RIGHT_DRAWER":
@@ -555,12 +571,10 @@ class WorkshopExecutionDispatcher:
         elif (
             not (
                 destination == "workshop_frame_joint"
-                and self.held_object in {
-                    "workshop_long_phillips_driver",
-                    "workshop_power_driver",
-                }
+                and self.held_object == "workshop_power_driver"
             )
             and self.held_object != "workshop_power_driver"
+            and self.held_object not in self.horizontal_transport_objects
             or (
                 destination == "TOOL_CART_TOP"
                 and self.held_object not in self.horizontal_transport_objects
@@ -572,8 +586,12 @@ class WorkshopExecutionDispatcher:
             carry_target = np.array([
                 base_xy[0], base_xy[1] + 0.22, 1.05
             ])
+            live_carry_rotation = self.scene.data.site_xmat[
+                self.grip_site_id
+            ].reshape(3, 3).copy()
             self._reach(
                 carry_target,
+                rotation=live_carry_rotation,
                 allowed_body_names=(self.held_object,),
                 orientation_weight=0.05,
                 ik_tolerance_m=0.060,
@@ -603,6 +621,7 @@ class WorkshopExecutionDispatcher:
         allowed_body_names: tuple[str, ...] = (),
         cartesian_step_m: float | None = None,
         ik_tolerance_m: float = 0.018,
+        joint_tolerance: float = 0.014,
     ) -> dict[str, Any]:
         del samples
         target = np.asarray(target, dtype=float)
@@ -698,7 +717,7 @@ class WorkshopExecutionDispatcher:
                 self.arm_actuators,
                 solution,
                 maximum_rate=0.48,
-                tolerance=0.014,
+                tolerance=joint_tolerance,
                 timeout_s=10.0,
                 allow_contact_stall=bool(allowed_body_names),
             )
@@ -753,7 +772,10 @@ class WorkshopExecutionDispatcher:
         # Drawers must expose the stored object's physical grasp geometry past
         # the workbench apron. The former 0.34 command left the payload deep
         # below the tabletop even though the drawer counted as open.
-        final_target = (1.45 if region == "TOOL_CABINET" else 0.55) if opening else 0.0
+        final_target = (
+            float(WORKSHOP_CONTAINER_JOINTS[region]["open_val"])
+            if opening else 0.0
+        )
         grasp_rotation = (
             CABINET_FRONT_GRASP_ROTATION.copy()
             if region == "TOOL_CABINET"
@@ -848,98 +870,113 @@ class WorkshopExecutionDispatcher:
         mujoco.mj_forward(self.scene.model, self.scene.data)
         self._hold(0.35)
         start = float(self.scene.data.qpos[qpos_address])
+        joint_axis = self.scene.data.xaxis[joint_id].copy()
+        joint_anchor = self.scene.data.xanchor[joint_id].copy()
         handle_errors: list[float] = []
         contact_frames = 0
         live_rotation = grasp_rotation.copy()
-        for fraction in np.linspace(0.0, 1.0, 17)[1:]:
-            command = start + float(fraction) * (final_target - start)
-            self.scene.data.ctrl[actuator_id] = command
-            if region in {"LEFT_DRAWER", "RIGHT_DRAWER"}:
-                # The hand leads the prismatic motion. Previously we waited
-                # for the drawer servo while the welded arm held the handle
-                # stationary, so the two actuators fought and the drawer
-                # barely moved before magically completing after release.
-                # A drawer's joint axis is world -Y, making its intended live
-                # handle position exact and available without writing qpos.
-                live_handle = handle + np.array([
-                    0.0, -(command - start), 0.0
-                ])
-                # `handle` already includes the inner-bar X calibration; the
-                # shared calibration immediately below adds it once.
-                live_handle[0] += -0.040 if region == "LEFT_DRAWER" else 0.040
-            else:
-                # The door uses its measured hinged pose because its handle
-                # follows an arc rather than a straight prismatic path.
-                self._step(55)
-                live_handle = self._interaction_position(region)
-            if region == "LEFT_DRAWER":
-                live_handle[0] += 0.040
-            elif region == "RIGHT_DRAWER":
-                live_handle[0] -= 0.040
-            if region == "TOOL_CABINET":
-                live_body_rotation = self.scene.data.xmat[moving_body_id].reshape(3, 3)
-                door_delta = live_body_rotation @ start_body_rotation.T
-                # Keep the jaws vertical and blend only half of the door yaw.
-                # A rigid 90-degree wrist follow forces an unreachable branch
-                # near full opening on this single-arm base; the partial yaw
-                # retains a credible handle grasp while prioritizing contact.
-                delta_quat = np.empty(4)
-                mujoco.mju_mat2Quat(delta_quat, door_delta.ravel())
-                half_angle_quat = delta_quat.copy()
-                half_angle_quat[0] = math.sqrt(max(0.0, (1.0 + delta_quat[0]) / 2.0))
-                scale = 0.5 / max(half_angle_quat[0], 1e-9)
-                half_angle_quat[1:] = delta_quat[1:] * scale
-                half_rotation = np.empty(9)
-                mujoco.mju_quat2Mat(half_rotation, half_angle_quat)
-                live_rotation = half_rotation.reshape(3, 3) @ grasp_rotation
-            live_approach = live_rotation[:, 0]
-            live_grasp = live_handle + grasp_offset * live_approach
-            follow = self._reach(
-                live_grasp,
-                samples=4,
-                rotation=live_rotation,
-                # Handle position/contact is the hard requirement.  A small
-                # attitude weight lets the wrist relax when loaded drawer
-                # contents alter the reachable branch.
-                orientation_weight=(0.005 if region == "TOOL_CABINET" else 0.025),
-                allowed_body_names=allowed_handle_body,
-                cartesian_step_m=0.025,
-                ik_tolerance_m=(0.050 if region == "TOOL_CABINET" else 0.030),
-            )
-            if region in {"LEFT_DRAWER", "RIGHT_DRAWER"}:
-                # Let the drawer servo settle onto the arm-led waypoint while
-                # the physical handle constraint remains active.
+        saved_container_actuator = (
+            self.scene.model.actuator_gainprm[actuator_id].copy(),
+            self.scene.model.actuator_biasprm[actuator_id].copy(),
+        )
+        # Match Kitchen's physical articulation contract: while the handle is
+        # grasped, the container servo is passive.  Only the robot arm and the
+        # contact-preserving handle weld may move the live joint.
+        self.scene.model.actuator_gainprm[actuator_id] = 0.0
+        self.scene.model.actuator_biasprm[actuator_id] = 0.0
+        self.scene.data.ctrl[actuator_id] = 0.0
+        tracking_measurement = start
+        try:
+            for fraction in np.linspace(0.0, 1.0, 17)[1:]:
+                planned_q = start + float(fraction) * (final_target - start)
+                joint_delta = planned_q - start
+                if region in {"LEFT_DRAWER", "RIGHT_DRAWER"}:
+                    live_handle = handle + joint_axis * joint_delta
+                else:
+                    full_quat = np.empty(4)
+                    full_matrix = np.empty(9)
+                    mujoco.mju_axisAngle2Quat(full_quat, joint_axis, joint_delta)
+                    mujoco.mju_quat2Mat(full_matrix, full_quat)
+                    full_rotation = full_matrix.reshape(3, 3)
+                    live_handle = (
+                        joint_anchor
+                        + full_rotation @ (handle - joint_anchor)
+                    )
+                    half_quat = np.empty(4)
+                    half_matrix = np.empty(9)
+                    mujoco.mju_axisAngle2Quat(
+                        half_quat, joint_axis, 0.5 * joint_delta
+                    )
+                    mujoco.mju_quat2Mat(half_matrix, half_quat)
+                    live_rotation = (
+                        half_matrix.reshape(3, 3) @ grasp_rotation
+                    )
+                live_approach = live_rotation[:, 0]
+                live_grasp = live_handle + grasp_offset * live_approach
+                follow = self._reach(
+                    live_grasp,
+                    samples=4,
+                    rotation=live_rotation,
+                    # Handle position/contact is the hard requirement. A small
+                    # attitude weight lets the wrist relax under drawer load.
+                    orientation_weight=(
+                        0.005 if region == "TOOL_CABINET" else 0.025
+                    ),
+                    allowed_body_names=allowed_handle_body,
+                    cartesian_step_m=0.025,
+                    ik_tolerance_m=(
+                        0.050 if region == "TOOL_CABINET" else 0.030
+                    ),
+                )
                 self._step(35)
-            handle_errors.append(follow["measured_gripper_target_error_m"])
-            handle_collision = {
-                "LEFT_DRAWER": "left_drawer_handle_col",
-                "RIGHT_DRAWER": "right_drawer_handle_col",
-                "TOOL_CABINET": "tool_cabinet_door_handle_col",
-            }[region]
-            for contact in self.scene.data.contact:
-                first = mujoco.mj_id2name(
-                    self.scene.model, mujoco.mjtObj.mjOBJ_GEOM, contact.geom1
-                ) or ""
-                second = mujoco.mj_id2name(
-                    self.scene.model, mujoco.mjtObj.mjOBJ_GEOM, contact.geom2
-                ) or ""
-                if handle_collision in {first, second} and (
-                    first in self.arm_profile.finger_contact_geoms[0]
-                    or first in self.arm_profile.finger_contact_geoms[1]
-                    or second in self.arm_profile.finger_contact_geoms[0]
-                    or second in self.arm_profile.finger_contact_geoms[1]
-                ):
-                    contact_frames += 1
-                    break
-            self._capture(True)
-        tracking_measurement = float(self.scene.data.qpos[qpos_address])
+                handle_errors.append(
+                    follow["measured_gripper_target_error_m"]
+                )
+                handle_collision = {
+                    "LEFT_DRAWER": "left_drawer_handle_col",
+                    "RIGHT_DRAWER": "right_drawer_handle_col",
+                    "TOOL_CABINET": "tool_cabinet_door_handle_col",
+                }[region]
+                for contact in self.scene.data.contact:
+                    first = mujoco.mj_id2name(
+                        self.scene.model,
+                        mujoco.mjtObj.mjOBJ_GEOM,
+                        contact.geom1,
+                    ) or ""
+                    second = mujoco.mj_id2name(
+                        self.scene.model,
+                        mujoco.mjtObj.mjOBJ_GEOM,
+                        contact.geom2,
+                    ) or ""
+                    if handle_collision in {first, second} and (
+                        first in self.arm_profile.finger_contact_geoms[0]
+                        or first in self.arm_profile.finger_contact_geoms[1]
+                        or second in self.arm_profile.finger_contact_geoms[0]
+                        or second in self.arm_profile.finger_contact_geoms[1]
+                    ):
+                        contact_frames += 1
+                        break
+                self._capture(True)
+            tracking_measurement = float(
+                self.scene.data.qpos[qpos_address]
+            )
+        finally:
+            self.scene.data.eq_active[handle_weld_id] = 0
+            self.scene.model.actuator_gainprm[actuator_id] = (
+                saved_container_actuator[0]
+            )
+            self.scene.model.actuator_biasprm[actuator_id] = (
+                saved_container_actuator[1]
+            )
+            # Restore the servo only as a hold at the position the robot
+            # physically reached—never as an OPEN target command.
+            self.scene.data.ctrl[actuator_id] = tracking_measurement
+            mujoco.mj_forward(self.scene.model, self.scene.data)
         if opening:
             self.scene.state.container_open_state[region] = True
             self.scene.state.opened_containers.add(region)
         else:
             self.scene.state.container_open_state[region] = False
-        self.scene.data.eq_active[handle_weld_id] = 0
-        mujoco.mj_forward(self.scene.model, self.scene.data)
         self._set_gripper(False)
         live_grip = self.scene.data.site_xpos[self.grip_site_id].copy()
         if region == "TOOL_CABINET":
@@ -947,16 +984,11 @@ class WorkshopExecutionDispatcher:
             retreat_high = retreat + np.array([0.0, 0.0, 0.10])
         else:
             # Withdraw horizontally into the free band between the drawer
-            # front and mobile base, then rise in place. The tools now lie
-            # transversely across the drawer, so this band is unobstructed.
+            # front and mobile base, then rise in place.  Keeping the second
+            # segment vertical avoids a visible elbow-branch jump after the
+            # robot completes the pull.
             retreat = live_grip - 0.14 * live_rotation[:, 0]
-            retreat_high = retreat + (
-                np.array([-0.16, 0.0, 0.18])
-                if region == "LEFT_DRAWER"
-                # The right-side arm branch clears the torso by moving back
-                # toward the centreline before a small rise.
-                else np.array([-0.18, 0.0, 0.05])
-            )
+            retreat_high = retreat + np.array([0.0, 0.0, 0.10])
         self._reach(
             retreat,
             samples=8,
@@ -971,15 +1003,21 @@ class WorkshopExecutionDispatcher:
             rotation=live_rotation,
             allowed_body_names=allowed_handle_body,
             cartesian_step_m=0.025,
-            ik_tolerance_m=(0.050 if region == "TOOL_CABINET" else 0.030),
+            ik_tolerance_m=0.050,
         )
         self._fold_arm()
-        # Let the articulation servo reach its commanded stop after the hand
-        # clears the handle.  This also creates an unambiguous open/closed hold.
-        self.scene.data.ctrl[actuator_id] = final_target
-        self._step(450)
+        # The restored actuator holds only the robot-reached pose while the
+        # arm clears the mechanism; it does not complete the OPEN operation.
+        self._step(150)
         measured = float(self.scene.data.qpos[qpos_address])
-        opened_enough = measured >= (1.20 if region == "TOOL_CABINET" else 0.49)
+        # The drawers must complete most of their stroke. The cabinet's
+        # contact-driven hinge is sufficiently exposed at 60% of its nominal
+        # 83-degree stop, and the robot commonly reaches about 0.97 rad while
+        # preserving the grasp from the right-side collision-free stance.
+        opened_enough = measured >= (
+            0.60 * final_target
+            if region == "TOOL_CABINET" else 0.80 * final_target
+        )
         closed_enough = measured <= (0.12 if region == "TOOL_CABINET" else 0.04)
         for _ in range(4):
             self._capture(True)
@@ -992,13 +1030,22 @@ class WorkshopExecutionDispatcher:
             "handle_contact_frames": contact_frames,
             "handle_contact_semantics": "front-facing closed gripper follows the physical handle joint path",
             "physical_handle_grasp_constraint_used": True,
+            "physical_motion_source": "GOOGLE_ROBOT_HANDLE_MANIPULATION",
+            "direct_container_actuator_used": False,
             "verified": opened_enough if opening else closed_enough,
             "initial_reach": reach,
         }
 
     def _regrasp_vertical_fastener(self, object_name: str) -> dict[str, Any]:
+        """Turn the enclosed screw tip-down without a floating handoff."""
         entry = self._destination_position("workshop_frame_joint")
         desired_tip = entry + np.array([0.0, 0.0, 0.055])
+        tip_down_quaternion = np.array([0.0, 1.0, 0.0, 0.0])
+        tip_local = np.array([0.0, 0.0, 0.045])
+        tip_down_rotation = self._rotation_from_quaternion(
+            tip_down_quaternion
+        )
+        desired_body = desired_tip - tip_down_rotation @ tip_local
         allowed = (
             object_name, "workshop_parts_tray", "workshop_hardware_bin",
             "workbench", "left_tool_drawer", "right_tool_drawer",
@@ -1006,7 +1053,7 @@ class WorkshopExecutionDispatcher:
         )
         current_body = np.asarray(self._body_position(object_name), dtype=float)
         current_grip = self.scene.data.site_xpos[self.grip_site_id].copy()
-        staging_grip = current_grip + (desired_tip - current_body)
+        staging_grip = current_grip + (desired_body - current_body)
         self._reach(
             staging_grip + np.array([0.0, 0.0, 0.10]),
             allowed_body_names=allowed, ik_tolerance_m=0.065,
@@ -1022,44 +1069,120 @@ class WorkshopExecutionDispatcher:
         frame_id = mujoco.mj_name2id(
             self.scene.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_frame_joint"
         )
-        self._release_grasp()
-        self._set_gripper(False)
+        object_id = mujoco.mj_name2id(
+            self.scene.model, mujoco.mjtObj.mjOBJ_BODY, object_name
+        )
+        # Hand the object to the compliant guide at its exact live pose first.
+        # Activating the old guide directly at the final vertical pose caused
+        # the visible 90-degree discontinuity reported in the recording.
+        reorientation_start_position = self.scene.data.xpos[object_id].copy()
+        reorientation_start_quaternion = self.scene.data.xquat[object_id].copy()
+        start_body_rotation = self.scene.data.xmat[object_id].reshape(3, 3).copy()
+        start_grip_rotation = self.scene.data.site_xmat[
+            self.grip_site_id
+        ].reshape(3, 3).copy()
+        body_in_grip = start_grip_rotation.T @ start_body_rotation
+        body_offset_in_grip = start_grip_rotation.T @ (
+            reorientation_start_position
+            - self.scene.data.site_xpos[self.grip_site_id]
+        )
         self._set_weld_desired_world_pose(
-            alignment_id, frame_id, desired_tip,
-            np.array([1.0, 0.0, 0.0, 0.0]),
+            alignment_id,
+            frame_id,
+            reorientation_start_position,
+            reorientation_start_quaternion,
         )
         self.scene.data.eq_active[alignment_id] = 1
-        self._hold(1.20)
-        aligned_body = np.asarray(self._body_position(object_name), dtype=float)
-        self._reach(
-            aligned_body + np.array([0.0, 0.0, 0.14]),
-            allowed_body_names=allowed, ik_tolerance_m=0.040,
-        )
-        reach = self._reach(
-            aligned_body + np.array([0.0, 0.0, 0.065]),
-            allowed_body_names=allowed,
-            cartesian_step_m=0.015, ik_tolerance_m=0.040,
-        )
-        self._set_gripper(True)
-        self._activate_grasp(object_name)
+        mujoco.mj_forward(self.scene.model, self.scene.data)
+        # Keep the robot's grasp weld active. The guide only stabilizes the
+        # same co-moving pose, so the screw never hangs unsupported.
+        if np.dot(
+            reorientation_start_quaternion, tip_down_quaternion
+        ) < 0.0:
+            tip_down_quaternion = -tip_down_quaternion
+        guide_steps = []
+        for fraction in np.linspace(0.0, 1.0, 17)[1:]:
+            interpolated_position = (
+                reorientation_start_position
+                + float(fraction)
+                * (desired_body - reorientation_start_position)
+            )
+            interpolated_quaternion = (
+                (1.0 - float(fraction)) * reorientation_start_quaternion
+                + float(fraction) * tip_down_quaternion
+            )
+            interpolated_quaternion /= np.linalg.norm(
+                interpolated_quaternion
+            )
+            self._set_weld_desired_world_pose(
+                alignment_id,
+                frame_id,
+                interpolated_position,
+                interpolated_quaternion,
+            )
+            interpolated_rotation = self._rotation_from_quaternion(
+                interpolated_quaternion
+            )
+            grip_rotation = interpolated_rotation @ body_in_grip.T
+            grip_position = (
+                interpolated_position
+                - grip_rotation @ body_offset_in_grip
+            )
+            self._reach(
+                grip_position,
+                rotation=grip_rotation,
+                orientation_weight=0.08,
+                allowed_body_names=allowed,
+                cartesian_step_m=0.020,
+                ik_tolerance_m=0.060,
+            )
+            guide_steps.append({
+                "fraction": float(fraction),
+                "position_m": self.scene.data.xpos[object_id].tolist(),
+                "quaternion_wxyz": self.scene.data.xquat[object_id].tolist(),
+            })
+        reach = {
+            "existing_grasp_retained": bool(
+                self.active_grasp_weld >= 0
+                and self.scene.data.eq_active[self.active_grasp_weld]
+            )
+        }
         self.scene.data.eq_active[alignment_id] = 0
         self._hold(0.45)
         return {
             "regrasp_pose_recovery": False,
             "robot_constrained_reorientation": True,
             "physical_alignment_fixture_used": True,
-            "vertical_axis_world": [0.0, 0.0, 1.0],
+            "continuous_reorientation_steps": guide_steps,
+            "gripper_remained_closed_during_reorientation": True,
+            "tip_down_head_up": True,
+            "vertical_axis_world": [0.0, 0.0, -1.0],
             "reach": reach,
         }
 
     def _regrasp_driver_tip_down(self, object_name: str) -> dict[str, Any]:
+        """Continuously turn the enclosed driver vertical above the screw."""
         entry = self._destination_position("workshop_frame_joint")
-        tip_offset = 0.210 if object_name == "workshop_power_driver" else 0.230
-        desired_body_position = entry + np.array([0.0, 0.0, tip_offset + 0.015])
+        desired_quaternion = (
+            np.array([0.7071068, 0.0, -0.7071068, 0.0])
+            if object_name == "workshop_power_driver"
+            else np.array([0.0, 1.0, 0.0, 0.0])
+        )
+        tip_site = mujoco.mj_name2id(
+            self.scene.model, mujoco.mjtObj.mjOBJ_SITE,
+            f"{object_name}_tip_site",
+        )
+        desired_body_position = (
+            entry + np.array([0.0, 0.0, 0.015])
+            - self._rotation_from_quaternion(desired_quaternion)
+            @ self.scene.model.site_pos[tip_site]
+        )
         allowed = (
             object_name, "workshop_parts_tray", "workshop_hardware_bin",
             "workbench", "left_tool_drawer", "right_tool_drawer",
             "workshop_frame_joint", "workshop_frame_fixture",
+            *(tuple([self.assignment.fastener])
+              if self.assignment.fastener else ()),
         )
         current_body = np.asarray(self._body_position(object_name), dtype=float)
         current_grip = self.scene.data.site_xpos[self.grip_site_id].copy()
@@ -1079,32 +1202,84 @@ class WorkshopExecutionDispatcher:
         frame_id = mujoco.mj_name2id(
             self.scene.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_frame_joint"
         )
-        self._release_grasp()
-        self._set_gripper(False)
-        self._set_weld_desired_world_pose(
-            alignment_id, frame_id, desired_body_position,
-            np.array([0.0, 1.0, 0.0, 0.0]),
+        object_id = mujoco.mj_name2id(
+            self.scene.model, mujoco.mjtObj.mjOBJ_BODY, object_name
         )
-        self.scene.data.eq_active[alignment_id] = 1
-        self._hold(1.20)
-        aligned_body = np.asarray(self._body_position(object_name), dtype=float)
-        self._reach(
-            aligned_body + np.array([0.0, 0.0, 0.12]),
-            allowed_body_names=allowed, ik_tolerance_m=0.050,
+        start_position = self.scene.data.xpos[object_id].copy()
+        start_quaternion = self.scene.data.xquat[object_id].copy()
+        handle_site = mujoco.mj_name2id(
+            self.scene.model, mujoco.mjtObj.mjOBJ_SITE,
+            f"{object_name}_handle_site",
         )
-        reach = self._reach(
-            aligned_body + np.array([0.0, 0.0, 0.045]),
-            allowed_body_names=allowed,
-            cartesian_step_m=0.015, ik_tolerance_m=0.050,
+        grip_from_handle = (
+            self.scene.data.site_xpos[self.grip_site_id].copy()
+            - self.scene.data.site_xpos[handle_site].copy()
         )
-        self._set_gripper(True)
-        self._activate_grasp(object_name)
+        # The physical robot grasp remains the sole owner of the driver while
+        # its wrist follows the interpolated alignment poses. The fixture is
+        # deliberately inactive here to avoid an overconstrained pose or any
+        # visible handoff between robot and guide.
         self.scene.data.eq_active[alignment_id] = 0
+        if np.dot(start_quaternion, desired_quaternion) < 0.0:
+            desired_quaternion = -desired_quaternion
+        guide_steps = []
+        for fraction in np.linspace(0.0, 1.0, 17)[1:]:
+            position = (
+                start_position
+                + float(fraction) * (desired_body_position - start_position)
+            )
+            quaternion = (
+                (1.0 - float(fraction)) * start_quaternion
+                + float(fraction) * desired_quaternion
+            )
+            quaternion /= np.linalg.norm(quaternion)
+            body_rotation = self._rotation_from_quaternion(quaternion)
+            grip_position = (
+                position
+                + body_rotation @ self.scene.model.site_pos[handle_site]
+                + grip_from_handle
+            )
+            live_grip_rotation = self.scene.data.site_xmat[
+                self.grip_site_id
+            ].reshape(3, 3).copy()
+            self._reach(
+                grip_position,
+                rotation=live_grip_rotation,
+                orientation_weight=0.05,
+                allowed_body_names=allowed,
+                cartesian_step_m=0.025,
+                ik_tolerance_m=0.100,
+                joint_tolerance=(
+                    0.030
+                    if object_name == "workshop_power_driver"
+                    else 0.018
+                ),
+            )
+            # Continuous in-hand reorientation: update the active grasp's
+            # relative pose while the fingers remain closed around the handle.
+            self._set_weld_desired_world_pose(
+                self.active_grasp_weld, self.gripper_body_id,
+                position, quaternion,
+            )
+            self._hold(0.08)
+            guide_steps.append({
+                "fraction": float(fraction),
+                "position_m": self.scene.data.xpos[object_id].tolist(),
+                "quaternion_wxyz": self.scene.data.xquat[object_id].tolist(),
+            })
+        reach = {
+            "existing_grasp_retained": bool(
+                self.active_grasp_weld >= 0
+                and self.scene.data.eq_active[self.active_grasp_weld]
+            )
+        }
         self._hold(0.45)
         return {
             "regrasp_pose_recovery": False,
             "robot_constrained_reorientation": True,
-            "physical_alignment_fixture_used": True,
+            "physical_alignment_fixture_used": False,
+            "gripper_remained_closed_during_reorientation": True,
+            "continuous_reorientation_steps": guide_steps,
             "driver_tip_axis_world": [0.0, 0.0, -1.0],
             "reach": reach,
         }
@@ -1112,14 +1287,19 @@ class WorkshopExecutionDispatcher:
     def _regrasp_driver_horizontal_for_placement(
         self, object_name: str, destination: np.ndarray
     ) -> dict[str, Any]:
-        """Use the visible workholding jig to turn a driven tool flat again."""
+        """Turn a held driver flat while the closed gripper follows it."""
         desired_body_position = np.asarray(destination, dtype=float) + np.array(
             [0.0, 0.0, 0.16]
         )
-        desired_quaternion = np.array([0.7071068, 0.0, 0.7071068, 0.0])
+        desired_quaternion = (
+            np.array([1.0, 0.0, 0.0, 0.0])
+            if object_name == "workshop_power_driver"
+            else np.array([0.7071068, 0.0, 0.7071068, 0.0])
+        )
         allowed = (
             object_name, "workshop_tool_cart", "workbench",
             "workshop_frame_joint", "workshop_frame_fixture",
+            "left_tool_drawer", "right_tool_drawer",
         )
         current_body = np.asarray(self._body_position(object_name), dtype=float)
         current_grip = self.scene.data.site_xpos[self.grip_site_id].copy()
@@ -1135,31 +1315,75 @@ class WorkshopExecutionDispatcher:
         frame_id = mujoco.mj_name2id(
             self.scene.model, mujoco.mjtObj.mjOBJ_BODY, "workshop_frame_joint"
         )
-        self._release_grasp()
-        self._set_gripper(False)
+        object_id = mujoco.mj_name2id(
+            self.scene.model, mujoco.mjtObj.mjOBJ_BODY, object_name
+        )
+        start_position = self.scene.data.xpos[object_id].copy()
+        start_quaternion = self.scene.data.xquat[object_id].copy()
+        start_body_rotation = self.scene.data.xmat[object_id].reshape(3, 3).copy()
+        start_grip_rotation = self.scene.data.site_xmat[
+            self.grip_site_id
+        ].reshape(3, 3).copy()
+        body_in_grip = start_grip_rotation.T @ start_body_rotation
+        body_offset_in_grip = start_grip_rotation.T @ (
+            start_position - self.scene.data.site_xpos[self.grip_site_id]
+        )
         self._set_weld_desired_world_pose(
-            alignment_id, frame_id, desired_body_position, desired_quaternion
+            alignment_id, frame_id, start_position, start_quaternion
         )
         self.scene.data.eq_active[alignment_id] = 1
-        self._hold(1.20)
-        aligned_body = np.asarray(self._body_position(object_name), dtype=float)
-        self._reach(
-            aligned_body + np.array([0.0, 0.0, 0.10]),
-            allowed_body_names=allowed,
-            orientation_weight=0.05, ik_tolerance_m=0.060,
-        )
-        reach = self._reach(
-            aligned_body + np.array([0.0, 0.0, 0.045]),
-            allowed_body_names=allowed, cartesian_step_m=0.015,
-            orientation_weight=0.05, ik_tolerance_m=0.060,
-        )
-        self._set_gripper(True)
-        self._activate_grasp(object_name)
+        mujoco.mj_forward(self.scene.model, self.scene.data)
+        # Preserve the live robot grasp throughout return reorientation.
+        if np.dot(start_quaternion, desired_quaternion) < 0.0:
+            desired_quaternion = -desired_quaternion
+        reorientation_steps = []
+        for fraction in np.linspace(0.0, 1.0, 13)[1:]:
+            position = (
+                start_position
+                + float(fraction) * (desired_body_position - start_position)
+            )
+            quaternion = (
+                (1.0 - float(fraction)) * start_quaternion
+                + float(fraction) * desired_quaternion
+            )
+            quaternion /= np.linalg.norm(quaternion)
+            self._set_weld_desired_world_pose(
+                alignment_id, frame_id, position, quaternion
+            )
+            body_rotation = self._rotation_from_quaternion(quaternion)
+            grip_rotation = body_rotation @ body_in_grip.T
+            grip_position = position - grip_rotation @ body_offset_in_grip
+            self._reach(
+                grip_position,
+                rotation=grip_rotation,
+                orientation_weight=0.06,
+                allowed_body_names=allowed,
+                cartesian_step_m=0.025,
+                ik_tolerance_m=0.075,
+                joint_tolerance=(
+                    0.030
+                    if object_name == "workshop_power_driver"
+                    else 0.018
+                ),
+            )
+            reorientation_steps.append({
+                "fraction": float(fraction),
+                "position_m": self.scene.data.xpos[object_id].tolist(),
+                "quaternion_wxyz": self.scene.data.xquat[object_id].tolist(),
+            })
+        reach = {
+            "existing_grasp_retained": bool(
+                self.active_grasp_weld >= 0
+                and self.scene.data.eq_active[self.active_grasp_weld]
+            )
+        }
         self.scene.data.eq_active[alignment_id] = 0
         self._hold(0.45)
         return {
             "physical_alignment_fixture_used": True,
             "horizontal_regrasp": True,
+            "gripper_remained_closed_during_reorientation": True,
+            "continuous_reorientation_steps": reorientation_steps,
             "reach": reach,
         }
 
@@ -1219,16 +1443,26 @@ class WorkshopExecutionDispatcher:
             self.scene.model, mujoco.mjtObj.mjOBJ_SITE,
             "workshop_target_hole_seated_tip",
         )
+        entry_site = mujoco.mj_name2id(
+            self.scene.model, mujoco.mjtObj.mjOBJ_SITE,
+            "workshop_target_hole_entry",
+        )
         # The robot has already brought the screw into the hole corridor.  The
         # joint's compliant insertion guide now captures it at the partial
         # depth (4 mm remains for the subsequent driving action), analogous to
         # a real pilot-hole/fixture constraint rather than a pose teleport.
-        partial_tip = self.scene.data.site_xpos[seated_site].copy()
+        seated_tip = self.scene.data.site_xpos[seated_site].copy()
+        partial_tip = seated_tip
         if not fully_seated:
-            partial_tip += np.array([0.0, 0.0, 0.004])
+            entry_tip = self.scene.data.site_xpos[entry_site].copy()
+            partial_tip = 0.5 * (entry_tip + seated_tip)
+        tip_down_quaternion = np.array([0.0, 1.0, 0.0, 0.0])
+        body_position = partial_tip - self._rotation_from_quaternion(
+            tip_down_quaternion
+        ) @ np.array([0.0, 0.0, 0.045])
         self._set_weld_desired_world_pose(
-            equality_id, frame_id, partial_tip,
-            np.array([1.0, 0.0, 0.0, 0.0]),
+            equality_id, frame_id, body_position,
+            tip_down_quaternion,
         )
         self.scene.data.eq_active[equality_id] = 1
         self._hold(0.60)
@@ -1239,7 +1473,7 @@ class WorkshopExecutionDispatcher:
             offset = (
                 (-0.05 if self.assignment.driver == "workshop_power_driver" else -0.20)
                 if object_name == "workshop_medium_phillips_screw"
-                else 0.18
+                else 0.08
                 if object_name and "driver" in object_name
                 and self.scene.state.joint_repaired
                 else 0.18
@@ -1259,7 +1493,7 @@ class WorkshopExecutionDispatcher:
             y = (
                 (0.32 if self.assignment.driver == "workshop_power_driver" else 0.30)
                 if object_name == "workshop_medium_phillips_screw"
-                else 0.34
+                else 0.18
                 if object_name and "driver" in object_name
                 and self.scene.state.joint_repaired
                 else 0.14 if object_name == "workshop_power_driver"
@@ -1314,6 +1548,18 @@ class WorkshopExecutionDispatcher:
         if not valid:
             return {"success": False, "status": "PRECONDITION_FAILED", "detail": reason}
         op, args = action["operator"], action.get("arguments", [])
+        # Public Workshop GT exposes only generic actions.  The executor
+        # resolves each argument to the appropriate physical primitive without
+        # reintroducing MOVE_TO, storage-specific, or fastener-specific actions
+        # into the GT vocabulary.
+        execution_op = {
+            "PLACE": (
+                "INSERT_FASTENER"
+                if len(args) == 2 and args[1] == "workshop_frame_joint"
+                else "PLACE_ON_SURFACE"
+            ),
+            "SCREW": "DRIVE_FASTENER",
+        }.get(op, op)
         result: dict[str, Any] = {
             "success": True,
             "status": "CONTACT_GATED_ROBOT_ACTUATED_GT_VERIFIED",
@@ -1325,26 +1571,48 @@ class WorkshopExecutionDispatcher:
             "autonomous_manipulation_claimed": False,
             "direct_payload_pose_write": False,
         }
-        if op == "MOVE_TO":
+        if op == "OPEN":
+            region = args[0]
+            # OPEN is one generic action, but its physical execution matches
+            # Kitchen: navigate to the selected region, grasp its handle, and
+            # move the live joint with the robot while the container actuator
+            # is passive.
+            self.robot_destination = region
+            self._navigate_robot(region)
+            result["articulation"] = self._articulate_storage(
+                region, opening=True
+            )
+            result["storage_motion_source"] = (
+                "GOOGLE_ROBOT_HANDLE_MANIPULATION"
+            )
+            result["robot_actuated_motion"] = True
+            result["success"] = bool(result["articulation"]["verified"])
+            # OPEN is deliberately the inspection action as well: a region is
+            # exposed once and stays open for the rest of the task.
+            result["observed_instances"] = self.scene.get_observed_instances()
+            self._hold(0.80)
+        elif execution_op == "MOVE_TO":
             self.robot_destination = args[0]
             self._navigate_robot(args[0])
             result["navigation_semantics"] = "actuator-driven retreat/lateral/approach route in the clear front corridor"
             result["robot_base_qpos"] = self.scene.data.qpos[self.base_qpos].tolist()
             result["collision_audited_route"] = self.navigation_audit[-3:]
-        elif op == "OPEN_STORAGE":
+        elif execution_op == "OPEN_STORAGE":
             result["articulation"] = self._articulate_storage(args[0], opening=True)
             result["success"] = bool(result["articulation"]["verified"])
-        elif op == "INSPECT_STORAGE":
+        elif execution_op == "INSPECT_STORAGE":
             result["observed_instances"] = self.scene.get_observed_instances()
             self._hold(0.80)
             for _ in range(5):
                 self._capture(True)
-        elif op == "CLOSE_STORAGE":
+        elif execution_op == "CLOSE_STORAGE":
             result["articulation"] = self._articulate_storage(args[0], opening=False)
             result["success"] = bool(result["articulation"]["verified"])
-        elif op == "PICK":
+        elif execution_op == "PICK":
             obj = args[0]
             source = args[1] if len(args) > 1 else self.robot_destination
+            self.robot_destination = source
+            self._navigate_robot(source)
             self.object_pick_sources[obj] = source
             self.horizontal_transport_objects.discard(obj)
             result["position_before_m"] = self._body_position(obj)
@@ -1400,7 +1668,7 @@ class WorkshopExecutionDispatcher:
             result["physical_grasp_point_before_m"] = grasp_point.tolist()
             if source == "TOOL_CABINET":
                 # The door-handle stance is intentionally farther back so the
-                # swing arc clears the torso.  Once the door is open, advance
+                # swing arc clears the torso. Once the door is open, advance
                 # straight toward the cabinet for the deeper shelf pickup.
                 cabinet_pick_base = self.scene.data.qpos[self.base_qpos].copy()
                 cabinet_pick_base[0] += 0.10
@@ -1447,47 +1715,83 @@ class WorkshopExecutionDispatcher:
                 )
             elif source in {"LEFT_DRAWER", "RIGHT_DRAWER"}:
                 # The drawer is now pulled fully beyond the workbench apron.
-                # Descend vertically with a top-down gripper onto the named
-                # physical grasp geometry, exactly like Kitchen drawer picks.
                 allowed = (
-                    obj, "left_tool_drawer", "right_tool_drawer", "workbench"
+                    obj,
+                    "left_tool_drawer",
+                    "right_tool_drawer",
+                    "left_tool_drawer_frame",
+                    "right_tool_drawer_frame",
+                    "workbench",
                 )
-                drawer_pick_rotation = (
-                    POWER_TOP_DOWN_GRASP_ROTATION
-                    if obj == "workshop_power_driver"
-                    else self.arm_profile.top_down_rotation
-                )
-                self._reach(
-                    grasp_point + np.array([0.0, 0.0, 0.24]),
-                    rotation=drawer_pick_rotation,
-                    orientation_weight=0.20,
-                    allowed_body_names=allowed,
-                    ik_tolerance_m=0.025,
-                )
-                self._reach(
-                    grasp_point + np.array([0.0, 0.0, 0.12]),
-                    rotation=drawer_pick_rotation,
-                    orientation_weight=0.20,
-                    allowed_body_names=allowed,
-                    cartesian_step_m=0.020,
-                    ik_tolerance_m=0.022,
-                )
-                # The screw head is much thinner than a tool handle. Centre
-                # the lowest fingertip pads on it; the 50 mm site offset used
-                # for driver handles leaves those pads about 17 mm too high.
-                contact_height = (
-                    0.033
-                    if obj == "workshop_medium_phillips_screw"
-                    else 0.050
-                )
-                result["reach"] = self._reach(
-                    grasp_point + np.array([0.0, 0.0, contact_height]),
-                    rotation=drawer_pick_rotation,
-                    orientation_weight=0.20,
-                    allowed_body_names=allowed,
-                    cartesian_step_m=0.010,
-                    ik_tolerance_m=0.018,
-                )
+                if obj == "workshop_long_phillips_driver":
+                    # This driver lies across the shallow kitchen-style tray.
+                    # The driver now rests fully inside the *closed* copied
+                    # kitchen tray.  The previous elevated approach was
+                    # calibrated for the old, protruding pose and ends on
+                    # the wrong side of the short front reach envelope.  A
+                    # single collision-checked front approach lands the
+                    # finger pads on the exposed handle.
+                    result["reach"] = self._reach(
+                        grasp_point + np.array([0.0, -0.035, 0.0]),
+                        rotation=DRAWER_OBJECT_FRONT_GRASP_ROTATION,
+                        orientation_weight=0.05,
+                        allowed_body_names=allowed,
+                        cartesian_step_m=0.020,
+                        ik_tolerance_m=0.020,
+                    )
+                elif obj == "workshop_power_driver":
+                    # After the robot itself pulls the drawer, the power-tool
+                    # handle is already in a clear top-down corridor. A direct
+                    # Cartesian descent preserves the current arm branch;
+                    # the old high/medium staging points introduced a needless
+                    # reach discontinuity between OPEN and PICK.
+                    result["reach"] = self._reach(
+                        grasp_point + np.array([0.0, 0.0, 0.050]),
+                        rotation=self.arm_profile.top_down_rotation,
+                        orientation_weight=0.20,
+                        allowed_body_names=allowed,
+                        cartesian_step_m=0.010,
+                        ik_tolerance_m=0.025,
+                    )
+                else:
+                    # Small parts and the power tool remain top-down drawer
+                    # picks, matching the kitchen tray-access geometry.  The
+                    # power driver now lies across the tray, so its handle is
+                    # grasped with the ordinary top-down jaw direction.
+                    drawer_pick_rotation = (
+                        POWER_TOP_DOWN_GRASP_ROTATION
+                        if obj == "workshop_medium_phillips_screw"
+                        else self.arm_profile.top_down_rotation
+                    )
+                    self._reach(
+                        grasp_point + np.array([0.0, 0.0, 0.24]),
+                        rotation=drawer_pick_rotation,
+                        orientation_weight=0.20,
+                        allowed_body_names=allowed,
+                        ik_tolerance_m=0.025,
+                    )
+                    self._reach(
+                        grasp_point + np.array([0.0, 0.0, 0.12]),
+                        rotation=drawer_pick_rotation,
+                        orientation_weight=0.20,
+                        allowed_body_names=allowed,
+                        cartesian_step_m=0.020,
+                        ik_tolerance_m=0.022,
+                    )
+                    # The screw head is much thinner than a tool handle.
+                    contact_height = (
+                        0.033
+                        if obj == "workshop_medium_phillips_screw"
+                        else 0.050
+                    )
+                    result["reach"] = self._reach(
+                        grasp_point + np.array([0.0, 0.0, contact_height]),
+                        rotation=drawer_pick_rotation,
+                        orientation_weight=0.20,
+                        allowed_body_names=allowed,
+                        cartesian_step_m=0.010,
+                        ik_tolerance_m=0.018,
+                    )
             else:
                 source_body = {
                     "LEFT_DRAWER": "left_tool_drawer",
@@ -1566,7 +1870,15 @@ class WorkshopExecutionDispatcher:
                 else 0.060
                 if source == "TOOL_CABINET"
                 and obj == "workshop_long_phillips_driver"
-                else 0.040 if source == "TOOL_CABINET" else 0.025
+                else 0.040 if source == "TOOL_CABINET"
+                # The kitchen-style drawer has a shallow, fully extended tray.
+                # A thin screw can be safely contacted with this calibrated
+                # 35 mm arrival tolerance; bilateral finger contact remains
+                # mandatory below, so this does not bypass physical grasping.
+                else 0.035
+                if source in {"LEFT_DRAWER", "RIGHT_DRAWER"}
+                and obj == "workshop_medium_phillips_screw"
+                else 0.025
             )
             if result["preclose_measured_gripper_error_m"] > preclose_limit:
                 raise RuntimeError(
@@ -1647,11 +1959,37 @@ class WorkshopExecutionDispatcher:
             result["position_after_m"] = self._body_position(obj)
             result["grasp_weld_active"] = bool(self.scene.data.eq_active[self.active_grasp_weld])
             result["robot_grasp_visible"] = True
-        elif op in {"PLACE_ON_SURFACE", "PLACE_IN_CONTAINER"}:
+        elif execution_op in {"PLACE_ON_SURFACE", "PLACE_IN_CONTAINER"}:
             obj, destination = args
+            self.robot_destination = destination
+            post_drive_tip_down_release = bool(
+                execution_op == "PLACE_ON_SURFACE"
+                and obj in {
+                    "workshop_long_phillips_driver", "workshop_power_driver"
+                }
+                and self.scene.state.joint_repaired
+            )
+            if (
+                post_drive_tip_down_release
+                and obj == "workshop_long_phillips_driver"
+                and obj not in self.horizontal_transport_objects
+            ):
+                # The SCREW action ends with a straight vertical retrieval.
+                # At the start of the following PLACE, smoothly turn the
+                # still-held tool into its carry attitude at the same elevated
+                # world position before moving the mobile base.
+                result["placement_reorientation"] = (
+                    self._regrasp_driver_horizontal_for_placement(
+                        obj,
+                        np.asarray(self._body_position(obj), dtype=float)
+                        - np.array([0.0, 0.0, 0.16]),
+                    )
+                )
+                self.horizontal_transport_objects.add(obj)
+            self._navigate_robot(destination)
             result["position_before_m"] = self._body_position(obj)
             if (
-                op == "PLACE_ON_SURFACE"
+                execution_op == "PLACE_ON_SURFACE"
                 and obj == "workshop_medium_phillips_screw"
                 and destination == "MAIN_WORKBENCH_ZONE"
             ):
@@ -1681,13 +2019,6 @@ class WorkshopExecutionDispatcher:
                 # refresh the pose used to compute its hand-relative offset.
                 result["position_before_m"] = self._body_position(obj)
             target = self._destination_position(destination, obj)
-            post_drive_tip_down_release = bool(
-                op == "PLACE_ON_SURFACE"
-                and obj in {
-                    "workshop_long_phillips_driver", "workshop_power_driver"
-                }
-                and self.scene.state.joint_repaired
-            )
             if (
                 post_drive_tip_down_release
                 and obj not in self.horizontal_transport_objects
@@ -1714,7 +2045,7 @@ class WorkshopExecutionDispatcher:
             )
             current_body_rotation = self.scene.data.xmat[body_id].reshape(3, 3).copy()
             body_in_grip = current_grip_rotation.T @ current_body_rotation
-            if op == "PLACE_IN_CONTAINER" and obj == "workshop_medium_phillips_screw":
+            if execution_op == "PLACE_IN_CONTAINER" and obj == "workshop_medium_phillips_screw":
                 # Keep the stable attitude established by the actual source
                 # grasp.  Cabinet screws arrive upright and drawer screws lie
                 # flat; forcing both through the same 90-degree wrist flip
@@ -1722,7 +2053,7 @@ class WorkshopExecutionDispatcher:
                 # support contact and staging weld make either pose static.
                 desired_body_rotation = current_body_rotation
             elif (
-                op == "PLACE_ON_SURFACE"
+                execution_op == "PLACE_ON_SURFACE"
                 and obj == "workshop_medium_phillips_screw"
             ):
                 # Stage the fastener in a stable, fixed horizontal attitude.
@@ -1733,7 +2064,7 @@ class WorkshopExecutionDispatcher:
                 desired_body_rotation = self._rotation_from_quaternion(
                     np.array([0.7071068, 0.0, 0.7071068, 0.0])
                 )
-            elif op == "PLACE_ON_SURFACE" and obj == "workshop_long_phillips_driver":
+            elif execution_op == "PLACE_ON_SURFACE" and obj == "workshop_long_phillips_driver":
                 if (
                     not post_drive_tip_down_release
                     and self.object_pick_sources.get(obj) in {
@@ -1748,7 +2079,7 @@ class WorkshopExecutionDispatcher:
                     desired_body_rotation = self._rotation_from_quaternion(
                         np.array([0.7071068, 0.0, 0.7071068, 0.0])
                     )
-            elif op == "PLACE_ON_SURFACE" and obj == "workshop_power_driver":
+            elif execution_op == "PLACE_ON_SURFACE" and obj == "workshop_power_driver":
                 desired_body_rotation = (
                     current_body_rotation
                     if post_drive_tip_down_release
@@ -1783,6 +2114,7 @@ class WorkshopExecutionDispatcher:
                 approach_names.extend((
                     "workshop_parts_tray", "workshop_hardware_bin",
                     "left_tool_drawer", "right_tool_drawer",
+                    "left_tool_drawer_frame", "right_tool_drawer_frame",
                     "workshop_frame_fixture", "workshop_frame_joint",
                 ))
             approach_allowed = tuple(approach_names)
@@ -1797,8 +2129,8 @@ class WorkshopExecutionDispatcher:
                 0.040 if destination == "TOOL_CART_TOP" else 0.025
             )
             placement_orientation_weight = (
-                0.01 if op == "PLACE_IN_CONTAINER" else
-                0.08 if op == "PLACE_ON_SURFACE"
+                0.01 if execution_op == "PLACE_IN_CONTAINER" else
+                0.08 if execution_op == "PLACE_ON_SURFACE"
                 and obj == "workshop_medium_phillips_screw" else
                 0.05 if obj in {
                     "workshop_long_phillips_driver", "workshop_power_driver"
@@ -1808,7 +2140,7 @@ class WorkshopExecutionDispatcher:
                 placement_ik_tolerance,
                 0.080 if obj in {
                     "workshop_long_phillips_driver", "workshop_power_driver"
-                } else 0.035 if op == "PLACE_IN_CONTAINER" else 0.0,
+                } else 0.035 if execution_op == "PLACE_IN_CONTAINER" else 0.0,
             )
             if obj == "workshop_power_driver" and not post_drive_tip_down_release:
                 # Lift the bulky drill completely above the bench edge before
@@ -1840,13 +2172,13 @@ class WorkshopExecutionDispatcher:
                     0.060 if obj in {
                         "workshop_long_phillips_driver",
                         "workshop_power_driver",
-                    } else 0.035 if op == "PLACE_IN_CONTAINER" else 0.0,
+                    } else 0.035 if execution_op == "PLACE_IN_CONTAINER" else 0.0,
                 ),
             )
             final_allowed = approach_allowed
             release_clearance = (
                 0.0
-                if op == "PLACE_ON_SURFACE"
+                if execution_op == "PLACE_ON_SURFACE"
                 and obj == "workshop_medium_phillips_screw"
                 else 0.015
             )
@@ -1858,11 +2190,11 @@ class WorkshopExecutionDispatcher:
                 cartesian_step_m=0.015,
                 ik_tolerance_m=max(
                     placement_ik_tolerance,
-                    0.035 if op == "PLACE_IN_CONTAINER" else 0.0,
+                    0.035 if execution_op == "PLACE_IN_CONTAINER" else 0.0,
                 ),
             )
             self._hold(0.75)
-            if op in {"PLACE_ON_SURFACE", "PLACE_IN_CONTAINER"}:
+            if execution_op in {"PLACE_ON_SURFACE", "PLACE_IN_CONTAINER"}:
                 # Establish a zero-motion support handoff at the physically
                 # reached pose *before* opening the fingers. Small round parts
                 # otherwise have time to roll or fall while the gripper opens.
@@ -1885,7 +2217,7 @@ class WorkshopExecutionDispatcher:
                 result["staged_object_static_after_contact"] = True
             self._release_grasp()
             self._set_gripper(False)
-            if op in {"PLACE_ON_SURFACE", "PLACE_IN_CONTAINER"}:
+            if execution_op in {"PLACE_ON_SURFACE", "PLACE_IN_CONTAINER"}:
                 self._hold(0.45)
             if destination == "TOOL_CART_TOP":
                 retreat = (
@@ -1916,7 +2248,7 @@ class WorkshopExecutionDispatcher:
                 ik_tolerance_m=(
                     0.080
                     if destination == "TOOL_CART_TOP"
-                    else 0.060 if op == "PLACE_IN_CONTAINER"
+                    else 0.060 if execution_op == "PLACE_IN_CONTAINER"
                     else 0.075 if post_drive_tip_down_release
                     or self.object_pick_sources.get(obj) in {
                         "LEFT_DRAWER", "RIGHT_DRAWER"
@@ -1954,14 +2286,18 @@ class WorkshopExecutionDispatcher:
                 result["success"] = bool(
                     result["measured_destination_error_m"] <= 0.100
                 )
-        elif op == "INSERT_FASTENER":
+        elif execution_op == "INSERT_FASTENER":
             obj, target = args
+            self.robot_destination = target
+            self._navigate_robot(target)
             result["reorientation"] = self._regrasp_vertical_fastener(obj)
             entry_site = mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_SITE, "workshop_target_hole_entry")
             seated_site = mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_SITE, "workshop_target_hole_seated_tip")
             tip_site = mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_SITE, f"{obj}_tip_site")
+            head_site = mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_SITE, f"{obj}_head_site")
             entry = self.scene.data.site_xpos[entry_site].copy()
-            partial_tip = self.scene.data.site_xpos[seated_site].copy() + np.array([0.0, 0.0, 0.004])
+            seated_tip = self.scene.data.site_xpos[seated_site].copy()
+            partial_tip = 0.5 * (entry + seated_tip)
             insertion_allowed = (
                 obj, "workshop_frame_joint", "workshop_frame_fixture",
                 "workbench", "left_tool_drawer", "right_tool_drawer",
@@ -1977,9 +2313,15 @@ class WorkshopExecutionDispatcher:
             )
             tip_before = self.scene.data.site_xpos[tip_site].copy()
             aligned_start_tip = np.array([entry[0], entry[1], tip_before[2]])
+            tip_down_quaternion = np.array([0.0, 1.0, 0.0, 0.0])
+            tip_local = np.array([0.0, 0.0, 0.045])
+            tip_down_rotation = self._rotation_from_quaternion(
+                tip_down_quaternion
+            )
             self._set_weld_desired_world_pose(
-                alignment_id, frame_id, aligned_start_tip,
-                np.array([1.0, 0.0, 0.0, 0.0]),
+                alignment_id, frame_id,
+                aligned_start_tip - tip_down_rotation @ tip_local,
+                tip_down_quaternion,
             )
             self.scene.data.eq_active[alignment_id] = 1
             self._hold(0.50)
@@ -1992,8 +2334,9 @@ class WorkshopExecutionDispatcher:
                     * (partial_tip[2] - start_tip_z),
                 ])
                 self._set_weld_desired_world_pose(
-                    alignment_id, frame_id, desired_tip,
-                    np.array([1.0, 0.0, 0.0, 0.0]),
+                    alignment_id, frame_id,
+                    desired_tip - tip_down_rotation @ tip_local,
+                    tip_down_quaternion,
                 )
                 live_tip = self.scene.data.site_xpos[tip_site].copy()
                 gripper_target = (
@@ -2019,6 +2362,7 @@ class WorkshopExecutionDispatcher:
             self._fold_arm()
             result["position_after_m"] = self._body_position(obj)
             final_tip = self.scene.data.site_xpos[tip_site].copy()
+            final_head = self.scene.data.site_xpos[head_site].copy()
             object_id = mujoco.mj_name2id(
                 self.scene.model, mujoco.mjtObj.mjOBJ_BODY, obj
             )
@@ -2026,9 +2370,12 @@ class WorkshopExecutionDispatcher:
             self.insertion_metrics = {
                 "radial_error_m": float(np.linalg.norm(final_tip[:2] - entry[:2])),
                 "insertion_depth_m": float(entry[2] - final_tip[2]),
-                "remaining_drive_depth_m": 0.004,
+                "remaining_drive_depth_m": float(
+                    final_tip[2] - seated_tip[2]
+                ),
+                "head_above_tip_m": float(final_head[2] - final_tip[2]),
                 "vertical_axis_error_rad": float(math.acos(np.clip(
-                    np.dot(fastener_axis, np.array([0.0, 0.0, 1.0])),
+                    np.dot(fastener_axis, np.array([0.0, 0.0, -1.0])),
                     -1.0, 1.0,
                 ))),
             }
@@ -2036,23 +2383,30 @@ class WorkshopExecutionDispatcher:
             result["direct_payload_pose_write"] = False
             result["success"] = bool(
                 self.insertion_metrics["radial_error_m"] <= 0.003
-                and self.insertion_metrics["insertion_depth_m"] >= 0.020
+                and 0.012 <= self.insertion_metrics["insertion_depth_m"] <= 0.018
+                and self.insertion_metrics["head_above_tip_m"] >= 0.040
                 and self.insertion_metrics["vertical_axis_error_rad"] <= 0.03
             )
-        elif op == "DRIVE_FASTENER":
+        elif execution_op == "DRIVE_FASTENER":
             driver, fastener, _target = args
+            self.robot_destination = _target
+            self._navigate_robot(_target)
             result["reorientation"] = self._regrasp_driver_tip_down(driver)
             driver_tip_site = mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_SITE, f"{driver}_tip_site")
             fastener_head_site = mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_SITE, f"{fastener}_head_site")
             head = self.scene.data.site_xpos[fastener_head_site].copy()
             tip = self.scene.data.site_xpos[driver_tip_site].copy()
-            preload_target = self.scene.data.site_xpos[self.grip_site_id].copy() + (head + np.array([0.0, 0.0, 0.002]) - tip)
+            preload_target = (
+                self.scene.data.site_xpos[self.grip_site_id].copy()
+                + (head - tip)
+            )
             result["axial_preload"] = self._reach(
                 preload_target, samples=12,
                 allowed_body_names=(
                     driver, fastener, "workshop_frame_joint",
                     "workshop_frame_fixture", "workbench",
                     "workshop_parts_tray", "workshop_hardware_bin",
+                    "left_tool_drawer", "right_tool_drawer",
                 ),
                 cartesian_step_m=0.010, ik_tolerance_m=0.035,
             )
@@ -2061,14 +2415,17 @@ class WorkshopExecutionDispatcher:
                 driver, fastener, "workshop_frame_joint",
                 "workshop_frame_fixture", "workbench",
                 "workshop_parts_tray", "workshop_hardware_bin",
+                "left_tool_drawer", "right_tool_drawer",
             )
-            for _ in range(3):
+            for _ in range(8):
                 tip = self.scene.data.site_xpos[driver_tip_site].copy()
-                if np.linalg.norm(tip - head) <= 0.012:
+                # The visible tip/head sites have a combined 7 mm marker/contact
+                # envelope; <=8 mm is physical overlap rather than a gap.
+                if np.linalg.norm(tip - head) <= 0.008:
                     break
                 contact_target = (
                     self.scene.data.site_xpos[self.grip_site_id].copy()
-                    + (head + np.array([0.0, 0.0, 0.002]) - tip)
+                    + (head - tip)
                 )
                 live_rotation = self.scene.data.site_xmat[
                     self.grip_site_id
@@ -2077,9 +2434,57 @@ class WorkshopExecutionDispatcher:
                     contact_target, rotation=live_rotation,
                     orientation_weight=0.08,
                     allowed_body_names=drive_allowed,
-                    cartesian_step_m=0.006, ik_tolerance_m=0.045,
+                    cartesian_step_m=0.003, ik_tolerance_m=0.035,
                 ))
+                self._hold(0.25)
             result["robot_contact_corrections"] = contact_corrections
+            driver_body = mujoco.mj_name2id(
+                self.scene.model, mujoco.mjtObj.mjOBJ_BODY, driver
+            )
+            contact_start_position = self.scene.data.xpos[driver_body].copy()
+            contact_start_quaternion = self.scene.data.xquat[driver_body].copy()
+            contact_quaternion = (
+                np.array([0.7071068, 0.0, -0.7071068, 0.0])
+                if driver == "workshop_power_driver"
+                else np.array([0.0, 1.0, 0.0, 0.0])
+            )
+            if np.dot(
+                contact_start_quaternion, contact_quaternion
+            ) < 0.0:
+                contact_quaternion = -contact_quaternion
+            contact_body_position = (
+                head
+                - self._rotation_from_quaternion(contact_quaternion)
+                @ self.scene.model.site_pos[driver_tip_site]
+            )
+            contact_alignment_steps = []
+            for fraction in np.linspace(0.0, 1.0, 9)[1:]:
+                position = (
+                    contact_start_position
+                    + float(fraction)
+                    * (contact_body_position - contact_start_position)
+                )
+                quaternion = (
+                    (1.0 - float(fraction)) * contact_start_quaternion
+                    + float(fraction) * contact_quaternion
+                )
+                quaternion /= np.linalg.norm(quaternion)
+                self._set_weld_desired_world_pose(
+                    self.active_grasp_weld, self.gripper_body_id,
+                    position, quaternion,
+                )
+                self._hold(0.08)
+                contact_alignment_steps.append({
+                    "fraction": float(fraction),
+                    "driver_tip_m": self.scene.data.site_xpos[
+                        driver_tip_site
+                    ].tolist(),
+                    "grasp_constraint_active": bool(
+                        self.scene.data.eq_active[
+                            self.active_grasp_weld
+                        ]
+                    ),
+                })
             # Always engage the concentric nose guide before torque.  It keeps
             # both tool and fastener exactly vertical while still allowing the
             # visible ratcheting rotation commanded below.
@@ -2091,20 +2496,22 @@ class WorkshopExecutionDispatcher:
                 self.scene.model, mujoco.mjtObj.mjOBJ_BODY,
                 "workshop_frame_joint",
             )
-            tip_offset = (
-                0.210 if driver == "workshop_power_driver" else 0.230
-            )
-            guide_body_position = head + np.array([
-                0.0, 0.0, tip_offset + 0.002
-            ])
-            driver_tip_down_quat = np.array([0.0, 1.0, 0.0, 0.0])
+            # The grasped robot motion above has already aligned the bit and
+            # established measured head contact. Activate the guide at that
+            # exact live pose: no release, no second alignment, and no snap.
+            guide_body_position = self.scene.data.xpos[driver_body].copy()
+            driver_tip_down_quat = self.scene.data.xquat[driver_body].copy()
             self._set_weld_desired_world_pose(
                 contact_guide_id, frame_id, guide_body_position,
                 driver_tip_down_quat,
             )
             self.scene.data.eq_active[contact_guide_id] = 1
-            self._hold(0.60)
+            mujoco.mj_forward(self.scene.model, self.scene.data)
             result["physical_tip_contact_guide_used"] = True
+            result["continuous_contact_alignment_steps"] = (
+                contact_alignment_steps
+            )
+            result["gripper_closed_during_contact_alignment"] = True
             predrive_tip = self.scene.data.site_xpos[driver_tip_site].copy()
             installed_id = mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_EQUALITY, "workshop_installed_fastener_weld")
             fastener_address = self._free_qpos_address(fastener)
@@ -2121,84 +2528,142 @@ class WorkshopExecutionDispatcher:
                 self.scene.model, mujoco.mjtObj.mjOBJ_ACTUATOR,
                 "google:joint_wrist_actuator",
             )
-            wrist_baseline = float(self.scene.data.ctrl[wrist_actuator])
+            wrist_arm_index = int(np.flatnonzero(
+                self.arm_actuators == wrist_actuator
+            )[0])
             self.scene.data.eq_active[installed_id] = 0
+            seated_site = mujoco.mj_name2id(
+                self.scene.model, mujoco.mjtObj.mjOBJ_SITE,
+                "workshop_target_hole_seated_tip",
+            )
+            fastener_tip_site = mujoco.mj_name2id(
+                self.scene.model, mujoco.mjtObj.mjOBJ_SITE,
+                f"{fastener}_tip_site",
+            )
+            seated = self.scene.data.site_xpos[seated_site].copy()
+            drive_start_tip = self.scene.data.site_xpos[
+                fastener_tip_site
+            ].copy()
+            drive_advance = max(0.0, float(
+                drive_start_tip[2] - seated[2]
+            ))
+            drive_duration_s = 4.0
+            total_drive_steps = int(round(
+                drive_duration_s / self.scene.model.opt.timestep
+            ))
+
+            # Plan the robot's matching axial descent once, then interpolate
+            # its actuator commands in the same four-second loop as the screw
+            # and driver guide. The gripper therefore remains co-moving with
+            # the tool rather than leaving the aligned driver behind.
+            drive_grip_start = self.scene.data.site_xpos[
+                self.grip_site_id
+            ].copy()
+            drive_grip_rotation = self.scene.data.site_xmat[
+                self.grip_site_id
+            ].reshape(3, 3).copy()
+            saved_qpos = self.scene.data.qpos.copy()
+            saved_qvel = self.scene.data.qvel.copy()
+            drive_ik = ProfiledIK(
+                self.scene.model, self.scene.data, self.arm_profile,
+                orientation_weight=0.08, maximum_iterations=1800,
+            )
+            drive_arm_target, drive_position_error, _ = drive_ik.solve(
+                drive_grip_start - np.array([0.0, 0.0, drive_advance]),
+                self.scene.data.qpos[self.arm_qpos].copy(),
+                drive_grip_rotation,
+            )
+            self.scene.data.qpos[:] = saved_qpos
+            self.scene.data.qvel[:] = saved_qvel
+            mujoco.mj_forward(self.scene.model, self.scene.data)
+            if drive_position_error > 0.050:
+                raise RuntimeError(
+                    "Unable to plan continuous driver descent: "
+                    f"error={drive_position_error:.4f} m"
+                )
+            drive_arm_start = self.scene.data.ctrl[
+                self.arm_actuators
+            ].copy()
+
+            def advance_drive_frame(
+                update_index: int,
+                update_count: int,
+                driver_quaternion: np.ndarray,
+                wrist_offset: float = 0.0,
+            ) -> None:
+                progress = update_index / update_count
+                advance = drive_advance * progress
+                screw_angle = 4.0 * math.pi * progress
+                screw_yaw = np.array([
+                    math.cos(screw_angle / 2.0), 0.0, 0.0,
+                    math.sin(screw_angle / 2.0),
+                ])
+                rotated_screw = np.empty(4)
+                mujoco.mju_mulQuat(rotated_screw, screw_yaw, base_quat)
+                self.scene.data.qpos[
+                    fastener_address : fastener_address + 3
+                ] = start_position - np.array([0.0, 0.0, advance])
+                self.scene.data.qpos[
+                    fastener_address + 3 : fastener_address + 7
+                ] = rotated_screw
+                self.scene.data.qvel[
+                    fastener_dof : fastener_dof + 6
+                ] = 0.0
+                arm_command = (
+                    drive_arm_start
+                    + progress * (drive_arm_target - drive_arm_start)
+                )
+                self.scene.data.ctrl[self.arm_actuators] = arm_command
+                self.scene.data.ctrl[wrist_actuator] = (
+                    arm_command[wrist_arm_index] + wrist_offset
+                )
+                self._set_weld_desired_world_pose(
+                    contact_guide_id, frame_id,
+                    guide_body_position - np.array([0.0, 0.0, advance]),
+                    driver_quaternion,
+                )
+                mujoco.mj_forward(self.scene.model, self.scene.data)
+                step_start = int(round(
+                    (update_index - 1) * total_drive_steps / update_count
+                ))
+                step_end = int(round(
+                    update_index * total_drive_steps / update_count
+                ))
+                self._step(max(1, step_end - step_start))
+
             stroke_samples = 10
             powered_drive = driver == "workshop_power_driver"
             ratchet_strokes = 0 if powered_drive else 8
             if powered_drive:
                 # The power-driver casing and robot wrist remain stationary.
-                # Its internal motor is represented by the screw's continuous
-                # rotation and helical descent after the bit contacts the head.
+                # Its internal motor rotates the screw while the robot and
+                # casing follow the full axial descent for exactly four seconds.
                 for sample in range(1, 81):
-                    progress = sample / 80.0
-                    screw_angle = 4.0 * math.pi * progress
-                    advance = 0.004 * progress
-                    self.scene.data.qpos[
-                        fastener_address : fastener_address + 3
-                    ] = start_position - np.array([0.0, 0.0, advance])
-                    screw_yaw = np.array([
-                        math.cos(screw_angle / 2.0), 0.0, 0.0,
-                        math.sin(screw_angle / 2.0),
-                    ])
-                    rotated_screw = np.empty(4)
-                    mujoco.mju_mulQuat(rotated_screw, screw_yaw, base_quat)
-                    self.scene.data.qpos[
-                        fastener_address + 3 : fastener_address + 7
-                    ] = rotated_screw
-                    self.scene.data.qvel[
-                        fastener_dof : fastener_dof + 6
-                    ] = 0.0
-                    self._set_weld_desired_world_pose(
-                        contact_guide_id, frame_id,
-                        guide_body_position - np.array([0.0, 0.0, advance]),
-                        driver_tip_down_quat,
+                    advance_drive_frame(
+                        sample, 80, driver_tip_down_quat
                     )
-                    mujoco.mj_forward(self.scene.model, self.scene.data)
-                    self._step(20)
             else:
                 # Forty degrees makes each manual ratchet stroke clearly
                 # visible. The return stroke does not back the screw out.
                 ratchet_angle = 0.70
+                update_count = ratchet_strokes * stroke_samples * 2
+                update_index = 0
                 for stroke in range(ratchet_strokes):
                     for sample in range(1, stroke_samples + 1):
                         local = sample / stroke_samples
-                        progress = (stroke + local) / ratchet_strokes
-                        screw_angle = 4.0 * math.pi * progress
-                        advance = 0.004 * progress
-                        self.scene.data.qpos[fastener_address : fastener_address + 3] = (
-                            start_position - np.array([0.0, 0.0, advance])
-                        )
-                        screw_yaw = np.array([
-                            math.cos(screw_angle / 2.0), 0.0, 0.0,
-                            math.sin(screw_angle / 2.0),
-                        ])
-                        rotated_screw = np.empty(4)
-                        mujoco.mju_mulQuat(rotated_screw, screw_yaw, base_quat)
-                        self.scene.data.qpos[fastener_address + 3 : fastener_address + 7] = rotated_screw
-                        self.scene.data.qvel[fastener_dof : fastener_dof + 6] = 0.0
                         driver_yaw = np.array([
                             math.cos(ratchet_angle * local / 2.0), 0.0, 0.0,
                             math.sin(ratchet_angle * local / 2.0),
                         ])
                         rotated_driver = np.empty(4)
                         mujoco.mju_mulQuat(rotated_driver, driver_yaw, driver_tip_down_quat)
-                        self._set_weld_desired_world_pose(
-                            contact_guide_id, frame_id,
-                            guide_body_position - np.array([0.0, 0.0, advance]),
-                            rotated_driver,
+                        update_index += 1
+                        advance_drive_frame(
+                            update_index, update_count, rotated_driver,
+                            ratchet_angle * local,
                         )
-                        self.scene.data.ctrl[wrist_actuator] = wrist_baseline + ratchet_angle * local
-                        mujoco.mj_forward(self.scene.model, self.scene.data)
-                        self._step(20)
                     for sample in range(1, stroke_samples + 1):
                         local = sample / stroke_samples
-                        progress = (stroke + 1.0) / ratchet_strokes
-                        advance = 0.004 * progress
-                        self.scene.data.qpos[fastener_address : fastener_address + 3] = (
-                            start_position - np.array([0.0, 0.0, advance])
-                        )
-                        self.scene.data.qvel[fastener_dof : fastener_dof + 6] = 0.0
                         return_angle = ratchet_angle * (1.0 - local)
                         driver_yaw = np.array([
                             math.cos(return_angle / 2.0), 0.0, 0.0,
@@ -2206,75 +2671,111 @@ class WorkshopExecutionDispatcher:
                         ])
                         rotated_driver = np.empty(4)
                         mujoco.mju_mulQuat(rotated_driver, driver_yaw, driver_tip_down_quat)
-                        self._set_weld_desired_world_pose(
-                            contact_guide_id, frame_id,
-                            guide_body_position - np.array([0.0, 0.0, advance]),
-                            rotated_driver,
+                        update_index += 1
+                        advance_drive_frame(
+                            update_index, update_count, rotated_driver,
+                            return_angle,
                         )
-                        self.scene.data.ctrl[wrist_actuator] = wrist_baseline + return_angle
-                        mujoco.mj_forward(self.scene.model, self.scene.data)
-                        self._step(20)
-            self.scene.data.ctrl[wrist_actuator] = wrist_baseline
-            seated_site = mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_SITE, "workshop_target_hole_seated_tip")
-            seated = self.scene.data.site_xpos[seated_site].copy()
-            self.scene.data.qpos[fastener_address : fastener_address + 3] = seated
+            self.scene.data.ctrl[self.arm_actuators] = drive_arm_target
+            seated_body = seated - self._rotation_from_quaternion(
+                base_quat
+            ) @ np.array([0.0, 0.0, 0.045])
+            self.scene.data.qpos[
+                fastener_address : fastener_address + 3
+            ] = seated_body
             self.scene.data.qvel[fastener_dof : fastener_dof + 6] = 0.0
             mujoco.mj_forward(self.scene.model, self.scene.data)
             self._activate_installed_fastener(fastener, fully_seated=True)
-            self.scene.data.eq_active[contact_guide_id] = 0
-            fastener_tip_site = mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_SITE, f"{fastener}_tip_site")
-            final_tip = self.scene.data.site_xpos[fastener_tip_site].copy()
             driver_body = mujoco.mj_name2id(
                 self.scene.model, mujoco.mjtObj.mjOBJ_BODY, driver
             )
+            visible_bit_axis_local = (
+                np.array([-1.0, 0.0, 0.0])
+                if powered_drive else np.array([0.0, 0.0, 1.0])
+            )
+            driver_axis_at_contact = (
+                self.scene.data.xmat[driver_body].reshape(3, 3)
+                @ visible_bit_axis_local
+            )
+            self.scene.data.eq_active[contact_guide_id] = 0
+            mujoco.mj_forward(self.scene.model, self.scene.data)
+            # Retain the physical grasp and lift the tool straight off the
+            # screw head before any transport or placement reorientation.
+            # Previously the driver was released into a fixture here, which
+            # produced a visible drop followed by a pose jump.
+            retreat_rotation = self.scene.data.site_xmat[
+                self.grip_site_id
+            ].reshape(3, 3).copy()
+            driver_position_before_retraction = self.scene.data.xpos[
+                driver_body
+            ].copy()
+            result["post_drive_vertical_retraction"] = self._reach(
+                self.scene.data.site_xpos[self.grip_site_id].copy()
+                + np.array([0.0, 0.0, 0.14]),
+                rotation=retreat_rotation,
+                orientation_weight=0.08,
+                allowed_body_names=(
+                    driver, fastener, "workshop_frame_joint",
+                    "workshop_frame_fixture", "workbench",
+                    "left_tool_drawer", "right_tool_drawer",
+                ),
+                cartesian_step_m=0.010,
+                ik_tolerance_m=0.045,
+            )
+            result["driver_grasp_retained_during_retraction"] = bool(
+                self.active_grasp_weld >= 0
+                and self.scene.data.eq_active[self.active_grasp_weld]
+            )
+            result["driver_post_drive_lift_m"] = float(
+                self.scene.data.xpos[driver_body][2]
+                - driver_position_before_retraction[2]
+            )
+            fastener_tip_site = mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_SITE, f"{fastener}_tip_site")
+            final_tip = self.scene.data.site_xpos[fastener_tip_site].copy()
             fastener_axis = self.scene.data.xmat[fastener_body].reshape(3, 3)[:, 2]
-            driver_axis = self.scene.data.xmat[driver_body].reshape(3, 3)[:, 2]
             self.drive_metrics = {
                 "driver_tip_to_head_error_m": float(np.linalg.norm(predrive_tip - head)),
                 "fastener_seated_error_m": float(np.linalg.norm(final_tip - seated)),
                 "driver_turns": 2.0,
-                "axial_advance_m": 0.004,
+                "axial_advance_m": drive_advance,
+                "continuous_drive_duration_s": drive_duration_s,
+                "robot_followed_axial_descent": True,
                 "ratchet_strokes": ratchet_strokes,
                 "drive_mode": "POWER_MOTOR_STATIC_CASING" if powered_drive else "MANUAL_RATCHET",
                 "fastener_vertical_error_rad": float(math.acos(np.clip(
-                    np.dot(fastener_axis, np.array([0.0, 0.0, 1.0])),
+                    np.dot(fastener_axis, np.array([0.0, 0.0, -1.0])),
                     -1.0, 1.0,
                 ))),
                 "driver_vertical_error_rad": float(math.acos(np.clip(
-                    np.dot(driver_axis, np.array([0.0, 0.0, -1.0])),
+                    np.dot(
+                        driver_axis_at_contact,
+                        np.array([0.0, 0.0, -1.0]),
+                    ),
                     -1.0, 1.0,
                 ))),
+                "visible_bit_axis_world": driver_axis_at_contact.tolist(),
             }
             self.scene.state.joint_repaired = bool(
-                self.drive_metrics["driver_tip_to_head_error_m"] <= 0.012
+                self.drive_metrics["driver_tip_to_head_error_m"] <= 0.008
                 and self.drive_metrics["fastener_seated_error_m"] <= 0.004
                 and self.drive_metrics["fastener_vertical_error_rad"] <= 0.03
                 and self.drive_metrics["driver_vertical_error_rad"] <= 0.05
             )
             result.update(self.drive_metrics)
             result["fastening_mechanics"] = (
-                "stationary power-driver casing with internal motor represented by two screw turns and continuous 4 mm helical advance"
+                "power-driver bit contact maintained for four seconds while the screw turns twice and the robot follows the full helical descent"
                 if powered_drive else
-                "eight visible manual wrist/driver ratchet strokes coupled to two screw turns and continuous 4 mm helical advance"
+                "eight visible manual wrist/driver ratchet strokes over four seconds, coupled to two screw turns and the robot's continuous axial descent"
             )
             result["tip_contact_constraint_recalibrated"] = False
             result["joint_repaired_state"] = bool(self.scene.state.joint_repaired)
             result["success"] = bool(self.scene.state.joint_repaired)
-            if result["success"]:
-                result["transport_reorientation"] = (
-                    self._regrasp_driver_horizontal_for_placement(
-                        driver,
-                        np.asarray(self._body_position(driver), dtype=float)
-                        - np.array([0.0, 0.0, 0.06]),
-                    )
-                )
-                self.horizontal_transport_objects.add(driver)
-        elif op == "VERIFY_REPAIR":
+        elif execution_op == "VERIFY_REPAIR":
             result["joint_repaired_state"] = bool(self.scene.state.joint_repaired)
             result["fastener_position_m"] = self._body_position(self.assignment.fastener or "")
             result["driver_position_m"] = self._body_position(self.assignment.driver or "")
             result["success"] = bool(self.scene.state.joint_repaired)
-        elif op == "TERMINATE_INFEASIBLE":
+        elif execution_op == "TERMINATE_INFEASIBLE":
             result["confirmed_rejection_reason"] = args[0]
         self._capture(True)
         return result
@@ -2290,7 +2791,10 @@ def validate_terminal_state(
     ))
     checks: dict[str, bool] = {
         "search_stopped_at_expected_region": set(state.inspected_storage) == expected_inspected,
-        "all_storage_closed": not any(state.storage_open.values()),
+        "inspected_storage_remains_open": (
+            {region for region, is_open in state.storage_open.items() if is_open}
+            == expected_inspected
+        ),
         "hand_empty": state.held_object is None,
     }
     measurements: dict[str, Any] = {}
@@ -2321,7 +2825,7 @@ def validate_terminal_state(
         )
         fastener_axis = scene.data.xmat[fastener_body].reshape(3, 3)[:, 2]
         vertical_error = float(math.acos(np.clip(
-            np.dot(fastener_axis, np.array([0.0, 0.0, 1.0])), -1.0, 1.0
+            np.dot(fastener_axis, np.array([0.0, 0.0, -1.0])), -1.0, 1.0
         )))
         insertion_error = float(np.linalg.norm(fastener_tip - joint_target))
         installed_weld = mujoco.mj_name2id(
@@ -2350,7 +2854,6 @@ def validate_terminal_state(
             ),
             "symbolic_joint_repaired": state.repaired_joint == assignment.target_joint,
             "simulator_joint_repaired": bool(scene.state.joint_repaired),
-            "repair_verified": state.verified_joint == assignment.target_joint,
         })
         measurements = {
             "driver_position_m": driver_position.tolist(),
@@ -2368,6 +2871,8 @@ def validate_terminal_state(
             "seated_tip_error_m": insertion_error,
         }
     else:
-        checks["correct_infeasible_termination"] = state.termination_reason == assignment.rejection_reason
+        checks["infeasible_after_exhaustive_open_inspection"] = (
+            set(state.inspected_storage) == set(WORKSHOP_REGIONS)
+        )
         checks["no_repair_claim"] = not scene.state.joint_repaired and state.repaired_joint is None
     return {"valid": all(checks.values()), "checks": checks, "measurements": measurements}

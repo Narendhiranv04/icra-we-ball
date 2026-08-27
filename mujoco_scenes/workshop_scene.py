@@ -41,6 +41,28 @@ WORKSHOP_VARIANTS_CONFIG = ROOT / "configs" / "workshop_variants.yaml"
 WORKSHOP_ALTERNATIVES_CONFIG = ROOT / "configs" / "workshop_joint_alternatives.yaml"
 
 WORKSHOP_REGIONS = ("LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET")
+WORKSHOP_FRAME_FIXTURE_CENTER = (-0.34, 0.34, 0.68)
+
+# The drawer entries deliberately mirror KitchenScene's D1/D2 articulation:
+# a 0.25 m prismatic pull-out with the same open threshold.  OPEN is a single
+# generic action; the argument selects the drawer or cabinet mechanism.
+WORKSHOP_CONTAINER_JOINTS = {
+    "LEFT_DRAWER": {
+        "joint": "left_tool_drawer_slide",
+        "actuator": "left_tool_drawer_actuator",
+        "open_val": 0.25,
+    },
+    "RIGHT_DRAWER": {
+        "joint": "right_tool_drawer_slide",
+        "actuator": "right_tool_drawer_actuator",
+        "open_val": 0.25,
+    },
+    "TOOL_CABINET": {
+        "joint": "tool_cabinet_door_hinge",
+        "actuator": "tool_cabinet_door_actuator",
+        "open_val": 1.45,
+    },
+}
 
 # Frozen Workshop-only spawn selected from the base-standoff audit.  The
 # shared Kitchen/Living-Room default in scene_loader remains unchanged.
@@ -316,11 +338,14 @@ def _create_object_element(
         ET.SubElement(body, "geom", {"name": f"{object_name}_col_shaft", "class": "collision", "type": "cylinder", "pos": "0 0 0.15", "size": "0.003 0.05"})
 
     elif object_name == "workshop_power_driver":
-        ET.SubElement(body, "site", {"name": f"{object_name}_handle_site", "pos": "0 0 0.060", "size": "0.006", "rgba": "0 0 0 0"})
-        ET.SubElement(body, "site", {"name": f"{object_name}_tip_site", "pos": "0 0 0.210", "size": "0.004", "rgba": "0.2 0.8 1 0.5"})
+        # Drill_01's visible chuck/bit points along local -X (the old +Z site
+        # described an empty point beside the mesh and made a horizontal drill
+        # falsely appear "vertical" numerically).
+        ET.SubElement(body, "site", {"name": f"{object_name}_handle_site", "pos": "0.045 0 0.055", "size": "0.006", "rgba": "0 0 0 0"})
+        ET.SubElement(body, "site", {"name": f"{object_name}_tip_site", "pos": "-0.0815 0 0.142", "size": "0.004", "rgba": "0.2 0.8 1 0.5"})
         ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "power_driver_mesh", "material": "drill_visual_mat"})
-        ET.SubElement(body, "geom", {"name": f"{object_name}_col_body", "class": "collision", "type": "box", "pos": "0 0 0.13", "size": "0.080 0.024 0.035"})
-        ET.SubElement(body, "geom", {"name": f"{object_name}_col_handle", "class": "collision", "type": "box", "pos": "0 0 0.06", "size": "0.025 0.020 0.060"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col_body", "class": "collision", "type": "box", "pos": "0 0 0.142", "size": "0.082 0.024 0.023"})
+        ET.SubElement(body, "geom", {"name": f"{object_name}_col_handle", "class": "collision", "type": "box", "pos": "0.045 0 0.060", "size": "0.026 0.020 0.060"})
 
     elif object_name == "workshop_wooden_hammer":
         ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "wooden_hammer_mesh", "material": "wooden_hammer_visual_mat"})
@@ -328,8 +353,12 @@ def _create_object_element(
         ET.SubElement(body, "geom", {"name": f"{object_name}_col_head", "class": "collision", "type": "box", "pos": "0 0 0.205", "size": "0.045 0.022 0.025"})
 
     elif object_name == "workshop_medium_phillips_screw":
-        ET.SubElement(body, "site", {"name": f"{object_name}_tip_site", "pos": "0 0 0", "size": "0.002", "rgba": "0.1 1 0.2 0.5"})
-        ET.SubElement(body, "site", {"name": f"{object_name}_head_site", "pos": "0 0 0.045", "size": "0.004", "rgba": "0.2 0.8 1 0.5"})
+        # The imported mesh and collision model place the broad Phillips head
+        # at the body origin and the pointed end along local +Z.  Keep the
+        # semantic sites consistent with what is visibly rendered so a 180
+        # degree tip-down placement leaves the broad head above the joint.
+        ET.SubElement(body, "site", {"name": f"{object_name}_head_site", "pos": "0 0 0", "size": "0.004", "rgba": "0.2 0.8 1 0.5"})
+        ET.SubElement(body, "site", {"name": f"{object_name}_tip_site", "pos": "0 0 0.045", "size": "0.002", "rgba": "0.1 1 0.2 0.5"})
         ET.SubElement(body, "geom", {"name": f"{object_name}_vis", "class": "visual", "type": "mesh", "mesh": "medium_screw_mesh", "material": "screwdrivers_visual_mat"})
         # A 43 mm rendered robust extent stays within the physical 45 mm
         # collision envelope while avoiding a one-pixel excess at the 45 mm
@@ -377,6 +406,10 @@ def _get_object_storage_pose(
     q_pliers_x = (0.5, 0.5, 0.5, 0.5)          # local Z -> world +X, local X -> world +Y, local Y -> world +Z
     q_wrench_x = (0.7071, 0.0, 0.0, 0.7071)    # local Y -> world +X
     q_drill_side = (0.7071, -0.7071, 0.0, 0.0) # lies flat on side
+    # Drawer-only drill pose: local Z (the tool's long axis) runs across the
+    # tray rather than into its shallow front-to-back depth.  This is what
+    # lets the copied kitchen drawer close fully around the physical asset.
+    q_drill_drawer_x = q_pliers_x
 
     if region_id == "TOOL_CABINET":
         cab_x = -0.75 if layout_swapped else 0.44
@@ -435,37 +468,42 @@ def _get_object_storage_pose(
             return (base_x, base_y, shelf_z + 0.020), q_along_x, "tool_cabinet"
 
     elif region_id == "LEFT_DRAWER":
+        # Kitchen-equivalent tray base top: frame z=0.524, tray base top=.472.
         floor_z = 0.4720
         drawer_slots_xy = [
-            (-0.34, 0.28),
-            (-0.22, 0.45),
-            (-0.22, 0.28),
-            (-0.34, 0.45),
-            (-0.28, 0.35),
+            (-0.34, 0.07),
+            (-0.22, 0.24),
+            (-0.22, 0.07),
+            (-0.34, 0.24),
+            (-0.28, 0.15),
         ]
         base_x, base_y = drawer_slots_xy[min(slot_idx, len(drawer_slots_xy) - 1)]
 
         if obj_name == "workshop_flathead_screwdriver":
             return (base_x, base_y + 0.110, floor_z + 0.014), q_along_y, "left_tool_drawer"
         elif obj_name == "workshop_long_phillips_driver":
-            # Long tools lie across the drawer, not toward its front. This
-            # keeps the physical handle-pull corridor clear and presents the
-            # handle to a vertical, top-down grasp after extraction.
-            return (-0.40, 0.430, floor_z + 0.013), q_along_x, "left_tool_drawer"
+            # The opened kitchen-style tray exposes this front slot directly
+            # while retaining the driver's original LEFT_DRAWER membership.
+            # The driver's 200 mm collision extent points along +X in this
+            # resting orientation, so its origin must remain left of centre
+            # to stay completely inside the copied kitchen tray when closed.
+            return (-0.36, 0.210, floor_z + 0.013), q_along_x, "left_tool_drawer"
         elif obj_name == "workshop_stubby_phillips_driver":
             return (base_x, base_y + 0.055, floor_z + 0.015), q_along_y, "left_tool_drawer"
         elif obj_name == "workshop_medium_phillips_screw":
-            return (-0.20, 0.300, floor_z + 0.007), q_along_x, "left_tool_drawer"
+            return (-0.34, 0.080, floor_z + 0.007), q_along_x, "left_tool_drawer"
         elif obj_name == "workshop_short_phillips_screw":
             return (base_x, base_y + 0.009, floor_z + 0.007), q_along_y, "left_tool_drawer"
         elif obj_name == "workshop_hex_bolt":
             return (base_x, base_y + 0.025, floor_z + 0.009), q_along_y, "left_tool_drawer"
         elif obj_name == "workshop_power_driver":
-            # Rest on the drill's flat side; the picker yaws its vertical
-            # wrist so the fingers close across (not along) the handle.
-            return (-0.36, 0.380, floor_z + 0.024), q_drill_side, "left_tool_drawer"
+            # The powered driver lies across the tray, so the kitchen-size
+            # drawer contains its full length while closed.  Keeping it out
+            # of the front-back axis also leaves OPEN's approach corridor
+            # clear for the robot.
+            return (-0.35, 0.150, floor_z + 0.024), q_drill_drawer_x, "left_tool_drawer"
         elif obj_name == "workshop_wooden_hammer":
-            return (-0.38, 0.430, floor_z + 0.012), q_along_x, "left_tool_drawer"
+            return (-0.34, 0.210, floor_z + 0.012), q_along_x, "left_tool_drawer"
         elif obj_name == "workshop_pliers":
             return (base_x, base_y + 0.095, floor_z + 0.010), q_along_y, "left_tool_drawer"
         elif obj_name == "workshop_combination_wrench":
@@ -476,11 +514,11 @@ def _get_object_storage_pose(
     elif region_id == "RIGHT_DRAWER":
         floor_z = 0.4720
         drawer_slots_xy = [
-            (0.22, 0.28),
-            (0.34, 0.45),
-            (0.34, 0.28),
-            (0.22, 0.45),
-            (0.28, 0.35),
+            (0.22, 0.07),
+            (0.34, 0.24),
+            (0.34, 0.07),
+            (0.22, 0.24),
+            (0.28, 0.15),
         ]
         base_x, base_y = drawer_slots_xy[min(slot_idx, len(drawer_slots_xy) - 1)]
 
@@ -489,17 +527,17 @@ def _get_object_storage_pose(
         elif obj_name == "workshop_flathead_screwdriver":
             return (base_x, base_y + 0.110, floor_z + 0.014), q_along_y, "right_tool_drawer"
         elif obj_name == "workshop_long_phillips_driver":
-            return (0.16, 0.430, floor_z + 0.013), q_along_x, "right_tool_drawer"
+            return (0.15, 0.210, floor_z + 0.013), q_along_x, "right_tool_drawer"
         elif obj_name == "workshop_medium_phillips_screw":
-            return (0.36, 0.300, floor_z + 0.007), q_along_x, "right_tool_drawer"
+            return (0.36, 0.080, floor_z + 0.007), q_along_x, "right_tool_drawer"
         elif obj_name == "workshop_short_phillips_screw":
             return (base_x, base_y + 0.009, floor_z + 0.007), q_along_y, "right_tool_drawer"
         elif obj_name == "workshop_hex_bolt":
             return (base_x, base_y + 0.025, floor_z + 0.009), q_along_y, "right_tool_drawer"
         elif obj_name == "workshop_power_driver":
-            return (0.34, 0.380, floor_z + 0.024), q_drill_side, "right_tool_drawer"
+            return (0.15, 0.150, floor_z + 0.024), q_drill_drawer_x, "right_tool_drawer"
         elif obj_name == "workshop_wooden_hammer":
-            return (0.16, 0.430, floor_z + 0.012), q_along_x, "right_tool_drawer"
+            return (0.22, 0.210, floor_z + 0.012), q_along_x, "right_tool_drawer"
         elif obj_name == "workshop_pliers":
             return (base_x, base_y + 0.095, floor_z + 0.010), q_along_y, "right_tool_drawer"
         elif obj_name == "workshop_combination_wrench":
@@ -517,22 +555,24 @@ def _get_storage_slots(
     q_flat_x = (0.7071, 0.0, 0.7071, 0.0)
     q_flat_y = (0.7071, 0.7071, 0.0, 0.0)
 
-    # Left Drawer: floor top Z = 0.4720m, inner X in [-0.43, -0.13], inner Y in [0.16, 0.53] (closed)
+    # Kitchen-equivalent left tray: floor top Z=.472 m, inner X [-.446, -.114],
+    # inner Y [.025, .281] while closed.
     left_drawer_slots = [
-        ((-0.34, 0.46, 0.486), q_flat_y, "left_tool_drawer"),
-        ((-0.22, 0.359, 0.479), q_flat_y, "left_tool_drawer"),
-        ((-0.22, 0.46, 0.486), q_flat_y, "left_tool_drawer"),
-        ((-0.34, 0.28, 0.479), q_flat_y, "left_tool_drawer"),
-        ((-0.28, 0.37, 0.485), q_flat_y, "left_tool_drawer"),
+        ((-0.34, 0.24, 0.486), q_flat_y, "left_tool_drawer"),
+        ((-0.22, 0.119, 0.479), q_flat_y, "left_tool_drawer"),
+        ((-0.22, 0.24, 0.486), q_flat_y, "left_tool_drawer"),
+        ((-0.34, 0.08, 0.479), q_flat_y, "left_tool_drawer"),
+        ((-0.28, 0.15, 0.485), q_flat_y, "left_tool_drawer"),
     ]
 
-    # Right Drawer: floor top Z = 0.4720m, inner X in [0.13, 0.43], inner Y in [0.16, 0.53] (closed)
+    # Kitchen-equivalent right tray: floor top Z=.472 m, inner X [.114, .446],
+    # inner Y [.025, .281] while closed.
     right_drawer_slots = [
-        ((0.22, 0.405, 0.487), q_flat_y, "right_tool_drawer"),
-        ((0.34, 0.375, 0.481), q_flat_y, "right_tool_drawer"),
-        ((0.34, 0.46, 0.486), q_flat_y, "right_tool_drawer"),
-        ((0.22, 0.28, 0.479), q_flat_y, "right_tool_drawer"),
-        ((0.28, 0.37, 0.485), q_flat_y, "right_tool_drawer"),
+        ((0.22, 0.185, 0.487), q_flat_y, "right_tool_drawer"),
+        ((0.34, 0.155, 0.481), q_flat_y, "right_tool_drawer"),
+        ((0.34, 0.24, 0.486), q_flat_y, "right_tool_drawer"),
+        ((0.22, 0.08, 0.479), q_flat_y, "right_tool_drawer"),
+        ((0.28, 0.15, 0.485), q_flat_y, "right_tool_drawer"),
     ]
 
     # Tool Cabinet: shelf top Z = 0.8260m, inner X in [cab_x-0.137, cab_x+0.137], inner Y in [cab_y-0.094, cab_y+0.084]
@@ -1068,6 +1108,25 @@ class WorkshopScene:
         mujoco.mj_resetData(self.model, self.data)
         self.state = WorkshopObservationState()
 
+        # A Workshop start is always the physical closed state.  Resetting an
+        # action-panel scene after an OPEN must not inherit actuator commands
+        # or joint velocity from the preceding run.
+        for mechanism in WORKSHOP_CONTAINER_JOINTS.values():
+            joint_id = mujoco.mj_name2id(
+                self.model, mujoco.mjtObj.mjOBJ_JOINT, mechanism["joint"]
+            )
+            actuator_id = mujoco.mj_name2id(
+                self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, mechanism["actuator"]
+            )
+            if joint_id < 0 or actuator_id < 0:
+                raise RuntimeError(
+                    "Workshop storage reset is missing its required "
+                    f"joint or actuator: {mechanism}"
+                )
+            self.data.qpos[self.model.jnt_qposadr[joint_id]] = 0.0
+            self.data.qvel[self.model.jnt_dofadr[joint_id]] = 0.0
+            self.data.ctrl[actuator_id] = 0.0
+
         if self.has_robot:
             for joint_name, value in GOOGLE_HOME_QPOS.items():
                 joint_id = mujoco.mj_name2id(
@@ -1229,7 +1288,7 @@ class WorkshopScene:
         """Return neutral target workpiece localization."""
         return {
             "target_instance_id": self._backend_to_instance_id.get("workshop_frame_joint", "target_0001"),
-            "fixture_center_world_m": [-0.15, 0.50, 0.68],
+            "fixture_center_world_m": list(WORKSHOP_FRAME_FIXTURE_CENTER),
         }
 
     # --------------------------------------------------------------------------
@@ -1344,7 +1403,7 @@ class WorkshopScene:
             raise RuntimeError("Workshop target-hole landmarks are missing")
         return {
             "workpiece_id": "workshop_frame_joint",
-            "fixture_center_world_m": [-0.15, 0.50, 0.68],
+            "fixture_center_world_m": list(WORKSHOP_FRAME_FIXTURE_CENTER),
             "hole_entry_center_world_m": self.data.site_xpos[entry_site].tolist(),
             "seated_fastener_tip_world_m": self.data.site_xpos[seated_site].tolist(),
             "hole_axis_world": [0.0, 0.0, 1.0],
@@ -1411,28 +1470,45 @@ class WorkshopScene:
         }
 
     def _container_actuator_id(self, region_id: str) -> int:
-        actuator_name = {
-            "LEFT_DRAWER": "left_tool_drawer_actuator",
-            "RIGHT_DRAWER": "right_tool_drawer_actuator",
-            "TOOL_CABINET": "tool_cabinet_door_actuator",
-        }.get(region_id)
-        if actuator_name is None:
+        mechanism = WORKSHOP_CONTAINER_JOINTS.get(region_id)
+        if mechanism is None:
             raise ValueError(f"Unknown workshop region: {region_id}")
         actuator_id = mujoco.mj_name2id(
-            self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, actuator_name
+            self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, mechanism["actuator"]
         )
         if actuator_id < 0:
-            raise RuntimeError(f"Missing actuator: {actuator_name}")
+            raise RuntimeError(f"Missing actuator: {mechanism['actuator']}")
         return actuator_id
 
-    def open_container(self, region_id: str, steps: int = 600) -> dict[str, Any]:
+    def open_container(self, region_id: str, steps: int = 1000) -> dict[str, Any]:
+        """Open one storage region with the KitchenScene articulation contract.
+
+        The public action is simply ``OPEN(region_id)``.  The mechanism is
+        chosen from the argument: both drawers use the duplicated kitchen
+        pull-out, while the cabinet uses its own hinged door.
+        """
         if region_id not in WORKSHOP_REGIONS:
             raise ValueError(f"Unknown storage container: {region_id}")
+        if self.state.container_open_state[region_id]:
+            return {"region_id": region_id, "opened": True, "newly_opened": False}
+
+        mechanism = WORKSHOP_CONTAINER_JOINTS[region_id]
         actuator_id = self._container_actuator_id(region_id)
-        target = 1.45 if region_id == "TOOL_CABINET" else 0.34
+        joint_id = mujoco.mj_name2id(
+            self.model, mujoco.mjtObj.mjOBJ_JOINT, mechanism["joint"]
+        )
+        if joint_id < 0:
+            raise RuntimeError(f"Missing storage joint: {mechanism['joint']}")
+        target = float(mechanism["open_val"])
         self.data.ctrl[actuator_id] = target
         for _ in range(steps):
             mujoco.mj_step(self.model, self.data)
+        joint_position = float(self.data.qpos[self.model.jnt_qposadr[joint_id]])
+        if joint_position < 0.80 * target:
+            raise RuntimeError(
+                f"{region_id} failed to reach its physical open target: "
+                f"joint={joint_position:.4f}, target={target:.4f}"
+            )
         was_new = region_id not in self.state.opened_containers
         self.state.container_open_state[region_id] = True
         self.state.opened_containers.add(region_id)
@@ -1443,6 +1519,9 @@ class WorkshopScene:
         }
 
     def close_container(self, region_id: str, steps: int = 600) -> None:
+        """Maintenance-only reset helper; it is intentionally not a Workshop action."""
+        if region_id not in WORKSHOP_REGIONS:
+            raise ValueError(f"Unknown workshop region: {region_id}")
         actuator_id = self._container_actuator_id(region_id)
         self.data.ctrl[actuator_id] = 0.0
         for _ in range(steps):

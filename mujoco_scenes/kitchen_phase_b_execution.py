@@ -90,15 +90,29 @@ class KitchenPhaseBExecutionDispatcher:
         try:
             record = self.phase_a._move(workspace)
         except RuntimeError as error:
-            if carrying_object_id and "compact navigation pose" in str(error):
+            if "compact navigation pose" in str(error):
                 try:
-                    preparation = (
-                        self.manipulation.executor.fold_held_payload_for_navigation(
-                            step_callback=self.manipulation.step_callback
+                    if carrying_object_id:
+                        preparation = (
+                            self.manipulation.executor.fold_held_payload_for_navigation(
+                                step_callback=self.manipulation.step_callback
+                            )
                         )
-                    )
+                    else:
+                        preparation = {
+                            "performed": True,
+                            "physics_steps": (
+                                self.manipulation._settle_navigation_posture()
+                            ),
+                            "empty_gripper_navigation_fold": True,
+                            "direct_object_qpos_write": False,
+                        }
                     record = self.phase_a._move(workspace)
-                    record["held_navigation_preparation"] = preparation
+                    record[
+                        "held_navigation_preparation"
+                        if carrying_object_id
+                        else "empty_navigation_preparation"
+                    ] = preparation
                 except RuntimeError as retry_error:
                     return {
                         "action": "MOVE",
@@ -206,7 +220,12 @@ class KitchenPhaseBExecutionDispatcher:
             # opening.  C2 retains presentation support through collision/IK
             # approach, then the low-level executor releases it immediately
             # before Cartesian pre-close and live bilateral contact.
-            defer_fixture_release = container == "C2"
+            # Keep storage support active while planning a tight aperture
+            # grasp. The manipulation executor releases the matching fixture
+            # immediately before live pre-close/contact, so drawer utensils
+            # do not drift for 120 physics steps before the robot reaches the
+            # pose that was planned from their observed location.
+            defer_fixture_release = container in {"C2", "D1", "D2"}
             record["storage_fixture_release_deferred_to_manipulation_stance"] = (
                 defer_fixture_release
             )

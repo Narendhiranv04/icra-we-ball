@@ -4,92 +4,22 @@
       "arguments": [
         "LEFT_DRAWER"
       ],
-      "operator": "MOVE_TO",
-      "reason": "Visit the next storage region in the fixed search order."
-    },
-    {
-      "arguments": [
-        "LEFT_DRAWER"
-      ],
-      "operator": "OPEN_STORAGE",
-      "reason": "Expose the fixed object set in this region."
-    },
-    {
-      "arguments": [
-        "LEFT_DRAWER"
-      ],
-      "operator": "INSPECT_STORAGE",
-      "reason": "Observe the screw, compatible drivers, or hammer distractor."
-    },
-    {
-      "arguments": [
-        "LEFT_DRAWER"
-      ],
-      "operator": "CLOSE_STORAGE",
-      "reason": "Restore the inspected storage region before continuing search."
+      "operator": "OPEN",
+      "reason": "Open this storage region once for inspection; it remains open."
     },
     {
       "arguments": [
         "RIGHT_DRAWER"
       ],
-      "operator": "MOVE_TO",
-      "reason": "Visit the next storage region in the fixed search order."
-    },
-    {
-      "arguments": [
-        "RIGHT_DRAWER"
-      ],
-      "operator": "OPEN_STORAGE",
-      "reason": "Expose the fixed object set in this region."
-    },
-    {
-      "arguments": [
-        "RIGHT_DRAWER"
-      ],
-      "operator": "INSPECT_STORAGE",
-      "reason": "Observe the screw, compatible drivers, or hammer distractor."
-    },
-    {
-      "arguments": [
-        "RIGHT_DRAWER"
-      ],
-      "operator": "CLOSE_STORAGE",
-      "reason": "Restore the inspected storage region before continuing search."
+      "operator": "OPEN",
+      "reason": "Open this storage region once for inspection; it remains open."
     },
     {
       "arguments": [
         "TOOL_CABINET"
       ],
-      "operator": "MOVE_TO",
-      "reason": "Visit the next storage region in the fixed search order."
-    },
-    {
-      "arguments": [
-        "TOOL_CABINET"
-      ],
-      "operator": "OPEN_STORAGE",
-      "reason": "Expose the fixed object set in this region."
-    },
-    {
-      "arguments": [
-        "TOOL_CABINET"
-      ],
-      "operator": "INSPECT_STORAGE",
-      "reason": "Observe the screw, compatible drivers, or hammer distractor."
-    },
-    {
-      "arguments": [
-        "TOOL_CABINET"
-      ],
-      "operator": "CLOSE_STORAGE",
-      "reason": "Restore the inspected storage region before continuing search."
-    },
-    {
-      "arguments": [
-        "NO_COMPATIBLE_DRIVER"
-      ],
-      "operator": "TERMINATE_INFEASIBLE",
-      "reason": "All three regions were inspected and the required screw-driver pair is absent."
+      "operator": "OPEN",
+      "reason": "Open this storage region once for inspection; it remains open."
     }
   ],
   "description": "Screw and hammer present; both compatible drivers absent.",
@@ -97,6 +27,6 @@
   "intended_outcome": "INFEASIBLE",
   "internal_variant": "I0_NO_DRIVER",
   "schema_version": 1,
-  "total_actions": 13,
+  "total_actions": 3,
   "variant": "W9"
 }
