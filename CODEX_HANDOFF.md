@@ -1395,10 +1395,11 @@ All completed run artifacts are organized by method under `runs/baselines`.
 Each of `completed/vlm_tamp` and `completed/owl_tamp` contains separate
 `kitchen` and `living_room` directories. The completed Kitchen prompt-v7 batch
 contains 360 episodes per baseline, while the completed Living-Room batches
-contain 300 episodes per baseline. Generated tables are under `summary`, and
-superseded, smoke, and manual runs remain under `archive`. Workshop camera
-artifacts are under `runs/scenes/workshop_pointcloud`. No run artifacts were
-deleted.
+contain 300 episodes per baseline. Final generated tables are under `summary`.
+Archived smoke tests, manual
+checks, partial batches, and superseded baseline runs were removed on
+2026-08-28 after verifying the completed episode counts. Workshop camera
+artifacts remain separately under `runs/scenes/workshop_pointcloud`.
 
 Table 4 no longer uses sequence F1 as a primary measure. The summarizer reports
 Goal Completion, Placement Correctness (precision), Required Placement Coverage
