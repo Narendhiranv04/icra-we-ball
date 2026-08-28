@@ -87,57 +87,111 @@ def _check_unary_predicate(node: ObservedNode, predicate_name: str) -> str:
     return "UNKNOWN"
 
 
-def _check_semantic_category(node: ObservedNode, accepted_categories: Sequence[str]) -> tuple[str, str | None]:
-    """Check if an observed node matches accepted semantic categories."""
+def extract_plausible_labels(belief: dict[str, Any] | None) -> list[str]:
+    """Extract credible semantic candidate hypotheses H(o) from semantic belief."""
+    if not belief:
+        return []
+    # Direct fields from semantic fusion
+    if "plausible_labels" in belief and isinstance(belief["plausible_labels"], list):
+        return [str(lbl) for lbl in belief["plausible_labels"] if lbl]
+    if "ambiguity_hypotheses" in belief and isinstance(belief["ambiguity_hypotheses"], list):
+        return [str(lbl) for lbl in belief["ambiguity_hypotheses"] if lbl]
+
+    latest = belief.get("latest_observation")
+    if isinstance(latest, dict):
+        if "plausible_labels" in latest and isinstance(latest["plausible_labels"], list):
+            return [str(lbl) for lbl in latest["plausible_labels"] if lbl]
+        if "ambiguity_hypotheses" in latest and isinstance(latest["ambiguity_hypotheses"], list):
+            return [str(lbl) for lbl in latest["ambiguity_hypotheses"] if lbl]
+
+    status = belief.get("status")
+    if status == "SUPPORTED" or status is None:
+        canonical = (
+            belief.get("validated", {}).get("canonical_label")
+            or belief.get("evaluated_label")
+            or belief.get("canonical_label")
+            or (latest.get("canonical_label") if isinstance(latest, dict) else None)
+        )
+        if canonical:
+            return [str(canonical)]
+
+    reasons = belief.get("reason_codes") or (latest.get("reason_codes") if isinstance(latest, dict) else [])
+    if status == "UNKNOWN" and "CONFLICTING_MULTI_VIEW_LABELS" in reasons:
+        alts = belief.get("alternatives") or (latest.get("alternatives") if isinstance(latest, dict) else [])
+        if isinstance(alts, list) and alts:
+            winner = alts[0].get("label") if isinstance(alts[0], dict) else None
+            candidates = [str(winner)] if winner else []
+            for a in alts[1:]:
+                lbl = a.get("label") if isinstance(a, dict) else None
+                if lbl and str(lbl) not in candidates and int(a.get("supporting_view_count", 0)) >= 2:
+                    candidates.append(str(lbl))
+            return candidates
+
+    return []
+
+
+def check_semantic_role_compatibility(
+    node_or_belief: ObservedNode | dict[str, Any] | None,
+    accepted_categories: Sequence[str],
+) -> tuple[str, str | None]:
+    """Check if an observed node or semantic belief matches accepted categories under role-compatible ambiguity.
+
+    Returns (status, matched_category) where status is 'TRUE', 'FALSE', or 'UNKNOWN'.
+    """
     if not accepted_categories:
-        return "TRUE", node.canonical_category
+        if isinstance(node_or_belief, ObservedNode):
+            return "TRUE", node_or_belief.canonical_category
+        return "TRUE", None
 
     accepted_set = {cat.strip().lower().replace(" ", "_") for cat in accepted_categories}
 
-    if node.canonical_category:
-        norm_canonical = node.canonical_category.strip().lower().replace(" ", "_")
-        if norm_canonical in accepted_set:
-            return "TRUE", node.canonical_category
-
-    belief = node.semantic_labels
-    if belief:
-        status = belief.get("status")
-        # Check explicit evaluated label
-        evaluated = belief.get("evaluated_label")
-        if evaluated:
-            norm_eval = str(evaluated).strip().lower().replace(" ", "_")
-            if norm_eval in accepted_set:
-                return "TRUE", str(evaluated)
-
-        # Check multi-view consensus alternative label with >= 2 views
-        alt_label = belief.get("consensus_alternative_label")
-        alt_views = int(belief.get("consensus_alternative_supporting_views") or 0)
-        if alt_label and alt_views >= 2:
-            norm_alt = str(alt_label).strip().lower().replace(" ", "_")
-            if norm_alt in accepted_set:
-                return "TRUE", str(alt_label)
-
-        support = belief.get("label_supporting_view_count", {})
-        for label, count in support.items():
-            if int(count) >= 2:
-                norm_label = str(label).strip().lower().replace(" ", "_")
-                if norm_label in accepted_set:
-                    return "TRUE", str(label)
-
-        if status == "UNKNOWN":
-            return "UNKNOWN", None
-
-        if status == "SUPPORTED" and not node.canonical_category:
+    if isinstance(node_or_belief, ObservedNode):
+        node = node_or_belief
+        entity_kind = getattr(node, "entity_kind", "OBJECT")
+        # 1. Direct canonical category if resolved and supported
+        if node.canonical_category:
+            norm_canonical = node.canonical_category.strip().lower().replace(" ", "_")
+            if norm_canonical in accepted_set:
+                return "TRUE", node.canonical_category
             return "FALSE", None
 
-    if not node.canonical_category:
-        # Check if instance_id itself matches
+        belief = node.semantic_labels
+    else:
+        node = None
+        entity_kind = "OBJECT"
+        belief = node_or_belief if isinstance(node_or_belief, dict) else None
+
+    # Extract plausible candidate set H(o)
+    plausible = extract_plausible_labels(belief)
+
+    if plausible:
+        norm_plausible = {lbl.strip().lower().replace(" ", "_") for lbl in plausible}
+        # S_sem(o, r) = TRUE iff H(o) != ∅ and H(o) ⊆ C(r)
+        if norm_plausible.issubset(accepted_set):
+            return "TRUE", plausible[0]
+        # S_sem(o, r) = FALSE iff H(o) != ∅ and H(o) ∩ C(r) = ∅
+        if norm_plausible.isdisjoint(accepted_set):
+            return "FALSE", None
+        # Mixed overlap (some in C(r), some not)
+        return "UNKNOWN", None
+
+    if belief:
+        status = belief.get("status")
+        if status == "SUPPORTED":
+            return "FALSE", None
+        return "UNKNOWN", None
+
+    # Only check instance_id if entity_kind is NOT OBJECT (e.g. REGION, FIXED_TARGET)
+    if node is not None and entity_kind != "OBJECT":
         norm_id = node.instance_id.strip().lower().replace(" ", "_")
         for cat in accepted_set:
             if cat in norm_id:
                 return "TRUE", cat
 
-    return "FALSE", None
+    return "UNKNOWN", None
+
+
+_check_semantic_category = check_semantic_role_compatibility
 
 
 def evaluate_node_for_role(node: ObservedNode, role: FunctionalRole) -> tuple[str, dict[str, Any]]:

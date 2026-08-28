@@ -1498,26 +1498,29 @@ def test_workshop_geometry_cannot_determine_semantic_category() -> None:
     assert matched_fastener is None
 
 
-# Suite 39: Workshop supported semantic category passes through
-def test_workshop_supported_semantic_category_passes() -> None:
-    from mujoco_scenes.functional_tamp_pipeline.grounding import _check_semantic_category
+# Suite 39: Mixed ambiguity produces UNKNOWN for both driver and fastener roles
+def test_mixed_driver_fastener_ambiguity_produces_unknown() -> None:
+    from mujoco_scenes.functional_tamp_pipeline.grounding import check_semantic_role_compatibility
 
-    # Track has multi-view consensus alternative label for screw with >=2 views
     node = ObservedNode(
         instance_id="object_0002",
         entity_kind="OBJECT",
         canonical_category=None,
         semantic_labels={
-            "canonical_label": "screwdriver",
-            "consensus_alternative_label": "screw",
-            "consensus_alternative_supporting_views": 2,
-            "label_supporting_view_count": {"screwdriver": 4, "screw": 2},
+            "status": "UNKNOWN",
+            "reason_codes": ["CONFLICTING_MULTI_VIEW_LABELS"],
+            "plausible_labels": ["screwdriver", "screw"],
+            "ambiguity_hypotheses": ["screwdriver", "screw"],
         },
     )
 
-    status_fastener, matched_fastener = _check_semantic_category(node, ["screw", "phillips_screw"])
-    assert status_fastener == "TRUE"
-    assert matched_fastener == "screw"
+    status_driver, matched_driver = check_semantic_role_compatibility(node, ["screwdriver", "power_driver"])
+    assert status_driver == "UNKNOWN"
+    assert matched_driver is None
+
+    status_fastener, matched_fastener = check_semantic_role_compatibility(node, ["screw", "phillips_screw"])
+    assert status_fastener == "UNKNOWN"
+    assert matched_fastener is None
 
 
 # Suite 40: Semantic fusion conflict and noise handling
@@ -1588,6 +1591,242 @@ def test_workshop_failure_result_retains_diagnostics() -> None:
     assert d["status"] == "INFEASIBLE"
     assert d["inspected_regions"] == ["LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"]
     assert d["failure_reason"] == "NO_GLOBAL_ASSIGNMENT"
+
+
+# Suite 42: Semantic role compatibility formal cases A through H (Section 30)
+def test_semantic_role_compatibility_cases_a_through_h() -> None:
+    from mujoco_scenes.functional_tamp_pipeline.grounding import check_semantic_role_compatibility
+
+    # Case A: SUPPORTED cup, C(r) = {cup, mug} -> TRUE
+    node_a = ObservedNode(instance_id="a", entity_kind="OBJECT", canonical_category="cup")
+    st, matched = check_semantic_role_compatibility(node_a, ["cup", "mug"])
+    assert st == "TRUE"
+    assert matched == "cup"
+
+    # Case B: UNKNOWN genuine ambiguity H(o) = {cup, mug}, C(r) = {cup, mug} -> TRUE
+    node_b = ObservedNode(
+        instance_id="b", entity_kind="OBJECT", canonical_category=None,
+        semantic_labels={"status": "UNKNOWN", "plausible_labels": ["cup", "mug"], "reason_codes": ["CONFLICTING_MULTI_VIEW_LABELS"]},
+    )
+    st, matched = check_semantic_role_compatibility(node_b, ["cup", "mug"])
+    assert st == "TRUE"
+    assert matched in ["cup", "mug"]
+
+    # Case C: UNKNOWN genuine ambiguity H(o) = {spoon, fork}, C(r) = {spoon} -> UNKNOWN
+    node_c = ObservedNode(
+        instance_id="c", entity_kind="OBJECT", canonical_category=None,
+        semantic_labels={"status": "UNKNOWN", "plausible_labels": ["spoon", "fork"], "reason_codes": ["CONFLICTING_MULTI_VIEW_LABELS"]},
+    )
+    st, matched = check_semantic_role_compatibility(node_c, ["spoon"])
+    assert st == "UNKNOWN"
+    assert matched is None
+
+    # Case D: UNKNOWN genuine ambiguity H(o) = {screwdriver, screw}, driver C(r) = {screwdriver} -> UNKNOWN
+    node_d = ObservedNode(
+        instance_id="d", entity_kind="OBJECT", canonical_category=None,
+        semantic_labels={"status": "UNKNOWN", "plausible_labels": ["screwdriver", "screw"], "reason_codes": ["CONFLICTING_MULTI_VIEW_LABELS"]},
+    )
+    st, matched = check_semantic_role_compatibility(node_d, ["screwdriver"])
+    assert st == "UNKNOWN"
+    assert matched is None
+
+    # Case E: UNKNOWN genuine ambiguity H(o) = {screwdriver, screw}, fastener C(r) = {screw} -> UNKNOWN
+    node_e = ObservedNode(
+        instance_id="e", entity_kind="OBJECT", canonical_category=None,
+        semantic_labels={"status": "UNKNOWN", "plausible_labels": ["screwdriver", "screw"], "reason_codes": ["CONFLICTING_MULTI_VIEW_LABELS"]},
+    )
+    st, matched = check_semantic_role_compatibility(node_e, ["screw"])
+    assert st == "UNKNOWN"
+    assert matched is None
+
+    # Case F: SUPPORTED hammer, driver C(r) = {screwdriver} -> FALSE
+    node_f = ObservedNode(instance_id="f", entity_kind="OBJECT", canonical_category="hammer")
+    st, matched = check_semantic_role_compatibility(node_f, ["screwdriver"])
+    assert st == "FALSE"
+    assert matched is None
+
+    # Case G: UNKNOWN due to INSUFFICIENT_SEMANTIC_CAMERA_SUPPORT -> UNKNOWN
+    node_g = ObservedNode(
+        instance_id="g", entity_kind="OBJECT", canonical_category=None,
+        semantic_labels={"status": "UNKNOWN", "plausible_labels": [], "reason_codes": ["INSUFFICIENT_SEMANTIC_CAMERA_SUPPORT"]},
+    )
+    st, matched = check_semantic_role_compatibility(node_g, ["cup", "mug"])
+    assert st == "UNKNOWN"
+    assert matched is None
+
+    # Case H: UNKNOWN due to NO_ASSOCIATED_DETECTION -> UNKNOWN
+    node_h = ObservedNode(
+        instance_id="h", entity_kind="OBJECT", canonical_category=None,
+        semantic_labels={"status": "UNKNOWN", "plausible_labels": [], "reason_codes": ["NO_ASSOCIATED_DETECTION"]},
+    )
+    st, matched = check_semantic_role_compatibility(node_h, ["cup", "mug"])
+    assert st == "UNKNOWN"
+    assert matched is None
+
+
+# Suite 43: Object ID instance name cannot promote OBJECT node to TRUE
+def test_object_id_does_not_promote_semantics() -> None:
+    from mujoco_scenes.functional_tamp_pipeline.grounding import check_semantic_role_compatibility
+
+    node = ObservedNode(
+        instance_id="red_screw_01",
+        entity_kind="OBJECT",
+        canonical_category=None,
+        semantic_labels={"status": "UNKNOWN", "plausible_labels": [], "reason_codes": ["INSUFFICIENT_SEMANTIC_CAMERA_SUPPORT"]},
+    )
+    st, matched = check_semantic_role_compatibility(node, ["screw", "phillips_screw"])
+    assert st == "UNKNOWN"
+    assert matched is None
+
+
+# Suite 44: Pure build_canonical_kitchen_witness validation
+def test_build_canonical_kitchen_witness() -> None:
+    from mujoco_scenes.functional_tamp_pipeline.domains.kitchen import build_canonical_kitchen_witness
+    from mujoco_scenes.functional_tamp_pipeline.models import GraphGroundingResult
+    from mujoco_scenes.functional_tamp_pipeline.gt_spec_provider import GTSpecProvider
+
+    spec = GTSpecProvider().provide("kitchen", "K1")
+    graph_o = ObservedSceneGraph()
+    for obj in ["c1", "c2", "s1", "s2", "src", "kettle", "sp1", "sp2", "sp3"]:
+        graph_o.add_node(ObservedNode(instance_id=obj, entity_kind="OBJECT"))
+
+    # Add valid pairwise relations
+    graph_o.add_relation(ObservedRelation(subject_id="sp1", predicate="INSERTABLE_IN", object_id="c1", status="TRUE", evidence={"margin": 0.01}))
+    graph_o.add_relation(ObservedRelation(subject_id="sp1", predicate="REACHES_BOTTOM", object_id="c1", status="TRUE", evidence={"margin": 0.01}))
+    graph_o.add_relation(ObservedRelation(subject_id="sp1", predicate="INSERTABLE_IN", object_id="c2", status="TRUE", evidence={"margin": 0.01}))
+    graph_o.add_relation(ObservedRelation(subject_id="sp1", predicate="REACHES_BOTTOM", object_id="c2", status="TRUE", evidence={"margin": 0.01}))
+    graph_o.add_relation(ObservedRelation(subject_id="sp2", predicate="INSERTABLE_IN", object_id="s1", status="TRUE", evidence={"margin": 0.01}))
+    graph_o.add_relation(ObservedRelation(subject_id="sp2", predicate="REACHES_BOTTOM", object_id="s1", status="TRUE", evidence={"margin": 0.01}))
+    graph_o.add_relation(ObservedRelation(subject_id="sp3", predicate="INSERTABLE_IN", object_id="s2", status="TRUE", evidence={"margin": 0.01}))
+    graph_o.add_relation(ObservedRelation(subject_id="sp3", predicate="REACHES_BOTTOM", object_id="s2", status="TRUE", evidence={"margin": 0.01}))
+
+    ground_res = GraphGroundingResult(
+        complete=True,
+        status="COMPLETE",
+        assignment={
+            "coffee_container": ("c1", "c2"),
+            "soup_container": ("s1", "s2"),
+            "coffee_stirrer": ("sp1",),
+            "soup_eating_utensil": ("sp2", "sp3"),
+            "coffee_source": ("src",),
+            "water_source": ("kettle",),
+        },
+        operation_bindings={
+            "coffee_stirring": (
+                {"tool_id": "sp1", "target_id": "c1"},
+                {"tool_id": "sp1", "target_id": "c2"},
+            ),
+            "soup_serving": (
+                {"tool_id": "sp2", "target_id": "s1"},
+                {"tool_id": "sp3", "target_id": "s2"},
+            ),
+        },
+    )
+
+    witness = build_canonical_kitchen_witness(spec, ground_res, graph_o)
+    assert witness["status"] == "COMPLETE"
+    assert "coffee_stirring" in [op["function_group_id"] for op in witness["operation_assignments"]]
+    assert "soup_serving" in [op["function_group_id"] for op in witness["operation_assignments"]]
+
+
+# Suite 45: Missing or non-TRUE relation in build_canonical_kitchen_witness raises RuntimeError
+def test_kitchen_witness_raises_on_missing_or_false_relation() -> None:
+    import pytest
+    from mujoco_scenes.functional_tamp_pipeline.domains.kitchen import build_canonical_kitchen_witness
+    from mujoco_scenes.functional_tamp_pipeline.models import GraphGroundingResult
+    from mujoco_scenes.functional_tamp_pipeline.gt_spec_provider import GTSpecProvider
+
+    spec = GTSpecProvider().provide("kitchen", "K1")
+    graph_o = ObservedSceneGraph()
+    for obj in ["c1", "c2", "s1", "s2", "src", "kettle", "sp1", "sp2", "sp3"]:
+        graph_o.add_node(ObservedNode(instance_id=obj, entity_kind="OBJECT"))
+
+    # Missing relations for c2
+    graph_o.add_relation(ObservedRelation(subject_id="sp1", predicate="INSERTABLE_IN", object_id="c1", status="TRUE"))
+    graph_o.add_relation(ObservedRelation(subject_id="sp1", predicate="REACHES_BOTTOM", object_id="c1", status="TRUE"))
+
+    ground_res = GraphGroundingResult(
+        complete=True,
+        status="COMPLETE",
+        assignment={
+            "coffee_container": ("c1", "c2"),
+            "soup_container": ("s1", "s2"),
+            "coffee_stirrer": ("sp1",),
+            "soup_eating_utensil": ("sp2", "sp3"),
+            "coffee_source": ("src",),
+            "water_source": ("kettle",),
+        },
+        operation_bindings={
+            "coffee_stirring": (
+                {"tool_id": "sp1", "target_id": "c1"},
+                {"tool_id": "sp1", "target_id": "c2"},
+            ),
+        },
+    )
+    with pytest.raises(RuntimeError, match="was not found in G_O"):
+        build_canonical_kitchen_witness(spec, ground_res, graph_o)
+
+    # Non-TRUE relation (status="FALSE")
+    graph_o.add_relation(ObservedRelation(subject_id="sp1", predicate="INSERTABLE_IN", object_id="c2", status="FALSE"))
+    graph_o.add_relation(ObservedRelation(subject_id="sp1", predicate="REACHES_BOTTOM", object_id="c2", status="TRUE"))
+    with pytest.raises(RuntimeError, match="with status 'FALSE'"):
+        build_canonical_kitchen_witness(spec, ground_res, graph_o)
+
+
+# Suite 46: Kitchen causal planning order verification (stirred before served)
+def test_kitchen_causal_planning_order() -> None:
+    from mujoco_scenes.functional_tamp_pipeline.domains.kitchen import KitchenPlanningCompiler
+    from mujoco_scenes.functional_tamp_pipeline.planning import plan_with_common_astar
+
+    compiled_state = {
+        "requirements": {
+            "home_region": "countertop",
+            "serving_destination": "serving_area",
+        },
+        "role_assignments": {
+            "coffee_targets": ["cup_1", "cup_2"],
+            "soup_targets": ["bowl_1", "bowl_2"],
+        },
+        "capabilities": {
+            "source_contains": [["kettle_1", "water"], ["jar_1", "coffee"], ["pot_1", "soup"]],
+            "can_stir": [["spoon_1", "cup_1"], ["spoon_1", "cup_2"]],
+            "assigned_soup_utensil": [["spoon_2", "bowl_1"], ["spoon_3", "bowl_2"]],
+            "initial_target_contents": [],
+        },
+        "objects": {
+            "cup_1": {"location": {"region_id": "countertop"}},
+            "cup_2": {"location": {"region_id": "countertop"}},
+            "bowl_1": {"location": {"region_id": "countertop"}},
+            "bowl_2": {"location": {"region_id": "countertop"}},
+            "kettle_1": {"location": {"region_id": "countertop"}},
+            "jar_1": {"location": {"region_id": "countertop"}},
+            "pot_1": {"location": {"region_id": "countertop"}},
+            "spoon_1": {"location": {"region_id": "countertop"}},
+            "spoon_2": {"location": {"region_id": "countertop"}},
+            "spoon_3": {"location": {"region_id": "countertop"}},
+        },
+    }
+
+    planned = plan_with_common_astar(
+        KitchenPlanningCompiler(),
+        {},
+        {"compiled_observed_state": compiled_state},
+    )
+    plan_ops = [(a["operator"], tuple(a["arguments"])) for a in planned.actions]
+
+    # Verify stir happens before serve for all coffee targets
+    for coffee_tgt in ["cup_1", "cup_2"]:
+        stir_idx = [i for i, (op, args) in enumerate(plan_ops) if op == "STIR" and args[1] == coffee_tgt][0]
+        serve_idx = [i for i, (op, args) in enumerate(plan_ops) if op == "PLACE" and args == (coffee_tgt, "serving_area")][0]
+        assert stir_idx < serve_idx, f"Causal violation: {coffee_tgt} served at {serve_idx} before stirred at {stir_idx}"
+
+    # Verify soup utensil placed before bowl served
+    for bowl_tgt, assigned_spoon in [("bowl_1", "spoon_2"), ("bowl_2", "spoon_3")]:
+        utensil_idx = [i for i, (op, args) in enumerate(plan_ops) if op == "PLACE" and args == (assigned_spoon, bowl_tgt)][0]
+        serve_idx = [i for i, (op, args) in enumerate(plan_ops) if op == "PLACE" and args == (bowl_tgt, "serving_area")][0]
+        assert utensil_idx < serve_idx, f"Causal violation: {bowl_tgt} served before {assigned_spoon} placed"
+
+
 
 
 

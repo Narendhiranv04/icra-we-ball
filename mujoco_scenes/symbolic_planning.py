@@ -678,6 +678,17 @@ class KitchenSymbolicProblem:
                     and (destination, "soup") not in state.contents
                 ):
                     continue
+                if destination == self.serving_destination:
+                    if held in self.coffee_targets:
+                        if held not in state.stirred or not {(held, "coffee"), (held, "water")} <= state.contents:
+                            continue
+                    elif held in self.soup_targets:
+                        if (held, "soup") not in state.contents or not any(
+                            locations.get(tool) == held
+                            for tool, assigned in self.soup_assignments
+                            if assigned == held
+                        ):
+                            continue
                 actions.append(GroundAction("place", (held, destination)))
             return sorted(set(actions), key=lambda item: (item.name, item.arguments))
 
@@ -703,6 +714,26 @@ class KitchenSymbolicProblem:
                 or (
                     (object_id, destination) in self.soup_assignments
                     and (destination, "soup") not in state.contents
+                )
+                or (
+                    destination == self.serving_destination
+                    and object_id in self.coffee_targets
+                    and (
+                        object_id not in state.stirred
+                        or not {(object_id, "coffee"), (object_id, "water")} <= state.contents
+                    )
+                )
+                or (
+                    destination == self.serving_destination
+                    and object_id in self.soup_targets
+                    and (
+                        (object_id, "soup") not in state.contents
+                        or not any(
+                            locations.get(tool) == object_id
+                            for tool, assigned in self.soup_assignments
+                            if assigned == object_id
+                        )
+                    )
                 )
             ):
                 raise ValueError("PLACE precondition failed")

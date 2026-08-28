@@ -298,32 +298,29 @@ class WorkshopDomainAdapter:
         objects = []
         drivers = []
         fasteners = []
+        from ..grounding import check_semantic_role_compatibility
+
+        driver_categories = [
+            "screwdriver", "power_driver", "power_drill",
+            "phillips screwdriver", "phillips_screwdriver",
+            "cordless power drill", "cordless_power_drill",
+        ]
+        fastener_categories = [
+            "screw", "phillips_screw",
+            "phillips head screw",
+        ]
+
         for track in self.controller.tracker.tracks.values():
             canonical = (
                 track.current_semantic_belief.get("evaluated_label")
                 or track.current_semantic_belief.get("canonical_label")
             )
-            candidate_labels = {canonical, track.current_semantic_belief.get("canonical_label")}
-            alt_label = track.current_semantic_belief.get("consensus_alternative_label")
-            alt_views = int(track.current_semantic_belief.get("consensus_alternative_supporting_views") or 0)
-            if alt_label and alt_views >= 2:
-                candidate_labels.add(alt_label)
-            for lbl, vcount in track.current_semantic_belief.get("label_supporting_view_count", {}).items():
-                if vcount >= 2:
-                    candidate_labels.add(lbl)
-
-            driver_categories = {
-                "screwdriver", "power_driver", "power_drill",
-                "phillips screwdriver", "phillips_screwdriver",
-                "cordless power drill", "cordless_power_drill",
-            }
-            fastener_categories = {
-                "screw", "phillips_screw",
-                "phillips head screw",
-            }
-
-            is_driver = any(str(c).lower().replace(" ", "_") in driver_categories or str(c).lower() in driver_categories for c in candidate_labels if c)
-            is_fastener = any(str(c).lower().replace(" ", "_") in fastener_categories or str(c).lower() in fastener_categories for c in candidate_labels if c)
+            driver_status, _ = check_semantic_role_compatibility(
+                track.current_semantic_belief, driver_categories
+            )
+            fastener_status, _ = check_semantic_role_compatibility(
+                track.current_semantic_belief, fastener_categories
+            )
 
             node = ObservedObject(
                 instance_id=track.instance_id,
@@ -334,15 +331,15 @@ class WorkshopDomainAdapter:
                 geometry=dict(track.current_geometric_properties),
                 unary_properties=dict(track.current_geometric_properties),
                 unary_predicates={
-                    "CAN_DRIVE_SCREW": "TRUE" if is_driver else "UNKNOWN",
-                    "CAN_FASTEN": "TRUE" if is_fastener else "UNKNOWN",
+                    "CAN_DRIVE_SCREW": driver_status,
+                    "CAN_FASTEN": fastener_status,
                 },
                 last_seen_stage=track.last_seen_stage,
             )
             objects.append(node)
-            if is_driver:
+            if driver_status in ("TRUE", "UNKNOWN"):
                 drivers.append(track)
-            if is_fastener:
+            if fastener_status in ("TRUE", "UNKNOWN"):
                 fasteners.append(track)
         self.graph.update_objects(objects, self._stage)
 

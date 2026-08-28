@@ -325,6 +325,68 @@ def build_kitchen_observed_scene_graph(session: Any) -> ObservedSceneGraph:
     return graph_o
 
 
+def build_canonical_kitchen_witness(
+    specification: FunctionalRequirementGraph,
+    ground_result: GraphGroundingResult,
+    graph_o: ObservedSceneGraph,
+) -> dict[str, Any]:
+    """Build pure canonical compatibility witness dictionary from graph grounding and G_O evidence."""
+    selected_witness: dict[str, list[str]] = {}
+    for role_name, assigned_val in ground_result.assignment.items():
+        if isinstance(assigned_val, str):
+            selected_witness[role_name] = [assigned_val]
+        elif isinstance(assigned_val, (list, tuple, set)):
+            selected_witness[role_name] = list(assigned_val)
+        else:
+            selected_witness[role_name] = []
+
+    operation_assignments: list[dict[str, Any]] = []
+    for group in specification.operation_groups:
+        bindings = ground_result.operation_bindings.get(group.id, [])
+        for binding in bindings:
+            tool_id = binding.get("tool_id")
+            target_id = binding.get("target_id")
+            checks = []
+            all_checks_true = True
+            for rel in group.required_relations:
+                obs_rel = graph_o.get_relation(rel, tool_id, target_id)
+                if obs_rel is None:
+                    raise RuntimeError(
+                        f"Architecture Error: ground_graph selected binding ({tool_id}, {target_id}) "
+                        f"for group '{group.id}', but required relation '{rel}' was not found in G_O."
+                    )
+                status = str(obs_rel.status)
+                if status != "TRUE":
+                    all_checks_true = False
+                    if ground_result.complete:
+                        raise RuntimeError(
+                            f"Architecture Error: ground_graph claimed COMPLETE, but selected binding "
+                            f"({tool_id}, {target_id}) for group '{group.id}' has relation '{rel}' with status '{status}'."
+                        )
+                checks.append({
+                    "relation": rel,
+                    "status": status,
+                    "evidence": dict(obs_rel.evidence),
+                })
+            assignment_status = "TRUE" if all_checks_true else "FALSE"
+            operation_assignments.append({
+                "function_group_id": group.id,
+                "utensil_object_id": tool_id,
+                "target_object_id": target_id,
+                "assignment_status": assignment_status,
+                "pair_geometry_status": assignment_status,
+                "relation_checks": checks,
+                "context": dict(binding.get("context", {})),
+            })
+
+    return {
+        "status": "COMPLETE" if ground_result.complete else "INCOMPLETE",
+        "inference_basis": "CANONICAL_GRAPH_GROUNDING_PLUS_OBSERVED_RELATION_EVIDENCE",
+        "selected_witness": selected_witness,
+        "operation_assignments": operation_assignments,
+    }
+
+
 def run_to_plan(
     *,
     variant_label: str,
@@ -434,54 +496,8 @@ def run_to_plan(
 
     # Compile observed symbolic state from graph grounding assignment
     # Build compatibility witness from canonical graph grounding result & actual G_O relations
-    selected_witness: dict[str, list[str]] = {}
-    for role_name, assigned_val in ground_result.assignment.items():
-        if isinstance(assigned_val, str):
-            selected_witness[role_name] = [assigned_val]
-        elif isinstance(assigned_val, (list, tuple, set)):
-            selected_witness[role_name] = list(assigned_val)
-        else:
-            selected_witness[role_name] = []
+    witness_payload = build_canonical_kitchen_witness(specification, ground_result, graph_o)
 
-    operation_assignments: list[dict[str, Any]] = []
-    for group in specification.operation_groups:
-        bindings = ground_result.operation_bindings.get(group.id, [])
-        for binding in bindings:
-            tool_id = binding.get("tool_id")
-            target_id = binding.get("target_id")
-            checks = []
-            all_checks_true = True
-            for rel in group.required_relations:
-                obs_rel = graph_o.get_relation(rel, tool_id, target_id)
-                if obs_rel is None:
-                    raise RuntimeError(
-                        f"Architecture Error: ground_graph selected binding ({tool_id}, {target_id}) "
-                        f"for group '{group.id}', but required relation '{rel}' was not found in G_O."
-                    )
-                status = str(obs_rel.status)
-                if status != "TRUE":
-                    all_checks_true = False
-                checks.append({
-                    "relation": rel,
-                    "status": status,
-                    "evidence": dict(obs_rel.evidence),
-                })
-            assignment_status = "TRUE" if all_checks_true else "FALSE"
-            operation_assignments.append({
-                "function_group_id": group.id,
-                "utensil_object_id": tool_id,
-                "target_object_id": target_id,
-                "assignment_status": assignment_status,
-                "pair_geometry_status": assignment_status,
-                "relation_checks": checks,
-                "context": dict(binding.get("context", {})),
-            })
-
-    witness_payload = {
-        "status": "COMPLETE",
-        "selected_witness": selected_witness,
-        "operation_assignments": operation_assignments,
-    }
     (session.run_dir / "latest_witness.json").write_text(
         json.dumps(witness_payload, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",

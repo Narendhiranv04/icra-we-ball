@@ -910,11 +910,35 @@ def fuse_semantic_observations(
         ):
             reasons.append("CONFLICTING_MULTI_VIEW_LABELS")
     status = "SUPPORTED" if not reasons else "UNKNOWN"
+    plausible_labels: list[str] = []
+    if status == "SUPPORTED" and winner is not None:
+        plausible_labels = [str(winner["label"])]
+    elif status == "UNKNOWN" and "CONFLICTING_MULTI_VIEW_LABELS" in reasons:
+        competing = []
+        if winner is not None:
+            competing.append(str(winner["label"]))
+        for r in label_records[1:]:
+            is_credible = (
+                (equal_primary_support and margin < float(fusion["minimum_winning_label_margin"]))
+                or (
+                    r["supporting_view_count"] >= 2
+                    and r["mean_confidence"] >= float(fusion.get("minimum_conflicting_mean_confidence", 0.10))
+                    and (r["supporting_view_count"] / max(winner["supporting_view_count"], 1)) > float(fusion.get("maximum_conflicting_view_fraction", 0.60))
+                    and (r["score"] / max(winner["score"], 1e-6)) > float(fusion.get("maximum_conflicting_score_fraction", 0.40))
+                )
+            )
+            if is_credible and str(r["label"]) not in competing:
+                competing.append(str(r["label"]))
+        plausible_labels = competing
+
     return {
         "status": status,
         "canonical_label": (
             winner["label"] if status == "SUPPORTED" else None
         ),
+        "plausible_labels": plausible_labels,
+        "ambiguity_hypotheses": list(plausible_labels),
+        "reason_codes": reasons,
         "alternatives": label_records,
         "winning_label_margin": margin,
         "winning_label_margin_kind": (

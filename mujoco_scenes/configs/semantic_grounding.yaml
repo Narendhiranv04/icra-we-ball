@@ -63,10 +63,8 @@ mask_crop:
 
 fusion:
   # Fuse confidence with mask-association quality and visible-area support.
-  # This prevents two extremely weak crop proposals from overruling one
-  # high-quality full-frame/crop association while still rewarding genuine
-  # independent multi-view agreement.
-  winner_policy: weighted_score_then_supporting_views
+  # Rewarding genuine independent multi-view agreement.
+  winner_policy: supporting_views_then_weighted_score
   minimum_supporting_views: 2
   minimum_mean_confidence: 0.03
   minimum_winning_label_margin: 0.08
