@@ -166,6 +166,21 @@ def compile_kitchen_contract_from_graph(graph: FunctionalRequirementGraph) -> di
 
     op_groups_dict = {}
     for grp in graph.operation_groups:
+        distinct = (
+            grp.distinct_within_group
+            if grp.distinct_within_group is not None
+            else (grp.usage_policy == "DEDICATED_PER_TARGET")
+        )
+        same_tool = (
+            grp.same_tool_must_cover_all_targets
+            if grp.same_tool_must_cover_all_targets is not None
+            else (grp.usage_policy == "SHARED_ACROSS_ALL_TARGETS")
+        )
+        pref = grp.selection_preference or (
+            "minimize_distinct_tools"
+            if grp.usage_policy == "SHARED_ACROSS_ALL_TARGETS"
+            else "deterministic_rank"
+        )
         op_groups_dict[grp.id] = {
             "function": grp.function,
             "tool_role": grp.tool_role,
@@ -173,7 +188,9 @@ def compile_kitchen_contract_from_graph(graph: FunctionalRequirementGraph) -> di
             "required_target_count": grp.required_target_count,
             "usage_policy": {
                 "mode": grp.usage_policy.lower(),
-                "distinct_within_group": grp.usage_policy == "DEDICATED_PER_TARGET",
+                "distinct_within_group": distinct,
+                "same_tool_must_cover_all_targets": same_tool,
+                "selection_preference": pref,
             },
             "relations": list(grp.required_relations),
         }
@@ -237,14 +254,6 @@ def build_kitchen_observed_scene_graph(session: Any) -> ObservedSceneGraph:
             or semantics.get("latest_observation", {}).get("canonical_label")
             or semantics.get("canonical_label")
         )
-        if not canonical:
-            alts = semantics.get("latest_observation", {}).get("alternatives", [])
-            for alt in alts:
-                if alt.get("supporting_view_count", 0) >= 2:
-                    canonical = alt.get("label")
-                    break
-            if not canonical and alts:
-                canonical = alts[0].get("label")
         unary_preds = {
             k: v.get("status", "TRUE" if v.get("value") else "FALSE") if isinstance(v, dict) else ("TRUE" if v else "FALSE")
             for k, v in record.get("geometric_predicates", {}).items()
@@ -274,21 +283,23 @@ def build_kitchen_observed_scene_graph(session: Any) -> ObservedSceneGraph:
         graph_o.add_node(node)
 
     # Load evaluated pairwise relations from stage artifacts if available
-    for stage_dir in sorted(session.run_dir.glob("stages/*")):
-        pair_path = stage_dir / "pair_relation_evaluations.json"
-        if pair_path.is_file():
-            try:
-                pair_data = json.loads(pair_path.read_text(encoding="utf-8"))
-                for item in pair_data.get("relations", []):
-                    graph_o.add_relation(ObservedRelation(
-                        subject_id=item["source_object_id"],
-                        predicate=item["relation"],
-                        object_id=item["target_object_id"],
-                        status=str(item.get("status", "UNKNOWN")),
-                        evidence=dict(item.get("evidence", {})),
-                    ))
-            except Exception:
-                pass
+    run_dir = getattr(session, "run_dir", None)
+    if run_dir is not None and hasattr(run_dir, "glob"):
+        for stage_dir in sorted(run_dir.glob("stages/*")):
+            pair_path = stage_dir / "pair_relation_evaluations.json"
+            if pair_path.is_file():
+                try:
+                    pair_data = json.loads(pair_path.read_text(encoding="utf-8"))
+                    for item in pair_data.get("relations", []):
+                        graph_o.add_relation(ObservedRelation(
+                            subject_id=item["source_object_id"],
+                            predicate=item["relation"],
+                            object_id=item["target_object_id"],
+                            status=str(item.get("status", "UNKNOWN")),
+                            evidence=dict(item.get("evidence", {})),
+                        ))
+                except Exception:
+                    pass
 
     # Check remaining pairwise relations or evaluate them directly
     from mujoco_scenes.geometry_properties import pairwise_relation_evaluation
@@ -333,13 +344,27 @@ def run_to_plan(
     root = Path(__file__).resolve().parents[1]
     base_vocab_path = Path(specification.metadata.get("semantic_vocabulary_path", root / "configs" / "semantic_vocabulary.yaml"))
     base_canon: dict[str, list[str]] = {}
+    alias_to_base_canon: dict[str, str] = {}
     if base_vocab_path.is_file():
         base_vocab = yaml.safe_load(base_vocab_path.read_text(encoding="utf-8"))
-        base_canon = base_vocab.get("canonical_labels", {})
+        base_canon = dict(base_vocab.get("canonical_labels", {}))
+        for canon_k, aliases in base_canon.items():
+            for a in aliases:
+                alias_to_base_canon[a.strip().lower()] = canon_k
+
     for role in specification.nodes.values():
         for cat in role.semantic_categories:
-            if cat not in canonical_labels:
-                canonical_labels[cat] = base_canon.get(cat, [cat])
+            norm_cat = cat.strip().lower()
+            if norm_cat in base_canon:
+                if norm_cat not in canonical_labels:
+                    canonical_labels[norm_cat] = list(base_canon[norm_cat])
+            elif norm_cat in alias_to_base_canon:
+                resolved_canon = alias_to_base_canon[norm_cat]
+                if resolved_canon not in canonical_labels:
+                    canonical_labels[resolved_canon] = list(base_canon[resolved_canon])
+            else:
+                if norm_cat not in canonical_labels:
+                    canonical_labels[norm_cat] = [norm_cat]
     vocab_dict = {
         "schema_version": 1,
         "canonical_labels": canonical_labels,
@@ -408,39 +433,60 @@ def run_to_plan(
         )
 
     # Compile observed symbolic state from graph grounding assignment
+    # Build compatibility witness from canonical graph grounding result & actual G_O relations
+    selected_witness: dict[str, list[str]] = {}
+    for role_name, assigned_val in ground_result.assignment.items():
+        if isinstance(assigned_val, str):
+            selected_witness[role_name] = [assigned_val]
+        elif isinstance(assigned_val, (list, tuple, set)):
+            selected_witness[role_name] = list(assigned_val)
+        else:
+            selected_witness[role_name] = []
+
+    operation_assignments: list[dict[str, Any]] = []
+    for group in specification.operation_groups:
+        bindings = ground_result.operation_bindings.get(group.id, [])
+        for binding in bindings:
+            tool_id = binding.get("tool_id")
+            target_id = binding.get("target_id")
+            checks = []
+            all_checks_true = True
+            for rel in group.required_relations:
+                obs_rel = graph_o.get_relation(rel, tool_id, target_id)
+                if obs_rel is None:
+                    raise RuntimeError(
+                        f"Architecture Error: ground_graph selected binding ({tool_id}, {target_id}) "
+                        f"for group '{group.id}', but required relation '{rel}' was not found in G_O."
+                    )
+                status = str(obs_rel.status)
+                if status != "TRUE":
+                    all_checks_true = False
+                checks.append({
+                    "relation": rel,
+                    "status": status,
+                    "evidence": dict(obs_rel.evidence),
+                })
+            assignment_status = "TRUE" if all_checks_true else "FALSE"
+            operation_assignments.append({
+                "function_group_id": group.id,
+                "utensil_object_id": tool_id,
+                "target_object_id": target_id,
+                "assignment_status": assignment_status,
+                "pair_geometry_status": assignment_status,
+                "relation_checks": checks,
+                "context": dict(binding.get("context", {})),
+            })
+
     witness_payload = {
         "status": "COMPLETE",
-        "selected_witness": {
-            "coffee_container": list(ground_result.assignment.get("coffee_container", [])),
-            "soup_container": list(ground_result.assignment.get("soup_container", [])),
-            "coffee_stirrer": [ground_result.assignment.get("coffee_stirrer")] if isinstance(ground_result.assignment.get("coffee_stirrer"), str) else list(ground_result.assignment.get("coffee_stirrer", [])),
-            "soup_eating_utensil": list(ground_result.assignment.get("soup_eating_utensil", [])) if isinstance(ground_result.assignment.get("soup_eating_utensil"), list) else [ground_result.assignment.get("soup_eating_utensil")],
-            "coffee_source": [ground_result.assignment.get("coffee_source")] if isinstance(ground_result.assignment.get("coffee_source"), str) else list(ground_result.assignment.get("coffee_source", [])),
-            "water_source": [ground_result.assignment.get("water_source")] if isinstance(ground_result.assignment.get("water_source"), str) else list(ground_result.assignment.get("water_source", [])),
-        },
-        "operation_assignments": [
-            {
-                "function_group_id": "coffee_stirring",
-                "utensil_object_id": ground_result.assignment.get("coffee_stirrer"),
-                "target_object_id": tgt,
-                "assignment_status": "TRUE",
-                "pair_geometry_status": "TRUE",
-                "relation_checks": [{"status": "TRUE"}],
-            }
-            for tgt in ground_result.assignment.get("coffee_container", [])
-        ] + [
-            {
-                "function_group_id": "soup_serving",
-                "utensil_object_id": u,
-                "target_object_id": tgt,
-                "assignment_status": "TRUE",
-                "pair_geometry_status": "TRUE",
-                "relation_checks": [{"status": "TRUE"}],
-            }
-            for u, tgt in zip(ground_result.assignment.get("soup_eating_utensil", []), ground_result.assignment.get("soup_container", []))
-        ],
+        "selected_witness": selected_witness,
+        "operation_assignments": operation_assignments,
     }
     (session.run_dir / "latest_witness.json").write_text(
+        json.dumps(witness_payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    (output_dir / "canonical_grounding_witness.json").write_text(
         json.dumps(witness_payload, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )

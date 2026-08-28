@@ -98,37 +98,44 @@ def _check_semantic_category(node: ObservedNode, accepted_categories: Sequence[s
         norm_canonical = node.canonical_category.strip().lower().replace(" ", "_")
         if norm_canonical in accepted_set:
             return "TRUE", node.canonical_category
-        return "FALSE", None
 
     belief = node.semantic_labels
     if belief:
         status = belief.get("status")
-        if status == "UNKNOWN":
-            return "UNKNOWN", None
+        # Check explicit evaluated label
+        evaluated = belief.get("evaluated_label")
+        if evaluated:
+            norm_eval = str(evaluated).strip().lower().replace(" ", "_")
+            if norm_eval in accepted_set:
+                return "TRUE", str(evaluated)
 
-        for key in ("canonical_label", "evaluated_label", "predicted_label", "label"):
-            label = belief.get(key)
-            if label:
-                norm_label = str(label).strip().lower().replace(" ", "_")
-                if norm_label in accepted_set:
-                    return "TRUE", str(label)
-                return "FALSE", None
+        # Check multi-view consensus alternative label with >= 2 views
+        alt_label = belief.get("consensus_alternative_label")
+        alt_views = int(belief.get("consensus_alternative_supporting_views") or 0)
+        if alt_label and alt_views >= 2:
+            norm_alt = str(alt_label).strip().lower().replace(" ", "_")
+            if norm_alt in accepted_set:
+                return "TRUE", str(alt_label)
 
         support = belief.get("label_supporting_view_count", {})
         for label, count in support.items():
-            if count > 0:
+            if int(count) >= 2:
                 norm_label = str(label).strip().lower().replace(" ", "_")
                 if norm_label in accepted_set:
                     return "TRUE", str(label)
 
-        if status == "SUPPORTED" or belief.get("canonical_label"):
+        if status == "UNKNOWN":
+            return "UNKNOWN", None
+
+        if status == "SUPPORTED" and not node.canonical_category:
             return "FALSE", None
 
-    # Check if instance_id itself matches
-    norm_id = node.instance_id.strip().lower().replace(" ", "_")
-    for cat in accepted_set:
-        if cat in norm_id:
-            return "TRUE", cat
+    if not node.canonical_category:
+        # Check if instance_id itself matches
+        norm_id = node.instance_id.strip().lower().replace(" ", "_")
+        for cat in accepted_set:
+            if cat in norm_id:
+                return "TRUE", cat
 
     return "FALSE", None
 

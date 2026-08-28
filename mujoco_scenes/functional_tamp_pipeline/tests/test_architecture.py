@@ -1323,5 +1323,273 @@ def test_workshop_vlm_omitted_target_relation_omits_repair_target_node() -> None
         assert rel.subject_role != "repair_target"
 
 
+# Suite 34: Kitchen UNKNOWN semantic remains UNKNOWN in G_O (no fallback promotion)
+def test_kitchen_unknown_semantic_remains_unknown_in_go() -> None:
+    from mujoco_scenes.functional_tamp_pipeline.domains.kitchen import build_kitchen_observed_scene_graph
+
+    class FakeSession:
+        registry = {
+            "objects": {
+                "object_0001": {
+                    "semantics": {
+                        "status": "UNKNOWN",
+                        "canonical_label": None,
+                        "latest_observation": {
+                            "canonical_label": None,
+                            "alternatives": [
+                                {"label": "cup", "supporting_view_count": 1, "confidence": 0.15},
+                            ],
+                        },
+                    },
+                    "geometric_predicates": {"OPEN_CAVITY": {"status": "TRUE"}},
+                    "geometric_properties": {"cavity_depth_m": 0.08},
+                }
+            }
+        }
+        fused_clouds = {}
+        events_path = Path("/fake/events.jsonl")
+
+    graph_o = build_kitchen_observed_scene_graph(FakeSession())
+    node = graph_o.get_node("object_0001")
+    assert node is not None
+    assert node.canonical_category is None
+    assert node.semantic_labels.get("status") == "UNKNOWN"
+
+
+# Suite 35: Kitchen supported semantic passes through
+def test_kitchen_supported_semantic_passes_through() -> None:
+    from mujoco_scenes.functional_tamp_pipeline.domains.kitchen import build_kitchen_observed_scene_graph
+
+    class FakeSession:
+        registry = {
+            "objects": {
+                "object_0001": {
+                    "semantics": {
+                        "status": "SUPPORTED",
+                        "canonical_label": "cup",
+                        "validated": {"canonical_label": "cup"},
+                        "latest_observation": {
+                            "canonical_label": "cup",
+                            "alternatives": [
+                                {"label": "cup", "supporting_view_count": 3, "confidence": 0.85},
+                            ],
+                        },
+                    },
+                    "geometric_predicates": {"OPEN_CAVITY": {"status": "TRUE"}},
+                    "geometric_properties": {"cavity_depth_m": 0.08},
+                }
+            }
+        }
+        fused_clouds = {}
+        events_path = Path("/fake/events.jsonl")
+
+    graph_o = build_kitchen_observed_scene_graph(FakeSession())
+    node = graph_o.get_node("object_0001")
+    assert node is not None
+    assert node.canonical_category == "cup"
+
+
+# Suite 36: OperationGroup policy serialization in kitchen contract compilation
+def test_kitchen_contract_operation_group_policy_serialization() -> None:
+    from mujoco_scenes.functional_tamp_pipeline.domains.kitchen import compile_kitchen_contract_from_graph
+
+    graph_f = FunctionalRequirementGraph(
+        domain="kitchen",
+        task_instruction="Prepare meal",
+        nodes={
+            "stirrer": FunctionalRole(name="stirrer", semantic_categories=("spoon",)),
+            "cup": FunctionalRole(name="cup", semantic_categories=("cup",), count=2),
+        },
+        operation_groups=(
+            OperationGroup(
+                id="stirring",
+                function="stir",
+                tool_role="stirrer",
+                target_role="cup",
+                required_target_count=2,
+                usage_policy="SHARED_ACROSS_ALL_TARGETS",
+                distinct_within_group=False,
+                same_tool_must_cover_all_targets=True,
+                selection_preference="minimize_distinct_tools",
+                required_relations=("INSERTABLE_IN", "REACHES_BOTTOM"),
+            ),
+        ),
+    )
+    contract = compile_kitchen_contract_from_graph(graph_f)
+    assert "stirring" in contract["operation_groups"]
+    op = contract["operation_groups"]["stirring"]
+    assert op["usage_policy"]["mode"] == "shared_across_all_targets"
+    assert op["usage_policy"]["distinct_within_group"] is False
+    assert op["usage_policy"]["same_tool_must_cover_all_targets"] is True
+    assert op["usage_policy"]["selection_preference"] == "minimize_distinct_tools"
+    assert op["relations"] == ["INSERTABLE_IN", "REACHES_BOTTOM"]
+
+
+# Suite 37: Exact operation bindings preserved without zip reconstruction
+def test_exact_operation_bindings_preserved() -> None:
+    from mujoco_scenes.functional_tamp_pipeline.models import PipelineResult
+
+    graph_f = FunctionalRequirementGraph(
+        domain="kitchen",
+        task_instruction="Serve soup",
+        nodes={
+            "soup_container": FunctionalRole(name="soup_container", count=2),
+            "soup_eating_utensil": FunctionalRole(name="soup_eating_utensil", count=2),
+        },
+        operation_groups=(
+            OperationGroup(
+                id="soup_serving",
+                function="serve",
+                tool_role="soup_eating_utensil",
+                target_role="soup_container",
+                required_target_count=2,
+                usage_policy="DEDICATED_PER_TARGET",
+                required_relations=("INSERTABLE_IN", "REACHES_BOTTOM"),
+            ),
+        ),
+    )
+    graph_o = ObservedSceneGraph()
+    for obj_id, cat in [
+        ("bowl_A", "bowl"), ("bowl_B", "bowl"),
+        ("spoon_X", "spoon"), ("spoon_Y", "spoon"),
+    ]:
+        graph_o.add_node(ObservedNode(instance_id=obj_id, entity_kind="OBJECT", canonical_category=cat))
+
+    # Add relations with explicit pairing: spoon_X -> bowl_B, spoon_Y -> bowl_A
+    for tool, tgt in [("spoon_X", "bowl_B"), ("spoon_Y", "bowl_A")]:
+        graph_o.add_relation(ObservedRelation(
+            subject_id=tool, predicate="INSERTABLE_IN", object_id=tgt, status="TRUE",
+            evidence={"margin": 0.05},
+        ))
+        graph_o.add_relation(ObservedRelation(
+            subject_id=tool, predicate="REACHES_BOTTOM", object_id=tgt, status="TRUE",
+            evidence={"depth": 0.08},
+        ))
+
+    res = ground_graph(graph_f, graph_o)
+    assert res.complete
+    bindings = res.operation_bindings["soup_serving"]
+    # Check that tool-target pairings are preserved
+    paired_dict = {b["tool_id"]: b["target_id"] for b in bindings}
+    assert paired_dict["spoon_X"] == "bowl_B"
+    assert paired_dict["spoon_Y"] == "bowl_A"
+
+
+# Suite 38: Workshop geometry cannot determine semantic category
+def test_workshop_geometry_cannot_determine_semantic_category() -> None:
+    from mujoco_scenes.functional_tamp_pipeline.grounding import _check_semantic_category
+
+    # Object has hammer semantic category and long length (0.15m)
+    node = ObservedNode(
+        instance_id="object_0001",
+        entity_kind="OBJECT",
+        canonical_category="hammer",
+        semantic_labels={"canonical_label": "hammer", "status": "SUPPORTED"},
+        unary_properties={"total_length_m": 0.15},
+    )
+
+    # Fastener role accepts screw, driver role accepts screwdriver
+    status_driver, matched_driver = _check_semantic_category(node, ["screwdriver", "power_driver"])
+    assert status_driver == "FALSE"
+    assert matched_driver is None
+
+    status_fastener, matched_fastener = _check_semantic_category(node, ["screw", "phillips_screw"])
+    assert status_fastener == "FALSE"
+    assert matched_fastener is None
+
+
+# Suite 39: Workshop supported semantic category passes through
+def test_workshop_supported_semantic_category_passes() -> None:
+    from mujoco_scenes.functional_tamp_pipeline.grounding import _check_semantic_category
+
+    # Track has multi-view consensus alternative label for screw with >=2 views
+    node = ObservedNode(
+        instance_id="object_0002",
+        entity_kind="OBJECT",
+        canonical_category=None,
+        semantic_labels={
+            "canonical_label": "screwdriver",
+            "consensus_alternative_label": "screw",
+            "consensus_alternative_supporting_views": 2,
+            "label_supporting_view_count": {"screwdriver": 4, "screw": 2},
+        },
+    )
+
+    status_fastener, matched_fastener = _check_semantic_category(node, ["screw", "phillips_screw"])
+    assert status_fastener == "TRUE"
+    assert matched_fastener == "screw"
+
+
+# Suite 40: Semantic fusion conflict and noise handling
+def test_semantic_fusion_conflict_and_noise() -> None:
+    from mujoco_scenes.semantic_grounding import fuse_semantic_observations, load_semantic_config
+
+    config = load_semantic_config()
+
+    def make_obs(label: str, conf: float, cam: str, score: float = 1.0, pixels: int = 1000):
+        return {
+            "detection": {
+                "canonical_label": label,
+                "confidence": conf,
+                "source_camera": cam,
+                "input_kind": "FULL_FRAME",
+            },
+            "association_score": score,
+            "metrics": {"visible_mask_pixels": pixels},
+        }
+
+    # Case 1: Clear winner (3 views bowl) vs weak noise runner (2 views cup, low confidence and association)
+    obs_clear = [
+        make_obs("bowl", 0.85, "c1", score=1.0, pixels=1000),
+        make_obs("bowl", 0.80, "c2", score=1.0, pixels=1000),
+        make_obs("bowl", 0.75, "c3", score=1.0, pixels=1000),
+        make_obs("cup", 0.12, "c4", score=0.25, pixels=1000),
+        make_obs("cup", 0.11, "c5", score=0.25, pixels=1000),
+    ]
+    res_clear = fuse_semantic_observations(
+        obs_clear, config=config, stage=0, region_id="countertop",
+        detector_metadata={},
+    )
+    assert res_clear["status"] == "SUPPORTED"
+    assert res_clear["canonical_label"] == "bowl"
+
+    # Case 2: Genuine conflict (3 views fork vs 2 views spoon with high confidence and high score)
+    obs_conflict = [
+        make_obs("fork", 0.70, "c1", score=1.0, pixels=1000),
+        make_obs("fork", 0.65, "c2", score=1.0, pixels=1000),
+        make_obs("fork", 0.60, "c3", score=1.0, pixels=1000),
+        make_obs("spoon", 0.72, "c4", score=1.0, pixels=1000),
+        make_obs("spoon", 0.68, "c5", score=1.0, pixels=1000),
+    ]
+    res_conflict = fuse_semantic_observations(
+        obs_conflict, config=config, stage=0, region_id="countertop",
+        detector_metadata={},
+    )
+    assert res_conflict["status"] == "UNKNOWN"
+    assert res_conflict["canonical_label"] is None
+    assert "CONFLICTING_MULTI_VIEW_LABELS" in res_conflict["reason_codes"]
+
+
+# Suite 41: Workshop failure result retains diagnostics
+def test_workshop_failure_result_retains_diagnostics() -> None:
+    from mujoco_scenes.functional_tamp_pipeline.models import PipelineResult
+
+    res = PipelineResult(
+        domain="workshop",
+        variant="W9",
+        mode="gt",
+        status="INFEASIBLE",
+        inspected_regions=["LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"],
+        failure_reason="NO_GLOBAL_ASSIGNMENT",
+    )
+    d = res.to_dict()
+    assert d["domain"] == "workshop"
+    assert d["variant"] == "W9"
+    assert d["status"] == "INFEASIBLE"
+    assert d["inspected_regions"] == ["LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"]
+    assert d["failure_reason"] == "NO_GLOBAL_ASSIGNMENT"
+
+
+
 
 

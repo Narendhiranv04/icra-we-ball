@@ -176,6 +176,7 @@ def run_pipeline(
         print(f"FUNCTIONAL GROUNDING FAILED: {reason}", flush=True)
         result = PipelineResult(
             domain=domain, variant=variant, mode=mode, status=satisfaction.status,
+            inspected_regions=inspected, failure_reason=reason,
         )
         _write_json(run_dir / "result.json", result.to_dict())
         return result

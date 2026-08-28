@@ -71,9 +71,10 @@ fusion:
   minimum_mean_confidence: 0.03
   minimum_winning_label_margin: 0.08
   # A weighted-score winner must not erase a strong contradictory label seen
-  # by several independent cameras. Two-versus-three fork/spoon disagreement,
-  # for example, is UNKNOWN even when the spoon boxes have higher confidence.
-  maximum_conflicting_view_fraction: 0.70
+  # by multiple independent cameras when both the supporting view ratio and
+  # score ratio indicate genuine multi-view conflict (e.g. 2-vs-3 disagreement).
+  maximum_conflicting_view_fraction: 0.60
+  maximum_conflicting_score_fraction: 0.40
   minimum_conflicting_mean_confidence: 0.10
   association_quality_power: 1.0
   visible_area_weight_power: 0.15

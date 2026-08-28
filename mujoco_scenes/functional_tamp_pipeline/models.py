@@ -385,7 +385,14 @@ class GraphGroundingResult:
 
     @property
     def missing_requirements(self) -> tuple[str, ...]:
-        return self.missing_roles or self.unresolved_constraints
+        reqs = list(self.missing_roles)
+        reqs.extend(self.unresolved_constraints)
+        for rel in self.unsatisfied_relations:
+            if isinstance(rel, dict):
+                reqs.append(f"{rel.get('predicate')}({rel.get('subject_role')}, {rel.get('object_role')})")
+            else:
+                reqs.append(str(rel))
+        return tuple(reqs)
 
     def to_dict(self) -> dict[str, Any]:
         return {
