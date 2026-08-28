@@ -299,25 +299,64 @@ class WorkshopDomainAdapter:
         drivers = []
         fasteners = []
         for track in self.controller.tracker.tracks.values():
-            canonical = track.current_semantic_belief.get("canonical_label")
+            canonical = (
+                track.current_semantic_belief.get("evaluated_label")
+                or track.current_semantic_belief.get("canonical_label")
+            )
+            candidate_labels = {canonical, track.current_semantic_belief.get("canonical_label")}
+            alt_label = track.current_semantic_belief.get("consensus_alternative_label")
+            alt_views = int(track.current_semantic_belief.get("consensus_alternative_supporting_views") or 0)
+            if alt_label and alt_views >= 2:
+                candidate_labels.add(alt_label)
+            for lbl, vcount in track.current_semantic_belief.get("label_supporting_view_count", {}).items():
+                if vcount >= 2:
+                    candidate_labels.add(lbl)
+
+            driver_categories = {
+                "screwdriver", "power_driver", "power_drill",
+                "phillips screwdriver", "Phillips screwdriver",
+                "cordless power drill", "cordless_power_drill",
+            }
+            fastener_categories = {
+                "screw", "phillips_screw", "Phillips screw",
+                "phillips head screw", "Phillips head screw",
+            }
+
+            is_driver = any(c in driver_categories for c in candidate_labels if c)
+            is_fastener = any(c in fastener_categories for c in candidate_labels if c)
+
+            primary_canonical = canonical
+            if is_fastener and not is_driver:
+                primary_canonical = "screw"
+            elif is_driver and not is_fastener:
+                primary_canonical = "screwdriver" if any("screwdriver" in str(c).lower() for c in candidate_labels if c) else "power_driver"
+            elif is_fastener and is_driver:
+                length = float(track.current_geometric_properties.get("total_length_m") or 0.0)
+                if 0 < length <= 0.08:
+                    primary_canonical = "screw"
+                    is_driver = False
+                elif length >= 0.12:
+                    primary_canonical = "screwdriver"
+                    is_fastener = False
+
             node = ObservedObject(
                 instance_id=track.instance_id,
                 entity_kind="OBJECT",
-                canonical_category=canonical,
+                canonical_category=primary_canonical,
                 semantic_labels=dict(track.current_semantic_belief),
                 source_region=track.source_inspection_region_id,
                 geometry=dict(track.current_geometric_properties),
                 unary_properties=dict(track.current_geometric_properties),
                 unary_predicates={
-                    "CAN_DRIVE_SCREW": "TRUE" if canonical in {"screwdriver", "power_driver", "power_drill", "Phillips screwdriver", "cordless power drill"} else "UNKNOWN",
-                    "CAN_FASTEN": "TRUE" if canonical in {"screw", "phillips_screw", "Phillips screw"} else "UNKNOWN",
+                    "CAN_DRIVE_SCREW": "TRUE" if is_driver else "UNKNOWN",
+                    "CAN_FASTEN": "TRUE" if is_fastener else "UNKNOWN",
                 },
                 last_seen_stage=track.last_seen_stage,
             )
             objects.append(node)
-            if canonical in {"screwdriver", "power_driver", "power_drill", "Phillips screwdriver", "cordless power drill"}:
+            if is_driver:
                 drivers.append(track)
-            if canonical in {"screw", "phillips_screw", "Phillips screw"}:
+            if is_fastener:
                 fasteners.append(track)
         self.graph.update_objects(objects, self._stage)
 

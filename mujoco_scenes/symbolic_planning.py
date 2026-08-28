@@ -322,7 +322,7 @@ def compile_observed_symbolic_state(
     source_capabilities: dict[str, str] = {}
     used_sources: set[str] = set()
     for role, requirement in symbolic.get("source_roles", {}).items():
-        witness_role = requirement.get("witness_role")
+        witness_role = requirement.get("witness_role") or (role if role in selected else None)
         if isinstance(witness_role, str) and witness_role:
             candidates = list(selected.get(witness_role, []))
             if len(candidates) != int(requirement.get("count", 1)):

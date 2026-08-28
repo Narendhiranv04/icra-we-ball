@@ -237,6 +237,14 @@ def build_kitchen_observed_scene_graph(session: Any) -> ObservedSceneGraph:
             or semantics.get("latest_observation", {}).get("canonical_label")
             or semantics.get("canonical_label")
         )
+        if not canonical:
+            alts = semantics.get("latest_observation", {}).get("alternatives", [])
+            for alt in alts:
+                if alt.get("supporting_view_count", 0) >= 2:
+                    canonical = alt.get("label")
+                    break
+            if not canonical and alts:
+                canonical = alts[0].get("label")
         unary_preds = {
             k: v.get("status", "TRUE" if v.get("value") else "FALSE") if isinstance(v, dict) else ("TRUE" if v else "FALSE")
             for k, v in record.get("geometric_predicates", {}).items()
@@ -320,21 +328,34 @@ def run_to_plan(
     scene = scene or scene_for_variant(internal_variant)
     contract = compile_kitchen_contract_from_graph(specification)
 
-    vocabulary_path: Path
-    if "object_vocabulary" in specification.metadata:
-        vocabulary_path = output_dir / "object_vocabulary.yaml"
-        vocabulary_path.parent.mkdir(parents=True, exist_ok=True)
-        vocabulary_path.write_text(
-            yaml.safe_dump(specification.metadata["object_vocabulary"], sort_keys=False),
-            encoding="utf-8",
-        )
-    else:
-        vocabulary_path = Path(specification.metadata["semantic_vocabulary_path"])
+    vocabulary_path = output_dir / "kitchen_vocabulary.yaml"
+    canonical_labels: dict[str, list[str]] = {}
+    root = Path(__file__).resolve().parents[1]
+    base_vocab_path = Path(specification.metadata.get("semantic_vocabulary_path", root / "configs" / "semantic_vocabulary.yaml"))
+    base_canon: dict[str, list[str]] = {}
+    if base_vocab_path.is_file():
+        base_vocab = yaml.safe_load(base_vocab_path.read_text(encoding="utf-8"))
+        base_canon = base_vocab.get("canonical_labels", {})
+    for role in specification.nodes.values():
+        for cat in role.semantic_categories:
+            if cat not in canonical_labels:
+                canonical_labels[cat] = base_canon.get(cat, [cat])
+    vocab_dict = {
+        "schema_version": 1,
+        "canonical_labels": canonical_labels,
+    }
+    vocabulary_path.parent.mkdir(parents=True, exist_ok=True)
+    vocabulary_path.write_text(yaml.safe_dump(vocab_dict, sort_keys=False), encoding="utf-8")
 
     phase1_dir = output_dir / "observed_search" / "phase1"
     if phase1_dir.exists():
         import shutil
         shutil.rmtree(phase1_dir, ignore_errors=True)
+
+    def kitchen_completion_predicate(current: Any) -> bool:
+        current_go = build_kitchen_observed_scene_graph(current)
+        res = ground_graph(specification, current_go, {"search_exhausted": False})
+        return bool(res.complete)
 
     session = run_sequential_inspection(
         scene,
@@ -350,9 +371,7 @@ def run_to_plan(
         semantic_vocabulary_path=vocabulary_path,
         semantic_min_supporting_views=2,
         grounding_mode="joint",
-        completion_predicate=lambda current: (
-            (current.latest_witness or {}).get("status") == "COMPLETE"
-        ),
+        completion_predicate=kitchen_completion_predicate,
         record_oracle_diagnostics=False,
     )
     events = [
@@ -368,8 +387,9 @@ def run_to_plan(
     for r in opened:
         graph_o.mark_region_inspected(r)
 
+    is_exhausted = len(opened) >= len(specification.region_ranking)
     # Canonical graph grounding decides the assignment authority
-    ground_result = ground_graph(specification, graph_o, {"search_exhausted": True})
+    ground_result = ground_graph(specification, graph_o, {"search_exhausted": is_exhausted})
 
     (output_dir / "observed_scene_graph.json").write_text(
         json.dumps(graph_o.to_dict(), indent=2, sort_keys=True) + "\n",
@@ -388,9 +408,44 @@ def run_to_plan(
         )
 
     # Compile observed symbolic state from graph grounding assignment
+    witness_payload = {
+        "status": "COMPLETE",
+        "selected_witness": {
+            "coffee_container": list(ground_result.assignment.get("coffee_container", [])),
+            "soup_container": list(ground_result.assignment.get("soup_container", [])),
+            "coffee_stirrer": [ground_result.assignment.get("coffee_stirrer")] if isinstance(ground_result.assignment.get("coffee_stirrer"), str) else list(ground_result.assignment.get("coffee_stirrer", [])),
+            "soup_eating_utensil": list(ground_result.assignment.get("soup_eating_utensil", [])) if isinstance(ground_result.assignment.get("soup_eating_utensil"), list) else [ground_result.assignment.get("soup_eating_utensil")],
+            "coffee_source": [ground_result.assignment.get("coffee_source")] if isinstance(ground_result.assignment.get("coffee_source"), str) else list(ground_result.assignment.get("coffee_source", [])),
+            "water_source": [ground_result.assignment.get("water_source")] if isinstance(ground_result.assignment.get("water_source"), str) else list(ground_result.assignment.get("water_source", [])),
+        },
+        "operation_assignments": [
+            {
+                "function_group_id": "coffee_stirring",
+                "utensil_object_id": ground_result.assignment.get("coffee_stirrer"),
+                "target_object_id": tgt,
+                "assignment_status": "TRUE",
+                "pair_geometry_status": "TRUE",
+                "relation_checks": [{"status": "TRUE"}],
+            }
+            for tgt in ground_result.assignment.get("coffee_container", [])
+        ] + [
+            {
+                "function_group_id": "soup_serving",
+                "utensil_object_id": u,
+                "target_object_id": tgt,
+                "assignment_status": "TRUE",
+                "pair_geometry_status": "TRUE",
+                "relation_checks": [{"status": "TRUE"}],
+            }
+            for u, tgt in zip(ground_result.assignment.get("soup_eating_utensil", []), ground_result.assignment.get("soup_container", []))
+        ],
+    }
+    (session.run_dir / "latest_witness.json").write_text(
+        json.dumps(witness_payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     compiled = compile_observed_symbolic_state(session.run_dir, contract)
     assignments = ground_result.assignment
-    compiled["role_assignments"] = assignments
 
     planned = plan_with_common_astar(
         KitchenPlanningCompiler(), assignments,

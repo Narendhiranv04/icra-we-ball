@@ -897,6 +897,12 @@ def fuse_semantic_observations(
             ) > float(
                 fusion.get("maximum_conflicting_view_fraction", 1.0)
             )
+            and (
+                runner["score"]
+                / max(winner["score"], 1e-6)
+            ) > float(
+                fusion.get("maximum_conflicting_score_fraction", 0.40)
+            )
         )
         if (
             strong_multi_view_runner

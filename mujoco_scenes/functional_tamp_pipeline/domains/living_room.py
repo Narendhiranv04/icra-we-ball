@@ -285,6 +285,9 @@ def run_to_plan(
     from ..grounding import ground_graph
 
     phase1 = output_dir / "observed_grounding"
+    if phase1.exists():
+        import shutil
+        shutil.rmtree(phase1, ignore_errors=True)
     rig_path = output_dir / "resolved_rig.yaml"
     name = scene_name(internal_variant)
     write_resolved_integrated_rig(name, rig_path)
