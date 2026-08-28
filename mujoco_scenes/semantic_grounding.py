@@ -910,10 +910,22 @@ def fuse_semantic_observations(
         ):
             reasons.append("CONFLICTING_MULTI_VIEW_LABELS")
     status = "SUPPORTED" if not reasons else "UNKNOWN"
+    lack_of_evidence = any(
+        r in reasons
+        for r in (
+            "NO_ASSOCIATED_DETECTION",
+            "INSUFFICIENT_SEMANTIC_CAMERA_SUPPORT",
+            "INSUFFICIENT_DETECTOR_CONFIDENCE",
+        )
+    )
     plausible_labels: list[str] = []
     if status == "SUPPORTED" and winner is not None:
         plausible_labels = [str(winner["label"])]
-    elif status == "UNKNOWN" and "CONFLICTING_MULTI_VIEW_LABELS" in reasons:
+    elif (
+        status == "UNKNOWN"
+        and "CONFLICTING_MULTI_VIEW_LABELS" in reasons
+        and not lack_of_evidence
+    ):
         competing = []
         if winner is not None:
             competing.append(str(winner["label"]))

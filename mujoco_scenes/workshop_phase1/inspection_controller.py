@@ -616,8 +616,6 @@ class WorkshopPhase1InspectionController:
             # 1. CAN_DRIVE_SCREW
             if driver_req:
                 s_res = self.semantic_grounder.ground_object_for_requirement(trk, driver_req)
-                if s_res.semantic_status == GroundingStatus.PASS:
-                    trk.current_semantic_belief.update(s_res.semantic_evidence)
                 g_res = (self._skipped_geometry_result(trk.instance_id, driver_req)
                          if is_semantic_only else
                          self.geometric_grounder.ground_object_geometry(trk, driver_req))
@@ -642,8 +640,6 @@ class WorkshopPhase1InspectionController:
             # 2. CAN_FASTEN
             if fastener_req:
                 s_res = self.semantic_grounder.ground_object_for_requirement(trk, fastener_req)
-                if s_res.semantic_status == GroundingStatus.PASS:
-                    trk.current_semantic_belief.update(s_res.semantic_evidence)
                 g_res = (self._skipped_geometry_result(trk.instance_id, fastener_req)
                          if is_semantic_only else
                          self.geometric_grounder.ground_object_geometry(trk, fastener_req))
@@ -670,8 +666,6 @@ class WorkshopPhase1InspectionController:
             # 3. WORK_SURFACE
             if surface_req:
                 s_res = self.semantic_grounder.ground_region_for_requirement(reg, surface_req)
-                if s_res.semantic_status == GroundingStatus.PASS:
-                    reg.current_semantic_belief.update(s_res.semantic_evidence)
                 g_res = (self._skipped_geometry_result(reg.region_instance_id, surface_req)
                          if is_semantic_only else
                          self.geometric_grounder.ground_region_geometry(reg, surface_req))
@@ -696,8 +690,6 @@ class WorkshopPhase1InspectionController:
             # 4. SMALL_PARTS_CONTAINER
             if container_req:
                 s_res = self.semantic_grounder.ground_region_for_requirement(reg, container_req)
-                if s_res.semantic_status == GroundingStatus.PASS:
-                    reg.current_semantic_belief.update(s_res.semantic_evidence)
                 g_res = (self._skipped_geometry_result(reg.region_instance_id, container_req)
                          if is_semantic_only else
                          self.geometric_grounder.ground_region_geometry(reg, container_req))

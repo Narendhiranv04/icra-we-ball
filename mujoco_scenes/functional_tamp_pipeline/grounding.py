@@ -91,33 +91,55 @@ def extract_plausible_labels(belief: dict[str, Any] | None) -> list[str]:
     """Extract credible semantic candidate hypotheses H(o) from semantic belief."""
     if not belief:
         return []
+
+    validated_dict = belief.get("validated") if isinstance(belief.get("validated"), dict) else {}
+    latest = belief.get("latest_observation") if isinstance(belief.get("latest_observation"), dict) else {}
+
+    reasons = (
+        belief.get("reason_codes")
+        or validated_dict.get("reason_codes")
+        or latest.get("reason_codes")
+        or []
+    )
+    lack_of_evidence_codes = {
+        "NO_ASSOCIATED_DETECTION",
+        "INSUFFICIENT_SEMANTIC_CAMERA_SUPPORT",
+        "INSUFFICIENT_DETECTOR_CONFIDENCE",
+        "SEMANTIC_LABEL_UNKNOWN",
+        "SEMANTIC_REGION_LABEL_UNKNOWN",
+    }
+    if any(code in reasons for code in lack_of_evidence_codes):
+        return []
+
     # Direct fields from semantic fusion
-    if "plausible_labels" in belief and isinstance(belief["plausible_labels"], list):
+    if "plausible_labels" in belief and isinstance(belief["plausible_labels"], list) and belief["plausible_labels"]:
         return [str(lbl) for lbl in belief["plausible_labels"] if lbl]
-    if "ambiguity_hypotheses" in belief and isinstance(belief["ambiguity_hypotheses"], list):
+    if "ambiguity_hypotheses" in belief and isinstance(belief["ambiguity_hypotheses"], list) and belief["ambiguity_hypotheses"]:
         return [str(lbl) for lbl in belief["ambiguity_hypotheses"] if lbl]
+    if "plausible_labels" in validated_dict and isinstance(validated_dict["plausible_labels"], list) and validated_dict["plausible_labels"]:
+        return [str(lbl) for lbl in validated_dict["plausible_labels"] if lbl]
+    if "plausible_labels" in latest and isinstance(latest["plausible_labels"], list) and latest["plausible_labels"]:
+        return [str(lbl) for lbl in latest["plausible_labels"] if lbl]
+    if "ambiguity_hypotheses" in latest and isinstance(latest["ambiguity_hypotheses"], list) and latest["ambiguity_hypotheses"]:
+        return [str(lbl) for lbl in latest["ambiguity_hypotheses"] if lbl]
 
-    latest = belief.get("latest_observation")
-    if isinstance(latest, dict):
-        if "plausible_labels" in latest and isinstance(latest["plausible_labels"], list):
-            return [str(lbl) for lbl in latest["plausible_labels"] if lbl]
-        if "ambiguity_hypotheses" in latest and isinstance(latest["ambiguity_hypotheses"], list):
-            return [str(lbl) for lbl in latest["ambiguity_hypotheses"] if lbl]
-
-    status = belief.get("status")
+    status = (
+        belief.get("status")
+        or validated_dict.get("status")
+        or latest.get("status")
+    )
     if status == "SUPPORTED" or status is None:
         canonical = (
-            belief.get("validated", {}).get("canonical_label")
+            validated_dict.get("canonical_label")
             or belief.get("evaluated_label")
             or belief.get("canonical_label")
-            or (latest.get("canonical_label") if isinstance(latest, dict) else None)
+            or latest.get("canonical_label")
         )
         if canonical:
             return [str(canonical)]
 
-    reasons = belief.get("reason_codes") or (latest.get("reason_codes") if isinstance(latest, dict) else [])
     if status == "UNKNOWN" and "CONFLICTING_MULTI_VIEW_LABELS" in reasons:
-        alts = belief.get("alternatives") or (latest.get("alternatives") if isinstance(latest, dict) else [])
+        alts = belief.get("alternatives") or validated_dict.get("alternatives") or latest.get("alternatives")
         if isinstance(alts, list) and alts:
             winner = alts[0].get("label") if isinstance(alts[0], dict) else None
             candidates = [str(winner)] if winner else []
@@ -148,35 +170,91 @@ def check_semantic_role_compatibility(
     if isinstance(node_or_belief, ObservedNode):
         node = node_or_belief
         entity_kind = getattr(node, "entity_kind", "OBJECT")
-        # 1. Direct canonical category if resolved and supported
-        if node.canonical_category:
-            norm_canonical = node.canonical_category.strip().lower().replace(" ", "_")
-            if norm_canonical in accepted_set:
-                return "TRUE", node.canonical_category
-            return "FALSE", None
+        belief = node.semantic_labels if isinstance(node.semantic_labels, dict) else None
 
-        belief = node.semantic_labels
+        if entity_kind == "OBJECT":
+            # For OBJECT:
+            # If explicit semantic belief with status/reasons exists, evaluate belief directly
+            has_belief_contract = bool(
+                belief and (
+                    "status" in belief or "reason_codes" in belief or "plausible_labels" in belief
+                    or "validated" in belief or "latest_observation" in belief
+                )
+            )
+            if has_belief_contract:
+                pass
+            elif node.canonical_category:
+                # Synthetic/legacy graph input without explicit belief contract
+                norm_canonical = node.canonical_category.strip().lower().replace(" ", "_")
+                if norm_canonical in accepted_set:
+                    return "TRUE", node.canonical_category
+                return "FALSE", None
+        else:
+            # For REGION / FIXED_TARGET:
+            if node.canonical_category:
+                norm_canonical = node.canonical_category.strip().lower().replace(" ", "_")
+                if norm_canonical in accepted_set:
+                    return "TRUE", node.canonical_category
+                return "FALSE", None
     else:
         node = None
         entity_kind = "OBJECT"
         belief = node_or_belief if isinstance(node_or_belief, dict) else None
 
-    # Extract plausible candidate set H(o)
-    plausible = extract_plausible_labels(belief)
-
-    if plausible:
-        norm_plausible = {lbl.strip().lower().replace(" ", "_") for lbl in plausible}
-        # S_sem(o, r) = TRUE iff H(o) != ∅ and H(o) ⊆ C(r)
-        if norm_plausible.issubset(accepted_set):
-            return "TRUE", plausible[0]
-        # S_sem(o, r) = FALSE iff H(o) != ∅ and H(o) ∩ C(r) = ∅
-        if norm_plausible.isdisjoint(accepted_set):
-            return "FALSE", None
-        # Mixed overlap (some in C(r), some not)
-        return "UNKNOWN", None
-
+    # Check belief if available
     if belief:
-        status = belief.get("status")
+        validated_dict = belief.get("validated") if isinstance(belief.get("validated"), dict) else {}
+        latest = belief.get("latest_observation") if isinstance(belief.get("latest_observation"), dict) else {}
+
+        status = (
+            belief.get("status")
+            or validated_dict.get("status")
+            or latest.get("status")
+        )
+        reasons = (
+            belief.get("reason_codes")
+            or validated_dict.get("reason_codes")
+            or latest.get("reason_codes")
+            or []
+        )
+        lack_of_evidence_codes = {
+            "NO_ASSOCIATED_DETECTION",
+            "INSUFFICIENT_SEMANTIC_CAMERA_SUPPORT",
+            "INSUFFICIENT_DETECTOR_CONFIDENCE",
+            "SEMANTIC_LABEL_UNKNOWN",
+            "SEMANTIC_REGION_LABEL_UNKNOWN",
+        }
+        has_lack_of_evidence = any(code in reasons for code in lack_of_evidence_codes)
+
+        if status == "SUPPORTED" and not has_lack_of_evidence:
+            canonical = (
+                belief.get("canonical_label")
+                or validated_dict.get("canonical_label")
+                or (node.canonical_category if node is not None else None)
+                or latest.get("canonical_label")
+            )
+            if canonical:
+                norm_canonical = str(canonical).strip().lower().replace(" ", "_")
+                if norm_canonical in accepted_set:
+                    return "TRUE", str(canonical)
+                return "FALSE", None
+
+        # If status == UNKNOWN or no supported canonical:
+        if has_lack_of_evidence:
+            return "UNKNOWN", None
+
+        plausible = extract_plausible_labels(belief)
+        if plausible:
+            norm_plausible = {lbl.strip().lower().replace(" ", "_") for lbl in plausible}
+            # S_sem(o, r) = TRUE iff H(o) != ∅ and H(o) ⊆ C(r)
+            if norm_plausible.issubset(accepted_set):
+                return "TRUE", plausible[0]
+            # S_sem(o, r) = FALSE iff H(o) != ∅ and H(o) ∩ C(r) = ∅
+            if norm_plausible.isdisjoint(accepted_set):
+                return "FALSE", None
+            # Mixed overlap (some in C(r), some not)
+            return "UNKNOWN", None
+
         if status == "SUPPORTED":
             return "FALSE", None
         return "UNKNOWN", None

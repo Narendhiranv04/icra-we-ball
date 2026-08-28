@@ -254,36 +254,35 @@ class SemanticGrounder:
         evidence_obj = self.backend.describe_object(track, requirement.description)
         evidence_dict = evidence_obj.to_dict()
 
-        canonical_label = evidence_obj.canonical_label.lower().strip()
+        belief = dict(track.current_semantic_belief)
         accepted_categories = [c.lower().strip() for c in requirement.accepted_categories]
-        label_views = track.current_semantic_belief.get("label_supporting_view_count", {})
-        supported_alternative = next(
-            (label for label in accepted_categories
-             if label != canonical_label and int(label_views.get(label, 0)) >= 2),
-            None,
-        )
+
+        from mujoco_scenes.functional_tamp_pipeline.grounding import check_semantic_role_compatibility
+        role_status, matched_cat = check_semantic_role_compatibility(belief, accepted_categories)
 
         rejections: list[str] = []
-
-        if not canonical_label or canonical_label in ("unknown", "object", "object_proposal"):
-            status = GroundingStatus.UNKNOWN
-            score = 0.50
-            rejections.append("SEMANTIC_LABEL_UNKNOWN")
-        elif canonical_label in accepted_categories or supported_alternative is not None:
+        if role_status == "TRUE":
             status = GroundingStatus.PASS
             score = max(0.60, evidence_obj.confidence)
-            if supported_alternative is not None:
-                evidence_dict["consensus_alternative_label"] = supported_alternative
-                evidence_dict["consensus_alternative_supporting_views"] = int(
-                    label_views[supported_alternative]
-                )
-        else:
+        elif role_status == "FALSE":
             status = GroundingStatus.FAIL
             score = 0.10
-            rejections.append(f"SEMANTIC_CATEGORY_MISMATCH_{canonical_label.upper()}_NOT_ACCEPTED")
+            canonical_label = belief.get("canonical_label") or evidence_obj.canonical_label
+            rejections.append(f"SEMANTIC_CATEGORY_MISMATCH_{str(canonical_label).upper()}_NOT_ACCEPTED")
+        else:
+            status = GroundingStatus.UNKNOWN
+            score = 0.50
+            reasons = belief.get("reason_codes", [])
+            if reasons:
+                rejections.extend(reasons)
+            else:
+                rejections.append("SEMANTIC_LABEL_UNKNOWN")
 
         evidence_dict["accepted_categories"] = list(requirement.accepted_categories)
-        evidence_dict["evaluated_label"] = supported_alternative or canonical_label
+        evidence_dict["role_semantic_status"] = role_status
+        evidence_dict["matched_category"] = matched_cat
+        evidence_dict["plausible_labels"] = belief.get("plausible_labels", [])
+        evidence_dict["reason_codes"] = belief.get("reason_codes", [])
 
         return FunctionGroundingResult(
             entity_id=track.instance_id,
@@ -310,25 +309,35 @@ class SemanticGrounder:
         evidence_obj = self.backend.describe_region(region, requirement.description)
         evidence_dict = evidence_obj.to_dict()
 
-        canonical_label = evidence_obj.canonical_label.lower().strip()
+        belief = dict(region.current_semantic_belief)
         accepted_categories = [c.lower().strip() for c in requirement.accepted_categories]
 
-        rejections: list[str] = []
+        from mujoco_scenes.functional_tamp_pipeline.grounding import check_semantic_role_compatibility
+        role_status, matched_cat = check_semantic_role_compatibility(belief, accepted_categories)
 
-        if not canonical_label or canonical_label in ("unknown", "object", "spatial_region"):
-            status = GroundingStatus.UNKNOWN
-            score = 0.50
-            rejections.append("SEMANTIC_REGION_LABEL_UNKNOWN")
-        elif canonical_label in accepted_categories:
+        rejections: list[str] = []
+        if role_status == "TRUE":
             status = GroundingStatus.PASS
             score = max(0.60, evidence_obj.confidence)
-        else:
+        elif role_status == "FALSE":
             status = GroundingStatus.FAIL
             score = 0.10
-            rejections.append(f"SEMANTIC_REGION_MISMATCH_{canonical_label.upper()}_NOT_ACCEPTED")
+            canonical_label = belief.get("canonical_label") or evidence_obj.canonical_label
+            rejections.append(f"SEMANTIC_REGION_MISMATCH_{str(canonical_label).upper()}_NOT_ACCEPTED")
+        else:
+            status = GroundingStatus.UNKNOWN
+            score = 0.50
+            reasons = belief.get("reason_codes", [])
+            if reasons:
+                rejections.extend(reasons)
+            else:
+                rejections.append("SEMANTIC_REGION_LABEL_UNKNOWN")
 
         evidence_dict["accepted_categories"] = list(requirement.accepted_categories)
-        evidence_dict["evaluated_label"] = canonical_label
+        evidence_dict["role_semantic_status"] = role_status
+        evidence_dict["matched_category"] = matched_cat
+        evidence_dict["plausible_labels"] = belief.get("plausible_labels", [])
+        evidence_dict["reason_codes"] = belief.get("reason_codes", [])
 
         return FunctionGroundingResult(
             entity_id=region.region_instance_id,

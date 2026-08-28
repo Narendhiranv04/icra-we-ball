@@ -47,7 +47,7 @@ def search_until_satisfied(
     except TypeError:
         final_result = domain.evaluate_satisfaction()
     return GraphGroundingResult(
-        status=final_result.status if final_result.status in {"INCOMPLETE", "INFEASIBLE"} else "INFEASIBLE",
+        status="INFEASIBLE",
         complete=False,
         assignment=None,
         operation_bindings=final_result.operation_bindings,

@@ -311,10 +311,10 @@ class WorkshopDomainAdapter:
         ]
 
         for track in self.controller.tracker.tracks.values():
-            canonical = (
-                track.current_semantic_belief.get("evaluated_label")
-                or track.current_semantic_belief.get("canonical_label")
-            )
+            if track.current_semantic_belief.get("status") == "SUPPORTED":
+                canonical = track.current_semantic_belief.get("canonical_label")
+            else:
+                canonical = None
             driver_status, _ = check_semantic_role_compatibility(
                 track.current_semantic_belief, driver_categories
             )

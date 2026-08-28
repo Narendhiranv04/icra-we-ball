@@ -75,6 +75,16 @@ class KitchenPlanningCompiler:
                 preconditions = {("holding", obj)}
                 if (obj, destination) in legacy.soup_assignments:
                     preconditions.add(("contains", destination, "soup"))
+                if destination == legacy.serving_destination:
+                    if obj in legacy.coffee_targets:
+                        preconditions.add(("contains", obj, "coffee"))
+                        preconditions.add(("contains", obj, "water"))
+                        preconditions.add(("stirred", obj))
+                    elif obj in legacy.soup_targets:
+                        preconditions.add(("contains", obj, "soup"))
+                        for tool, assigned_target in legacy.soup_assignments:
+                            if assigned_target == obj:
+                                preconditions.add(("at", tool, obj))
                 actions.append(_action(
                     "PLACE", (obj, destination), preconditions,
                     {("hand_empty",), ("at", obj, destination)},
@@ -403,7 +413,7 @@ def run_to_plan(
 
     vocabulary_path = output_dir / "kitchen_vocabulary.yaml"
     canonical_labels: dict[str, list[str]] = {}
-    root = Path(__file__).resolve().parents[1]
+    root = Path(__file__).resolve().parents[2]
     base_vocab_path = Path(specification.metadata.get("semantic_vocabulary_path", root / "configs" / "semantic_vocabulary.yaml"))
     base_canon: dict[str, list[str]] = {}
     alias_to_base_canon: dict[str, str] = {}

@@ -1827,6 +1827,275 @@ def test_kitchen_causal_planning_order() -> None:
         assert utensil_idx < serve_idx, f"Causal violation: {bowl_tgt} served before {assigned_spoon} placed"
 
 
+# Suite 47: Direct inspection of Kitchen compiled PLACE action preconditions
+def test_kitchen_place_action_preconditions() -> None:
+    from mujoco_scenes.functional_tamp_pipeline.domains.kitchen import KitchenPlanningCompiler
+
+    compiled_state = {
+        "requirements": {
+            "home_region": "countertop",
+            "serving_destination": "serving_area",
+        },
+        "role_assignments": {
+            "coffee_targets": ["cup_1"],
+            "soup_targets": ["bowl_1"],
+        },
+        "capabilities": {
+            "source_contains": [["kettle_1", "water"], ["jar_1", "coffee"], ["pot_1", "soup"]],
+            "can_stir": [["spoon_1", "cup_1"]],
+            "assigned_soup_utensil": [["spoon_2", "bowl_1"]],
+            "initial_target_contents": [],
+        },
+        "objects": {
+            "cup_1": {"location": {"region_id": "countertop"}},
+            "bowl_1": {"location": {"region_id": "countertop"}},
+            "kettle_1": {"location": {"region_id": "countertop"}},
+            "jar_1": {"location": {"region_id": "countertop"}},
+            "pot_1": {"location": {"region_id": "countertop"}},
+            "spoon_1": {"location": {"region_id": "countertop"}},
+            "spoon_2": {"location": {"region_id": "countertop"}},
+        },
+    }
+
+    problem = KitchenPlanningCompiler().compile_problem({}, {"compiled_observed_state": compiled_state})
+
+    # 1. Coffee serve action
+    coffee_place = next(
+        a for a in problem.actions
+        if a.name == "PLACE" and a.arguments == ("cup_1", "serving_area")
+    )
+    assert ("holding", "cup_1") in coffee_place.positive_preconditions
+    assert ("contains", "cup_1", "coffee") in coffee_place.positive_preconditions
+    assert ("contains", "cup_1", "water") in coffee_place.positive_preconditions
+    assert ("stirred", "cup_1") in coffee_place.positive_preconditions
+
+    # 2. Soup serve action
+    soup_place = next(
+        a for a in problem.actions
+        if a.name == "PLACE" and a.arguments == ("bowl_1", "serving_area")
+    )
+    assert ("holding", "bowl_1") in soup_place.positive_preconditions
+    assert ("contains", "bowl_1", "soup") in soup_place.positive_preconditions
+    assert ("at", "spoon_2", "bowl_1") in soup_place.positive_preconditions
+
+
+# Suite 48: Direct applicability testing (is_applicable) on unstirred vs stirred coffee and unassigned vs assigned soup bowl
+def test_kitchen_place_action_applicability() -> None:
+    from mujoco_scenes.functional_tamp_pipeline.domains.kitchen import KitchenPlanningCompiler
+    from mujoco_scenes.symbolic_planning_core import is_applicable
+
+    compiled_state = {
+        "requirements": {
+            "home_region": "countertop",
+            "serving_destination": "serving_area",
+        },
+        "role_assignments": {
+            "coffee_targets": ["cup_1"],
+            "soup_targets": ["bowl_1"],
+        },
+        "capabilities": {
+            "source_contains": [["kettle_1", "water"], ["jar_1", "coffee"], ["pot_1", "soup"]],
+            "can_stir": [["spoon_1", "cup_1"]],
+            "assigned_soup_utensil": [["spoon_2", "bowl_1"]],
+            "initial_target_contents": [],
+        },
+        "objects": {
+            "cup_1": {"location": {"region_id": "countertop"}},
+            "bowl_1": {"location": {"region_id": "countertop"}},
+            "kettle_1": {"location": {"region_id": "countertop"}},
+            "jar_1": {"location": {"region_id": "countertop"}},
+            "pot_1": {"location": {"region_id": "countertop"}},
+            "spoon_1": {"location": {"region_id": "countertop"}},
+            "spoon_2": {"location": {"region_id": "countertop"}},
+        },
+    }
+
+    problem = KitchenPlanningCompiler().compile_problem({}, {"compiled_observed_state": compiled_state})
+
+    coffee_place = next(
+        a for a in problem.actions
+        if a.name == "PLACE" and a.arguments == ("cup_1", "serving_area")
+    )
+
+    # State with holding, coffee, water, but NOT stirred
+    state_unstirred = frozenset({
+        ("holding", "cup_1"),
+        ("contains", "cup_1", "coffee"),
+        ("contains", "cup_1", "water"),
+    })
+    assert not is_applicable(state_unstirred, coffee_place), "Unstirred coffee must not be applicable for serving"
+
+    # Add stirred
+    state_stirred = state_unstirred | {("stirred", "cup_1")}
+    assert is_applicable(state_stirred, coffee_place), "Stirred coffee must be applicable for serving"
+
+    soup_place = next(
+        a for a in problem.actions
+        if a.name == "PLACE" and a.arguments == ("bowl_1", "serving_area")
+    )
+
+    # State with holding, soup, but utensil NOT at bowl
+    state_no_utensil = frozenset({
+        ("holding", "bowl_1"),
+        ("contains", "bowl_1", "soup"),
+        ("at", "spoon_2", "countertop"),
+    })
+    assert not is_applicable(state_no_utensil, soup_place), "Soup bowl without placed utensil must not be applicable for serving"
+
+    # Add utensil placed
+    state_with_utensil = state_no_utensil | {("at", "spoon_2", "bowl_1")}
+    assert is_applicable(state_with_utensil, soup_place), "Soup bowl with placed utensil must be applicable for serving"
+
+
+# Suite 49: Workshop SemanticGrounder role compatibility and alternative promotion ban
+def test_workshop_semantic_grounder_role_compatibility() -> None:
+    from mujoco_scenes.workshop_phase1.semantic_grounding import SemanticGrounder
+    from mujoco_scenes.workshop_phase1.types import (
+        ObservedObjectTrack,
+        FunctionalRequirement,
+        GroundingStatus,
+        EntityType,
+    )
+
+    grounder = SemanticGrounder()
+
+    driver_req = FunctionalRequirement(
+        requirement_id="req_driver",
+        entity_type=EntityType.OBJECT,
+        function_name="CAN_DRIVE_SCREW",
+        description="driver requirement",
+        accepted_categories=["screwdriver", "power_driver"],
+    )
+    fastener_req = FunctionalRequirement(
+        requirement_id="req_fastener",
+        entity_type=EntityType.OBJECT,
+        function_name="CAN_FASTEN",
+        description="fastener requirement",
+        accepted_categories=["screw"],
+    )
+
+    # Case 1: Supported screwdriver with 2-view alternative screw
+    # Canonical supported screwdriver must PASS for driver and FAIL for fastener
+    track_screwdriver = ObservedObjectTrack(
+        instance_id="track_1",
+        current_semantic_belief={
+            "status": "SUPPORTED",
+            "canonical_label": "screwdriver",
+            "plausible_labels": ["screwdriver"],
+            "ambiguity_hypotheses": ["screwdriver"],
+            "reason_codes": [],
+            "confidence": 0.95,
+            "label_supporting_view_count": {"screwdriver": 3, "screw": 2},
+        },
+    )
+    res_driver = grounder.ground_object_for_requirement(track_screwdriver, driver_req)
+    assert res_driver.semantic_status == GroundingStatus.PASS
+
+    res_fastener = grounder.ground_object_for_requirement(track_screwdriver, fastener_req)
+    assert res_fastener.semantic_status == GroundingStatus.FAIL, (
+        "Alternative screw with 2 views must NOT override supported canonical screwdriver"
+    )
+
+    # Case 2: Genuine ambiguity between screwdriver and screw
+    track_ambiguous = ObservedObjectTrack(
+        instance_id="track_2",
+        current_semantic_belief={
+            "status": "UNKNOWN",
+            "canonical_label": None,
+            "plausible_labels": ["screwdriver", "screw"],
+            "ambiguity_hypotheses": ["screwdriver", "screw"],
+            "reason_codes": ["CONFLICTING_MULTI_VIEW_LABELS"],
+            "confidence": 0.50,
+        },
+    )
+    assert grounder.ground_object_for_requirement(track_ambiguous, driver_req).semantic_status == GroundingStatus.UNKNOWN
+    assert grounder.ground_object_for_requirement(track_ambiguous, fastener_req).semantic_status == GroundingStatus.UNKNOWN
+
+    # Case 3: Insufficient camera support
+    track_insufficient = ObservedObjectTrack(
+        instance_id="track_3",
+        current_semantic_belief={
+            "status": "UNKNOWN",
+            "canonical_label": None,
+            "plausible_labels": [],
+            "ambiguity_hypotheses": [],
+            "reason_codes": ["INSUFFICIENT_SEMANTIC_CAMERA_SUPPORT"],
+            "confidence": 0.50,
+        },
+    )
+    assert grounder.ground_object_for_requirement(track_insufficient, driver_req).semantic_status == GroundingStatus.UNKNOWN
+
+
+# Suite 50: Workshop Tracker consensus semantic belief fusion contract
+def test_workshop_tracker_consensus_fusion() -> None:
+    from mujoco_scenes.workshop_phase1.tracking import PersistentInstanceTracker
+
+    # Case A: 3 high-confidence screwdriver views, 1 weak screw
+    obs_supported = [
+        {"stage_index": 0, "camera_id": "CAM1", "canonical_label": "screwdriver", "confidence": 0.9, "physical_support_quality": 1.0},
+        {"stage_index": 0, "camera_id": "CAM2", "canonical_label": "screwdriver", "confidence": 0.85, "physical_support_quality": 1.0},
+        {"stage_index": 0, "camera_id": "CAM3", "canonical_label": "screwdriver", "confidence": 0.88, "physical_support_quality": 1.0},
+        {"stage_index": 0, "camera_id": "CAM4", "canonical_label": "screw", "confidence": 0.1, "physical_support_quality": 0.5},
+    ]
+    belief_supported = PersistentInstanceTracker._compute_consensus_semantic_belief(obs_supported)
+    assert belief_supported["status"] == "SUPPORTED"
+    assert belief_supported["canonical_label"] == "screwdriver"
+    assert belief_supported["plausible_labels"] == ["screwdriver"]
+    assert belief_supported["reason_codes"] == []
+
+    # Case B: 3 screwdriver vs 2 strong screw views (meeting conflict criteria)
+    obs_conflicting = [
+        {"stage_index": 0, "camera_id": "CAM1", "canonical_label": "screwdriver", "confidence": 0.7, "physical_support_quality": 1.0},
+        {"stage_index": 0, "camera_id": "CAM2", "canonical_label": "screwdriver", "confidence": 0.65, "physical_support_quality": 1.0},
+        {"stage_index": 0, "camera_id": "CAM3", "canonical_label": "screwdriver", "confidence": 0.68, "physical_support_quality": 1.0},
+        {"stage_index": 0, "camera_id": "CAM4", "canonical_label": "screw", "confidence": 0.7, "physical_support_quality": 1.0},
+        {"stage_index": 0, "camera_id": "CAM5", "canonical_label": "screw", "confidence": 0.65, "physical_support_quality": 1.0},
+    ]
+    belief_conflicting = PersistentInstanceTracker._compute_consensus_semantic_belief(obs_conflicting)
+    assert belief_conflicting["status"] == "UNKNOWN"
+    assert belief_conflicting["canonical_label"] is None
+    assert set(belief_conflicting["plausible_labels"]) == {"screwdriver", "screw"}
+    assert "CONFLICTING_MULTI_VIEW_LABELS" in belief_conflicting["reason_codes"]
+
+    # Case C: 1 single view (insufficient camera support)
+    obs_single = [
+        {"stage_index": 0, "camera_id": "CAM1", "canonical_label": "screwdriver", "confidence": 0.9, "physical_support_quality": 1.0},
+    ]
+    belief_single = PersistentInstanceTracker._compute_consensus_semantic_belief(obs_single)
+    assert belief_single["status"] == "UNKNOWN"
+    assert belief_single["canonical_label"] is None
+    assert belief_single["plausible_labels"] == []
+    assert "INSUFFICIENT_SEMANTIC_CAMERA_SUPPORT" in belief_single["reason_codes"]
+
+
+# Suite 51: Explicit UNKNOWN in semantic belief overrides stale canonical_category on OBJECT nodes
+def test_explicit_unknown_overrides_stale_canonical_category_on_object() -> None:
+    from mujoco_scenes.functional_tamp_pipeline.grounding import check_semantic_role_compatibility
+    from mujoco_scenes.functional_tamp_pipeline.scene_graph import ObservedNode
+
+    node = ObservedNode(
+        instance_id="obj_1",
+        entity_kind="OBJECT",
+        canonical_category="screwdriver",  # stale or speculative label
+        semantic_labels={
+            "status": "UNKNOWN",
+            "canonical_label": None,
+            "plausible_labels": ["screwdriver", "screw"],
+            "ambiguity_hypotheses": ["screwdriver", "screw"],
+            "reason_codes": ["CONFLICTING_MULTI_VIEW_LABELS"],
+        },
+    )
+
+    # For driver role:
+    status, _ = check_semantic_role_compatibility(node, ["screwdriver", "power_driver"])
+    assert status == "UNKNOWN", f"Expected UNKNOWN for ambiguous node, got {status}"
+
+    # For fastener role:
+    status, _ = check_semantic_role_compatibility(node, ["screw"])
+    assert status == "UNKNOWN", f"Expected UNKNOWN for ambiguous node, got {status}"
+
+
+
 
 
 

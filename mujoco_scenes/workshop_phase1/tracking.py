@@ -83,9 +83,21 @@ class PersistentInstanceTracker:
 
     @staticmethod
     def _compute_consensus_semantic_belief(observations: list[dict[str, Any]]) -> dict[str, Any]:
-        """Aggregate multi-view semantic observations using confidence-weighted voting."""
+        """Aggregate multi-view semantic observations using consensus fusion with ambiguity tracking."""
         if not observations:
-            return {"canonical_label": "unknown", "raw_label": "unknown", "confidence": 0.0}
+            return {
+                "status": "UNKNOWN",
+                "canonical_label": None,
+                "plausible_labels": [],
+                "ambiguity_hypotheses": [],
+                "reason_codes": ["NO_ASSOCIATED_DETECTION"],
+                "raw_label": "unknown",
+                "confidence": 0.0,
+                "total_observations": 0,
+                "supporting_view_count": 0,
+                "label_supporting_view_count": {},
+                "label_confidence_sum": {},
+            }
 
         score_by_label: dict[str, float] = defaultdict(float)
         raw_by_label: dict[str, str] = {}
@@ -97,16 +109,21 @@ class PersistentInstanceTracker:
                            * float(unique[key].get("physical_support_quality", 1.0))) if key in unique else -1.0
             if support > old_support:
                 unique[key] = obs
+
+        # Primary label view counts and scores
+        view_counts: dict[str, set[str]] = defaultdict(set)
+        confidences_by_label: dict[str, list[float]] = defaultdict(list)
         for obs in unique.values():
             label = obs.get("canonical_label", "unknown").lower()
             conf = float(obs.get("confidence", 1.0))
-            score_by_label[label] += conf * float(obs.get("physical_support_quality", 1.0))
+            quality = float(obs.get("physical_support_quality", 1.0))
+            score_by_label[label] += conf * quality
+            view_counts[label].add(str(obs.get("camera_id", "")))
+            confidences_by_label[label].append(conf)
             if label not in raw_by_label:
                 raw_by_label[label] = obs.get("raw_label", label)
 
-        # Retain multi-label YOLO evidence that was collapsed into one physical
-        # proposal. Alternative labels can later satisfy a requirement only
-        # with independent support from at least two camera views.
+        # Alternative hypotheses across cameras
         label_views: dict[str, set[str]] = defaultdict(set)
         label_confidence_sum: dict[str, float] = defaultdict(float)
         for obs in observations:
@@ -125,18 +142,97 @@ class PersistentInstanceTracker:
                 label_views[label].add(camera)
                 label_confidence_sum[label] += confidence
 
-        # Pick label with highest total score
-        best_label = max(score_by_label, key=score_by_label.get)
+        # Rank candidate labels by (supporting_view_count, total_score)
+        valid_labels = [l for l in score_by_label if l and l not in ("unknown", "object", "object_proposal")]
+        if not valid_labels:
+            return {
+                "status": "UNKNOWN",
+                "canonical_label": None,
+                "plausible_labels": [],
+                "ambiguity_hypotheses": [],
+                "reason_codes": ["SEMANTIC_LABEL_UNKNOWN"],
+                "raw_label": "unknown",
+                "confidence": 0.0,
+                "total_observations": len(unique),
+                "supporting_view_count": 0,
+                "label_supporting_view_count": {l: len(v) for l, v in label_views.items()},
+                "label_confidence_sum": dict(label_confidence_sum),
+            }
+
+        label_records = []
+        for label in valid_labels:
+            views = len(view_counts[label])
+            score = score_by_label[label]
+            mean_conf = float(np.mean(confidences_by_label[label])) if confidences_by_label[label] else 0.0
+            label_records.append({
+                "label": label,
+                "supporting_view_count": views,
+                "score": score,
+                "mean_confidence": mean_conf,
+            })
+
+        label_records.sort(key=lambda r: (-r["supporting_view_count"], -r["score"], r["label"]))
+        winner = label_records[0]
+        runner = label_records[1] if len(label_records) > 1 else None
+
+        reasons = []
+        if winner["supporting_view_count"] < 2:
+            reasons.append("INSUFFICIENT_SEMANTIC_CAMERA_SUPPORT")
+        if winner["mean_confidence"] < 0.03:
+            reasons.append("INSUFFICIENT_DETECTOR_CONFIDENCE")
+
+        if runner is not None:
+            view_diff = winner["supporting_view_count"] - runner["supporting_view_count"]
+            score_diff = winner["score"] - runner["score"]
+            is_equal_views = (view_diff == 0)
+            if is_equal_views and score_diff < 0.08:
+                reasons.append("CONFLICTING_MULTI_VIEW_LABELS")
+            elif (
+                runner["supporting_view_count"] >= 2
+                and runner["mean_confidence"] >= 0.10
+                and (runner["supporting_view_count"] / max(winner["supporting_view_count"], 1)) > 0.60
+                and (runner["score"] / max(winner["score"], 1e-6)) > 0.40
+            ):
+                reasons.append("CONFLICTING_MULTI_VIEW_LABELS")
+
+        status = "SUPPORTED" if not reasons else "UNKNOWN"
+        lack_of_evidence = any(
+            r in reasons
+            for r in (
+                "NO_ASSOCIATED_DETECTION",
+                "INSUFFICIENT_SEMANTIC_CAMERA_SUPPORT",
+                "INSUFFICIENT_DETECTOR_CONFIDENCE",
+                "SEMANTIC_LABEL_UNKNOWN",
+            )
+        )
+
+        plausible_labels: list[str] = []
+        if status == "SUPPORTED":
+            plausible_labels = [winner["label"]]
+        elif status == "UNKNOWN" and "CONFLICTING_MULTI_VIEW_LABELS" in reasons and not lack_of_evidence:
+            competing = [winner["label"]]
+            for r in label_records[1:]:
+                if (
+                    r["supporting_view_count"] >= 2
+                    and r["label"] not in competing
+                ):
+                    competing.append(r["label"])
+            plausible_labels = competing
+
+        best_label = winner["label"]
         total_score = sum(score_by_label.values())
         norm_conf = min(0.99, score_by_label[best_label] / max(1.0, total_score) * min(1.0, 0.5 + 0.25 * len(observations)))
 
         return {
-            "canonical_label": best_label,
+            "status": status,
+            "canonical_label": winner["label"] if status == "SUPPORTED" else None,
+            "plausible_labels": plausible_labels,
+            "ambiguity_hypotheses": list(plausible_labels),
+            "reason_codes": reasons,
             "raw_label": raw_by_label.get(best_label, best_label),
             "confidence": round(norm_conf, 4),
             "total_observations": len(unique),
-            "supporting_view_count": len({obs.get("camera_id") for obs in unique.values()
-                                           if obs.get("canonical_label", "unknown").lower() == best_label}),
+            "supporting_view_count": winner["supporting_view_count"],
             "label_supporting_view_count": {
                 label: len(views) for label, views in label_views.items()
             },

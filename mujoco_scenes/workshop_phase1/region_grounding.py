@@ -106,7 +106,17 @@ class RegionGrounder:
     @staticmethod
     def _compute_consensus_region_semantic(observations: list[dict[str, Any]]) -> dict[str, Any]:
         if not observations:
-            return {"canonical_label": "unknown", "raw_label": "unknown", "confidence": 0.0}
+            return {
+                "status": "UNKNOWN",
+                "canonical_label": None,
+                "plausible_labels": [],
+                "ambiguity_hypotheses": [],
+                "reason_codes": ["NO_ASSOCIATED_DETECTION"],
+                "raw_label": "unknown",
+                "confidence": 0.0,
+                "total_observations": 0,
+                "supporting_view_count": 0,
+            }
 
         score_by_label: dict[str, float] = defaultdict(float)
         raw_by_label: dict[str, str] = {}
@@ -123,17 +133,36 @@ class RegionGrounder:
             if label not in raw_by_label:
                 raw_by_label[label] = obs.get("raw_label", label)
 
-        best_label = max(score_by_label, key=score_by_label.get)
+        valid_labels = [l for l in score_by_label if l and l not in ("unknown", "absent_region", "spatial_region")]
+        if not valid_labels:
+            return {
+                "status": "UNKNOWN",
+                "canonical_label": None,
+                "plausible_labels": [],
+                "ambiguity_hypotheses": [],
+                "reason_codes": ["SEMANTIC_REGION_LABEL_UNKNOWN"],
+                "raw_label": "unknown",
+                "confidence": 0.0,
+                "total_observations": len(unique),
+                "supporting_view_count": 0,
+            }
+
+        best_label = max(valid_labels, key=score_by_label.get)
         total_score = sum(score_by_label.values())
         norm_conf = min(0.99, score_by_label[best_label] / max(1.0, total_score) * min(1.0, 0.5 + 0.25 * len(unique)))
+        supporting_views = len({obs.get("camera_id") for obs in unique.values()
+                                if obs.get("canonical_label", "unknown").lower() == best_label})
 
         return {
+            "status": "SUPPORTED",
             "canonical_label": best_label,
+            "plausible_labels": [best_label],
+            "ambiguity_hypotheses": [best_label],
+            "reason_codes": [],
             "raw_label": raw_by_label.get(best_label, best_label),
             "confidence": round(norm_conf, 4),
             "total_observations": len(unique),
-            "supporting_view_count": len({obs.get("camera_id") for obs in unique.values()
-                                           if obs.get("canonical_label", "unknown").lower() == best_label}),
+            "supporting_view_count": supporting_views,
         }
 
     def discover_candidate_regions(
