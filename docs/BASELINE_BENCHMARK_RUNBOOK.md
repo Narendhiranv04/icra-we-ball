@@ -143,14 +143,21 @@ directory aside, then rerun the same command.
 
 ```bash
 .venv/bin/python -m baseline_common.summarize_plan_gt_batch \
-  runs/baseline_camera_ablation/kitchen \
-  runs/baseline_camera_ablation/living_room \
-  --output-dir runs/baseline_camera_ablation/summary
+  runs/baselines/current/kitchen \
+  runs/baselines/current/living_room \
+  --output-dir runs/baselines/current/summary
 ```
 
 This prints the Markdown table and writes `table4.csv` and `table4.json`.
-The main paper table contains only scene, method, image count, exact
-GT-sequence match rate, and mean ordered GT-sequence LCS-F1. Raw per-run
-precision, recall, exact-match, and LCS metrics remain available in each
-`episode_result.json`. Feasibility and failure statuses are diagnostics only;
-they are not Table 4 scores.
+The main table uses goal-level measures rather than sequence F1:
+
+- **Goal completion:** feasible trials where every required final relation holds.
+- **Placement correctness:** correct goal-related placements divided by all
+  goal-related placements proposed by the planner (precision).
+- **Required placement coverage:** required final relations established by the
+  plan divided by all required final relations (recall).
+- **Infeasibility detection:** infeasible trials correctly rejected.
+
+The evaluator symbolically applies planned `PLACE` effects, so these metrics do
+not require physical execution. Exact sequence and LCS fields remain in each
+`episode_result.json` as secondary diagnostics.

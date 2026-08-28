@@ -1388,3 +1388,18 @@ capture confirmed all seven region IDs in all five annotation manifests.
 - Visible objects and living-room regions use semantic aliases only in RGB annotations. Stable IDs remain internal to manifests and planner state. Both comparison baselines receive the same annotated RGB input.
 - Living-room duplicate classes receive unique aliases (`cup_1`, `cup_2`, etc.). Both prompts receive an observable alias-to-ID map, removing the prior ID-only prompt contradiction. Living-room labels avoid object and label overlap.
 - OWL-TAMP Living Room symbolic search previously counted every grounded-action attempt against its node-expansion budget, causing false `NO_SYMBOLIC_PLAN` results even for an exact valid L1 sketch. It now counts expanded states. A five-object/ten-action regression passes; old OWL results from the prompt-v8 batch must be discarded.
+
+## Baseline run organization and relation metrics (2026-08-28)
+
+All retained run artifacts are organized under `runs/baselines`: current
+Living-Room VLM-TAMP and OWL-TAMP batches are under `current/living_room`, the
+generated Table 4 files are under `current/summary`, and superseded, smoke, and
+manual runs are under `archive`. Workshop camera artifacts moved to
+`runs/scenes/workshop_pointcloud`. No run artifacts were deleted.
+
+Table 4 no longer uses sequence F1 as a primary measure. The summarizer reports
+Goal Completion, Placement Correctness (precision), Required Placement Coverage
+(recall), Correct Feasibility Decision, and Infeasibility Detection. For the
+Living-Room task, it evaluates the final cup/saucer-to-personal-table and
+remote-to-shared-table relations after symbolically applying planned PLACE
+effects, so planning-only OWL-TAMP is evaluated without physical execution.
