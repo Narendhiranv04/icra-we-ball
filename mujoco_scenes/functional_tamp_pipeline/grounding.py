@@ -725,7 +725,6 @@ def ground_graph(
 
             if combo_status == "TRUE":
                 valid_assignments.append((assignment_map, combo_op_bindings))
-                # If we found a valid assignment for the preferred minimal count configuration, stop searching larger counts
                 break
             elif combo_status == "UNKNOWN":
                 has_unknown_combination = True

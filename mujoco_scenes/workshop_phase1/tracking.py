@@ -34,6 +34,7 @@ class PersistentInstanceTracker:
         volume_margin_m: float = 0.08,
         min_points_per_mask: int = 8,
         stage_object_merge_distance_threshold_m: float = 0.0,
+        fusion_config: dict[str, Any] | None = None,
     ) -> None:
         self.cluster_distance_threshold_m = cluster_distance_threshold_m
         self.track_match_distance_threshold_m = track_match_distance_threshold_m
@@ -43,6 +44,7 @@ class PersistentInstanceTracker:
         self.min_points_per_mask = int(min_points_per_mask)
         self.stage_object_merge_distance_threshold_m = float(
             stage_object_merge_distance_threshold_m)
+        self.fusion_config = dict(fusion_config or {})
 
         self._tracks: dict[str, ObservedObjectTrack] = {}
         self._next_instance_idx: int = 1
@@ -82,7 +84,10 @@ class PersistentInstanceTracker:
         )
 
     @staticmethod
-    def _compute_consensus_semantic_belief(observations: list[dict[str, Any]]) -> dict[str, Any]:
+    def _compute_consensus_semantic_belief(
+        observations: list[dict[str, Any]],
+        fusion_config: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Aggregate multi-view semantic observations using consensus fusion with ambiguity tracking."""
         if not observations:
             return {
@@ -99,52 +104,44 @@ class PersistentInstanceTracker:
                 "label_confidence_sum": {},
             }
 
-        score_by_label: dict[str, float] = defaultdict(float)
-        raw_by_label: dict[str, str] = {}
-        unique: dict[tuple[int, str], dict[str, Any]] = {}
-        for obs in observations:
-            key = (int(obs.get("stage_index", 0)), str(obs.get("camera_id", "")))
-            support = float(obs.get("confidence", 0.0)) * float(obs.get("physical_support_quality", 1.0))
-            old_support = (float(unique[key].get("confidence", 0.0))
-                           * float(unique[key].get("physical_support_quality", 1.0))) if key in unique else -1.0
-            if support > old_support:
-                unique[key] = obs
+        f_cfg = dict(fusion_config or {})
+        min_views = int(f_cfg.get("minimum_supporting_views", 2))
+        min_mean_conf = float(f_cfg.get("minimum_mean_confidence", 0.03))
+        min_winning_margin = float(f_cfg.get("minimum_winning_label_margin", 0.08))
+        max_conflicting_view_frac = float(f_cfg.get("maximum_conflicting_view_fraction", 0.60))
+        max_conflicting_score_frac = float(f_cfg.get("maximum_conflicting_score_fraction", 0.40))
+        min_conflicting_mean_conf = float(f_cfg.get("minimum_conflicting_mean_confidence", 0.10))
 
-        # Primary label view counts and scores
-        view_counts: dict[str, set[str]] = defaultdict(set)
-        confidences_by_label: dict[str, list[float]] = defaultdict(list)
-        for obs in unique.values():
-            label = obs.get("canonical_label", "unknown").lower()
-            conf = float(obs.get("confidence", 1.0))
-            quality = float(obs.get("physical_support_quality", 1.0))
-            score_by_label[label] += conf * quality
-            view_counts[label].add(str(obs.get("camera_id", "")))
-            confidences_by_label[label].append(conf)
-            if label not in raw_by_label:
-                raw_by_label[label] = obs.get("raw_label", label)
-
-        # Alternative hypotheses across cameras
-        label_views: dict[str, set[str]] = defaultdict(set)
-        label_confidence_sum: dict[str, float] = defaultdict(float)
+        # Collect best observation per (camera_id, canonical_label)
+        per_camera_label: dict[tuple[str, str], dict[str, Any]] = {}
         for obs in observations:
             camera = str(obs.get("camera_id", ""))
             quality = float(obs.get("physical_support_quality", 1.0))
+            is_crop = (obs.get("inference_source") == "proposal_crop")
+            mult = 20.0 if is_crop else 1.0
             hypotheses = [{
                 "canonical_label": obs.get("canonical_label", "unknown"),
+                "raw_label": obs.get("raw_label", "unknown"),
                 "confidence": obs.get("confidence", 0.0),
             }, *list(obs.get("semantic_alternatives", []))]
-            best_for_camera: dict[str, float] = {}
             for hypothesis in hypotheses:
                 label = str(hypothesis.get("canonical_label", "unknown")).lower()
-                confidence = float(hypothesis.get("confidence", 0.0)) * quality
-                best_for_camera[label] = max(best_for_camera.get(label, 0.0), confidence)
-            for label, confidence in best_for_camera.items():
-                label_views[label].add(camera)
-                label_confidence_sum[label] += confidence
+                if not label or label in ("unknown", "object", "object_proposal"):
+                    continue
+                conf = float(hypothesis.get("confidence", 0.0))
+                score = mult * conf * quality
+                key = (camera, label)
+                if key not in per_camera_label or score > per_camera_label[key]["score"]:
+                    per_camera_label[key] = {
+                        "camera_id": camera,
+                        "canonical_label": label,
+                        "raw_label": hypothesis.get("raw_label", label),
+                        "confidence": conf,
+                        "score": score,
+                    }
 
-        # Rank candidate labels by (supporting_view_count, total_score)
-        valid_labels = [l for l in score_by_label if l and l not in ("unknown", "object", "object_proposal")]
-        if not valid_labels:
+        labels = sorted({label for (_, label) in per_camera_label})
+        if not labels:
             return {
                 "status": "UNKNOWN",
                 "canonical_label": None,
@@ -153,17 +150,26 @@ class PersistentInstanceTracker:
                 "reason_codes": ["SEMANTIC_LABEL_UNKNOWN"],
                 "raw_label": "unknown",
                 "confidence": 0.0,
-                "total_observations": len(unique),
+                "total_observations": len(observations),
                 "supporting_view_count": 0,
-                "label_supporting_view_count": {l: len(v) for l, v in label_views.items()},
-                "label_confidence_sum": dict(label_confidence_sum),
+                "label_supporting_view_count": {},
+                "label_confidence_sum": {},
             }
 
         label_records = []
-        for label in valid_labels:
-            views = len(view_counts[label])
-            score = score_by_label[label]
-            mean_conf = float(np.mean(confidences_by_label[label])) if confidences_by_label[label] else 0.0
+        raw_by_label: dict[str, str] = {}
+        label_views: dict[str, set[str]] = defaultdict(set)
+        label_confidence_sum: dict[str, float] = defaultdict(float)
+        score_by_label: dict[str, float] = defaultdict(float)
+        for label in labels:
+            supporting = [entry for (cam, canon), entry in per_camera_label.items() if canon == label]
+            views = len({entry["camera_id"] for entry in supporting})
+            score = sum(entry["score"] for entry in supporting)
+            mean_conf = float(np.mean([entry["confidence"] for entry in supporting])) if supporting else 0.0
+            label_views[label] = {entry["camera_id"] for entry in supporting}
+            label_confidence_sum[label] = score
+            score_by_label[label] = score
+            raw_by_label[label] = supporting[0]["raw_label"]
             label_records.append({
                 "label": label,
                 "supporting_view_count": views,
@@ -176,24 +182,26 @@ class PersistentInstanceTracker:
         runner = label_records[1] if len(label_records) > 1 else None
 
         reasons = []
-        if winner["supporting_view_count"] < 2:
+        if winner["supporting_view_count"] < min_views:
             reasons.append("INSUFFICIENT_SEMANTIC_CAMERA_SUPPORT")
-        if winner["mean_confidence"] < 0.03:
+        if winner["mean_confidence"] < min_mean_conf:
             reasons.append("INSUFFICIENT_DETECTOR_CONFIDENCE")
 
-        if runner is not None:
-            view_diff = winner["supporting_view_count"] - runner["supporting_view_count"]
-            score_diff = winner["score"] - runner["score"]
+        for candidate in label_records[1:]:
+            view_diff = winner["supporting_view_count"] - candidate["supporting_view_count"]
+            score_diff = winner["score"] - candidate["score"]
             is_equal_views = (view_diff == 0)
-            if is_equal_views and score_diff < 0.08:
+            if is_equal_views and score_diff < min_winning_margin:
                 reasons.append("CONFLICTING_MULTI_VIEW_LABELS")
+                break
             elif (
-                runner["supporting_view_count"] >= 2
-                and runner["mean_confidence"] >= 0.10
-                and (runner["supporting_view_count"] / max(winner["supporting_view_count"], 1)) > 0.60
-                and (runner["score"] / max(winner["score"], 1e-6)) > 0.40
+                candidate["supporting_view_count"] >= min_views
+                and candidate["mean_confidence"] >= min_conflicting_mean_conf
+                and (candidate["supporting_view_count"] / max(winner["supporting_view_count"], 1)) >= max_conflicting_view_frac
+                and (candidate["score"] / max(winner["score"], 1e-6)) >= max_conflicting_score_frac
             ):
                 reasons.append("CONFLICTING_MULTI_VIEW_LABELS")
+                break
 
         status = "SUPPORTED" if not reasons else "UNKNOWN"
         lack_of_evidence = any(
@@ -213,8 +221,9 @@ class PersistentInstanceTracker:
             competing = [winner["label"]]
             for r in label_records[1:]:
                 if (
-                    r["supporting_view_count"] >= 2
+                    r["supporting_view_count"] >= min_views
                     and r["label"] not in competing
+                    and (r["score"] / max(winner["score"], 1e-6)) >= max_conflicting_score_frac
                 ):
                     competing.append(r["label"])
             plausible_labels = competing
@@ -231,7 +240,7 @@ class PersistentInstanceTracker:
             "reason_codes": reasons,
             "raw_label": raw_by_label.get(best_label, best_label),
             "confidence": round(norm_conf, 4),
-            "total_observations": len(unique),
+            "total_observations": len(per_camera_label),
             "supporting_view_count": winner["supporting_view_count"],
             "label_supporting_view_count": {
                 label: len(views) for label, views in label_views.items()
@@ -445,7 +454,9 @@ class PersistentInstanceTracker:
                     track.points_by_camera.update(st_obj["points_by_camera"])
                     track.crop_evidence.update(st_obj["crops_by_camera"])
                     track.semantic_observations.extend(st_obj["semantic_observations"])
-                    track.current_semantic_belief = self._compute_consensus_semantic_belief(track.semantic_observations)
+                    track.current_semantic_belief = self._compute_consensus_semantic_belief(
+                        track.semantic_observations, fusion_config=self.fusion_config
+                    )
                     track.current_measurement_evidence = self._measurement_evidence(
                         t_id, stage_index, source_region_id, st_obj)
                     track.current_geometric_properties = {}
@@ -454,7 +465,9 @@ class PersistentInstanceTracker:
             for i, st_obj in enumerate(stage_objects):
                 if i not in matched_stage_indices:
                     new_id = self._allocate_instance_id()
-                    sem_belief = self._compute_consensus_semantic_belief(st_obj["semantic_observations"])
+                    sem_belief = self._compute_consensus_semantic_belief(
+                        st_obj["semantic_observations"], fusion_config=self.fusion_config
+                    )
                     new_track = ObservedObjectTrack(
                         instance_id=new_id,
                         first_seen_stage=stage_index,
@@ -478,7 +491,9 @@ class PersistentInstanceTracker:
         else:
             for st_obj in stage_objects:
                 new_id = self._allocate_instance_id()
-                sem_belief = self._compute_consensus_semantic_belief(st_obj["semantic_observations"])
+                sem_belief = self._compute_consensus_semantic_belief(
+                    st_obj["semantic_observations"], fusion_config=self.fusion_config
+                )
                 new_track = ObservedObjectTrack(
                     instance_id=new_id,
                     first_seen_stage=stage_index,

@@ -503,7 +503,10 @@ def _get_object_storage_pose(
             # clear for the robot.
             return (-0.35, 0.150, floor_z + 0.024), q_drill_drawer_x, "left_tool_drawer"
         elif obj_name == "workshop_wooden_hammer":
-            return (-0.34, 0.210, floor_z + 0.012), q_along_x, "left_tool_drawer"
+            # The rendered hammer mesh spans 0.28 m along +X, exceeding its
+            # smaller collision proxy.  Keep the complete visible asset
+            # between the tray walls, with clearance on both ends.
+            return (-0.415, 0.210, floor_z + 0.012), q_along_x, "left_tool_drawer"
         elif obj_name == "workshop_pliers":
             return (base_x, base_y + 0.095, floor_z + 0.010), q_along_y, "left_tool_drawer"
         elif obj_name == "workshop_combination_wrench":

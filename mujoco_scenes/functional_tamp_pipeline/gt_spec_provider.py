@@ -57,7 +57,7 @@ class GTSpecProvider(FunctionalSpecProvider):
             name="fastener",
             entity_kind="OBJECT",
             count=1,
-            semantic_categories=("screw", "Phillips screw"),
+            semantic_categories=("screw", "Phillips screw", "Phillips head screw"),
             unary_predicates=("CAN_FASTEN",),
             binding_policy="DISTINCT",
             verification_mode="SEMANTIC_AND_GEOMETRIC",
@@ -97,6 +97,7 @@ class GTSpecProvider(FunctionalSpecProvider):
         vocabulary = (
             "screwdriver", "power drill", "screw", "wooden hammer",
             "Phillips screwdriver", "cordless power drill", "Phillips screw",
+            "Phillips head screw",
         )
         ranking = ("LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET")
         return FunctionalRequirementGraph(

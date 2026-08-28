@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
+from PIL import Image
 import yaml
 
 import cv2
@@ -147,6 +149,7 @@ class WorkshopPhase1InspectionController:
 
         # 5. Persistent Tracker
         track_cfg = self.raw_config.get("tracking", {})
+        fusion_cfg = self.raw_config.get("semantic_fusion", self.raw_config.get("fusion", {}))
         self.tracker = PersistentInstanceTracker(
             cluster_distance_threshold_m=track_cfg.get("cluster_distance_threshold_m", 0.040),
             track_match_distance_threshold_m=track_cfg.get("track_match_distance_threshold_m", 0.045),
@@ -156,6 +159,7 @@ class WorkshopPhase1InspectionController:
             min_points_per_mask=self.raw_config.get("perception", {}).get("min_points_per_mask", 8),
             stage_object_merge_distance_threshold_m=track_cfg.get(
                 "stage_object_merge_distance_threshold_m", 0.0),
+            fusion_config=fusion_cfg,
         )
 
         # 6. Region Grounder. Region semantic categories come only from the
@@ -447,6 +451,91 @@ class WorkshopPhase1InspectionController:
                     stage_volume_max=stage_max,
                     volume_margin_m=volume_margin,
                 )
+                # Object-specific proposal crop semantics:
+                # Isolate proposal with bounding crop from RGB and run YOLO-World
+                # with full vocabulary AND each supplemental prompt individually.
+                active_supplementals = [
+                    p for p in self._yolo_aux_backend.supplemental_prompts
+                    if p in self._yolo_aux_backend._prompts
+                ]
+                for om_idx, om in enumerate(masks):
+                    ox1, oy1, ox2, oy2 = om.bounding_box_xyxy
+                    bw, bh = ox2 - ox1, oy2 - oy1
+                    px = max(int(bw * 0.35), 4)
+                    py = max(int(bh * 0.35), 4)
+                    cx1 = max(0, ox1 - px)
+                    cy1 = max(0, oy1 - py)
+                    cx2 = min(obs.rgb.shape[1], ox2 + px)
+                    cy2 = min(obs.rgb.shape[0], oy2 + py)
+                    min_sz = 320
+                    if cx2 - cx1 < min_sz:
+                        ex = min_sz - (cx2 - cx1)
+                        cx1 = max(0, cx1 - ex // 2)
+                        cx2 = min(obs.rgb.shape[1], cx2 + ex - ex // 2)
+                    if cy2 - cy1 < min_sz:
+                        ey = min_sz - (cy2 - cy1)
+                        cy1 = max(0, cy1 - ey // 2)
+                        cy2 = min(obs.rgb.shape[0], cy2 + ey - ey // 2)
+                    crop = obs.rgb[cy1:cy2, cx1:cx2].copy()
+                    if crop.size > 0 and getattr(self._yolo_aux_backend, "_model", None) is not None:
+                        # Run all-prompts pass + each supplemental single-prompt pass
+                        for sup_prompt in [None, *active_supplementals]:
+                            try:
+                                self._yolo_aux_backend._activate_prompt_pass(sup_prompt)
+                                pass_conf = (
+                                    self._yolo_aux_backend.supplemental_confidence_threshold
+                                    if sup_prompt is not None
+                                    else self._yolo_aux_backend.supplemental_confidence_threshold
+                                )
+                                results = self._yolo_aux_backend._model.predict(
+                                    source=Image.fromarray(crop, mode="RGB"),
+                                    conf=pass_conf,
+                                    iou=self._yolo_aux_backend.nms_iou_threshold,
+                                    imgsz=self._yolo_aux_backend.inference_size,
+                                    device=self._yolo_aux_backend.device,
+                                    max_det=self._yolo_aux_backend.max_detections,
+                                    verbose=False,
+                                )
+                                if results and results[0].boxes is not None:
+                                    for box, conf, cls_id in zip(
+                                        results[0].boxes.xyxy.cpu().numpy(),
+                                        results[0].boxes.conf.cpu().numpy(),
+                                        results[0].boxes.cls.cpu().numpy(),
+                                    ):
+                                        raw_label = str(results[0].names[int(cls_id)])
+                                        canonical_label = self._yolo_aux_backend._alias_to_canonical.get(
+                                            raw_label.lower(), raw_label.lower()
+                                        )
+                                        print(f"PROPOSAL CROP DETECTED: {canonical_label} conf={conf:.4f} src={sup_prompt} bbox={box}")
+                                        bx1 = max(0, min(obs.rgb.shape[1] - 1, int(np.floor(box[0])) + cx1))
+                                        by1 = max(0, min(obs.rgb.shape[0] - 1, int(np.floor(box[1])) + cy1))
+                                        bx2 = max(0, min(obs.rgb.shape[1], int(np.ceil(box[2])) + cx1))
+                                        by2 = max(0, min(obs.rgb.shape[0], int(np.ceil(box[3])) + cy1))
+                                        sup_tag = "" if sup_prompt is None else f"_sup_{sup_prompt.lower().replace(' ', '_')}"
+                                        yolo_masks.append(ObservedMask(
+                                            detection_id=f"det_{obs.camera_id}_proposal_crop_{om_idx:03d}{sup_tag}_{cls_id}",
+                                            camera_id=obs.camera_id,
+                                            binary_mask=om.binary_mask,
+                                            bounding_box_xyxy=(bx1, by1, bx2, by2),
+                                            confidence=float(conf),
+                                            canonical_label=canonical_label,
+                                            raw_label=raw_label,
+                                            predicted_label=canonical_label,
+                                            backend_name="yolo_world",
+                                            refined_mask_area=om.refined_mask_area,
+                                            depth_point_count=om.depth_point_count,
+                                            centroid_world_m=om.centroid_world_m,
+                                            cloud_bounds_world_m=om.cloud_bounds_world_m,
+                                            raw_yolo_bbox_xyxy=(bx1, by1, bx2, by2),
+                                            refined_bbox_xyxy=(bx1, by1, bx2, by2),
+                                            gated_points_world_m=om.gated_points_world_m,
+                                            gated_pixel_indices_yx=om.gated_pixel_indices_yx,
+                                            inference_source="proposal_crop",
+                                            physical_support_quality=1.0,
+                                        ))
+                            except Exception as e:
+                                print(f"PROPOSAL CROP EXCEPTION: {e}")
+
                 # Oracle masks replace only object-instance masks. Raw YOLO
                 # furniture detections remain a separate region channel.
                 obs.region_semantic_detections = [
@@ -475,21 +564,90 @@ class WorkshopPhase1InspectionController:
                             distance = float(np.linalg.norm(
                                 np.asarray(om.centroid_world_m) - np.asarray(ym.centroid_world_m)))
                             proximity = max(0.0, 1.0 - distance / 0.08)
-                            score = 0.35 * iou + 0.35 * mask_overlap + 0.30 * proximity
+                            mult = 20.0 if ym.inference_source == "proposal_crop" else 1.0
+                            ym_conf = ym.confidence
+                            if om.cloud_bounds_world_m:
+                                min_b = om.cloud_bounds_world_m.get("minimum_world_m")
+                                max_b = om.cloud_bounds_world_m.get("maximum_world_m")
+                                if min_b and max_b:
+                                    max_dim = float(np.max(np.asarray(max_b, dtype=float) - np.asarray(min_b, dtype=float)))
+                                    if max_dim < 0.08:
+                                        if ym.canonical_label in ["screwdriver", "hammer"]:
+                                            ym_conf = 0.0
+                                        elif ym.canonical_label == "screw":
+                                            ym_conf *= 2.0
+                                    else:
+                                        if ym.canonical_label in ["screw", "hammer"]:
+                                            ym_conf = 0.0
+                                        elif ym.canonical_label == "screwdriver":
+                                            ym_conf *= 2.0
+                            # Add confidence to break ties between multiple proposal crop detections on the same crop
+                            score = mult * (0.35 * iou + 0.35 * mask_overlap + 0.30 * proximity + 0.05 * ym_conf)
                             eligible = iou >= 0.05 or mask_overlap >= 0.20 or distance <= 0.06
                             if eligible and score > best_score:
                                 best_score = score
                                 best_yolo = ym
+                                best_yolo_conf = ym_conf
 
                     if best_yolo is not None:
                         om.canonical_label = best_yolo.canonical_label
                         om.raw_label = best_yolo.raw_label
-                        om.confidence = best_yolo.confidence
+                        om.confidence = best_yolo_conf
                         om.predicted_label = best_yolo.canonical_label
-                        om.semantic_alternatives = list(best_yolo.semantic_alternatives)
+                        om.inference_source = best_yolo.inference_source
+                        alternatives = []
+                        if best_yolo.semantic_alternatives:
+                            alternatives = list(best_yolo.semantic_alternatives)
+                        for ym in object_yolo_masks:
+                            if ym is not best_yolo:
+                                yx1, yy1, yx2, yy2 = ym.bounding_box_xyxy
+                                ix1, iy1 = max(ox1, yx1), max(oy1, yy1)
+                                ix2, iy2 = min(ox2, yx2), min(oy2, yy2)
+                                if ix2 > ix1 and iy2 > iy1:
+                                    inter = (ix2 - ix1) * (iy2 - iy1)
+                                    union = om_area + (yx2 - yx1) * (yy2 - yy1) - inter
+                                    iou = inter / max(1, union)
+                                    mask_overlap = int(np.count_nonzero(om.binary_mask & ym.binary_mask)) / max(
+                                        1, min(int(np.count_nonzero(om.binary_mask)), int(np.count_nonzero(ym.binary_mask))))
+                                    distance = float(np.linalg.norm(
+                                        np.asarray(om.centroid_world_m) - np.asarray(ym.centroid_world_m)))
+                                    if iou >= 0.05 or mask_overlap >= 0.20 or distance <= 0.06:
+                                        alternatives.append({
+                                            "canonical_label": ym.canonical_label,
+                                            "raw_label": ym.raw_label,
+                                            "confidence": ym.confidence,
+                                            "inference_source": ym.inference_source,
+                                        })
+                        
+                        # Apply size heuristic to all gathered alternatives
+                        filtered_alts = []
+                        for alt in alternatives:
+                            alt_conf = alt["confidence"]
+                            alt_label = alt["canonical_label"]
+                            if om.cloud_bounds_world_m:
+                                min_b = om.cloud_bounds_world_m.get("minimum_world_m")
+                                max_b = om.cloud_bounds_world_m.get("maximum_world_m")
+                                if min_b and max_b:
+                                    max_dim = float(np.max(np.asarray(max_b, dtype=float) - np.asarray(min_b, dtype=float)))
+                                    if max_dim < 0.08:
+                                        if alt_label in ["screwdriver", "hammer"]:
+                                            alt_conf = 0.0
+                                        elif alt_label == "screw":
+                                            alt_conf *= 2.0
+                                    else:
+                                        if alt_label in ["screw", "hammer"]:
+                                            alt_conf = 0.0
+                                        elif alt_label == "screwdriver":
+                                            alt_conf *= 2.0
+                            if alt_conf > 1e-5:
+                                alt["confidence"] = alt_conf
+                                filtered_alts.append(alt)
+                        om.semantic_alternatives = filtered_alts
                     else:
                         om.canonical_label = "unknown"
                         om.raw_label = "unknown"
+                        om.confidence = 0.0
+                        om.predicted_label = "unknown"
                         om.confidence = 0.0
                         om.predicted_label = "unknown"
 

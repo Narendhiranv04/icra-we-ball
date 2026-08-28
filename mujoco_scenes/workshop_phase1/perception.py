@@ -468,6 +468,7 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
                 record["duplicate_group_id"] = next(
                     mask.duplicate_group_id for mask in deduplicated
                     if mask.detection_id == record["detection_id"])
+        self._activate_prompt_pass(None)
         return deduplicated
 
     def _inference_windows(

@@ -247,7 +247,8 @@ class WorkshopDomainAdapter:
             controller._yolo_aux_backend.supplemental_prompts = [
                 prompt for prompt in (
                     "Phillips screwdriver", "cordless power drill",
-                    "Phillips screw", "wooden hammer",
+                    "Phillips head screw", "Phillips screw", "screw",
+                    "wooden hammer",
                 ) if prompt in controller.prompts
             ]
             controller._yolo_aux_backend.supplemental_confidence_threshold = 0.001

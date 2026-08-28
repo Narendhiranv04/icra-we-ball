@@ -17,7 +17,7 @@ perception:
   detector:
     checkpoint: yolov8l-worldv2.pt
     confidence_threshold: 0.01
-    supplemental_prompts: ["Phillips screwdriver", "cordless power drill", "Phillips head screw", "wooden hammer"]
+    supplemental_prompts: ["Phillips screwdriver", "cordless power drill", "Phillips head screw", "Phillips screw", "screw", "wooden hammer"]
     supplemental_confidence_threshold: 0.001
     nms_iou_threshold: 0.35
     inference_size: 1280
@@ -41,6 +41,13 @@ tracking:
   voxel_size_m: 0.003
   min_cluster_points: 8
   stage_object_merge_distance_threshold_m: 0.015
+semantic_fusion:
+  winner_policy: weighted_score_then_supporting_views
+  minimum_mean_confidence: 0.001
+  minimum_winning_label_margin: 0.0005
+  maximum_conflicting_view_fraction: 0.60
+  maximum_conflicting_score_fraction: 0.20
+  minimum_conflicting_mean_confidence: 0.001
 inspection:
   sequence: [LEFT_DRAWER, RIGHT_DRAWER, TOOL_CABINET]
   early_stop: true
