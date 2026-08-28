@@ -143,9 +143,9 @@ directory aside, then rerun the same command.
 
 ```bash
 .venv/bin/python -m baseline_common.summarize_plan_gt_batch \
-  runs/baselines/current/kitchen \
-  runs/baselines/current/living_room \
-  --output-dir runs/baselines/current/summary
+  runs/baselines/completed/vlm_tamp \
+  runs/baselines/completed/owl_tamp \
+  --output-dir runs/baselines/summary
 ```
 
 This prints the Markdown table and writes `table4.csv` and `table4.json`.

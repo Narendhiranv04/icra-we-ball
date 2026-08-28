@@ -1391,11 +1391,14 @@ capture confirmed all seven region IDs in all five annotation manifests.
 
 ## Baseline run organization and relation metrics (2026-08-28)
 
-All retained run artifacts are organized under `runs/baselines`: current
-Living-Room VLM-TAMP and OWL-TAMP batches are under `current/living_room`, the
-generated Table 4 files are under `current/summary`, and superseded, smoke, and
-manual runs are under `archive`. Workshop camera artifacts moved to
-`runs/scenes/workshop_pointcloud`. No run artifacts were deleted.
+All completed run artifacts are organized by method under `runs/baselines`.
+Each of `completed/vlm_tamp` and `completed/owl_tamp` contains separate
+`kitchen` and `living_room` directories. The completed Kitchen prompt-v7 batch
+contains 360 episodes per baseline, while the completed Living-Room batches
+contain 300 episodes per baseline. Generated tables are under `summary`, and
+superseded, smoke, and manual runs remain under `archive`. Workshop camera
+artifacts are under `runs/scenes/workshop_pointcloud`. No run artifacts were
+deleted.
 
 Table 4 no longer uses sequence F1 as a primary measure. The summarizer reports
 Goal Completion, Placement Correctness (precision), Required Placement Coverage
