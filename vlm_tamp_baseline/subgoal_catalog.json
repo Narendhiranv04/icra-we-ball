@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "scenes": {
+    "kitchen": {
+      "INSPECTED": {
+        "description": "The named storage region has been inspected.",
+        "arguments": {"region_id": "region"}
+      },
+      "HOLDING": {
+        "description": "The robot is holding the named object.",
+        "arguments": {"object_id": "object"}
+      },
+      "PLACED": {
+        "description": "The named object is in or on the named region.",
+        "arguments": {"object_id": "object", "region_id": "destination"}
+      },
+      "POURED": {
+        "description": "Material from the source has been poured into the target.",
+        "arguments": {"source_id": "object", "target_id": "object"}
+      },
+      "STIRRED": {
+        "description": "The target has been stirred with the named tool.",
+        "arguments": {"tool_id": "object", "target_id": "object"}
+      }
+    },
+    "living_room": {
+      "INSPECTED": {
+        "description": "The named region has been inspected.",
+        "arguments": {"region_id": "region"}
+      },
+      "HOLDING": {
+        "description": "The robot is holding the named object.",
+        "arguments": {"object_id": "object"}
+      },
+      "PLACED": {
+        "description": "The named object is in or on the named region.",
+        "arguments": {"object_id": "object", "region_id": "destination"}
+      },
+      "CLEANED": {
+        "description": "The target rigid surface has been cleaned with the named tool.",
+        "arguments": {"tool_id": "object", "target_id": "object"}
+      }
+    },
+    "workshop": {
+      "INSPECTED": {
+        "description": "The named storage region has been inspected.",
+        "arguments": {"region_id": "region"}
+      },
+      "HOLDING": {
+        "description": "The robot is holding the named object.",
+        "arguments": {"object_id": "object"}
+      },
+      "PLACED": {
+        "description": "The named object is in or on the named region.",
+        "arguments": {"object_id": "object", "region_id": "destination"}
+      },
+      "REMOVED": {
+        "description": "The named obstruction has been removed from the target.",
+        "arguments": {"object_id": "object", "target_id": "object"}
+      },
+      "INSERTED": {
+        "description": "The fastener has been inserted into the target.",
+        "arguments": {"fastener_id": "object", "target_id": "object"}
+      },
+      "FASTENED": {
+        "description": "The inserted fastener has been driven using the named tool.",
+        "arguments": {
+          "tool_id": "object",
+          "fastener_id": "object",
+          "target_id": "object"
+        }
+      }
+    }
+  }
+}

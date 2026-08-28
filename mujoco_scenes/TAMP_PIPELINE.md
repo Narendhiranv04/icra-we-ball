@@ -1,5 +1,11 @@
 # Functional-Alternative TAMP Pipeline
 
+> This document describes the retained interactive living-room storage demo.
+> It is not the current cross-scene research execution architecture. Use
+> [`../EXECUTION_AND_TESTING.md`](../EXECUTION_AND_TESTING.md) for the
+> functional decomposition, observed-witness, sequencing, and shared physical
+> execution boundaries.
+
 The pipeline separates model judgment from simulator authority:
 
 1. `LivingRoomObserver` produces the currently observed objects, regions,

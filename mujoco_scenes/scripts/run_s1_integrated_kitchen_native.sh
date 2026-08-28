@@ -18,6 +18,7 @@ cd "$root"
 export MUJOCO_GL="${MUJOCO_GL:-egl}"
 export PYOPENGL_PLATFORM="${PYOPENGL_PLATFORM:-egl}"
 export YOLO_CONFIG_DIR="${YOLO_CONFIG_DIR:-/tmp/yolo-config}"
+export MPLCONFIGDIR="${MPLCONFIGDIR:-/tmp/matplotlib}"
 
 exec "$python" -m mujoco_scenes.scene_loader \
     --scene S1_integrated_kitchen_object_function_primary \

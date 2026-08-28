@@ -1,0 +1,384 @@
+{
+  "assets": [
+    {
+      "asset_id": "modern_arm_chair_01",
+      "canonical_dimensions_m": [
+        0.820344,
+        0.986562,
+        1.022852
+      ],
+      "coordinate_transform": "rotate +90 degrees about X; center XY; min Z=0",
+      "download_date": "2026-08-09",
+      "final_role": [
+        "lounge_chair_left",
+        "lounge_chair_right"
+      ],
+      "human_readable_name": "Modern Arm Chair 01",
+      "license": "CC0-1.0",
+      "license_url": "https://polyhaven.com/license",
+      "original_filename": "modern_arm_chair_01_1k.gltf bundle",
+      "original_sha256": "6931a200110bae3754aecd90346e6fa97e03e7dd5c684756c0f8c0283d08d8f8",
+      "original_units": "metres (Poly Haven metadata converted from mm)",
+      "processed_filename": "assets/living_room_realistic/modern_arm_chair_01_part_01.obj",
+      "processed_parts": [
+        {
+          "part_id": "modern_arm_chair_01_part_01",
+          "processed_filename": "assets/living_room_realistic/modern_arm_chair_01_part_01.obj",
+          "processed_sha256": "fb53106c8bd9b6ed5f6944aa1241004fc3540eab942d7156c9f06fa1c87a4da6",
+          "texture_file": "assets/living_room_realistic/modern_arm_chair_01_part_01.png",
+          "texture_sha256": "4bf795ed486a8226a8dfe450b837fb9fe78c8963a206d49bd8245a31f9170540",
+          "triangle_count": 5608,
+          "vertex_count": 3884
+        },
+        {
+          "part_id": "modern_arm_chair_01_part_02",
+          "processed_filename": "assets/living_room_realistic/modern_arm_chair_01_part_02.obj",
+          "processed_sha256": "de213c7929a912f08ff0195799881932cdab691176fa49888311a83947e1e944",
+          "texture_file": "assets/living_room_realistic/modern_arm_chair_01_part_02.png",
+          "texture_sha256": "8bf5456db58172996bb53b899483935923260d6feee1112da53e0df8a757c2f0",
+          "triangle_count": 3308,
+          "vertex_count": 1967
+        }
+      ],
+      "processed_sha256": "fb53106c8bd9b6ed5f6944aa1241004fc3540eab942d7156c9f06fa1c87a4da6",
+      "processing_steps": [
+        "download Poly Haven 1k glTF and required resources",
+        "verify declared byte sizes",
+        "apply glTF scene-node transforms",
+        "convert Y-up to MuJoCo Z-up",
+        "center on XY origin and ground at Z=0",
+        "export independent textured OBJ visual parts",
+        "retain analytic collision proxies in MJCF"
+      ],
+      "scene_instances": [
+        {
+          "final_dimensions_m": [
+            0.73831,
+            0.887906,
+            0.920567
+          ],
+          "final_scale": [
+            0.9,
+            0.9,
+            0.9
+          ],
+          "instance_id": "chair_left"
+        },
+        {
+          "final_dimensions_m": [
+            0.73831,
+            0.887906,
+            0.920567
+          ],
+          "final_scale": [
+            0.9,
+            0.9,
+            0.9
+          ],
+          "instance_id": "chair_right"
+        }
+      ],
+      "source": "Poly Haven",
+      "source_author": "Vibrant Nordic",
+      "source_url": "https://polyhaven.com/a/modern_arm_chair_01",
+      "texture_files": [
+        "assets/living_room_realistic/modern_arm_chair_01_part_01.png",
+        "assets/living_room_realistic/modern_arm_chair_01_part_02.png"
+      ]
+    },
+    {
+      "asset_id": "side_table_01",
+      "canonical_dimensions_m": [
+        0.55,
+        0.45,
+        0.550662
+      ],
+      "coordinate_transform": "rotate +90 degrees about X; center XY; min Z=0",
+      "download_date": "2026-08-09",
+      "final_role": [
+        "personal_side_table_left",
+        "personal_side_table_right"
+      ],
+      "human_readable_name": "Side Table 01",
+      "license": "CC0-1.0",
+      "license_url": "https://polyhaven.com/license",
+      "original_filename": "side_table_01_1k.gltf bundle",
+      "original_sha256": "074fb3a40c67910f58ac8af5c9f21b66818149455352848bca598cc4d6a12b56",
+      "original_units": "metres (Poly Haven metadata converted from mm)",
+      "processed_filename": "assets/living_room_realistic/side_table_01_part_01.obj",
+      "processed_parts": [
+        {
+          "part_id": "side_table_01_part_01",
+          "processed_filename": "assets/living_room_realistic/side_table_01_part_01.obj",
+          "processed_sha256": "7abd0f421e340923c77d9721891d172788684a1329bb0f7477cc42747a6d586e",
+          "texture_file": "assets/living_room_realistic/side_table_01_part_01.png",
+          "texture_sha256": "2a06e5d360cd7f5d9d733955923d255bd120f60fe7d1eeea56581aeee9395e5b",
+          "triangle_count": 2756,
+          "vertex_count": 3164
+        }
+      ],
+      "processed_sha256": "7abd0f421e340923c77d9721891d172788684a1329bb0f7477cc42747a6d586e",
+      "processing_steps": [
+        "download Poly Haven 1k glTF and required resources",
+        "verify declared byte sizes",
+        "apply glTF scene-node transforms",
+        "convert Y-up to MuJoCo Z-up",
+        "center on XY origin and ground at Z=0",
+        "export independent textured OBJ visual parts",
+        "retain analytic collision proxies in MJCF"
+      ],
+      "scene_instances": [
+        {
+          "final_dimensions_m": [
+            0.55,
+            0.45,
+            0.550662
+          ],
+          "final_scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "instance_id": "side_table_left"
+        },
+        {
+          "final_dimensions_m": [
+            0.55,
+            0.45,
+            0.550662
+          ],
+          "final_scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "instance_id": "side_table_right"
+        }
+      ],
+      "source": "Poly Haven",
+      "source_author": "James Ray Cock",
+      "source_url": "https://polyhaven.com/a/side_table_01",
+      "texture_files": [
+        "assets/living_room_realistic/side_table_01_part_01.png"
+      ]
+    },
+    {
+      "asset_id": "CoffeeTable_01",
+      "canonical_dimensions_m": [
+        1.540011,
+        0.972847,
+        0.523237
+      ],
+      "coordinate_transform": "rotate +90 degrees about X; center XY; min Z=0",
+      "download_date": "2026-08-09",
+      "final_role": [
+        "central_coffee_table"
+      ],
+      "human_readable_name": "Coffee Table 01",
+      "license": "CC0-1.0",
+      "license_url": "https://polyhaven.com/license",
+      "original_filename": "CoffeeTable_01_1k.gltf bundle",
+      "original_sha256": "953e5664b1a9170162d65533b58601a6f98d6d699edac03fed2453b4cca52588",
+      "original_units": "metres (Poly Haven metadata converted from mm)",
+      "processed_filename": "assets/living_room_realistic/CoffeeTable_01_part_01.obj",
+      "processed_parts": [
+        {
+          "part_id": "CoffeeTable_01_part_01",
+          "processed_filename": "assets/living_room_realistic/CoffeeTable_01_part_01.obj",
+          "processed_sha256": "61b4a8d3f94853cc58e1d0095fc4d2797289794fc52bfca11bb8006e09270b93",
+          "texture_file": "assets/living_room_realistic/CoffeeTable_01_part_01.png",
+          "texture_sha256": "ef20f6332f3c2b8f2a260c56ab5c2ed7848993f59d4f45a0ef263309a1dfc375",
+          "triangle_count": 10404,
+          "vertex_count": 6927
+        }
+      ],
+      "processed_sha256": "61b4a8d3f94853cc58e1d0095fc4d2797289794fc52bfca11bb8006e09270b93",
+      "processing_steps": [
+        "download Poly Haven 1k glTF and required resources",
+        "verify declared byte sizes",
+        "apply glTF scene-node transforms",
+        "convert Y-up to MuJoCo Z-up",
+        "center on XY origin and ground at Z=0",
+        "export independent textured OBJ visual parts",
+        "apply deterministic warm-neutral albedo grade",
+        "retain analytic collision proxies in MJCF"
+      ],
+      "scene_instances": [
+        {
+          "final_dimensions_m": [
+            1.155008,
+            0.729635,
+            0.392428
+          ],
+          "final_scale": [
+            0.75,
+            0.75,
+            0.75
+          ],
+          "instance_id": "coffee_table"
+        }
+      ],
+      "source": "Poly Haven",
+      "source_author": "Fernando Quinn",
+      "source_url": "https://polyhaven.com/a/CoffeeTable_01",
+      "texture_files": [
+        "assets/living_room_realistic/CoffeeTable_01_part_01.png"
+      ]
+    },
+    {
+      "asset_id": "WoodenTable_02",
+      "canonical_dimensions_m": [
+        0.300676,
+        0.300676,
+        0.417657
+      ],
+      "coordinate_transform": "rotate +90 degrees about X; center XY; min Z=0",
+      "download_date": "2026-08-09",
+      "final_role": [
+        "accent_table",
+        "compact_shared_fit_failure_table"
+      ],
+      "human_readable_name": "Wooden Table 02",
+      "license": "CC0-1.0",
+      "license_url": "https://polyhaven.com/license",
+      "original_filename": "WoodenTable_02_1k.gltf bundle",
+      "original_sha256": "436198313f0463b8986acd95b39c54cd1e681509905adc394d0d1cdde1a959c1",
+      "original_units": "metres (Poly Haven metadata converted from mm)",
+      "processed_filename": "assets/living_room_realistic/WoodenTable_02_part_01.obj",
+      "processed_parts": [
+        {
+          "part_id": "WoodenTable_02_part_01",
+          "processed_filename": "assets/living_room_realistic/WoodenTable_02_part_01.obj",
+          "processed_sha256": "bdcd905ed893c921f463ceb7ae4043b80c5dec169e2f1d4d184b896931bc53e9",
+          "texture_file": "assets/living_room_realistic/WoodenTable_02_part_01.png",
+          "texture_sha256": "2d6d6dcac6c8ae2282b5efe15a63ca095223d1904fe6a5caa20f251c0b9b8724",
+          "triangle_count": 1514,
+          "vertex_count": 1265
+        }
+      ],
+      "processed_sha256": "bdcd905ed893c921f463ceb7ae4043b80c5dec169e2f1d4d184b896931bc53e9",
+      "processing_steps": [
+        "download Poly Haven 1k glTF and required resources",
+        "verify declared byte sizes",
+        "apply glTF scene-node transforms",
+        "convert Y-up to MuJoCo Z-up",
+        "center on XY origin and ground at Z=0",
+        "export independent textured OBJ visual parts",
+        "retain analytic collision proxies in MJCF"
+      ],
+      "scene_instances": [
+        {
+          "final_dimensions_m": [
+            0.300676,
+            0.300676,
+            0.417657
+          ],
+          "final_scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "instance_id": "accent_table"
+        },
+        {
+          "final_dimensions_m": [
+            0.300676,
+            0.300676,
+            0.417657
+          ],
+          "final_scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "instance_id": "i3_compact_shared_fit_failure_table"
+        }
+      ],
+      "source": "Poly Haven",
+      "source_author": "Fran Calvente",
+      "source_url": "https://polyhaven.com/a/WoodenTable_02",
+      "texture_files": [
+        "assets/living_room_realistic/WoodenTable_02_part_01.png"
+      ]
+    },
+    {
+      "asset_id": "chinese_console_table",
+      "canonical_dimensions_m": [
+        1.719625,
+        0.338793,
+        0.660742
+      ],
+      "coordinate_transform": "rotate +90 degrees about X; center XY; min Z=0",
+      "download_date": "2026-08-09",
+      "final_role": [
+        "media_console",
+        "staging_table"
+      ],
+      "human_readable_name": "Chinese Console Table",
+      "license": "CC0-1.0",
+      "license_url": "https://polyhaven.com/license",
+      "original_filename": "chinese_console_table_1k.gltf bundle",
+      "original_sha256": "dcc313a97e951d62857c953b25107f08308ec81bb403d4a8479b247e70a7f77b",
+      "original_units": "metres (Poly Haven metadata converted from mm)",
+      "processed_filename": "assets/living_room_realistic/chinese_console_table_part_01.obj",
+      "processed_parts": [
+        {
+          "part_id": "chinese_console_table_part_01",
+          "processed_filename": "assets/living_room_realistic/chinese_console_table_part_01.obj",
+          "processed_sha256": "7dd75d5c3e26e67a84426fd0a4aa4f345905a49ffb21dd7a71162914ee35840d",
+          "texture_file": "assets/living_room_realistic/chinese_console_table_part_01.png",
+          "texture_sha256": "a4512bbab98d383498e951b284e4368af765d361fba6d75334ca44b07491b28f",
+          "triangle_count": 13648,
+          "vertex_count": 13228
+        }
+      ],
+      "processed_sha256": "7dd75d5c3e26e67a84426fd0a4aa4f345905a49ffb21dd7a71162914ee35840d",
+      "processing_steps": [
+        "download Poly Haven 1k glTF and required resources",
+        "verify declared byte sizes",
+        "apply glTF scene-node transforms",
+        "convert Y-up to MuJoCo Z-up",
+        "center on XY origin and ground at Z=0",
+        "export independent textured OBJ visual parts",
+        "retain analytic collision proxies in MJCF"
+      ],
+      "scene_instances": [
+        {
+          "final_dimensions_m": [
+            1.341307,
+            0.264259,
+            0.515379
+          ],
+          "final_scale": [
+            0.78,
+            0.78,
+            0.78
+          ],
+          "instance_id": "media_console"
+        },
+        {
+          "final_dimensions_m": [
+            1.3757,
+            0.49125,
+            0.726816
+          ],
+          "final_scale": [
+            0.8,
+            1.45,
+            1.1
+          ],
+          "instance_id": "staging_table"
+        }
+      ],
+      "source": "Poly Haven",
+      "source_author": "Kirill Sannikov",
+      "source_url": "https://polyhaven.com/a/chinese_console_table",
+      "texture_files": [
+        "assets/living_room_realistic/chinese_console_table_part_01.png"
+      ]
+    }
+  ],
+  "collection": "integrated_living_room_realistic_furniture",
+  "license_policy": "retained assets must permit repository redistribution",
+  "schema_version": 1
+}

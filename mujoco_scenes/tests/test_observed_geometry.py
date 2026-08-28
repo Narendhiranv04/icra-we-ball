@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 
@@ -39,6 +40,28 @@ class ObservedGeometryTests(unittest.TestCase):
             self.assertEqual(selected.status, "COMPLETE")
             self.assertEqual(selected.selected_object_id, "spoon")
             self.assertEqual(len(selected.evaluations), 2)
+
+    def test_registry_cannot_be_reused_for_another_scene(self):
+        with tempfile.TemporaryDirectory() as root:
+            registry = {
+                "schema_version": 1,
+                "scene_name": "kitchen",
+                "current_stage": -1,
+                "instance_index": {},
+                "objects": {},
+            }
+            with open(f"{root}/object_registry.json", "w", encoding="utf-8") as stream:
+                json.dump(registry, stream)
+            with self.assertRaisesRegex(ValueError, "different scene"):
+                ObservedGeometryState(root, scene_name="living_room")
+
+    def test_geometric_selection_requires_a_relation(self):
+        with tempfile.TemporaryDirectory() as root:
+            state = ObservedGeometryState(root, scene_name="test")
+            with self.assertRaisesRegex(ValueError, "relation"):
+                state.select_first_compatible(
+                    ["candidate"], target_id="target", required_relations=[]
+                )
 
 
 if __name__ == "__main__":

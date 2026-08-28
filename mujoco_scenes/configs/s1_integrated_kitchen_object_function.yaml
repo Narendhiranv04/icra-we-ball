@@ -1,15 +1,22 @@
 schema_version: 2
 task_id: s1_integrated_prepare_and_serve_coffee_and_soup
 specification_source: manual_s1_integrated_kitchen_v1
-goal_instruction: "Prepare and serve coffee and soup for three people using the available kitchenware. Stir all three coffees and provide each soup bowl with a suitable utensil. Search the closed kitchen storage for anything still required."
+goal_instruction: "Prepare and serve coffee and soup for two people using the available kitchenware. Stir both coffees and provide each soup bowl with a suitable utensil."
 target_assignment_ablation: true
+
+# The live goal runner fails closed unless the typed goal selects this exact
+# benchmark contract and the FM returns these functional requirements. This
+# prevents a one-coffee or unrelated goal from silently executing the larger
+# two-person coffee-and-soup plan below.
+execution_goal_contract:
+  required_functions: [can_hold_liquid, can_stir]
 
 pairing:
   strategy: semantic_role_scoped
 
 roles:
   coffee_container:
-    count: 3
+    count: 2
     assignment_order: 0
     semantic_preferences:
       - rank: 1
@@ -23,7 +30,7 @@ roles:
         expected: true
 
   soup_container:
-    count: 3
+    count: 2
     assignment_order: 1
     semantic_preferences:
       - rank: 1
@@ -34,24 +41,31 @@ roles:
         expected: true
 
   coffee_stirrer:
-    count: 1
+    binding_cardinality:
+      mode: assignment_driven
+      minimum_distinct_physical_objects: 1
+      maximum_distinct_physical_objects: 2
+      preferred: minimize_distinct
     assignment_order: 2
     semantic_preferences:
       - rank: 1
         canonical_label: spoon
-        detector_aliases: [teaspoon, tablespoon, soup spoon]
+        detector_aliases: [teaspoon, tablespoon, dessert spoon, soup spoon]
     known_excluded_labels: [fork, marker, pen, spatula, tongs]
     unary_geometry:
       - predicate: ELONGATED_OBJECT
         expected: true
 
   soup_eating_utensil:
-    count: 1
+    binding_cardinality:
+      mode: assignment_driven
+      minimum_distinct_physical_objects: 2
+      maximum_distinct_physical_objects: 2
     assignment_order: 3
     semantic_preferences:
       - rank: 1
         canonical_label: spoon
-        detector_aliases: [teaspoon, tablespoon, soup spoon]
+        detector_aliases: [teaspoon, tablespoon, dessert spoon, soup spoon]
     known_excluded_labels: [fork, marker, pen, spatula, tongs]
     unary_geometry:
       - predicate: ELONGATED_OBJECT
@@ -80,25 +94,27 @@ operation_groups:
     function: STIR_COFFEE
     tool_role: coffee_stirrer
     target_role: coffee_container
-    required_target_count: 3
+    required_target_count: 2
     usage_policy:
       mode: sequential_reuse_allowed
       distinct_within_group: false
-      same_tool_must_cover_all_targets: true
+      same_tool_must_cover_all_targets: false
+      selection_preference: minimize_distinct_tools
     relations: [INSERTABLE_IN, REACHES_BOTTOM]
 
   soup_serving:
     function: PROVIDE_SOUP_EATING_UTENSIL
     tool_role: soup_eating_utensil
     target_role: soup_container
-    required_target_count: 3
+    required_target_count: 2
     usage_policy:
       mode: dedicated_per_target
       distinct_within_group: true
     relations: [INSERTABLE_IN, REACHES_BOTTOM]
 
 cross_group_reuse:
-  allowed: true
+  allowed: false
+  selection_preference: neutral
 constraints:
   distinct_role_assignments: false
 selection:
@@ -106,3 +122,38 @@ selection:
   semantic_confidence_is_only_a_gate: true
 diagnostics:
   max_representative_rejections: 300
+
+# Declarative preparation specification. This is the sole ground-truth block
+# intended to be replaced by a future FM. It describes required outcomes and
+# causal dependencies, never physical object IDs or a linear action order.
+symbolic_task:
+  schema_version: 1
+  home_region: countertop
+  initial_observation_region: countertop
+  contents: [coffee, water, soup]
+  source_roles:
+    coffee_source:
+      accepted_semantic_labels: [coffee_source]
+      provides: coffee
+      count: 1
+    water_source:
+      accepted_semantic_labels: [kettle]
+      provides: water
+      count: 1
+  target_requirements:
+    coffee:
+      witness_role: coffee_container
+      required_contents: [coffee, water]
+      requires_operation_group: coffee_stirring
+      final_goal: served
+    soup:
+      witness_role: soup_container
+      required_contents: [soup]
+      initial_contents: [soup]
+      requires_operation_group: soup_serving
+      final_goal: served
+  causal_dependencies:
+    - [coffee_contents_present, coffee_stirred]
+    - [coffee_stirred, coffee_served]
+    - [soup_content_present, soup_utensil_placed]
+    - [soup_utensil_placed, soup_served]

@@ -201,8 +201,36 @@ class ObservedStateRun:
         grounding_mode: str = "geometry-only",
         pairing_strategy: str | None = None,
         save_semantic_overlays: bool = False,
+        record_oracle_diagnostics: bool = True,
         run_config: dict[str, Any] | None = None,
     ):
+        if not isinstance(scene_name, str) or not scene_name.strip():
+            raise ValueError("scene_name must be a non-empty string")
+        if not isinstance(initial_region_id, str) or not initial_region_id.strip():
+            raise ValueError("initial_region_id must be a non-empty string")
+        if (
+            isinstance(voxel_size, bool)
+            or not isinstance(voxel_size, (int, float, np.integer, np.floating))
+            or not math.isfinite(float(voxel_size))
+            or voxel_size < 0.0
+        ):
+            raise ValueError("voxel_size must be finite and non-negative")
+        region_ids = tuple(region_ids)
+        if (
+            len(set(region_ids)) != len(region_ids)
+            or any(not isinstance(region, str) or not region.strip() for region in region_ids)
+        ):
+            raise ValueError("region_ids must contain unique non-empty strings")
+        if not isinstance(grounding_mode, str) or grounding_mode not in {
+            "geometry-only",
+            "semantic-only",
+            "joint",
+        }:
+            raise ValueError(
+                "grounding_mode must be geometry-only, semantic-only, or joint"
+            )
+        if run_config is not None and not isinstance(run_config, dict):
+            raise TypeError("run_config must be a mapping when provided")
         self.run_dir = Path(run_dir).resolve()
         self.run_dir.mkdir(parents=True, exist_ok=True)
         self.run_id = self.run_dir.name
@@ -253,6 +281,7 @@ class ObservedStateRun:
                 / "semantic_grounding.yaml"
             )
         self.save_semantic_overlays = bool(save_semantic_overlays)
+        self.record_oracle_diagnostics = bool(record_oracle_diagnostics)
         if isinstance(task_requirements, dict):
             task_source = "inline"
         else:
@@ -267,16 +296,68 @@ class ObservedStateRun:
         self.events_path = self.run_dir / "events.jsonl"
         self.stages_dir = self.run_dir / "stages"
         self.stages_dir.mkdir(exist_ok=True)
-        self.region_ids = tuple(region_ids)
+        self.region_ids = region_ids
 
         if self.registry_path.exists():
-            self.registry = json.loads(self.registry_path.read_text())
+            self.registry = json.loads(
+                self.registry_path.read_text(encoding="utf-8")
+            )
+            if not isinstance(self.registry, dict):
+                raise RuntimeError("Observed-state registry must be a JSON object")
             if self.registry.get("schema_version") != SCHEMA_VERSION:
                 raise RuntimeError(
                     f"Run {self.run_dir} uses observed-state schema "
                     f"{self.registry.get('schema_version')}; region-evidence "
                     f"schema {SCHEMA_VERSION} requires a new --run-id"
                 )
+            if self.registry.get("run_id") != self.run_id:
+                raise RuntimeError(
+                    "Observed-state registry run_id does not match its directory"
+                )
+            if self.registry.get("scene_name") != scene_name:
+                raise RuntimeError(
+                    "Cannot resume an observed-state run with a different scene"
+                )
+            stored_voxel = self.registry.get("voxel_size_m")
+            if (
+                isinstance(stored_voxel, bool)
+                or not isinstance(stored_voxel, (int, float))
+                or not math.isclose(
+                    float(stored_voxel), float(voxel_size), abs_tol=1e-12
+                )
+            ):
+                raise RuntimeError(
+                    "Cannot resume an observed-state run with a different voxel size"
+                )
+            current_stage = self.registry.get("current_stage")
+            if (
+                isinstance(current_stage, bool)
+                or not isinstance(current_stage, int)
+                or current_stage < -1
+                or not isinstance(self.registry.get("instance_index"), dict)
+                or not isinstance(self.registry.get("objects"), dict)
+            ):
+                raise RuntimeError("Observed-state registry structure is invalid")
+            object_records = self.registry["objects"]
+            instance_index = self.registry["instance_index"]
+            if any(
+                not isinstance(object_id, str)
+                or not isinstance(record, dict)
+                or record.get("object_id") != object_id
+                for object_id, record in object_records.items()
+            ):
+                raise RuntimeError("Observed-state object records are invalid")
+            indexed_objects = tuple(instance_index.values())
+            if (
+                any(
+                    not isinstance(token, str)
+                    or not isinstance(object_id, str)
+                    or object_id not in object_records
+                    for token, object_id in instance_index.items()
+                )
+                or len(set(indexed_objects)) != len(indexed_objects)
+            ):
+                raise RuntimeError("Observed-state instance index is invalid")
         else:
             self.registry = {
                 "schema_version": SCHEMA_VERSION,
@@ -287,9 +368,9 @@ class ObservedStateRun:
                 "instance_index": {},
                 "objects": {},
             }
-        self.next_stage = int(self.registry.get("current_stage", -1)) + 1
+        self.next_stage = self.registry.get("current_stage", -1) + 1
         self.latest_witness = (
-            json.loads(self.latest_witness_path.read_text())
+            json.loads(self.latest_witness_path.read_text(encoding="utf-8"))
             if self.latest_witness_path.exists()
             else None
         )
@@ -318,12 +399,47 @@ class ObservedStateRun:
             "grounding_mode": grounding_mode,
             "pairing_strategy": self.pairing_strategy,
             "semantic_detector_enabled": self.semantic_enabled,
+            "record_oracle_diagnostics": self.record_oracle_diagnostics,
             "task_requirements": task_source,
             "task_id": self.task_requirements["task_id"],
             **(run_config or {}),
         }
-        if not (self.run_dir / "run_config.json").exists():
-            _atomic_json(self.run_dir / "run_config.json", config_payload)
+        # Compare the same JSON representation that is persisted so tuples
+        # and other JSON-compatible values do not produce false resume errors.
+        config_payload = json.loads(json.dumps(config_payload))
+        run_config_path = self.run_dir / "run_config.json"
+        if run_config_path.exists():
+            existing_run_config = json.loads(
+                run_config_path.read_text(encoding="utf-8")
+            )
+            if not isinstance(existing_run_config, dict):
+                raise RuntimeError("run_config.json must contain a JSON object")
+            comparison_keys = (
+                set(existing_run_config) | set(config_payload)
+            ) - {"created_at"}
+            for key in sorted(comparison_keys):
+                if existing_run_config.get(key) != config_payload.get(key):
+                    raise RuntimeError(
+                        f"Cannot resume run with changed {key}: "
+                        f"{existing_run_config.get(key)!r} != "
+                        f"{config_payload.get(key)!r}"
+                    )
+        else:
+            _atomic_json(run_config_path, config_payload)
+        task_payload = {
+            key: deepcopy(value)
+            for key, value in self.task_requirements.items()
+            if not key.startswith("_")
+        }
+        task_path = self.run_dir / "task_requirements.json"
+        if task_path.exists():
+            existing_task = json.loads(task_path.read_text(encoding="utf-8"))
+            if existing_task != task_payload:
+                raise RuntimeError(
+                    "Cannot resume an observed-state run with changed task requirements"
+                )
+        else:
+            _atomic_json(task_path, task_payload)
         goal_instruction = self.task_requirements.get("goal_instruction")
         if goal_instruction:
             _atomic_json(
@@ -334,17 +450,13 @@ class ObservedStateRun:
                     "specification_source": self.task_requirements.get(
                         "specification_source"
                     ),
-                    "generated_from_foundation_model": False,
+                    "generated_from_foundation_model": bool(
+                        self.task_requirements.get(
+                            "generated_from_foundation_model", False
+                        )
+                    ),
                 },
             )
-        _atomic_json(
-            self.run_dir / "task_requirements.json",
-            {
-                key: deepcopy(value)
-                for key, value in self.task_requirements.items()
-                if not key.startswith("_")
-            },
-        )
 
     @classmethod
     def create_for_scene(
@@ -361,6 +473,7 @@ class ObservedStateRun:
         grounding_mode: str = "geometry-only",
         pairing_strategy: str | None = None,
         save_semantic_overlays: bool = False,
+        record_oracle_diagnostics: bool = True,
         run_config: dict[str, Any] | None = None,
     ) -> "ObservedStateRun":
         if run_id is None:
@@ -385,6 +498,7 @@ class ObservedStateRun:
             grounding_mode=grounding_mode,
             pairing_strategy=pairing_strategy,
             save_semantic_overlays=save_semantic_overlays,
+            record_oracle_diagnostics=record_oracle_diagnostics,
             run_config=run_config,
         )
 
@@ -422,7 +536,8 @@ class ObservedStateRun:
         )
         return cloud_run, stage_dir
 
-    def _source_region(self, scene, instance_id: str) -> str:
+    def _oracle_source_region(self, scene, instance_id: str) -> str:
+        """Return simulator provenance for evaluation diagnostics only."""
         if hasattr(scene, "get_instance_source_region"):
             source = scene.get_instance_source_region(instance_id)
             return source if source is not None else self.initial_region_id
@@ -446,7 +561,10 @@ class ObservedStateRun:
 
     def _new_object_id(self) -> str:
         """Allocate an identifier that contains no semantic category."""
-        return f"object_{len(self.registry['objects']) + 1:04d}"
+        index = len(self.registry["objects"]) + 1
+        while f"object_{index:04d}" in self.registry["objects"]:
+            index += 1
+        return f"object_{index:04d}"
 
     def _association_token(self, instance_id: str) -> str:
         """Hash the simulator identifier so persisted state exposes no label."""
@@ -470,7 +588,11 @@ class ObservedStateRun:
                 np.empty((0, 3), dtype=np.float32),
                 np.empty((0, 3), dtype=np.uint8),
             )
-        path = self.run_dir / relative_path
+        path = (self.run_dir / relative_path).resolve()
+        if self.run_dir != path and self.run_dir not in path.parents:
+            raise RuntimeError(
+                "Cumulative cloud path escapes the observed-state run directory"
+            )
         if not path.exists():
             return (
                 np.empty((0, 3), dtype=np.float32),
@@ -650,10 +772,13 @@ class ObservedStateRun:
                 merged_points,
                 merged_colors,
             )
+            observed_source_region = (
+                self.initial_region_id
+                if expected_region == "INITIAL"
+                else expected_region
+            )
             source_region = (
-                self._source_region(scene, instance_id)
-                if is_new
-                else existing["source_region"]
+                observed_source_region if is_new else existing["source_region"]
             )
             quality_is_valid = bool(
                 evidenced.measurement_quality.get(
@@ -699,6 +824,7 @@ class ObservedStateRun:
                     self.grounding_mode.upper().replace("-", "_")
                 ),
                 "source_region": source_region,
+                "source_region_basis": "REGION_GATED_OBSERVATION",
                 "first_seen_stage": stage if is_new else existing["first_seen_stage"],
                 "last_seen_stage": stage,
                 "observation_count": (
@@ -740,6 +866,13 @@ class ObservedStateRun:
                 ),
                 **measured,
             }
+            if self.record_oracle_diagnostics:
+                record["oracle_source_region"] = (
+                    self._oracle_source_region(scene, instance_id)
+                    if is_new
+                    else existing.get("oracle_source_region")
+                )
+                record["oracle_source_region_usage"] = "EVALUATION_ONLY"
             record["geometry"] = {
                 "centroid_world_m": deepcopy(
                     record.get("centroid_world_m", {})

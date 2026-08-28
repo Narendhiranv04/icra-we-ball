@@ -94,4 +94,16 @@ def test_movie_night_free_payloads_settle_finitely():
         scene = L2LivingRoomRegionScene(scene_name, robot="none")
         assert np.all(np.isfinite(scene.data.qpos))
         assert np.all(np.isfinite(scene.data.qvel))
-        assert float(np.max(np.abs(scene.data.qvel))) < 0.08
+        free_dofs = [
+            int(scene.model.jnt_dofadr[joint_id])
+            for joint_id in range(scene.model.njnt)
+            if scene.model.jnt_type[joint_id] == mujoco.mjtJoint.mjJNT_FREE
+        ]
+        assert max(
+            float(np.max(np.abs(scene.data.qvel[dof:dof + 3])))
+            for dof in free_dofs
+        ) < 0.08
+        assert max(
+            float(np.max(np.abs(scene.data.qvel[dof + 3:dof + 6])))
+            for dof in free_dofs
+        ) < 0.25

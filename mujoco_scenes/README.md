@@ -42,19 +42,18 @@ grasp action would have to disable.
 - `wrist_camera`
 - `front_camera`
 
-Fetch also contributes `head_camera_rgb`. It is available from the same
+Google Robot also contributes `head_camera_rgb`. It is available from the same
 `--camera` CLI option whenever the robot is enabled.
 
 The interactive viewer starts with MuJoCo's free camera by default. Pass an
 explicit `--camera NAME` to start from one of the fixed or robot-mounted
 cameras instead.
 
-With Fetch or Google Robot enabled, `wrist_camera` is attached to its gripper
-link and `head_camera_rgb` is robot-mounted.
+With Google Robot enabled, `wrist_camera` is attached to its gripper link and
+`head_camera_rgb` is robot-mounted.
 The kitchen-only `--no-robot` mode uses a fixed placeholder with the same name.
 
-Fetch assets are supplied by `gymnasium-robotics`. Google Robot assets are
-loaded from an external MuJoCo Menagerie checkout. See
+Google Robot assets are loaded from an external MuJoCo Menagerie checkout. See
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for attribution and licenses.
 
 ## Run natively with uv
@@ -63,14 +62,15 @@ Create the Python environment from the repository root:
 
 ```bash
 uv venv --python 3.11
-uv pip install --python .venv/bin/python \
+uv pip install --torch-backend cpu --python .venv/bin/python \
   -r mujoco_scenes/requirements-dev.txt
 ```
 
-The requirements install Mink as the default profile-driven IK backend.
-`MUJOCO_IK_BACKEND=legacy` selects the original damped least-squares solver
-for regression comparisons; `auto` is the default and falls back only when
-Mink is unavailable.
+The development requirements include Mink for the standalone backend
+comparison in `mujoco_scenes.ik`. The calibrated live scene controllers retain
+their constrained damped least-squares solver in `generic_manipulation.py`;
+switching that physical path to Mink requires a separate trajectory and
+collision-regression calibration rather than a dependency-only change.
 
 Five-view point-cloud inspection and category-free geometric checks are
 documented in [POINT_CLOUD_PERCEPTION.md](POINT_CLOUD_PERCEPTION.md). The
@@ -78,8 +78,7 @@ Google Robot remains in the scene; MuJoCo instance segmentation is available
 only through an explicit oracle mode, while learned mask backends use the same
 RGB-D reconstruction path.
 
-Google Robot is the default robot. Fetch remains available for regression
-comparison:
+Google Robot is the only production robot backend:
 
 ```bash
 MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.scene_loader \
@@ -95,13 +94,6 @@ git clone --depth 1 --filter=blob:none --sparse \
 git -C ../third_party/mujoco_menagerie sparse-checkout set google_robot
 ```
 
-Then launch the same scene with the alternative backend:
-
-```bash
-MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.scene_loader \
-  --scene S1_coffee_missing_mug --robot google --viewer
-```
-
 Set `MUJOCO_MENAGERIE_PATH` when the checkout lives elsewhere. The Google
 backend supports scene loading, cameras, joint targets, collision-checked base
 navigation, and an S1-calibrated vertical sugar-jar pick/place at
@@ -110,6 +102,9 @@ hang, and secured carry; spoon placement remains gated. Other scene poses plus
 coffee-jar and kettle actions remain gated. See
 [ROBOT_CALIBRATION.md](ROBOT_CALIBRATION.md) for the calibration and acceptance
 process used for this and future robot backends.
+
+The complete current execution and repository-test procedure is in
+[`../EXECUTION_AND_TESTING.md`](../EXECUTION_AND_TESTING.md).
 
 ## Run the interactive viewer in Docker (Linux/X11)
 
@@ -140,16 +135,10 @@ To start with C1 already open, append `--open-container C1` to the `docker run`
 command. The actuator controls in the viewer UI can also move every door,
 drawer, and the box lid.
 
-With Fetch or Google Robot enabled, `--viewer` also opens the companion
-`Actions` panel.
+With Google Robot enabled, `--viewer` also opens the companion `Actions` panel.
 Choose `Actions` → `Move` → `Home`, `Cupboard 1`, `Cupboard 2`, or `Box` to run
 one collision-checked RRT* base motion. `Cupboard 2` and `Box` are symbolic
-aliases of the same right-side pose. For Fetch, `Actions` → `Pick` provides
-staged vertical grasps for the kettle handle, both jar upper bodies, and the
-spoon handle. Fetch jar picks add a compliant 90-degree in-hand pitch—with the
-rigid weld released and only soft upright/centring assistance—followed by a
-horizontal carry pose.
-Google uses the same navigation controls and exposes its validated sugar-jar
+aliases of the same right-side pose. Google exposes its validated sugar-jar
 pick/place plus far-tip spoon pick/carry. The spoon uses a live rotational
 pivot to settle bowl-down before its transport weld is restored; its Place
 control remains disabled. Unsupported objects are deliberately not shown as

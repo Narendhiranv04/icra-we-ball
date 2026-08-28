@@ -11,7 +11,6 @@ The script is idempotent. Pass ``--force`` to replace existing prepared files.
 from __future__ import annotations
 
 import argparse
-import concurrent.futures
 import hashlib
 import io
 import json
@@ -83,41 +82,6 @@ def _single_request(url: str, byte_range: tuple[int, int] | None = None) -> tupl
     raise RuntimeError(f"Could not download {url}: {last_error}")
 
 
-def _request_bytes(url: str) -> bytes:
-    """Download with parallel ranges when the server advertises byte ranges."""
-    status, headers, probe = _single_request(url, (0, 0))
-    content_range = headers.get("Content-Range", "")
-    if status != 206 or "/" not in content_range:
-        return probe
-
-    total = int(content_range.rsplit("/", 1)[1])
-    if total == 1:
-        return probe
-    chunk_size = 256 * 1024
-    ranges = [
-        (start, min(start + chunk_size - 1, total - 1))
-        for start in range(0, total, chunk_size)
-    ]
-
-    def fetch(item: tuple[int, tuple[int, int]]) -> tuple[int, bytes]:
-        index, byte_range = item
-        chunk_status, _chunk_headers, data = _single_request(url, byte_range)
-        expected = byte_range[1] - byte_range[0] + 1
-        if chunk_status != 206 or len(data) != expected:
-            raise RuntimeError(
-                f"Invalid range response for {url}: {byte_range}, "
-                f"status={chunk_status}, bytes={len(data)}, expected={expected}"
-            )
-        return index, data
-
-    chunks: list[bytes | None] = [None] * len(ranges)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=32) as executor:
-        for index, data in executor.map(fetch, enumerate(ranges)):
-            chunks[index] = data
-    payload = b"".join(chunk for chunk in chunks if chunk is not None)
-    if len(payload) != total:
-        raise RuntimeError(f"Incomplete ranged download for {url}")
-    return payload
 
 
 def _request_plain(url: str) -> bytes:

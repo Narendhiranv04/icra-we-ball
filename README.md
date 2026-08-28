@@ -5,6 +5,19 @@ The current benchmark layout is documented in
 alternatives, living-room region alternatives, and a compact workshop that
 combines both. Google Robot remains the default interactive robot.
 
+For the authoritative native setup, scene launch, functional-planning,
+physical-execution boundaries, and test commands, use
+[EXECUTION_AND_TESTING.md](EXECUTION_AND_TESTING.md).
+
+For the paper-faithful LLM3 and VLM-TAMP ports, frozen upstream revisions,
+shared comparison controls, and permitted claims, use
+[BASELINE_FIDELITY.md](BASELINE_FIDELITY.md).
+
+The independent [OWL-TAMP adapter](owl_tamp_baseline/README.md) supports
+planning-only Kitchen and Living Room sequence-to-GT experiments. It is
+explicitly labeled as a paper-derived reimplementation because no official
+author code release is currently available.
+
 ## Intended Workflow
 
 The **S1 environment** demonstrates container-level missing-object search with
@@ -99,10 +112,26 @@ does not claim those types are present, search the scene, verify geometry,
 sequence actions, or execute anything.
 
 The separate [llm3_baseline](llm3_baseline/README.md) folder is a zero-training
-comparison method. A frozen VLM directly proposes observation-bounded scene
-actions, and its bounded executive can return shared motion failures for a new
-proposal. The current command-line path produces validated plans only; live
-MuJoCo skill dispatch remains an explicit integration step.
+comparison method. A frozen VLM directly proposes complete plans containing
+discrete arguments and bounded continuous parameters; its executive returns
+motion feedback and the last three plan traces for resampling or symbolic
+backtracking. The command-line client produces validated plans only;
+`llm3_baseline.run_kitchen` performs live kitchen execution through the same
+MuJoCo skill dispatcher as the production architecture.
+
+The separate [vlm_tamp_baseline](vlm_tamp_baseline/README.md) folder provides
+a zero-training VLM-TAMP algorithm port. Two VLM stages produce English
+intermediate goals and grounded formal subgoals; pinned PDDLStream refines each
+subgoal before the shared geometry checks and physical executor. The VLM sees
+the paper-style complete object-name universe but not hidden locations or
+container contents.
+
+The two comparison methods do not import each other. Their prompts, planners,
+executives, execution adapters, CLIs, tests, and live runners stay in
+their respective folders. `baseline_common/` contains only neutral
+observation/action contracts, the shared physical-skill catalogue, image/model
+transport helpers, and the final MuJoCo dispatcher bridge required for a fair
+same-controller comparison.
 
 The complete native server and new-client-PC procedure is in
 [NEW_PC_SETUP.md](inference_server/NEW_PC_SETUP.md).
@@ -239,8 +268,10 @@ semantic-first relation pruning across six visible containers and the full
 xdg-open reports/s1_integrated_kitchen_demo/presentation_report.html
 ```
 
-The broad goal and functional requirements are still manually connected; no
-FM parsing, robot manipulation, action planning, or TAMP execution occurs.
+The broad goal and functional requirements are still manually connected; this
+grounding command itself does not call the FM, plan actions, or move the robot.
+The separate guarded kitchen execution boundary is documented in
+[EXECUTION_AND_TESTING.md](EXECUTION_AND_TESTING.md).
 See the integrated benchmark section in
 [mujoco_scenes/README.md](mujoco_scenes/README.md) for exact local/Docker
 commands, scene variants, measured progression, outputs, and limitations.

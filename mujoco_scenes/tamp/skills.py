@@ -37,6 +37,7 @@ class SkillResult:
     failure_code: FailureCode | None = None
     message: str = ""
     recoverable: bool = True
+    details: Mapping[str, object] = field(default_factory=dict)
 
     @classmethod
     def succeeded(cls, *effects: str) -> SkillResult:
@@ -49,12 +50,14 @@ class SkillResult:
         message: str,
         *,
         recoverable: bool = True,
+        details: Mapping[str, object] | None = None,
     ) -> SkillResult:
         return cls(
             False,
             failure_code=code,
             message=message,
             recoverable=recoverable,
+            details=dict(details or {}),
         )
 
 

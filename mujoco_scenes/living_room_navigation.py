@@ -22,6 +22,8 @@ from mujoco_scenes.mobile_motion import (
     BasePose,
     MuJoCoBaseCollisionChecker,
     RRTStarPlanner,
+    angle_delta,
+    rotation_targets,
 )
 from mujoco_scenes.robot_profiles import mobile_profile
 from mujoco_scenes.living_room_scene import LIVING_ROOM_FORWARD_LIMITS
@@ -42,10 +44,6 @@ LIVING_ROOM_DESTINATIONS = (
     "duster",
 )
 TABLE_NAVIGATION_HALF_EXTENTS = (0.78, 0.66)
-
-
-def _angle_delta(target: float, current: float) -> float:
-    return math.atan2(math.sin(target - current), math.cos(target - current))
 
 
 @dataclass(frozen=True)
@@ -168,17 +166,6 @@ class LivingRoomNavigationExecutor:
         )
 
     @staticmethod
-    def _rotation_targets(
-        x: float, y: float, start: float, goal: float
-    ) -> list[tuple[float, float, float]]:
-        delta = _angle_delta(goal, start)
-        count = max(1, int(math.ceil(abs(delta) / math.radians(4))))
-        return [
-            (x, y, start + delta * fraction)
-            for fraction in np.linspace(0.0, 1.0, count + 1)[1:]
-        ]
-
-    @staticmethod
     def _outside_table_keepout(
         x: float,
         y: float,
@@ -277,7 +264,7 @@ class LivingRoomNavigationExecutor:
                         )
                 targets.extend(retreat_targets)
                 current = BasePose(retreat_x, current.y, current.yaw)
-            rotation = self._rotation_targets(
+            rotation = rotation_targets(
                 current.x, current.y, current.yaw, 0.0
             )
             for pose in rotation:
@@ -296,7 +283,7 @@ class LivingRoomNavigationExecutor:
         )
         path = planner.plan((current.x, current.y), (goal.x, goal.y))
         targets.extend((x, y, 0.0) for x, y in path[1:])
-        rotation = self._rotation_targets(goal.x, goal.y, 0.0, goal.yaw)
+        rotation = rotation_targets(goal.x, goal.y, 0.0, goal.yaw)
         for pose in rotation:
             if not self.checker.is_pose_valid(*pose):
                 raise RuntimeError(
@@ -361,7 +348,7 @@ class LivingRoomNavigationExecutor:
         current = self.data.qpos[list(self.qpos_addresses)]
         velocity = self.data.qvel[list(self.dof_addresses)]
         position_error = float(np.linalg.norm(current[:2] - target[:2]))
-        yaw_error = abs(_angle_delta(float(target[2]), float(current[2])))
+        yaw_error = abs(angle_delta(float(target[2]), float(current[2])))
         is_final = self.target_index == len(self.targets) - 1
         position_tolerance = BASE_FINAL_POSITION_TOLERANCE if is_final else 0.018
         yaw_tolerance = BASE_FINAL_YAW_TOLERANCE if is_final else math.radians(1.2)
@@ -372,7 +359,7 @@ class LivingRoomNavigationExecutor:
             self.target_index += 1
             return
         command_error = target - self.data.ctrl[list(self.actuator_ids)]
-        command_error[2] = _angle_delta(
+        command_error[2] = angle_delta(
             float(target[2]), float(self.data.ctrl[self.actuator_ids[2]])
         )
         command_settled = (
@@ -392,7 +379,8 @@ class LivingRoomNavigationExecutor:
             return
         self.data.ctrl[list(self.actuator_ids)] = target
         self.target_index += 1
-        assert self.requested_location is not None
+        if self.requested_location is None:
+            raise RuntimeError("Navigation completed without a requested destination")
         self.current_location = self.requested_location
         elapsed = time.monotonic() - self.started_at
         self.status = f"Move complete: {self.current_location} ({elapsed:.1f} s)"

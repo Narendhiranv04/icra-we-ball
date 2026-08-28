@@ -110,6 +110,8 @@ class _HeldDusterCollisionChecker:
                 for name in self.profile.arm_joints
             ]
         )
+        if np.any(self.arm_joint_ids < 0):
+            raise RuntimeError("Held-duster collision model is missing arm joints")
         self.arm_qpos = self.model.jnt_qposadr[self.arm_joint_ids]
         tool_joint = int(self.model.body_jntadr[tool_body_id])
         self.tool_qpos = int(self.model.jnt_qposadr[tool_joint])
@@ -166,6 +168,10 @@ class _HeldDusterCollisionChecker:
         self.screen_geom_id = mujoco.mj_name2id(
             self.model, mujoco.mjtObj.mjOBJ_GEOM, "tv_screen_collision"
         )
+        if self.head_geom_id < 0 or self.screen_geom_id < 0:
+            raise RuntimeError(
+                "Held-duster collision model is missing tool or screen geometry"
+            )
 
     def _position_tool(self, arm_joints: np.ndarray) -> None:
         self.data.qpos[:] = self.reference.qpos
@@ -298,6 +304,16 @@ class TVDustExecutor:
             mujoco.mjtObj.mjOBJ_EQUALITY,
             "google:pick_weld_rigid_duster",
         )
+        if any(
+            value < 0
+            for value in (
+                self.gripper_body_id,
+                self.head_geom_id,
+                self.screen_geom_id,
+                self.grasp_equality_id,
+            )
+        ):
+            raise RuntimeError("TV dust controller model interface is incomplete")
         self.mode = "idle"
         self.status = "TV dusting idle"
         self.failure: str | None = None
@@ -393,7 +409,8 @@ class TVDustExecutor:
         )
         if not valid:
             raise RuntimeError(reason or "robot arm collision")
-        assert self.tool_checker is not None
+        if self.tool_checker is None:
+            raise RuntimeError("Held-tool collision checker is not initialized")
         valid, reason = self.tool_checker.segment_valid(start, goal)
         if not valid:
             raise RuntimeError(reason or "held duster collision")

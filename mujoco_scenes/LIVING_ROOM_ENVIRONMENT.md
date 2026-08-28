@@ -113,8 +113,7 @@ MUJOCO_GL=egl PYOPENGL_PLATFORM=egl .venv/bin/python \
 ```
 
 The static room can be inspected without a robot using either `--robot none`
-or `--no-robot`. The default is `--robot google`; Fetch is not composed into
-either production environment.
+or `--no-robot`. The default is `--robot google`.
 
 Run the same five-view point-cloud reconstruction used by the kitchen:
 

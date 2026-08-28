@@ -2,7 +2,12 @@ import unittest
 
 import numpy as np
 
-from perception_server.server import Detection, deduplicate, encode_rle
+from perception_server.server import (
+    Detection,
+    deduplicate,
+    encode_rle,
+    normalize_prompts,
+)
 
 
 def decode_rle(payload):
@@ -30,6 +35,15 @@ class ServerTests(unittest.TestCase):
         ]
         kept = deduplicate(detections, threshold=0.85)
         self.assertEqual([(item.label, item.score) for item in kept], [("utensil", 0.9)])
+
+    def test_prompt_contract_rejects_string_as_array(self):
+        with self.assertRaisesRegex(ValueError, "array"):
+            normalize_prompts("spoon")
+
+    def test_prompt_contract_strips_and_rejects_non_strings(self):
+        self.assertEqual(normalize_prompts([" spoon ", "", "mug"]), ["spoon", "mug"])
+        with self.assertRaisesRegex(ValueError, "only strings"):
+            normalize_prompts(["spoon", 3])
 
 
 if __name__ == "__main__":

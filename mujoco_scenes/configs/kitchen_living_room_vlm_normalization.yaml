@@ -1,0 +1,130 @@
+schema_version: 1
+
+# Post-response aliases accepted from Qwen. Nothing in this file is sent to the
+# model. Canonical predicates and categories remain owned by each reviewed task
+# file and are used only to audit whether raw VLM output is grounding-ready.
+relation_aliases:
+  OPEN_CAVITY:
+    - "open cavity"
+    - "hold the contents"
+    - "contain the contents"
+    - "open top receptacle"
+    - "receive material from above"
+    - "open top"
+    - "openable top"
+  ELONGATED_OBJECT:
+    - "elongated object"
+    - "long narrow shape"
+    - "slender manipulable shape"
+    - "usable stirring handle"
+  INSERTABLE_IN:
+    - "insert into the target"
+    - "fit through the opening"
+    - "enter the container opening"
+    - "fit inside the receptacle"
+  REACHES_BOTTOM:
+    - "reach the bottom"
+    - "reach the contents"
+    - "sufficient length to stir"
+    - "contact contents near the bottom"
+  PLANAR_SUPPORT:
+    - "planar support"
+    - "flat stable support"
+    - "support objects stably"
+    - "level supporting surface"
+    - "stable surface capable of supporting"
+    - "flat stable surface"
+  FITS_SET_ON:
+    - "fit the complete set"
+    - "fit a cup and saucer together"
+    - "support the payload set"
+    - "enough usable area for the set"
+    - "surface area sufficient to hold both items"
+  FITS_ON:
+    - "fit the payload"
+    - "fit the remote"
+    - "support the remote"
+    - "enough usable area for the object"
+    - "large enough to accommodate the remote"
+  NEAR_SEAT:
+    - "near the assigned seat"
+    - "within reach of one seated person"
+    - "personal access from the seat"
+    - "adjacent to the viewer"
+    - "position relative to the armchair"
+    - "accessibility during viewing"
+  ACCESSIBLE_FROM_BOTH_SEATS:
+    - "accessible from both seats"
+    - "reachable by both viewers"
+    - "shared access from both seating positions"
+    - "centrally accessible"
+    - "within easy reach of both viewers"
+
+environments:
+  kitchen:
+    task_path: "mujoco_scenes/configs/s1_integrated_kitchen_object_function.yaml"
+    vocabulary_path: "mujoco_scenes/configs/semantic_vocabulary.yaml"
+    instruction_field: "goal_instruction"
+    roles:
+      coffee_container:
+        function_hint: "contain an individual serving of coffee"
+        function_aliases:
+          - "contain coffee"
+          - "hold coffee"
+          - "coffee drinking vessel"
+          - "serve coffee"
+      soup_container:
+        function_hint: "contain an individual serving of soup"
+        function_aliases:
+          - "contain soup"
+          - "hold soup"
+          - "soup serving vessel"
+          - "serve soup"
+      coffee_stirrer:
+        function_hint: "stir coffee inside each selected coffee container"
+        function_aliases:
+          - "stir coffee"
+          - "mix coffee"
+          - "coffee stirring"
+          - "agitate coffee"
+      soup_eating_utensil:
+        function_hint: "provide a suitable eating utensil for each soup bowl"
+        function_aliases:
+          - "eat soup"
+          - "soup eating utensil"
+          - "provide soup utensil"
+          - "serve soup utensil"
+      coffee_source:
+        function_hint: "provide coffee material for both coffee servings"
+        function_aliases:
+          - "provide coffee"
+          - "coffee ingredient"
+          - "source of coffee"
+          - "coffee jar"
+      water_source:
+        function_hint: "provide pourable water for both coffee servings"
+        function_aliases:
+          - "provide water"
+          - "water source"
+          - "pour hot water"
+          - "kettle"
+
+  living_room:
+    task_path: "mujoco_scenes/configs/l2_integrated_region_function_task.yaml"
+    vocabulary_path: "mujoco_scenes/configs/l2_integrated_region_function_semantic_vocabulary.yaml"
+    instruction_field: "natural_language_goal"
+    roles:
+      personal_cup_saucer:
+        function_hint: "support one person's cup and saucer near that person's seat"
+        function_aliases:
+          - "personal cup and saucer support"
+          - "support a cup and saucer near a seat"
+          - "personal serving surface"
+          - "hold one viewer's drinkware"
+      shared_remote:
+        function_hint: "support the television remote where both viewers can access it"
+        function_aliases:
+          - "shared remote support"
+          - "support the television remote"
+          - "shared control surface"
+          - "hold the remote for both viewers"

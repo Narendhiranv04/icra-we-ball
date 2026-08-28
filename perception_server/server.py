@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import hmac
 import io
 import json
 import os
@@ -15,7 +16,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Protocol
 
 import numpy as np
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 
 def encode_rle(mask: np.ndarray) -> dict:
@@ -49,6 +50,18 @@ class SegmentationEngine(Protocol):
     name: str
 
     def segment(self, image: Image.Image, prompts: list[str]) -> list[Detection]: ...
+
+
+def normalize_prompts(value: object) -> list[str]:
+    if not isinstance(value, list):
+        raise ValueError("prompts must be an array of strings")
+    if not all(isinstance(item, str) for item in value):
+        raise ValueError("prompts must contain only strings")
+    prompts = [item.strip() for item in value]
+    prompts = [item for item in prompts if item]
+    if not 1 <= len(prompts) <= 32:
+        raise ValueError("provide between 1 and 32 non-empty prompts")
+    return prompts
 
 
 def _mask_iou(left: np.ndarray, right: np.ndarray) -> float:
@@ -94,13 +107,20 @@ class Sam31Engine:
             device=self.device,
             compile=os.getenv("SAM3_COMPILE", "0") == "1",
         )
+        confidence = float(os.getenv("SAM3_CONFIDENCE", "0.5"))
+        if not 0.0 <= confidence <= 1.0:
+            raise ValueError("SAM3_CONFIDENCE must be between 0 and 1")
         self.processor = Sam3Processor(
             model,
             device=self.device,
-            confidence_threshold=float(os.getenv("SAM3_CONFIDENCE", "0.5")),
+            confidence_threshold=confidence,
         )
         self.minimum_area = int(os.getenv("SAM3_MINIMUM_MASK_PIXELS", "32"))
         self.duplicate_iou = float(os.getenv("SAM3_DUPLICATE_IOU", "0.85"))
+        if self.minimum_area < 1:
+            raise ValueError("SAM3_MINIMUM_MASK_PIXELS must be positive")
+        if not 0.0 <= self.duplicate_iou <= 1.0:
+            raise ValueError("SAM3_DUPLICATE_IOU must be between 0 and 1")
 
     def segment(self, image: Image.Image, prompts: list[str]) -> list[Detection]:
         state = self.processor.set_image(image)
@@ -163,7 +183,10 @@ class SamRequestHandler(BaseHTTPRequestHandler):
 
     def _authorized(self) -> bool:
         expected = self.server.api_key
-        return not expected or self.headers.get("Authorization") == f"Bearer {expected}"
+        if not expected:
+            return True
+        supplied = self.headers.get("Authorization", "")
+        return hmac.compare_digest(supplied, f"Bearer {expected}")
 
     def do_GET(self) -> None:
         if self.path != "/health":
@@ -183,10 +206,9 @@ class SamRequestHandler(BaseHTTPRequestHandler):
             if length <= 0 or length > 25_000_000:
                 raise ValueError("invalid request size")
             payload = json.loads(self.rfile.read(length))
-            prompts = [str(item).strip() for item in payload["prompts"]]
-            prompts = [item for item in prompts if item]
-            if not prompts or len(prompts) > 32:
-                raise ValueError("provide between 1 and 32 non-empty prompts")
+            if not isinstance(payload, dict):
+                raise ValueError("request body must be a JSON object")
+            prompts = normalize_prompts(payload["prompts"])
             image_bytes = base64.b64decode(payload["image_png_base64"], validate=True)
             image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
             with self.server.inference_lock:
@@ -204,8 +226,14 @@ class SamRequestHandler(BaseHTTPRequestHandler):
                     }
                 )
             self._json(HTTPStatus.OK, {"instances": instances})
-        except Exception as exc:
+        except (KeyError, TypeError, ValueError, UnidentifiedImageError) as exc:
             self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+        except Exception as exc:
+            self.log_error("Segmentation failed: %s", exc)
+            self._json(
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+                {"error": "segmentation inference failed"},
+            )
 
     def log_message(self, format: str, *args) -> None:
         print(f"{self.address_string()} - {format % args}")

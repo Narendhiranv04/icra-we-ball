@@ -19,11 +19,12 @@ open_cavity:
   minimum_interior_camera_count: 2
   rim_percentile_z: 86.0
   # Twelve 30-degree sectors are stable at the 3 mm voxel resolution used by
-  # both MuJoCo 3.3 and newer renderers. Requiring 75% still demands visible
-  # rim support in at least nine sectors; changing renderer sampling by one or
-  # two boundary voxels no longer flips an otherwise supported cavity.
+  # both MuJoCo 3.3 and newer renderers. Eight supported sectors are enough to
+  # continue to the independent open-centre and multiview-interior checks.
+  # This admits partially occluded handled mugs without making rim evidence
+  # alone sufficient for OPEN_CAVITY.
   angular_bin_count: 12
-  minimum_rim_enclosure_ratio: 0.75
+  minimum_rim_enclosure_ratio: 0.66
   minimum_rim_normal_alignment: 0.88
   rim_shell_minimum_radius: 0.70
   minimum_rim_shell_fraction: 0.45

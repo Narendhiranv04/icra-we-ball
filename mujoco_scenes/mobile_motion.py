@@ -27,7 +27,7 @@ BASE_SETTLE_TICKS = 50
 
 @dataclass(frozen=True)
 class BasePose:
-    """A named world-frame planar pose for the Fetch base."""
+    """A named world-frame planar pose for the mobile base."""
 
     x: float
     y: float
@@ -236,6 +236,8 @@ class MuJoCoBaseCollisionChecker:
         model: mujoco.MjModel,
         reference_data: mujoco.MjData,
         profile: MobileRobotProfile,
+        ignored_environment_geoms: frozenset[str] = frozenset(),
+        lateral_limits: tuple[float, float] = (-1.5, 1.5),
     ):
         self.model = model
         self.data = mujoco.MjData(model)
@@ -248,6 +250,8 @@ class MuJoCoBaseCollisionChecker:
         self.body_prefix = profile.body_prefix
         self.home_y = profile.home_y
         self.forward_limits = profile.forward_limits
+        self.ignored_environment_geoms = ignored_environment_geoms
+        self.lateral_limits = lateral_limits
         self.attached_body_ids: set[int] = set()
         for equality_id in range(model.neq):
             if not reference_data.eq_active[equality_id]:
@@ -306,7 +310,7 @@ class MuJoCoBaseCollisionChecker:
         lateral = -x
         if not (
             self.forward_limits[0] <= forward <= self.forward_limits[1]
-            and -1.5 <= lateral <= 1.5
+            and self.lateral_limits[0] <= lateral <= self.lateral_limits[1]
         ):
             self.cache[key] = False
             return False
@@ -363,22 +367,35 @@ class MuJoCoBaseCollisionChecker:
             if first_robot == second_robot:
                 continue
             other = second if first_robot else first
-            if other != "floor":
+            if other != "floor" and other not in self.ignored_environment_geoms:
                 valid = False
                 break
         self.cache[key] = valid
         return valid
 
 
-def _angle_delta(target: float, current: float) -> float:
+def angle_delta(target: float, current: float) -> float:
+    """Return the shortest signed planar rotation from current to target."""
     return math.atan2(math.sin(target - current), math.cos(target - current))
+
+
+def rotation_targets(
+    x: float, y: float, start: float, goal: float
+) -> list[tuple[float, float, float]]:
+    """Discretize an in-place turn into collision-checkable four-degree steps."""
+    delta = angle_delta(goal, start)
+    count = max(1, int(math.ceil(abs(delta) / math.radians(4))))
+    return [
+        (x, y, start + delta * fraction)
+        for fraction in np.linspace(0.0, 1.0, count + 1)[1:]
+    ]
 
 
 class MobileMoveExecutor:
     """Plans and incrementally executes one named mobile move action."""
 
     def __init__(
-        self, model: mujoco.MjModel, data: mujoco.MjData, robot_name: str = "fetch"
+        self, model: mujoco.MjModel, data: mujoco.MjData, robot_name: str = "google"
     ):
         self.model = model
         self.data = data
@@ -431,15 +448,6 @@ class MobileMoveExecutor:
             float(-lateral), float(self.home_pose.y + forward), float(yaw)
         )
 
-    @staticmethod
-    def _rotation_targets(x: float, y: float, start: float, goal: float) -> list[tuple[float, float, float]]:
-        delta = _angle_delta(goal, start)
-        count = max(1, int(math.ceil(abs(delta) / math.radians(4))))
-        return [
-            (x, y, start + delta * fraction)
-            for fraction in np.linspace(0.0, 1.0, count + 1)[1:]
-        ]
-
     def request_move(self, destination: str) -> None:
         if self.busy:
             raise RuntimeError("A move action is already running")
@@ -466,7 +474,7 @@ class MobileMoveExecutor:
                 targets.append((retreat.x, retreat.y, current.yaw))
                 current = BasePose(retreat.x, retreat.y, current.yaw)
                 route = route[1:]
-            targets.extend(self._rotation_targets(current.x, current.y, current.yaw, 0.0))
+            targets.extend(rotation_targets(current.x, current.y, current.yaw, 0.0))
 
         source_anchor = self.route_anchors[route[0]]
         if _distance(
@@ -484,16 +492,16 @@ class MobileMoveExecutor:
             cursor = (anchor.x, anchor.y)
 
         final_pose = self.physical_poses[destination_physical]
-        rotation_targets = self._rotation_targets(
+        final_rotation_targets = rotation_targets(
             cursor[0], cursor[1], 0.0, final_pose.yaw
         )
-        for x, y, yaw in rotation_targets:
+        for x, y, yaw in final_rotation_targets:
             if not checker.is_pose_valid(x, y, yaw):
                 raise RuntimeError(
                     "Final base rotation is in collision; move the arm to its "
                     "compact navigation pose before moving"
                 )
-        targets.extend(rotation_targets)
+        targets.extend(final_rotation_targets)
         self.targets = targets
         self.target_index = 0
         self.settle_ticks = 0
@@ -520,7 +528,7 @@ class MobileMoveExecutor:
         current = self.data.qpos[list(self.joint_addresses)]
         velocity = self.data.qvel[list(self.joint_velocity_addresses)]
         position_error = float(np.linalg.norm(current[:2] - joint_target[:2]))
-        yaw_error = abs(_angle_delta(float(joint_target[2]), float(current[2])))
+        yaw_error = abs(angle_delta(float(joint_target[2]), float(current[2])))
         is_final = self.target_index == len(self.targets) - 1
         position_tolerance = BASE_FINAL_POSITION_TOLERANCE if is_final else 0.018
         yaw_tolerance = BASE_FINAL_YAW_TOLERANCE if is_final else math.radians(1.2)
@@ -533,7 +541,7 @@ class MobileMoveExecutor:
             return
 
         command_error = joint_target - self.data.ctrl[list(self.actuator_ids)]
-        command_error[2] = _angle_delta(
+        command_error[2] = angle_delta(
             float(joint_target[2]),
             float(self.data.ctrl[self.actuator_ids[2]]),
         )
@@ -557,7 +565,8 @@ class MobileMoveExecutor:
         # base back to an idle Actions panel.
         self.data.ctrl[list(self.actuator_ids)] = joint_target
         self.target_index += 1
-        assert self.requested_location is not None
+        if self.requested_location is None:
+            raise RuntimeError("Navigation completed without a requested destination")
         self.current_symbolic_location = self.requested_location
         self.current_physical_location = physical_location(self.requested_location)
         elapsed = time.monotonic() - self.started_at
@@ -613,6 +622,12 @@ def launch_action_viewer(
         viewer.cam.type = mujoco.mjtCamera.mjCAMERA_FIXED
         viewer.cam.fixedcamid = camera_id
     executor = MobileMoveExecutor(scene.model, scene.data, scene.robot_name)
+    from mujoco_scenes.kitchen_articulation import GoogleKitchenArticulationExecutor
+    from mujoco_scenes.kitchen_execution_policy import KitchenWorkspace
+
+    articulation_executor = GoogleKitchenArticulationExecutor(
+        scene, held_object_getter=lambda: picker.held_object
+    )
     observed_run = ObservedStateRun.create_for_scene(
         scene,
         runs_root="runs",
@@ -874,7 +889,19 @@ def launch_action_viewer(
         try:
             if executor.busy or picker.busy:
                 raise RuntimeError("Wait for the current action to finish")
-            scene.open_container(container_id)
+            workspace = {
+                "home": KitchenWorkspace.HOME,
+                "cupboard1": KitchenWorkspace.LEFT_SIDE,
+                "right_side": KitchenWorkspace.RIGHT_SIDE,
+            }[executor.current_physical_location]
+            result = articulation_executor.execute("OPEN", container_id, workspace)
+            if not result.success:
+                raise RuntimeError(
+                    f"{result.failure_code}: {result.message or result.status}"
+                )
+            # Bookkeeping follows the verified physical postcondition.  The
+            # direct inspection actuator API is intentionally not called.
+            scene.record_container_opened(container_id)
             run_geometry(f"after_{container_id}", region_opened=container_id)
         except Exception as error:
             ui_error = f"Open failed: {error}"

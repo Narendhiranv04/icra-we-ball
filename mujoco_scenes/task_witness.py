@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from itertools import combinations, product
+import math
 from pathlib import Path
 from typing import Any
 
@@ -91,6 +92,11 @@ def _normalize_joint_unary_requirement(
             f"Role '{role_name}' unary_geometry {index} must be a mapping"
         )
     if "predicate" in requirement:
+        predicate = requirement.get("predicate")
+        if not isinstance(predicate, str) or not predicate.strip():
+            raise ValueError(
+                f"Role '{role_name}' unary predicate must be non-empty"
+            )
         expected = requirement.get(
             "expected", requirement.get("required_status", True)
         )
@@ -100,10 +106,11 @@ def _normalize_joint_unary_requirement(
                 "expected: true only"
             )
         return {
-            "predicate": str(requirement["predicate"]),
+            "predicate": predicate.strip(),
             "required_status": "TRUE",
         }
-    if "property" not in requirement:
+    property_name = requirement.get("property")
+    if not isinstance(property_name, str) or not property_name.strip():
         raise ValueError(
             f"Role '{role_name}' unary_geometry {index} needs predicate "
             "or property"
@@ -114,14 +121,27 @@ def _normalize_joint_unary_requirement(
         raise ValueError(
             f"Role '{role_name}' property operator must be >=, <=, or =="
         )
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise ValueError("Joint unary property value must be numeric")
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not math.isfinite(float(value))
+    ):
+        raise ValueError("Joint unary property value must be finite and numeric")
+    allowed_statuses = requirement.get(
+        "allowed_statuses", ["MEASURED", "DERIVED"]
+    )
+    if (
+        not isinstance(allowed_statuses, list)
+        or not allowed_statuses
+        or not set(allowed_statuses).issubset(PROPERTY_STATUSES - {"UNKNOWN"})
+    ):
+        raise ValueError(
+            "Joint unary allowed_statuses may contain MEASURED and/or DERIVED"
+        )
     normalized = {
-        "property": str(requirement["property"]),
+        "property": property_name.strip(),
         "unit": requirement.get("unit", "m"),
-        "allowed_statuses": requirement.get(
-            "allowed_statuses", ["MEASURED", "DERIVED"]
-        ),
+        "allowed_statuses": allowed_statuses,
     }
     normalized[{">=": "minimum", "<=": "maximum", "==": "equals"}[operator]] = (
         float(value)
@@ -140,6 +160,8 @@ def _validate_joint_task_requirements(
         raise ValueError("Joint task requirements need roles")
     assignment_orders = set()
     for role_name, role in roles.items():
+        if not isinstance(role_name, str) or not role_name.strip():
+            raise ValueError("Joint task role names must be non-empty strings")
         if not isinstance(role, dict):
             raise ValueError(f"Role '{role_name}' must be a mapping")
         role.setdefault("count", 1)
@@ -149,6 +171,27 @@ def _validate_joint_task_requirements(
             or role["count"] < 1
         ):
             raise ValueError(f"Role '{role_name}' count must be positive")
+        binding = role.get("binding_cardinality")
+        if binding is not None:
+            if not isinstance(binding, dict) or binding.get("mode") != "assignment_driven":
+                raise ValueError(
+                    f"Role '{role_name}' binding_cardinality must be assignment_driven"
+                )
+            minimum = binding.get("minimum_distinct_physical_objects")
+            maximum = binding.get("maximum_distinct_physical_objects")
+            if (
+                isinstance(minimum, bool) or not isinstance(minimum, int)
+                or minimum < 1
+                or isinstance(maximum, bool) or not isinstance(maximum, int)
+                or maximum < minimum
+            ):
+                raise ValueError(
+                    f"Role '{role_name}' has invalid assignment-driven cardinality"
+                )
+            if binding.get("preferred") not in {None, "minimize_distinct"}:
+                raise ValueError(
+                    f"Role '{role_name}' has unsupported binding preference"
+                )
         assignment_order = role.setdefault(
             "assignment_order", len(assignment_orders)
         )
@@ -188,11 +231,13 @@ def _validate_joint_task_requirements(
                 raise ValueError("detector_aliases must be a list")
             ranks.add(rank)
             preference["canonical_label"] = canonical.strip().lower()
+            if any(
+                not isinstance(alias, str) or not alias.strip()
+                for alias in aliases
+            ):
+                raise ValueError("detector_aliases must contain non-empty strings")
             preference["detector_aliases"] = sorted(
-                {
-                    canonical.strip().lower(),
-                    *(str(alias).strip().lower() for alias in aliases),
-                }
+                {canonical.strip().lower(), *(alias.strip().lower() for alias in aliases)}
             )
             overlap = aliases_seen & set(preference["detector_aliases"])
             if overlap:
@@ -201,7 +246,9 @@ def _validate_joint_task_requirements(
                 )
             aliases_seen.update(preference["detector_aliases"])
         unary = role.get("unary_geometry")
-        if not isinstance(unary, list) or not unary:
+        if not isinstance(unary, list) or (
+            not unary and not role.get("allow_empty_geometry", False)
+        ):
             raise ValueError(f"Role '{role_name}' needs unary_geometry")
         role["geometric_requirements"] = [
             _normalize_joint_unary_requirement(
@@ -223,7 +270,7 @@ def _validate_joint_task_requirements(
         subject = relation.get("subject_role")
         target = relation.get("object_role")
         expected = relation.get("expected", True)
-        if not isinstance(predicate, str) or not predicate:
+        if not isinstance(predicate, str) or not predicate.strip():
             raise ValueError(f"Relation {index} needs predicate")
         if subject not in roles or target not in roles:
             raise ValueError(f"Relation {index} references an unknown role")
@@ -231,7 +278,7 @@ def _validate_joint_task_requirements(
             raise ValueError("Joint relations currently require expected: true")
         normalized_pairwise.append(
             {
-                "relation": predicate,
+                "relation": predicate.strip(),
                 "from_role": subject,
                 "to_role": target,
                 "required_status": "TRUE",
@@ -334,6 +381,19 @@ def _validate_joint_task_requirements(
                     "same_tool_must_cover_all_targets is only valid for "
                     "sequential_reuse_allowed"
                 )
+            selection_preference = usage_policy.get(
+                "selection_preference",
+                "minimize_distinct_tools"
+                if policy_mode == "sequential_reuse_allowed"
+                else "deterministic_rank",
+            )
+            if selection_preference not in {
+                "minimize_distinct_tools", "deterministic_rank"
+            }:
+                raise ValueError(
+                    "selection_preference must be minimize_distinct_tools "
+                    "or deterministic_rank"
+                )
             relation_names = group.get("relations")
             if not isinstance(relation_names, list) or not relation_names:
                 raise ValueError(
@@ -368,6 +428,7 @@ def _validate_joint_task_requirements(
                     "same_tool_must_cover_all_targets": (
                         same_tool_must_cover_all_targets
                     ),
+                    "selection_preference": selection_preference,
                 },
                 "relations": normalized_relation_names,
             }
@@ -378,6 +439,12 @@ def _validate_joint_task_requirements(
             cross_group.get("allowed"), bool
         ):
             raise ValueError("cross_group_reuse.allowed must be boolean")
+        cross_preference = cross_group.get("selection_preference", "neutral")
+        if cross_preference not in {"neutral", None}:
+            raise ValueError(
+                "cross_group_reuse.selection_preference must be neutral"
+            )
+        cross_group["selection_preference"] = "neutral"
         config["operation_groups"] = normalized_groups
         assignment_ablation = config.get(
             "target_assignment_ablation", False
@@ -389,13 +456,31 @@ def _validate_joint_task_requirements(
     else:
         config["_task_schema"] = "JOINT_ROLE_GROUNDING"
     selection = config.setdefault("selection", {})
+    if not isinstance(selection, dict):
+        raise ValueError("selection must be a mapping")
     if selection.setdefault("policy", "ranked_valid_candidate") != (
         "ranked_valid_candidate"
     ):
         raise ValueError("Only ranked_valid_candidate selection is supported")
-    selection.setdefault("semantic_confidence_is_only_a_gate", True)
+    confidence_gate = selection.setdefault(
+        "semantic_confidence_is_only_a_gate", True
+    )
+    if not isinstance(confidence_gate, bool):
+        raise ValueError("semantic_confidence_is_only_a_gate must be boolean")
     diagnostics = config.setdefault("diagnostics", {})
-    diagnostics.setdefault("max_representative_rejections", 50)
+    if not isinstance(diagnostics, dict):
+        raise ValueError("diagnostics must be a mapping")
+    maximum_rejections = diagnostics.setdefault(
+        "max_representative_rejections", 50
+    )
+    if (
+        isinstance(maximum_rejections, bool)
+        or not isinstance(maximum_rejections, int)
+        or maximum_rejections < 0
+    ):
+        raise ValueError(
+            "diagnostics.max_representative_rejections must be non-negative"
+        )
     pairing = config.setdefault("pairing", {})
     if not isinstance(pairing, dict):
         raise ValueError("pairing must be a mapping")
@@ -424,13 +509,16 @@ def load_task_requirements(
             config = yaml.safe_load(stream)
     if not isinstance(config, dict):
         raise ValueError("Task requirements must be a YAML/JSON mapping")
+    raw_roles = config.get("roles")
+    if not isinstance(raw_roles, dict):
+        raise ValueError("Task requirements need roles as a mapping")
     is_joint = any(
         isinstance(role, dict)
         and (
             "semantic_preferences" in role
             or "unary_geometry" in role
         )
-        for role in config.get("roles", {}).values()
+        for role in raw_roles.values()
     )
     if is_joint:
         return _validate_joint_task_requirements(config)
@@ -497,9 +585,9 @@ def load_task_requirements(
                 value = requirement[key]
                 if isinstance(value, bool) or not isinstance(
                     value, (int, float)
-                ):
+                ) or not math.isfinite(float(value)):
                     raise ValueError(
-                        f"Property '{property_name}' {key} must be numeric"
+                        f"Property '{property_name}' {key} must be finite and numeric"
                     )
             allowed = requirement.setdefault(
                 "allowed_statuses", ["MEASURED", "DERIVED"]
@@ -1039,12 +1127,103 @@ def evaluate_semantic_compatibility(
 ) -> dict[str, Any]:
     """Return tri-state compatibility from cached detector evidence."""
     semantics = object_attributes.get("semantics", {})
-    validated = semantics.get("validated")
+    # A supported observation is cached under ``validated``. If no canonical
+    # label passed fusion, retain the latest UNKNOWN observation so compatible
+    # role-level alternatives can still be assessed without fabricating a
+    # canonical label or overwriting stronger cached evidence.
+    validated = semantics.get("validated") or semantics.get(
+        "latest_observation"
+    )
+    if not isinstance(validated, dict):
+        return {
+            "status": "UNKNOWN",
+            "canonical_label": None,
+            "semantic_rank": None,
+            "confidence": None,
+            "reason": "NO_VALIDATED_SEMANTIC_EVIDENCE",
+            "provenance": validated,
+        }
     if (
-        not isinstance(validated, dict)
-        or validated.get("status") != "SUPPORTED"
+        validated.get("status") != "SUPPORTED"
         or not isinstance(validated.get("canonical_label"), str)
     ):
+        # Canonical-label fusion can be uncertain even when independent views
+        # consistently support labels that are interchangeable for this role
+        # (for example one view says cup and another says mug). Aggregate only
+        # role-compatible alternatives, never unrelated/excluded labels.
+        alternatives = validated.get("alternatives", [])
+        compatible = []
+        for preference in sorted(
+            role["semantic_preferences"], key=lambda item: item["rank"]
+        ):
+            accepted = {
+                preference["canonical_label"],
+                *preference.get("detector_aliases", []),
+            }
+            for alternative in alternatives:
+                if str(alternative.get("label", "")).lower() in accepted:
+                    compatible.append((preference, alternative))
+        compatible_cameras = {
+            camera_id
+            for _preference, alternative in compatible
+            for camera_id in alternative.get("camera_ids", [])
+        }
+        compatible_score = sum(
+            float(alternative.get("score") or 0.0)
+            for _preference, alternative in compatible
+        )
+        excluded_score = max(
+            (
+                float(alternative.get("score") or 0.0)
+                for alternative in alternatives
+                if all(
+                    str(alternative.get("label", "")).lower()
+                    not in {
+                        preference["canonical_label"],
+                        *preference.get("detector_aliases", []),
+                    }
+                    for preference in role["semantic_preferences"]
+                )
+            ),
+            default=0.0,
+        )
+        excluded_multi_view = any(
+            int(alternative.get("supporting_view_count") or 0) >= 2
+            and all(
+                str(alternative.get("label", "")).lower()
+                not in {
+                    preference["canonical_label"],
+                    *preference.get("detector_aliases", []),
+                }
+                for preference in role["semantic_preferences"]
+            )
+            for alternative in alternatives
+        )
+        if (
+            len(compatible_cameras) >= 2
+            and compatible_score > excluded_score
+            and not excluded_multi_view
+        ):
+            preference, alternative = min(
+                compatible,
+                key=lambda item: (
+                    int(item[0]["rank"]),
+                    -float(item[1].get("score") or 0.0),
+                    str(item[1].get("label", "")),
+                ),
+            )
+            return {
+                "status": "TRUE",
+                "canonical_label": alternative["label"],
+                "semantic_rank": int(preference["rank"]),
+                "confidence": alternative.get("mean_confidence"),
+                "reason": "SUPPORTED_ROLE_COMPATIBLE_ALTERNATIVES",
+                "preference": deepcopy(preference),
+                "role_compatible_camera_ids": sorted(compatible_cameras),
+                "role_compatible_score": compatible_score,
+                "strongest_excluded_score": excluded_score,
+                "provenance": validated,
+            }
         return {
             "status": "UNKNOWN",
             "canonical_label": None,
@@ -1279,7 +1458,6 @@ def evaluate_joint_task_witness(
 
     def selection_key(assignment: dict[str, Any]) -> tuple:
         ranks = []
-        confidences = []
         ids = []
         for role_name in role_order:
             for object_id in assignment["selected_objects"][role_name]:
@@ -1287,12 +1465,8 @@ def evaluate_joint_task_witness(
                 semantic = evaluation["semantic"]
                 if grounding_mode != "geometry-only":
                     ranks.append(int(semantic["semantic_rank"]))
-                    confidence = _finite_number(semantic.get("confidence"))
-                    confidences.append(
-                        -confidence if confidence is not None else 0.0
-                    )
                 ids.append(object_id)
-        return (*ranks, *confidences, *ids)
+        return (*ranks, *ids)
 
     valid_assignments.sort(key=selection_key)
     selected_assignment = valid_assignments[0] if valid_assignments else None
@@ -1493,10 +1667,8 @@ def evaluate_usage_policy_task_witness(
             return (object_id,)
         semantic = candidate_index[(role_name, object_id)]["semantic"]
         rank = semantic.get("semantic_rank")
-        confidence = _finite_number(semantic.get("confidence"))
         return (
             int(rank) if rank is not None else 10**6,
-            -(confidence if confidence is not None else 0.0),
             object_id,
         )
 
@@ -2009,8 +2181,17 @@ def evaluate_usage_policy_task_witness(
             for group_id in group_ids
             for assignment in option["groups"][group_id]["assignments"]
         ]
+        preferred_group_counts = tuple(
+            option["groups"][group_id][
+                "distinct_assigned_physical_objects"
+            ]
+            for group_id in group_ids
+            if config["operation_groups"][group_id]["usage_policy"].get(
+                "selection_preference"
+            ) == "minimize_distinct_tools"
+        )
         return (
-            option["distinct_physical_tool_count"],
+            *preferred_group_counts,
             *(
                 candidate_key(
                     assignment["tool_role"],
@@ -2081,6 +2262,46 @@ def evaluate_usage_policy_task_witness(
             else 1
         )
         local_complete = bool(work["full_options"])
+        valid_edges = sorted(
+            (
+                deepcopy(edge)
+                for edge in work["edge_index"].values()
+                if edge["status"] == "TRUE"
+                and edge["target_object_id"] in work[
+                    "eligible_target_object_ids"
+                ]
+            ),
+            key=lambda edge: (
+                edge["target_object_id"], edge["utensil_object_id"]
+            ),
+        )
+        covered_targets = sorted({
+            assignment["target_object_id"]
+            for assignment in option["assignments"]
+        })
+        required_targets = option.get(
+            "target_object_ids",
+            work["eligible_target_object_ids"][:
+                work["group"]["required_target_count"]
+            ],
+        )
+        unmatched_targets = sorted(set(required_targets) - set(covered_targets))
+        minimum_distinct_tools = (
+            min(
+                candidate["distinct_assigned_physical_objects"]
+                for candidate in work["full_options"]
+            )
+            if work["full_options"] else None
+        )
+        maximum_matching_cardinality = max(
+            (
+                candidate["satisfied_target_slots"]
+                for candidate in [
+                    *work["full_options"], work["best_partial"]
+                ]
+            ),
+            default=0,
+        )
         group_status = (
             "COMPLETE"
             if local_complete
@@ -2123,6 +2344,19 @@ def evaluate_usage_policy_task_witness(
                 "unknown_target_object_ids"
             ],
             "selected_assignments": deepcopy(option["assignments"]),
+            "valid_target_tool_edges": valid_edges,
+            "covered_target_object_ids": covered_targets,
+            "uncovered_target_object_ids": unmatched_targets,
+            "complete_target_coverage_exists": local_complete,
+            "minimum_distinct_tool_count": minimum_distinct_tools,
+            "maximum_matching_cardinality": maximum_matching_cardinality,
+            "distinctness_satisfied": (
+                len(option["distinct_tool_object_ids"])
+                == len(option["assignments"])
+                if work["group"]["usage_policy"][
+                    "distinct_within_group"
+                ] else True
+            ),
             "candidate_target_evaluations": [
                 deepcopy(edge)
                 for edge in work["edge_index"].values()
@@ -2211,6 +2445,30 @@ def evaluate_usage_policy_task_witness(
         group["counts"]["required_distinct_physical_objects"]
         for group in function_group_evaluations
     ]
+    tool_role_binding_requirements = {}
+    for role_name in ("coffee_stirrer", "soup_eating_utensil"):
+        role = config["roles"].get(role_name, {})
+        declared = role.get("binding_cardinality")
+        if isinstance(declared, dict) and declared.get("mode") == "assignment_driven":
+            tool_role_binding_requirements[role_name] = deepcopy(declared)
+    for group in function_group_evaluations:
+        role_name = group.get("tool_role")
+        if role_name in tool_role_binding_requirements:
+            tool_role_binding_requirements[role_name][
+                "selected_distinct_physical_objects"
+            ] = group.get("minimum_distinct_tool_count")
+    count_based_role_requirements = {
+        role_name: config["roles"][role_name]["count"]
+        for role_name in relevant_roles
+        if not (
+            isinstance(
+                config["roles"].get(role_name, {}).get("binding_cardinality"),
+                dict,
+            )
+            and config["roles"][role_name]["binding_cardinality"].get("mode")
+            == "assignment_driven"
+        )
+    }
     if usage_policy_mode == "always-distinct":
         policy_distinct_requirement = sum(group_distinct_requirements)
     elif usage_policy_mode == "always-reusable":
@@ -2241,10 +2499,12 @@ def evaluate_usage_policy_task_witness(
         "selected_witness": selected_witness,
         "selected_candidate_edges": selected_candidate_edges,
         "selected_pairwise_relations": selected_pairwise_relations,
-        "role_requirements": {
-            role_name: config["roles"][role_name]["count"]
-            for role_name in relevant_roles
-        },
+        "count_based_role_requirements": count_based_role_requirements,
+        # Legacy alias retained for callers that still expect this key. It is
+        # deliberately restricted to count-based roles and never claims that
+        # an assignment-driven tool role has physical count one.
+        "role_requirements": count_based_role_requirements,
+        "tool_role_binding_requirements": tool_role_binding_requirements,
         "operation_assignments": operation_assignments,
         "function_group_evaluations": function_group_evaluations,
         "usage_policy_evaluations": function_group_evaluations,
@@ -2315,7 +2575,7 @@ def evaluate_usage_policy_task_witness(
             }[evidence_mode],
             "target_edge_gate": "all_required_relations_true",
             "assignment_order": (
-                "fewest_distinct_then_semantic_rank_confidence_id"
+                "group_preferences_then_semantic_rank_id_confidence_gate_only"
             ),
         },
     }

@@ -31,7 +31,7 @@ address. Docker deployments retain authenticated network-facing defaults.
 
 | Profile | Checkpoint | Load mode | Planner mode | Output budget |
 |---|---|---:|---:|---:|
-| `qwen35-9b` | `Qwen/Qwen3.5-9B` | BF16 | thinking, toggleable | 12K |
+| `qwen35-9b` | `Qwen/Qwen3.5-9B` | BF16 | thinking, toggleable | 24K |
 | `glm46v-flash` | `zai-org/GLM-4.6V-Flash` | BF16 | thinking, toggleable | 12K |
 | `qwen3-vl-8b-thinking` | `Qwen/Qwen3-VL-8B-Thinking` | BF16 | fixed thinking | 12K |
 | `internvl35-14b` | `OpenGVLab/InternVL3_5-14B-HF` | online FP8 | prompt-driven thinking | 12K |
@@ -72,15 +72,23 @@ The thinking sampling defaults follow the checkpoint authors' recipes:
   generation configuration. The older general Kimi-VL Thinking guidance says
   0.8, but the selected 2506 checkpoint's own configuration is more specific.
 
-The 12K planner output caps remain deployment bounds for the 32 GB GPU rather
-than creator-recommended maximum generation lengths. They can be revisited
-separately without changing the sampling recipes.
+Qwen3.5 uses a 24K planner output cap because its thinking mode repeatedly
+reached the former 12K limit before emitting final JSON. The other 12K caps and
+Qwen's 24K cap are deployment bounds for the 32 GB GPU rather than
+creator-recommended maximum generation lengths.
 
 `muse-glimmer` is a disabled registry placeholder until Meta publishes a
 verified local checkpoint and serving recipe. Muse Spark is available through
 Meta's hosted API and cannot be run locally in this workspace.
 
 ## Functional decomposition contract
+
+The exact system prompt is the editable text file
+[`prompts/functional_decomposition.txt`](prompts/functional_decomposition.txt).
+`functional_planner.py` loads it when the functional API starts, so restart
+`planner_api.py` after editing the prompt. The user message is assembled at
+request time from the goal, camera labels/images, function catalog, ranking
+limits, forbidden generic types, and strict output schema.
 
 `functional_catalog.json` mirrors the repository's simple function registry:
 `can_store`, `can_stir`, `can_hold_liquid`, `can_clean`, and `can_spread`.
@@ -242,7 +250,7 @@ export PLANNER_MODEL_BASE_URL=http://127.0.0.1:8000/v1
 export PLANNER_HOST=127.0.0.1
 export PLANNER_PORT=8080
 export PLANNER_ENABLE_THINKING=true
-export PLANNER_MAX_TOKENS=8192
+export PLANNER_MAX_TOKENS=24576
 unset INFERENCE_API_KEY PLANNER_API_KEY
 python3 planner_api.py
 ```

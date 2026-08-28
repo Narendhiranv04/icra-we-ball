@@ -1,0 +1,901 @@
+"""Production runner for the integrated living-room region Phase-1 family."""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import hashlib
+import json
+import platform
+import shutil
+from pathlib import Path
+
+import mujoco
+import numpy as np
+import yaml
+from PIL import Image
+
+from mujoco_scenes.living_room_region_function import (
+    DEFAULT_SEMANTIC_VOCABULARY,
+    DEFAULT_TASK_CONFIG,
+    IntegratedLivingRoomRegionRun,
+    variant_code,
+    write_resolved_integrated_rig,
+)
+from mujoco_scenes.living_room_region_oracle import evaluate_privileged_oracle
+from mujoco_scenes.living_room_region_scene import (
+    L2_INTEGRATED_GOAL,
+    L2_INTEGRATED_SCENES,
+    L2LivingRoomRegionScene,
+)
+from mujoco_scenes.living_room_robot_spawn_validation import (
+    validate_google_robot_spawn,
+)
+from mujoco_scenes.living_room_variants import load_living_room_variants
+from mujoco_scenes.region_ablation import create_region_semantic_detector
+from mujoco_scenes.region_ablation2 import DEFAULT_EVALUATION_CONFIG, _atomic_json
+from mujoco_scenes.semantic_grounding import load_semantic_config
+
+
+ROOT = Path(__file__).resolve().parent
+
+
+def _controlled_failure_diagnostic(run, code: str) -> dict:
+    """Persist direct missing-table evidence for controlled infeasibility."""
+    spec = load_living_room_variants()[code]
+    expected_absent = list(spec.get("absent_regions", []))
+    observed_count = len(run.region_registry)
+    expected_count = 3 - len(expected_absent)
+    matching = [{
+        "direct_cause": spec.get("rejection_reason"),
+        "expected_absent_regions": expected_absent,
+        "expected_observed_region_count": expected_count,
+        "actual_observed_region_count": observed_count,
+    }] if expected_absent and observed_count == expected_count else []
+    diagnostic = {
+        "schema_version": 1,
+        "variant": code,
+        "production_status": run.production_result["status"],
+        "direct_signature_applicable": bool(expected_absent),
+        "direct_signature_match_count": len(matching),
+        "direct_signature_rows": matching,
+        "target_agnostic_status": run.diagnostics[
+            "target_agnostic_count"
+        ]["status"],
+        "complete_global_assignment_exists": (
+            run.production_result["status"] == "COMPLETE"
+        ),
+    }
+    _atomic_json(run.run_dir / "controlled_failure_diagnostics.json", diagnostic)
+    return diagnostic
+
+
+def _json_sha256(payload: dict) -> str:
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _selected_row(run, assignment: dict) -> dict | None:
+    rows = (
+        run.personal_rows
+        if assignment["function_id"] == "PERSONAL_CUP_SAUCER_REGION"
+        else run.shared_rows
+    )
+    return next(
+        (
+            row
+            for row in rows
+            if row["slot_id"] == assignment["slot_id"]
+            and row["region_id"] == assignment["region_id"]
+        ),
+        None,
+    )
+
+
+def _validate_selected_allocation(run) -> dict:
+    if run.production_result["status"] != "COMPLETE":
+        return {
+            "applicable": False,
+            "personal_target_coverage": None,
+            "personal_region_distinctness": None,
+            "shared_remote_assignment": None,
+            "cross_function_nonsharing": None,
+            "selected_compatibility_edges_valid": None,
+            "functional_region_allocation_valid": None,
+        }
+    assignments = run.production_result.get("assignments", [])
+    personal = [
+        item
+        for item in assignments
+        if item["function_id"] == "PERSONAL_CUP_SAUCER_REGION"
+    ]
+    shared = [
+        item
+        for item in assignments
+        if item["function_id"] == "SHARED_REMOTE_REGION"
+    ]
+    expected_targets = set(run.seating_registry)
+    personal_targets = {
+        item.get("seating_target_id") for item in personal
+    }
+    personal_regions = [item["region_id"] for item in personal]
+    shared_regions = [item["region_id"] for item in shared]
+    selected_rows = [_selected_row(run, item) for item in assignments]
+    shared_roles = {
+        run.payload_registry[payload_id]["semantic_payload_role"]
+        for item in shared
+        for payload_id in item.get("payload_ids", [])
+    }
+    checks = {
+        "applicable": True,
+        "personal_target_coverage": (
+            len(personal) == len(expected_targets) == 2
+            and personal_targets == expected_targets
+        ),
+        "personal_region_distinctness": (
+            len(personal_regions) == 2
+            and len(set(personal_regions)) == 2
+        ),
+        "shared_remote_assignment": (
+            len(shared) == 1
+            and len(shared[0].get("payload_ids", [])) == 1
+            and shared_roles == {"tv_remote"}
+        ),
+        "cross_function_nonsharing": (
+            len(shared_regions) == 1
+            and shared_regions[0] not in set(personal_regions)
+        ),
+        "selected_compatibility_edges_valid": (
+            len(selected_rows) == len(assignments)
+            and all(
+                row is not None and row["compatibility_status"] == "TRUE"
+                for row in selected_rows
+            )
+        ),
+    }
+    checks["functional_region_allocation_valid"] = all(
+        checks[key]
+        for key in (
+            "personal_target_coverage",
+            "personal_region_distinctness",
+            "shared_remote_assignment",
+            "cross_function_nonsharing",
+            "selected_compatibility_edges_valid",
+        )
+    )
+    return checks
+
+
+def _mean_applicable(rows: list[dict], key: str) -> float | None:
+    values = [row[key] for row in rows if row.get(key) is not None]
+    return float(np.mean(values)) if values else None
+
+
+def _copy_compact_variant(source: Path, destination: Path) -> None:
+    destination.mkdir(parents=True, exist_ok=True)
+    for name in (
+        "run_config.json",
+        "variant_config.json",
+        "task_requirements.json",
+        "oracle_feasibility.json",
+        "predicted_feasibility.json",
+        "comparison.json",
+        "functional_region_witness.json",
+        "region_assignments.json",
+        "payload_registry.json",
+        "region_registry.json",
+        "compatibility_matrix.json",
+        "diagnostic_modes.json",
+        "expectation_validation.json",
+        "evaluation_order.json",
+        "controlled_failure_diagnostics.json",
+    ):
+        if (source / name).exists():
+            shutil.copy2(source / name, destination / name)
+    evidence = destination / "evidence"
+    evidence.mkdir(exist_ok=True)
+    for source_name, target_name in (
+        ("initial_scene_overview.png", "initial_scene_overview.jpg"),
+        ("semantic_overview.png", "semantic_overview.jpg"),
+        ("region_masks_overview.png", "region_masks_overview.jpg"),
+    ):
+        image_path = source / "observation" / source_name
+        if image_path.exists():
+            with Image.open(image_path) as image:
+                compact = image.convert("RGB")
+                compact.thumbnail((1100, 1100), Image.Resampling.LANCZOS)
+                compact.save(
+                    evidence / target_name, quality=82, optimize=True
+                )
+
+
+def _write_report_docs(report_dir: Path, rows: list[dict], metrics: dict) -> None:
+    def metric(name: str) -> str:
+        value = metrics.get(name)
+        return "N/A" if value is None else f"{float(value):.3f}"
+
+    table = [
+        "| Variant | Oracle | Production | Semantic-only | Geometry-only |",
+        "|---|---:|---:|---:|---:|",
+    ]
+    table.extend(
+        f"| {row['variant']} | {row['oracle_status']} | {row['production_status']} | "
+        f"{row['semantic_only_status']} | {row['geometry_only_status']} |"
+        for row in rows
+    )
+    readme = f"""# Living-room Region-Function Phase 1
+
+Fixed goal: **{L2_INTEGRATED_GOAL}**
+
+This frozen benchmark performs one INITIAL five-view RGB-D observation. It
+grounds only spatial destination-region functions from RGB semantics, measured
+support geometry, two-object set packing, and seat-relative context. Objects
+are payload operands; there is no object-function grounding. The production
+solver exhaustively allocates the two fixed individual tables and the separate
+fixed shared table. It emits COMPLETE or controlled-set INFEASIBLE and
+stops before planning or execution.
+
+The scene uses documented CC0 Poly Haven furniture visuals at real-world scale
+with independent analytic collision and RGB-D measurement proxies. Five payload
+objects occupy a separate staging console, preserving a sparse destination
+layout and reliable one-to-one instance association. Visual mesh dimensions
+are never consumed by production inference.
+
+Candidate support regions are supplied by neutral simulator-derived spatial
+proposal volumes. These proposals provide only region localization/evidence
+gating. Functional validity, semantic role, support dimensions, geometry, and
+target-relative suitability are inferred from rendered RGB/RGB-D evidence.
+Open-world support-region proposal/discovery is outside the scope of this
+benchmark.
+
+{chr(10).join(table)}
+
+Overall accuracy: {metric('overall_feasibility_accuracy')}. Feasible
+recall: {metric('feasible_recall')}. Infeasible recall:
+{metric('infeasible_recall')}. Selected allocation validity:
+{metric('functional_region_allocation_validity')}. F0 production complete-
+solution count: {metrics['production_complete_solution_count_F0']}.
+
+Each variant directory contains the compact witness, compatibility matrix,
+oracle comparison, and representative RGB/semantic/mask overviews. Raw RGB-D
+and point clouds remain in the corresponding untracked `runs/` directory.
+
+The oracle is marked `PRIVILEGED_ORACLE_EVALUATION_ONLY` and is produced only
+after the independent production result. It is never imported by production
+grounding. Every variant includes `evaluation_order.json`; the benchmark root
+contains artifact-derived metrics and `scientific_guard_report.json`.
+
+Current limitations are manually specified functional requirements,
+controlled simulator layouts, neutral privileged spatial proposals rather
+than free-space proposal discovery, no robot execution, no task planning, no
+FM requirement generation, and no photorealism claim. The included Google
+Robot artifact validates only its initial compiled pose and clearance.
+"""
+    (report_dir / "README.md").write_text(readme, encoding="utf-8")
+    command = """#!/bin/sh
+set -eu
+MUJOCO_GL=egl PYOPENGL_PLATFORM=egl YOLO_CONFIG_DIR=/tmp \\
+MUJOCO_SEMANTIC_PROCESS_ISOLATION=1 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 \\
+OPENBLAS_NUM_THREADS=2 MALLOC_ARENA_MAX=2 \\
+.venv/bin/python -m mujoco_scenes.run_living_room_region_benchmark \\
+  --runs-root runs/living_room_region_phase1 \\
+  --run-id living_room_region_phase1_reproduction \\
+  --report-dir mujoco_scenes/benchmark_reports/living_room_region_feasibility_phase1 \\
+  --semantic-model semantic_model_cache/yolov8m-worldv2.pt \\
+  --width 1280 --height 960
+"""
+    reproduction = report_dir / "reproduction_command.sh"
+    reproduction.write_text(command, encoding="utf-8")
+    reproduction.chmod(0o755)
+
+
+def _scientific_guards(
+    summary_rows: list[dict], task: dict, robot_validation: dict
+) -> dict:
+    production_source = (
+        ROOT / "living_room_region_function.py"
+    ).read_text(encoding="utf-8")
+    guard_specs = {
+        "fixed_goal_identical": (
+            all(
+                row["natural_language_goal"] == L2_INTEGRATED_GOAL
+                for row in summary_rows
+            ),
+            "runtime_artifacts",
+            "all variant run_config natural_language_goal values",
+        ),
+        "functional_candidate_kind_region_only": (
+            task.get("requirement_entity_kind") == "REGION",
+            "task_config",
+            "requirement_entity_kind",
+        ),
+        "no_object_function_grounding": (
+            all(
+                group.get("candidate_entity_kind") == "REGION"
+                for group in task["function_groups"].values()
+            )
+            and "object_functions" not in task,
+            "task_config",
+            "all function candidate_entity_kind values",
+        ),
+        "no_fm_or_vlm_call": (
+            all(not row["uses_foundation_model"] for row in summary_rows),
+            "runtime_artifacts",
+            "run_config.uses_foundation_model",
+        ),
+        "no_symbolic_planning_or_action_sequence": (
+            all(
+                not row["uses_symbolic_planning"]
+                and not row["has_action_sequence"]
+                for row in summary_rows
+            ),
+            "runtime_artifacts",
+            "run_config plus functional witness",
+        ),
+        "no_robot_navigation_or_tamp": (
+            all(
+                not row["uses_robot"]
+                and not row["uses_navigation"]
+                and not row["uses_tamp"]
+                for row in summary_rows
+            ),
+            "runtime_artifacts",
+            "run_config execution flags",
+        ),
+        "exactly_one_initial_perception_stage": (
+            all(row["perception_stage_count"] == 1 for row in summary_rows),
+            "runtime_artifacts",
+            "perception_stage_count and INITIAL metadata",
+        ),
+        "all_five_payload_records_created": (
+            all(row["payload_count"] == 5 for row in summary_rows),
+            "runtime_artifacts",
+            "payload registry count",
+        ),
+        "all_two_seat_records_created": (
+            all(row["seat_count"] == 2 for row in summary_rows),
+            "runtime_artifacts",
+            "seating target registry count",
+        ),
+        "region_measurement_count_matches_present_tables": (
+            all(
+                row["region_count"]
+                == 3 - len(
+                    load_living_room_variants()[row["variant"]].get(
+                        "absent_regions", []
+                    )
+                )
+                for row in summary_rows
+            ),
+            "runtime_artifacts",
+            "region registry count",
+        ),
+        "all_payloads_have_required_measurement_camera_evidence": (
+            all(row["payload_camera_evidence_sufficient"] for row in summary_rows),
+            "measurement_provenance",
+            "payload provenance contributing_camera_ids versus configured minimum",
+        ),
+        "all_regions_have_required_measurement_camera_evidence": (
+            all(row["region_camera_evidence_sufficient"] for row in summary_rows),
+            "measurement_provenance",
+            "region provenance contributing_camera_ids versus configured minimum",
+        ),
+        "all_seats_have_required_measurement_camera_evidence": (
+            all(row["seat_camera_evidence_sufficient"] for row in summary_rows),
+            "measurement_provenance",
+            "seat provenance contributing_camera_ids versus configured minimum",
+        ),
+        "generic_region_ids_in_production": (
+            all(row["generic_region_ids"] for row in summary_rows),
+            "runtime_artifacts",
+            "region registry identifiers",
+        ),
+        "region_dimensions_measured_from_rgbd": (
+            all(row["rgbd_region_provenance"] for row in summary_rows),
+            "measurement_provenance",
+            "selected region evidence paths and purposes",
+        ),
+        "semantic_decisions_from_rgb_detector": (
+            all(row["detector_backend"] != "none" for row in summary_rows),
+            "runtime_artifacts",
+            "detector backend and saved RGB associations",
+        ),
+        "oracle_separated_from_production": (
+            all(row["production_before_oracle"] for row in summary_rows)
+            and "living_room_region_oracle" not in production_source,
+            "execution_order_and_code_structure",
+            "evaluation_order.json plus production module import scan",
+        ),
+        "unknown_never_treated_as_true": (
+            all(row["selected_edges_exclude_unknown"] for row in summary_rows),
+            "compatibility_matrix",
+            "selected compatibility statuses",
+        ),
+        "usage_and_nonsharing_constraints": (
+            task["function_groups"]["personal_cup_saucer"]["usage_policy"]
+            == "DEDICATED_REGION_PER_TARGET"
+            and task["function_groups"]["shared_remote"]["usage_policy"]
+            == "SHARED_REGION_REQUIRED"
+            and task["allow_cross_function_region_sharing"] is False,
+            "task_config",
+            "function usage policies",
+        ),
+        "fixed_three_region_contract": (
+            all(len(row["candidate_ranks"]) == 3 for row in summary_rows if row["variant"].startswith("F")),
+            "resolved_rigs",
+            "all feasible variants expose exactly two personal tables and one shared table",
+        ),
+        "same_task_requirements_all_variants": (
+            len({row["task_config_sha256"] for row in summary_rows}) == 1,
+            "runtime_artifacts",
+            "task_requirements hashes",
+        ),
+        "candidate_count_tracks_table_absence": (
+            all(
+                len(row["candidate_ranks"]) == 3 - len(load_living_room_variants()[row["variant"]].get("absent_regions", []))
+                for row in summary_rows
+            ),
+            "resolved_rigs",
+            "candidate count equals present table count",
+        ),
+        "visual_mesh_dimensions_not_production_evidence": (
+            all(
+                row["production_paths_are_measurement_clouds"]
+                for row in summary_rows
+            ),
+            "measurement_provenance",
+            "compatibility evidence paths",
+        ),
+        "neutral_region_proposals_encode_no_function_or_validity": (
+            all(row["neutral_region_proposal_provenance"] for row in summary_rows),
+            "resolved_rigs_and_runtime_artifacts",
+            "explicit neutral spatial-gate provenance fields",
+        ),
+        "f0_has_exactly_one_production_solution": (
+            next(row for row in summary_rows if row["variant"] == "F0_ALL_OBJECTS_IN_STAGING")[
+                "production_complete_solution_count"
+            ] == 1,
+            "production_compatibility_matrix",
+            "F0 joint exhaustive complete solution count",
+        ),
+        "i3_all_tables_missing_is_observed": (
+            next(
+                row for row in summary_rows
+                if row["variant"] == "I3_NO_TABLES"
+            )["direct_failure_signature_match_count"] >= 1,
+            "controlled_failure_diagnostics",
+            "all three required placement tables absent",
+        ),
+        "all_controlled_infeasible_causes_directly_supported": (
+            all(
+                row["direct_failure_signature_match_count"] >= 1
+                for row in summary_rows
+                if row["variant"].startswith("I")
+            ),
+            "controlled_failure_diagnostics",
+            "I0-I3 direct missing-table signatures",
+        ),
+        "google_robot_spawn_validation_passes": (
+            robot_validation["all_passed"],
+            "compiled_google_robot_scene",
+            "robot_spawn_validation.json",
+        ),
+    }
+    return {
+        "schema_version": 1,
+        "checks": [
+            {
+                "guard": name,
+                "status": "PASS" if passed else "FAIL",
+                "evidence_type": evidence_type,
+                "evidence": evidence,
+            }
+            for name, (passed, evidence_type, evidence) in guard_specs.items()
+        ],
+        "all_passed": all(item[0] for item in guard_specs.values()),
+    }
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--runs-root", type=Path, default=Path("runs/living_room_region_phase1"))
+    parser.add_argument("--run-id", required=True)
+    parser.add_argument("--report-dir", type=Path)
+    parser.add_argument("--semantic-model", default="semantic_model_cache/yolov8m-worldv2.pt")
+    parser.add_argument(
+        "--semantic-vocabulary",
+        type=Path,
+        default=DEFAULT_SEMANTIC_VOCABULARY,
+    )
+    parser.add_argument("--task-config", type=Path, default=DEFAULT_TASK_CONFIG)
+    parser.add_argument("--semantic-confidence-threshold", type=float, default=0.03)
+    parser.add_argument("--semantic-min-supporting-views", type=int, default=1)
+    parser.add_argument("--semantic-minimum-mean-confidence", type=float, default=0.03)
+    parser.add_argument("--semantic-minimum-winning-label-margin", type=float, default=0.08)
+    parser.add_argument("--width", type=int, default=1280)
+    parser.add_argument("--height", type=int, default=960)
+    return parser
+
+
+def main() -> None:
+    args = build_parser().parse_args()
+    benchmark_dir = (args.runs_root / args.run_id).resolve()
+    if benchmark_dir.exists():
+        raise RuntimeError(f"Benchmark directory already exists: {benchmark_dir}")
+    benchmark_dir.mkdir(parents=True)
+    robot_validation = validate_google_robot_spawn(
+        L2_INTEGRATED_SCENES[0]
+    )
+    _atomic_json(
+        benchmark_dir / "robot_spawn_validation.json", robot_validation
+    )
+    detector, semantic_config = create_region_semantic_detector(
+        checkpoint=args.semantic_model,
+        confidence_threshold=args.semantic_confidence_threshold,
+        vocabulary_path=args.semantic_vocabulary,
+    )
+    task = yaml_safe_load(args.task_config)
+    task["semantic_requirements"]["minimum_supporting_views"] = (
+        args.semantic_min_supporting_views
+    )
+    task["semantic_requirements"]["minimum_mean_confidence"] = (
+        args.semantic_minimum_mean_confidence
+    )
+    task["semantic_requirements"]["minimum_winning_score_margin"] = (
+        args.semantic_minimum_winning_label_margin
+    )
+    resolved_task_path = benchmark_dir / "resolved_task_config.yaml"
+    resolved_task_path.write_text(
+        yaml.safe_dump(task, sort_keys=False), encoding="utf-8"
+    )
+    rows = []
+    for scene_name in L2_INTEGRATED_SCENES:
+        code = variant_code(scene_name)
+        print(f"[L2 REGION BENCHMARK] {code}", flush=True)
+        scene = L2LivingRoomRegionScene(scene_name, robot="none")
+        variant_dir = benchmark_dir / code
+        rig_path = benchmark_dir / "resolved_rigs" / f"{code}.yaml"
+        write_resolved_integrated_rig(scene_name, rig_path)
+        run = IntegratedLivingRoomRegionRun(
+            variant_dir,
+            scene_name=scene_name,
+            task_config=resolved_task_path,
+            evaluation_config=DEFAULT_EVALUATION_CONFIG,
+            rig_config=rig_path,
+            semantic_detector=detector,
+            semantic_config=semantic_config,
+            width=args.width,
+            height=args.height,
+        ).run(scene)
+        failure_diagnostic = _controlled_failure_diagnostic(run, code)
+        production_digest = _json_sha256(run.production_result)
+        # The privileged evaluator runs only after production has finished and
+        # persisted its independent decision.
+        oracle = evaluate_privileged_oracle(scene, task)
+        _atomic_json(
+            variant_dir / "evaluation_order.json",
+            {
+                "schema_version": 1,
+                "steps": [
+                    {
+                        "sequence": 1,
+                        "phase": "PRODUCTION_RGBD_GROUNDING",
+                        "artifact": "predicted_feasibility.json",
+                        "production_result_sha256": production_digest,
+                    },
+                    {
+                        "sequence": 2,
+                        "phase": "PRIVILEGED_ORACLE_EVALUATION_ONLY",
+                        "artifact": "oracle_feasibility.json",
+                    },
+                ],
+                "oracle_input_to_production": False,
+            },
+        )
+        _atomic_json(variant_dir / "oracle_feasibility.json", oracle)
+        _atomic_json(
+            variant_dir / "variant_config.json",
+            {
+                "variant": code,
+                "scene_name": scene_name,
+                "natural_language_goal": scene.goal,
+                "physical_variant_only": True,
+                "candidate_ranks_modified_for_variant": False,
+                "expected_oracle_status": oracle["status"],
+            },
+        )
+        allocation_checks = _validate_selected_allocation(run)
+        comparison = {
+            "variant": code,
+            "oracle_status": oracle["status"],
+            "production_status": run.production_result["status"],
+            "classification_correct": oracle["status"] == run.production_result["status"],
+            "production_completed_before_oracle": True,
+            "production_result_sha256_before_oracle": production_digest,
+            "selected_allocation_validation": allocation_checks,
+            "selected_allocation_globally_valid": allocation_checks[
+                "functional_region_allocation_valid"
+            ],
+        }
+        _atomic_json(variant_dir / "comparison.json", comparison)
+        run.validate_expected()
+        run_config = json.loads(
+            (variant_dir / "run_config.json").read_text(encoding="utf-8")
+        )
+        task_artifact = json.loads(
+            (variant_dir / "task_requirements.json").read_text(encoding="utf-8")
+        )
+        rig_artifact = yaml_safe_load(rig_path)
+        minimum_entity_camera_count = int(
+            rig_artifact["view_validation"]["minimum_entity_camera_count"]
+        )
+        selected_rows = [
+            _selected_row(run, assignment)
+            for assignment in run.production_result.get("assignments", [])
+        ]
+        provenance_paths = [
+            path
+            for row_record in selected_rows
+            if row_record is not None
+            for path in (
+                [row_record["region_evidence_path"]]
+                + row_record.get("payload_evidence_paths", [])
+            )
+        ]
+        row = {
+            "variant": code,
+            "scene_name": scene_name,
+            "natural_language_goal": scene.goal,
+            "oracle_status": oracle["status"],
+            "production_status": run.production_result["status"],
+            "correct": comparison["classification_correct"],
+            "payload_count": len(run.payload_registry),
+            "seat_count": len(run.seating_registry),
+            "region_count": len(run.region_registry),
+            "perception_stage_count": 1,
+            "generic_region_ids": all(
+                key.startswith("region_") for key in run.region_registry
+            ),
+            "detector_backend": getattr(detector, "name", "unknown"),
+            "uses_foundation_model": run_config["uses_foundation_model"],
+            "uses_symbolic_planning": run_config["uses_symbolic_planning"],
+            "uses_robot": run_config["uses_robot"],
+            "uses_navigation": False,
+            "uses_tamp": run_config["uses_tamp"],
+            "has_action_sequence": bool(
+                json.loads(
+                    (variant_dir / "functional_region_witness.json").read_text(
+                        encoding="utf-8"
+                    )
+                ).get("action_sequence")
+            ),
+            "semantic_only_status": run.diagnostics["semantic_only"]["status"],
+            "geometry_only_status": run.diagnostics["geometry_only"]["status"],
+            "joint_status": run.production_result["status"],
+            "target_agnostic_status": run.diagnostics[
+                "target_agnostic_count"
+            ]["status"],
+            "greedy_status": run.diagnostics[
+                "greedy_target_specific"
+            ]["status"],
+            "oracle_solution_count": oracle["complete_solution_count"],
+            "production_complete_solution_count": run.production_result[
+                "complete_solution_count"
+            ],
+            "candidate_ranks": [
+                value["candidate_rank"]
+                for value in yaml_safe_load(rig_path)[
+                    "region_selectors"
+                ].values()
+            ],
+            "task_config_sha256": _json_sha256(task_artifact),
+            "production_before_oracle": True,
+            "selected_edges_exclude_unknown": all(
+                item is not None and item["compatibility_status"] == "TRUE"
+                for item in selected_rows
+            ),
+            "rgbd_region_provenance": all(
+                record["provenance"]["measurement_purpose"]
+                == "REGION_MEASUREMENT_EVIDENCE"
+                and record["provenance"]["measurement_cloud_path"].startswith(
+                    "observation/regions/"
+                )
+                for record in run.region_registry.values()
+            ),
+            "production_paths_are_measurement_clouds": all(
+                path.startswith(("observation/regions/", "observation/payloads/"))
+                and path.endswith("/fused.ply")
+                for path in provenance_paths
+            ),
+            "minimum_required_entity_camera_count": minimum_entity_camera_count,
+            "payload_min_contributing_camera_count": min(
+                len(record["provenance"]["contributing_camera_ids"])
+                for record in run.payload_registry.values()
+            ),
+            "region_min_contributing_camera_count": min(
+                (len(record["provenance"]["contributing_camera_ids"])
+                for record in run.region_registry.values()),
+                default=0,
+            ),
+            "seat_min_contributing_camera_count": min(
+                len(record["provenance"]["contributing_camera_ids"])
+                for record in run.seating_registry.values()
+            ),
+            "payload_camera_evidence_sufficient": all(
+                len(record["provenance"]["contributing_camera_ids"])
+                >= minimum_entity_camera_count
+                for record in run.payload_registry.values()
+            ),
+            "region_camera_evidence_sufficient": all(
+                len(record["provenance"]["contributing_camera_ids"])
+                >= minimum_entity_camera_count
+                for record in run.region_registry.values()
+            ),
+            "seat_camera_evidence_sufficient": all(
+                len(record["provenance"]["contributing_camera_ids"])
+                >= minimum_entity_camera_count
+                for record in run.seating_registry.values()
+            ),
+            "neutral_region_proposal_provenance": (
+                run_config.get("region_proposal_provenance")
+                == rig_artifact.get("region_proposal_provenance")
+                == {
+                    "region_proposal_source": (
+                        "SIMULATOR_DERIVED_NEUTRAL_SPATIAL_GATE"
+                    ),
+                    "region_proposal_encodes_function": False,
+                    "region_proposal_encodes_semantic_class": False,
+                    "region_proposal_encodes_expected_validity": False,
+                    "region_dimensions_for_functional_reasoning": (
+                        "OBSERVED_RGBD_POINT_CLOUD"
+                    ),
+                }
+                and all(
+                    record["provenance"].get(
+                        "region_proposal_encodes_function"
+                    ) is False
+                    and record["provenance"].get(
+                        "region_proposal_encodes_semantic_class"
+                    ) is False
+                    and record["provenance"].get(
+                        "region_proposal_encodes_expected_validity"
+                    ) is False
+                    and record["provenance"].get(
+                        "region_dimensions_for_functional_reasoning"
+                    ) == "OBSERVED_RGBD_POINT_CLOUD"
+                    for record in run.region_registry.values()
+                )
+            ),
+            "direct_failure_signature_match_count": failure_diagnostic[
+                "direct_signature_match_count"
+            ],
+            **allocation_checks,
+        }
+        rows.append(row)
+    feasible = [row for row in rows if row["oracle_status"] == "COMPLETE"]
+    infeasible = [row for row in rows if row["oracle_status"] == "INFEASIBLE"]
+    produced_feasible = [
+        row for row in rows if row["production_status"] == "COMPLETE"
+    ]
+    metrics = {
+        "overall_feasibility_accuracy": float(
+            np.mean([row["correct"] for row in rows])
+        ),
+        "feasible_recall": float(
+            np.mean(
+                [row["production_status"] == "COMPLETE" for row in feasible]
+            )
+        ),
+        "infeasible_recall": float(
+            np.mean(
+                [
+                    row["production_status"] == "INFEASIBLE"
+                    for row in infeasible
+                ]
+            )
+        ),
+        "false_feasible_count": sum(
+            row["oracle_status"] == "INFEASIBLE"
+            and row["production_status"] == "COMPLETE"
+            for row in rows
+        ),
+        "false_infeasible_count": sum(
+            row["oracle_status"] == "COMPLETE"
+            and row["production_status"] == "INFEASIBLE"
+            for row in rows
+        ),
+        "functional_region_allocation_validity": _mean_applicable(
+            produced_feasible, "functional_region_allocation_valid"
+        ),
+        "personal_target_coverage": _mean_applicable(
+            produced_feasible, "personal_target_coverage"
+        ),
+        "personal_region_distinctness": _mean_applicable(
+            produced_feasible, "personal_region_distinctness"
+        ),
+        "shared_remote_assignment": _mean_applicable(
+            produced_feasible, "shared_remote_assignment"
+        ),
+        "cross_function_nonsharing": _mean_applicable(
+            produced_feasible, "cross_function_nonsharing"
+        ),
+        "selected_compatibility_edge_validity": _mean_applicable(
+            produced_feasible, "selected_compatibility_edges_valid"
+        ),
+        "production_complete_solution_count_F0": next(
+            row for row in rows if row["variant"] == "F0_ALL_OBJECTS_IN_STAGING"
+        )["production_complete_solution_count"],
+        "feasible_placement_variant_consistency": float(
+            all(
+                row["production_status"] == "COMPLETE"
+                for row in rows if row["variant"].startswith("F")
+            )
+        ),
+        "infeasible_table_absence_consistency": float(
+            all(
+                row["production_status"] == "INFEASIBLE"
+                for row in rows if row["variant"].startswith("I")
+            )
+        ),
+    }
+    summary = {"schema_version": 1, "rows": rows, "metrics": metrics}
+    guards = _scientific_guards(rows, task, robot_validation)
+    _atomic_json(benchmark_dir / "benchmark_summary.json", summary)
+    _atomic_json(benchmark_dir / "variant_manifest.json", {"variants": rows})
+    _atomic_json(benchmark_dir / "scientific_guard_report.json", guards)
+    _atomic_json(
+        benchmark_dir / "environment.json",
+        {
+            "python": platform.python_version(),
+            "mujoco": mujoco.__version__,
+            "numpy": np.__version__,
+            "detector": getattr(detector, "name", None),
+            "checkpoint": getattr(detector, "checkpoint", None),
+            "detector_version": getattr(detector, "version", None),
+            "device": getattr(detector, "device", None),
+            "detector_inference_size": getattr(
+                detector, "inference_size", None
+            ),
+            "detector_process_isolation": getattr(
+                detector, "process_isolation", None
+            ),
+            "resolution": [args.width, args.height],
+        },
+    )
+    with (benchmark_dir / "benchmark_summary.csv").open("w", newline="", encoding="utf-8") as target:
+        writer = csv.DictWriter(
+            target, fieldnames=list(rows[0]), lineterminator="\n"
+        )
+        writer.writeheader()
+        writer.writerows(rows)
+    report_dir = args.report_dir
+    if report_dir:
+        report_dir = report_dir.resolve()
+        report_dir.mkdir(parents=True, exist_ok=True)
+        for name in (
+            "benchmark_summary.json", "benchmark_summary.csv", "environment.json",
+            "variant_manifest.json", "scientific_guard_report.json",
+            "robot_spawn_validation.json",
+        ):
+            shutil.copy2(benchmark_dir / name, report_dir / name)
+        for row in rows:
+            _copy_compact_variant(
+                benchmark_dir / row["variant"],
+                report_dir / "variants" / row["variant"],
+            )
+        _write_report_docs(report_dir, rows, metrics)
+    print(json.dumps(summary["metrics"], indent=2))
+    print(f"[L2 REGION BENCHMARK] output: {benchmark_dir}")
+    if not all(row["correct"] for row in rows) or not guards["all_passed"]:
+        raise SystemExit(2)
+
+
+def yaml_safe_load(path: Path) -> dict:
+    import yaml
+
+    with path.open(encoding="utf-8") as source:
+        return yaml.safe_load(source)
+
+
+if __name__ == "__main__":
+    main()

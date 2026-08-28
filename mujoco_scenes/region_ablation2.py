@@ -129,9 +129,16 @@ def load_ablation2_task(path: str | Path) -> dict[str, Any]:
     path = Path(path)
     with path.open(encoding="utf-8") as source:
         config = yaml.safe_load(source)
+    if not isinstance(config, dict):
+        raise ValueError("Ablation-2 task must be a mapping")
     if "extends" in config:
-        base = load_ablation2_task(path.parent / config.pop("extends"))
+        extends = config.pop("extends")
+        if not isinstance(extends, str) or not extends.strip():
+            raise ValueError("Ablation-2 extends must be a non-empty path")
+        base = load_ablation2_task(path.parent / extends)
         config = _deep_merge(base, config)
+    if not isinstance(config.get("function_groups"), dict):
+        raise ValueError("Ablation-2 task requires function_groups")
     groups = config.get(
         "active_function_groups", list(config["function_groups"])
     )
@@ -376,6 +383,15 @@ class InitialEvidenceCapture:
         width: int,
         height: int,
     ):
+        if (
+            isinstance(width, bool)
+            or not isinstance(width, int)
+            or isinstance(height, bool)
+            or not isinstance(height, int)
+            or width <= 0
+            or height <= 0
+        ):
+            raise ValueError("Initial capture dimensions must be positive integers")
         self.scene = scene
         self.model = scene.model
         self.data = scene.data
@@ -384,6 +400,12 @@ class InitialEvidenceCapture:
         self.task = task_config
         with Path(rig_config).open(encoding="utf-8") as source:
             self.config = yaml.safe_load(source)
+        if not isinstance(self.config, dict):
+            raise ValueError("Initial inspection rig must be a mapping")
+        if not isinstance(self.config.get("camera_slots"), dict):
+            raise ValueError("Initial inspection rig requires camera_slots")
+        if not isinstance(self.config.get("capture"), dict):
+            raise ValueError("Initial inspection rig requires capture settings")
 
     def capture(self, observation_dir: Path) -> InitialObservation:
         started = time.perf_counter()
@@ -398,6 +420,8 @@ class InitialEvidenceCapture:
             model_id = mujoco.mj_name2id(
                 self.model, mujoco.mjtObj.mjOBJ_CAMERA, model_name
             )
+            if model_id < 0:
+                raise ValueError(f"Missing inspection camera: {model_name}")
             camera = capture_config["cameras"][camera_id]
             position = np.asarray(camera["position_world_m"], float)
             target = np.asarray(camera["look_at_world_m"], float)
@@ -586,7 +610,11 @@ class InitialEvidenceCapture:
             raw_cameras, "region_points", "region"
         )
         seat_id_map = self._generic_volume_ids(
-            raw_cameras, "seat_points", "seating"
+            raw_cameras,
+            "seat_points",
+            self.config.get("entity_id_prefixes", {}).get(
+                "seating_target", "seating"
+            ),
         )
         cameras = self._rename_masks(
             raw_cameras, payload_id_map, region_id_map, seat_id_map
@@ -621,6 +649,18 @@ class InitialEvidenceCapture:
             "region_selector_count": len(regions),
             "payload_instance_count": len(payloads),
             "seating_target_count": len(seats),
+            "region_proposal_provenance": self.config.get(
+                "region_proposal_provenance",
+                {
+                    "region_proposal_source": "CONFIGURED_SPATIAL_GATE",
+                    "region_proposal_encodes_function": None,
+                    "region_proposal_encodes_semantic_class": None,
+                    "region_proposal_encodes_expected_validity": None,
+                    "region_dimensions_for_functional_reasoning": (
+                        "OBSERVED_RGBD_POINT_CLOUD"
+                    ),
+                },
+            ),
             "region_selectors": {
                 selector_id: {
                     "volume": selector["volume"],
@@ -1596,9 +1636,15 @@ class RegionAblation2Run:
         with Path(evaluation_config).open(encoding="utf-8") as source:
             self.evaluation = yaml.safe_load(source)
         self.rig_config = Path(rig_config)
-        self.detector = semantic_detector or NullSemanticDetector()
-        self.semantic_config = semantic_config or load_semantic_config(
-            vocabulary_path=DEFAULT_SEMANTIC_VOCABULARY
+        with self.rig_config.open(encoding="utf-8") as source:
+            self.rig_definition = yaml.safe_load(source)
+        self.detector = (
+            NullSemanticDetector() if semantic_detector is None else semantic_detector
+        )
+        self.semantic_config = (
+            load_semantic_config(vocabulary_path=DEFAULT_SEMANTIC_VOCABULARY)
+            if semantic_config is None
+            else semantic_config
         )
         self.width = width
         self.height = height
@@ -1702,7 +1748,8 @@ class RegionAblation2Run:
     def _build_registries(
         self, semantics: dict[str, dict[str, Any]]
     ) -> None:
-        assert self.observation is not None
+        if self.observation is None:
+            raise RuntimeError("Initial region evidence has not been captured")
         for region_id, record in self.observation.regions.items():
             properties = extract_region_properties(
                 record["evidence"], task_config=self.task
@@ -1724,11 +1771,20 @@ class RegionAblation2Run:
                     "contributing_camera_ids": list(
                         record["evidence"].contributing_camera_ids
                     ),
+                    **self.rig_definition.get(
+                        "region_proposal_provenance", {}
+                    ),
                 },
             }
         role_categories = self.task["semantic_requirements"]["payload_roles"]
         for object_id, record in self.observation.payloads.items():
             properties = extract_payload_properties(record["evidence"])
+            measurement_points = record["evidence"].measurement_points
+            observed_centroid = (
+                np.median(measurement_points, axis=0).tolist()
+                if len(measurement_points)
+                else None
+            )
             semantic = semantics[object_id]
             role = None
             if semantic.get("status") == "SUPPORTED":
@@ -1749,6 +1805,7 @@ class RegionAblation2Run:
                     "observation_count": 1,
                 },
                 "geometry": properties,
+                "observed_centroid_world_m": observed_centroid,
                 "semantics": semantic,
                 "semantic_payload_role": role,
                 "provenance": {

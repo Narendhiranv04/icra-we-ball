@@ -18,6 +18,7 @@ from typing import Any, Protocol
 
 ROOT = Path(__file__).resolve().parent
 FUNCTION_CATALOG = ROOT / "functional_catalog.json"
+PROMPT_PATH = ROOT / "prompts" / "functional_decomposition.txt"
 SCENE_ALIASES = {
     "kitchen": "kitchen",
     "living_room": "living_room",
@@ -34,49 +35,7 @@ REQUIREMENT_ID = re.compile(r"^req_[1-9][0-9]{0,2}$")
 FUNCTION_NAME = re.compile(r"^can_[a-z0-9_]{1,48}$")
 
 
-SYSTEM_PROMPT = """\
-You decompose a robot task goal into replaceable functional requirements.
-Return only the requested JSON object.
-
-Rules:
-- Select only functions from the supplied function catalog. Function names are
-  simple ability predicates.
-- Create a requirement only when the goal needs a replaceable object or region
-  to provide that function. Do not translate every manipulation action into a
-  function.
-- For each requirement, rank ten to fifteen common candidate types from most to
-  least conventional for safe robot use. These are commonsense type priors,
-  not detected scene instances.
-- Every candidate must be a concrete, detector-searchable physical category.
-  Never output an umbrella category from the supplied forbidden-generic list.
-  Candidate types must be distinct.
-- target_description names what the candidate acts on, contains, cleans, or
-  supports. It must not redescribe the candidate itself.
-- The images provide visible task context only. Never claim that a proposed
-  candidate type is visible, present, available, graspable, or geometrically
-  feasible.
-- Do not emit simulator names, object IDs, coordinates, action sequences,
-  inspection order, search results, or geometry results.
-- Prefer rigid, robot-manipulable candidates. Do not rank a candidate merely
-  because it could technically work when its use would be unsafe or clearly
-  unconventional.
-- Use depends_on only for dependencies between functional requirements, not
-  for low-level action ordering.
-- Treat a named serving destination as a fixed task target. Do not create a
-  can_store requirement merely because the goal says to serve or place an
-  object, unless the goal actually requires choosing an alternative region.
-- A separate system will search observations for these types, semantically
-  ground instances, and run target-specific geometric checks. Your ranking
-  does not override those checks.
-- Keep internal reasoning concise and leave enough output budget to emit the
-  complete JSON object.
-- Return GOAL_UNSUPPORTED only when the goal contains no function supported by
-  the supplied catalog. Otherwise return DECOMPOSED. DECOMPOSED must contain at
-  least one functional requirement and unsupported_reason must be exactly an
-  empty string. GOAL_UNSUPPORTED must contain no requirements and must provide
-  a non-empty unsupported_reason.
-- Do not include chain-of-thought in the final JSON object.
-"""
+SYSTEM_PROMPT = PROMPT_PATH.read_text(encoding="utf-8").strip()
 
 
 DECOMPOSITION_SCHEMA: dict[str, Any] = {
@@ -153,7 +112,7 @@ class PlannerConfig:
     base_url: str
     model: str
     api_key: str
-    timeout_seconds: float = 300.0
+    timeout_seconds: float = 600.0
     max_tokens: int = 8192
     enable_thinking: bool = True
     sampling: Mapping[str, object] | None = None
@@ -167,7 +126,7 @@ def load_function_catalog(
     path: str | Path = FUNCTION_CATALOG,
 ) -> dict[str, Any]:
     document = json.loads(Path(path).read_text(encoding="utf-8"))
-    if document.get("schema_version") != 1:
+    if not isinstance(document, dict) or document.get("schema_version") != 1:
         raise ValueError("Unsupported function catalog schema")
     minimum = document.get("min_ranked_candidates")
     maximum = document.get("max_ranked_candidates")
@@ -248,7 +207,7 @@ def completion_payload(
     catalog: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
     normalized = validate_request(request)
-    function_catalog = catalog or load_function_catalog()
+    function_catalog = load_function_catalog() if catalog is None else catalog
     task = {
         "scene": normalized["scene"],
         "goal": normalized["goal"],
@@ -401,7 +360,7 @@ def validate_decomposition(
     catalog: Mapping[str, object] | None = None,
 ) -> dict[str, Any]:
     normalized = validate_request(request)
-    function_catalog = catalog or load_function_catalog()
+    function_catalog = load_function_catalog() if catalog is None else catalog
     expected_fields = {
         "status",
         "scene",
@@ -606,7 +565,12 @@ class OpenAITransport:
             with urllib.request.urlopen(
                 request, timeout=self.config.timeout_seconds
             ) as response:
-                result = json.load(response)
+                try:
+                    result = json.load(response)
+                except (json.JSONDecodeError, UnicodeError) as error:
+                    raise FunctionalPlanningError(
+                        "Model server returned invalid JSON"
+                    ) from error
         except urllib.error.HTTPError as error:
             detail = error.read().decode("utf-8", errors="replace")
             raise FunctionalPlanningError(
@@ -616,6 +580,8 @@ class OpenAITransport:
             raise FunctionalPlanningError(
                 f"Cannot reach model server: {error.reason}"
             ) from error
+        except (OSError, TimeoutError) as error:
+            raise FunctionalPlanningError(f"Model request failed: {error}") from error
         if not isinstance(result, dict):
             raise FunctionalPlanningError(
                 "Model server response must be a JSON object"
@@ -631,8 +597,8 @@ class FunctionalPlanner:
         catalog: Mapping[str, object] | None = None,
     ):
         self.config = config
-        self.transport = transport or OpenAITransport(config)
-        self.catalog = catalog or load_function_catalog()
+        self.transport = OpenAITransport(config) if transport is None else transport
+        self.catalog = load_function_catalog() if catalog is None else catalog
 
     def decompose(self, request: Mapping[str, object]) -> dict[str, object]:
         payload = completion_payload(request, self.config, self.catalog)

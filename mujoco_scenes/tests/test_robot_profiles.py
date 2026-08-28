@@ -21,6 +21,7 @@ from mujoco_scenes.mobile_motion import (
     BASE_LINEAR_COMMAND_SPEED as NAVIGATION_BASE_LINEAR_COMMAND_SPEED,
     BASE_YAW_COMMAND_SPEED as NAVIGATION_BASE_YAW_COMMAND_SPEED,
 )
+from mujoco_scenes.kitchen_object_manipulation import KITCHEN_ARM_COMMAND_SPEED
 from mujoco_scenes.robot_profiles import (
     GOOGLE_LEFT_FINGER_GEOMS,
     GOOGLE_RIGHT_FINGER_GEOMS,
@@ -48,7 +49,8 @@ class RobotProfileTests(unittest.TestCase):
         self.assertEqual(
             SELF_COLLISION_MOUNT_ALLOWANCES,
             {
-                frozenset(("google:base_link", "google:link_shoulder")): -0.050
+                frozenset(("google:base_link", "google:link_shoulder")): -0.100,
+                frozenset(("google:base_link", "google:link_bicep")): -0.050,
             },
         )
 
@@ -75,6 +77,8 @@ class RobotProfileTests(unittest.TestCase):
         self.assertGreater(INTERMEDIATE_TRACKING_TOLERANCE, JOINT_WAYPOINT_TOLERANCE)
         self.assertEqual(WAYPOINT_HOLD_TICKS, 4)
         self.assertEqual(MANIPULATION_BASE_LINEAR_DAMPING, 2000.0)
+        self.assertEqual(KITCHEN_ARM_COMMAND_SPEED, 0.85)
+        self.assertLess(KITCHEN_ARM_COMMAND_SPEED, ARM_COMMAND_SPEED)
 
     def test_google_requires_named_contacts_from_both_fingers(self):
         profile = manipulation_profile("google")

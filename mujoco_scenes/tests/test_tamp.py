@@ -4,7 +4,10 @@ import time
 import unittest
 from pathlib import Path
 
-from mujoco_scenes.foundation_model import FixedAssessmentBackend
+from mujoco_scenes.foundation_model import (
+    FixedAssessmentBackend,
+    FunctionalAssessmentResult,
+)
 from mujoco_scenes.tamp.candidates import visible_candidates
 from mujoco_scenes.tamp.events import EventLog
 from mujoco_scenes.tamp.executive import FunctionalTask, TaskExecutive
@@ -285,6 +288,44 @@ class TampTests(unittest.TestCase):
             observation["state"]["objects"]["controller"]["location"],
             "right_drawer",
         )
+
+    def test_unknown_custom_backend_candidate_fails_without_crashing(self):
+        class InvalidBackend:
+            def assess(self, _request):
+                return FunctionalAssessmentResult(
+                    ("invented",), ("invented",), "invalid"
+                )
+
+        observer = MutableObserver(_state())
+        executive = TaskExecutive(
+            self.registry,
+            InvalidBackend(),
+            observer,
+            FakeDispatcher(observer),
+            lambda _task, _candidate, _state: (),
+            lambda _task, _candidate, _state: False,
+        )
+        try:
+            executive.start(self.task)
+            _run(executive)
+        finally:
+            executive.close()
+
+        self.assertEqual(executive.mode, "failed")
+        self.assertEqual(executive.failure_code, FailureCode.INFERENCE_FAILED)
+
+    def test_negative_discovery_limit_is_rejected(self):
+        observer = MutableObserver(_state())
+        with self.assertRaisesRegex(ValueError, "max_discoveries"):
+            TaskExecutive(
+                self.registry,
+                FixedAssessmentBackend(("right_drawer",)),
+                observer,
+                FakeDispatcher(observer),
+                lambda _task, _candidate, _state: (),
+                lambda _task, _candidate, _state: False,
+                max_discoveries=-1,
+            )
 
 
 if __name__ == "__main__":

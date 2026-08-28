@@ -65,7 +65,7 @@ def region_points_from_mask(
 
 
 class SofaInspectionExecutor:
-    """Capture five base-mounted views and update only observed scene state."""
+    """Capture the configured foot-camera views and update observed state."""
 
     def __init__(
         self,
@@ -81,6 +81,11 @@ class SofaInspectionExecutor:
             raise ValueError("Sofa perception must be oracle or sam3")
         if scene.robot_name != "google":
             raise ValueError("Under-sofa inspection requires Google Robot")
+        if (
+            isinstance(width, bool) or not isinstance(width, int) or width <= 0
+            or isinstance(height, bool) or not isinstance(height, int) or height <= 0
+        ):
+            raise ValueError("Sofa image dimensions must be positive integers")
         self.scene = scene
         self.model = scene.model
         self.data = scene.data
@@ -114,6 +119,8 @@ class SofaInspectionExecutor:
 
     def _oracle_mask(self, segmentation: np.ndarray) -> np.ndarray:
         body_id = self.scene.body_id("remote_control")
+        if body_id < 0:
+            raise RuntimeError("Remote-control body is missing from the scene")
         geom_ids = np.flatnonzero(self.model.geom_bodyid == body_id)
         return (
             segmentation[:, :, 1] == int(mujoco.mjtObj.mjOBJ_GEOM)
@@ -151,6 +158,10 @@ class SofaInspectionExecutor:
                 model_camera_id = mujoco.mj_name2id(
                     self.model, mujoco.mjtObj.mjOBJ_CAMERA, camera_id
                 )
+                if model_camera_id < 0:
+                    raise RuntimeError(
+                        f"Configured sofa camera is missing: {camera_id}"
+                    )
                 renderer.update_scene(self.data, camera=model_camera_id)
                 rgb = renderer.render().copy()
                 renderer.enable_depth_rendering()

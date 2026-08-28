@@ -5,13 +5,13 @@ from pathlib import Path
 import numpy as np
 
 from mujoco_scenes.geometry_checker import (
+    GeometryChecker,
     associate_segmented_centroid,
     backproject_masked_depth,
     camera_intrinsics,
     gate_points_to_volume,
     load_inspection_rig_config,
     look_at_camera_rotation,
-    scale_intrinsics,
     voxel_downsample,
     write_ply,
 )
@@ -19,6 +19,40 @@ from mujoco_scenes.living_room_scene import LIVING_ROOM_INSPECTION_RIG_CONFIG
 
 
 class GeometryCheckerTests(unittest.TestCase):
+    def test_camera_intrinsics_reject_invalid_calibration(self):
+        for fovy, width, height in (
+            (0.0, 640, 480),
+            (180.0, 640, 480),
+            (float("nan"), 640, 480),
+            (60.0, 0, 480),
+            (60.0, 640, True),
+        ):
+            with self.subTest(fovy=fovy, width=width, height=height):
+                with self.assertRaises(ValueError):
+                    camera_intrinsics(fovy, width, height)
+
+    def test_backprojection_rejects_mismatched_images(self):
+        with self.assertRaisesRegex(ValueError, "same-shaped"):
+            backproject_masked_depth(
+                np.ones((2, 2)),
+                np.ones((3, 2), dtype=bool),
+                np.eye(3),
+                np.zeros(3),
+                np.eye(3),
+                max_depth=2.0,
+            )
+
+    def test_geometry_checker_rejects_invalid_capture_settings_early(self):
+        for kwargs in (
+            {"width": 0},
+            {"height": True},
+            {"max_depth": 0.0},
+            {"voxel_size": -0.1},
+        ):
+            with self.subTest(kwargs=kwargs):
+                with self.assertRaises(ValueError):
+                    GeometryChecker(object(), **kwargs)
+
     def test_learned_masks_associate_by_label_and_world_centroid(self):
         centroids = {}
         labels = {}
@@ -77,17 +111,6 @@ class GeometryCheckerTests(unittest.TestCase):
         self.assertAlmostEqual(intrinsics[0, 2], 320.0)
         self.assertAlmostEqual(intrinsics[1, 2], 240.0)
 
-    def test_intrinsics_scale_correctly_to_320_by_240(self):
-        source = camera_intrinsics(60.0, width=640, height=480)
-        scaled = scale_intrinsics(
-            source,
-            source_width=640,
-            source_height=480,
-            target_width=320,
-            target_height=240,
-        )
-        direct = camera_intrinsics(60.0, width=320, height=240)
-        np.testing.assert_allclose(scaled, direct)
 
     def test_known_multiview_camera_transforms_align(self):
         world_point = np.array([0.1, 0.2, 0.6])

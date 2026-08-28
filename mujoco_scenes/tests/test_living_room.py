@@ -80,6 +80,17 @@ class LivingRoomSceneTests(unittest.TestCase):
             -1,
         )
 
+    def test_scene_step_counts_reject_invalid_types_and_ranges(self):
+        for value in (-1, True, 1.5, "10"):
+            with self.subTest(reset=value):
+                with self.assertRaises(ValueError):
+                    self.scene.reset(settle_steps=value)
+        for method in (self.scene.open_container, self.scene.close_container):
+            for value in (0, -1, True, 1.5, "10"):
+                with self.subTest(method=method.__name__, steps=value):
+                    with self.assertRaises(ValueError):
+                        method("LEFT_DRAWER", steps=value)
+
     def test_robot_camera_render_is_rejected_without_robot(self):
         robot_free = SimpleNamespace(has_robot=False)
         with self.assertRaisesRegex(ValueError, "requires Google Robot"):

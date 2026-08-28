@@ -5,7 +5,6 @@ from tempfile import TemporaryDirectory
 import mujoco
 
 from mujoco_scenes.geometry_checker import GeometryChecker, load_inspection_rig_config
-from mujoco_scenes.workshop_alternatives import evaluate_ranked_alternatives
 from mujoco_scenes.workshop_pointcloud import run_workshop_pointcloud
 from mujoco_scenes.workshop_scene import (
     WORKSHOP_CAMERAS,
@@ -13,68 +12,6 @@ from mujoco_scenes.workshop_scene import (
     WORKSHOP_INSPECTION_RIG_CONFIG,
     WorkshopScene,
 )
-
-
-TARGET = {
-    "hole_diameter_m": 0.007,
-    "joint_depth_m": 0.030,
-    "radial_clearance_m": 0.0005,
-}
-OBJECTS = [
-    {
-        "object_id": "hammer",
-        "functions": ["can_hammer"],
-        "geometry": {"face_width_m": 0.040},
-        "source_region": "workbench",
-    },
-    {
-        "object_id": "large_nail",
-        "functions": ["can_fasten"],
-        "geometry": {
-            "diameter_m": 0.010,
-            "length_m": 0.090,
-            "head_width_m": 0.022,
-        },
-        "source_region": "workbench",
-    },
-    {
-        "object_id": "flat_driver",
-        "functions": ["can_screw"],
-        "geometry": {"tip_profile": "flat", "tip_width_m": 0.004},
-        "source_region": "LEFT_DRAWER",
-    },
-    {
-        "object_id": "short_screw",
-        "functions": ["can_fasten"],
-        "geometry": {
-            "diameter_m": 0.005,
-            "length_m": 0.015,
-            "recess_profile": "flat",
-            "recess_width_m": 0.005,
-        },
-        "source_region": "LEFT_DRAWER",
-    },
-    {
-        "object_id": "phillips_driver",
-        "functions": ["can_screw"],
-        "geometry": {
-            "tip_profile": "phillips_2",
-            "tip_width_m": 0.004,
-        },
-        "source_region": "RIGHT_DRAWER",
-    },
-    {
-        "object_id": "medium_screw",
-        "functions": ["can_fasten"],
-        "geometry": {
-            "diameter_m": 0.005,
-            "length_m": 0.050,
-            "recess_profile": "phillips_2",
-            "recess_width_m": 0.0045,
-        },
-        "source_region": "RIGHT_DRAWER",
-    },
-]
 
 
 class WorkshopSceneTests(unittest.TestCase):
@@ -286,72 +223,6 @@ class WorkshopSceneTests(unittest.TestCase):
                 manifest["final_region_states"]["TOOL_CABINET"]["open"]
             )
             self.assertFalse(scene.get_task_scene_state()["tool_cabinet"]["open"])
-
-
-class WorkshopAlternativeTests(unittest.TestCase):
-    def test_joint_reasoning_rejects_two_near_misses_then_selects_screw(self):
-        proposals = [
-            {
-                "rank": 1,
-                "method": "nail",
-                "tool_object_id": "hammer",
-                "fastener_object_id": "large_nail",
-            },
-            {
-                "rank": 2,
-                "method": "screw",
-                "tool_object_id": "flat_driver",
-                "fastener_object_id": "short_screw",
-            },
-            {
-                "rank": 3,
-                "method": "screw",
-                "tool_object_id": "phillips_driver",
-                "fastener_object_id": "medium_screw",
-            },
-        ]
-        result = evaluate_ranked_alternatives(
-            observed_objects=OBJECTS,
-            target_geometry=TARGET,
-            ranked_proposals=proposals,
-        )
-        self.assertEqual(result["status"], "COMPLETE")
-        self.assertEqual(result["selected"]["rank"], 3)
-        self.assertFalse(result["evaluated"][0]["geometry_checks"]["fits_hole"])
-        self.assertFalse(
-            result["evaluated"][1]["geometry_checks"]["reaches_joint"]
-        )
-
-    def test_unobserved_object_id_is_rejected(self):
-        with self.assertRaisesRegex(ValueError, "outside visible state"):
-            evaluate_ranked_alternatives(
-                observed_objects=OBJECTS[:2],
-                target_geometry=TARGET,
-                ranked_proposals=[
-                    {
-                        "rank": 1,
-                        "method": "screw",
-                        "tool_object_id": "invented_driver",
-                        "fastener_object_id": "large_nail",
-                    }
-                ],
-            )
-
-    def test_accepts_at_most_three_fm_alternatives(self):
-        proposal = {
-            "method": "nail",
-            "tool_object_id": "hammer",
-            "fastener_object_id": "large_nail",
-        }
-        with self.assertRaisesRegex(ValueError, "maximum is 3"):
-            evaluate_ranked_alternatives(
-                observed_objects=OBJECTS,
-                target_geometry=TARGET,
-                ranked_proposals=[
-                    {**proposal, "rank": rank} for rank in range(1, 5)
-                ],
-            )
-
 
 if __name__ == "__main__":
     unittest.main()

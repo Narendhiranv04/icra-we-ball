@@ -69,6 +69,12 @@ class TaskExecutive:
         max_discoveries: int = 0,
         event_log: EventLog | None = None,
     ):
+        if (
+            isinstance(max_discoveries, bool)
+            or not isinstance(max_discoveries, int)
+            or max_discoveries < 0
+        ):
+            raise ValueError("max_discoveries must be a non-negative integer")
         self.registry = registry
         self.assessment_backend = assessment_backend
         self.observer = observer
@@ -77,7 +83,7 @@ class TaskExecutive:
         self.goal_verifier = goal_verifier
         self.discovery_policy = discovery_policy
         self.max_discoveries = max_discoveries
-        self.events = event_log or EventLog()
+        self.events = EventLog() if event_log is None else event_log
         self._pool = ThreadPoolExecutor(
             max_workers=1, thread_name_prefix="tamp-inference"
         )
@@ -127,10 +133,19 @@ class TaskExecutive:
         self._begin_assessment()
 
     def _begin_assessment(self) -> None:
-        assert self.task is not None
-        self.state = self.observer()
-        function = self.registry.get(self.task.required_function)
-        candidates = visible_candidates(self.state, function)
+        if self.task is None:
+            self._fail(FailureCode.INTERNAL_ERROR, "Functional task is missing")
+            return
+        try:
+            self.state = self.observer()
+            function = self.registry.get(self.task.required_function)
+            candidates = visible_candidates(self.state, function)
+        except Exception as error:
+            self._fail(
+                FailureCode.INTERNAL_ERROR,
+                f"Candidate observation failed: {error}",
+            )
+            return
         self._candidates = {
             candidate.candidate_id: candidate for candidate in candidates
         }
@@ -160,7 +175,12 @@ class TaskExecutive:
         )
 
     def _accept_assessment(self) -> None:
-        assert self._future is not None
+        if self._future is None:
+            self._fail(
+                FailureCode.INTERNAL_ERROR,
+                "Assessment completed without an active request",
+            )
+            return
         try:
             self.assessment = self._future.result()
         except Exception as error:
@@ -185,11 +205,21 @@ class TaskExecutive:
         self._start_next_candidate()
 
     def _start_next_candidate(self) -> None:
-        assert self.task is not None
-        assert self.state is not None
+        if self.task is None or self.state is None:
+            self._fail(
+                FailureCode.INTERNAL_ERROR,
+                "Candidate selection has no active task observation",
+            )
+            return
         while self._candidate_queue:
             candidate_id = self._candidate_queue.pop(0)
-            self._candidate = self._candidates[candidate_id]
+            self._candidate = self._candidates.get(candidate_id)
+            if self._candidate is None:
+                self._fail(
+                    FailureCode.INFERENCE_FAILED,
+                    f"Assessment returned unknown candidate {candidate_id!r}",
+                )
+                return
             try:
                 actions = tuple(
                     self.plan_factory(
@@ -204,6 +234,12 @@ class TaskExecutive:
                     message=str(error),
                 )
                 continue
+            except Exception as error:
+                self._fail(
+                    FailureCode.INTERNAL_ERROR,
+                    f"Candidate planning failed: {error}",
+                )
+                return
             if not actions:
                 self.events.append(
                     "candidate_rejected",
@@ -212,24 +248,58 @@ class TaskExecutive:
                     message="planner returned no actions",
                 )
                 continue
-            self._start_actions(actions, "candidate")
-            self.events.append(
-                "candidate_selected",
-                candidate=candidate_id,
-                action_count=len(actions),
-            )
+            if self._start_actions(actions, "candidate"):
+                self.events.append(
+                    "candidate_selected",
+                    candidate=candidate_id,
+                    action_count=len(actions),
+                )
             return
         self._start_discovery_or_fail()
 
     def _start_actions(
         self, actions: Sequence[SkillAction], purpose: str
-    ) -> None:
+    ) -> bool:
         self._actions = tuple(actions)
+        prepare = getattr(self.dispatcher, "prepare", None)
+        if callable(prepare):
+            try:
+                preparation = prepare(self._actions)
+            except SkillStartError as error:
+                preparation = SkillResult.failed(
+                    error.code, str(error), recoverable=error.recoverable
+                )
+            except Exception as error:
+                preparation = SkillResult.failed(
+                    FailureCode.INTERNAL_ERROR, str(error), recoverable=False
+                )
+            if preparation is not None and not preparation.success:
+                self.events.append(
+                    "plan_preparation_failed",
+                    purpose=purpose,
+                    failure_code=(
+                        preparation.failure_code.value
+                        if preparation.failure_code
+                        else FailureCode.INTERNAL_ERROR.value
+                    ),
+                    message=preparation.message,
+                )
+                if purpose == "candidate":
+                    self._candidate_failed(preparation)
+                elif preparation.recoverable:
+                    self._start_discovery_or_fail()
+                else:
+                    self._fail(
+                        preparation.failure_code or FailureCode.INTERNAL_ERROR,
+                        preparation.message,
+                    )
+                return False
         self._action_index = 0
         self._action_active = False
         self._purpose = purpose
         self.mode = "executing"
         self.status = f"Executing {purpose} plan"
+        return True
 
     def _start_discovery_or_fail(self) -> None:
         if (
@@ -241,13 +311,22 @@ class TaskExecutive:
                 "No functional visible candidate remains",
             )
             return
-        assert self.task is not None
-        self.state = self.observer()
-        actions = tuple(
-            self.discovery_policy(
-                self.task, self.state, self._discoveries
+        if self.task is None:
+            self._fail(FailureCode.INTERNAL_ERROR, "Functional task is missing")
+            return
+        try:
+            self.state = self.observer()
+            actions = tuple(
+                self.discovery_policy(
+                    self.task, self.state, self._discoveries
+                )
             )
-        )
+        except Exception as error:
+            self._fail(
+                FailureCode.INTERNAL_ERROR,
+                f"Discovery planning failed: {error}",
+            )
+            return
         self._discoveries += 1
         if not actions:
             self._fail(
@@ -284,7 +363,14 @@ class TaskExecutive:
                 result.message,
             )
             return
-        self.state = self.observer()
+        try:
+            self.state = self.observer()
+        except Exception as error:
+            self._fail(
+                FailureCode.INTERNAL_ERROR,
+                f"Failure observation failed: {error}",
+            )
+            return
         self._start_next_candidate()
 
     def _finish_actions(self) -> None:
@@ -293,10 +379,24 @@ class TaskExecutive:
             self._begin_assessment()
             return
 
-        assert self.task is not None
-        assert self._candidate is not None
-        self.state = self.observer()
-        if self.goal_verifier(self.task, self._candidate, self.state):
+        if self.task is None or self._candidate is None:
+            self._fail(
+                FailureCode.INTERNAL_ERROR,
+                "Candidate execution lost its active task",
+            )
+            return
+        try:
+            self.state = self.observer()
+            complete = self.goal_verifier(
+                self.task, self._candidate, self.state
+            )
+        except Exception as error:
+            self._fail(
+                FailureCode.INTERNAL_ERROR,
+                f"Goal verification failed: {error}",
+            )
+            return
+        if complete:
             self.mode = "complete"
             self.status = (
                 f"Task complete using {self._candidate.candidate_id}"
@@ -329,6 +429,17 @@ class TaskExecutive:
                     self._candidate_failed(result)
                 else:
                     self._start_discovery_or_fail()
+                return
+            except Exception as error:
+                result = SkillResult.failed(
+                    FailureCode.INTERNAL_ERROR,
+                    str(error),
+                    recoverable=False,
+                )
+                if self._purpose == "candidate":
+                    self._candidate_failed(result)
+                else:
+                    self._fail(FailureCode.INTERNAL_ERROR, str(error))
                 return
             self._action_active = True
             self.status = f"Executing {action.name}"
@@ -371,7 +482,14 @@ class TaskExecutive:
                     result.message,
                 )
             return
-        self.state = self.observer()
+        try:
+            self.state = self.observer()
+        except Exception as error:
+            self._fail(
+                FailureCode.INTERNAL_ERROR,
+                f"Post-skill observation failed: {error}",
+            )
+            return
         self.events.append(
             "observation",
             revision=self.state.revision,

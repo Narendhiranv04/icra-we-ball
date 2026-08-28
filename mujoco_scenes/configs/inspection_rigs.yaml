@@ -15,7 +15,6 @@ view_validation:
   minimum_valid_depth_pixels: 200
 
 processing:
-  external_association_max_distance_m: 0.12
   mask_erosion_pixels: 0
   depth_discontinuity_m: 0.060
   depth_discontinuity_radius_pixels: 1
@@ -48,8 +47,8 @@ regions:
     settle_steps: 50
     boundary_margin_m: 0.015
     inspection_volume:
-      minimum_world_m: [-0.72, -0.43, 0.56]
-      maximum_world_m: [0.42, -0.08, 0.92]
+      minimum_world_m: [-0.72, -0.48, 0.56]
+      maximum_world_m: [0.65, -0.05, 0.92]
     cameras:
       inspection_left:
         position_offset_m: [-0.30, 0.00, 0.08]
@@ -112,16 +111,18 @@ regions:
         fovy_degrees: 58.0
 
   D2:
-    target_world_m: [0.48, -0.46, 0.46]
-    rig_position_world_m: [0.48, -1.02, 0.90]
+    # Mirror the proven D1 drawer framing around the kitchen centreline.
+    # The former target looked over the open tray toward countertop sources.
+    target_world_m: [0.47, -0.54, 0.42]
+    rig_position_world_m: [0.47, -1.02, 0.88]
     up_world: [0.0, 0.0, 1.0]
     near_depth_m: 0.12
     far_depth_m: 1.40
     settle_steps: 80
     boundary_margin_m: 0.018
     inspection_volume:
-      minimum_world_m: [0.22, -0.72, 0.30]
-      maximum_world_m: [0.70, 0.10, 0.70]
+      minimum_world_m: [0.25, -0.75, 0.37]
+      maximum_world_m: [0.70, -0.35, 0.52]
     cameras:
       inspection_left:
         position_offset_m: [-0.20, 0.00, 0.12]
@@ -136,11 +137,11 @@ regions:
         look_at_offset_m: [0.00, 0.00, 0.00]
         fovy_degrees: 58.0
       inspection_front:
-        position_offset_m: [-0.10, -0.08, 0.08]
+        position_offset_m: [0.05, 0.20, 0.35]
         look_at_offset_m: [0.00, 0.00, 0.00]
         fovy_degrees: 58.0
       inspection_close:
-        position_offset_m: [0.10, 0.28, 0.15]
+        position_offset_m: [-0.05, 0.20, 0.35]
         look_at_offset_m: [0.00, 0.00, 0.00]
         fovy_degrees: 58.0
 

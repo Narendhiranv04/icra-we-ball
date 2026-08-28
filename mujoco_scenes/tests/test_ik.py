@@ -7,7 +7,7 @@ from unittest.mock import patch
 import mujoco
 import numpy as np
 
-from mujoco_scenes.ik import ProfiledIK
+from mujoco_scenes.ik import ProfiledIK, rotation_vector
 
 
 TEST_MODEL = """
@@ -34,6 +34,46 @@ TEST_MODEL = """
 
 
 class ProfiledIKTests(unittest.TestCase):
+    def test_rotation_vector_rejects_malformed_rotation(self):
+        for matrix in (np.eye(2), np.full((3, 3), np.nan)):
+            with self.subTest(shape=matrix.shape):
+                with self.assertRaises(ValueError):
+                    rotation_vector(matrix)
+
+    def test_solver_rejects_malformed_pose_and_seed(self):
+        ik = ProfiledIK(
+            self.model, self.data, self.profile, backend="legacy"
+        )
+        with self.assertRaisesRegex(ValueError, "target position"):
+            ik.solve(np.zeros(2), np.zeros(6), np.eye(3))
+        with self.assertRaisesRegex(ValueError, "seed"):
+            ik.solve(np.zeros(3), np.zeros(5), np.eye(3))
+        with self.assertRaisesRegex(ValueError, "orthonormal"):
+            ik.solve(np.zeros(3), np.zeros(6), np.ones((3, 3)))
+
+    def test_zero_orientation_weight_does_not_wait_for_rotation(self):
+        ik = ProfiledIK(
+            self.model,
+            self.data,
+            self.profile,
+            orientation_weight=0.0,
+            backend="legacy",
+        )
+        angle = 1.0
+        unreachable_orientation = np.array(
+            (
+                (math.cos(angle), -math.sin(angle), 0.0),
+                (math.sin(angle), math.cos(angle), 0.0),
+                (0.0, 0.0, 1.0),
+            )
+        )
+        with patch("mujoco_scenes.ik.mujoco.mj_jacSite") as jacobian:
+            _joints, position_error, _orientation_error = ik.solve(
+                np.zeros(3), np.zeros(6), unreachable_orientation
+            )
+        self.assertLess(position_error, 1e-12)
+        jacobian.assert_not_called()
+
     def setUp(self):
         self.model = mujoco.MjModel.from_xml_string(TEST_MODEL)
         self.data = mujoco.MjData(self.model)
@@ -99,6 +139,11 @@ class ProfiledIKTests(unittest.TestCase):
             )
         self.assertEqual(ik.backend_name, "legacy")
 
+    def test_calibrated_default_uses_legacy_backend(self):
+        with patch.dict(os.environ, {}, clear=True):
+            ik = ProfiledIK(self.model, self.data, self.profile)
+        self.assertEqual(ik.backend_name, "legacy")
+
     def test_rejects_unknown_backend(self):
         with self.assertRaisesRegex(
             ValueError, "auto, mink, or legacy"
@@ -109,6 +154,33 @@ class ProfiledIKTests(unittest.TestCase):
                 self.profile,
                 backend="unknown",
             )
+
+    def test_calibrated_solver_controls_are_supported_by_both_backends(self):
+        for backend in ("mink", "legacy"):
+            with self.subTest(backend=backend):
+                ik = ProfiledIK(
+                    self.model,
+                    self.data,
+                    self.profile,
+                    orientation_weight=0.0,
+                    seed_continuity_weight=0.01,
+                    maximum_seed_delta_rad=0.25,
+                    maximum_iterations=20,
+                    backend=backend,
+                )
+                joints, _, _ = ik.solve(
+                    np.array((0.02, 0.0, 0.0)),
+                    np.zeros(6),
+                    np.eye(3),
+                )
+                self.assertTrue(np.all(np.abs(joints) <= 0.25 + 1e-9))
+
+    def test_generic_manipulation_reexports_the_single_ik_implementation(self):
+        from mujoco_scenes.generic_manipulation import (
+            ProfiledIK as GenericProfiledIK,
+        )
+
+        self.assertIs(GenericProfiledIK, ProfiledIK)
 
 
 if __name__ == "__main__":

@@ -26,7 +26,6 @@ from mujoco_scenes.region_ablation2 import (
 )
 from mujoco_scenes.region_grounding import (
     REGION_MEASUREMENT_PURPOSE,
-    evaluate_fits_on,
     extract_payload_properties,
     extract_region_properties,
 )
@@ -64,6 +63,12 @@ def _hash_file(path: Path) -> str:
 def load_ablation3_task(path: str | Path = DEFAULT_TASK_CONFIG) -> dict:
     with Path(path).open(encoding="utf-8") as source:
         task = yaml.safe_load(source)
+    if not isinstance(task, dict):
+        raise ValueError("Ablation-3 task must be a mapping")
+    if not isinstance(task.get("function_groups"), dict):
+        raise ValueError("Ablation-3 task requires function_groups")
+    if "personal_drinks" not in task["function_groups"]:
+        raise ValueError("Ablation-3 task requires personal_drinks")
     group = task["function_groups"]["personal_drinks"]
     if group["usage_policy"] != "DEDICATED_REGION_PER_TARGET":
         raise ValueError("Ablation 3 requires dedicated target regions")
@@ -357,9 +362,13 @@ class RegionAblation3Run:
         with Path(evaluation_config).open(encoding="utf-8") as source:
             self.evaluation = yaml.safe_load(source)
         self.rig_config = Path(rig_config)
-        self.detector = semantic_detector or NullSemanticDetector()
-        self.semantic_config = semantic_config or load_semantic_config(
-            vocabulary_path=DEFAULT_SEMANTIC_VOCABULARY
+        self.detector = (
+            NullSemanticDetector() if semantic_detector is None else semantic_detector
+        )
+        self.semantic_config = (
+            load_semantic_config(vocabulary_path=DEFAULT_SEMANTIC_VOCABULARY)
+            if semantic_config is None
+            else semantic_config
         )
         self.width, self.height = width, height
         self.events_path = self.run_dir / "events.jsonl"
@@ -450,7 +459,8 @@ class RegionAblation3Run:
         return self
 
     def _build_registries(self, semantics: dict[str, dict]) -> None:
-        assert self.observation is not None
+        if self.observation is None:
+            raise RuntimeError("Initial payload evidence has not been captured")
         for object_id, record in self.observation.payloads.items():
             geometry = extract_payload_properties(record["evidence"])
             semantic = semantics[object_id]

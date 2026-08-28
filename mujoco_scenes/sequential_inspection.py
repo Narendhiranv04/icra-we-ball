@@ -102,7 +102,9 @@ class SequentialInspectionAdapter:
                 conflicting, steps=DIRECT_ACTUATION_STEPS
             )
         self.scene.open_container(region_id, steps=DIRECT_ACTUATION_STEPS)
-        if hasattr(self.scene, "release_storage_fixture"):
+        if hasattr(self.scene, "release_storage_fixture_for_inspection"):
+            self.scene.release_storage_fixture_for_inspection(region_id)
+        elif hasattr(self.scene, "release_storage_fixture"):
             self.scene.release_storage_fixture(region_id)
 
 
@@ -119,6 +121,7 @@ def run_fixed_order_inspection(
     adapter: Any,
     observe: Callable[[str, str | None], tuple[Any, Path]],
     stop_on_complete: bool,
+    completion_predicate: Callable[[ObservedStateRun], bool] | None = None,
 ) -> ObservedStateRun:
     """Run the common closed-initial, fixed-order observation loop."""
     sequence = tuple(sequence)
@@ -127,7 +130,10 @@ def run_fixed_order_inspection(
     print(f"  Witness: {_witness_status(session)}")
     print(f"  Saved: {stage_dir}")
 
-    if stop_on_complete and _witness_status(session) == "COMPLETE":
+    complete = completion_predicate or (
+        lambda current: _witness_status(current) == "COMPLETE"
+    )
+    if stop_on_complete and complete(session):
         session.append_event(
             {
                 "event": "INSPECTION_STOPPED_COMPLETE",
@@ -164,7 +170,7 @@ def run_fixed_order_inspection(
         )
         print(f"  Witness: {_witness_status(session)}")
         print(f"  Saved: {stage_dir}")
-        if stop_on_complete and _witness_status(session) == "COMPLETE":
+        if stop_on_complete and complete(session):
             remaining = list(sequence[sequence_index + 1:])
             session.append_event(
                 {
@@ -178,7 +184,7 @@ def run_fixed_order_inspection(
             )
             return session
 
-    if stop_on_complete and _witness_status(session) != "COMPLETE":
+    if stop_on_complete and not complete(session):
         final_witness_status = _witness_status(session)
         session.append_event(
             {
@@ -220,13 +226,19 @@ def run_sequential_inspection(
     grounding_mode: str = "auto",
     pairing_strategy: str | None = None,
     save_semantic_overlays: bool = False,
+    completion_predicate: Callable[[ObservedStateRun], bool] | None = None,
+    record_oracle_diagnostics: bool = True,
 ) -> ObservedStateRun:
     """Observe closed reset, then inspect and persist one region at a time."""
     available_regions = tuple(scene.get_region_observation_states().keys())
     default_sequence = tuple(
         getattr(scene, "default_inspection_order", DEFAULT_INSPECTION_ORDER)
     )
-    sequence = tuple(sequence or default_sequence)
+    sequence = tuple(default_sequence if sequence is None else sequence)
+    if any(not isinstance(region, str) or not region for region in sequence):
+        raise ValueError("Inspection sequence must contain non-empty region names")
+    if len(sequence) != len(set(sequence)):
+        raise ValueError("Inspection sequence contains duplicate regions")
     unknown = [region for region in sequence if region not in available_regions]
     if unknown:
         raise ValueError(
@@ -252,7 +264,10 @@ def run_sequential_inspection(
                 "strategy", "semantic_role_scoped"
             )
         )
-    ).replace("-", "_")
+    )
+    if not isinstance(pairing_strategy, str) or not pairing_strategy.strip():
+        raise ValueError("pairing_strategy must be a non-empty string")
+    pairing_strategy = pairing_strategy.strip().replace("-", "_")
     semantic_config = load_semantic_config(
         semantic_config_path
         if semantic_config_path is not None
@@ -264,7 +279,15 @@ def run_sequential_inspection(
         vocabulary_path=semantic_vocabulary_path,
     )
     if semantic_min_supporting_views is not None:
-        semantic_config["fusion"]["minimum_supporting_views"] = int(
+        if (
+            isinstance(semantic_min_supporting_views, bool)
+            or not isinstance(semantic_min_supporting_views, int)
+            or semantic_min_supporting_views <= 0
+        ):
+            raise ValueError(
+                "semantic_min_supporting_views must be a positive integer"
+            )
+        semantic_config["fusion"]["minimum_supporting_views"] = (
             semantic_min_supporting_views
         )
     if semantic_detector is None:
@@ -318,6 +341,7 @@ def run_sequential_inspection(
         grounding_mode=grounding_mode,
         pairing_strategy=pairing_strategy,
         save_semantic_overlays=save_semantic_overlays,
+        record_oracle_diagnostics=record_oracle_diagnostics,
         run_config={
             "mode": "sequential_inspection",
             "inspection_sequence": list(sequence),
@@ -326,6 +350,7 @@ def run_sequential_inspection(
             "uses_robot": False,
             "uses_mobile_base": False,
             "uses_virtual_inspection_rig": True,
+            "scene_layout": getattr(scene, "layout_manifest", None),
             "opening_adapter": f"{scene.__class__.__name__}.open_container",
             "opening_actuation_steps": DIRECT_ACTUATION_STEPS,
             "grounding_mode": grounding_mode,
@@ -379,6 +404,7 @@ def run_sequential_inspection(
         adapter=adapter,
         observe=observe,
         stop_on_complete=stop_on_complete,
+        completion_predicate=completion_predicate,
     )
     print(f"[OBSERVED STATE] Run complete: {session.run_dir}\n")
     return session

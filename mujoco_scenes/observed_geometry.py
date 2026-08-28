@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Sequence
@@ -33,13 +34,22 @@ class ObservedGeometryState:
         scene_name: str,
         geometry_config: dict[str, Any] | None = None,
     ):
-        self.root = Path(root)
+        if not isinstance(scene_name, str) or not scene_name.strip():
+            raise ValueError("scene_name must be a non-empty string")
+        if geometry_config is not None and not isinstance(geometry_config, dict):
+            raise TypeError("geometry_config must be a mapping")
+        self.root = Path(root).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
         self.scene_name = scene_name
-        self.geometry_config = geometry_config or load_geometry_config()
+        self.geometry_config = (
+            load_geometry_config() if geometry_config is None else geometry_config
+        )
         self.registry_path = self.root / "object_registry.json"
         if self.registry_path.exists():
-            self.registry = json.loads(self.registry_path.read_text())
+            self.registry = json.loads(
+                self.registry_path.read_text(encoding="utf-8")
+            )
+            self._validate_registry()
         else:
             self.registry = {
                 "schema_version": 1,
@@ -49,21 +59,70 @@ class ObservedGeometryState:
                 "objects": {},
             }
 
+    def _validate_registry(self) -> None:
+        if not isinstance(self.registry, dict):
+            raise ValueError("observed geometry registry must be an object")
+        if self.registry.get("schema_version") != 1:
+            raise ValueError("unsupported observed geometry registry schema")
+        if self.registry.get("scene_name") != self.scene_name:
+            raise ValueError(
+                "observed geometry registry belongs to a different scene"
+            )
+        if (
+            isinstance(self.registry.get("current_stage"), bool)
+            or not isinstance(self.registry.get("current_stage"), int)
+            or self.registry["current_stage"] < -1
+            or not isinstance(self.registry.get("instance_index"), dict)
+            or not isinstance(self.registry.get("objects"), dict)
+        ):
+            raise ValueError("observed geometry registry is malformed")
+        objects = self.registry["objects"]
+        index = self.registry["instance_index"]
+        if any(
+            not isinstance(object_id, str) or not isinstance(record, dict)
+            for object_id, record in objects.items()
+        ) or any(
+            not isinstance(token, str)
+            or not isinstance(object_id, str)
+            or object_id not in objects
+            for token, object_id in index.items()
+        ):
+            raise ValueError("observed geometry registry references are malformed")
+
+    @staticmethod
+    def _write_json(path: Path, payload: Any) -> None:
+        temporary = path.with_name(f".{path.name}.tmp")
+        temporary.write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        temporary.replace(path)
+
     def _association_token(self, source_id: str, mode: str) -> str:
         payload = f"{self.scene_name}:{mode}:{source_id}".encode()
         return hashlib.sha256(payload).hexdigest()[:24]
 
     def _new_object_id(self) -> str:
-        return f"object_{len(self.registry['objects']) + 1:04d}"
+        index = len(self.registry["objects"]) + 1
+        while f"object_{index:04d}" in self.registry["objects"]:
+            index += 1
+        return f"object_{index:04d}"
 
     def update(self, run: PointCloudRun, *, stage_label: str) -> dict[str, str]:
         """Measure accepted stage evidence and persist generic object IDs."""
         if run.inspection is None:
             raise ValueError("observed state requires a region inspection run")
+        safe_label = re.sub(
+            r"[^A-Za-z0-9_.-]+", "_", str(stage_label)
+        ).strip("._")
+        if not safe_label:
+            raise ValueError(
+                "stage_label must contain a safe filename component"
+            )
         inspection = run.inspection
         stage = int(self.registry["current_stage"]) + 1
-        stage_dir = self.root / "stages" / f"{stage:03d}_{stage_label}"
-        stage_dir.mkdir(parents=True, exist_ok=True)
+        stage_dir = self.root / "stages" / f"{stage:03d}_{safe_label}"
+        stage_dir.mkdir(parents=True, exist_ok=False)
         mode = str(inspection.metadata.get("perception_mode", "unknown"))
         associations: dict[str, str] = {}
 
@@ -108,14 +167,10 @@ class ObservedGeometryState:
                 **measured,
             }
             self.registry["objects"][object_id] = record
-            (evidence_dir / "properties.json").write_text(
-                json.dumps(record, indent=2, sort_keys=True) + "\n"
-            )
+            self._write_json(evidence_dir / "properties.json", record)
 
         self.registry["current_stage"] = stage
-        self.registry_path.write_text(
-            json.dumps(self.registry, indent=2, sort_keys=True) + "\n"
-        )
+        self._write_json(self.registry_path, self.registry)
         return associations
 
     def relation(
@@ -140,6 +195,12 @@ class ObservedGeometryState:
         required_relations: Sequence[str],
     ) -> CompatibilitySelection:
         """Return the first ranked candidate proven geometrically feasible."""
+        if not ranked_candidate_ids:
+            return CompatibilitySelection("INCOMPLETE", None, ())
+        if len(set(ranked_candidate_ids)) != len(ranked_candidate_ids):
+            raise ValueError("ranked candidate IDs must be unique")
+        if not required_relations:
+            raise ValueError("at least one geometric relation is required")
         evaluations: list[dict[str, Any]] = []
         saw_unknown = False
         for candidate_id in ranked_candidate_ids:

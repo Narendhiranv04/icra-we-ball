@@ -97,6 +97,18 @@ PAIRWISE = (
 
 
 class TaskWitnessTests(unittest.TestCase):
+    def test_roles_must_be_a_mapping(self):
+        with self.assertRaisesRegex(ValueError, "roles as a mapping"):
+            load_task_requirements({"task_id": "bad", "roles": []})
+
+    def test_property_bounds_must_be_finite(self):
+        requirements = task({"tool": 1})
+        requirements["roles"]["tool"]["geometric_requirements"] = [
+            {"property": "length", "minimum": float("nan")}
+        ]
+        with self.assertRaisesRegex(ValueError, "finite"):
+            load_task_requirements(requirements)
+
     def test_complete_assignment_uses_distinct_geometric_candidates(self):
         requirements = task({"receptacle": 2, "tool": 1}, PAIRWISE)
         observed = graph(

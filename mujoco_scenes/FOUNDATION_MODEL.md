@@ -1,4 +1,9 @@
-# Remote Foundation-Model Ranking
+# Remote Foundation-Model Assessment
+
+This package retains two distinct interfaces: the current multimodal
+functional-decomposition service and the older observed-instance ranker used
+by the interactive living-room storage demo. They are experimental paths, not
+two stages that should both be called for one task.
 
 The simulator uses one OpenAI-compatible client for either vLLM or SGLang.
 The inference server runs on the GPU machine; the MuJoCo environment needs no
@@ -77,20 +82,20 @@ request = RankingRequest(
 )
 
 with OpenAICompatibleRanker.from_env() as ranker:
-    result = ranker.rank(request)
-    print(result.candidate_ids)
+    result = ranker.assess(request)
+    print(result.functional_candidate_ids)
+    print(result.ranked_candidate_ids)
 ```
 
-This older observed-instance ranker belongs after search: only candidates
-passed to `RankingRequest` are sent to the server.
-`assess()` returns both the functional subset and its ranking; unknown,
+This observed-instance assessment belongs after search: only candidates passed
+to `RankingRequest` are sent to the server. `assess()` returns both the
+functional subset and its ranking; unknown,
 non-visible, duplicate, missing, or malformed IDs are rejected before
-execution. `rank()` remains available when every supplied candidate is already
-known to satisfy the function.
+execution.
 
-`FixedRankingBackend` provides the same interface for offline development and
-tests. Switching between vLLM and SGLang only changes the server process or
-`TAMP_FM_BASE_URL`; it does not require another client implementation.
+`FixedAssessmentBackend` provides the same interface for offline development
+and tests. Switching between vLLM and SGLang only changes the server process
+or `TAMP_FM_BASE_URL`; it does not require another client implementation.
 
 See [TAMP_PIPELINE.md](TAMP_PIPELINE.md) for the simulator executive and
 living-room example.

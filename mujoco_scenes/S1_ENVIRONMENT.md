@@ -78,192 +78,22 @@ special case: the mug, cup, glass, plate, small plate, bowl, and coffee jar
 use hollow bottom-and-wall proxies, allowing a spoon to occupy the visible
 interior instead of being ejected by a solid proxy.
 
-## Google Robot mobile manipulator
+## Google Robot actions
 
-Google Robot is the only production robot backend on the integration branch.
-Its model comes from the pinned MuJoCo Menagerie checkout, while the kitchen
-adapter provides planar base joints, cameras, controllers, and calibrated
-navigation/pick/place actions. The older Fetch-specific notes below describe
-historical controller implementation details and are not exposed by the CLI.
+Google Robot is the only production robot backend. Its model comes from the
+pinned MuJoCo Menagerie checkout. The kitchen adapter adds planar base joints,
+cameras, collision-checked RRT* navigation, and calibrated manipulation.
 
 The active planar joints are `google:base_forward_joint`,
 `google:base_lateral_joint`, and `google:base_yaw_joint`. The calibrated home
-line is `Y=-1.25 m`; navigation, sugar-jar pick/place, and spoon pick/carry are
-validated by `calibration_check.py`.
+line is `Y=-1.25 m`. `mobile_motion.py` maps the named UI destinations to
+collision-checked base routes and uses `generic_manipulation.py` for supported
+pick/place operations. Container buttons call the scene's articulated
+open/close API. `calibration_check.py` exercises the supported Google Robot
+navigation, grasp, carry, and placement paths.
 
-### Archived Fetch implementation notes
-
-The Fetch kinematic tree and meshes come from Gymnasium-Robotics. The original
-benchmark model fixes the base; this scene adapts it to three planar controlled
-joints:
-
-- `robot0:base_forward_joint`: motion along Fetch's forward direction.
-- `robot0:base_lateral_joint`: sideways motion.
-- `robot0:base_yaw_joint`: rotation about the vertical axis.
-
-At reset Fetch faces the workstation. The model also exposes the torso lift,
-head pan/tilt, seven arm joints, and two gripper-finger joints through named
-position actuators. The base is holonomic at this stage: it represents a
-mobile-manipulator planning pose, not differential wheel dynamics. Wheel-level
-drive dynamics can be introduced later without changing the scene regions.
-
-## PDDL-style `move`, `pick`, and `place` actions
-
-The symbolic actions are declared in `pddl/mobile_move_domain.pddl`. PDDL is
-used only for the action preconditions and effects; it does not generate
-continuous trajectories. `mobile_motion.py` resolves the
-named destination, plans collision-checked planar segments with RRT*, and
-commands the three base position actuators.
-
-The four UI destinations map to three physical poses:
-
-| UI destination | World base pose `(X,Y,yaw)` | Physical pose |
-|---|---:|---|
-| `home` | `(0.00,-1.10,0°)` | centered behind the serving table |
-| `cupboard1` | `(-1.025,-0.10,-90°)` | left of the workstation, facing inward |
-| `cupboard2` | `(1.025,-0.10,90°)` | right of the workstation, facing inward |
-| `box` | `(1.025,-0.10,90°)` | alias of `cupboard2` |
-
-Outbound moves keep yaw at zero while Fetch first travels laterally to
-`X=±1.35`, advances beside the table, closes inward to the `X=±1.025`
-manipulation pose, and only then rotates 90 degrees. On departure it reverses
-that last step—backing out to `X=±1.35` before rotating—so a carried object
-does not sweep through the workstation. Moves between opposite sides return
-through the home corridor.
-
-Running the viewer with the robot opens a companion `Actions` panel. Expand
-`Actions`, then `Move`, and press `Home`, `Cupboard 1`, `Cupboard 2`, or `Box`.
-Buttons are disabled while an action is executing. Use
+Running the viewer with the robot opens the companion `Actions` panel. Use
 `--no-actions-panel` when only the standard MuJoCo viewer is desired.
-
-The same window contains `Actions` → `Pick` for the four objects initially on
-the table and for every object exposed by an open D1/D2 drawer.
-`pick_motion.py` executes these staged motions rather than using PDDL as a
-continuous planner:
-
-1. Open the gripper and move from the tucked rest pose to an overhead corridor.
-2. Reach a pre-grasp exactly `0.08 m` above the object's grasp point.
-3. Descend vertically through that fixed `0.08 m` distance.
-4. Close gradually around the selected grasp site. Ordinary objects require
-   bilateral contact; the light tissue uses a centre-pinch proximity/contact
-   confirmation before it can slide away from one pad.
-5. Apply a live-pose grasp constraint only after bilateral contact and lift
-   vertically to clear the table.
-6. For either jar, release the rigid transport weld and pitch the end effector
-   exactly 90 degrees around the unchanged finger-contact axis. A compliant
-   centring/upright controller permits small natural translation and wobble.
-7. Carry every jar with the gripper horizontal at the base-relative equivalent
-   of roughly `(0.00,-0.75,0.74)` at home.
-   Kettle and spoon picks retain the vertical overhead arm return route; the
-   spoon itself passively swings into a bowl-down vertical hang.
-
-The kettle site lies on the visible upper-handle centreline and includes a
-matching handle collision proxy. Its gripper yaw is recomputed from the live
-kettle body orientation so the fingers straddle the handle before closing;
-only bilateral finger contact with that handle can confirm the grasp. Coffee
-and sugar jars are grasped higher on their upper bodies (`Z=0.040` in each
-object frame), preventing the containers from sitting too deeply inside the
-gripper. During their in-hand pitch, the fingers remain squeezed while a soft
-force/torque correction keeps the freely simulated jar near its pivot and
-within a few degrees of vertical. The rigid weld is disabled throughout this
-slip and is recreated from the resulting live grasp only before horizontal
-transport.
-The spoon is pinched near the far tip of its handle and uses separate
-handle/bowl collision proxies. After the initial lift clears the table, its
-rigid transport weld is replaced by a live, free-rotation point constraint at
-the handle grasp. At the `0.16 m` high hover, the arm pauses briefly while the
-finger width blends gradually into a close passive pinch, avoiding a visible
-contact jump. Transverse damping remains light so gravity swings the heavier
-bowl naturally downward, while implicit damping only around the local handle
-axis suppresses uncontrolled spin. The action completes only after the spoon
-has settled within three degrees of vertical. At the final
-carry pose, that live vertical grasp is captured by the transport weld so the
-spoon cannot continue spinning around its handle. It first rises to `0.16 m`
-above its grasp point before any carry translation. Non-jar arm carry returns
-to the base-relative equivalent of roughly `(0.00,-0.82,0.95)` at home.
-Picking uses each object's live grasp site and is enabled whenever its centre
-lies in the table region associated with the current home, left, or right base
-pose. Thus an object placed in `table_sub_2` or `table_sub_3` can be picked
-again from the matching side pose. Every jar pick first lifts vertically, then
-moves into a base-relative reorientation corridor, performs the same compliant
-90-degree slip, and finishes in horizontal carry regardless of base location.
-Drawer picks are available only at Home and only after the corresponding
-slide has reached its full-open limit. D1's fork, knife, and stirrer and D2's
-tongs and scanned spatula are pinched near the logical handle end. Each rises
-vertically to a `0.20–0.22 m` clear hover, changes from its transport weld to
-a compliant point pivot, and swings working-end-down under gravity with light
-damping and a weak upright spring. The final live vertical pose is captured
-for carry; no object pose is teleported or frozen during the transition. The
-D2 tissue/napkin instead uses its body-centre site and stays flat in a vertical
-approach, lift, and carry trajectory.
-
-`Actions` → `Place` is enabled while an object is held. Its public regions are
-resolved to these world-frame rectangles:
-
-| UI region | Active base pose | Internal region | Rectangle `(min X, max X, min Y, max Y)` |
-|---|---|---|---:|
-| `Serving table` | `home` | `serving_table` | `(-0.25, 0.25, -0.71, -0.41)` |
-| `Table` | `home` | `table_sub_1` | `(-0.36, 0.36, -0.37, -0.14)` |
-| `Table` | `cupboard1` | `table_sub_2` | `(-0.68, -0.36, -0.34, 0.22)` |
-| `Table` | `cupboard2` / `box` | `table_sub_3` | `(0.36, 0.68, -0.37, -0.12)` |
-| `Drawer 1` | `home` | `drawer_D1` | `(-0.606, -0.274, -0.682, -0.424)` |
-| `Drawer 2` | `home` | `drawer_D2` | `(0.274, 0.606, -0.682, -0.424)` |
-
-The sampler shrinks the selected rectangle by a `0.025 m` edge buffer and by
-the held object's full collision footprint. It rejects points overlapping
-other free objects, so the reported sample keeps the complete object away
-from support edges and clutter. The arm follows one smooth trajectory from
-carry to a hover `0.08 m` above release, descends to a nominal `0.025 m`
-clearance, opens the gripper, lets physics settle the object, retreats through
-the hover, and returns the empty gripper to its original carry pose. Side-pose
-jar releases use a directly reachable `0.025 m` hover, allow extra release
-height for actuator compliance, and use a short,
-damped upright torque while settling and while the open fingers clear it; the
-jar remains a free translating body throughout and the assistance is removed
-at the end of retreat.
-Drawer placement is enabled only when that drawer is fully open. It uses the
-same vertical hover, descent, low release, vertical retreat, and shared carry
-pose. The sampler first tries the stable slot vacated by the current object,
-then searches the buffered tray interior; this preserves clearance in the
-crowded D2 layout while still allowing a different valid sample when space is
-available. Handle-grasped utensils enter vertically and topple along the wide
-drawer X axis after release, while the tissue is released flat at its sampled
-centre point.
-
-`Actions` → `Open` → `Box` becomes available at the shared `box` / `cupboard2`
-physical pose while the gripper is empty. The arm first moves above B1, drops
-to a horizontal hover `0.075 m` in front of the lid handle, inserts along
-world +Y, and closes only until both finger geoms contact the metal bar. A
-live-pose weld is then enabled without snapping the lid. The arm and the
-actual `B1_lid_joint` advance on one tracking-gated circular trajectory to the
-intentional 100-degree open position (inside the joint's `2.0 rad` mechanical
-limit). The gripper then opens, rises vertically by `0.12 m`, and returns to
-the empty side carry-hover pose while the lid actuator holds 100 degrees. Both
-cupboard doors use compact three-piece U-handles at `Z=0.13`, matching the box
-handle without placing them at the cupboard top. The cupboard row remains
-recessed at `Y=0.65`, leaving the 100-degree box-lid and retreat sweep clear.
-
-`Actions` → `Open` → `Drawer 1` or `Drawer 2` becomes available at Home while
-the gripper is empty. Both drawers have identical, level front-facing
-U-handles. The arm uses a safe high corridor before facing the selected
-handle, descends to its front hover, inserts horizontally along +Y, and closes
-until both fingers make physical contact. It then pulls the real slide joint
-straight back along -Y to the full shared `0.25 m` limit. After release, the arm
-retreats horizontally beyond the serving-table edge and returns to the
-shared empty carry pose.
-
-Robot-mounted sensors:
-
-- `head_camera_rgb`: Google Robot head camera.
-- `wrist_camera`: attached to the Google Robot gripper link.
-
-Environment cameras remain:
-
-- `left_shoulder_camera`
-- `right_shoulder_camera`
-- `overhead_camera`
-- `side_camera`
-- `front_camera`
 
 ## Intended S1 episode
 

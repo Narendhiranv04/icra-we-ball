@@ -12,10 +12,10 @@ to the model.
 | Living room L2 | Alternative destination regions | An observed region is semantically appropriate, supports the payload, fits it, and is near the sofa. |
 | Workshop W1 | Regions and object types together | A visible tool/fastener pair has the required simple functions and passes hole, reach, and mating checks. |
 
-Each ranker may return at most three alternatives. Ranking belongs to the
-foundation model; the deterministic stage only rejects unobserved IDs and
-checks geometry in rank order. Planning stops as soon as a valid witness is
-available.
+The functional FM returns 10--15 concrete type priors per requirement. The
+grounding experiments may expose a smaller controlled set of observed
+instances. The deterministic stage rejects unobserved IDs and checks geometry
+in rank order; search stops as soon as a complete valid witness is available.
 
 ## Native uv setup
 
@@ -23,7 +23,7 @@ From `V1`:
 
 ```bash
 uv venv --python 3.11
-uv pip install --python .venv/bin/python \
+uv pip install --torch-backend cpu --python .venv/bin/python \
   -r mujoco_scenes/requirements-dev.txt
 ```
 
@@ -50,9 +50,23 @@ Run natively:
 ./mujoco_scenes/scripts/run_s1_integrated_kitchen_native.sh kitchen_trial_01
 ```
 
-This benchmark intentionally runs without a robot because it measures
-grounding and search, not manipulation execution. The interactive Google
-Robot kitchen remains available separately:
+This search command intentionally runs without a robot. After it reports a
+`COMPLETE` witness, send the configured goal and execute the generated plan in
+the live Google-robot viewer:
+
+```bash
+GOAL='Prepare and serve coffee and soup for three people using the available kitchenware. Stir all three coffees and provide each soup bowl with a suitable utensil.'
+MUJOCO_GL=glfw .venv/bin/python -m \
+  mujoco_scenes.run_kitchen_goal_execution \
+  --phase1-run-dir runs/kitchen_trial_01 \
+  --base-url http://127.0.0.1:18080/v1 \
+  --goal "$GOAL" \
+  --camera free
+```
+
+The functional gateway and SSH tunnel must already be running. See
+`EXECUTION_AND_TESTING.md` for the complete contract and offline-response
+option. The manual interactive Google Robot kitchen also remains available:
 
 ```bash
 MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.scene_loader \
@@ -171,11 +185,8 @@ MUJOCO_GL=glfw .venv/bin/python -m mujoco_scenes.workshop_scene \
 ```
 
 The point-cloud runner establishes workshop observation and reconstruction,
-but not task execution. The existing `workshop_joint_alternatives.yaml`
-contract and
-`workshop_alternatives.py` validator still describe the earlier single-joint
-prototype; updating the functional-requirement, search, and sequencing
-pipeline is intentionally deferred. The `--remove-seal` option applies a
+but not task execution. Updating the functional-requirement, search, and
+sequencing pipeline is intentionally deferred. The `--remove-seal` option applies a
 labelled ground-truth debug transition; calibrated grasp-and-place execution
 must eventually replace it.
 

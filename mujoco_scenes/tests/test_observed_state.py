@@ -243,6 +243,31 @@ class ObservedStateTests(unittest.TestCase):
             stage_label="initial",
         )
 
+    def test_resume_rejects_changed_capture_provenance(self):
+        self._initial()
+        with self.assertRaisesRegex(RuntimeError, "different voxel size"):
+            ObservedStateRun(
+                self.run_dir,
+                scene_name=self.scene.scene_name,
+                region_ids=self.scene.region_states,
+                voxel_size=0.01,
+            )
+
+    def test_resume_rejects_different_scene(self):
+        self._initial()
+        with self.assertRaisesRegex(RuntimeError, "different scene"):
+            ObservedStateRun(
+                self.run_dir,
+                scene_name="different_scene",
+                region_ids=self.scene.region_states,
+            )
+
+    def test_cumulative_cloud_path_cannot_escape_run_directory(self):
+        with self.assertRaisesRegex(RuntimeError, "escapes"):
+            self.session._load_cumulative_visualization(
+                {"cumulative_visualization_cloud_path": "../../outside.ply"}
+            )
+
     def test_initial_objects_use_initial_stage_evidence_and_hidden_is_absent(self):
         self._initial()
         objects = self.session.registry["objects"]

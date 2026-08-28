@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import time
 from dataclasses import dataclass, field, replace
 from pathlib import Path
@@ -134,6 +135,22 @@ class PointCloudRun:
 
 def camera_intrinsics(fovy_degrees: float, width: int, height: int) -> np.ndarray:
     """Return pinhole intrinsics for MuJoCo's vertical field of view."""
+    if (
+        isinstance(width, bool)
+        or not isinstance(width, int)
+        or isinstance(height, bool)
+        or not isinstance(height, int)
+        or width <= 0
+        or height <= 0
+    ):
+        raise ValueError("Image dimensions must be positive integers")
+    if (
+        isinstance(fovy_degrees, bool)
+        or not isinstance(fovy_degrees, (int, float, np.integer, np.floating))
+        or not math.isfinite(float(fovy_degrees))
+        or not 0.0 < float(fovy_degrees) < 180.0
+    ):
+        raise ValueError("Vertical field of view must be between 0 and 180 degrees")
     fy = 0.5 * height / np.tan(0.5 * np.deg2rad(fovy_degrees))
     fx = fy
     return np.array(
@@ -142,25 +159,6 @@ def camera_intrinsics(fovy_degrees: float, width: int, height: int) -> np.ndarra
     )
 
 
-def scale_intrinsics(
-    intrinsics: np.ndarray,
-    *,
-    source_width: int,
-    source_height: int,
-    target_width: int,
-    target_height: int,
-) -> np.ndarray:
-    """Scale pinhole intrinsics to a resized, aligned RGB-D pixel grid."""
-    if min(source_width, source_height, target_width, target_height) <= 0:
-        raise ValueError("Image dimensions must be positive")
-    scaled = np.asarray(intrinsics, dtype=np.float64).copy()
-    scale_x = target_width / source_width
-    scale_y = target_height / source_height
-    scaled[0, 0] *= scale_x
-    scaled[0, 2] *= scale_x
-    scaled[1, 1] *= scale_y
-    scaled[1, 2] *= scale_y
-    return scaled
 
 
 def load_inspection_rig_config(
@@ -429,9 +427,23 @@ def gate_points_to_volume(
     boundary_margin_m: float,
 ) -> np.ndarray:
     """Return a mask selecting finite points inside one configured volume."""
-    samples = np.asarray(points)
-    minimum = np.asarray(minimum_world_m, dtype=np.float64) - boundary_margin_m
-    maximum = np.asarray(maximum_world_m, dtype=np.float64) + boundary_margin_m
+    samples = np.asarray(points, dtype=np.float64)
+    minimum = np.asarray(minimum_world_m, dtype=np.float64)
+    maximum = np.asarray(maximum_world_m, dtype=np.float64)
+    if samples.ndim != 2 or samples.shape[1] != 3:
+        raise ValueError("points must have shape (N, 3)")
+    if (
+        minimum.shape != (3,)
+        or maximum.shape != (3,)
+        or not np.all(np.isfinite(minimum))
+        or not np.all(np.isfinite(maximum))
+        or np.any(maximum <= minimum)
+    ):
+        raise ValueError("Volume bounds must be finite ordered 3-vectors")
+    if not math.isfinite(float(boundary_margin_m)) or boundary_margin_m < 0.0:
+        raise ValueError("boundary_margin_m must be finite and non-negative")
+    minimum = minimum - boundary_margin_m
+    maximum = maximum + boundary_margin_m
     return (
         np.all(np.isfinite(samples), axis=1)
         & np.all(samples >= minimum, axis=1)
@@ -489,6 +501,34 @@ def backproject_masked_depth(
     MuJoCo cameras look along local -Z with +X right and +Y up. Image row
     coordinates point downward, hence the sign on local Y.
     """
+    depth = np.asarray(depth)
+    mask = np.asarray(mask, dtype=bool)
+    intrinsics = np.asarray(intrinsics, dtype=np.float64)
+    camera_position = np.asarray(camera_position, dtype=np.float64)
+    camera_rotation = np.asarray(camera_rotation, dtype=np.float64)
+    if depth.ndim != 2 or mask.shape != depth.shape:
+        raise ValueError("depth and mask must be same-shaped 2D arrays")
+    if (
+        intrinsics.shape != (3, 3)
+        or not np.all(np.isfinite(intrinsics))
+        or intrinsics[0, 0] <= 0.0
+        or intrinsics[1, 1] <= 0.0
+    ):
+        raise ValueError("intrinsics must be a finite 3x3 matrix with positive focal lengths")
+    if (
+        camera_position.shape != (3,)
+        or camera_rotation.shape != (3, 3)
+        or not np.all(np.isfinite(camera_position))
+        or not np.all(np.isfinite(camera_rotation))
+    ):
+        raise ValueError("camera pose must contain finite 3D position and rotation")
+    if (
+        not math.isfinite(float(min_depth))
+        or not math.isfinite(float(max_depth))
+        or min_depth < 0.0
+        or max_depth <= min_depth
+    ):
+        raise ValueError("Depth limits must be finite and satisfy 0 <= min < max")
     valid = (
         mask
         & np.isfinite(depth)
@@ -509,8 +549,8 @@ def backproject_masked_depth(
             -z,
         )
     )
-    world = local @ np.asarray(camera_rotation, dtype=np.float64).T
-    world += np.asarray(camera_position, dtype=np.float64)
+    world = local @ camera_rotation.T
+    world += camera_position
     pixels = np.column_stack((rows, cols)).astype(np.int32)
     return world.astype(np.float32), pixels
 
@@ -651,6 +691,29 @@ class GeometryChecker:
     ):
         if mujoco is None:
             raise RuntimeError("GeometryChecker requires the mujoco package")
+        if (
+            isinstance(width, bool)
+            or not isinstance(width, int)
+            or isinstance(height, bool)
+            or not isinstance(height, int)
+            or width <= 0
+            or height <= 0
+        ):
+            raise ValueError("Geometry image dimensions must be positive integers")
+        if (
+            isinstance(max_depth, bool)
+            or not isinstance(max_depth, (int, float))
+            or not math.isfinite(float(max_depth))
+            or max_depth <= 0.0
+        ):
+            raise ValueError("max_depth must be finite and positive")
+        if (
+            isinstance(voxel_size, bool)
+            or not isinstance(voxel_size, (int, float))
+            or not math.isfinite(float(voxel_size))
+            or voxel_size < 0.0
+        ):
+            raise ValueError("voxel_size must be finite and non-negative")
         self.scene = scene
         self.model = scene.model
         self.data = scene.data
@@ -659,6 +722,12 @@ class GeometryChecker:
             if cameras is not None
             else getattr(scene, "point_cloud_cameras", DEFAULT_FUSION_CAMERAS)
         )
+        if (
+            not self.cameras
+            or len(set(self.cameras)) != len(self.cameras)
+            or any(not isinstance(name, str) or not name for name in self.cameras)
+        ):
+            raise ValueError("cameras must contain unique non-empty camera names")
         self.width = width
         self.height = height
         self.max_depth = max_depth
@@ -880,18 +949,18 @@ class GeometryChecker:
         :class:`MeasurementEvidence` objects. It never reads a historical PLY.
         """
         started = time.perf_counter()
-        configuration = (
-            load_inspection_rig_config(rig_config)
-            if isinstance(rig_config, (str, Path))
-            else rig_config
-            or load_inspection_rig_config(
+        if isinstance(rig_config, (str, Path)):
+            configuration = load_inspection_rig_config(rig_config)
+        elif rig_config is not None:
+            configuration = rig_config
+        else:
+            configuration = load_inspection_rig_config(
                 getattr(
                     self.scene,
                     "inspection_rig_config_path",
                     INSPECTION_RIG_CONFIG_PATH,
                 )
             )
-        )
         if region_id not in configuration["regions"]:
             raise ValueError(f"No inspection rig configured for {region_id}")
         region = configuration["regions"][region_id]

@@ -118,9 +118,9 @@ set -x PLANNER_MODEL qwen35-9b
 set -x PLANNER_MODEL_BASE_URL http://127.0.0.1:8000/v1
 set -x PLANNER_HOST 127.0.0.1
 set -x PLANNER_PORT 8080
-set -x PLANNER_MODEL_TIMEOUT_SECONDS 300
+set -x PLANNER_MODEL_TIMEOUT_SECONDS 600
 set -x PLANNER_ENABLE_THINKING true
-set -x PLANNER_MAX_TOKENS 12288
+set -x PLANNER_MAX_TOKENS 24576
 
 set -e INFERENCE_API_KEY
 set -e PLANNER_API_KEY
@@ -130,6 +130,10 @@ python3 inference_server/planner_api.py
 
 Leave this shell running too. Only `planner_api.py` must be restarted after a
 prompt, schema, catalog, or planner configuration change. vLLM can keep running.
+The system prompt is
+`inference_server/prompts/functional_decomposition.txt`; the request-specific
+user message is assembled in `functional_planner.py` from the goal, images,
+catalog, and JSON schema.
 
 ### Switch to another model
 
@@ -168,7 +172,7 @@ set -x INFERENCE_MODEL glm46v-flash
 set -x PLANNER_MODEL_BASE_URL http://127.0.0.1:8000/v1
 set -x PLANNER_HOST 127.0.0.1
 set -x PLANNER_PORT 8080
-set -x PLANNER_MODEL_TIMEOUT_SECONDS 300
+set -x PLANNER_MODEL_TIMEOUT_SECONDS 600
 
 set -e PLANNER_MODEL
 set -e PLANNER_ENABLE_THINKING
@@ -324,12 +328,13 @@ and restart only `planner_api.py`.
 
 ### `Completion has no final JSON content (finish_reason=length)`
 
-First confirm the current `functional_planner.py` is on the server. Thinking
-mode must use the configured non-greedy sampler. If it still reaches the limit,
-temporarily try:
+First confirm the current `functional_planner.py` and `models.json` are on the
+server. Thinking mode must use the configured non-greedy sampler. Qwen3.5 uses
+the following bounded 24K output budget inside its 32K context:
 
 ```fish
-set -x PLANNER_MAX_TOKENS 16384
+set -x PLANNER_MAX_TOKENS 24576
+set -x PLANNER_MODEL_TIMEOUT_SECONDS 600
 ```
 
 Restart `planner_api.py` after changing the value. If Qwen repeatedly consumes

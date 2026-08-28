@@ -19,3 +19,12 @@ semantic_model_cache/
 weights/
 mujoco_scenes/weights/
 *.pt
+
+# Exact external paper implementations installed by baseline setup scripts
+.paper_deps/
+
+# PDDLStream's pinned research fork writes these relative runtime artifacts.
+statistics/
+temp/
+visualizations/
+txt_file.txt

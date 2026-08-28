@@ -7,7 +7,7 @@ import math
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import mujoco
 import numpy as np
@@ -992,6 +992,15 @@ class L2RegionEvidenceCapture:
         width: int,
         height: int,
     ):
+        if (
+            isinstance(width, bool)
+            or not isinstance(width, int)
+            or isinstance(height, bool)
+            or not isinstance(height, int)
+            or width <= 0
+            or height <= 0
+        ):
+            raise ValueError("Region capture dimensions must be positive integers")
         self.scene = scene
         self.model = scene.model
         self.data = scene.data
@@ -999,6 +1008,26 @@ class L2RegionEvidenceCapture:
         self.height = height
         with Path(rig_config).open(encoding="utf-8") as source:
             self.config = yaml.safe_load(source)
+        if not isinstance(self.config, dict):
+            raise ValueError("Region inspection rig must be a mapping")
+        for key in (
+            "camera_slots",
+            "view_validation",
+            "processing",
+            "sofa_context_volume",
+            "regions",
+        ):
+            if not isinstance(self.config.get(key), dict):
+                raise ValueError(f"Region inspection rig requires mapping {key!r}")
+        camera_slots = self.config["camera_slots"]
+        if not camera_slots or any(
+            not isinstance(key, str)
+            or not key.strip()
+            or not isinstance(value, str)
+            or not value.strip()
+            for key, value in camera_slots.items()
+        ):
+            raise ValueError("Region camera slots require non-empty string names")
 
     def capture(
         self,
@@ -1007,6 +1036,10 @@ class L2RegionEvidenceCapture:
         stage: int,
         stage_dir: str | Path,
     ) -> RegionStageCapture:
+        if inspection_label not in self.config["regions"]:
+            raise ValueError(f"Unknown region inspection label: {inspection_label}")
+        if isinstance(stage, bool) or not isinstance(stage, int) or stage < 0:
+            raise ValueError("Region capture stage must be a non-negative integer")
         started = time.perf_counter()
         stage_dir = Path(stage_dir)
         stage_dir.mkdir(parents=True, exist_ok=False)
@@ -1396,6 +1429,17 @@ class L2RegionEvidenceCapture:
 def load_region_task(path: str | Path) -> dict[str, Any]:
     with Path(path).open(encoding="utf-8") as source:
         config = yaml.safe_load(source)
-    if config.get("natural_language_goal") is None:
-        raise ValueError("Region task requires natural_language_goal")
+    if not isinstance(config, dict):
+        raise ValueError("Region task must be a mapping")
+    goal = config.get("natural_language_goal")
+    if not isinstance(goal, str) or not goal.strip():
+        raise ValueError("Region task requires a non-empty natural_language_goal")
+    for key in (
+        "function",
+        "semantic_requirements",
+        "geometric_requirements",
+        "candidate_ranking",
+    ):
+        if not isinstance(config.get(key), dict):
+            raise ValueError(f"Region task requires mapping {key!r}")
     return config

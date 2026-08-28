@@ -256,11 +256,28 @@ class RegionAblationRun:
         self.task = load_region_task(task_config)
         with Path(evaluation_config).open(encoding="utf-8") as source:
             self.evaluation = yaml.safe_load(source)
+        if not isinstance(self.evaluation, dict) or not isinstance(
+            self.evaluation.get("scenes"), dict
+        ):
+            raise ValueError("Region evaluation config requires a scenes mapping")
         self.rig_config = Path(rig_config)
-        self.semantic_detector = semantic_detector or NullSemanticDetector()
-        self.semantic_config = semantic_config or load_semantic_config(
-            vocabulary_path=DEFAULT_SEMANTIC_VOCABULARY
+        self.semantic_detector = (
+            NullSemanticDetector() if semantic_detector is None else semantic_detector
         )
+        self.semantic_config = (
+            load_semantic_config(vocabulary_path=DEFAULT_SEMANTIC_VOCABULARY)
+            if semantic_config is None
+            else semantic_config
+        )
+        if (
+            isinstance(width, bool)
+            or not isinstance(width, int)
+            or isinstance(height, bool)
+            or not isinstance(height, int)
+            or width <= 0
+            or height <= 0
+        ):
+            raise ValueError("Region run dimensions must be positive integers")
         self.width = width
         self.height = height
         self.registry = PersistentRegionRegistry()

@@ -1,5 +1,8 @@
 import unittest
+import tempfile
+from pathlib import Path
 
+from inference_server.functional_client import request_decomposition
 from inference_server.server import build_command, load_profiles, printable_command
 
 
@@ -92,6 +95,7 @@ class ServerLauncherTests(unittest.TestCase):
             (self.environment("unknown"), "Unknown model profile"),
             (self.environment(INFERENCE_BACKEND="other"), "INFERENCE_BACKEND"),
             (self.environment(INFERENCE_MAX_MODEL_LEN="0"), "must be positive"),
+            (self.environment(INFERENCE_CONTAINER_PORT="0"), "between 1 and 65535"),
             (self.environment(INFERENCE_GPU_MEMORY_UTILIZATION="1"), "between 0 and 1"),
             (self.environment("muse-glimmer"), "not runnable"),
         )
@@ -99,6 +103,38 @@ class ServerLauncherTests(unittest.TestCase):
             with self.subTest(message=message):
                 with self.assertRaisesRegex(ValueError, message):
                     build_command(environment)
+
+
+class FunctionalClientTests(unittest.TestCase):
+    def test_rejects_duplicate_camera_labels_before_network_request(self):
+        with tempfile.TemporaryDirectory() as root:
+            image = Path(root) / "frame.png"
+            image.write_bytes(b"png")
+            with self.assertRaisesRegex(ValueError, "unique"):
+                request_decomposition(
+                    scene="kitchen",
+                    goal="make coffee",
+                    images=[("front", image), ("front", image)],
+                    base_url="http://127.0.0.1:18080/v1",
+                )
+
+    def test_rejects_invalid_endpoint_and_timeout(self):
+        with tempfile.TemporaryDirectory() as root:
+            image = Path(root) / "frame.png"
+            image.write_bytes(b"png")
+            common = {
+                "scene": "kitchen",
+                "goal": "make coffee",
+                "images": [("front", image)],
+            }
+            with self.assertRaisesRegex(ValueError, "HTTP"):
+                request_decomposition(**common, base_url="localhost:18080/v1")
+            with self.assertRaisesRegex(ValueError, "timeout"):
+                request_decomposition(
+                    **common,
+                    base_url="http://127.0.0.1:18080/v1",
+                    timeout_seconds=0,
+                )
 
 
 if __name__ == "__main__":

@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import hmac
 import json
+import math
 import os
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Any
 
 try:
     from .functional_planner import (
@@ -76,15 +76,22 @@ def config_from_env(environ: dict[str, str] | None = None) -> tuple[PlannerConfi
     sampling = sampling_profiles.get(sampling_name) if sampling_profiles else None
     if sampling is not None and not isinstance(sampling, dict):
         raise ValueError(f"Invalid {profile_name or model} planner sampling profile")
-    timeout = float(values.get("PLANNER_MODEL_TIMEOUT_SECONDS", "300"))
+    timeout = float(values.get("PLANNER_MODEL_TIMEOUT_SECONDS", "600"))
     max_tokens = int(
         values.get("PLANNER_MAX_TOKENS", "").strip()
         or planner.get("max_tokens", 8192)
     )
     port = int(values.get("PLANNER_PORT", "8080"))
     host = values.get("PLANNER_HOST", "127.0.0.1").strip()
-    if timeout <= 0 or max_tokens <= 0 or not 1 <= port <= 65535:
+    if (
+        not math.isfinite(timeout)
+        or timeout <= 0
+        or max_tokens <= 0
+        or not 1 <= port <= 65535
+    ):
         raise ValueError("Planner timeout, token limit, and port must be positive")
+    if not host:
+        raise ValueError("PLANNER_HOST must not be empty")
     if not incoming_key and not _is_loopback(host):
         raise ValueError("PLANNER_API_KEY is required for a non-loopback host")
     config = PlannerConfig(

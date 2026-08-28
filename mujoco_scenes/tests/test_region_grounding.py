@@ -10,6 +10,7 @@ import pytest
 from mujoco_scenes.living_room_region_scene import (
     L2_ABLATION1_SCENES,
     L2_ABLATION3_SCENES,
+    L2_INTEGRATED_SCENES,
     L2_SCENES,
     L2LivingRoomRegionScene,
     build_l2_region_xml,
@@ -42,6 +43,17 @@ from mujoco_scenes.generate_region_ablation_report import _data_uri, _write_html
 
 
 TASK = load_region_task(DEFAULT_TASK_CONFIG)
+
+
+def test_region_task_and_capture_reject_malformed_inputs(tmp_path):
+    malformed = tmp_path / "task.yaml"
+    malformed.write_text("- not\n- a\n- mapping\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="must be a mapping"):
+        load_region_task(malformed)
+    with pytest.raises(ValueError, match="dimensions"):
+        L2RegionEvidenceCapture(
+            object(), rig_config=DEFAULT_TASK_CONFIG, width=0, height=240
+        )
 
 
 def _horizontal_points(length=0.7, width=0.5, z=0.5, count=1600):
@@ -373,6 +385,11 @@ def test_l2_variants_compile_without_robot(scene_name):
             )
             >= 0
         )
+    elif scene_name in L2_INTEGRATED_SCENES:
+        assert sum(
+            model.jnt_type[joint_id] == mujoco.mjtJoint.mjJNT_FREE
+            for joint_id in range(model.njnt)
+        ) == 5
     elif scene_name not in L2_ABLATION3_SCENES:
         assert sum(
             model.jnt_type[joint_id] == mujoco.mjtJoint.mjJNT_FREE

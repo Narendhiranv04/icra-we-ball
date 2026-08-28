@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import shlex
-import sys
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -23,11 +23,37 @@ def _is_loopback(host: str) -> bool:
 
 def load_profiles(path: str | Path = MODEL_REGISTRY) -> dict[str, dict[str, Any]]:
     document = json.loads(Path(path).read_text(encoding="utf-8"))
-    if document.get("schema_version") != 1:
+    if not isinstance(document, dict) or document.get("schema_version") != 1:
         raise ValueError("Unsupported model registry schema")
     profiles = document.get("models")
     if not isinstance(profiles, dict) or not profiles:
         raise ValueError("Model registry must contain profiles")
+    for name, profile in profiles.items():
+        if not isinstance(name, str) or not name or not isinstance(profile, dict):
+            raise ValueError("Invalid model profile entry")
+        if profile.get("available", True) is not True:
+            if not isinstance(profile.get("notes"), str):
+                raise ValueError(f"Unavailable profile {name!r} needs notes")
+            continue
+        required_strings = ("model_id", "served_name", "default_backend", "precision")
+        if any(
+            not isinstance(profile.get(field), str) or not profile[field].strip()
+            for field in required_strings
+        ):
+            raise ValueError(f"Profile {name!r} has invalid required fields")
+        backend = profile["default_backend"]
+        if backend not in BACKENDS or not isinstance(profile.get(backend), dict):
+            raise ValueError(f"Profile {name!r} has an invalid default backend")
+        for field in ("max_model_len", "max_concurrency"):
+            value = profile.get(field)
+            if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+                raise ValueError(f"Profile {name!r} has invalid {field}")
+        max_images = profile.get("max_images", 0)
+        if isinstance(max_images, bool) or not isinstance(max_images, int) or max_images < 0:
+            raise ValueError(f"Profile {name!r} has invalid max_images")
+        planner = profile.get("planner")
+        if not isinstance(planner, dict):
+            raise ValueError(f"Profile {name!r} needs planner configuration")
     return profiles
 
 
@@ -40,8 +66,15 @@ def _positive_int(value: str, name: str) -> int:
 
 def _fraction(value: str, name: str) -> float:
     parsed = float(value)
-    if not 0.0 < parsed < 1.0:
+    if not math.isfinite(parsed) or not 0.0 < parsed < 1.0:
         raise ValueError(f"{name} must be between 0 and 1")
+    return parsed
+
+
+def _port(value: str, name: str) -> int:
+    parsed = int(value)
+    if not 1 <= parsed <= 65535:
+        raise ValueError(f"{name} must be between 1 and 65535")
     return parsed
 
 
@@ -54,7 +87,7 @@ def resolve_profile(
     environ: Mapping[str, str],
     profiles: Mapping[str, dict[str, Any]] | None = None,
 ) -> tuple[str, dict[str, Any], str]:
-    available_profiles = profiles or load_profiles()
+    available_profiles = load_profiles() if profiles is None else profiles
     profile_name = environ.get("INFERENCE_MODEL", "").strip()
     if not profile_name:
         raise ValueError("INFERENCE_MODEL is required")
@@ -89,7 +122,10 @@ def build_command(
     api_key = environ.get("INFERENCE_API_KEY", "").strip()
     if not api_key and not _is_loopback(host):
         raise ValueError("INFERENCE_API_KEY is required for a non-loopback host")
-    port = _setting(environ, "INFERENCE_CONTAINER_PORT", "8000")
+    port = _port(
+        _setting(environ, "INFERENCE_CONTAINER_PORT", "8000"),
+        "INFERENCE_CONTAINER_PORT",
+    )
     tensor_parallel = _positive_int(
         _setting(environ, "INFERENCE_TENSOR_PARALLEL_SIZE", 1),
         "INFERENCE_TENSOR_PARALLEL_SIZE",
@@ -118,7 +154,7 @@ def build_command(
             "--host",
             host,
             "--port",
-            port,
+            str(port),
             "--tensor-parallel-size",
             str(tensor_parallel),
             "--max-model-len",
@@ -155,7 +191,7 @@ def build_command(
             "--host",
             host,
             "--port",
-            port,
+            str(port),
             "--tp-size",
             str(tensor_parallel),
             "--context-length",

@@ -19,8 +19,10 @@ from mujoco_scenes.scene_loader import (
     ROBOT_GOOGLE,
     ROBOT_NONE,
     _google_robot_dir,
+    _apply_robot_home_pose,
     _inject_google_robot,
     _load_google_binary_assets,
+    _validate_render_dimensions,
 )
 
 
@@ -88,7 +90,7 @@ class WorkshopScene:
     implement grasping, screw driving, or task-and-motion planning.
     """
 
-    scene_name = "W1_workshop_joint_alternatives"
+    scene_name = "W1_workshop_joint_prerequisites"
     goal = (
         "Remove the protective seal, then repair the fixture-held frame joint "
         "using the first compatible observed driver and screw."
@@ -120,16 +122,13 @@ class WorkshopScene:
         mujoco.mj_resetData(self.model, self.data)
         self.state = WorkshopObservationState()
         if self.has_robot:
-            for joint_name, value in GOOGLE_HOME_QPOS.items():
-                joint_id = mujoco.mj_name2id(
-                    self.model, mujoco.mjtObj.mjOBJ_JOINT, joint_name
-                )
-                self.data.qpos[self.model.jnt_qposadr[joint_id]] = value
-            for actuator_name, joint_name, *_rest in GOOGLE_ACTUATORS:
-                actuator_id = mujoco.mj_name2id(
-                    self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, actuator_name
-                )
-                self.data.ctrl[actuator_id] = GOOGLE_HOME_QPOS[joint_name]
+            _apply_robot_home_pose(
+                self.model,
+                self.data,
+                robot_name="Google Robot",
+                home_qpos=GOOGLE_HOME_QPOS,
+                actuators=GOOGLE_ACTUATORS,
+            )
         mujoco.mj_forward(self.model, self.data)
         for _ in range(settle_steps):
             mujoco.mj_step(self.model, self.data)
@@ -273,6 +272,7 @@ class WorkshopScene:
         width: int = 1280,
         height: int = 720,
     ) -> np.ndarray:
+        width, height = _validate_render_dimensions(width, height)
         if camera not in WORKSHOP_CAMERAS:
             raise ValueError(f"Unknown workshop camera: {camera}")
         renderer = mujoco.Renderer(self.model, height=height, width=width)

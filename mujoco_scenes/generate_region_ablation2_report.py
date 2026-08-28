@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import base64
-import csv
 import html
 import json
 import mimetypes

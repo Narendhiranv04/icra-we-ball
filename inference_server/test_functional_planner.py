@@ -258,7 +258,7 @@ class FunctionalPlannerTests(unittest.TestCase):
         )
         self.assertEqual(config.model, "qwen35-9b")
         self.assertTrue(config.enable_thinking)
-        self.assertEqual(config.max_tokens, 12288)
+        self.assertEqual(config.max_tokens, 24576)
         self.assertEqual(incoming_key, "secret")
         self.assertEqual((host, port), ("127.0.0.1", 8080))
 

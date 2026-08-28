@@ -20,7 +20,16 @@ IK_MAX_JOINT_STEP = 0.055
 MINK_TIMESTEP = 0.1
 
 
-def _rotation_vector(matrix: np.ndarray) -> np.ndarray:
+def rotation_vector(matrix: np.ndarray) -> np.ndarray:
+    """Convert a 3x3 rotation matrix to its shortest axis-angle vector."""
+    matrix = np.asarray(matrix, dtype=float)
+    if (
+        matrix.shape != (3, 3)
+        or not np.all(np.isfinite(matrix))
+        or not np.allclose(matrix.T @ matrix, np.eye(3), atol=1e-5)
+        or not np.isclose(np.linalg.det(matrix), 1.0, atol=1e-5)
+    ):
+        raise ValueError("rotation matrix must be a finite orthonormal 3x3 array")
     quat = np.empty(4)
     mujoco.mju_mat2Quat(quat, matrix.ravel())
     if quat[0] < 0:
@@ -37,9 +46,47 @@ class _ProfileIKBase:
         model: mujoco.MjModel,
         reference: mujoco.MjData,
         profile: ManipulationProfile,
+        *,
+        orientation_weight: float = 0.30,
+        seed_continuity_weight: float = 0.0,
+        maximum_seed_delta_rad: float | None = None,
+        maximum_iterations: int = IK_MAX_ITERATIONS,
     ):
+        if (
+            isinstance(orientation_weight, bool)
+            or not isinstance(orientation_weight, (int, float))
+            or not math.isfinite(float(orientation_weight))
+            or orientation_weight < 0
+        ):
+            raise ValueError("orientation_weight must be finite and non-negative")
+        if (
+            isinstance(seed_continuity_weight, bool)
+            or not isinstance(seed_continuity_weight, (int, float))
+            or not math.isfinite(float(seed_continuity_weight))
+            or seed_continuity_weight < 0
+        ):
+            raise ValueError(
+                "seed_continuity_weight must be finite and non-negative"
+            )
+        if maximum_seed_delta_rad is not None and (
+            isinstance(maximum_seed_delta_rad, bool)
+            or not isinstance(maximum_seed_delta_rad, (int, float))
+            or not math.isfinite(float(maximum_seed_delta_rad))
+            or maximum_seed_delta_rad <= 0
+        ):
+            raise ValueError("maximum_seed_delta_rad must be positive")
+        if (
+            isinstance(maximum_iterations, bool)
+            or not isinstance(maximum_iterations, int)
+            or maximum_iterations <= 0
+        ):
+            raise ValueError("maximum_iterations must be a positive integer")
         self.model = model
         self.profile = profile
+        self.orientation_weight = float(orientation_weight)
+        self.seed_continuity_weight = float(seed_continuity_weight)
+        self.maximum_seed_delta_rad = maximum_seed_delta_rad
+        self.maximum_iterations = maximum_iterations
         self.reference_qpos = reference.qpos.copy()
         self.data = mujoco.MjData(model)
         self.data.qpos[:] = self.reference_qpos
@@ -65,12 +112,36 @@ class _ProfileIKBase:
         self.lower = np.where(limited, limits[:, 0] + 0.015, -math.pi)
         self.upper = np.where(limited, limits[:, 1] - 0.015, math.pi)
 
-    def _initial_qpos(self, seed: np.ndarray) -> np.ndarray:
+    def _initial_qpos(
+        self, seed: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        seed = np.asarray(seed, dtype=float)
+        if seed.shape != self.lower.shape or not np.all(np.isfinite(seed)):
+            raise ValueError("IK seed has the wrong shape or non-finite values")
+        seed = np.clip(seed, self.lower, self.upper)
+        local_lower = self.lower
+        local_upper = self.upper
+        if self.maximum_seed_delta_rad is not None:
+            local_lower = np.maximum(
+                local_lower, seed - self.maximum_seed_delta_rad
+            )
+            local_upper = np.minimum(
+                local_upper, seed + self.maximum_seed_delta_rad
+            )
         qpos = self.reference_qpos.copy()
-        qpos[self.qpos_addresses] = np.clip(
-            seed, self.lower, self.upper
-        )
-        return qpos
+        qpos[self.qpos_addresses] = seed
+        return qpos, seed, local_lower, local_upper
+
+    @staticmethod
+    def _validate_target(
+        target: np.ndarray, target_rotation: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray]:
+        target = np.asarray(target, dtype=float)
+        if target.shape != (3,) or not np.all(np.isfinite(target)):
+            raise ValueError("IK target position must be a finite 3-vector")
+        target_rotation = np.asarray(target_rotation, dtype=float)
+        rotation_vector(target_rotation)
+        return target, target_rotation
 
     def _result(
         self,
@@ -88,7 +159,7 @@ class _ProfileIKBase:
             ),
             float(
                 np.linalg.norm(
-                    _rotation_vector(target_rotation @ rotation.T)
+                    rotation_vector(target_rotation @ rotation.T)
                 )
             ),
         )
@@ -103,22 +174,29 @@ class DampedLeastSquaresIK(_ProfileIKBase):
         seed: np.ndarray,
         target_rotation: np.ndarray,
     ) -> tuple[np.ndarray, float, float]:
-        self.data.qpos[:] = self._initial_qpos(seed)
+        target, target_rotation = self._validate_target(
+            target, target_rotation
+        )
+        qpos, seed, local_lower, local_upper = self._initial_qpos(seed)
+        self.data.qpos[:] = qpos
         self.data.qvel[:] = 0
-        for _ in range(IK_MAX_ITERATIONS):
+        for _ in range(self.maximum_iterations):
             mujoco.mj_forward(self.model, self.data)
             rotation = self.data.site_xmat[self.site_id].reshape(3, 3)
             position_error = target - self.data.site_xpos[self.site_id]
-            rotation_error = _rotation_vector(
+            rotation_error = rotation_vector(
                 target_rotation @ rotation.T
             )
             error = np.concatenate(
-                (position_error, 0.30 * rotation_error)
+                (position_error, self.orientation_weight * rotation_error)
             )
             if (
                 np.linalg.norm(position_error) < IK_POSITION_TOLERANCE
-                and np.linalg.norm(rotation_error)
-                < IK_ORIENTATION_TOLERANCE
+                and (
+                    self.orientation_weight == 0.0
+                    or np.linalg.norm(rotation_error)
+                    < IK_ORIENTATION_TOLERANCE
+                )
             ):
                 break
 
@@ -134,15 +212,20 @@ class DampedLeastSquaresIK(_ProfileIKBase):
             jacobian = np.vstack(
                 (
                     jac_pos[:, self.dof_addresses],
-                    0.30 * jac_rot[:, self.dof_addresses],
+                    self.orientation_weight * jac_rot[:, self.dof_addresses],
                 )
             )
             damping = 0.0025
-            delta = jacobian.T @ np.linalg.solve(
+            damped_inverse = np.linalg.solve(
                 jacobian @ jacobian.T + damping * np.eye(6),
-                error,
+                np.eye(6),
             )
+            pseudoinverse = jacobian.T @ damped_inverse
+            delta = pseudoinverse @ error
             current = self.data.qpos[self.qpos_addresses]
+            delta += self.seed_continuity_weight * (
+                np.eye(len(current)) - pseudoinverse @ jacobian
+            ) @ (seed - current)
             self.data.qpos[self.qpos_addresses] = np.clip(
                 current
                 + np.clip(
@@ -150,8 +233,8 @@ class DampedLeastSquaresIK(_ProfileIKBase):
                     -IK_MAX_JOINT_STEP,
                     IK_MAX_JOINT_STEP,
                 ),
-                self.lower,
-                self.upper,
+                local_lower,
+                local_upper,
             )
 
         return self._result(target, target_rotation)
@@ -165,8 +248,9 @@ class MinkIK(_ProfileIKBase):
         model: mujoco.MjModel,
         reference: mujoco.MjData,
         profile: ManipulationProfile,
+        **solver_options: Any,
     ):
-        super().__init__(model, reference, profile)
+        super().__init__(model, reference, profile, **solver_options)
         try:
             import mink
         except ModuleNotFoundError as error:
@@ -197,14 +281,17 @@ class MinkIK(_ProfileIKBase):
         seed: np.ndarray,
         target_rotation: np.ndarray,
     ) -> tuple[np.ndarray, float, float]:
-        qpos = self._initial_qpos(seed)
+        target, target_rotation = self._validate_target(
+            target, target_rotation
+        )
+        qpos, seed, local_lower, local_upper = self._initial_qpos(seed)
         configuration = self.mink.Configuration(self.model, q=qpos)
 
         frame_task = self.mink.FrameTask(
             frame_name=self.profile.grip_site,
             frame_type="site",
             position_cost=1.0,
-            orientation_cost=0.30,
+            orientation_cost=self.orientation_weight,
             gain=0.8,
             lm_damping=1e-4,
         )
@@ -216,7 +303,9 @@ class MinkIK(_ProfileIKBase):
         )
 
         posture_cost = np.zeros(self.model.nv)
-        posture_cost[self.dof_addresses] = 1e-3
+        posture_cost[self.dof_addresses] = max(
+            1e-3, self.seed_continuity_weight
+        )
         posture_task = self.mink.PostureTask(
             self.model,
             cost=posture_cost,
@@ -229,7 +318,7 @@ class MinkIK(_ProfileIKBase):
             else None
         )
 
-        for _ in range(IK_MAX_ITERATIONS):
+        for _ in range(self.maximum_iterations):
             try:
                 velocity = self.mink.solve_ik(
                     configuration,
@@ -255,8 +344,8 @@ class MinkIK(_ProfileIKBase):
             )
             configuration.data.qpos[self.qpos_addresses] = np.clip(
                 configuration.data.qpos[self.qpos_addresses],
-                self.lower,
-                self.upper,
+                local_lower,
+                local_upper,
             )
             configuration.update()
 
@@ -271,12 +360,15 @@ class MinkIK(_ProfileIKBase):
             )
             orientation_error = float(
                 np.linalg.norm(
-                    _rotation_vector(target_rotation @ rotation.T)
+                    rotation_vector(target_rotation @ rotation.T)
                 )
             )
             if (
                 position_error < IK_POSITION_TOLERANCE
-                and orientation_error < IK_ORIENTATION_TOLERANCE
+                and (
+                    self.orientation_weight == 0.0
+                    or orientation_error < IK_ORIENTATION_TOLERANCE
+                )
             ):
                 break
 
@@ -295,22 +387,34 @@ class ProfiledIK:
         model: mujoco.MjModel,
         reference: mujoco.MjData,
         profile: ManipulationProfile,
+        orientation_weight: float = 0.30,
+        seed_continuity_weight: float = 0.0,
+        maximum_seed_delta_rad: float | None = None,
+        maximum_iterations: int = IK_MAX_ITERATIONS,
         *,
         backend: str | None = None,
     ):
-        requested = (
-            backend
-            or os.environ.get("MUJOCO_IK_BACKEND", "auto")
-        ).strip().lower()
+        requested_value = backend or os.environ.get(
+            "MUJOCO_IK_BACKEND", "legacy"
+        )
+        if not isinstance(requested_value, str):
+            raise TypeError("IK backend must be a string")
+        requested = requested_value.strip().lower()
         if requested not in self.VALID_BACKENDS:
             raise ValueError(
                 "MUJOCO_IK_BACKEND must be auto, mink, or legacy"
             )
+        solver_options = {
+            "orientation_weight": orientation_weight,
+            "seed_continuity_weight": seed_continuity_weight,
+            "maximum_seed_delta_rad": maximum_seed_delta_rad,
+            "maximum_iterations": maximum_iterations,
+        }
 
         if requested in {"auto", "mink"}:
             try:
                 self._solver: Any = MinkIK(
-                    model, reference, profile
+                    model, reference, profile, **solver_options
                 )
                 self.backend_name = "mink"
             except ModuleNotFoundError:
@@ -323,12 +427,12 @@ class ProfiledIK:
                     stacklevel=2,
                 )
                 self._solver = DampedLeastSquaresIK(
-                    model, reference, profile
+                    model, reference, profile, **solver_options
                 )
                 self.backend_name = "legacy"
         else:
             self._solver = DampedLeastSquaresIK(
-                model, reference, profile
+                model, reference, profile, **solver_options
             )
             self.backend_name = "legacy"
 

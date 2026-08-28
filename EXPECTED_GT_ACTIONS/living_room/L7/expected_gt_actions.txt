@@ -1,0 +1,8 @@
+Environment: living_room
+Variant: L7
+Internal variant: I0_NO_SHARED_TABLE
+Intended outcome: INFEASIBLE
+Description: The required shared table is absent. Grounding termination: FUNCTIONAL_WITNESS_NOT_COMPLETE.
+Expected GT actions: 1
+
+001. TERMINATE_INFEASIBLE(FUNCTIONAL_WITNESS_NOT_COMPLETE)  # No complete functional region assignment exists.

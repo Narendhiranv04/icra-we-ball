@@ -1039,18 +1039,3 @@ def pairwise_relation_evaluation(
             **provenance,
         }
     raise ValueError(f"Unsupported pairwise relation: {relation}")
-
-
-def pairwise_relation_status(
-    relation: str,
-    source_properties: dict[str, Any],
-    target_properties: dict[str, Any],
-    config: dict[str, Any],
-) -> str:
-    """Compatibility wrapper returning only the tri-state result."""
-    return pairwise_relation_evaluation(
-        relation,
-        source_properties,
-        target_properties,
-        config,
-    )["status"]

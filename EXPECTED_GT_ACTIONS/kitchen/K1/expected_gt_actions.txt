@@ -1,0 +1,31 @@
+Environment: kitchen
+Variant: K1
+Internal variant: F0_ALL_VISIBLE
+Intended outcome: FEASIBLE
+Description: All required objects are initially visible.
+Expected GT actions: 24
+
+001. PICK(s1i_compact_kettle)  # Pick water_source (s1i_compact_kettle) to dispense hot water
+002. POUR(s1i_compact_kettle, ab3_narrow_deep_cup)  # Pour hot water from s1i_compact_kettle into coffee target ab3_narrow_deep_cup
+003. POUR(s1i_compact_kettle, ab3_medium_deep_mug)  # Pour hot water from s1i_compact_kettle into coffee target ab3_medium_deep_mug
+004. PLACE(s1i_compact_kettle, countertop)  # Return water_source (s1i_compact_kettle) to safe countertop support
+005. PICK(s1i_compact_coffee_jar)  # Pick coffee_source (s1i_compact_coffee_jar) to dispense coffee grounds
+006. POUR(s1i_compact_coffee_jar, ab3_narrow_deep_cup)  # Pour coffee grounds from s1i_compact_coffee_jar into coffee target ab3_narrow_deep_cup
+007. POUR(s1i_compact_coffee_jar, ab3_medium_deep_mug)  # Pour coffee grounds from s1i_compact_coffee_jar into coffee target ab3_medium_deep_mug
+008. PLACE(s1i_compact_coffee_jar, countertop)  # Return coffee_source (s1i_compact_coffee_jar) to safe countertop support
+009. PICK(s1i_final_long_narrow_spoon)  # Pick coffee stirring tool s1i_final_long_narrow_spoon for sequential preparation
+010. STIR(s1i_final_long_narrow_spoon, ab3_narrow_deep_cup)  # Stir coffee in ab3_narrow_deep_cup using assigned tool s1i_final_long_narrow_spoon
+011. STIR(s1i_final_long_narrow_spoon, ab3_medium_deep_mug)  # Stir coffee in ab3_medium_deep_mug using assigned tool s1i_final_long_narrow_spoon
+012. PLACE(s1i_final_long_narrow_spoon, countertop)  # Set stirring tool s1i_final_long_narrow_spoon on countertop after coffee stirring completion
+013. PICK(ab3_narrow_deep_cup)  # Pick prepared coffee vessel ab3_narrow_deep_cup for serving
+014. PLACE(ab3_narrow_deep_cup, serving_area)  # Place coffee vessel ab3_narrow_deep_cup in serving area
+015. PICK(ab3_medium_deep_mug)  # Pick prepared coffee vessel ab3_medium_deep_mug for serving
+016. PLACE(ab3_medium_deep_mug, serving_area)  # Place coffee vessel ab3_medium_deep_mug in serving area
+017. PICK(ab3_deep_bowl)  # Pick soup bowl ab3_deep_bowl for serving
+018. PLACE(ab3_deep_bowl, serving_area)  # Place soup bowl ab3_deep_bowl in serving area
+019. PICK(s1i_oversized_spoon)  # Pick dedicated soup utensil s1i_oversized_spoon for ab3_deep_bowl
+020. PLACE_SERVING_UTENSIL(s1i_oversized_spoon, ab3_deep_bowl)  # Place soup utensil s1i_oversized_spoon with served soup bowl ab3_deep_bowl
+021. PICK(ab3_shallow_bowl)  # Pick soup bowl ab3_shallow_bowl for serving
+022. PLACE(ab3_shallow_bowl, serving_area)  # Place soup bowl ab3_shallow_bowl in serving area
+023. PICK(ab3_partial_spoon)  # Pick dedicated soup utensil ab3_partial_spoon for ab3_shallow_bowl
+024. PLACE_SERVING_UTENSIL(ab3_partial_spoon, ab3_shallow_bowl)  # Place soup utensil ab3_partial_spoon with served soup bowl ab3_shallow_bowl

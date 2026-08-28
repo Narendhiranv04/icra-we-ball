@@ -1,0 +1,53 @@
+{
+  "actions": [
+    {
+      "arguments": [
+        "D1"
+      ],
+      "operator": "OPEN",
+      "reason": "Search storage D1 to assess task feasibility"
+    },
+    {
+      "arguments": [
+        "D1"
+      ],
+      "operator": "CLOSE",
+      "reason": "Close upper drawer D1 to clear arm approach corridor to D2 handle"
+    },
+    {
+      "arguments": [
+        "D2"
+      ],
+      "operator": "OPEN",
+      "reason": "Search storage D2 to assess task feasibility"
+    },
+    {
+      "arguments": [
+        "C2"
+      ],
+      "operator": "OPEN",
+      "reason": "Search storage C2 to assess task feasibility"
+    },
+    {
+      "arguments": [
+        "B1"
+      ],
+      "operator": "OPEN",
+      "reason": "Search storage B1 to assess task feasibility"
+    },
+    {
+      "arguments": [
+        "C1"
+      ],
+      "operator": "OPEN",
+      "reason": "Search storage C1 to assess task feasibility"
+    }
+  ],
+  "description": "The kettle is absent; otherwise identical to F5.",
+  "environment": "kitchen",
+  "intended_outcome": "INFEASIBLE",
+  "internal_variant": "I4_MISSING_KETTLE",
+  "schema_version": 1,
+  "total_actions": 6,
+  "variant": "K11"
+}

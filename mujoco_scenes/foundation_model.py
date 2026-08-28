@@ -14,29 +14,10 @@ from typing import Protocol
 from urllib.parse import urlsplit
 
 
-SYSTEM_PROMPT = """\
-Rank the visible candidates for the requested robot function.
-Use general functional suitability and safe, conventional robot use.
-Rank every supplied candidate exactly once. Do not invent candidates.
-Return only the requested JSON object."""
-
 ASSESSMENT_PROMPT = """\
 Assess which visible candidates can perform the requested robot function.
 Rank every functional candidate by safe, conventional suitability.
 Do not invent candidates. Return only the requested JSON object."""
-
-RANKING_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "ranked_candidate_ids": {
-            "type": "array",
-            "items": {"type": "string"},
-            "minItems": 1,
-        }
-    },
-    "required": ["ranked_candidate_ids"],
-    "additionalProperties": False,
-}
 
 ASSESSMENT_SCHEMA = {
     "type": "object",
@@ -72,9 +53,15 @@ class Candidate:
     facts: Mapping[str, object] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, object]:
-        if not self.candidate_id.strip():
+        if (
+            not isinstance(self.candidate_id, str)
+            or not self.candidate_id.strip()
+        ):
             raise ValueError("candidate_id must not be empty")
-        if not self.category.strip():
+        if (
+            not isinstance(self.category, str)
+            or not self.category.strip()
+        ):
             raise ValueError("candidate category must not be empty")
         return {
             "id": self.candidate_id,
@@ -90,15 +77,6 @@ class RankingRequest:
     required_function: str
     candidates: Sequence[Candidate]
     target: Mapping[str, object] | None = None
-
-
-@dataclass(frozen=True)
-class RankingResult:
-    """A validated ordering of the supplied candidate IDs."""
-
-    candidate_ids: tuple[str, ...]
-    model: str
-    latency_ms: float | None = None
 
 
 @dataclass(frozen=True)
@@ -122,11 +100,21 @@ class ServerConfig:
     max_tokens: int = 96
 
     def __post_init__(self) -> None:
-        if self.timeout_seconds <= 0:
+        if not isinstance(self.base_url, str) or not self.base_url.strip():
+            raise ValueError("base_url must not be empty")
+        if (
+            isinstance(self.timeout_seconds, bool)
+            or not isinstance(self.timeout_seconds, (int, float))
+            or self.timeout_seconds <= 0
+        ):
             raise ValueError("timeout_seconds must be positive")
-        if self.max_tokens <= 0:
+        if (
+            isinstance(self.max_tokens, bool)
+            or not isinstance(self.max_tokens, int)
+            or self.max_tokens <= 0
+        ):
             raise ValueError("max_tokens must be positive")
-        if not self.model.strip():
+        if not isinstance(self.model, str) or not self.model.strip():
             raise ValueError("model must not be empty")
 
     @classmethod
@@ -152,13 +140,6 @@ class ServerConfig:
             timeout_seconds=timeout,
             max_tokens=max_tokens,
         )
-
-
-class RankingBackend(Protocol):
-    """Common interface used by the future task executive."""
-
-    def rank(self, request: RankingRequest) -> RankingResult:
-        """Return a complete validated candidate ordering."""
 
 
 class AssessmentBackend(Protocol):
@@ -187,7 +168,9 @@ class OpenAICompatibleRanker:
         transport: JsonTransport | None = None,
     ):
         self.config = config
-        self._transport = transport or _PersistentJsonTransport(config)
+        self._transport = (
+            _PersistentJsonTransport(config) if transport is None else transport
+        )
 
     @classmethod
     def from_env(cls) -> OpenAICompatibleRanker:
@@ -247,19 +230,6 @@ class OpenAICompatibleRanker:
         latency_ms = (time.perf_counter() - started) * 1000.0
         return _parse_response(response), candidate_ids, latency_ms
 
-    def rank(self, request: RankingRequest) -> RankingResult:
-        result, candidate_ids, latency_ms = self._complete(
-            request,
-            SYSTEM_PROMPT,
-            "candidate_ranking",
-            RANKING_SCHEMA,
-        )
-        ranked_ids = _string_list(result, "ranked_candidate_ids")
-        _validate_ranking(ranked_ids, candidate_ids)
-        return RankingResult(
-            tuple(ranked_ids), self.config.model, latency_ms
-        )
-
     def assess(
         self, request: RankingRequest
     ) -> FunctionalAssessmentResult:
@@ -281,18 +251,6 @@ class OpenAICompatibleRanker:
             self.config.model,
             latency_ms,
         )
-
-
-class FixedRankingBackend:
-    """Small deterministic backend for tests and offline development."""
-
-    def __init__(self, candidate_ids: Sequence[str]):
-        self._candidate_ids = tuple(candidate_ids)
-
-    def rank(self, request: RankingRequest) -> RankingResult:
-        _, visible_ids = _validate_request(request)
-        _validate_ranking(self._candidate_ids, visible_ids)
-        return RankingResult(self._candidate_ids, "fixed")
 
 
 class FixedAssessmentBackend:
@@ -334,7 +292,10 @@ def _json_value(value: object, label: str) -> object:
 def _validate_request(
     request: RankingRequest,
 ) -> tuple[list[dict[str, object]], tuple[str, ...]]:
-    if not request.required_function.strip():
+    if (
+        not isinstance(request.required_function, str)
+        or not request.required_function.strip()
+    ):
         raise ValueError("required_function must not be empty")
     candidates = tuple(request.candidates)
     if not candidates:
@@ -424,7 +385,7 @@ class _PersistentJsonTransport:
     """One persistent HTTP/1.1 connection with stale-connection recovery."""
 
     def __init__(self, config: ServerConfig):
-        parsed = urlsplit(config.base_url)
+        parsed = urlsplit(config.base_url.strip())
         if (
             parsed.scheme not in {"http", "https"}
             or not parsed.hostname
@@ -523,4 +484,4 @@ class _PersistentJsonTransport:
                     raise FoundationModelResponseError(
                         "inference server returned invalid JSON"
                     ) from error
-        raise AssertionError("unreachable")
+        raise RuntimeError("Inference request retry loop terminated unexpectedly")

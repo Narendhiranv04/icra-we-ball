@@ -1,7 +1,9 @@
 from types import SimpleNamespace
 
 import numpy as np
+import pytest
 
+from mujoco_scenes import semantic_grounding
 from mujoco_scenes.semantic_grounding import (
     Detection,
     _largest_mask_component,
@@ -68,6 +70,21 @@ def _accepted_observation(
 def test_semantic_process_isolation_environment_is_explicit(monkeypatch):
     monkeypatch.delenv("MUJOCO_SEMANTIC_PROCESS_ISOLATION", raising=False)
     assert not _process_isolation_requested()
+
+
+def test_missing_ultralytics_reports_cpu_uv_install(monkeypatch):
+    def missing(_name):
+        raise semantic_grounding.importlib.metadata.PackageNotFoundError
+
+    monkeypatch.setattr(semantic_grounding.importlib.metadata, "version", missing)
+    with pytest.raises(RuntimeError, match="--torch-backend cpu"):
+        semantic_grounding.YOLOWorldSemanticDetector(
+            "model.pt",
+            confidence_threshold=0.03,
+            inference_size=640,
+            device="cpu",
+            max_detections=10,
+        )
     monkeypatch.setenv("MUJOCO_SEMANTIC_PROCESS_ISOLATION", "1")
     assert _process_isolation_requested()
     monkeypatch.setenv("MUJOCO_SEMANTIC_PROCESS_ISOLATION", "false")
@@ -87,6 +104,29 @@ def test_detection_serializes_normalized_required_fields():
     assert record["bbox_xyxy"] == [1, 2, 30, 40]
     assert record["inference_resolution"] == [100, 100]
     assert record["detector_name"] == "mock_detector"
+
+
+@pytest.mark.parametrize(
+    "kwargs, message",
+    [
+        ({"raw_label": ""}, "raw_label"),
+        ({"confidence": float("nan")}, "confidence"),
+        ({"confidence": 1.1}, "confidence"),
+        ({"bbox_xyxy": (1, 2, float("inf"), 4)}, "bbox_xyxy"),
+        ({"inference_resolution": (0, 100)}, "inference_resolution"),
+    ],
+)
+def test_detection_rejects_malformed_backend_output(kwargs, message):
+    values = {
+        "raw_label": "spoon",
+        "canonical_label": "spoon",
+        "confidence": 0.8,
+        "bbox_xyxy": (1, 2, 30, 40),
+        "inference_resolution": (100, 100),
+    }
+    values.update(kwargs)
+    with pytest.raises(ValueError, match=message):
+        Detection(**values)
 
 
 def test_strong_box_mask_overlap_associates_correct_object():
@@ -286,7 +326,6 @@ def test_multiview_consensus_outweighs_one_high_confidence_outlier():
             _accepted_observation("fork", "inspection_right", 0.31),
             _accepted_observation("fork", "inspection_top", 0.29),
             _accepted_observation("pen", "inspection_front", 0.95),
-            _accepted_observation("pen", "inspection_close", 0.90),
         ],
         config=config,
         stage=0,
@@ -299,7 +338,7 @@ def test_multiview_consensus_outweighs_one_high_confidence_outlier():
     )
     assert record["status"] == "SUPPORTED"
     assert record["canonical_label"] == "fork"
-    assert record["supporting_view_margin"] == 1
+    assert record["supporting_view_margin"] == 2
     assert record["winning_label_margin_kind"] == "supporting_view_count"
 
 

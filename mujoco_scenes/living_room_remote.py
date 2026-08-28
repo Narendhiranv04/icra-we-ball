@@ -47,6 +47,8 @@ class RemoteTVExecutor:
             mujoco.mjtObj.mjOBJ_EQUALITY,
             "google:pick_weld_remote_control",
         )
+        if self.remote_body_id < 0 or self.grasp_equality_id < 0:
+            raise RuntimeError("TV remote controller model interface is incomplete")
         self.mode = "idle"
         self.status = "TV remote action idle"
         self.failure: str | None = None

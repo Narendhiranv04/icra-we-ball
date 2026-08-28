@@ -1,0 +1,313 @@
+INTEGRATED KITCHEN — AUTHORITATIVE ONE-CALL REQUEST
+====================================================
+
+Source of truth:
+  FMAdapter.generate_kitchen_functional_graph and
+  KITCHEN_FUNCTIONAL_GRAPH_SCHEMA in
+  mujoco_scenes/workshop_phase1/fm_adapter.py
+
+SYSTEM MESSAGE
+--------------
+
+You are a vision-language functional-requirement graph generator. Return only
+the requested JSON. Task-specific knowledge must be inferred from the task
+instruction and raw initial images. Emit exact checker predicate identifiers
+yourself. Never assume hidden contents, GT identities, poses, measurements,
+assignments, feasibility labels, or plans.
+
+USER TEXT JSON
+--------------
+
+The exact compact JSON is assembled from:
+
+{
+  "task_instruction": "<TASK_INSTRUCTION>",
+  "observable_closed_storage_regions": [
+    {"region_id": "<EXECUTABLE_HANDLE>", "visual_description": "<VISIBLE DESCRIPTION>"}
+  ],
+  "verifier_interface": {
+    "unary_predicates": ["OPEN_CAVITY", "ELONGATED_OBJECT"],
+    "binary_predicates": ["INSERTABLE_IN", "REACHES_BOTTOM"],
+    "numeric_properties": "<EXACT PROPERTY-ID TO UNIT MAP FROM SOURCE>",
+    "usage_policies": ["SEQUENTIAL_REUSE_ALLOWED", "DEDICATED_PER_TARGET"],
+    "note": "These are generic implemented checker APIs. Select only the predicates actually required by the task; no predicate will be inferred or alias-mapped downstream."
+  },
+  "request": "In one response, infer the complete functional requirement graph, all role counts/functions/unary predicates/binary relations/reuse rules, semantic candidate categories, source and target planning requirements, candidate storage regions, and a complete inspection ranking. Decide them yourself from the goal and initial RGB views. Every material source must also be a normal role in roles; planning source_roles references it by witness_role. Do not output physical instance assignments or an action sequence."
+}
+
+The raw RGB image_url blocks follow that text block in the same user message.
+The strict response schema is KITCHEN_FUNCTIONAL_GRAPH_SCHEMA. Its top-level
+fields are roles, relations, operation_groups, cross_group_reuse_allowed,
+planning, candidate_regions, inspection_order, initial_satisfaction_assessment,
+initial_satisfaction_reason, and status metadata. The complete executable JSON
+schema is kept in source rather than duplicated here so this file cannot drift.
+
+Generation parameters: temperature 0.2, top_p 0.8, max_tokens from
+TAMP_FM_MAX_TOKENS (default 4096), stream false, thinking disabled.
+
+This integrated request is exactly one Qwen call. It does not use
+generate_task_requirements, generate_inspection_priors, the normalization YAML,
+or a reviewed Kitchen task contract.
+
+
+LEGACY REQUIREMENTS-ONLY REQUEST — EXACT TEXT AND PAYLOAD LAYOUT
+============================================================
+
+Source of truth:
+  mujoco_scenes/workshop_phase1/fm_adapter.py
+
+Important:
+  - No reviewed ontology, role envelope, expected role, expected function,
+    expected property, expected category, or expected count is sent to Qwen.
+  - One to eight raw initial-observation images are appended to the user
+    message as base64 data URLs.
+  - In normal Kitchen/Living-Room use, --variant constructs that exact MuJoCo
+    scene and freshly renders five unannotated RGB camera views. No YOLO output,
+    semantic overlay, evidence graph, or detector result is sent to Qwen.
+  - The base64 image bytes vary by run and are represented below as
+    <BASE64_IMAGE_BYTES>.
+
+
+MESSAGE 1 — SYSTEM
+==================
+
+You are a vision-language functional-requirement planner.
+
+Return only the requested JSON object. Do not produce an action sequence.
+
+Rules:
+- Infer the complete set of physical or spatial functional roles from the task
+  instruction yourself. The user will not supply expected roles, functions,
+  object categories, or properties.
+- Use the initial-observation images as visual evidence. Do not assume that an
+  object is present merely because it would normally be useful for the task.
+- Create one requirement for each independently satisfiable functional role
+  needed by the task. Give it your own short, stable snake_case id.
+- Set `entity_kind` to OBJECT for a manipulable physical item and REGION for a
+  usable support surface, placement area, or spatial destination.
+- `functional_requirements` describes role types, never individual assignment
+  slots. Functionally identical needs MUST be one record with `required_count`
+  equal to the minimum number of distinct simultaneous candidates. A response
+  containing duplicate function records distinguished only by left/right,
+  person identity, target identity, or location is invalid. List all visible
+  candidates for those slots in the one consolidated record.
+- Count simultaneous distinct assignments, not repeated operations. A tool
+  that can be reused sequentially can have required_count 1 even when it acts
+  on several targets.
+- Locating, grasping, aligning, inserting, rotating, and placing are actions,
+  not replaceable functional roles. Never create requirements for them.
+- Include a support or destination role when its functional suitability must be
+  evaluated among observed objects or regions. Do not create a role for a truly
+  immutable target that requires no selection or suitability decision.
+- Express `function` and `required_properties` in concise natural language. A
+  downstream ontology mapper will normalize them; do not invent metric values.
+- For each role, independently rank zero or more `candidate_objects` from the
+  initial-observation images. Each candidate label must be a concrete,
+  detector-searchable noun phrase. Its visual description must distinguish the
+  observed item or region without inventing a simulator identifier.
+- An empty candidate list means that no plausible candidate is visible. It does
+  not mean the functional role is unnecessary. Use an empty list only after
+  examining every supplied view; include fixed objects named by the goal when
+  they are visibly plausible satisfiers of an inferred role.
+- A required property states a qualitative capability, fit, reach, interface,
+  or compatibility condition. Never emit centimetres, thresholds, coordinates,
+  measurements, numerical values, simulator identifiers, object IDs, or
+  variant names.
+- Include every qualitative property whose failure would disqualify a
+  candidate. Consider capacity, containment, shape, reach, fit, interface,
+  stability, support, proximity, and shared accessibility when relevant, but
+  decide which of them actually apply to each inferred role.
+- A candidate is only visually plausible. Do not claim that it is selected,
+  graspable, geometrically valid, or physically compatible; those are separate
+  downstream checks.
+- The task is supported when its physical roles can be described, even though
+  no suitable candidate is visible or later geometry may find the scene
+  infeasible.
+- `SUPPORTED` requires at least one requirement and an empty unsupported_reason.
+  `UNSUPPORTED` requires no requirements and a concise non-empty reason.
+- Do not include chain-of-thought or robot execution instructions.
+- Before returning, check that every explicit desired outcome in the task is
+  covered by at least one functional role. Do not turn a search instruction or
+  storage location into its own role unless that storage entity itself must be
+  selected by functional suitability.
+
+
+MESSAGE 2 — USER CONTENT LAYOUT
+===============================
+
+The OpenAI-compatible user message uses an array of content blocks:
+
+[
+  {
+    "type": "text",
+    "text": "<COMPACT_USER_JSON>"
+  },
+  {
+    "type": "image_url",
+    "image_url": {
+      "url": "data:<IMAGE_MIME_TYPE>;base64,<BASE64_IMAGE_BYTES>",
+      "detail": "high"
+    }
+  }
+]
+
+An additional image_url block is appended for each additional image, up to a
+maximum of eight images.
+
+
+EXACT USER JSON TEMPLATE
+========================
+
+The value of the text block is compact JSON with no added whitespace:
+
+{"task_instruction":"<TASK_INSTRUCTION>","request":"Using the task goal and initial-observation images, infer the functional roles, describe the qualitative properties each role requires, and rank any visually plausible candidate objects or regions for each role. Decide all role and property content yourself."}
+
+
+EXACT KITCHEN USER JSON
+=======================
+
+{"task_instruction":"Prepare and serve coffee and soup for two people using the available kitchenware. Stir both coffees and provide each soup bowl with a suitable utensil. Search the closed kitchen storage for anything still required.","request":"Using the task goal and initial-observation images, infer the functional roles, describe the qualitative properties each role requires, and rank any visually plausible candidate objects or regions for each role. Decide all role and property content yourself."}
+
+
+EXACT LIVING-ROOM USER JSON
+===========================
+
+{"task_instruction":"Prepare the living room for two people watching television. Place one cup and one saucer on each person's fixed individual side table, and place the TV remote on the fixed shared coffee table.","request":"Using the task goal and initial-observation images, infer the functional roles, describe the qualitative properties each role requires, and rank any visually plausible candidate objects or regions for each role. Decide all role and property content yourself."}
+
+
+EXACT WORKSHOP USER JSON
+========================
+
+{"task_instruction":"Find the compatible screw and first compatible driver encountered, insert the screw tip-down into the workbench hole, and drive it fully.","request":"Using the task goal and initial-observation images, infer the functional roles, describe the qualitative properties each role requires, and rank any visually plausible candidate objects or regions for each role. Decide all role and property content yourself."}
+
+
+STRUCTURED OUTPUT SCHEMA SENT THROUGH response_format
+=====================================================
+
+{
+  "type": "json_schema",
+  "json_schema": {
+    "name": "functional_requirements",
+    "strict": true,
+    "schema": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["SUPPORTED", "UNSUPPORTED"]
+        },
+        "task_summary": {
+          "type": "string"
+        },
+        "functional_requirements": {
+          "type": "array",
+          "maxItems": 12,
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "entity_kind": {
+                "type": "string",
+                "enum": ["OBJECT", "REGION"]
+              },
+              "function": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "required_count": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 20
+              },
+              "candidate_objects": {
+                "type": "array",
+                "minItems": 0,
+                "maxItems": 16,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string"
+                    },
+                    "visual_description": {
+                      "type": "string"
+                    },
+                    "suitability_reason": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "visual_description",
+                    "suitability_reason"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required_properties": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 16,
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "id",
+              "entity_kind",
+              "function",
+              "description",
+              "required_count",
+              "candidate_objects",
+              "required_properties"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "unsupported_reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "task_summary",
+        "functional_requirements",
+        "unsupported_reason"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
+
+
+GENERATION PARAMETERS SENT WITH THE REQUEST
+===========================================
+
+temperature: 0.7
+top_p: 0.8
+top_k: 20
+min_p: 0.0
+presence_penalty: 1.5
+repetition_penalty: 1.0
+max_tokens: TAMP_FM_MAX_TOKENS, default 4096
+stream: false
+chat_template_kwargs.enable_thinking: false
+
+
+NOT SENT TO QWEN
+================
+
+The following are strictly post-response resources and are not part of either
+message:
+
+  - mujoco_scenes/configs/kitchen_living_room_vlm_normalization.yaml
+  - mujoco_scenes/configs/workshop_phase1_fm_contract.yaml
+  - Kitchen or Living-Room reviewed task-contract contents
+  - canonical function or predicate identifiers
+  - role envelopes or expected category lists
+  - allocation, geometry, planning, or execution results

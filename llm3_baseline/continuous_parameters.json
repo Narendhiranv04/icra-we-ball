@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "scenes": {
+    "kitchen": {
+      "INSPECT": {},
+      "PICK": {},
+      "PLACE": {
+        "x_offset_m": {"minimum": -0.05, "maximum": 0.05},
+        "y_offset_m": {"minimum": -0.05, "maximum": 0.05},
+        "yaw_rad": {"minimum": -3.141593, "maximum": 3.141593}
+      },
+      "POUR": {
+        "tilt_angle_rad": {"minimum": 0.6, "maximum": 2.1},
+        "outlet_height_m": {"minimum": 0.06, "maximum": 0.24}
+      },
+      "STIR": {
+        "radius_scale": {"minimum": 0.1, "maximum": 0.8},
+        "depth_scale": {"minimum": 0.1, "maximum": 0.8},
+        "cycles": {"minimum": 1.0, "maximum": 3.0}
+      }
+    }
+  }
+}

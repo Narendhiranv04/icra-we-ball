@@ -12,7 +12,6 @@ from mujoco_scenes.geometry_properties import (
     extract_object_properties,
     load_geometry_config,
     pairwise_relation_evaluation,
-    pairwise_relation_status,
 )
 
 
@@ -244,6 +243,28 @@ class GeometryPropertyTests(unittest.TestCase):
         self.assertEqual(predicate["status"], "UNKNOWN")
         self.assertEqual(predicate["reason"], "INSUFFICIENT_OBSERVED_INTERIOR")
 
+    def test_partial_rim_with_multiview_interior_is_supported(self):
+        points = cavity_cloud()
+        angles = np.arctan2(points[:, 1], points[:, 0])
+        normalized_radius = np.sqrt(
+            (points[:, 0] / 0.05) ** 2 + (points[:, 1] / 0.04) ** 2
+        )
+        # Remove one outer half of the synthetic vessel. The retained high
+        # shell occupies eight of twelve bins, while central depth remains
+        # independently observed by multiple cameras.
+        keep = ~(
+            (np.abs(angles) < np.pi / 2.0)
+            & (normalized_radius > 0.70)
+        )
+        predicate = self.measure(points[keep])[
+            "geometric_predicates"
+        ]["OPEN_CAVITY"]
+        self.assertEqual(predicate["status"], "TRUE")
+        self.assertEqual(predicate["evidence"]["occupied_angular_bins"], 8)
+        self.assertGreaterEqual(
+            predicate["evidence"]["interior_camera_count"], 2
+        )
+
     def test_flat_plate_and_segmentation_hole_are_not_open_cavities(self):
         x, y = np.meshgrid(
             np.linspace(-0.10, 0.10, 35),
@@ -318,15 +339,15 @@ class GeometryPropertyTests(unittest.TestCase):
         tool = self.measure(tool_points)
         receptacle = self.measure(cavity_cloud())
         self.assertEqual(
-            pairwise_relation_status(
+            pairwise_relation_evaluation(
                 "INSERTABLE_IN", tool, receptacle, self.config
-            ),
+            )["status"],
             "TRUE",
         )
         self.assertEqual(
-            pairwise_relation_status(
+            pairwise_relation_evaluation(
                 "REACHES_BOTTOM", tool, receptacle, self.config
-            ),
+            )["status"],
             "TRUE",
         )
         insertable = pairwise_relation_evaluation(
@@ -370,9 +391,9 @@ class GeometryPropertyTests(unittest.TestCase):
         )
         for relation in ("INSERTABLE_IN", "REACHES_BOTTOM"):
             self.assertEqual(
-                pairwise_relation_status(
+                pairwise_relation_evaluation(
                     relation, tool, target, self.config
-                ),
+                )["status"],
                 "UNKNOWN",
             )
 

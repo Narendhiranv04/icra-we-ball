@@ -26,8 +26,11 @@ from mujoco_scenes.scene_loader import (
     ROBOT_GOOGLE,
     ROBOT_NONE,
     _google_robot_dir,
+    _apply_robot_home_pose,
     _inject_google_robot,
     _load_google_binary_assets,
+    _validate_render_dimensions,
+    _validate_step_count,
 )
 
 
@@ -164,7 +167,8 @@ def build_living_room_xml(
         )
         forward_actuator.set("ctrlrange", "-1 2.10")
         equality = root.find("equality")
-        assert equality is not None
+        if equality is None:
+            raise RuntimeError("Living-room XML is missing its equality section")
         for object_name in PICKABLE_OBJECTS:
             ET.SubElement(
                 equality,
@@ -264,23 +268,22 @@ class LivingRoomScene:
     def _set_robot_home_pose(self) -> None:
         if not self.has_robot:
             return
-        for joint_name, value in GOOGLE_HOME_QPOS.items():
-            joint_id = mujoco.mj_name2id(
-                self.model, mujoco.mjtObj.mjOBJ_JOINT, joint_name
-            )
-            if joint_id < 0:
-                raise RuntimeError(f"Google Robot joint missing: {joint_name}")
-            self.data.qpos[self.model.jnt_qposadr[joint_id]] = value
-        for actuator_name, joint_name, _kp, _lower, _upper in GOOGLE_ACTUATORS:
-            actuator_id = mujoco.mj_name2id(
-                self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, actuator_name
-            )
-            if actuator_id < 0:
-                raise RuntimeError(f"Google Robot actuator missing: {actuator_name}")
-            self.data.ctrl[actuator_id] = GOOGLE_HOME_QPOS[joint_name]
+        _apply_robot_home_pose(
+            self.model,
+            self.data,
+            robot_name="Google Robot",
+            home_qpos=GOOGLE_HOME_QPOS,
+            actuators=GOOGLE_ACTUATORS,
+        )
 
     def reset(self, settle_steps: int = 1000) -> None:
         """Restore robot, table, clutter, constraints, and visible dust."""
+        if (
+            isinstance(settle_steps, bool)
+            or not isinstance(settle_steps, int)
+            or settle_steps < 0
+        ):
+            raise ValueError("settle_steps must be a non-negative integer")
         mujoco.mj_resetData(self.model, self.data)
         self.model.geom_rgba[:] = self._initial_geom_rgba
         self.model.mat_rgba[:] = self._initial_mat_rgba
@@ -349,6 +352,7 @@ class LivingRoomScene:
 
     def open_container(self, region_id: str, steps: int = 1000) -> list[str]:
         """Open a drawer for deterministic virtual inspection."""
+        steps = _validate_step_count(steps)
         actuator_id = self._drawer_actuator_id(region_id)
         self.data.ctrl[actuator_id] = 0.27
         for _ in range(max(steps, 600)):
@@ -359,6 +363,7 @@ class LivingRoomScene:
 
     def close_container(self, region_id: str, steps: int = 1000) -> None:
         """Close a drawer and update its observable state."""
+        steps = _validate_step_count(steps)
         actuator_id = self._drawer_actuator_id(region_id)
         self.data.ctrl[actuator_id] = 0.0
         for _ in range(max(steps, 600)):
@@ -473,6 +478,7 @@ class LivingRoomScene:
         width: int = 1280,
         height: int = 720,
     ) -> np.ndarray:
+        width, height = _validate_render_dimensions(width, height)
         if camera not in LIVING_ROOM_CAMERAS:
             raise ValueError(f"Choose a fixed camera from: {LIVING_ROOM_CAMERAS}")
         if not self.has_robot and camera in {
@@ -482,11 +488,12 @@ class LivingRoomScene:
         }:
             raise ValueError(f"Camera {camera} requires Google Robot")
         renderer = mujoco.Renderer(self.model, height=height, width=width)
-        mujoco.mj_forward(self.model, self.data)
-        renderer.update_scene(self.data, camera=camera)
-        frame = renderer.render().copy()
-        renderer.close()
-        return frame
+        try:
+            mujoco.mj_forward(self.model, self.data)
+            renderer.update_scene(self.data, camera=camera)
+            return renderer.render().copy()
+        finally:
+            renderer.close()
 
     def launch_viewer(
         self,

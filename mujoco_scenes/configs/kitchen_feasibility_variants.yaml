@@ -1,0 +1,123 @@
+schema_version: 2
+goal_instruction: "Prepare and serve coffee and soup for two people using the available kitchenware. Stir both coffees and provide each soup bowl with a suitable utensil."
+inspection_order: [D1, D2, C2, B1, C1]
+task_requirements: s1_integrated_kitchen_object_function.yaml
+required_counts: {coffee_containers: 2, soup_containers: 2, soup_utensils: 2}
+required_sources:
+  water_source: [s1i_compact_kettle]
+  coffee_source: [s1i_compact_coffee_jar]
+role_object_kinds:
+  coffee_stirrer: [s1i_final_long_narrow_spoon]
+  soup_eating_utensil: [s1i_oversized_spoon, ab3_partial_spoon]
+
+# Only required-object locations change. Each infeasible variant removes one
+# required object/role from its matching feasible layout.
+variants:
+  F0_ALL_VISIBLE:
+    scene_name: S1_integrated_kitchen_object_function_feasibility_F0
+    base_scene: S1_integrated_kitchen_object_function_initial_complete
+    intended_outcome: FEASIBLE
+    intended_min_coffee_tools: 1
+    expected_inspections: 0
+    countertop_objects: {counter_spot_13: ab3_narrow_deep_cup, counter_spot_14: ab3_medium_deep_mug, counter_spot_16: ab3_shallow_bowl, counter_spot_25: ab3_deep_bowl, counter_spot_17: s1i_final_long_narrow_spoon, counter_spot_18: s1i_oversized_spoon, counter_spot_20: ab3_partial_spoon, counter_spot_57: s1i_compact_kettle, counter_spot_53: s1i_compact_coffee_jar}
+    container_contents: {D1: [], D2: [], C2: [], B1: [], C1: []}
+    description: All required objects are initially visible.
+
+  F1_HIDDEN_COFFEE_VESSEL:
+    scene_name: S1_integrated_kitchen_object_function_feasibility_F1
+    base_scene: S1_integrated_kitchen_object_function_initial_complete
+    intended_outcome: FEASIBLE
+    intended_min_coffee_tools: 1
+    countertop_objects: {counter_spot_13: ab3_narrow_deep_cup, counter_spot_16: ab3_shallow_bowl, counter_spot_25: ab3_deep_bowl, counter_spot_17: s1i_final_long_narrow_spoon, counter_spot_18: s1i_oversized_spoon, counter_spot_20: ab3_partial_spoon, counter_spot_57: s1i_compact_kettle, counter_spot_53: s1i_compact_coffee_jar}
+    container_contents: {D1: [], D2: [], C2: [ab3_medium_deep_mug], B1: [], C1: []}
+    description: The second coffee vessel is in cupboard C2.
+
+  F2_HIDDEN_SOUP_BOWL:
+    scene_name: S1_integrated_kitchen_object_function_feasibility_F2
+    base_scene: S1_integrated_kitchen_object_function_initial_complete
+    intended_outcome: FEASIBLE
+    intended_min_coffee_tools: 1
+    countertop_objects: {counter_spot_13: ab3_narrow_deep_cup, counter_spot_14: ab3_medium_deep_mug, counter_spot_16: ab3_shallow_bowl, counter_spot_17: s1i_final_long_narrow_spoon, counter_spot_18: s1i_oversized_spoon, counter_spot_20: ab3_partial_spoon, counter_spot_57: s1i_compact_kettle, counter_spot_53: s1i_compact_coffee_jar}
+    container_contents: {D1: [], D2: [], C2: [], B1: [ab3_deep_bowl], C1: []}
+    description: The second soup bowl is in box B1.
+
+  F3_HIDDEN_VESSELS_MIXED:
+    scene_name: S1_integrated_kitchen_object_function_feasibility_F3
+    base_scene: S1_integrated_kitchen_object_function_initial_complete
+    intended_outcome: FEASIBLE
+    intended_min_coffee_tools: 1
+    countertop_objects: {counter_spot_13: ab3_narrow_deep_cup, counter_spot_16: ab3_shallow_bowl, counter_spot_17: s1i_final_long_narrow_spoon, counter_spot_18: s1i_oversized_spoon, counter_spot_20: ab3_partial_spoon, counter_spot_57: s1i_compact_kettle, counter_spot_53: s1i_compact_coffee_jar}
+    container_contents: {D1: [], D2: [], C2: [ab3_medium_deep_mug], B1: [ab3_deep_bowl], C1: []}
+    description: The second coffee vessel is in C2 and the second soup bowl is in B1.
+
+  F4_TOOLS_IN_DRAWERS:
+    scene_name: S1_integrated_kitchen_object_function_feasibility_F4
+    base_scene: S1_integrated_kitchen_object_function_initial_complete
+    intended_outcome: FEASIBLE
+    intended_min_coffee_tools: 1
+    countertop_objects: {counter_spot_13: ab3_narrow_deep_cup, counter_spot_14: ab3_medium_deep_mug, counter_spot_16: ab3_shallow_bowl, counter_spot_25: ab3_deep_bowl, counter_spot_18: s1i_oversized_spoon, counter_spot_57: s1i_compact_kettle, counter_spot_53: s1i_compact_coffee_jar}
+    container_contents: {D1: [s1i_final_long_narrow_spoon], D2: [ab3_partial_spoon], C2: [], B1: [], C1: []}
+    description: The coffee stirrer and one soup utensil are in drawers D1 and D2.
+
+  F5_FULL_DISTRIBUTED_SEARCH:
+    scene_name: S1_integrated_kitchen_object_function_feasibility_F5
+    base_scene: S1_integrated_kitchen_object_function_initial_complete
+    intended_outcome: FEASIBLE
+    intended_min_coffee_tools: 1
+    countertop_objects: {counter_spot_13: ab3_narrow_deep_cup, counter_spot_16: ab3_shallow_bowl, counter_spot_57: s1i_compact_kettle, counter_spot_53: s1i_compact_coffee_jar}
+    container_contents: {D1: [s1i_oversized_spoon], D2: [ab3_partial_spoon], C2: [ab3_medium_deep_mug], B1: [ab3_deep_bowl], C1: [s1i_final_long_narrow_spoon]}
+    description: One required object is distributed through each storage region.
+
+  I0_MISSING_COFFEE_VESSEL:
+    scene_name: S1_integrated_kitchen_object_function_feasibility_I0
+    base_scene: S1_integrated_kitchen_object_function_initial_complete
+    intended_outcome: INFEASIBLE
+    intended_failure_reason: INSUFFICIENT_COFFEE_CONTAINERS
+    countertop_objects: {counter_spot_13: ab3_narrow_deep_cup, counter_spot_16: ab3_shallow_bowl, counter_spot_17: s1i_final_long_narrow_spoon, counter_spot_18: s1i_oversized_spoon, counter_spot_20: ab3_partial_spoon, counter_spot_57: s1i_compact_kettle, counter_spot_53: s1i_compact_coffee_jar}
+    container_contents: {D1: [], D2: [], C2: [], B1: [ab3_deep_bowl], C1: []}
+    description: The second coffee vessel is absent; otherwise identical to F3.
+
+  I1_MISSING_SOUP_BOWL:
+    scene_name: S1_integrated_kitchen_object_function_feasibility_I1
+    base_scene: S1_integrated_kitchen_object_function_initial_complete
+    intended_outcome: INFEASIBLE
+    intended_failure_reason: INSUFFICIENT_SOUP_CONTAINERS
+    countertop_objects: {counter_spot_13: ab3_narrow_deep_cup, counter_spot_16: ab3_shallow_bowl, counter_spot_17: s1i_final_long_narrow_spoon, counter_spot_18: s1i_oversized_spoon, counter_spot_20: ab3_partial_spoon, counter_spot_57: s1i_compact_kettle, counter_spot_53: s1i_compact_coffee_jar}
+    container_contents: {D1: [], D2: [], C2: [ab3_medium_deep_mug], B1: [], C1: []}
+    description: The second soup bowl is absent; otherwise identical to F3.
+
+  I2_MISSING_COFFEE_SPOON:
+    scene_name: S1_integrated_kitchen_object_function_feasibility_I2
+    base_scene: S1_integrated_kitchen_object_function_initial_complete
+    intended_outcome: INFEASIBLE
+    intended_failure_reason: MISSING_COFFEE_STIRRER
+    countertop_objects: {counter_spot_13: ab3_narrow_deep_cup, counter_spot_16: ab3_shallow_bowl, counter_spot_57: s1i_compact_kettle, counter_spot_53: s1i_compact_coffee_jar}
+    container_contents: {D1: [s1i_oversized_spoon], D2: [ab3_partial_spoon], C2: [ab3_medium_deep_mug], B1: [ab3_deep_bowl], C1: []}
+    description: The reusable coffee stirrer is absent; otherwise identical to F5.
+
+  I3_MISSING_SOUP_UTENSIL:
+    scene_name: S1_integrated_kitchen_object_function_feasibility_I3
+    base_scene: S1_integrated_kitchen_object_function_initial_complete
+    intended_outcome: INFEASIBLE
+    intended_failure_reason: INSUFFICIENT_DISTINCT_SOUP_TOOLS
+    countertop_objects: {counter_spot_13: ab3_narrow_deep_cup, counter_spot_16: ab3_shallow_bowl, counter_spot_57: s1i_compact_kettle, counter_spot_53: s1i_compact_coffee_jar}
+    container_contents: {D1: [s1i_oversized_spoon], D2: [], C2: [ab3_medium_deep_mug], B1: [ab3_deep_bowl], C1: [s1i_final_long_narrow_spoon]}
+    description: One of the two required soup utensils is absent; otherwise identical to F5.
+
+  I4_MISSING_KETTLE:
+    scene_name: S1_integrated_kitchen_object_function_feasibility_I4
+    base_scene: S1_integrated_kitchen_object_function_initial_complete
+    intended_outcome: INFEASIBLE
+    intended_failure_reason: MISSING_WATER_SOURCE
+    countertop_objects: {counter_spot_13: ab3_narrow_deep_cup, counter_spot_16: ab3_shallow_bowl, counter_spot_53: s1i_compact_coffee_jar}
+    container_contents: {D1: [s1i_oversized_spoon], D2: [ab3_partial_spoon], C2: [ab3_medium_deep_mug], B1: [ab3_deep_bowl], C1: [s1i_final_long_narrow_spoon]}
+    description: The kettle is absent; otherwise identical to F5.
+
+  I5_MISSING_COFFEE_JAR:
+    scene_name: S1_integrated_kitchen_object_function_feasibility_I5
+    base_scene: S1_integrated_kitchen_object_function_initial_complete
+    intended_outcome: INFEASIBLE
+    intended_failure_reason: MISSING_COFFEE_SOURCE
+    countertop_objects: {counter_spot_13: ab3_narrow_deep_cup, counter_spot_16: ab3_shallow_bowl, counter_spot_57: s1i_compact_kettle}
+    container_contents: {D1: [s1i_oversized_spoon], D2: [ab3_partial_spoon], C2: [ab3_medium_deep_mug], B1: [ab3_deep_bowl], C1: [s1i_final_long_narrow_spoon]}
+    description: The coffee jar is absent; otherwise identical to F5.

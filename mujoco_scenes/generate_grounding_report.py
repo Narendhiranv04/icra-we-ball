@@ -74,14 +74,6 @@ def _value(record: Any) -> Any:
     return record.get("value") if isinstance(record, dict) else None
 
 
-def _status(record: Any) -> str:
-    return (
-        str(record.get("status", "UNKNOWN"))
-        if isinstance(record, dict)
-        else "UNKNOWN"
-    )
-
-
 def _fmt(value: Any, digits: int = 4) -> str:
     if value is None:
         return "UNKNOWN"

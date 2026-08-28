@@ -1,139 +1,90 @@
-# LLM3-style baseline
+# LLM3 baseline
 
-This folder provides a zero-training action-planning baseline inspired by
-LLM3. It uses a frozen VLM through the repository's existing OpenAI-compatible
-vLLM or SGLang server. It does not fine-tune a model, train an affordance
-function, or include the original project's PyBullet environment.
-
-The baseline differs from the functional-search pipeline as follows:
+This folder ports LLM3's planning algorithm to the same MuJoCo Google-robot
+kitchen used by the other methods. It preserves the paper's full-plan,
+continuous-parameter, motion-feedback, resampling, and backtracking contract.
+It is a domain/embodiment adaptation rather than an exact replay of the
+paper's PyBullet box-packing experiments. See
+[`BASELINE_FIDELITY.md`](../BASELINE_FIDELITY.md).
 
 ```text
-functional-search: images -> functions/types -> search -> geometry -> sequence
-LLM3-style:       images -> action sequence -> execute -> return failure -> replan
+goal + ID-only textual state + five ID-annotated images
+                 + action/parameter vocabulary
+                              |
+       model: brief failure diagnosis + full parameterized action plan
+                              |
+         MuJoCo motion planning and physical execution, action by action
+                              |
+             successful prefix + motion failure (trace length 3)
+                              |
+            resample continuous values or symbolically backtrack
 ```
 
-Both methods must use the same visible observations, semantic grounder,
-point-cloud predicates, motion planner, controllers, and goal verifier.
+Each output action contains grounded discrete arguments and continuous values.
+For this kitchen port those values are placement offsets/yaw, pour tilt/outlet
+height, and stir radius/depth/cycles. They are range-validated before motion;
+the physical controller actually consumes them, and its normal IK, collision,
+contact, support, and effect checks remain authoritative.
 
-## Current boundary
+The action vocabulary includes `INSPECT`, but the runtime never inspects a
+region automatically. Object actions may reference only currently visible
+IDs. The model does not receive hidden contents, backend body names, the
+reference symbolic plan, or the private goal verifier.
 
-The implemented pieces are:
+The original LLM3 implementation textualizes a symbolic state and is not a
+raw-image VLM benchmark. This shared-domain adaptation retains that
+textualization, but exposes only persistent IDs, region open/inspected state,
+observable locations, and robot state. Semantic object and region labels must
+be inferred from the same five ID-annotated RGB views used by VLM-TAMP.
+MuJoCo instance segmentation is used only to keep IDs aligned across views;
+it is an oracle instance tracker, not a semantic detector.
 
-- strict per-scene action catalogues;
-- a visible-state-only observation contract;
-- multimodal prompting through an OpenAI-compatible endpoint;
-- strict structured action output and reference validation;
-- a bounded execution loop that re-prompts after recoverable failures;
-- independent goal verification; and
-- tests using a deterministic fake executor.
+## Start the model and run
 
-The folder does not yet connect actions to the live MuJoCo dispatcher. It also
-does not ask the VLM to generate raw continuous poses. The eventual simulator
-adapter should expose the same finite grasp/placement samples to every method,
-then report IK, collision, grasp, placement, and effect failures through the
-implemented `LLM3Executive` interface. Until that adapter exists, results are
-planning-only and must not be reported as end-to-end TAMP execution.
-
-## Visible-state contract
-
-The observation JSON contains only:
-
-- currently visible image-derived object instances with persistent IDs;
-- known region IDs and whether each has been inspected;
-- observed robot state; and
-- the independently verified goal flag.
-
-Do not put hidden simulator inventory, hidden region contents, MuJoCo body
-names, privileged poses, or oracle geometry in this file. `INSPECT` may refer
-to a known uninspected region. All other object references must be present in
-`visible_entities`; invalid model output is rejected before execution.
-
-See `example_observation.json` for the input shape.
-
-## Start the model server
-
-Use the existing inference workspace on the GPU server. For the current Qwen
-profile:
+On the inference server:
 
 ```bash
 cd inference_server
 ./serve up qwen35-9b --detach
 ```
 
-If the model server is remote, tunnel its raw OpenAI-compatible port:
+On the simulator PC:
 
 ```bash
 ssh -L 18000:127.0.0.1:8000 user@gpu-server
-```
 
-The baseline talks directly to the raw model endpoint on port 8000; it does
-not use the functional `/v1/decompose` API.
-
-## Request one plan
-
-From the repository root:
-
-```bash
+cd ~/Documents/RRC/LH_Extension/V1
 export LLM3_MODEL_BASE_URL=http://127.0.0.1:18000/v1
 export LLM3_PROFILE=qwen35-9b
 
-python3 -m llm3_baseline.client \
-  --goal "Stir the contents of the visible mug" \
+GOAL='Prepare and serve coffee and soup for three people using the available kitchenware. Stir all three coffees and provide each soup bowl with a suitable utensil.'
+
+MUJOCO_GL=glfw .venv/bin/python -m llm3_baseline.run_kitchen \
+  --phase1-run-dir runs/kitchen_live_02 \
+  --output-dir runs/llm3/qwen35_trial_001 \
+  --goal "$GOAL" \
+  --camera free
+```
+
+The default `--decoding paper` matches the original planner's temperature `0`
+and disables thinking. `--decoding model-native` is a separate ablation. Plans
+are printed as short lines including their sampled parameters. Model calls,
+the three-entry plan/failure trace, physical telemetry, observation frames, and
+the final result are written below the chosen output directory. Every episode
+requires an empty output directory so traces from separate trials cannot mix.
+
+## Planning-only client
+
+```bash
+.venv/bin/python -m llm3_baseline.client \
+  --goal 'Stir the contents of the visible mug' \
   --observation llm3_baseline/example_observation.json \
-  --image front_camera=runs/qwen_kitchen_test/front_camera.png \
-  --image overhead_camera=runs/qwen_kitchen_test/overhead_camera.png
+  --image front_camera=runs/qwen_kitchen_test/front_camera.png
 ```
 
-The output is a validated plan only. `execution_started` remains `false`.
-
-Optional environment variables:
-
-| Variable | Default |
-|---|---:|
-| `LLM3_MODEL_BASE_URL` | `http://127.0.0.1:8000/v1` |
-| `LLM3_PROFILE` | `qwen35-9b` |
-| `LLM3_MODEL` | selected profile's served name |
-| `LLM3_API_KEY` | empty |
-| `LLM3_MAX_TOKENS` | selected profile's configured limit |
-| `LLM3_MAX_ACTIONS` | `20` |
-| `LLM3_TIMEOUT_SECONDS` | `300` |
-| `LLM3_ENABLE_THINKING` | `true` |
-| `LLM3_TEMPERATURE` | selected profile's recommended value |
-| `LLM3_TOP_P` | selected profile's recommended value |
-
-By default the client reads the selected model's thinking mode, structured
-output support, token limit, reasoning markers, and creator-recommended
-sampling settings from `inference_server/models.json`. Temperature and top-p
-overrides exist for controlled ablations. These are runtime settings, not
-learned parameters; freeze and record them for a benchmark.
-
-## Failure feedback
-
-The live adapter should translate the shared skill result into a concise
-failure such as:
-
-```json
-{
-  "code": "ik_failed",
-  "message": "No collision-free IK solution was found."
-}
-```
-
-The baseline accepts these failure classes without model training:
-
-- `precondition_failed`
-- `path_blocked`
-- `ik_failed`
-- `collision`
-- `grasp_failed`
-- `placement_failed`
-- `object_not_visible`
-- `target_occupied`
-- `function_unsatisfied`
-- `effect_not_observed`
-
-Avoid including hidden object locations or the correct solution in a failure
-message.
+This validates a full parameterized plan but does not execute it. The example
+JSON may contain human-readable labels for convenience; the planner strips
+them before constructing `textualized_state`.
 
 ## Tests
 
@@ -142,6 +93,5 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/python -m pytest \
   llm3_baseline/tests -q
 ```
 
-For paper results, describe this as an **LLM3-style adaptation with a frozen
-VLM**, not an exact reproduction. The original LLM3 system used GPT-4,
-PyBullet box-packing environments, and its own motion-planning interface.
+Primary references: [LLM3 paper](https://arxiv.org/abs/2403.11552) and
+[official implementation](https://github.com/AssassinWS/LLM-TAMP).

@@ -3,34 +3,15 @@
 from __future__ import annotations
 
 import argparse
-import base64
 import json
-import mimetypes
+import os
 from dataclasses import replace
 from pathlib import Path
 
+from baseline_common.client import data_url, image_argument
+
 from .models import Failure, Observation
 from .planner import LLM3Planner, PlannerConfig, PlanningError
-
-
-def image_argument(value: str) -> tuple[str, Path]:
-    if "=" in value:
-        camera, path = value.split("=", 1)
-    else:
-        path = value
-        camera = Path(path).stem
-    image = Path(path)
-    if not camera.strip() or not image.is_file():
-        raise argparse.ArgumentTypeError(
-            "Use CAMERA=/path/to/an/existing/image.png"
-        )
-    return camera.strip(), image
-
-
-def data_url(path: Path) -> str:
-    media_type = mimetypes.guess_type(path.name)[0] or "image/png"
-    encoded = base64.b64encode(path.read_bytes()).decode("ascii")
-    return f"data:{media_type};base64,{encoded}"
 
 
 def parser() -> argparse.ArgumentParser:
@@ -80,12 +61,16 @@ def _failure(path: Path | None) -> Failure | None:
 
 def main() -> None:
     arguments = parser().parse_args()
-    config = PlannerConfig.from_env()
+    environment = dict(os.environ)
+    if arguments.no_thinking:
+        environment["LLM3_ENABLE_THINKING"] = "false"
+    config = PlannerConfig.from_env(environment)
     overrides = {
-        "base_url": arguments.base_url or config.base_url,
-        "model": arguments.model or config.model,
-        "max_tokens": arguments.max_tokens or config.max_tokens,
-        "enable_thinking": False if arguments.no_thinking else config.enable_thinking,
+        "base_url": config.base_url if arguments.base_url is None else arguments.base_url,
+        "model": config.model if arguments.model is None else arguments.model,
+        "max_tokens": (
+            config.max_tokens if arguments.max_tokens is None else arguments.max_tokens
+        ),
     }
     config = replace(config, **overrides)
     observation = Observation.from_dict(

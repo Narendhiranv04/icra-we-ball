@@ -1,0 +1,35 @@
+Environment: workshop
+Variant: W2
+Internal variant: F1_POWER_FIRST_ONE_REGION
+Intended outcome: FEASIBLE
+Description: Power driver and screw are both in the first region; search stops after one inspection.
+Expected GT actions: 28
+
+001. MOVE_TO(LEFT_DRAWER)  # Visit the next storage region in the fixed search order.
+002. OPEN_STORAGE(LEFT_DRAWER)  # Expose the fixed object set in this region.
+003. INSPECT_STORAGE(LEFT_DRAWER)  # Observe the screw, compatible drivers, or hammer distractor.
+004. CLOSE_STORAGE(LEFT_DRAWER)  # Restore the inspected storage region before continuing search.
+005. OPEN_STORAGE(LEFT_DRAWER)  # Make the selected driver accessible.
+006. PICK(workshop_power_driver, LEFT_DRAWER)  # Acquire the first compatible driver encountered.
+007. MOVE_TO(MAIN_WORKBENCH_ZONE)  # Carry the selected driver to the fixed main workbench staging area.
+008. PLACE_ON_SURFACE(workshop_power_driver, MAIN_WORKBENCH_ZONE)  # Stage the selected driver safely while retrieving the screw.
+009. MOVE_TO(LEFT_DRAWER)  # Return empty-handed to the driver's source.
+010. CLOSE_STORAGE(LEFT_DRAWER)  # Close the driver's source after retrieval.
+011. OPEN_STORAGE(LEFT_DRAWER)  # Make the compatible screw accessible.
+012. PICK(workshop_medium_phillips_screw, LEFT_DRAWER)  # Acquire the single compatible workbench screw.
+013. MOVE_TO(MAIN_WORKBENCH_ZONE)  # Carry the screw to a stable workbench staging pose before restoring the extracted drawer.
+014. PLACE_ON_SURFACE(workshop_medium_phillips_screw, MAIN_WORKBENCH_ZONE)  # Stage the screw so the gripper is free to close its source drawer.
+015. MOVE_TO(LEFT_DRAWER)  # Return empty-handed to the screw's source drawer.
+016. CLOSE_STORAGE(LEFT_DRAWER)  # Close the extracted drawer before entering the repair workspace.
+017. MOVE_TO(MAIN_WORKBENCH_ZONE)  # Return to the staged screw after the drawer is closed.
+018. PICK(workshop_medium_phillips_screw, MAIN_WORKBENCH_ZONE)  # Reacquire the staged screw for insertion.
+019. MOVE_TO(workshop_frame_joint)  # Carry the fastener to the loose frame joint.
+020. INSERT_FASTENER(workshop_medium_phillips_screw, workshop_frame_joint)  # Place it perfectly tip-down with the screw head/recess on top.
+021. MOVE_TO(MAIN_WORKBENCH_ZONE)  # Return to the selected staged driver.
+022. PICK(workshop_power_driver, MAIN_WORKBENCH_ZONE)  # Acquire the staged driver for fastening.
+023. MOVE_TO(workshop_frame_joint)  # Bring the compatible driver to the inserted fastener.
+024. DRIVE_FASTENER(workshop_power_driver, workshop_medium_phillips_screw, workshop_frame_joint)  # Hold the powered driver steady while its motor turns and advances the screw.
+025. MOVE_TO(MAIN_WORKBENCH_ZONE)  # Return the driver to the selected work surface.
+026. PLACE_ON_SURFACE(workshop_power_driver, MAIN_WORKBENCH_ZONE)  # Leave the used driver safely on the main workbench.
+027. MOVE_TO(workshop_frame_joint)  # Move to the repaired joint for terminal inspection.
+028. VERIFY_REPAIR(workshop_frame_joint)  # Verify the intended repair and terminal organization.

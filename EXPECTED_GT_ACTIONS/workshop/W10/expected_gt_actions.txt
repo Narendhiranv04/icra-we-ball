@@ -1,0 +1,20 @@
+Environment: workshop
+Variant: W10
+Internal variant: I1_NO_SCREW
+Intended outcome: INFEASIBLE
+Description: Both compatible drivers and hammer present; required screw absent.
+Expected GT actions: 13
+
+001. MOVE_TO(LEFT_DRAWER)  # Visit the next storage region in the fixed search order.
+002. OPEN_STORAGE(LEFT_DRAWER)  # Expose the fixed object set in this region.
+003. INSPECT_STORAGE(LEFT_DRAWER)  # Observe the screw, compatible drivers, or hammer distractor.
+004. CLOSE_STORAGE(LEFT_DRAWER)  # Restore the inspected storage region before continuing search.
+005. MOVE_TO(RIGHT_DRAWER)  # Visit the next storage region in the fixed search order.
+006. OPEN_STORAGE(RIGHT_DRAWER)  # Expose the fixed object set in this region.
+007. INSPECT_STORAGE(RIGHT_DRAWER)  # Observe the screw, compatible drivers, or hammer distractor.
+008. CLOSE_STORAGE(RIGHT_DRAWER)  # Restore the inspected storage region before continuing search.
+009. MOVE_TO(TOOL_CABINET)  # Visit the next storage region in the fixed search order.
+010. OPEN_STORAGE(TOOL_CABINET)  # Expose the fixed object set in this region.
+011. INSPECT_STORAGE(TOOL_CABINET)  # Observe the screw, compatible drivers, or hammer distractor.
+012. CLOSE_STORAGE(TOOL_CABINET)  # Restore the inspected storage region before continuing search.
+013. TERMINATE_INFEASIBLE(NO_COMPATIBLE_SCREW)  # All three regions were inspected and the required screw-driver pair is absent.

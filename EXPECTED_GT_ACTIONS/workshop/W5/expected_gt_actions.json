@@ -1,0 +1,257 @@
+{
+  "actions": [
+    {
+      "arguments": [
+        "LEFT_DRAWER"
+      ],
+      "operator": "MOVE_TO",
+      "reason": "Visit the next storage region in the fixed search order."
+    },
+    {
+      "arguments": [
+        "LEFT_DRAWER"
+      ],
+      "operator": "OPEN_STORAGE",
+      "reason": "Expose the fixed object set in this region."
+    },
+    {
+      "arguments": [
+        "LEFT_DRAWER"
+      ],
+      "operator": "INSPECT_STORAGE",
+      "reason": "Observe the screw, compatible drivers, or hammer distractor."
+    },
+    {
+      "arguments": [
+        "LEFT_DRAWER"
+      ],
+      "operator": "CLOSE_STORAGE",
+      "reason": "Restore the inspected storage region before continuing search."
+    },
+    {
+      "arguments": [
+        "RIGHT_DRAWER"
+      ],
+      "operator": "MOVE_TO",
+      "reason": "Visit the next storage region in the fixed search order."
+    },
+    {
+      "arguments": [
+        "RIGHT_DRAWER"
+      ],
+      "operator": "OPEN_STORAGE",
+      "reason": "Expose the fixed object set in this region."
+    },
+    {
+      "arguments": [
+        "RIGHT_DRAWER"
+      ],
+      "operator": "INSPECT_STORAGE",
+      "reason": "Observe the screw, compatible drivers, or hammer distractor."
+    },
+    {
+      "arguments": [
+        "RIGHT_DRAWER"
+      ],
+      "operator": "CLOSE_STORAGE",
+      "reason": "Restore the inspected storage region before continuing search."
+    },
+    {
+      "arguments": [
+        "TOOL_CABINET"
+      ],
+      "operator": "MOVE_TO",
+      "reason": "Visit the next storage region in the fixed search order."
+    },
+    {
+      "arguments": [
+        "TOOL_CABINET"
+      ],
+      "operator": "OPEN_STORAGE",
+      "reason": "Expose the fixed object set in this region."
+    },
+    {
+      "arguments": [
+        "TOOL_CABINET"
+      ],
+      "operator": "INSPECT_STORAGE",
+      "reason": "Observe the screw, compatible drivers, or hammer distractor."
+    },
+    {
+      "arguments": [
+        "TOOL_CABINET"
+      ],
+      "operator": "CLOSE_STORAGE",
+      "reason": "Restore the inspected storage region before continuing search."
+    },
+    {
+      "arguments": [
+        "RIGHT_DRAWER"
+      ],
+      "operator": "MOVE_TO",
+      "reason": "Move to the first compatible driver observed during search."
+    },
+    {
+      "arguments": [
+        "RIGHT_DRAWER"
+      ],
+      "operator": "OPEN_STORAGE",
+      "reason": "Make the selected driver accessible."
+    },
+    {
+      "arguments": [
+        "workshop_long_phillips_driver",
+        "RIGHT_DRAWER"
+      ],
+      "operator": "PICK",
+      "reason": "Acquire the first compatible driver encountered."
+    },
+    {
+      "arguments": [
+        "MAIN_WORKBENCH_ZONE"
+      ],
+      "operator": "MOVE_TO",
+      "reason": "Carry the selected driver to the fixed main workbench staging area."
+    },
+    {
+      "arguments": [
+        "workshop_long_phillips_driver",
+        "MAIN_WORKBENCH_ZONE"
+      ],
+      "operator": "PLACE_ON_SURFACE",
+      "reason": "Stage the selected driver safely while retrieving the screw."
+    },
+    {
+      "arguments": [
+        "RIGHT_DRAWER"
+      ],
+      "operator": "MOVE_TO",
+      "reason": "Return empty-handed to the driver's source."
+    },
+    {
+      "arguments": [
+        "RIGHT_DRAWER"
+      ],
+      "operator": "CLOSE_STORAGE",
+      "reason": "Close the driver's source after retrieval."
+    },
+    {
+      "arguments": [
+        "TOOL_CABINET"
+      ],
+      "operator": "MOVE_TO",
+      "reason": "Move to the observed compatible screw."
+    },
+    {
+      "arguments": [
+        "TOOL_CABINET"
+      ],
+      "operator": "OPEN_STORAGE",
+      "reason": "Make the compatible screw accessible."
+    },
+    {
+      "arguments": [
+        "workshop_medium_phillips_screw",
+        "TOOL_CABINET"
+      ],
+      "operator": "PICK",
+      "reason": "Acquire the single compatible workbench screw."
+    },
+    {
+      "arguments": [
+        "workshop_frame_joint"
+      ],
+      "operator": "MOVE_TO",
+      "reason": "Carry the fastener to the loose frame joint."
+    },
+    {
+      "arguments": [
+        "workshop_medium_phillips_screw",
+        "workshop_frame_joint"
+      ],
+      "operator": "INSERT_FASTENER",
+      "reason": "Place it perfectly tip-down with the screw head/recess on top."
+    },
+    {
+      "arguments": [
+        "TOOL_CABINET"
+      ],
+      "operator": "MOVE_TO",
+      "reason": "Return empty-handed after insertion to restore the cabinet."
+    },
+    {
+      "arguments": [
+        "TOOL_CABINET"
+      ],
+      "operator": "CLOSE_STORAGE",
+      "reason": "Close the cabinet after retrieving and inserting the screw."
+    },
+    {
+      "arguments": [
+        "MAIN_WORKBENCH_ZONE"
+      ],
+      "operator": "MOVE_TO",
+      "reason": "Return to the selected staged driver."
+    },
+    {
+      "arguments": [
+        "workshop_long_phillips_driver",
+        "MAIN_WORKBENCH_ZONE"
+      ],
+      "operator": "PICK",
+      "reason": "Acquire the staged driver for fastening."
+    },
+    {
+      "arguments": [
+        "workshop_frame_joint"
+      ],
+      "operator": "MOVE_TO",
+      "reason": "Bring the compatible driver to the inserted fastener."
+    },
+    {
+      "arguments": [
+        "workshop_long_phillips_driver",
+        "workshop_medium_phillips_screw",
+        "workshop_frame_joint"
+      ],
+      "operator": "DRIVE_FASTENER",
+      "reason": "Rotate the manual driver in visible ratchet strokes while the screw advances."
+    },
+    {
+      "arguments": [
+        "MAIN_WORKBENCH_ZONE"
+      ],
+      "operator": "MOVE_TO",
+      "reason": "Return the driver to the selected work surface."
+    },
+    {
+      "arguments": [
+        "workshop_long_phillips_driver",
+        "MAIN_WORKBENCH_ZONE"
+      ],
+      "operator": "PLACE_ON_SURFACE",
+      "reason": "Leave the used driver safely on the main workbench."
+    },
+    {
+      "arguments": [
+        "workshop_frame_joint"
+      ],
+      "operator": "MOVE_TO",
+      "reason": "Move to the repaired joint for terminal inspection."
+    },
+    {
+      "arguments": [
+        "workshop_frame_joint"
+      ],
+      "operator": "VERIFY_REPAIR",
+      "reason": "Verify the intended repair and terminal organization."
+    }
+  ],
+  "description": "Manual driver is found second; the screw is only found in the third region.",
+  "environment": "workshop",
+  "intended_outcome": "FEASIBLE",
+  "internal_variant": "F4_MANUAL_FIRST_THREE_REGIONS",
+  "schema_version": 1,
+  "total_actions": 34,
+  "variant": "W5"
+}
