@@ -6,10 +6,12 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 import pytest
+import yaml
 
 from mujoco_scenes.functional_tamp_pipeline.models import (
     FunctionalRequirementGraph,
     FunctionalRole,
+    GraphGroundingResult,
     PipelineResult,
 )
 from mujoco_scenes.functional_tamp_pipeline.run import (
@@ -25,6 +27,7 @@ from mujoco_scenes.functional_tamp_pipeline.search_order import (
     FIXED_SEARCH_ORDERS,
     ORACLE_SEARCH_ORDERS,
     resolve_search_order,
+    validate_search_order_preflight,
 )
 
 
@@ -381,7 +384,7 @@ def test_vlm_oracle_rejected():
         resolve_search_order(spec, "kitchen", "oracle", mode="vlm", variant="K1")
 
 
-# 20. Random search reproducibility and validation
+# 20. Random search properties and validation
 def test_random_search_properties():
     spec = _make_dummy_spec(domain="kitchen")
     order1, eff1, seed1 = resolve_search_order(spec, "kitchen", "random", mode="vlm", seed=42)
@@ -404,7 +407,38 @@ def test_random_search_properties():
         resolve_search_order(spec, "kitchen", "provider", mode="vlm", seed=0)
 
 
-# 21. Kitchen nested action plan discovery
+# 21. Early search-config preflight validation before provider/image acquisition
+def test_preflight_validation_fails_before_provider(tmp_path: Path):
+    with patch("mujoco_scenes.functional_tamp_pipeline.run.provider_for_mode") as mock_prov_factory:
+        # VLM + oracle must fail fast
+        with pytest.raises(ValueError, match="oracle search is privileged"):
+            run_pipeline(domain="kitchen", variant="K1", mode="vlm", search_order="oracle", output_root=tmp_path)
+        mock_prov_factory.assert_not_called()
+
+        # Random without seed must fail fast
+        with pytest.raises(ValueError, match="random search requires --search-seed"):
+            run_pipeline(domain="kitchen", variant="K1", mode="vlm", search_order="random", output_root=tmp_path)
+        mock_prov_factory.assert_not_called()
+
+        # Living room with oracle must fail fast
+        with pytest.raises(ValueError, match="not applicable for living_room"):
+            run_pipeline(domain="living_room", variant="L1", mode="gt", search_order="oracle", output_root=tmp_path)
+        mock_prov_factory.assert_not_called()
+
+
+# 22. Manifest truthful unresolved policy on early exception
+def test_manifest_unresolved_effective_policy_on_early_failure(tmp_path: Path):
+    with patch("mujoco_scenes.functional_tamp_pipeline.run.provider_for_mode", side_effect=RuntimeError("Provider offline")):
+        with pytest.raises(RuntimeError, match="Provider offline"):
+            run_pipeline(domain="kitchen", variant="K1", mode="vlm", search_order="auto", output_root=tmp_path)
+
+    manifest_path = tmp_path / "kitchen" / "K1" / "vlm" / "run_manifest.json"
+    assert manifest_path.exists()
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["search_order_source_effective"] is None
+
+
+# 23. Kitchen nested action plan discovery
 def test_artifact_discovery_kitchen_nested(tmp_path: Path):
     run_dir = tmp_path / "kitchen_run"
     plan_dir = run_dir / "action_sequence"
@@ -418,7 +452,7 @@ def test_artifact_discovery_kitchen_nested(tmp_path: Path):
     assert artifacts["plan_grounding_audit"] == "plan_grounding_audit.json"
 
 
-# 22. Living Room plan and replay discovery
+# 24. Living Room plan and replay discovery
 def test_artifact_discovery_living_room(tmp_path: Path):
     run_dir = tmp_path / "lr_run"
     plan_dir = run_dir / "action_sequence"
@@ -432,7 +466,7 @@ def test_artifact_discovery_living_room(tmp_path: Path):
     assert artifacts["replay_validation"] == "action_sequence/replay_validation.json"
 
 
-# 23. Workshop root action plan discovery
+# 25. Workshop root action plan discovery
 def test_artifact_discovery_workshop_root(tmp_path: Path):
     run_dir = tmp_path / "workshop_run"
     run_dir.mkdir(parents=True)
@@ -447,7 +481,88 @@ def test_artifact_discovery_workshop_root(tmp_path: Path):
     assert artifacts["detection_diagnostics"] == "detection_diagnostics.json"
 
 
-# 24. Manifest failure on success is non-intrusive
+# 26. Restored: Centralized finalization called exactly once on success
+def test_manifest_finalization_called_once_on_success(tmp_path: Path):
+    dummy_spec = _make_dummy_spec(domain="kitchen")
+    dummy_result = PipelineResult(
+        domain="kitchen",
+        variant="K1",
+        mode="gt",
+        status="ACTION_SEQUENCE_READY",
+        assignment={"tool": "object_0001"},
+        plan=({"action_index": 1, "operator": "PICK", "arguments": ["object_0001"]},),
+    )
+
+    with patch("mujoco_scenes.functional_tamp_pipeline.run.provider_for_mode") as mock_prov_factory, \
+         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.scene_for_variant"), \
+         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.run_to_plan", return_value=dummy_result), \
+         patch("mujoco_scenes.functional_tamp_pipeline.run._write_run_manifest", wraps=_write_run_manifest) as mock_manifest_writer:
+        mock_provider = MagicMock()
+        mock_provider.provide.return_value = dummy_spec
+        mock_prov_factory.return_value = mock_provider
+
+        res = run_pipeline(
+            domain="kitchen",
+            variant="K1",
+            mode="gt",
+            output_root=tmp_path,
+        )
+        assert res.status == "ACTION_SEQUENCE_READY"
+        assert mock_manifest_writer.call_count == 1
+
+
+# 27. Restored: Centralized finalization called exactly once on infeasible
+def test_manifest_finalization_called_once_on_infeasible(tmp_path: Path):
+    dummy_spec = _make_dummy_spec(domain="kitchen")
+    dummy_result = PipelineResult(
+        domain="kitchen",
+        variant="K7",
+        mode="gt",
+        status="INFEASIBLE",
+        failure_reason="NO_TOOL_OBSERVED",
+    )
+
+    with patch("mujoco_scenes.functional_tamp_pipeline.run.provider_for_mode") as mock_prov_factory, \
+         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.scene_for_variant"), \
+         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.run_to_plan", return_value=dummy_result), \
+         patch("mujoco_scenes.functional_tamp_pipeline.run._write_run_manifest", wraps=_write_run_manifest) as mock_manifest_writer:
+        mock_provider = MagicMock()
+        mock_provider.provide.return_value = dummy_spec
+        mock_prov_factory.return_value = mock_provider
+
+        res = run_pipeline(
+            domain="kitchen",
+            variant="K7",
+            mode="gt",
+            output_root=tmp_path,
+        )
+        assert res.status == "INFEASIBLE"
+        assert mock_manifest_writer.call_count == 1
+
+
+# 28. Restored: Centralized finalization called exactly once on exception
+def test_manifest_finalization_called_once_on_exception(tmp_path: Path):
+    dummy_spec = _make_dummy_spec(domain="kitchen")
+
+    with patch("mujoco_scenes.functional_tamp_pipeline.run.provider_for_mode") as mock_prov_factory, \
+         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.scene_for_variant"), \
+         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.run_to_plan", side_effect=ValueError("Perception crashed")), \
+         patch("mujoco_scenes.functional_tamp_pipeline.run._write_run_manifest", wraps=_write_run_manifest) as mock_manifest_writer:
+        mock_provider = MagicMock()
+        mock_provider.provide.return_value = dummy_spec
+        mock_prov_factory.return_value = mock_provider
+
+        with pytest.raises(ValueError, match="Perception crashed"):
+            run_pipeline(
+                domain="kitchen",
+                variant="K1",
+                mode="gt",
+                output_root=tmp_path,
+            )
+        assert mock_manifest_writer.call_count == 1
+
+
+# 29. Manifest failure on success is non-intrusive
 def test_manifest_failure_on_success_is_non_intrusive(tmp_path: Path, capsys: pytest.CaptureFixture):
     dummy_spec = _make_dummy_spec(domain="kitchen")
     dummy_result = PipelineResult(
@@ -480,7 +595,7 @@ def test_manifest_failure_on_success_is_non_intrusive(tmp_path: Path, capsys: py
     assert "RUN MANIFEST WRITE FAILED: OSError: disk full" in captured.err
 
 
-# 25. Manifest failure on infeasible is non-intrusive
+# 30. Manifest failure on infeasible is non-intrusive
 def test_manifest_failure_on_infeasible_is_non_intrusive(tmp_path: Path, capsys: pytest.CaptureFixture):
     dummy_spec = _make_dummy_spec(domain="kitchen")
     dummy_result = PipelineResult(
@@ -512,7 +627,7 @@ def test_manifest_failure_on_infeasible_is_non_intrusive(tmp_path: Path, capsys:
     assert "RUN MANIFEST WRITE FAILED: PermissionError: permission denied" in captured.err
 
 
-# 26. Manifest failure on pipeline exception preserves original exception
+# 31. Manifest failure on pipeline exception preserves original exception
 def test_manifest_failure_on_pipeline_exception_preserves_original_exception(tmp_path: Path, capsys: pytest.CaptureFixture):
     dummy_spec = _make_dummy_spec(domain="kitchen")
 
@@ -536,3 +651,38 @@ def test_manifest_failure_on_pipeline_exception_preserves_original_exception(tmp
 
     captured = capsys.readouterr()
     assert "RUN MANIFEST WRITE FAILED: OSError: manifest failure" in captured.err
+
+
+# 32. Regression test: Kitchen semantic vocabulary generation preserves aliases
+def test_kitchen_semantic_vocabulary_retains_aliases(tmp_path: Path):
+    from mujoco_scenes.functional_tamp_pipeline.domains.kitchen import run_to_plan
+
+    spec = _make_dummy_spec(domain="kitchen")
+    dummy_session = MagicMock()
+    dummy_session.events_path.read_text.return_value = ""
+    dummy_session.run_dir = tmp_path
+    dummy_go = MagicMock()
+    dummy_go.to_dict.return_value = {"nodes": [], "edges": []}
+
+    with patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.scene_for_variant"), \
+         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.run_sequential_inspection", return_value=dummy_session), \
+         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.build_kitchen_observed_scene_graph", return_value=dummy_go), \
+         patch("mujoco_scenes.functional_tamp_pipeline.grounding.ground_graph") as mock_ground:
+        mock_ground.return_value = GraphGroundingResult(status="INFEASIBLE", complete=False)
+
+        run_to_plan(
+            variant_label="K1",
+            internal_variant="F0_ALL_VISIBLE",
+            mode="gt",
+            specification=spec,
+            output_dir=tmp_path,
+        )
+
+    vocab_file = tmp_path / "kitchen_vocabulary.yaml"
+    assert vocab_file.exists()
+    vocab_data = yaml.safe_load(vocab_file.read_text(encoding="utf-8"))
+    canonical_labels = vocab_data.get("canonical_labels", {})
+    assert "spoon" in canonical_labels
+    # Must retain multi-label aliases from configs/semantic_vocabulary.yaml, e.g. [spoon, teaspoon, ...]
+    assert len(canonical_labels["spoon"]) > 1
+    assert "teaspoon" in canonical_labels["spoon"]

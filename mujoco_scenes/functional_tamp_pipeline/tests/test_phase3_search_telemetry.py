@@ -1,4 +1,4 @@
-"""Unit tests for Phase 3.1: search order regimes and telemetry events."""
+"""Unit tests for Phase 3.1 & 3.1.1: search order regimes and telemetry events."""
 
 from __future__ import annotations
 
@@ -95,11 +95,16 @@ class FakeWorkshopDomain:
         self.observed_initial = False
         self.opened_regions: list[str] = []
         self.observed_after_open: list[str] = []
+        self.call_history: list[str] = []
+        self.graph = MagicMock()
+        self.graph.to_dict.return_value = {"nodes": [], "edges": []}
 
     def observe_initial(self) -> None:
         self.observed_initial = True
+        self.call_history.append("observe_initial")
 
     def evaluate_satisfaction(self, search_exhausted: bool = False) -> SatisfactionResult:
+        self.call_history.append(f"evaluate_satisfaction(exhausted={search_exhausted})")
         satisfied = False
         if self.satisfy_at_region and self.satisfy_at_region in self.opened_regions:
             satisfied = True
@@ -113,10 +118,12 @@ class FakeWorkshopDomain:
 
     def open_region(self, region: str) -> dict[str, Any]:
         self.opened_regions.append(region)
+        self.call_history.append(f"open_region({region})")
         return {"success": True}
 
     def observe_after_open(self, region: str) -> None:
         self.observed_after_open.append(region)
+        self.call_history.append(f"observe_after_open({region})")
 
 
 def test_workshop_search_explicit_order_and_early_stopping():
@@ -139,7 +146,7 @@ def test_workshop_search_explicit_order_and_early_stopping():
     assert inspected == ("TOOL_CABINET",)
     assert domain.opened_regions == ["TOOL_CABINET"]
 
-    # Verify event types received in order
+    # Verify event types received in order and live scene_graph presence
     event_names = [e[0] for e in events]
     assert event_names == [
         "observation_updated",  # initial
@@ -149,9 +156,40 @@ def test_workshop_search_explicit_order_and_early_stopping():
         "observation_updated",  # after_TOOL_CABINET
         "grounding_updated",    # after_TOOL_CABINET evaluation
     ]
+    # Check that scene_graph is exposed in observation and grounding events
+    assert events[0][1]["scene_graph"] == {"nodes": [], "edges": []}
+    assert events[1][1]["scene_graph"] == {"nodes": [], "edges": []}
 
 
-# 4. Kitchen sequential inspection explicit order and early stopping
+# 4. FIX #9: Observer does not alter computation (identically zero extra calls)
+def test_observer_does_not_change_computation():
+    spec = _make_dummy_spec(
+        domain="workshop",
+        candidate_regions=("LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"),
+        region_ranking=("LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"),
+    )
+    domain_no_obs = FakeWorkshopDomain(satisfy_at_region="RIGHT_DRAWER")
+    res_no_obs, insp_no_obs = search_until_satisfied(
+        domain_no_obs, spec, search_order=spec.region_ranking, observer=None
+    )
+
+    domain_with_obs = FakeWorkshopDomain(satisfy_at_region="RIGHT_DRAWER")
+    events = []
+    def observer(event: str, payload: dict[str, Any]):
+        events.append((event, payload))
+
+    res_with_obs, insp_with_obs = search_until_satisfied(
+        domain_with_obs, spec, search_order=spec.region_ranking, observer=observer
+    )
+
+    # Identical call history and result
+    assert domain_no_obs.call_history == domain_with_obs.call_history
+    assert insp_no_obs == insp_with_obs
+    assert res_no_obs.status == res_with_obs.status
+    assert res_no_obs.assignment == res_with_obs.assignment
+
+
+# 5. Kitchen sequential inspection explicit order and early stopping
 def test_kitchen_sequential_inspection_order_and_early_stopping(tmp_path: Path):
     from mujoco_scenes.sequential_inspection import run_fixed_order_inspection
 
@@ -213,7 +251,115 @@ def test_kitchen_sequential_inspection_order_and_early_stopping(tmp_path: Path):
     ]
 
 
-# 5. Living Room telemetry: zero search/open events
+# 6. Kitchen stage events sequence and central payload enrichment
+def test_kitchen_stage_events_sequence_and_enrichment(tmp_path: Path):
+    dummy_spec = _make_dummy_spec(domain="kitchen")
+    dummy_result = PipelineResult(
+        domain="kitchen",
+        variant="K1",
+        mode="gt",
+        status="ACTION_SEQUENCE_READY",
+        assignment={"tool": "object_0001"},
+        plan=({"action_index": 1, "operator": "PICK", "arguments": ["object_0001"]},),
+    )
+
+    events = []
+    def observer(event: str, payload: dict[str, Any]):
+        events.append((event, payload))
+
+    with patch("mujoco_scenes.functional_tamp_pipeline.run.provider_for_mode") as mock_prov_factory, \
+         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.scene_for_variant"), \
+         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.run_to_plan", return_value=dummy_result):
+        mock_provider = MagicMock()
+        mock_provider.provide.return_value = dummy_spec
+        mock_prov_factory.return_value = mock_provider
+
+        res = run_pipeline(
+            domain="kitchen",
+            variant="K1",
+            mode="gt",
+            search_order="auto",
+            observer=observer,
+            output_root=tmp_path,
+        )
+        assert res.status == "ACTION_SEQUENCE_READY"
+
+    stages = [payload["stage"] for name, payload in events if name == "stage_changed"]
+    assert stages == ["specification", "perception", "search_grounding", "planning", "complete"]
+
+
+# 7. Central search event policy and seed enrichment
+def test_central_search_event_enrichment(tmp_path: Path):
+    dummy_spec = _make_dummy_spec(domain="workshop", candidate_regions=("LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"), region_ranking=("LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"), source="VLM_FUNCTIONAL_SPEC")
+    dummy_result = PipelineResult(
+        domain="workshop",
+        variant="W1",
+        mode="vlm",
+        status="ACTION_SEQUENCE_READY",
+        inspected_regions=("LEFT_DRAWER",),
+        assignment={"driver": "d1", "fastener": "f1", "work_surface": "w1"},
+        plan=({"action_index": 1, "operator": "PICK", "arguments": ["d1"]},),
+    )
+
+    events = []
+    def observer(event: str, payload: dict[str, Any]):
+        events.append((event, payload))
+
+    with patch("mujoco_scenes.functional_tamp_pipeline.run.provider_for_mode") as mock_prov_factory, \
+         patch("mujoco_scenes.workshop_scene.WorkshopScene"), \
+         patch("mujoco_scenes.functional_tamp_pipeline.run._capture_workshop_vlm_inputs", return_value=[]), \
+         patch("mujoco_scenes.functional_tamp_pipeline.domains.workshop.WorkshopDomainAdapter") as mock_adapter_cls, \
+         patch("mujoco_scenes.functional_tamp_pipeline.run.search_until_satisfied") as mock_search, \
+         patch("mujoco_scenes.functional_tamp_pipeline.run.plan_with_common_astar") as mock_plan:
+        mock_provider = MagicMock()
+        mock_provider.provide.return_value = dummy_spec
+        mock_prov_factory.return_value = mock_provider
+
+        mock_adapter_instance = MagicMock()
+        mock_adapter_instance.graph.to_dict.return_value = {"nodes": [], "edges": []}
+        mock_adapter_instance.controller.detection_diagnostics = []
+        mock_adapter_cls.return_value = mock_adapter_instance
+
+        mock_satisfaction = GraphGroundingResult(
+            status="ACTION_SEQUENCE_READY",
+            complete=True,
+            assignment={"driver": "d1", "fastener": "f1", "work_surface": "w1"},
+        )
+        def fake_search(adapter, spec, search_order=None, observer=None):
+            if observer is not None:
+                observer("search_region_selected", {"region": "LEFT_DRAWER", "index": 0, "total_regions": 3})
+                observer("search_region_opened", {"region": "LEFT_DRAWER", "success": True, "exploratory": True})
+            return mock_satisfaction, ("LEFT_DRAWER",)
+        mock_search.side_effect = fake_search
+
+        planned_mock = MagicMock()
+        planned_mock.actions = ({"action_index": 1, "operator": "PICK", "arguments": ["d1"]},)
+        planned_mock.search.statistics = {}
+        planned_mock.validation = {}
+        mock_plan.return_value = planned_mock
+
+        res = run_pipeline(
+            domain="workshop",
+            variant="W1",
+            mode="vlm",
+            search_order="random",
+            search_seed=42,
+            observer=observer,
+            output_root=tmp_path,
+        )
+        assert res.status == "ACTION_SEQUENCE_READY"
+
+    selected_events = [p for n, p in events if n == "search_region_selected"]
+    opened_events = [p for n, p in events if n == "search_region_opened"]
+    assert len(selected_events) == 1
+    assert selected_events[0]["search_order_source_effective"] == "random"
+    assert selected_events[0]["search_seed_effective"] == 42
+    assert len(opened_events) == 1
+    assert opened_events[0]["search_order_source_effective"] == "random"
+    assert opened_events[0]["search_seed_effective"] == 42
+
+
+# 8. Living Room telemetry: zero search/open events
 def test_living_room_telemetry_no_search_events(tmp_path: Path):
     dummy_spec = _make_dummy_spec(domain="living_room", candidate_regions=(), region_ranking=())
     dummy_result = PipelineResult(
@@ -254,7 +400,7 @@ def test_living_room_telemetry_no_search_events(tmp_path: Path):
     assert "search_region_opened" not in event_names
 
 
-# 5. Observer failure isolation
+# 9. Observer failure isolation
 def test_observer_failure_does_not_affect_pipeline(tmp_path: Path, capsys: pytest.CaptureFixture):
     dummy_spec = _make_dummy_spec(domain="kitchen")
     dummy_result = PipelineResult(
@@ -296,7 +442,7 @@ def test_observer_failure_does_not_affect_pipeline(tmp_path: Path, capsys: pytes
     assert manifest["observer_errors"][0]["type"] == "RuntimeError"
 
 
-# 6. Replay with random search does not call provider
+# 10. Replay with random search does not call provider
 def test_replay_with_random_search_bypasses_provider(tmp_path: Path):
     spec = _make_dummy_spec(domain="kitchen", source="VLM_FUNCTIONAL_SPEC")
     spec_file = tmp_path / "saved_spec.json"

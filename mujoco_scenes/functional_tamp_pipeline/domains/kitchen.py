@@ -415,14 +415,19 @@ def run_to_plan(
 
     scene = scene or scene_for_variant(internal_variant)
     contract = compile_kitchen_contract_from_graph(specification)
-    vocabulary_path = output_dir / "kitchen_yolo_world_labels.yaml"
-    base_canon = contract.get("canonical_labels", {})
-    alias_to_base_canon: dict[str, str] = {}
-    for canon_name, aliases in base_canon.items():
-        for alias in aliases:
-            alias_to_base_canon[alias.strip().lower()] = canon_name
-
+    vocabulary_path = output_dir / "kitchen_vocabulary.yaml"
     canonical_labels: dict[str, list[str]] = {}
+    root = Path(__file__).resolve().parents[2]
+    base_vocab_path = Path(specification.metadata.get("semantic_vocabulary_path", root / "configs" / "semantic_vocabulary.yaml"))
+    base_canon: dict[str, list[str]] = {}
+    alias_to_base_canon: dict[str, str] = {}
+    if base_vocab_path.is_file():
+        base_vocab = yaml.safe_load(base_vocab_path.read_text(encoding="utf-8"))
+        base_canon = dict(base_vocab.get("canonical_labels", {}))
+        for canon_k, aliases in base_canon.items():
+            for a in aliases:
+                alias_to_base_canon[a.strip().lower()] = canon_k
+
     for role in specification.nodes.values():
         for cat in role.semantic_categories:
             norm_cat = cat.strip().lower()
@@ -458,6 +463,7 @@ def run_to_plan(
                 "grounding": res.to_dict(),
                 "satisfied": bool(res.complete),
                 "status": res.status,
+                "scene_graph": current_go.to_dict(),
             })
         return bool(res.complete)
 
@@ -500,6 +506,7 @@ def run_to_plan(
             "grounding": ground_result.to_dict(),
             "satisfied": bool(ground_result.complete),
             "status": ground_result.status,
+            "scene_graph": graph_o.to_dict(),
         })
 
     (output_dir / "observed_scene_graph.json").write_text(

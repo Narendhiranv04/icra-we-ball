@@ -19,6 +19,13 @@ class SearchDomain(Protocol):
     def observe_after_open(self, region: str) -> None: ...
 
 
+def _extract_scene_graph_dict(domain: SearchDomain) -> dict[str, Any] | None:
+    graph = getattr(domain, "graph", None)
+    if graph is not None and hasattr(graph, "to_dict"):
+        return graph.to_dict()
+    return None
+
+
 def search_until_satisfied(
     domain: SearchDomain,
     specification: FunctionalSpecification,
@@ -29,10 +36,12 @@ def search_until_satisfied(
 ) -> tuple[SatisfactionResult, tuple[str, ...]]:
     order = tuple(search_order) if search_order is not None else tuple(specification.region_ranking)
     domain.observe_initial()
+    sg_dict = _extract_scene_graph_dict(domain)
     if observer is not None:
         observer("observation_updated", {
             "stage": "initial",
             "inspected_regions": [],
+            "scene_graph": sg_dict,
         })
 
     result = domain.evaluate_satisfaction()
@@ -42,6 +51,7 @@ def search_until_satisfied(
             "grounding": result.to_dict(),
             "satisfied": bool(result.satisfied),
             "status": result.status,
+            "scene_graph": sg_dict,
         })
 
     inspected: list[str] = []
@@ -67,10 +77,12 @@ def search_until_satisfied(
             })
         inspected.append(region)
         domain.observe_after_open(region)
+        sg_dict = _extract_scene_graph_dict(domain)
         if observer is not None:
             observer("observation_updated", {
                 "stage": f"after_{region}",
                 "inspected_regions": list(inspected),
+                "scene_graph": sg_dict,
             })
         result = domain.evaluate_satisfaction()
         emit(f"[SEARCH] Functional satisfaction: {result.status}")
@@ -79,6 +91,7 @@ def search_until_satisfied(
                 "grounding": result.to_dict(),
                 "satisfied": bool(result.satisfied),
                 "status": result.status,
+                "scene_graph": sg_dict,
             })
         if result.satisfied:
             return result, tuple(inspected)
@@ -87,11 +100,13 @@ def search_until_satisfied(
         final_result = domain.evaluate_satisfaction(search_exhausted=True)
     except TypeError:
         final_result = domain.evaluate_satisfaction()
+    sg_dict = _extract_scene_graph_dict(domain)
     if observer is not None:
         observer("grounding_updated", {
             "grounding": final_result.to_dict(),
             "satisfied": bool(final_result.satisfied),
             "status": final_result.status,
+            "scene_graph": sg_dict,
         })
 
     return GraphGroundingResult(

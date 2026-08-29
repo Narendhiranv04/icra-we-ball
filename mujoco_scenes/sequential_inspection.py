@@ -126,6 +126,7 @@ def run_fixed_order_inspection(
 ) -> ObservedStateRun:
     """Run the common closed-initial, fixed-order observation loop."""
     sequence = tuple(sequence)
+    actually_inspected: list[str] = []
     print("\n[OBSERVED STATE] Stage 000: closed initial observation")
     _cloud_run, stage_dir = observe("initial", None)
     print(f"  Witness: {_witness_status(session)}")
@@ -176,6 +177,7 @@ def run_fixed_order_inspection(
                 "total_regions": len(sequence),
             })
         adapter.inspect(region_id)
+        actually_inspected.append(region_id)
         if observer is not None:
             observer("search_region_opened", {
                 "region": region_id,
@@ -193,7 +195,7 @@ def run_fixed_order_inspection(
             observer("observation_updated", {
                 "stage": f"after_{region_id}",
                 "stage_dir": str(stage_dir),
-                "inspected_regions": list(sequence[:sequence_index + 1]),
+                "inspected_regions": list(actually_inspected),
             })
         if stop_on_complete and complete(session):
             remaining = list(sequence[sequence_index + 1:])

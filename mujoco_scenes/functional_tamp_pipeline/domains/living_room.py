@@ -356,6 +356,7 @@ def run_to_plan(
             "grounding": ground_result.to_dict(),
             "satisfied": bool(ground_result.complete),
             "status": ground_result.status,
+            "scene_graph": graph_o.to_dict(),
         })
 
     (output_dir / "observed_scene_graph.json").write_text(

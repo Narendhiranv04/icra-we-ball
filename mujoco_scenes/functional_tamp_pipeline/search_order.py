@@ -45,21 +45,16 @@ ORACLE_SEARCH_ORDERS: Final[Mapping[str, Mapping[str, Tuple[str, ...]]]] = {
 }
 
 
-def resolve_search_order(
-    specification: FunctionalRequirementGraph,
+def validate_search_order_preflight(
     domain: str,
     source: str = "auto",
     *,
     mode: str = "gt",
-    variant: str | None = None,
     seed: int | None = None,
-) -> tuple[tuple[str, ...], str, int | None]:
+) -> None:
     """
-    Resolve the search order for a run.
-    Pure helper: does not access scenes, G_O, or hidden simulation state.
-    Does NOT mutate specification.
-
-    Returns: (resolved_order, effective_source, effective_seed)
+    Validate search order CLI configuration before doing any expensive rendering or provider calls.
+    Raises ValueError on invalid configurations.
     """
     if source not in {"auto", "oracle", "provider", "random", "fixed"}:
         raise ValueError(
@@ -76,6 +71,46 @@ def resolve_search_order(
             raise ValueError(f"Search order {source!r} is not applicable for living_room")
         if seed is not None:
             raise ValueError("--search-seed is not applicable for living_room")
+        return
+
+    effective_source = ("oracle" if mode == "gt" else "provider") if source == "auto" else source
+
+    if effective_source != "random" and seed is not None:
+        raise ValueError(f"--search-seed is only valid for random search order, got seed={seed} with source={effective_source!r}")
+
+    if effective_source == "oracle" and mode == "vlm":
+        raise ValueError("oracle search is privileged and only valid with GT mode")
+
+    if effective_source == "random":
+        if seed is None:
+            raise ValueError("random search requires --search-seed")
+        if not isinstance(seed, int) or seed < 0:
+            raise ValueError(f"random search seed must be a non-negative integer, got {seed!r}")
+
+
+def resolve_search_order(
+    specification: FunctionalRequirementGraph,
+    domain: str,
+    source: str = "auto",
+    *,
+    mode: str = "gt",
+    variant: str | None = None,
+    seed: int | None = None,
+) -> tuple[tuple[str, ...], str, int | None]:
+    """
+    Resolve the search order for a run.
+    Pure helper: does not access scenes, G_O, or hidden simulation state.
+    Does NOT mutate specification.
+
+    Returns: (resolved_order, effective_source, effective_seed)
+    """
+    validate_search_order_preflight(domain, source, mode=mode, seed=seed)
+
+    # Normalize deprecated alias 'fixed' to 'oracle'
+    if source == "fixed":
+        source = "oracle"
+
+    if domain == "living_room":
         return (), "not_applicable", None
 
     # Resolve effective source for 'auto'
@@ -84,13 +119,7 @@ def resolve_search_order(
     else:
         effective_source = source
 
-    # Validate seed rules
-    if effective_source != "random" and seed is not None:
-        raise ValueError(f"--search-seed is only valid for random search order, got seed={seed} with source={effective_source!r}")
-
     if effective_source == "oracle":
-        if mode == "vlm":
-            raise ValueError("oracle search is privileged and only valid with GT mode")
         if variant is None:
             raise ValueError(f"variant is required to resolve oracle search order for domain {domain!r}")
         normalized_variant = paper_variant_label(domain, variant)
@@ -105,10 +134,7 @@ def resolve_search_order(
         effective_seed = None
 
     elif effective_source == "random":
-        if seed is None:
-            raise ValueError("random search requires --search-seed")
-        if not isinstance(seed, int) or seed < 0:
-            raise ValueError(f"random search seed must be a non-negative integer, got {seed!r}")
+        assert seed is not None
         base = list(specification.candidate_regions)
         rng = random.Random(seed)
         rng.shuffle(base)

@@ -20,7 +20,7 @@ from mujoco_scenes.final_paper_variant_labels import resolve_variant_name
 from .models import FunctionalRequirementGraph, PipelineResult
 from .planning import plan_with_common_astar
 from .search import search_until_satisfied
-from .search_order import resolve_search_order
+from .search_order import resolve_search_order, validate_search_order_preflight
 from .spec_provider import provider_for_mode
 
 
@@ -43,7 +43,7 @@ class _RunState:
     specification_sha256: str | None = None
     provider_model: str | None = None
     search_order: str = "auto"
-    search_order_source_effective: str = "oracle"
+    search_order_source_effective: str | None = None
     search_seed_requested: int | None = None
     search_seed_effective: int | None = None
     resolved_search_order: tuple[str, ...] = ()
@@ -64,8 +64,14 @@ def _make_guarded_observer(
     def _guarded_callback(event_type: str, payload: dict[str, Any]) -> None:
         if observer is None:
             return
+        enriched_payload = dict(payload)
+        if event_type in {"search_region_selected", "search_region_opened"}:
+            if "search_order_source_effective" not in enriched_payload and state.search_order_source_effective is not None:
+                enriched_payload["search_order_source_effective"] = state.search_order_source_effective
+            if "search_seed_effective" not in enriched_payload and state.search_seed_effective is not None:
+                enriched_payload["search_seed_effective"] = state.search_seed_effective
         try:
-            observer(event_type, payload)
+            observer(event_type, enriched_payload)
         except Exception as error:
             print(
                 f"OBSERVER ERROR on {event_type}: {type(error).__name__}: {error}",
@@ -315,6 +321,7 @@ def _run_pipeline_impl(
         print("[2/5] Initial perception", flush=True)
         guarded_observer("stage_changed", {"stage": "perception"})
         print("[3/5] Functional grounding and ranked region search", flush=True)
+        guarded_observer("stage_changed", {"stage": "search_grounding"})
         result = run_to_plan(
             variant_label=state.variant,
             internal_variant=state.internal_variant,
@@ -557,6 +564,9 @@ def run_pipeline(
     verbose: bool = False,
     observation_images: list[Path] | None = None,
 ) -> PipelineResult:
+    # Early preflight validation before any expensive provider / simulator work
+    validate_search_order_preflight(domain, search_order, mode=mode, seed=search_seed)
+
     started_at_utc = datetime.now(timezone.utc).isoformat()
     start_t = time.perf_counter()
     internal_variant = resolve_variant_name(domain, variant)
