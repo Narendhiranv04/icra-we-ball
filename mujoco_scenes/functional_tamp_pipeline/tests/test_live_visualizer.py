@@ -8,17 +8,21 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import numpy as np
+from PIL import Image
 import pytest
 
 from mujoco_scenes.functional_tamp_pipeline.live_visualizer import (
     LivePipelineVisualizer,
     _VisualizerState,
+    _flatten_assignment_instance_ids,
+    _format_assignment_binding,
     _format_gf_role,
     _format_gf_relation,
     _format_operation_group,
     _format_go_relation,
     _format_operation_binding,
     _format_unsatisfied_relation,
+    _gf_relevant_predicates,
     _safe_copy_value,
 )
 from mujoco_scenes.functional_tamp_pipeline.models import (
@@ -29,6 +33,7 @@ from mujoco_scenes.functional_tamp_pipeline.models import (
     NumericConstraint,
     GraphGroundingResult,
     SatisfactionResult,
+    PipelineResult,
 )
 from mujoco_scenes.functional_tamp_pipeline.scene_graph import (
     ObservedSceneGraph,
@@ -110,6 +115,8 @@ def _make_canonical_test_gf() -> FunctionalRequirementGraph:
         required_target_count=1,
         usage_policy="SEQUENTIAL_REUSE_ALLOWED",
         required_relations=("COMPATIBLE_WITH",),
+        context_role="fastener",
+        context_relations=("NEAR_TARGET",),
     )
     return FunctionalRequirementGraph(
         domain="workshop",
@@ -191,6 +198,7 @@ def test_2_real_schema_gf(fake_viewer_factory):
         assert "repair_group" in op_str
         assert "DRIVE_FASTENER" in op_str
         assert "driver -> fastener" in op_str
+        assert "SEQUENTIAL_REUSE_ALLOWED" in op_str
 
         viz("spec_ready", {
             "graph": gf_dict,
@@ -334,9 +342,7 @@ def test_6_queue_saturation_preserves_open_history(fake_viewer_factory):
 
         with viz._state_lock:
             s = viz._state
-            # Must have dropped/coalesced redraws
             assert s.dropped_display_updates > 0
-            # Cumulative OPEN history must NOT be lost
             assert "C2" in s.inspected_regions
             assert len(s.exploratory_open_trace) == 1
             assert s.exploratory_open_trace[0]["region"] == "C2"
@@ -351,7 +357,6 @@ def test_6_queue_saturation_preserves_open_history(fake_viewer_factory):
 def test_7_nested_snapshot_copy_and_unsupported_rejection(fake_viewer_factory):
     viz = LivePipelineVisualizer(viewer_factory=fake_viewer_factory)
     try:
-        # Nested mutation test
         nested_payload = {
             "scene_graph": {
                 "nodes": {
@@ -434,8 +439,8 @@ def test_9_incomplete_grounding_panel(fake_viewer_factory):
         viz.close()
 
 
-# 10. Headless Workshop telemetry copy safety (no numpy NameError, respects telemetry_enabled)
-def test_10_workshop_telemetry_enable_flag():
+# 10. Headless Workshop telemetry copy safety (mutating SAME source array)
+def test_10_workshop_telemetry_enable_flag_mutates_same_source():
     from mujoco_scenes.functional_tamp_pipeline.domains.workshop import WorkshopDomainAdapter
 
     class FakeObs:
@@ -452,8 +457,13 @@ def test_10_workshop_telemetry_enable_flag():
             self.region_categories = set()
             self.graph = MagicMock()
             self.detection_diagnostics = []
+            self.last_observation = None
+
         def _capture_and_process_stage(self, stage_idx, source_region_id):
-            return [FakeObs()]
+            obs = FakeObs()
+            self.last_observation = obs
+            return [obs]
+
         def _evaluate_grounding_and_search(self, stage_idx, source_region_id):
             return MagicMock(status="INCOMPLETE"), None
 
@@ -479,9 +489,11 @@ def test_10_workshop_telemetry_enable_flag():
         adapter_enabled._capture_and_evaluate("TOOL_CABINET")
         assert adapter_enabled.latest_frame_rgb is not None
         assert adapter_enabled.latest_frame_rgb.shape == (60, 80, 3)
-        # Modifying original does not mutate copy
-        obs_rgb = adapter_enabled.controller._capture_and_process_stage(0, "X")[0].rgb
-        obs_rgb[:] = 255
+
+        # Mutate the EXACT SAME source observation returned in _capture_and_evaluate
+        source = adapter_enabled.controller.last_observation.rgb
+        source[:] = 255
+        # Stored frame in adapter must still contain original zeros
         assert np.all(adapter_enabled.latest_frame_rgb == 0)
 
 
@@ -507,8 +519,8 @@ def test_11_zero_overhead_when_observer_is_none():
         mock_extract.assert_not_called()
 
 
-# 12. G_F and G_O panel caching
-def test_12_panel_caching(fake_viewer_factory):
+# 12. G_F and G_O panel caching and assignment invalidation
+def test_12_panel_caching_and_assignment_invalidation(fake_viewer_factory):
     viz = LivePipelineVisualizer(viewer_factory=fake_viewer_factory)
     try:
         gf = _make_canonical_test_gf()
@@ -521,10 +533,17 @@ def test_12_panel_caching(fake_viewer_factory):
         assert img_gf1 is img_gf2
 
         viz._state.scene_graph = go.to_dict()
+        viz._state.assignment = {"driver": "driver_01"}
         s2 = viz._snapshot_state_for_render()
         img_go1 = viz._get_or_render_go_panel(s2, 800, 280)
         img_go2 = viz._get_or_render_go_panel(s2, 800, 280)
         assert img_go1 is img_go2
+
+        # Change assignment only: G_O cache must invalidate and produce a new image
+        viz._state.assignment = {"driver": "driver_02"}
+        s3 = viz._snapshot_state_for_render()
+        img_go3 = viz._get_or_render_go_panel(s3, 800, 280)
+        assert img_go3 is not img_go1
     finally:
         viz.close()
 
@@ -578,3 +597,244 @@ def test_15_exploration_vs_plan_separation(fake_viewer_factory):
             assert viz._state.plan_actions[0]["operator"] == "PICK"
     finally:
         viz.close()
+
+
+# 16. Multi-valued role assignments formatting and normalization
+def test_16_multi_valued_assignment(fake_viewer_factory):
+    viz = LivePipelineVisualizer(viewer_factory=fake_viewer_factory)
+    try:
+        assignment = {
+            "cup_set": ["cup_01", "cup_02"],
+            "shared_remote": "remote_01",
+        }
+        # Helper normalization test
+        inst_ids = _flatten_assignment_instance_ids(assignment)
+        assert inst_ids == {"cup_01", "cup_02", "remote_01"}
+
+        # Binding formatting test
+        list_str = _format_assignment_binding("cup_set", ["cup_01", "cup_02"])
+        assert "cup_set" in list_str
+        assert "[cup_01, cup_02]" in list_str
+
+        scalar_str = _format_assignment_binding("shared_remote", "remote_01")
+        assert "shared_remote" in scalar_str
+        assert "remote_01" in scalar_str
+
+        # Full grounding integration with real scene graph
+        go = _make_canonical_test_go()
+        grounding = GraphGroundingResult(
+            status="COMPLETE",
+            complete=True,
+            assignment=assignment,
+        )
+
+        viz("observation_updated", {"stage": "initial", "scene_graph": go.to_dict()})
+        viz("grounding_updated", {"grounding": grounding.to_dict(), "satisfied": True, "status": "COMPLETE"})
+
+        time.sleep(0.05)
+        # Render composite must succeed without TypeError on unhashable list
+        frame = viz.render_composite_frame()
+        assert frame.shape == (960, 1600, 3)
+        assert frame.dtype == np.uint8
+    finally:
+        viz.close()
+
+
+# 17. Guaranteed terminal render race test
+def test_17_terminal_render_race_guarantee(fake_viewer_factory):
+    # Set slow FPS (e.g. 5 FPS = 200ms cooldown)
+    viz = LivePipelineVisualizer(viewer_factory=fake_viewer_factory, fps=5)
+    try:
+        viewer = fake_viewer_factory.viewers[0]
+        # Emit initial event
+        viz("run_started", {"domain": "kitchen", "variant": "K1", "spec_mode": "gt"})
+        time.sleep(0.05)
+        initial_frames = len(viewer.frames)
+        assert initial_frames >= 1
+
+        # Emit plan_ready and run_finished rapidly within cooldown
+        viz("plan_ready", {"actions": [{"action_index": 1, "operator": "PICK", "arguments": ["cup_01"]}]})
+        viz("run_finished", {"terminal_status": "ACTION_SEQUENCE_READY"})
+
+        # Wait for terminal render to execute
+        time.sleep(0.15)
+
+        # Viewer MUST have received an additional frame containing terminal status
+        assert len(viewer.frames) > initial_frames
+        assert viz.last_rendered_terminal_status == "ACTION_SEQUENCE_READY"
+    finally:
+        viz.close()
+
+
+# 18. Frame-path disk image cache test
+def test_18_frame_path_image_cache(tmp_path: Path, fake_viewer_factory):
+    viz = LivePipelineVisualizer(viewer_factory=fake_viewer_factory)
+    try:
+        p1 = tmp_path / "frame1.png"
+        img1 = Image.new("RGB", (64, 64), (100, 150, 200))
+        img1.save(p1)
+
+        p2 = tmp_path / "frame2.png"
+        img2 = Image.new("RGB", (64, 64), (50, 100, 150))
+        img2.save(p2)
+
+        open_calls = []
+        real_open = Image.open
+
+        def tracked_open(fp, *args, **kwargs):
+            open_calls.append(str(fp))
+            return real_open(fp, *args, **kwargs)
+
+        with patch("PIL.Image.open", side_effect=tracked_open):
+            viz("observation_updated", {"stage": "initial", "frame_path": str(p1)})
+            # Render composite multiple times
+            for _ in range(5):
+                viz.render_composite_frame()
+            # Image.open for p1 should be called exactly once
+            assert open_calls.count(str(p1)) == 1
+
+            # Change path to p2
+            viz("observation_updated", {"stage": "after_C2", "frame_path": str(p2)})
+            for _ in range(5):
+                viz.render_composite_frame()
+            # Image.open for p2 should be called exactly once
+            assert open_calls.count(str(p2)) == 1
+    finally:
+        viz.close()
+
+
+# 19. NumPy scalar snapshot support
+def test_19_numpy_scalar_snapshot_support():
+    payload = {
+        "score": np.float32(0.85),
+        "count": np.int64(42),
+        "valid": np.bool_(True),
+        "nested": {"val": np.float64(3.14)},
+    }
+    copied = _safe_copy_value(payload)
+    assert isinstance(copied["score"], float)
+    assert isinstance(copied["count"], int)
+    assert isinstance(copied["valid"], bool)
+    assert isinstance(copied["nested"]["val"], float)
+    assert copied["score"] == pytest.approx(0.85, 1e-5)
+    assert copied["count"] == 42
+    assert copied["valid"] is True
+
+    # Arbitrary simulator objects still raise TypeError
+    class DummySimObj:
+        pass
+    with pytest.raises(TypeError, match="Unsupported live object in visualization payload"):
+        _safe_copy_value({"sim": DummySimObj()})
+
+
+# 20. G_F relation relevance includes operation groups
+def test_20_gf_relation_relevance_includes_operation_groups():
+    gf_dict = {
+        "relations": [
+            {"subject_role": "driver", "predicate": "COMPATIBLE_WITH", "object_role": "fastener"}
+        ],
+        "operation_groups": [
+            {
+                "id": "group1",
+                "function": "FASTEN",
+                "tool_role": "driver",
+                "target_role": "fastener",
+                "required_relations": ["REACHES_TARGET"],
+                "context_role": "fastener",
+                "context_relations": ["NEAR_CONTEXT"],
+            }
+        ],
+    }
+    preds = _gf_relevant_predicates(gf_dict)
+    assert preds == {"COMPATIBLE_WITH", "REACHES_TARGET", "NEAR_CONTEXT"}
+
+
+# 21. Living Room telemetry search N/A
+def test_21_living_room_telemetry_search_na(fake_viewer_factory):
+    viz = LivePipelineVisualizer(viewer_factory=fake_viewer_factory)
+    try:
+        viz("run_started", {"domain": "living_room", "variant": "L1", "spec_mode": "gt"})
+        time.sleep(0.05)
+        s = viz._snapshot_state_for_render()
+        panel = viz._render_status_and_search_panel(s, 1040, 400)
+        assert panel is not None
+        assert s.domain == "living_room"
+    finally:
+        viz.close()
+
+
+# 22. INFEASIBLE scientific outcome is not an exception
+def test_22_infeasible_grounding_outcome(fake_viewer_factory):
+    viz = LivePipelineVisualizer(viewer_factory=fake_viewer_factory)
+    try:
+        grounding = GraphGroundingResult(
+            status="INFEASIBLE",
+            complete=False,
+            missing_roles=("driver",),
+        )
+        viz("run_started", {"domain": "workshop", "variant": "W1", "spec_mode": "gt"})
+        viz("grounding_updated", {"grounding": grounding.to_dict(), "satisfied": False, "status": "INFEASIBLE"})
+        viz("run_finished", {"terminal_status": "INFEASIBLE"})
+
+        time.sleep(0.05)
+        with viz._state_lock:
+            s = viz._state
+            assert s.terminal_status == "INFEASIBLE"
+            assert s.is_exception is False
+            assert len(s.plan_actions) == 0
+
+        frame = viz.render_composite_frame()
+        assert frame.shape == (960, 1600, 3)
+    finally:
+        viz.close()
+
+
+# 23. run_failed marks PIPELINE_EXCEPTION
+def test_23_run_failed_exception(fake_viewer_factory):
+    viz = LivePipelineVisualizer(viewer_factory=fake_viewer_factory)
+    try:
+        viz("run_started", {"domain": "workshop", "variant": "W1", "spec_mode": "gt"})
+        viz("run_failed", {
+            "error_type": "RuntimeError",
+            "error_message": "Unexpected simulator articulation failure",
+        })
+        time.sleep(0.05)
+        with viz._state_lock:
+            s = viz._state
+            assert s.is_exception is True
+            assert s.terminal_status == "PIPELINE_EXCEPTION"
+            assert s.exception_type == "RuntimeError"
+            assert "articulation failure" in (s.exception_message or "")
+    finally:
+        viz.close()
+
+
+# 24. close() idempotence
+def test_24_close_idempotence(fake_viewer_factory):
+    viz = LivePipelineVisualizer(viewer_factory=fake_viewer_factory)
+    viz.close()
+    viz.close()  # Must not raise on second close
+
+
+# 25. CLI failure does not indefinitely hold window
+def test_25_cli_lifecycle_failure_does_not_hold():
+    from mujoco_scenes.functional_tamp_pipeline.run import main
+
+    test_args = [
+        "run.py",
+        "--domain", "kitchen",
+        "--variant", "K1",
+        "--mode", "gt",
+        "--visualize",
+    ]
+
+    mock_visualizer = MagicMock()
+    with patch("sys.argv", test_args), \
+         patch("mujoco_scenes.functional_tamp_pipeline.live_visualizer.LivePipelineVisualizer", return_value=mock_visualizer), \
+         patch("mujoco_scenes.functional_tamp_pipeline.run.run_pipeline", side_effect=RuntimeError("Early simulator failure")):
+        exit_code = main()
+        assert exit_code == 1
+        # hold_until_closed must NOT be called on pipeline exception
+        mock_visualizer.hold_until_closed.assert_not_called()
+        # visualizer must be closed cleanly
+        mock_visualizer.close.assert_called_once()

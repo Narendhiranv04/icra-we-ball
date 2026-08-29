@@ -90,6 +90,8 @@ def _safe_copy_value(val: Any) -> Any:
     """Recursively make defensive copy of json-compatible and numpy structures."""
     if val is None or isinstance(val, (bool, int, float, str)):
         return val
+    if isinstance(val, np.generic):
+        return val.item()
     if isinstance(val, Path):
         return str(val)
     if isinstance(val, np.ndarray):
@@ -100,6 +102,47 @@ def _safe_copy_value(val: Any) -> Any:
         copied_list = [_safe_copy_value(v) for v in val]
         return copied_list if isinstance(val, list) else tuple(copied_list)
     raise TypeError(f"Unsupported live object in visualization payload: {type(val).__name__}")
+
+
+def _flatten_assignment_instance_ids(assignment: Mapping[str, Any] | None) -> set[str]:
+    """Normalize and flatten role assignment mapping to a set of instance ID strings."""
+    if not assignment:
+        return set()
+    ids: set[str] = set()
+    for val in assignment.values():
+        if isinstance(val, str):
+            ids.add(val)
+        elif isinstance(val, (list, tuple, set)):
+            for item in val:
+                if isinstance(item, str):
+                    ids.add(item)
+    return ids
+
+
+def _format_assignment_binding(role: str, value: Any) -> str:
+    """Format role assignment binding cleanly handling scalar and list/tuple values."""
+    if isinstance(value, (list, tuple, set)):
+        val_str = "[" + ", ".join(str(v) for v in value) + "]"
+    else:
+        val_str = str(value)
+    return f"• {role}  ->  {val_str}"
+
+
+def _gf_relevant_predicates(spec_graph: Mapping[str, Any] | None) -> set[str]:
+    """Extract all predicates from G_F relations and operation groups."""
+    if not spec_graph:
+        return set()
+    preds: set[str] = set()
+    for r in spec_graph.get("relations", []):
+        if isinstance(r, dict) and "predicate" in r:
+            preds.add(str(r["predicate"]))
+    for op in spec_graph.get("operation_groups", []):
+        if isinstance(op, dict):
+            for req in op.get("required_relations", []):
+                preds.add(str(req))
+            for ctx in op.get("context_relations", []):
+                preds.add(str(ctx))
+    return preds
 
 
 def _get_default_font(size: int = 14) -> ImageFont.ImageFont | ImageFont.FreeTypeFont:
@@ -149,7 +192,23 @@ def _format_operation_group(op_data: Mapping[str, Any]) -> str:
     tool = op_data.get("tool_role", "")
     tgt = op_data.get("target_role", "")
     cnt = op_data.get("required_target_count", 1)
-    return f"{gid}: {fn}({tool} -> {tgt}, n={cnt})"
+    base = f"{gid}: {fn}({tool} -> {tgt}, n={cnt})"
+    policy = op_data.get("usage_policy")
+    req_rels = op_data.get("required_relations", [])
+    ctx_role = op_data.get("context_role")
+    ctx_rels = op_data.get("context_relations", [])
+    details = []
+    if policy:
+        details.append(f"reuse={policy}")
+    if req_rels:
+        details.append(f"rel={','.join(str(r) for r in req_rels)}")
+    if ctx_role:
+        details.append(f"ctx={ctx_role}")
+    if ctx_rels:
+        details.append(f"ctx_rel={','.join(str(r) for r in ctx_rels)}")
+    if details:
+        return f"{base} [{' | '.join(details)}]"
+    return base
 
 
 def _format_go_relation(rel_data: Mapping[str, Any]) -> tuple[str, str]:
@@ -207,6 +266,15 @@ class LivePipelineVisualizer:
         self._cached_gf_image: Image.Image | None = None
         self._cached_go_key: str | None = None
         self._cached_go_image: Image.Image | None = None
+
+        # Frame-path disk image cache
+        self._cached_frame_path: str | None = None
+        self._cached_frame_rgb: np.ndarray | None = None
+        self._failed_frame_path: str | None = None
+
+        # Diagnostics & verification metrics
+        self.render_count: int = 0
+        self.last_rendered_terminal_status: str | None = None
 
         self._font_title = _get_default_font(18)
         self._font_heading = _get_default_font(15)
@@ -332,13 +400,14 @@ class LivePipelineVisualizer:
     def _worker_loop(self) -> None:
         last_render_time = 0.0
         frame_interval = 1.0 / max(1, self.fps)
+        dirty = True
 
         while not self._stop_event.is_set():
             try:
                 token = self._queue.get(timeout=frame_interval)
                 if token is None:
                     break
-
+                dirty = True
                 # Drain any extra queued tokens to coalesce redraws
                 while True:
                     try:
@@ -347,34 +416,25 @@ class LivePipelineVisualizer:
                             return
                     except queue.Empty:
                         break
-
-                now = time.monotonic()
-                if now - last_render_time >= frame_interval:
-                    self._render_and_show()
-                    last_render_time = now
-
             except queue.Empty:
-                with self._state_lock:
-                    is_term = self._state.is_terminal
-                if not is_term:
-                    now = time.monotonic()
-                    if now - last_render_time >= frame_interval:
-                        self._render_and_show()
-                        last_render_time = now
+                pass
 
-            except Exception as error:
-                print(
-                    f"VISUALIZER WORKER ERROR: {type(error).__name__}: {error}",
-                    file=sys.stderr,
-                    flush=True,
-                )
-                with self._state_lock:
-                    self._state.display_errors.append({
-                        "event": "worker_loop",
-                        "type": type(error).__name__,
-                        "message": str(error),
-                    })
-                self._viewer_disabled = True
+            if self._stop_event.is_set():
+                break
+
+            now = time.monotonic()
+            with self._state_lock:
+                is_term = self._state.is_terminal
+
+            # If dirty, render if interval reached OR if state is terminal (guarantees final frame)
+            if dirty and (now - last_render_time >= frame_interval or is_term):
+                self._render_and_show()
+                last_render_time = now
+                dirty = False
+            elif not is_term and (now - last_render_time >= frame_interval):
+                # Periodic redraw to update elapsed timer during active run
+                self._render_and_show()
+                last_render_time = now
 
     def _render_and_show(self) -> None:
         if self._viewer_disabled or self._viewer is None:
@@ -382,6 +442,10 @@ class LivePipelineVisualizer:
         try:
             frame_rgb = self.render_composite_frame()
             self._viewer.show(frame_rgb)
+            self.render_count += 1
+            with self._state_lock:
+                if self._state.is_terminal:
+                    self.last_rendered_terminal_status = self._state.terminal_status
         except Exception as error:
             print(
                 f"VISUALIZER DISPLAY ERROR: {type(error).__name__}: {error}",
@@ -399,20 +463,29 @@ class LivePipelineVisualizer:
     def _snapshot_state_for_render(self) -> _VisualizerState:
         with self._state_lock:
             snap = copy.deepcopy(self._state)
-        # Load frame_path on worker thread if needed
-        if snap.latest_frame is None and snap.latest_frame_path:
-            frame_p = Path(snap.latest_frame_path)
-            if frame_p.exists():
-                try:
-                    with Image.open(frame_p) as img:
-                        snap.latest_frame = np.array(img.convert("RGB"), dtype=np.uint8)
-                except Exception as error:
-                    with self._state_lock:
-                        self._state.display_errors.append({
-                            "event": "load_frame_path",
-                            "type": type(error).__name__,
-                            "message": str(error),
-                        })
+            # Load frame_path on worker thread if needed, using disk image cache
+            if snap.latest_frame is None and snap.latest_frame_path:
+                path_str = snap.latest_frame_path
+                if path_str == self._cached_frame_path and self._cached_frame_rgb is not None:
+                    snap.latest_frame = self._cached_frame_rgb
+                elif path_str != self._failed_frame_path:
+                    frame_p = Path(path_str)
+                    if frame_p.is_file():
+                        try:
+                            with Image.open(frame_p) as img:
+                                loaded_rgb = np.array(img.convert("RGB"), dtype=np.uint8)
+                                self._cached_frame_path = path_str
+                                self._cached_frame_rgb = loaded_rgb
+                                snap.latest_frame = loaded_rgb
+                        except Exception as error:
+                            self._failed_frame_path = path_str
+                            self._state.display_errors.append({
+                                "event": "load_frame_path",
+                                "type": type(error).__name__,
+                                "message": str(error),
+                            })
+                    else:
+                        self._failed_frame_path = path_str
         return snap
 
     def render_composite_frame(self) -> np.ndarray:
@@ -609,7 +682,13 @@ class LivePipelineVisualizer:
         return panel
 
     def _get_or_render_go_panel(self, s: _VisualizerState, w: int, h: int) -> Image.Image:
-        key = str(s.scene_graph) if s.scene_graph else "None"
+        assigned_ids = _flatten_assignment_instance_ids(s.assignment)
+        gf_preds = _gf_relevant_predicates(s.spec_graph)
+        key = repr((
+            s.scene_graph,
+            sorted(assigned_ids),
+            sorted(gf_preds),
+        ))
         if self._cached_go_key == key and self._cached_go_image is not None:
             return self._cached_go_image
 
@@ -674,20 +753,12 @@ class LivePipelineVisualizer:
         draw.text((rx, ry), f"Relations ({len(relations)}):", fill=(56, 189, 248), font=self._font_body)
         ry += 18
 
-        # Prioritize relations matching G_F predicates or current assignment
-        gf_preds = set()
-        if s.spec_graph:
-            for r in s.spec_graph.get("relations", []):
-                if isinstance(r, dict) and "predicate" in r:
-                    gf_preds.add(str(r["predicate"]))
-        assigned_insts = set(s.assignment.values()) if s.assignment else set()
-
         def _rel_priority(rel_dict: Mapping[str, Any]) -> int:
-            sub = rel_dict.get("subject_id", rel_dict.get("subject", ""))
-            obj = rel_dict.get("object_id", rel_dict.get("object", ""))
-            pred = rel_dict.get("predicate", "")
+            sub = str(rel_dict.get("subject_id", rel_dict.get("subject", "")))
+            obj = str(rel_dict.get("object_id", rel_dict.get("object", "")))
+            pred = str(rel_dict.get("predicate", ""))
             is_gf_pred = pred in gf_preds
-            is_assigned = (sub in assigned_insts) or (obj in assigned_insts)
+            is_assigned = (sub in assigned_ids) or (obj in assigned_ids)
             if is_gf_pred and is_assigned:
                 return 0
             if is_gf_pred:
@@ -732,7 +803,8 @@ class LivePipelineVisualizer:
             draw.text((12, y), "Role Bindings:", fill=(56, 189, 248), font=self._font_body)
             y += 18
             for role, bound_obj in list(s.assignment.items()):
-                draw.text((18, y), f"• {role}  ->  {bound_obj}", fill=(228, 228, 231), font=self._font_small)
+                line = _format_assignment_binding(role, bound_obj)
+                draw.text((18, y), _truncate_text(line, 55), fill=(228, 228, 231), font=self._font_small)
                 y += 15
                 if y > h - 60:
                     break

@@ -523,7 +523,7 @@ def test_manifest_visualization_requested_flag(tmp_path: Path):
 
 
 # 12. Camera plumbing tests without MuJoCo
-def test_kitchen_camera_plumbing_surfaces_overview_image(tmp_path: Path):
+def test_kitchen_camera_plumbing_surfaces_raw_rgb_image(tmp_path: Path):
     from mujoco_scenes.sequential_inspection import run_fixed_order_inspection
 
     class FakeScene:
@@ -546,10 +546,15 @@ def test_kitchen_camera_plumbing_surfaces_overview_image(tmp_path: Path):
     stage_dir = tmp_path / "stage_000"
     stage_dir.mkdir(parents=True, exist_ok=True)
     overview_img = stage_dir / "overview.png"
-    overview_img.write_text("fake_png_data", encoding="utf-8")
+    overview_img.write_text("fake_overview_composite", encoding="utf-8")
+
+    cam_dir = stage_dir / "cameras" / "CAM_A"
+    cam_dir.mkdir(parents=True, exist_ok=True)
+    raw_rgb_img = cam_dir / "rgb.png"
+    raw_rgb_img.write_text("fake_raw_rgb", encoding="utf-8")
 
     def fake_observe(stage_label, region_opened):
-        cloud_mock = MagicMock(total_points=100)
+        cloud_mock = MagicMock(total_points=100, cameras=("CAM_A", "CAM_B"))
         return cloud_mock, stage_dir
 
     events = []
@@ -568,7 +573,24 @@ def test_kitchen_camera_plumbing_surfaces_overview_image(tmp_path: Path):
 
     obs_events = [p for e, p in events if e == "observation_updated"]
     assert len(obs_events) > 0
-    assert obs_events[0]["frame_path"] == str(overview_img)
+    assert obs_events[0]["frame_path"] == str(raw_rgb_img)
+    assert obs_events[0]["frame_path"] != str(overview_img)
+
+    # When no raw rgb exists, frame_path must be None (no fallback to overview.png)
+    raw_rgb_img.unlink()
+    events.clear()
+    run_fixed_order_inspection(
+        FakeScene(),
+        FakeSession(),
+        ("C2",),
+        adapter=FakeAdapter(),
+        observe=fake_observe,
+        stop_on_complete=True,
+        observer=observer,
+    )
+    obs_events = [p for e, p in events if e == "observation_updated"]
+    assert len(obs_events) > 0
+    assert obs_events[0]["frame_path"] is None
 
 
 def test_workshop_camera_plumbing_copies_rgb_array():

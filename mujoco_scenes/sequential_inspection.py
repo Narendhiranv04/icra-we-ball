@@ -113,6 +113,16 @@ def _witness_status(session: ObservedStateRun) -> str:
     return str(witness.get("status", "INCOMPLETE"))
 
 
+def _existing_representative_rgb_path(cloud_run: Any, stage_dir: Path) -> str | None:
+    """Return path to first existing raw camera RGB capture from PointCloudRun cameras, or None."""
+    if cloud_run is not None and getattr(cloud_run, "cameras", None):
+        for camera_id in cloud_run.cameras:
+            rgb_path = stage_dir / "cameras" / str(camera_id) / "rgb.png"
+            if rgb_path.is_file():
+                return str(rgb_path)
+    return None
+
+
 def run_fixed_order_inspection(
     scene,
     session: ObservedStateRun,
@@ -132,8 +142,7 @@ def run_fixed_order_inspection(
     print(f"  Witness: {_witness_status(session)}")
     print(f"  Saved: {stage_dir}")
     if observer is not None:
-        overview_path = stage_dir / "overview.png"
-        frame_path_str = str(overview_path) if overview_path.exists() else None
+        frame_path_str = _existing_representative_rgb_path(_cloud_run, stage_dir)
         observer("observation_updated", {
             "stage": "initial",
             "stage_dir": str(stage_dir),
@@ -195,8 +204,7 @@ def run_fixed_order_inspection(
         print(f"  Witness: {_witness_status(session)}")
         print(f"  Saved: {stage_dir}")
         if observer is not None:
-            overview_path = stage_dir / "overview.png"
-            frame_path_str = str(overview_path) if overview_path.exists() else None
+            frame_path_str = _existing_representative_rgb_path(cloud_run, stage_dir)
             observer("observation_updated", {
                 "stage": f"after_{region_id}",
                 "stage_dir": str(stage_dir),

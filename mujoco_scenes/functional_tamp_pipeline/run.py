@@ -706,6 +706,7 @@ def main() -> int:
             )
             visualizer = None
 
+    result = None
     try:
         result = run_pipeline(
             domain=args.domain,
@@ -721,6 +722,8 @@ def main() -> int:
             verbose=args.verbose,
             observation_images=args.observation_image,
         )
+    except KeyboardInterrupt:
+        return 130
     except Exception as error:
         print(f"PIPELINE FAILED: {error}", flush=True)
         if args.verbose:
@@ -728,12 +731,12 @@ def main() -> int:
         return 1
     finally:
         if visualizer is not None:
-            try:
-                visualizer.hold_until_closed()
-            except KeyboardInterrupt:
-                pass
-            finally:
-                visualizer.close()
+            if result is not None and result.status in {"ACTION_SEQUENCE_READY", "INFEASIBLE"}:
+                try:
+                    visualizer.hold_until_closed()
+                except KeyboardInterrupt:
+                    pass
+            visualizer.close()
 
     print(f"PIPELINE STATUS: {result.status}", flush=True)
     return 0 if result.status in {"ACTION_SEQUENCE_READY", "INFEASIBLE"} else 1
