@@ -64,25 +64,36 @@ def load_grounding_info(run_dir: str) -> Tuple[str, Optional[bool]]:
 
 def load_plan_validation(run_dir: str) -> Optional[bool]:
     """
-    Search for action plan artifacts and extract independent symbolic replay validation status.
-    Returns True if validator confirmed replay status == 'VALID', False if invalid, None if absent/NA.
+    Search for action plan or replay validation artifacts and extract independent symbolic replay validation status.
+    Supports both nested validation (Style A: data['validation']['status']) and direct replay artifacts (Style B: data['status']).
+    Returns True if validator confirmed replay status == 'VALID', False if 'INVALID', None if absent/NA.
     """
     candidates = [
         os.path.join(run_dir, "action_sequence", "action_plan.json"),
         os.path.join(run_dir, "action_plan.json"),
+        os.path.join(run_dir, "action_sequence", "replay_validation.json"),
+        os.path.join(run_dir, "replay_validation.json"),
         os.path.join(run_dir, "action_sequence", "plan.json"),
+        os.path.join(run_dir, "plan.json"),
     ]
     for c in candidates:
         if os.path.exists(c):
             try:
                 with open(c, "r") as f:
                     data = json.load(f)
-                    if "validation" in data and isinstance(data["validation"], dict):
+                    # Style A: nested planner validation object
+                    if isinstance(data.get("validation"), dict):
                         val_status = data["validation"].get("status")
+                        if val_status in ("VALID", "INVALID"):
+                            return val_status == "VALID"
+                    # Style B: direct replay validation artifact
+                    val_status = data.get("status")
+                    if val_status in ("VALID", "INVALID"):
                         return val_status == "VALID"
             except Exception:
                 pass
     return None
+
 
 
 def load_grounding_audit(run_dir: str) -> Tuple[Optional[bool], Optional[bool]]:

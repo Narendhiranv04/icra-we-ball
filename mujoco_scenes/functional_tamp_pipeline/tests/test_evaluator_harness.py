@@ -98,3 +98,47 @@ def test_evaluator_helpers_audit_with_violations(tmp_path):
     audit_valid, prep_access = load_grounding_audit(str(run_dir))
     assert audit_valid is False
     assert prep_access is False
+
+
+def test_evaluator_helpers_living_room_replay_valid(tmp_path):
+    run_dir = tmp_path / "run_gt"
+    run_dir.mkdir(parents=True)
+
+    # Living Room style plan.json (no nested validation)
+    act_seq = run_dir / "action_sequence"
+    act_seq.mkdir()
+    plan_file = act_seq / "plan.json"
+    plan_file.write_text(json.dumps({
+        "actions": [{"operator": "PICK", "step": 0}],
+        "search_statistics": {"plan_cost": 1}
+    }))
+
+    # Living Room style replay_validation.json
+    replay_file = act_seq / "replay_validation.json"
+    replay_file.write_text(json.dumps({
+        "status": "VALID",
+        "goal_status": "GOAL_SATISFIED",
+        "validator": "independent_symbolic_replay_v1",
+        "steps": [{"operator": "PICK", "status": "VALID", "step": 0}]
+    }))
+
+    plan_replay_valid = load_plan_validation(str(run_dir))
+    assert plan_replay_valid is True
+
+
+def test_evaluator_helpers_living_room_replay_invalid(tmp_path):
+    run_dir = tmp_path / "run_gt"
+    run_dir.mkdir(parents=True)
+
+    act_seq = run_dir / "action_sequence"
+    act_seq.mkdir()
+    replay_file = act_seq / "replay_validation.json"
+    replay_file.write_text(json.dumps({
+        "status": "INVALID",
+        "goal_status": "GOAL_UNSATISFIED",
+        "validator": "independent_symbolic_replay_v1"
+    }))
+
+    plan_replay_valid = load_plan_validation(str(run_dir))
+    assert plan_replay_valid is False
+
