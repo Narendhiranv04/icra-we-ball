@@ -2096,6 +2096,229 @@ def test_explicit_unknown_overrides_stale_canonical_category_on_object() -> None
     assert status == "UNKNOWN", f"Expected UNKNOWN for ambiguous node, got {status}"
 
 
+# Suite 52: Pass 2B.4 Action Validity, Preparation Accessibility, and Grounding Audit
+def test_hidden_coffee_vessel_requires_preparation_staging() -> None:
+    from mujoco_scenes.functional_tamp_pipeline.domains.kitchen import KitchenPlanningCompiler
+    from mujoco_scenes.functional_tamp_pipeline.planning import plan_with_common_astar
+
+    compiled_state = {
+        "requirements": {
+            "home_region": "countertop",
+            "serving_destination": "serving_area",
+        },
+        "role_assignments": {
+            "coffee_targets": ["cup_1", "cup_2"],
+            "soup_targets": ["bowl_1", "bowl_2"],
+        },
+        "capabilities": {
+            "source_contains": [["kettle_1", "water"], ["jar_1", "coffee"], ["pot_1", "soup"]],
+            "can_stir": [["spoon_1", "cup_1"], ["spoon_1", "cup_2"]],
+            "assigned_soup_utensil": [["spoon_2", "bowl_1"], ["spoon_3", "bowl_2"]],
+            "initial_target_contents": [["bowl_1", "soup"], ["bowl_2", "soup"]],
+        },
+        "objects": {
+            "cup_1": {"location": {"region_id": "countertop"}},
+            "cup_2": {"location": {"region_id": "C2"}},  # Discovered in storage C2
+            "bowl_1": {"location": {"region_id": "countertop"}},
+            "bowl_2": {"location": {"region_id": "countertop"}},
+            "kettle_1": {"location": {"region_id": "countertop"}},
+            "jar_1": {"location": {"region_id": "countertop"}},
+            "pot_1": {"location": {"region_id": "countertop"}},
+            "spoon_1": {"location": {"region_id": "countertop"}},
+            "spoon_2": {"location": {"region_id": "countertop"}},
+            "spoon_3": {"location": {"region_id": "countertop"}},
+        },
+    }
+
+    planned = plan_with_common_astar(
+        KitchenPlanningCompiler(),
+        {},
+        {"compiled_observed_state": compiled_state},
+    )
+    plan_ops = [(a["operator"], tuple(a["arguments"])) for a in planned.actions]
+
+    # Find the stage action: PLACE(cup_2, countertop)
+    stage_idx = [
+        i for i, (op, args) in enumerate(plan_ops)
+        if op == "PLACE" and args == ("cup_2", "countertop")
+    ]
+    assert len(stage_idx) == 1, f"Hidden coffee vessel cup_2 must be staged to countertop: {plan_ops}"
+    stage_pos = stage_idx[0]
+
+    # Verify first POUR into cup_2 happens AFTER staging
+    pour_indices = [
+        i for i, (op, args) in enumerate(plan_ops)
+        if op == "POUR" and args[1] == "cup_2"
+    ]
+    assert len(pour_indices) == 2, f"Expected 2 pours into cup_2, found: {pour_indices}"
+    for p_idx in pour_indices:
+        assert stage_pos < p_idx, f"POUR at step {p_idx} executed before cup_2 staged at step {stage_pos}"
+
+    # Verify STIR on cup_2 happens AFTER staging
+    stir_indices = [
+        i for i, (op, args) in enumerate(plan_ops)
+        if op == "STIR" and args[1] == "cup_2"
+    ]
+    assert len(stir_indices) == 1, f"Expected 1 stir on cup_2, found: {stir_indices}"
+    assert stage_pos < stir_indices[0], f"STIR at step {stir_indices[0]} executed before cup_2 staged at step {stage_pos}"
+
+
+def test_visible_coffee_vessel_does_not_require_redundant_staging() -> None:
+    from mujoco_scenes.functional_tamp_pipeline.domains.kitchen import KitchenPlanningCompiler
+    from mujoco_scenes.functional_tamp_pipeline.planning import plan_with_common_astar
+
+    compiled_state = {
+        "requirements": {
+            "home_region": "countertop",
+            "serving_destination": "serving_area",
+        },
+        "role_assignments": {
+            "coffee_targets": ["cup_1", "cup_2"],
+            "soup_targets": ["bowl_1", "bowl_2"],
+        },
+        "capabilities": {
+            "source_contains": [["kettle_1", "water"], ["jar_1", "coffee"], ["pot_1", "soup"]],
+            "can_stir": [["spoon_1", "cup_1"], ["spoon_1", "cup_2"]],
+            "assigned_soup_utensil": [["spoon_2", "bowl_1"], ["spoon_3", "bowl_2"]],
+            "initial_target_contents": [["bowl_1", "soup"], ["bowl_2", "soup"]],
+        },
+        "objects": {
+            "cup_1": {"location": {"region_id": "countertop"}},
+            "cup_2": {"location": {"region_id": "countertop"}},
+            "bowl_1": {"location": {"region_id": "countertop"}},
+            "bowl_2": {"location": {"region_id": "countertop"}},
+            "kettle_1": {"location": {"region_id": "countertop"}},
+            "jar_1": {"location": {"region_id": "countertop"}},
+            "pot_1": {"location": {"region_id": "countertop"}},
+            "spoon_1": {"location": {"region_id": "countertop"}},
+            "spoon_2": {"location": {"region_id": "countertop"}},
+            "spoon_3": {"location": {"region_id": "countertop"}},
+        },
+    }
+
+    planned = plan_with_common_astar(
+        KitchenPlanningCompiler(),
+        {},
+        {"compiled_observed_state": compiled_state},
+    )
+    plan_ops = [(a["operator"], tuple(a["arguments"])) for a in planned.actions]
+
+    # No redundant PLACE(cup_1, countertop) or PLACE(cup_2, countertop)
+    staging_actions = [
+        (op, args) for op, args in plan_ops
+        if op == "PLACE" and args[1] == "countertop" and args[0] in {"cup_1", "cup_2"}
+    ]
+    assert len(staging_actions) == 0, f"Redundant staging found for visible cups: {staging_actions}"
+
+
+def test_pour_and_stir_accessibility_preconditions() -> None:
+    from mujoco_scenes.functional_tamp_pipeline.domains.kitchen import KitchenPlanningCompiler
+    from mujoco_scenes.symbolic_planning_core import is_applicable
+
+    compiled_state = {
+        "requirements": {
+            "home_region": "countertop",
+            "serving_destination": "serving_area",
+        },
+        "role_assignments": {
+            "coffee_targets": ["cup_1"],
+            "soup_targets": ["bowl_1"],
+        },
+        "capabilities": {
+            "source_contains": [["kettle_1", "water"], ["jar_1", "coffee"]],
+            "can_stir": [["spoon_1", "cup_1"]],
+            "assigned_soup_utensil": [["spoon_2", "bowl_1"]],
+            "initial_target_contents": [],
+        },
+        "objects": {
+            "cup_1": {"location": {"region_id": "C2"}},
+            "bowl_1": {"location": {"region_id": "countertop"}},
+            "kettle_1": {"location": {"region_id": "countertop"}},
+            "jar_1": {"location": {"region_id": "countertop"}},
+            "spoon_1": {"location": {"region_id": "countertop"}},
+            "spoon_2": {"location": {"region_id": "countertop"}},
+        },
+    }
+
+    problem = KitchenPlanningCompiler().compile_problem({}, {"compiled_observed_state": compiled_state})
+
+    pour_action = next(
+        a for a in problem.actions
+        if a.name == "POUR" and a.arguments == ("kettle_1", "cup_1")
+    )
+    assert ("at", "cup_1", "countertop") in pour_action.positive_preconditions
+
+    stir_action = next(
+        a for a in problem.actions
+        if a.name == "STIR" and a.arguments == ("spoon_1", "cup_1")
+    )
+    assert ("at", "cup_1", "countertop") in stir_action.positive_preconditions
+
+    # State where cup_1 is still at C2
+    state_in_c2 = frozenset({
+        ("holding", "kettle_1"),
+        ("at", "cup_1", "C2"),
+    })
+    assert not is_applicable(state_in_c2, pour_action), "POUR must not be applicable when target is in C2"
+
+    state_stir_in_c2 = frozenset({
+        ("holding", "spoon_1"),
+        ("at", "cup_1", "C2"),
+        ("contains", "cup_1", "coffee"),
+        ("contains", "cup_1", "water"),
+    })
+    assert not is_applicable(state_stir_in_c2, stir_action), "STIR must not be applicable when target is in C2"
+
+
+def test_hidden_soup_bowl_does_not_force_countertop_staging() -> None:
+    from mujoco_scenes.functional_tamp_pipeline.domains.kitchen import KitchenPlanningCompiler
+    from mujoco_scenes.functional_tamp_pipeline.planning import plan_with_common_astar
+
+    compiled_state = {
+        "requirements": {
+            "home_region": "countertop",
+            "serving_destination": "serving_area",
+        },
+        "role_assignments": {
+            "coffee_targets": ["cup_1", "cup_2"],
+            "soup_targets": ["bowl_1", "bowl_2"],
+        },
+        "capabilities": {
+            "source_contains": [["kettle_1", "water"], ["jar_1", "coffee"], ["pot_1", "soup"]],
+            "can_stir": [["spoon_1", "cup_1"], ["spoon_1", "cup_2"]],
+            "assigned_soup_utensil": [["spoon_2", "bowl_1"], ["spoon_3", "bowl_2"]],
+            "initial_target_contents": [["bowl_1", "soup"], ["bowl_2", "soup"]],
+        },
+        "objects": {
+            "cup_1": {"location": {"region_id": "countertop"}},
+            "cup_2": {"location": {"region_id": "countertop"}},
+            "bowl_1": {"location": {"region_id": "countertop"}},
+            "bowl_2": {"location": {"region_id": "D1"}},  # Hidden soup bowl in D1
+            "kettle_1": {"location": {"region_id": "countertop"}},
+            "jar_1": {"location": {"region_id": "countertop"}},
+            "pot_1": {"location": {"region_id": "countertop"}},
+            "spoon_1": {"location": {"region_id": "countertop"}},
+            "spoon_2": {"location": {"region_id": "countertop"}},
+            "spoon_3": {"location": {"region_id": "countertop"}},
+        },
+    }
+
+    planned = plan_with_common_astar(
+        KitchenPlanningCompiler(),
+        {},
+        {"compiled_observed_state": compiled_state},
+    )
+    plan_ops = [(a["operator"], tuple(a["arguments"])) for a in planned.actions]
+
+    # bowl_2 does not need PLACE(bowl_2, countertop)
+    staging_bowl_2 = [
+        (op, args) for op, args in plan_ops
+        if op == "PLACE" and args == ("bowl_2", "countertop")
+    ]
+    assert len(staging_bowl_2) == 0, f"Unnecessary countertop staging for soup bowl: {staging_bowl_2}"
+
+
+
 
 
 

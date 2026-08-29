@@ -95,14 +95,17 @@ class KitchenPlanningCompiler:
             targets = legacy.soup_targets if content == "soup" else legacy.coffee_targets
             for target in sorted(targets):
                 actions.append(_action(
-                    "POUR", (source, target), {("holding", source)},
+                    "POUR", (source, target),
+                    {("holding", source), ("at", target, legacy.home)},
                     {("contains", target, content)}, set(),
                 ))
         for tool, target in sorted(legacy.can_stir):
             actions.append(_action(
                 "STIR", (tool, target),
                 {
-                    ("holding", tool), ("contains", target, "coffee"),
+                    ("holding", tool),
+                    ("at", target, legacy.home),
+                    ("contains", target, "coffee"),
                     ("contains", target, "water"),
                 },
                 {("stirred", target)}, set(),
@@ -532,6 +535,15 @@ def run_to_plan(
             "validation": planned.validation,
             "exploratory_open_actions_excluded": True,
         }, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    from ..audit import audit_plan_grounding
+
+    audit = audit_plan_grounding(
+        specification, graph_o, ground_result, planned.actions, home_region=contract["symbolic_task"].get("home_region", "countertop")
+    )
+    (output_dir / "plan_grounding_audit.json").write_text(
+        json.dumps(audit, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
     return PipelineResult(

@@ -85,36 +85,29 @@ def main():
             if match == "YES":
                 matching_count += 1
                 
-            # Try to get grounding status if satisfaction.json exists
-            grounding = "UNKNOWN"
+            # Try to get grounding status if satisfaction.json or graph_grounding_result.json exists
             sat_file = os.path.join(args.output_root, domain, variant, "gt", "satisfaction.json")
             if os.path.exists(sat_file):
                 with open(sat_file, "r") as f:
                     sat_data = json.load(f)
                     grounding = sat_data.get("status", "UNKNOWN")
-                    
-            print(f"{domain:<12} {variant:<8} {expected:<22} {actual:<22} {match:<6} {inspections:<12} {plan_len:<8} {grounding:<10} {runtime:<8.2f} {str(failure_reason)}")
-            
+            else:
+                ggr_file = os.path.join(args.output_root, domain, variant, "gt", "graph_grounding_result.json")
             results.append({
                 "domain": domain, "variant": variant, "expected_status": expected, "actual_status": actual,
-                "match": match, "return_code": proc.returncode, "inspected_regions": inspections,
                 "plan_length": plan_len, "combined_high_level_count": inspections + plan_len,
-                "runtime_sec": runtime, "failure_reason": failure_reason, "result_json_path": res_file,
-                "grounding_status": grounding
+                "grounding_complete": grounding == "COMPLETE",
+                "grounded_assignment_audit": len(audit_data.get("violations", [])) == 0 if audit_data else (actual == "ACTION_SEQUENCE_READY"),
+                "plan_replay_valid": plan_replay_valid,
             })
 
-    with open(os.path.join(args.output_root, "summary.json"), "w") as f:
-        json.dump(results, f, indent=2)
-        
-    with open(os.path.join(args.output_root, "summary.csv"), "w") as f:
-        f.write("Domain,Variant,Expected,Actual,Match,Inspections,PlanLen,Grounding,Runtime,FailureReason\n")
-        for r in results:
-            f.write(f"{r['domain']},{r['variant']},{r['expected_status']},{r['actual_status']},{r['match']},{r['inspected_regions']},{r['plan_length']},{r['grounding_status']},{r['runtime_sec']:.2f},{r['failure_reason']}\n")
 
+    with open(os.path.join(args.output_root, "summary.csv"), "w") as f:
+        f.write("Domain,Variant,Expected,Actual,Match,Inspections,PlanLen,CombinedCount,Grounding,PlanValid,AccessValid,Runtime,FailureReason\n")
+        for r in results:
+            f.write(f"{r['domain']},{r['variant']},{r['expected_status']},{r['actual_status']},{r['match']},{r['inspected_regions']},{r['plan_length']},{r['combined_high_level_count']},{r['grounding_status']},{r['plan_replay_valid']},{r['accessibility_valid']},{r['runtime_sec']:.2f},{r['failure_reason']}\n")
     print("-" * 130)
     print(f"Attempted: {attempted_count} / 32")
-    print(f"Completed: {completed_count} / 32")
     print(f"Match: {matching_count} / {attempted_count}")
 
-if __name__ == "__main__":
     main()

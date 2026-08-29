@@ -590,12 +590,20 @@ class KitchenSymbolicProblem:
             locations.get(target) != self.serving_destination
             for target in self.coffee_targets | self.soup_targets
         )
+        missing_staging = sum(
+            locations.get(target) != self.home
+            for target in self.coffee_targets
+            if (target, "coffee") not in state.contents
+            or (target, "water") not in state.contents
+            or target not in state.stirred
+        )
         # Each unsatisfied placement requires PICK+PLACE, while contents/stir
         # need at least one transition. This is deterministic guidance, not a
         # claim of optimality.
         return (
             missing_contents + missing_stir
             + 2 * missing_utensils + 2 * missing_served
+            + 2 * missing_staging
         )
 
     def _allowed_destinations(self, object_id: str) -> set[str]:
@@ -630,6 +638,15 @@ class KitchenSymbolicProblem:
             if locations.get(tool) != target
         )
         needed.update(
+            target for target in self.coffee_targets
+            if locations.get(target) != self.home
+            and (
+                (target, "coffee") not in state.contents
+                or (target, "water") not in state.contents
+                or target not in state.stirred
+            )
+        )
+        needed.update(
             target for target in self.coffee_targets | self.soup_targets
             if locations.get(target) != self.serving_destination
             and (
@@ -659,12 +676,15 @@ class KitchenSymbolicProblem:
                 content = self.source_contents[held]
                 targets = self.soup_targets if content == "soup" else self.coffee_targets
                 for target in sorted(targets):
-                    if (target, content) not in state.contents:
+                    if (target, content) not in state.contents and locations.get(target) == self.home:
                         productive.append(GroundAction("pour", (held, target)))
             for tool, target in sorted(self.can_stir):
-                if tool == held and target not in state.stirred and {
-                    (target, "coffee"), (target, "water")
-                } <= state.contents:
+                if (
+                    tool == held
+                    and target not in state.stirred
+                    and locations.get(target) == self.home
+                    and {(target, "coffee"), (target, "water")} <= state.contents
+                ):
                     productive.append(GroundAction("stir", (tool, target)))
             if productive:
                 return sorted(
@@ -745,13 +765,20 @@ class KitchenSymbolicProblem:
             accepted_targets = (
                 self.soup_targets if content == "soup" else self.coffee_targets
             )
-            if state.held != source or content is None or target not in accepted_targets:
+            if (
+                state.held != source
+                or content is None
+                or target not in accepted_targets
+                or locations.get(target) != self.home
+            ):
                 raise ValueError("POUR precondition failed")
             return replace(state, contents=state.contents | {(target, content)})
         if name == "stir":
             tool, target = args
             if (
-                state.held != tool or (tool, target) not in self.can_stir
+                state.held != tool
+                or (tool, target) not in self.can_stir
+                or locations.get(target) != self.home
                 or not {(target, "coffee"), (target, "water")} <= state.contents
             ):
                 raise ValueError("STIR precondition failed")
@@ -868,6 +895,8 @@ def validate_symbolic_plan(
                 failed.append(f"provides({source}, content)")
             if target not in valid_targets:
                 failed.append(f"accepts_content({target}, {content})")
+            if locations.get(target) != problem.home:
+                failed.append(f"at({target}, {problem.home})")
             if not failed:
                 state = replace(state, contents=state.contents | {(target, content)})
                 added.append(("contains", target, content))
@@ -880,6 +909,8 @@ def validate_symbolic_plan(
             for content in ("coffee", "water"):
                 if (target, content) not in state.contents:
                     failed.append(f"contains({target}, {content})")
+            if locations.get(target) != problem.home:
+                failed.append(f"at({target}, {problem.home})")
             if not failed:
                 state = replace(state, stirred=state.stirred | {target})
                 added.append(("stirred", target))
@@ -967,11 +998,11 @@ def render_domain_pddl() -> str:
     :effect (and (at ?o ?destination) (handempty) (not (holding ?o))))
   (:action pour :parameters (?source ?target ?content)
     :precondition (and (holding ?source) (provides ?source ?content)
-      (accepts_content ?target ?content))
+      (accepts_content ?target ?content) (at ?target countertop))
     :effect (contains ?target ?content))
   (:action stir :parameters (?tool ?target)
     :precondition (and (holding ?tool) (stirrer_for ?tool ?target)
-      (contains ?target coffee) (contains ?target water))
+      (contains ?target coffee) (contains ?target water) (at ?target countertop))
     :effect (stirred ?target))
 )\n"""
 
