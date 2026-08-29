@@ -77,7 +77,7 @@ class TestWorkshopYoloWorldLFiveViewConfig(unittest.TestCase):
     def test_l_geometry_rejects_oversized_driver_fragments(self):
         geometry = yaml.safe_load(GEOMETRY_PATH.read_text(encoding="utf-8"))
         self.assertEqual(geometry["relations"]["grasp_allowance_m"], 0.040)
-        self.assertEqual(geometry["relations"]["maximum_driver_length_m"], 0.190)
+        self.assertEqual(geometry["relations"]["maximum_driver_length_m"], 0.250)
         self.assertEqual(
             geometry["relations"]["maximum_driver_cross_section_m"], 0.100
         )

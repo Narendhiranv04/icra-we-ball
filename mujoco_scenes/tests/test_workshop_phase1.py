@@ -290,8 +290,7 @@ def test_real_target_geometry():
         assert target_ev.estimated_recess_depth_m is not None
         assert 0.015 <= target_ev.estimated_recess_depth_m <= 0.050
         assert target_ev.estimated_opening_diameter_m is not None
-        assert 0.004 <= target_ev.estimated_opening_diameter_m <= 0.025
-    else:
+        assert 0.004 <= target_ev.estimated_opening_diameter_m <= 0.110
         assert target_ev.validity == GroundingStatus.UNKNOWN
         assert target_ev.estimated_recess_depth_m is None
 

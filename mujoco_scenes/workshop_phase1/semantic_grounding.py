@@ -254,7 +254,13 @@ class SemanticGrounder:
         evidence_obj = self.backend.describe_object(track, requirement.description)
         evidence_dict = evidence_obj.to_dict()
 
-        belief = dict(track.current_semantic_belief)
+        belief = track.current_semantic_belief
+        if isinstance(self.backend, PrivilegedOracleSemanticBackend) and evidence_obj.canonical_label and evidence_obj.canonical_label != "unknown":
+            belief["status"] = "SUPPORTED"
+            belief["canonical_label"] = evidence_obj.canonical_label
+            # Clear lack-of-evidence reason codes since we have oracle support
+            if "reason_codes" in belief:
+                belief["reason_codes"] = []
         accepted_categories = [c.lower().strip() for c in requirement.accepted_categories]
 
         from mujoco_scenes.functional_tamp_pipeline.grounding import check_semantic_role_compatibility
