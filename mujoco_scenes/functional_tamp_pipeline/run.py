@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -24,6 +25,30 @@ from .spec_provider import provider_for_mode
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT = ROOT / "runs" / "functional_tamp_pipeline"
+
+
+@dataclass
+class _RunState:
+    domain: str
+    variant: str
+    internal_variant: str
+    mode: str
+    run_dir: Path
+    specification: FunctionalRequirementGraph | None = None
+    spec_acquisition: str = "live_provider"
+    specification_input: str | None = None
+    specification_sha256: str | None = None
+    provider_model: str | None = None
+    search_order: str = "provider"
+    search_order_source_effective: str = "provider"
+    resolved_search_order: tuple[str, ...] = ()
+    exploration_actuation: str = "unknown"
+    git_commit: str | None = None
+    git_dirty: bool | None = None
+    started_at_utc: str = ""
+    finished_at_utc: str = ""
+    runtime_sec: float = 0.0
+    terminal_status: str = "PIPELINE_EXCEPTION"
 
 
 def _write_json(path: Path, payload: Any) -> None:
@@ -70,7 +95,6 @@ def _collect_artifacts(run_dir: Path) -> dict[str, str]:
         "grounding": "graph_grounding_result.json",
         "satisfaction": "satisfaction.json",
         "canonical_grounding_witness": "canonical_grounding_witness.json",
-        "action_plan": "action_sequence/action_plan.json",
         "plan": "action_sequence/plan.json",
         "replay_validation": "action_sequence/replay_validation.json",
         "plan_grounding_audit": "plan_grounding_audit.json",
@@ -81,6 +105,17 @@ def _collect_artifacts(run_dir: Path) -> dict[str, str]:
     for key, rel_path in candidate_map.items():
         if (run_dir / rel_path).exists():
             artifacts[key] = rel_path
+
+    # Action plan discovery (Kitchen nested, Workshop root, Living Room plan)
+    if (run_dir / "action_sequence" / "action_plan.json").exists():
+        artifacts["action_plan"] = "action_sequence/action_plan.json"
+        artifacts["final_plan"] = "action_sequence/action_plan.json"
+    elif (run_dir / "action_plan.json").exists():
+        artifacts["action_plan"] = "action_plan.json"
+        artifacts["final_plan"] = "action_plan.json"
+    elif (run_dir / "action_sequence" / "plan.json").exists():
+        artifacts["final_plan"] = "action_sequence/plan.json"
+
     return artifacts
 
 
@@ -135,57 +170,35 @@ def _load_or_acquire_specification(
     return specification, "live_provider", None
 
 
-def _write_run_manifest(
-    *,
-    run_dir: Path,
-    domain: str,
-    variant: str,
-    internal_variant: str,
-    mode: str,
-    specification: FunctionalRequirementGraph | None,
-    spec_acquisition: str,
-    specification_input: str | None,
-    specification_sha256: str | None,
-    provider_model: str | None,
-    search_order: str,
-    search_order_source_effective: str,
-    resolved_search_order: tuple[str, ...],
-    exploration_actuation: str,
-    git_commit: str | None,
-    git_dirty: bool | None,
-    started_at_utc: str,
-    finished_at_utc: str,
-    runtime_sec: float,
-    terminal_status: str,
-) -> None:
+def _write_run_manifest(state: _RunState) -> None:
     manifest = {
         "schema_version": 1,
-        "domain": domain,
-        "variant": variant,
-        "internal_variant": internal_variant,
-        "spec_mode": mode,
-        "spec_provider_source": specification.source if specification else None,
-        "spec_acquisition": spec_acquisition,
-        "specification_sha256": specification_sha256,
-        "specification_input": specification_input,
-        "provider_model": provider_model,
-        "search_order_source_requested": search_order,
-        "search_order_source_effective": search_order_source_effective,
-        "provider_region_ranking": list(specification.region_ranking) if specification else [],
-        "region_order_used": list(resolved_search_order),
-        "exploration_actuation": exploration_actuation,
+        "domain": state.domain,
+        "variant": state.variant,
+        "internal_variant": state.internal_variant,
+        "spec_mode": state.mode,
+        "spec_provider_source": state.specification.source if state.specification else None,
+        "spec_acquisition": state.spec_acquisition,
+        "specification_sha256": state.specification_sha256,
+        "specification_input": state.specification_input,
+        "provider_model": state.provider_model,
+        "search_order_source_requested": state.search_order,
+        "search_order_source_effective": state.search_order_source_effective,
+        "provider_region_ranking": list(state.specification.region_ranking) if state.specification else [],
+        "region_order_used": list(state.resolved_search_order),
+        "exploration_actuation": state.exploration_actuation,
         "execution_state": "planning_only",
         "visualization_requested": False,
-        "git_commit": git_commit,
-        "git_dirty": git_dirty,
-        "started_at_utc": started_at_utc,
-        "finished_at_utc": finished_at_utc,
-        "pipeline_runtime_seconds": round(runtime_sec, 4),
-        "terminal_status": terminal_status,
+        "git_commit": state.git_commit,
+        "git_dirty": state.git_dirty,
+        "started_at_utc": state.started_at_utc,
+        "finished_at_utc": state.finished_at_utc,
+        "pipeline_runtime_seconds": round(state.runtime_sec, 4),
+        "terminal_status": state.terminal_status,
         "observer_errors": [],
-        "artifacts": _collect_artifacts(run_dir),
+        "artifacts": _collect_artifacts(state.run_dir),
     }
-    _write_json(run_dir / "run_manifest.json", manifest)
+    _write_json(state.run_dir / "run_manifest.json", manifest)
 
 
 def _capture_workshop_vlm_inputs(scene: Any, output_dir: Path) -> list[Path]:
@@ -203,6 +216,206 @@ def _capture_workshop_vlm_inputs(scene: Any, output_dir: Path) -> list[Path]:
             raise RuntimeError(f"Could not write VLM input image {path}")
         paths.append(path)
     return paths
+
+
+def _run_pipeline_impl(
+    *,
+    state: _RunState,
+    specification_json: Path | str | None,
+    dry_run: bool,
+    verbose: bool,
+    observation_images: list[Path] | None,
+) -> PipelineResult:
+    if state.domain == "kitchen":
+        from mujoco_scenes.run_kitchen_vlm_pipeline import _render_initial
+        from .domains.kitchen import TASK, run_to_plan, scene_for_variant
+
+        scene = scene_for_variant(state.internal_variant)
+        images = list(observation_images or [])
+        if state.mode == "vlm" and not images and specification_json is None:
+            images = _render_initial(scene, state.run_dir / "vlm_inputs", 640, 480)
+
+        print("[1/5] Functional specification", flush=True)
+        state.specification, state.spec_acquisition, state.specification_input = _load_or_acquire_specification(
+            domain=state.domain,
+            mode=state.mode,
+            task=TASK,
+            images=images,
+            specification_json=specification_json,
+        )
+        _write_json(state.run_dir / "functional_specification.json", state.specification.to_dict())
+        _write_json(state.run_dir / "functional_requirement_graph.json", state.specification.to_dict())
+        state.specification_sha256 = _compute_file_sha256(state.run_dir / "functional_specification.json")
+
+        state.resolved_search_order = resolve_search_order(state.specification, state.domain, state.search_order)
+        if state.domain != "living_room" and state.search_order == "fixed":
+            raise RuntimeError("fixed search order is resolved but not executable until Phase 3.1 wiring")
+
+        print("[2/5] Initial perception", flush=True)
+        print("[3/5] Functional grounding and ranked region search", flush=True)
+        result = run_to_plan(
+            variant_label=state.variant,
+            internal_variant=state.internal_variant,
+            mode=state.mode,
+            specification=state.specification,
+            output_dir=state.run_dir,
+            scene=scene,
+        )
+        if result.assignment:
+            print("[4/5] Role assignment", flush=True)
+            print(json.dumps(result.assignment, indent=2, sort_keys=True), flush=True)
+            print("[5/5] A* planning", flush=True)
+            for action in result.plan:
+                print(f"  {action['action_index']:02d}. {action['operator']}({', '.join(action['arguments'])})", flush=True)
+        _write_json(state.run_dir / "result.json", result.to_dict())
+        return result
+
+    if state.domain == "living_room":
+        from .domains.living_room import TASK, run_to_plan
+
+        images = list(observation_images or [])
+        if state.mode == "vlm" and not images and specification_json is None:
+            from PIL import Image
+            from mujoco_scenes.living_room_region_scene import (
+                L2_CAMERAS, L2LivingRoomRegionScene,
+            )
+            from mujoco_scenes.living_room_variants import scene_name
+
+            vlm_scene = L2LivingRoomRegionScene(scene_name(state.internal_variant), robot="none")
+            image_dir = state.run_dir / "vlm_inputs"
+            image_dir.mkdir(parents=True, exist_ok=True)
+            for camera in L2_CAMERAS:
+                path = image_dir / f"{camera}.png"
+                Image.fromarray(vlm_scene.render_frame(camera, 1280, 960)).save(path)
+                images.append(path)
+
+        print("[1/5] Functional specification", flush=True)
+        state.specification, state.spec_acquisition, state.specification_input = _load_or_acquire_specification(
+            domain=state.domain,
+            mode=state.mode,
+            task=TASK,
+            images=images,
+            specification_json=specification_json,
+        )
+        _write_json(state.run_dir / "functional_specification.json", state.specification.to_dict())
+        _write_json(state.run_dir / "functional_requirement_graph.json", state.specification.to_dict())
+        state.specification_sha256 = _compute_file_sha256(state.run_dir / "functional_specification.json")
+
+        state.resolved_search_order = resolve_search_order(state.specification, state.domain, state.search_order)
+
+        print("[2/5] Initial perception", flush=True)
+        print("[3/5] Global functional grounding", flush=True)
+        result = run_to_plan(
+            variant_label=state.variant, internal_variant=state.internal_variant,
+            mode=state.mode, specification=state.specification, output_dir=state.run_dir,
+        )
+        if result.assignment:
+            print("[4/5] Role assignment", flush=True)
+            print(json.dumps(result.assignment, indent=2, sort_keys=True), flush=True)
+            print("[5/5] A* planning", flush=True)
+            for action in result.plan:
+                print(f"  {action['action_index']:02d}. {action['operator']}({', '.join(action['arguments'])})", flush=True)
+        _write_json(state.run_dir / "result.json", result.to_dict())
+        return result
+
+    if state.domain != "workshop":
+        raise NotImplementedError(
+            f"The canonical adapter for {state.domain} has not been integrated yet"
+        )
+
+    from mujoco_scenes.workshop_scene import WorkshopScene
+    from .domains.workshop import WorkshopDomainAdapter, WorkshopPlanningCompiler
+
+    scene = WorkshopScene(robot="google", variant=state.internal_variant)
+    images = list(observation_images or [])
+    if state.mode == "vlm" and not images and specification_json is None:
+        images = _capture_workshop_vlm_inputs(scene, state.run_dir / "vlm_inputs")
+
+    print("[1/5] Functional specification", flush=True)
+    task = WorkshopDomainAdapter.task_instruction
+    state.specification, state.spec_acquisition, state.specification_input = _load_or_acquire_specification(
+        domain=state.domain,
+        mode=state.mode,
+        task=task,
+        images=images,
+        specification_json=specification_json,
+    )
+    _write_json(state.run_dir / "functional_specification.json", state.specification.to_dict())
+    _write_json(state.run_dir / "functional_requirement_graph.json", state.specification.to_dict())
+    state.specification_sha256 = _compute_file_sha256(state.run_dir / "functional_specification.json")
+
+    state.resolved_search_order = resolve_search_order(state.specification, state.domain, state.search_order)
+    if state.domain != "living_room" and state.search_order == "fixed":
+        raise RuntimeError("fixed search order is resolved but not executable until Phase 3.1 wiring")
+
+    adapter = WorkshopDomainAdapter(
+        state.internal_variant,
+        state.specification,
+        scene=scene,
+        physical_open=not dry_run,
+        output_dir=str(state.run_dir / "perception"),
+        verbose=verbose,
+    )
+    print("[2/5] Initial perception", flush=True)
+    print("[3/5] Functional grounding and ranked region search", flush=True)
+    satisfaction, inspected = search_until_satisfied(adapter, state.specification)
+    _write_json(state.run_dir / "observed_scene_graph.json", adapter.graph.to_dict())
+    _write_json(state.run_dir / "detection_diagnostics.json", {
+        "records": adapter.controller.detection_diagnostics,
+    })
+    _write_json(state.run_dir / "graph_grounding_result.json", satisfaction.to_dict())
+    _write_json(state.run_dir / "satisfaction.json", {
+        "satisfied": satisfaction.satisfied,
+        "status": satisfaction.status,
+        "assignment": satisfaction.assignment,
+        "missing_requirements": list(satisfaction.missing_requirements),
+        "evidence": satisfaction.evidence,
+    })
+    if not satisfaction.satisfied or satisfaction.assignment is None:
+        reason = ", ".join(satisfaction.missing_requirements) or "NO_GLOBAL_ASSIGNMENT"
+        print(f"FUNCTIONAL GROUNDING FAILED: {reason}", flush=True)
+        result = PipelineResult(
+            domain=state.domain, variant=state.variant, mode=state.mode, status=satisfaction.status,
+            inspected_regions=inspected, failure_reason=reason,
+        )
+        _write_json(state.run_dir / "result.json", result.to_dict())
+        return result
+
+    print("[4/5] Role assignment", flush=True)
+    print("ROLE ASSIGNMENT", flush=True)
+    for role in ("driver", "fastener", "work_surface"):
+        print(f"{role} -> {satisfaction.assignment[role]}", flush=True)
+
+    print("[5/5] A* planning", flush=True)
+    planned = plan_with_common_astar(
+        WorkshopPlanningCompiler(), satisfaction.assignment, adapter.planning_context()
+    )
+    _write_json(state.run_dir / "action_plan.json", {
+        "planner": planned.search.statistics,
+        "actions": list(planned.actions),
+        "validation": planned.validation,
+        "exploratory_open_actions_excluded": True,
+    })
+    for action in planned.actions:
+        print(
+            f"  {action['action_index']:02d}. {action['operator']}"
+            f"({', '.join(action['arguments'])})",
+            flush=True,
+        )
+
+    result = PipelineResult(
+        domain=state.domain,
+        variant=state.variant,
+        mode=state.mode,
+        status="ACTION_SEQUENCE_READY",
+        inspected_regions=inspected,
+        assignment=satisfaction.assignment,
+        plan=planned.actions,
+        search_statistics=planned.search.statistics,
+        failure_reason=None,
+    )
+    _write_json(state.run_dir / "result.json", result.to_dict())
+    return result
 
 
 def run_pipeline(
@@ -228,329 +441,42 @@ def run_pipeline(
     provider_model = _get_provider_model(mode)
     spec_acquisition = "live_provider" if specification_json is None else "replayed_provider_output"
     specification_input = None if specification_json is None else str(Path(specification_json).resolve())
-    specification: FunctionalRequirementGraph | None = None
-    specification_sha256: str | None = None
-    resolved_search_order: tuple[str, ...] = ()
-    search_order_source_effective: str = "not_applicable" if domain == "living_room" else search_order
+    search_order_source_effective = "not_applicable" if domain == "living_room" else search_order
+
+    state = _RunState(
+        domain=domain,
+        variant=variant,
+        internal_variant=internal_variant,
+        mode=mode,
+        run_dir=run_dir,
+        spec_acquisition=spec_acquisition,
+        specification_input=specification_input,
+        provider_model=provider_model,
+        search_order=search_order,
+        search_order_source_effective=search_order_source_effective,
+        exploration_actuation=exploration_actuation,
+        git_commit=git_commit,
+        git_dirty=git_dirty,
+        started_at_utc=started_at_utc,
+    )
 
     try:
-        if domain == "kitchen":
-            from mujoco_scenes.run_kitchen_vlm_pipeline import _render_initial
-            from .domains.kitchen import TASK, run_to_plan, scene_for_variant
-
-            scene = scene_for_variant(internal_variant)
-            images = list(observation_images or [])
-            if mode == "vlm" and not images and specification_json is None:
-                images = _render_initial(scene, run_dir / "vlm_inputs", 640, 480)
-
-            print("[1/5] Functional specification", flush=True)
-            specification, spec_acquisition, specification_input = _load_or_acquire_specification(
-                domain=domain,
-                mode=mode,
-                task=TASK,
-                images=images,
-                specification_json=specification_json,
-            )
-            _write_json(run_dir / "functional_specification.json", specification.to_dict())
-            _write_json(run_dir / "functional_requirement_graph.json", specification.to_dict())
-            specification_sha256 = _compute_file_sha256(run_dir / "functional_specification.json")
-
-            resolved_search_order = resolve_search_order(specification, domain, search_order)
-            if domain != "living_room" and search_order == "fixed":
-                raise RuntimeError("fixed search order is resolved but not executable until Phase 3.1 wiring")
-
-            print("[2/5] Initial perception", flush=True)
-            print("[3/5] Functional grounding and ranked region search", flush=True)
-            result = run_to_plan(
-                variant_label=variant,
-                internal_variant=internal_variant,
-                mode=mode,
-                specification=specification,
-                output_dir=run_dir,
-                scene=scene,
-            )
-            if result.assignment:
-                print("[4/5] Role assignment", flush=True)
-                print(json.dumps(result.assignment, indent=2, sort_keys=True), flush=True)
-                print("[5/5] A* planning", flush=True)
-                for action in result.plan:
-                    print(f"  {action['action_index']:02d}. {action['operator']}({', '.join(action['arguments'])})", flush=True)
-            _write_json(run_dir / "result.json", result.to_dict())
-
-            finished_at_utc = datetime.now(timezone.utc).isoformat()
-            runtime_sec = time.perf_counter() - start_t
-            _write_run_manifest(
-                run_dir=run_dir,
-                domain=domain,
-                variant=variant,
-                internal_variant=internal_variant,
-                mode=mode,
-                specification=specification,
-                spec_acquisition=spec_acquisition,
-                specification_input=specification_input,
-                specification_sha256=specification_sha256,
-                provider_model=provider_model,
-                search_order=search_order,
-                search_order_source_effective=search_order_source_effective,
-                resolved_search_order=resolved_search_order,
-                exploration_actuation=exploration_actuation,
-                git_commit=git_commit,
-                git_dirty=git_dirty,
-                started_at_utc=started_at_utc,
-                finished_at_utc=finished_at_utc,
-                runtime_sec=runtime_sec,
-                terminal_status=result.status,
-            )
-            return result
-
-        if domain == "living_room":
-            from .domains.living_room import TASK, run_to_plan
-
-            images = list(observation_images or [])
-            if mode == "vlm" and not images and specification_json is None:
-                from PIL import Image
-                from mujoco_scenes.living_room_region_scene import (
-                    L2_CAMERAS, L2LivingRoomRegionScene,
-                )
-                from mujoco_scenes.living_room_variants import scene_name
-
-                vlm_scene = L2LivingRoomRegionScene(scene_name(internal_variant), robot="none")
-                image_dir = run_dir / "vlm_inputs"
-                image_dir.mkdir(parents=True, exist_ok=True)
-                for camera in L2_CAMERAS:
-                    path = image_dir / f"{camera}.png"
-                    Image.fromarray(vlm_scene.render_frame(camera, 1280, 960)).save(path)
-                    images.append(path)
-
-            print("[1/5] Functional specification", flush=True)
-            specification, spec_acquisition, specification_input = _load_or_acquire_specification(
-                domain=domain,
-                mode=mode,
-                task=TASK,
-                images=images,
-                specification_json=specification_json,
-            )
-            _write_json(run_dir / "functional_specification.json", specification.to_dict())
-            _write_json(run_dir / "functional_requirement_graph.json", specification.to_dict())
-            specification_sha256 = _compute_file_sha256(run_dir / "functional_specification.json")
-
-            resolved_search_order = resolve_search_order(specification, domain, search_order)
-
-            print("[2/5] Initial perception", flush=True)
-            print("[3/5] Global functional grounding", flush=True)
-            result = run_to_plan(
-                variant_label=variant, internal_variant=internal_variant,
-                mode=mode, specification=specification, output_dir=run_dir,
-            )
-            if result.assignment:
-                print("[4/5] Role assignment", flush=True)
-                print(json.dumps(result.assignment, indent=2, sort_keys=True), flush=True)
-                print("[5/5] A* planning", flush=True)
-                for action in result.plan:
-                    print(f"  {action['action_index']:02d}. {action['operator']}({', '.join(action['arguments'])})", flush=True)
-            _write_json(run_dir / "result.json", result.to_dict())
-
-            finished_at_utc = datetime.now(timezone.utc).isoformat()
-            runtime_sec = time.perf_counter() - start_t
-            _write_run_manifest(
-                run_dir=run_dir,
-                domain=domain,
-                variant=variant,
-                internal_variant=internal_variant,
-                mode=mode,
-                specification=specification,
-                spec_acquisition=spec_acquisition,
-                specification_input=specification_input,
-                specification_sha256=specification_sha256,
-                provider_model=provider_model,
-                search_order=search_order,
-                search_order_source_effective=search_order_source_effective,
-                resolved_search_order=resolved_search_order,
-                exploration_actuation=exploration_actuation,
-                git_commit=git_commit,
-                git_dirty=git_dirty,
-                started_at_utc=started_at_utc,
-                finished_at_utc=finished_at_utc,
-                runtime_sec=runtime_sec,
-                terminal_status=result.status,
-            )
-            return result
-
-        if domain != "workshop":
-            raise NotImplementedError(
-                f"The canonical adapter for {domain} has not been integrated yet"
-            )
-
-        from mujoco_scenes.workshop_scene import WorkshopScene
-        from .domains.workshop import WorkshopDomainAdapter, WorkshopPlanningCompiler
-
-        scene = WorkshopScene(robot="google", variant=internal_variant)
-        images = list(observation_images or [])
-        if mode == "vlm" and not images and specification_json is None:
-            images = _capture_workshop_vlm_inputs(scene, run_dir / "vlm_inputs")
-
-        print("[1/5] Functional specification", flush=True)
-        task = WorkshopDomainAdapter.task_instruction
-        specification, spec_acquisition, specification_input = _load_or_acquire_specification(
-            domain=domain,
-            mode=mode,
-            task=task,
-            images=images,
+        result = _run_pipeline_impl(
+            state=state,
             specification_json=specification_json,
-        )
-        _write_json(run_dir / "functional_specification.json", specification.to_dict())
-        _write_json(run_dir / "functional_requirement_graph.json", specification.to_dict())
-        specification_sha256 = _compute_file_sha256(run_dir / "functional_specification.json")
-
-        resolved_search_order = resolve_search_order(specification, domain, search_order)
-        if domain != "living_room" and search_order == "fixed":
-            raise RuntimeError("fixed search order is resolved but not executable until Phase 3.1 wiring")
-
-        adapter = WorkshopDomainAdapter(
-            internal_variant,
-            specification,
-            scene=scene,
-            physical_open=not dry_run,
-            output_dir=str(run_dir / "perception"),
+            dry_run=dry_run,
             verbose=verbose,
+            observation_images=observation_images,
         )
-        print("[2/5] Initial perception", flush=True)
-        print("[3/5] Functional grounding and ranked region search", flush=True)
-        satisfaction, inspected = search_until_satisfied(adapter, specification)
-        _write_json(run_dir / "observed_scene_graph.json", adapter.graph.to_dict())
-        _write_json(run_dir / "detection_diagnostics.json", {
-            "records": adapter.controller.detection_diagnostics,
-        })
-        _write_json(run_dir / "graph_grounding_result.json", satisfaction.to_dict())
-        _write_json(run_dir / "satisfaction.json", {
-            "satisfied": satisfaction.satisfied,
-            "status": satisfaction.status,
-            "assignment": satisfaction.assignment,
-            "missing_requirements": list(satisfaction.missing_requirements),
-            "evidence": satisfaction.evidence,
-        })
-        if not satisfaction.satisfied or satisfaction.assignment is None:
-            reason = ", ".join(satisfaction.missing_requirements) or "NO_GLOBAL_ASSIGNMENT"
-            print(f"FUNCTIONAL GROUNDING FAILED: {reason}", flush=True)
-            result = PipelineResult(
-                domain=domain, variant=variant, mode=mode, status=satisfaction.status,
-                inspected_regions=inspected, failure_reason=reason,
-            )
-            _write_json(run_dir / "result.json", result.to_dict())
-
-            finished_at_utc = datetime.now(timezone.utc).isoformat()
-            runtime_sec = time.perf_counter() - start_t
-            _write_run_manifest(
-                run_dir=run_dir,
-                domain=domain,
-                variant=variant,
-                internal_variant=internal_variant,
-                mode=mode,
-                specification=specification,
-                spec_acquisition=spec_acquisition,
-                specification_input=specification_input,
-                specification_sha256=specification_sha256,
-                provider_model=provider_model,
-                search_order=search_order,
-                search_order_source_effective=search_order_source_effective,
-                resolved_search_order=resolved_search_order,
-                exploration_actuation=exploration_actuation,
-                git_commit=git_commit,
-                git_dirty=git_dirty,
-                started_at_utc=started_at_utc,
-                finished_at_utc=finished_at_utc,
-                runtime_sec=runtime_sec,
-                terminal_status=result.status,
-            )
-            return result
-
-        print("[4/5] Role assignment", flush=True)
-        print("ROLE ASSIGNMENT", flush=True)
-        for role in ("driver", "fastener", "work_surface"):
-            print(f"{role} -> {satisfaction.assignment[role]}", flush=True)
-
-        print("[5/5] A* planning", flush=True)
-        planned = plan_with_common_astar(
-            WorkshopPlanningCompiler(), satisfaction.assignment, adapter.planning_context()
-        )
-        _write_json(run_dir / "action_plan.json", {
-            "planner": planned.search.statistics,
-            "actions": list(planned.actions),
-            "validation": planned.validation,
-            "exploratory_open_actions_excluded": True,
-        })
-        for action in planned.actions:
-            print(
-                f"  {action['action_index']:02d}. {action['operator']}"
-                f"({', '.join(action['arguments'])})",
-                flush=True,
-            )
-
-        result = PipelineResult(
-            domain=domain,
-            variant=variant,
-            mode=mode,
-            status="ACTION_SEQUENCE_READY",
-            inspected_regions=inspected,
-            assignment=satisfaction.assignment,
-            plan=planned.actions,
-            search_statistics=planned.search.statistics,
-            failure_reason=None,
-        )
-        _write_json(run_dir / "result.json", result.to_dict())
-
-        finished_at_utc = datetime.now(timezone.utc).isoformat()
-        runtime_sec = time.perf_counter() - start_t
-        _write_run_manifest(
-            run_dir=run_dir,
-            domain=domain,
-            variant=variant,
-            internal_variant=internal_variant,
-            mode=mode,
-            specification=specification,
-            spec_acquisition=spec_acquisition,
-            specification_input=specification_input,
-            specification_sha256=specification_sha256,
-            provider_model=provider_model,
-            search_order=search_order,
-            search_order_source_effective=search_order_source_effective,
-            resolved_search_order=resolved_search_order,
-            exploration_actuation=exploration_actuation,
-            git_commit=git_commit,
-            git_dirty=git_dirty,
-            started_at_utc=started_at_utc,
-            finished_at_utc=finished_at_utc,
-            runtime_sec=runtime_sec,
-            terminal_status=result.status,
-        )
+        state.terminal_status = result.status
         return result
-
     except Exception:
-        finished_at_utc = datetime.now(timezone.utc).isoformat()
-        runtime_sec = time.perf_counter() - start_t
-        _write_run_manifest(
-            run_dir=run_dir,
-            domain=domain,
-            variant=variant,
-            internal_variant=internal_variant,
-            mode=mode,
-            specification=specification,
-            spec_acquisition=spec_acquisition,
-            specification_input=specification_input,
-            specification_sha256=specification_sha256,
-            provider_model=provider_model,
-            search_order=search_order,
-            search_order_source_effective=search_order_source_effective,
-            resolved_search_order=resolved_search_order,
-            exploration_actuation=exploration_actuation,
-            git_commit=git_commit,
-            git_dirty=git_dirty,
-            started_at_utc=started_at_utc,
-            finished_at_utc=finished_at_utc,
-            runtime_sec=runtime_sec,
-            terminal_status="PIPELINE_EXCEPTION",
-        )
+        state.terminal_status = "PIPELINE_EXCEPTION"
         raise
+    finally:
+        state.finished_at_utc = datetime.now(timezone.utc).isoformat()
+        state.runtime_sec = time.perf_counter() - start_t
+        _write_run_manifest(state)
 
 
 def main() -> int:

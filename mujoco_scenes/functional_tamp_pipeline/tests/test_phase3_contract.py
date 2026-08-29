@@ -1,4 +1,4 @@
-"""Unit tests for Phase 3.0 contract: search order, specification replay, manifest, and safety guards."""
+"""Unit tests for Phase 3.0/3.0.1 contract: search order, specification replay, manifest, artifact discovery, and safety guards."""
 
 from __future__ import annotations
 
@@ -13,9 +13,11 @@ from mujoco_scenes.functional_tamp_pipeline.models import (
     PipelineResult,
 )
 from mujoco_scenes.functional_tamp_pipeline.run import (
+    _collect_artifacts,
     _compute_file_sha256,
     _get_git_provenance,
     _load_or_acquire_specification,
+    _write_run_manifest,
     run_pipeline,
 )
 from mujoco_scenes.functional_tamp_pipeline.search_order import (
@@ -84,7 +86,6 @@ def test_search_order_workshop_fixed():
 # 4. Duplicate region order rejected
 def test_search_order_duplicate_region_rejected():
     nodes = {"tool": FunctionalRole(name="tool", count=1, semantic_categories=("spoon",))}
-    # Construct without validation to test resolver validation
     spec = FunctionalRequirementGraph(
         domain="kitchen",
         task_instruction="dummy",
@@ -363,3 +364,127 @@ def test_fixed_search_runtime_guard(tmp_path: Path):
                 search_order="fixed",
                 output_root=tmp_path,
             )
+
+
+# 19. Pass 3.0.1: Kitchen nested action plan discovery
+def test_artifact_discovery_kitchen_nested(tmp_path: Path):
+    run_dir = tmp_path / "kitchen_run"
+    plan_dir = run_dir / "action_sequence"
+    plan_dir.mkdir(parents=True)
+    (plan_dir / "action_plan.json").write_text("{}", encoding="utf-8")
+    (run_dir / "plan_grounding_audit.json").write_text("{}", encoding="utf-8")
+
+    artifacts = _collect_artifacts(run_dir)
+    assert artifacts["action_plan"] == "action_sequence/action_plan.json"
+    assert artifacts["final_plan"] == "action_sequence/action_plan.json"
+    assert artifacts["plan_grounding_audit"] == "plan_grounding_audit.json"
+
+
+# 20. Pass 3.0.1: Living Room plan and replay discovery
+def test_artifact_discovery_living_room(tmp_path: Path):
+    run_dir = tmp_path / "lr_run"
+    plan_dir = run_dir / "action_sequence"
+    plan_dir.mkdir(parents=True)
+    (plan_dir / "plan.json").write_text("{}", encoding="utf-8")
+    (plan_dir / "replay_validation.json").write_text("{}", encoding="utf-8")
+
+    artifacts = _collect_artifacts(run_dir)
+    assert artifacts["plan"] == "action_sequence/plan.json"
+    assert artifacts["final_plan"] == "action_sequence/plan.json"
+    assert artifacts["replay_validation"] == "action_sequence/replay_validation.json"
+
+
+# 21. Pass 3.0.1: Workshop root action plan discovery (BUG FIX)
+def test_artifact_discovery_workshop_root(tmp_path: Path):
+    run_dir = tmp_path / "workshop_run"
+    run_dir.mkdir(parents=True)
+    (run_dir / "action_plan.json").write_text("{}", encoding="utf-8")
+    (run_dir / "satisfaction.json").write_text("{}", encoding="utf-8")
+    (run_dir / "detection_diagnostics.json").write_text("{}", encoding="utf-8")
+
+    artifacts = _collect_artifacts(run_dir)
+    assert artifacts["action_plan"] == "action_plan.json"
+    assert artifacts["final_plan"] == "action_plan.json"
+    assert artifacts["satisfaction"] == "satisfaction.json"
+    assert artifacts["detection_diagnostics"] == "detection_diagnostics.json"
+
+
+# 22. Pass 3.0.1: Centralized finalization called exactly once on success
+def test_manifest_finalization_called_once_on_success(tmp_path: Path):
+    dummy_spec = _make_dummy_spec(domain="kitchen")
+    dummy_result = PipelineResult(
+        domain="kitchen",
+        variant="K1",
+        mode="gt",
+        status="ACTION_SEQUENCE_READY",
+        assignment={"tool": "object_0001"},
+        plan=({"action_index": 1, "operator": "PICK", "arguments": ["object_0001"]},),
+    )
+
+    with patch("mujoco_scenes.functional_tamp_pipeline.run.provider_for_mode") as mock_prov_factory, \
+         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.scene_for_variant"), \
+         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.run_to_plan", return_value=dummy_result), \
+         patch("mujoco_scenes.functional_tamp_pipeline.run._write_run_manifest", wraps=_write_run_manifest) as mock_manifest_writer:
+        mock_provider = MagicMock()
+        mock_provider.provide.return_value = dummy_spec
+        mock_prov_factory.return_value = mock_provider
+
+        res = run_pipeline(
+            domain="kitchen",
+            variant="K1",
+            mode="gt",
+            output_root=tmp_path,
+        )
+        assert res.status == "ACTION_SEQUENCE_READY"
+        assert mock_manifest_writer.call_count == 1
+
+
+# 23. Pass 3.0.1: Centralized finalization called exactly once on infeasible
+def test_manifest_finalization_called_once_on_infeasible(tmp_path: Path):
+    dummy_spec = _make_dummy_spec(domain="kitchen")
+    dummy_result = PipelineResult(
+        domain="kitchen",
+        variant="K7",
+        mode="gt",
+        status="INFEASIBLE",
+        failure_reason="NO_TOOL_OBSERVED",
+    )
+
+    with patch("mujoco_scenes.functional_tamp_pipeline.run.provider_for_mode") as mock_prov_factory, \
+         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.scene_for_variant"), \
+         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.run_to_plan", return_value=dummy_result), \
+         patch("mujoco_scenes.functional_tamp_pipeline.run._write_run_manifest", wraps=_write_run_manifest) as mock_manifest_writer:
+        mock_provider = MagicMock()
+        mock_provider.provide.return_value = dummy_spec
+        mock_prov_factory.return_value = mock_provider
+
+        res = run_pipeline(
+            domain="kitchen",
+            variant="K7",
+            mode="gt",
+            output_root=tmp_path,
+        )
+        assert res.status == "INFEASIBLE"
+        assert mock_manifest_writer.call_count == 1
+
+
+# 24. Pass 3.0.1: Centralized finalization called exactly once on exception
+def test_manifest_finalization_called_once_on_exception(tmp_path: Path):
+    dummy_spec = _make_dummy_spec(domain="kitchen")
+
+    with patch("mujoco_scenes.functional_tamp_pipeline.run.provider_for_mode") as mock_prov_factory, \
+         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.scene_for_variant"), \
+         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.run_to_plan", side_effect=ValueError("Perception crashed")), \
+         patch("mujoco_scenes.functional_tamp_pipeline.run._write_run_manifest", wraps=_write_run_manifest) as mock_manifest_writer:
+        mock_provider = MagicMock()
+        mock_provider.provide.return_value = dummy_spec
+        mock_prov_factory.return_value = mock_provider
+
+        with pytest.raises(ValueError, match="Perception crashed"):
+            run_pipeline(
+                domain="kitchen",
+                variant="K1",
+                mode="gt",
+                output_root=tmp_path,
+            )
+        assert mock_manifest_writer.call_count == 1
