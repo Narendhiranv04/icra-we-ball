@@ -479,3 +479,124 @@ def test_replay_with_random_search_bypasses_provider(tmp_path: Path):
     assert manifest["search_order_source_effective"] == "random"
     assert manifest["search_seed_requested"] == 7
     assert manifest["search_seed_effective"] == 7
+
+
+# 11. Manifest records visualization_requested flag correctly
+def test_manifest_visualization_requested_flag(tmp_path: Path):
+    dummy_spec = _make_dummy_spec(domain="kitchen")
+    dummy_result = PipelineResult(
+        domain="kitchen",
+        variant="K1",
+        mode="gt",
+        status="ACTION_SEQUENCE_READY",
+        assignment={"tool": "object_0001"},
+        plan=(),
+    )
+
+    with patch("mujoco_scenes.functional_tamp_pipeline.run.provider_for_mode") as mock_prov_factory, \
+         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.scene_for_variant"), \
+         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.run_to_plan", return_value=dummy_result):
+        mock_provider = MagicMock()
+        mock_provider.provide.return_value = dummy_spec
+        mock_prov_factory.return_value = mock_provider
+
+        # Default run: visualization_requested = False
+        run_pipeline(
+            domain="kitchen",
+            variant="K1",
+            mode="gt",
+            output_root=tmp_path / "default_run",
+        )
+        manifest_default = json.loads((tmp_path / "default_run" / "kitchen" / "K1" / "gt" / "run_manifest.json").read_text(encoding="utf-8"))
+        assert manifest_default["visualization_requested"] is False
+
+        # Visualized run: visualization_requested = True
+        run_pipeline(
+            domain="kitchen",
+            variant="K1",
+            mode="gt",
+            visualize=True,
+            output_root=tmp_path / "visualized_run",
+        )
+        manifest_viz = json.loads((tmp_path / "visualized_run" / "kitchen" / "K1" / "gt" / "run_manifest.json").read_text(encoding="utf-8"))
+        assert manifest_viz["visualization_requested"] is True
+
+
+# 12. Camera plumbing tests without MuJoCo
+def test_kitchen_camera_plumbing_surfaces_overview_image(tmp_path: Path):
+    from mujoco_scenes.sequential_inspection import run_fixed_order_inspection
+
+    class FakeScene:
+        def get_region_observation_states(self):
+            return {"C2": {}}
+
+    class FakeAdapter:
+        def inspect(self, region_id):
+            pass
+
+    class FakeSession:
+        def __init__(self):
+            self.events = []
+            self.latest_witness = {"status": "COMPLETE"}
+            self.next_stage = 1
+            self.registry = {"objects": []}
+        def append_event(self, event):
+            self.events.append(event)
+
+    stage_dir = tmp_path / "stage_000"
+    stage_dir.mkdir(parents=True, exist_ok=True)
+    overview_img = stage_dir / "overview.png"
+    overview_img.write_text("fake_png_data", encoding="utf-8")
+
+    def fake_observe(stage_label, region_opened):
+        cloud_mock = MagicMock(total_points=100)
+        return cloud_mock, stage_dir
+
+    events = []
+    def observer(event: str, payload: dict[str, Any]):
+        events.append((event, payload))
+
+    run_fixed_order_inspection(
+        FakeScene(),
+        FakeSession(),
+        ("C2",),
+        adapter=FakeAdapter(),
+        observe=fake_observe,
+        stop_on_complete=True,
+        observer=observer,
+    )
+
+    obs_events = [p for e, p in events if e == "observation_updated"]
+    assert len(obs_events) > 0
+    assert obs_events[0]["frame_path"] == str(overview_img)
+
+
+def test_workshop_camera_plumbing_copies_rgb_array():
+    import numpy as np
+    from mujoco_scenes.functional_tamp_pipeline.search import search_until_satisfied
+
+    class FakeWorkshopDomain:
+        def __init__(self):
+            self.latest_frame_rgb = np.zeros((100, 100, 3), dtype=np.uint8)
+        def observe_initial(self):
+            pass
+        def evaluate_satisfaction(self):
+            return SatisfactionResult(complete=True, status="SATISFIED", assignment={"driver": "d1"})
+        def open_region(self, region):
+            return {"success": True}
+        def observe_after_open(self, region):
+            pass
+
+    events = []
+    def observer(event: str, payload: dict[str, Any]):
+        events.append((event, payload))
+
+    domain = FakeWorkshopDomain()
+    spec = _make_dummy_spec(domain="workshop")
+    search_until_satisfied(domain, spec, observer=observer)
+
+    obs_events = [p for e, p in events if e == "observation_updated"]
+    assert len(obs_events) > 0
+    assert obs_events[0]["frame_rgb"] is not None
+    assert obs_events[0]["frame_rgb"].shape == (100, 100, 3)
+

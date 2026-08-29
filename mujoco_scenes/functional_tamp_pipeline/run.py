@@ -48,6 +48,7 @@ class _RunState:
     search_seed_effective: int | None = None
     resolved_search_order: tuple[str, ...] = ()
     exploration_actuation: str = "unknown"
+    visualization_requested: bool = False
     git_commit: str | None = None
     git_dirty: bool | None = None
     started_at_utc: str = ""
@@ -60,10 +61,11 @@ class _RunState:
 def _make_guarded_observer(
     observer: EventCallback | None,
     state: _RunState,
-) -> EventCallback:
+) -> EventCallback | None:
+    if observer is None:
+        return None
+
     def _guarded_callback(event_type: str, payload: dict[str, Any]) -> None:
-        if observer is None:
-            return
         enriched_payload = dict(payload)
         if event_type in {"search_region_selected", "search_region_opened"}:
             if "search_order_source_effective" not in enriched_payload and state.search_order_source_effective is not None:
@@ -84,6 +86,11 @@ def _make_guarded_observer(
                 "message": str(error),
             })
     return _guarded_callback
+
+
+def _emit_event(observer: EventCallback | None, event_type: str, payload: dict[str, Any]) -> None:
+    if observer is not None:
+        observer(event_type, payload)
 
 
 def _write_json(path: Path, payload: Any) -> None:
@@ -225,7 +232,7 @@ def _write_run_manifest(state: _RunState) -> None:
         "region_order_used": list(state.resolved_search_order),
         "exploration_actuation": state.exploration_actuation,
         "execution_state": "planning_only",
-        "visualization_requested": False,
+        "visualization_requested": state.visualization_requested,
         "git_commit": state.git_commit,
         "git_dirty": state.git_dirty,
         "started_at_utc": state.started_at_utc,
@@ -271,7 +278,7 @@ def _capture_workshop_vlm_inputs(scene: Any, output_dir: Path) -> list[Path]:
 def _run_pipeline_impl(
     *,
     state: _RunState,
-    guarded_observer: EventCallback,
+    guarded_observer: EventCallback | None,
     specification_json: Path | str | None,
     dry_run: bool,
     verbose: bool,
@@ -287,7 +294,7 @@ def _run_pipeline_impl(
             images = _render_initial(scene, state.run_dir / "vlm_inputs", 640, 480)
 
         print("[1/5] Functional specification", flush=True)
-        guarded_observer("stage_changed", {"stage": "specification"})
+        _emit_event(guarded_observer, "stage_changed", {"stage": "specification"})
         state.specification, state.spec_acquisition, state.specification_input = _load_or_acquire_specification(
             domain=state.domain,
             mode=state.mode,
@@ -309,7 +316,7 @@ def _run_pipeline_impl(
                 seed=state.search_seed_requested,
             )
         )
-        guarded_observer("spec_ready", {
+        _emit_event(guarded_observer, "spec_ready", {
             "graph": state.specification.to_dict(),
             "source": state.specification.source,
             "provider_region_ranking": list(state.specification.region_ranking),
@@ -319,9 +326,9 @@ def _run_pipeline_impl(
         })
 
         print("[2/5] Initial perception", flush=True)
-        guarded_observer("stage_changed", {"stage": "perception"})
+        _emit_event(guarded_observer, "stage_changed", {"stage": "perception"})
         print("[3/5] Functional grounding and ranked region search", flush=True)
-        guarded_observer("stage_changed", {"stage": "search_grounding"})
+        _emit_event(guarded_observer, "stage_changed", {"stage": "search_grounding"})
         result = run_to_plan(
             variant_label=state.variant,
             internal_variant=state.internal_variant,
@@ -336,8 +343,8 @@ def _run_pipeline_impl(
             print("[4/5] Role assignment", flush=True)
             print(json.dumps(result.assignment, indent=2, sort_keys=True), flush=True)
             print("[5/5] A* planning", flush=True)
-            guarded_observer("stage_changed", {"stage": "planning"})
-            guarded_observer("plan_ready", {
+            _emit_event(guarded_observer, "stage_changed", {"stage": "planning"})
+            _emit_event(guarded_observer, "plan_ready", {
                 "actions": list(result.plan),
                 "search_statistics": result.search_statistics,
             })
@@ -366,7 +373,7 @@ def _run_pipeline_impl(
                 images.append(path)
 
         print("[1/5] Functional specification", flush=True)
-        guarded_observer("stage_changed", {"stage": "specification"})
+        _emit_event(guarded_observer, "stage_changed", {"stage": "specification"})
         state.specification, state.spec_acquisition, state.specification_input = _load_or_acquire_specification(
             domain=state.domain,
             mode=state.mode,
@@ -388,7 +395,7 @@ def _run_pipeline_impl(
                 seed=state.search_seed_requested,
             )
         )
-        guarded_observer("spec_ready", {
+        _emit_event(guarded_observer, "spec_ready", {
             "graph": state.specification.to_dict(),
             "source": state.specification.source,
             "provider_region_ranking": list(state.specification.region_ranking),
@@ -398,7 +405,7 @@ def _run_pipeline_impl(
         })
 
         print("[2/5] Initial perception", flush=True)
-        guarded_observer("stage_changed", {"stage": "perception"})
+        _emit_event(guarded_observer, "stage_changed", {"stage": "perception"})
         print("[3/5] Global functional grounding", flush=True)
         result = run_to_plan(
             variant_label=state.variant,
@@ -412,8 +419,8 @@ def _run_pipeline_impl(
             print("[4/5] Role assignment", flush=True)
             print(json.dumps(result.assignment, indent=2, sort_keys=True), flush=True)
             print("[5/5] A* planning", flush=True)
-            guarded_observer("stage_changed", {"stage": "planning"})
-            guarded_observer("plan_ready", {
+            _emit_event(guarded_observer, "stage_changed", {"stage": "planning"})
+            _emit_event(guarded_observer, "plan_ready", {
                 "actions": list(result.plan),
                 "search_statistics": result.search_statistics,
             })
@@ -436,7 +443,7 @@ def _run_pipeline_impl(
         images = _capture_workshop_vlm_inputs(scene, state.run_dir / "vlm_inputs")
 
     print("[1/5] Functional specification", flush=True)
-    guarded_observer("stage_changed", {"stage": "specification"})
+    _emit_event(guarded_observer, "stage_changed", {"stage": "specification"})
     task = WorkshopDomainAdapter.task_instruction
     state.specification, state.spec_acquisition, state.specification_input = _load_or_acquire_specification(
         domain=state.domain,
@@ -459,7 +466,7 @@ def _run_pipeline_impl(
             seed=state.search_seed_requested,
         )
     )
-    guarded_observer("spec_ready", {
+    _emit_event(guarded_observer, "spec_ready", {
         "graph": state.specification.to_dict(),
         "source": state.specification.source,
         "provider_region_ranking": list(state.specification.region_ranking),
@@ -477,9 +484,9 @@ def _run_pipeline_impl(
         verbose=verbose,
     )
     print("[2/5] Initial perception", flush=True)
-    guarded_observer("stage_changed", {"stage": "perception"})
+    _emit_event(guarded_observer, "stage_changed", {"stage": "perception"})
     print("[3/5] Functional grounding and ranked region search", flush=True)
-    guarded_observer("stage_changed", {"stage": "search_grounding"})
+    _emit_event(guarded_observer, "stage_changed", {"stage": "search_grounding"})
     satisfaction, inspected = search_until_satisfied(
         adapter,
         state.specification,
@@ -514,7 +521,7 @@ def _run_pipeline_impl(
         print(f"{role} -> {satisfaction.assignment[role]}", flush=True)
 
     print("[5/5] A* planning", flush=True)
-    guarded_observer("stage_changed", {"stage": "planning"})
+    _emit_event(guarded_observer, "stage_changed", {"stage": "planning"})
     planned = plan_with_common_astar(
         WorkshopPlanningCompiler(), satisfaction.assignment, adapter.planning_context()
     )
@@ -524,7 +531,7 @@ def _run_pipeline_impl(
         "validation": planned.validation,
         "exploratory_open_actions_excluded": True,
     })
-    guarded_observer("plan_ready", {
+    _emit_event(guarded_observer, "plan_ready", {
         "actions": list(planned.actions),
         "search_statistics": planned.search.statistics,
     })
@@ -558,6 +565,7 @@ def run_pipeline(
     search_order: str = "auto",
     search_seed: int | None = None,
     specification_json: Path | str | None = None,
+    visualize: bool = False,
     observer: EventCallback | None = None,
     output_root: Path = DEFAULT_OUTPUT,
     dry_run: bool = False,
@@ -591,13 +599,14 @@ def run_pipeline(
         search_order=search_order,
         search_seed_requested=search_seed,
         exploration_actuation=exploration_actuation,
+        visualization_requested=visualize,
         git_commit=git_commit,
         git_dirty=git_dirty,
         started_at_utc=started_at_utc,
     )
     guarded_observer = _make_guarded_observer(observer, state)
 
-    guarded_observer("run_started", {
+    _emit_event(guarded_observer, "run_started", {
         "domain": state.domain,
         "variant": state.variant,
         "spec_mode": state.mode,
@@ -616,8 +625,8 @@ def run_pipeline(
             observation_images=observation_images,
         )
         state.terminal_status = result.status
-        guarded_observer("stage_changed", {"stage": "complete"})
-        guarded_observer("run_finished", {
+        _emit_event(guarded_observer, "stage_changed", {"stage": "complete"})
+        _emit_event(guarded_observer, "run_finished", {
             "terminal_status": result.status,
             "run_dir": str(state.run_dir),
             "inspected_regions": list(result.inspected_regions),
@@ -625,7 +634,7 @@ def run_pipeline(
         return result
     except Exception as error:
         state.terminal_status = "PIPELINE_EXCEPTION"
-        guarded_observer("run_failed", {
+        _emit_event(guarded_observer, "run_failed", {
             "error_type": type(error).__name__,
             "error_message": str(error),
             "run_dir": str(state.run_dir),
@@ -634,6 +643,12 @@ def run_pipeline(
     finally:
         state.finished_at_utc = datetime.now(timezone.utc).isoformat()
         state.runtime_sec = time.perf_counter() - start_t
+        if observer is not None and hasattr(observer, "drain_errors"):
+            try:
+                display_errors = observer.drain_errors()
+                state.observer_errors.extend(display_errors)
+            except Exception:
+                pass
         _safe_write_run_manifest(state)
 
 
@@ -666,8 +681,29 @@ def main() -> int:
         "--dry-run", action="store_true",
         help="Use direct simulator articulation instead of robot-actuated search OPEN.",
     )
+    parser.add_argument(
+        "--visualize", action="store_true",
+        help="Launch non-intrusive LiveMosaicViewer to monitor pipeline state in real time.",
+    )
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
+
+    visualizer = None
+    if args.visualize:
+        try:
+            from .live_visualizer import LivePipelineVisualizer
+            visualizer = LivePipelineVisualizer(
+                title=f"TAMP Pipeline - {args.domain.upper()} {args.variant} ({args.mode.upper()})"
+            )
+        except Exception as error:
+            print(
+                f"VISUALIZER WARNING: Could not initialize visualizer ({type(error).__name__}: {error}). "
+                "Proceeding in headless mode.",
+                file=sys.stderr,
+                flush=True,
+            )
+            visualizer = None
+
     try:
         result = run_pipeline(
             domain=args.domain,
@@ -676,6 +712,8 @@ def main() -> int:
             search_order=args.search_order,
             search_seed=args.search_seed,
             specification_json=args.specification_json,
+            visualize=args.visualize,
+            observer=visualizer,
             output_root=args.output_root,
             dry_run=args.dry_run,
             verbose=args.verbose,
@@ -686,6 +724,15 @@ def main() -> int:
         if args.verbose:
             traceback.print_exc()
         return 1
+    finally:
+        if visualizer is not None:
+            try:
+                visualizer.hold_until_closed()
+            except KeyboardInterrupt:
+                pass
+            finally:
+                visualizer.close()
+
     print(f"PIPELINE STATUS: {result.status}", flush=True)
     return 0 if result.status in {"ACTION_SEQUENCE_READY", "INFEASIBLE"} else 1
 

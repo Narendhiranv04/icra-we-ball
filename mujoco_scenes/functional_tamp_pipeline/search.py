@@ -37,11 +37,13 @@ def search_until_satisfied(
     order = tuple(search_order) if search_order is not None else tuple(specification.region_ranking)
     domain.observe_initial()
     sg_dict = _extract_scene_graph_dict(domain)
+    frame_rgb = getattr(domain, "latest_frame_rgb", None)
     if observer is not None:
         observer("observation_updated", {
             "stage": "initial",
             "inspected_regions": [],
             "scene_graph": sg_dict,
+            "frame_rgb": frame_rgb,
         })
 
     result = domain.evaluate_satisfaction()
@@ -78,11 +80,13 @@ def search_until_satisfied(
         inspected.append(region)
         domain.observe_after_open(region)
         sg_dict = _extract_scene_graph_dict(domain)
+        frame_rgb = getattr(domain, "latest_frame_rgb", None)
         if observer is not None:
             observer("observation_updated", {
                 "stage": f"after_{region}",
                 "inspected_regions": list(inspected),
                 "scene_graph": sg_dict,
+                "frame_rgb": frame_rgb,
             })
         result = domain.evaluate_satisfaction()
         emit(f"[SEARCH] Functional satisfaction: {result.status}")

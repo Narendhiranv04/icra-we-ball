@@ -131,10 +131,13 @@ def run_fixed_order_inspection(
     _cloud_run, stage_dir = observe("initial", None)
     print(f"  Witness: {_witness_status(session)}")
     print(f"  Saved: {stage_dir}")
+    overview_path = stage_dir / "overview.png"
+    frame_path_str = str(overview_path) if overview_path.exists() else None
     if observer is not None:
         observer("observation_updated", {
             "stage": "initial",
             "stage_dir": str(stage_dir),
+            "frame_path": frame_path_str,
             "inspected_regions": [],
         })
 
@@ -191,10 +194,13 @@ def run_fixed_order_inspection(
         )
         print(f"  Witness: {_witness_status(session)}")
         print(f"  Saved: {stage_dir}")
+        overview_path = stage_dir / "overview.png"
+        frame_path_str = str(overview_path) if overview_path.exists() else None
         if observer is not None:
             observer("observation_updated", {
                 "stage": f"after_{region_id}",
                 "stage_dir": str(stage_dir),
+                "frame_path": frame_path_str,
                 "inspected_regions": list(actually_inspected),
             })
         if stop_on_complete and complete(session):

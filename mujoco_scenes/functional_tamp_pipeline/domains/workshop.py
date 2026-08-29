@@ -278,6 +278,9 @@ class WorkshopDomainAdapter:
         observations = self.controller._capture_and_process_stage(
             stage_idx=self._stage, source_region_id=source_region
         )
+        if observations and len(observations) > 0 and getattr(observations[0], "rgb", None) is not None:
+            self.latest_frame_rgb = np.array(observations[0].rgb, copy=True)
+            self.latest_camera_id = getattr(observations[0], "camera_id", "WORKSHOP_CAMERA")
         if self._stage == 0:
             target = self.controller.geometric_grounder.observe_target_recess(
                 observations,
