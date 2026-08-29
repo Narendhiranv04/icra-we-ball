@@ -10,6 +10,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import time
 import traceback
 from typing import Any
@@ -199,6 +200,19 @@ def _write_run_manifest(state: _RunState) -> None:
         "artifacts": _collect_artifacts(state.run_dir),
     }
     _write_json(state.run_dir / "run_manifest.json", manifest)
+
+
+def _safe_write_run_manifest(state: _RunState) -> Exception | None:
+    try:
+        _write_run_manifest(state)
+        return None
+    except Exception as error:
+        print(
+            f"RUN MANIFEST WRITE FAILED: {type(error).__name__}: {error}",
+            file=sys.stderr,
+            flush=True,
+        )
+        return error
 
 
 def _capture_workshop_vlm_inputs(scene: Any, output_dir: Path) -> list[Path]:
@@ -476,7 +490,7 @@ def run_pipeline(
     finally:
         state.finished_at_utc = datetime.now(timezone.utc).isoformat()
         state.runtime_sec = time.perf_counter() - start_t
-        _write_run_manifest(state)
+        _safe_write_run_manifest(state)
 
 
 def main() -> int:

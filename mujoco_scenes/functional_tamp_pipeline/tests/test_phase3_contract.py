@@ -1,4 +1,4 @@
-"""Unit tests for Phase 3.0/3.0.1 contract: search order, specification replay, manifest, artifact discovery, and safety guards."""
+"""Unit tests for Phase 3 contract: search order, spec replay, manifest, artifact discovery, and failure isolation."""
 
 from __future__ import annotations
 
@@ -17,6 +17,7 @@ from mujoco_scenes.functional_tamp_pipeline.run import (
     _compute_file_sha256,
     _get_git_provenance,
     _load_or_acquire_specification,
+    _safe_write_run_manifest,
     _write_run_manifest,
     run_pipeline,
 )
@@ -366,7 +367,7 @@ def test_fixed_search_runtime_guard(tmp_path: Path):
             )
 
 
-# 19. Pass 3.0.1: Kitchen nested action plan discovery
+# 19. Kitchen nested action plan discovery
 def test_artifact_discovery_kitchen_nested(tmp_path: Path):
     run_dir = tmp_path / "kitchen_run"
     plan_dir = run_dir / "action_sequence"
@@ -380,7 +381,7 @@ def test_artifact_discovery_kitchen_nested(tmp_path: Path):
     assert artifacts["plan_grounding_audit"] == "plan_grounding_audit.json"
 
 
-# 20. Pass 3.0.1: Living Room plan and replay discovery
+# 20. Living Room plan and replay discovery
 def test_artifact_discovery_living_room(tmp_path: Path):
     run_dir = tmp_path / "lr_run"
     plan_dir = run_dir / "action_sequence"
@@ -394,7 +395,7 @@ def test_artifact_discovery_living_room(tmp_path: Path):
     assert artifacts["replay_validation"] == "action_sequence/replay_validation.json"
 
 
-# 21. Pass 3.0.1: Workshop root action plan discovery (BUG FIX)
+# 21. Workshop root action plan discovery
 def test_artifact_discovery_workshop_root(tmp_path: Path):
     run_dir = tmp_path / "workshop_run"
     run_dir.mkdir(parents=True)
@@ -409,7 +410,7 @@ def test_artifact_discovery_workshop_root(tmp_path: Path):
     assert artifacts["detection_diagnostics"] == "detection_diagnostics.json"
 
 
-# 22. Pass 3.0.1: Centralized finalization called exactly once on success
+# 22. Centralized finalization called exactly once on success
 def test_manifest_finalization_called_once_on_success(tmp_path: Path):
     dummy_spec = _make_dummy_spec(domain="kitchen")
     dummy_result = PipelineResult(
@@ -439,7 +440,7 @@ def test_manifest_finalization_called_once_on_success(tmp_path: Path):
         assert mock_manifest_writer.call_count == 1
 
 
-# 23. Pass 3.0.1: Centralized finalization called exactly once on infeasible
+# 23. Centralized finalization called exactly once on infeasible
 def test_manifest_finalization_called_once_on_infeasible(tmp_path: Path):
     dummy_spec = _make_dummy_spec(domain="kitchen")
     dummy_result = PipelineResult(
@@ -468,7 +469,7 @@ def test_manifest_finalization_called_once_on_infeasible(tmp_path: Path):
         assert mock_manifest_writer.call_count == 1
 
 
-# 24. Pass 3.0.1: Centralized finalization called exactly once on exception
+# 24. Centralized finalization called exactly once on exception
 def test_manifest_finalization_called_once_on_exception(tmp_path: Path):
     dummy_spec = _make_dummy_spec(domain="kitchen")
 
@@ -488,3 +489,94 @@ def test_manifest_finalization_called_once_on_exception(tmp_path: Path):
                 output_root=tmp_path,
             )
         assert mock_manifest_writer.call_count == 1
+
+
+# 25. Pass 3.0.2: SUCCESS + MANIFEST FAILURE
+def test_manifest_failure_on_success_is_non_intrusive(tmp_path: Path, capsys: pytest.CaptureFixture):
+    dummy_spec = _make_dummy_spec(domain="kitchen")
+    dummy_result = PipelineResult(
+        domain="kitchen",
+        variant="K1",
+        mode="gt",
+        status="ACTION_SEQUENCE_READY",
+        assignment={"tool": "object_0001"},
+        plan=({"action_index": 1, "operator": "PICK", "arguments": ["object_0001"]},),
+    )
+
+    with patch("mujoco_scenes.functional_tamp_pipeline.run.provider_for_mode") as mock_prov_factory, \
+         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.scene_for_variant"), \
+         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.run_to_plan", return_value=dummy_result), \
+         patch("mujoco_scenes.functional_tamp_pipeline.run._write_run_manifest", side_effect=OSError("disk full")):
+        mock_provider = MagicMock()
+        mock_provider.provide.return_value = dummy_spec
+        mock_prov_factory.return_value = mock_provider
+
+        res = run_pipeline(
+            domain="kitchen",
+            variant="K1",
+            mode="gt",
+            output_root=tmp_path,
+        )
+        assert res.status == "ACTION_SEQUENCE_READY"
+        assert res is dummy_result
+
+    captured = capsys.readouterr()
+    assert "RUN MANIFEST WRITE FAILED: OSError: disk full" in captured.err
+
+
+# 26. Pass 3.0.2: INFEASIBLE + MANIFEST FAILURE
+def test_manifest_failure_on_infeasible_is_non_intrusive(tmp_path: Path, capsys: pytest.CaptureFixture):
+    dummy_spec = _make_dummy_spec(domain="kitchen")
+    dummy_result = PipelineResult(
+        domain="kitchen",
+        variant="K7",
+        mode="gt",
+        status="INFEASIBLE",
+        failure_reason="NO_TOOL_OBSERVED",
+    )
+
+    with patch("mujoco_scenes.functional_tamp_pipeline.run.provider_for_mode") as mock_prov_factory, \
+         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.scene_for_variant"), \
+         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.run_to_plan", return_value=dummy_result), \
+         patch("mujoco_scenes.functional_tamp_pipeline.run._write_run_manifest", side_effect=PermissionError("permission denied")):
+        mock_provider = MagicMock()
+        mock_provider.provide.return_value = dummy_spec
+        mock_prov_factory.return_value = mock_provider
+
+        res = run_pipeline(
+            domain="kitchen",
+            variant="K7",
+            mode="gt",
+            output_root=tmp_path,
+        )
+        assert res.status == "INFEASIBLE"
+        assert res is dummy_result
+
+    captured = capsys.readouterr()
+    assert "RUN MANIFEST WRITE FAILED: PermissionError: permission denied" in captured.err
+
+
+# 27. Pass 3.0.2: PIPELINE EXCEPTION + MANIFEST FAILURE (DOUBLE FAILURE)
+def test_manifest_failure_on_pipeline_exception_preserves_original_exception(tmp_path: Path, capsys: pytest.CaptureFixture):
+    dummy_spec = _make_dummy_spec(domain="kitchen")
+
+    with patch("mujoco_scenes.functional_tamp_pipeline.run.provider_for_mode") as mock_prov_factory, \
+         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.scene_for_variant"), \
+         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.run_to_plan", side_effect=RuntimeError("original pipeline failure")), \
+         patch("mujoco_scenes.functional_tamp_pipeline.run._write_run_manifest", side_effect=OSError("manifest failure")):
+        mock_provider = MagicMock()
+        mock_provider.provide.return_value = dummy_spec
+        mock_prov_factory.return_value = mock_provider
+
+        with pytest.raises(RuntimeError) as exc_info:
+            run_pipeline(
+                domain="kitchen",
+                variant="K1",
+                mode="gt",
+                output_root=tmp_path,
+            )
+        assert str(exc_info.value) == "original pipeline failure"
+        assert type(exc_info.value) is RuntimeError
+
+    captured = capsys.readouterr()
+    assert "RUN MANIFEST WRITE FAILED: OSError: manifest failure" in captured.err
