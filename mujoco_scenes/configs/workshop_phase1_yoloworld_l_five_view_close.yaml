@@ -46,11 +46,11 @@ tracking:
   stage_object_merge_distance_threshold_m: 0.015
 semantic_fusion:
   winner_policy: weighted_score_then_supporting_views
-  minimum_supporting_views: 2
+  minimum_supporting_views: 1
   minimum_mean_confidence: 0.001
   minimum_winning_label_margin: 0.0005
   maximum_conflicting_view_fraction: 0.60
-  maximum_conflicting_score_fraction: 0.20
+  maximum_conflicting_score_fraction: 0.60
   minimum_conflicting_mean_confidence: 0.001
   proposal_crop_score_multiplier: 20.0
 inspection:

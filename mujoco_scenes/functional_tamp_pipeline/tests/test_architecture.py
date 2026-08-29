@@ -872,6 +872,7 @@ def test_workshop_sync_common_graph_calls_real_geometric_grounder_methods() -> N
         "head_diameter_m": 0.006,
         "maximum_cross_section_m": 0.006,
         "total_length_m": 0.015,
+        "measurement_provenance": {"camera_ids": ["cam1", "cam2"]},
     }
 
     adapter.controller.tracker._tracks = {

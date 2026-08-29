@@ -119,7 +119,7 @@ class PersistentInstanceTracker:
             if not camera:
                 continue
 
-            quality = float(obs.get("observation_quality", 1.0))
+            quality = float(obs.get("physical_support_quality", 1.0))
             is_crop = (obs.get("inference_source") == "proposal_crop")
             mult = crop_mult if is_crop else 1.0
             hypotheses = [{

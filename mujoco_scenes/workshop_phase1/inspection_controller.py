@@ -558,8 +558,6 @@ class WorkshopPhase1InspectionController:
                         yx1, yy1, yx2, yy2 = ym.bounding_box_xyxy
                         ix1, iy1 = max(ox1, yx1), max(oy1, yy1)
                         ix2, iy2 = min(ox2, yx2), min(oy2, yy2)
-                        if source_region_id == "TOOL_CABINET":
-                            print(f"DEBUG_BBOX: cam={obs.camera_id} om_bbox=[{ox1},{oy1},{ox2},{oy2}] ym_label={ym.canonical_label} ym_bbox=[{yx1},{yy1},{yx2},{yy2}] overlap={ix2>ix1 and iy2>iy1}")
                         if ix2 > ix1 and iy2 > iy1:
                             inter = (ix2 - ix1) * (iy2 - iy1)
                             union = om_area + (yx2 - yx1) * (yy2 - yy1) - inter
@@ -591,8 +589,6 @@ class WorkshopPhase1InspectionController:
                             # Add confidence to break ties between multiple proposal crop detections on the same crop
                             score = mult * (0.35 * iou + 0.35 * mask_overlap + 0.30 * proximity + 0.05 * ym_conf)
                             eligible = iou >= 0.05 or mask_overlap >= 0.20 or distance <= 0.06
-                            if source_region_id == "TOOL_CABINET":
-                                print(f"DEBUG: om={om.camera_id} ym={ym.canonical_label} iou={iou:.3f} mo={mask_overlap:.3f} dist={distance:.3f} eligible={eligible} score={score:.3f} best={best_score:.3f}")
                             if eligible and score > best_score:
                                 best_score = score
                                 best_yolo = ym
@@ -655,8 +651,6 @@ class WorkshopPhase1InspectionController:
                     else:
                         om.canonical_label = "unknown"
                         om.raw_label = "unknown"
-                        om.confidence = 0.0
-                        om.predicted_label = "unknown"
                         om.confidence = 0.0
                         om.predicted_label = "unknown"
 

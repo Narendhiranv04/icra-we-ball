@@ -157,15 +157,18 @@ def test_result_records_image_provenance_and_no_execution(observation_image):
     assert transport.calls == 1
 
 
-def test_missing_geometric_property_fails_post_response(observation_image):
-    pytest.skip("Pass 2A removed the strict requirement constraint to allow organic VLM output")
+def test_vlm_organic_geometric_property_accepted(observation_image):
+    # Pass 2A removed strict requirement constraints to allow organic VLM output
     document = natural_decomposition()
+    # The VLM might omit or rephrase geometric properties; we just parse what we get.
     document["functional_requirements"][0]["required_properties"] = [
-        "must reach the screw head"
+        "must be capable of reaching the deep screw head recess"
     ]
     provider, _ = provider_for(document)
-    with pytest.raises(ValueError, match="omitted required qualitative properties"):
-        provider.get_requirements(observation_images=[observation_image])
+    # This should not raise any exceptions
+    graph = provider.get_requirements(observation_images=[observation_image])
+    assert graph is not None
+    # The string is just captured as qualitative context (if at all) but does not crash.
 
 
 def test_transport_schema_rejects_old_candidate_types_and_extra_fields():
