@@ -4,11 +4,12 @@ Evaluate functional TAMP variants across benchmark domains (Kitchen, Living Room
 Provides clean execution, return code checking, artifact inspection, plan validation,
 grounding audits, structured JSON/CSV logging, and summary reporting.
 
-Extended in Pass 3.3 for controlled search experiments:
+Extended in Pass 3.3 / 3.3.1 for controlled search experiments:
 - GT Oracle, Provider (FM-guided when VLM), Seeded Random
 - Multi-seed random trial output isolation
-- Exact G_F replay and SHA-256 pairing verification
-- Summary aggregation for multi-seed random trials
+- Exact G_F replay and pre-run/post-run SHA-256 pairing verification
+- Authoritative manifest provenance consistency checking
+- Summary aggregation for multi-seed random trials with dynamic P(complete by k)
 """
 
 import argparse
@@ -158,20 +159,23 @@ def compute_file_sha256(file_path: str) -> str:
 def parse_random_seeds(seeds_arg: Optional[str]) -> Optional[List[int]]:
     """
     Parse comma-separated seed list string into a list of non-negative integers.
-    Rejects negatives, duplicates, empty entries, and non-integers.
+    Strictly rejects empty tokens (e.g. '0,,2', '0,', ',0', '0, ,2'), negatives, duplicates, and non-integers.
     """
     if seeds_arg is None:
         return None
-    raw_parts = [p.strip() for p in seeds_arg.split(",") if p.strip()]
-    if not raw_parts:
+    raw_tokens = seeds_arg.split(",")
+    if not raw_tokens:
         raise ValueError("Empty --random-seeds argument.")
     seeds: List[int] = []
     seen = set()
-    for p in raw_parts:
+    for token in raw_tokens:
+        stripped = token.strip()
+        if not stripped:
+            raise ValueError(f"Empty token in --random-seeds: '{seeds_arg}'")
         try:
-            val = int(p)
+            val = int(stripped)
         except ValueError:
-            raise ValueError(f"Invalid integer in --random-seeds: '{p}'")
+            raise ValueError(f"Invalid integer in --random-seeds: '{stripped}'")
         if val < 0:
             raise ValueError(f"Negative seed not permitted in --random-seeds: {val}")
         if val in seen:
@@ -222,6 +226,7 @@ def evaluate_variant(
     search_order: Optional[str] = None,
     search_seed: Optional[int] = None,
     specification_json: Optional[str] = None,
+    source_specification_sha256: Optional[str] = None,
     trial_output_root: Optional[str] = None,
     trial_id: Optional[str] = None,
 ) -> Dict[str, Any]:
@@ -231,6 +236,15 @@ def evaluate_variant(
     """
     expected = EXPECTED[domain][variant]
     actual_runner_output_root = trial_output_root if trial_output_root is not None else output_root
+
+    # Compute source specification hash before subprocess launch if not precomputed
+    source_spec_sha256_before = source_specification_sha256
+    source_hash_error_before = False
+    if specification_json is not None and source_spec_sha256_before is None:
+        try:
+            source_spec_sha256_before = compute_file_sha256(specification_json)
+        except Exception:
+            source_hash_error_before = True
 
     cmd = build_runner_command(
         domain=domain,
@@ -282,44 +296,94 @@ def evaluate_variant(
     manifest = load_run_manifest(run_dir)
     manifest_path = os.path.join(run_dir, "run_manifest.json") if manifest is not None else None
 
-    search_order_requested = search_order or "auto"
-    search_order_effective = None
-    search_seed_requested = search_seed
-    search_seed_effective = None
-    provider_region_ranking: List[str] = []
-    region_order_used: List[str] = []
-    exploration_actuation = "unknown"
-    spec_acquisition = "unknown"
-    spec_sha256 = None
+    evaluator_mode_requested = mode
+    evaluator_search_order_requested = search_order or "auto"
+    evaluator_search_seed_requested = search_seed
 
-    if manifest:
-        search_order_effective = manifest.get("search_order_source_effective")
-        search_seed_effective = manifest.get("search_seed_effective")
-        provider_region_ranking = list(manifest.get("provider_region_ranking", []))
-        region_order_used = list(manifest.get("region_order_used", []))
-        exploration_actuation = manifest.get("exploration_actuation", "unknown")
-        spec_acquisition = manifest.get("spec_acquisition", "unknown")
-        spec_sha256 = manifest.get("specification_sha256")
-    elif domain == "living_room":
-        search_order_effective = "not_applicable"
+    manifest_spec_mode = manifest.get("spec_mode") if manifest else None
+    manifest_search_order_requested = manifest.get("search_order_source_requested") if manifest else None
+    manifest_search_order_effective = manifest.get("search_order_source_effective") if manifest else None
+    manifest_search_seed_requested = manifest.get("search_seed_requested") if manifest else None
+    manifest_search_seed_effective = manifest.get("search_seed_effective") if manifest else None
+    manifest_terminal_status = manifest.get("terminal_status") if manifest else None
 
-    # Replay SHA verification
-    source_spec_sha256 = None
+    provider_region_ranking: List[str] = list(manifest.get("provider_region_ranking", [])) if manifest else []
+    region_order_used: List[str] = list(manifest.get("region_order_used", [])) if manifest else []
+    exploration_actuation = manifest.get("exploration_actuation", "unknown") if manifest else "unknown"
+    spec_acquisition = manifest.get("spec_acquisition", "unknown") if manifest else "unknown"
+    manifest_spec_sha256 = manifest.get("specification_sha256") if manifest else None
+
+    # Provenance consistency checks
+    provenance_mismatches: List[str] = []
+    if manifest is not None:
+        if manifest_spec_mode != evaluator_mode_requested:
+            provenance_mismatches.append(f"spec_mode: evaluator='{evaluator_mode_requested}' != manifest='{manifest_spec_mode}'")
+        if manifest_search_order_requested != evaluator_search_order_requested:
+            provenance_mismatches.append(f"search_order_requested: evaluator='{evaluator_search_order_requested}' != manifest='{manifest_search_order_requested}'")
+        if evaluator_search_seed_requested is not None and manifest_search_seed_requested != evaluator_search_seed_requested:
+            provenance_mismatches.append(f"search_seed: evaluator={evaluator_search_seed_requested} != manifest={manifest_search_seed_requested}")
+        if is_completed and actual in {"ACTION_SEQUENCE_READY", "INFEASIBLE"} and manifest_terminal_status != actual:
+            provenance_mismatches.append(f"terminal_status: result.json='{actual}' != manifest='{manifest_terminal_status}'")
+        provenance_match = (len(provenance_mismatches) == 0)
+    else:
+        provenance_match = None
+
+    # Replay SHA verification and source immutability check
+    source_spec_sha256_after = None
+    source_spec_unchanged = None
+    pairing_status = "NOT_APPLICABLE"
     spec_hash_match = None
-    if specification_json is not None:
-        try:
-            source_spec_sha256 = compute_file_sha256(specification_json)
-            if spec_sha256 is not None:
-                spec_hash_match = (source_spec_sha256 == spec_sha256)
-                if not spec_hash_match:
-                    failure_reason = f"specification_sha256 mismatch with replayed source: {spec_sha256} != {source_spec_sha256}"
-                    actual = "ERROR_SPEC_HASH_MISMATCH"
-                    is_completed = False
-        except Exception as e:
-            spec_hash_match = False
-            failure_reason = f"failed to hash source spec: {e}"
 
+    if specification_json is not None:
+        if source_hash_error_before or source_spec_sha256_before is None:
+            pairing_status = "SOURCE_HASH_ERROR"
+            spec_hash_match = False
+        else:
+            try:
+                source_spec_sha256_after = compute_file_sha256(specification_json)
+                source_spec_unchanged = (source_spec_sha256_before == source_spec_sha256_after)
+            except Exception:
+                source_spec_unchanged = False
+
+            if source_spec_unchanged is False:
+                pairing_status = "SOURCE_CHANGED"
+                spec_hash_match = False
+            elif manifest is None:
+                pairing_status = "MANIFEST_MISSING"
+                spec_hash_match = False
+            elif manifest_spec_sha256 is None:
+                pairing_status = "MANIFEST_HASH_MISSING"
+                spec_hash_match = False
+            elif source_spec_sha256_before != manifest_spec_sha256:
+                pairing_status = "HASH_MISMATCH"
+                spec_hash_match = False
+            else:
+                pairing_status = "VERIFIED"
+                spec_hash_match = True
+
+    # Evaluation validity determination (scientific condition validity)
+    evaluation_valid = True
+    evaluation_failure_reasons: List[str] = []
+
+    if not is_completed:
+        evaluation_valid = False
+        evaluation_failure_reasons.append(f"pipeline did not complete ({failure_reason or actual})")
+
+    if provenance_match is False:
+        evaluation_valid = False
+        evaluation_failure_reasons.extend(provenance_mismatches)
+
+    if specification_json is not None:
+        if pairing_status != "VERIFIED":
+            evaluation_valid = False
+            evaluation_failure_reasons.append(f"pairing_status: {pairing_status}")
+
+    evaluation_failure_reason = "; ".join(evaluation_failure_reasons) if evaluation_failure_reasons else None
+
+    # Match and valid_match calculations
     match = "YES" if actual == expected else "NO"
+    valid_match = ("YES" if actual == expected else "NO") if evaluation_valid else "N/A"
+
     inspection_count = len(inspected_regions)
     combined_count = inspection_count + plan_len
 
@@ -335,18 +399,23 @@ def evaluate_variant(
     ggr_path = os.path.join(run_dir, "graph_grounding_result.json")
     audit_path = os.path.join(run_dir, "plan_grounding_audit.json")
 
+    # Effective search order resolution for compatibility field
+    search_order_effective = manifest_search_order_effective
+    if search_order_effective is None and domain == "living_room":
+        search_order_effective = "not_applicable"
+
     # Condition label derivation
     if domain == "living_room":
         condition_label = f"{mode}_living_room"
-    elif search_order_requested == "random" or search_order_effective == "random":
-        seed_str = f"{search_seed_requested:03d}" if search_seed_requested is not None else "none"
+    elif evaluator_search_order_requested == "random" or search_order_effective == "random":
+        seed_str = f"{evaluator_search_seed_requested:03d}" if evaluator_search_seed_requested is not None else "none"
         condition_label = f"{mode}_random_seed_{seed_str}"
-    elif (search_order_effective or search_order_requested) == "oracle":
+    elif (search_order_effective or evaluator_search_order_requested) == "oracle":
         condition_label = f"{mode}_oracle"
-    elif (search_order_effective or search_order_requested) == "provider":
+    elif (search_order_effective or evaluator_search_order_requested) == "provider":
         condition_label = f"{mode}_provider"
     else:
-        condition_label = f"{mode}_{search_order_requested}"
+        condition_label = f"{mode}_{evaluator_search_order_requested}"
 
     return {
         "domain": domain,
@@ -354,6 +423,9 @@ def evaluate_variant(
         "expected_status": expected,
         "actual_status": actual,
         "match": match,
+        "valid_match": valid_match,
+        "evaluation_valid": evaluation_valid,
+        "evaluation_failure_reason": evaluation_failure_reason,
         "return_code": proc.returncode,
         "completed": is_completed,
         "runtime_sec": runtime,
@@ -371,19 +443,33 @@ def evaluate_variant(
         "result_json_path": res_file,
         "graph_grounding_path": ggr_path if os.path.exists(ggr_path) else None,
         "audit_path": audit_path if os.path.exists(audit_path) else None,
-        "spec_mode": mode,
+        "spec_mode": manifest_spec_mode or mode,
         "condition_label": condition_label,
-        "search_order_requested": search_order_requested,
+        "search_order_requested": manifest_search_order_requested or evaluator_search_order_requested,
         "search_order_effective": search_order_effective,
-        "search_seed_requested": search_seed_requested,
-        "search_seed_effective": search_seed_effective,
+        "search_seed_requested": manifest_search_seed_requested if manifest_search_seed_requested is not None else evaluator_search_seed_requested,
+        "search_seed_effective": manifest_search_seed_effective,
+        "evaluator_mode_requested": evaluator_mode_requested,
+        "evaluator_search_order_requested": evaluator_search_order_requested,
+        "evaluator_search_seed_requested": evaluator_search_seed_requested,
+        "manifest_spec_mode": manifest_spec_mode,
+        "manifest_search_order_requested": manifest_search_order_requested,
+        "manifest_search_order_effective": manifest_search_order_effective,
+        "manifest_search_seed_requested": manifest_search_seed_requested,
+        "manifest_search_seed_effective": manifest_search_seed_effective,
+        "manifest_terminal_status": manifest_terminal_status,
+        "provenance_match": provenance_match,
+        "provenance_mismatches": provenance_mismatches,
         "provider_region_ranking": provider_region_ranking,
         "region_order_used": region_order_used,
         "exploration_actuation": exploration_actuation,
         "spec_acquisition": spec_acquisition,
-        "specification_sha256": spec_sha256,
+        "specification_sha256": manifest_spec_sha256,
         "source_specification_path": specification_json,
-        "source_specification_sha256": source_spec_sha256,
+        "source_specification_sha256": source_spec_sha256_before,
+        "source_specification_sha256_after": source_spec_sha256_after,
+        "source_specification_unchanged": source_spec_unchanged,
+        "pairing_status": pairing_status,
         "specification_hash_match": spec_hash_match,
         "run_manifest_path": manifest_path,
         "trial_id": trial_id or f"{domain}_{variant}_{mode}",
@@ -398,8 +484,8 @@ def aggregate_random_trials(
 ) -> Tuple[Dict[str, Any], str, str]:
     """
     Aggregate repeated random seed trials per (domain, variant).
-    Computes descriptive statistics (mean, population std, median, min, max) and P(grounding complete by k).
-    Produces random_aggregate.json and random_aggregate.csv at output_root.
+    Computes descriptive statistics (mean, population std, median, min, max) and dynamic P(grounding complete by k).
+    Produces random_aggregate.json and random_aggregate.csv at output_root with dynamic global max k.
     """
     grouped: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
     for r in results:
@@ -407,11 +493,14 @@ def aggregate_random_trials(
         grouped.setdefault(key, []).append(r)
 
     aggregates_by_variant = []
+    global_max_k = 0
+
     for (dom, var), group_rows in sorted(grouped.items()):
         n_trials = len(group_rows)
         seeds = [r["search_seed_requested"] for r in group_rows if r.get("search_seed_requested") is not None]
-        valid_rows = [r for r in group_rows if r.get("completed")]
+        valid_rows = [r for r in group_rows if r.get("evaluation_valid") is True]
         n_valid = len(valid_rows)
+        n_invalid = n_trials - n_valid
         expected_status = EXPECTED[dom][var]
 
         status_counts = {}
@@ -419,11 +508,20 @@ def aggregate_random_trials(
             st = r.get("actual_status", "UNKNOWN")
             status_counts[st] = status_counts.get(st, 0) + 1
 
-        match_count = sum(1 for r in group_rows if r.get("match") == "YES")
-        match_rate = (match_count / n_trials) if n_trials > 0 else 0.0
+        pairing_counts = {}
+        for r in group_rows:
+            ps = r.get("pairing_status", "NOT_APPLICABLE")
+            pairing_counts[ps] = pairing_counts.get(ps, 0) + 1
+
+        prov_failures = sum(1 for r in group_rows if r.get("provenance_match") is False)
+
+        match_count_all = sum(1 for r in valid_rows if r.get("match") == "YES")
+        match_rate_all = (match_count_all / n_trials) if n_trials > 0 else 0.0
+        match_rate_valid = (match_count_all / n_valid) if n_valid > 0 else None
 
         gr_complete_count = sum(1 for r in valid_rows if r.get("grounding_complete") is True)
         gr_complete_rate = (gr_complete_count / n_trials) if n_trials > 0 else 0.0
+        gr_complete_rate_valid = (gr_complete_count / n_valid) if n_valid > 0 else None
 
         # Inspection count statistics over valid completed trials
         if valid_rows:
@@ -436,8 +534,9 @@ def aggregate_random_trials(
         else:
             insp_mean, insp_std, insp_median, insp_min, insp_max = 0.0, 0.0, 0.0, 0, 0
 
-        # Runtime statistics over all attempted trials
-        runtimes = [r["runtime_sec"] for r in group_rows]
+        # Runtime statistics over valid completed trials (or all rows if none valid)
+        target_runtime_rows = valid_rows if valid_rows else group_rows
+        runtimes = [r["runtime_sec"] for r in target_runtime_rows]
         rt_mean = statistics.mean(runtimes) if runtimes else 0.0
         rt_std = statistics.pstdev(runtimes) if len(runtimes) > 1 else 0.0
 
@@ -457,22 +556,22 @@ def aggregate_random_trials(
         else:
             replay_valid_rate = None
 
-        # Hash match over all trials
-        has_hash_check = any(r.get("specification_hash_match") is not None for r in group_rows)
-        if has_hash_check:
-            spec_hash_all_match = all(r.get("specification_hash_match") is True for r in group_rows)
+        # Specification hash all match
+        has_replay = any(r.get("pairing_status") != "NOT_APPLICABLE" for r in group_rows)
+        if has_replay:
+            spec_hash_all_match = all(r.get("pairing_status") == "VERIFIED" for r in group_rows)
         else:
             spec_hash_all_match = None
 
-        # P(grounding complete by k)
-        # Determine max_k from observed inspection sequences
-        max_k_obs = 0
-        for r in group_rows:
-            max_k_obs = max(max_k_obs, len(r.get("inspected_regions", [])), len(r.get("region_order_used", [])))
-        max_k = max(max_k_obs, 4)
+        # Dynamic k range definition based on region_order_used length (fallback to inspected_regions)
+        candidate_lens = [len(r.get("region_order_used", [])) for r in group_rows if r.get("region_order_used")]
+        if not candidate_lens:
+            candidate_lens = [len(r.get("inspected_regions", [])) for r in group_rows]
+        variant_max_k = max(candidate_lens) if candidate_lens else 0
+        global_max_k = max(global_max_k, variant_max_k)
 
         p_grounding_complete_by_k = {}
-        for k in range(max_k + 1):
+        for k in range(variant_max_k + 1):
             succ = sum(1 for r in valid_rows if r.get("grounding_complete") is True and r["inspection_count"] <= k)
             p_k = (succ / n_trials) if n_trials > 0 else 0.0
             p_grounding_complete_by_k[str(k)] = round(p_k, 4)
@@ -483,10 +582,16 @@ def aggregate_random_trials(
             "n_trials": n_trials,
             "seeds": seeds,
             "n_valid_trials": n_valid,
+            "evaluation_invalid_count": n_invalid,
             "expected_status": expected_status,
             "actual_status_counts": status_counts,
-            "expected_match_rate": round(match_rate, 4),
+            "pairing_status_counts": pairing_counts,
+            "provenance_failure_count": prov_failures,
+            "expected_match_rate": round(match_rate_all, 4),
+            "expected_match_rate_all_attempts": round(match_rate_all, 4),
+            "expected_match_rate_valid_trials": round(match_rate_valid, 4) if match_rate_valid is not None else None,
             "grounding_complete_rate": round(gr_complete_rate, 4),
+            "grounding_complete_rate_valid_trials": round(gr_complete_rate_valid, 4) if gr_complete_rate_valid is not None else None,
             "inspection_count_mean": round(insp_mean, 4),
             "inspection_count_std": round(insp_std, 4),
             "inspection_count_median": insp_median,
@@ -498,13 +603,15 @@ def aggregate_random_trials(
             "plan_length_std": round(pl_std, 4),
             "replay_valid_rate": round(replay_valid_rate, 4) if replay_valid_rate is not None else None,
             "specification_hash_all_match": spec_hash_all_match,
+            "variant_max_k": variant_max_k,
             "p_grounding_complete_by_k": p_grounding_complete_by_k,
         })
 
     aggregate_summary = {
-        "schema_version": 1,
+        "schema_version": 2,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "std_metric": "population_standard_deviation (statistics.pstdev)",
+        "global_max_k": global_max_k,
         "aggregates": aggregates_by_variant,
     }
 
@@ -512,44 +619,54 @@ def aggregate_random_trials(
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(aggregate_summary, f, indent=2)
 
+    # Dynamic CSV generation up to global_max_k
     csv_path = os.path.join(output_root, "random_aggregate.csv")
+    csv_headers = [
+        "Domain",
+        "Variant",
+        "NTrials",
+        "NValidTrials",
+        "EvaluationInvalidCount",
+        "ExpectedStatus",
+        "ExpectedMatchRate",
+        "ExpectedMatchRateAllAttempts",
+        "ExpectedMatchRateValidTrials",
+        "GroundingCompleteRate",
+        "GroundingCompleteRateValidTrials",
+        "InspectionCountMean",
+        "InspectionCountStd",
+        "InspectionCountMedian",
+        "InspectionCountMin",
+        "InspectionCountMax",
+        "RuntimeMean",
+        "RuntimeStd",
+        "PlanLengthMean",
+        "PlanLengthStd",
+        "ReplayValidRate",
+        "PairingStatusCounts",
+        "ProvenanceFailureCount",
+        "SpecificationHashAllMatch",
+    ]
+    for k in range(global_max_k + 1):
+        csv_headers.append(f"PCompleteByK{k}")
+
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow([
-            "Domain",
-            "Variant",
-            "NTrials",
-            "NValidTrials",
-            "ExpectedStatus",
-            "ExpectedMatchRate",
-            "GroundingCompleteRate",
-            "InspectionCountMean",
-            "InspectionCountStd",
-            "InspectionCountMedian",
-            "InspectionCountMin",
-            "InspectionCountMax",
-            "RuntimeMean",
-            "RuntimeStd",
-            "PlanLengthMean",
-            "PlanLengthStd",
-            "ReplayValidRate",
-            "SpecificationHashAllMatch",
-            "PCompleteByK0",
-            "PCompleteByK1",
-            "PCompleteByK2",
-            "PCompleteByK3",
-            "PCompleteByK4",
-        ])
+        writer.writerow(csv_headers)
         for agg in aggregates_by_variant:
             p_k = agg["p_grounding_complete_by_k"]
-            writer.writerow([
+            row = [
                 agg["domain"],
                 agg["variant"],
                 agg["n_trials"],
                 agg["n_valid_trials"],
+                agg["evaluation_invalid_count"],
                 agg["expected_status"],
                 f"{agg['expected_match_rate']:.4f}",
+                f"{agg['expected_match_rate_all_attempts']:.4f}",
+                f"{agg['expected_match_rate_valid_trials']:.4f}" if agg["expected_match_rate_valid_trials"] is not None else "N/A",
                 f"{agg['grounding_complete_rate']:.4f}",
+                f"{agg['grounding_complete_rate_valid_trials']:.4f}" if agg["grounding_complete_rate_valid_trials"] is not None else "N/A",
                 f"{agg['inspection_count_mean']:.4f}",
                 f"{agg['inspection_count_std']:.4f}",
                 f"{agg['inspection_count_median']}",
@@ -560,13 +677,13 @@ def aggregate_random_trials(
                 f"{agg['plan_length_mean']:.4f}",
                 f"{agg['plan_length_std']:.4f}",
                 f"{agg['replay_valid_rate']:.4f}" if agg["replay_valid_rate"] is not None else "N/A",
+                json.dumps(agg["pairing_status_counts"]),
+                agg["provenance_failure_count"],
                 str(agg["specification_hash_all_match"]),
-                p_k.get("0", "N/A"),
-                p_k.get("1", "N/A"),
-                p_k.get("2", "N/A"),
-                p_k.get("3", "N/A"),
-                p_k.get("4", "N/A"),
-            ])
+            ]
+            for k in range(global_max_k + 1):
+                row.append(str(p_k.get(str(k), "N/A")))
+            writer.writerow(row)
 
     return aggregate_summary, json_path, csv_path
 
@@ -702,39 +819,54 @@ def main() -> None:
         )
         sys.exit(1)
 
-    # Preflight Check 7: Replay specification preflight across ALL queued variants
-    spec_paths_by_variant: Dict[Tuple[str, str], str] = {}
+    # Preflight Check 7: Replay specification preflight across ALL queued variants with SHA-256 precomputation
+    spec_info_by_variant: Dict[Tuple[str, str], Dict[str, str]] = {}
     if args.specification_root:
         missing_specs = []
+        hashing_failures = []
         for d, v in variant_queue:
             spec_candidate = os.path.join(args.specification_root, d, v, args.mode, "functional_specification.json")
             if not os.path.isfile(spec_candidate):
                 missing_specs.append((d, v, spec_candidate))
             else:
-                spec_paths_by_variant[(d, v)] = spec_candidate
+                try:
+                    sha_val = compute_file_sha256(spec_candidate)
+                    spec_info_by_variant[(d, v)] = {
+                        "path": spec_candidate,
+                        "sha256": sha_val,
+                    }
+                except Exception as e:
+                    hashing_failures.append((d, v, spec_candidate, str(e)))
 
-        if missing_specs:
-            print(
-                f"Error: Preflight failed. Missing {len(missing_specs)} replayed specification file(s) in {args.specification_root}:",
-                file=sys.stderr,
-            )
-            for d, v, path in missing_specs[:5]:
-                print(f"  - [{d} {v}]: {path}", file=sys.stderr)
-            if len(missing_specs) > 5:
-                print(f"  ... and {len(missing_specs) - 5} more.", file=sys.stderr)
+        if missing_specs or hashing_failures:
+            if missing_specs:
+                print(
+                    f"Error: Preflight failed. Missing {len(missing_specs)} replayed specification file(s) in {args.specification_root}:",
+                    file=sys.stderr,
+                )
+                for d, v, path in missing_specs[:5]:
+                    print(f"  - [{d} {v}]: {path}", file=sys.stderr)
+                if len(missing_specs) > 5:
+                    print(f"  ... and {len(missing_specs) - 5} more.", file=sys.stderr)
+            if hashing_failures:
+                print(
+                    f"Error: Preflight failed. Unable to hash {len(hashing_failures)} replayed specification file(s):",
+                    file=sys.stderr,
+                )
+                for d, v, path, err in hashing_failures[:5]:
+                    print(f"  - [{d} {v}]: {path} ({err})", file=sys.stderr)
             sys.exit(1)
 
     os.makedirs(args.output_root, exist_ok=False)
 
     # Build sequence of trial runs
-    # If random seeds list provided, expand trials across seeds
     seeds_list: List[Optional[int]] = [args.search_seed] if args.search_seed is not None else (parsed_seeds if parsed_seeds is not None else [None])
-    is_multi_seed_random = (search_order == "random" and len(seeds_list) > 1)
 
     results: List[Dict[str, Any]] = []
     attempted_count = 0
     completed_count = 0
     matching_count = 0
+    valid_count = 0
 
     print(
         f"{'Domain':<12} {'Variant':<8} {'Expected':<22} {'Actual':<22} {'Match':<6} "
@@ -744,12 +876,14 @@ def main() -> None:
     print("-" * 175)
 
     for domain, variant in variant_queue:
-        spec_json_path = spec_paths_by_variant.get((domain, variant))
+        spec_info = spec_info_by_variant.get((domain, variant))
+        spec_json_path = spec_info["path"] if spec_info else None
+        spec_sha256_pre = spec_info["sha256"] if spec_info else None
+
         for seed_val in seeds_list:
             attempted_count += 1
 
             if search_order == "random" and seed_val is not None:
-                # Isolated directory structure for seeded random trials
                 trial_output_root = os.path.join(args.output_root, "trials", "random", f"seed_{seed_val:03d}")
                 trial_id = f"{domain}_{variant}_{args.mode}_random_seed_{seed_val:03d}"
             else:
@@ -764,6 +898,7 @@ def main() -> None:
                 search_order=search_order,
                 search_seed=seed_val,
                 specification_json=spec_json_path,
+                source_specification_sha256=spec_sha256_pre,
                 trial_output_root=trial_output_root,
                 trial_id=trial_id,
             )
@@ -773,6 +908,8 @@ def main() -> None:
                 completed_count += 1
             if res["match"] == "YES":
                 matching_count += 1
+            if res.get("evaluation_valid") is True:
+                valid_count += 1
 
             audit_str = "N/A" if res["grounding_audit_valid"] is None else ("VALID" if res["grounding_audit_valid"] else "INVALID")
             replay_str = "N/A" if res["plan_replay_valid"] is None else ("VALID" if res["plan_replay_valid"] else "INVALID")
@@ -801,13 +938,15 @@ def main() -> None:
         "attempted_count": attempted_count,
         "completed_count": completed_count,
         "matching_count": matching_count,
+        "scientifically_valid_count": valid_count,
         "exact_match_rate": (matching_count / attempted_count) if attempted_count > 0 else 0.0,
+        "scientifically_valid_rate": (valid_count / attempted_count) if attempted_count > 0 else 0.0,
         "results": results,
     }
     with open(os.path.join(args.output_root, "summary.json"), "w", encoding="utf-8") as f:
         json.dump(summary_data, f, indent=2)
 
-    # Write summary.csv preserving all legacy headers, appending new Phase 3.3 columns
+    # Write summary.csv preserving all legacy headers, appending Phase 3.3 and 3.3.1 columns
     csv_file = os.path.join(args.output_root, "summary.csv")
     with open(csv_file, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
@@ -851,6 +990,24 @@ def main() -> None:
             "TrialID",
             "TrialOutputRoot",
             "RunDir",
+            # Phase 3.3.1 additive provenance headers
+            "EvaluationValid",
+            "EvaluationFailureReason",
+            "ValidMatch",
+            "PairingStatus",
+            "SourceSpecificationSHA256After",
+            "SourceSpecificationUnchanged",
+            "EvaluatorModeRequested",
+            "EvaluatorSearchOrderRequested",
+            "EvaluatorSearchSeedRequested",
+            "ManifestSpecMode",
+            "ManifestSearchOrderRequested",
+            "ManifestSearchOrderEffective",
+            "ManifestSearchSeedRequested",
+            "ManifestSearchSeedEffective",
+            "ManifestTerminalStatus",
+            "ProvenanceMatch",
+            "ProvenanceMismatches",
         ])
         for r in results:
             audit_val = "N/A" if r["grounding_audit_valid"] is None else str(r["grounding_audit_valid"])
@@ -895,6 +1052,23 @@ def main() -> None:
                 r.get("trial_id", ""),
                 r.get("trial_output_root", ""),
                 r.get("run_dir", ""),
+                str(r.get("evaluation_valid", True)),
+                r.get("evaluation_failure_reason") or "",
+                r.get("valid_match", "N/A"),
+                r.get("pairing_status", "NOT_APPLICABLE"),
+                r.get("source_specification_sha256_after") or "",
+                "" if r.get("source_specification_unchanged") is None else str(r["source_specification_unchanged"]),
+                r.get("evaluator_mode_requested", ""),
+                r.get("evaluator_search_order_requested", ""),
+                "" if r.get("evaluator_search_seed_requested") is None else str(r["evaluator_search_seed_requested"]),
+                r.get("manifest_spec_mode") or "",
+                r.get("manifest_search_order_requested") or "",
+                r.get("manifest_search_order_effective") or "",
+                "" if r.get("manifest_search_seed_requested") is None else str(r["manifest_search_seed_requested"]),
+                "" if r.get("manifest_search_seed_effective") is None else str(r["manifest_search_seed_effective"]),
+                r.get("manifest_terminal_status") or "",
+                "" if r.get("provenance_match") is None else str(r["provenance_match"]),
+                ";".join(r.get("provenance_mismatches", [])),
             ])
 
     total_variants_queued = len(variant_queue) * len(seeds_list)
@@ -902,6 +1076,7 @@ def main() -> None:
     print(f"Attempted: {attempted_count} / {total_variants_queued}")
     print(f"Completed: {completed_count} / {total_variants_queued}")
     print(f"Match: {matching_count} / {attempted_count}")
+    print(f"Scientifically Valid: {valid_count} / {attempted_count}")
 
 
 if __name__ == "__main__":
