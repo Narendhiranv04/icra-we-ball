@@ -343,9 +343,9 @@ def run_to_plan(
     ).run(scene)
 
     graph_o = build_living_room_observed_scene_graph(run)
-    overview_path = phase1 / "observation" / "initial_scene_overview.png"
-    frame_path_str = str(overview_path) if overview_path.exists() else None
     if observer is not None:
+        overview_path = phase1 / "observation" / "initial_scene_overview.png"
+        frame_path_str = str(overview_path) if overview_path.exists() else None
         observer("observation_updated", {
             "stage": "initial",
             "inspected_regions": [],

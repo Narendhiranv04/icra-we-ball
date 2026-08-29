@@ -175,12 +175,16 @@ class WorkshopDomainAdapter:
         physical_open: bool = True,
         output_dir: str | None = None,
         verbose: bool = False,
+        telemetry_enabled: bool = False,
     ) -> None:
         self.variant = variant
         self.specification = specification
         self.scene = scene or WorkshopScene(robot="google", variant=variant)
         self.physical_open = physical_open
         self.verbose = verbose
+        self.telemetry_enabled = telemetry_enabled
+        self.latest_frame_rgb = None
+        self.latest_camera_id = None
         self.graph = ObservedSceneGraph()
         self.controller = WorkshopPhase1InspectionController(
             scene=self.scene,
@@ -278,8 +282,13 @@ class WorkshopDomainAdapter:
         observations = self.controller._capture_and_process_stage(
             stage_idx=self._stage, source_region_id=source_region
         )
-        if observations and len(observations) > 0 and getattr(observations[0], "rgb", None) is not None:
-            self.latest_frame_rgb = np.array(observations[0].rgb, copy=True)
+        if (
+            self.telemetry_enabled
+            and observations
+            and len(observations) > 0
+            and getattr(observations[0], "rgb", None) is not None
+        ):
+            self.latest_frame_rgb = observations[0].rgb.copy()
             self.latest_camera_id = getattr(observations[0], "camera_id", "WORKSHOP_CAMERA")
         if self._stage == 0:
             target = self.controller.geometric_grounder.observe_target_recess(

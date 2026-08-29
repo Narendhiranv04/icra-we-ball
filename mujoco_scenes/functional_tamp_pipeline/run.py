@@ -482,6 +482,7 @@ def _run_pipeline_impl(
         physical_open=not dry_run,
         output_dir=str(state.run_dir / "perception"),
         verbose=verbose,
+        telemetry_enabled=(guarded_observer is not None),
     )
     print("[2/5] Initial perception", flush=True)
     _emit_event(guarded_observer, "stage_changed", {"stage": "perception"})
@@ -612,6 +613,7 @@ def run_pipeline(
         "spec_mode": state.mode,
         "search_order_source_requested": state.search_order,
         "search_seed_requested": state.search_seed_requested,
+        "exploration_actuation": state.exploration_actuation,
         "run_dir": str(state.run_dir),
     })
 
