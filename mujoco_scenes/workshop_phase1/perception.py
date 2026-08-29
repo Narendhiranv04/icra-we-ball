@@ -88,12 +88,13 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
         tile_overlap_fraction: float = 0.15,
         supplemental_prompts: list[str] | None = None,
         supplemental_confidence_threshold: float | None = None,
+        proposal_crop_confidence_threshold: float | None = None,
     ) -> None:
         self.weights_path = Path(weights_path) if weights_path else find_yolo_world_weights()
         self.confidence_threshold = float(confidence_threshold)
         self.nms_iou_threshold = float(nms_iou_threshold)
         self.inference_size = int(inference_size)
-        self.device = device or "cpu"
+        self.device = device if device is not None else "cpu"
         self.max_detections = int(max_detections)
         self.min_points_per_mask = int(min_points_per_mask)
         self.duplicate_box_iou_threshold = float(duplicate_box_iou_threshold)
@@ -108,6 +109,10 @@ class YOLOWorldProposalBackend(InstanceProposalBackend):
         self.supplemental_confidence_threshold = float(
             supplemental_confidence_threshold
             if supplemental_confidence_threshold is not None else confidence_threshold
+        )
+        self.proposal_crop_confidence_threshold = float(
+            proposal_crop_confidence_threshold
+            if proposal_crop_confidence_threshold is not None else confidence_threshold
         )
 
         self._model = None

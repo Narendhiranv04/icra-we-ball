@@ -104,21 +104,24 @@ class PersistentInstanceTracker:
                 "label_confidence_sum": {},
             }
 
-        f_cfg = dict(fusion_config or {})
-        min_views = int(f_cfg.get("minimum_supporting_views", 2))
-        min_mean_conf = float(f_cfg.get("minimum_mean_confidence", 0.03))
-        min_winning_margin = float(f_cfg.get("minimum_winning_label_margin", 0.08))
-        max_conflicting_view_frac = float(f_cfg.get("maximum_conflicting_view_fraction", 0.60))
-        max_conflicting_score_frac = float(f_cfg.get("maximum_conflicting_score_fraction", 0.40))
-        min_conflicting_mean_conf = float(f_cfg.get("minimum_conflicting_mean_confidence", 0.10))
+        fusion_config = fusion_config or {}
+        min_views = int(fusion_config.get("minimum_supporting_views", 2))
+        min_mean_conf = float(fusion_config.get("minimum_mean_confidence", 0.03))
+        min_winning_margin = float(fusion_config.get("minimum_winning_label_margin", 0.08))
+        max_conflicting_view_frac = float(fusion_config.get("maximum_conflicting_view_fraction", 0.60))
+        max_conflicting_score_frac = float(fusion_config.get("maximum_conflicting_score_fraction", 0.40))
+        min_conflicting_mean_conf = float(fusion_config.get("minimum_conflicting_mean_confidence", 0.10))
+        crop_mult = float(fusion_config.get("proposal_crop_score_multiplier", 20.0))
 
-        # Collect best observation per (camera_id, canonical_label)
-        per_camera_label: dict[tuple[str, str], dict[str, Any]] = {}
+        per_camera_label = {}
         for obs in observations:
-            camera = str(obs.get("camera_id", ""))
-            quality = float(obs.get("physical_support_quality", 1.0))
+            camera = obs.get("camera_id")
+            if not camera:
+                continue
+
+            quality = float(obs.get("observation_quality", 1.0))
             is_crop = (obs.get("inference_source") == "proposal_crop")
-            mult = 20.0 if is_crop else 1.0
+            mult = crop_mult if is_crop else 1.0
             hypotheses = [{
                 "canonical_label": obs.get("canonical_label", "unknown"),
                 "raw_label": obs.get("raw_label", "unknown"),
@@ -177,7 +180,26 @@ class PersistentInstanceTracker:
                 "mean_confidence": mean_conf,
             })
 
-        label_records.sort(key=lambda r: (-r["supporting_view_count"], -r["score"], r["label"]))
+        winner_policy = fusion_config.get("winner_policy", "supporting_views_then_weighted_score")
+        if winner_policy == "weighted_score_then_supporting_views":
+            label_records.sort(
+                key=lambda r: (
+                    -r["score"],
+                    -r["supporting_view_count"],
+                    r["label"],
+                )
+            )
+        elif winner_policy == "supporting_views_then_weighted_score":
+            label_records.sort(
+                key=lambda r: (
+                    -r["supporting_view_count"],
+                    -r["score"],
+                    r["label"],
+                )
+            )
+        else:
+            raise ValueError(f"Unknown winner_policy: {winner_policy}")
+
         winner = label_records[0]
         runner = label_records[1] if len(label_records) > 1 else None
 

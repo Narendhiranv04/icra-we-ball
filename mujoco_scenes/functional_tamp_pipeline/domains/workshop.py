@@ -193,9 +193,7 @@ class WorkshopDomainAdapter:
             output_dir=output_dir,
         )
         # The close-view file carries a legacy frozen-evaluation length cap.
-        # Use the current category-independent verifier while retaining the
-        # calibrated L-model camera and visual profiles.
-        self.controller.geometric_grounder = GeometricGrounder(CURRENT_GEOMETRY_CONFIG)
+        # Use the calibrated L-model camera and visual profiles.
         self.controller.functional_search = FunctionalSatisfactionSearch(
             self.controller.geometric_grounder
         )

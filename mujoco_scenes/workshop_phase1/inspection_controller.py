@@ -138,6 +138,9 @@ class WorkshopPhase1InspectionController:
                 device=det_cfg.get("device", "cpu"),
                 max_detections=det_cfg.get("max_detections", 100),
                 min_points_per_mask=self.raw_config.get("perception", {}).get("min_points_per_mask", 8),
+                supplemental_prompts=det_cfg.get("supplemental_prompts"),
+                supplemental_confidence_threshold=det_cfg.get("supplemental_confidence_threshold"),
+                proposal_crop_confidence_threshold=det_cfg.get("proposal_crop_confidence_threshold"),
                 **self._duplicate_config(),
                 **self._multi_scale_config(),
             )
@@ -485,7 +488,7 @@ class WorkshopPhase1InspectionController:
                                 pass_conf = (
                                     self._yolo_aux_backend.supplemental_confidence_threshold
                                     if sup_prompt is not None
-                                    else self._yolo_aux_backend.supplemental_confidence_threshold
+                                    else self._yolo_aux_backend.proposal_crop_confidence_threshold
                                 )
                                 results = self._yolo_aux_backend._model.predict(
                                     source=Image.fromarray(crop, mode="RGB"),
@@ -555,6 +558,8 @@ class WorkshopPhase1InspectionController:
                         yx1, yy1, yx2, yy2 = ym.bounding_box_xyxy
                         ix1, iy1 = max(ox1, yx1), max(oy1, yy1)
                         ix2, iy2 = min(ox2, yx2), min(oy2, yy2)
+                        if source_region_id == "TOOL_CABINET":
+                            print(f"DEBUG_BBOX: cam={obs.camera_id} om_bbox=[{ox1},{oy1},{ox2},{oy2}] ym_label={ym.canonical_label} ym_bbox=[{yx1},{yy1},{yx2},{yy2}] overlap={ix2>ix1 and iy2>iy1}")
                         if ix2 > ix1 and iy2 > iy1:
                             inter = (ix2 - ix1) * (iy2 - iy1)
                             union = om_area + (yx2 - yx1) * (yy2 - yy1) - inter
@@ -564,26 +569,30 @@ class WorkshopPhase1InspectionController:
                             distance = float(np.linalg.norm(
                                 np.asarray(om.centroid_world_m) - np.asarray(ym.centroid_world_m)))
                             proximity = max(0.0, 1.0 - distance / 0.08)
-                            mult = 20.0 if ym.inference_source == "proposal_crop" else 1.0
+                            assoc_cfg = self.raw_config.get("perception", {}).get("association", {})
+                            crop_assoc_mult = float(assoc_cfg.get("proposal_crop_association_multiplier", 20.0))
+                            mult = crop_assoc_mult if ym.inference_source == "proposal_crop" else 1.0
                             ym_conf = ym.confidence
                             if om.cloud_bounds_world_m:
                                 min_b = om.cloud_bounds_world_m.get("minimum_world_m")
                                 max_b = om.cloud_bounds_world_m.get("maximum_world_m")
                                 if min_b and max_b:
-                                    max_dim = float(np.max(np.asarray(max_b, dtype=float) - np.asarray(min_b, dtype=float)))
-                                    if max_dim < 0.08:
-                                        if ym.canonical_label in ["screwdriver", "hammer"]:
-                                            ym_conf = 0.0
-                                        elif ym.canonical_label == "screw":
-                                            ym_conf *= 2.0
-                                    else:
-                                        if ym.canonical_label in ["screw", "hammer"]:
-                                            ym_conf = 0.0
-                                        elif ym.canonical_label == "screwdriver":
-                                            ym_conf *= 2.0
+                                    prior_cfg = self.raw_config.get("semantic_physical_prior", {})
+                                    if prior_cfg.get("enabled", False):
+                                        max_dim = float(np.max(np.asarray(max_b, dtype=float) - np.asarray(min_b, dtype=float)))
+                                        small_thresh = prior_cfg.get("small_object_max_dimension_m", 0.08)
+                                        if max_dim < small_thresh:
+                                            multipliers = prior_cfg.get("small_object", {})
+                                        else:
+                                            multipliers = prior_cfg.get("large_object", {})
+                                        
+                                        if ym.canonical_label in multipliers:
+                                            mult *= float(multipliers[ym.canonical_label])
                             # Add confidence to break ties between multiple proposal crop detections on the same crop
                             score = mult * (0.35 * iou + 0.35 * mask_overlap + 0.30 * proximity + 0.05 * ym_conf)
                             eligible = iou >= 0.05 or mask_overlap >= 0.20 or distance <= 0.06
+                            if source_region_id == "TOOL_CABINET":
+                                print(f"DEBUG: om={om.camera_id} ym={ym.canonical_label} iou={iou:.3f} mo={mask_overlap:.3f} dist={distance:.3f} eligible={eligible} score={score:.3f} best={best_score:.3f}")
                             if eligible and score > best_score:
                                 best_score = score
                                 best_yolo = ym
@@ -628,17 +637,17 @@ class WorkshopPhase1InspectionController:
                                 min_b = om.cloud_bounds_world_m.get("minimum_world_m")
                                 max_b = om.cloud_bounds_world_m.get("maximum_world_m")
                                 if min_b and max_b:
-                                    max_dim = float(np.max(np.asarray(max_b, dtype=float) - np.asarray(min_b, dtype=float)))
-                                    if max_dim < 0.08:
-                                        if alt_label in ["screwdriver", "hammer"]:
-                                            alt_conf = 0.0
-                                        elif alt_label == "screw":
-                                            alt_conf *= 2.0
-                                    else:
-                                        if alt_label in ["screw", "hammer"]:
-                                            alt_conf = 0.0
-                                        elif alt_label == "screwdriver":
-                                            alt_conf *= 2.0
+                                    prior_cfg = self.raw_config.get("semantic_physical_prior", {})
+                                    if prior_cfg.get("enabled", False):
+                                        max_dim = float(np.max(np.asarray(max_b, dtype=float) - np.asarray(min_b, dtype=float)))
+                                        small_thresh = prior_cfg.get("small_object_max_dimension_m", 0.08)
+                                        if max_dim < small_thresh:
+                                            multipliers = prior_cfg.get("small_object", {})
+                                        else:
+                                            multipliers = prior_cfg.get("large_object", {})
+                                        
+                                        if alt_label in multipliers:
+                                            alt_conf *= multipliers[alt_label]
                             if alt_conf > 1e-5:
                                 alt["confidence"] = alt_conf
                                 filtered_alts.append(alt)

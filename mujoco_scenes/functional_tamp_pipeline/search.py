@@ -50,6 +50,9 @@ def search_until_satisfied(
         status=final_result.status,
         complete=final_result.complete,
         assignment=final_result.assignment,
+        operation_bindings=final_result.operation_bindings,
+        missing_roles=final_result.missing_roles,
+        unsatisfied_relations=final_result.unsatisfied_relations,
         unresolved_constraints=final_result.unresolved_constraints,
         evidence=final_result.evidence,
     ), tuple(inspected)

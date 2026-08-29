@@ -47,7 +47,7 @@ class GTSpecProvider(FunctionalSpecProvider):
             name="driver",
             entity_kind="OBJECT",
             count=1,
-            semantic_categories=("screwdriver", "power_drill", "Phillips screwdriver", "cordless power drill"),
+            semantic_categories=("screwdriver", "power_driver", "power_drill", "Phillips screwdriver", "cordless power drill"),
             unary_predicates=("CAN_DRIVE_SCREW",),
             binding_policy="DISTINCT",
             verification_mode="SEMANTIC_AND_GEOMETRIC",
