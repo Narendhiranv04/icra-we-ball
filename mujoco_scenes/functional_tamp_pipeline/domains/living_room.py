@@ -281,6 +281,7 @@ def build_living_room_observed_scene_graph(run: Any) -> ObservedSceneGraph:
 def run_to_plan(
     *, variant_label: str, internal_variant: str, mode: str,
     specification: FunctionalSpecification, output_dir: Path,
+    observer: Any = None,
 ) -> PipelineResult:
     from ..grounding import ground_graph
 
@@ -342,7 +343,20 @@ def run_to_plan(
     ).run(scene)
 
     graph_o = build_living_room_observed_scene_graph(run)
+    if observer is not None:
+        observer("observation_updated", {
+            "stage": "initial",
+            "inspected_regions": [],
+            "scene_graph": graph_o.to_dict(),
+        })
+
     ground_result = ground_graph(specification, graph_o, {"search_exhausted": True})
+    if observer is not None:
+        observer("grounding_updated", {
+            "grounding": ground_result.to_dict(),
+            "satisfied": bool(ground_result.complete),
+            "status": ground_result.status,
+        })
 
     (output_dir / "observed_scene_graph.json").write_text(
         json.dumps(graph_o.to_dict(), indent=2, sort_keys=True) + "\n",

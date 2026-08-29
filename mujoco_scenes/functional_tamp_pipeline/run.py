@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -13,7 +13,7 @@ import subprocess
 import sys
 import time
 import traceback
-from typing import Any
+from typing import Any, Callable
 
 from mujoco_scenes.final_paper_variant_labels import resolve_variant_name
 
@@ -26,6 +26,8 @@ from .spec_provider import provider_for_mode
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT = ROOT / "runs" / "functional_tamp_pipeline"
+
+EventCallback = Callable[[str, dict[str, Any]], None]
 
 
 @dataclass
@@ -40,8 +42,10 @@ class _RunState:
     specification_input: str | None = None
     specification_sha256: str | None = None
     provider_model: str | None = None
-    search_order: str = "provider"
-    search_order_source_effective: str = "provider"
+    search_order: str = "auto"
+    search_order_source_effective: str = "oracle"
+    search_seed_requested: int | None = None
+    search_seed_effective: int | None = None
     resolved_search_order: tuple[str, ...] = ()
     exploration_actuation: str = "unknown"
     git_commit: str | None = None
@@ -50,6 +54,30 @@ class _RunState:
     finished_at_utc: str = ""
     runtime_sec: float = 0.0
     terminal_status: str = "PIPELINE_EXCEPTION"
+    observer_errors: list[dict[str, Any]] = field(default_factory=list)
+
+
+def _make_guarded_observer(
+    observer: EventCallback | None,
+    state: _RunState,
+) -> EventCallback:
+    def _guarded_callback(event_type: str, payload: dict[str, Any]) -> None:
+        if observer is None:
+            return
+        try:
+            observer(event_type, payload)
+        except Exception as error:
+            print(
+                f"OBSERVER ERROR on {event_type}: {type(error).__name__}: {error}",
+                file=sys.stderr,
+                flush=True,
+            )
+            state.observer_errors.append({
+                "event": event_type,
+                "type": type(error).__name__,
+                "message": str(error),
+            })
+    return _guarded_callback
 
 
 def _write_json(path: Path, payload: Any) -> None:
@@ -185,6 +213,8 @@ def _write_run_manifest(state: _RunState) -> None:
         "provider_model": state.provider_model,
         "search_order_source_requested": state.search_order,
         "search_order_source_effective": state.search_order_source_effective,
+        "search_seed_requested": state.search_seed_requested,
+        "search_seed_effective": state.search_seed_effective,
         "provider_region_ranking": list(state.specification.region_ranking) if state.specification else [],
         "region_order_used": list(state.resolved_search_order),
         "exploration_actuation": state.exploration_actuation,
@@ -196,7 +226,7 @@ def _write_run_manifest(state: _RunState) -> None:
         "finished_at_utc": state.finished_at_utc,
         "pipeline_runtime_seconds": round(state.runtime_sec, 4),
         "terminal_status": state.terminal_status,
-        "observer_errors": [],
+        "observer_errors": list(state.observer_errors),
         "artifacts": _collect_artifacts(state.run_dir),
     }
     _write_json(state.run_dir / "run_manifest.json", manifest)
@@ -235,6 +265,7 @@ def _capture_workshop_vlm_inputs(scene: Any, output_dir: Path) -> list[Path]:
 def _run_pipeline_impl(
     *,
     state: _RunState,
+    guarded_observer: EventCallback,
     specification_json: Path | str | None,
     dry_run: bool,
     verbose: bool,
@@ -250,6 +281,7 @@ def _run_pipeline_impl(
             images = _render_initial(scene, state.run_dir / "vlm_inputs", 640, 480)
 
         print("[1/5] Functional specification", flush=True)
+        guarded_observer("stage_changed", {"stage": "specification"})
         state.specification, state.spec_acquisition, state.specification_input = _load_or_acquire_specification(
             domain=state.domain,
             mode=state.mode,
@@ -261,11 +293,27 @@ def _run_pipeline_impl(
         _write_json(state.run_dir / "functional_requirement_graph.json", state.specification.to_dict())
         state.specification_sha256 = _compute_file_sha256(state.run_dir / "functional_specification.json")
 
-        state.resolved_search_order = resolve_search_order(state.specification, state.domain, state.search_order)
-        if state.domain != "living_room" and state.search_order == "fixed":
-            raise RuntimeError("fixed search order is resolved but not executable until Phase 3.1 wiring")
+        state.resolved_search_order, state.search_order_source_effective, state.search_seed_effective = (
+            resolve_search_order(
+                state.specification,
+                state.domain,
+                state.search_order,
+                mode=state.mode,
+                variant=state.variant,
+                seed=state.search_seed_requested,
+            )
+        )
+        guarded_observer("spec_ready", {
+            "graph": state.specification.to_dict(),
+            "source": state.specification.source,
+            "provider_region_ranking": list(state.specification.region_ranking),
+            "search_order_source_effective": state.search_order_source_effective,
+            "region_order_used": list(state.resolved_search_order),
+            "search_seed_effective": state.search_seed_effective,
+        })
 
         print("[2/5] Initial perception", flush=True)
+        guarded_observer("stage_changed", {"stage": "perception"})
         print("[3/5] Functional grounding and ranked region search", flush=True)
         result = run_to_plan(
             variant_label=state.variant,
@@ -274,11 +322,18 @@ def _run_pipeline_impl(
             specification=state.specification,
             output_dir=state.run_dir,
             scene=scene,
+            search_order=state.resolved_search_order,
+            observer=guarded_observer,
         )
         if result.assignment:
             print("[4/5] Role assignment", flush=True)
             print(json.dumps(result.assignment, indent=2, sort_keys=True), flush=True)
             print("[5/5] A* planning", flush=True)
+            guarded_observer("stage_changed", {"stage": "planning"})
+            guarded_observer("plan_ready", {
+                "actions": list(result.plan),
+                "search_statistics": result.search_statistics,
+            })
             for action in result.plan:
                 print(f"  {action['action_index']:02d}. {action['operator']}({', '.join(action['arguments'])})", flush=True)
         _write_json(state.run_dir / "result.json", result.to_dict())
@@ -304,6 +359,7 @@ def _run_pipeline_impl(
                 images.append(path)
 
         print("[1/5] Functional specification", flush=True)
+        guarded_observer("stage_changed", {"stage": "specification"})
         state.specification, state.spec_acquisition, state.specification_input = _load_or_acquire_specification(
             domain=state.domain,
             mode=state.mode,
@@ -315,18 +371,45 @@ def _run_pipeline_impl(
         _write_json(state.run_dir / "functional_requirement_graph.json", state.specification.to_dict())
         state.specification_sha256 = _compute_file_sha256(state.run_dir / "functional_specification.json")
 
-        state.resolved_search_order = resolve_search_order(state.specification, state.domain, state.search_order)
+        state.resolved_search_order, state.search_order_source_effective, state.search_seed_effective = (
+            resolve_search_order(
+                state.specification,
+                state.domain,
+                state.search_order,
+                mode=state.mode,
+                variant=state.variant,
+                seed=state.search_seed_requested,
+            )
+        )
+        guarded_observer("spec_ready", {
+            "graph": state.specification.to_dict(),
+            "source": state.specification.source,
+            "provider_region_ranking": list(state.specification.region_ranking),
+            "search_order_source_effective": state.search_order_source_effective,
+            "region_order_used": list(state.resolved_search_order),
+            "search_seed_effective": state.search_seed_effective,
+        })
 
         print("[2/5] Initial perception", flush=True)
+        guarded_observer("stage_changed", {"stage": "perception"})
         print("[3/5] Global functional grounding", flush=True)
         result = run_to_plan(
-            variant_label=state.variant, internal_variant=state.internal_variant,
-            mode=state.mode, specification=state.specification, output_dir=state.run_dir,
+            variant_label=state.variant,
+            internal_variant=state.internal_variant,
+            mode=state.mode,
+            specification=state.specification,
+            output_dir=state.run_dir,
+            observer=guarded_observer,
         )
         if result.assignment:
             print("[4/5] Role assignment", flush=True)
             print(json.dumps(result.assignment, indent=2, sort_keys=True), flush=True)
             print("[5/5] A* planning", flush=True)
+            guarded_observer("stage_changed", {"stage": "planning"})
+            guarded_observer("plan_ready", {
+                "actions": list(result.plan),
+                "search_statistics": result.search_statistics,
+            })
             for action in result.plan:
                 print(f"  {action['action_index']:02d}. {action['operator']}({', '.join(action['arguments'])})", flush=True)
         _write_json(state.run_dir / "result.json", result.to_dict())
@@ -346,6 +429,7 @@ def _run_pipeline_impl(
         images = _capture_workshop_vlm_inputs(scene, state.run_dir / "vlm_inputs")
 
     print("[1/5] Functional specification", flush=True)
+    guarded_observer("stage_changed", {"stage": "specification"})
     task = WorkshopDomainAdapter.task_instruction
     state.specification, state.spec_acquisition, state.specification_input = _load_or_acquire_specification(
         domain=state.domain,
@@ -358,9 +442,24 @@ def _run_pipeline_impl(
     _write_json(state.run_dir / "functional_requirement_graph.json", state.specification.to_dict())
     state.specification_sha256 = _compute_file_sha256(state.run_dir / "functional_specification.json")
 
-    state.resolved_search_order = resolve_search_order(state.specification, state.domain, state.search_order)
-    if state.domain != "living_room" and state.search_order == "fixed":
-        raise RuntimeError("fixed search order is resolved but not executable until Phase 3.1 wiring")
+    state.resolved_search_order, state.search_order_source_effective, state.search_seed_effective = (
+        resolve_search_order(
+            state.specification,
+            state.domain,
+            state.search_order,
+            mode=state.mode,
+            variant=state.variant,
+            seed=state.search_seed_requested,
+        )
+    )
+    guarded_observer("spec_ready", {
+        "graph": state.specification.to_dict(),
+        "source": state.specification.source,
+        "provider_region_ranking": list(state.specification.region_ranking),
+        "search_order_source_effective": state.search_order_source_effective,
+        "region_order_used": list(state.resolved_search_order),
+        "search_seed_effective": state.search_seed_effective,
+    })
 
     adapter = WorkshopDomainAdapter(
         state.internal_variant,
@@ -371,8 +470,15 @@ def _run_pipeline_impl(
         verbose=verbose,
     )
     print("[2/5] Initial perception", flush=True)
+    guarded_observer("stage_changed", {"stage": "perception"})
     print("[3/5] Functional grounding and ranked region search", flush=True)
-    satisfaction, inspected = search_until_satisfied(adapter, state.specification)
+    guarded_observer("stage_changed", {"stage": "search_grounding"})
+    satisfaction, inspected = search_until_satisfied(
+        adapter,
+        state.specification,
+        search_order=state.resolved_search_order,
+        observer=guarded_observer,
+    )
     _write_json(state.run_dir / "observed_scene_graph.json", adapter.graph.to_dict())
     _write_json(state.run_dir / "detection_diagnostics.json", {
         "records": adapter.controller.detection_diagnostics,
@@ -401,6 +507,7 @@ def _run_pipeline_impl(
         print(f"{role} -> {satisfaction.assignment[role]}", flush=True)
 
     print("[5/5] A* planning", flush=True)
+    guarded_observer("stage_changed", {"stage": "planning"})
     planned = plan_with_common_astar(
         WorkshopPlanningCompiler(), satisfaction.assignment, adapter.planning_context()
     )
@@ -409,6 +516,10 @@ def _run_pipeline_impl(
         "actions": list(planned.actions),
         "validation": planned.validation,
         "exploratory_open_actions_excluded": True,
+    })
+    guarded_observer("plan_ready", {
+        "actions": list(planned.actions),
+        "search_statistics": planned.search.statistics,
     })
     for action in planned.actions:
         print(
@@ -437,8 +548,10 @@ def run_pipeline(
     domain: str,
     variant: str,
     mode: str,
-    search_order: str = "provider",
+    search_order: str = "auto",
+    search_seed: int | None = None,
     specification_json: Path | str | None = None,
+    observer: EventCallback | None = None,
     output_root: Path = DEFAULT_OUTPUT,
     dry_run: bool = False,
     verbose: bool = False,
@@ -455,7 +568,6 @@ def run_pipeline(
     provider_model = _get_provider_model(mode)
     spec_acquisition = "live_provider" if specification_json is None else "replayed_provider_output"
     specification_input = None if specification_json is None else str(Path(specification_json).resolve())
-    search_order_source_effective = "not_applicable" if domain == "living_room" else search_order
 
     state = _RunState(
         domain=domain,
@@ -467,25 +579,47 @@ def run_pipeline(
         specification_input=specification_input,
         provider_model=provider_model,
         search_order=search_order,
-        search_order_source_effective=search_order_source_effective,
+        search_seed_requested=search_seed,
         exploration_actuation=exploration_actuation,
         git_commit=git_commit,
         git_dirty=git_dirty,
         started_at_utc=started_at_utc,
     )
+    guarded_observer = _make_guarded_observer(observer, state)
+
+    guarded_observer("run_started", {
+        "domain": state.domain,
+        "variant": state.variant,
+        "spec_mode": state.mode,
+        "search_order_source_requested": state.search_order,
+        "search_seed_requested": state.search_seed_requested,
+        "run_dir": str(state.run_dir),
+    })
 
     try:
         result = _run_pipeline_impl(
             state=state,
+            guarded_observer=guarded_observer,
             specification_json=specification_json,
             dry_run=dry_run,
             verbose=verbose,
             observation_images=observation_images,
         )
         state.terminal_status = result.status
+        guarded_observer("stage_changed", {"stage": "complete"})
+        guarded_observer("run_finished", {
+            "terminal_status": result.status,
+            "run_dir": str(state.run_dir),
+            "inspected_regions": list(result.inspected_regions),
+        })
         return result
-    except Exception:
+    except Exception as error:
         state.terminal_status = "PIPELINE_EXCEPTION"
+        guarded_observer("run_failed", {
+            "error_type": type(error).__name__,
+            "error_message": str(error),
+            "run_dir": str(state.run_dir),
+        })
         raise
     finally:
         state.finished_at_utc = datetime.now(timezone.utc).isoformat()
@@ -500,9 +634,15 @@ def main() -> int:
     parser.add_argument("--mode", required=True, choices=("gt", "vlm"))
     parser.add_argument(
         "--search-order",
-        choices=("provider", "fixed"),
-        default="provider",
-        help="Search-order source: 'provider' uses specification ranking, 'fixed' uses domain default.",
+        choices=("auto", "oracle", "provider", "random", "fixed"),
+        default="auto",
+        help="Search-order source: 'auto' (default, oracle for GT, provider for VLM), 'oracle', 'provider', 'random', or 'fixed' (deprecated alias for oracle).",
+    )
+    parser.add_argument(
+        "--search-seed",
+        type=int,
+        default=None,
+        help="Random seed for '--search-order random'. Must be a non-negative integer.",
     )
     parser.add_argument(
         "--specification-json",
@@ -524,6 +664,7 @@ def main() -> int:
             variant=args.variant,
             mode=args.mode,
             search_order=args.search_order,
+            search_seed=args.search_seed,
             specification_json=args.specification_json,
             output_root=args.output_root,
             dry_run=args.dry_run,

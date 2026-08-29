@@ -429,106 +429,48 @@ After G_F and search order are resolved, the same downstream functions must run
 for GT and VLM. Tests should assert this dispatch property with mocked providers;
 Flash must not make live remote calls.
 
-## 11. Search-Order Policy
+## 11. Search-Order Policy (Revised Protocol: Three Scientific Regimes)
 
-Use the term **search-order source**, with CLI values:
+The scientific search protocol defines three real search regimes plus a mode-aware `auto` convenience resolution:
 
-- `provider`: use the exact `specification.region_ranking` supplied with G_F.
-- `fixed`: use a domain-authored, task/variant-independent order.
+1. **`oracle`** (Privileged GT Minimum-Inspection Reference):
+   Uses privileged GT variant configuration to place required hidden regions first, providing a minimum-inspection cost reference upper bound. Only valid in `gt` mode.
+2. **`provider`** (FM/VLM-Guided Search):
+   Uses the exact `specification.region_ranking` emitted by the specification provider without alteration.
+3. **`random`** (Seeded Random Permutation Baseline):
+   Deterministic seeded permutation of `specification.candidate_regions` using a local RNG (`random.Random(seed)`). Requires an explicit `--search-seed INT` (non-negative integer).
+4. **`auto`** (Default Convenience Policy):
+   Resolves `gt -> oracle` and `vlm -> provider`.
+5. **`fixed`** (Deprecated Compatibility Alias):
+   Resolves to `oracle`.
 
-Verified fixed orders are:
+Living Room resolves search order to `()` and `not_applicable`. Explicit `oracle` or `random` on Living Room is rejected.
 
-```python
-FIXED_SEARCH_ORDERS = {
-    "kitchen": ("D1", "D2", "C2", "B1", "C1"),
-    "workshop": ("LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"),
-}
-```
+Search order is resolved with a pure helper that validates uniqueness and exact set equality against `specification.candidate_regions`.
 
-These are existing canonical/default insertion orders, not derived from variant
-contents. Resolve the order with a pure helper that validates uniqueness and
-exact set equality against `specification.candidate_regions`. Do not silently
-intersect or append unknown/missing candidates: a malformed condition should
-fail before perception.
+The unchanged provider G_F is persisted. The manifest records `search_order_source_requested`, `search_order_source_effective`, `search_seed_requested`, `search_seed_effective`, `provider_region_ranking`, and `region_order_used`.
 
-Pass the resulting tuple separately:
+Scientific comparison protocol:
 
-- Kitchen `run_to_plan(..., search_order=...)` passes it to
-  `run_sequential_inspection()` and uses its length for exhaustion.
-- Workshop `search_until_satisfied(..., search_order=...)` iterates it; the
-  adapter records the same order in controller configuration/diagnostics.
-- Living Room resolves to `not_applicable` and `()`. If the user explicitly
-  requests `fixed`, accept it as N/A with a clear manifest/UI value, or reject it
-  consistently at argument validation; do not fabricate a search condition.
-
-The unchanged provider G_F is persisted. The manifest records both
-`provider_region_ranking` and `region_order_used`.
-
-Scientific interpretation:
-
-| Spec mode | Order source | Meaning |
-|---|---|---|
-| GT | provider | reviewed manually authored G_F plus its manual canonical order |
-| GT | fixed | software-supported but currently identical to GT/provider in Kitchen and Workshop |
-| VLM | provider | VLM/FM-produced G_F plus VLM/FM-produced order |
-| VLM | fixed | VLM-produced G_F with task/variant-independent order |
-
-Thus GT/provider versus GT/fixed is not an experimental contrast in the current
-repository. The meaningful order comparison is VLM/provider versus VLM/fixed
-with all other settings and inputs held constant. GT runs remain the validated
-reference. Do not claim the GT provider order is learned, FM-ranked, or an
-ablation.
+| Spec mode | Search policy | Effective source | Meaning |
+|---|---|---|---|
+| GT | auto / oracle | oracle | Privileged minimum-inspection GT reference |
+| GT | provider | provider | GT specification with manual canonical region ranking |
+| VLM | auto / provider | provider | VLM-generated G_F with VLM-produced ranking (FM-guided) |
+| VLM | random (seed=N) | random | Paired comparison using the exact same saved VLM G_F with deterministic random seeds |
 
 ## 12. Interactive CLI
 
 Extend the existing parser in `run.py`:
 
 ```text
---search-order {provider,fixed}   default: provider
---visualize                       default: false
---specification-json PATH         optional validated provider-output replay
+--search-order {auto,oracle,provider,random,fixed}   default: auto
+--search-seed INT                                    default: None (required for random)
+--visualize                                          default: false
+--specification-json PATH                            optional validated provider-output replay
 ```
 
 Keep all existing flags and semantics. Do not add another runner.
-
-Examples (each uses a fresh output root):
-
-```bash
-# K1 GT
-PYTHONPATH=. python -m mujoco_scenes.functional_tamp_pipeline.run \
-  --domain kitchen --variant K1 --mode gt --output-root /tmp/p3_k1_gt
-
-# K2 GT with live window
-PYTHONPATH=. python -m mujoco_scenes.functional_tamp_pipeline.run \
-  --domain kitchen --variant K2 --mode gt --visualize \
-  --output-root /tmp/p3_k2_gt_visual
-
-# K7 expected negative
-PYTHONPATH=. python -m mujoco_scenes.functional_tamp_pipeline.run \
-  --domain kitchen --variant K7 --mode gt --output-root /tmp/p3_k7_gt
-
-# W1, cheap direct-articulation planning smoke test
-PYTHONPATH=. python -m mujoco_scenes.functional_tamp_pipeline.run \
-  --domain workshop --variant W1 --mode gt --dry-run --visualize \
-  --output-root /tmp/p3_w1_gt_visual
-
-# L1 (search order is N/A)
-PYTHONPATH=. python -m mujoco_scenes.functional_tamp_pipeline.run \
-  --domain living_room --variant L1 --mode gt --visualize \
-  --output-root /tmp/p3_l1_gt_visual
-
-# VLM with its provider order
-PYTHONPATH=. python -m mujoco_scenes.functional_tamp_pipeline.run \
-  --domain kitchen --variant K2 --mode vlm --search-order provider \
-  --output-root /tmp/p3_k2_vlm_provider
-
-# The same VLM condition with fixed order
-PYTHONPATH=. python -m mujoco_scenes.functional_tamp_pipeline.run \
-  --domain kitchen --variant K2 --mode vlm --search-order fixed \
-  --specification-json \
-    /tmp/p3_k2_vlm_provider/kitchen/K2/vlm/functional_specification.json \
-  --output-root /tmp/p3_k2_vlm_fixed
-```
 
 For a controlled VLM order comparison, generate G_F once in the provider-order
 run, then use that exact `functional_specification.json` for the fixed-order run.

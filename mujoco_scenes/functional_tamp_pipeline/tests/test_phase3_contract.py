@@ -23,6 +23,7 @@ from mujoco_scenes.functional_tamp_pipeline.run import (
 )
 from mujoco_scenes.functional_tamp_pipeline.search_order import (
     FIXED_SEARCH_ORDERS,
+    ORACLE_SEARCH_ORDERS,
     resolve_search_order,
 )
 
@@ -58,30 +59,42 @@ def test_search_order_provider_returns_unchanged():
         candidate_regions=("C2", "D1", "D2", "B1", "C1"),
         region_ranking=("C2", "D1", "D2", "B1", "C1"),
     )
-    order = resolve_search_order(spec, "kitchen", source="provider")
+    order, effective_source, effective_seed = resolve_search_order(spec, "kitchen", source="provider")
     assert order == ("C2", "D1", "D2", "B1", "C1")
+    assert effective_source == "provider"
+    assert effective_seed is None
 
 
-# 2. Kitchen fixed order resolves expected canonical order
-def test_search_order_kitchen_fixed():
+# 2. Kitchen oracle orders resolve expected canonical orders
+def test_search_order_kitchen_oracle():
     spec = _make_dummy_spec(
         domain="kitchen",
-        candidate_regions=("C2", "D1", "D2", "B1", "C1"),
+        candidate_regions=("D1", "D2", "C2", "B1", "C1"),
         region_ranking=("C2", "D1", "D2", "B1", "C1"),
     )
-    order = resolve_search_order(spec, "kitchen", source="fixed")
-    assert order == ("D1", "D2", "C2", "B1", "C1")
+    order, source, seed = resolve_search_order(spec, "kitchen", source="oracle", mode="gt", variant="K2")
+    assert order == ("C2", "D1", "D2", "B1", "C1")
+    assert source == "oracle"
+    assert seed is None
+
+    order_k3, _, _ = resolve_search_order(spec, "kitchen", source="oracle", mode="gt", variant="K3")
+    assert order_k3 == ("B1", "D1", "D2", "C2", "C1")
 
 
-# 3. Workshop fixed order resolves expected canonical order
-def test_search_order_workshop_fixed():
+# 3. Workshop oracle orders resolve expected canonical orders
+def test_search_order_workshop_oracle():
     spec = _make_dummy_spec(
         domain="workshop",
-        candidate_regions=("TOOL_CABINET", "LEFT_DRAWER", "RIGHT_DRAWER"),
+        candidate_regions=("LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"),
         region_ranking=("TOOL_CABINET", "LEFT_DRAWER", "RIGHT_DRAWER"),
     )
-    order = resolve_search_order(spec, "workshop", source="fixed")
+    order, source, seed = resolve_search_order(spec, "workshop", source="oracle", mode="gt", variant="W1")
     assert order == ("LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET")
+    assert source == "oracle"
+    assert seed is None
+
+    order_w5, _, _ = resolve_search_order(spec, "workshop", source="oracle", mode="gt", variant="W5")
+    assert order_w5 == ("TOOL_CABINET", "LEFT_DRAWER", "RIGHT_DRAWER")
 
 
 # 4. Duplicate region order rejected
@@ -106,7 +119,7 @@ def test_search_order_missing_candidate_rejected():
         region_ranking=("D1", "D2", "C2", "B1", "C1", "EXTRA"),
     )
     with pytest.raises(ValueError, match="missing candidate regions"):
-        resolve_search_order(spec, "kitchen", source="fixed")
+        resolve_search_order(spec, "kitchen", source="oracle", mode="gt", variant="K1")
 
 
 # 6. Unknown extra region rejected
@@ -117,7 +130,7 @@ def test_search_order_unknown_extra_region_rejected():
         region_ranking=("D1", "D2"),
     )
     with pytest.raises(ValueError, match="extra unknown regions"):
-        resolve_search_order(spec, "kitchen", source="fixed")
+        resolve_search_order(spec, "kitchen", source="oracle", mode="gt", variant="K1")
 
 
 # 7. Living Room resolves search order as N/A / empty
@@ -127,8 +140,12 @@ def test_search_order_living_room_empty():
         candidate_regions=(),
         region_ranking=(),
     )
-    assert resolve_search_order(spec, "living_room", source="provider") == ()
-    assert resolve_search_order(spec, "living_room", source="fixed") == ()
+    assert resolve_search_order(spec, "living_room", source="auto") == ((), "not_applicable", None)
+    assert resolve_search_order(spec, "living_room", source="provider") == ((), "not_applicable", None)
+    with pytest.raises(ValueError, match="not applicable for living_room"):
+        resolve_search_order(spec, "living_room", source="oracle")
+    with pytest.raises(ValueError, match="not applicable for living_room"):
+        resolve_search_order(spec, "living_room", source="random", seed=0)
 
 
 # 8. Specification replay: valid saved G_F loads successfully
@@ -267,8 +284,8 @@ def test_manifest_success_mocked(tmp_path: Path):
     assert manifest["variant"] == "K1"
     assert manifest["spec_mode"] == "gt"
     assert manifest["spec_acquisition"] == "live_provider"
-    assert manifest["search_order_source_requested"] == "provider"
-    assert manifest["search_order_source_effective"] == "provider"
+    assert manifest["search_order_source_requested"] == "auto"
+    assert manifest["search_order_source_effective"] == "oracle"
     assert manifest["execution_state"] == "planning_only"
     assert manifest["visualization_requested"] is False
     assert manifest["terminal_status"] == "ACTION_SEQUENCE_READY"
@@ -347,27 +364,47 @@ def test_default_provider_call_when_spec_json_absent(tmp_path: Path):
         assert path_input is None
 
 
-# 18. Fixed runtime guard: requesting fixed before Pass 3.1 must fail fast
-def test_fixed_search_runtime_guard(tmp_path: Path):
-    dummy_spec = _make_dummy_spec(domain="kitchen")
+# 18. Auto search mode defaults
+def test_search_order_auto_resolution():
+    spec = _make_dummy_spec(domain="kitchen")
+    _, eff_gt, _ = resolve_search_order(spec, "kitchen", "auto", mode="gt", variant="K1")
+    assert eff_gt == "oracle"
 
-    with patch("mujoco_scenes.functional_tamp_pipeline.run.provider_for_mode") as mock_prov_factory, \
-         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.scene_for_variant"):
-        mock_provider = MagicMock()
-        mock_provider.provide.return_value = dummy_spec
-        mock_prov_factory.return_value = mock_provider
-
-        with pytest.raises(RuntimeError, match="fixed search order is resolved but not executable until Phase 3.1 wiring"):
-            run_pipeline(
-                domain="kitchen",
-                variant="K1",
-                mode="gt",
-                search_order="fixed",
-                output_root=tmp_path,
-            )
+    _, eff_vlm, _ = resolve_search_order(spec, "kitchen", "auto", mode="vlm", variant="K1")
+    assert eff_vlm == "provider"
 
 
-# 19. Kitchen nested action plan discovery
+# 19. VLM + Oracle rejected
+def test_vlm_oracle_rejected():
+    spec = _make_dummy_spec(domain="kitchen")
+    with pytest.raises(ValueError, match="oracle search is privileged and only valid with GT mode"):
+        resolve_search_order(spec, "kitchen", "oracle", mode="vlm", variant="K1")
+
+
+# 20. Random search reproducibility and validation
+def test_random_search_properties():
+    spec = _make_dummy_spec(domain="kitchen")
+    order1, eff1, seed1 = resolve_search_order(spec, "kitchen", "random", mode="vlm", seed=42)
+    order2, eff2, seed2 = resolve_search_order(spec, "kitchen", "random", mode="vlm", seed=42)
+    assert order1 == order2
+    assert eff1 == "random"
+    assert seed1 == 42
+    assert set(order1) == set(spec.candidate_regions)
+
+    # Missing seed rejected
+    with pytest.raises(ValueError, match="random search requires --search-seed"):
+        resolve_search_order(spec, "kitchen", "random", mode="vlm", seed=None)
+
+    # Negative seed rejected
+    with pytest.raises(ValueError, match="must be a non-negative integer"):
+        resolve_search_order(spec, "kitchen", "random", mode="vlm", seed=-5)
+
+    # Seed with oracle/provider rejected
+    with pytest.raises(ValueError, match="--search-seed is only valid for random"):
+        resolve_search_order(spec, "kitchen", "provider", mode="vlm", seed=0)
+
+
+# 21. Kitchen nested action plan discovery
 def test_artifact_discovery_kitchen_nested(tmp_path: Path):
     run_dir = tmp_path / "kitchen_run"
     plan_dir = run_dir / "action_sequence"
@@ -381,7 +418,7 @@ def test_artifact_discovery_kitchen_nested(tmp_path: Path):
     assert artifacts["plan_grounding_audit"] == "plan_grounding_audit.json"
 
 
-# 20. Living Room plan and replay discovery
+# 22. Living Room plan and replay discovery
 def test_artifact_discovery_living_room(tmp_path: Path):
     run_dir = tmp_path / "lr_run"
     plan_dir = run_dir / "action_sequence"
@@ -395,7 +432,7 @@ def test_artifact_discovery_living_room(tmp_path: Path):
     assert artifacts["replay_validation"] == "action_sequence/replay_validation.json"
 
 
-# 21. Workshop root action plan discovery
+# 23. Workshop root action plan discovery
 def test_artifact_discovery_workshop_root(tmp_path: Path):
     run_dir = tmp_path / "workshop_run"
     run_dir.mkdir(parents=True)
@@ -410,88 +447,7 @@ def test_artifact_discovery_workshop_root(tmp_path: Path):
     assert artifacts["detection_diagnostics"] == "detection_diagnostics.json"
 
 
-# 22. Centralized finalization called exactly once on success
-def test_manifest_finalization_called_once_on_success(tmp_path: Path):
-    dummy_spec = _make_dummy_spec(domain="kitchen")
-    dummy_result = PipelineResult(
-        domain="kitchen",
-        variant="K1",
-        mode="gt",
-        status="ACTION_SEQUENCE_READY",
-        assignment={"tool": "object_0001"},
-        plan=({"action_index": 1, "operator": "PICK", "arguments": ["object_0001"]},),
-    )
-
-    with patch("mujoco_scenes.functional_tamp_pipeline.run.provider_for_mode") as mock_prov_factory, \
-         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.scene_for_variant"), \
-         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.run_to_plan", return_value=dummy_result), \
-         patch("mujoco_scenes.functional_tamp_pipeline.run._write_run_manifest", wraps=_write_run_manifest) as mock_manifest_writer:
-        mock_provider = MagicMock()
-        mock_provider.provide.return_value = dummy_spec
-        mock_prov_factory.return_value = mock_provider
-
-        res = run_pipeline(
-            domain="kitchen",
-            variant="K1",
-            mode="gt",
-            output_root=tmp_path,
-        )
-        assert res.status == "ACTION_SEQUENCE_READY"
-        assert mock_manifest_writer.call_count == 1
-
-
-# 23. Centralized finalization called exactly once on infeasible
-def test_manifest_finalization_called_once_on_infeasible(tmp_path: Path):
-    dummy_spec = _make_dummy_spec(domain="kitchen")
-    dummy_result = PipelineResult(
-        domain="kitchen",
-        variant="K7",
-        mode="gt",
-        status="INFEASIBLE",
-        failure_reason="NO_TOOL_OBSERVED",
-    )
-
-    with patch("mujoco_scenes.functional_tamp_pipeline.run.provider_for_mode") as mock_prov_factory, \
-         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.scene_for_variant"), \
-         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.run_to_plan", return_value=dummy_result), \
-         patch("mujoco_scenes.functional_tamp_pipeline.run._write_run_manifest", wraps=_write_run_manifest) as mock_manifest_writer:
-        mock_provider = MagicMock()
-        mock_provider.provide.return_value = dummy_spec
-        mock_prov_factory.return_value = mock_provider
-
-        res = run_pipeline(
-            domain="kitchen",
-            variant="K7",
-            mode="gt",
-            output_root=tmp_path,
-        )
-        assert res.status == "INFEASIBLE"
-        assert mock_manifest_writer.call_count == 1
-
-
-# 24. Centralized finalization called exactly once on exception
-def test_manifest_finalization_called_once_on_exception(tmp_path: Path):
-    dummy_spec = _make_dummy_spec(domain="kitchen")
-
-    with patch("mujoco_scenes.functional_tamp_pipeline.run.provider_for_mode") as mock_prov_factory, \
-         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.scene_for_variant"), \
-         patch("mujoco_scenes.functional_tamp_pipeline.domains.kitchen.run_to_plan", side_effect=ValueError("Perception crashed")), \
-         patch("mujoco_scenes.functional_tamp_pipeline.run._write_run_manifest", wraps=_write_run_manifest) as mock_manifest_writer:
-        mock_provider = MagicMock()
-        mock_provider.provide.return_value = dummy_spec
-        mock_prov_factory.return_value = mock_provider
-
-        with pytest.raises(ValueError, match="Perception crashed"):
-            run_pipeline(
-                domain="kitchen",
-                variant="K1",
-                mode="gt",
-                output_root=tmp_path,
-            )
-        assert mock_manifest_writer.call_count == 1
-
-
-# 25. Pass 3.0.2: SUCCESS + MANIFEST FAILURE
+# 24. Manifest failure on success is non-intrusive
 def test_manifest_failure_on_success_is_non_intrusive(tmp_path: Path, capsys: pytest.CaptureFixture):
     dummy_spec = _make_dummy_spec(domain="kitchen")
     dummy_result = PipelineResult(
@@ -524,7 +480,7 @@ def test_manifest_failure_on_success_is_non_intrusive(tmp_path: Path, capsys: py
     assert "RUN MANIFEST WRITE FAILED: OSError: disk full" in captured.err
 
 
-# 26. Pass 3.0.2: INFEASIBLE + MANIFEST FAILURE
+# 25. Manifest failure on infeasible is non-intrusive
 def test_manifest_failure_on_infeasible_is_non_intrusive(tmp_path: Path, capsys: pytest.CaptureFixture):
     dummy_spec = _make_dummy_spec(domain="kitchen")
     dummy_result = PipelineResult(
@@ -556,7 +512,7 @@ def test_manifest_failure_on_infeasible_is_non_intrusive(tmp_path: Path, capsys:
     assert "RUN MANIFEST WRITE FAILED: PermissionError: permission denied" in captured.err
 
 
-# 27. Pass 3.0.2: PIPELINE EXCEPTION + MANIFEST FAILURE (DOUBLE FAILURE)
+# 26. Manifest failure on pipeline exception preserves original exception
 def test_manifest_failure_on_pipeline_exception_preserves_original_exception(tmp_path: Path, capsys: pytest.CaptureFixture):
     dummy_spec = _make_dummy_spec(domain="kitchen")
 

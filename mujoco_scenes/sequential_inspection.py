@@ -122,6 +122,7 @@ def run_fixed_order_inspection(
     observe: Callable[[str, str | None], tuple[Any, Path]],
     stop_on_complete: bool,
     completion_predicate: Callable[[ObservedStateRun], bool] | None = None,
+    observer: Any = None,
 ) -> ObservedStateRun:
     """Run the common closed-initial, fixed-order observation loop."""
     sequence = tuple(sequence)
@@ -129,6 +130,12 @@ def run_fixed_order_inspection(
     _cloud_run, stage_dir = observe("initial", None)
     print(f"  Witness: {_witness_status(session)}")
     print(f"  Saved: {stage_dir}")
+    if observer is not None:
+        observer("observation_updated", {
+            "stage": "initial",
+            "stage_dir": str(stage_dir),
+            "inspected_regions": [],
+        })
 
     complete = completion_predicate or (
         lambda current: _witness_status(current) == "COMPLETE"
@@ -162,7 +169,19 @@ def run_fixed_order_inspection(
             f"[OBSERVED STATE] Stage {session.next_stage:03d}: "
             f"inspect {region_id}"
         )
+        if observer is not None:
+            observer("search_region_selected", {
+                "region": region_id,
+                "index": sequence_index,
+                "total_regions": len(sequence),
+            })
         adapter.inspect(region_id)
+        if observer is not None:
+            observer("search_region_opened", {
+                "region": region_id,
+                "success": True,
+                "exploratory": True,
+            })
         cloud_run, stage_dir = observe(f"after_{region_id}", region_id)
         print(
             f"  Registry objects: {len(session.registry['objects'])}; "
@@ -170,6 +189,12 @@ def run_fixed_order_inspection(
         )
         print(f"  Witness: {_witness_status(session)}")
         print(f"  Saved: {stage_dir}")
+        if observer is not None:
+            observer("observation_updated", {
+                "stage": f"after_{region_id}",
+                "stage_dir": str(stage_dir),
+                "inspected_regions": list(sequence[:sequence_index + 1]),
+            })
         if stop_on_complete and complete(session):
             remaining = list(sequence[sequence_index + 1:])
             session.append_event(
@@ -232,6 +257,7 @@ def run_sequential_inspection(
     save_semantic_overlays: bool = False,
     completion_predicate: Callable[[ObservedStateRun], bool] | None = None,
     record_oracle_diagnostics: bool = True,
+    observer: Any = None,
 ) -> ObservedStateRun:
     """Observe closed reset, then inspect and persist one region at a time."""
     available_regions = tuple(scene.get_region_observation_states().keys())
@@ -416,6 +442,7 @@ def run_sequential_inspection(
         observe=observe,
         stop_on_complete=stop_on_complete,
         completion_predicate=completion_predicate,
+        observer=observer,
     )
     print(f"[OBSERVED STATE] Run complete: {session.run_dir}\n")
     return session

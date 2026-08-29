@@ -408,25 +408,21 @@ def run_to_plan(
     specification: FunctionalSpecification,
     output_dir: Path,
     scene: KitchenScene | None = None,
+    search_order: tuple[str, ...] | None = None,
+    observer: Any = None,
 ) -> PipelineResult:
     from ..grounding import ground_graph
 
     scene = scene or scene_for_variant(internal_variant)
     contract = compile_kitchen_contract_from_graph(specification)
-
-    vocabulary_path = output_dir / "kitchen_vocabulary.yaml"
-    canonical_labels: dict[str, list[str]] = {}
-    root = Path(__file__).resolve().parents[2]
-    base_vocab_path = Path(specification.metadata.get("semantic_vocabulary_path", root / "configs" / "semantic_vocabulary.yaml"))
-    base_canon: dict[str, list[str]] = {}
+    vocabulary_path = output_dir / "kitchen_yolo_world_labels.yaml"
+    base_canon = contract.get("canonical_labels", {})
     alias_to_base_canon: dict[str, str] = {}
-    if base_vocab_path.is_file():
-        base_vocab = yaml.safe_load(base_vocab_path.read_text(encoding="utf-8"))
-        base_canon = dict(base_vocab.get("canonical_labels", {}))
-        for canon_k, aliases in base_canon.items():
-            for a in aliases:
-                alias_to_base_canon[a.strip().lower()] = canon_k
+    for canon_name, aliases in base_canon.items():
+        for alias in aliases:
+            alias_to_base_canon[alias.strip().lower()] = canon_name
 
+    canonical_labels: dict[str, list[str]] = {}
     for role in specification.nodes.values():
         for cat in role.semantic_categories:
             norm_cat = cat.strip().lower()
@@ -452,14 +448,22 @@ def run_to_plan(
         import shutil
         shutil.rmtree(phase1_dir, ignore_errors=True)
 
+    order = tuple(search_order) if search_order is not None else tuple(specification.region_ranking)
+
     def kitchen_completion_predicate(current: Any) -> bool:
         current_go = build_kitchen_observed_scene_graph(current)
         res = ground_graph(specification, current_go, {"search_exhausted": False})
+        if observer is not None:
+            observer("grounding_updated", {
+                "grounding": res.to_dict(),
+                "satisfied": bool(res.complete),
+                "status": res.status,
+            })
         return bool(res.complete)
 
     session = run_sequential_inspection(
         scene,
-        specification.region_ranking,
+        order,
         runs_root=output_dir / "observed_search",
         run_id="phase1",
         width=1280,
@@ -473,6 +477,7 @@ def run_to_plan(
         grounding_mode="joint",
         completion_predicate=kitchen_completion_predicate,
         record_oracle_diagnostics=False,
+        observer=observer,
     )
     events = [
         json.loads(line) for line in session.events_path.read_text(encoding="utf-8").splitlines()
@@ -487,9 +492,15 @@ def run_to_plan(
     for r in opened:
         graph_o.mark_region_inspected(r)
 
-    is_exhausted = len(opened) >= len(specification.region_ranking)
+    is_exhausted = len(opened) >= len(order)
     # Canonical graph grounding decides the assignment authority
     ground_result = ground_graph(specification, graph_o, {"search_exhausted": is_exhausted})
+    if observer is not None:
+        observer("grounding_updated", {
+            "grounding": ground_result.to_dict(),
+            "satisfied": bool(ground_result.complete),
+            "status": ground_result.status,
+        })
 
     (output_dir / "observed_scene_graph.json").write_text(
         json.dumps(graph_o.to_dict(), indent=2, sort_keys=True) + "\n",
