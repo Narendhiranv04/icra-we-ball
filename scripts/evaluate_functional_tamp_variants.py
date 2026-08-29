@@ -4,11 +4,11 @@ Evaluate functional TAMP variants across benchmark domains (Kitchen, Living Room
 Provides clean execution, return code checking, artifact inspection, plan validation,
 grounding audits, structured JSON/CSV logging, and summary reporting.
 
-Extended in Pass 3.3 / 3.3.1 for controlled search experiments:
+Extended in Pass 3.3 / 3.3.1 / 3.3.2 for controlled search experiments:
 - GT Oracle, Provider (FM-guided when VLM), Seeded Random
 - Multi-seed random trial output isolation
 - Exact G_F replay and pre-run/post-run SHA-256 pairing verification
-- Authoritative manifest provenance consistency checking
+- Authoritative manifest provenance and spec_acquisition validation
 - Summary aggregation for multi-seed random trials with dynamic P(complete by k)
 """
 
@@ -35,6 +35,19 @@ EXPECTED: Dict[str, Dict[str, str]] = {
     "living_room": {v: "ACTION_SEQUENCE_READY" if int(v[1:]) <= 6 else "INFEASIBLE" for v in DOMAINS["living_room"]},
     "workshop": {v: "ACTION_SEQUENCE_READY" if int(v[1:]) <= 8 else "INFEASIBLE" for v in DOMAINS["workshop"]},
 }
+
+# Critical required fields that every parseable run_manifest.json must contain
+REQUIRED_MANIFEST_FIELDS = [
+    "spec_mode",
+    "spec_acquisition",
+    "search_order_source_requested",
+    "search_order_source_effective",
+    "search_seed_requested",
+    "search_seed_effective",
+    "terminal_status",
+    "exploration_actuation",
+    "specification_sha256",
+]
 
 
 def load_grounding_info(run_dir: str) -> Tuple[str, Optional[bool]]:
@@ -239,12 +252,13 @@ def evaluate_variant(
 
     # Compute source specification hash before subprocess launch if not precomputed
     source_spec_sha256_before = source_specification_sha256
-    source_hash_error_before = False
     if specification_json is not None and source_spec_sha256_before is None:
         try:
             source_spec_sha256_before = compute_file_sha256(specification_json)
-        except Exception:
-            source_hash_error_before = True
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to read/hash replay specification before subprocess: {specification_json} ({e})"
+            ) from e
 
     cmd = build_runner_command(
         domain=domain,
@@ -299,8 +313,10 @@ def evaluate_variant(
     evaluator_mode_requested = mode
     evaluator_search_order_requested = search_order or "auto"
     evaluator_search_seed_requested = search_seed
+    expected_spec_acquisition = "replayed_provider_output" if specification_json is not None else "live_provider"
 
     manifest_spec_mode = manifest.get("spec_mode") if manifest else None
+    manifest_spec_acquisition = manifest.get("spec_acquisition") if manifest else None
     manifest_search_order_requested = manifest.get("search_order_source_requested") if manifest else None
     manifest_search_order_effective = manifest.get("search_order_source_effective") if manifest else None
     manifest_search_seed_requested = manifest.get("search_seed_requested") if manifest else None
@@ -310,23 +326,31 @@ def evaluate_variant(
     provider_region_ranking: List[str] = list(manifest.get("provider_region_ranking", [])) if manifest else []
     region_order_used: List[str] = list(manifest.get("region_order_used", [])) if manifest else []
     exploration_actuation = manifest.get("exploration_actuation", "unknown") if manifest else "unknown"
-    spec_acquisition = manifest.get("spec_acquisition", "unknown") if manifest else "unknown"
+    spec_acquisition = manifest_spec_acquisition or "unknown"
     manifest_spec_sha256 = manifest.get("specification_sha256") if manifest else None
 
     # Provenance consistency checks
     provenance_mismatches: List[str] = []
-    if manifest is not None:
+    if manifest is None:
+        provenance_mismatches.append("run manifest missing or unreadable")
+        provenance_match = False
+    else:
+        # Check required fields
+        for field in REQUIRED_MANIFEST_FIELDS:
+            if field not in manifest:
+                provenance_mismatches.append(f"manifest missing field: {field}")
+
         if manifest_spec_mode != evaluator_mode_requested:
             provenance_mismatches.append(f"spec_mode: evaluator='{evaluator_mode_requested}' != manifest='{manifest_spec_mode}'")
+        if manifest_spec_acquisition != expected_spec_acquisition:
+            provenance_mismatches.append(f"spec_acquisition: expected='{expected_spec_acquisition}' != manifest='{manifest_spec_acquisition}'")
         if manifest_search_order_requested != evaluator_search_order_requested:
             provenance_mismatches.append(f"search_order_requested: evaluator='{evaluator_search_order_requested}' != manifest='{manifest_search_order_requested}'")
-        if evaluator_search_seed_requested is not None and manifest_search_seed_requested != evaluator_search_seed_requested:
+        if manifest_search_seed_requested != evaluator_search_seed_requested:
             provenance_mismatches.append(f"search_seed: evaluator={evaluator_search_seed_requested} != manifest={manifest_search_seed_requested}")
         if is_completed and actual in {"ACTION_SEQUENCE_READY", "INFEASIBLE"} and manifest_terminal_status != actual:
             provenance_mismatches.append(f"terminal_status: result.json='{actual}' != manifest='{manifest_terminal_status}'")
         provenance_match = (len(provenance_mismatches) == 0)
-    else:
-        provenance_match = None
 
     # Replay SHA verification and source immutability check
     source_spec_sha256_after = None
@@ -335,31 +359,32 @@ def evaluate_variant(
     spec_hash_match = None
 
     if specification_json is not None:
-        if source_hash_error_before or source_spec_sha256_before is None:
-            pairing_status = "SOURCE_HASH_ERROR"
+        post_hash_read_error = False
+        try:
+            source_spec_sha256_after = compute_file_sha256(specification_json)
+            source_spec_unchanged = (source_spec_sha256_before == source_spec_sha256_after)
+        except Exception:
+            post_hash_read_error = True
+            source_spec_unchanged = None
+
+        if post_hash_read_error:
+            pairing_status = "SOURCE_HASH_ERROR_AFTER"
+            spec_hash_match = False
+        elif source_spec_unchanged is False:
+            pairing_status = "SOURCE_CHANGED"
+            spec_hash_match = False
+        elif manifest is None:
+            pairing_status = "MANIFEST_MISSING"
+            spec_hash_match = False
+        elif manifest_spec_sha256 is None:
+            pairing_status = "MANIFEST_HASH_MISSING"
+            spec_hash_match = False
+        elif source_spec_sha256_before != manifest_spec_sha256:
+            pairing_status = "HASH_MISMATCH"
             spec_hash_match = False
         else:
-            try:
-                source_spec_sha256_after = compute_file_sha256(specification_json)
-                source_spec_unchanged = (source_spec_sha256_before == source_spec_sha256_after)
-            except Exception:
-                source_spec_unchanged = False
-
-            if source_spec_unchanged is False:
-                pairing_status = "SOURCE_CHANGED"
-                spec_hash_match = False
-            elif manifest is None:
-                pairing_status = "MANIFEST_MISSING"
-                spec_hash_match = False
-            elif manifest_spec_sha256 is None:
-                pairing_status = "MANIFEST_HASH_MISSING"
-                spec_hash_match = False
-            elif source_spec_sha256_before != manifest_spec_sha256:
-                pairing_status = "HASH_MISMATCH"
-                spec_hash_match = False
-            else:
-                pairing_status = "VERIFIED"
-                spec_hash_match = True
+            pairing_status = "VERIFIED"
+            spec_hash_match = True
 
     # Evaluation validity determination (scientific condition validity)
     evaluation_valid = True
@@ -452,7 +477,9 @@ def evaluate_variant(
         "evaluator_mode_requested": evaluator_mode_requested,
         "evaluator_search_order_requested": evaluator_search_order_requested,
         "evaluator_search_seed_requested": evaluator_search_seed_requested,
+        "expected_spec_acquisition": expected_spec_acquisition,
         "manifest_spec_mode": manifest_spec_mode,
+        "manifest_spec_acquisition": manifest_spec_acquisition,
         "manifest_search_order_requested": manifest_search_order_requested,
         "manifest_search_order_effective": manifest_search_order_effective,
         "manifest_search_seed_requested": manifest_search_seed_requested,
@@ -523,30 +550,37 @@ def aggregate_random_trials(
         gr_complete_rate = (gr_complete_count / n_trials) if n_trials > 0 else 0.0
         gr_complete_rate_valid = (gr_complete_count / n_valid) if n_valid > 0 else None
 
-        # Inspection count statistics over valid completed trials
+        # Inspection count statistics over valid completed trials (None if no valid trials)
         if valid_rows:
             insp_counts = [r["inspection_count"] for r in valid_rows]
-            insp_mean = statistics.mean(insp_counts)
-            insp_std = statistics.pstdev(insp_counts) if len(insp_counts) > 1 else 0.0
+            insp_mean = round(statistics.mean(insp_counts), 4)
+            insp_std = round(statistics.pstdev(insp_counts), 4) if len(insp_counts) > 1 else 0.0
             insp_median = statistics.median(insp_counts)
             insp_min = min(insp_counts)
             insp_max = max(insp_counts)
         else:
-            insp_mean, insp_std, insp_median, insp_min, insp_max = 0.0, 0.0, 0.0, 0, 0
+            insp_mean, insp_std, insp_median, insp_min, insp_max = None, None, None, None, None
 
-        # Runtime statistics over valid completed trials (or all rows if none valid)
-        target_runtime_rows = valid_rows if valid_rows else group_rows
-        runtimes = [r["runtime_sec"] for r in target_runtime_rows]
-        rt_mean = statistics.mean(runtimes) if runtimes else 0.0
-        rt_std = statistics.pstdev(runtimes) if len(runtimes) > 1 else 0.0
+        # Runtime statistics: valid-only runtime metrics (None if no valid trials)
+        if valid_rows:
+            valid_runtimes = [r["runtime_sec"] for r in valid_rows]
+            rt_mean = round(statistics.mean(valid_runtimes), 4)
+            rt_std = round(statistics.pstdev(valid_runtimes), 4) if len(valid_runtimes) > 1 else 0.0
+        else:
+            rt_mean, rt_std = None, None
 
-        # Plan length statistics over valid completed trials
+        # Attempt-level runtime statistics over all attempted rows
+        all_runtimes = [r["runtime_sec"] for r in group_rows]
+        rt_attempt_mean = round(statistics.mean(all_runtimes), 4) if all_runtimes else 0.0
+        rt_attempt_std = round(statistics.pstdev(all_runtimes), 4) if len(all_runtimes) > 1 else 0.0
+
+        # Plan length statistics over valid completed trials (None if no valid trials)
         if valid_rows:
             plan_lens = [r["plan_length"] for r in valid_rows]
-            pl_mean = statistics.mean(plan_lens)
-            pl_std = statistics.pstdev(plan_lens) if len(plan_lens) > 1 else 0.0
+            pl_mean = round(statistics.mean(plan_lens), 4)
+            pl_std = round(statistics.pstdev(plan_lens), 4) if len(plan_lens) > 1 else 0.0
         else:
-            pl_mean, pl_std = 0.0, 0.0
+            pl_mean, pl_std = None, None
 
         # Replay valid rate among applicable feasible tasks
         feasible_valid = [r for r in valid_rows if r.get("expected_status") == "ACTION_SEQUENCE_READY"]
@@ -592,15 +626,17 @@ def aggregate_random_trials(
             "expected_match_rate_valid_trials": round(match_rate_valid, 4) if match_rate_valid is not None else None,
             "grounding_complete_rate": round(gr_complete_rate, 4),
             "grounding_complete_rate_valid_trials": round(gr_complete_rate_valid, 4) if gr_complete_rate_valid is not None else None,
-            "inspection_count_mean": round(insp_mean, 4),
-            "inspection_count_std": round(insp_std, 4),
+            "inspection_count_mean": insp_mean,
+            "inspection_count_std": insp_std,
             "inspection_count_median": insp_median,
             "inspection_count_min": insp_min,
             "inspection_count_max": insp_max,
-            "runtime_mean": round(rt_mean, 4),
-            "runtime_std": round(rt_std, 4),
-            "plan_length_mean": round(pl_mean, 4),
-            "plan_length_std": round(pl_std, 4),
+            "runtime_mean": rt_mean,
+            "runtime_std": rt_std,
+            "runtime_attempt_mean": rt_attempt_mean,
+            "runtime_attempt_std": rt_attempt_std,
+            "plan_length_mean": pl_mean,
+            "plan_length_std": pl_std,
             "replay_valid_rate": round(replay_valid_rate, 4) if replay_valid_rate is not None else None,
             "specification_hash_all_match": spec_hash_all_match,
             "variant_max_k": variant_max_k,
@@ -640,6 +676,8 @@ def aggregate_random_trials(
         "InspectionCountMax",
         "RuntimeMean",
         "RuntimeStd",
+        "RuntimeAttemptMean",
+        "RuntimeAttemptStd",
         "PlanLengthMean",
         "PlanLengthStd",
         "ReplayValidRate",
@@ -667,15 +705,17 @@ def aggregate_random_trials(
                 f"{agg['expected_match_rate_valid_trials']:.4f}" if agg["expected_match_rate_valid_trials"] is not None else "N/A",
                 f"{agg['grounding_complete_rate']:.4f}",
                 f"{agg['grounding_complete_rate_valid_trials']:.4f}" if agg["grounding_complete_rate_valid_trials"] is not None else "N/A",
-                f"{agg['inspection_count_mean']:.4f}",
-                f"{agg['inspection_count_std']:.4f}",
-                f"{agg['inspection_count_median']}",
-                agg["inspection_count_min"],
-                agg["inspection_count_max"],
-                f"{agg['runtime_mean']:.4f}",
-                f"{agg['runtime_std']:.4f}",
-                f"{agg['plan_length_mean']:.4f}",
-                f"{agg['plan_length_std']:.4f}",
+                f"{agg['inspection_count_mean']:.4f}" if agg["inspection_count_mean"] is not None else "N/A",
+                f"{agg['inspection_count_std']:.4f}" if agg["inspection_count_std"] is not None else "N/A",
+                str(agg["inspection_count_median"]) if agg["inspection_count_median"] is not None else "N/A",
+                str(agg["inspection_count_min"]) if agg["inspection_count_min"] is not None else "N/A",
+                str(agg["inspection_count_max"]) if agg["inspection_count_max"] is not None else "N/A",
+                f"{agg['runtime_mean']:.4f}" if agg["runtime_mean"] is not None else "N/A",
+                f"{agg['runtime_std']:.4f}" if agg["runtime_std"] is not None else "N/A",
+                f"{agg['runtime_attempt_mean']:.4f}",
+                f"{agg['runtime_attempt_std']:.4f}",
+                f"{agg['plan_length_mean']:.4f}" if agg["plan_length_mean"] is not None else "N/A",
+                f"{agg['plan_length_std']:.4f}" if agg["plan_length_std"] is not None else "N/A",
                 f"{agg['replay_valid_rate']:.4f}" if agg["replay_valid_rate"] is not None else "N/A",
                 json.dumps(agg["pairing_status_counts"]),
                 agg["provenance_failure_count"],
@@ -1000,7 +1040,9 @@ def main() -> None:
             "EvaluatorModeRequested",
             "EvaluatorSearchOrderRequested",
             "EvaluatorSearchSeedRequested",
+            "ExpectedSpecAcquisition",
             "ManifestSpecMode",
+            "ManifestSpecAcquisition",
             "ManifestSearchOrderRequested",
             "ManifestSearchOrderEffective",
             "ManifestSearchSeedRequested",
@@ -1061,7 +1103,9 @@ def main() -> None:
                 r.get("evaluator_mode_requested", ""),
                 r.get("evaluator_search_order_requested", ""),
                 "" if r.get("evaluator_search_seed_requested") is None else str(r["evaluator_search_seed_requested"]),
+                r.get("expected_spec_acquisition", ""),
                 r.get("manifest_spec_mode") or "",
+                r.get("manifest_spec_acquisition") or "",
                 r.get("manifest_search_order_requested") or "",
                 r.get("manifest_search_order_effective") or "",
                 "" if r.get("manifest_search_seed_requested") is None else str(r["manifest_search_seed_requested"]),

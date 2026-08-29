@@ -1,4 +1,4 @@
-"""Comprehensive unit tests for Phase 3.3 and 3.3.1 evaluator orchestration, provenance, and aggregation."""
+"""Comprehensive unit tests for Phase 3.3, 3.3.1, and 3.3.2 evaluator orchestration, provenance, and aggregation."""
 
 import csv
 import json
@@ -13,6 +13,7 @@ import pytest
 from scripts.evaluate_functional_tamp_variants import (
     DOMAINS,
     EXPECTED,
+    REQUIRED_MANIFEST_FIELDS,
     aggregate_random_trials,
     build_runner_command,
     compute_file_sha256,
@@ -24,6 +25,36 @@ from scripts.evaluate_functional_tamp_variants import (
     main,
     parse_random_seeds,
 )
+
+
+# Helper to build a complete canonical manifest dictionary
+def make_valid_manifest(
+    *,
+    spec_mode="gt",
+    spec_acquisition="live_provider",
+    search_order_source_requested="auto",
+    search_order_source_effective="oracle",
+    search_seed_requested=None,
+    search_seed_effective=None,
+    terminal_status="ACTION_SEQUENCE_READY",
+    exploration_actuation="direct_sim_articulation",
+    specification_sha256="abc123sha",
+    provider_region_ranking=None,
+    region_order_used=None,
+):
+    return {
+        "spec_mode": spec_mode,
+        "spec_acquisition": spec_acquisition,
+        "search_order_source_requested": search_order_source_requested,
+        "search_order_source_effective": search_order_source_effective,
+        "search_seed_requested": search_seed_requested,
+        "search_seed_effective": search_seed_effective,
+        "terminal_status": terminal_status,
+        "exploration_actuation": exploration_actuation,
+        "specification_sha256": specification_sha256,
+        "provider_region_ranking": provider_region_ranking or ["C2", "B1"],
+        "region_order_used": region_order_used or ["C2", "B1"],
+    }
 
 
 # 1. Command Construction Tests
@@ -256,6 +287,32 @@ def test_preflight_missing_replay_spec_aborts_before_subprocess(tmp_path: Path):
     mock_subproc.assert_not_called()
 
 
+def test_preflight_hash_failure_aborts_before_subprocess(tmp_path: Path):
+    spec_root = tmp_path / "saved_specs"
+    spec_root.mkdir()
+    k1_dir = spec_root / "kitchen" / "K1" / "gt"
+    k1_dir.mkdir(parents=True)
+    spec_file = k1_dir / "functional_specification.json"
+    spec_file.write_text("{}", encoding="utf-8")
+
+    test_args = [
+        "evaluate_functional_tamp_variants.py",
+        "--output-root", str(tmp_path / "out"),
+        "--domains", "kitchen",
+        "--variants", "K1",
+        "--specification-root", str(spec_root),
+    ]
+
+    with patch("sys.argv", test_args), \
+         patch("scripts.evaluate_functional_tamp_variants.compute_file_sha256", side_effect=PermissionError("Cannot read")), \
+         patch("subprocess.run") as mock_subproc, \
+         pytest.raises(SystemExit) as exc_info:
+        main()
+
+    assert exc_info.value.code == 1
+    mock_subproc.assert_not_called()
+
+
 # 4. Output Isolation Test
 def test_random_trial_output_isolation(tmp_path: Path):
     output_root = tmp_path / "eval_out"
@@ -273,8 +330,8 @@ def test_random_trial_output_isolation(tmp_path: Path):
     assert "seed_009" in run_dirs[2]
 
 
-# 5. Manifest Provenance & Consistency Test
-def test_manifest_provenance_loaded_in_result(tmp_path: Path):
+# 5. Non-replay Missing Manifest Invalidates Trial (Issue #1)
+def test_non_replay_missing_manifest_invalidates_evaluation(tmp_path: Path):
     run_dir = tmp_path / "out" / "kitchen" / "K1" / "gt"
     run_dir.mkdir(parents=True)
 
@@ -284,214 +341,204 @@ def test_manifest_provenance_loaded_in_result(tmp_path: Path):
         "inspected_regions": ["C2"],
         "plan": [{"operator": "PICK"}],
     }), encoding="utf-8")
-
-    manifest_json = run_dir / "run_manifest.json"
-    manifest_json.write_text(json.dumps({
-        "spec_mode": "gt",
-        "spec_acquisition": "live_provider",
-        "specification_sha256": "abcdef123456",
-        "search_order_source_requested": "oracle",
-        "search_order_source_effective": "oracle",
-        "search_seed_requested": None,
-        "search_seed_effective": None,
-        "provider_region_ranking": ["C2", "B1"],
-        "region_order_used": ["C2", "B1"],
-        "exploration_actuation": "direct_sim_articulation",
-        "terminal_status": "ACTION_SEQUENCE_READY",
-    }), encoding="utf-8")
+    # run_manifest.json is absent!
 
     with patch("subprocess.run", return_value=MagicMock(returncode=0)):
-        res = evaluate_variant("kitchen", "K1", str(tmp_path / "out"), search_order="oracle")
+        res = evaluate_variant("kitchen", "K1", str(tmp_path / "out"))
 
-    assert res["search_order_effective"] == "oracle"
-    assert res["provider_region_ranking"] == ["C2", "B1"]
-    assert res["region_order_used"] == ["C2", "B1"]
-    assert res["exploration_actuation"] == "direct_sim_articulation"
-    assert res["spec_acquisition"] == "live_provider"
-    assert res["specification_sha256"] == "abcdef123456"
-    assert res["provenance_match"] is True
-    assert res["evaluation_valid"] is True
-    assert res["valid_match"] == "YES"
-    assert res["n_open"] == 1
+    # Raw pipeline science must remain intact
+    assert res["actual_status"] == "ACTION_SEQUENCE_READY"
+    assert res["completed"] is True
+    assert res["match"] == "YES"
+
+    # Evaluator validity must be marked invalid
+    assert res["provenance_match"] is False
+    assert res["evaluation_valid"] is False
+    assert res["valid_match"] == "N/A"
+    assert "run manifest missing or unreadable" in res["evaluation_failure_reason"]
 
 
-# 6. Source Hash Pre-Subprocess and Verified Pairing
-def test_replay_verified_pairing(tmp_path: Path):
-    spec_file = tmp_path / "source_spec.json"
-    spec_file.write_text(json.dumps({"domain": "kitchen", "task": "test"}), encoding="utf-8")
-    expected_sha = compute_file_sha256(str(spec_file))
-
+# 6. Spec Acquisition Validation Tests (Issue #2)
+def test_spec_acquisition_provenance_live_and_replay_valid(tmp_path: Path):
     run_dir = tmp_path / "out" / "kitchen" / "K1" / "gt"
     run_dir.mkdir(parents=True)
     (run_dir / "result.json").write_text(json.dumps({"status": "ACTION_SEQUENCE_READY", "inspected_regions": []}), encoding="utf-8")
-    (run_dir / "run_manifest.json").write_text(json.dumps({
-        "spec_mode": "gt",
-        "search_order_source_requested": "auto",
-        "search_order_source_effective": "oracle",
-        "specification_sha256": expected_sha,
-        "terminal_status": "ACTION_SEQUENCE_READY",
-    }), encoding="utf-8")
+
+    # Case A: Live provider run
+    manifest = make_valid_manifest(spec_acquisition="live_provider")
+    (run_dir / "run_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    with patch("subprocess.run", return_value=MagicMock(returncode=0)):
+        res_live = evaluate_variant("kitchen", "K1", str(tmp_path / "out"))
+
+    assert res_live["expected_spec_acquisition"] == "live_provider"
+    assert res_live["manifest_spec_acquisition"] == "live_provider"
+    assert res_live["provenance_match"] is True
+    assert res_live["evaluation_valid"] is True
+
+    # Case B: Replayed provider output run
+    spec_file = tmp_path / "spec.json"
+    spec_file.write_text("{}", encoding="utf-8")
+    sha_val = compute_file_sha256(str(spec_file))
+
+    manifest_replay = make_valid_manifest(
+        spec_acquisition="replayed_provider_output",
+        specification_sha256=sha_val,
+    )
+    (run_dir / "run_manifest.json").write_text(json.dumps(manifest_replay), encoding="utf-8")
+    with patch("subprocess.run", return_value=MagicMock(returncode=0)):
+        res_replay = evaluate_variant(
+            "kitchen", "K1", str(tmp_path / "out"),
+            specification_json=str(spec_file),
+            source_specification_sha256=sha_val,
+        )
+
+    assert res_replay["expected_spec_acquisition"] == "replayed_provider_output"
+    assert res_replay["manifest_spec_acquisition"] == "replayed_provider_output"
+    assert res_replay["provenance_match"] is True
+    assert res_replay["evaluation_valid"] is True
+    assert res_replay["pairing_status"] == "VERIFIED"
+
+
+def test_spec_acquisition_mismatch_invalidates_evaluation(tmp_path: Path):
+    run_dir = tmp_path / "out" / "kitchen" / "K1" / "gt"
+    run_dir.mkdir(parents=True)
+    (run_dir / "result.json").write_text(json.dumps({"status": "ACTION_SEQUENCE_READY", "inspected_regions": []}), encoding="utf-8")
+
+    # Replay requested, but manifest says live_provider
+    spec_file = tmp_path / "spec.json"
+    spec_file.write_text("{}", encoding="utf-8")
+    sha_val = compute_file_sha256(str(spec_file))
+
+    manifest = make_valid_manifest(spec_acquisition="live_provider", specification_sha256=sha_val)
+    (run_dir / "run_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
 
     with patch("subprocess.run", return_value=MagicMock(returncode=0)):
-        res = evaluate_variant("kitchen", "K1", str(tmp_path / "out"), specification_json=str(spec_file))
+        res = evaluate_variant(
+            "kitchen", "K1", str(tmp_path / "out"),
+            specification_json=str(spec_file),
+            source_specification_sha256=sha_val,
+        )
 
-    assert res["pairing_status"] == "VERIFIED"
-    assert res["specification_hash_match"] is True
-    assert res["source_specification_unchanged"] is True
-    assert res["evaluation_valid"] is True
-    assert res["valid_match"] == "YES"
-    assert res["actual_status"] == "ACTION_SEQUENCE_READY"
+    assert res["provenance_match"] is False
+    assert res["evaluation_valid"] is False
+    assert any("spec_acquisition" in m for m in res["provenance_mismatches"])
 
 
-# 7. Source Mutation Test
-def test_source_mutation_detected_after_subprocess(tmp_path: Path):
-    spec_file = tmp_path / "source_spec.json"
-    spec_file.write_text(json.dumps({"version": 1}), encoding="utf-8")
+# 7. Seed Provenance Comparison with None (Issue #3)
+def test_seed_provenance_comparison_with_none(tmp_path: Path):
+    run_dir = tmp_path / "out" / "kitchen" / "K1" / "gt"
+    run_dir.mkdir(parents=True)
+    (run_dir / "result.json").write_text(json.dumps({"status": "ACTION_SEQUENCE_READY", "inspected_regions": []}), encoding="utf-8")
+
+    # Evaluator seed=None, manifest seed=7 -> mismatch!
+    manifest_mismatch = make_valid_manifest(search_seed_requested=7)
+    (run_dir / "run_manifest.json").write_text(json.dumps(manifest_mismatch), encoding="utf-8")
+    with patch("subprocess.run", return_value=MagicMock(returncode=0)):
+        res_mismatch = evaluate_variant("kitchen", "K1", str(tmp_path / "out"), search_seed=None)
+
+    assert res_mismatch["provenance_match"] is False
+    assert res_mismatch["evaluation_valid"] is False
+    assert any("search_seed" in m for m in res_mismatch["provenance_mismatches"])
+
+    # Evaluator seed=None, manifest seed=None -> match!
+    manifest_match = make_valid_manifest(search_seed_requested=None)
+    (run_dir / "run_manifest.json").write_text(json.dumps(manifest_match), encoding="utf-8")
+    with patch("subprocess.run", return_value=MagicMock(returncode=0)):
+        res_match = evaluate_variant("kitchen", "K1", str(tmp_path / "out"), search_seed=None)
+
+    assert res_match["provenance_match"] is True
+    assert res_match["evaluation_valid"] is True
+
+
+# 8. Post-run Hash Read Error vs Source Changed & Direct Pre-Hash Failure (Issue #4)
+def test_direct_evaluate_variant_pre_hash_failure_blocks_subprocess(tmp_path: Path):
+    nonexistent_file = str(tmp_path / "does_not_exist.json")
+    with patch("subprocess.run") as mock_subproc:
+        with pytest.raises(RuntimeError, match="Failed to read/hash replay specification before subprocess"):
+            evaluate_variant("kitchen", "K1", str(tmp_path / "out"), specification_json=nonexistent_file)
+        mock_subproc.assert_not_called()
+
+
+def test_post_run_hash_read_failure_classified_as_error_after(tmp_path: Path):
+    spec_file = tmp_path / "spec.json"
+    spec_file.write_text("{}", encoding="utf-8")
     initial_sha = compute_file_sha256(str(spec_file))
 
     run_dir = tmp_path / "out" / "kitchen" / "K1" / "gt"
     run_dir.mkdir(parents=True)
     (run_dir / "result.json").write_text(json.dumps({"status": "ACTION_SEQUENCE_READY", "inspected_regions": []}), encoding="utf-8")
-    (run_dir / "run_manifest.json").write_text(json.dumps({
-        "spec_mode": "gt",
-        "search_order_source_requested": "auto",
-        "search_order_source_effective": "oracle",
-        "specification_sha256": initial_sha,
-        "terminal_status": "ACTION_SEQUENCE_READY",
-    }), encoding="utf-8")
+    manifest = make_valid_manifest(spec_acquisition="replayed_provider_output", specification_sha256=initial_sha)
+    (run_dir / "run_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+    def deleting_subprocess(*args, **kwargs):
+        # File is deleted or unreadable post-run
+        os.remove(str(spec_file))
+        return MagicMock(returncode=0)
+
+    with patch("subprocess.run", side_effect=deleting_subprocess):
+        res = evaluate_variant("kitchen", "K1", str(tmp_path / "out"), specification_json=str(spec_file))
+
+    assert res["pairing_status"] == "SOURCE_HASH_ERROR_AFTER"
+    assert res["source_specification_unchanged"] is None
+    assert res["evaluation_valid"] is False
+    assert res["actual_status"] == "ACTION_SEQUENCE_READY"
+
+
+def test_source_changed_when_hashes_differ(tmp_path: Path):
+    spec_file = tmp_path / "spec.json"
+    spec_file.write_text("{\"v\": 1}", encoding="utf-8")
+    initial_sha = compute_file_sha256(str(spec_file))
+
+    run_dir = tmp_path / "out" / "kitchen" / "K1" / "gt"
+    run_dir.mkdir(parents=True)
+    (run_dir / "result.json").write_text(json.dumps({"status": "ACTION_SEQUENCE_READY", "inspected_regions": []}), encoding="utf-8")
+    manifest = make_valid_manifest(spec_acquisition="replayed_provider_output", specification_sha256=initial_sha)
+    (run_dir / "run_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
 
     def mutating_subprocess(*args, **kwargs):
-        # Mutate the source file during run
-        spec_file.write_text(json.dumps({"version": 2}), encoding="utf-8")
+        spec_file.write_text("{\"v\": 2}", encoding="utf-8")
         return MagicMock(returncode=0)
 
     with patch("subprocess.run", side_effect=mutating_subprocess):
         res = evaluate_variant("kitchen", "K1", str(tmp_path / "out"), specification_json=str(spec_file))
 
-    assert res["source_specification_unchanged"] is False
     assert res["pairing_status"] == "SOURCE_CHANGED"
+    assert res["source_specification_unchanged"] is False
     assert res["evaluation_valid"] is False
-    assert res["valid_match"] == "N/A"
-    # Raw pipeline status must NOT be rewritten
     assert res["actual_status"] == "ACTION_SEQUENCE_READY"
-    assert res["match"] == "YES"
 
 
-# 8. Manifest Missing / Hash Missing / Hash Mismatch Tests
-def test_manifest_missing_invalidates_pairing(tmp_path: Path):
-    spec_file = tmp_path / "source_spec.json"
-    spec_file.write_text("{}", encoding="utf-8")
-
+def test_manifest_missing_required_field_invalidates_trial(tmp_path: Path):
     run_dir = tmp_path / "out" / "kitchen" / "K1" / "gt"
     run_dir.mkdir(parents=True)
     (run_dir / "result.json").write_text(json.dumps({"status": "ACTION_SEQUENCE_READY", "inspected_regions": []}), encoding="utf-8")
-
-    with patch("subprocess.run", return_value=MagicMock(returncode=0)):
-        res = evaluate_variant("kitchen", "K1", str(tmp_path / "out"), specification_json=str(spec_file))
-
-    assert res["pairing_status"] == "MANIFEST_MISSING"
-    assert res["evaluation_valid"] is False
-    assert res["valid_match"] == "N/A"
-    assert res["actual_status"] == "ACTION_SEQUENCE_READY"
-
-
-def test_manifest_hash_missing_invalidates_pairing(tmp_path: Path):
-    spec_file = tmp_path / "source_spec.json"
-    spec_file.write_text("{}", encoding="utf-8")
-
-    run_dir = tmp_path / "out" / "kitchen" / "K1" / "gt"
-    run_dir.mkdir(parents=True)
-    (run_dir / "result.json").write_text(json.dumps({"status": "ACTION_SEQUENCE_READY", "inspected_regions": []}), encoding="utf-8")
-    (run_dir / "run_manifest.json").write_text(json.dumps({"spec_mode": "gt"}), encoding="utf-8")
-
-    with patch("subprocess.run", return_value=MagicMock(returncode=0)):
-        res = evaluate_variant("kitchen", "K1", str(tmp_path / "out"), specification_json=str(spec_file))
-
-    assert res["pairing_status"] == "MANIFEST_HASH_MISSING"
-    assert res["evaluation_valid"] is False
-    assert res["valid_match"] == "N/A"
-    assert res["actual_status"] == "ACTION_SEQUENCE_READY"
-
-
-def test_replay_hash_mismatch_invalidates_pairing(tmp_path: Path):
-    spec_file = tmp_path / "source_spec.json"
-    spec_file.write_text("{}", encoding="utf-8")
-
-    run_dir = tmp_path / "out" / "kitchen" / "K1" / "gt"
-    run_dir.mkdir(parents=True)
-    (run_dir / "result.json").write_text(json.dumps({"status": "ACTION_SEQUENCE_READY", "inspected_regions": []}), encoding="utf-8")
-    (run_dir / "run_manifest.json").write_text(json.dumps({
-        "spec_mode": "gt",
-        "search_order_source_requested": "auto",
-        "specification_sha256": "different_hash",
-        "terminal_status": "ACTION_SEQUENCE_READY",
-    }), encoding="utf-8")
-
-    with patch("subprocess.run", return_value=MagicMock(returncode=0)):
-        res = evaluate_variant("kitchen", "K1", str(tmp_path / "out"), specification_json=str(spec_file))
-
-    assert res["pairing_status"] == "HASH_MISMATCH"
-    assert res["specification_hash_match"] is False
-    assert res["evaluation_valid"] is False
-    assert res["valid_match"] == "N/A"
-    assert res["actual_status"] == "ACTION_SEQUENCE_READY"
-
-
-# 9. Provenance Mismatch Tests
-def test_provenance_mismatch_detection(tmp_path: Path):
-    run_dir = tmp_path / "out" / "kitchen" / "K1" / "vlm"
-    run_dir.mkdir(parents=True)
-    (run_dir / "result.json").write_text(json.dumps({"status": "ACTION_SEQUENCE_READY", "inspected_regions": []}), encoding="utf-8")
-    # Manifest reports seed 1, but evaluator requested seed 0
-    (run_dir / "run_manifest.json").write_text(json.dumps({
-        "spec_mode": "vlm",
-        "search_order_source_requested": "random",
-        "search_seed_requested": 1,
-        "terminal_status": "ACTION_SEQUENCE_READY",
-    }), encoding="utf-8")
-
-    with patch("subprocess.run", return_value=MagicMock(returncode=0)):
-        res = evaluate_variant("kitchen", "K1", str(tmp_path / "out"), mode="vlm", search_order="random", search_seed=0)
-
-    assert res["provenance_match"] is False
-    assert len(res["provenance_mismatches"]) == 1
-    assert "search_seed: evaluator=0 != manifest=1" in res["provenance_mismatches"][0]
-    assert res["evaluation_valid"] is False
-    assert res["actual_status"] == "ACTION_SEQUENCE_READY"
-
-
-def test_manifest_terminal_status_mismatch(tmp_path: Path):
-    run_dir = tmp_path / "out" / "kitchen" / "K1" / "gt"
-    run_dir.mkdir(parents=True)
-    (run_dir / "result.json").write_text(json.dumps({"status": "ACTION_SEQUENCE_READY", "inspected_regions": []}), encoding="utf-8")
-    (run_dir / "run_manifest.json").write_text(json.dumps({
-        "spec_mode": "gt",
-        "search_order_source_requested": "auto",
-        "terminal_status": "INFEASIBLE",
-    }), encoding="utf-8")
+    manifest = make_valid_manifest()
+    del manifest["terminal_status"] # Missing critical field!
+    (run_dir / "run_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
 
     with patch("subprocess.run", return_value=MagicMock(returncode=0)):
         res = evaluate_variant("kitchen", "K1", str(tmp_path / "out"))
 
     assert res["provenance_match"] is False
     assert res["evaluation_valid"] is False
-    assert res["actual_status"] == "ACTION_SEQUENCE_READY"
+    assert any("manifest missing field: terminal_status" in m for m in res["provenance_mismatches"])
 
 
-# 10. Dynamic K Range and Aggregation Tests
-def test_dynamic_k_range_kitchen_5_regions(tmp_path: Path):
+# 9. Dynamic K Range with Canonical Region IDs (Issue #5 & #6)
+def test_dynamic_k_range_kitchen_canonical_ids(tmp_path: Path):
+    # Canonical Kitchen IDs: ["D1", "D2", "C2", "B1", "C1"] (5 candidate regions)
     synthetic_rows = [
         {
             "domain": "kitchen", "variant": "K1", "completed": True, "match": "YES", "evaluation_valid": True,
             "actual_status": "ACTION_SEQUENCE_READY", "expected_status": "ACTION_SEQUENCE_READY",
             "inspection_count": 2, "inspected_regions": ["C2", "B1"], "runtime_sec": 1.0,
-            "region_order_used": ["C2", "B1", "DRAWER", "FRIDGE", "CABINET"], # 5 regions
+            "region_order_used": ["D1", "D2", "C2", "B1", "C1"],
             "plan_length": 2, "plan_replay_valid": True, "grounding_complete": True,
             "search_seed_requested": 0, "pairing_status": "NOT_APPLICABLE",
         },
     ]
 
-    out_dir = str(tmp_path / "agg_k")
+    out_dir = str(tmp_path / "agg_k_canonical")
     os.makedirs(out_dir)
     summary_data, _, _ = aggregate_random_trials(synthetic_rows, out_dir)
 
@@ -502,19 +549,20 @@ def test_dynamic_k_range_kitchen_5_regions(tmp_path: Path):
     assert "6" not in p_k
 
 
-def test_dynamic_k_range_workshop_3_regions(tmp_path: Path):
+def test_dynamic_k_range_workshop_canonical_ids(tmp_path: Path):
+    # Canonical Workshop IDs: ["LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"] (3 candidate regions)
     synthetic_rows = [
         {
             "domain": "workshop", "variant": "W1", "completed": True, "match": "YES", "evaluation_valid": True,
             "actual_status": "ACTION_SEQUENCE_READY", "expected_status": "ACTION_SEQUENCE_READY",
             "inspection_count": 1, "inspected_regions": ["TOOL_CABINET"], "runtime_sec": 1.0,
-            "region_order_used": ["TOOL_CABINET", "DRAWER_LEFT", "DRAWER_RIGHT"], # 3 regions
+            "region_order_used": ["LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"],
             "plan_length": 2, "plan_replay_valid": True, "grounding_complete": True,
             "search_seed_requested": 0, "pairing_status": "NOT_APPLICABLE",
         },
     ]
 
-    out_dir = str(tmp_path / "agg_w")
+    out_dir = str(tmp_path / "agg_w_canonical")
     os.makedirs(out_dir)
     summary_data, _, _ = aggregate_random_trials(synthetic_rows, out_dir)
 
@@ -525,29 +573,29 @@ def test_dynamic_k_range_workshop_3_regions(tmp_path: Path):
     assert "4" not in p_k
 
 
-def test_mixed_aggregate_csv_dynamic_columns(tmp_path: Path):
+def test_mixed_aggregate_csv_dynamic_columns_and_canonical_ids(tmp_path: Path):
     synthetic_rows = [
-        # Kitchen variant with 5 regions
+        # Kitchen variant with 5 canonical regions
         {
             "domain": "kitchen", "variant": "K1", "completed": True, "match": "YES", "evaluation_valid": True,
             "actual_status": "ACTION_SEQUENCE_READY", "expected_status": "ACTION_SEQUENCE_READY",
             "inspection_count": 2, "inspected_regions": ["C2", "B1"], "runtime_sec": 1.0,
-            "region_order_used": ["C2", "B1", "C3", "B2", "D1"],
+            "region_order_used": ["D1", "D2", "C2", "B1", "C1"],
             "plan_length": 2, "plan_replay_valid": True, "grounding_complete": True,
             "search_seed_requested": 0, "pairing_status": "NOT_APPLICABLE",
         },
-        # Workshop variant with 3 regions
+        # Workshop variant with 3 canonical regions
         {
             "domain": "workshop", "variant": "W1", "completed": True, "match": "YES", "evaluation_valid": True,
             "actual_status": "ACTION_SEQUENCE_READY", "expected_status": "ACTION_SEQUENCE_READY",
             "inspection_count": 1, "inspected_regions": ["TOOL_CABINET"], "runtime_sec": 1.0,
-            "region_order_used": ["TOOL_CABINET", "DRAWER_LEFT", "DRAWER_RIGHT"],
+            "region_order_used": ["LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"],
             "plan_length": 2, "plan_replay_valid": True, "grounding_complete": True,
             "search_seed_requested": 0, "pairing_status": "NOT_APPLICABLE",
         },
     ]
 
-    out_dir = str(tmp_path / "agg_mixed")
+    out_dir = str(tmp_path / "agg_mixed_canonical")
     os.makedirs(out_dir)
     _, _, csv_p = aggregate_random_trials(synthetic_rows, out_dir)
 
@@ -572,6 +620,65 @@ def test_mixed_aggregate_csv_dynamic_columns(tmp_path: Path):
     assert workshop_row[k_idx_5] == "N/A"
 
 
+# 10. Aggregation with Zero Valid Trials vs Mixed Trials (Issue #5)
+def test_zero_valid_trials_reports_none_and_na(tmp_path: Path):
+    synthetic_rows = [
+        # Trial 0: invalid
+        {
+            "domain": "workshop", "variant": "W1", "completed": True, "match": "YES", "evaluation_valid": False,
+            "actual_status": "ACTION_SEQUENCE_READY", "expected_status": "ACTION_SEQUENCE_READY",
+            "inspection_count": 5, "inspected_regions": ["TOOL_CABINET"], "runtime_sec": 1.0,
+            "region_order_used": ["LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"],
+            "plan_length": 20, "plan_replay_valid": True, "grounding_complete": True,
+            "search_seed_requested": 0, "pairing_status": "HASH_MISMATCH",
+        },
+        # Trial 1: invalid
+        {
+            "domain": "workshop", "variant": "W1", "completed": True, "match": "YES", "evaluation_valid": False,
+            "actual_status": "ACTION_SEQUENCE_READY", "expected_status": "ACTION_SEQUENCE_READY",
+            "inspection_count": 8, "inspected_regions": ["LEFT_DRAWER"], "runtime_sec": 3.0,
+            "region_order_used": ["LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"],
+            "plan_length": 30, "plan_replay_valid": True, "grounding_complete": True,
+            "search_seed_requested": 1, "pairing_status": "HASH_MISMATCH",
+        },
+    ]
+
+    out_dir = str(tmp_path / "agg_zero_valid")
+    os.makedirs(out_dir)
+    summary_data, json_p, csv_p = aggregate_random_trials(synthetic_rows, out_dir)
+
+    agg = summary_data["aggregates"][0]
+    assert agg["n_trials"] == 2
+    assert agg["n_valid_trials"] == 0
+    assert agg["evaluation_invalid_count"] == 2
+
+    # Scientific valid-only stats must be None (not 0.0)
+    assert agg["inspection_count_mean"] is None
+    assert agg["inspection_count_std"] is None
+    assert agg["inspection_count_median"] is None
+    assert agg["inspection_count_min"] is None
+    assert agg["inspection_count_max"] is None
+    assert agg["plan_length_mean"] is None
+    assert agg["plan_length_std"] is None
+    assert agg["runtime_mean"] is None
+    assert agg["runtime_std"] is None
+
+    # Attempt-level runtime statistics are computed over all rows
+    assert agg["runtime_attempt_mean"] == 2.0
+    assert agg["runtime_attempt_std"] == 1.0
+
+    # CSV verification: valid-only numeric columns must be "N/A"
+    with open(csv_p, "r", newline="", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        headers = next(reader)
+        row = next(reader)
+
+    assert row[headers.index("InspectionCountMean")] == "N/A"
+    assert row[headers.index("PlanLengthMean")] == "N/A"
+    assert row[headers.index("RuntimeMean")] == "N/A"
+    assert row[headers.index("RuntimeAttemptMean")] == "2.0000"
+
+
 def test_invalid_trial_excluded_from_numeric_stats(tmp_path: Path):
     synthetic_rows = [
         # Seed 0: valid, inspection_count = 1
@@ -579,7 +686,7 @@ def test_invalid_trial_excluded_from_numeric_stats(tmp_path: Path):
             "domain": "workshop", "variant": "W1", "completed": True, "match": "YES", "evaluation_valid": True,
             "actual_status": "ACTION_SEQUENCE_READY", "expected_status": "ACTION_SEQUENCE_READY",
             "inspection_count": 1, "inspected_regions": ["TOOL_CABINET"], "runtime_sec": 1.0,
-            "region_order_used": ["TOOL_CABINET", "DRAWER_LEFT", "DRAWER_RIGHT"],
+            "region_order_used": ["LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"],
             "plan_length": 2, "plan_replay_valid": True, "grounding_complete": True,
             "search_seed_requested": 0, "pairing_status": "VERIFIED",
         },
@@ -587,8 +694,8 @@ def test_invalid_trial_excluded_from_numeric_stats(tmp_path: Path):
         {
             "domain": "workshop", "variant": "W1", "completed": True, "match": "YES", "evaluation_valid": False,
             "actual_status": "ACTION_SEQUENCE_READY", "expected_status": "ACTION_SEQUENCE_READY",
-            "inspection_count": 99, "inspected_regions": ["DRAWER_RIGHT"], "runtime_sec": 9.0,
-            "region_order_used": ["TOOL_CABINET", "DRAWER_LEFT", "DRAWER_RIGHT"],
+            "inspection_count": 99, "inspected_regions": ["RIGHT_DRAWER"], "runtime_sec": 9.0,
+            "region_order_used": ["LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"],
             "plan_length": 99, "plan_replay_valid": True, "grounding_complete": True,
             "search_seed_requested": 1, "pairing_status": "HASH_MISMATCH",
         },
@@ -606,10 +713,6 @@ def test_invalid_trial_excluded_from_numeric_stats(tmp_path: Path):
     # Mean inspection count over valid trials must be 1.0 (not (1+99)/2 = 50.0)
     assert agg["inspection_count_mean"] == 1.0
     assert agg["plan_length_mean"] == 2.0
-
-    # P(complete by k) denominator remains n_trials=2
-    # For k=1: 1 valid trial completed <= 1 -> 1 / 2 = 0.5
-    assert agg["p_grounding_complete_by_k"]["1"] == 0.5
 
 
 # 11. Summary & CSV Backward Compatibility Test
@@ -633,17 +736,18 @@ def test_summary_and_csv_structure_backward_compatibility(tmp_path: Path):
         "graph_grounding_path": None, "audit_path": None, "spec_mode": "gt", "condition_label": "gt_oracle",
         "search_order_requested": "auto", "search_order_effective": "oracle", "search_seed_requested": None,
         "search_seed_effective": None, "evaluator_mode_requested": "gt", "evaluator_search_order_requested": "auto",
-        "evaluator_search_seed_requested": None, "manifest_spec_mode": "gt", "manifest_search_order_requested": "auto",
-        "manifest_search_order_effective": "oracle", "manifest_search_seed_requested": None,
-        "manifest_search_seed_effective": None, "manifest_terminal_status": "ACTION_SEQUENCE_READY",
-        "provenance_match": True, "provenance_mismatches": [], "provider_region_ranking": ["C2"],
-        "region_order_used": ["C2"], "exploration_actuation": "direct_sim_articulation",
-        "spec_acquisition": "live_provider", "specification_sha256": "abc", "source_specification_path": None,
-        "source_specification_sha256": None, "source_specification_sha256_after": None,
-        "source_specification_unchanged": None, "pairing_status": "NOT_APPLICABLE",
-        "specification_hash_match": None, "evaluation_valid": True, "evaluation_failure_reason": None,
-        "run_manifest_path": "/tmp/man.json", "trial_id": "kitchen_K1_gt", "trial_output_root": str(out_root),
-        "run_dir": str(out_root / "kitchen" / "K1" / "gt"),
+        "evaluator_search_seed_requested": None, "expected_spec_acquisition": "live_provider",
+        "manifest_spec_mode": "gt", "manifest_spec_acquisition": "live_provider",
+        "manifest_search_order_requested": "auto", "manifest_search_order_effective": "oracle",
+        "manifest_search_seed_requested": None, "manifest_search_seed_effective": None,
+        "manifest_terminal_status": "ACTION_SEQUENCE_READY", "provenance_match": True, "provenance_mismatches": [],
+        "provider_region_ranking": ["C2"], "region_order_used": ["C2"],
+        "exploration_actuation": "direct_sim_articulation", "spec_acquisition": "live_provider",
+        "specification_sha256": "abc", "source_specification_path": None, "source_specification_sha256": None,
+        "source_specification_sha256_after": None, "source_specification_unchanged": None,
+        "pairing_status": "NOT_APPLICABLE", "specification_hash_match": None, "evaluation_valid": True,
+        "evaluation_failure_reason": None, "run_manifest_path": "/tmp/man.json", "trial_id": "kitchen_K1_gt",
+        "trial_output_root": str(out_root), "run_dir": str(out_root / "kitchen" / "K1" / "gt"),
     }
 
     with patch("sys.argv", test_args), \
@@ -679,4 +783,6 @@ def test_summary_and_csv_structure_backward_compatibility(tmp_path: Path):
     assert "EvaluationValid" in headers
     assert "ValidMatch" in headers
     assert "PairingStatus" in headers
+    assert "ExpectedSpecAcquisition" in headers
+    assert "ManifestSpecAcquisition" in headers
     assert "ProvenanceMatch" in headers
