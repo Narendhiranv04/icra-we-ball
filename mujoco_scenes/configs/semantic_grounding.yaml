@@ -26,7 +26,7 @@ vocabulary:
     marker: [marker, permanent marker]
     knife: [knife, kitchen knife]
     jar: [jar, food jar]
-    coffee_source: [coffee jar, coffee can, instant coffee tin, instant coffee jar, nescafe coffee jar]
+    coffee_source: [coffee jar, coffee can, instant coffee tin, instant coffee jar]
     kettle: [kettle, tea kettle, teapot]
     bottle: [bottle]
     remote_control: [remote control, television remote, TV remote]
@@ -51,11 +51,10 @@ association:
 
 mask_crop:
   enabled: true
-  # A detection made from the object's own mask-bounded RGB crop is stronger
-  # association evidence than an overlapping full-frame box. Labels still
-  # come only from RGB; the multiplier prevents neighbouring utensil boxes
-  # from winning the one-to-one match for a thin instance.
-  association_preference_multiplier: 20.0
+  # Prefer an object-isolated RGB crop only modestly over an overlapping
+  # full-frame proposal. Strong full-frame evidence still wins; this merely
+  # prevents cabinet/background context from dominating close label ties.
+  association_preference_multiplier: 1.5
   padding_fraction: 0.30
   minimum_crop_size_pixels: 32
   # Remove neighbouring tabletop objects from the object-specific detector

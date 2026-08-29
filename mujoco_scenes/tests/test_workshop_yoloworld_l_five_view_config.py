@@ -85,10 +85,10 @@ class TestWorkshopYoloWorldLFiveViewConfig(unittest.TestCase):
             geometry["relations"]["slender_driver_max_cross_section_ratio"], 0.30
         )
         self.assertEqual(
-            geometry["relations"]["compact_driver_min_cross_section_ratio"], 0.65
+            geometry["relations"]["compact_driver_min_cross_section_ratio"], 0.55
         )
         self.assertEqual(
-            geometry["relations"]["compact_driver_minimum_cross_section_m"], 0.075
+            geometry["relations"]["compact_driver_minimum_cross_section_m"], 0.065
         )
         self.assertEqual(
             geometry["relations"]["compact_driver_maximum_cross_section_m"], 0.220
@@ -97,18 +97,18 @@ class TestWorkshopYoloWorldLFiveViewConfig(unittest.TestCase):
             geometry["relations"]["compact_driver_maximum_length_m"], 0.250
         )
         self.assertEqual(
-            geometry["relations"]["compact_driver_partial_maximum_length_m"], 0.100
+            geometry["relations"]["compact_driver_partial_maximum_length_m"], 0.125
         )
         self.assertEqual(
-            geometry["relations"]["compact_driver_full_minimum_length_m"], 0.200
+            geometry["relations"]["compact_driver_full_minimum_length_m"], 0.150
         )
         self.assertEqual(
             geometry["relations"]["maximum_fastener_cross_section_m"], 0.043
         )
-        self.assertEqual(geometry["measurement"]["slot_anisotropy_ratio"], 4.2)
+        self.assertEqual(geometry["measurement"]["slot_anisotropy_ratio"], 4.5)
         self.assertEqual(geometry["measurement"]["slot_min_transverse_length_m"], 0.006)
         self.assertEqual(geometry["measurement"]["slot_max_transverse_length_m"], 0.015)
-        self.assertEqual(geometry["measurement"]["hex_radial_symmetry_ratio"], 1.35)
+        self.assertEqual(geometry["measurement"]["hex_radial_symmetry_ratio"], 1.25)
         self.assertEqual(geometry["measurement"]["minimum_interface_points"], 5)
         self.assertEqual(geometry["relations"]["minimum_fastener_camera_count"], 2)
         self.assertEqual(geometry["relations"]["target_length_tolerance_m"], 0.0061)

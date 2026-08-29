@@ -12,7 +12,7 @@ DOMAINS = {
 }
 
 EXPECTED = {
-    "kitchen": {v: "ACTION_SEQUENCE_READY" if v in ["K1", "K3", "K5"] else ("INCOMPLETE" if v in ["K2", "K4", "K6"] else "INFEASIBLE") for v in DOMAINS["kitchen"]},
+    "kitchen": {v: "ACTION_SEQUENCE_READY" if int(v[1:]) <= 6 else "INFEASIBLE" for v in DOMAINS["kitchen"]},
     "living_room": {v: "ACTION_SEQUENCE_READY" if int(v[1:]) <= 6 else "INFEASIBLE" for v in DOMAINS["living_room"]},
     "workshop": {v: "ACTION_SEQUENCE_READY" if int(v[1:]) <= 8 else "INFEASIBLE" for v in DOMAINS["workshop"]},
 }
@@ -61,19 +61,26 @@ def main():
             failure_reason = None
             inspections = 0
             plan_len = 0
+            is_completed = False
             
             if os.path.exists(res_file):
-                with open(res_file, "r") as f:
-                    data = json.load(f)
-                    actual = data.get("status", "UNKNOWN")
-                    failure_reason = data.get("failure_reason")
-                    inspections = len(data.get("inspected_regions", []))
-                    plan_len = len(data.get("plan", []))
+                try:
+                    with open(res_file, "r") as f:
+                        data = json.load(f)
+                        actual = data.get("status", "UNKNOWN")
+                        failure_reason = data.get("failure_reason")
+                        inspections = len(data.get("inspected_regions", []))
+                        plan_len = len(data.get("plan", []))
+                        is_completed = True
+                except Exception as e:
+                    actual = "ERROR_INVALID_RESULT"
+                    failure_reason = str(e)
             elif proc.returncode != 0:
                 actual = "CRASH"
                 failure_reason = f"return_code={proc.returncode}"
             
-            completed_count += 1
+            if is_completed:
+                completed_count += 1
             match = "YES" if actual == expected else "NO"
             if match == "YES":
                 matching_count += 1

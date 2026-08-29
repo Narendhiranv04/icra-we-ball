@@ -380,4 +380,131 @@ class WorkshopSceneTests(unittest.TestCase):
 
 
 class WorkshopPrivilegeBoundaryTests(unittest.TestCase):
-    pass
+    def test_production_observed_instances_leak_no_semantics(self):
+        for v_name in ("F0_MANUAL_FIRST_ONE_REGION", "F2_MANUAL_FIRST_TWO_REGIONS", "F4_MANUAL_FIRST_THREE_REGIONS", "F6_MANUAL_ONLY"):
+            scene = WorkshopScene("none", variant=v_name)
+            for reg in WORKSHOP_REGIONS:
+                scene.open_container(reg)
+            observed = scene.get_observed_instances()
+
+            pattern = re.compile(r"^object_\d{4}$")
+            seen_ids = set()
+            for item in observed:
+                self.assertIn("instance_id", item)
+                self.assertIn("source_region", item)
+                self.assertRegex(item["instance_id"], pattern)
+                seen_ids.add(item["instance_id"])
+
+            self.assertEqual(len(seen_ids), len(observed), "Generic instance IDs must be unique")
+
+            leaks = _check_dict_leakage(observed, FORBIDDEN_LEAKAGE_STRINGS)
+            self.assertEqual(leaks, [], f"Forbidden strings leaked in {v_name}: {leaks}")
+
+    def test_production_candidate_regions_leak_no_ground_truth(self):
+        scene = WorkshopScene("none", variant="F0_MANUAL_FIRST_ONE_REGION")
+        regions = scene.get_candidate_regions()
+        pattern = re.compile(r"^region_\d{4}$")
+        for reg in regions:
+            self.assertRegex(reg["region_instance_id"], pattern)
+            self.assertNotIn("usable_area_m2", reg)
+            self.assertNotIn("cavity_volume_m3", reg)
+            self.assertNotIn("proposal_type", reg)
+            self.assertIn("proposal_bounds_m", reg)
+
+        leaks = _check_dict_leakage(regions, FORBIDDEN_LEAKAGE_STRINGS)
+        self.assertEqual(leaks, [], f"Forbidden strings leaked in candidate regions: {leaks}")
+
+    def test_production_target_workpiece_spec_leaks_no_ground_truth(self):
+        scene = WorkshopScene("none", variant="F0_MANUAL_FIRST_ONE_REGION")
+        target_spec = scene.get_target_workpiece_specification()
+        self.assertIn("target_instance_id", target_spec)
+        self.assertIn("fixture_center_world_m", target_spec)
+        self.assertNotIn("target_hole_diameter_m", target_spec)
+        self.assertNotIn("target_hole_depth_m", target_spec)
+        self.assertNotIn("required_driver_function", target_spec)
+        self.assertNotIn("required_fastener_function", target_spec)
+        self.assertNotIn("required_recess_profile", target_spec)
+
+        leaks = _check_dict_leakage(target_spec, FORBIDDEN_LEAKAGE_STRINGS)
+        self.assertEqual(leaks, [], f"Forbidden strings leaked in target workpiece spec: {leaks}")
+
+    def test_ordinary_api_surface_has_no_cheating_wrappers(self):
+        scene = WorkshopScene("none", variant="F0_MANUAL_FIRST_ONE_REGION")
+        self.assertFalse(hasattr(scene, "get_candidate_work_surfaces"))
+        self.assertFalse(hasattr(scene, "get_candidate_parts_containers"))
+        self.assertFalse(hasattr(scene, "get_target_joint_specification"))
+
+    def test_generic_instance_ids_are_deterministic_and_persistent(self):
+        scene1 = WorkshopScene("none", variant="F0_MANUAL_FIRST_ONE_REGION")
+        scene2 = WorkshopScene("none", variant="F0_MANUAL_FIRST_ONE_REGION")
+
+        self.assertEqual(scene1._backend_to_instance_id, scene2._backend_to_instance_id)
+
+        target_ids_1 = [
+            obs["instance_id"]
+            for obs in scene1.get_observed_instances()
+            if scene1.privileged_backend_name_for_instance(obs["instance_id"]) == "workshop_frame_fixture"
+        ]
+        if target_ids_1:
+            initial_target_id = target_ids_1[0]
+            scene1.open_container("LEFT_DRAWER")
+            post_open_target_id = [
+                obs["instance_id"]
+                for obs in scene1.get_observed_instances()
+                if scene1.privileged_backend_name_for_instance(obs["instance_id"]) == "workshop_frame_fixture"
+            ][0]
+            self.assertEqual(initial_target_id, post_open_target_id, "Instance ID must not mutate upon container opening")
+
+    def test_privileged_apis_retain_full_ground_truth(self):
+        scene = WorkshopScene("none", variant="F0_MANUAL_FIRST_ONE_REGION")
+
+        for backend_name, instance_id in scene._backend_to_instance_id.items():
+            self.assertEqual(scene.privileged_backend_name_for_instance(instance_id), backend_name)
+            self.assertEqual(scene.privileged_instance_id_for_backend(backend_name), instance_id)
+
+        priv_target = scene.privileged_get_target_joint_specification()
+        self.assertEqual(priv_target["target_hole_diameter_m"], 0.007)
+        self.assertEqual(priv_target["target_hole_depth_m"], 0.030)
+        self.assertEqual(priv_target["required_recess_profile"], "PH2")
+        self.assertEqual(priv_target["required_driver_function"], "can_drive_screw")
+        self.assertEqual(priv_target["required_fastener_function"], "can_fasten")
+
+    def test_storage_objects_revealed_only_after_opening(self):
+        scene = WorkshopScene("none", variant="F2_MANUAL_FIRST_TWO_REGIONS")
+        initial_visible = scene.get_observed_instances()
+        initial_ids = {obs["instance_id"] for obs in initial_visible}
+        initial_backend_names = {
+            scene.privileged_backend_name_for_instance(i_id) for i_id in initial_ids
+        }
+        self.assertNotIn("workshop_medium_phillips_screw", initial_backend_names)
+        self.assertNotIn("workshop_long_phillips_driver", initial_backend_names)
+
+        open_res = scene.open_container("LEFT_DRAWER")
+        self.assertEqual(open_res["region_id"], "LEFT_DRAWER")
+        self.assertTrue(open_res["opened"])
+        self.assertTrue(open_res["newly_opened"])
+
+        post_open_visible = scene.get_observed_instances()
+        post_open_names = {
+            scene.privileged_backend_name_for_instance(obs["instance_id"])
+            for obs in post_open_visible
+        }
+        self.assertIn("workshop_medium_phillips_screw", post_open_names)
+        self.assertNotIn("workshop_long_phillips_driver", post_open_names)
+        self.assertEqual(
+            scene.get_instance_source_region("workshop_medium_phillips_screw"),
+            "LEFT_DRAWER",
+        )
+
+        # Open RIGHT_DRAWER to reveal workshop_long_phillips_driver
+        open_res_r = scene.open_container("RIGHT_DRAWER")
+        self.assertEqual(open_res_r["region_id"], "RIGHT_DRAWER")
+        post_open_r_names = {
+            scene.privileged_backend_name_for_instance(obs["instance_id"])
+            for obs in scene.get_observed_instances()
+        }
+        self.assertIn("workshop_long_phillips_driver", post_open_r_names)
+        self.assertEqual(
+            scene.get_instance_source_region("workshop_long_phillips_driver"),
+            "RIGHT_DRAWER",
+        )
