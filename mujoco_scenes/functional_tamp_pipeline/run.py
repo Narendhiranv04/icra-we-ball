@@ -728,6 +728,11 @@ def main() -> int:
         print(f"PIPELINE FAILED: {error}", flush=True)
         if args.verbose:
             traceback.print_exc()
+        if visualizer is not None:
+            try:
+                visualizer.flush_latest_frame(timeout_sec=0.25)
+            except Exception:
+                pass
         return 1
     finally:
         if visualizer is not None:

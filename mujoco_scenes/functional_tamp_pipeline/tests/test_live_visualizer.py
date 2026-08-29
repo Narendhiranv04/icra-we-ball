@@ -24,6 +24,7 @@ from mujoco_scenes.functional_tamp_pipeline.live_visualizer import (
     _format_unsatisfied_relation,
     _gf_relevant_predicates,
     _safe_copy_value,
+    _search_policy_label,
 )
 from mujoco_scenes.functional_tamp_pipeline.models import (
     FunctionalRequirementGraph,
@@ -398,6 +399,8 @@ def test_8_random_seed_zero_display(fake_viewer_factory):
         })
         time.sleep(0.05)
         s = viz._snapshot_state_for_render()
+        label = _search_policy_label(s)
+        assert label == "SEEDED RANDOM (Seed=0)"
         panel = viz._render_status_and_search_panel(s, 1040, 400)
         assert panel is not None
         with viz._state_lock:
@@ -642,7 +645,6 @@ def test_16_multi_valued_assignment(fake_viewer_factory):
 
 # 17. Guaranteed terminal render race test
 def test_17_terminal_render_race_guarantee(fake_viewer_factory):
-    # Set slow FPS (e.g. 5 FPS = 200ms cooldown)
     viz = LivePipelineVisualizer(viewer_factory=fake_viewer_factory, fps=5)
     try:
         viewer = fake_viewer_factory.viewers[0]
@@ -687,6 +689,7 @@ def test_18_frame_path_image_cache(tmp_path: Path, fake_viewer_factory):
 
         with patch("PIL.Image.open", side_effect=tracked_open):
             viz("observation_updated", {"stage": "initial", "frame_path": str(p1)})
+            time.sleep(0.05)
             # Render composite multiple times
             for _ in range(5):
                 viz.render_composite_frame()
@@ -695,6 +698,7 @@ def test_18_frame_path_image_cache(tmp_path: Path, fake_viewer_factory):
 
             # Change path to p2
             viz("observation_updated", {"stage": "after_C2", "frame_path": str(p2)})
+            time.sleep(0.05)
             for _ in range(5):
                 viz.render_composite_frame()
             # Image.open for p2 should be called exactly once
@@ -749,16 +753,35 @@ def test_20_gf_relation_relevance_includes_operation_groups():
     assert preds == {"COMPATIBLE_WITH", "REACHES_TARGET", "NEAR_CONTEXT"}
 
 
-# 21. Living Room telemetry search N/A
-def test_21_living_room_telemetry_search_na(fake_viewer_factory):
+# 21. Living Room telemetry search N/A and pure policy label test
+def test_21_living_room_telemetry_search_na_and_search_policy_labels(fake_viewer_factory):
     viz = LivePipelineVisualizer(viewer_factory=fake_viewer_factory)
     try:
+        # Living room N/A
+        s_lr = _VisualizerState(domain="living_room")
+        assert _search_policy_label(s_lr) == "N/A"
+
+        # Oracle
+        s_oracle = _VisualizerState(domain="kitchen", search_order_source_effective="oracle")
+        assert _search_policy_label(s_oracle) == "GT ORACLE (Privileged)"
+
+        # Provider + VLM
+        s_vlm = _VisualizerState(domain="kitchen", search_order_source_effective="provider", spec_mode="vlm")
+        assert _search_policy_label(s_vlm) == "FM-GUIDED (VLM Ranking)"
+
+        # Provider + GT
+        s_gt = _VisualizerState(domain="kitchen", search_order_source_effective="provider", spec_mode="gt")
+        assert _search_policy_label(s_gt) == "PROVIDER (Manual Canonical)"
+
+        # Random seed 0
+        s_rand = _VisualizerState(domain="kitchen", search_order_source_effective="random", search_seed_effective=0)
+        assert _search_policy_label(s_rand) == "SEEDED RANDOM (Seed=0)"
+
         viz("run_started", {"domain": "living_room", "variant": "L1", "spec_mode": "gt"})
         time.sleep(0.05)
         s = viz._snapshot_state_for_render()
         panel = viz._render_status_and_search_panel(s, 1040, 400)
         assert panel is not None
-        assert s.domain == "living_room"
     finally:
         viz.close()
 
@@ -816,17 +839,137 @@ def test_24_close_idempotence(fake_viewer_factory):
     viz.close()  # Must not raise on second close
 
 
-# 25. CLI failure does not indefinitely hold window
-def test_25_cli_lifecycle_failure_does_not_hold():
+# 25. State lock is NOT held during Image.open disk I/O
+def test_25_lock_held_during_disk_io_regression(tmp_path: Path, fake_viewer_factory):
+    viz = LivePipelineVisualizer(viewer_factory=fake_viewer_factory)
+    try:
+        frame_p = tmp_path / "lock_test.png"
+        img = Image.new("RGB", (64, 64), (10, 20, 30))
+        img.save(frame_p)
+
+        open_called = False
+        real_open = Image.open
+
+        def tracked_open(fp, *args, **kwargs):
+            nonlocal open_called
+            open_called = True
+            # Attempt non-blocking acquisition of _state_lock; MUST succeed because lock is not held
+            acquired = viz._state_lock.acquire(blocking=False)
+            assert acquired is True, "State lock was held during Image.open disk I/O!"
+            viz._state_lock.release()
+            return real_open(fp, *args, **kwargs)
+
+        with patch("PIL.Image.open", side_effect=tracked_open):
+            viz("observation_updated", {"stage": "initial", "frame_path": str(frame_p)})
+            time.sleep(0.05)
+            viz.render_composite_frame()
+            assert open_called is True
+    finally:
+        viz.close()
+
+
+# 26. Bounded exception flush_latest_frame
+def test_26_exception_flush_latest_frame(fake_viewer_factory):
+    viz = LivePipelineVisualizer(viewer_factory=fake_viewer_factory, fps=5)
+    try:
+        viewer = fake_viewer_factory.viewers[0]
+        viz("run_started", {"domain": "workshop", "variant": "W1", "spec_mode": "gt"})
+        viz("run_failed", {
+            "error_type": "RuntimeError",
+            "error_message": "Unexpected motor fault",
+        })
+        flushed = viz.flush_latest_frame(timeout_sec=0.25)
+        assert flushed is True
+        assert len(viewer.frames) >= 1
+        assert viz.last_rendered_terminal_status == "PIPELINE_EXCEPTION"
+    finally:
+        viz.close()
+
+
+# 27. Unsatisfied relation and operation failure diagnostic formatting
+def test_27_unsatisfied_relation_diagnostics_formatting():
+    # Explicit relation diagnostic
+    explicit_diag = {
+        "subject_role": "driver",
+        "subject_id": "driver_01",
+        "predicate": "COMPATIBLE_WITH",
+        "object_role": "fastener",
+        "object_id": "fastener_01",
+    }
+    explicit_str = _format_unsatisfied_relation(explicit_diag)
+    assert explicit_str == "COMPATIBLE_WITH(driver, fastener)"
+
+    # Operation-group diagnostic with concrete tool and target
+    op_diag = {
+        "group": "repair_group",
+        "tool": "driver_01",
+        "target": "fastener_01",
+        "predicate": "REACHES_TARGET",
+        "status": "FALSE",
+    }
+    op_str = _format_unsatisfied_relation(op_diag)
+    assert "repair_group: REACHES_TARGET(driver_01, fastener_01)" in op_str
+    assert "?" not in op_str
+
+
+# 28. CLI lifecycle: ACTION_SEQUENCE_READY holds and exits 0
+def test_28_cli_lifecycle_ready_holds():
     from mujoco_scenes.functional_tamp_pipeline.run import main
 
-    test_args = [
-        "run.py",
-        "--domain", "kitchen",
-        "--variant", "K1",
-        "--mode", "gt",
-        "--visualize",
-    ]
+    test_args = ["run.py", "--domain", "kitchen", "--variant", "K1", "--mode", "gt", "--visualize"]
+    ready_result = PipelineResult(
+        domain="kitchen",
+        variant="K1",
+        mode="gt",
+        status="ACTION_SEQUENCE_READY",
+        inspected_regions=("C2",),
+        assignment={"tool": "sponge"},
+        plan=({"action_index": 1, "operator": "PICK", "arguments": ["sponge"]},),
+    )
+
+    mock_visualizer = MagicMock()
+    with patch("sys.argv", test_args), \
+         patch("mujoco_scenes.functional_tamp_pipeline.live_visualizer.LivePipelineVisualizer", return_value=mock_visualizer), \
+         patch("mujoco_scenes.functional_tamp_pipeline.run.run_pipeline", return_value=ready_result):
+        exit_code = main()
+        assert exit_code == 0
+        mock_visualizer.hold_until_closed.assert_called_once()
+        mock_visualizer.flush_latest_frame.assert_not_called()
+        mock_visualizer.close.assert_called_once()
+
+
+# 29. CLI lifecycle: INFEASIBLE holds and exits 0
+def test_29_cli_lifecycle_infeasible_holds():
+    from mujoco_scenes.functional_tamp_pipeline.run import main
+
+    test_args = ["run.py", "--domain", "kitchen", "--variant", "K1", "--mode", "gt", "--visualize"]
+    infeasible_result = PipelineResult(
+        domain="kitchen",
+        variant="K1",
+        mode="gt",
+        status="INFEASIBLE",
+        inspected_regions=("C2", "B1"),
+        assignment=None,
+        plan=(),
+        failure_reason="NO_TOOL_SATISFIES_REQUIREMENTS",
+    )
+
+    mock_visualizer = MagicMock()
+    with patch("sys.argv", test_args), \
+         patch("mujoco_scenes.functional_tamp_pipeline.live_visualizer.LivePipelineVisualizer", return_value=mock_visualizer), \
+         patch("mujoco_scenes.functional_tamp_pipeline.run.run_pipeline", return_value=infeasible_result):
+        exit_code = main()
+        assert exit_code == 0
+        mock_visualizer.hold_until_closed.assert_called_once()
+        mock_visualizer.flush_latest_frame.assert_not_called()
+        mock_visualizer.close.assert_called_once()
+
+
+# 30. CLI lifecycle: pipeline exception flushes and does NOT hold, exits 1
+def test_30_cli_lifecycle_failure_flushes_and_does_not_hold():
+    from mujoco_scenes.functional_tamp_pipeline.run import main
+
+    test_args = ["run.py", "--domain", "kitchen", "--variant", "K1", "--mode", "gt", "--visualize"]
 
     mock_visualizer = MagicMock()
     with patch("sys.argv", test_args), \
@@ -836,5 +979,7 @@ def test_25_cli_lifecycle_failure_does_not_hold():
         assert exit_code == 1
         # hold_until_closed must NOT be called on pipeline exception
         mock_visualizer.hold_until_closed.assert_not_called()
+        # flush_latest_frame MUST be called once
+        mock_visualizer.flush_latest_frame.assert_called_once_with(timeout_sec=0.25)
         # visualizer must be closed cleanly
         mock_visualizer.close.assert_called_once()

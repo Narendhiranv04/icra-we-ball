@@ -145,6 +145,23 @@ def _gf_relevant_predicates(spec_graph: Mapping[str, Any] | None) -> set[str]:
     return preds
 
 
+def _search_policy_label(s: _VisualizerState) -> str:
+    """Derive human-readable search policy label from visualizer state."""
+    if s.domain == "living_room":
+        return "N/A"
+    eff_policy = s.search_order_source_effective or s.search_order_source_requested
+    seed_val = s.search_seed_effective if s.search_seed_effective is not None else s.search_seed_requested
+    if eff_policy == "oracle":
+        return "GT ORACLE (Privileged)"
+    if eff_policy == "provider" and s.spec_mode == "vlm":
+        return "FM-GUIDED (VLM Ranking)"
+    if eff_policy == "provider":
+        return "PROVIDER (Manual Canonical)"
+    if eff_policy == "random":
+        return f"SEEDED RANDOM (Seed={seed_val})"
+    return str(eff_policy).upper()
+
+
 def _get_default_font(size: int = 14) -> ImageFont.ImageFont | ImageFont.FreeTypeFont:
     try:
         for font_name in ("DejaVuSansMono.ttf", "DejaVuSans.ttf", "LiberationMono-Regular.ttf", "FreeMono.ttf"):
@@ -229,11 +246,30 @@ def _format_operation_binding(group_id: str, binding: Mapping[str, Any]) -> str:
 
 
 def _format_unsatisfied_relation(rel: Any) -> str:
+    """Format unsatisfied relation or operation diagnostic cleanly without '?' when fields exist."""
     if isinstance(rel, dict):
-        pred = rel.get("predicate", "REL")
-        sub = rel.get("subject_role", rel.get("subject", "?"))
-        obj = rel.get("object_role", rel.get("object", "?"))
-        return f"{pred}({sub}, {obj})"
+        pred = str(rel.get("predicate", "REL"))
+        sub = str(
+            rel.get("subject_role")
+            or rel.get("subject_id")
+            or rel.get("subject")
+            or rel.get("tool")
+            or rel.get("tool_role")
+            or "?"
+        )
+        obj = str(
+            rel.get("object_role")
+            or rel.get("object_id")
+            or rel.get("object")
+            or rel.get("target")
+            or rel.get("target_role")
+            or "?"
+        )
+        base = f"{pred}({sub}, {obj})"
+        grp = rel.get("group") or rel.get("group_id")
+        if grp:
+            return f"{grp}: {base}"
+        return base
     return str(rel)
 
 
@@ -260,6 +296,7 @@ class LivePipelineVisualizer:
         self._state = _VisualizerState()
         self._queue: queue.Queue[str | None] = queue.Queue(maxsize=2)
         self._stop_event = threading.Event()
+        self._render_condition = threading.Condition()
 
         # Cached renderings
         self._cached_gf_key: str | None = None
@@ -267,7 +304,7 @@ class LivePipelineVisualizer:
         self._cached_go_key: str | None = None
         self._cached_go_image: Image.Image | None = None
 
-        # Frame-path disk image cache
+        # Frame-path disk image cache (worker-owned)
         self._cached_frame_path: str | None = None
         self._cached_frame_rgb: np.ndarray | None = None
         self._failed_frame_path: str | None = None
@@ -442,10 +479,12 @@ class LivePipelineVisualizer:
         try:
             frame_rgb = self.render_composite_frame()
             self._viewer.show(frame_rgb)
-            self.render_count += 1
             with self._state_lock:
                 if self._state.is_terminal:
                     self.last_rendered_terminal_status = self._state.terminal_status
+            with self._render_condition:
+                self.render_count += 1
+                self._render_condition.notify_all()
         except Exception as error:
             print(
                 f"VISUALIZER DISPLAY ERROR: {type(error).__name__}: {error}",
@@ -459,33 +498,55 @@ class LivePipelineVisualizer:
                     "message": str(error),
                 })
             self._viewer_disabled = True
+            with self._render_condition:
+                self._render_condition.notify_all()
+
+    def flush_latest_frame(self, timeout_sec: float = 0.25) -> bool:
+        """Perform one bounded attempt to render and display the latest frame on the worker thread."""
+        if self._viewer_disabled or self._viewer is None or self._stop_event.is_set():
+            return False
+        with self._render_condition:
+            start_count = self.render_count
+        try:
+            self._queue.put_nowait("REDRAW")
+        except queue.Full:
+            pass
+        deadline = time.monotonic() + max(0.01, timeout_sec)
+        with self._render_condition:
+            while self.render_count == start_count and not self._viewer_disabled and not self._stop_event.is_set():
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                self._render_condition.wait(timeout=remaining)
+            return self.render_count > start_count
 
     def _snapshot_state_for_render(self) -> _VisualizerState:
         with self._state_lock:
             snap = copy.deepcopy(self._state)
-            # Load frame_path on worker thread if needed, using disk image cache
-            if snap.latest_frame is None and snap.latest_frame_path:
-                path_str = snap.latest_frame_path
-                if path_str == self._cached_frame_path and self._cached_frame_rgb is not None:
-                    snap.latest_frame = self._cached_frame_rgb
-                elif path_str != self._failed_frame_path:
-                    frame_p = Path(path_str)
-                    if frame_p.is_file():
-                        try:
-                            with Image.open(frame_p) as img:
-                                loaded_rgb = np.array(img.convert("RGB"), dtype=np.uint8)
-                                self._cached_frame_path = path_str
-                                self._cached_frame_rgb = loaded_rgb
-                                snap.latest_frame = loaded_rgb
-                        except Exception as error:
-                            self._failed_frame_path = path_str
+        # Disk I/O & frame caching performed OUTSIDE _state_lock
+        if snap.latest_frame is None and snap.latest_frame_path:
+            path_str = snap.latest_frame_path
+            if path_str == self._cached_frame_path and self._cached_frame_rgb is not None:
+                snap.latest_frame = self._cached_frame_rgb
+            elif path_str != self._failed_frame_path:
+                frame_p = Path(path_str)
+                if frame_p.is_file():
+                    try:
+                        with Image.open(frame_p) as img:
+                            loaded_rgb = np.array(img.convert("RGB"), dtype=np.uint8)
+                            self._cached_frame_path = path_str
+                            self._cached_frame_rgb = loaded_rgb
+                            snap.latest_frame = loaded_rgb
+                    except Exception as error:
+                        self._failed_frame_path = path_str
+                        with self._state_lock:
                             self._state.display_errors.append({
                                 "event": "load_frame_path",
                                 "type": type(error).__name__,
                                 "message": str(error),
                             })
-                    else:
-                        self._failed_frame_path = path_str
+                else:
+                    self._failed_frame_path = path_str
         return snap
 
     def render_composite_frame(self) -> np.ndarray:
@@ -575,10 +636,7 @@ class LivePipelineVisualizer:
         if s.domain == "living_room":
             draw.text((16, y), "Search Policy: N/A (single-stage global grounding, no region search)", fill=(161, 161, 170), font=self._font_body)
         else:
-            eff_policy = s.search_order_source_effective or s.search_order_source_requested
-            seed_val = s.search_seed_effective if s.search_seed_effective is not None else s.search_seed_requested
-            policy_label = "GT ORACLE (Privileged)" if eff_policy == "oracle" else "FM-GUIDED (VLM Ranking)" if (eff_policy == "provider" and s.spec_mode == "vlm") else "PROVIDER (Manual Canonical)" if eff_policy == "provider" else f"SEEDED RANDOM (Seed={seed_val})" if eff_policy == "random" else str(eff_policy).upper()
-
+            policy_label = _search_policy_label(s)
             draw.text((16, y), f"Policy: {policy_label}", fill=(56, 189, 248), font=self._font_body)
             draw.text((450, y), f"Requested: {s.search_order_source_requested}", fill=(161, 161, 170), font=self._font_body)
 
@@ -932,6 +990,8 @@ class LivePipelineVisualizer:
             self._queue.put_nowait(None)
         except Exception:
             pass
+        with self._render_condition:
+            self._render_condition.notify_all()
         if self._worker_thread.is_alive():
             self._worker_thread.join(timeout=2.0)
         if self._viewer is not None:
