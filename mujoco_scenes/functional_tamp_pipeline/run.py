@@ -17,12 +17,22 @@ from typing import Any, Callable
 
 from mujoco_scenes.final_paper_variant_labels import resolve_variant_name
 
-from .errors import PipelineError, VLMSpecificationError, ReplaySpecificationError
-from .models import FunctionalRequirementGraph, PipelineResult
-from .planning import plan_with_common_astar
-from .search import search_until_satisfied
-from .search_order import resolve_search_order, validate_search_order_preflight
-from .spec_provider import provider_for_mode
+try:
+    from .errors import PipelineError, VLMSpecificationError, ReplaySpecificationError
+    from .models import FunctionalRequirementGraph, PipelineResult
+    from .planning import plan_with_common_astar
+    from .search import search_until_satisfied
+    from .search_order import resolve_search_order, validate_search_order_preflight
+    from .spec_provider import provider_for_mode
+except ImportError:
+    from mujoco_scenes.functional_tamp_pipeline.errors import (
+        PipelineError, VLMSpecificationError, ReplaySpecificationError
+    )
+    from mujoco_scenes.functional_tamp_pipeline.models import FunctionalRequirementGraph, PipelineResult
+    from mujoco_scenes.functional_tamp_pipeline.planning import plan_with_common_astar
+    from mujoco_scenes.functional_tamp_pipeline.search import search_until_satisfied
+    from mujoco_scenes.functional_tamp_pipeline.search_order import resolve_search_order, validate_search_order_preflight
+    from mujoco_scenes.functional_tamp_pipeline.spec_provider import provider_for_mode
 
 
 ROOT = Path(__file__).resolve().parents[2]
