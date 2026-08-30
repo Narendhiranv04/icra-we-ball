@@ -1,0 +1,335 @@
+{
+  "domain": "living_room",
+  "task_instruction": "serve tea",
+  "roles": [
+    {
+      "name": "CUP_SAUCER_SET",
+      "entity_kind": "OBJECT",
+      "count": 2,
+      "min_count": null,
+      "max_count": null,
+      "preference": null,
+      "semantic_categories": [
+        "cup_saucer_set",
+        "cup",
+        "saucer"
+      ],
+      "unary_predicates": [],
+      "numeric_constraints": [],
+      "binding_policy": "DISTINCT",
+      "verification_mode": "SEMANTIC_ONLY",
+      "description": "",
+      "semantic_hints": [],
+      "distinct": true,
+      "reusable": false,
+      "shared": false
+    },
+    {
+      "name": "PERSONAL_CUP_SAUCER_REGION",
+      "entity_kind": "REGION",
+      "count": 2,
+      "min_count": null,
+      "max_count": null,
+      "preference": null,
+      "semantic_categories": [
+        "side_table",
+        "end_table"
+      ],
+      "unary_predicates": [
+        "PLANAR_SUPPORT"
+      ],
+      "numeric_constraints": [],
+      "binding_policy": "DISTINCT",
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC",
+      "description": "",
+      "semantic_hints": [],
+      "distinct": true,
+      "reusable": false,
+      "shared": false
+    },
+    {
+      "name": "REMOTE",
+      "entity_kind": "OBJECT",
+      "count": 1,
+      "min_count": null,
+      "max_count": null,
+      "preference": null,
+      "semantic_categories": [
+        "remote_control",
+        "tv_remote"
+      ],
+      "unary_predicates": [],
+      "numeric_constraints": [],
+      "binding_policy": "DISTINCT",
+      "verification_mode": "SEMANTIC_ONLY",
+      "description": "",
+      "semantic_hints": [],
+      "distinct": true,
+      "reusable": false,
+      "shared": false
+    },
+    {
+      "name": "SEATING_PAIR",
+      "entity_kind": "FIXED_TARGET",
+      "count": 1,
+      "min_count": null,
+      "max_count": null,
+      "preference": null,
+      "semantic_categories": [
+        "armchair",
+        "chair",
+        "sofa",
+        "seating_pair"
+      ],
+      "unary_predicates": [],
+      "numeric_constraints": [],
+      "binding_policy": "SHARED",
+      "verification_mode": "SEMANTIC_ONLY",
+      "description": "",
+      "semantic_hints": [],
+      "distinct": false,
+      "reusable": false,
+      "shared": true
+    },
+    {
+      "name": "SEATING_POSITION",
+      "entity_kind": "FIXED_TARGET",
+      "count": 2,
+      "min_count": null,
+      "max_count": null,
+      "preference": null,
+      "semantic_categories": [
+        "armchair",
+        "chair",
+        "sofa",
+        "seating_position"
+      ],
+      "unary_predicates": [],
+      "numeric_constraints": [],
+      "binding_policy": "DISTINCT",
+      "verification_mode": "SEMANTIC_ONLY",
+      "description": "",
+      "semantic_hints": [],
+      "distinct": true,
+      "reusable": false,
+      "shared": false
+    },
+    {
+      "name": "SHARED_REMOTE_REGION",
+      "entity_kind": "REGION",
+      "count": 1,
+      "min_count": null,
+      "max_count": null,
+      "preference": null,
+      "semantic_categories": [
+        "coffee_table",
+        "central_table",
+        "side_table"
+      ],
+      "unary_predicates": [
+        "PLANAR_SUPPORT"
+      ],
+      "numeric_constraints": [],
+      "binding_policy": "SHARED",
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC",
+      "description": "",
+      "semantic_hints": [],
+      "distinct": false,
+      "reusable": false,
+      "shared": true
+    }
+  ],
+  "nodes": {
+    "CUP_SAUCER_SET": {
+      "name": "CUP_SAUCER_SET",
+      "entity_kind": "OBJECT",
+      "count": 2,
+      "min_count": null,
+      "max_count": null,
+      "preference": null,
+      "semantic_categories": [
+        "cup_saucer_set",
+        "cup",
+        "saucer"
+      ],
+      "unary_predicates": [],
+      "numeric_constraints": [],
+      "binding_policy": "DISTINCT",
+      "verification_mode": "SEMANTIC_ONLY",
+      "description": "",
+      "semantic_hints": [],
+      "distinct": true,
+      "reusable": false,
+      "shared": false
+    },
+    "PERSONAL_CUP_SAUCER_REGION": {
+      "name": "PERSONAL_CUP_SAUCER_REGION",
+      "entity_kind": "REGION",
+      "count": 2,
+      "min_count": null,
+      "max_count": null,
+      "preference": null,
+      "semantic_categories": [
+        "side_table",
+        "end_table"
+      ],
+      "unary_predicates": [
+        "PLANAR_SUPPORT"
+      ],
+      "numeric_constraints": [],
+      "binding_policy": "DISTINCT",
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC",
+      "description": "",
+      "semantic_hints": [],
+      "distinct": true,
+      "reusable": false,
+      "shared": false
+    },
+    "REMOTE": {
+      "name": "REMOTE",
+      "entity_kind": "OBJECT",
+      "count": 1,
+      "min_count": null,
+      "max_count": null,
+      "preference": null,
+      "semantic_categories": [
+        "remote_control",
+        "tv_remote"
+      ],
+      "unary_predicates": [],
+      "numeric_constraints": [],
+      "binding_policy": "DISTINCT",
+      "verification_mode": "SEMANTIC_ONLY",
+      "description": "",
+      "semantic_hints": [],
+      "distinct": true,
+      "reusable": false,
+      "shared": false
+    },
+    "SEATING_PAIR": {
+      "name": "SEATING_PAIR",
+      "entity_kind": "FIXED_TARGET",
+      "count": 1,
+      "min_count": null,
+      "max_count": null,
+      "preference": null,
+      "semantic_categories": [
+        "armchair",
+        "chair",
+        "sofa",
+        "seating_pair"
+      ],
+      "unary_predicates": [],
+      "numeric_constraints": [],
+      "binding_policy": "SHARED",
+      "verification_mode": "SEMANTIC_ONLY",
+      "description": "",
+      "semantic_hints": [],
+      "distinct": false,
+      "reusable": false,
+      "shared": true
+    },
+    "SEATING_POSITION": {
+      "name": "SEATING_POSITION",
+      "entity_kind": "FIXED_TARGET",
+      "count": 2,
+      "min_count": null,
+      "max_count": null,
+      "preference": null,
+      "semantic_categories": [
+        "armchair",
+        "chair",
+        "sofa",
+        "seating_position"
+      ],
+      "unary_predicates": [],
+      "numeric_constraints": [],
+      "binding_policy": "DISTINCT",
+      "verification_mode": "SEMANTIC_ONLY",
+      "description": "",
+      "semantic_hints": [],
+      "distinct": true,
+      "reusable": false,
+      "shared": false
+    },
+    "SHARED_REMOTE_REGION": {
+      "name": "SHARED_REMOTE_REGION",
+      "entity_kind": "REGION",
+      "count": 1,
+      "min_count": null,
+      "max_count": null,
+      "preference": null,
+      "semantic_categories": [
+        "coffee_table",
+        "central_table",
+        "side_table"
+      ],
+      "unary_predicates": [
+        "PLANAR_SUPPORT"
+      ],
+      "numeric_constraints": [],
+      "binding_policy": "SHARED",
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC",
+      "description": "",
+      "semantic_hints": [],
+      "distinct": false,
+      "reusable": false,
+      "shared": true
+    }
+  },
+  "relations": [
+    {
+      "subject_role": "SHARED_REMOTE_REGION",
+      "predicate": "FITS_ON",
+      "object_role": "REMOTE",
+      "expected": true
+    },
+    {
+      "subject_role": "SHARED_REMOTE_REGION",
+      "predicate": "ACCESSIBLE_FROM_BOTH_SEATS",
+      "object_role": "SEATING_PAIR",
+      "expected": true
+    }
+  ],
+  "operation_groups": [
+    {
+      "id": "personal_support_group",
+      "function": "SUPPORT_DRINKWARE",
+      "tool_role": "PERSONAL_CUP_SAUCER_REGION",
+      "target_role": "CUP_SAUCER_SET",
+      "required_target_count": 2,
+      "usage_policy": "DEDICATED_PER_TARGET",
+      "required_relations": [
+        "FITS_SET_ON"
+      ],
+      "context_role": "SEATING_POSITION",
+      "context_relations": [
+        "NEAR_SEAT"
+      ],
+      "distinct_within_group": true,
+      "same_tool_must_cover_all_targets": false,
+      "selection_preference": null
+    }
+  ],
+  "cross_group_reuse_allowed": false,
+  "detector_vocabulary": [
+    "side_table",
+    "end_table",
+    "coffee_table",
+    "central_table",
+    "cup",
+    "saucer",
+    "plate",
+    "remote_control",
+    "armchair",
+    "chair",
+    "sofa"
+  ],
+  "candidate_regions": [],
+  "region_ranking": [],
+  "source": "GT_FUNCTIONAL_SPEC_ONLY",
+  "metadata": {
+    "contract_path": "/home/naren/RA_iiith/mujoco_scenes/configs/l2_integrated_region_function_task.yaml",
+    "semantic_vocabulary_path": "/home/naren/RA_iiith/mujoco_scenes/configs/l2_integrated_region_function_semantic_vocabulary.yaml"
+  }
+}

@@ -1,0 +1,11 @@
+PASS 3.6B.1 Frozen-SHA Representative Live VLM Audit Protocol:
+- Frozen Runtime SHA: a0149206eca005d5f7026986d499c9236d986031
+- Zero source-code modifications
+- 1 live VLM attempt per case (Kitchen K2, Living Room L1, Workshop W1)
+- VLM Input RGB images persisted under inputs/ with sha256 manifest
+- Raw model responses, validated specifications, canonical G_F, and traces saved under live/
+- GT reference G_F generated offline with GTSpecProvider and evaluated with evaluate_gf_against_reference()
+- Provider replay using exact saved G_F (specification_sha256 checked)
+- Random replays for seeds 0 and 1 using exact saved G_F (if candidate regions >= 2)
+- Replay validator execution
+- All artifacts recorded under repository-local tmp/
