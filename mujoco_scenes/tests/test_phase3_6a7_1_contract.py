@@ -41,9 +41,10 @@ from mujoco_scenes.functional_tamp_pipeline.models import (
 )
 from mujoco_scenes.functional_tamp_pipeline.task_interface_validator import (
     validate_canonical_task_interface,
-    validate_kitchen_gf_completeness,
-    validate_living_room_gf_completeness,
-    validate_workshop_gf_completeness,
+    validate_runtime_gf,
+)
+from mujoco_scenes.functional_tamp_pipeline.gf_reference_evaluator import (
+    evaluate_gf_against_reference,
 )
 from mujoco_scenes.functional_tamp_pipeline.vlm_spec_provider import (
     VLM_CANONICALIZATION_VERSION,
@@ -421,9 +422,9 @@ def test_v_kitchen_graph_missing_required_role_fails():
         domain="kitchen", task_instruction=gf.task_instruction,
         nodes=nodes, relations=gf.relations, operation_groups=gf.operation_groups,
     )
-    with pytest.raises(MalformedVLMSpecificationError) as exc_info:
-        validate_kitchen_gf_completeness(bad_gf)
-    assert "missing required task role 'soup_eating_utensil'" in str(exc_info.value)
+    result = evaluate_gf_against_reference(bad_gf, gf)
+    assert not result.structurally_complete
+    assert "soup_eating_utensil" in result.missing_roles
 
 
 def test_w_kitchen_graph_missing_operation_group_fails():
@@ -432,9 +433,9 @@ def test_w_kitchen_graph_missing_operation_group_fails():
         domain="kitchen", task_instruction=gf.task_instruction,
         nodes=dict(gf.nodes), relations=gf.relations, operation_groups=(),
     )
-    with pytest.raises(MalformedVLMSpecificationError) as exc_info:
-        validate_kitchen_gf_completeness(bad_gf)
-    assert "missing required coffee stirring operation group" in str(exc_info.value)
+    result = evaluate_gf_against_reference(bad_gf, gf)
+    assert not result.structurally_complete
+    assert len(result.missing_operation_groups) > 0
 
 
 def test_x_living_graph_missing_cup_saucer_set_fails():
@@ -449,9 +450,10 @@ def test_x_living_graph_missing_cup_saucer_set_fails():
         domain="living_room", task_instruction=gf.task_instruction,
         nodes=nodes, relations=gf.relations, operation_groups=gf.operation_groups,
     )
-    with pytest.raises(MalformedVLMSpecificationError) as exc_info:
-        validate_living_room_gf_completeness(bad_gf)
-    assert "missing required task role 'CUP_SAUCER_SET'" in str(exc_info.value)
+    ref_gf = GTSpecProvider().provide("living_room", "serve tea for two")
+    result = evaluate_gf_against_reference(bad_gf, ref_gf)
+    assert not result.structurally_complete
+    assert "CUP_SAUCER_SET" in result.missing_roles
 
 
 def test_y_living_graph_missing_personal_operation_group_fails():
@@ -464,9 +466,10 @@ def test_y_living_graph_missing_personal_operation_group_fails():
         domain="living_room", task_instruction=gf.task_instruction,
         nodes=dict(gf.nodes), relations=gf.relations, operation_groups=(),
     )
-    with pytest.raises(MalformedVLMSpecificationError) as exc_info:
-        validate_living_room_gf_completeness(bad_gf)
-    assert "missing required personal support OperationGroup" in str(exc_info.value)
+    ref_gf = GTSpecProvider().provide("living_room", "serve tea for two")
+    result = evaluate_gf_against_reference(bad_gf, ref_gf)
+    assert not result.structurally_complete
+    assert len(result.missing_operation_groups) > 0
 
 
 def test_z_living_graph_missing_shared_relation_fails():
@@ -481,9 +484,10 @@ def test_z_living_graph_missing_shared_relation_fails():
         domain="living_room", task_instruction=gf.task_instruction,
         nodes=dict(gf.nodes), relations=filtered_rels, operation_groups=gf.operation_groups,
     )
-    with pytest.raises(MalformedVLMSpecificationError) as exc_info:
-        validate_living_room_gf_completeness(bad_gf)
-    assert "missing required relation: SHARED_REMOTE_REGION -- FITS_ON --> REMOTE" in str(exc_info.value)
+    ref_gf = GTSpecProvider().provide("living_room", "serve tea for two")
+    result = evaluate_gf_against_reference(bad_gf, ref_gf)
+    assert not result.structurally_complete
+    assert any(r[1] == "FITS_ON" for r in result.missing_relations)
 
 
 def test_aa_workshop_graph_missing_repair_target_fails():
@@ -494,9 +498,9 @@ def test_aa_workshop_graph_missing_repair_target_fails():
         domain="workshop", task_instruction=gf.task_instruction,
         nodes=nodes, relations=gf.relations,
     )
-    with pytest.raises(MalformedVLMSpecificationError) as exc_info:
-        validate_workshop_gf_completeness(bad_gf)
-    assert "missing required task role 'repair_target'" in str(exc_info.value)
+    result = evaluate_gf_against_reference(bad_gf, gf)
+    assert not result.structurally_complete
+    assert "repair_target" in result.missing_roles
 
 
 def test_ab_workshop_graph_missing_compatible_with_fails():
@@ -506,9 +510,9 @@ def test_ab_workshop_graph_missing_compatible_with_fails():
         domain="workshop", task_instruction=gf.task_instruction,
         nodes=dict(gf.nodes), relations=filtered_rels,
     )
-    with pytest.raises(MalformedVLMSpecificationError) as exc_info:
-        validate_workshop_gf_completeness(bad_gf)
-    assert "missing required relation: driver -- COMPATIBLE_WITH --> fastener" in str(exc_info.value)
+    result = evaluate_gf_against_reference(bad_gf, gf)
+    assert not result.structurally_complete
+    assert ("driver", "COMPATIBLE_WITH", "fastener") in result.missing_relations
 
 
 def test_ac_workshop_graph_missing_reaches_target_fails():
@@ -518,9 +522,9 @@ def test_ac_workshop_graph_missing_reaches_target_fails():
         domain="workshop", task_instruction=gf.task_instruction,
         nodes=dict(gf.nodes), relations=filtered_rels,
     )
-    with pytest.raises(MalformedVLMSpecificationError) as exc_info:
-        validate_workshop_gf_completeness(bad_gf)
-    assert "missing required relation: driver -- REACHES_TARGET --> repair_target" in str(exc_info.value)
+    result = evaluate_gf_against_reference(bad_gf, gf)
+    assert not result.structurally_complete
+    assert ("driver", "REACHES_TARGET", "repair_target") in result.missing_relations
 
 
 def test_ad_workshop_graph_missing_compatible_with_target_fails():
@@ -530,9 +534,9 @@ def test_ad_workshop_graph_missing_compatible_with_target_fails():
         domain="workshop", task_instruction=gf.task_instruction,
         nodes=dict(gf.nodes), relations=filtered_rels,
     )
-    with pytest.raises(MalformedVLMSpecificationError) as exc_info:
-        validate_workshop_gf_completeness(bad_gf)
-    assert "missing required relation: fastener -- COMPATIBLE_WITH_TARGET --> repair_target" in str(exc_info.value)
+    result = evaluate_gf_against_reference(bad_gf, gf)
+    assert not result.structurally_complete
+    assert ("fastener", "COMPATIBLE_WITH_TARGET", "repair_target") in result.missing_relations
 
 
 # ---------------------------------------------------------------------------
@@ -586,9 +590,11 @@ def test_ah_workshop_driver_wrong_entity_kind_fails():
         FunctionalRelation(subject_role="fastener", predicate="COMPATIBLE_WITH_TARGET", object_role="repair_target", expected=True),
     )
     bad_gf = FunctionalRequirementGraph(domain="workshop", task_instruction="fasten", nodes=nodes, relations=rels)
-    with pytest.raises(MalformedVLMSpecificationError) as exc_info:
-        validate_workshop_gf_completeness(bad_gf)
-    assert "must have entity_kind 'OBJECT', got 'REGION'" in str(exc_info.value)
+    ref_gf = GTSpecProvider().provide("workshop", "fasten")
+    result = evaluate_gf_against_reference(bad_gf, ref_gf)
+    assert not result.structurally_complete
+    assert "driver" in result.role_attribute_mismatches
+    assert result.role_attribute_mismatches["driver"]["entity_kind"]["candidate"] == "REGION"
 
 
 # ---------------------------------------------------------------------------

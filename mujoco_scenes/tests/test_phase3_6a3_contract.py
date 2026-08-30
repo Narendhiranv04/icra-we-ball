@@ -53,7 +53,7 @@ from mujoco_scenes.workshop_phase1.requirements import (
 
 
 def test_vlm_canonicalization_version_constant():
-    assert VLM_CANONICALIZATION_VERSION == "phase3_6a7_v1"
+    assert VLM_CANONICALIZATION_VERSION == "phase3_6a7_2_v1"
 
 
 def test_single_role_field_enforced():
@@ -74,6 +74,7 @@ def test_single_role_field_enforced():
             }
         ],
         "functional_relations": [],
+        "interaction_groups": [],
         "inspectable_regions": [],
         "inspection_order": [],
         "unsupported_reason": "",
@@ -102,6 +103,7 @@ def test_mandatory_role_fields_no_defaults():
         "task_summary": "Test",
         "functional_roles": [no_binding],
         "functional_relations": [],
+        "interaction_groups": [],
         "inspectable_regions": [],
         "inspection_order": [],
         "unsupported_reason": "",
@@ -149,6 +151,7 @@ def test_workshop_unary_properties_never_routed_to_relations():
             }
         ],
         "functional_relations": [],
+        "interaction_groups": [],
         "inspectable_regions": [],
         "inspection_order": [],
         "unsupported_reason": "",
@@ -187,6 +190,7 @@ def test_workshop_explicit_relations_fail_closed():
                 "object_role": "unknown_screw_role",
             }
         ],
+        "interaction_groups": [],
         "inspectable_regions": [],
         "inspection_order": [],
         "unsupported_reason": "",
@@ -271,6 +275,7 @@ def test_unsupported_status_strict_validation():
         "task_summary": "Do impossible task",
         "functional_roles": [],
         "functional_relations": [],
+        "interaction_groups": [],
         "inspectable_regions": [],
         "inspection_order": [],
         "unsupported_reason": "Task violates physical feasibility.",

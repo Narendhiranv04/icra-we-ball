@@ -31,8 +31,8 @@ class GTSpecProvider(FunctionalSpecProvider):
         else:
             raise NotImplementedError(f"GT specification adapter is not implemented for {domain}")
         graph.validate()
-        from .task_interface_validator import validate_canonical_task_interface
-        validate_canonical_task_interface(graph)
+        from .task_interface_validator import validate_runtime_gf
+        validate_runtime_gf(graph)
         return graph
 
     @staticmethod

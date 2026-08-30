@@ -64,9 +64,9 @@ class MockTransport:
 
 # Section 1: Version constant checks across all modules
 def test_phase3_6a5_version_constants():
-    assert VLM_CANONICALIZATION_VERSION == "phase3_6a7_v1"
-    assert KITCHEN_VERSION == "phase3_6a7_v1"
-    assert ENV_VERSION == "phase3_6a7_v1"
+    assert VLM_CANONICALIZATION_VERSION == "phase3_6a7_2_v1"
+    assert KITCHEN_VERSION == "phase3_6a7_2_v1"
+    assert ENV_VERSION == "phase3_6a7_2_v1"
 
 
 # Section 2: Clean static prompt (zero concrete semantic examples and zero benchmark nouns)
@@ -147,6 +147,7 @@ def test_unsupported_checker_capability_raised_for_unsupported_property(tmp_path
                 "object_role": "fastener_obj",
             }
         ],
+        "interaction_groups": [],
         "inspectable_regions": [],
         "inspection_order": [],
         "unsupported_reason": "",
@@ -185,6 +186,7 @@ def test_malformed_vlm_spec_raised_for_undeclared_relation_endpoint(tmp_path):
                 "object_role": "non_existent_role",
             }
         ],
+        "interaction_groups": [],
         "inspectable_regions": [],
         "inspection_order": [],
         "unsupported_reason": "",
@@ -329,6 +331,7 @@ def test_workshop_detector_vocabulary_purity(tmp_path):
                 "object_role": "target_hole",
             },
         ],
+        "interaction_groups": [],
         "inspectable_regions": [
             {"id": "drawer_1", "label": "tool drawer", "visual_description": "wooden tool storage drawer", "reason": "storage"}
         ],
@@ -387,6 +390,7 @@ def test_living_room_valid_fixed_target_relation_preservation(tmp_path):
                 "object_role": "armchair_seat",
             }
         ],
+        "interaction_groups": [],
         "inspectable_regions": [],
         "inspection_order": [],
         "unsupported_reason": "",

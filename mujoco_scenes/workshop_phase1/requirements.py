@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import abc
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 import re
@@ -382,6 +383,8 @@ class FMRequirementProvider(RequirementProvider):
         self.ontology_contract = ontology_contract or ManualWorkshopFMContract()
         self._requirements: list[FunctionalRequirement] | None = None
         self._category_rank: dict[str, int] = {}
+        self.raw_vlm_response: dict[str, Any] | None = None
+        self.validated_vlm_specification: dict[str, Any] | None = None
         self.raw_decomposition: dict[str, Any] | None = None
         self.region_ranking: tuple[str, ...] = ()
         self.candidate_regions: tuple[str, ...] = ()
@@ -481,7 +484,11 @@ class FMRequirementProvider(RequirementProvider):
         document = self.fm_adapter.generate_task_requirements(
             task_instruction, observation_images=observation_images or []
         )
-        self.raw_decomposition = document
+        self.raw_vlm_response = deepcopy(
+            getattr(self.fm_adapter, "last_raw_requirement_response", None) or document
+        )
+        self.validated_vlm_specification = deepcopy(document)
+        self.raw_decomposition = document  # legacy alias
         if document.get("status") != "SUPPORTED":
             raise VLMSpecificationError(
                 "VLM_SPEC_FAILED: VLM marked the Workshop task unsupported: "

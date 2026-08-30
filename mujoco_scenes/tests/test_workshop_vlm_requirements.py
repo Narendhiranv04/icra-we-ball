@@ -98,6 +98,7 @@ def natural_decomposition() -> dict:
                 "object_role": "repair_hole",
             },
         ],
+        "interaction_groups": [],
         "inspectable_regions": [],
         "inspection_order": [],
         "unsupported_reason": "",

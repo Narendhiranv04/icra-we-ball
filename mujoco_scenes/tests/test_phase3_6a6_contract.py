@@ -324,7 +324,8 @@ def test_e_workshop_open_vocab_routing():
 # Test F: Workshop fails with MalformedVLMSpecificationError on missing driver/fastener
 # ---------------------------------------------------------------------------
 def test_f_workshop_fails_on_missing_driver_or_fastener():
-    from mujoco_scenes.functional_tamp_pipeline.domains.workshop import WorkshopDomainAdapter
+    from mujoco_scenes.functional_tamp_pipeline.gf_reference_evaluator import evaluate_gf_against_reference
+    from mujoco_scenes.functional_tamp_pipeline.gt_spec_provider import GTSpecProvider
     from mujoco_scenes.functional_tamp_pipeline.models import FunctionalRequirementGraph, FunctionalRole
 
     bad_spec = FunctionalRequirementGraph(
@@ -344,9 +345,11 @@ def test_f_workshop_fails_on_missing_driver_or_fastener():
         candidate_regions=(),
         region_ranking=(),
     )
-    with pytest.raises(MalformedVLMSpecificationError) as exc_info:
-        WorkshopDomainAdapter("F0_MANUAL_FIRST_ONE_REGION", bad_spec)
-    assert "driver" in str(exc_info.value)
+    ref_gf = GTSpecProvider().provide("workshop", "assemble joint")
+    res = evaluate_gf_against_reference(bad_spec, ref_gf)
+    assert not res.structurally_complete
+    assert "driver" in res.missing_roles
+    assert "fastener" in res.missing_roles
 
 
 # ---------------------------------------------------------------------------

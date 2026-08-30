@@ -284,8 +284,8 @@ def run_to_plan(
     observer: Any = None,
 ) -> PipelineResult:
     from ..grounding import ground_graph
-    from ..task_interface_validator import validate_canonical_task_interface
-    validate_canonical_task_interface(specification)
+    from ..task_interface_validator import validate_runtime_gf
+    validate_runtime_gf(specification)
 
     phase1 = output_dir / "observed_grounding"
     if phase1.exists():

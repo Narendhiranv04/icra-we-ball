@@ -577,9 +577,9 @@ def test_k_empty_candidate_categories_fails_closed():
 # Test L: canonicalization version is final and consistent (phase3_6a7_v1)
 # ---------------------------------------------------------------------------
 def test_l_canonicalization_version_is_phase3_6a7_v1():
-    assert VLM_CANONICALIZATION_VERSION == "phase3_6a7_v1"
-    assert ENV_VLM_VERSION == "phase3_6a7_v1"
-    assert KITCHEN_VLM_VERSION == "phase3_6a7_v1"
+    assert VLM_CANONICALIZATION_VERSION == "phase3_6a7_2_v1"
+    assert ENV_VLM_VERSION == "phase3_6a7_2_v1"
+    assert KITCHEN_VLM_VERSION == "phase3_6a7_2_v1"
 
 
 # ---------------------------------------------------------------------------

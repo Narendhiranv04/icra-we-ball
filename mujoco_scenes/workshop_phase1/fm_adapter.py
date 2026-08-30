@@ -245,9 +245,9 @@ RESPONSE_SCHEMA: dict[str, Any] = {
                     },
                     "required_relations": {
                         "type": "array",
-                        "minItems": 0,
+                        "minItems": 1,
                         "maxItems": 12,
-                        "items": {"type": "string"},
+                        "items": {"type": "string", "minLength": 1},
                     },
                     "context_role": {"type": "string"},
                     "context_relations": {
@@ -264,6 +264,7 @@ RESPONSE_SCHEMA: dict[str, Any] = {
                     "target_role",
                     "required_target_count",
                     "usage_policy",
+                    "required_relations",
                 ],
                 "additionalProperties": False,
             },
@@ -294,6 +295,7 @@ RESPONSE_SCHEMA: dict[str, Any] = {
         "task_summary",
         "functional_roles",
         "functional_relations",
+        "interaction_groups",
         "inspectable_regions",
         "inspection_order",
         "unsupported_reason",
@@ -404,18 +406,13 @@ KITCHEN_FUNCTIONAL_GRAPH_SCHEMA: dict[str, Any] = {
                         "enum": ["SEQUENTIAL_REUSE_ALLOWED", "DEDICATED_PER_TARGET"],
                     },
                     "required_relations": {
-                        "type": "array", "minItems": 0, "maxItems": 12,
-                        "items": {"type": "string"},
-                    },
-                    "context_role": {"type": "string"},
-                    "context_relations": {
-                        "type": "array", "minItems": 0, "maxItems": 12,
-                        "items": {"type": "string"},
+                        "type": "array", "minItems": 1, "maxItems": 12,
+                        "items": {"type": "string", "minLength": 1},
                     },
                 },
                 "required": [
                     "id", "function", "tool_role", "target_role",
-                    "required_target_count", "usage_policy",
+                    "required_target_count", "usage_policy", "required_relations",
                 ],
                 "additionalProperties": False,
             },
@@ -618,7 +615,7 @@ def validate_requirement_response(document: Mapping[str, Any]) -> dict[str, Any]
 
     for req_field in {
         "status", "task_summary", "functional_roles",
-        "functional_relations", "inspectable_regions", "inspection_order",
+        "functional_relations", "interaction_groups", "inspectable_regions", "inspection_order",
         "unsupported_reason",
     }:
         if req_field not in document:
@@ -645,7 +642,7 @@ def validate_requirement_response(document: Mapping[str, Any]) -> dict[str, Any]
             raise FMResponseValidationError("UNSUPPORTED status must have empty functional_roles")
         if document.get("functional_relations") != []:
             raise FMResponseValidationError("UNSUPPORTED status must have empty functional_relations")
-        if document.get("interaction_groups") not in (None, []):
+        if document.get("interaction_groups") != []:
             raise FMResponseValidationError("UNSUPPORTED status must have empty interaction_groups")
         if document.get("inspectable_regions") != []:
             raise FMResponseValidationError("UNSUPPORTED status must have empty inspectable_regions")
@@ -1226,7 +1223,9 @@ class FMAdapter:
             sanitized_request=sanitized_req,
         )
         self.last_raw_kitchen_graph_response = deepcopy(document)
-        return validate_kitchen_functional_specification(document)
+        validated = validate_kitchen_functional_specification(document)
+        self.last_validated_kitchen_graph_response = deepcopy(validated)
+        return validated
 
     def _completion_transport(self) -> CompletionTransport:
         if self._transport is not None:

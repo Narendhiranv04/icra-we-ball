@@ -46,7 +46,7 @@ from mujoco_scenes.workshop_phase1.requirements import (
 
 
 def test_vlm_canonicalization_version_constant():
-    assert VLM_CANONICALIZATION_VERSION == "phase3_6a7_v1"
+    assert VLM_CANONICALIZATION_VERSION == "phase3_6a7_2_v1"
 
 
 def test_kitchen_render_resolution_configured():
@@ -105,6 +105,7 @@ def test_unsupported_contract_enforcement():
         "task_summary": "Perform quantum teleportation",
         "functional_roles": [],
         "functional_relations": [],
+        "interaction_groups": [],
         "inspectable_regions": [],
         "inspection_order": [],
         "unsupported_reason": "Task violates laws of physics and lacks physical roles.",

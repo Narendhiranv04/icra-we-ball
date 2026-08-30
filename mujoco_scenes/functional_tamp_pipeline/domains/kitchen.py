@@ -412,8 +412,8 @@ def run_to_plan(
     observer: Any = None,
 ) -> PipelineResult:
     from ..grounding import ground_graph
-    from ..task_interface_validator import validate_canonical_task_interface
-    validate_canonical_task_interface(specification)
+    from ..task_interface_validator import validate_runtime_gf
+    validate_runtime_gf(specification)
 
     scene = scene or scene_for_variant(internal_variant)
     contract = compile_kitchen_contract_from_graph(specification)

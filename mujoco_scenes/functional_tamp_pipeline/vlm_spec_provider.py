@@ -13,7 +13,7 @@ from .models import (
 )
 from .spec_provider import FunctionalSpecProvider
 
-VLM_CANONICALIZATION_VERSION = "phase3_6a7_v1"
+VLM_CANONICALIZATION_VERSION = "phase3_6a7_2_v1"
 
 
 class VLMSpecProvider(FunctionalSpecProvider):
@@ -32,8 +32,8 @@ class VLMSpecProvider(FunctionalSpecProvider):
         else:
             raise NotImplementedError(f"VLM specification adapter is not implemented for {domain}")
         graph.validate()
-        from .task_interface_validator import validate_canonical_task_interface
-        validate_canonical_task_interface(graph)
+        from .task_interface_validator import validate_runtime_gf
+        validate_runtime_gf(graph)
         return graph
 
     @staticmethod
@@ -89,6 +89,10 @@ class VLMSpecProvider(FunctionalSpecProvider):
 
         detector_vocab = tuple(dict.fromkeys(provider.vlm_derived_detector_prompts))
 
+        raw_resp = getattr(provider, "raw_vlm_response", None) or provider.raw_decomposition
+        valid_spec = getattr(provider, "validated_vlm_specification", None) or provider.raw_decomposition
+        trace = getattr(provider, "transformation_trace", [])
+
         return FunctionalRequirementGraph(
             domain="workshop",
             task_instruction=task_instruction,
@@ -109,19 +113,27 @@ class VLMSpecProvider(FunctionalSpecProvider):
                 "evaluation_negative_control_prompts": list(provider.evaluation_negative_control_prompts),
                 "detector_label_to_canonical": provider.get_detector_label_to_canonical_map(),
                 "alias_to_canonical": provider.get_alias_to_canonical_map(),
+                "raw_vlm_response": raw_resp,
+                "validated_vlm_specification": valid_spec,
+                "canonicalization_trace": trace,
                 "raw_decomposition": provider.raw_decomposition,
-                "transformation_trace": getattr(provider, "transformation_trace", []),
+                "transformation_trace": trace,
             },
         )
 
     @staticmethod
-    def _kitchen(task_instruction: str, observation_images: list[Path]) -> FunctionalRequirementGraph:
+    def _kitchen(
+        task_instruction: str,
+        observation_images: list[Path],
+        adapter: FMAdapter | None = None,
+    ) -> FunctionalRequirementGraph:
         from mujoco_scenes.kitchen_vlm_functional_graph import (
             KITCHEN_OBSERVABLE_REGIONS, compile_vlm_functional_graph,
         )
         from mujoco_scenes.workshop_phase1.fm_adapter import FMAdapter
 
-        adapter = FMAdapter()
+        if adapter is None:
+            adapter = FMAdapter()
         raw = adapter.generate_kitchen_functional_graph(
             task_instruction,
             observation_images=observation_images,
@@ -208,6 +220,8 @@ class VLMSpecProvider(FunctionalSpecProvider):
         prompts = tuple(dict.fromkeys(
             phrase for phrases in object_vocab.values() if isinstance(phrases, (list, tuple)) for phrase in phrases
         ))
+        raw_resp = getattr(adapter, "last_raw_kitchen_graph_response", None) or getattr(adapter, "last_raw_requirement_response", None) or raw
+        valid_spec = getattr(adapter, "last_validated_kitchen_graph_response", None) or raw
         return FunctionalRequirementGraph(
             domain="kitchen",
             task_instruction=task_instruction,
@@ -223,6 +237,9 @@ class VLMSpecProvider(FunctionalSpecProvider):
             metadata={
                 "vlm_canonicalization_version": VLM_CANONICALIZATION_VERSION,
                 "object_vocabulary": object_vocab,
+                "raw_vlm_response": raw_resp,
+                "validated_vlm_specification": valid_spec,
+                "canonicalization_trace": trace,
                 "raw_decomposition": raw,
                 "normalization_trace": trace,
                 "symbolic_task": contract.get("symbolic_task", {}),

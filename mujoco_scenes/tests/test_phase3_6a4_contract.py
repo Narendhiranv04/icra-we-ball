@@ -54,9 +54,9 @@ PNG_1X1 = (
 
 # Section 50: Version constant check
 def test_phase3_6a4_version_constant():
-    assert VLM_CANONICALIZATION_VERSION == "phase3_6a7_v1"
-    assert KITCHEN_VERSION == "phase3_6a7_v1"
-    assert ENV_VERSION == "phase3_6a7_v1"
+    assert VLM_CANONICALIZATION_VERSION == "phase3_6a7_2_v1"
+    assert KITCHEN_VERSION == "phase3_6a7_2_v1"
+    assert ENV_VERSION == "phase3_6a7_2_v1"
 
 
 # Section 51: Neutral prompt de-biasing
@@ -185,6 +185,7 @@ def test_workshop_lossless_canonical_construction(tmp_path):
                 "object_role": "screw_fastener",
             }
         ],
+        "interaction_groups": [],
         "inspectable_regions": [
             {"id": "reg_l", "label": "left storage drawer", "visual_description": "drawer on left", "reason": "tools"}
         ],
@@ -246,6 +247,7 @@ def test_workshop_single_vLM_call_in_pipeline(tmp_path):
             }
         ],
         "functional_relations": [],
+        "interaction_groups": [],
         "inspectable_regions": [
             {"id": "r1", "label": "left drawer", "visual_description": "drawer", "reason": "storage"}
         ],

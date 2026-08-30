@@ -40,7 +40,7 @@ KITCHEN_SEARCH_REGIONS = {
     "C1": "lower kitchen cupboard",
 }
 
-VLM_CANONICALIZATION_VERSION = "phase3_6a7_v1"
+VLM_CANONICALIZATION_VERSION = "phase3_6a7_2_v1"
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:

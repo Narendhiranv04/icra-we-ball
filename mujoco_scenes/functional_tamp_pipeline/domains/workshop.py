@@ -179,8 +179,8 @@ class WorkshopDomainAdapter:
     ) -> None:
         self.variant = variant
         self.specification = specification
-        from ..task_interface_validator import validate_canonical_task_interface
-        validate_canonical_task_interface(specification)
+        from ..task_interface_validator import validate_runtime_gf
+        validate_runtime_gf(specification)
         self.scene = scene or WorkshopScene(robot="google", variant=variant)
         self.physical_open = physical_open
         self.verbose = verbose

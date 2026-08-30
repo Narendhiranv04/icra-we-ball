@@ -1,15 +1,15 @@
 # Phase 3 Freeze and Phase 4 Handoff Status
 
 > [!NOTE]
-> **PASS 3.6A.7.1 CANDIDATE — FINAL PRODUCTION-COMPATIBILITY AND COMPLETENESS HOTFIX**
-> Phase 3 Status: **NOT FROZEN** (`PASS 3.6A.7.1 CODE CLOSURE: YES`, `VLM INTERFACE IMPLEMENTATION FROZEN: YES`, `READY FOR PASS 3.6B: YES`, `PHASE 3 FROZEN: NO`, `READY FOR PHASE 4: NO`).
-> Pass 3.6A.7.1 closes the remaining deterministic production/interface compatibility mismatches: Living Room $G_F \leftrightarrow G_O$ task-anchor category alignment, domain-scoped Living unary checker capability constraints (`PLANAR_SUPPORT` only), strict generic interaction-group schema validation (`required_relations` mandatory), mode-safe canonical task-interface completeness validation, strict entity-kind compatibility checks, and distinct provenance tracking layers (`raw_vlm_response`, `validated_vlm_specification`, `canonicalization_trace`).
+> **PASS 3.6A.7.2 CANDIDATE — FINAL NON-ORACULAR VLM INTERFACE FREEZE: SCHEMA PARITY, RUNTIME/EVALUATION SEPARATION, PROVENANCE, AND SYNTHETIC PATH VALIDATION**
+> Phase 3 Status: **NOT FROZEN** (`PASS 3.6A.7.2 CODE CLOSURE: YES`, `VLM INTERFACE IMPLEMENTATION FROZEN: YES`, `READY FOR PASS 3.6B: YES`, `PHASE 3 FROZEN: NO`, `READY FOR PHASE 4: NO`).
+> Pass 3.6A.7.2 closes the deterministic VLM interface correctly: separates runtime generic structural validation (`validate_runtime_gf` with zero task nouns/oracles) from offline evaluation (`gf_reference_evaluator.py:evaluate_gf_against_reference()`), closes generic and Kitchen `RESPONSE_SCHEMA` $\leftrightarrow$ Python validator parity (`required_relations` mandatory with `minItems=1`), exposes 3-layer provenance (`raw_vlm_response`, `validated_vlm_specification`, `canonicalization_trace`), fixes canonicalization version to `phase3_6a7_2_v1`, and proves compiler non-mutation invariance and synthetic raw-VLM $\to$ canonical $G_F$ end-to-end paths.
 
 ---
 
 ## 1. Executive Summary
 
-Phase 3 establishes the canonical functional-grounding Task and Motion Planning (TAMP) pipeline architecture. Under Pass 3.6A.1 through Pass 3.6A.7.1, the interface boundary between the live Vision-Language Model (VLM) and downstream execution has been fully closed and frozen to adhere strictly to scientific zero-leakage principles with lossless, deterministic canonicalization.
+Phase 3 establishes the canonical functional-grounding Task and Motion Planning (TAMP) pipeline architecture. Under Pass 3.6A.1 through Pass 3.6A.7.2, the interface boundary between the live Vision-Language Model (VLM) and downstream execution has been fully closed and frozen to adhere strictly to scientific zero-leakage principles with lossless, deterministic canonicalization.
 
 The scientific pipeline is established as:
 ```
@@ -21,9 +21,9 @@ raw VLM output (raw_vlm_response)
         ↓
 strict generic schema validation (validated_vlm_specification)
         ↓
-lossless deterministic canonicalization (phase3_6a7_v1, canonicalization_trace)
+lossless deterministic canonicalization (phase3_6a7_2_v1, canonicalization_trace)
         ↓
-mode-safe task-interface completeness validation
+generic domain-independent runtime G_F validation (validate_runtime_gf)
         ↓
 canonical G_F
         ↓
@@ -36,7 +36,7 @@ G_O (sequential inspection) → grounding (phi*) → symbolic compiler → A*
 
 ---
 
-## 2. Pass 3.6A.7.1 Contract and Canonicalization Summary
+## 2. Pass 3.6A.7.2 Contract and Canonicalization Summary
 
 1. **Complete Natural-Language Schema & Generic Prompt**:
    - Clean static prompt: format instruction only, zero concrete semantic examples, zero benchmark nouns.
@@ -51,10 +51,11 @@ G_O (sequential inspection) → grounding (phi*) → symbolic compiler → A*
    - **Workshop**: Lossless normalized roles and relations. Pure $G_F \to G_O$ semantic category routing (`REACHES_TARGET`, `COMPATIBLE_WITH_TARGET`, `COMPATIBLE_WITH`) with run-local prompt tokenization.
 
 3. **Strict Validation & Traceability**:
-   - `VLM_CANONICALIZATION_VERSION = "phase3_6a7_v1"` attached to all $G_F$ metadata.
+   - `VLM_CANONICALIZATION_VERSION = "phase3_6a7_2_v1"` attached to all $G_F$ metadata.
    - Distinct `unary_property_aliases` and `binary_relation_aliases` tables.
    - Domain-scoped unary checker capabilities enforced fail-closed (`PLANAR_SUPPORT` only in Living Room).
-   - Mode-safe canonical task-interface completeness validator executed before planning/grounding.
+   - Generic runtime $G_F$ structural validator executed without domain oracle lists.
+   - Offline reference evaluation (`evaluate_gf_against_reference`) dynamically comparing candidate $G_F$ against ground-truth reference $G_F$.
    - Genuine separation of `raw_vlm_response`, `validated_vlm_specification`, and `canonicalization_trace`.
 
 ---

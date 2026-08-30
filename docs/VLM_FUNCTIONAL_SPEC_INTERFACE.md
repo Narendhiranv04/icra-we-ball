@@ -1,6 +1,6 @@
-# VLM Functional Specification Interface Contract (Pass 3.6A.7.1)
+# VLM Functional Specification Interface Contract (Pass 3.6A.7.2)
 
-**Canonicalization Version**: `phase3_6a7_v1`
+**Canonicalization Version**: `phase3_6a7_2_v1`
 **VLM Interface Implementation Frozen**: YES
 **Phase 3 Frozen**: NO (Live audit & evaluation in Pass 3.6B)
 **Ready for Phase 4**: NO
@@ -22,9 +22,9 @@ raw VLM output (raw_vlm_response)
         ↓
 strict generic schema validation (validated_vlm_specification)
         ↓
-lossless deterministic canonicalization (phase3_6a7_v1, canonicalization_trace)
+lossless deterministic canonicalization (phase3_6a7_2_v1, canonicalization_trace)
         ↓
-mode-safe task-interface completeness validation
+generic domain-independent runtime G_F validation (validate_runtime_gf)
         ↓
 canonical G_F (with complete roles, relations, and operation groups)
         ↓
@@ -34,6 +34,8 @@ canonical G_F (with complete roles, relations, and operation groups)
         ↓
 G_O (sequential inspection) → grounding (phi*) → symbolic compiler → A*
 ```
+
+*Note on Evaluation Separation*: Offline task/domain evaluation (e.g. assessing candidate $G_F$ recall/completeness against reference specifications) is strictly decoupled from runtime and performed via `gf_reference_evaluator.py:evaluate_gf_against_reference()`. The proposed-method runtime execution path contains zero task oracle lists or expected benchmark nouns.
 
 ---
 
@@ -132,7 +134,7 @@ If the VLM determines that the task cannot be represented with this abstraction:
 
 ---
 
-## 4. Deterministic Backend Canonicalization (`phase3_6a7_v1`)
+## 4. Deterministic Backend Canonicalization (`phase3_6a7_2_v1`)
 
 Downstream backend code compiles the VLM's natural-language output deterministically and fails closed on invalid or ambiguous specifications:
 
@@ -156,13 +158,15 @@ Downstream backend code compiles the VLM's natural-language output deterministic
    - Paired `context_role` and `context_relations`: if `context_role` is present, `context_relations` must be non-empty; if `context_role` is absent, `context_relations` cannot be specified.
    - Zero silent dropping of interaction groups.
 
-5. **Mode-Safe Task-Interface Completeness Validation**:
-   - Before planning/grounding, `validate_canonical_task_interface` verifies that canonical $G_F$ contains all required roles, relations, and operation groups needed for downstream solvers.
+5. **Generic Runtime G_F Validation vs Offline Reference Evaluation**:
+   - Runtime validation (`validate_runtime_gf`) verifies domain-independent graph structural integrity (unique role names, count $\ge 1$, valid entity kinds, endpoints in nodes, non-empty required relations) with zero expected task nouns or domain oracle lists.
+   - Task/domain completeness evaluation is strictly offline via `gf_reference_evaluator.py:evaluate_gf_against_reference()`.
 
 6. **Separate Provenance Layers**:
    - `raw_vlm_response`: Exact decoded JSON before validation.
    - `validated_vlm_specification`: Validated schema document.
    - `canonicalization_trace`: Detailed mappings of role IDs, categories, and predicates.
+   - `vlm_canonicalization_version`: Fixed to `phase3_6a7_2_v1`.
 
 ---
 
