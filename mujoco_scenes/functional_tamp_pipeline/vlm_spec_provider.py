@@ -13,7 +13,7 @@ from .models import (
 )
 from .spec_provider import FunctionalSpecProvider
 
-VLM_CANONICALIZATION_VERSION = "phase3_6a5_v1"
+VLM_CANONICALIZATION_VERSION = "phase3_6a7_v1"
 
 
 class VLMSpecProvider(FunctionalSpecProvider):
@@ -40,6 +40,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
         observation_images: list[Path],
         provider: FMRequirementProvider | None = None,
     ) -> FunctionalRequirementGraph:
+        from mujoco_scenes.functional_tamp_pipeline.errors import MalformedVLMSpecificationError
         from mujoco_scenes.workshop_phase1.requirements import (
             FMRequirementProvider, WORKSHOP_SEARCH_REGIONS,
         )
@@ -55,6 +56,11 @@ class VLMSpecProvider(FunctionalSpecProvider):
 
         for role in provider.normalized_roles:
             role_id = role.canonical_role_id
+            if role.entity_kind == "OBJECT" and role_id in ("driver", "fastener"):
+                if not role.run_local_categories:
+                    raise MalformedVLMSpecificationError(
+                        f"Workshop functional role {role_id!r} must have non-empty candidate_categories"
+                    )
             nodes[role_id] = FunctionalRole(
                 name=role_id,
                 entity_kind=role.entity_kind,
@@ -246,9 +252,13 @@ class VLMSpecProvider(FunctionalSpecProvider):
             count = int(row["vlm_required_count"])
             entity_kind = row["entity_kind"]
             cats = tuple(row["accepted_categories"])
-            unary = tuple(
-                prop for prop in row.get("required_properties", []) if prop == "PLANAR_SUPPORT"
-            )
+            if entity_kind in ("OBJECT", "REGION") and func_id in ("PERSONAL_CUP_SAUCER_REGION", "SHARED_REMOTE_REGION"):
+                if not cats:
+                    from mujoco_scenes.functional_tamp_pipeline.errors import MalformedVLMSpecificationError
+                    raise MalformedVLMSpecificationError(
+                        f"Living Room discoverable functional role {func_id!r} must have non-empty candidate_categories"
+                    )
+            unary = tuple(row.get("required_properties", []))
             nodes[func_id] = FunctionalRole(
                 name=func_id,
                 entity_kind=entity_kind,

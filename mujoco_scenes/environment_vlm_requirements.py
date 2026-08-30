@@ -40,7 +40,7 @@ KITCHEN_SEARCH_REGIONS = {
     "C1": "lower kitchen cupboard",
 }
 
-VLM_CANONICALIZATION_VERSION = "phase3_6a5_v1"
+VLM_CANONICALIZATION_VERSION = "phase3_6a7_v1"
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -93,17 +93,21 @@ def map_living_room_role_function(function_text: str) -> str | None:
 def map_living_room_relation(
     relation_text: str,
     relation_aliases: dict[str, list[str]] | None = None,
+    *,
+    fail_closed: bool = True,
 ) -> str | None:
     """Deterministic concept matching for Living Room binary relations."""
     norm = _phrase(relation_text)
     if not norm:
+        if fail_closed:
+            raise UnmappedFunctionalConceptError("Empty relation text cannot be mapped")
         return None
     matches = set()
     if any(k in norm for k in (
         "near seat", "near the seat", "near armchair", "reach of one seated",
         "near seating", "adjacent to viewer", "within reach of seat",
         "near assigned seat", "adjacent to seat", "adjacent to armchair",
-        "within reach of armchair",
+        "within reach of armchair", "reach of seat", "reach of armchair",
     )):
         matches.add("NEAR_SEAT")
     if any(k in norm for k in (
@@ -115,12 +119,14 @@ def map_living_room_relation(
     if any(k in norm for k in (
         "fit set", "fits set", "fit cup and saucer", "fits cup and saucer",
         "hold cup and saucer", "fit the complete set", "support cup and saucer",
-        "hold the complete set", "fit the payload set",
+        "hold the complete set", "fit the payload set", "support drinkware",
+        "support personal drinkware", "fits personal drinkware",
     )):
         matches.add("FITS_SET_ON")
     if any(k in norm for k in (
         "fit remote", "fits remote", "support remote", "accommodate remote",
         "fit the remote", "fit television remote", "support television remote",
+        "fits television remote",
     )):
         matches.add("FITS_ON")
 
@@ -128,7 +134,7 @@ def map_living_room_relation(
         for pred in ("NEAR_SEAT", "ACCESSIBLE_FROM_BOTH_SEATS", "FITS_SET_ON", "FITS_ON"):
             for alias in relation_aliases.get(pred, []):
                 a_norm = _phrase(alias)
-                if a_norm == norm or f" {a_norm} " in f" {norm} ":
+                if a_norm == norm or f" {a_norm} " in f" {norm} " or f" {norm} " in f" {a_norm} ":
                     matches.add(pred)
                     break
 
@@ -137,6 +143,10 @@ def map_living_room_relation(
     if len(matches) > 1:
         raise AmbiguousCanonicalizationError(
             f"Ambiguous living room relation {relation_text!r} matches: {sorted(matches)}"
+        )
+    if fail_closed:
+        raise UnmappedFunctionalConceptError(
+            f"VLM living room relation {relation_text!r} cannot be mapped to any reviewed relation"
         )
     return None
 
@@ -196,7 +206,12 @@ class EnvironmentVLMRequirementProvider:
         normalization = _load_yaml(_resolve(normalization_path))
         if normalization.get("schema_version") != 1:
             raise ValueError("Unsupported Kitchen/Living-Room VLM normalization schema")
-        self.relation_aliases = normalization.get("relation_aliases", {})
+        self.unary_property_aliases = normalization.get("unary_property_aliases", {})
+        self.binary_relation_aliases = normalization.get("binary_relation_aliases", {})
+        self.relation_aliases = normalization.get("relation_aliases", {}) or {
+            **self.unary_property_aliases,
+            **self.binary_relation_aliases,
+        }
         self.environment_config = normalization["environments"][environment]
         self.task_path = _resolve(self.environment_config["task_path"])
         self.vocabulary_path = _resolve(self.environment_config["vocabulary_path"])
@@ -324,7 +339,7 @@ class EnvironmentVLMRequirementProvider:
         for value in values:
             norm = _phrase(value)
             prop_matches = set()
-            for predicate, aliases in self.relation_aliases.items():
+            for predicate, aliases in self.unary_property_aliases.items():
                 for alias in aliases:
                     a_norm = _phrase(alias)
                     if a_norm == norm or f" {a_norm} " in f" {norm} ":
@@ -334,15 +349,11 @@ class EnvironmentVLMRequirementProvider:
                 mapped.add(next(iter(prop_matches)))
             elif len(prop_matches) > 1:
                 raise AmbiguousCanonicalizationError(
-                    f"Ambiguous property {value!r} matches multiple relations: {sorted(prop_matches)}"
+                    f"Ambiguous property {value!r} matches multiple unary predicates: {sorted(prop_matches)}"
                 )
             elif fail_closed:
-                if any(k in norm for k in ("rigid", "metallic", "transparent", "heavy", "smooth", "flexible", "wooden", "plastic", "ceramic", "glass", "magnetic")):
-                    raise UnsupportedCheckerCapabilityError(
-                        f"VLM property {value!r} is physically meaningful but unsupported in Living Room"
-                    )
-                raise UnmappedFunctionalConceptError(
-                    f"VLM property {value!r} cannot be mapped to any reviewed relation"
+                raise UnsupportedCheckerCapabilityError(
+                    f"VLM required property {value!r} is not supported by any available checker in {self.environment}"
                 )
         return mapped
 
@@ -352,7 +363,7 @@ class EnvironmentVLMRequirementProvider:
 
     def _candidate_categories(self, raw: dict[str, Any]) -> list[str]:
         categories: list[str] = []
-        for candidate in raw.get("visible_candidates", []) or raw.get("candidate_objects", []):
+        for candidate in raw.get("visible_candidates", []):
             canonical = self._map_category(candidate.get("label", ""))
             if canonical is not None and canonical not in categories:
                 categories.append(canonical)
@@ -631,6 +642,11 @@ class EnvironmentVLMRequirementProvider:
                     for cat in raw.get("candidate_categories", [])
                     if str(cat).strip()
                 ))
+                if entity_kind in ("OBJECT", "REGION") and canonical_func in ("PERSONAL_CUP_SAUCER_REGION", "SHARED_REMOTE_REGION"):
+                    if not cand_cats:
+                        raise MalformedVLMSpecificationError(
+                            f"Discoverable Living Room role {canonical_func!r} must specify non-empty candidate_categories"
+                        )
                 vlm_role_vocab.extend(cand_cats)
                 run_local_cats = list(dict.fromkeys(_phrase(c).replace(" ", "_") for c in cand_cats if c))
 
@@ -665,7 +681,7 @@ class EnvironmentVLMRequirementProvider:
                         "semantic_hints": hints,
                         "source": "FM",
                         "provenance": "qwen_vlm_normalized_by_generic_ontology",
-                        "vlm_canonicalization_version": "phase3_6a5_v1",
+                        "vlm_canonicalization_version": VLM_CANONICALIZATION_VERSION,
                         "normalization_status": "COMPLETE",
                     }
                 )
@@ -686,7 +702,7 @@ class EnvironmentVLMRequirementProvider:
                     )
                 s_canon = raw_id_to_canon[s]
                 o_canon = raw_id_to_canon[o]
-                mapped_r = map_living_room_relation(r, self.relation_aliases)
+                mapped_r = map_living_room_relation(r, self.binary_relation_aliases)
                 if mapped_r is None:
                     raise UnmappedFunctionalConceptError(
                         f"VLM living room relation {r!r} cannot be mapped to any reviewed relation"
@@ -720,14 +736,14 @@ class EnvironmentVLMRequirementProvider:
 
                 req_rels: list[str] = []
                 for r in grp.get("required_relations", []):
-                    mapped_r = map_living_room_relation(r, self.relation_aliases)
+                    mapped_r = map_living_room_relation(r, self.binary_relation_aliases)
                     if mapped_r is None:
                         raise UnmappedFunctionalConceptError(f"Unmapped interaction group relation {r!r}")
                     req_rels.append(mapped_r)
 
                 ctx_rels: list[str] = []
                 for r in grp.get("context_relations", []):
-                    mapped_r = map_living_room_relation(r, self.relation_aliases)
+                    mapped_r = map_living_room_relation(r, self.binary_relation_aliases)
                     if mapped_r is None:
                         raise UnmappedFunctionalConceptError(f"Unmapped interaction group context relation {r!r}")
                     ctx_rels.append(mapped_r)

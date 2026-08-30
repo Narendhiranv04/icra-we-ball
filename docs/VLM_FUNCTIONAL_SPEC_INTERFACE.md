@@ -1,7 +1,8 @@
-# VLM Functional Specification Interface Contract (Pass 3.6A.6)
+# VLM Functional Specification Interface Contract (Pass 3.6A.7)
 
-**Canonicalization Version**: `phase3_6a5_v1`
-**Phase 3 Frozen**: NO (Live audit & boundary refinement in progress)
+**Canonicalization Version**: `phase3_6a7_v1`
+**VLM Interface Implementation Frozen**: YES
+**Phase 3 Frozen**: NO (Live audit & evaluation in Pass 3.6B)
 **Ready for Phase 4**: NO
 
 This document defines the authoritative scientific interface contract between the Vision-Language Model (VLM) specification provider and downstream perception, grounding, and task-and-motion planning (TAMP) components.
@@ -19,7 +20,7 @@ TASK + INITIAL MULTI-VIEW RGB
         ↓
 complete natural-language functional specification
         ↓
-lossless deterministic canonicalization (phase3_6a5_v1)
+lossless deterministic canonicalization (phase3_6a7_v1)
         ↓
 canonical G_F (with complete roles, relations, and operation groups)
         ↓
@@ -127,7 +128,7 @@ If the VLM determines that the task cannot be represented with this abstraction:
 
 ---
 
-## 4. Deterministic Backend Canonicalization (`phase3_6a5_v1`)
+## 4. Deterministic Backend Canonicalization (`phase3_6a7_v1`)
 
 Downstream backend code compiles the VLM's natural-language output deterministically and fails closed on invalid or ambiguous specifications:
 
@@ -135,20 +136,20 @@ Downstream backend code compiles the VLM's natural-language output deterministic
    - Maps role function phrases to reviewed domain canonical roles ignoring local VLM IDs:
      - **Kitchen**: `coffee_container`, `soup_container`, `coffee_stirrer`, `soup_eating_utensil`, `coffee_source`, `water_source`.
      - **Living Room**: `personal_cup_saucer`, `shared_remote`.
-     - **Workshop**: `CAN_DRIVE_SCREW`, `CAN_FASTEN`, `repair_target` (`FIXED_TARGET`).
-2. **Unary Properties**:
-   - `required_properties` contains **UNARY ONLY** physical properties of one role.
-   - Evaluated against exact/alias predicate checkers (e.g. `OPEN_CAVITY`, `ELONGATED_OBJECT`, `PLANAR_SUPPORT`).
-3. **Explicit Functional Relations**:
-   - Top-level `functional_relations` specify explicit `subject_role`, `relation`, `object_role`.
-   - Verified that both endpoints exist and relation maps deterministically (e.g. `COMPATIBLE_WITH`, `REACHES_TARGET`, `COMPATIBLE_WITH_TARGET`).
+     - **Workshop**: `driver`, `fastener`, `repair_target` (`FIXED_TARGET`).
+2. **Unary Properties vs Binary Relations Separation**:
+   - `required_properties` contains **UNARY ONLY** physical properties of one role mapped strictly through `unary_property_aliases`. Any unknown required property fails closed with `UnsupportedCheckerCapabilityError`.
+   - Relations (`functional_relations`, `interaction_groups.required_relations`, `context_relations`) map strictly through `binary_relation_aliases` to reviewed binary relations (`NEAR_SEAT`, `ACCESSIBLE_FROM_BOTH_SEATS`, `FITS_SET_ON`, `FITS_ON`, `INSERTABLE_IN`, `REACHES_BOTTOM`, `REACHES_TARGET`, `COMPATIBLE_WITH_TARGET`, `COMPATIBLE_WITH`). Unmapped relations raise `UnmappedFunctionalConceptError`.
+3. **Selectable Role Non-Empty Candidate Categories**:
+   - For discoverable/selectable functional assets (`PERSONAL_CUP_SAUCER_REGION`, `SHARED_REMOTE_REGION`, `driver`, `fastener`), `candidate_categories` must be non-empty. Otherwise fails closed with `MalformedVLMSpecificationError`.
 4. **Region Proposal Resolution**:
    - Matches visually proposed region descriptions (`"upper wall cupboard"`) against domain region alias tables $\to$ `C2`.
    - Local VLM IDs (e.g., `"c2"`) are completely ignored; resolution uses only natural language `label` and `visual_description`.
    - The resulting $G_F$ `candidate_regions` contains **ONLY** successfully resolved VLM proposals. No fallback to the full canonical catalog is permitted.
-5. **Strict Validation & No Semantic Repairs**:
+5. **Strict Validation & Zero Silent Dropping**:
    - Fails closed on unmapped properties, relations, roles, or mismatched policies.
-   - Attaches `vlm_canonicalization_version: "phase3_6a5_v1"` and full transformation provenance to $G_F$ metadata.
+   - All accepted `required_properties` directly become `FunctionalRole.unary_predicates` without hardcoded filtering.
+   - Attaches `vlm_canonicalization_version: "phase3_6a7_v1"` and full transformation provenance to $G_F$ metadata.
 
 ---
 

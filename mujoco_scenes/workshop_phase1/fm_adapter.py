@@ -770,7 +770,6 @@ def validate_requirement_response(document: Mapping[str, Any]) -> dict[str, Any]
             "required_count": required_count,
             "binding_policy": binding_policy,
             "candidate_categories": [str(c).strip() for c in cand_cats],
-            "candidate_objects": cleaned_candidates,
             "visible_candidates": cleaned_candidates,
             "required_properties": cleaned_props,
         })

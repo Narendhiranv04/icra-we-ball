@@ -64,9 +64,9 @@ class MockTransport:
 
 # Section 1: Version constant checks across all modules
 def test_phase3_6a5_version_constants():
-    assert VLM_CANONICALIZATION_VERSION == "phase3_6a5_v1"
-    assert KITCHEN_VERSION == "phase3_6a5_v1"
-    assert ENV_VERSION == "phase3_6a5_v1"
+    assert VLM_CANONICALIZATION_VERSION == "phase3_6a7_v1"
+    assert KITCHEN_VERSION == "phase3_6a7_v1"
+    assert ENV_VERSION == "phase3_6a7_v1"
 
 
 # Section 2: Clean static prompt (zero concrete semantic examples and zero benchmark nouns)

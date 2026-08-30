@@ -379,11 +379,10 @@ def test_i_ambiguous_living_room_relation_raises_ambiguous_error():
 # ---------------------------------------------------------------------------
 def test_j_unmapped_living_room_property_error_taxonomy():
     provider = EnvironmentVLMRequirementProvider("living_room")
-    # Physically meaningful unsupported property
+    # In Pass 3.6A.7, all unknown required properties fail closed with UnsupportedCheckerCapabilityError
     with pytest.raises(UnsupportedCheckerCapabilityError):
         provider._map_properties(["rigid metallic surface"])
-    # Completely unmapped functional concept
-    with pytest.raises(UnmappedFunctionalConceptError):
+    with pytest.raises(UnsupportedCheckerCapabilityError):
         provider._map_properties(["quantum encrypted surface"])
 
 

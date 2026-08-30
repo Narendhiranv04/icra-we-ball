@@ -318,6 +318,11 @@ class WorkshopDomainAdapter:
             raise MalformedVLMSpecificationError(
                 "Workshop functional specification must contain canonical role 'driver'"
             )
+        if not driver_node.semantic_categories:
+            from ..errors import MalformedVLMSpecificationError
+            raise MalformedVLMSpecificationError(
+                "Workshop functional role 'driver' must have non-empty candidate_categories"
+            )
         driver_categories = list(driver_node.semantic_categories)
 
         fastener_node = self.specification.nodes.get("fastener")
@@ -325,6 +330,11 @@ class WorkshopDomainAdapter:
             from ..errors import MalformedVLMSpecificationError
             raise MalformedVLMSpecificationError(
                 "Workshop functional specification must contain canonical role 'fastener'"
+            )
+        if not fastener_node.semantic_categories:
+            from ..errors import MalformedVLMSpecificationError
+            raise MalformedVLMSpecificationError(
+                "Workshop functional role 'fastener' must have non-empty candidate_categories"
             )
         fastener_categories = list(fastener_node.semantic_categories)
 

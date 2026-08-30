@@ -53,7 +53,7 @@ from mujoco_scenes.workshop_phase1.requirements import (
 
 
 def test_vlm_canonicalization_version_constant():
-    assert VLM_CANONICALIZATION_VERSION == "phase3_6a5_v1"
+    assert VLM_CANONICALIZATION_VERSION == "phase3_6a7_v1"
 
 
 def test_single_role_field_enforced():
