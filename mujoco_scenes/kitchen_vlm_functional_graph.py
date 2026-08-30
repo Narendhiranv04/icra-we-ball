@@ -172,10 +172,22 @@ def compile_vlm_functional_graph(
             raise ValueError("VLM operation group has duplicate ID or unknown role")
         required_relations = list(map(str, row["required_relations"]))
         for predicate in required_relations:
-            if (predicate, tool_role, target_role) not in relation_index:
+            if predicate not in SUPPORTED_BINARY_CHECKERS:
                 raise ValueError(
-                    f"Operation {group_id} requires undeclared exact relation {predicate}"
+                    f"VLM emitted binary predicate {predicate!r}, but no exact checker exists"
                 )
+            key = (predicate, tool_role, target_role)
+            if key not in relation_index:
+                relation_index.add(key)
+                relations.append({
+                    "predicate": predicate,
+                    "subject_role": tool_role,
+                    "object_role": target_role,
+                    "expected": True,
+                })
+                exact_predicates["binary"].append({
+                    "subject_role": tool_role, "predicate": predicate, "object_role": target_role
+                })
         policy = str(row["usage_policy"])
         req_target_count = int(row["required_target_count"])
         if target_role in roles:
