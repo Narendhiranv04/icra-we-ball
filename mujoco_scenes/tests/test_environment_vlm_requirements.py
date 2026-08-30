@@ -14,6 +14,7 @@ from mujoco_scenes.run_environment_vlm_requirements import (
     DIRECT_SCENE_CAMERAS,
     available_variants,
 )
+from mujoco_scenes.functional_tamp_pipeline.errors import TransportOrStructuredOutputError
 from mujoco_scenes.task_witness import load_task_requirements
 from mujoco_scenes.workshop_phase1.fm_adapter import FMAdapter, FMResponseValidationError
 
@@ -495,7 +496,7 @@ def test_fm_diagnostics_saved_on_failure_and_success(tmp_path, monkeypatch):
     adapter_err = FMAdapter(transport=transport_err)
     img_err = tmp_path / "img_err.png"
     img_err.write_bytes(PNG_1X1)
-    with pytest.raises(FMResponseValidationError):
+    with pytest.raises((FMResponseValidationError, TransportOrStructuredOutputError)):
         adapter_err.generate_kitchen_functional_graph("task", {}, observation_images=[img_err])
 
     f1 = diag_dir / "fm_call_001.json"

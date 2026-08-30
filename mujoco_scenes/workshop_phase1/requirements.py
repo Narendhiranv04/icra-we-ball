@@ -320,7 +320,7 @@ def resolve_workshop_region_proposal(proposal: dict[str, Any] | str) -> str | No
     if len(matches) == 1:
         return next(iter(matches))
     if len(matches) > 1:
-        raise ValueError(f"Ambiguous workshop region proposal {proposal!r} matches multiple regions: {sorted(matches)}")
+        raise AmbiguousCanonicalizationError(f"Ambiguous workshop region proposal {proposal!r} matches multiple regions: {sorted(matches)}")
     return None
 
 
@@ -354,7 +354,7 @@ def map_workshop_relation(relation_text: str) -> str | None:
     if len(matches) == 1:
         return next(iter(matches))
     if len(matches) > 1:
-        raise VLMSpecificationError(f"Ambiguous workshop relation {relation_text!r} matches multiple relations: {sorted(matches)}")
+        raise AmbiguousCanonicalizationError(f"Ambiguous workshop relation {relation_text!r} matches multiple relations: {sorted(matches)}")
     return None
 
 

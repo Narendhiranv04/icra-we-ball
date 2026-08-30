@@ -135,9 +135,27 @@ def map_living_room_relation(
     if len(matches) == 1:
         return next(iter(matches))
     if len(matches) > 1:
-        raise VLMSpecificationError(
+        raise AmbiguousCanonicalizationError(
             f"Ambiguous living room relation {relation_text!r} matches: {sorted(matches)}"
         )
+    return None
+
+
+def map_living_room_object_payload_role(raw: dict[str, Any]) -> str | None:
+    """Deterministic concept matching for Living Room task-explicit payload OBJECT roles."""
+    if raw.get("entity_kind") != "OBJECT":
+        return None
+    fn_desc = f"{raw.get('function', '')} {raw.get('description', '')}"
+    cand_cats = " ".join(raw.get("candidate_categories", []))
+    norm_all = _phrase(f"{fn_desc} {cand_cats}")
+    if not norm_all:
+        return None
+    has_cup = any(w in norm_all for w in ("cup", "saucer", "drinkware", "drink", "coffee", "tea", "beverage", "cup_saucer_set", "cup saucer", "cups"))
+    has_remote = any(w in norm_all for w in ("remote", "controller", "tv_remote", "remote_control", "television_remote", "control device", "tv"))
+    if has_cup and not has_remote:
+        return "CUP_SAUCER_SET"
+    if has_remote and not has_cup:
+        return "REMOTE"
     return None
 
 
@@ -298,7 +316,7 @@ class EnvironmentVLMRequirementProvider:
         if len(matches) == 1:
             return next(iter(matches))
         if len(matches) > 1:
-            raise ValueError(f"Ambiguous category match for {value!r}: {sorted(matches)}")
+            raise AmbiguousCanonicalizationError(f"Ambiguous category match for {value!r}: {sorted(matches)}")
         return None
 
     def _map_properties(self, values: list[str], *, fail_closed: bool = True) -> set[str]:
@@ -315,11 +333,15 @@ class EnvironmentVLMRequirementProvider:
             if len(prop_matches) == 1:
                 mapped.add(next(iter(prop_matches)))
             elif len(prop_matches) > 1:
-                raise ValueError(
+                raise AmbiguousCanonicalizationError(
                     f"Ambiguous property {value!r} matches multiple relations: {sorted(prop_matches)}"
                 )
             elif fail_closed:
-                raise ValueError(
+                if any(k in norm for k in ("rigid", "metallic", "transparent", "heavy", "smooth", "flexible", "wooden", "plastic", "ceramic", "glass", "magnetic")):
+                    raise UnsupportedCheckerCapabilityError(
+                        f"VLM property {value!r} is physically meaningful but unsupported in Living Room"
+                    )
+                raise UnmappedFunctionalConceptError(
                     f"VLM property {value!r} cannot be mapped to any reviewed relation"
                 )
         return mapped
@@ -521,6 +543,27 @@ class EnvironmentVLMRequirementProvider:
                             f"VLM role {raw_id!r} with function {fn_text!r} cannot be mapped to any reviewed FIXED_TARGET role"
                         )
                     canonical_func = matched_role_id.upper()
+                elif raw_kind == "OBJECT":
+                    matched_payload = map_living_room_object_payload_role(raw)
+                    if matched_payload is not None:
+                        matched_role_id = matched_payload
+                        canonical_func = matched_payload
+                    else:
+                        func_text = str(raw.get("function", ""))
+                        comp_role = map_living_room_role_function(f"{func_text} {raw.get('description', '')}")
+                        matched_role_id = comp_role
+                        if matched_role_id is None:
+                            fn_text = f"{raw.get('function', '')} {raw.get('description', '')}"
+                            raise UnmappedFunctionalConceptError(
+                                f"VLM role {raw_id!r} with function {fn_text!r} cannot be mapped to any reviewed OBJECT role"
+                            )
+                        canonical_func = (
+                            "PERSONAL_CUP_SAUCER_REGION"
+                            if matched_role_id == "personal_cup_saucer"
+                            else "SHARED_REMOTE_REGION"
+                            if matched_role_id == "shared_remote"
+                            else matched_role_id.upper()
+                        )
                 else:
                     func_text = str(raw.get("function", ""))
                     comp_role = map_living_room_role_function(f"{func_text} {raw.get('description', '')}")
@@ -657,7 +700,55 @@ class EnvironmentVLMRequirementProvider:
                     "canonical_object_role_id": o_canon,
                 })
 
+            # Canonicalize interaction groups losslessly into OperationGroup objects
+            canonical_operation_groups: list[dict[str, Any]] = []
+            for grp in self.raw_decomposition.get("interaction_groups", []):
+                gid = grp.get("id")
+                t_role = grp.get("tool_role")
+                tgt_role = grp.get("target_role")
+                if t_role not in raw_id_to_canon:
+                    raise MalformedVLMSpecificationError(f"Interaction group tool role {t_role!r} not declared")
+                if tgt_role not in raw_id_to_canon:
+                    raise MalformedVLMSpecificationError(f"Interaction group target role {tgt_role!r} not declared")
+                t_canon = raw_id_to_canon[t_role]
+                tgt_canon = raw_id_to_canon[tgt_role]
+
+                ctx_role = grp.get("context_role")
+                ctx_canon = raw_id_to_canon[ctx_role] if (ctx_role and ctx_role in raw_id_to_canon) else None
+                if ctx_role and ctx_canon is None:
+                    raise MalformedVLMSpecificationError(f"Interaction group context role {ctx_role!r} not declared")
+
+                req_rels: list[str] = []
+                for r in grp.get("required_relations", []):
+                    mapped_r = map_living_room_relation(r, self.relation_aliases)
+                    if mapped_r is None:
+                        raise UnmappedFunctionalConceptError(f"Unmapped interaction group relation {r!r}")
+                    req_rels.append(mapped_r)
+
+                ctx_rels: list[str] = []
+                for r in grp.get("context_relations", []):
+                    mapped_r = map_living_room_relation(r, self.relation_aliases)
+                    if mapped_r is None:
+                        raise UnmappedFunctionalConceptError(f"Unmapped interaction group context relation {r!r}")
+                    ctx_rels.append(mapped_r)
+
+                usage_policy = grp.get("usage_policy", "DEDICATED_PER_TARGET")
+                canonical_operation_groups.append({
+                    "id": str(gid),
+                    "function": str(grp.get("function", "")),
+                    "tool_role": t_canon,
+                    "target_role": tgt_canon,
+                    "required_target_count": int(grp.get("required_target_count", 1)),
+                    "usage_policy": usage_policy,
+                    "required_relations": tuple(req_rels),
+                    "context_role": ctx_canon,
+                    "context_relations": tuple(ctx_rels),
+                    "distinct_within_group": True,
+                    "same_tool_must_cover_all_targets": False,
+                })
+
             self.normalized_relations = canonical_relations
+            self.normalized_operation_groups = canonical_operation_groups
             self.vlm_derived_role_vocabulary = tuple(dict.fromkeys(vlm_role_vocab))
             self.task_explicit_context_vocabulary = (
                 "armchair", "chair", "sofa", "remote control", "tv remote",
@@ -717,6 +808,7 @@ class EnvironmentVLMRequirementProvider:
             ),
             "normalized_requirements": self.normalized_requirements,
             "normalized_relations": self.normalized_relations,
+            "normalized_operation_groups": getattr(self, "normalized_operation_groups", []),
             "normalized_task_contract": self.normalized_task,
             "ready_for_grounding": self.ready_for_grounding,
             "reviewed_ontology_audit": {

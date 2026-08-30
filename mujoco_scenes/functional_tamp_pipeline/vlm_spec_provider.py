@@ -269,6 +269,22 @@ class VLMSpecProvider(FunctionalSpecProvider):
                 expected=True,
             ))
 
+        operation_groups: list[OperationGroup] = []
+        for og_data in result.get("normalized_operation_groups", []):
+            operation_groups.append(OperationGroup(
+                id=str(og_data["id"]),
+                function=str(og_data["function"]),
+                tool_role=str(og_data["tool_role"]),
+                target_role=str(og_data["target_role"]),
+                required_target_count=int(og_data["required_target_count"]),
+                usage_policy=str(og_data["usage_policy"]),
+                required_relations=tuple(og_data.get("required_relations", ())),
+                context_role=str(og_data["context_role"]) if og_data.get("context_role") else None,
+                context_relations=tuple(og_data.get("context_relations", ())),
+                distinct_within_group=bool(og_data.get("distinct_within_group", True)),
+                same_tool_must_cover_all_targets=bool(og_data.get("same_tool_must_cover_all_targets", False)),
+            ))
+
         vlm_prompts = list(provider.vlm_derived_role_vocabulary)
         context_prompts = list(provider.task_explicit_context_vocabulary)
         vocabulary = tuple(dict.fromkeys(vlm_prompts + context_prompts))
@@ -278,7 +294,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
             task_instruction=task_instruction,
             nodes=nodes,
             relations=tuple(relations),
-            operation_groups=(),
+            operation_groups=tuple(operation_groups),
             cross_group_reuse_allowed=False,
             detector_vocabulary=vocabulary,
             candidate_regions=(),

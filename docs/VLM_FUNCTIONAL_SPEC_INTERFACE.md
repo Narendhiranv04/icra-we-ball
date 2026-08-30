@@ -1,6 +1,8 @@
-# VLM Functional Specification Interface Contract (Pass 3.6A.5)
+# VLM Functional Specification Interface Contract (Pass 3.6A.6)
 
 **Canonicalization Version**: `phase3_6a5_v1`
+**Phase 3 Frozen**: NO (Live audit & boundary refinement in progress)
+**Ready for Phase 4**: NO
 
 This document defines the authoritative scientific interface contract between the Vision-Language Model (VLM) specification provider and downstream perception, grounding, and task-and-motion planning (TAMP) components.
 
@@ -19,7 +21,7 @@ complete natural-language functional specification
         ↓
 lossless deterministic canonicalization (phase3_6a5_v1)
         ↓
-canonical G_F
+canonical G_F (with complete roles, relations, and operation groups)
         ↓
 ══════════════════════════════════════════════════════════════════════════
                VLM HAS NO ROLE BELOW THIS POINT

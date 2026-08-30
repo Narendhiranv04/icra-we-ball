@@ -313,24 +313,20 @@ class WorkshopDomainAdapter:
 
         # Determine driver and fastener categories directly from G_F specification
         driver_node = self.specification.nodes.get("driver")
-        if driver_node is not None:
-            driver_categories = list(driver_node.semantic_categories)
-        else:
-            driver_nodes = [
-                n for n in self.specification.nodes.values()
-                if "driver" in n.name.lower() or "drive" in n.name.lower() or "CAN_DRIVE_SCREW" in n.unary_predicates
-            ]
-            driver_categories = list(driver_nodes[0].semantic_categories) if driver_nodes else []
+        if driver_node is None:
+            from ..errors import MalformedVLMSpecificationError
+            raise MalformedVLMSpecificationError(
+                "Workshop functional specification must contain canonical role 'driver'"
+            )
+        driver_categories = list(driver_node.semantic_categories)
 
         fastener_node = self.specification.nodes.get("fastener")
-        if fastener_node is not None:
-            fastener_categories = list(fastener_node.semantic_categories)
-        else:
-            fastener_nodes = [
-                n for n in self.specification.nodes.values()
-                if "fastener" in n.name.lower() or "screw" in n.name.lower() or "fasten" in n.name.lower() or "CAN_FASTEN" in n.unary_predicates
-            ]
-            fastener_categories = list(fastener_nodes[0].semantic_categories) if fastener_nodes else []
+        if fastener_node is None:
+            from ..errors import MalformedVLMSpecificationError
+            raise MalformedVLMSpecificationError(
+                "Workshop functional specification must contain canonical role 'fastener'"
+            )
+        fastener_categories = list(fastener_node.semantic_categories)
 
         for track in self.controller.tracker.tracks.values():
             if track.current_semantic_belief.get("status") == "SUPPORTED":

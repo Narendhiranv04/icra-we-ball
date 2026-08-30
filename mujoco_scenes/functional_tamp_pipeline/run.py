@@ -66,6 +66,8 @@ class _RunState:
     finished_at_utc: str = ""
     runtime_sec: float = 0.0
     terminal_status: str = "PIPELINE_EXCEPTION"
+    failure_reason: str | None = None
+    failure_category: str | None = None
     observer_errors: list[dict[str, Any]] = field(default_factory=list)
 
 
@@ -241,12 +243,16 @@ def _acquire_spec_or_fail(
             return None
         except VLMSpecificationError as error:
             state.terminal_status = "VLM_SPEC_FAILED"
+            cat = getattr(error, "category", None) or "MALFORMED_VLM_SPECIFICATION"
+            state.failure_category = cat
+            state.failure_reason = str(error)
             res = PipelineResult(
                 domain=state.domain,
                 variant=state.variant,
                 mode=state.mode,
                 status="VLM_SPEC_FAILED",
                 failure_reason=str(error),
+                failure_category=cat,
             )
             _write_json(state.run_dir / "result.json", res.to_dict())
             return res
@@ -288,6 +294,8 @@ def _write_run_manifest(state: _RunState) -> None:
         "finished_at_utc": state.finished_at_utc,
         "pipeline_runtime_seconds": round(state.runtime_sec, 4),
         "terminal_status": state.terminal_status,
+        "failure_reason": state.failure_reason,
+        "failure_category": state.failure_category,
         "observer_errors": list(state.observer_errors),
         "artifacts": _collect_artifacts(state.run_dir),
     }
@@ -567,9 +575,12 @@ def _run_pipeline_impl(
     if not satisfaction.satisfied or satisfaction.assignment is None:
         reason = ", ".join(satisfaction.missing_requirements) or "NO_GLOBAL_ASSIGNMENT"
         print(f"FUNCTIONAL GROUNDING FAILED: {reason}", flush=True)
+        state.terminal_status = satisfaction.status
+        state.failure_reason = reason
+        state.failure_category = None
         result = PipelineResult(
             domain=state.domain, variant=state.variant, mode=state.mode, status=satisfaction.status,
-            inspected_regions=inspected, failure_reason=reason,
+            inspected_regions=inspected, failure_reason=reason, failure_category=None,
         )
         _write_json(state.run_dir / "result.json", result.to_dict())
         return result

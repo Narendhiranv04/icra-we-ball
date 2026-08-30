@@ -1,9 +1,8 @@
 """One-shot Qwen requirement decomposition over an OpenAI-compatible server.
 
 This module intentionally stops before observation search, grounding, planning,
-or execution. The integrated Kitchen entry point asks the model to emit exact
-implemented predicate identifiers; downstream code validates those identifiers
-without translating natural-language aliases into task requirements.
+or execution. All domains ask the model for natural-language semantics; downstream
+code performs strict deterministic canonicalization into canonical functional requirement graphs.
 """
 
 from __future__ import annotations
@@ -40,7 +39,7 @@ except ImportError:
         category = "TRANSPORT_OR_STRUCTURED_OUTPUT_FAILURE"
 
 
-class FMBackendNotConfiguredError(VLMSpecificationError):
+class FMBackendNotConfiguredError(TransportOrStructuredOutputError):
     """Raised when live requirement generation has no configured endpoint."""
 
 
@@ -120,6 +119,9 @@ Rules:
   - Use a short atomic unary-property phrase for each required property.
   - Use a short atomic binary-relation phrase for each functional relation.
   Do not write long narrative sentences. Do not use complex compound clauses.
+- When a role must be paired independently with multiple task targets or
+  contextual references, represent that dependency using an interaction group
+  rather than relying on an unconstrained many-to-many relation.
 - Set `entity_kind` to:
   - OBJECT: a selectable/manipulable physical item.
   - REGION: a selectable support surface, placement area, or spatial destination.
@@ -223,6 +225,46 @@ RESPONSE_SCHEMA: dict[str, Any] = {
                     "object_role": {"type": "string"},
                 },
                 "required": ["subject_role", "relation", "object_role"],
+                "additionalProperties": False,
+            },
+        },
+        "interaction_groups": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string"},
+                    "function": {"type": "string"},
+                    "tool_role": {"type": "string"},
+                    "target_role": {"type": "string"},
+                    "required_target_count": {"type": "integer", "minimum": 1, "maximum": 20},
+                    "usage_policy": {
+                        "type": "string",
+                        "enum": ["SEQUENTIAL_REUSE_ALLOWED", "DEDICATED_PER_TARGET"],
+                    },
+                    "required_relations": {
+                        "type": "array",
+                        "minItems": 0,
+                        "maxItems": 12,
+                        "items": {"type": "string"},
+                    },
+                    "context_role": {"type": "string"},
+                    "context_relations": {
+                        "type": "array",
+                        "minItems": 0,
+                        "maxItems": 12,
+                        "items": {"type": "string"},
+                    },
+                },
+                "required": [
+                    "id",
+                    "function",
+                    "tool_role",
+                    "target_role",
+                    "required_target_count",
+                    "usage_policy",
+                ],
                 "additionalProperties": False,
             },
         },
@@ -362,13 +404,18 @@ KITCHEN_FUNCTIONAL_GRAPH_SCHEMA: dict[str, Any] = {
                         "enum": ["SEQUENTIAL_REUSE_ALLOWED", "DEDICATED_PER_TARGET"],
                     },
                     "required_relations": {
-                        "type": "array", "minItems": 1, "maxItems": 12,
+                        "type": "array", "minItems": 0, "maxItems": 12,
+                        "items": {"type": "string"},
+                    },
+                    "context_role": {"type": "string"},
+                    "context_relations": {
+                        "type": "array", "minItems": 0, "maxItems": 12,
                         "items": {"type": "string"},
                     },
                 },
                 "required": [
                     "id", "function", "tool_role", "target_role",
-                    "required_target_count", "usage_policy", "required_relations",
+                    "required_target_count", "usage_policy",
                 ],
                 "additionalProperties": False,
             },
@@ -524,7 +571,7 @@ def _extract_json_content(
         content = message["content"]
     except (KeyError, IndexError, TypeError) as error:
         _save_fm_diagnostic(response, None, call_kind, False, parse_error=str(error), sanitized_request=sanitized_request)
-        raise FMResponseValidationError(
+        raise TransportOrStructuredOutputError(
             "Completion response has no choices[0].message.content"
         ) from error
     if isinstance(content, dict):
@@ -535,7 +582,7 @@ def _extract_json_content(
         suffix = " after reasoning" if reasoning else ""
         msg = f"Completion has no final JSON content{suffix}"
         _save_fm_diagnostic(response, content, call_kind, False, parse_error=msg, sanitized_request=sanitized_request)
-        raise FMResponseValidationError(msg)
+        raise TransportOrStructuredOutputError(msg)
     text = content.strip()
     fenced = re.fullmatch(
         r"```(?:json)?\s*(.*?)\s*```", text, flags=re.DOTALL | re.IGNORECASE
@@ -546,11 +593,11 @@ def _extract_json_content(
         decoded = json.loads(text)
     except json.JSONDecodeError as error:
         _save_fm_diagnostic(response, content, call_kind, False, parse_error=str(error), sanitized_request=sanitized_request)
-        raise FMResponseValidationError(f"Completion content is not valid JSON: {error}") from error
+        raise TransportOrStructuredOutputError(f"Completion content is not valid JSON: {error}") from error
     if not isinstance(decoded, dict):
         msg = "Completion JSON must be an object"
         _save_fm_diagnostic(response, content, call_kind, False, parse_error=msg, sanitized_request=sanitized_request)
-        raise FMResponseValidationError(msg)
+        raise TransportOrStructuredOutputError(msg)
     _save_fm_diagnostic(response, content, call_kind, True, None, sanitized_request=sanitized_request)
     return decoded
 
@@ -562,14 +609,18 @@ def validate_requirement_response(document: Mapping[str, Any]) -> dict[str, Any]
 
     allowed_top = {
         "status", "task_summary", "functional_roles",
-        "functional_relations", "inspectable_regions", "inspection_order",
+        "functional_relations", "interaction_groups", "inspectable_regions", "inspection_order",
         "unsupported_reason",
     }
     if not set(document).issubset(allowed_top):
         unexpected = set(document) - allowed_top
         raise FMResponseValidationError(f"Unexpected top-level fields in requirement response: {sorted(unexpected)}")
 
-    for req_field in allowed_top:
+    for req_field in {
+        "status", "task_summary", "functional_roles",
+        "functional_relations", "inspectable_regions", "inspection_order",
+        "unsupported_reason",
+    }:
         if req_field not in document:
             raise FMResponseValidationError(f"Requirement response missing required top-level field {req_field!r}")
 
@@ -594,6 +645,8 @@ def validate_requirement_response(document: Mapping[str, Any]) -> dict[str, Any]
             raise FMResponseValidationError("UNSUPPORTED status must have empty functional_roles")
         if document.get("functional_relations") != []:
             raise FMResponseValidationError("UNSUPPORTED status must have empty functional_relations")
+        if document.get("interaction_groups") not in (None, []):
+            raise FMResponseValidationError("UNSUPPORTED status must have empty interaction_groups")
         if document.get("inspectable_regions") != []:
             raise FMResponseValidationError("UNSUPPORTED status must have empty inspectable_regions")
         if document.get("inspection_order") != []:
@@ -603,6 +656,7 @@ def validate_requirement_response(document: Mapping[str, Any]) -> dict[str, Any]
             "task_summary": summary.strip(),
             "functional_roles": [],
             "functional_relations": [],
+            "interaction_groups": [],
             "inspectable_regions": [],
             "inspection_order": [],
             "unsupported_reason": unsupported_reason.strip(),
@@ -779,11 +833,62 @@ def validate_requirement_response(document: Mapping[str, Any]) -> dict[str, Any]
             "object_role": str(o).strip(),
         })
 
+    raw_groups = document.get("interaction_groups", [])
+    if not isinstance(raw_groups, list) or len(raw_groups) > 8:
+        raise FMResponseValidationError("interaction_groups must be a list of at most 8 items")
+    cleaned_groups = []
+    seen_group_ids: set[str] = set()
+    for g_idx, grp in enumerate(raw_groups):
+        if not isinstance(grp, dict):
+            raise FMResponseValidationError(f"interaction_groups[{g_idx}] must be a dict")
+        grp_allowed = {
+            "id", "function", "tool_role", "target_role",
+            "required_target_count", "usage_policy", "required_relations",
+            "context_role", "context_relations",
+        }
+        grp_required = {
+            "id", "function", "tool_role", "target_role",
+            "required_target_count", "usage_policy",
+        }
+        if not grp_required.issubset(set(grp)):
+            raise FMResponseValidationError(f"interaction_groups[{g_idx}] missing required fields: {sorted(grp_required - set(grp))}")
+        if not set(grp).issubset(grp_allowed):
+            raise FMResponseValidationError(f"interaction_groups[{g_idx}] has invalid fields: {sorted(set(grp) - grp_allowed)}")
+        gid = grp.get("id")
+        if not _short_string(gid, 80) or gid in seen_group_ids:
+            raise FMResponseValidationError(f"interaction_groups[{g_idx}].id must be unique non-empty string")
+        seen_group_ids.add(gid)
+        t_role = grp.get("tool_role")
+        tgt_role = grp.get("target_role")
+        if t_role not in seen_ids or tgt_role not in seen_ids:
+            raise FMResponseValidationError(f"interaction_groups[{g_idx}] references undeclared role ({t_role!r}, {tgt_role!r})")
+        if grp.get("usage_policy") not in {"SEQUENTIAL_REUSE_ALLOWED", "DEDICATED_PER_TARGET"}:
+            raise FMResponseValidationError(f"interaction_groups[{g_idx}].usage_policy must be SEQUENTIAL_REUSE_ALLOWED or DEDICATED_PER_TARGET")
+        req_tgt_c = grp.get("required_target_count")
+        if isinstance(req_tgt_c, bool) or not isinstance(req_tgt_c, int) or req_tgt_c < 1 or req_tgt_c > 20:
+            raise FMResponseValidationError(f"interaction_groups[{g_idx}].required_target_count must be an integer from 1 to 20")
+        ctx_role = grp.get("context_role")
+        if ctx_role is not None:
+            if not isinstance(ctx_role, str) or ctx_role not in seen_ids:
+                raise FMResponseValidationError(f"interaction_groups[{g_idx}].context_role references undeclared role {ctx_role!r}")
+        cleaned_groups.append({
+            "id": str(gid).strip(),
+            "function": str(grp.get("function", "")).strip(),
+            "tool_role": str(t_role).strip(),
+            "target_role": str(tgt_role).strip(),
+            "required_target_count": req_tgt_c,
+            "usage_policy": str(grp.get("usage_policy")),
+            "required_relations": [str(r).strip() for r in grp.get("required_relations", []) if isinstance(r, str)],
+            "context_role": str(ctx_role).strip() if ctx_role else None,
+            "context_relations": [str(r).strip() for r in grp.get("context_relations", []) if isinstance(r, str)],
+        })
+
     return {
         "status": status,
         "task_summary": summary.strip(),
         "functional_roles": normalized_roles,
         "functional_relations": cleaned_relations,
+        "interaction_groups": cleaned_groups,
         "inspectable_regions": cleaned_regions,
         "inspection_order": cleaned_order,
         "unsupported_reason": "",

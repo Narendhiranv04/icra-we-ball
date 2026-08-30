@@ -438,7 +438,23 @@ class PipelineResult:
     plan: tuple[dict[str, Any], ...] = ()
     search_statistics: dict[str, Any] = field(default_factory=dict)
     failure_reason: str | None = None
+    failure_category: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> PipelineResult:
+        return cls(
+            domain=str(data["domain"]),
+            variant=str(data["variant"]),
+            mode=str(data["mode"]),
+            status=str(data["status"]),
+            inspected_regions=tuple(map(str, data.get("inspected_regions", ()))),
+            assignment=dict(data["assignment"]) if data.get("assignment") is not None else None,
+            plan=tuple(dict(p) for p in data.get("plan", ())),
+            search_statistics=dict(data.get("search_statistics", {})),
+            failure_reason=str(data["failure_reason"]) if data.get("failure_reason") is not None else None,
+            failure_category=str(data["failure_category"]) if data.get("failure_category") is not None else None,
+        )
 
