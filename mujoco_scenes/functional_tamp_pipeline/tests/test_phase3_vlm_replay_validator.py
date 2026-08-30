@@ -1,4 +1,4 @@
-"""Comprehensive unit tests for offline Phase 3.4 / 3.4.1 VLM replay validator."""
+"""Comprehensive unit tests for offline Phase 3.4 / 3.4.1 / 3.4.2 VLM replay validator."""
 
 from __future__ import annotations
 
@@ -275,7 +275,6 @@ def test_validator_random_order_duplicate_fail(tmp_path: Path):
 # H. Random order coincidentally equal to provider order -> PASS if produced by seed
 def test_validator_random_order_coincidentally_equal_pass(tmp_path: Path):
     g = make_test_graph()
-    # Compute seed that produces exact provider ranking or construct graph where seed 0 produces it
     base = list(g.candidate_regions)
     rng = random.Random(42)
     rng.shuffle(base)
@@ -300,6 +299,7 @@ def test_validator_random_order_coincidentally_equal_pass(tmp_path: Path):
         expect_seed=42,
     )
     assert ok is True
+    assert details["checks"]["live_provider_baseline"] == "PASS"
     assert details["checks"]["candidate_permutation"] == "PASS"
     assert details["checks"]["random_seed_order"] == "PASS"
 
@@ -308,8 +308,8 @@ def test_validator_random_order_coincidentally_equal_pass(tmp_path: Path):
 def test_validator_provider_replay_assignment_differs_fail(tmp_path: Path):
     live_dir, replay_dir = setup_pair_dirs(
         tmp_path,
-        live_ggr_extra={"assignment": {"sponge": "sponge_1"}},
-        replay_ggr_extra={"assignment": {"sponge": "sponge_2"}},
+        live_ggr_extra={"status": "COMPLETE", "complete": True, "assignment": {"sponge": "sponge_1"}},
+        replay_ggr_extra={"status": "COMPLETE", "complete": True, "assignment": {"sponge": "sponge_2"}},
     )
     ok, details = validate_vlm_replay(live_dir, replay_dir, expect_replay_search="provider")
     assert ok is False
@@ -573,3 +573,127 @@ def test_validator_random_order_not_matching_seed_permutation_fail(tmp_path: Pat
     )
     assert ok is False
     assert details["checks"]["random_seed_order"] == "FAIL"
+
+
+# Pass 3.4.2 New Tests
+# 20. Issue #1: Random Replay Live Baseline Check
+def test_validator_random_replay_live_baseline_not_provider_fail(tmp_path: Path):
+    g = make_test_graph()
+    base0 = list(g.candidate_regions)
+    rng0 = random.Random(0)
+    rng0.shuffle(base0)
+
+    # Live run was random instead of provider!
+    live_dir, replay_dir = setup_pair_dirs(
+        tmp_path,
+        live_graph=g,
+        replay_graph=g,
+        live_manifest_extra={
+            "search_order_source_requested": "random",
+            "search_order_source_effective": "random",
+            "region_order_used": base0,
+        },
+        replay_manifest_extra={
+            "search_order_source_requested": "random",
+            "search_order_source_effective": "random",
+            "search_seed_requested": 0,
+            "search_seed_effective": 0,
+            "region_order_used": base0,
+        },
+    )
+    ok, details = validate_vlm_replay(
+        live_dir,
+        replay_dir,
+        expect_replay_search="random",
+        expect_seed=0,
+    )
+    assert ok is False
+    assert details["checks"]["live_provider_baseline"] == "FAIL"
+
+
+def test_validator_random_replay_live_baseline_provider_pass(tmp_path: Path):
+    g = make_test_graph()
+    base0 = list(g.candidate_regions)
+    rng0 = random.Random(0)
+    rng0.shuffle(base0)
+
+    live_dir, replay_dir = setup_pair_dirs(
+        tmp_path,
+        live_graph=g,
+        replay_graph=g,
+        replay_manifest_extra={
+            "search_order_source_requested": "random",
+            "search_order_source_effective": "random",
+            "search_seed_requested": 0,
+            "search_seed_effective": 0,
+            "region_order_used": base0,
+        },
+    )
+    ok, details = validate_vlm_replay(
+        live_dir,
+        replay_dir,
+        expect_replay_search="random",
+        expect_seed=0,
+    )
+    assert ok is True
+    assert details["checks"]["live_provider_baseline"] == "PASS"
+
+
+# 21. Issue #2: Gating deterministic_provider_replay by upstream failures
+def test_validator_provider_replay_gated_by_upstream_order_failure(tmp_path: Path):
+    g = make_test_graph()
+    # Replay used order differs, but everything downstream matches
+    live_dir, replay_dir = setup_pair_dirs(
+        tmp_path,
+        live_graph=g,
+        replay_graph=g,
+        replay_manifest_extra={
+            "region_order_used": ["D2", "D1", "C2", "B1", "C1"], # Mismatch!
+        },
+    )
+    ok, details = validate_vlm_replay(live_dir, replay_dir, expect_replay_search="provider")
+    assert ok is False
+    assert details["checks"]["provider_order_used"] == "FAIL"
+    assert details["checks"]["deterministic_provider_replay"] == "FAIL"
+
+
+# 22. Issue #3: READY GGR assignment and completeness checks
+def test_validator_ready_ggr_assignment_missing_fail(tmp_path: Path):
+    live_dir, replay_dir = setup_pair_dirs(
+        tmp_path,
+        live_ggr_extra={"status": "COMPLETE", "complete": True, "assignment": None},
+    )
+    ok, details = validate_vlm_replay(live_dir, replay_dir, expect_replay_search="provider")
+    assert ok is False
+    assert details["checks"]["deterministic_provider_replay"] == "FAIL"
+
+
+def test_validator_ready_ggr_assignment_empty_dict_fail(tmp_path: Path):
+    live_dir, replay_dir = setup_pair_dirs(
+        tmp_path,
+        live_ggr_extra={"status": "COMPLETE", "complete": True, "assignment": {}},
+        replay_ggr_extra={"status": "COMPLETE", "complete": True, "assignment": {}},
+    )
+    ok, details = validate_vlm_replay(live_dir, replay_dir, expect_replay_search="provider")
+    assert ok is False
+    assert details["checks"]["deterministic_provider_replay"] == "FAIL"
+
+
+def test_validator_ready_ggr_complete_false_fail(tmp_path: Path):
+    live_dir, replay_dir = setup_pair_dirs(
+        tmp_path,
+        live_ggr_extra={"status": "COMPLETE", "complete": False, "assignment": {"sponge": "sponge_1"}},
+    )
+    ok, details = validate_vlm_replay(live_dir, replay_dir, expect_replay_search="provider")
+    assert ok is False
+    assert details["checks"]["deterministic_provider_replay"] == "FAIL"
+
+
+def test_validator_ready_ggr_status_not_complete_fail(tmp_path: Path):
+    live_dir, replay_dir = setup_pair_dirs(
+        tmp_path,
+        live_ggr_extra={"status": "INCOMPLETE", "complete": True, "assignment": {"sponge": "sponge_1"}},
+    )
+    ok, details = validate_vlm_replay(live_dir, replay_dir, expect_replay_search="provider")
+    assert ok is False
+    assert details["checks"]["deterministic_provider_replay"] == "FAIL"

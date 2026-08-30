@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Offline artifact validator for Phase 3.4 / 3.4.1 VLM and exact-G_F replay integration.
+Offline artifact validator for Phase 3.4 / 3.4.1 / 3.4.2 VLM and exact-G_F replay integration.
 Verifies cryptographic SHA identity, structural G_F validity, domain/variant identity,
 VLM source provenance, provider ranking fidelity, provider used order, random seed validity,
-exact random permutation reproduction, and deterministic provider replay.
+exact random permutation reproduction, live provider baseline, and gated deterministic provider replay.
 """
 
 from __future__ import annotations
@@ -274,7 +274,24 @@ def validate_vlm_replay(
     else:
         checks["provider_order_used"] = "N/A"
 
-    # 8. Candidate Permutation & Seed-Order Check (for random replay)
+    # 8. Live Provider Baseline (for random replay)
+    if expect_replay_search == "random" and domain != "living_room":
+        base_prov_ok = True
+        if live_manifest.get("search_order_source_effective") != "provider":
+            failures.append(f"live baseline search_order_source_effective='{live_manifest.get('search_order_source_effective')}' (expected 'provider')")
+            base_prov_ok = False
+        if live_graph is not None:
+            if list(live_manifest.get("provider_region_ranking", [])) != list(live_graph.region_ranking):
+                failures.append("live baseline provider_region_ranking != live_graph.region_ranking")
+                base_prov_ok = False
+            if list(live_manifest.get("region_order_used", [])) != list(live_graph.region_ranking):
+                failures.append("live baseline region_order_used != live_graph.region_ranking")
+                base_prov_ok = False
+        checks["live_provider_baseline"] = "PASS" if base_prov_ok else "FAIL"
+    else:
+        checks["live_provider_baseline"] = "N/A"
+
+    # 9. Candidate Permutation & Seed-Order Check (for random replay)
     if expect_replay_search == "random" and replay_graph is not None and domain != "living_room":
         used_order = list(replay_manifest.get("region_order_used", []))
         candidate_regions = list(replay_graph.candidate_regions)
@@ -301,7 +318,7 @@ def validate_vlm_replay(
         checks["candidate_permutation"] = "N/A"
         checks["random_seed_order"] = "N/A"
 
-    # 9. Terminal / Result Consistency
+    # 10. Terminal / Result Consistency
     term_ok = True
     if live_manifest.get("terminal_status") != live_result.get("status"):
         failures.append(f"live manifest terminal_status={live_manifest.get('terminal_status')} != result.json status={live_result.get('status')}")
@@ -312,9 +329,26 @@ def validate_vlm_replay(
 
     checks["terminal_result_consistency"] = "PASS" if term_ok else "FAIL"
 
-    # 10. Deterministic Provider Replay Check
+    # 11. Deterministic Provider Replay Check (Strictly Gated by Prerequisite Checks)
     if expect_replay_search == "provider":
         det_ok = True
+
+        # Check prerequisite checks
+        prereq_checks = [
+            "identity",
+            "exact_gf_sha",
+            "structural_gf_identity",
+            "vlm_source",
+            "provenance",
+            "provider_ranking_preserved",
+            "provider_order_used",
+            "terminal_result_consistency",
+        ]
+        prereq_ok = all(checks.get(c) in ("PASS", "N/A") for c in prereq_checks)
+        if not prereq_ok:
+            det_ok = False
+            failures.append("deterministic provider replay prerequisites failed")
+
         if live_result.get("status") != replay_result.get("status"):
             failures.append(f"status differs between live and provider replay: {live_result.get('status')} != {replay_result.get('status')}")
             det_ok = False
@@ -328,7 +362,7 @@ def validate_vlm_replay(
         live_ggr_file = live_dir / "graph_grounding_result.json"
         replay_ggr_file = replay_dir / "graph_grounding_result.json"
 
-        # If terminal status is ACTION_SEQUENCE_READY, require GGR artifacts and matching assignment
+        # If terminal status is ACTION_SEQUENCE_READY, require GGR artifacts and valid complete matching assignment
         if live_result.get("status") == "ACTION_SEQUENCE_READY":
             if not live_ggr_file.is_file():
                 failures.append(f"live run ACTION_SEQUENCE_READY missing {live_ggr_file}")
@@ -341,9 +375,37 @@ def validate_vlm_replay(
                 try:
                     live_ggr = load_json(live_ggr_file)
                     replay_ggr = load_json(replay_ggr_file)
-                    if live_ggr.get("assignment") != replay_ggr.get("assignment"):
-                        failures.append(f"grounding assignment differs between live ({live_ggr.get('assignment')}) and provider replay ({replay_ggr.get('assignment')})")
+
+                    # Require complete is True
+                    if live_ggr.get("complete") is not True:
+                        failures.append(f"live GGR complete={live_ggr.get('complete')!r} (expected True)")
                         det_ok = False
+                    if replay_ggr.get("complete") is not True:
+                        failures.append(f"replay GGR complete={replay_ggr.get('complete')!r} (expected True)")
+                        det_ok = False
+
+                    # Require success status is COMPLETE
+                    if live_ggr.get("status") != "COMPLETE":
+                        failures.append(f"live GGR status={live_ggr.get('status')!r} (expected 'COMPLETE')")
+                        det_ok = False
+                    if replay_ggr.get("status") != "COMPLETE":
+                        failures.append(f"replay GGR status={replay_ggr.get('status')!r} (expected 'COMPLETE')")
+                        det_ok = False
+
+                    # Require non-empty assignment dict
+                    live_assign = live_ggr.get("assignment")
+                    replay_assign = replay_ggr.get("assignment")
+                    if not isinstance(live_assign, dict) or not live_assign:
+                        failures.append(f"live GGR assignment is invalid or empty: {live_assign!r}")
+                        det_ok = False
+                    if not isinstance(replay_assign, dict) or not replay_assign:
+                        failures.append(f"replay GGR assignment is invalid or empty: {replay_assign!r}")
+                        det_ok = False
+
+                    if isinstance(live_assign, dict) and isinstance(replay_assign, dict) and live_assign and replay_assign:
+                        if live_assign != replay_assign:
+                            failures.append(f"grounding assignment differs between live ({live_assign}) and provider replay ({replay_assign})")
+                            det_ok = False
                 except Exception as e:
                     failures.append(f"failed to read grounding artifact: {e}")
                     det_ok = False
