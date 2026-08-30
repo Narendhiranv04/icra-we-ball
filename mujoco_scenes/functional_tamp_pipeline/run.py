@@ -212,6 +212,34 @@ def _load_or_acquire_specification(
     return specification, "live_provider", None
 
 
+def _acquire_spec_or_fail(
+    state: _RunState,
+    task: str,
+    images: list[Path],
+    specification_json: Path | str | None,
+) -> PipelineResult | None:
+    try:
+        state.specification, state.spec_acquisition, state.specification_input = _load_or_acquire_specification(
+            domain=state.domain,
+            mode=state.mode,
+            task=task,
+            images=images,
+            specification_json=specification_json,
+        )
+        return None
+    except Exception as error:
+        state.terminal_status = "VLM_SPEC_FAILED"
+        res = PipelineResult(
+            domain=state.domain,
+            variant=state.variant,
+            mode=state.mode,
+            status="VLM_SPEC_FAILED",
+            failure_reason=str(error),
+        )
+        _write_json(state.run_dir / "result.json", res.to_dict())
+        return res
+
+
 def _write_run_manifest(state: _RunState) -> None:
     manifest = {
         "schema_version": 1,
@@ -295,13 +323,14 @@ def _run_pipeline_impl(
 
         print("[1/5] Functional specification", flush=True)
         _emit_event(guarded_observer, "stage_changed", {"stage": "specification"})
-        state.specification, state.spec_acquisition, state.specification_input = _load_or_acquire_specification(
-            domain=state.domain,
-            mode=state.mode,
+        fail_res = _acquire_spec_or_fail(
+            state=state,
             task=TASK,
             images=images,
             specification_json=specification_json,
         )
+        if fail_res is not None:
+            return fail_res
         _write_json(state.run_dir / "functional_specification.json", state.specification.to_dict())
         _write_json(state.run_dir / "functional_requirement_graph.json", state.specification.to_dict())
         state.specification_sha256 = _compute_file_sha256(state.run_dir / "functional_specification.json")
@@ -374,13 +403,14 @@ def _run_pipeline_impl(
 
         print("[1/5] Functional specification", flush=True)
         _emit_event(guarded_observer, "stage_changed", {"stage": "specification"})
-        state.specification, state.spec_acquisition, state.specification_input = _load_or_acquire_specification(
-            domain=state.domain,
-            mode=state.mode,
+        fail_res = _acquire_spec_or_fail(
+            state=state,
             task=TASK,
             images=images,
             specification_json=specification_json,
         )
+        if fail_res is not None:
+            return fail_res
         _write_json(state.run_dir / "functional_specification.json", state.specification.to_dict())
         _write_json(state.run_dir / "functional_requirement_graph.json", state.specification.to_dict())
         state.specification_sha256 = _compute_file_sha256(state.run_dir / "functional_specification.json")
@@ -445,13 +475,14 @@ def _run_pipeline_impl(
     print("[1/5] Functional specification", flush=True)
     _emit_event(guarded_observer, "stage_changed", {"stage": "specification"})
     task = WorkshopDomainAdapter.task_instruction
-    state.specification, state.spec_acquisition, state.specification_input = _load_or_acquire_specification(
-        domain=state.domain,
-        mode=state.mode,
+    fail_res = _acquire_spec_or_fail(
+        state=state,
         task=task,
         images=images,
         specification_json=specification_json,
     )
+    if fail_res is not None:
+        return fail_res
     _write_json(state.run_dir / "functional_specification.json", state.specification.to_dict())
     _write_json(state.run_dir / "functional_requirement_graph.json", state.specification.to_dict())
     state.specification_sha256 = _compute_file_sha256(state.run_dir / "functional_specification.json")
