@@ -212,21 +212,29 @@ INSPECTION_POLICY_SCHEMA: dict[str, Any] = {
     "properties": {
         "initial_requirements_satisfied": {"type": "boolean"},
         "decision_reason": {"type": "string"},
-        "inspection_order": {
+        "inspectable_regions": {
             "type": "array",
+            "maxItems": 12,
             "items": {
                 "type": "object",
                 "properties": {
-                    "region_id": {"type": "string"},
+                    "id": {"type": "string"},
+                    "label": {"type": "string"},
+                    "visual_description": {"type": "string"},
                     "reason": {"type": "string"},
                 },
-                "required": ["region_id", "reason"],
+                "required": ["id", "label", "visual_description", "reason"],
                 "additionalProperties": False,
             },
         },
+        "inspection_order": {
+            "type": "array",
+            "items": {"type": "string"},
+        },
     },
     "required": [
-        "initial_requirements_satisfied", "decision_reason", "inspection_order"
+        "initial_requirements_satisfied", "decision_reason",
+        "inspectable_regions", "inspection_order",
     ],
     "additionalProperties": False,
 }
@@ -236,88 +244,46 @@ KITCHEN_FUNCTIONAL_GRAPH_SCHEMA: dict[str, Any] = {
     "properties": {
         "status": {"type": "string", "enum": ["SUPPORTED", "UNSUPPORTED"]},
         "task_summary": {"type": "string"},
-        "roles": {
+        "functional_roles": {
             "type": "array", "maxItems": 12,
             "items": {
                 "type": "object",
                 "properties": {
                     "id": {"type": "string"},
-                    "entity_kind": {"type": "string", "enum": ["OBJECT", "REGION"]},
+                    "entity_kind": {"type": "string", "enum": ["OBJECT", "REGION", "FIXED_TARGET"]},
                     "function": {"type": "string"},
                     "required_count": {"type": "integer", "minimum": 1, "maximum": 20},
-                    "binding_policy": {"type": "string", "enum": ["DISTINCT", "REUSABLE"]},
-                    "verification_mode": {
-                        "type": "string",
-                        "enum": ["SEMANTIC_ONLY", "SEMANTIC_AND_GEOMETRIC"],
-                    },
+                    "binding_policy": {"type": "string", "enum": ["DISTINCT", "REUSABLE", "SHARED"]},
                     "candidate_categories": {
                         "type": "array", "minItems": 1, "maxItems": 12,
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "canonical_label": {"type": "string"},
-                                "detector_phrases": {
-                                    "type": "array", "minItems": 1, "maxItems": 12,
-                                    "items": {"type": "string"},
-                                },
-                            },
-                            "required": ["canonical_label", "detector_phrases"],
-                            "additionalProperties": False,
-                        },
+                        "items": {"type": "string"},
                     },
-                    "unary_properties": {
+                    "required_properties": {
                         "type": "array", "minItems": 0, "maxItems": 12,
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "predicate": {"type": "string"},
-                                "expected": {"type": "boolean", "enum": [True]},
-                            },
-                            "required": ["predicate", "expected"],
-                            "additionalProperties": False,
-                        },
-                    },
-                    "numeric_properties": {
-                        "type": "array", "maxItems": 12,
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "property": {"type": "string"},
-                                "operator": {
-                                    "type": "string", "enum": [">=", "<=", "=="],
-                                },
-                                "value": {"type": "number"},
-                                "unit": {"type": "string"},
-                            },
-                            "required": ["property", "operator", "value", "unit"],
-                            "additionalProperties": False,
-                        },
+                        "items": {"type": "string"},
                     },
                 },
                 "required": [
                     "id", "entity_kind", "function", "required_count",
-                    "binding_policy", "verification_mode", "candidate_categories",
-                    "unary_properties",
-                    "numeric_properties",
+                    "candidate_categories", "required_properties",
                 ],
                 "additionalProperties": False,
             },
         },
-        "relations": {
+        "functional_relations": {
             "type": "array", "maxItems": 24,
             "items": {
                 "type": "object",
                 "properties": {
-                    "predicate": {"type": "string"},
                     "subject_role": {"type": "string"},
+                    "relation": {"type": "string"},
                     "object_role": {"type": "string"},
-                    "expected": {"type": "boolean", "enum": [True]},
                 },
-                "required": ["predicate", "subject_role", "object_role", "expected"],
+                "required": ["subject_role", "relation", "object_role"],
                 "additionalProperties": False,
             },
         },
-        "operation_groups": {
+        "interaction_groups": {
             "type": "array", "maxItems": 8,
             "items": {
                 "type": "object",
@@ -344,66 +310,32 @@ KITCHEN_FUNCTIONAL_GRAPH_SCHEMA: dict[str, Any] = {
             },
         },
         "cross_group_reuse_allowed": {"type": "boolean"},
-        "planning": {
-            "type": "object",
-            "properties": {
-                "contents": {"type": "array", "items": {"type": "string"}},
-                "source_roles": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "id": {"type": "string"},
-                            "provides": {"type": "string"},
-                            "witness_role": {"type": "string"},
-                        },
-                        "required": [
-                            "id", "provides", "witness_role",
-                        ],
-                        "additionalProperties": False,
-                    },
-                },
-                "target_requirements": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "content": {"type": "string"},
-                            "witness_role": {"type": "string"},
-                            "required_contents": {"type": "array", "items": {"type": "string"}},
-                            "initial_contents": {"type": "array", "items": {"type": "string"}},
-                            "operation_group": {"type": "string"},
-                            "final_goal": {"type": "string"},
-                        },
-                        "required": [
-                            "content", "witness_role", "required_contents",
-                            "initial_contents", "operation_group", "final_goal",
-                        ],
-                        "additionalProperties": False,
-                    },
-                },
-            },
-            "required": ["contents", "source_roles", "target_requirements"],
-            "additionalProperties": False,
-        },
-        "candidate_regions": {
-            "type": "array",
+        "inspectable_regions": {
+            "type": "array", "maxItems": 12,
             "items": {
                 "type": "object",
-                "properties": {"region_id": {"type": "string"}, "reason": {"type": "string"}},
-                "required": ["region_id", "reason"],
+                "properties": {
+                    "id": {"type": "string"},
+                    "label": {"type": "string"},
+                    "visual_description": {"type": "string"},
+                    "reason": {"type": "string"},
+                },
+                "required": ["id", "label", "visual_description", "reason"],
                 "additionalProperties": False,
             },
         },
-        "inspection_order": {"type": "array", "items": {"type": "string"}},
+        "inspection_order": {
+            "type": "array",
+            "items": {"type": "string"},
+        },
         "initial_satisfaction_assessment": {"type": "boolean"},
         "initial_satisfaction_reason": {"type": "string"},
         "unsupported_reason": {"type": "string"},
     },
     "required": [
-        "status", "task_summary", "roles", "relations", "operation_groups",
-        "cross_group_reuse_allowed",
-        "planning", "candidate_regions", "inspection_order",
+        "status", "task_summary", "functional_roles", "functional_relations",
+        "interaction_groups", "cross_group_reuse_allowed",
+        "inspectable_regions", "inspection_order",
         "initial_satisfaction_assessment", "initial_satisfaction_reason",
         "unsupported_reason",
     ],
@@ -445,6 +377,7 @@ def _encode_observation_images(
         if mime_type not in {"image/jpeg", "image/png", "image/webp"}:
             raise ValueError(f"Unsupported observation image type: {path}")
         encoded = base64.b64encode(data).decode("ascii")
+        sha256 = hashlib.sha256(data).hexdigest()
         blocks.append(
             {
                 "type": "image_url",
@@ -459,18 +392,20 @@ def _encode_observation_images(
                 "path": str(path),
                 "mime_type": mime_type,
                 "bytes": len(data),
-                "sha256": hashlib.sha256(data).hexdigest(),
+                "sha256": sha256,
             }
         )
     return blocks, metadata
 
 
 def _save_fm_diagnostic(
-    response: Mapping[str, Any] | None,
+    response: Any,
     content: Any,
     call_kind: str,
     json_parse_success: bool,
     parse_error: str | None = None,
+    *,
+    sanitized_request: dict[str, Any] | None = None,
 ) -> None:
     diag_dir_env = os.environ.get("TAMP_FM_DIAGNOSTIC_DIR")
     if not diag_dir_env:
@@ -498,6 +433,7 @@ def _save_fm_diagnostic(
         diag_data = {
             "model": model,
             "call_kind": call_kind,
+            "sanitized_request": sanitized_request,
             "finish_reason": finish_reason,
             "usage": usage,
             "content_length_chars": len(content_str),
@@ -515,27 +451,29 @@ def _save_fm_diagnostic(
 def _extract_json_content(
     response: Mapping[str, Any],
     call_kind: str = "completion",
+    *,
+    sanitized_request: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if isinstance(response, dict) and "choices" not in response:
-        _save_fm_diagnostic(None, response, call_kind, True, None)
+        _save_fm_diagnostic(None, response, call_kind, True, None, sanitized_request=sanitized_request)
         return dict(response)
     try:
         choice = response["choices"][0]
         message = choice["message"]
         content = message["content"]
     except (KeyError, IndexError, TypeError) as error:
-        _save_fm_diagnostic(response, None, call_kind, False, parse_error=str(error))
+        _save_fm_diagnostic(response, None, call_kind, False, parse_error=str(error), sanitized_request=sanitized_request)
         raise FMResponseValidationError(
             "Completion response has no choices[0].message.content"
         ) from error
     if isinstance(content, dict):
-        _save_fm_diagnostic(response, content, call_kind, True, None)
+        _save_fm_diagnostic(response, content, call_kind, True, None, sanitized_request=sanitized_request)
         return content
     if not isinstance(content, str) or not content.strip():
         reasoning = message.get("reasoning_content") if isinstance(message, dict) else None
         suffix = " after reasoning" if reasoning else ""
         msg = f"Completion has no final JSON content{suffix}"
-        _save_fm_diagnostic(response, content, call_kind, False, parse_error=msg)
+        _save_fm_diagnostic(response, content, call_kind, False, parse_error=msg, sanitized_request=sanitized_request)
         raise FMResponseValidationError(msg)
     text = content.strip()
     fenced = re.fullmatch(
@@ -546,13 +484,13 @@ def _extract_json_content(
     try:
         decoded = json.loads(text)
     except json.JSONDecodeError as error:
-        _save_fm_diagnostic(response, content, call_kind, False, parse_error=str(error))
+        _save_fm_diagnostic(response, content, call_kind, False, parse_error=str(error), sanitized_request=sanitized_request)
         raise FMResponseValidationError(f"Completion content is not valid JSON: {error}") from error
     if not isinstance(decoded, dict):
         msg = "Completion JSON must be an object"
-        _save_fm_diagnostic(response, content, call_kind, False, parse_error=msg)
+        _save_fm_diagnostic(response, content, call_kind, False, parse_error=msg, sanitized_request=sanitized_request)
         raise FMResponseValidationError(msg)
-    _save_fm_diagnostic(response, content, call_kind, True, None)
+    _save_fm_diagnostic(response, content, call_kind, True, None, sanitized_request=sanitized_request)
     return decoded
 
 
@@ -731,63 +669,51 @@ class FMAdapter:
         image_blocks, self.last_observation_images = _encode_observation_images(
             observation_images
         )
+    def generate_kitchen_functional_graph(
+        self,
+        task_instruction: str,
+        search_region_descriptors: dict[str, str] | None = None,
+        *,
+        observation_images: Sequence[str | Path],
+    ) -> dict[str, Any]:
+        """Produce the complete Kitchen natural functional requirement specification."""
+        del search_region_descriptors
+        image_blocks, self.last_observation_images = _encode_observation_images(
+            observation_images
+        )
+        system_prompt = (
+            "You are a vision-language functional-requirement graph generator. "
+            "Return only the requested JSON. Infer the functional roles, qualitative "
+            "properties, qualitative relations between roles, interaction groups with "
+            "reuse policies, candidate categories, and visually proposed inspectable "
+            "closed storage regions from the task instruction and initial multi-view RGB images. "
+            "Never assume hidden contents, ground-truth identities, poses, measurements, "
+            "assignments, feasibility labels, or plans."
+        )
         prompt = {
             "task_instruction": task_instruction.strip(),
-            "observable_closed_storage_regions": [
-                {"region_id": key, "visual_description": value}
-                for key, value in search_region_descriptors.items()
-            ],
-            "verifier_interface": {
-                "unary_predicates": ["OPEN_CAVITY", "ELONGATED_OBJECT"],
-                "binary_predicates": ["INSERTABLE_IN", "REACHES_BOTTOM"],
-                "numeric_properties": {
-                    "total_length_m": "m",
-                    "usable_length_m": "m",
-                    "maximum_cross_section_m": "m",
-                    "elongation_ratio": "ratio",
-                    "flatness_ratio": "ratio",
-                    "planarity_score": "ratio",
-                    "support_length_m": "m",
-                    "support_width_m": "m",
-                    "support_thickness_m": "m",
-                    "support_area_m2": "m2",
-                    "opening_width_m": "m",
-                    "opening_length_m": "m",
-                    "cavity_depth_m": "m",
-                },
-                "usage_policies": [
-                    "SEQUENTIAL_REUSE_ALLOWED", "DEDICATED_PER_TARGET"
-                ],
-                "note": (
-                    "These are generic implemented checker APIs. Select only the "
-                    "predicates actually required by the task; no predicate will be "
-                    "inferred or alias-mapped downstream."
-                ),
-            },
             "request": (
-                "In one response, infer the complete functional requirement graph, "
-                "all role counts/functions/unary predicates/binary relations/reuse "
-                "rules, semantic candidate categories, source and target planning "
-                "requirements, candidate storage regions, and a complete inspection "
-                "ranking. Decide them yourself from the goal and initial RGB views. "
-                "Every material source must also be a normal role in roles; planning "
-                "source_roles references it by witness_role. Do not output physical "
-                "instance assignments or an action sequence."
+                "In one response, infer the functional roles, qualitative properties, "
+                "qualitative relations between roles, interaction groups with reuse policies, "
+                "candidate semantic categories, inspectable closed storage regions visible in the initial images, "
+                "and a complete inspection ranking over those proposed regions if evidence is incomplete. "
+                "Decide them yourself from the goal and initial RGB views. "
+                "Do not output physical instance assignments or an action sequence."
             ),
+        }
+        sanitized_req = {
+            "system_prompt": system_prompt,
+            "user_prompt": prompt,
+            "schema_name": "kitchen_functional_requirement_graph",
+            "num_images": len(self.last_observation_images),
+            "image_metadata": self.last_observation_images,
         }
         payload = {
             "model": self.model,
             "messages": [
                 {
                     "role": "system",
-                    "content": (
-                        "You are a vision-language functional-requirement graph "
-                        "generator. Return only the requested JSON. Task-specific "
-                        "knowledge must be inferred from the task instruction and raw "
-                        "initial images. Emit exact checker predicate identifiers "
-                        "yourself. Never assume hidden contents, GT identities, poses, "
-                        "measurements, assignments, feasibility labels, or plans."
-                    ),
+                    "content": system_prompt,
                 },
                 {"role": "user", "content": [
                     {"type": "text", "text": json.dumps(prompt, separators=(",", ":"))},
@@ -813,6 +739,7 @@ class FMAdapter:
         document = _extract_json_content(
             self._completion_transport().complete(payload),
             call_kind="kitchen_functional_graph",
+            sanitized_request=sanitized_req,
         )
         self.last_raw_kitchen_graph_response = deepcopy(document)
         return document
@@ -845,18 +772,26 @@ class FMAdapter:
             observation_images
         )
         transport = self._completion_transport()
+        user_prompt_data = {
+            "task_instruction": task_instruction.strip(),
+            "request": (
+                "Using the task goal and initial-observation images, infer the "
+                "functional roles, describe the qualitative properties each role "
+                "requires, and rank any visually plausible candidate objects or "
+                "regions for each role. Decide all role and property content yourself."
+            ),
+        }
         user_text = json.dumps(
-            {
-                "task_instruction": task_instruction.strip(),
-                "request": (
-                    "Using the task goal and initial-observation images, infer the "
-                    "functional roles, describe the qualitative properties each role "
-                    "requires, and rank any visually plausible candidate objects or "
-                    "regions for each role. Decide all role and property content yourself."
-                ),
-            },
+            user_prompt_data,
             separators=(",", ":"),
         )
+        sanitized_req = {
+            "system_prompt": SYSTEM_PROMPT,
+            "user_prompt": user_prompt_data,
+            "schema_name": "functional_requirements",
+            "num_images": len(self.last_observation_images),
+            "image_metadata": self.last_observation_images,
+        }
         payload = {
             "model": self.model,
             "messages": [
@@ -890,47 +825,51 @@ class FMAdapter:
         self.metrics.requirement_calls += 1
         self.metrics.total_calls += 1
         response = transport.complete(payload)
-        raw_document = _extract_json_content(response, call_kind="task_requirements")
+        raw_document = _extract_json_content(
+            response, call_kind="task_requirements", sanitized_request=sanitized_req
+        )
         self.last_raw_requirement_response = deepcopy(raw_document)
         return validate_requirement_response(raw_document)
 
     def generate_inspection_priors(
         self,
         task_instruction: str,
-        search_region_descriptors: dict[str, str],
+        search_region_descriptors: dict[str, str] | None = None,
         *,
         observation_images: Sequence[str | Path],
     ) -> dict[str, Any]:
-        """Ask Qwen for a complete search order over observable storage regions."""
-        if not search_region_descriptors:
-            raise ValueError("At least one observable search region is required")
-        image_blocks, _metadata = _encode_observation_images(observation_images)
-        region_ids = list(search_region_descriptors)
+        """Ask Qwen for visually proposed inspectable regions and search order."""
+        del search_region_descriptors
+        image_blocks, self.last_observation_images = _encode_observation_images(observation_images)
+        system_prompt = (
+            "You choose an evidence-gathering order for the task. Return only the requested JSON. "
+            "Visually identify any closed storage regions (such as drawers or cabinets) visible in the "
+            "initial scene images, and rank them in the order they should be inspected if evidence is incomplete. "
+            "Never infer hidden contents, ground-truth assignments, feasibility labels, or actions beyond "
+            "opening/inspecting the regions you identified."
+        )
         prompt = {
             "task_instruction": task_instruction.strip(),
-            "observable_closed_storage_regions": [
-                {"region_id": key, "visual_description": value}
-                for key, value in search_region_descriptors.items()
-            ],
             "request": (
                 "Decide from the initial images whether all functional requirements "
-                "are already visibly satisfiable. Also rank every listed closed "
-                "storage region exactly once in the order it should be inspected if "
-                "evidence is incomplete. Do not predict or invent stored contents."
+                "are already visibly satisfiable. Visually identify and propose any closed "
+                "storage regions (such as drawers or cabinets) visible in the scene, and rank them "
+                "in the order they should be inspected if evidence is incomplete. Do not predict or invent stored contents."
             ),
+        }
+        sanitized_req = {
+            "system_prompt": system_prompt,
+            "user_prompt": prompt,
+            "schema_name": "inspection_policy",
+            "num_images": len(self.last_observation_images),
+            "image_metadata": self.last_observation_images,
         }
         payload = {
             "model": self.model,
             "messages": [
                 {
                     "role": "system",
-                    "content": (
-                        "You choose an evidence-gathering order for a kitchen task. "
-                        "Return only the requested JSON. Use only the task, images, "
-                        "and observable region descriptions. Never infer hidden "
-                        "contents, ground-truth assignments, feasibility labels, or "
-                        "actions beyond opening/inspecting the listed regions."
-                    ),
+                    "content": system_prompt,
                 },
                 {"role": "user", "content": [
                     {"type": "text", "text": json.dumps(prompt, separators=(",", ":"))},
@@ -945,7 +884,7 @@ class FMAdapter:
             "response_format": {
                 "type": "json_schema",
                 "json_schema": {
-                    "name": "kitchen_inspection_policy",
+                    "name": "inspection_policy",
                     "strict": True,
                     "schema": INSPECTION_POLICY_SCHEMA,
                 },
@@ -956,29 +895,25 @@ class FMAdapter:
         document = _extract_json_content(
             self._completion_transport().complete(payload),
             call_kind="inspection_priors",
+            sanitized_request=sanitized_req,
         )
         self.last_raw_inspection_response = deepcopy(document)
-        expected = {"initial_requirements_satisfied", "decision_reason", "inspection_order"}
-        if not isinstance(document, dict) or set(document) != expected:
+        expected = {
+            "initial_requirements_satisfied", "decision_reason", "inspection_order",
+        }
+        if not isinstance(document, dict) or not expected.issubset(set(document)):
             raise FMResponseValidationError("Inspection policy has invalid fields")
         if not isinstance(document["initial_requirements_satisfied"], bool):
             raise FMResponseValidationError("initial_requirements_satisfied must be boolean")
         if not _short_string(document["decision_reason"], 1000):
             raise FMResponseValidationError("decision_reason must be non-empty")
-        rows = document["inspection_order"]
-        if not isinstance(rows, list) or len(rows) != len(region_ids):
-            raise FMResponseValidationError("inspection_order must contain every region exactly once")
-        cleaned = []
-        for row in rows:
-            if not isinstance(row, dict) or set(row) != {"region_id", "reason"}:
-                raise FMResponseValidationError("inspection_order item has invalid fields")
-            if row["region_id"] not in search_region_descriptors or not _short_string(row["reason"], 500):
-                raise FMResponseValidationError("inspection_order contains an unknown region or invalid reason")
-            cleaned.append({"region_id": row["region_id"], "reason": row["reason"].strip()})
-        if len({row["region_id"] for row in cleaned}) != len(region_ids):
-            raise FMResponseValidationError("inspection_order contains duplicate or missing regions")
+        inspectable = list(document.get("inspectable_regions", []))
+        raw_order = list(document.get("inspection_order", []))
+        if not inspectable and raw_order and isinstance(raw_order[0], dict):
+            inspectable = [{"id": item.get("region_id", ""), "label": item.get("region_id", ""), "visual_description": item.get("reason", "")} for item in raw_order]
         return {
             "initial_requirements_satisfied": document["initial_requirements_satisfied"],
-            "decision_reason": document["decision_reason"].strip(),
-            "inspection_order": cleaned,
+            "decision_reason": str(document["decision_reason"]).strip(),
+            "inspectable_regions": inspectable,
+            "inspection_order": raw_order,
         }

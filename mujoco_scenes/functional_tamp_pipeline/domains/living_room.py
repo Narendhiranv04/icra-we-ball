@@ -294,26 +294,53 @@ def run_to_plan(
     write_resolved_integrated_rig(name, rig_path)
 
     vocabulary_path: Path
-    if "object_vocabulary" in specification.metadata:
-        vocabulary_path = output_dir / "kitchen_vocabulary.yaml"
-        vocabulary_path.parent.mkdir(parents=True, exist_ok=True)
-        vocabulary_path.write_text(
-            yaml.safe_dump(specification.metadata["object_vocabulary"], sort_keys=False),
-            encoding="utf-8",
-        )
-    elif "semantic_vocabulary_path" in specification.metadata:
-        vocabulary_path = Path(specification.metadata["semantic_vocabulary_path"])
-    elif specification.detector_vocabulary:
+    if specification.detector_vocabulary:
         vocabulary_path = output_dir / "living_room_vocabulary.yaml"
         vocabulary_path.parent.mkdir(parents=True, exist_ok=True)
         canonical_labels: dict[str, list[str]] = {}
+        base_canon: dict[str, list[str]] = {}
+        alias_to_base: dict[str, str] = {}
+        if "semantic_vocabulary_path" in specification.metadata:
+            base_vocab_p = Path(specification.metadata["semantic_vocabulary_path"])
+            if base_vocab_p.is_file():
+                b_data = yaml.safe_load(base_vocab_p.read_text(encoding="utf-8")) or {}
+                base_canon = dict(b_data.get("canonical_labels", {}))
+                for c_k, a_list in base_canon.items():
+                    for a in a_list:
+                        alias_to_base[a.strip().lower()] = c_k
+
+        for node in specification.nodes.values():
+            for cat in node.semantic_categories:
+                norm_c = cat.strip().lower()
+                if norm_c in base_canon:
+                    canonical_labels[norm_c] = list(base_canon[norm_c])
+                elif norm_c in alias_to_base:
+                    canon_k = alias_to_base[norm_c]
+                    canonical_labels[canon_k] = list(base_canon[canon_k])
+                else:
+                    canonical_labels[norm_c] = [norm_c]
+
         for term in specification.detector_vocabulary:
-            canonical_labels[term] = [term]
+            norm_t = term.strip().lower()
+            if norm_t not in canonical_labels:
+                if norm_t in alias_to_base:
+                    canon_k = alias_to_base[norm_t]
+                    if canon_k not in canonical_labels:
+                        canonical_labels[canon_k] = list(base_canon[canon_k])
+                else:
+                    canonical_labels[norm_t] = [norm_t]
+
         vocab_dict = {
             "schema_version": 1,
             "canonical_labels": canonical_labels,
         }
         vocabulary_path.write_text(yaml.safe_dump(vocab_dict, sort_keys=False), encoding="utf-8")
+    elif "semantic_vocabulary_path" in specification.metadata:
+        vocabulary_path = Path(specification.metadata["semantic_vocabulary_path"])
+    else:
+        vocabulary_path = output_dir / "living_room_vocabulary.yaml"
+        vocabulary_path.parent.mkdir(parents=True, exist_ok=True)
+        vocabulary_path.write_text(yaml.safe_dump({"schema_version": 1, "canonical_labels": {}}, sort_keys=False), encoding="utf-8")
 
     detector, semantic_config = create_region_semantic_detector(
         checkpoint=str(LOCAL_MODEL), confidence_threshold=0.03,

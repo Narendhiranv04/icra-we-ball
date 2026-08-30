@@ -51,7 +51,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
             task_instruction, observation_images=observation_images
         ))
 
-        candidate_regions = tuple(WORKSHOP_SEARCH_REGIONS.keys())
+        candidate_regions = tuple(provider.candidate_regions)
         nodes: dict[str, FunctionalRole] = {}
         relations: list[FunctionalRelation] = []
 
@@ -170,7 +170,6 @@ class VLMSpecProvider(FunctionalSpecProvider):
         adapter = FMAdapter()
         raw = adapter.generate_kitchen_functional_graph(
             task_instruction,
-            KITCHEN_OBSERVABLE_REGIONS,
             observation_images=observation_images,
         )
         contract, vocabularies, trace = compile_vlm_functional_graph(
@@ -250,7 +249,8 @@ class VLMSpecProvider(FunctionalSpecProvider):
                 selection_preference=str(selection_pref) if selection_pref is not None else None,
             ))
 
-        order = tuple(raw["inspection_order"])
+        resolved_order = tuple(trace.get("inspection_order", ()))
+        resolved_regions = tuple(trace.get("candidate_regions", ()))
         object_vocab = vocabularies["object"].get("canonical_labels", vocabularies["object"])
         prompts = tuple(dict.fromkeys(
             phrase for phrases in object_vocab.values() if isinstance(phrases, (list, tuple)) for phrase in phrases
@@ -263,8 +263,8 @@ class VLMSpecProvider(FunctionalSpecProvider):
             operation_groups=tuple(operation_groups),
             cross_group_reuse_allowed=bool(contract.get("cross_group_reuse", {}).get("allowed", False)),
             detector_vocabulary=prompts,
-            candidate_regions=tuple(KITCHEN_OBSERVABLE_REGIONS),
-            region_ranking=order,
+            candidate_regions=resolved_regions,
+            region_ranking=resolved_order,
             source="VLM_FUNCTIONAL_SPEC",
             raw_requirements=(contract,),
             metadata={

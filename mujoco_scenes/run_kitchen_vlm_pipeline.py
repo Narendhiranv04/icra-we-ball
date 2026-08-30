@@ -183,7 +183,6 @@ def run_pipeline(
     )
     raw_graph = adapter.generate_kitchen_functional_graph(
         task_instruction,
-        KITCHEN_OBSERVABLE_REGIONS,
         observation_images=image_paths,
     )
     fm_calls_for_run = adapter.metrics.total_calls - fm_calls_before
@@ -198,7 +197,7 @@ def run_pipeline(
             observable_regions=tuple(KITCHEN_OBSERVABLE_REGIONS),
         )
     )
-    order = list(raw_graph["inspection_order"])
+    order = list(transformation_trace.get("inspection_order", []))
     requirements_path = run_root / "vlm_task_requirements.yaml"
     _atomic_json(
         run_root / "01_raw_vlm_functional_graph.json", raw_graph

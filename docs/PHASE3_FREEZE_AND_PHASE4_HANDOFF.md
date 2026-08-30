@@ -1,17 +1,19 @@
 # Phase 3 Freeze and Phase 4 Handoff
 
+> [!IMPORTANT]
+> **SUPERSESSION NOTICE**: Phase 3 freeze is temporarily reopened for VLM interface realignment (Pass 3.6A).
+> The previous freeze declaration has been superseded to eliminate information leaks (e.g., pre-enumerated checker names, canonical region IDs) from the live VLM interface. Phase 3 will be re-frozen following Pass 3.6B.
+
 ## 1. Executive Summary
 
-Phase 3 of the canonical functional-grounding Task and Motion Planning (TAMP) pipeline is **OFFICIALLY COMPLETE AND FROZEN**.
+Phase 3 establishes the canonical functional-grounding Task and Motion Planning (TAMP) pipeline architecture. Under Pass 3.6A, the interface boundary between the live Vision-Language Model (VLM) and downstream execution has been realigned to adhere strictly to scientific zero-leakage principles.
 
 The pipeline establishes end-to-end integration across:
-1. **Live Vision-Language Model (VLM) Specification Acquisition**: Direct invocation of remote VLM backends (e.g. Qwen 3.5 9B) consuming 5-view RGB scene captures and task goals to produce structured Functional Requirement Graphs ($G_F$).
-2. **Canonical Functional Grounding & Geometric Verification**: Grounding extracted scene entities, evaluating continuous physical criteria (reachability, compatibility, containment), and building observed scene graphs ($G_O$).
+1. **Live Vision-Language Model (VLM) Specification Acquisition**: Direct invocation of remote VLM backends (e.g. Qwen 3.5 9B) consuming 5-view RGB scene captures and task goals to produce natural-language functional specifications.
+2. **Deterministic Canonicalization & Geometric Verification**: Mapping natural-language functional descriptions into executable criteria ($G_F$), evaluating continuous physical criteria (reachability, compatibility, containment), and building observed scene graphs ($G_O$).
 3. **Multi-Condition Search Orchestration**: Exact evaluation under GT Oracle, Provider/FM-guided, and Seeded Random search policies with isolated run directories.
 4. **Exact-$G_F$ Provenance & Deterministic Replay**: Cryptographic SHA-256 specification hashing, JSON serialization invariance, and strict replay validation preventing cross-condition contamination.
 5. **A* Symbolic & Geometric Task Planning**: Generating executable action sequences (`action_plan.json`) for downstream robot actuation.
-
-No further modifications to Phase 3 perception, grounding, VLM schemas, prompts, or planning logic are permitted. The codebase is fully frozen for **Phase 4 (Physical Robot Execution)**.
 
 ---
 

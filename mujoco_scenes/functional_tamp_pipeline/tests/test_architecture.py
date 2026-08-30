@@ -1093,14 +1093,21 @@ def test_kitchen_vlm_variable_cardinality_and_policies_roundtrip(monkeypatch) ->
     mock_kitchen_raw["inspection_order"] = ["D1", "D2", "C2", "B1", "C1"]
     mock_kitchen_raw["candidate_regions"] = [{"region_id": r, "description": r} for r in ["D1", "D2", "C2", "B1", "C1"]]
     # Add variable cardinality to mixing_implement
-    for r in mock_kitchen_raw["roles"]:
+    for r in (mock_kitchen_raw.get("functional_roles") or mock_kitchen_raw.get("roles") or []):
         if r["id"] == "mixing_implement":
+            r["min_count"] = 1
+            r["max_count"] = 2
+            r["preference"] = "minimize_distinct"
             r["binding_cardinality"] = {
                 "mode": "assignment_driven",
                 "minimum_distinct_physical_objects": 1,
                 "maximum_distinct_physical_objects": 2,
                 "preferred": "minimize_distinct",
             }
+
+    for g in (mock_kitchen_raw.get("interaction_groups") or mock_kitchen_raw.get("operation_groups") or []):
+        if "mix" in g["id"]:
+            g["selection_preference"] = "minimize_distinct_tools"
 
     monkeypatch.setattr(
         FMAdapter, "generate_kitchen_functional_graph",

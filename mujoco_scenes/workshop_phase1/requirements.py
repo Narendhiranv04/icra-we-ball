@@ -223,13 +223,55 @@ WORKSHOP_SEARCH_REGIONS = {
 }
 
 
-class FMRequirementProvider(RequirementProvider):
-    """One-shot VLM generation guarded by generic Workshop ontology mapping.
+WORKSHOP_REGION_ALIASES: dict[str, tuple[str, ...]] = {
+    "LEFT_DRAWER": (
+        "left storage drawer", "left drawer", "left workbench drawer",
+        "drawer on the left", "left storage drawer below workbench",
+        "left desk drawer", "left lower drawer", "left table drawer", "left_drawer",
+    ),
+    "RIGHT_DRAWER": (
+        "right storage drawer", "right drawer", "right workbench drawer",
+        "drawer on the right", "right storage drawer below workbench",
+        "right desk drawer", "right lower drawer", "right table drawer", "right_drawer",
+    ),
+    "TOOL_CABINET": (
+        "tool cabinet", "cabinet", "wall cabinet", "upper cabinet",
+        "tool storage cabinet", "storage cabinet", "overhead tool cabinet",
+        "upper tool storage", "wall tool cabinet", "tool_cabinet",
+    ),
+}
 
-    Qwen may use natural phrases. Only phrases that map to known functions,
-    semantic categories, and qualitative relations cross into production grounding.
-    Unknown, incomplete, or ambiguous output fails closed.
-    """
+FIXED_TARGET_ALIASES = (
+    "repair_hole_in_workbench", "workbench_repair_hole", "repair_target",
+    "repair_hole_target", "frame_joint", "workbench_hole", "hole",
+)
+
+
+def resolve_workshop_region_proposal(proposal: dict[str, Any] | str) -> str | None:
+    if isinstance(proposal, str):
+        text = proposal.strip().lower()
+    else:
+        text = f"{proposal.get('id', '')} {proposal.get('region_id', '')} {proposal.get('label', '')} {proposal.get('visual_description', '')}".strip().lower()
+    norm = " ".join(re.findall(r"[a-z0-9]+", text.casefold()))
+    for reg_id, aliases in WORKSHOP_REGION_ALIASES.items():
+        if norm == reg_id.lower():
+            return reg_id
+        for alias in aliases:
+            a_norm = " ".join(re.findall(r"[a-z0-9]+", alias.casefold()))
+            if a_norm == norm or a_norm in norm or norm in a_norm:
+                return reg_id
+    words = set(norm.split())
+    if "left" in words and "drawer" in words:
+        return "LEFT_DRAWER"
+    if "right" in words and "drawer" in words:
+        return "RIGHT_DRAWER"
+    if "cabinet" in words:
+        return "TOOL_CABINET"
+    return None
+
+
+class FMRequirementProvider(RequirementProvider):
+    """Dynamic VLM requirement provider for Workshop domain."""
 
     def __init__(
         self,
@@ -238,11 +280,12 @@ class FMRequirementProvider(RequirementProvider):
     ) -> None:
         self.fm_adapter = fm_adapter or FMAdapter()
         self.ontology_contract = ontology_contract or ManualWorkshopFMContract()
+        self._requirements: list[FunctionalRequirement] | None = None
+        self._category_rank: dict[str, int] = {}
         self.raw_decomposition: dict[str, Any] | None = None
         self.region_ranking: tuple[str, ...] = ()
         self.candidate_regions: tuple[str, ...] = ()
-        self._requirements: list[FunctionalRequirement] | None = None
-        self._category_rank: dict[str, int] = {}
+
         normalization = self.ontology_contract._contract_data.get(
             "fm_normalization", {}
         )
@@ -253,8 +296,8 @@ class FMRequirementProvider(RequirementProvider):
             normalization.get("relation_aliases", {})
         )
 
-    @staticmethod
-    def _phrase(value: object) -> str:
+    @classmethod
+    def _phrase(cls, value: object) -> str:
         return " ".join(re.findall(r"[a-z0-9]+", str(value).casefold()))
 
     @classmethod
@@ -367,17 +410,20 @@ class FMRequirementProvider(RequirementProvider):
                 f"{document.get('unsupported_reason', 'no reason')}"
             )
 
-        self.region_ranking = tuple(WORKSHOP_SEARCH_REGIONS.keys())
-        self.candidate_regions = tuple(WORKSHOP_SEARCH_REGIONS.keys())
-
         normalized: dict[str, FunctionalRequirement] = {}
         raw_requirements = document["functional_requirements"]
         for rank_idx, raw in enumerate(raw_requirements, start=1):
+            if raw.get("entity_kind") == "REGION":
+                r_id = str(raw.get("id", "")).lower()
+                r_desc = str(raw.get("description", "")).lower()
+                if any(k in r_id or k in r_desc for k in FIXED_TARGET_ALIASES):
+                    continue
+                raise ValueError(f"VLM_SPEC_FAILED: Unsupported REGION role {raw.get('id')!r}")
             if raw.get("entity_kind") != "OBJECT":
                 continue
             categories: list[str] = []
             for candidate in raw.get("candidate_objects", []):
-                for field in ("label", "visual_description", "suitability_reason"):
+                for field in ("label", "visual_description"):
                     val = candidate.get(field)
                     if val:
                         canonical = self._map_category(val)
@@ -437,13 +483,34 @@ class FMRequirementProvider(RequirementProvider):
             raise ValueError("VLM_SPEC_FAILED: Observation images required for VLM inspection policy")
         priors = self.fm_adapter.generate_inspection_priors(
             task_instruction,
-            WORKSHOP_SEARCH_REGIONS,
             observation_images=images,
         )
-        order = tuple(item["region_id"] for item in priors.get("inspection_order", []))
-        if not order or set(order) != set(WORKSHOP_SEARCH_REGIONS.keys()):
-            raise ValueError(f"VLM_SPEC_FAILED: VLM returned invalid inspection order: {order}")
-        self.region_ranking = order
+        resolved_map: dict[str, str] = {}
+        for item in priors.get("inspectable_regions", []):
+            if isinstance(item, dict):
+                prop_id = item.get("id") or item.get("region_id") or ""
+                canon_reg = resolve_workshop_region_proposal(item)
+                if canon_reg is not None and canon_reg in WORKSHOP_SEARCH_REGIONS:
+                    resolved_map[prop_id] = canon_reg
+            elif isinstance(item, str):
+                canon_reg = resolve_workshop_region_proposal(item)
+                if canon_reg is not None and canon_reg in WORKSHOP_SEARCH_REGIONS:
+                    resolved_map[item] = canon_reg
+
+        raw_order = priors.get("inspection_order", [])
+        order = []
+        for raw_item in raw_order:
+            if isinstance(raw_item, dict):
+                raw_id = raw_item.get("id") or raw_item.get("region_id") or ""
+                canon = resolved_map.get(raw_id) or resolve_workshop_region_proposal(raw_item)
+            else:
+                raw_id = str(raw_item)
+                canon = resolved_map.get(raw_id) or resolve_workshop_region_proposal(raw_id)
+            if canon is not None and canon in WORKSHOP_SEARCH_REGIONS and canon not in order:
+                order.append(canon)
+
+        self.region_ranking = tuple(order)
+        self.candidate_regions = tuple(dict.fromkeys(resolved_map.values()))
         return self.region_ranking
 
     def get_requirements(
@@ -488,3 +555,4 @@ class FMRequirementProvider(RequirementProvider):
     def get_alias_to_canonical_map(self) -> dict[str, str]:
         self._ensure_generated()
         return self.ontology_contract.get_alias_to_canonical_map()
+

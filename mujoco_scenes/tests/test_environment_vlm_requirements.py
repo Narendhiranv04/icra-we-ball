@@ -345,9 +345,7 @@ def test_kitchen_inspection_policy_is_qwen_ranked_without_hidden_contents(observ
     ]
     assert adapter.last_raw_inspection_response == policy
     prompt = json.loads(transport.payload["messages"][1]["content"][0]["text"])
-    assert set(prompt) == {
-        "task_instruction", "observable_closed_storage_regions", "request"
-    }
+    assert set(prompt) == {"task_instruction", "request"}
     serialized = json.dumps(prompt).casefold()
     assert "hidden objects" not in serialized
     assert "intended_outcome" not in serialized
