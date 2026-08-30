@@ -307,14 +307,11 @@ class FunctionalRequirementGraph:
                 )
 
     def to_dict(self) -> dict[str, Any]:
-        sorted_nodes = {name: self.nodes[name] for name in sorted(self.nodes.keys())}
         return {
             "domain": self.domain,
             "task_instruction": self.task_instruction,
             "roles": [sorted_nodes[name].to_dict() for name in sorted_nodes],
             "nodes": {name: sorted_nodes[name].to_dict() for name in sorted_nodes},
-            "relations": [r.to_dict() for r in self.relations],
-            "operation_groups": [g.to_dict() for g in self.operation_groups],
             "cross_group_reuse_allowed": self.cross_group_reuse_allowed,
             "detector_vocabulary": list(self.detector_vocabulary),
             "candidate_regions": list(self.candidate_regions),
