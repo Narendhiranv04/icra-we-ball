@@ -156,6 +156,7 @@ def test_zero_leakage_in_kitchen_and_workshop_payloads(tmp_path):
                 "object_role": "fastener_obj",
             }
         ],
+        "interaction_groups": [],
         "inspectable_regions": [],
         "inspection_order": [],
     }
@@ -263,6 +264,7 @@ def test_fail_closed_on_unsupported_workshop_region_role(tmp_path):
             }
         ],
         "functional_relations": [],
+        "interaction_groups": [],
         "inspectable_regions": [],
         "inspection_order": [],
     }
@@ -328,6 +330,7 @@ def test_living_room_detector_vocabulary_uses_only_vlm_categories(tmp_path):
                 "object_role": "shared_support",
             },
         ],
+        "interaction_groups": [],
         "inspectable_regions": [],
         "inspection_order": [],
     }

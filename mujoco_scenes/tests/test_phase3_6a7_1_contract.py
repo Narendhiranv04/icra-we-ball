@@ -512,7 +512,7 @@ def test_ab_workshop_graph_missing_compatible_with_fails():
     )
     result = evaluate_gf_against_reference(bad_gf, gf)
     assert not result.structurally_complete
-    assert ("driver", "COMPATIBLE_WITH", "fastener") in result.missing_relations
+    assert ("driver", "COMPATIBLE_WITH", "fastener", True) in result.missing_relations
 
 
 def test_ac_workshop_graph_missing_reaches_target_fails():
@@ -524,7 +524,7 @@ def test_ac_workshop_graph_missing_reaches_target_fails():
     )
     result = evaluate_gf_against_reference(bad_gf, gf)
     assert not result.structurally_complete
-    assert ("driver", "REACHES_TARGET", "repair_target") in result.missing_relations
+    assert ("driver", "REACHES_TARGET", "repair_target", True) in result.missing_relations
 
 
 def test_ad_workshop_graph_missing_compatible_with_target_fails():
@@ -536,7 +536,7 @@ def test_ad_workshop_graph_missing_compatible_with_target_fails():
     )
     result = evaluate_gf_against_reference(bad_gf, gf)
     assert not result.structurally_complete
-    assert ("fastener", "COMPATIBLE_WITH_TARGET", "repair_target") in result.missing_relations
+    assert ("fastener", "COMPATIBLE_WITH_TARGET", "repair_target", True) in result.missing_relations
 
 
 # ---------------------------------------------------------------------------

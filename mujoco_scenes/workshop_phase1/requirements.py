@@ -17,6 +17,7 @@ from mujoco_scenes.functional_tamp_pipeline.errors import (
     UnsupportedCheckerCapabilityError,
     VLMSpecificationError,
 )
+from mujoco_scenes.functional_tamp_pipeline.models import OperationGroup
 from mujoco_scenes.workshop_phase1.fm_adapter import FMAdapter, FMBackendNotConfiguredError
 from mujoco_scenes.workshop_phase1.types import (
     EntityType,
@@ -391,6 +392,7 @@ class FMRequirementProvider(RequirementProvider):
         self.transformation_trace: list[dict[str, Any]] = []
         self.normalized_roles: list[NormalizedWorkshopRole] = []
         self.normalized_relations: list[NormalizedWorkshopRelation] = []
+        self.normalized_operation_groups: list[OperationGroup] = []
         self.vlm_derived_detector_prompts: tuple[str, ...] = ()
         self.evaluation_negative_control_prompts: tuple[str, ...] = (
             "claw hammer", "ball peen hammer", "sledgehammer"
@@ -659,11 +661,133 @@ class FMRequirementProvider(RequirementProvider):
                 if mapped_rel not in legacy_requirements[func_key].required_relations:
                     legacy_requirements[func_key].required_relations.append(mapped_rel)
 
+        normalized_operation_groups: list[OperationGroup] = []
+        for grp in document.get("interaction_groups", []):
+            g_id = str(grp.get("id", ""))
+            func_desc = str(grp.get("function", ""))
+            target_count = int(grp.get("required_target_count", 1))
+            policy = str(grp.get("usage_policy", "SEQUENTIAL_REUSE_ALLOWED"))
+            if policy not in {"SEQUENTIAL_REUSE_ALLOWED", "DEDICATED_PER_TARGET"}:
+                raise MalformedVLMSpecificationError(
+                    f"VLM_SPEC_FAILED: Invalid usage policy {policy!r} in interaction group {g_id!r}"
+                )
+            if target_count < 1:
+                raise MalformedVLMSpecificationError(
+                    f"VLM_SPEC_FAILED: Invalid required_target_count {target_count} in interaction group {g_id!r}"
+                )
+
+            tool_raw = grp.get("tool_role")
+            target_raw = grp.get("target_role")
+            if tool_raw not in raw_id_to_canon:
+                raise MalformedVLMSpecificationError(
+                    f"VLM_SPEC_FAILED: Interaction group tool role {tool_raw!r} not declared in functional roles"
+                )
+            if target_raw not in raw_id_to_canon:
+                raise MalformedVLMSpecificationError(
+                    f"VLM_SPEC_FAILED: Interaction group target role {target_raw!r} not declared in functional roles"
+                )
+            tool_canon = raw_id_to_canon[tool_raw]
+            target_canon = raw_id_to_canon[target_raw]
+
+            ctx_raw = grp.get("context_role")
+            ctx_canon: str | None = None
+            if ctx_raw:
+                if ctx_raw not in raw_id_to_canon:
+                    raise MalformedVLMSpecificationError(
+                        f"VLM_SPEC_FAILED: Interaction group context role {ctx_raw!r} not declared in functional roles"
+                    )
+                ctx_canon = raw_id_to_canon[ctx_raw]
+
+            req_rels_raw = grp.get("required_relations", [])
+            if not req_rels_raw:
+                raise MalformedVLMSpecificationError(
+                    f"VLM_SPEC_FAILED: Interaction group {g_id!r} must have non-empty required_relations"
+                )
+            req_rels_canon = []
+            for r in req_rels_raw:
+                mapped_rel = map_workshop_relation(r)
+                if mapped_rel is None:
+                    norm_r = self._phrase(r)
+                    prop_matches = set()
+                    for relation_name, aliases in self._relation_aliases.items():
+                        for alias in aliases:
+                            if self._contains_phrase(norm_r, alias):
+                                prop_matches.add(relation_name)
+                                break
+                    if len(prop_matches) == 1:
+                        mapped_rel = next(iter(prop_matches))
+                    elif len(prop_matches) > 1:
+                        raise AmbiguousCanonicalizationError(
+                            f"VLM_SPEC_FAILED: Ambiguous relation {r!r} in interaction group: {sorted(prop_matches)}"
+                        )
+                    else:
+                        raise UnmappedFunctionalConceptError(
+                            f"VLM_SPEC_FAILED: Relation {r!r} in interaction group cannot be mapped to any Workshop relation"
+                        )
+                req_rels_canon.append(mapped_rel)
+
+            ctx_rels_raw = grp.get("context_relations", [])
+            ctx_rels_canon = []
+            if ctx_canon:
+                if not ctx_rels_raw:
+                    raise MalformedVLMSpecificationError(
+                        f"VLM_SPEC_FAILED: Interaction group {g_id!r} has context_role but missing context_relations"
+                    )
+                for r in ctx_rels_raw:
+                    mapped_rel = map_workshop_relation(r)
+                    if mapped_rel is None:
+                        norm_r = self._phrase(r)
+                        prop_matches = set()
+                        for relation_name, aliases in self._relation_aliases.items():
+                            for alias in aliases:
+                                if self._contains_phrase(norm_r, alias):
+                                    prop_matches.add(relation_name)
+                                    break
+                        if len(prop_matches) == 1:
+                            mapped_rel = next(iter(prop_matches))
+                        elif len(prop_matches) > 1:
+                            raise AmbiguousCanonicalizationError(
+                                f"VLM_SPEC_FAILED: Ambiguous context relation {r!r} in interaction group: {sorted(prop_matches)}"
+                            )
+                        else:
+                            raise UnmappedFunctionalConceptError(
+                                f"VLM_SPEC_FAILED: Context relation {r!r} in interaction group cannot be mapped to any Workshop relation"
+                            )
+                    ctx_rels_canon.append(mapped_rel)
+            elif ctx_rels_raw:
+                raise MalformedVLMSpecificationError(
+                    f"VLM_SPEC_FAILED: Interaction group {g_id!r} has context_relations but no context_role"
+                )
+
+            canonical_group = OperationGroup(
+                id=g_id,
+                function=func_desc,
+                tool_role=tool_canon,
+                target_role=target_canon,
+                required_target_count=target_count,
+                usage_policy=policy,
+                required_relations=tuple(req_rels_canon),
+                context_role=ctx_canon,
+                context_relations=tuple(ctx_rels_canon),
+                distinct_within_group=bool(grp.get("distinct_within_group", True)),
+                same_tool_must_cover_all_targets=bool(grp.get("same_tool_must_cover_all_targets", False)),
+                selection_preference=str(grp["selection_preference"]) if grp.get("selection_preference") else None,
+            )
+            normalized_operation_groups.append(canonical_group)
+            self.transformation_trace.append({
+                "raw_group": g_id,
+                "transformation": "CANONICAL_OPERATION_GROUP_MAPPING",
+                "tool_role": f"{tool_raw} -> {tool_canon}",
+                "target_role": f"{target_raw} -> {target_canon}",
+                "required_relations": [f"{raw} -> {canon}" for raw, canon in zip(req_rels_raw, req_rels_canon)],
+            })
+
         if not normalized_roles:
             raise VLMSpecificationError("VLM_SPEC_FAILED: No functional requirements produced by VLM")
 
         self.normalized_roles = normalized_roles
         self.normalized_relations = normalized_relations
+        self.normalized_operation_groups = normalized_operation_groups
         self._requirements = sorted(legacy_requirements.values(), key=lambda item: item.rank)
 
         # Resolve regions from the single initial response

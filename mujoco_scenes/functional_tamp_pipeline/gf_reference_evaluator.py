@@ -33,25 +33,35 @@ class GFReferenceEvaluationResult:
     missing_roles: tuple[str, ...]
     extra_roles: tuple[str, ...]
     role_attribute_mismatches: dict[str, dict[str, Any]] = field(default_factory=dict)
+    category_diagnostics: dict[str, dict[str, Any]] = field(default_factory=dict)
 
-    # Relations comparison
-    reference_relations: tuple[tuple[str, str, str], ...] = ()
-    candidate_relations: tuple[tuple[str, str, str], ...] = ()
-    missing_relations: tuple[tuple[str, str, str], ...] = ()
-    extra_relations: tuple[tuple[str, str, str], ...] = ()
+    # Relations comparison (subject_role, predicate, object_role, expected)
+    reference_relations: tuple[tuple[str, str, str, bool], ...] = ()
+    candidate_relations: tuple[tuple[str, str, str, bool], ...] = ()
+    missing_relations: tuple[tuple[str, str, str, bool], ...] = ()
+    extra_relations: tuple[tuple[str, str, str, bool], ...] = ()
 
     # Operation groups comparison
     reference_operation_groups: tuple[dict[str, Any], ...] = ()
     candidate_operation_groups: tuple[dict[str, Any], ...] = ()
+    matched_operation_groups: tuple[tuple[str, str], ...] = ()  # (ref_id, cand_id)
     missing_operation_groups: tuple[str, ...] = ()
     extra_operation_groups: tuple[str, ...] = ()
     operation_group_mismatches: dict[str, dict[str, Any]] = field(default_factory=dict)
 
+    # Graph-level semantics
+    cross_group_reuse_mismatch: bool = False
+
     # Metrics
-    structurally_complete: bool = False
+    reference_complete: bool = False
+    exact_structural_match: bool = False
+    structurally_complete: bool = False  # alias for reference_complete
     role_recall: float = 0.0
+    role_precision: float = 0.0
     relation_recall: float = 0.0
+    relation_precision: float = 0.0
     operation_group_recall: float = 0.0
+    operation_group_precision: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -64,6 +74,7 @@ class GFReferenceEvaluationResult:
                 "missing": list(self.missing_roles),
                 "extra": list(self.extra_roles),
                 "attribute_mismatches": self.role_attribute_mismatches,
+                "category_diagnostics": self.category_diagnostics,
             },
             "relations": {
                 "reference": [list(r) for r in self.reference_relations],
@@ -74,15 +85,24 @@ class GFReferenceEvaluationResult:
             "operation_groups": {
                 "reference": list(self.reference_operation_groups),
                 "candidate": list(self.candidate_operation_groups),
+                "matched_pairs": [list(p) for p in self.matched_operation_groups],
                 "missing": list(self.missing_operation_groups),
                 "extra": list(self.extra_operation_groups),
                 "mismatches": self.operation_group_mismatches,
             },
+            "graph_level": {
+                "cross_group_reuse_mismatch": self.cross_group_reuse_mismatch,
+            },
             "metrics": {
+                "reference_complete": self.reference_complete,
+                "exact_structural_match": self.exact_structural_match,
                 "structurally_complete": self.structurally_complete,
                 "role_recall": self.role_recall,
+                "role_precision": self.role_precision,
                 "relation_recall": self.relation_recall,
+                "relation_precision": self.relation_precision,
                 "operation_group_recall": self.operation_group_recall,
+                "operation_group_precision": self.operation_group_precision,
             },
         }
 
@@ -111,6 +131,8 @@ def evaluate_gf_against_reference(
     extra_roles = cand_roles - ref_roles
 
     role_attribute_mismatches: dict[str, dict[str, Any]] = {}
+    category_diagnostics: dict[str, dict[str, Any]] = {}
+
     for r_name in matched_roles:
         ref_node = reference_graph.nodes[r_name]
         cand_node = candidate_graph.nodes[r_name]
@@ -130,62 +152,122 @@ def evaluate_gf_against_reference(
         if diffs:
             role_attribute_mismatches[r_name] = diffs
 
-    # Relations comparison (subject_role, predicate, object_role)
-    ref_rel_triples = set((r.subject_role, r.predicate, r.object_role) for r in reference_graph.relations)
-    cand_rel_triples = set((r.subject_role, r.predicate, r.object_role) for r in candidate_graph.relations)
-    matched_rels = ref_rel_triples & cand_rel_triples
-    missing_rels = ref_rel_triples - cand_rel_triples
-    extra_rels = cand_rel_triples - ref_rel_triples
+        # Category diagnostics (informative only, open-vocabulary comparison)
+        ref_cats = list(ref_node.semantic_categories)
+        cand_cats = list(cand_node.semantic_categories)
+        ref_norm = {c.casefold().strip() for c in ref_cats if str(c).strip()}
+        cand_norm = {c.casefold().strip() for c in cand_cats if str(c).strip()}
+        overlap = sorted(ref_norm & cand_norm)
+        category_diagnostics[r_name] = {
+            "reference_categories": ref_cats,
+            "candidate_categories": cand_cats,
+            "normalized_overlap": overlap,
+            "overlap_count": len(overlap),
+        }
 
-    # Operation groups comparison
-    ref_ops_by_id = {g.id: g for g in reference_graph.operation_groups}
-    cand_ops_by_id = {g.id: g for g in candidate_graph.operation_groups}
+    # Relations comparison (subject_role, predicate, object_role, expected)
+    ref_rel_quads = set((r.subject_role, r.predicate, r.object_role, bool(r.expected)) for r in reference_graph.relations)
+    cand_rel_quads = set((r.subject_role, r.predicate, r.object_role, bool(r.expected)) for r in candidate_graph.relations)
+    matched_rels = ref_rel_quads & cand_rel_quads
+    missing_rels = ref_rel_quads - cand_rel_quads
+    extra_rels = cand_rel_quads - ref_rel_quads
 
-    matched_ops = set()
-    missing_ops = set()
-    op_mismatches = {}
+    # Operation groups deterministic 1-to-1 matching
+    ref_ops = list(reference_graph.operation_groups)
+    cand_ops = list(candidate_graph.operation_groups)
+    cand_ops_by_id = {g.id: g for g in cand_ops}
 
-    for r_id, r_op in ref_ops_by_id.items():
-        cand_op = cand_ops_by_id.get(r_id)
-        if cand_op is None:
-            for c_op in cand_ops_by_id.values():
-                if c_op.tool_role == r_op.tool_role and c_op.target_role == r_op.target_role:
-                    cand_op = c_op
-                    break
-        if cand_op is None:
-            missing_ops.add(r_id)
+    matched_pairs: list[tuple[str, str]] = []
+    matched_ref_ids: set[str] = set()
+    matched_cand_ids: set[str] = set()
+    op_mismatches: dict[str, dict[str, Any]] = {}
+    missing_ops: set[str] = set()
+
+    # 1. Match exact group IDs first
+    for r_op in ref_ops:
+        if r_op.id in cand_ops_by_id and r_op.id not in matched_cand_ids:
+            c_op = cand_ops_by_id[r_op.id]
+            matched_pairs.append((r_op.id, c_op.id))
+            matched_ref_ids.add(r_op.id)
+            matched_cand_ids.add(c_op.id)
+
+    # 2. For unmatched reference groups, search unmatched candidates by (tool_role, target_role)
+    for r_op in ref_ops:
+        if r_op.id in matched_ref_ids:
+            continue
+        candidates_matching_roles = [
+            c for c in cand_ops
+            if c.id not in matched_cand_ids and c.tool_role == r_op.tool_role and c.target_role == r_op.target_role
+        ]
+        if len(candidates_matching_roles) == 1:
+            c_op = candidates_matching_roles[0]
+            matched_pairs.append((r_op.id, c_op.id))
+            matched_ref_ids.add(r_op.id)
+            matched_cand_ids.add(c_op.id)
+        elif len(candidates_matching_roles) == 0:
+            missing_ops.add(r_op.id)
         else:
-            matched_ops.add(r_id)
-            diffs = {}
-            if r_op.tool_role != cand_op.tool_role:
-                diffs["tool_role"] = {"reference": r_op.tool_role, "candidate": cand_op.tool_role}
-            if r_op.target_role != cand_op.target_role:
-                diffs["target_role"] = {"reference": r_op.target_role, "candidate": cand_op.target_role}
-            if r_op.required_target_count != cand_op.required_target_count:
-                diffs["required_target_count"] = {"reference": r_op.required_target_count, "candidate": cand_op.required_target_count}
-            if r_op.usage_policy != cand_op.usage_policy:
-                diffs["usage_policy"] = {"reference": r_op.usage_policy, "candidate": cand_op.usage_policy}
-            if set(r_op.required_relations) != set(cand_op.required_relations):
-                diffs["required_relations"] = {"reference": sorted(r_op.required_relations), "candidate": sorted(cand_op.required_relations)}
-            if r_op.context_role != cand_op.context_role:
-                diffs["context_role"] = {"reference": r_op.context_role, "candidate": cand_op.context_role}
-            if set(r_op.context_relations) != set(cand_op.context_relations):
-                diffs["context_relations"] = {"reference": sorted(r_op.context_relations), "candidate": sorted(cand_op.context_relations)}
-            if diffs:
-                op_mismatches[r_id] = diffs
+            missing_ops.add(r_op.id)
+            op_mismatches[r_op.id] = {
+                "ambiguous_candidate_matches": [c.id for c in candidates_matching_roles]
+            }
 
-    extra_ops = set(cand_ops_by_id.keys()) - {cand_ops_by_id[g].id for g in matched_ops if g in cand_ops_by_id}
+    # 3. Compare matched operation-group fields
+    for r_id, c_id in matched_pairs:
+        r_op = next(g for g in ref_ops if g.id == r_id)
+        c_op = next(g for g in cand_ops if g.id == c_id)
+        diffs: dict[str, Any] = {}
+        if r_op.tool_role != c_op.tool_role:
+            diffs["tool_role"] = {"reference": r_op.tool_role, "candidate": c_op.tool_role}
+        if r_op.target_role != c_op.target_role:
+            diffs["target_role"] = {"reference": r_op.target_role, "candidate": c_op.target_role}
+        if r_op.required_target_count != c_op.required_target_count:
+            diffs["required_target_count"] = {"reference": r_op.required_target_count, "candidate": c_op.required_target_count}
+        if r_op.usage_policy != c_op.usage_policy:
+            diffs["usage_policy"] = {"reference": r_op.usage_policy, "candidate": c_op.usage_policy}
+        if set(r_op.required_relations) != set(c_op.required_relations):
+            diffs["required_relations"] = {"reference": sorted(r_op.required_relations), "candidate": sorted(c_op.required_relations)}
+        if r_op.context_role != c_op.context_role:
+            diffs["context_role"] = {"reference": r_op.context_role, "candidate": c_op.context_role}
+        if set(r_op.context_relations) != set(c_op.context_relations):
+            diffs["context_relations"] = {"reference": sorted(r_op.context_relations), "candidate": sorted(c_op.context_relations)}
+        if r_op.same_tool_must_cover_all_targets != c_op.same_tool_must_cover_all_targets:
+            diffs["same_tool_must_cover_all_targets"] = {"reference": r_op.same_tool_must_cover_all_targets, "candidate": c_op.same_tool_must_cover_all_targets}
+        if r_op.distinct_within_group != c_op.distinct_within_group:
+            diffs["distinct_within_group"] = {"reference": r_op.distinct_within_group, "candidate": c_op.distinct_within_group}
+        # Note: selection_preference is intentionally excluded from structural mismatch because it does not affect current grounding feasibility.
+        if diffs:
+            op_mismatches[r_id] = diffs
+
+    extra_ops = set(c.id for c in cand_ops if c.id not in matched_cand_ids)
+
+    cross_group_reuse_mismatch = (
+        candidate_graph.cross_group_reuse_allowed != reference_graph.cross_group_reuse_allowed
+    )
 
     role_recall = len(matched_roles) / len(ref_roles) if ref_roles else 1.0
-    rel_recall = len(matched_rels) / len(ref_rel_triples) if ref_rel_triples else 1.0
-    op_recall = len(matched_ops) / len(ref_ops_by_id) if ref_ops_by_id else 1.0
+    role_precision = len(matched_roles) / len(cand_roles) if cand_roles else (1.0 if not ref_roles else 0.0)
 
-    structurally_complete = (
+    rel_recall = len(matched_rels) / len(ref_rel_quads) if ref_rel_quads else 1.0
+    rel_precision = len(matched_rels) / len(cand_rel_quads) if cand_rel_quads else (1.0 if not ref_rel_quads else 0.0)
+
+    op_recall = len(matched_ref_ids) / len(ref_ops) if ref_ops else 1.0
+    op_precision = len(matched_cand_ids) / len(cand_ops) if cand_ops else (1.0 if not ref_ops else 0.0)
+
+    reference_complete = (
         len(missing_roles) == 0
         and len(role_attribute_mismatches) == 0
         and len(missing_rels) == 0
         and len(missing_ops) == 0
         and len(op_mismatches) == 0
+        and not cross_group_reuse_mismatch
+    )
+
+    exact_structural_match = (
+        reference_complete
+        and len(extra_roles) == 0
+        and len(extra_rels) == 0
+        and len(extra_ops) == 0
     )
 
     return GFReferenceEvaluationResult(
@@ -197,17 +279,25 @@ def evaluate_gf_against_reference(
         missing_roles=tuple(sorted(missing_roles)),
         extra_roles=tuple(sorted(extra_roles)),
         role_attribute_mismatches=role_attribute_mismatches,
-        reference_relations=tuple(sorted(ref_rel_triples)),
-        candidate_relations=tuple(sorted(cand_rel_triples)),
-        missing_relations=tuple(sorted(missing_rels)),
-        extra_relations=tuple(sorted(extra_rels)),
+        category_diagnostics=category_diagnostics,
+        reference_relations=tuple(sorted(ref_rel_quads, key=lambda x: (x[0], x[1], x[2], x[3]))),
+        candidate_relations=tuple(sorted(cand_rel_quads, key=lambda x: (x[0], x[1], x[2], x[3]))),
+        missing_relations=tuple(sorted(missing_rels, key=lambda x: (x[0], x[1], x[2], x[3]))),
+        extra_relations=tuple(sorted(extra_rels, key=lambda x: (x[0], x[1], x[2], x[3]))),
         reference_operation_groups=tuple(g.to_dict() for g in reference_graph.operation_groups),
         candidate_operation_groups=tuple(g.to_dict() for g in candidate_graph.operation_groups),
+        matched_operation_groups=tuple(sorted(matched_pairs)),
         missing_operation_groups=tuple(sorted(missing_ops)),
         extra_operation_groups=tuple(sorted(extra_ops)),
         operation_group_mismatches=op_mismatches,
-        structurally_complete=structurally_complete,
+        cross_group_reuse_mismatch=cross_group_reuse_mismatch,
+        reference_complete=reference_complete,
+        exact_structural_match=exact_structural_match,
+        structurally_complete=reference_complete,
         role_recall=role_recall,
+        role_precision=role_precision,
         relation_recall=rel_recall,
+        relation_precision=rel_precision,
         operation_group_recall=op_recall,
+        operation_group_precision=op_precision,
     )

@@ -21,10 +21,7 @@ from pathlib import Path
 from typing import Any
 import pytest
 
-try:
-    import jsonschema
-except ImportError:
-    jsonschema = None
+import jsonschema
 
 from mujoco_scenes.environment_vlm_requirements import (
     EnvironmentVLMRequirementProvider,
@@ -475,7 +472,7 @@ def test_l_incomplete_candidate_passes_runtime_fails_offline_eval():
     assert not eval_result.structurally_complete
     assert "repair_target" in eval_result.missing_roles
     assert eval_result.role_recall < 1.0
-    assert ("driver", "REACHES_TARGET", "repair_target") in eval_result.missing_relations
+    assert ("driver", "REACHES_TARGET", "repair_target", True) in eval_result.missing_relations
 
 
 def test_m_incomplete_kitchen_passes_runtime_fails_offline_eval():
@@ -603,6 +600,7 @@ def test_q_living_room_synthetic_raw_to_canonical_provenance():
 # ===========================================================================
 def test_r_graph_compilers_do_not_mutate_gf():
     from mujoco_scenes.functional_tamp_pipeline.domains.kitchen import compile_kitchen_contract_from_graph
+    from mujoco_scenes.functional_tamp_pipeline.domains.living_room import compile_living_room_task_from_graph
     from mujoco_scenes.functional_tamp_pipeline.domains.workshop import compile_workshop_requirements_from_graph
 
     # Kitchen compiler invariance
@@ -621,6 +619,17 @@ def test_r_graph_compilers_do_not_mutate_gf():
     assert workshop_gf.nodes == workshop_before.nodes
     assert workshop_gf.relations == workshop_before.relations
     assert workshop_gf.metadata == workshop_before.metadata
+
+    # Living room compiler invariance
+    living_gf = GTSpecProvider().provide("living_room", "serve tea for two")
+    living_before = deepcopy(living_gf)
+    _ = compile_living_room_task_from_graph(living_gf)
+    assert living_gf.nodes == living_before.nodes
+    assert living_gf.relations == living_before.relations
+    assert living_gf.operation_groups == living_before.operation_groups
+    assert living_gf.candidate_regions == living_before.candidate_regions
+    assert living_gf.region_ranking == living_before.region_ranking
+    assert living_gf.metadata == living_before.metadata
 
 
 # ===========================================================================
@@ -708,3 +717,233 @@ def test_v_zero_prompt_and_schema_leakage():
     ]
     for leak in leaks:
         assert leak not in prompt_lower, f"Leaked phrase {leak!r} found in SYSTEM_PROMPT"
+
+
+# ===========================================================================
+# 8. Workshop Interaction Groups & Evaluator Hardening Tests
+# ===========================================================================
+def test_w_workshop_interaction_group_canonicalization():
+    raw_doc = _valid_generic_vlm_doc()
+    adapter = MockFMAdapter(raw_doc)
+    provider = FMRequirementProvider(fm_adapter=adapter)
+    spec_provider = VLMSpecProvider()
+    gf = spec_provider._workshop("fasten joint", [], provider=provider)
+
+    assert len(gf.operation_groups) == 1
+    op = gf.operation_groups[0]
+    assert op.id == "fastening_op"
+    assert op.tool_role == "driver"
+    assert op.target_role == "fastener"
+    assert op.required_target_count == 1
+    assert op.usage_policy == "SEQUENTIAL_REUSE_ALLOWED"
+    assert op.required_relations == ("COMPATIBLE_WITH",)
+
+    trace = gf.metadata["canonicalization_trace"]
+    op_traces = [t for t in trace if t.get("transformation") == "CANONICAL_OPERATION_GROUP_MAPPING"]
+    assert len(op_traces) == 1
+    assert "driver_tool -> driver" in op_traces[0]["tool_role"]
+    assert "fastener_part -> fastener" in op_traces[0]["target_role"]
+
+
+def test_x_workshop_interaction_group_unmapped_relation_fail_closed():
+    raw_doc = _valid_generic_vlm_doc()
+    raw_doc["interaction_groups"][0]["required_relations"] = ["telepathic quantum entanglement"]
+    adapter = MockFMAdapter(raw_doc)
+    provider = FMRequirementProvider(fm_adapter=adapter)
+    spec_provider = VLMSpecProvider()
+    with pytest.raises(VLMSpecificationError, match="cannot be mapped"):
+        spec_provider._workshop("fasten joint", [], provider=provider)
+
+
+def test_y_evaluator_expected_polarity_mismatch():
+    ref = GTSpecProvider().provide("workshop", "fasten joint")
+    # Candidate with flipped polarity on driver COMPATIBLE_WITH fastener
+    nodes = dict(ref.nodes)
+    rels = tuple(
+        FunctionalRelation(subject_role=r.subject_role, predicate=r.predicate, object_role=r.object_role, expected=False)
+        if r.predicate == "COMPATIBLE_WITH" else r
+        for r in ref.relations
+    )
+    candidate = FunctionalRequirementGraph(
+        domain="workshop",
+        task_instruction=ref.task_instruction,
+        nodes=nodes,
+        relations=rels,
+        operation_groups=ref.operation_groups,
+    )
+    res = evaluate_gf_against_reference(candidate, ref)
+    assert not res.reference_complete
+    assert not res.exact_structural_match
+    assert ("driver", "COMPATIBLE_WITH", "fastener", True) in res.missing_relations
+    assert ("driver", "COMPATIBLE_WITH", "fastener", False) in res.extra_relations
+
+
+def test_z_evaluator_operation_group_semantic_matching_and_extras():
+    ref = GTSpecProvider().provide("kitchen", "prepare coffee and soup")
+    # Candidate operation groups: rename group ID, add an extra group
+    cand_ops = [
+        OperationGroup(
+            id="renamed_stir_op",
+            function="stir coffee",
+            tool_role="coffee_stirrer",
+            target_role="coffee_container",
+            required_target_count=2,
+            usage_policy="SEQUENTIAL_REUSE_ALLOWED",
+            required_relations=("INSERTABLE_IN", "REACHES_BOTTOM"),
+            distinct_within_group=False,
+            same_tool_must_cover_all_targets=False,
+        ),
+        OperationGroup(
+            id="eat_op",
+            function="eat soup",
+            tool_role="soup_eating_utensil",
+            target_role="soup_container",
+            required_target_count=2,
+            usage_policy="DEDICATED_PER_TARGET",
+            required_relations=("INSERTABLE_IN", "REACHES_BOTTOM"),
+            distinct_within_group=True,
+            same_tool_must_cover_all_targets=False,
+        ),
+        OperationGroup(
+            id="extra_op",
+            function="extra action",
+            tool_role="coffee_material_container",
+            target_role="water_source",
+            required_target_count=1,
+            usage_policy="SEQUENTIAL_REUSE_ALLOWED",
+            required_relations=("ENTER_OPENING",),
+            distinct_within_group=True,
+            same_tool_must_cover_all_targets=False,
+        ),
+    ]
+    candidate = FunctionalRequirementGraph(
+        domain="kitchen",
+        task_instruction=ref.task_instruction,
+        nodes=dict(ref.nodes),
+        relations=ref.relations,
+        operation_groups=tuple(cand_ops),
+        cross_group_reuse_allowed=ref.cross_group_reuse_allowed,
+    )
+    res = evaluate_gf_against_reference(candidate, ref)
+    assert res.reference_complete is True
+    assert res.exact_structural_match is False
+    assert "extra_op" in res.extra_operation_groups
+    assert res.operation_group_recall == 1.0
+    assert res.operation_group_precision == 2.0 / 3.0
+
+
+def test_aa_evaluator_operation_group_ambiguous_matching():
+    ref = GTSpecProvider().provide("kitchen", "prepare coffee and soup")
+    # Two candidate groups for the same (coffee_stirrer, coffee_container) roles with different IDs
+    cand_ops = (
+        OperationGroup(
+            id="group_variant_a",
+            function="stir coffee a",
+            tool_role="coffee_stirrer",
+            target_role="coffee_container",
+            required_target_count=2,
+            usage_policy="SEQUENTIAL_REUSE_ALLOWED",
+            required_relations=("INSERTABLE_IN", "REACHES_BOTTOM"),
+            distinct_within_group=False,
+        ),
+        OperationGroup(
+            id="group_variant_b",
+            function="stir coffee b",
+            tool_role="coffee_stirrer",
+            target_role="coffee_container",
+            required_target_count=2,
+            usage_policy="DEDICATED_PER_TARGET",
+            required_relations=("INSERTABLE_IN", "REACHES_BOTTOM"),
+            distinct_within_group=False,
+        ),
+    )
+    candidate = FunctionalRequirementGraph(
+        domain="kitchen",
+        task_instruction=ref.task_instruction,
+        nodes=dict(ref.nodes),
+        relations=ref.relations,
+        operation_groups=cand_ops,
+        cross_group_reuse_allowed=ref.cross_group_reuse_allowed,
+    )
+    res = evaluate_gf_against_reference(candidate, ref)
+    assert not res.reference_complete
+    assert "coffee_stirring" in res.missing_operation_groups
+    assert "coffee_stirring" in res.operation_group_mismatches
+    assert "ambiguous_candidate_matches" in res.operation_group_mismatches["coffee_stirring"]
+
+
+def test_ab_evaluator_cross_group_reuse_mismatch():
+    ref = GTSpecProvider().provide("kitchen", "prepare coffee and soup")
+    candidate = FunctionalRequirementGraph(
+        domain="kitchen",
+        task_instruction=ref.task_instruction,
+        nodes=dict(ref.nodes),
+        relations=ref.relations,
+        operation_groups=ref.operation_groups,
+        cross_group_reuse_allowed=not ref.cross_group_reuse_allowed,
+    )
+    res = evaluate_gf_against_reference(candidate, ref)
+    assert res.cross_group_reuse_mismatch is True
+    assert res.reference_complete is False
+    assert res.exact_structural_match is False
+
+
+def test_ac_evaluator_category_diagnostics_without_failing_completeness():
+    ref = GTSpecProvider().provide("workshop", "fasten joint")
+    # Candidate with different synonym categories
+    cand_nodes = {
+        "driver": FunctionalRole(name="driver", entity_kind="OBJECT", count=1, semantic_categories=("cordless electric driver", "screwdriver"), unary_predicates=("CAN_DRIVE_SCREW",), binding_policy="DISTINCT"),
+        "fastener": FunctionalRole(name="fastener", entity_kind="OBJECT", count=1, semantic_categories=("machine screw", "threaded fastener"), unary_predicates=("CAN_FASTEN",), binding_policy="DISTINCT"),
+        "repair_target": FunctionalRole(name="repair_target", entity_kind="FIXED_TARGET", count=1, semantic_categories=("threaded hole", "recess"), unary_predicates=(), binding_policy="DISTINCT"),
+    }
+    candidate = FunctionalRequirementGraph(
+        domain="workshop",
+        task_instruction=ref.task_instruction,
+        nodes=cand_nodes,
+        relations=ref.relations,
+        operation_groups=ref.operation_groups,
+        cross_group_reuse_allowed=ref.cross_group_reuse_allowed,
+    )
+    res = evaluate_gf_against_reference(candidate, ref)
+    assert res.reference_complete is True
+    assert res.exact_structural_match is True
+    assert "driver" in res.category_diagnostics
+    assert res.category_diagnostics["driver"]["overlap_count"] >= 1
+    assert "screwdriver" in res.category_diagnostics["driver"]["normalized_overlap"]
+
+
+def test_ad_complete_effective_prompt_static_leakage(tmp_path):
+    class RecordingTransport:
+        def __init__(self):
+            self.payloads = []
+
+        def complete(self, payload: dict[str, Any]) -> dict[str, Any]:
+            self.payloads.append(deepcopy(payload))
+            return {
+                "choices": [
+                    {
+                        "message": {
+                            "content": json.dumps(_valid_kitchen_vlm_doc()),
+                        }
+                    }
+                ]
+            }
+
+    img = tmp_path / "img.png"
+    img.write_bytes(b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82")
+
+    transport = RecordingTransport()
+    adapter = FMAdapter(model="test_model", transport=transport)
+
+    adapter.generate_kitchen_functional_graph("Make coffee and soup", observation_images=[img])
+    assert len(transport.payloads) == 1
+
+    prompt_str = json.dumps(transport.payloads[0]).lower()
+    forbidden = [
+        "has_handle", "has_threaded_body", "fit_into_hole",
+        "d1", "d2", "c1", "c2", "b1", "left_drawer", "right_drawer", "tool_cabinet",
+        "open_cavity", "elongated_object", "reaches_bottom", "fits_set_on",
+    ]
+    for leak in forbidden:
+        assert f'"{leak}"' not in prompt_str, f"Forbidden benchmark token {leak!r} leaked in payload"
+

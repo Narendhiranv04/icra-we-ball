@@ -137,12 +137,13 @@ Rules:
   Never place binary relations or compatibility statements here.
 - `functional_relations`: list explicit role-to-role relations using `subject_role`, `relation`, and `object_role`.
   Both subject_role and object_role must reference declared role IDs.
+- `interaction_groups`: list structured interaction groups with tool_role, target_role, required_target_count, usage_policy, required_relations, and optional context_role/context_relations.
 - `inspectable_regions`: propose visible closed/storage regions in the initial images that could be inspected if required items are missing.
 - `inspection_order`: rank the proposed inspectable region IDs.
 - Status semantics:
   - `SUPPORTED`: task can be represented with functional roles and relations. `functional_roles` must be non-empty, `unsupported_reason` must be empty ("").
-  - `UNSUPPORTED`: task cannot be represented with this abstraction. `functional_roles`, `functional_relations`, `inspectable_regions`, `inspection_order` must be empty ([]), and `unsupported_reason` must be a non-empty explanation.
-  - Low visual confidence, synthetic images, partial observability, unmeasured continuous geometry, or search failure are NOT reasons for UNSUPPORTED.
+  - `UNSUPPORTED`: use only when the task itself cannot be represented by this abstraction. `functional_roles`, `functional_relations`, `interaction_groups`, `inspectable_regions`, `inspection_order` must be empty ([]), and `unsupported_reason` must be a non-empty explanation.
+  - Partial observability, missing visible candidates, unmeasured continuous geometry, or needing inspection/search are NOT reasons for UNSUPPORTED.
 """
 
 
@@ -730,6 +731,14 @@ def validate_requirement_response(document: Mapping[str, Any]) -> dict[str, Any]
         for c_idx, candidate in enumerate(candidates):
             if not isinstance(candidate, dict):
                 raise FMResponseValidationError(f"functional_roles[{index}].visible_candidates[{c_idx}] must be a dict")
+            cand_allowed = {"label", "visual_description", "suitability_reason"}
+            cand_required = {"label", "visual_description"}
+            if not cand_required.issubset(set(candidate)):
+                missing = sorted(cand_required - set(candidate))
+                raise FMResponseValidationError(f"functional_roles[{index}].visible_candidates[{c_idx}] missing required fields: {missing}")
+            if not set(candidate).issubset(cand_allowed):
+                unexpected = sorted(set(candidate) - cand_allowed)
+                raise FMResponseValidationError(f"functional_roles[{index}].visible_candidates[{c_idx}] has invalid fields: {unexpected}")
             label = candidate.get("label", "")
             v_desc = candidate.get("visual_description", "")
             s_reason = candidate.get("suitability_reason", "")
@@ -737,6 +746,8 @@ def validate_requirement_response(document: Mapping[str, Any]) -> dict[str, Any]
                 raise FMResponseValidationError(f"functional_roles[{index}].visible_candidates[{c_idx}].label is invalid")
             if not _short_string(v_desc, 400):
                 raise FMResponseValidationError(f"functional_roles[{index}].visible_candidates[{c_idx}].visual_description is invalid")
+            if s_reason and not isinstance(s_reason, str):
+                raise FMResponseValidationError(f"functional_roles[{index}].visible_candidates[{c_idx}].suitability_reason must be a string")
             key = (str(label).strip().casefold(), str(v_desc).strip().casefold())
             if key in seen_cand:
                 raise FMResponseValidationError(f"functional_roles[{index}].visible_candidates contains duplicates")
@@ -777,14 +788,16 @@ def validate_requirement_response(document: Mapping[str, Any]) -> dict[str, Any]
         raise FMResponseValidationError("inspectable_regions must be a list of at most 12 items")
     cleaned_regions = []
     for r_idx, reg in enumerate(raw_regions):
-        if not isinstance(reg, dict) or not {"id", "label", "visual_description"}.issubset(set(reg)):
-            raise FMResponseValidationError(f"inspectable_regions[{r_idx}] must contain id, label, visual_description")
+        if not isinstance(reg, dict) or set(reg) != {"id", "label", "visual_description", "reason"}:
+            raise FMResponseValidationError(f"inspectable_regions[{r_idx}] must contain exact fields id, label, visual_description, reason")
         reg_id = reg.get("id")
         if not _short_string(reg_id, 80) or not str(reg_id).strip():
             raise FMResponseValidationError(f"inspectable_regions[{r_idx}].id must be a non-empty string")
         if reg_id in declared_region_ids:
             raise FMResponseValidationError(f"Duplicate inspectable_region id {reg_id!r}")
         declared_region_ids.add(reg_id)
+        if not isinstance(reg.get("label"), str) or not isinstance(reg.get("visual_description"), str) or not isinstance(reg.get("reason"), str):
+            raise FMResponseValidationError(f"inspectable_regions[{r_idx}] fields must be strings")
         cleaned_regions.append({
             "id": str(reg_id).strip(),
             "label": str(reg.get("label", "")).strip(),
@@ -814,7 +827,7 @@ def validate_requirement_response(document: Mapping[str, Any]) -> dict[str, Any]
         raise FMResponseValidationError("functional_relations must be a list of at most 24 items")
     cleaned_relations = []
     for rel_idx, rel in enumerate(raw_relations):
-        if not isinstance(rel, dict) or not {"subject_role", "relation", "object_role"}.issubset(set(rel)):
+        if not isinstance(rel, dict) or set(rel) != {"subject_role", "relation", "object_role"}:
             raise FMResponseValidationError(f"functional_relations[{rel_idx}] has invalid fields")
         s = rel.get("subject_role")
         r = rel.get("relation")
@@ -1021,8 +1034,8 @@ def validate_kitchen_functional_specification(document: dict[str, Any]) -> dict[
                 f"functional_roles[{index}].binding_policy must be DISTINCT, REUSABLE, or SHARED"
             )
         cand_cats = role.get("candidate_categories")
-        if not isinstance(cand_cats, list) or not cand_cats:
-            raise FMResponseValidationError(f"functional_roles[{index}].candidate_categories must be a non-empty list")
+        if not isinstance(cand_cats, list) or len(cand_cats) < 1 or len(cand_cats) > 12:
+            raise FMResponseValidationError(f"functional_roles[{index}].candidate_categories must contain 1 to 12 items")
         for c in cand_cats:
             if not isinstance(c, str) or not c.strip():
                 raise FMResponseValidationError(f"functional_roles[{index}].candidate_categories items must be non-empty strings")
@@ -1030,8 +1043,8 @@ def validate_kitchen_functional_specification(document: dict[str, Any]) -> dict[
         if not isinstance(cand_objs, list) or len(cand_objs) > 16:
             raise FMResponseValidationError(f"functional_roles[{index}].visible_candidates must be a list of at most 16 items")
         for c_idx, candidate in enumerate(cand_objs):
-            if not isinstance(candidate, dict):
-                raise FMResponseValidationError(f"functional_roles[{index}].visible_candidates[{c_idx}] must be a dict")
+            if not isinstance(candidate, dict) or set(candidate) != {"label", "visual_description"}:
+                raise FMResponseValidationError(f"functional_roles[{index}].visible_candidates[{c_idx}] has invalid fields")
             label = candidate.get("label", "")
             v_desc = candidate.get("visual_description", "")
             if not _short_string(label, 400) or not str(label).strip():
@@ -1039,16 +1052,16 @@ def validate_kitchen_functional_specification(document: dict[str, Any]) -> dict[
             if not _short_string(v_desc, 400):
                 raise FMResponseValidationError(f"functional_roles[{index}].visible_candidates[{c_idx}].visual_description is invalid")
         req_props = role.get("required_properties")
-        if not isinstance(req_props, list):
-            raise FMResponseValidationError(f"functional_roles[{index}].required_properties must be a list")
+        if not isinstance(req_props, list) or len(req_props) > 12:
+            raise FMResponseValidationError(f"functional_roles[{index}].required_properties must be a list of at most 12 items")
         for p in req_props:
             if not isinstance(p, str) or not p.strip():
                 raise FMResponseValidationError(f"functional_roles[{index}].required_properties items must be non-empty strings")
 
     declared_region_ids: set[str] = set()
     raw_regions = document.get("inspectable_regions", [])
-    if not isinstance(raw_regions, list):
-        raise FMResponseValidationError("inspectable_regions must be a list")
+    if not isinstance(raw_regions, list) or len(raw_regions) > 12:
+        raise FMResponseValidationError("inspectable_regions must be a list of at most 12 items")
     for r_idx, reg in enumerate(raw_regions):
         if not isinstance(reg, dict) or set(reg) != {"id", "label", "visual_description", "reason"}:
             raise FMResponseValidationError(f"inspectable_regions[{r_idx}] must have exact fields id, label, visual_description, reason")
@@ -1063,6 +1076,7 @@ def validate_kitchen_functional_specification(document: dict[str, Any]) -> dict[
     if not isinstance(raw_order, list):
         raise FMResponseValidationError("inspection_order must be a list")
     seen_order: set[str] = set()
+    cleaned_order: list[str] = []
     for o_idx, item in enumerate(raw_order):
         if not isinstance(item, str):
             raise FMResponseValidationError(f"inspection_order[{o_idx}] must be a string ID")
@@ -1071,12 +1085,13 @@ def validate_kitchen_functional_specification(document: dict[str, Any]) -> dict[
         if item in seen_order:
             raise FMResponseValidationError(f"Duplicate region ID {item!r} in inspection_order")
         seen_order.add(item)
+        cleaned_order.append(item.strip())
     if raw_order and declared_region_ids and set(raw_order) != declared_region_ids:
         raise FMResponseValidationError("inspection_order must be a complete permutation of declared inspectable_regions")
 
     raw_relations = document.get("functional_relations", [])
-    if not isinstance(raw_relations, list):
-        raise FMResponseValidationError("functional_relations must be a list")
+    if not isinstance(raw_relations, list) or len(raw_relations) > 24:
+        raise FMResponseValidationError("functional_relations must be a list of at most 24 items")
     for rel_idx, rel in enumerate(raw_relations):
         if not isinstance(rel, dict) or set(rel) != {"subject_role", "relation", "object_role"}:
             raise FMResponseValidationError(f"functional_relations[{rel_idx}] has invalid fields")
@@ -1086,8 +1101,8 @@ def validate_kitchen_functional_specification(document: dict[str, Any]) -> dict[
             raise FMResponseValidationError(f"functional_relations[{rel_idx}] references undeclared role ({s!r}, {o!r})")
 
     raw_groups = document.get("interaction_groups", [])
-    if not isinstance(raw_groups, list):
-        raise FMResponseValidationError("interaction_groups must be a list")
+    if not isinstance(raw_groups, list) or len(raw_groups) > 8:
+        raise FMResponseValidationError("interaction_groups must be a list of at most 8 items")
     group_ids: set[str] = set()
     for g_idx, grp in enumerate(raw_groups):
         grp_fields = {
@@ -1106,11 +1121,15 @@ def validate_kitchen_functional_specification(document: dict[str, Any]) -> dict[
             raise FMResponseValidationError(f"interaction_groups[{g_idx}] references undeclared role ({t_role!r}, {tgt_role!r})")
         if grp.get("usage_policy") not in {"SEQUENTIAL_REUSE_ALLOWED", "DEDICATED_PER_TARGET"}:
             raise FMResponseValidationError(f"interaction_groups[{g_idx}].usage_policy must be SEQUENTIAL_REUSE_ALLOWED or DEDICATED_PER_TARGET")
-        if not isinstance(grp.get("required_relations"), list) or not grp.get("required_relations"):
-            raise FMResponseValidationError(f"interaction_groups[{g_idx}].required_relations must be a non-empty list")
+        raw_req_rels = grp.get("required_relations")
+        if not isinstance(raw_req_rels, list) or len(raw_req_rels) < 1 or len(raw_req_rels) > 12:
+            raise FMResponseValidationError(f"interaction_groups[{g_idx}].required_relations must contain 1 to 12 items")
+        for r_i, r in enumerate(raw_req_rels):
+            if not isinstance(r, str) or not r.strip():
+                raise FMResponseValidationError(f"interaction_groups[{g_idx}].required_relations[{r_i}] must be a non-empty string")
         req_tgt_c = grp.get("required_target_count")
-        if isinstance(req_tgt_c, bool) or not isinstance(req_tgt_c, int) or req_tgt_c < 1:
-            raise FMResponseValidationError(f"interaction_groups[{g_idx}].required_target_count must be an integer >= 1")
+        if isinstance(req_tgt_c, bool) or not isinstance(req_tgt_c, int) or req_tgt_c < 1 or req_tgt_c > 20:
+            raise FMResponseValidationError(f"interaction_groups[{g_idx}].required_target_count must be an integer from 1 to 20")
         if role_counts.get(tgt_role) != req_tgt_c:
             raise FMResponseValidationError(
                 f"interaction_groups[{g_idx}] target role {tgt_role} has required_count {role_counts.get(tgt_role)}, but group requires {req_tgt_c}"
@@ -1169,7 +1188,17 @@ class FMAdapter:
             "reuse policies, candidate categories, and visually proposed inspectable "
             "closed storage regions from the task instruction and initial multi-view RGB images. "
             "Never assume hidden contents, ground-truth identities, poses, measurements, "
-            "assignments, feasibility labels, or plans."
+            "assignments, feasibility labels, or plans.\n\n"
+            "Status semantics:\n"
+            "- SUPPORTED:\n"
+            "  * The task can be represented using the schema.\n"
+            "  * functional_roles must be non-empty.\n"
+            "  * unsupported_reason MUST be empty (\"\").\n"
+            "- UNSUPPORTED:\n"
+            "  * Use only when the task itself cannot be represented by this abstraction.\n"
+            "  * functional_roles = [], functional_relations = [], interaction_groups = [], inspectable_regions = [], inspection_order = [].\n"
+            "  * unsupported_reason must be a non-empty explanation.\n"
+            "- Partial observability, missing visible candidates, unmeasured geometry, or needing inspection/search are NOT reasons for UNSUPPORTED."
         )
         prompt = {
             "task_instruction": task_instruction.strip(),
