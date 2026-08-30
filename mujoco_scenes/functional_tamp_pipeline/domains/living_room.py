@@ -295,31 +295,25 @@ def run_to_plan(
 
     vocabulary_path: Path
     if "object_vocabulary" in specification.metadata:
-        vocabulary_path = output_dir / "living_room_vocabulary.yaml"
+        vocabulary_path = output_dir / "kitchen_vocabulary.yaml"
         vocabulary_path.parent.mkdir(parents=True, exist_ok=True)
         vocabulary_path.write_text(
             yaml.safe_dump(specification.metadata["object_vocabulary"], sort_keys=False),
             encoding="utf-8",
         )
+    elif "semantic_vocabulary_path" in specification.metadata:
+        vocabulary_path = Path(specification.metadata["semantic_vocabulary_path"])
     elif specification.detector_vocabulary:
         vocabulary_path = output_dir / "living_room_vocabulary.yaml"
         vocabulary_path.parent.mkdir(parents=True, exist_ok=True)
         canonical_labels: dict[str, list[str]] = {}
         for term in specification.detector_vocabulary:
             canonical_labels[term] = [term]
-        if "semantic_vocabulary_path" in specification.metadata:
-            base_vocab = yaml.safe_load(Path(specification.metadata["semantic_vocabulary_path"]).read_text(encoding="utf-8"))
-            base_canon = base_vocab.get("canonical_labels", {})
-            for cat in specification.detector_vocabulary:
-                if cat in base_canon:
-                    canonical_labels[cat] = base_canon[cat]
         vocab_dict = {
             "schema_version": 1,
             "canonical_labels": canonical_labels,
         }
         vocabulary_path.write_text(yaml.safe_dump(vocab_dict, sort_keys=False), encoding="utf-8")
-    else:
-        vocabulary_path = Path(specification.metadata["semantic_vocabulary_path"])
 
     detector, semantic_config = create_region_semantic_detector(
         checkpoint=str(LOCAL_MODEL), confidence_threshold=0.03,

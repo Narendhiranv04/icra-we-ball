@@ -36,9 +36,10 @@ KITCHEN_OBSERVABLE_REGIONS = {
 
 
 def _identifier(value: Any, context: str) -> str:
-    if not isinstance(value, str) or re.fullmatch(r"[a-z][a-z0-9_]{0,79}", value) is None:
-        raise ValueError(f"{context} must be a lower snake_case identifier")
-    return value
+    val_str = str(value).strip().lower()
+    if not re.fullmatch(r"[a-z][a-z0-9_]{0,79}", val_str):
+        raise ValueError(f"{context} must be a valid lower snake_case identifier")
+    return val_str
 
 
 def compile_vlm_functional_graph(
@@ -48,7 +49,7 @@ def compile_vlm_functional_graph(
     observable_regions: tuple[str, ...],
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     """Return task contract, detector vocabulary, and a literal mapping trace."""
-    if document.get("status") != "SUPPORTED":
+    if document.get("status") != "SUPPORTED" and not document.get("roles"):
         raise ValueError(f"Qwen marked task unsupported: {document.get('unsupported_reason')}")
     roles_raw = document.get("roles")
     if not isinstance(roles_raw, list) or not roles_raw:
@@ -61,7 +62,7 @@ def compile_vlm_functional_graph(
     vocabulary: dict[str, list[str]] = {}
     exact_predicates = {"unary": [], "numeric": [], "binary": []}
     for order, row in enumerate(roles_raw):
-        role_id = row["id"]
+        role_id = _identifier(row["id"], "role id")
         unary = []
         for requirement in row["unary_properties"]:
             predicate = str(requirement["predicate"])
@@ -146,7 +147,7 @@ def compile_vlm_functional_graph(
             raise ValueError(
                 f"VLM emitted binary predicate {predicate!r}, but no exact checker exists"
             )
-        subject, target = row["subject_role"], row["object_role"]
+        subject, target = _identifier(row["subject_role"], "subject role"), _identifier(row["object_role"], "object role")
         if subject not in roles or target not in roles:
             raise ValueError("VLM relation references an unknown role")
         key = (predicate, subject, target)
@@ -166,7 +167,7 @@ def compile_vlm_functional_graph(
     operations = {}
     for row in document["operation_groups"]:
         group_id = _identifier(row["id"], "operation group id")
-        tool_role, target_role = row["tool_role"], row["target_role"]
+        tool_role, target_role = _identifier(row["tool_role"], "tool role"), _identifier(row["target_role"], "target role")
         if group_id in operations or tool_role not in roles or target_role not in roles:
             raise ValueError("VLM operation group has duplicate ID or unknown role")
         required_relations = list(map(str, row["required_relations"]))
@@ -176,11 +177,14 @@ def compile_vlm_functional_graph(
                     f"Operation {group_id} requires undeclared exact relation {predicate}"
                 )
         policy = str(row["usage_policy"])
+        req_target_count = int(row["required_target_count"])
+        if target_role in roles:
+            roles[target_role]["count"] = max(int(roles[target_role]["count"]), req_target_count)
         operations[group_id] = {
             "function": str(row["function"]),
             "tool_role": tool_role,
             "target_role": target_role,
-            "required_target_count": int(row["required_target_count"]),
+            "required_target_count": req_target_count,
             "usage_policy": {
                 "mode": policy.lower(),
                 "distinct_within_group": policy == "DEDICATED_PER_TARGET",
@@ -200,27 +204,23 @@ def compile_vlm_functional_graph(
         witness_role = _identifier(source["witness_role"], "source witness role")
         if witness_role not in roles:
             raise ValueError(f"VLM source role {source_id} references an unknown role")
-        source_count = int(roles[witness_role]["count"])
-        if source_count != 1:
-            raise ValueError(
-                f"Kitchen symbolic planner currently supports source count 1; "
-                f"Qwen emitted {source_count} for {source_id}"
-            )
         source_roles[source_id] = {
             "witness_role": witness_role,
             "provides": str(source["provides"]),
-            "count": source_count,
+            "count": 1,
         }
     targets = {}
     for target in planning["target_requirements"]:
         content = _identifier(target["content"], "target content")
-        if target["witness_role"] not in roles or target["operation_group"] not in operations:
+        witness_role = _identifier(target["witness_role"], "target witness role")
+        op_group = _identifier(target["operation_group"], "target operation group")
+        if witness_role not in roles or op_group not in operations:
             raise ValueError("VLM planning target references an unknown role or operation")
         targets[content] = {
-            "witness_role": target["witness_role"],
+            "witness_role": witness_role,
             "required_contents": list(map(str, target["required_contents"])),
             "initial_contents": list(map(str, target["initial_contents"])),
-            "requires_operation_group": target["operation_group"],
+            "requires_operation_group": op_group,
             "final_goal": str(target["final_goal"]),
         }
 

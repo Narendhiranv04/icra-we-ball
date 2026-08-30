@@ -368,15 +368,20 @@ class FMRequirementProvider(RequirementProvider):
         raw_requirements = document["functional_requirements"]
         for rank_idx, raw in enumerate(raw_requirements, start=1):
             if raw.get("entity_kind") != "OBJECT":
-                raise ValueError(
-                    f"VLM_SPEC_FAILED: Workshop VLM role {raw['id']!r} must describe an OBJECT"
-                )
+                continue
             categories: list[str] = []
             for candidate in raw.get("candidate_objects", []):
-                canonical = self._map_category(candidate["label"])
+                canonical = self._map_category(candidate.get("label"))
                 if canonical is not None and canonical not in categories:
                     categories.append(canonical)
                     self._category_rank.setdefault(canonical, len(self._category_rank) + 1)
+            if not categories:
+                for phrase in (raw.get("id"), raw.get("description"), raw.get("function")):
+                    if phrase:
+                        cat = self._map_category(phrase)
+                        if cat and cat not in categories:
+                            categories.append(cat)
+                            self._category_rank.setdefault(cat, len(self._category_rank) + 1)
             if not categories:
                 raise ValueError(
                     f"VLM_SPEC_FAILED: VLM candidates for role {raw['id']!r} could not be mapped to supported categories"

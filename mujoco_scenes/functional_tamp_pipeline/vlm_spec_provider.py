@@ -276,10 +276,15 @@ class VLMSpecProvider(FunctionalSpecProvider):
         )
 
     @staticmethod
-    def _living_room(task_instruction: str, observation_images: list[Path]) -> FunctionalRequirementGraph:
+    def _living_room(
+        task_instruction: str,
+        observation_images: list[Path],
+        provider: EnvironmentVLMRequirementProvider | None = None,
+    ) -> FunctionalRequirementGraph:
         from mujoco_scenes.environment_vlm_requirements import EnvironmentVLMRequirementProvider
 
-        provider = EnvironmentVLMRequirementProvider("living_room")
+        if provider is None:
+            provider = EnvironmentVLMRequirementProvider("living_room")
         result = provider.generate_canonical(
             task_instruction,
             observation_images=observation_images,

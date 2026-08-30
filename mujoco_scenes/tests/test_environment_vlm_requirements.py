@@ -147,7 +147,7 @@ def living_room_decomposition() -> dict:
 
 
 class FakeTransport:
-    def __init__(self, document: dict) -> None:
+    def __init__(self, document: Any) -> None:
         self.document = document
         self.calls = 0
         self.payload = None
@@ -155,7 +155,10 @@ class FakeTransport:
     def complete(self, payload):
         self.calls += 1
         self.payload = payload
-        return {"choices": [{"message": {"content": json.dumps(self.document)}}]}
+        if isinstance(self.document, dict) and "choices" in self.document:
+            return self.document
+        content = json.dumps(self.document) if not isinstance(self.document, str) else self.document
+        return {"choices": [{"message": {"content": content}}]}
 
 
 def provider_for(environment: str, document: dict):
@@ -349,3 +352,156 @@ def test_kitchen_inspection_policy_is_qwen_ranked_without_hidden_contents(observ
     assert "hidden objects" not in serialized
     assert "intended_outcome" not in serialized
     assert "expected_gt" not in serialized
+
+
+def test_living_room_canonical_role_consolidation(observation_image):
+    decomposition = {
+        "status": "SUPPORTED",
+        "task_summary": "Prepare living room seating surfaces for drinks and remote.",
+        "functional_requirements": [
+            {
+                "id": "viewer_1_side_table",
+                "entity_kind": "REGION",
+                "function": "personal cup and saucer support",
+                "description": "hold viewer 1 drinkware",
+                "required_count": 1,
+                "candidate_objects": [
+                    candidate("small side table", "left viewer individual side table"),
+                ],
+                "required_properties": ["planar support", "within reach of one seated person"],
+            },
+            {
+                "id": "viewer_2_side_table",
+                "entity_kind": "REGION",
+                "function": "personal cup and saucer support",
+                "description": "hold viewer 2 drinkware",
+                "required_count": 1,
+                "candidate_objects": [
+                    candidate("small side table", "right viewer individual side table"),
+                ],
+                "required_properties": ["planar support", "within reach of one seated person"],
+            },
+            {
+                "id": "shared_coffee_table",
+                "entity_kind": "REGION",
+                "function": "shared remote support",
+                "description": "hold television remote for both viewers",
+                "required_count": 1,
+                "candidate_objects": [
+                    candidate("coffee table", "central low coffee table"),
+                ],
+                "required_properties": ["planar support", "accessible from both seats"],
+            },
+        ],
+        "unsupported_reason": "",
+    }
+    provider, _ = provider_for("living_room", decomposition)
+    result = provider.generate_canonical(
+        "Prepare living room for two people",
+        observation_images=[observation_image],
+    )
+    reqs = result["normalized_requirements"]
+    # Exactly 2 consolidated canonical roles: personal_cup_saucer (count 2) and shared_remote (count 1)
+    assert len(reqs) == 2
+    personal_req = next(r for r in reqs if r["role_id"] == "personal_cup_saucer")
+    assert personal_req["vlm_required_count"] == 2
+    assert personal_req["raw_vlm_role_ids"] == ["viewer_1_side_table", "viewer_2_side_table"]
+    assert personal_req["function"] == "PERSONAL_CUP_SAUCER_REGION"
+
+    shared_req = next(r for r in reqs if r["role_id"] == "shared_remote")
+    assert shared_req["vlm_required_count"] == 1
+    assert shared_req["raw_vlm_role_ids"] == ["shared_coffee_table"]
+    assert shared_req["function"] == "SHARED_REMOTE_REGION"
+
+    # Now verify FunctionalRequirementGraph construction and validation has no duplicate IDs
+    from mujoco_scenes.functional_tamp_pipeline.vlm_spec_provider import VLMSpecProvider
+    vlm_spec = VLMSpecProvider()
+    graph = vlm_spec._living_room("Prepare living room", [observation_image], provider=provider)
+    graph.validate()
+    op_ids = [op.id for op in graph.operation_groups]
+    assert len(op_ids) == len(set(op_ids))
+    assert "personal_cup_saucer_region_group" in op_ids
+    personal_op = next(op for op in graph.operation_groups if op.id == "personal_cup_saucer_region_group")
+    assert personal_op.required_target_count == 2
+
+
+def test_fm_diagnostics_saved_on_failure_and_success(tmp_path, monkeypatch):
+    import os
+    diag_dir = tmp_path / "test_diag"
+    monkeypatch.setenv("TAMP_FM_DIAGNOSTIC_DIR", str(diag_dir))
+
+    # Test 1: finish_reason="length", truncated malformed JSON
+    mock_resp_length = {
+        "model": "qwen35-9b",
+        "choices": [{"finish_reason": "length", "message": {"content": '{"status": "SUPPORTED", "roles": ['}}],
+        "usage": {"total_tokens": 4096},
+    }
+    transport_err = FakeTransport(mock_resp_length)
+    adapter_err = FMAdapter(transport=transport_err)
+    img_err = tmp_path / "img_err.png"
+    img_err.write_bytes(PNG_1X1)
+    with pytest.raises(Exception):
+        adapter_err.generate_kitchen_functional_graph("task", {}, observation_images=[img_err])
+
+    f1 = diag_dir / "fm_call_001.json"
+    assert f1.exists()
+    d1 = json.loads(f1.read_text(encoding="utf-8"))
+    assert d1["finish_reason"] == "length"
+    assert d1["json_parse_success"] is False
+    assert d1["content_length_chars"] > 0
+    assert d1["content_sha256"] is not None
+
+    # Test 2: finish_reason="stop", valid JSON
+    valid_doc = {
+        "status": "SUPPORTED",
+        "task_summary": "sum",
+        "functional_requirements": [
+            {
+                "id": "r1", "entity_kind": "OBJECT", "function": "func", "description": "desc",
+                "required_count": 1, "candidate_objects": [], "required_properties": ["prop"],
+            }
+        ],
+        "unsupported_reason": "",
+    }
+    mock_resp_ok = {
+        "model": "qwen35-9b",
+        "choices": [{"finish_reason": "stop", "message": {"content": json.dumps(valid_doc)}}],
+        "usage": {"total_tokens": 500},
+    }
+    transport_ok = FakeTransport(mock_resp_ok)
+    adapter_ok = FMAdapter(transport=transport_ok)
+    img = tmp_path / "img.png"
+    img.write_bytes(PNG_1X1)
+    res = adapter_ok.generate_task_requirements("task", observation_images=[img])
+    assert res["status"] == "SUPPORTED"
+
+    f2 = diag_dir / "fm_call_002.json"
+    assert f2.exists()
+    d2 = json.loads(f2.read_text(encoding="utf-8"))
+    assert d2["finish_reason"] == "stop"
+    assert d2["json_parse_success"] is True
+
+
+def test_fm_diagnostics_not_saved_when_unset(tmp_path, monkeypatch):
+    monkeypatch.delenv("TAMP_FM_DIAGNOSTIC_DIR", raising=False)
+    img = tmp_path / "img.png"
+    img.write_bytes(PNG_1X1)
+    valid_doc = {
+        "status": "SUPPORTED",
+        "task_summary": "sum",
+        "functional_requirements": [
+            {
+                "id": "r1", "entity_kind": "OBJECT", "function": "func", "description": "desc",
+                "required_count": 1, "candidate_objects": [], "required_properties": ["prop"],
+            }
+        ],
+        "unsupported_reason": "",
+    }
+    mock_resp = {
+        "model": "qwen35-9b",
+        "choices": [{"finish_reason": "stop", "message": {"content": json.dumps(valid_doc)}}],
+    }
+    transport = FakeTransport(mock_resp)
+    adapter = FMAdapter(transport=transport)
+    adapter.generate_task_requirements("task", observation_images=[img])
+    assert not list(tmp_path.glob("fm_call_*.json"))

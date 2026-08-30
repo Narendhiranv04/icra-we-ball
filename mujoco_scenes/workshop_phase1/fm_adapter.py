@@ -465,21 +465,78 @@ def _encode_observation_images(
     return blocks, metadata
 
 
-def _extract_json_content(response: Mapping[str, Any]) -> dict[str, Any]:
+def _save_fm_diagnostic(
+    response: Mapping[str, Any] | None,
+    content: Any,
+    call_kind: str,
+    json_parse_success: bool,
+    parse_error: str | None = None,
+) -> None:
+    diag_dir_env = os.environ.get("TAMP_FM_DIAGNOSTIC_DIR")
+    if not diag_dir_env:
+        return
+    try:
+        diag_dir = Path(diag_dir_env)
+        diag_dir.mkdir(parents=True, exist_ok=True)
+        existing = list(diag_dir.glob("fm_call_*.json"))
+        call_idx = len(existing) + 1
+        diag_path = diag_dir / f"fm_call_{call_idx:03d}.json"
+
+        content_str = str(content) if content is not None else ""
+        content_sha = hashlib.sha256(content_str.encode("utf-8")).hexdigest()
+
+        finish_reason = None
+        usage = None
+        model = None
+        if isinstance(response, dict):
+            model = response.get("model")
+            usage = response.get("usage")
+            choices = response.get("choices")
+            if isinstance(choices, list) and choices:
+                finish_reason = choices[0].get("finish_reason")
+
+        diag_data = {
+            "model": model,
+            "call_kind": call_kind,
+            "finish_reason": finish_reason,
+            "usage": usage,
+            "content_length_chars": len(content_str),
+            "content_sha256": content_sha,
+            "content": content,
+            "json_parse_success": json_parse_success,
+            "parse_error": parse_error,
+        }
+        with open(diag_path, "w", encoding="utf-8") as f:
+            json.dump(diag_data, f, indent=2)
+    except Exception:
+        pass
+
+
+def _extract_json_content(
+    response: Mapping[str, Any],
+    call_kind: str = "completion",
+) -> dict[str, Any]:
+    if isinstance(response, dict) and "choices" not in response:
+        _save_fm_diagnostic(None, response, call_kind, True, None)
+        return dict(response)
     try:
         choice = response["choices"][0]
         message = choice["message"]
         content = message["content"]
     except (KeyError, IndexError, TypeError) as error:
+        _save_fm_diagnostic(response, None, call_kind, False, parse_error=str(error))
         raise FMResponseValidationError(
             "Completion response has no choices[0].message.content"
         ) from error
     if isinstance(content, dict):
+        _save_fm_diagnostic(response, content, call_kind, True, None)
         return content
     if not isinstance(content, str) or not content.strip():
         reasoning = message.get("reasoning_content") if isinstance(message, dict) else None
         suffix = " after reasoning" if reasoning else ""
-        raise FMResponseValidationError(f"Completion has no final JSON content{suffix}")
+        msg = f"Completion has no final JSON content{suffix}"
+        _save_fm_diagnostic(response, content, call_kind, False, parse_error=msg)
+        raise FMResponseValidationError(msg)
     text = content.strip()
     fenced = re.fullmatch(
         r"```(?:json)?\s*(.*?)\s*```", text, flags=re.DOTALL | re.IGNORECASE
@@ -489,9 +546,13 @@ def _extract_json_content(response: Mapping[str, Any]) -> dict[str, Any]:
     try:
         decoded = json.loads(text)
     except json.JSONDecodeError as error:
+        _save_fm_diagnostic(response, content, call_kind, False, parse_error=str(error))
         raise FMResponseValidationError(f"Completion content is not valid JSON: {error}") from error
     if not isinstance(decoded, dict):
-        raise FMResponseValidationError("Completion JSON must be an object")
+        msg = "Completion JSON must be an object"
+        _save_fm_diagnostic(response, content, call_kind, False, parse_error=msg)
+        raise FMResponseValidationError(msg)
+    _save_fm_diagnostic(response, content, call_kind, True, None)
     return decoded
 
 
@@ -650,7 +711,7 @@ class FMAdapter:
             _env_first("TAMP_FM_TIMEOUT_SECONDS", "FM_TIMEOUT_SECONDS", default="600")
         )
         self.max_tokens = max_tokens or int(
-            _env_first("TAMP_FM_MAX_TOKENS", "FM_MAX_TOKENS", default="4096")
+            _env_first("TAMP_FM_MAX_TOKENS", "FM_MAX_TOKENS", default="8192")
         )
         self.metrics = FMCallMetrics()
         self._transport = transport
@@ -749,7 +810,10 @@ class FMAdapter:
         }
         self.metrics.requirement_calls += 1
         self.metrics.total_calls += 1
-        document = _extract_json_content(self._completion_transport().complete(payload))
+        document = _extract_json_content(
+            self._completion_transport().complete(payload),
+            call_kind="kitchen_functional_graph",
+        )
         self.last_raw_kitchen_graph_response = deepcopy(document)
         return document
 
@@ -826,7 +890,7 @@ class FMAdapter:
         self.metrics.requirement_calls += 1
         self.metrics.total_calls += 1
         response = transport.complete(payload)
-        raw_document = _extract_json_content(response)
+        raw_document = _extract_json_content(response, call_kind="task_requirements")
         self.last_raw_requirement_response = deepcopy(raw_document)
         return validate_requirement_response(raw_document)
 
@@ -889,7 +953,10 @@ class FMAdapter:
         }
         self.metrics.requirement_calls += 1
         self.metrics.total_calls += 1
-        document = _extract_json_content(self._completion_transport().complete(payload))
+        document = _extract_json_content(
+            self._completion_transport().complete(payload),
+            call_kind="inspection_priors",
+        )
         self.last_raw_inspection_response = deepcopy(document)
         expected = {"initial_requirements_satisfied", "decision_reason", "inspection_order"}
         if not isinstance(document, dict) or set(document) != expected:
