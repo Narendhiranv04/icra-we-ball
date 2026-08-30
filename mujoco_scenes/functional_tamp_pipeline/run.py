@@ -341,7 +341,9 @@ def _run_pipeline_impl(
 ) -> PipelineResult:
     if state.domain == "kitchen":
         from mujoco_scenes.run_kitchen_vlm_pipeline import _render_initial
-        from .domains.kitchen import TASK, run_to_plan, scene_for_variant
+        from mujoco_scenes.functional_tamp_pipeline.domains.kitchen import (
+            TASK, run_to_plan, scene_for_variant
+        )
 
         scene = scene_for_variant(state.internal_variant)
         images = list(observation_images or [])
@@ -410,7 +412,9 @@ def _run_pipeline_impl(
         return result
 
     if state.domain == "living_room":
-        from .domains.living_room import TASK, run_to_plan
+        from mujoco_scenes.functional_tamp_pipeline.domains.living_room import (
+            TASK, run_to_plan
+        )
 
         images = list(observation_images or [])
         if state.mode == "vlm" and not images and specification_json is None:
@@ -492,7 +496,9 @@ def _run_pipeline_impl(
         )
 
     from mujoco_scenes.workshop_scene import WorkshopScene
-    from .domains.workshop import WorkshopDomainAdapter, WorkshopPlanningCompiler
+    from mujoco_scenes.functional_tamp_pipeline.domains.workshop import (
+        WorkshopDomainAdapter, WorkshopPlanningCompiler
+    )
 
     scene = WorkshopScene(robot="google", variant=state.internal_variant)
     images = list(observation_images or [])
@@ -751,7 +757,7 @@ def main() -> int:
     visualizer = None
     if args.visualize:
         try:
-            from .live_visualizer import LivePipelineVisualizer
+            from mujoco_scenes.functional_tamp_pipeline.live_visualizer import LivePipelineVisualizer
             visualizer = LivePipelineVisualizer(
                 title=f"TAMP Pipeline - {args.domain.upper()} {args.variant} ({args.mode.upper()})"
             )
