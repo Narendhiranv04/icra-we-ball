@@ -289,7 +289,14 @@ class FMRequirementProvider(RequirementProvider):
             if self._contains_phrase(normalized, alias)
             or self._contains_phrase(alias, normalized)
         }
-        return next(iter(matches)) if len(matches) == 1 else None
+        if len(matches) == 1:
+            return next(iter(matches))
+        # Fallback: check individual words in snake_case / delimited phrase
+        tokens = normalized.replace("_", " ").split()
+        for token in tokens:
+            if token in exact:
+                return exact[token]
+        return None
 
     def _map_function(
         self, raw: dict[str, Any], categories: list[str]
