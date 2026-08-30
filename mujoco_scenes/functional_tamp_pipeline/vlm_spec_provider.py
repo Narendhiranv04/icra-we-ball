@@ -156,6 +156,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
                 "detector_label_to_canonical": provider.get_detector_label_to_canonical_map(),
                 "alias_to_canonical": provider.get_alias_to_canonical_map(),
                 "raw_decomposition": provider.raw_decomposition,
+                "transformation_trace": getattr(provider, "transformation_trace", []),
                 "evaluation_negative_controls": ["wooden hammer"],
             },
         )
@@ -190,7 +191,6 @@ class VLMSpecProvider(FunctionalSpecProvider):
             ))
 
         for name, role in contract["roles"].items():
-            card = role.get("binding_cardinality", {})
             categories = tuple(
                 item["canonical_label"] for item in role.get("semantic_preferences", [])
             )
@@ -207,17 +207,17 @@ class VLMSpecProvider(FunctionalSpecProvider):
                         unit=str(item.get("unit", "m")),
                     ))
 
-            binding = "REUSABLE" if card.get("preferred") == "minimize_distinct" else "DISTINCT"
-            min_c = card.get("minimum_distinct_physical_objects", role.get("min_count"))
-            max_c = card.get("maximum_distinct_physical_objects", role.get("max_count"))
-            pref = card.get("preferred", role.get("preference"))
+            raw_entity_kind = str(role.get("entity_kind", "OBJECT"))
+            if raw_entity_kind not in {"OBJECT", "REGION", "FIXED_TARGET"}:
+                raise ValueError(f"Unsupported entity_kind {raw_entity_kind!r} for kitchen role {name!r}")
+
+            binding = str(role.get("vlm_binding_policy") or "DISTINCT")
+            raw_count = int(role["count"])
+
             nodes[name] = FunctionalRole(
                 name=name,
-                entity_kind="OBJECT",
-                count=int(role.get("count", min_c if min_c is not None else 1)),
-                min_count=int(min_c) if min_c is not None else None,
-                max_count=int(max_c) if max_c is not None else None,
-                preference=str(pref) if pref is not None else None,
+                entity_kind=raw_entity_kind,
+                count=raw_count,
                 semantic_categories=categories,
                 unary_predicates=tuple(unary_preds),
                 numeric_constraints=tuple(numeric_reqs),
@@ -330,6 +330,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
                     semantic_categories=("remote_control", "tv_remote"),
                     binding_policy="DISTINCT",
                     verification_mode="SEMANTIC_ONLY",
+                    description="System-owned task entity representing remote control",
                 )
                 nodes["SEATING_PAIR"] = FunctionalRole(
                     name="SEATING_PAIR",
@@ -338,6 +339,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
                     semantic_categories=("armchair", "chair", "sofa", "seating_pair"),
                     binding_policy="SHARED",
                     verification_mode="SEMANTIC_ONLY",
+                    description="System-owned task entity representing shared seating pair",
                 )
                 for rel in req_rels:
                     target_role = "SEATING_PAIR" if "SEAT" in rel else "REMOTE"
@@ -355,6 +357,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
                     semantic_categories=("cup_saucer_set", "cup", "saucer"),
                     binding_policy="DISTINCT",
                     verification_mode="SEMANTIC_ONLY",
+                    description="System-owned task entity representing cup and saucer set",
                 )
                 nodes["SEATING_POSITION"] = FunctionalRole(
                     name="SEATING_POSITION",
@@ -363,6 +366,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
                     semantic_categories=("armchair", "chair", "sofa", "seating_position"),
                     binding_policy="DISTINCT",
                     verification_mode="SEMANTIC_ONLY",
+                    description="System-owned task entity representing seating location",
                 )
                 target_req_rels = tuple(r for r in req_rels if "SEAT" not in r)
                 context_rels = tuple(r for r in req_rels if "SEAT" in r)
@@ -411,6 +415,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
                 "semantic_vocabulary_path": str(provider.vocabulary_path),
                 "raw_decomposition": result["raw_vlm_decomposition"],
                 "normalization_audit": result["reviewed_ontology_audit"],
+                "system_owned_task_entities": ["REMOTE", "SEATING_PAIR", "CUP_SAUCER_SET", "SEATING_POSITION"],
             },
         )
 

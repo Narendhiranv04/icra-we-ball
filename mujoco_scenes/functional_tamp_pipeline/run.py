@@ -17,6 +17,7 @@ from typing import Any, Callable
 
 from mujoco_scenes.final_paper_variant_labels import resolve_variant_name
 
+from .errors import PipelineError, VLMSpecificationError, ReplaySpecificationError
 from .models import FunctionalRequirementGraph, PipelineResult
 from .planning import plan_with_common_astar
 from .search import search_until_satisfied
@@ -208,7 +209,13 @@ def _load_or_acquire_specification(
         return graph, "replayed_provider_output", str(spec_path.resolve())
 
     provider = provider_for_mode(mode)
-    specification = provider.provide(domain, task, images)
+    try:
+        specification = provider.provide(domain, task, images)
+    except (VLMSpecificationError, ValueError) as err:
+        if mode == "vlm":
+            if not isinstance(err, VLMSpecificationError):
+                raise VLMSpecificationError(str(err)) from err
+        raise
     return specification, "live_provider", None
 
 
@@ -218,7 +225,28 @@ def _acquire_spec_or_fail(
     images: list[Path],
     specification_json: Path | str | None,
 ) -> PipelineResult | None:
-    try:
+    if state.mode == "vlm" and specification_json is None:
+        try:
+            state.specification, state.spec_acquisition, state.specification_input = _load_or_acquire_specification(
+                domain=state.domain,
+                mode=state.mode,
+                task=task,
+                images=images,
+                specification_json=specification_json,
+            )
+            return None
+        except VLMSpecificationError as error:
+            state.terminal_status = "VLM_SPEC_FAILED"
+            res = PipelineResult(
+                domain=state.domain,
+                variant=state.variant,
+                mode=state.mode,
+                status="VLM_SPEC_FAILED",
+                failure_reason=str(error),
+            )
+            _write_json(state.run_dir / "result.json", res.to_dict())
+            return res
+    else:
         state.specification, state.spec_acquisition, state.specification_input = _load_or_acquire_specification(
             domain=state.domain,
             mode=state.mode,
@@ -227,17 +255,6 @@ def _acquire_spec_or_fail(
             specification_json=specification_json,
         )
         return None
-    except Exception as error:
-        state.terminal_status = "VLM_SPEC_FAILED"
-        res = PipelineResult(
-            domain=state.domain,
-            variant=state.variant,
-            mode=state.mode,
-            status="VLM_SPEC_FAILED",
-            failure_reason=str(error),
-        )
-        _write_json(state.run_dir / "result.json", res.to_dict())
-        return res
 
 
 def _write_run_manifest(state: _RunState) -> None:

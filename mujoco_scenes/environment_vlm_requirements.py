@@ -182,6 +182,8 @@ class EnvironmentVLMRequirementProvider:
 
     def _map_category(self, value: object) -> str | None:
         normalized = _phrase(value)
+        if not normalized:
+            return None
         aliases = self._category_map()
         if normalized in aliases:
             return aliases[normalized]
@@ -189,16 +191,34 @@ class EnvironmentVLMRequirementProvider:
             canonical
             for alias, canonical in aliases.items()
             if f" {alias} " in f" {normalized} "
-            or f" {normalized} " in f" {alias} "
         }
-        return next(iter(matches)) if len(matches) == 1 else None
+        if len(matches) == 1:
+            return next(iter(matches))
+        if len(matches) > 1:
+            raise ValueError(f"Ambiguous category match for {value!r}: {sorted(matches)}")
+        return None
 
-    def _map_properties(self, values: list[str]) -> set[str]:
+    def _map_properties(self, values: list[str], *, fail_closed: bool = True) -> set[str]:
         mapped: set[str] = set()
         for value in values:
+            norm = _phrase(value)
+            prop_matches = set()
             for predicate, aliases in self.relation_aliases.items():
-                if any(_phrase_score(value, alias) >= 0.75 for alias in aliases):
-                    mapped.add(predicate)
+                for alias in aliases:
+                    a_norm = _phrase(alias)
+                    if a_norm == norm or f" {a_norm} " in f" {norm} ":
+                        prop_matches.add(predicate)
+                        break
+            if len(prop_matches) == 1:
+                mapped.add(next(iter(prop_matches)))
+            elif len(prop_matches) > 1:
+                raise ValueError(
+                    f"Ambiguous property {value!r} matches multiple relations: {sorted(prop_matches)}"
+                )
+            elif fail_closed:
+                raise ValueError(
+                    f"VLM property {value!r} cannot be mapped to any reviewed relation"
+                )
         return mapped
 
     def _detector_label(self, canonical: str) -> str:
@@ -207,29 +227,11 @@ class EnvironmentVLMRequirementProvider:
 
     def _candidate_categories(self, raw: dict[str, Any]) -> list[str]:
         categories: list[str] = []
-        for candidate in raw["candidate_objects"]:
+        for candidate in raw.get("candidate_objects", []):
             canonical = self._map_category(candidate["label"])
             if canonical is not None and canonical not in categories:
                 categories.append(canonical)
         return categories
-
-    def _role_match_score(
-        self, raw: dict[str, Any], spec: dict[str, Any]
-    ) -> float:
-        if raw["entity_kind"] != spec["entity_kind"]:
-            return 0.0
-        function_text = f"{raw['function']} {raw['description']}"
-        language_score = max(
-            (_phrase_score(function_text, alias)
-             for alias in spec["function_aliases"]),
-            default=0.0,
-        )
-        visible_categories = set(self._candidate_categories(raw))
-        category_score = (
-            len(visible_categories & set(spec["categories"]))
-            / max(1, len(visible_categories))
-        )
-        return language_score + 0.20 * category_score
 
     def _assign_roles(
         self,
@@ -239,19 +241,23 @@ class EnvironmentVLMRequirementProvider:
         issues: list[str] = []
         matched: dict[str, list[dict[str, Any]]] = {}
         for raw in raw_requirements:
-            scores = [self._role_match_score(raw, spec) for spec in specs]
-            best = max(scores, default=0.0)
-            winners = [
-                index for index, score in enumerate(scores)
-                if score == best and score >= 0.60
-            ]
-            if len(winners) != 1:
+            func_text = _phrase(f"{raw.get('function', '')} {raw.get('description', '')}")
+            matching_specs = []
+            for spec in specs:
+                if raw.get("entity_kind") != spec.get("entity_kind"):
+                    continue
+                for alias in spec.get("function_aliases", []):
+                    a_norm = _phrase(alias)
+                    if a_norm == func_text or f" {a_norm} " in f" {func_text} ":
+                        matching_specs.append(spec)
+                        break
+            if len(matching_specs) != 1:
                 issues.append(
                     f"raw role {raw['id']!r} is unmapped or ambiguous; "
-                    f"reviewed-role scores={dict(zip((s['role_id'] for s in specs), scores))}"
+                    f"matches={[s['role_id'] for s in matching_specs]}"
                 )
                 continue
-            spec = specs[winners[0]]
+            spec = matching_specs[0]
             role_id = spec["role_id"]
             matched.setdefault(role_id, []).append(raw)
         for spec in specs:
@@ -340,7 +346,7 @@ class EnvironmentVLMRequirementProvider:
                 for canonical_cat in categories:
                     if canonical_cat in spec["categories"]:
                         category_rank.setdefault(canonical_cat, len(category_rank) + 1)
-                properties = self._map_properties(raw["required_properties"])
+                properties = self._map_properties(raw["required_properties"], fail_closed=False)
                 missing_properties = set(spec["properties"]) - properties
                 if missing_properties:
                     issues.append(
@@ -410,25 +416,32 @@ class EnvironmentVLMRequirementProvider:
             language_roles = self.environment_config.get("roles", {})
             grouped_requirements: dict[str, list[dict[str, Any]]] = {}
             for raw in raw_requirements:
-                matched_role_id = raw["id"]
-                canonical_func = raw.get("function", "").upper().replace(" ", "_")
-                best_score = 0.0
+                func_text = _phrase(f"{raw.get('function', '')} {raw.get('description', '')}")
+                matching_roles = []
                 for r_id, r_cfg in language_roles.items():
-                    func_text = f"{raw.get('function', '')} {raw.get('description', '')}"
-                    score = max(
-                        (_phrase_score(func_text, alias) for alias in r_cfg.get("function_aliases", [])),
-                        default=0.0,
+                    for alias in r_cfg.get("function_aliases", []):
+                        a_norm = _phrase(alias)
+                        if a_norm == func_text or f" {a_norm} " in f" {func_text} ":
+                            matching_roles.append(r_id)
+                            break
+                if len(matching_roles) == 0:
+                    raise ValueError(
+                        f"VLM role {raw.get('id')!r} with function {raw.get('function')!r} "
+                        "cannot be mapped to any reviewed canonical role"
                     )
-                    if score > best_score and score >= 0.35:
-                        best_score = score
-                        matched_role_id = r_id
-                        canonical_func = (
-                            "PERSONAL_CUP_SAUCER_REGION"
-                            if r_id == "personal_cup_saucer"
-                            else "SHARED_REMOTE_REGION"
-                            if r_id == "shared_remote"
-                            else canonical_func
-                        )
+                if len(matching_roles) > 1:
+                    raise ValueError(
+                        f"VLM role {raw.get('id')!r} with function {raw.get('function')!r} "
+                        f"is ambiguous across canonical roles: {sorted(matching_roles)}"
+                    )
+                matched_role_id = matching_roles[0]
+                canonical_func = (
+                    "PERSONAL_CUP_SAUCER_REGION"
+                    if matched_role_id == "personal_cup_saucer"
+                    else "SHARED_REMOTE_REGION"
+                    if matched_role_id == "shared_remote"
+                    else matched_role_id.upper()
+                )
                 grouped_requirements.setdefault(matched_role_id, []).append({
                     "raw": raw,
                     "canonical_func": canonical_func,

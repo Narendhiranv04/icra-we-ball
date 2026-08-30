@@ -248,25 +248,27 @@ FIXED_TARGET_ALIASES = (
 
 
 def resolve_workshop_region_proposal(proposal: dict[str, Any] | str) -> str | None:
+    """Resolve visual region proposal to canonical region ID using ONLY label and visual_description.
+
+    VLM-local IDs (e.g. 'id', 'region_id') are NOT semantic evidence and must be ignored.
+    """
     if isinstance(proposal, str):
         text = proposal.strip().lower()
     else:
-        text = f"{proposal.get('id', '')} {proposal.get('region_id', '')} {proposal.get('label', '')} {proposal.get('visual_description', '')}".strip().lower()
+        text = f"{proposal.get('label', '')} {proposal.get('visual_description', '')}".strip().lower()
     norm = " ".join(re.findall(r"[a-z0-9]+", text.casefold()))
+    if not norm:
+        return None
+    matches = set()
     for reg_id, aliases in WORKSHOP_REGION_ALIASES.items():
-        if norm == reg_id.lower():
-            return reg_id
         for alias in aliases:
             a_norm = " ".join(re.findall(r"[a-z0-9]+", alias.casefold()))
-            if a_norm == norm or a_norm in norm or norm in a_norm:
-                return reg_id
-    words = set(norm.split())
-    if "left" in words and "drawer" in words:
-        return "LEFT_DRAWER"
-    if "right" in words and "drawer" in words:
-        return "RIGHT_DRAWER"
-    if "cabinet" in words:
-        return "TOOL_CABINET"
+            if a_norm == norm or f" {a_norm} " in f" {norm} ":
+                matches.add(reg_id)
+    if len(matches) == 1:
+        return next(iter(matches))
+    if len(matches) > 1:
+        raise ValueError(f"Ambiguous workshop region proposal {proposal!r} matches multiple regions: {sorted(matches)}")
     return None
 
 
@@ -285,6 +287,7 @@ class FMRequirementProvider(RequirementProvider):
         self.raw_decomposition: dict[str, Any] | None = None
         self.region_ranking: tuple[str, ...] = ()
         self.candidate_regions: tuple[str, ...] = ()
+        self.transformation_trace: list[dict[str, Any]] = []
 
         normalization = self.ontology_contract._contract_data.get(
             "fm_normalization", {}
@@ -322,6 +325,8 @@ class FMRequirementProvider(RequirementProvider):
 
     def _map_category(self, phrase: object) -> str | None:
         normalized = self._phrase(phrase)
+        if not normalized:
+            return None
         aliases = self.ontology_contract.get_alias_to_canonical_map()
         exact = {self._phrase(alias): canonical for alias, canonical in aliases.items()}
         if normalized in exact:
@@ -333,63 +338,46 @@ class FMRequirementProvider(RequirementProvider):
         }
         if len(matches) == 1:
             return next(iter(matches))
-        words = set(normalized.replace("_", " ").split())
-        if words & {"driver", "screwdriver", "drill"}:
-            return "power_driver" if "power" in words or "electric" in words or "cordless" in words else "screwdriver"
-        if words & {"screw", "fastener", "bolt"}:
-            return "screw"
+        if len(matches) > 1:
+            raise ValueError(f"Ambiguous category match for {phrase!r}: {sorted(matches)}")
         return None
 
     def _map_function(
         self, raw: dict[str, Any], categories: list[str]
     ) -> str:
-        text = self._phrase(f"{raw['function']} {raw['description']}")
-        words = set(text.split())
-        scores: dict[str, int] = {}
+        del categories
+        text = self._phrase(f"{raw.get('function', '')} {raw.get('description', '')}")
+        matches = set()
         for function_name, aliases in self._function_aliases.items():
-            score = 3 * sum(
-                1
-                for alias in aliases
-                if self._contains_phrase(text, alias)
-            )
-            if function_name == "CAN_DRIVE_SCREW":
-                score += sum(1 for w in ("drive", "driver", "screwdriver", "torque", "tighten", "turn") if w in words)
-                if any(c in {"screwdriver", "power_driver", "power_drill"} for c in categories):
-                    score += 2
-            elif function_name == "CAN_FASTEN":
-                score += sum(1 for w in ("fasten", "fastener", "screw", "thread", "secure") if w in words)
-                if any(c in {"screw", "phillips_screw"} for c in categories):
-                    score += 2
-            scores[function_name] = score
-        best = max(scores.values(), default=0)
-        winners = [name for name, score in scores.items() if score == best and score > 0]
-        if len(winners) != 1:
+            for alias in aliases:
+                if self._contains_phrase(text, alias):
+                    matches.add(function_name)
+                    break
+        if len(matches) == 1:
+            return next(iter(matches))
+        if len(matches) == 0:
             raise ValueError(
-                f"VLM_SPEC_FAILED: VLM function phrase {raw['function']!r} cannot be mapped uniquely to ontology; "
-                f"scores={scores}"
+                f"VLM_SPEC_FAILED: VLM function phrase {raw.get('function')!r} cannot be mapped to any reviewed ontology function"
             )
-        return winners[0]
+        raise ValueError(
+            f"VLM_SPEC_FAILED: VLM function phrase {raw.get('function')!r} is ambiguous across functions: {sorted(matches)}"
+        )
 
     def _map_relations(self, properties: list[str]) -> set[str]:
         mapped: set[str] = set()
         for property_text in properties:
             normalized = self._phrase(property_text)
+            prop_matches = set()
             for relation, aliases in self._relation_aliases.items():
-                if any(self._contains_phrase(normalized, alias) for alias in aliases):
-                    mapped.add(relation)
-            words = set(normalized.split())
-            if words & {"reach", "reaches", "access", "accessible"}:
-                mapped.add("REACHES_TARGET")
-            compatibility = words & {
-                "fit", "fits", "match", "matches", "compatible", "compatibility",
-                "thread", "threads", "suitable",
-            }
-            if compatibility and words & {"hole", "workbench", "target"}:
-                mapped.add("COMPATIBLE_WITH_TARGET")
-            if (
-                compatibility or words & {"torque", "interface"}
-            ) and words & {"screw", "recess", "head", "interface"}:
-                mapped.add("COMPATIBLE_WITH")
+                for alias in aliases:
+                    if self._contains_phrase(normalized, alias):
+                        prop_matches.add(relation)
+                        break
+            if len(prop_matches) == 0:
+                raise ValueError(
+                    f"VLM_SPEC_FAILED: VLM property {property_text!r} cannot be mapped to any reviewed relation"
+                )
+            mapped.update(prop_matches)
         return mapped
 
     def _ensure_generated(
@@ -412,11 +400,20 @@ class FMRequirementProvider(RequirementProvider):
 
         normalized: dict[str, FunctionalRequirement] = {}
         raw_requirements = document["functional_requirements"]
+        self.transformation_trace = []
         for rank_idx, raw in enumerate(raw_requirements, start=1):
-            if raw.get("entity_kind") == "REGION":
+            if raw.get("entity_kind") in {"REGION", "FIXED_TARGET"}:
                 r_id = str(raw.get("id", "")).lower()
                 r_desc = str(raw.get("description", "")).lower()
-                if any(k in r_id or k in r_desc for k in FIXED_TARGET_ALIASES):
+                r_fn = str(raw.get("function", "")).lower()
+                text = f"{r_id} {r_desc} {r_fn}"
+                if any(self._contains_phrase(self._phrase(text), self._phrase(k)) for k in FIXED_TARGET_ALIASES):
+                    self.transformation_trace.append({
+                        "raw_role": raw.get("id"),
+                        "raw_entity_kind": raw.get("entity_kind"),
+                        "transformation": "SYSTEM_OWNED_FIXED_TARGET_REPRESENTATION",
+                        "canonical_role": "repair_target",
+                    })
                     continue
                 raise ValueError(f"VLM_SPEC_FAILED: Unsupported REGION role {raw.get('id')!r}")
             if raw.get("entity_kind") != "OBJECT":
@@ -502,10 +499,10 @@ class FMRequirementProvider(RequirementProvider):
         for raw_item in raw_order:
             if isinstance(raw_item, dict):
                 raw_id = raw_item.get("id") or raw_item.get("region_id") or ""
-                canon = resolved_map.get(raw_id) or resolve_workshop_region_proposal(raw_item)
+                canon = resolved_map.get(raw_id)
             else:
                 raw_id = str(raw_item)
-                canon = resolved_map.get(raw_id) or resolve_workshop_region_proposal(raw_id)
+                canon = resolved_map.get(raw_id)
             if canon is not None and canon in WORKSHOP_SEARCH_REGIONS and canon not in order:
                 order.append(canon)
 

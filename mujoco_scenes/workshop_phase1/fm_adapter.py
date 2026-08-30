@@ -22,16 +22,22 @@ from pathlib import Path
 from typing import Sequence
 from typing import Any, Mapping, Protocol
 
+try:
+    from mujoco_scenes.functional_tamp_pipeline.errors import VLMSpecificationError
+except ImportError:
+    class VLMSpecificationError(Exception):
+        """Fallback base error for VLM specification failures."""
 
-class FMBackendNotConfiguredError(RuntimeError):
+
+class FMBackendNotConfiguredError(VLMSpecificationError):
     """Raised when live requirement generation has no configured endpoint."""
 
 
-class FMTransportError(RuntimeError):
+class FMTransportError(VLMSpecificationError):
     """Raised when the inference server cannot return a usable completion."""
 
 
-class FMResponseValidationError(RuntimeError):
+class FMResponseValidationError(VLMSpecificationError):
     """Raised when the model response violates the transport-level schema."""
 
 
@@ -265,7 +271,7 @@ KITCHEN_FUNCTIONAL_GRAPH_SCHEMA: dict[str, Any] = {
                 },
                 "required": [
                     "id", "entity_kind", "function", "required_count",
-                    "candidate_categories", "required_properties",
+                    "binding_policy", "candidate_categories", "required_properties",
                 ],
                 "additionalProperties": False,
             },
@@ -627,6 +633,169 @@ def validate_requirement_response(document: Mapping[str, Any]) -> dict[str, Any]
     }
 
 
+def validate_kitchen_functional_specification(document: dict[str, Any]) -> dict[str, Any]:
+    """Deterministically validate raw Kitchen functional specification against strict schema."""
+    if not isinstance(document, dict):
+        raise FMResponseValidationError("Kitchen functional graph response must be a JSON object")
+
+    allowed_top = {
+        "status", "task_summary", "functional_roles", "functional_relations",
+        "interaction_groups", "cross_group_reuse_allowed", "inspectable_regions",
+        "inspection_order", "initial_satisfaction_assessment",
+        "initial_satisfaction_reason", "unsupported_reason",
+    }
+    if not set(document).issubset(allowed_top):
+        unexpected = set(document) - allowed_top
+        raise FMResponseValidationError(f"Unexpected top-level fields in kitchen spec: {sorted(unexpected)}")
+
+    status = document.get("status")
+    if status not in {"SUPPORTED", "UNSUPPORTED"}:
+        raise FMResponseValidationError("status must be 'SUPPORTED' or 'UNSUPPORTED'")
+
+    summary = document.get("task_summary", "")
+    if not isinstance(summary, str) or not summary.strip():
+        raise FMResponseValidationError("task_summary must be a non-empty string")
+
+    unsupported_reason = document.get("unsupported_reason", "")
+    if not isinstance(unsupported_reason, str):
+        raise FMResponseValidationError("unsupported_reason must be a string")
+
+    roles = document.get("functional_roles")
+
+    if status == "UNSUPPORTED":
+        if not unsupported_reason.strip():
+            raise FMResponseValidationError("UNSUPPORTED status requires a non-empty unsupported_reason")
+        if roles is not None and len(roles) > 0:
+            raise FMResponseValidationError("UNSUPPORTED status must not contain functional_roles")
+        return deepcopy(document)
+
+    if not isinstance(roles, list) or not roles:
+        raise FMResponseValidationError("SUPPORTED status requires a non-empty functional_roles array")
+
+    role_ids: set[str] = set()
+    role_counts: dict[str, int] = {}
+    for index, role in enumerate(roles):
+        if not isinstance(role, dict):
+            raise FMResponseValidationError(f"functional_roles[{index}] must be a dict")
+        role_req_fields = {
+            "id", "entity_kind", "function", "required_count",
+            "binding_policy", "candidate_categories", "required_properties",
+        }
+        if set(role) != role_req_fields:
+            missing = role_req_fields - set(role)
+            unexpected = set(role) - role_req_fields
+            raise FMResponseValidationError(
+                f"functional_roles[{index}] fields mismatch (missing: {missing}, unexpected: {unexpected})"
+            )
+        r_id = role.get("id")
+        if not isinstance(r_id, str) or not re.fullmatch(r"[a-zA-Z0-9_]+", r_id):
+            raise FMResponseValidationError(f"functional_roles[{index}].id must be a valid identifier")
+        if r_id in role_ids:
+            raise FMResponseValidationError(f"Duplicate role ID {r_id!r} in functional_roles")
+        role_ids.add(r_id)
+
+        if role.get("entity_kind") not in {"OBJECT", "REGION", "FIXED_TARGET"}:
+            raise FMResponseValidationError(
+                f"functional_roles[{index}].entity_kind must be OBJECT, REGION, or FIXED_TARGET"
+            )
+        if not isinstance(role.get("function"), str) or not role.get("function").strip():
+            raise FMResponseValidationError(f"functional_roles[{index}].function must be a non-empty string")
+        req_count = role.get("required_count")
+        if isinstance(req_count, bool) or not isinstance(req_count, int) or req_count < 1:
+            raise FMResponseValidationError(f"functional_roles[{index}].required_count must be an integer >= 1")
+        role_counts[r_id] = req_count
+
+        if role.get("binding_policy") not in {"DISTINCT", "REUSABLE", "SHARED"}:
+            raise FMResponseValidationError(
+                f"functional_roles[{index}].binding_policy must be DISTINCT, REUSABLE, or SHARED"
+            )
+        cand_cats = role.get("candidate_categories")
+        if not isinstance(cand_cats, list) or not cand_cats:
+            raise FMResponseValidationError(f"functional_roles[{index}].candidate_categories must be a non-empty list")
+        for c in cand_cats:
+            if not isinstance(c, str) or not c.strip():
+                raise FMResponseValidationError(f"functional_roles[{index}].candidate_categories items must be non-empty strings")
+        req_props = role.get("required_properties")
+        if not isinstance(req_props, list):
+            raise FMResponseValidationError(f"functional_roles[{index}].required_properties must be a list")
+        for p in req_props:
+            if not isinstance(p, str) or not p.strip():
+                raise FMResponseValidationError(f"functional_roles[{index}].required_properties items must be non-empty strings")
+
+    declared_region_ids: set[str] = set()
+    raw_regions = document.get("inspectable_regions", [])
+    if not isinstance(raw_regions, list):
+        raise FMResponseValidationError("inspectable_regions must be a list")
+    for r_idx, reg in enumerate(raw_regions):
+        if not isinstance(reg, dict) or set(reg) != {"id", "label", "visual_description", "reason"}:
+            raise FMResponseValidationError(f"inspectable_regions[{r_idx}] must have exact fields id, label, visual_description, reason")
+        reg_id = reg.get("id")
+        if not isinstance(reg_id, str) or not reg_id.strip():
+            raise FMResponseValidationError(f"inspectable_regions[{r_idx}].id must be a non-empty string")
+        if reg_id in declared_region_ids:
+            raise FMResponseValidationError(f"Duplicate inspectable_region id {reg_id!r}")
+        declared_region_ids.add(reg_id)
+
+    raw_order = document.get("inspection_order", [])
+    if not isinstance(raw_order, list):
+        raise FMResponseValidationError("inspection_order must be a list")
+    seen_order: set[str] = set()
+    for o_idx, item in enumerate(raw_order):
+        if not isinstance(item, str):
+            raise FMResponseValidationError(f"inspection_order[{o_idx}] must be a string ID")
+        if item not in declared_region_ids:
+            raise FMResponseValidationError(f"inspection_order[{o_idx}] references undeclared region ID {item!r}")
+        if item in seen_order:
+            raise FMResponseValidationError(f"Duplicate region ID {item!r} in inspection_order")
+        seen_order.add(item)
+    if raw_order and declared_region_ids and set(raw_order) != declared_region_ids:
+        raise FMResponseValidationError("inspection_order must be a complete permutation of declared inspectable_regions")
+
+    raw_relations = document.get("functional_relations", [])
+    if not isinstance(raw_relations, list):
+        raise FMResponseValidationError("functional_relations must be a list")
+    for rel_idx, rel in enumerate(raw_relations):
+        if not isinstance(rel, dict) or set(rel) != {"subject_role", "relation", "object_role"}:
+            raise FMResponseValidationError(f"functional_relations[{rel_idx}] has invalid fields")
+        s = rel.get("subject_role")
+        o = rel.get("object_role")
+        if s not in role_ids or o not in role_ids:
+            raise FMResponseValidationError(f"functional_relations[{rel_idx}] references undeclared role ({s!r}, {o!r})")
+
+    raw_groups = document.get("interaction_groups", [])
+    if not isinstance(raw_groups, list):
+        raise FMResponseValidationError("interaction_groups must be a list")
+    group_ids: set[str] = set()
+    for g_idx, grp in enumerate(raw_groups):
+        grp_fields = {
+            "id", "function", "tool_role", "target_role",
+            "required_target_count", "usage_policy", "required_relations",
+        }
+        if not isinstance(grp, dict) or set(grp) != grp_fields:
+            raise FMResponseValidationError(f"interaction_groups[{g_idx}] has invalid fields")
+        gid = grp.get("id")
+        if not isinstance(gid, str) or not gid.strip() or gid in group_ids:
+            raise FMResponseValidationError(f"interaction_groups[{g_idx}].id must be unique non-empty string")
+        group_ids.add(gid)
+        t_role = grp.get("tool_role")
+        tgt_role = grp.get("target_role")
+        if t_role not in role_ids or tgt_role not in role_ids:
+            raise FMResponseValidationError(f"interaction_groups[{g_idx}] references undeclared role ({t_role!r}, {tgt_role!r})")
+        if grp.get("usage_policy") not in {"SEQUENTIAL_REUSE_ALLOWED", "DEDICATED_PER_TARGET"}:
+            raise FMResponseValidationError(f"interaction_groups[{g_idx}].usage_policy must be SEQUENTIAL_REUSE_ALLOWED or DEDICATED_PER_TARGET")
+        if not isinstance(grp.get("required_relations"), list) or not grp.get("required_relations"):
+            raise FMResponseValidationError(f"interaction_groups[{g_idx}].required_relations must be a non-empty list")
+        req_tgt_c = grp.get("required_target_count")
+        if isinstance(req_tgt_c, bool) or not isinstance(req_tgt_c, int) or req_tgt_c < 1:
+            raise FMResponseValidationError(f"interaction_groups[{g_idx}].required_target_count must be an integer >= 1")
+        if role_counts.get(tgt_role) != req_tgt_c:
+            raise FMResponseValidationError(
+                f"interaction_groups[{g_idx}] target role {tgt_role} has required_count {role_counts.get(tgt_role)}, but group requires {req_tgt_c}"
+            )
+
+    return deepcopy(document)
+
+
 class FMAdapter:
     """Generate one structured, planning-free requirement decomposition."""
 
@@ -731,7 +900,7 @@ class FMAdapter:
             sanitized_request=sanitized_req,
         )
         self.last_raw_kitchen_graph_response = deepcopy(document)
-        return document
+        return validate_kitchen_functional_specification(document)
 
     def _completion_transport(self) -> CompletionTransport:
         if self._transport is not None:

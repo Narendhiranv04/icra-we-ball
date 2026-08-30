@@ -201,3 +201,31 @@ def test_missing_endpoint_after_image_validation(observation_image, monkeypatch)
             "Find a compatible screw and driver",
             observation_images=[observation_image],
         )
+
+
+def test_workshop_local_id_collision_independence():
+    from mujoco_scenes.workshop_phase1.requirements import resolve_workshop_region_proposal
+    proposal = {
+        "id": "LEFT_DRAWER",
+        "label": "right storage drawer",
+        "visual_description": "drawer on right side of workbench",
+    }
+    resolved = resolve_workshop_region_proposal(proposal)
+    assert resolved == "RIGHT_DRAWER", f"Expected RIGHT_DRAWER from visual label, got {resolved}"
+
+
+def test_workshop_fixed_target_role_tracing(observation_image):
+    doc = natural_decomposition()
+    doc["functional_requirements"].append({
+        "id": "workbench_repair_hole",
+        "entity_kind": "REGION",
+        "function": "target repair hole on workpiece",
+        "description": "hole in the frame joint to receive screw",
+        "required_count": 1,
+        "candidate_objects": [],
+        "required_properties": ["fit the workbench hole"],
+    })
+    provider, _ = provider_for(doc)
+    reqs = provider.get_requirements(observation_images=[observation_image])
+    assert len(reqs) == 2
+    assert any(t.get("transformation") == "SYSTEM_OWNED_FIXED_TARGET_REPRESENTATION" for t in provider.transformation_trace)

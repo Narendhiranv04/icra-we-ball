@@ -1,8 +1,12 @@
 # Phase 3 Freeze and Phase 4 Handoff
 
+> [!WARNING]
+> **SUPERSEDED / PHASE 3 REOPENED**
+> Phase 3 was reopened in Pass 3.6A / Pass 3.6A.1 to realign the VLM interface boundary and enforce semantic-preserving canonicalization. Phase 3 is not frozen and Phase 4 must not begin until Pass 3.6B is complete.
+
 ## 1. Executive Summary
 
-Phase 3 establishes the canonical functional-grounding Task and Motion Planning (TAMP) pipeline architecture. Under Pass 3.6A, the interface boundary between the live Vision-Language Model (VLM) and downstream execution has been realigned to adhere strictly to scientific zero-leakage principles.
+Phase 3 establishes the canonical functional-grounding Task and Motion Planning (TAMP) pipeline architecture. Under Pass 3.6A and Pass 3.6A.1, the interface boundary between the live Vision-Language Model (VLM) and downstream execution has been realigned to adhere strictly to scientific zero-leakage principles with deterministic, semantic-preserving canonicalization.
 The pipeline establishes end-to-end integration across:
 1. **Live Vision-Language Model (VLM) Specification Acquisition**: Direct invocation of remote VLM backends (e.g. Qwen 3.5 9B) consuming 5-view RGB scene captures and task goals to produce natural-language functional specifications.
 2. **Deterministic Canonicalization & Geometric Verification**: Mapping natural-language functional descriptions into executable criteria ($G_F$), evaluating continuous physical criteria (reachability, compatibility, containment), and building observed scene graphs ($G_O$).
