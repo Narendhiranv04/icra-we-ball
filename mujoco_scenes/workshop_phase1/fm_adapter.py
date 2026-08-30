@@ -665,8 +665,6 @@ def validate_kitchen_functional_specification(document: dict[str, Any]) -> dict[
     if status == "UNSUPPORTED":
         if not unsupported_reason.strip():
             raise FMResponseValidationError("UNSUPPORTED status requires a non-empty unsupported_reason")
-        if roles is not None and len(roles) > 0:
-            raise FMResponseValidationError("UNSUPPORTED status must not contain functional_roles")
         return deepcopy(document)
 
     if not isinstance(roles, list) or not roles:
