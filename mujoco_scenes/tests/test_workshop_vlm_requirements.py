@@ -174,7 +174,7 @@ def test_vlm_organic_geometric_property_accepted(observation_image):
 def test_transport_schema_rejects_old_candidate_types_and_extra_fields():
     document = natural_decomposition()
     document["actions"] = []
-    with pytest.raises(FMResponseValidationError, match="fields must be exactly"):
+    with pytest.raises(FMResponseValidationError, match="fields must be exactly|Unexpected top-level fields"):
         validate_requirement_response(document)
 
     document = natural_decomposition()

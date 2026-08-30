@@ -158,8 +158,8 @@ def run_pipeline(
     output_root: Path,
     semantic_backend: str = "yolo_world",
     semantic_model: str | None = None,
-    width: int = 640,
-    height: int = 480,
+    width: int = 1280,
+    height: int = 960,
     fm_adapter: FMAdapter | None = None,
 ) -> dict[str, Any]:
     internal_variant = resolve_variant_name("kitchen", variant)

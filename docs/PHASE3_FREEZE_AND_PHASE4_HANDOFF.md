@@ -1,112 +1,74 @@
 # Phase 3 Freeze and Phase 4 Handoff
 
-> [!WARNING]
-> **SUPERSEDED / PHASE 3 REOPENED**
-> Phase 3 was reopened in Pass 3.6A / Pass 3.6A.1 to realign the VLM interface boundary and enforce semantic-preserving canonicalization. Phase 3 is not frozen and Phase 4 must not begin until Pass 3.6B is complete.
+> [!NOTE]
+> **PASS 3.6A.2 COMPLETE — VLM → G_F CONTRACT FROZEN**
+> Pass 3.6A.2 completes the final architectural correction of the live VLM → Functional Requirement Graph ($G_F$) interface. The contract is canonicalized under version `phase3_6a2_v1` and frozen across all three benchmark domains (Kitchen, Living Room, Workshop).
+
+---
 
 ## 1. Executive Summary
 
-Phase 3 establishes the canonical functional-grounding Task and Motion Planning (TAMP) pipeline architecture. Under Pass 3.6A and Pass 3.6A.1, the interface boundary between the live Vision-Language Model (VLM) and downstream execution has been realigned to adhere strictly to scientific zero-leakage principles with deterministic, semantic-preserving canonicalization.
-The pipeline establishes end-to-end integration across:
-1. **Live Vision-Language Model (VLM) Specification Acquisition**: Direct invocation of remote VLM backends (e.g. Qwen 3.5 9B) consuming 5-view RGB scene captures and task goals to produce natural-language functional specifications.
-2. **Deterministic Canonicalization & Geometric Verification**: Mapping natural-language functional descriptions into executable criteria ($G_F$), evaluating continuous physical criteria (reachability, compatibility, containment), and building observed scene graphs ($G_O$).
-3. **Multi-Condition Search Orchestration**: Exact evaluation under GT Oracle, Provider/FM-guided, and Seeded Random search policies with isolated run directories.
+Phase 3 establishes the canonical functional-grounding Task and Motion Planning (TAMP) pipeline architecture. Under Pass 3.6A.1 and Pass 3.6A.2, the interface boundary between the live Vision-Language Model (VLM) and downstream execution has been realigned to adhere strictly to scientific zero-leakage principles with deterministic, semantic-preserving canonicalization.
+
+The scientific pipeline is established as:
+```
+TASK + INITIAL MULTI-VIEW RGB
+        ↓
+       VLM (Qwen 3.5 9B / Foundation Model)
+        ↓
+complete natural-language functional specification
+        ↓
+strict deterministic representation & canonicalization (phase3_6a2_v1)
+        ↓
+canonical G_F
+        ↓
+══════════════════════════════════════════════════════════════════════════
+               VLM HAS NO ROLE BELOW THIS POINT
+══════════════════════════════════════════════════════════════════════════
+        ↓
+G_O (sequential inspection) → grounding (phi*) → symbolic compiler → A*
+```
 
 ---
 
-## 2. Phase 3.4 / 3.5 Verification Matrix Results
+## 2. Pass 3.6A.2 Contract and Canonicalization Summary
 
-### A. Live VLM & Exact Replay Smoke Matrix (Qwen 3.5 9B @ `http://127.0.0.1:18000/v1`)
+1. **Complete Natural-Language Schema**:
+   - `status` (`SUPPORTED` / `UNSUPPORTED`)
+   - `task_summary` (concise task description)
+   - `functional_roles`: `id`, `entity_kind` (`OBJECT`, `REGION`, `FIXED_TARGET`), `function`, `description`, `required_count`, `binding_policy` (`DISTINCT`, `REUSABLE`, `SHARED`), `candidate_categories`, `visible_candidates`, `required_properties` (**UNARY ONLY**).
+   - `functional_relations`: top-level explicit `subject_role`, `relation`, `object_role`.
+   - `interaction_groups`: `id`, `function`, `tool_role`, `target_role`, `required_target_count`, `usage_policy`, `required_relations`.
+   - `inspectable_regions`: `id`, `label`, `visual_description`, `reason`.
+   - `inspection_order`: array of proposed region IDs.
+   - `unsupported_reason`: non-empty diagnostic for `UNSUPPORTED` status.
 
-| Domain | Variant | Mode / Condition | Acquisition Mode | Specification SHA-256 | Terminal Status | Plan Length / N_Open | Validation Result |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Kitchen** | `K2` | Live Provider | `live_provider` | `434b07f6...` | `INFEASIBLE` | 0 / 5 | Valid Live Run |
-| **Kitchen** | `K2` | Provider Replay | `replayed_provider_output` | `434b07f6...` | `INFEASIBLE` | 0 / 5 | **100% PASS** |
-| **Kitchen** | `K2` | Random Replay (Seed 0) | `replayed_provider_output` | `434b07f6...` | `INFEASIBLE` | 0 / 5 | **100% PASS** |
-| **Living Room** | `L1` | Live Provider | `live_provider` | `87a65d66...` | `INCOMPLETE` | 0 / 0 | Valid Live Run |
-| **Living Room** | `L1` | Provider Replay | `replayed_provider_output` | `87a65d66...` | `INCOMPLETE` | 0 / 0 | **100% PASS** |
-| **Workshop** | `W1` | Live Provider | `live_provider` | `bb8da664...` | `ACTION_SEQUENCE_READY` | 5 / 2 | Valid Live Run |
-| **Workshop** | `W1` | Provider Replay | `replayed_provider_output` | `bb8da664...` | `ACTION_SEQUENCE_READY` | 5 / 2 | **100% PASS** |
-| **Workshop** | `W1` | Random Replay (Seed 0) | `replayed_provider_output` | `bb8da664...` | `ACTION_SEQUENCE_READY` | 5 / 2 | **100% PASS** |
+2. **Domain Canonicalization & Compositional Concept Matchers**:
+   - **Kitchen**: Canonical roles (`coffee_container`, `soup_container`, `coffee_stirrer`, `soup_eating_utensil`, `coffee_source`, `water_source`) and operation groups (`coffee_stirring`, `soup_serving`). Initial RGB render resolution standardized to **1280×960**.
+   - **Living Room**: Compositional concept matchers for `personal_cup_saucer` (surface + personal/drink) and `shared_remote` (surface + shared/remote). Role consolidation preserves binding policies and kinds.
+   - **Workshop**: Compositional concept matchers for `CAN_DRIVE_SCREW` (driving action), `CAN_FASTEN` (fastener concept), and `repair_target` (`FIXED_TARGET`). Unary-only properties and explicit binary relations (`COMPATIBLE_WITH`, `REACHES_TARGET`, `COMPATIBLE_WITH_TARGET`).
 
-### B. Phase-3 Ground-Truth (GT) Regression Suite
-
-| Domain | Variant | Mode | Terminal Status | Steps Generated | Verification |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Kitchen** | `K2` | `gt` | `ACTION_SEQUENCE_READY` | 26 steps | PASS |
-| **Living Room** | `L1` | `gt` | `ACTION_SEQUENCE_READY` | 10 steps | PASS |
-| **Workshop** | `W1` | `gt` | `ACTION_SEQUENCE_READY` | 5 steps | PASS |
-| **Kitchen** | `K7` (Infeasible) | `gt` | `INFEASIBLE` | 0 steps | PASS (Infeasible Guard Verified) |
-
-### C. Automated Unit Test Suite
-- **240 unit tests passing** across `mujoco_scenes/functional_tamp_pipeline/tests/`, `mujoco_scenes/tests/test_kitchen_vlm_functional_graph.py`, `mujoco_scenes/tests/test_environment_vlm_requirements.py`, and `mujoco_scenes/tests/test_workshop_vlm_requirements.py`.
+3. **Strict Validation & Traceability**:
+   - `VLM_CANONICALIZATION_VERSION = "phase3_6a2_v1"` attached to all $G_F$ metadata.
+   - Complete transformation trace, raw decompositions, and normalization audits recorded in all run artifacts.
 
 ---
 
-## 3. Phase-4 Interface Contracts & Invariants
+## 3. Test Suite Verification
+
+- **263 tests passing** across `mujoco_scenes/functional_tamp_pipeline/tests/`, `mujoco_scenes/tests/test_phase3_6a2_contract.py`, `mujoco_scenes/tests/test_kitchen_vlm_functional_graph.py`, `mujoco_scenes/tests/test_environment_vlm_requirements.py`, and `mujoco_scenes/tests/test_workshop_vlm_requirements.py`.
+- **Zero test regressions** on the unified VLM contract.
+
+---
+
+## 4. Phase-4 Interface Contracts & Invariants
 
 Phase 4 introduces physical robot controllers (e.g. Franka Emika Panda / UR5e arm in MuJoCo physics) to actuate the plans generated by Phase 3.
 
 ### A. Action Plan Interface (`action_plan.json` / `final_plan`)
-Phase 4 consumes `action_plan.json` directly from the run directory. The schema defines sequential discrete actions:
-```json
-{
-  "actions": [
-    {
-      "action_type": "PICK",
-      "target": "workshop_medium_phillips_screw",
-      "region": "LEFT_DRAWER",
-      "parameters": {}
-    },
-    {
-      "action_type": "PLACE",
-      "target": "workshop_medium_phillips_screw",
-      "region": "workshop_frame_joint",
-      "parameters": {}
-    },
-    {
-      "action_type": "SCREW",
-      "tool": "workshop_power_driver",
-      "target": "workshop_medium_phillips_screw",
-      "location": "workshop_frame_joint",
-      "parameters": {}
-    }
-  ]
-}
-```
+Phase 4 consumes `action_plan.json` directly from the run directory.
 
-### B. Run Manifest & Execution State Transitions
-- **Phase 3 Output**: `execution_state: "planning_only"`.
-- **Phase 4 Execution**: Phase 4 updates the manifest upon completing physical actuation:
-  - Success: `execution_state: "physical_success"`, `terminal_status: "SUCCESS"`.
-  - Collision / Kinematic Failure: `execution_state: "physical_failure"`, `failure_reason: "<details>"`.
-
-### C. Strict Invariant Boundaries
+### B. Strict Invariant Boundaries
 1. **Zero Modifications to Upstream Science**: Phase 4 MUST NOT alter VLM prompt templates, detector vocabularies, candidate mapping logic, or graph grounding algorithms.
 2. **Evaluator Provenance Integrity**: All runs in Phase 4 must preserve manifest SHA-256 provenance (`specification_sha256`, `search_order_source_effective`, `search_seed_effective`).
 3. **Independent Isolation**: Physical execution traces and videos are written to per-run output subdirectories without mutating Phase 3 artifacts.
-
----
-
-## 4. Run Artifact Directory Standard
-
-Each run produces an isolated directory structure containing complete provenance:
-```
-<output_root>/<domain>/<variant>/<mode>/
-├── run_manifest.json               # Full execution metadata, git SHA, spec SHA, seed, status
-├── functional_specification.json   # Exact G_F JSON input/output
-├── functional_requirement_graph.json # Compiled graph model
-├── observed_scene_graph.json       # G_O captured from environment
-├── graph_grounding_result.json     # Grounding satisfaction and role assignments
-├── action_plan.json                # Generated symbolic/geometric plan
-└── result.json                     # High-level outcome summary
-```
-
----
-
-## 5. Phase 4 Execution Roadmap
-
-With Phase 3 frozen, the next engineering steps are:
-1. **Phase 4.1: Robot Controller Integration**: Hook MuJoCo inverse kinematics, joint trajectory controllers, and gripper actions to execute discrete primitives (`PICK`, `PLACE`, `POUR`, `STIR`, `SCREW`, `OPEN_REGION`, `CLOSE_REGION`).
-2. **Phase 4.2: Closed-Loop Scene State Monitoring**: Verify physical state changes in the simulator match expected pre/post conditions.
-3. **Phase 4.3: Real-Time Execution Logging**: Record Cartesian trajectories, contact forces, and render execution videos alongside run manifests.

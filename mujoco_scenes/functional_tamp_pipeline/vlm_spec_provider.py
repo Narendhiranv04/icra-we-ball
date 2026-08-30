@@ -13,6 +13,8 @@ from .models import (
 )
 from .spec_provider import FunctionalSpecProvider
 
+VLM_CANONICALIZATION_VERSION = "phase3_6a2_v1"
+
 
 class VLMSpecProvider(FunctionalSpecProvider):
     def provide(
@@ -153,6 +155,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
             source="VLM_FUNCTIONAL_SPEC",
             raw_requirements=requirements,
             metadata={
+                "vlm_canonicalization_version": VLM_CANONICALIZATION_VERSION,
                 "detector_label_to_canonical": provider.get_detector_label_to_canonical_map(),
                 "alias_to_canonical": provider.get_alias_to_canonical_map(),
                 "raw_decomposition": provider.raw_decomposition,
@@ -268,6 +271,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
             source="VLM_FUNCTIONAL_SPEC",
             raw_requirements=(contract,),
             metadata={
+                "vlm_canonicalization_version": VLM_CANONICALIZATION_VERSION,
                 "object_vocabulary": object_vocab,
                 "raw_decomposition": raw,
                 "normalization_trace": trace,
@@ -412,6 +416,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
             source="VLM_FUNCTIONAL_SPEC",
             raw_requirements=(result["normalized_task_contract"],),
             metadata={
+                "vlm_canonicalization_version": VLM_CANONICALIZATION_VERSION,
                 "semantic_vocabulary_path": str(provider.vocabulary_path),
                 "raw_decomposition": result["raw_vlm_decomposition"],
                 "normalization_audit": result["reviewed_ontology_audit"],

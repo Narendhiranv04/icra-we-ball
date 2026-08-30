@@ -97,59 +97,32 @@ Return only the requested JSON object. Do not produce an action sequence.
 
 Rules:
 - Infer the complete set of physical or spatial functional roles from the task
-  instruction yourself. The user will not supply expected roles, functions,
-  object categories, or properties.
-- Use the initial-observation images as visual evidence. Do not assume that an
-  object is present merely because it would normally be useful for the task.
-- Create one requirement for each independently satisfiable functional role
-  needed by the task. Give it your own short, stable snake_case id.
-- Set `entity_kind` to OBJECT for a manipulable physical item and REGION for a
-  usable support surface, placement area, or spatial destination.
-- `functional_requirements` describes role types, never individual assignment
-  slots. Functionally identical needs MUST be one record with `required_count`
-  equal to the minimum number of distinct simultaneous candidates. A response
-  containing duplicate function records distinguished only by left/right,
-  person identity, target identity, or location is invalid. List all visible
-  candidates for those slots in the one consolidated record.
-- Count simultaneous distinct assignments, not repeated operations. A tool
-  that can be reused sequentially can have required_count 1 even when it acts
-  on several targets.
-- Locating, grasping, aligning, inserting, rotating, and placing are actions,
-  not replaceable functional roles. Never create requirements for them.
-- Include a support or destination role when its functional suitability must be
-  evaluated among observed objects or regions. Do not create a role for a truly
-  immutable target that requires no selection or suitability decision.
-- Express `function` and `required_properties` in concise natural language. A
-  downstream ontology mapper will normalize them; do not invent metric values.
-- For each role, independently rank zero or more `candidate_objects` from the
-  initial-observation images. Each candidate label must be a concrete,
-  detector-searchable noun phrase. Its visual description must distinguish the
-  observed item or region without inventing a simulator identifier.
-- An empty candidate list means that no plausible candidate is visible. It does
-  not mean the functional role is unnecessary. Use an empty list only after
-  examining every supplied view; include fixed objects named by the goal when
-  they are visibly plausible satisfiers of an inferred role.
-- A required property states a qualitative capability, fit, reach, interface,
-  or compatibility condition. Never emit centimetres, thresholds, coordinates,
-  measurements, numerical values, simulator identifiers, object IDs, or
-  variant names.
-- Include every qualitative property whose failure would disqualify a
-  candidate. Consider capacity, containment, shape, reach, fit, interface,
-  stability, support, proximity, and shared accessibility when relevant, but
-  decide which of them actually apply to each inferred role.
-- A candidate is only visually plausible. Do not claim that it is selected,
-  graspable, geometrically valid, or physically compatible; those are separate
-  downstream checks.
-- The task is supported when its physical roles can be described, even though
-  no suitable candidate is visible or later geometry may find the scene
-  infeasible.
-- `SUPPORTED` requires at least one requirement and an empty unsupported_reason.
-  `UNSUPPORTED` requires no requirements and a concise non-empty reason.
-- Do not include chain-of-thought or robot execution instructions.
-- Before returning, check that every explicit desired outcome in the task is
-  covered by at least one functional role. Do not turn a search instruction or
-  storage location into its own role unless that storage entity itself must be
-  selected by functional suitability.
+  instruction and initial multi-view RGB images yourself. The user will not supply
+  expected roles, functions, object categories, or properties.
+- Use SHORT ATOMIC PHRASES for all functions, properties, and relations (e.g.
+  function: "drive threaded fastener", property: "elongated", relation: "engages fastener head").
+  Do not write long narrative sentences.
+- Set `entity_kind` to:
+  - OBJECT: a selectable/manipulable physical item.
+  - REGION: a selectable support surface, placement area, or spatial destination.
+  - FIXED_TARGET: a fixed contextual task target or workpiece feature (e.g. workpiece repair target hole, seating position) that participates in relations.
+- Set `binding_policy` to:
+  - DISTINCT: separate simultaneous physical items are required.
+  - REUSABLE: one physical item may be reused sequentially across targets.
+  - SHARED: one physical region/entity intentionally serves multiple items/users.
+- `candidate_categories`: list open-vocabulary semantic search phrases that could satisfy the role, even if nothing is currently visible.
+- `candidate_objects` / `visible_candidates`: list visually apparent items/regions in the initial RGB views.
+  This array may be empty ([]).
+- `required_properties`: list UNARY-ONLY physical properties of this single role (e.g. "elongated", "planar support").
+  Never place binary relations or compatibility statements here.
+- `functional_relations`: list explicit role-to-role relations using `subject_role`, `relation`, and `object_role`.
+  Both subject_role and object_role must reference declared role IDs.
+- `inspectable_regions`: propose visible closed/storage regions in the initial images that could be inspected if required items are missing.
+- `inspection_order`: rank the proposed inspectable region IDs.
+- Status semantics:
+  - `SUPPORTED`: task can be represented with functional roles and relations. `functional_roles` must be non-empty, `unsupported_reason` must be empty ("").
+  - `UNSUPPORTED`: task cannot be represented with this abstraction. `functional_roles`, `functional_relations`, `inspectable_regions`, `inspection_order` must be empty ([]), and `unsupported_reason` must be a non-empty explanation.
+  - Low visual confidence, synthetic images, partial observability, unmeasured continuous geometry, or search failure are NOT reasons for UNSUPPORTED.
 """
 
 
@@ -158,20 +131,48 @@ RESPONSE_SCHEMA: dict[str, Any] = {
     "properties": {
         "status": {"type": "string", "enum": ["SUPPORTED", "UNSUPPORTED"]},
         "task_summary": {"type": "string"},
-        "functional_requirements": {
+        "functional_roles": {
             "type": "array",
             "maxItems": 12,
             "items": {
                 "type": "object",
                 "properties": {
                     "id": {"type": "string"},
-                    "entity_kind": {"type": "string", "enum": ["OBJECT", "REGION"]},
+                    "entity_kind": {
+                        "type": "string",
+                        "enum": ["OBJECT", "REGION", "FIXED_TARGET"],
+                    },
                     "function": {"type": "string"},
                     "description": {"type": "string"},
                     "required_count": {
                         "type": "integer",
                         "minimum": 1,
                         "maximum": 20,
+                    },
+                    "binding_policy": {
+                        "type": "string",
+                        "enum": ["DISTINCT", "REUSABLE", "SHARED"],
+                    },
+                    "candidate_categories": {
+                        "type": "array",
+                        "minItems": 0,
+                        "maxItems": 12,
+                        "items": {"type": "string"},
+                    },
+                    "visible_candidates": {
+                        "type": "array",
+                        "minItems": 0,
+                        "maxItems": 16,
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "label": {"type": "string"},
+                                "visual_description": {"type": "string"},
+                                "suitability_reason": {"type": "string"},
+                            },
+                            "required": ["label", "visual_description"],
+                            "additionalProperties": True,
+                        },
                     },
                     "candidate_objects": {
                         "type": "array",
@@ -184,31 +185,145 @@ RESPONSE_SCHEMA: dict[str, Any] = {
                                 "visual_description": {"type": "string"},
                                 "suitability_reason": {"type": "string"},
                             },
-                            "required": [
-                                "label", "visual_description", "suitability_reason"
-                            ],
-                            "additionalProperties": False,
+                            "required": ["label", "visual_description"],
+                            "additionalProperties": True,
                         },
                     },
                     "required_properties": {
                         "type": "array",
-                        "minItems": 1,
+                        "minItems": 0,
                         "maxItems": 16,
                         "items": {"type": "string"},
                     },
                 },
                 "required": [
-                    "id", "entity_kind", "function", "description", "required_count",
-                    "candidate_objects",
+                    "id",
+                    "entity_kind",
+                    "function",
+                    "required_count",
+                    "binding_policy",
+                    "candidate_categories",
                     "required_properties",
                 ],
+                "additionalProperties": True,
+            },
+        },
+        "functional_requirements": {
+            "type": "array",
+            "maxItems": 12,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string"},
+                    "entity_kind": {
+                        "type": "string",
+                        "enum": ["OBJECT", "REGION", "FIXED_TARGET"],
+                    },
+                    "function": {"type": "string"},
+                    "description": {"type": "string"},
+                    "required_count": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 20,
+                    },
+                    "binding_policy": {
+                        "type": "string",
+                        "enum": ["DISTINCT", "REUSABLE", "SHARED"],
+                    },
+                    "candidate_categories": {
+                        "type": "array",
+                        "minItems": 0,
+                        "maxItems": 12,
+                        "items": {"type": "string"},
+                    },
+                    "visible_candidates": {
+                        "type": "array",
+                        "minItems": 0,
+                        "maxItems": 16,
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "label": {"type": "string"},
+                                "visual_description": {"type": "string"},
+                                "suitability_reason": {"type": "string"},
+                            },
+                            "required": ["label", "visual_description"],
+                            "additionalProperties": True,
+                        },
+                    },
+                    "candidate_objects": {
+                        "type": "array",
+                        "minItems": 0,
+                        "maxItems": 16,
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "label": {"type": "string"},
+                                "visual_description": {"type": "string"},
+                                "suitability_reason": {"type": "string"},
+                            },
+                            "required": ["label", "visual_description"],
+                            "additionalProperties": True,
+                        },
+                    },
+                    "required_properties": {
+                        "type": "array",
+                        "minItems": 0,
+                        "maxItems": 16,
+                        "items": {"type": "string"},
+                    },
+                },
+                "required": [
+                    "id",
+                    "entity_kind",
+                    "function",
+                    "required_count",
+                    "binding_policy",
+                    "candidate_categories",
+                    "required_properties",
+                ],
+                "additionalProperties": True,
+            },
+        },
+        "functional_relations": {
+            "type": "array",
+            "maxItems": 24,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "subject_role": {"type": "string"},
+                    "relation": {"type": "string"},
+                    "object_role": {"type": "string"},
+                },
+                "required": ["subject_role", "relation", "object_role"],
                 "additionalProperties": False,
             },
+        },
+        "inspectable_regions": {
+            "type": "array",
+            "maxItems": 12,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string"},
+                    "label": {"type": "string"},
+                    "visual_description": {"type": "string"},
+                    "reason": {"type": "string"},
+                },
+                "required": ["id", "label", "visual_description", "reason"],
+                "additionalProperties": False,
+            },
+        },
+        "inspection_order": {
+            "type": "array",
+            "items": {"type": "string"},
         },
         "unsupported_reason": {"type": "string"},
     },
     "required": [
-        "status", "task_summary", "functional_requirements", "unsupported_reason",
+        "status",
+        "task_summary",
+        "unsupported_reason",
     ],
     "additionalProperties": False,
 }
@@ -264,6 +379,18 @@ KITCHEN_FUNCTIONAL_GRAPH_SCHEMA: dict[str, Any] = {
                         "type": "array", "minItems": 1, "maxItems": 12,
                         "items": {"type": "string"},
                     },
+                    "visible_candidates": {
+                        "type": "array", "minItems": 0, "maxItems": 16,
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "label": {"type": "string"},
+                                "visual_description": {"type": "string"},
+                            },
+                            "required": ["label", "visual_description"],
+                            "additionalProperties": True,
+                        },
+                    },
                     "required_properties": {
                         "type": "array", "minItems": 0, "maxItems": 12,
                         "items": {"type": "string"},
@@ -273,7 +400,7 @@ KITCHEN_FUNCTIONAL_GRAPH_SCHEMA: dict[str, Any] = {
                     "id", "entity_kind", "function", "required_count",
                     "binding_policy", "candidate_categories", "required_properties",
                 ],
-                "additionalProperties": False,
+                "additionalProperties": True,
             },
         },
         "functional_relations": {
@@ -501,135 +628,232 @@ def _extract_json_content(
 
 
 def validate_requirement_response(document: Mapping[str, Any]) -> dict[str, Any]:
-    """Validate the model-facing schema before ontology normalization."""
-    allowed_top = {
-        "status", "task_summary", "functional_requirements", "unsupported_reason"
-    }
-    if set(document) != allowed_top:
-        raise FMResponseValidationError(
-            f"Requirement response fields must be exactly {sorted(allowed_top)}"
-        )
-    status = document.get("status")
-    summary = document.get("task_summary")
-    requirements = document.get("functional_requirements")
-    reason = document.get("unsupported_reason")
-    if status not in {"SUPPORTED", "UNSUPPORTED"}:
-        raise FMResponseValidationError("status must be SUPPORTED or UNSUPPORTED")
-    if not _short_string(summary, 1000):
-        raise FMResponseValidationError("task_summary must be a short non-empty string")
-    if not isinstance(requirements, list) or len(requirements) > 12:
-        raise FMResponseValidationError(
-            "functional_requirements must be an array of at most 12 items"
-        )
-    if not isinstance(reason, str) or len(reason) > 1000:
-        raise FMResponseValidationError("unsupported_reason must be a string")
-    if status == "SUPPORTED" and (not requirements or reason.strip()):
-        raise FMResponseValidationError(
-            "SUPPORTED requires requirements and an empty unsupported_reason"
-        )
-    if status == "UNSUPPORTED" and (requirements or not reason.strip()):
-        raise FMResponseValidationError(
-            "UNSUPPORTED requires no requirements and a non-empty unsupported_reason"
-        )
+    """Validate the generic Living Room and Workshop specification schema."""
+    if not isinstance(document, Mapping):
+        raise FMResponseValidationError("Requirement response must be a JSON object")
 
-    normalized_requirements: list[dict[str, Any]] = []
-    seen_ids: set[str] = set()
-    required_fields = {
-        "id", "entity_kind", "function", "description", "required_count",
-        "candidate_objects", "required_properties"
+    allowed_top = {
+        "status", "task_summary", "functional_roles", "functional_requirements",
+        "functional_relations", "inspectable_regions", "inspection_order",
+        "unsupported_reason",
     }
-    for index, requirement in enumerate(requirements):
-        if not isinstance(requirement, dict) or set(requirement) != required_fields:
-            raise FMResponseValidationError(
-                f"functional_requirements[{index}] has invalid fields"
-            )
-        identifier = requirement.get("id")
-        if not _short_string(identifier, 80) or identifier in seen_ids:
-            raise FMResponseValidationError(
-                f"functional_requirements[{index}].id must be short and unique"
-            )
+    if not set(document).issubset(allowed_top):
+        unexpected = set(document) - allowed_top
+        raise FMResponseValidationError(f"Unexpected top-level fields in requirement response: {sorted(unexpected)}")
+
+    status = document.get("status")
+    if status not in {"SUPPORTED", "UNSUPPORTED"}:
+        raise FMResponseValidationError("status must be 'SUPPORTED' or 'UNSUPPORTED'")
+
+    summary = document.get("task_summary", "")
+    if not isinstance(summary, str) or not summary.strip():
+        raise FMResponseValidationError("task_summary must be a non-empty string")
+
+    unsupported_reason = document.get("unsupported_reason", "")
+    if not isinstance(unsupported_reason, str):
+        raise FMResponseValidationError("unsupported_reason must be a string")
+
+    roles = document.get("functional_roles")
+    if roles is None:
+        roles = document.get("functional_requirements")
+
+    if status == "UNSUPPORTED":
+        if not unsupported_reason.strip():
+            raise FMResponseValidationError("UNSUPPORTED status requires a non-empty unsupported_reason")
+        if roles:
+            raise FMResponseValidationError("UNSUPPORTED status must have empty functional_roles")
+        if document.get("functional_relations"):
+            raise FMResponseValidationError("UNSUPPORTED status must have empty functional_relations")
+        if document.get("inspectable_regions"):
+            raise FMResponseValidationError("UNSUPPORTED status must have empty inspectable_regions")
+        if document.get("inspection_order"):
+            raise FMResponseValidationError("UNSUPPORTED status must have empty inspection_order")
+        return {
+            "status": "UNSUPPORTED",
+            "task_summary": summary.strip(),
+            "functional_roles": [],
+            "functional_requirements": [],
+            "functional_relations": [],
+            "inspectable_regions": [],
+            "inspection_order": [],
+            "unsupported_reason": unsupported_reason.strip(),
+        }
+
+    if unsupported_reason.strip():
+        raise FMResponseValidationError("SUPPORTED status requires an empty unsupported_reason")
+
+    if not isinstance(roles, list) or not roles:
+        raise FMResponseValidationError("SUPPORTED status requires a non-empty functional_roles array")
+    if len(roles) > 12:
+        raise FMResponseValidationError("functional_roles must contain at most 12 items")
+
+    normalized_roles: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+
+    for index, role in enumerate(roles):
+        if not isinstance(role, dict):
+            raise FMResponseValidationError(f"functional_roles[{index}] must be a dict")
+        role_allowed = {
+            "id", "entity_kind", "function", "description", "required_count",
+            "binding_policy", "candidate_categories", "candidate_objects",
+            "visible_candidates", "required_properties",
+        }
+        if not set(role).issubset(role_allowed):
+            raise FMResponseValidationError(f"functional_roles[{index}] has invalid fields: {sorted(set(role) - role_allowed)}")
+        identifier = role.get("id")
+        if not _short_string(identifier, 80) or not re.fullmatch(r"[a-zA-Z0-9_]+", str(identifier)):
+            raise FMResponseValidationError(f"functional_roles[{index}].id must be a valid identifier")
+        if identifier in seen_ids:
+            raise FMResponseValidationError(f"Duplicate role ID {identifier!r} in functional_roles")
         seen_ids.add(identifier)
-        if requirement.get("entity_kind") not in {"OBJECT", "REGION"}:
-            raise FMResponseValidationError(
-                f"functional_requirements[{index}].entity_kind must be OBJECT or REGION"
-            )
-        for field in ("function", "description"):
-            if not _short_string(requirement.get(field), 600):
-                raise FMResponseValidationError(
-                    f"functional_requirements[{index}].{field} is invalid"
-                )
-        required_count = requirement.get("required_count")
-        if (
-            isinstance(required_count, bool)
-            or not isinstance(required_count, int)
-            or not 1 <= required_count <= 20
-        ):
-            raise FMResponseValidationError(
-                f"functional_requirements[{index}].required_count must be an integer from 1 to 20"
-            )
-        properties = requirement.get("required_properties")
-        if not isinstance(properties, list) or not 1 <= len(properties) <= 16:
-            raise FMResponseValidationError(
-                f"functional_requirements[{index}].required_properties must contain 1-16 items"
-            )
-        if not all(_short_string(value, 160) for value in properties):
-            raise FMResponseValidationError(
-                f"functional_requirements[{index}].required_properties contains invalid text"
-            )
-        lowered = [value.strip().casefold() for value in properties]
-        if len(lowered) != len(set(lowered)):
-            raise FMResponseValidationError(
-                f"functional_requirements[{index}].required_properties contains duplicates"
-            )
-        candidates = requirement.get("candidate_objects")
+
+        entity_kind = role.get("entity_kind")
+        if entity_kind not in {"OBJECT", "REGION", "FIXED_TARGET"}:
+            raise FMResponseValidationError(f"functional_roles[{index}].entity_kind must be OBJECT, REGION, or FIXED_TARGET")
+
+        function_text = role.get("function")
+        if not _short_string(function_text, 600) or not str(function_text).strip():
+            raise FMResponseValidationError(f"functional_roles[{index}].function must be a non-empty string")
+
+        desc_text = role.get("description", "")
+        if not isinstance(desc_text, str):
+            raise FMResponseValidationError(f"functional_roles[{index}].description must be a string")
+
+        required_count = role.get("required_count", 1)
+        if isinstance(required_count, bool) or not isinstance(required_count, int) or required_count < 1 or required_count > 20:
+            raise FMResponseValidationError(f"functional_roles[{index}].required_count must be an integer from 1 to 20")
+
+        binding_policy = role.get("binding_policy", "DISTINCT")
+        if binding_policy not in {"DISTINCT", "REUSABLE", "SHARED"}:
+            raise FMResponseValidationError(f"functional_roles[{index}].binding_policy must be DISTINCT, REUSABLE, or SHARED")
+
+        cand_cats = role.get("candidate_categories", [])
+        if not isinstance(cand_cats, list):
+            raise FMResponseValidationError(f"functional_roles[{index}].candidate_categories must be a list")
+        for cat in cand_cats:
+            if not isinstance(cat, str) or not cat.strip():
+                raise FMResponseValidationError(f"functional_roles[{index}].candidate_categories items must be non-empty strings")
+
+        candidates = role.get("visible_candidates")
+        if candidates is None:
+            candidates = role.get("candidate_objects", [])
         if not isinstance(candidates, list) or len(candidates) > 16:
-            raise FMResponseValidationError(
-                f"functional_requirements[{index}].candidate_objects must contain 0-16 items"
-            )
+            raise FMResponseValidationError(f"functional_roles[{index}].visible_candidates must be a list of at most 16 items")
+
         cleaned_candidates: list[dict[str, str]] = []
-        seen_candidates: set[tuple[str, str]] = set()
-        candidate_fields = {"label", "visual_description", "suitability_reason"}
-        for candidate_index, candidate in enumerate(candidates):
-            if not isinstance(candidate, dict) or set(candidate) != candidate_fields:
-                raise FMResponseValidationError(
-                    f"functional_requirements[{index}].candidate_objects[{candidate_index}] has invalid fields"
-                )
-            if not all(_short_string(candidate.get(field), 400) for field in candidate_fields):
-                raise FMResponseValidationError(
-                    f"functional_requirements[{index}].candidate_objects[{candidate_index}] contains invalid text"
-                )
-            key = (
-                candidate["label"].strip().casefold(),
-                candidate["visual_description"].strip().casefold(),
-            )
-            if key in seen_candidates:
-                raise FMResponseValidationError(
-                    f"functional_requirements[{index}].candidate_objects contains duplicates"
-                )
-            seen_candidates.add(key)
-            cleaned_candidates.append(
-                {
-                    "label": candidate["label"].strip(),
-                    "visual_description": candidate["visual_description"].strip(),
-                    "suitability_reason": candidate["suitability_reason"].strip(),
-                }
-            )
-        normalized_requirements.append(
-            {
-                "id": identifier.strip(),
-                "entity_kind": requirement["entity_kind"],
-                "function": requirement["function"].strip(),
-                "description": requirement["description"].strip(),
-                "required_count": required_count,
-                "candidate_objects": cleaned_candidates,
-                "required_properties": [value.strip() for value in properties],
-            }
-        )
+        seen_cand: set[tuple[str, str]] = set()
+        for c_idx, candidate in enumerate(candidates):
+            if not isinstance(candidate, dict):
+                raise FMResponseValidationError(f"functional_roles[{index}].visible_candidates[{c_idx}] must be a dict")
+            label = candidate.get("label", "")
+            v_desc = candidate.get("visual_description", "")
+            s_reason = candidate.get("suitability_reason", "")
+            if not _short_string(label, 400) or not str(label).strip():
+                raise FMResponseValidationError(f"functional_roles[{index}].visible_candidates[{c_idx}].label is invalid")
+            if not _short_string(v_desc, 400):
+                raise FMResponseValidationError(f"functional_roles[{index}].visible_candidates[{c_idx}].visual_description is invalid")
+            key = (str(label).strip().casefold(), str(v_desc).strip().casefold())
+            if key in seen_cand:
+                raise FMResponseValidationError(f"functional_roles[{index}].visible_candidates contains duplicates")
+            seen_cand.add(key)
+            cleaned_candidates.append({
+                "label": str(label).strip(),
+                "visual_description": str(v_desc).strip(),
+                "suitability_reason": str(s_reason).strip(),
+            })
+
+        properties = role.get("required_properties", [])
+        if not isinstance(properties, list) or len(properties) > 16:
+            raise FMResponseValidationError(f"functional_roles[{index}].required_properties must be a list of at most 16 items")
+        cleaned_props = []
+        for prop in properties:
+            if not isinstance(prop, str) or not prop.strip() or len(prop) > 160:
+                raise FMResponseValidationError(f"functional_roles[{index}].required_properties item is invalid")
+            cleaned_props.append(prop.strip())
+        lowered_props = [p.casefold() for p in cleaned_props]
+        if len(lowered_props) != len(set(lowered_props)):
+            raise FMResponseValidationError(f"functional_roles[{index}].required_properties contains duplicates")
+
+        normalized_roles.append({
+            "id": identifier.strip(),
+            "entity_kind": entity_kind,
+            "function": str(function_text).strip(),
+            "description": desc_text.strip(),
+            "required_count": required_count,
+            "binding_policy": binding_policy,
+            "candidate_categories": [str(c).strip() for c in cand_cats],
+            "candidate_objects": cleaned_candidates,
+            "visible_candidates": cleaned_candidates,
+            "required_properties": cleaned_props,
+        })
+
+    declared_region_ids: set[str] = set()
+    raw_regions = document.get("inspectable_regions", [])
+    if not isinstance(raw_regions, list) or len(raw_regions) > 12:
+        raise FMResponseValidationError("inspectable_regions must be a list of at most 12 items")
+    cleaned_regions = []
+    for r_idx, reg in enumerate(raw_regions):
+        if not isinstance(reg, dict) or not {"id", "label", "visual_description"}.issubset(set(reg)):
+            raise FMResponseValidationError(f"inspectable_regions[{r_idx}] must contain id, label, visual_description")
+        reg_id = reg.get("id")
+        if not _short_string(reg_id, 80) or not str(reg_id).strip():
+            raise FMResponseValidationError(f"inspectable_regions[{r_idx}].id must be a non-empty string")
+        if reg_id in declared_region_ids:
+            raise FMResponseValidationError(f"Duplicate inspectable_region id {reg_id!r}")
+        declared_region_ids.add(reg_id)
+        cleaned_regions.append({
+            "id": str(reg_id).strip(),
+            "label": str(reg.get("label", "")).strip(),
+            "visual_description": str(reg.get("visual_description", "")).strip(),
+            "reason": str(reg.get("reason", "")).strip(),
+        })
+
+    raw_order = document.get("inspection_order", [])
+    if not isinstance(raw_order, list):
+        raise FMResponseValidationError("inspection_order must be a list")
+    seen_order: set[str] = set()
+    cleaned_order = []
+    for o_idx, item in enumerate(raw_order):
+        if not isinstance(item, str):
+            raise FMResponseValidationError(f"inspection_order[{o_idx}] must be a string ID")
+        if item not in declared_region_ids:
+            raise FMResponseValidationError(f"inspection_order[{o_idx}] references undeclared region ID {item!r}")
+        if item in seen_order:
+            raise FMResponseValidationError(f"Duplicate region ID {item!r} in inspection_order")
+        seen_order.add(item)
+        cleaned_order.append(item.strip())
+    if cleaned_order and declared_region_ids and set(cleaned_order) != declared_region_ids:
+        raise FMResponseValidationError("inspection_order must be a complete permutation of declared inspectable_regions")
+
+    raw_relations = document.get("functional_relations", [])
+    if not isinstance(raw_relations, list) or len(raw_relations) > 24:
+        raise FMResponseValidationError("functional_relations must be a list of at most 24 items")
+    cleaned_relations = []
+    for rel_idx, rel in enumerate(raw_relations):
+        if not isinstance(rel, dict) or not {"subject_role", "relation", "object_role"}.issubset(set(rel)):
+            raise FMResponseValidationError(f"functional_relations[{rel_idx}] has invalid fields")
+        s = rel.get("subject_role")
+        r = rel.get("relation")
+        o = rel.get("object_role")
+        if s not in seen_ids or o not in seen_ids:
+            raise FMResponseValidationError(f"functional_relations[{rel_idx}] references undeclared role ({s!r}, {o!r})")
+        if not _short_string(r, 400) or not str(r).strip():
+            raise FMResponseValidationError(f"functional_relations[{rel_idx}].relation must be a non-empty string")
+        cleaned_relations.append({
+            "subject_role": str(s).strip(),
+            "relation": str(r).strip(),
+            "object_role": str(o).strip(),
+        })
+
     return {
         "status": status,
         "task_summary": summary.strip(),
-        "functional_requirements": normalized_requirements,
-        "unsupported_reason": reason.strip(),
+        "functional_roles": normalized_roles,
+        "functional_requirements": normalized_roles,
+        "functional_relations": cleaned_relations,
+        "inspectable_regions": cleaned_regions,
+        "inspection_order": cleaned_order,
+        "unsupported_reason": "",
     }
 
 
@@ -665,7 +889,20 @@ def validate_kitchen_functional_specification(document: dict[str, Any]) -> dict[
     if status == "UNSUPPORTED":
         if not unsupported_reason.strip():
             raise FMResponseValidationError("UNSUPPORTED status requires a non-empty unsupported_reason")
+        if roles:
+            raise FMResponseValidationError("UNSUPPORTED status must have empty functional_roles")
+        if document.get("functional_relations"):
+            raise FMResponseValidationError("UNSUPPORTED status must have empty functional_relations")
+        if document.get("interaction_groups"):
+            raise FMResponseValidationError("UNSUPPORTED status must have empty interaction_groups")
+        if document.get("inspectable_regions"):
+            raise FMResponseValidationError("UNSUPPORTED status must have empty inspectable_regions")
+        if document.get("inspection_order"):
+            raise FMResponseValidationError("UNSUPPORTED status must have empty inspection_order")
         return deepcopy(document)
+
+    if unsupported_reason.strip():
+        raise FMResponseValidationError("SUPPORTED status requires an empty unsupported_reason")
 
     if not isinstance(roles, list) or not roles:
         raise FMResponseValidationError("SUPPORTED status requires a non-empty functional_roles array")

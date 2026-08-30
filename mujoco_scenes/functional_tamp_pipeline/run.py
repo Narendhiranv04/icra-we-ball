@@ -348,7 +348,7 @@ def _run_pipeline_impl(
         scene = scene_for_variant(state.internal_variant)
         images = list(observation_images or [])
         if state.mode == "vlm" and not images and specification_json is None:
-            images = _render_initial(scene, state.run_dir / "vlm_inputs", 640, 480)
+            images = _render_initial(scene, state.run_dir / "vlm_inputs", 1280, 960)
 
         print("[1/5] Functional specification", flush=True)
         _emit_event(guarded_observer, "stage_changed", {"stage": "specification"})

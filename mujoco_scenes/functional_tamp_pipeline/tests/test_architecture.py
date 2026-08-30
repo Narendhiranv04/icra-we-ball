@@ -1110,14 +1110,14 @@ def test_kitchen_vlm_variable_cardinality_and_policies_roundtrip(monkeypatch) ->
 
     spec = VLMSpecProvider().provide("kitchen", "prepare coffee and soup", observation_images=[])
     assert spec.domain == "kitchen"
-    stirrer = spec.nodes.get("mixing_implement")
+    stirrer = spec.nodes.get("mixing_implement") or spec.nodes.get("coffee_stirrer")
     assert stirrer is not None
     assert stirrer.binding_policy == "REUSABLE"
     assert stirrer.count == 1
 
     # Check operation group policies
     assert len(spec.operation_groups) >= 1
-    coffee_grp = next(g for g in spec.operation_groups if "mix" in g.id)
+    coffee_grp = next(g for g in spec.operation_groups if "mix" in g.id or "coffee" in g.id)
     assert coffee_grp.usage_policy == "SEQUENTIAL_REUSE_ALLOWED"
 
 

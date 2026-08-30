@@ -7,7 +7,7 @@ class PipelineError(Exception):
     """Base class for all functional TAMP pipeline errors."""
 
 
-class VLMSpecificationError(PipelineError):
+class VLMSpecificationError(PipelineError, ValueError):
     """Raised when VLM functional specification acquisition, validation, or canonicalization fails."""
 
 

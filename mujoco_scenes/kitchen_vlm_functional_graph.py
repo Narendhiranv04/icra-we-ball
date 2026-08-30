@@ -11,9 +11,44 @@ import re
 from copy import deepcopy
 from typing import Any
 
+from mujoco_scenes.functional_tamp_pipeline.errors import VLMSpecificationError
 from .workshop_phase1.fm_adapter import validate_kitchen_functional_specification
 from .task_witness import load_task_requirements
 
+
+# Stable Kitchen Canonical Role Registry
+KITCHEN_ROLE_REGISTRY: dict[str, tuple[str, ...]] = {
+    "coffee_container": (
+        "contain coffee", "hold coffee", "coffee container", "coffee receptacle",
+        "coffee vessel", "coffee cup", "coffee mug", "coffee serving",
+        "contain an individual serving of coffee", "hold coffee serving",
+        "receptacle for coffee", "vessel for coffee",
+    ),
+    "soup_container": (
+        "contain soup", "hold soup", "soup container", "soup receptacle",
+        "soup vessel", "soup bowl", "soup serving",
+        "contain an individual serving of soup", "hold soup serving",
+        "receptacle for soup", "vessel for soup",
+    ),
+    "coffee_stirrer": (
+        "stir coffee", "mix coffee", "coffee stirrer", "coffee stirring",
+        "stir", "mix", "stir beverage", "agitate coffee", "stirring utensil",
+        "stirring implement", "stir both coffees", "coffee implement",
+    ),
+    "soup_eating_utensil": (
+        "serve soup", "soup utensil", "eat soup", "consume soup", "soup spoon",
+        "soup implement", "provide utensil for soup", "provide a suitable eating utensil for each soup bowl",
+        "eating utensil for soup", "serve with soup", "soup utensil provision",
+    ),
+    "coffee_source": (
+        "provide coffee", "coffee source", "coffee material", "coffee ingredient",
+        "coffee supply", "coffee jar", "source of coffee", "coffee grounds",
+    ),
+    "water_source": (
+        "provide water", "water source", "pour water", "hot water", "kettle",
+        "water supply", "source of water",
+    ),
+}
 
 # Strictly physical / capability language only (no object nouns like cup/spoon)
 UNARY_PROPERTY_ALIASES: dict[str, tuple[str, ...]] = {
@@ -94,6 +129,48 @@ def _contains_phrase(text: str, phrase: str) -> bool:
     return any(words[i:i + k] == p_words for i in range(n - k + 1))
 
 
+def map_kitchen_role_function(text: str) -> str | None:
+    """Map natural language role function to unique canonical Kitchen role."""
+    norm = _phrase(text)
+    words = set(norm.split())
+
+    has_contain = any(w in words or w in norm for w in ("contain", "hold", "receptacle", "vessel", "bowl", "cup", "mug", "serving", "container"))
+    has_coffee = "coffee" in norm
+    has_soup = "soup" in norm
+    has_stir = any(w in words or w in norm for w in ("stir", "mix", "agitate", "stirrer", "stirring"))
+    has_utensil = any(w in words or w in norm for w in ("utensil", "eat", "consume", "spoon", "serve", "eating"))
+    has_source = any(w in words or w in norm for w in ("source", "provide", "supply", "pour", "ingredient", "material"))
+    has_water = any(w in words or w in norm for w in ("water", "kettle", "hot water", "pour water"))
+
+    if has_water and (has_source or has_water):
+        return "water_source"
+    if has_coffee and has_contain and not has_stir and not has_source:
+        return "coffee_container"
+    if has_soup and has_contain and not has_utensil and not has_source:
+        return "soup_container"
+    if has_stir and not has_soup and not has_contain:
+        return "coffee_stirrer"
+    if has_coffee and has_stir and not has_contain:
+        return "coffee_stirrer"
+    if has_soup and (has_utensil or not has_contain):
+        return "soup_eating_utensil"
+    if has_coffee and has_source:
+        return "coffee_source"
+
+    matches = set()
+    for role_name, aliases in KITCHEN_ROLE_REGISTRY.items():
+        for alias in aliases:
+            a_norm = _phrase(alias)
+            if a_norm == norm or _contains_phrase(norm, a_norm) or _contains_phrase(a_norm, norm):
+                matches.add(role_name)
+                break
+    if len(matches) == 1:
+        return next(iter(matches))
+    if len(matches) > 1:
+        raise VLMSpecificationError(f"Ambiguous kitchen role function {text!r} matches multiple roles: {sorted(matches)}")
+    return None
+
+
 def map_unary_property(text: str) -> str | None:
     """Map natural language property to unique canonical predicate or fail if ambiguous/unmapped."""
     norm = _phrase(text)
@@ -106,7 +183,7 @@ def map_unary_property(text: str) -> str | None:
     if len(matches) == 1:
         return next(iter(matches))
     if len(matches) > 1:
-        raise ValueError(f"Ambiguous unary property {text!r} matches multiple checkers: {sorted(matches)}")
+        raise VLMSpecificationError(f"Ambiguous unary property {text!r} matches multiple checkers: {sorted(matches)}")
     return None
 
 
@@ -122,7 +199,7 @@ def map_binary_relation(text: str) -> str | None:
     if len(matches) == 1:
         return next(iter(matches))
     if len(matches) > 1:
-        raise ValueError(f"Ambiguous binary relation {text!r} matches multiple relations: {sorted(matches)}")
+        raise VLMSpecificationError(f"Ambiguous binary relation {text!r} matches multiple relations: {sorted(matches)}")
     return None
 
 
@@ -134,7 +211,6 @@ def resolve_kitchen_region_proposal(proposal: dict[str, Any] | str) -> str | Non
     if isinstance(proposal, str):
         text = proposal.strip().lower()
     else:
-        # Strictly ignore proposal.get('id') or proposal.get('region_id')
         text = f"{proposal.get('label', '')} {proposal.get('visual_description', '')}".strip().lower()
     norm = _phrase(text)
     if not norm:
@@ -148,14 +224,14 @@ def resolve_kitchen_region_proposal(proposal: dict[str, Any] | str) -> str | Non
     if len(matches) == 1:
         return next(iter(matches))
     if len(matches) > 1:
-        raise ValueError(f"Ambiguous kitchen region proposal {proposal!r} matches multiple regions: {sorted(matches)}")
+        raise VLMSpecificationError(f"Ambiguous kitchen region proposal {proposal!r} matches multiple regions: {sorted(matches)}")
     return None
 
 
 def _identifier(value: Any, context: str) -> str:
     val_str = str(value).strip().lower().replace(" ", "_")
     if not re.fullmatch(r"[a-z][a-z0-9_]{0,79}", val_str):
-        raise ValueError(f"{context} must be a valid lower snake_case identifier")
+        raise VLMSpecificationError(f"{context} must be a valid lower snake_case identifier")
     return val_str
 
 
@@ -169,33 +245,47 @@ def compile_vlm_functional_graph(
     # First strictly validate raw response schema locally
     valid_doc = validate_kitchen_functional_specification(document)
     if valid_doc.get("status") != "SUPPORTED":
-        raise ValueError(f"VLM marked task unsupported: {valid_doc.get('unsupported_reason')}")
+        raise VLMSpecificationError(f"VLM marked task unsupported: {valid_doc.get('unsupported_reason')}")
 
     roles_raw = valid_doc.get("functional_roles", [])
     if not isinstance(roles_raw, list) or not roles_raw:
-        raise ValueError("VLM functional specification has no roles")
+        raise VLMSpecificationError("VLM functional specification has no roles")
 
-    role_ids = [_identifier(row.get("id"), "role id") for row in roles_raw]
-    if len(set(role_ids)) != len(role_ids):
-        raise ValueError("VLM functional specification contains duplicate role IDs")
+    raw_role_ids = [_identifier(row.get("id"), "role id") for row in roles_raw]
+    if len(set(raw_role_ids)) != len(raw_role_ids):
+        raise VLMSpecificationError("VLM functional specification contains duplicate role IDs")
 
     roles: dict[str, Any] = {}
     vocabulary: dict[str, list[str]] = {}
     canonical_predicates: dict[str, list[Any]] = {"unary": [], "binary": []}
+    raw_role_to_canonical: dict[str, str] = {}
 
     for order, row in enumerate(roles_raw):
-        role_id = _identifier(row["id"], "role id")
+        raw_role_id = _identifier(row["id"], "role id")
         raw_entity_kind = str(row.get("entity_kind", "OBJECT"))
         if raw_entity_kind not in {"OBJECT", "REGION", "FIXED_TARGET"}:
-            raise ValueError(f"Unsupported entity_kind {raw_entity_kind!r} for role {role_id!r}")
+            raise VLMSpecificationError(f"Unsupported entity_kind {raw_entity_kind!r} for role {raw_role_id!r}")
 
         binding_policy = str(row.get("binding_policy") or "")
         if binding_policy not in {"DISTINCT", "REUSABLE", "SHARED"}:
-            raise ValueError(f"Role {role_id!r} missing required binding_policy (got {binding_policy!r})")
+            raise VLMSpecificationError(f"Role {raw_role_id!r} missing required binding_policy (got {binding_policy!r})")
 
         required_count = int(row["required_count"])
         if required_count < 1:
-            raise ValueError(f"Role {role_id!r} required_count must be >= 1")
+            raise VLMSpecificationError(f"Role {raw_role_id!r} required_count must be >= 1")
+
+        # Deterministic role mapping from function phrase (ignoring raw role ID)
+        canon_role_name = map_kitchen_role_function(str(row.get("function", "")))
+        if canon_role_name is None:
+            raise VLMSpecificationError(
+                f"VLM role {raw_role_id!r} with function {row.get('function')!r} "
+                "cannot be mapped to any reviewed Kitchen canonical role"
+            )
+        if canon_role_name in roles:
+            raise VLMSpecificationError(
+                f"Duplicate canonical role {canon_role_name!r} mapped from raw roles"
+            )
+        raw_role_to_canonical[raw_role_id] = canon_role_name
 
         unary = []
         raw_props = row.get("required_properties", [])
@@ -204,26 +294,26 @@ def compile_vlm_functional_graph(
                 if isinstance(prop, str):
                     mapped = map_unary_property(prop)
                     if mapped is None:
-                        raise ValueError(
-                            f"VLM emitted unary property {prop!r} for role {role_id!r}, "
+                        raise VLMSpecificationError(
+                            f"VLM emitted unary property {prop!r} for role {raw_role_id!r}, "
                             "but no exact or alias checker mapping exists"
                         )
                     if not any(item.get("predicate") == mapped for item in unary):
                         unary.append({"predicate": mapped, "expected": True})
-                        canonical_predicates["unary"].append({"role": role_id, "predicate": mapped})
+                        canonical_predicates["unary"].append({"role": canon_role_name, "predicate": mapped})
 
         cand_cats = row.get("candidate_categories", [])
         if not cand_cats:
-            raise ValueError(f"Role {role_id!r} has no candidate categories")
+            raise VLMSpecificationError(f"Role {raw_role_id!r} has no candidate categories")
         preferences = []
         seen_canon = set()
         for cat in cand_cats:
             if isinstance(cat, dict):
-                canon_label = _identifier(cat.get("canonical_label", "").lower().replace(" ", "_"), f"canonical category for {role_id}")
+                canon_label = _identifier(cat.get("canonical_label", "").lower().replace(" ", "_"), f"canonical category for {raw_role_id}")
                 phrases = [canon_label.replace("_", " "), *map(lambda s: str(s).lower(), cat.get("detector_phrases", []))]
             else:
                 c_str = str(cat).lower()
-                canon_label = _identifier(c_str.replace(" ", "_"), f"canonical category for {role_id}")
+                canon_label = _identifier(c_str.replace(" ", "_"), f"canonical category for {raw_role_id}")
                 phrases = [canon_label.replace("_", " "), c_str]
             phrases = list(dict.fromkeys([p for p in phrases if p]))
             if canon_label in seen_canon:
@@ -237,7 +327,8 @@ def compile_vlm_functional_graph(
                 "detector_aliases": phrases,
             })
 
-        roles[role_id] = {
+        roles[canon_role_name] = {
+            "raw_vlm_role_id": raw_role_id,
             "entity_kind": raw_entity_kind,
             "count": required_count,
             "assignment_order": order,
@@ -253,14 +344,16 @@ def compile_vlm_functional_graph(
     relation_index = set()
     raw_relations = valid_doc.get("functional_relations", [])
     for rel_row in raw_relations:
-        subj = _identifier(rel_row["subject_role"], "subject role")
-        obj = _identifier(rel_row["object_role"], "object role")
-        if subj not in roles or obj not in roles:
-            raise ValueError(f"VLM relation references unknown roles: {subj}, {obj}")
+        raw_subj = _identifier(rel_row["subject_role"], "subject role")
+        raw_obj = _identifier(rel_row["object_role"], "object role")
+        if raw_subj not in raw_role_to_canonical or raw_obj not in raw_role_to_canonical:
+            raise VLMSpecificationError(f"VLM relation references unknown roles: {raw_subj}, {raw_obj}")
+        subj = raw_role_to_canonical[raw_subj]
+        obj = raw_role_to_canonical[raw_obj]
         rel_str = rel_row.get("relation") or rel_row.get("predicate")
         mapped_rel = map_binary_relation(rel_str)
         if mapped_rel is None:
-            raise ValueError(
+            raise VLMSpecificationError(
                 f"VLM emitted binary relation {rel_str!r}, but no exact or alias checker mapping exists"
             )
         key = (mapped_rel, subj, obj)
@@ -277,25 +370,47 @@ def compile_vlm_functional_graph(
             })
 
     operations = {}
+    raw_group_to_canonical: dict[str, str] = {}
     raw_ops = valid_doc.get("interaction_groups", [])
     for row in raw_ops:
-        group_id = _identifier(row["id"], "operation group id")
-        tool_role = _identifier(row["tool_role"], "tool role")
-        target_role = _identifier(row["target_role"], "target role")
-        if group_id in operations or tool_role not in roles or target_role not in roles:
-            raise ValueError("VLM operation group has duplicate ID or unknown role")
+        raw_group_id = _identifier(row["id"], "operation group id")
+        raw_tool_role = _identifier(row["tool_role"], "tool role")
+        raw_target_role = _identifier(row["target_role"], "target role")
+        if raw_tool_role not in raw_role_to_canonical or raw_target_role not in raw_role_to_canonical:
+            raise VLMSpecificationError("VLM operation group references unknown role")
+        tool_role = raw_role_to_canonical[raw_tool_role]
+        target_role = raw_role_to_canonical[raw_target_role]
+
+        # Map group to canonical group name
+        if tool_role == "coffee_stirrer" and target_role == "coffee_container":
+            canon_group_id = "coffee_stirring"
+        elif tool_role == "soup_eating_utensil" and target_role == "soup_container":
+            canon_group_id = "soup_serving"
+        else:
+            norm_fn = _phrase(row.get("function", ""))
+            if "stir" in norm_fn or "mix" in norm_fn:
+                canon_group_id = "coffee_stirring"
+            elif "soup" in norm_fn or "utensil" in norm_fn or "serve" in norm_fn:
+                canon_group_id = "soup_serving"
+            else:
+                raise VLMSpecificationError(f"Unmapped operation group: tool={tool_role}, target={target_role}, fn={row.get('function')}")
+
+        if canon_group_id in operations:
+            raise VLMSpecificationError(f"Duplicate canonical operation group: {canon_group_id}")
+        raw_group_to_canonical[raw_group_id] = canon_group_id
+
         req_target_count = int(row["required_target_count"])
         if int(roles[target_role]["count"]) != req_target_count:
-            raise ValueError(
+            raise VLMSpecificationError(
                 f"VLM specification inconsistency: role {target_role} has required_count "
-                f"{roles[target_role]['count']}, but operation group {group_id} requires {req_target_count}"
+                f"{roles[target_role]['count']}, but operation group {canon_group_id} requires {req_target_count}"
             )
         req_rels = list(row.get("required_relations", []))
         mapped_op_rels = []
         for rel_item in req_rels:
             mapped_op_rel = map_binary_relation(rel_item)
             if mapped_op_rel is None:
-                raise ValueError(
+                raise VLMSpecificationError(
                     f"VLM operation group emitted binary relation {rel_item!r}, but no exact checker exists"
                 )
             mapped_op_rels.append(mapped_op_rel)
@@ -312,7 +427,8 @@ def compile_vlm_functional_graph(
                     "subject_role": tool_role, "predicate": mapped_op_rel, "object_role": target_role
                 })
         policy = str(row.get("usage_policy") or "SEQUENTIAL_REUSE_ALLOWED")
-        operations[group_id] = {
+        operations[canon_group_id] = {
+            "raw_vlm_group_id": raw_group_id,
             "function": str(row["function"]),
             "tool_role": tool_role,
             "target_role": target_role,
@@ -385,8 +501,11 @@ def compile_vlm_functional_graph(
     }
     trace = {
         "schema_version": 2,
+        "vlm_canonicalization_version": "phase3_6a2_v1",
         "transformation": "DETERMINISTIC_NATURAL_LANGUAGE_CANONICALIZATION",
-        "raw_roles_preserved": role_ids,
+        "raw_roles_preserved": raw_role_ids,
+        "raw_role_to_canonical": raw_role_to_canonical,
+        "raw_group_to_canonical": raw_group_to_canonical,
         "canonical_predicates_dispatched": canonical_predicates,
         "resolved_regions": local_id_to_canonical,
         "unresolved_proposals": unresolved_proposals,
