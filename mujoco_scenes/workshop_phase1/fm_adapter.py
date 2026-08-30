@@ -407,7 +407,7 @@ def _save_fm_diagnostic(
     *,
     sanitized_request: dict[str, Any] | None = None,
 ) -> None:
-    diag_dir_env = os.environ.get("TAMP_FM_DIAGNOSTIC_DIR")
+    diag_dir_env = os.environ.get("TAMP_FM_DIAGNOSTIC_DIR") or os.environ.get("TAMP_FM_DIAGNOSTICS_DIR")
     if not diag_dir_env:
         return
     try:
@@ -658,17 +658,6 @@ class FMAdapter:
         self.last_raw_inspection_response: dict[str, Any] | None = None
         self.last_raw_kitchen_graph_response: dict[str, Any] | None = None
 
-    def generate_kitchen_functional_graph(
-        self,
-        task_instruction: str,
-        search_region_descriptors: dict[str, str],
-        *,
-        observation_images: Sequence[str | Path],
-    ) -> dict[str, Any]:
-        """Produce the complete Kitchen requirement graph and search policy once."""
-        image_blocks, self.last_observation_images = _encode_observation_images(
-            observation_images
-        )
     def generate_kitchen_functional_graph(
         self,
         task_instruction: str,
