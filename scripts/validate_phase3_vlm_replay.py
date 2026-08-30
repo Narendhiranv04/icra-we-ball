@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-Offline artifact validator for Phase 3.4 VLM and exact-G_F replay integration.
-Verifies cryptographic SHA identity, structural G_F validity, provenance consistency,
-provider ranking fidelity, random candidate permutation validity, and provider-replay determinism.
+Offline artifact validator for Phase 3.4 / 3.4.1 VLM and exact-G_F replay integration.
+Verifies cryptographic SHA identity, structural G_F validity, domain/variant identity,
+VLM source provenance, provider ranking fidelity, provider used order, random seed validity,
+exact random permutation reproduction, and deterministic provider replay.
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import random
 import sys
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -72,8 +74,36 @@ def validate_vlm_replay(
     replay_spec_dict = load_json(replay_dir / "functional_specification.json")
     replay_result = load_json(replay_dir / "result.json")
 
-    domain = live_manifest.get("domain") or replay_manifest.get("domain") or "unknown"
-    variant = live_manifest.get("variant") or replay_manifest.get("variant") or "unknown"
+    live_domain = live_manifest.get("domain")
+    replay_domain = replay_manifest.get("domain")
+    live_variant = live_manifest.get("variant")
+    replay_variant = replay_manifest.get("variant")
+
+    # Domain and Variant Identity
+    id_ok = True
+    if not isinstance(live_domain, str) or not live_domain.strip():
+        failures.append(f"live manifest missing or empty domain: {live_domain!r}")
+        id_ok = False
+    if not isinstance(replay_domain, str) or not replay_domain.strip():
+        failures.append(f"replay manifest missing or empty domain: {replay_domain!r}")
+        id_ok = False
+    if live_domain != replay_domain or not live_domain:
+        failures.append(f"domain mismatch: live='{live_domain}', replay='{replay_domain}'")
+        id_ok = False
+
+    if not isinstance(live_variant, str) or not live_variant.strip():
+        failures.append(f"live manifest missing or empty variant: {live_variant!r}")
+        id_ok = False
+    if not isinstance(replay_variant, str) or not replay_variant.strip():
+        failures.append(f"replay manifest missing or empty variant: {replay_variant!r}")
+        id_ok = False
+    if live_variant != replay_variant or not live_variant:
+        failures.append(f"variant mismatch: live='{live_variant}', replay='{replay_variant}'")
+        id_ok = False
+
+    domain = live_domain if (live_domain and live_domain == replay_domain) else "unknown"
+    variant = live_variant if (live_variant and live_variant == replay_variant) else "unknown"
+    checks["identity"] = "PASS" if id_ok else "FAIL"
 
     # 2. SHA-256 Cryptographic Identity
     live_file_sha = compute_file_sha256(live_dir / "functional_specification.json")
@@ -94,25 +124,66 @@ def validate_vlm_replay(
             f"live_manifest={live_man_sha}, replay_manifest={replay_man_sha}"
         )
 
-    # 3. Structural G_F Validation
+    # 3. Structural G_F Validation & Graph Domain Consistency
+    live_graph: Optional[FunctionalRequirementGraph] = None
+    replay_graph: Optional[FunctionalRequirementGraph] = None
     try:
         live_graph = FunctionalRequirementGraph.from_dict(live_spec_dict)
         live_graph.validate()
         replay_graph = FunctionalRequirementGraph.from_dict(replay_spec_dict)
         replay_graph.validate()
 
-        if live_graph.to_dict() == replay_graph.to_dict():
-            checks["structural_gf_identity"] = "PASS"
-        else:
-            checks["structural_gf_identity"] = "FAIL"
+        struct_ok = True
+        if live_graph.to_dict() != replay_graph.to_dict():
             failures.append("live_graph.to_dict() != replay_graph.to_dict()")
+            struct_ok = False
+
+        if id_ok:
+            if live_graph.domain != live_domain:
+                failures.append(f"live graph domain '{live_graph.domain}' != live manifest domain '{live_domain}'")
+                struct_ok = False
+            if replay_graph.domain != replay_domain:
+                failures.append(f"replay graph domain '{replay_graph.domain}' != replay manifest domain '{replay_domain}'")
+                struct_ok = False
+
+        checks["structural_gf_identity"] = "PASS" if struct_ok else "FAIL"
     except Exception as e:
         checks["structural_gf_identity"] = "FAIL"
         failures.append(f"G_F graph validation exception: {e}")
         live_graph = None
         replay_graph = None
 
-    # 4. Manifest Provenance Validation
+    # 4. VLM Source Validation
+    vlm_source_ok = True
+    live_man_src = live_manifest.get("spec_provider_source")
+    replay_man_src = replay_manifest.get("spec_provider_source")
+
+    if not isinstance(live_man_src, str) or not live_man_src.startswith("VLM"):
+        failures.append(f"live manifest spec_provider_source '{live_man_src}' does not start with 'VLM'")
+        vlm_source_ok = False
+    if not isinstance(replay_man_src, str) or not replay_man_src.startswith("VLM"):
+        failures.append(f"replay manifest spec_provider_source '{replay_man_src}' does not start with 'VLM'")
+        vlm_source_ok = False
+
+    if live_graph is not None:
+        if not isinstance(live_graph.source, str) or not live_graph.source.startswith("VLM"):
+            failures.append(f"live graph source '{live_graph.source}' does not start with 'VLM'")
+            vlm_source_ok = False
+        if live_man_src != live_graph.source:
+            failures.append(f"live manifest source '{live_man_src}' != live graph source '{live_graph.source}'")
+            vlm_source_ok = False
+
+    if replay_graph is not None:
+        if not isinstance(replay_graph.source, str) or not replay_graph.source.startswith("VLM"):
+            failures.append(f"replay graph source '{replay_graph.source}' does not start with 'VLM'")
+            vlm_source_ok = False
+        if replay_man_src != replay_graph.source:
+            failures.append(f"replay manifest source '{replay_man_src}' != replay graph source '{replay_graph.source}'")
+            vlm_source_ok = False
+
+    checks["vlm_source"] = "PASS" if vlm_source_ok else "FAIL"
+
+    # 5. Manifest Provenance Validation
     prov_ok = True
     if live_manifest.get("spec_mode") != "vlm":
         failures.append(f"live spec_mode={live_manifest.get('spec_mode')} (expected 'vlm')")
@@ -147,33 +218,63 @@ def validate_vlm_replay(
         if replay_manifest.get("search_order_source_effective") != "random":
             failures.append(f"replay search={replay_manifest.get('search_order_source_effective')} (expected 'random')")
             prov_ok = False
+
+        seed_req = replay_manifest.get("search_seed_requested")
+        seed_eff = replay_manifest.get("search_seed_effective")
+        seed_valid = (
+            isinstance(seed_req, int)
+            and not isinstance(seed_req, bool)
+            and isinstance(seed_eff, int)
+            and not isinstance(seed_eff, bool)
+            and seed_req >= 0
+            and seed_eff >= 0
+            and seed_req == seed_eff
+        )
+        if not seed_valid:
+            failures.append(
+                f"invalid random seed in replay manifest: requested={seed_req} ({type(seed_req).__name__}), "
+                f"effective={seed_eff} ({type(seed_eff).__name__})"
+            )
+            prov_ok = False
+
         if expect_seed is not None:
-            if replay_manifest.get("search_seed_requested") != expect_seed or replay_manifest.get("search_seed_effective") != expect_seed:
+            if seed_req != expect_seed or seed_eff != expect_seed:
                 failures.append(
-                    f"replay seed requested={replay_manifest.get('search_seed_requested')}, "
-                    f"effective={replay_manifest.get('search_seed_effective')} (expected {expect_seed})"
+                    f"replay seed requested={seed_req}, effective={seed_eff} (expected {expect_seed})"
                 )
                 prov_ok = False
 
     checks["provenance"] = "PASS" if prov_ok else "FAIL"
 
-    # 5. Provider Ranking Fidelity
+    # 6. Provider Ranking Fidelity
     ranking_ok = True
     if live_graph is not None:
         if list(live_manifest.get("provider_region_ranking", [])) != list(live_graph.region_ranking):
             failures.append("live provider_region_ranking != live_graph.region_ranking")
             ranking_ok = False
-        if list(replay_manifest.get("provider_region_ranking", [])) != list(live_graph.region_ranking):
-            failures.append("replay provider_region_ranking != live_graph.region_ranking")
+    if replay_graph is not None:
+        if list(replay_manifest.get("provider_region_ranking", [])) != list(replay_graph.region_ranking):
+            failures.append("replay provider_region_ranking != replay_graph.region_ranking")
             ranking_ok = False
-        if domain != "living_room" and live_manifest.get("search_order_source_effective") == "provider":
-            if list(live_manifest.get("region_order_used", [])) != list(live_graph.region_ranking):
-                failures.append("live region_order_used != live_graph.region_ranking")
-                ranking_ok = False
 
     checks["provider_ranking_preserved"] = "PASS" if ranking_ok else "FAIL"
 
-    # 6. Candidate Permutation Check (for random replay)
+    # 7. Provider Used Order (for provider replay)
+    if expect_replay_search == "provider" and domain != "living_room":
+        prov_order_ok = True
+        if live_graph is not None:
+            if list(live_manifest.get("region_order_used", [])) != list(live_graph.region_ranking):
+                failures.append("live region_order_used != live_graph.region_ranking")
+                prov_order_ok = False
+        if replay_graph is not None:
+            if list(replay_manifest.get("region_order_used", [])) != list(replay_graph.region_ranking):
+                failures.append("replay region_order_used != replay_graph.region_ranking")
+                prov_order_ok = False
+        checks["provider_order_used"] = "PASS" if prov_order_ok else "FAIL"
+    else:
+        checks["provider_order_used"] = "N/A"
+
+    # 8. Candidate Permutation & Seed-Order Check (for random replay)
     if expect_replay_search == "random" and replay_graph is not None and domain != "living_room":
         used_order = list(replay_manifest.get("region_order_used", []))
         candidate_regions = list(replay_graph.candidate_regions)
@@ -182,10 +283,25 @@ def validate_vlm_replay(
         else:
             checks["candidate_permutation"] = "FAIL"
             failures.append(f"random region_order_used {used_order} is not a valid permutation of candidates {candidate_regions}")
+
+        # Exact random permutation verification from recorded seed
+        seed_eff = replay_manifest.get("search_seed_effective")
+        if isinstance(seed_eff, int) and not isinstance(seed_eff, bool) and seed_eff >= 0:
+            base = list(replay_graph.candidate_regions)
+            rng = random.Random(seed_eff)
+            rng.shuffle(base)
+            if used_order == base:
+                checks["random_seed_order"] = "PASS"
+            else:
+                checks["random_seed_order"] = "FAIL"
+                failures.append(f"random region_order_used {used_order} does not match expected permutation {base} for seed {seed_eff}")
+        else:
+            checks["random_seed_order"] = "FAIL"
     else:
         checks["candidate_permutation"] = "N/A"
+        checks["random_seed_order"] = "N/A"
 
-    # 7. Terminal / Result Consistency
+    # 9. Terminal / Result Consistency
     term_ok = True
     if live_manifest.get("terminal_status") != live_result.get("status"):
         failures.append(f"live manifest terminal_status={live_manifest.get('terminal_status')} != result.json status={live_result.get('status')}")
@@ -196,7 +312,7 @@ def validate_vlm_replay(
 
     checks["terminal_result_consistency"] = "PASS" if term_ok else "FAIL"
 
-    # 8. Deterministic Provider Replay Check
+    # 10. Deterministic Provider Replay Check
     if expect_replay_search == "provider":
         det_ok = True
         if live_result.get("status") != replay_result.get("status"):
@@ -211,15 +327,37 @@ def validate_vlm_replay(
 
         live_ggr_file = live_dir / "graph_grounding_result.json"
         replay_ggr_file = replay_dir / "graph_grounding_result.json"
-        if live_ggr_file.is_file() and replay_ggr_file.is_file():
+
+        # If terminal status is ACTION_SEQUENCE_READY, require GGR artifacts and matching assignment
+        if live_result.get("status") == "ACTION_SEQUENCE_READY":
+            if not live_ggr_file.is_file():
+                failures.append(f"live run ACTION_SEQUENCE_READY missing {live_ggr_file}")
+                det_ok = False
+            if not replay_ggr_file.is_file():
+                failures.append(f"replay run ACTION_SEQUENCE_READY missing {replay_ggr_file}")
+                det_ok = False
+
+            if live_ggr_file.is_file() and replay_ggr_file.is_file():
+                try:
+                    live_ggr = load_json(live_ggr_file)
+                    replay_ggr = load_json(replay_ggr_file)
+                    if live_ggr.get("assignment") != replay_ggr.get("assignment"):
+                        failures.append(f"grounding assignment differs between live ({live_ggr.get('assignment')}) and provider replay ({replay_ggr.get('assignment')})")
+                        det_ok = False
+                except Exception as e:
+                    failures.append(f"failed to read grounding artifact: {e}")
+                    det_ok = False
+        elif live_ggr_file.is_file() and replay_ggr_file.is_file():
             try:
                 live_ggr = load_json(live_ggr_file)
                 replay_ggr = load_json(replay_ggr_file)
-                if live_ggr.get("assignment") != replay_ggr.get("assignment"):
-                    failures.append("grounding assignment differs between live and provider replay")
-                    det_ok = False
-            except Exception:
-                pass
+                for field in ["status", "complete", "missing_roles"]:
+                    if live_ggr.get(field) != replay_ggr.get(field):
+                        failures.append(f"grounding {field} differs between live and provider replay: {live_ggr.get(field)} != {replay_ggr.get(field)}")
+                        det_ok = False
+            except Exception as e:
+                failures.append(f"failed to read grounding artifact: {e}")
+                det_ok = False
 
         checks["deterministic_provider_replay"] = "PASS" if det_ok else "FAIL"
     else:
