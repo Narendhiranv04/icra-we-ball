@@ -408,8 +408,7 @@ class EnvironmentVLMRequirementProvider:
                 self.normalized_task = None
         else:
             language_roles = self.environment_config.get("roles", {})
-            grouped_raw: dict[str, list[dict[str, Any]]] = {}
-            group_canonical_funcs: dict[str, str] = {}
+            grouped_requirements: dict[str, list[dict[str, Any]]] = {}
             for raw in raw_requirements:
                 matched_role_id = raw["id"]
                 canonical_func = raw.get("function", "").upper().replace(" ", "_")
@@ -426,70 +425,58 @@ class EnvironmentVLMRequirementProvider:
                         canonical_func = (
                             "PERSONAL_CUP_SAUCER_REGION"
                             if r_id == "personal_cup_saucer"
-                            else ("SHARED_REMOTE_REGION" if r_id == "shared_remote" else r_id.upper())
+                            else "SHARED_REMOTE_REGION"
+                            if r_id == "shared_remote"
+                            else canonical_func
                         )
-                grouped_raw.setdefault(matched_role_id, []).append(raw)
-                group_canonical_funcs[matched_role_id] = canonical_func
+                grouped_requirements.setdefault(matched_role_id, []).append({
+                    "raw": raw,
+                    "canonical_func": canonical_func,
+                })
 
-            for matched_role_id, raw_group in grouped_raw.items():
-                canonical_func = group_canonical_funcs[matched_role_id]
+            for role_id, group in grouped_requirements.items():
+                raw_group = [item["raw"] for item in group]
+                canonical_func = group[0]["canonical_func"]
+                raw_vlm_role_ids = [raw["id"] for raw in raw_group]
                 entity_kinds = {raw.get("entity_kind", "REGION") for raw in raw_group}
                 if len(entity_kinds) != 1:
-                    raise ValueError(
-                        f"Canonical grouping for {matched_role_id} has conflicting entity_kinds: {entity_kinds}"
-                    )
-                entity_kind = next(iter(entity_kinds))
-
-                cats: list[str] = []
-                props: set[str] = set()
-                hints: list[str] = []
-                seen_candidates: set[tuple[str, str]] = set()
-                mapped_candidates: list[dict[str, Any]] = []
-
-                for raw in raw_group:
-                    for c in self._candidate_categories(raw):
-                        if c not in cats:
-                            cats.append(c)
-                    props.update(self._map_properties(raw.get("required_properties", [])))
-                    for candidate in raw.get("candidate_objects", []):
-                        lbl = str(candidate.get("label", "")).strip()
-                        desc = str(candidate.get("visual_description", "")).strip()
-                        if lbl and lbl not in hints:
-                            hints.append(lbl)
-                        cand_key = (lbl, desc)
-                        if cand_key not in seen_candidates:
-                            seen_candidates.add(cand_key)
-                            mapped_candidates.append(
-                                {
-                                    **deepcopy(candidate),
-                                    "canonical_category": self._map_category(candidate.get("label")),
-                                    "accepted_for_role": (
-                                        self._map_category(candidate.get("label")) in cats
-                                    ),
-                                }
-                            )
-
-                for canonical_cat in cats:
-                    category_rank.setdefault(canonical_cat, len(category_rank) + 1)
-
-                raw_vlm_role_ids = list(dict.fromkeys(raw["id"] for raw in raw_group))
+                    raise ValueError(f"Mixed entity kinds in canonical group {role_id}: {entity_kinds}")
+                entity_kind = entity_kinds.pop()
                 total_count = sum(int(raw.get("required_count", 1)) for raw in raw_group)
                 raw_func = " / ".join(dict.fromkeys(raw.get("function", "") for raw in raw_group if raw.get("function")))
                 raw_desc = " ".join(dict.fromkeys(raw.get("description", "") for raw in raw_group if raw.get("description")))
-
+                hints = list(dict.fromkeys(
+                    candidate["label"]
+                    for raw in raw_group
+                    for candidate in raw.get("candidate_objects", [])
+                    if candidate.get("label")
+                ))
+                accepted_categories = list(dict.fromkeys(
+                    self._map_category(candidate.get("label", "")) or candidate.get("label", "")
+                    for raw in raw_group
+                    for candidate in raw.get("candidate_objects", [])
+                    if candidate.get("label")
+                ))
+                accepted_categories = [c for c in accepted_categories if c]
+                required_properties = sorted(
+                    set().union(*(self._map_properties(raw.get("required_properties", [])) for raw in raw_group))
+                )
                 normalized_records.append(
                     {
-                        "role_id": matched_role_id,
-                        "raw_vlm_role_id": raw_group[0]["id"],
+                        "role_id": role_id,
                         "raw_vlm_role_ids": raw_vlm_role_ids,
                         "entity_kind": entity_kind,
                         "function": canonical_func,
                         "raw_function": raw_func,
                         "vlm_required_count": total_count,
                         "description": raw_desc,
-                        "accepted_categories": list(cats),
-                        "mapped_visible_candidates": mapped_candidates,
-                        "required_properties": sorted(props),
+                        "accepted_categories": accepted_categories,
+                        "required_properties": required_properties,
+                        "candidate_objects": [
+                            candidate
+                            for raw in raw_group
+                            for candidate in raw.get("candidate_objects", [])
+                        ],
                         "semantic_hints": hints,
                         "source": "FM",
                         "provenance": "qwen_vlm_normalized_by_generic_ontology",
@@ -511,11 +498,10 @@ class EnvironmentVLMRequirementProvider:
                 list(aliases).index(category),
             ),
         )
-        for rank, canonical in enumerate(ordered_categories, start=1):
+        for rank, canonical in enumerate(ordered_categories, 1):
             vocabulary_entries.append(
                 {
                     "canonical_label": canonical,
-                    "detector_label": self._detector_label(canonical),
                     "aliases": list(aliases[canonical]),
                     "rank": rank,
                     "source": (
