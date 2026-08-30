@@ -307,11 +307,12 @@ class FunctionalRequirementGraph:
                 )
 
     def to_dict(self) -> dict[str, Any]:
+        sorted_nodes = {name: self.nodes[name] for name in sorted(self.nodes.keys())}
         return {
             "domain": self.domain,
             "task_instruction": self.task_instruction,
-            "roles": [node.to_dict() for node in self.nodes.values()],
-            "nodes": {name: node.to_dict() for name, node in self.nodes.items()},
+            "roles": [sorted_nodes[name].to_dict() for name in sorted_nodes],
+            "nodes": {name: sorted_nodes[name].to_dict() for name in sorted_nodes},
             "relations": [r.to_dict() for r in self.relations],
             "operation_groups": [g.to_dict() for g in self.operation_groups],
             "cross_group_reuse_allowed": self.cross_group_reuse_allowed,
@@ -324,15 +325,15 @@ class FunctionalRequirementGraph:
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> FunctionalRequirementGraph:
-        if "nodes" in data and isinstance(data["nodes"], dict):
-            nodes = {
-                name: FunctionalRole.from_dict(node_data)
-                for name, node_data in data["nodes"].items()
-            }
-        elif "roles" in data and isinstance(data["roles"], (list, tuple)):
+        if "roles" in data and isinstance(data["roles"], (list, tuple)):
             nodes = {
                 role_data["name"]: FunctionalRole.from_dict(role_data)
                 for role_data in data["roles"]
+            }
+        elif "nodes" in data and isinstance(data["nodes"], dict):
+            nodes = {
+                name: FunctionalRole.from_dict(node_data)
+                for name, node_data in data["nodes"].items()
             }
         else:
             nodes = {}
