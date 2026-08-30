@@ -303,9 +303,9 @@ def run_pipeline(
             if planning_error
             else "INFEASIBLE_AFTER_SEARCH"
         ),
-        "vlm_initial_satisfaction_decision": raw_graph[
+        "vlm_initial_satisfaction_decision": raw_graph.get(
             "initial_satisfaction_assessment"
-        ],
+        ),
         "evidence_initial_satisfaction_decision": (
             witness.get("stage") == 0 and complete
         ),

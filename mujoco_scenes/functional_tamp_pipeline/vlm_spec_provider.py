@@ -13,7 +13,7 @@ from .models import (
 )
 from .spec_provider import FunctionalSpecProvider
 
-VLM_CANONICALIZATION_VERSION = "phase3_6a3_v1"
+VLM_CANONICALIZATION_VERSION = "phase3_6a4_v1"
 
 
 class VLMSpecProvider(FunctionalSpecProvider):
@@ -46,121 +46,66 @@ class VLMSpecProvider(FunctionalSpecProvider):
 
         if provider is None:
             provider = FMRequirementProvider()
-        requirements = tuple(provider.get_requirements(
+        provider.get_requirements(
             task_instruction, observation_images=observation_images
-        ))
-        ranking = tuple(provider.generate_inspection_policy(
-            task_instruction, observation_images=observation_images
-        ))
+        )
 
-        candidate_regions = tuple(provider.candidate_regions)
         nodes: dict[str, FunctionalRole] = {}
         relations: list[FunctionalRelation] = []
 
-        driver_role_name = None
-        fastener_role_name = None
-        driver_req = None
-        fastener_req = None
-
-        for requirement in requirements:
-            func_name = requirement.function_name
-            role_id = "driver" if func_name == "CAN_DRIVE_SCREW" else ("fastener" if func_name == "CAN_FASTEN" else requirement.requirement_id)
-            if func_name == "CAN_DRIVE_SCREW":
-                driver_role_name = role_id
-                driver_req = requirement
-            elif func_name == "CAN_FASTEN":
-                fastener_role_name = role_id
-                fastener_req = requirement
-
-            role = FunctionalRole(
+        for role in provider.normalized_roles:
+            role_id = role.canonical_role_id
+            nodes[role_id] = FunctionalRole(
                 name=role_id,
-                entity_kind="OBJECT",
-                count=1,
-                semantic_categories=tuple(requirement.accepted_categories),
-                unary_predicates=(func_name,),
-                binding_policy="DISTINCT",
-                verification_mode="SEMANTIC_AND_GEOMETRIC",
-                description=requirement.description,
-                semantic_hints=tuple(requirement.semantic_hints),
-            )
-            nodes[role_id] = role
-
-        driver_id = driver_role_name or "driver"
-        fastener_id = fastener_role_name or "fastener"
-        target_id = "repair_target"
-
-        needs_target = False
-        if driver_req and "REACHES_TARGET" in driver_req.required_relations:
-            needs_target = True
-        if fastener_req and "COMPATIBLE_WITH_TARGET" in fastener_req.required_relations:
-            needs_target = True
-
-        if needs_target:
-            nodes[target_id] = FunctionalRole(
-                name=target_id,
-                entity_kind="FIXED_TARGET",
-                count=1,
-                semantic_categories=("repair_target", "workshop_frame_joint", "recess"),
-                binding_policy="DISTINCT",
-                verification_mode="GEOMETRIC_ONLY",
-                description="Target repair hole on the workpiece",
+                entity_kind=role.entity_kind,
+                count=role.required_count,
+                semantic_categories=role.run_local_categories,
+                unary_predicates=role.unary_predicates,
+                binding_policy=role.binding_policy,
+                verification_mode=(
+                    "GEOMETRIC_ONLY"
+                    if role.entity_kind == "FIXED_TARGET"
+                    else ("SEMANTIC_AND_GEOMETRIC" if role.unary_predicates else "SEMANTIC_ONLY")
+                ),
+                description=role.description,
+                semantic_hints=role.semantic_hints,
             )
 
-        if driver_req:
-            if "COMPATIBLE_WITH" in driver_req.required_relations and fastener_id in nodes:
-                relations.append(FunctionalRelation(
-                    subject_role=driver_id,
-                    predicate="COMPATIBLE_WITH",
-                    object_role=fastener_id,
-                    expected=True,
-                ))
-            if "REACHES_TARGET" in driver_req.required_relations and target_id in nodes:
-                relations.append(FunctionalRelation(
-                    subject_role=driver_id,
-                    predicate="REACHES_TARGET",
-                    object_role=target_id,
-                    expected=True,
-                ))
+        for rel in provider.normalized_relations:
+            relations.append(FunctionalRelation(
+                subject_role=rel.canonical_subject_role_id,
+                predicate=rel.canonical_predicate,
+                object_role=rel.canonical_object_role_id,
+                expected=True,
+            ))
 
-        if fastener_req:
-            if "COMPATIBLE_WITH_TARGET" in fastener_req.required_relations and target_id in nodes:
-                relations.append(FunctionalRelation(
-                    subject_role=fastener_id,
-                    predicate="COMPATIBLE_WITH_TARGET",
-                    object_role=target_id,
-                    expected=True,
-                ))
-
-        # Derive detector vocabulary strictly from G_F role categories and generic aliases
-        role_categories = set()
-        for node in nodes.values():
-            if node.entity_kind == "OBJECT":
-                role_categories.update(node.semantic_categories)
-
-        detector_map = provider.get_detector_label_to_canonical_map()
-        prompts = []
-        for prompt, canonical in detector_map.items():
-            if canonical in role_categories and prompt not in prompts:
-                prompts.append(prompt)
-        vocabulary = tuple(prompts)
+        detector_vocab = tuple(dict.fromkeys([
+            *provider.vlm_derived_detector_prompts,
+            *provider.evaluation_negative_control_prompts,
+        ]))
 
         return FunctionalRequirementGraph(
             domain="workshop",
             task_instruction=task_instruction,
             nodes=nodes,
             relations=tuple(relations),
-            detector_vocabulary=vocabulary,
-            candidate_regions=candidate_regions,
-            region_ranking=ranking,
-            source="VLM_FUNCTIONAL_SPEC",
-            raw_requirements=requirements,
+            detector_vocabulary=detector_vocab,
+            candidate_regions=tuple(provider.candidate_regions),
+            region_ranking=tuple(provider.region_ranking),
+            source="VLM_CANONICAL_G_F",
+            raw_requirements=tuple(provider._requirements or []),
             metadata={
+                "schema_version": 2,
                 "vlm_canonicalization_version": VLM_CANONICALIZATION_VERSION,
+                "transformation": "LOSSLESS_CANONICAL_G_F_CONSTRUCTION",
+                "raw_roles_count": len(provider.normalized_roles),
+                "raw_relations_count": len(provider.normalized_relations),
+                "vlm_derived_detector_prompts": list(provider.vlm_derived_detector_prompts),
+                "evaluation_negative_control_prompts": list(provider.evaluation_negative_control_prompts),
                 "detector_label_to_canonical": provider.get_detector_label_to_canonical_map(),
                 "alias_to_canonical": provider.get_alias_to_canonical_map(),
                 "raw_decomposition": provider.raw_decomposition,
                 "transformation_trace": getattr(provider, "transformation_trace", []),
-                "evaluation_negative_controls": ["wooden hammer"],
             },
         )
 
@@ -294,17 +239,16 @@ class VLMSpecProvider(FunctionalSpecProvider):
             observation_images=observation_images,
         )
         requirements = result["normalized_requirements"]
+        canonical_relations = result.get("normalized_relations", [])
         nodes: dict[str, FunctionalRole] = {}
         relations: list[FunctionalRelation] = []
-        all_categories: list[str] = []
 
         for row in requirements:
             func_id = row["function"]
-            binding = row.get("binding_policy", "SHARED" if "SHARED" in func_id else "DISTINCT")
+            binding = row["binding_policy"]
             count = int(row["vlm_required_count"])
-            entity_kind = row.get("entity_kind", "REGION")
+            entity_kind = row["entity_kind"]
             cats = tuple(row["accepted_categories"])
-            all_categories.extend(cats)
             unary = tuple(
                 prop for prop in row.get("required_properties", []) if prop == "PLANAR_SUPPORT"
             )
@@ -320,39 +264,17 @@ class VLMSpecProvider(FunctionalSpecProvider):
                 semantic_hints=tuple(row.get("semantic_hints", ())),
             )
 
-        raw_to_canonical = {}
-        for row in requirements:
-            for raw_id in row.get("raw_vlm_role_ids", []):
-                raw_to_canonical[raw_id] = row["function"]
-            if "raw_vlm_role_id" in row:
-                raw_to_canonical[row["raw_vlm_role_id"]] = row["function"]
-            raw_to_canonical[row["function"]] = row["function"]
-            raw_to_canonical[row["role_id"]] = row["function"]
+        for rel_item in canonical_relations:
+            relations.append(FunctionalRelation(
+                subject_role=rel_item["canonical_subject_role_id"],
+                predicate=rel_item["canonical_predicate"],
+                object_role=rel_item["canonical_object_role_id"],
+                expected=True,
+            ))
 
-        raw_relations = result.get("raw_vlm_decomposition", {}).get("functional_relations", [])
-        for rel_item in raw_relations:
-            s = rel_item.get("subject_role")
-            r = rel_item.get("relation")
-            o = rel_item.get("object_role")
-            if s and r and o:
-                canon_s = raw_to_canonical.get(str(s), str(s))
-                canon_o = raw_to_canonical.get(str(o), str(o))
-                if canon_s in nodes and canon_o in nodes:
-                    relations.append(FunctionalRelation(
-                        subject_role=canon_s,
-                        predicate=str(r),
-                        object_role=canon_o,
-                        expected=True,
-                    ))
-
-        role_categories = set(all_categories)
-        role_categories.update(["armchair", "chair", "sofa", "remote_control", "tv_remote", "cup", "saucer", "cup_saucer_set"])
-        aliases = provider._vocabulary_aliases()
-        prompts: list[str] = []
-        for cat in aliases:
-            if cat in role_categories:
-                prompts.extend(aliases[cat])
-        vocabulary = tuple(dict.fromkeys(prompts))
+        vlm_prompts = list(provider.vlm_derived_role_vocabulary)
+        context_prompts = list(provider.task_explicit_context_vocabulary)
+        vocabulary = tuple(dict.fromkeys(vlm_prompts + context_prompts))
 
         return FunctionalRequirementGraph(
             domain="living_room",
@@ -364,11 +286,13 @@ class VLMSpecProvider(FunctionalSpecProvider):
             detector_vocabulary=vocabulary,
             candidate_regions=(),
             region_ranking=(),
-            source="VLM_FUNCTIONAL_SPEC",
+            source="VLM_CANONICAL_G_F",
             raw_requirements=(result.get("normalized_task_contract") or result["raw_vlm_decomposition"],),
             metadata={
                 "vlm_canonicalization_version": VLM_CANONICALIZATION_VERSION,
                 "semantic_vocabulary_path": str(provider.vocabulary_path),
+                "vlm_derived_role_vocabulary": vlm_prompts,
+                "task_explicit_context_vocabulary": context_prompts,
                 "raw_decomposition": result["raw_vlm_decomposition"],
                 "normalization_audit": result["reviewed_ontology_audit"],
             },

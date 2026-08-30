@@ -1,14 +1,14 @@
 # Phase 3 Freeze and Phase 4 Handoff
 
 > [!NOTE]
-> **PASS 3.6A.3 COMPLETE — SEMANTIC PRESERVATION AND VLM → G_F CONTRACT FROZEN**
-> Pass 3.6A.3 enforces strict semantic preservation across the live VLM → Functional Requirement Graph ($G_F$) interface. The contract is canonicalized under version `phase3_6a3_v1` and frozen across all three benchmark domains (Kitchen, Living Room, Workshop).
+> **PASS 3.6A.4 CANDIDATE — LOSSLESS CANONICAL G_F CONSTRUCTION ACROSS DOMAINS**
+> Pass 3.6A.4 enforces lossless deterministic canonicalization of raw VLM natural-language semantics into Canonical $G_F$. The contract is canonicalized under version `phase3_6a4_v1` across all three benchmark domains (Kitchen, Living Room, Workshop).
 
 ---
 
 ## 1. Executive Summary
 
-Phase 3 establishes the canonical functional-grounding Task and Motion Planning (TAMP) pipeline architecture. Under Pass 3.6A.1, Pass 3.6A.2, and Pass 3.6A.3, the interface boundary between the live Vision-Language Model (VLM) and downstream execution has been realigned to adhere strictly to scientific zero-leakage principles with deterministic, semantic-preserving canonicalization.
+Phase 3 establishes the canonical functional-grounding Task and Motion Planning (TAMP) pipeline architecture. Under Pass 3.6A.1 through Pass 3.6A.4, the interface boundary between the live Vision-Language Model (VLM) and downstream execution has been realigned to adhere strictly to scientific zero-leakage principles with lossless, deterministic canonicalization.
 
 The scientific pipeline is established as:
 ```
@@ -18,7 +18,7 @@ TASK + INITIAL MULTI-VIEW RGB
         ↓
 complete natural-language functional specification
         ↓
-strict deterministic representation & canonicalization (phase3_6a3_v1)
+lossless deterministic canonicalization (phase3_6a4_v1)
         ↓
 canonical G_F
         ↓
@@ -31,7 +31,7 @@ G_O (sequential inspection) → grounding (phi*) → symbolic compiler → A*
 
 ---
 
-## 2. Pass 3.6A.3 Contract and Canonicalization Summary
+## 2. Pass 3.6A.4 Contract and Canonicalization Summary
 
 1. **Complete Natural-Language Schema**:
    - `status` (`SUPPORTED` / `UNSUPPORTED`)
@@ -43,20 +43,20 @@ G_O (sequential inspection) → grounding (phi*) → symbolic compiler → A*
    - `inspection_order`: array of proposed region IDs.
    - `unsupported_reason`: non-empty diagnostic for `UNSUPPORTED` status.
 
-2. **Domain Canonicalization & Compositional Concept Matchers**:
-   - **Kitchen**: Canonical roles (`coffee_container`, `soup_container`, `coffee_stirrer`, `soup_eating_utensil`, `coffee_source`, `water_source`) and operation groups (`coffee_stirring`, `soup_serving`). Initial RGB render resolution standardized to **1280×960** across 5 views.
-   - **Living Room**: Compositional concept matchers for `personal_cup_saucer` (surface + personal/drink) and `shared_remote` (surface + shared/remote). Role consolidation preserves raw binding policies, counts, and kinds. Mode-independent task entities handled downstream.
-   - **Workshop**: Compositional concept matchers for `CAN_DRIVE_SCREW` (driving action), `CAN_FASTEN` (fastener concept), and `repair_target` (`FIXED_TARGET`). Unary-only properties and explicit binary relations (`COMPATIBLE_WITH`, `REACHES_TARGET`, `COMPATIBLE_WITH_TARGET`). Open-vocabulary candidate detector categories preserved.
+2. **Domain Lossless Canonicalization & Open-Vocabulary Handling**:
+   - **Kitchen**: Canonical roles (`coffee_container`, `soup_container`, `coffee_stirrer`, `soup_eating_utensil`, `coffee_source`, `water_source`) and operation groups (`coffee_stirring`, `soup_serving`). Strict required top-level schema validation. Initial RGB render resolution standardized to **1280×960** across 5 views.
+   - **Living Room**: Lossless relation preservation and open-vocabulary candidate categories mapped to snake_case tokens. Compositional concept matchers for `personal_cup_saucer` (surface + personal/drink) and `shared_remote` (surface + shared/remote). Role consolidation preserves raw binding policies, counts, and kinds without post-hoc overwrites.
+   - **Workshop**: Lossless normalized roles and relations (`NormalizedWorkshopRole`, `NormalizedWorkshopRelation`). Function names are not stored in unary predicates. Candidate categories directly populate detector vocabulary without fixed ontology mapping. Single initial VLM call extracts roles, relations, inspectable regions, and region ranking. Bare `"hole"` alias removed in favor of compositional target hole matching.
 
 3. **Strict Validation & Traceability**:
-   - `VLM_CANONICALIZATION_VERSION = "phase3_6a3_v1"` attached to all $G_F$ metadata.
+   - `VLM_CANONICALIZATION_VERSION = "phase3_6a4_v1"` attached to all $G_F$ metadata.
    - Complete transformation trace, raw decompositions, and normalization audits recorded in all run artifacts.
 
 ---
 
 ## 3. Test Suite Verification
 
-- **263 tests passing** across `mujoco_scenes/functional_tamp_pipeline/tests/`, `mujoco_scenes/tests/test_phase3_6a2_contract.py`, `mujoco_scenes/tests/test_kitchen_vlm_functional_graph.py`, `mujoco_scenes/tests/test_environment_vlm_requirements.py`, and `mujoco_scenes/tests/test_workshop_vlm_requirements.py`.
+- **327 tests passing** across `mujoco_scenes/functional_tamp_pipeline/tests/`, `mujoco_scenes/tests/test_phase3_6a4_contract.py`, `mujoco_scenes/tests/test_phase3_6a3_contract.py`, `mujoco_scenes/tests/test_phase3_6a2_contract.py`, `mujoco_scenes/tests/test_kitchen_vlm_functional_graph.py`, `mujoco_scenes/tests/test_environment_vlm_requirements.py`, `mujoco_scenes/tests/test_workshop_vlm_requirements.py`, and `mujoco_scenes/tests/test_workshop_phase1.py`.
 - **Zero test regressions** on the unified VLM contract.
 
 ---

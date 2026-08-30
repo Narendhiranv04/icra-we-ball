@@ -1,6 +1,6 @@
-# VLM Functional Specification Interface Contract (Pass 3.6A.3)
+# VLM Functional Specification Interface Contract (Pass 3.6A.4)
 
-**Canonicalization Version**: `phase3_6a3_v1`
+**Canonicalization Version**: `phase3_6a4_v1`
 
 This document defines the authoritative scientific interface contract between the Vision-Language Model (VLM) specification provider and downstream perception, grounding, and task-and-motion planning (TAMP) components.
 
@@ -17,7 +17,7 @@ TASK + INITIAL MULTI-VIEW RGB
         ↓
 complete natural-language functional specification
         ↓
-strict deterministic representation & canonicalization (phase3_6a3_v1)
+lossless deterministic canonicalization (phase3_6a4_v1)
         ↓
 canonical G_F
         ↓
@@ -125,7 +125,7 @@ If the VLM determines that the task cannot be represented with this abstraction:
 
 ---
 
-## 4. Deterministic Backend Canonicalization (`phase3_6a3_v1`)
+## 4. Deterministic Backend Canonicalization (`phase3_6a4_v1`)
 
 Downstream backend code compiles the VLM's natural-language output deterministically and fails closed on invalid or ambiguous specifications:
 
@@ -146,7 +146,7 @@ Downstream backend code compiles the VLM's natural-language output deterministic
    - The resulting $G_F$ `candidate_regions` contains **ONLY** successfully resolved VLM proposals. No fallback to the full canonical catalog is permitted.
 5. **Strict Validation & No Semantic Repairs**:
    - Fails closed on unmapped properties, relations, roles, or mismatched policies.
-   - Attaches `vlm_canonicalization_version: "phase3_6a3_v1"` and full transformation provenance to $G_F$ metadata.
+   - Attaches `vlm_canonicalization_version: "phase3_6a4_v1"` and full transformation provenance to $G_F$ metadata.
 
 ---
 

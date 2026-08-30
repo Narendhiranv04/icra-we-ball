@@ -53,7 +53,7 @@ from mujoco_scenes.workshop_phase1.requirements import (
 
 
 def test_vlm_canonicalization_version_constant():
-    assert VLM_CANONICALIZATION_VERSION == "phase3_6a3_v1"
+    assert VLM_CANONICALIZATION_VERSION == "phase3_6a4_v1"
 
 
 def test_single_role_field_enforced():
@@ -254,6 +254,7 @@ def test_kitchen_operation_group_fail_closed_no_rescue():
         ],
         "inspectable_regions": [],
         "inspection_order": [],
+        "cross_group_reuse_allowed": False,
         "unsupported_reason": "",
     }
     with pytest.raises(VLMSpecificationError, match="does not match any canonical kitchen operation group"):

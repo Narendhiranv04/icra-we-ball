@@ -46,7 +46,7 @@ from mujoco_scenes.workshop_phase1.requirements import (
 
 
 def test_vlm_canonicalization_version_constant():
-    assert VLM_CANONICALIZATION_VERSION == "phase3_6a3_v1"
+    assert VLM_CANONICALIZATION_VERSION == "phase3_6a4_v1"
 
 
 def test_kitchen_render_resolution_configured():

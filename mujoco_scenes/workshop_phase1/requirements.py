@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import abc
+from dataclasses import dataclass
 from pathlib import Path
 import re
 from typing import Any
@@ -217,6 +218,34 @@ class ManualWorkshopFMContract(RequirementProvider):
 StaticWorkshopRequirementProvider = ManualWorkshopFMContract
 
 
+@dataclass(frozen=True)
+class NormalizedWorkshopRole:
+    raw_role_id: str
+    canonical_role_id: str
+    entity_kind: str  # "OBJECT", "FIXED_TARGET"
+    raw_function: str
+    canonical_function: str
+    required_count: int
+    binding_policy: str  # "DISTINCT", "REUSABLE", "SHARED"
+    candidate_categories: tuple[str, ...]
+    run_local_categories: tuple[str, ...]
+    visible_candidates: tuple[dict[str, Any], ...]
+    unary_predicates: tuple[str, ...]
+    description: str
+    semantic_hints: tuple[str, ...]
+    provenance: str
+
+
+@dataclass(frozen=True)
+class NormalizedWorkshopRelation:
+    raw_subject_role_id: str
+    canonical_subject_role_id: str
+    raw_relation_text: str
+    canonical_predicate: str
+    raw_object_role_id: str
+    canonical_object_role_id: str
+
+
 WORKSHOP_SEARCH_REGIONS = {
     "LEFT_DRAWER": "left storage drawer below workbench",
     "RIGHT_DRAWER": "right storage drawer below workbench",
@@ -242,10 +271,26 @@ WORKSHOP_REGION_ALIASES: dict[str, tuple[str, ...]] = {
     ),
 }
 
-FIXED_TARGET_ALIASES = (
-    "repair_hole_in_workbench", "workbench_repair_hole", "repair_target",
-    "repair_hole_target", "frame_joint", "workbench_hole", "hole",
-)
+
+def map_workshop_fixed_target_role(raw: dict[str, Any]) -> str | None:
+    """Deterministic concept matching for Workshop contextual FIXED_TARGET roles."""
+    if raw.get("entity_kind") != "FIXED_TARGET":
+        return None
+    fn_desc = f"{raw.get('function', '')} {raw.get('description', '')}"
+    norm = " ".join(re.findall(r"[a-z0-9]+", fn_desc.casefold()))
+    if not norm:
+        return None
+    has_target_concept = any(
+        k in norm for k in (
+            "repair hole", "repair target", "target hole", "workbench hole",
+            "frame joint", "joint hole", "workpiece hole", "threaded fastener target",
+            "fastener insertion point", "accept threaded fastener", "accept screw",
+            "insertion hole", "pre drilled hole", "hole in frame", "hole in workpiece",
+        )
+    )
+    if has_target_concept:
+        return "repair_target"
+    return None
 
 
 def resolve_workshop_region_proposal(proposal: dict[str, Any] | str) -> str | None:
@@ -335,6 +380,12 @@ class FMRequirementProvider(RequirementProvider):
         self.region_ranking: tuple[str, ...] = ()
         self.candidate_regions: tuple[str, ...] = ()
         self.transformation_trace: list[dict[str, Any]] = []
+        self.normalized_roles: list[NormalizedWorkshopRole] = []
+        self.normalized_relations: list[NormalizedWorkshopRelation] = []
+        self.vlm_derived_detector_prompts: tuple[str, ...] = ()
+        self.evaluation_negative_control_prompts: tuple[str, ...] = (
+            "claw hammer", "ball peen hammer", "sledgehammer"
+        )
 
         normalization = self.ontology_contract._contract_data.get(
             "fm_normalization", {}
@@ -431,42 +482,70 @@ class FMRequirementProvider(RequirementProvider):
                 f"{document.get('unsupported_reason', 'no reason')}"
             )
 
-        normalized: dict[str, FunctionalRequirement] = {}
         raw_requirements = document.get("functional_roles", [])
         self.transformation_trace = []
         raw_id_to_canon: dict[str, str] = {}
+        normalized_roles: list[NormalizedWorkshopRole] = []
+        legacy_requirements: dict[str, FunctionalRequirement] = {}
 
         for rank_idx, raw in enumerate(raw_requirements, start=1):
             raw_kind = raw.get("entity_kind")
             raw_id = raw.get("id")
+            required_count = int(raw.get("required_count", 1))
+            binding_policy = str(raw.get("binding_policy", "DISTINCT"))
+
             if raw_kind == "FIXED_TARGET":
-                fn_text = f"{raw.get('function', '')} {raw.get('description', '')}"
-                norm_fn = self._phrase(fn_text)
-                if any(self._contains_phrase(norm_fn, self._phrase(k)) for k in FIXED_TARGET_ALIASES):
-                    raw_id_to_canon[raw_id] = "repair_target"
-                    self.transformation_trace.append({
-                        "raw_role": raw_id,
-                        "raw_entity_kind": raw_kind,
-                        "transformation": "SYSTEM_OWNED_FIXED_TARGET_REPRESENTATION",
-                        "canonical_role": "repair_target",
-                    })
-                    continue
-                raise VLMSpecificationError(f"VLM_SPEC_FAILED: Unsupported FIXED_TARGET role {raw_id!r}: {fn_text}")
+                canonical_target = map_workshop_fixed_target_role(raw)
+                if canonical_target is None:
+                    fn_text = f"{raw.get('function', '')} {raw.get('description', '')}"
+                    raise VLMSpecificationError(f"VLM_SPEC_FAILED: Unsupported FIXED_TARGET role {raw_id!r}: {fn_text}")
+                raw_id_to_canon[raw_id] = canonical_target
+                cand_cats = tuple(str(c).strip() for c in raw.get("candidate_categories", []) if str(c).strip())
+                run_local_cats = tuple(dict.fromkeys(self._phrase(c).replace(" ", "_") for c in cand_cats)) or ("repair_target",)
+                cand_objs = tuple(raw.get("visible_candidates", []))
+                hints = tuple(candidate["label"] for candidate in cand_objs if candidate.get("label"))
+
+                normalized_role = NormalizedWorkshopRole(
+                    raw_role_id=raw_id,
+                    canonical_role_id=canonical_target,
+                    entity_kind="FIXED_TARGET",
+                    raw_function=str(raw.get("function", "")),
+                    canonical_function="FIXED_TARGET",
+                    required_count=required_count,
+                    binding_policy=binding_policy,
+                    candidate_categories=cand_cats,
+                    run_local_categories=run_local_cats,
+                    visible_candidates=cand_objs,
+                    unary_predicates=(),
+                    description=str(raw.get("description", "")),
+                    semantic_hints=hints,
+                    provenance="vlm_explicit_fixed_target",
+                )
+                normalized_roles.append(normalized_role)
+                self.transformation_trace.append({
+                    "raw_role": raw_id,
+                    "raw_entity_kind": raw_kind,
+                    "transformation": "SYSTEM_OWNED_FIXED_TARGET_REPRESENTATION",
+                    "canonical_role": canonical_target,
+                })
+                continue
             elif raw_kind == "REGION":
                 raise VLMSpecificationError(f"VLM_SPEC_FAILED: Unsupported REGION role {raw_id!r} in Workshop specification")
             elif raw_kind != "OBJECT":
                 raise VLMSpecificationError(f"VLM_SPEC_FAILED: Invalid entity_kind {raw_kind!r} for role {raw_id!r}")
 
-            cand_cats = [str(c).strip().lower() for c in raw.get("candidate_categories", []) if str(c).strip()]
-            if not cand_cats:
+            raw_cand_cats = [str(c).strip() for c in raw.get("candidate_categories", []) if str(c).strip()]
+            if not raw_cand_cats:
                 raise VLMSpecificationError(f"VLM_SPEC_FAILED: Role {raw_id!r} has no candidate categories")
+            cand_cats = tuple(raw_cand_cats)
+            run_local_cats = tuple(dict.fromkeys(self._phrase(c).replace(" ", "_") for c in cand_cats))
 
             for cat in cand_cats:
                 canon_c = self._map_category(cat)
                 if canon_c is not None:
                     self._category_rank.setdefault(canon_c, len(self._category_rank) + 1)
 
-            cand_objs = raw.get("visible_candidates", [])
+            cand_objs = tuple(raw.get("visible_candidates", []))
             for candidate in cand_objs:
                 for field in ("label", "visual_description"):
                     val = candidate.get(field)
@@ -475,11 +554,13 @@ class FMRequirementProvider(RequirementProvider):
                         if canon_c is not None:
                             self._category_rank.setdefault(canon_c, len(self._category_rank) + 1)
                             break
+            hints = tuple(candidate["label"] for candidate in cand_objs if candidate.get("label"))
 
             function_name = self._map_function(raw)
-            if function_name in normalized:
-                raise VLMSpecificationError(f"VLM_SPEC_FAILED: VLM emitted duplicate role {function_name}")
-            raw_id_to_canon[raw_id] = function_name
+            canonical_role_id = "driver" if function_name == "CAN_DRIVE_SCREW" else ("fastener" if function_name == "CAN_FASTEN" else raw_id)
+            if canonical_role_id in raw_id_to_canon.values():
+                raise VLMSpecificationError(f"VLM_SPEC_FAILED: VLM emitted duplicate role {canonical_role_id}")
+            raw_id_to_canon[raw_id] = canonical_role_id
 
             raw_props = raw.get("required_properties", [])
             unary_predicates: list[str] = []
@@ -492,23 +573,39 @@ class FMRequirementProvider(RequirementProvider):
                 if mapped_u not in unary_predicates:
                     unary_predicates.append(mapped_u)
 
-            normalized[function_name] = FunctionalRequirement(
+            normalized_role = NormalizedWorkshopRole(
+                raw_role_id=raw_id,
+                canonical_role_id=canonical_role_id,
+                entity_kind="OBJECT",
+                raw_function=str(raw.get("function", "")),
+                canonical_function=function_name,
+                required_count=required_count,
+                binding_policy=binding_policy,
+                candidate_categories=cand_cats,
+                run_local_categories=run_local_cats,
+                visible_candidates=cand_objs,
+                unary_predicates=tuple(unary_predicates),
+                description=str(raw.get("description", "")),
+                semantic_hints=hints,
+                provenance="qwen_vlm_normalized_by_workshop_ontology",
+            )
+            normalized_roles.append(normalized_role)
+
+            legacy_requirements[function_name] = FunctionalRequirement(
                 requirement_id=raw["id"],
                 entity_type=EntityType.OBJECT,
                 function_name=function_name,
                 description=raw.get("description", ""),
                 rank=rank_idx,
                 source=RequirementSource.FM,
-                accepted_categories=cand_cats,
-                semantic_hints=[
-                    candidate["label"] for candidate in cand_objs if candidate.get("label")
-                ],
+                accepted_categories=list(cand_cats),
+                semantic_hints=list(hints),
                 geometric_constraints={},
-                required_relations=unary_predicates,
+                required_relations=list(unary_predicates),
                 provenance="qwen_vlm_normalized_by_workshop_ontology",
             )
 
-        # Handle top-level functional_relations with strict fail-closed matching
+        normalized_relations: list[NormalizedWorkshopRelation] = []
         for rel in document.get("functional_relations", []):
             s = rel.get("subject_role")
             r = rel.get("relation")
@@ -535,30 +632,30 @@ class FMRequirementProvider(RequirementProvider):
                 else:
                     raise VLMSpecificationError(f"VLM_SPEC_FAILED: Relation {r!r} cannot be mapped to any Workshop relation")
 
-            if s_canon in normalized:
-                if mapped_rel not in normalized[s_canon].required_relations:
-                    normalized[s_canon].required_relations.append(mapped_rel)
+            normalized_relations.append(NormalizedWorkshopRelation(
+                raw_subject_role_id=s,
+                canonical_subject_role_id=s_canon,
+                raw_relation_text=r,
+                canonical_predicate=mapped_rel,
+                raw_object_role_id=o,
+                canonical_object_role_id=o_canon,
+            ))
 
-        if not normalized:
+            func_key = "CAN_DRIVE_SCREW" if s_canon == "driver" else ("CAN_FASTEN" if s_canon == "fastener" else s_canon)
+            if func_key in legacy_requirements:
+                if mapped_rel not in legacy_requirements[func_key].required_relations:
+                    legacy_requirements[func_key].required_relations.append(mapped_rel)
+
+        if not normalized_roles:
             raise VLMSpecificationError("VLM_SPEC_FAILED: No functional requirements produced by VLM")
 
-        self._requirements = sorted(normalized.values(), key=lambda item: item.rank)
+        self.normalized_roles = normalized_roles
+        self.normalized_relations = normalized_relations
+        self._requirements = sorted(legacy_requirements.values(), key=lambda item: item.rank)
 
-    def generate_inspection_policy(
-        self,
-        task_instruction: str = CANONICAL_WORKSHOP_INSTRUCTION,
-        *,
-        observation_images: list[str | Path] | None = None,
-    ) -> tuple[str, ...]:
-        images = list(observation_images or [])
-        if not images:
-            raise ValueError("VLM_SPEC_FAILED: Observation images required for VLM inspection policy")
-        priors = self.fm_adapter.generate_inspection_priors(
-            task_instruction,
-            observation_images=images,
-        )
+        # Resolve regions from the single initial response
         resolved_map: dict[str, str] = {}
-        for item in priors.get("inspectable_regions", []):
+        for item in document.get("inspectable_regions", []):
             if isinstance(item, dict):
                 prop_id = item.get("id") or item.get("region_id") or ""
                 canon_reg = resolve_workshop_region_proposal(item)
@@ -569,7 +666,7 @@ class FMRequirementProvider(RequirementProvider):
                 if canon_reg is not None and canon_reg in WORKSHOP_SEARCH_REGIONS:
                     resolved_map[item] = canon_reg
 
-        raw_order = priors.get("inspection_order", [])
+        raw_order = document.get("inspection_order", [])
         order = []
         for raw_item in raw_order:
             if isinstance(raw_item, dict):
@@ -583,6 +680,27 @@ class FMRequirementProvider(RequirementProvider):
 
         self.region_ranking = tuple(order)
         self.candidate_regions = tuple(dict.fromkeys(resolved_map.values()))
+
+        # VLM derived detector vocabulary
+        vlm_prompts = list(dict.fromkeys(
+            cat
+            for r in self.normalized_roles
+            if r.entity_kind == "OBJECT"
+            for cat in r.candidate_categories
+        ))
+        self.vlm_derived_detector_prompts = tuple(vlm_prompts)
+
+    def generate_inspection_policy(
+        self,
+        task_instruction: str = CANONICAL_WORKSHOP_INSTRUCTION,
+        *,
+        observation_images: list[str | Path] | None = None,
+    ) -> tuple[str, ...]:
+        if self.region_ranking:
+            return self.region_ranking
+        self._ensure_generated(
+            task_instruction, observation_images=observation_images
+        )
         return self.region_ranking
 
     def get_requirements(

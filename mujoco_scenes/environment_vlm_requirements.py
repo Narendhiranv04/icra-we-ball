@@ -34,6 +34,8 @@ KITCHEN_SEARCH_REGIONS = {
     "C1": "lower kitchen cupboard",
 }
 
+VLM_CANONICALIZATION_VERSION = "phase3_6a4_v1"
+
 
 def _load_yaml(path: Path) -> dict[str, Any]:
     document = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -82,6 +84,75 @@ def map_living_room_role_function(function_text: str) -> str | None:
     return None
 
 
+def map_living_room_relation(
+    relation_text: str,
+    relation_aliases: dict[str, list[str]] | None = None,
+) -> str | None:
+    """Deterministic concept matching for Living Room binary relations."""
+    norm = _phrase(relation_text)
+    if not norm:
+        return None
+    matches = set()
+    if any(k in norm for k in (
+        "near seat", "near the seat", "near armchair", "reach of one seated",
+        "near seating", "adjacent to viewer", "within reach of seat",
+        "near assigned seat", "adjacent to seat", "adjacent to armchair",
+        "within reach of armchair",
+    )):
+        matches.add("NEAR_SEAT")
+    if any(k in norm for k in (
+        "accessible from both", "reachable by both", "shared access",
+        "both viewers", "between seats", "central access", "accessible to both",
+        "accessible from both seating positions", "shared access from both",
+    )):
+        matches.add("ACCESSIBLE_FROM_BOTH_SEATS")
+    if any(k in norm for k in (
+        "fit set", "fits set", "fit cup and saucer", "fits cup and saucer",
+        "hold cup and saucer", "fit the complete set", "support cup and saucer",
+        "hold the complete set", "fit the payload set",
+    )):
+        matches.add("FITS_SET_ON")
+    if any(k in norm for k in (
+        "fit remote", "fits remote", "support remote", "accommodate remote",
+        "fit the remote", "fit television remote", "support television remote",
+    )):
+        matches.add("FITS_ON")
+
+    if relation_aliases:
+        for pred in ("NEAR_SEAT", "ACCESSIBLE_FROM_BOTH_SEATS", "FITS_SET_ON", "FITS_ON"):
+            for alias in relation_aliases.get(pred, []):
+                a_norm = _phrase(alias)
+                if a_norm == norm or f" {a_norm} " in f" {norm} ":
+                    matches.add(pred)
+                    break
+
+    if len(matches) == 1:
+        return next(iter(matches))
+    if len(matches) > 1:
+        raise VLMSpecificationError(
+            f"Ambiguous living room relation {relation_text!r} matches: {sorted(matches)}"
+        )
+    return None
+
+
+def map_living_room_fixed_target_role(raw: dict[str, Any]) -> str | None:
+    """Deterministic concept matching for Living Room contextual FIXED_TARGET roles."""
+    if raw.get("entity_kind") != "FIXED_TARGET":
+        return None
+    fn_desc = f"{raw.get('function', '')} {raw.get('description', '')}"
+    norm = _phrase(fn_desc)
+    if not norm:
+        return None
+    if any(k in norm for k in (
+        "seating pair", "seating position", "both seats", "seating area",
+        "armchairs", "armchair positions", "viewer positions", "viewing seats",
+    )):
+        return "SEATING_PAIR"
+    if any(k in norm for k in ("seating", "seat", "armchair", "chair")):
+        return "SEATING_POSITION"
+    return None
+
+
 class EnvironmentVLMRequirementProvider:
     """Generate once, then audit against a frozen environment contract."""
 
@@ -114,6 +185,9 @@ class EnvironmentVLMRequirementProvider:
         self.raw_decomposition: dict[str, Any] | None = None
         self.normalized_task: dict[str, Any] | None = None
         self.normalized_requirements: list[dict[str, Any]] | None = None
+        self.normalized_relations: list[dict[str, Any]] = []
+        self.vlm_derived_role_vocabulary: tuple[str, ...] = ()
+        self.task_explicit_context_vocabulary: tuple[str, ...] = ()
         self.ranked_detector_vocabulary: list[dict[str, Any]] | None = None
         self.normalization_issues: list[str] = []
         self.ready_for_grounding = False
@@ -427,57 +501,75 @@ class EnvironmentVLMRequirementProvider:
         else:
             language_roles = self.environment_config.get("roles", {})
             grouped_requirements: dict[str, list[dict[str, Any]]] = {}
+            raw_id_to_canon: dict[str, str] = {}
+
             for raw in raw_requirements:
-                func_text = str(raw.get("function", ""))
-                comp_role = map_living_room_role_function(f"{func_text} {raw.get('description', '')}")
-                matched_role_id = comp_role
-                if matched_role_id is None:
-                    norm_func = _phrase(f"{func_text} {raw.get('description', '')}")
-                    matching_roles = []
-                    for r_id, r_cfg in language_roles.items():
-                        for alias in r_cfg.get("function_aliases", []):
-                            a_norm = _phrase(alias)
-                            if a_norm == norm_func or f" {a_norm} " in f" {norm_func} ":
-                                matching_roles.append(r_id)
-                                break
-                    if len(matching_roles) == 1:
-                        matched_role_id = matching_roles[0]
-                    elif len(matching_roles) > 1:
+                raw_id = raw.get("id")
+                raw_kind = raw.get("entity_kind")
+
+                if raw_kind == "FIXED_TARGET":
+                    matched_role_id = map_living_room_fixed_target_role(raw)
+                    if matched_role_id is None:
+                        fn_text = f"{raw.get('function', '')} {raw.get('description', '')}"
                         raise VLMSpecificationError(
-                            f"VLM role {raw.get('id')!r} with function {raw.get('function')!r} "
-                            f"is ambiguous across canonical roles: {sorted(matching_roles)}"
+                            f"VLM role {raw_id!r} with function {fn_text!r} cannot be mapped to any reviewed FIXED_TARGET role"
+                        )
+                    canonical_func = matched_role_id.upper()
+                else:
+                    func_text = str(raw.get("function", ""))
+                    comp_role = map_living_room_role_function(f"{func_text} {raw.get('description', '')}")
+                    matched_role_id = comp_role
+                    if matched_role_id is None:
+                        norm_func = _phrase(f"{func_text} {raw.get('description', '')}")
+                        matching_roles = []
+                        for r_id, r_cfg in language_roles.items():
+                            for alias in r_cfg.get("function_aliases", []):
+                                a_norm = _phrase(alias)
+                                if a_norm == norm_func or f" {a_norm} " in f" {norm_func} ":
+                                    matching_roles.append(r_id)
+                                    break
+                        if len(matching_roles) == 1:
+                            matched_role_id = matching_roles[0]
+                        elif len(matching_roles) > 1:
+                            raise VLMSpecificationError(
+                                f"VLM role {raw_id!r} with function {raw.get('function')!r} "
+                                f"is ambiguous across canonical roles: {sorted(matching_roles)}"
+                            )
+
+                    if matched_role_id is None:
+                        raise VLMSpecificationError(
+                            f"VLM role {raw_id!r} with function {raw.get('function')!r} "
+                            "cannot be mapped to any reviewed canonical role"
                         )
 
-                if matched_role_id is None:
-                    raise VLMSpecificationError(
-                        f"VLM role {raw.get('id')!r} with function {raw.get('function')!r} "
-                        "cannot be mapped to any reviewed canonical role"
+                    canonical_func = (
+                        "PERSONAL_CUP_SAUCER_REGION"
+                        if matched_role_id == "personal_cup_saucer"
+                        else "SHARED_REMOTE_REGION"
+                        if matched_role_id == "shared_remote"
+                        else matched_role_id.upper()
                     )
 
-                canonical_func = (
-                    "PERSONAL_CUP_SAUCER_REGION"
-                    if matched_role_id == "personal_cup_saucer"
-                    else "SHARED_REMOTE_REGION"
-                    if matched_role_id == "shared_remote"
-                    else matched_role_id.upper()
-                )
-                grouped_requirements.setdefault(matched_role_id, []).append({
+                raw_id_to_canon[raw_id] = canonical_func
+                grouped_requirements.setdefault(canonical_func, []).append({
                     "raw": raw,
                     "canonical_func": canonical_func,
+                    "matched_role_id": matched_role_id,
                 })
 
-            for role_id, group in grouped_requirements.items():
+            vlm_role_vocab: list[str] = []
+            for canonical_func, group in grouped_requirements.items():
                 raw_group = [item["raw"] for item in group]
-                canonical_func = group[0]["canonical_func"]
+                matched_role_id = group[0]["matched_role_id"]
                 raw_vlm_role_ids = [raw["id"] for raw in raw_group]
                 entity_kinds = {raw.get("entity_kind") for raw in raw_group}
                 if len(entity_kinds) != 1:
-                    raise VLMSpecificationError(f"Mixed entity kinds in canonical group {role_id}: {entity_kinds}")
+                    raise VLMSpecificationError(f"Mixed entity kinds in canonical group {canonical_func}: {entity_kinds}")
                 entity_kind = entity_kinds.pop()
 
                 binding_policies = {raw.get("binding_policy") for raw in raw_group}
                 if len(binding_policies) > 1:
-                    raise VLMSpecificationError(f"Conflicting binding policies in canonical group {role_id}: {binding_policies}")
+                    raise VLMSpecificationError(f"Conflicting binding policies in canonical group {canonical_func}: {binding_policies}")
                 binding_policy = binding_policies.pop()
 
                 total_count = sum(int(raw.get("required_count", 1)) for raw in raw_group)
@@ -485,11 +577,13 @@ class EnvironmentVLMRequirementProvider:
                 raw_desc = " ".join(dict.fromkeys(raw.get("description", "") for raw in raw_group if raw.get("description")))
 
                 cand_cats = list(dict.fromkeys(
-                    cat
+                    cat.strip()
                     for raw in raw_group
                     for cat in raw.get("candidate_categories", [])
-                    if cat
+                    if str(cat).strip()
                 ))
+                vlm_role_vocab.extend(cand_cats)
+                run_local_cats = list(dict.fromkeys(_phrase(c).replace(" ", "_") for c in cand_cats if c))
 
                 hints = list(dict.fromkeys(
                     candidate["label"]
@@ -497,25 +591,13 @@ class EnvironmentVLMRequirementProvider:
                     for candidate in raw.get("visible_candidates", [])
                     if candidate.get("label")
                 ))
-                accepted_categories = list(dict.fromkeys(
-                    self._map_category(candidate.get("label", "")) or candidate.get("label", "")
-                    for raw in raw_group
-                    for candidate in raw.get("visible_candidates", [])
-                    if candidate.get("label")
-                ))
-                accepted_categories = [c for c in accepted_categories if c]
-                if not accepted_categories and cand_cats:
-                    for cat in cand_cats:
-                        mapped_c = self._map_category(cat)
-                        if mapped_c and mapped_c not in accepted_categories:
-                            accepted_categories.append(mapped_c)
 
                 required_properties = sorted(
                     set().union(*(self._map_properties(raw.get("required_properties", []), fail_closed=True) for raw in raw_group))
                 )
                 normalized_records.append(
                     {
-                        "role_id": role_id,
+                        "role_id": matched_role_id,
                         "raw_vlm_role_ids": raw_vlm_role_ids,
                         "entity_kind": entity_kind,
                         "binding_policy": binding_policy,
@@ -524,7 +606,7 @@ class EnvironmentVLMRequirementProvider:
                         "vlm_required_count": total_count,
                         "description": raw_desc,
                         "candidate_categories": cand_cats,
-                        "accepted_categories": accepted_categories,
+                        "accepted_categories": run_local_cats or cand_cats,
                         "required_properties": required_properties,
                         "visible_candidates": [
                             candidate
@@ -534,10 +616,47 @@ class EnvironmentVLMRequirementProvider:
                         "semantic_hints": hints,
                         "source": "FM",
                         "provenance": "qwen_vlm_normalized_by_generic_ontology",
-                        "vlm_canonicalization_version": "phase3_6a3_v1",
+                        "vlm_canonicalization_version": "phase3_6a4_v1",
                         "normalization_status": "COMPLETE",
                     }
                 )
+
+            # Canonicalize relations losslessly
+            canonical_relations: list[dict[str, Any]] = []
+            for rel_item in self.raw_decomposition.get("functional_relations", []):
+                s = rel_item.get("subject_role")
+                r = rel_item.get("relation")
+                o = rel_item.get("object_role")
+                if s not in raw_id_to_canon:
+                    raise VLMSpecificationError(
+                        f"VLM relation subject role {s!r} not declared in living room roles"
+                    )
+                if o not in raw_id_to_canon:
+                    raise VLMSpecificationError(
+                        f"VLM relation object role {o!r} not declared in living room roles"
+                    )
+                s_canon = raw_id_to_canon[s]
+                o_canon = raw_id_to_canon[o]
+                mapped_r = map_living_room_relation(r, self.relation_aliases)
+                if mapped_r is None:
+                    raise VLMSpecificationError(
+                        f"VLM living room relation {r!r} cannot be mapped to any reviewed relation"
+                    )
+                canonical_relations.append({
+                    "raw_subject_role_id": str(s),
+                    "canonical_subject_role_id": s_canon,
+                    "raw_relation_text": str(r),
+                    "canonical_predicate": mapped_r,
+                    "raw_object_role_id": str(o),
+                    "canonical_object_role_id": o_canon,
+                })
+
+            self.normalized_relations = canonical_relations
+            self.vlm_derived_role_vocabulary = tuple(dict.fromkeys(vlm_role_vocab))
+            self.task_explicit_context_vocabulary = (
+                "armchair", "chair", "sofa", "remote control", "tv remote",
+                "cup", "saucer", "cup saucer set"
+            )
             self.normalization_issues = []
             self.ready_for_grounding = True
             self.normalized_task = None
@@ -591,6 +710,7 @@ class EnvironmentVLMRequirementProvider:
                 self.fm_adapter.last_raw_inspection_response
             ),
             "normalized_requirements": self.normalized_requirements,
+            "normalized_relations": self.normalized_relations,
             "normalized_task_contract": self.normalized_task,
             "ready_for_grounding": self.ready_for_grounding,
             "reviewed_ontology_audit": {

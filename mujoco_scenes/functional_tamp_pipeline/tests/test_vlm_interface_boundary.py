@@ -114,8 +114,6 @@ def test_zero_leakage_in_kitchen_and_workshop_payloads(tmp_path):
             {"id": "c1", "label": "upper wall cupboard", "visual_description": "cupboard", "reason": "storage"}
         ],
         "inspection_order": ["c1"],
-        "initial_satisfaction_assessment": False,
-        "initial_satisfaction_reason": "Need cups",
         "unsupported_reason": "",
     }
 
@@ -237,6 +235,7 @@ def test_fail_closed_on_unmapped_kitchen_property():
         ],
         "functional_relations": [],
         "interaction_groups": [],
+        "cross_group_reuse_allowed": False,
         "inspectable_regions": [],
         "inspection_order": [],
         "unsupported_reason": "",

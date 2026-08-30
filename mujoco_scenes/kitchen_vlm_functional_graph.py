@@ -15,6 +15,8 @@ from mujoco_scenes.functional_tamp_pipeline.errors import VLMSpecificationError
 from .workshop_phase1.fm_adapter import validate_kitchen_functional_specification
 from .task_witness import load_task_requirements
 
+VLM_CANONICALIZATION_VERSION = "phase3_6a4_v1"
+
 
 # Stable Kitchen Canonical Role Registry
 KITCHEN_ROLE_REGISTRY: dict[str, tuple[str, ...]] = {
@@ -498,7 +500,7 @@ def compile_vlm_functional_graph(
     }
     trace = {
         "schema_version": 2,
-        "vlm_canonicalization_version": "phase3_6a3_v1",
+        "vlm_canonicalization_version": "phase3_6a4_v1",
         "transformation": "DETERMINISTIC_NATURAL_LANGUAGE_CANONICALIZATION",
         "raw_roles_preserved": raw_role_ids,
         "raw_role_to_canonical": raw_role_to_canonical,

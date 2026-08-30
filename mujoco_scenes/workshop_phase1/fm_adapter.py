@@ -91,7 +91,7 @@ class OpenAICompletionTransport:
         return decoded
 
 
-SYSTEM_PROMPT = """You are a vision-language functional-requirement planner.
+SYSTEM_PROMPT = """You are a vision-language functional-requirement specification generator.
 
 Return only the requested JSON object. Do not produce an action sequence.
 
@@ -100,20 +100,20 @@ Rules:
   instruction and initial multi-view RGB images yourself. The user will not supply
   expected roles, functions, object categories, or properties.
 - Use SHORT ATOMIC PHRASES for all functions, properties, and relations (e.g.
-  function: "drive threaded fastener", property: "elongated", relation: "engages fastener head").
+  function: "support an item", property: "rigid", relation: "near reference region").
   Do not write long narrative sentences.
 - Set `entity_kind` to:
   - OBJECT: a selectable/manipulable physical item.
   - REGION: a selectable support surface, placement area, or spatial destination.
-  - FIXED_TARGET: a fixed contextual task target or workpiece feature (e.g. workpiece repair target hole, seating position) that participates in relations.
+  - FIXED_TARGET: a non-selectable contextual reference or fixed target feature that participates in relations.
 - Set `binding_policy` to:
   - DISTINCT: separate simultaneous physical items are required.
   - REUSABLE: one physical item may be reused sequentially across targets.
   - SHARED: one physical region/entity intentionally serves multiple items/users.
 - `candidate_categories`: list open-vocabulary semantic search phrases that could satisfy the role, even if nothing is currently visible.
-- `candidate_objects` / `visible_candidates`: list visually apparent items/regions in the initial RGB views.
+- `visible_candidates`: list visually apparent items/regions in the initial RGB views.
   This array may be empty ([]).
-- `required_properties`: list UNARY-ONLY physical properties of this single role (e.g. "elongated", "planar support").
+- `required_properties`: list UNARY-ONLY physical properties of this single role (e.g. "rigid", "planar support").
   Never place binary relations or compatibility statements here.
 - `functional_relations`: list explicit role-to-role relations using `subject_role`, `relation`, and `object_role`.
   Both subject_role and object_role must reference declared role IDs.
@@ -374,15 +374,12 @@ KITCHEN_FUNCTIONAL_GRAPH_SCHEMA: dict[str, Any] = {
             "type": "array",
             "items": {"type": "string"},
         },
-        "initial_satisfaction_assessment": {"type": "boolean"},
-        "initial_satisfaction_reason": {"type": "string"},
         "unsupported_reason": {"type": "string"},
     },
     "required": [
         "status", "task_summary", "functional_roles", "functional_relations",
         "interaction_groups", "cross_group_reuse_allowed",
         "inspectable_regions", "inspection_order",
-        "initial_satisfaction_assessment", "initial_satisfaction_reason",
         "unsupported_reason",
     ],
     "additionalProperties": False,
@@ -780,14 +777,16 @@ def validate_kitchen_functional_specification(document: dict[str, Any]) -> dict[
     if not isinstance(document, dict):
         raise FMResponseValidationError("Kitchen functional graph response must be a JSON object")
 
-    allowed_top = {
+    required_top = {
         "status", "task_summary", "functional_roles", "functional_relations",
         "interaction_groups", "cross_group_reuse_allowed", "inspectable_regions",
-        "inspection_order", "initial_satisfaction_assessment",
-        "initial_satisfaction_reason", "unsupported_reason",
+        "inspection_order", "unsupported_reason",
     }
-    if not set(document).issubset(allowed_top):
-        unexpected = set(document) - allowed_top
+    if not required_top.issubset(set(document)):
+        missing = required_top - set(document)
+        raise FMResponseValidationError(f"Missing required top-level fields in kitchen spec: {sorted(missing)}")
+    if not set(document).issubset(required_top):
+        unexpected = set(document) - required_top
         raise FMResponseValidationError(f"Unexpected top-level fields in kitchen spec: {sorted(unexpected)}")
 
     status = document.get("status")
@@ -801,6 +800,10 @@ def validate_kitchen_functional_specification(document: dict[str, Any]) -> dict[
     unsupported_reason = document.get("unsupported_reason", "")
     if not isinstance(unsupported_reason, str):
         raise FMResponseValidationError("unsupported_reason must be a string")
+
+    cross_group_reuse = document.get("cross_group_reuse_allowed")
+    if not isinstance(cross_group_reuse, bool):
+        raise FMResponseValidationError("cross_group_reuse_allowed must be a boolean")
 
     roles = document.get("functional_roles")
 

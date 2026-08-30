@@ -143,8 +143,6 @@ def natural_kitchen_spec() -> dict:
             },
         ],
         "inspection_order": ["reg_1", "reg_2"],
-        "initial_satisfaction_assessment": False,
-        "initial_satisfaction_reason": "Not all roles are visibly satisfied.",
         "unsupported_reason": "",
     }
 
