@@ -466,8 +466,82 @@ def test_operation_group_different_id_matches_semantically():
     assert len(result.missing_operation_groups) == 0
 
 
+def test_operation_group_same_id_wrong_semantics_does_not_match():
+    """Candidate group with same ID as reference but wrong semantic roles must NOT match."""
+    ref_gf = GTSpecProvider().provide("kitchen", "prepare coffee and soup")
+    # Reference has coffee_stirring with tool_role="coffee_stirrer", target_role="coffee_container"
+    # Create candidate where group id "coffee_stirring" has wrong roles (e.g. soup_eating_utensil -> soup_container)
+    wrong_role_op = OperationGroup(
+        id="coffee_stirring",
+        function="wrong roles",
+        tool_role="soup_eating_utensil",
+        target_role="soup_container",
+        required_target_count=2,
+        usage_policy="DEDICATED_PER_TARGET",
+        required_relations=("INSERTABLE_IN", "REACHES_BOTTOM"),
+    )
+
+    cand_gf = FunctionalRequirementGraph(
+        domain=ref_gf.domain,
+        task_instruction=ref_gf.task_instruction,
+        nodes=ref_gf.nodes,
+        relations=ref_gf.relations,
+        operation_groups=(wrong_role_op,),
+        cross_group_reuse_allowed=ref_gf.cross_group_reuse_allowed,
+    )
+
+    result = evaluate_gf_against_reference(cand_gf, ref_gf)
+    # coffee_stirring in reference requires (coffee_stirrer, coffee_container), which wrong_role_op does NOT satisfy
+    assert result.reference_complete is False
+    assert "coffee_stirring" in result.missing_operation_groups
+    assert ("coffee_stirring", "coffee_stirring") not in result.matched_operation_groups
+
+
+def test_operation_group_id_used_only_as_semantic_tiebreak():
+    """When multiple candidates are semantically eligible, reference ID tie-breaks if unique."""
+    ref_gf = GTSpecProvider().provide("kitchen", "prepare coffee and soup")
+    adapter = MockFMAdapter(_valid_kitchen_raw_vlm())
+    cand_gf = VLMSpecProvider()._kitchen("prepare coffee and soup", [], adapter=adapter)
+
+    # Two candidate groups for coffee_stirrer -> coffee_container: one named coffee_stirring, one named alt_stirring
+    grp_exact_id = OperationGroup(
+        id="coffee_stirring",
+        function="stir coffee",
+        tool_role="coffee_stirrer",
+        target_role="coffee_container",
+        required_target_count=2,
+        usage_policy="SEQUENTIAL_REUSE_ALLOWED",
+        required_relations=("INSERTABLE_IN", "REACHES_BOTTOM"),
+    )
+    grp_alt_id = OperationGroup(
+        id="alt_stirring",
+        function="stir coffee alt",
+        tool_role="coffee_stirrer",
+        target_role="coffee_container",
+        required_target_count=2,
+        usage_policy="SEQUENTIAL_REUSE_ALLOWED",
+        required_relations=("INSERTABLE_IN", "REACHES_BOTTOM"),
+    )
+    soup_op = next(g for g in cand_gf.operation_groups if g.id == "soup_serving")
+
+    cand_with_tiebreak = FunctionalRequirementGraph(
+        domain=cand_gf.domain,
+        task_instruction=cand_gf.task_instruction,
+        nodes=cand_gf.nodes,
+        relations=cand_gf.relations,
+        operation_groups=(grp_alt_id, grp_exact_id, soup_op),
+        cross_group_reuse_allowed=cand_gf.cross_group_reuse_allowed,
+    )
+
+    result = evaluate_gf_against_reference(cand_with_tiebreak, ref_gf)
+    assert result.reference_complete is True
+    # Successfully tie-broken to coffee_stirring
+    assert ("coffee_stirring", "coffee_stirring") in result.matched_operation_groups
+    assert "alt_stirring" in result.extra_operation_groups
+
+
 def test_operation_group_ambiguity_reported():
-    """Two unmatched candidate groups matching the same roles are reported as ambiguous."""
+    """Two unmatched candidate groups matching the same roles without ID tiebreak are reported as ambiguous."""
     ref_gf = GTSpecProvider().provide("kitchen", "prepare coffee and soup")
     adapter = MockFMAdapter(_valid_kitchen_raw_vlm())
     cand_gf = VLMSpecProvider()._kitchen("prepare coffee and soup", [], adapter=adapter)
@@ -498,12 +572,59 @@ def test_operation_group_ambiguity_reported():
         nodes=cand_gf.nodes,
         relations=cand_gf.relations,
         operation_groups=other_ops + (grp1, grp2),
+        cross_group_reuse_allowed=cand_gf.cross_group_reuse_allowed,
     )
 
     result = evaluate_gf_against_reference(ambig_cand_gf, ref_gf)
     assert result.reference_complete is False
     assert "coffee_stirring" in result.ambiguous_operation_groups
     assert set(result.ambiguous_operation_groups["coffee_stirring"]) == {"cand_stir_1", "cand_stir_2"}
+
+
+def test_distinct_within_group_mismatch_is_diagnostic_only():
+    """Mismatch in distinct_within_group is diagnostic-only and does not fail reference_complete or exact_structural_match."""
+    ref_gf = GTSpecProvider().provide("kitchen", "prepare coffee and soup")
+    adapter = MockFMAdapter(_valid_kitchen_raw_vlm())
+    cand_gf = VLMSpecProvider()._kitchen("prepare coffee and soup", [], adapter=adapter)
+
+    # Invert distinct_within_group on coffee_stirring
+    mod_ops = []
+    for g in cand_gf.operation_groups:
+        if g.id == "coffee_stirring":
+            mod_ops.append(
+                OperationGroup(
+                    id=g.id,
+                    function=g.function,
+                    tool_role=g.tool_role,
+                    target_role=g.target_role,
+                    required_target_count=g.required_target_count,
+                    usage_policy=g.usage_policy,
+                    required_relations=g.required_relations,
+                    context_role=g.context_role,
+                    context_relations=g.context_relations,
+                    distinct_within_group=True,  # Reference is False
+                    same_tool_must_cover_all_targets=g.same_tool_must_cover_all_targets,
+                )
+            )
+        else:
+            mod_ops.append(g)
+
+    cand_gf_mod = FunctionalRequirementGraph(
+        domain=cand_gf.domain,
+        task_instruction=cand_gf.task_instruction,
+        nodes=cand_gf.nodes,
+        relations=cand_gf.relations,
+        operation_groups=tuple(mod_ops),
+        cross_group_reuse_allowed=cand_gf.cross_group_reuse_allowed,
+    )
+
+    result = evaluate_gf_against_reference(cand_gf_mod, ref_gf)
+    assert result.reference_complete is True
+    assert result.exact_structural_match is False  # Reusable cardinality [1,1] vs [1,2] makes exact False, but not group
+    assert result.operation_group_exact_recall == 1.0
+    assert result.operation_group_exact_precision == 1.0
+    assert "coffee_stirring" in result.operation_group_representation_diagnostics
+    assert result.operation_group_representation_diagnostics["coffee_stirring"]["distinct_within_group"]["grounding_relevant"] is False
 
 
 def test_cross_group_reuse_mismatch_fails():
@@ -562,12 +683,45 @@ def test_same_tool_coverage_mismatch_fails():
         nodes=cand_gf.nodes,
         relations=cand_gf.relations,
         operation_groups=tuple(mod_ops),
+        cross_group_reuse_allowed=cand_gf.cross_group_reuse_allowed,
     )
 
     result = evaluate_gf_against_reference(mod_cand_gf, ref_gf)
     assert result.reference_complete is False
     assert "coffee_stirring" in result.operation_group_mismatches
     assert "same_tool_must_cover_all_targets" in result.operation_group_mismatches["coffee_stirring"]
+
+
+# ===========================================================================
+# 3b. Domain Safety Guards
+# ===========================================================================
+def test_domain_mismatch_candidate_and_reference_raises():
+    """Candidate domain differing from reference domain raises ValueError."""
+    cand_workshop = GTSpecProvider().provide("workshop", "fasten joint")
+    ref_kitchen = GTSpecProvider().provide("kitchen", "prepare coffee and soup")
+
+    with pytest.raises(ValueError) as exc_info:
+        evaluate_gf_against_reference(cand_workshop, ref_kitchen)
+    assert "Reference evaluation domain mismatch: candidate='workshop', reference='kitchen'" in str(exc_info.value)
+
+
+def test_explicit_domain_override_mismatch_raises():
+    """Explicit domain differing from candidate domain raises ValueError."""
+    cand_workshop = GTSpecProvider().provide("workshop", "fasten joint")
+
+    with pytest.raises(ValueError) as exc_info:
+        evaluate_gf_against_reference(cand_workshop, domain="kitchen")
+    assert "explicit domain='kitchen' differs from candidate domain='workshop'" in str(exc_info.value)
+
+
+def test_matching_domain_evaluation_succeeds():
+    """Matching candidate and reference domain evaluates successfully."""
+    cand_workshop = GTSpecProvider().provide("workshop", "fasten joint")
+    ref_workshop = GTSpecProvider().provide("workshop", "fasten joint")
+
+    result = evaluate_gf_against_reference(cand_workshop, ref_workshop)
+    assert result.reference_complete is True
+    assert result.exact_structural_match is True
 
 
 # ===========================================================================

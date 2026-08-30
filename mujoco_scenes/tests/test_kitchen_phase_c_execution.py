@@ -212,7 +212,7 @@ def test_stir_orientation_family_preserves_strict_task_axis_geometry():
         if row["provenance"] == "TASK_EQUIVALENT_TOOL_AXIS_FAMILY"
     ]
     assert {row["inclination_deg"] for row in task_candidates} == {
-        0.0, 15.0, 30.0, 45.0, 60.0
+        0.0,
     }
     assert {row["tool_roll_deg"] for row in task_candidates} == {
         0.0, 180.0

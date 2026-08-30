@@ -59,6 +59,7 @@ class GFReferenceEvaluationResult:
     extra_operation_groups: tuple[str, ...] = ()
     ambiguous_operation_groups: dict[str, list[str]] = field(default_factory=dict)
     operation_group_mismatches: dict[str, dict[str, Any]] = field(default_factory=dict)
+    operation_group_representation_diagnostics: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     # Graph-level semantics
     cross_group_reuse_mismatch: bool = False
@@ -118,6 +119,7 @@ class GFReferenceEvaluationResult:
                 "extra": list(self.extra_operation_groups),
                 "ambiguous": self.ambiguous_operation_groups,
                 "mismatches": self.operation_group_mismatches,
+                "representation_diagnostics": self.operation_group_representation_diagnostics,
             },
             "graph_level": {
                 "cross_group_reuse_mismatch": self.cross_group_reuse_mismatch,
@@ -158,8 +160,15 @@ def evaluate_gf_against_reference(
     cand_nodes_snapshot = deepcopy(candidate_graph.nodes)
     cand_rels_snapshot = deepcopy(candidate_graph.relations)
     cand_ops_snapshot = deepcopy(candidate_graph.operation_groups)
+    cand_dict_snapshot = deepcopy(candidate_graph.to_dict())
 
-    target_domain = domain or candidate_graph.domain
+    # Domain consistency guards
+    if domain is not None and domain != candidate_graph.domain:
+        raise ValueError(
+            f"Reference evaluation domain mismatch: explicit domain='{domain}' differs from candidate domain='{candidate_graph.domain}'"
+        )
+
+    target_domain = candidate_graph.domain
     target_instruction = task_instruction or candidate_graph.task_instruction
 
     if reference_graph is None:
@@ -168,9 +177,15 @@ def evaluate_gf_against_reference(
             task_instruction=target_instruction,
         )
 
+    if reference_graph.domain != candidate_graph.domain:
+        raise ValueError(
+            f"Reference evaluation domain mismatch: candidate='{candidate_graph.domain}', reference='{reference_graph.domain}'"
+        )
+
     ref_nodes_snapshot = deepcopy(reference_graph.nodes)
     ref_rels_snapshot = deepcopy(reference_graph.relations)
     ref_ops_snapshot = deepcopy(reference_graph.operation_groups)
+    ref_dict_snapshot = deepcopy(reference_graph.to_dict())
 
     ref_roles = set(reference_graph.nodes.keys())
     cand_roles = set(candidate_graph.nodes.keys())
@@ -200,78 +215,76 @@ def evaluate_gf_against_reference(
         ref_binding = ref_node.binding_policy
         cand_binding = cand_node.binding_policy
 
-        binding_compatible = (ref_binding == cand_binding)
-        if not binding_compatible:
-            is_card_compat = False
-            is_card_exact = False
-            reason = f"Binding policy mismatch: reference requires {ref_binding}, candidate provides {cand_binding}"
-        else:
-            if ref_binding == "REUSABLE":
-                # Candidate interval [cand_min, cand_max] is contained in allowed reference range [ref_min, ref_max]
-                is_card_compat = (ref_min <= cand_min) and (cand_max <= ref_max)
-                is_card_exact = (cand_min == ref_min) and (cand_max == ref_max)
-                if is_card_compat:
-                    if is_card_exact:
-                        reason = f"Exact reusable count [{cand_min}, {cand_max}] matches reference interval [{ref_min}, {ref_max}]"
-                    else:
-                        reason = f"Candidate reusable count [{cand_min}, {cand_max}] is semantically compatible with reference allowed interval [{ref_min}, {ref_max}]"
-                else:
-                    reason = f"Candidate reusable count [{cand_min}, {cand_max}] is outside reference allowed interval [{ref_min}, {ref_max}]"
-            else:
-                # DISTINCT / SHARED: exact capacity or within intentional reference interval
-                is_card_compat = (ref_min <= cand_min) and (cand_max <= ref_max)
-                is_card_exact = (cand_min == ref_min) and (cand_max == ref_max)
-                if is_card_compat:
-                    if is_card_exact:
-                        reason = f"Exact count [{cand_min}, {cand_max}] matches reference [{ref_min}, {ref_max}]"
-                    else:
-                        reason = f"Candidate count [{cand_min}, {cand_max}] is compatible with reference interval [{ref_min}, {ref_max}]"
-                else:
-                    reason = f"Candidate count [{cand_min}, {cand_max}] does not match reference requirement [{ref_min}, {ref_max}]"
-
-        role_cardinality_diagnostics[r_name] = {
-            "reference_binding": ref_binding,
-            "candidate_binding": cand_binding,
-            "reference_range": [ref_min, ref_max],
-            "candidate_range": [cand_min, cand_max],
-            "cardinality_compatible": is_card_compat,
-            "cardinality_exact": is_card_exact,
-            "reason": reason,
-        }
-
-        if not is_card_compat:
-            diffs["cardinality"] = role_cardinality_diagnostics[r_name]
-        if not binding_compatible:
+        if ref_binding != cand_binding:
             diffs["binding_policy"] = {"reference": ref_binding, "candidate": cand_binding}
 
-        # 3. Unary Predicates with Evaluation-Only Legacy Marker Normalization
+        if ref_binding == "REUSABLE" and cand_binding == "REUSABLE":
+            # Semantic compatibility: candidate point count [c, c] is compatible if ref_min <= c <= ref_max
+            is_compatible = (cand_min >= ref_min) and (cand_max <= ref_max) and (cand_min == cand_max or (cand_min == ref_min and cand_max == ref_max))
+            is_exact = (cand_min == ref_min) and (cand_max == ref_max)
+            role_cardinality_diagnostics[r_name] = {
+                "reference_binding": ref_binding,
+                "candidate_binding": cand_binding,
+                "reference_range": [ref_min, ref_max],
+                "candidate_range": [cand_min, cand_max],
+                "cardinality_compatible": is_compatible,
+                "cardinality_exact": is_exact,
+                "reason": (
+                    f"Candidate reusable count [{cand_min}, {cand_max}] is semantically compatible with reference allowed interval [{ref_min}, {ref_max}]"
+                    if is_compatible
+                    else f"Candidate reusable count [{cand_min}, {cand_max}] outside reference allowed interval [{ref_min}, {ref_max}]"
+                ),
+            }
+            if not is_compatible:
+                diffs["cardinality"] = {
+                    "reference": [ref_min, ref_max],
+                    "candidate": [cand_min, cand_max],
+                }
+        else:
+            is_exact = (cand_min == ref_min) and (cand_max == ref_max)
+            role_cardinality_diagnostics[r_name] = {
+                "reference_binding": ref_binding,
+                "candidate_binding": cand_binding,
+                "reference_range": [ref_min, ref_max],
+                "candidate_range": [cand_min, cand_max],
+                "cardinality_compatible": is_exact,
+                "cardinality_exact": is_exact,
+                "reason": "Exact cardinality match required for non-reusable roles",
+            }
+            if not is_exact:
+                diffs["cardinality"] = {
+                    "reference": [ref_min, ref_max],
+                    "candidate": [cand_min, cand_max],
+                }
+
+        # 3. Unary Predicates (with legacy role-function marker normalization for evaluation)
         ref_unary = set(ref_node.unary_predicates)
         cand_unary = set(cand_node.unary_predicates)
 
         ignored_markers = LEGACY_ROLE_FUNCTION_MARKERS.get((target_domain, r_name), set())
-        if ignored_markers & ref_unary:
+        effective_ref_unary = ref_unary - ignored_markers
+        effective_cand_unary = cand_unary - ignored_markers
+
+        if ignored_markers and (ref_unary & ignored_markers):
             role_normalization_diagnostics[r_name] = {
-                "ignored_legacy_role_function_markers": sorted(ignored_markers & ref_unary),
+                "ignored_legacy_role_function_markers": sorted(ref_unary & ignored_markers),
                 "description": "Legacy GT functional-role marker, represented by canonical role identity in the VLM interface.",
             }
 
-        ref_effective_unary = ref_unary - ignored_markers
-        cand_effective_unary = cand_unary - ignored_markers
-
-        if ref_effective_unary != cand_effective_unary:
+        if effective_ref_unary != effective_cand_unary:
             diffs["unary_predicates"] = {
-                "reference": sorted(ref_effective_unary),
-                "candidate": sorted(cand_effective_unary),
+                "reference": sorted(effective_ref_unary),
+                "candidate": sorted(effective_cand_unary),
             }
 
         if diffs:
             role_attribute_mismatches[r_name] = diffs
 
-        # 4. Open-Vocabulary Semantic Category Diagnostics (Informative only, not failing completeness)
+        # 5. Open-Vocabulary Semantic Categories (Diagnostic Only, not affecting reference_complete)
         ref_cats = list(ref_node.semantic_categories)
         cand_cats = list(cand_node.semantic_categories)
-        ref_norm = sorted(set(c.casefold().strip() for c in ref_cats if str(c).strip()))
-        cand_norm = sorted(set(c.casefold().strip() for c in cand_cats if str(c).strip()))
+        ref_norm = [c.casefold().strip() for c in ref_cats]
+        cand_norm = [c.casefold().strip() for c in cand_cats]
         exact_overlap = sorted(set(ref_norm) & set(cand_norm))
         overlap_ratio = len(exact_overlap) / len(ref_norm) if ref_norm else 1.0
         category_diagnostics[r_name] = {
@@ -285,61 +298,66 @@ def evaluate_gf_against_reference(
             "overlap_ratio": overlap_ratio,
         }
 
-    # Relations comparison (subject_role, predicate, object_role, expected)
+    # Relations comparison (4-tuples: subject_role, predicate, object_role, expected)
     ref_rel_quads = set((r.subject_role, r.predicate, r.object_role, bool(r.expected)) for r in reference_graph.relations)
     cand_rel_quads = set((r.subject_role, r.predicate, r.object_role, bool(r.expected)) for r in candidate_graph.relations)
     matched_rels = ref_rel_quads & cand_rel_quads
     missing_rels = ref_rel_quads - cand_rel_quads
     extra_rels = cand_rel_quads - ref_rel_quads
 
-    # Operation groups deterministic 1-to-1 matching
+    # Operation groups deterministic 1-to-1 matching (Semantic-First, ID tie-break only)
     ref_ops = list(reference_graph.operation_groups)
     cand_ops = list(candidate_graph.operation_groups)
-    cand_ops_by_id = {g.id: g for g in cand_ops}
 
     matched_pairs: list[tuple[str, str]] = []  # (ref_id, cand_id)
     matched_ref_ids: set[str] = set()
     matched_cand_ids: set[str] = set()
     op_mismatches: dict[str, dict[str, Any]] = {}
+    op_representation_diagnostics: dict[str, dict[str, Any]] = {}
     missing_ops: set[str] = set()
     ambiguous_ops: dict[str, list[str]] = {}
 
-    # Step 1: Match exact group IDs first
     for r_op in ref_ops:
-        if r_op.id in cand_ops_by_id and r_op.id not in matched_cand_ids:
-            c_op = cand_ops_by_id[r_op.id]
-            matched_pairs.append((r_op.id, c_op.id))
-            matched_ref_ids.add(r_op.id)
-            matched_cand_ids.add(c_op.id)
-
-    # Step 2: For unmatched reference groups, search unmatched candidates by (tool_role, target_role)
-    for r_op in ref_ops:
-        if r_op.id in matched_ref_ids:
-            continue
-        candidates_matching_roles = [
+        # Match by semantic grounding key: (tool_role, target_role, context_role)
+        semantically_eligible = [
             c for c in cand_ops
-            if c.id not in matched_cand_ids and c.tool_role == r_op.tool_role and c.target_role == r_op.target_role
+            if c.id not in matched_cand_ids
+            and c.tool_role == r_op.tool_role
+            and c.target_role == r_op.target_role
+            and c.context_role == r_op.context_role
         ]
-        if len(candidates_matching_roles) == 1:
-            c_op = candidates_matching_roles[0]
+
+        if len(semantically_eligible) == 1:
+            c_op = semantically_eligible[0]
             matched_pairs.append((r_op.id, c_op.id))
             matched_ref_ids.add(r_op.id)
             matched_cand_ids.add(c_op.id)
-        elif len(candidates_matching_roles) == 0:
-            missing_ops.add(r_op.id)
+        elif len(semantically_eligible) > 1:
+            # Tie-break: if exactly one eligible candidate shares reference ID, select it
+            same_id_candidates = [c for c in semantically_eligible if c.id == r_op.id]
+            if len(same_id_candidates) == 1:
+                c_op = same_id_candidates[0]
+                matched_pairs.append((r_op.id, c_op.id))
+                matched_ref_ids.add(r_op.id)
+                matched_cand_ids.add(c_op.id)
+            else:
+                missing_ops.add(r_op.id)
+                ambig_ids = [c.id for c in semantically_eligible]
+                ambiguous_ops[r_op.id] = ambig_ids
+                op_mismatches[r_op.id] = {
+                    "ambiguous_candidate_matches": ambig_ids
+                }
         else:
             missing_ops.add(r_op.id)
-            ambiguous_cands = [c.id for c in candidates_matching_roles]
-            ambiguous_ops[r_op.id] = ambiguous_cands
-            op_mismatches[r_op.id] = {
-                "ambiguous_candidate_matches": ambiguous_cands
-            }
 
-    # Step 3: Compare matched operation-group fields
+    # Compare matched operation-group fields
     for r_id, c_id in matched_pairs:
         r_op = next(g for g in ref_ops if g.id == r_id)
         c_op = next(g for g in cand_ops if g.id == c_id)
         diffs = {}
+        rep_diffs = {}
+
+        # Grounding-relevant fields
         if r_op.tool_role != c_op.tool_role:
             diffs["tool_role"] = {"reference": r_op.tool_role, "candidate": c_op.tool_role}
         if r_op.target_role != c_op.target_role:
@@ -356,11 +374,27 @@ def evaluate_gf_against_reference(
             diffs["context_relations"] = {"reference": sorted(r_op.context_relations), "candidate": sorted(c_op.context_relations)}
         if r_op.same_tool_must_cover_all_targets != c_op.same_tool_must_cover_all_targets:
             diffs["same_tool_must_cover_all_targets"] = {"reference": r_op.same_tool_must_cover_all_targets, "candidate": c_op.same_tool_must_cover_all_targets}
+
+        # Non-grounding-relevant representation diagnostics (distinct_within_group & selection_preference)
         if r_op.distinct_within_group != c_op.distinct_within_group:
-            diffs["distinct_within_group"] = {"reference": r_op.distinct_within_group, "candidate": c_op.distinct_within_group}
-        # Note: selection_preference is intentionally excluded from structural mismatch because it does not affect current grounding feasibility.
+            rep_diffs["distinct_within_group"] = {
+                "reference": r_op.distinct_within_group,
+                "candidate": c_op.distinct_within_group,
+                "grounding_relevant": False,
+            }
+        r_sel_pref = getattr(r_op, "selection_preference", None)
+        c_sel_pref = getattr(c_op, "selection_preference", None)
+        if r_sel_pref != c_sel_pref:
+            rep_diffs["selection_preference"] = {
+                "reference": r_sel_pref,
+                "candidate": c_sel_pref,
+                "grounding_relevant": False,
+            }
+
         if diffs:
             op_mismatches[r_id] = diffs
+        if rep_diffs:
+            op_representation_diagnostics[r_id] = rep_diffs
 
     extra_ops = set(c.id for c in cand_ops if c.id not in matched_cand_ids)
 
@@ -422,9 +456,11 @@ def evaluate_gf_against_reference(
     assert candidate_graph.nodes == cand_nodes_snapshot, "Evaluator violated candidate_graph.nodes non-mutation invariant"
     assert candidate_graph.relations == cand_rels_snapshot, "Evaluator violated candidate_graph.relations non-mutation invariant"
     assert candidate_graph.operation_groups == cand_ops_snapshot, "Evaluator violated candidate_graph.operation_groups non-mutation invariant"
+    assert candidate_graph.to_dict() == cand_dict_snapshot, "Evaluator violated candidate_graph.to_dict() non-mutation invariant"
     assert reference_graph.nodes == ref_nodes_snapshot, "Evaluator violated reference_graph.nodes non-mutation invariant"
     assert reference_graph.relations == ref_rels_snapshot, "Evaluator violated reference_graph.relations non-mutation invariant"
     assert reference_graph.operation_groups == ref_ops_snapshot, "Evaluator violated reference_graph.operation_groups non-mutation invariant"
+    assert reference_graph.to_dict() == ref_dict_snapshot, "Evaluator violated reference_graph.to_dict() non-mutation invariant"
 
     return GFReferenceEvaluationResult(
         domain=target_domain,
@@ -449,6 +485,7 @@ def evaluate_gf_against_reference(
         extra_operation_groups=tuple(sorted(extra_ops)),
         ambiguous_operation_groups=ambiguous_ops,
         operation_group_mismatches=op_mismatches,
+        operation_group_representation_diagnostics=op_representation_diagnostics,
         cross_group_reuse_mismatch=cross_group_reuse_mismatch,
         graph_attribute_mismatches=graph_attribute_mismatches,
         reference_complete=reference_complete,

@@ -1,15 +1,15 @@
 # Phase 3 Freeze and Phase 4 Handoff Status
 
 > [!NOTE]
-> **PASS 3.6B.0 — FAIR G_F REFERENCE EVALUATOR PREFLIGHT AND FREEZE**
-> Phase 3 Status: **NOT FROZEN** (`PASS 3.6A RUNTIME INTERFACE FROZEN: YES`, `PASS 3.6B.0 EVALUATOR PREFLIGHT COMPLETE: YES`, `READY FOR PASS 3.6B LIVE EVALUATION: YES`, `PHASE 3 FROZEN: NO`, `READY FOR PHASE 4: NO`).
-> Pass 3.6B.0 closes the offline reference evaluator preflight: normalizes legacy GT Workshop role-function markers as redundant role identities in evaluation only, implements semantic cardinality compatibility for Kitchen reusable roles, compares 4-tuple relations with expected polarity, enforces deterministic 1-to-1 operation-group matching, and bumps canonicalization provenance version to `phase3_6a7_2_1_v1`.
+> **PASS 3.6B.0.1 — FINAL EVALUATOR SEMANTIC-CORRECTNESS CLEANUP BEFORE LIVE VLM EVALUATION**
+> Phase 3 Status: **NOT FROZEN** (`PASS 3.6A RUNTIME INTERFACE FROZEN: YES`, `PASS 3.6B.0 EVALUATOR PREFLIGHT FROZEN: YES`, `READY FOR PASS 3.6B LIVE EVALUATION: YES`, `PHASE 3 FROZEN: NO`, `READY FOR PHASE 4: NO`).
+> Pass 3.6B.0.1 finalizes offline reference evaluator semantic correctness: enforces semantic-first operation-group matching (`tool_role`, `target_role`, `context_role`) with group ID tie-breaking, moves `distinct_within_group` and `selection_preference` to diagnostic-only representation reporting, and adds explicit domain consistency checks without mutating runtime canonicalization (`phase3_6a7_2_1_v1`).
 
 ---
 
 ## 1. Executive Summary
 
-Phase 3 establishes the canonical functional-grounding Task and Motion Planning (TAMP) pipeline architecture. Under Pass 3.6A.1 through Pass 3.6A.7.2.1, the runtime interface boundary between the live Vision-Language Model (VLM) and downstream execution has been fully closed and frozen. Pass 3.6B.0 completes the offline evaluation preflight to ensure fair, non-punitive comparison against ground truth.
+Phase 3 establishes the canonical functional-grounding Task and Motion Planning (TAMP) pipeline architecture. Under Pass 3.6A.1 through Pass 3.6A.7.2.1, the runtime interface boundary between the live Vision-Language Model (VLM) and downstream execution has been fully closed and frozen. Pass 3.6B.0 and Pass 3.6B.0.1 complete the offline evaluation preflight and semantic correctness to ensure fair, non-punitive comparison against ground truth.
 
 The scientific pipeline is established as:
 ```

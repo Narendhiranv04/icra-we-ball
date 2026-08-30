@@ -1,9 +1,9 @@
 """Image-conditioned Qwen requirement generation for Kitchen and Living Room.
 
 The model independently produces roles, properties, counts, and visible
-candidate objects. This module audits the response against reviewed task
-contracts after the call and stops before grounding, allocation, planning, or
-execution.
+candidate objects. This module validates and deterministically canonicalizes
+the response against reviewed task-independent normalization contracts after
+the call and stops before grounding, allocation, planning, or execution.
 """
 
 from __future__ import annotations

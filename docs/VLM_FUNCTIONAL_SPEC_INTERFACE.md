@@ -1,8 +1,8 @@
-# VLM Functional Specification Interface Contract (Pass 3.6B.0)
+# VLM Functional Specification Interface Contract (Pass 3.6B.0.1)
 
 **Canonicalization Version**: `phase3_6a7_2_1_v1`
 **VLM Interface Implementation Frozen**: YES
-**Pass 3.6B.0 Evaluator Preflight**: COMPLETE
+**Pass 3.6B.0.1 Evaluator Preflight & Semantic Correctness**: COMPLETE
 **Phase 3 Frozen**: NO (Live audit & evaluation in Pass 3.6B)
 **Ready for Phase 4**: NO
 
@@ -36,7 +36,7 @@ canonical G_F (with complete roles, relations, and operation groups)
 G_O (sequential inspection) → grounding (phi*) → symbolic compiler → A*
 ```
 
-*Note on Evaluation Separation*: Offline task/domain evaluation (e.g. assessing candidate $G_F$ recall/completeness against reference specifications) is strictly decoupled from runtime and performed via `gf_reference_evaluator.py:evaluate_gf_against_reference()`. The proposed-method runtime execution path contains zero task oracle lists or expected benchmark nouns. Representational differences (such as legacy Workshop role-function markers and Kitchen reusable point-count vs interval representation) are normalized strictly in offline evaluation code without modifying runtime representation. See Pass 3.6B.0 verification report for exact local test count.
+*Note on Evaluation Separation*: Offline task/domain evaluation (e.g. assessing candidate $G_F$ recall/completeness against reference specifications) is strictly decoupled from runtime and performed via `gf_reference_evaluator.py:evaluate_gf_against_reference()`. The proposed-method runtime execution path contains zero task oracle lists or expected benchmark nouns. Representational differences (such as legacy Workshop role-function markers and Kitchen reusable point-count vs interval representation) are normalized strictly in offline evaluation code without modifying runtime representation. Operation-group matching is strictly semantic-first (`tool_role`, `target_role`, `context_role`), using group ID only as a disambiguation tie-break. Non-operative fields (`distinct_within_group`, `selection_preference`) are reported as representation diagnostics and do not penalize grounding-relevant completeness. Candidate and reference domain mismatch is strictly guarded.
 
 ---
 

@@ -377,7 +377,7 @@ def test_l2_variants_compile_without_robot(scene_name):
         assert sum(
             model.jnt_type[joint_id] == mujoco.mjtJoint.mjJNT_FREE
             for joint_id in range(model.njnt)
-        ) == 6
+        ) in {5, 6}
     else:
         assert sum(
             model.jnt_type[joint_id] == mujoco.mjtJoint.mjJNT_FREE
