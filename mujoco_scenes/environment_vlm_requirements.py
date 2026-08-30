@@ -15,7 +15,13 @@ from typing import Any
 
 import yaml
 
-from mujoco_scenes.functional_tamp_pipeline.errors import VLMSpecificationError
+from mujoco_scenes.functional_tamp_pipeline.errors import (
+    AmbiguousCanonicalizationError,
+    MalformedVLMSpecificationError,
+    UnmappedFunctionalConceptError,
+    UnsupportedCheckerCapabilityError,
+    VLMSpecificationError,
+)
 from .workshop_phase1.fm_adapter import FMAdapter
 
 
@@ -34,7 +40,7 @@ KITCHEN_SEARCH_REGIONS = {
     "C1": "lower kitchen cupboard",
 }
 
-VLM_CANONICALIZATION_VERSION = "phase3_6a4_v1"
+VLM_CANONICALIZATION_VERSION = "phase3_6a5_v1"
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -144,11 +150,11 @@ def map_living_room_fixed_target_role(raw: dict[str, Any]) -> str | None:
     if not norm:
         return None
     if any(k in norm for k in (
-        "seating pair", "seating position", "both seats", "seating area",
+        "seating pair", "both seats", "seating area", "pair of seats",
         "armchairs", "armchair positions", "viewer positions", "viewing seats",
     )):
         return "SEATING_PAIR"
-    if any(k in norm for k in ("seating", "seat", "armchair", "chair")):
+    if any(k in norm for k in ("seating position", "seat position", "seating", "seat", "armchair", "chair")):
         return "SEATING_POSITION"
     return None
 
@@ -511,7 +517,7 @@ class EnvironmentVLMRequirementProvider:
                     matched_role_id = map_living_room_fixed_target_role(raw)
                     if matched_role_id is None:
                         fn_text = f"{raw.get('function', '')} {raw.get('description', '')}"
-                        raise VLMSpecificationError(
+                        raise UnmappedFunctionalConceptError(
                             f"VLM role {raw_id!r} with function {fn_text!r} cannot be mapped to any reviewed FIXED_TARGET role"
                         )
                     canonical_func = matched_role_id.upper()
@@ -531,13 +537,13 @@ class EnvironmentVLMRequirementProvider:
                         if len(matching_roles) == 1:
                             matched_role_id = matching_roles[0]
                         elif len(matching_roles) > 1:
-                            raise VLMSpecificationError(
+                            raise AmbiguousCanonicalizationError(
                                 f"VLM role {raw_id!r} with function {raw.get('function')!r} "
                                 f"is ambiguous across canonical roles: {sorted(matching_roles)}"
                             )
 
                     if matched_role_id is None:
-                        raise VLMSpecificationError(
+                        raise UnmappedFunctionalConceptError(
                             f"VLM role {raw_id!r} with function {raw.get('function')!r} "
                             "cannot be mapped to any reviewed canonical role"
                         )
@@ -564,12 +570,12 @@ class EnvironmentVLMRequirementProvider:
                 raw_vlm_role_ids = [raw["id"] for raw in raw_group]
                 entity_kinds = {raw.get("entity_kind") for raw in raw_group}
                 if len(entity_kinds) != 1:
-                    raise VLMSpecificationError(f"Mixed entity kinds in canonical group {canonical_func}: {entity_kinds}")
+                    raise MalformedVLMSpecificationError(f"Mixed entity kinds in canonical group {canonical_func}: {entity_kinds}")
                 entity_kind = entity_kinds.pop()
 
                 binding_policies = {raw.get("binding_policy") for raw in raw_group}
                 if len(binding_policies) > 1:
-                    raise VLMSpecificationError(f"Conflicting binding policies in canonical group {canonical_func}: {binding_policies}")
+                    raise MalformedVLMSpecificationError(f"Conflicting binding policies in canonical group {canonical_func}: {binding_policies}")
                 binding_policy = binding_policies.pop()
 
                 total_count = sum(int(raw.get("required_count", 1)) for raw in raw_group)
@@ -616,7 +622,7 @@ class EnvironmentVLMRequirementProvider:
                         "semantic_hints": hints,
                         "source": "FM",
                         "provenance": "qwen_vlm_normalized_by_generic_ontology",
-                        "vlm_canonicalization_version": "phase3_6a4_v1",
+                        "vlm_canonicalization_version": "phase3_6a5_v1",
                         "normalization_status": "COMPLETE",
                     }
                 )
@@ -628,18 +634,18 @@ class EnvironmentVLMRequirementProvider:
                 r = rel_item.get("relation")
                 o = rel_item.get("object_role")
                 if s not in raw_id_to_canon:
-                    raise VLMSpecificationError(
+                    raise MalformedVLMSpecificationError(
                         f"VLM relation subject role {s!r} not declared in living room roles"
                     )
                 if o not in raw_id_to_canon:
-                    raise VLMSpecificationError(
+                    raise MalformedVLMSpecificationError(
                         f"VLM relation object role {o!r} not declared in living room roles"
                     )
                 s_canon = raw_id_to_canon[s]
                 o_canon = raw_id_to_canon[o]
                 mapped_r = map_living_room_relation(r, self.relation_aliases)
                 if mapped_r is None:
-                    raise VLMSpecificationError(
+                    raise UnmappedFunctionalConceptError(
                         f"VLM living room relation {r!r} cannot be mapped to any reviewed relation"
                     )
                 canonical_relations.append({

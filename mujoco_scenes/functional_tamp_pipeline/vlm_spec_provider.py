@@ -13,7 +13,7 @@ from .models import (
 )
 from .spec_provider import FunctionalSpecProvider
 
-VLM_CANONICALIZATION_VERSION = "phase3_6a4_v1"
+VLM_CANONICALIZATION_VERSION = "phase3_6a5_v1"
 
 
 class VLMSpecProvider(FunctionalSpecProvider):
@@ -79,10 +79,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
                 expected=True,
             ))
 
-        detector_vocab = tuple(dict.fromkeys([
-            *provider.vlm_derived_detector_prompts,
-            *provider.evaluation_negative_control_prompts,
-        ]))
+        detector_vocab = tuple(dict.fromkeys(provider.vlm_derived_detector_prompts))
 
         return FunctionalRequirementGraph(
             domain="workshop",

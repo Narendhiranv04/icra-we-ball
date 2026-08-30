@@ -1,14 +1,14 @@
 # Phase 3 Freeze and Phase 4 Handoff
 
 > [!NOTE]
-> **PASS 3.6A.4 CANDIDATE — LOSSLESS CANONICAL G_F CONSTRUCTION ACROSS DOMAINS**
-> Pass 3.6A.4 enforces lossless deterministic canonicalization of raw VLM natural-language semantics into Canonical $G_F$. The contract is canonicalized under version `phase3_6a4_v1` across all three benchmark domains (Kitchen, Living Room, Workshop).
+> **PASS 3.6A.5 CANDIDATE — END-TO-END VLM SEMANTIC BOUNDARY CLOSURE**
+> Pass 3.6A.5 closes the end-to-end VLM semantic boundary between $G_F$ and $G_O$, enforces structured failure taxonomies, removes prompt examples, and purges hardcoded category assumptions below $G_F$. The contract is canonicalized under version `phase3_6a5_v1` across all three benchmark domains (Kitchen, Living Room, Workshop).
 
 ---
 
 ## 1. Executive Summary
 
-Phase 3 establishes the canonical functional-grounding Task and Motion Planning (TAMP) pipeline architecture. Under Pass 3.6A.1 through Pass 3.6A.4, the interface boundary between the live Vision-Language Model (VLM) and downstream execution has been realigned to adhere strictly to scientific zero-leakage principles with lossless, deterministic canonicalization.
+Phase 3 establishes the canonical functional-grounding Task and Motion Planning (TAMP) pipeline architecture. Under Pass 3.6A.1 through Pass 3.6A.5, the interface boundary between the live Vision-Language Model (VLM) and downstream execution has been realigned to adhere strictly to scientific zero-leakage principles with lossless, deterministic canonicalization.
 
 The scientific pipeline is established as:
 ```
@@ -18,7 +18,7 @@ TASK + INITIAL MULTI-VIEW RGB
         ↓
 complete natural-language functional specification
         ↓
-lossless deterministic canonicalization (phase3_6a4_v1)
+lossless deterministic canonicalization (phase3_6a5_v1)
         ↓
 canonical G_F
         ↓
@@ -31,25 +31,27 @@ G_O (sequential inspection) → grounding (phi*) → symbolic compiler → A*
 
 ---
 
-## 2. Pass 3.6A.4 Contract and Canonicalization Summary
+## 2. Pass 3.6A.5 Contract and Canonicalization Summary
 
-1. **Complete Natural-Language Schema**:
+1. **Complete Natural-Language Schema & Generic Prompt**:
+   - Clean static prompt: format instruction only, zero concrete semantic examples (`"rigid"`, `"support an item"`), zero benchmark nouns.
+   - Generic functional-asset vs task-payload/context distinction.
+   - Standardized structured failure taxonomy: `MALFORMED_VLM_SPECIFICATION`, `UNMAPPED_FUNCTIONAL_CONCEPT`, `UNSUPPORTED_CHECKER_CAPABILITY`, `AMBIGUOUS_CANONICALIZATION`, `TRANSPORT_OR_STRUCTURED_OUTPUT_FAILURE`.
    - `status` (`SUPPORTED` / `UNSUPPORTED`)
    - `task_summary` (concise task description)
    - `functional_roles`: `id`, `entity_kind` (`OBJECT`, `REGION`, `FIXED_TARGET`), `function`, `description`, `required_count`, `binding_policy` (`DISTINCT`, `REUSABLE`, `SHARED`), `candidate_categories`, `visible_candidates`, `required_properties` (**UNARY ONLY**).
    - `functional_relations`: top-level explicit `subject_role`, `relation`, `object_role`.
-   - `interaction_groups`: `id`, `function`, `tool_role`, `target_role`, `required_target_count`, `usage_policy`, `required_relations`.
    - `inspectable_regions`: `id`, `label`, `visual_description`, `reason`.
    - `inspection_order`: array of proposed region IDs.
    - `unsupported_reason`: non-empty diagnostic for `UNSUPPORTED` status.
 
 2. **Domain Lossless Canonicalization & Open-Vocabulary Handling**:
    - **Kitchen**: Canonical roles (`coffee_container`, `soup_container`, `coffee_stirrer`, `soup_eating_utensil`, `coffee_source`, `water_source`) and operation groups (`coffee_stirring`, `soup_serving`). Strict required top-level schema validation. Initial RGB render resolution standardized to **1280×960** across 5 views.
-   - **Living Room**: Lossless relation preservation and open-vocabulary candidate categories mapped to snake_case tokens. Compositional concept matchers for `personal_cup_saucer` (surface + personal/drink) and `shared_remote` (surface + shared/remote). Role consolidation preserves raw binding policies, counts, and kinds without post-hoc overwrites.
-   - **Workshop**: Lossless normalized roles and relations (`NormalizedWorkshopRole`, `NormalizedWorkshopRelation`). Function names are not stored in unary predicates. Candidate categories directly populate detector vocabulary without fixed ontology mapping. Single initial VLM call extracts roles, relations, inspectable regions, and region ranking. Bare `"hole"` alias removed in favor of compositional target hole matching.
+   - **Living Room**: Lossless relation preservation and open-vocabulary candidate categories mapped to snake_case tokens. Compositional concept matchers for `personal_cup_saucer` (surface + personal/drink) and `shared_remote` (surface + shared/remote). Valid contextual FIXED_TARGET support (`SEATING_POSITION`, `SEATING_PAIR`).
+   - **Workshop**: Lossless normalized roles and relations (`NormalizedWorkshopRole`, `NormalizedWorkshopRelation`). Pure $G_F \to G_O$ semantic category sourcing with run-local prompt tokenization. Production detector vocabulary contains only VLM-derived detector prompts; supplemental passes constrained strictly to $G_F$.
 
 3. **Strict Validation & Traceability**:
-   - `VLM_CANONICALIZATION_VERSION = "phase3_6a4_v1"` attached to all $G_F$ metadata.
+   - `VLM_CANONICALIZATION_VERSION = "phase3_6a5_v1"` attached to all $G_F$ metadata.
    - Complete transformation trace, raw decompositions, and normalization audits recorded in all run artifacts.
 
 ---

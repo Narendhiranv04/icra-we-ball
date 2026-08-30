@@ -9,7 +9,13 @@ import re
 from typing import Any
 import yaml
 
-from mujoco_scenes.functional_tamp_pipeline.errors import VLMSpecificationError
+from mujoco_scenes.functional_tamp_pipeline.errors import (
+    AmbiguousCanonicalizationError,
+    MalformedVLMSpecificationError,
+    UnmappedFunctionalConceptError,
+    UnsupportedCheckerCapabilityError,
+    VLMSpecificationError,
+)
 from mujoco_scenes.workshop_phase1.fm_adapter import FMAdapter, FMBackendNotConfiguredError
 from mujoco_scenes.workshop_phase1.types import (
     EntityType,
@@ -339,11 +345,11 @@ def map_workshop_relation(relation_text: str) -> str | None:
     """Deterministic concept matching for Workshop relations."""
     norm = " ".join(re.findall(r"[a-z0-9]+", str(relation_text).casefold()))
     matches = set()
-    if any(k in norm for k in ("engage", "fit screw", "fits driver", "fit driver", "driver bit", "fit fastener", "match bit", "compatible with fastener", "compatible with screw", "torque to screw", "compatible with the fastener")):
+    if any(k in norm for k in ("engage", "fit screw", "fits driver", "fit driver", "driver bit", "fit fastener", "match bit", "compatible with fastener", "compatible with screw", "torque to screw", "compatible with the fastener", "compatible with")):
         matches.add("COMPATIBLE_WITH")
-    if any(k in norm for k in ("reaches target", "reach target", "reaches hole", "reach hole", "reaches repair", "reach repair", "access target", "length to reach", "reaches workpiece", "reach workpiece")):
+    if any(k in norm for k in ("reaches target", "reach target", "reaches into", "reach into", "reaches hole", "reach hole", "reaches repair", "reach repair", "access target", "length to reach", "reaches workpiece", "reach workpiece")):
         matches.add("REACHES_TARGET")
-    if any(k in norm for k in ("thread into", "threads into", "fit hole", "fits hole", "fit target", "fits target", "anchor in", "anchors in", "compatible with hole", "compatible with target", "fits workpiece")):
+    if any(k in norm for k in ("thread into", "threads into", "fit hole", "fits hole", "fit target", "fits target", "anchor in", "anchors in", "compatible with hole", "compatible with target", "fits workpiece", "fit inside", "fits inside")):
         matches.add("COMPATIBLE_WITH_TARGET")
     if len(matches) == 1:
         return next(iter(matches))
@@ -457,10 +463,10 @@ class FMRequirementProvider(RequirementProvider):
         if len(matches) == 1:
             return next(iter(matches))
         if len(matches) == 0:
-            raise VLMSpecificationError(
+            raise UnmappedFunctionalConceptError(
                 f"VLM_SPEC_FAILED: VLM function phrase {raw.get('function')!r} cannot be mapped to any reviewed ontology function"
             )
-        raise VLMSpecificationError(
+        raise AmbiguousCanonicalizationError(
             f"VLM_SPEC_FAILED: VLM function phrase {raw.get('function')!r} is ambiguous across functions: {sorted(matches)}"
         )
 
@@ -567,7 +573,7 @@ class FMRequirementProvider(RequirementProvider):
             for prop in raw_props:
                 mapped_u = map_workshop_unary_property(prop)
                 if mapped_u is None:
-                    raise VLMSpecificationError(
+                    raise UnsupportedCheckerCapabilityError(
                         f"VLM_SPEC_FAILED: VLM unary property {prop!r} for role {raw_id!r} is not supported in Workshop"
                     )
                 if mapped_u not in unary_predicates:
@@ -611,9 +617,9 @@ class FMRequirementProvider(RequirementProvider):
             r = rel.get("relation")
             o = rel.get("object_role")
             if s not in raw_id_to_canon:
-                raise VLMSpecificationError(f"VLM_SPEC_FAILED: Relation subject role {s!r} not declared")
+                raise MalformedVLMSpecificationError(f"VLM_SPEC_FAILED: Relation subject role {s!r} not declared")
             if o not in raw_id_to_canon:
-                raise VLMSpecificationError(f"VLM_SPEC_FAILED: Relation object role {o!r} not declared")
+                raise MalformedVLMSpecificationError(f"VLM_SPEC_FAILED: Relation object role {o!r} not declared")
             s_canon = raw_id_to_canon[s]
             o_canon = raw_id_to_canon[o]
             mapped_rel = map_workshop_relation(r)
@@ -628,9 +634,9 @@ class FMRequirementProvider(RequirementProvider):
                 if len(prop_matches) == 1:
                     mapped_rel = next(iter(prop_matches))
                 elif len(prop_matches) > 1:
-                    raise VLMSpecificationError(f"VLM_SPEC_FAILED: Ambiguous relation {r!r}: {sorted(prop_matches)}")
+                    raise AmbiguousCanonicalizationError(f"VLM_SPEC_FAILED: Ambiguous relation {r!r}: {sorted(prop_matches)}")
                 else:
-                    raise VLMSpecificationError(f"VLM_SPEC_FAILED: Relation {r!r} cannot be mapped to any Workshop relation")
+                    raise UnmappedFunctionalConceptError(f"VLM_SPEC_FAILED: Relation {r!r} cannot be mapped to any Workshop relation")
 
             normalized_relations.append(NormalizedWorkshopRelation(
                 raw_subject_role_id=s,
@@ -740,9 +746,18 @@ class FMRequirementProvider(RequirementProvider):
 
     def get_detector_label_to_canonical_map(self) -> dict[str, str]:
         self._ensure_generated()
-        return self.ontology_contract.get_detector_label_to_canonical_map()
+        mapping = dict(self.ontology_contract.get_detector_label_to_canonical_map())
+        for role in getattr(self, "normalized_roles", []):
+            for prompt, token in zip(role.candidate_categories, role.run_local_categories):
+                mapping[prompt.lower()] = token
+        return mapping
 
     def get_alias_to_canonical_map(self) -> dict[str, str]:
         self._ensure_generated()
-        return self.ontology_contract.get_alias_to_canonical_map()
+        mapping = dict(self.ontology_contract.get_alias_to_canonical_map())
+        for role in getattr(self, "normalized_roles", []):
+            for prompt, token in zip(role.candidate_categories, role.run_local_categories):
+                mapping[prompt.lower()] = token
+                mapping[token.lower()] = token
+        return mapping
 

@@ -23,21 +23,32 @@ from typing import Sequence
 from typing import Any, Mapping, Protocol
 
 try:
-    from mujoco_scenes.functional_tamp_pipeline.errors import VLMSpecificationError
+    from mujoco_scenes.functional_tamp_pipeline.errors import (
+        MalformedVLMSpecificationError,
+        TransportOrStructuredOutputError,
+        VLMSpecificationError,
+    )
 except ImportError:
     class VLMSpecificationError(Exception):
         """Fallback base error for VLM specification failures."""
+        category = "UNMAPPED_FUNCTIONAL_CONCEPT"
+
+    class MalformedVLMSpecificationError(VLMSpecificationError):
+        category = "MALFORMED_VLM_SPECIFICATION"
+
+    class TransportOrStructuredOutputError(VLMSpecificationError):
+        category = "TRANSPORT_OR_STRUCTURED_OUTPUT_FAILURE"
 
 
 class FMBackendNotConfiguredError(VLMSpecificationError):
     """Raised when live requirement generation has no configured endpoint."""
 
 
-class FMTransportError(VLMSpecificationError):
+class FMTransportError(TransportOrStructuredOutputError):
     """Raised when the inference server cannot return a usable completion."""
 
 
-class FMResponseValidationError(VLMSpecificationError):
+class FMResponseValidationError(MalformedVLMSpecificationError):
     """Raised when the model response violates the transport-level schema."""
 
 
@@ -99,9 +110,16 @@ Rules:
 - Infer the complete set of physical or spatial functional roles from the task
   instruction and initial multi-view RGB images yourself. The user will not supply
   expected roles, functions, object categories, or properties.
-- Use SHORT ATOMIC PHRASES for all functions, properties, and relations (e.g.
-  function: "support an item", property: "rigid", relation: "near reference region").
-  Do not write long narrative sentences.
+- Create functional roles for scene assets whose identity, suitability, or
+  functional capability must be discovered or selected to accomplish the task.
+  Objects explicitly specified by the task as payloads or fixed contextual
+  entities need not be reintroduced as selectable functional roles unless their
+  functional suitability itself must be discovered.
+- Use SHORT ATOMIC PHRASES for all functions, properties, and relations:
+  - Use a short atomic function phrase for each role function.
+  - Use a short atomic unary-property phrase for each required property.
+  - Use a short atomic binary-relation phrase for each functional relation.
+  Do not write long narrative sentences. Do not use complex compound clauses.
 - Set `entity_kind` to:
   - OBJECT: a selectable/manipulable physical item.
   - REGION: a selectable support surface, placement area, or spatial destination.
@@ -113,7 +131,7 @@ Rules:
 - `candidate_categories`: list open-vocabulary semantic search phrases that could satisfy the role, even if nothing is currently visible.
 - `visible_candidates`: list visually apparent items/regions in the initial RGB views.
   This array may be empty ([]).
-- `required_properties`: list UNARY-ONLY physical properties of this single role (e.g. "rigid", "planar support").
+- `required_properties`: list UNARY-ONLY physical properties of this single role.
   Never place binary relations or compatibility statements here.
 - `functional_relations`: list explicit role-to-role relations using `subject_role`, `relation`, and `object_role`.
   Both subject_role and object_role must reference declared role IDs.
