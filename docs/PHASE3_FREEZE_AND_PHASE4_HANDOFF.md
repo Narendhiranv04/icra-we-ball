@@ -1,15 +1,15 @@
 # Phase 3 Freeze and Phase 4 Handoff Status
 
 > [!NOTE]
-> **PASS 3.6A.7.2 CANDIDATE — FINAL NON-ORACULAR VLM INTERFACE FREEZE: SCHEMA PARITY, RUNTIME/EVALUATION SEPARATION, PROVENANCE, AND SYNTHETIC PATH VALIDATION**
-> Phase 3 Status: **NOT FROZEN** (`PASS 3.6A.7.2 CODE CLOSURE: YES`, `VLM INTERFACE IMPLEMENTATION FROZEN: YES`, `READY FOR PASS 3.6B: YES`, `PHASE 3 FROZEN: NO`, `READY FOR PHASE 4: NO`).
-> Pass 3.6A.7.2 closes the deterministic VLM interface correctly: separates runtime generic structural validation (`validate_runtime_gf` with zero task nouns/oracles) from offline evaluation (`gf_reference_evaluator.py:evaluate_gf_against_reference()`), closes generic and Kitchen `RESPONSE_SCHEMA` $\leftrightarrow$ Python validator parity (`required_relations` mandatory with `minItems=1`), exposes 3-layer provenance (`raw_vlm_response`, `validated_vlm_specification`, `canonicalization_trace`), fixes canonicalization version to `phase3_6a7_2_v1`, and proves compiler non-mutation invariance and synthetic raw-VLM $\to$ canonical $G_F$ end-to-end paths.
+> **PASS 3.6B.0 — FAIR G_F REFERENCE EVALUATOR PREFLIGHT AND FREEZE**
+> Phase 3 Status: **NOT FROZEN** (`PASS 3.6A RUNTIME INTERFACE FROZEN: YES`, `PASS 3.6B.0 EVALUATOR PREFLIGHT COMPLETE: YES`, `READY FOR PASS 3.6B LIVE EVALUATION: YES`, `PHASE 3 FROZEN: NO`, `READY FOR PHASE 4: NO`).
+> Pass 3.6B.0 closes the offline reference evaluator preflight: normalizes legacy GT Workshop role-function markers as redundant role identities in evaluation only, implements semantic cardinality compatibility for Kitchen reusable roles, compares 4-tuple relations with expected polarity, enforces deterministic 1-to-1 operation-group matching, and bumps canonicalization provenance version to `phase3_6a7_2_1_v1`.
 
 ---
 
 ## 1. Executive Summary
 
-Phase 3 establishes the canonical functional-grounding Task and Motion Planning (TAMP) pipeline architecture. Under Pass 3.6A.1 through Pass 3.6A.7.2, the interface boundary between the live Vision-Language Model (VLM) and downstream execution has been fully closed and frozen to adhere strictly to scientific zero-leakage principles with lossless, deterministic canonicalization.
+Phase 3 establishes the canonical functional-grounding Task and Motion Planning (TAMP) pipeline architecture. Under Pass 3.6A.1 through Pass 3.6A.7.2.1, the runtime interface boundary between the live Vision-Language Model (VLM) and downstream execution has been fully closed and frozen. Pass 3.6B.0 completes the offline evaluation preflight to ensure fair, non-punitive comparison against ground truth.
 
 The scientific pipeline is established as:
 ```
@@ -21,7 +21,7 @@ raw VLM output (raw_vlm_response)
         ↓
 strict generic schema validation (validated_vlm_specification)
         ↓
-lossless deterministic canonicalization (phase3_6a7_2_v1, canonicalization_trace)
+lossless deterministic canonicalization (phase3_6a7_2_1_v1, canonicalization_trace)
         ↓
 generic domain-independent runtime G_F validation (validate_runtime_gf)
         ↓
@@ -36,7 +36,7 @@ G_O (sequential inspection) → grounding (phi*) → symbolic compiler → A*
 
 ---
 
-## 2. Pass 3.6A.7.2 Contract and Canonicalization Summary
+## 2. Pass 3.6B.0 Contract and Canonicalization Summary
 
 1. **Complete Natural-Language Schema & Generic Prompt**:
    - Clean static prompt: format instruction only, zero concrete semantic examples, zero benchmark nouns.
@@ -48,14 +48,14 @@ G_O (sequential inspection) → grounding (phi*) → symbolic compiler → A*
 2. **Domain Lossless Canonicalization & Open-Vocabulary Handling**:
    - **Kitchen**: Canonical roles and operation groups with strict required top-level schema validation. Multi-view RGB resolution standardized to 1280×960.
    - **Living Room**: Lossless canonicalization into `FunctionalRequirementGraph` including task payload `OBJECT` roles (`CUP_SAUCER_SET`, `REMOTE`), contextual `FIXED_TARGET` roles (`SEATING_POSITION`, `SEATING_PAIR`), and `OperationGroup` bipartite matching specifications. Production $G_O$ task-anchor categories aligned with VLM $G_F$.
-   - **Workshop**: Lossless normalized roles and relations. Pure $G_F \to G_O$ semantic category routing (`REACHES_TARGET`, `COMPATIBLE_WITH_TARGET`, `COMPATIBLE_WITH`) with run-local prompt tokenization.
+   - **Workshop**: Lossless normalized roles, relations, and operation groups. Pure $G_F \to G_O$ semantic category routing (`REACHES_TARGET`, `COMPATIBLE_WITH_TARGET`, `COMPATIBLE_WITH`) with run-local prompt tokenization.
 
-3. **Strict Validation & Traceability**:
-   - `VLM_CANONICALIZATION_VERSION = "phase3_6a7_2_v1"` attached to all $G_F$ metadata.
+3. **Strict Validation, Offline Evaluation & Traceability**:
+   - `VLM_CANONICALIZATION_VERSION = "phase3_6a7_2_1_v1"` attached to all $G_F$ metadata.
    - Distinct `unary_property_aliases` and `binary_relation_aliases` tables.
    - Domain-scoped unary checker capabilities enforced fail-closed (`PLANAR_SUPPORT` only in Living Room).
    - Generic runtime $G_F$ structural validator executed without domain oracle lists.
-   - Offline reference evaluation (`evaluate_gf_against_reference`) dynamically comparing candidate $G_F$ against ground-truth reference $G_F$.
+   - Offline reference evaluation (`evaluate_gf_against_reference`) dynamically comparing candidate $G_F$ against ground-truth reference $G_F$ with evaluation-only normalization of legacy GT markers.
    - Genuine separation of `raw_vlm_response`, `validated_vlm_specification`, and `canonicalization_trace`.
 
 ---

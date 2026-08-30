@@ -54,9 +54,9 @@ PNG_1X1 = (
 
 # Section 50: Version constant check
 def test_phase3_6a4_version_constant():
-    assert VLM_CANONICALIZATION_VERSION == "phase3_6a7_2_v1"
-    assert KITCHEN_VERSION == "phase3_6a7_2_v1"
-    assert ENV_VERSION == "phase3_6a7_2_v1"
+    assert VLM_CANONICALIZATION_VERSION == "phase3_6a7_2_1_v1"
+    assert KITCHEN_VERSION == "phase3_6a7_2_1_v1"
+    assert ENV_VERSION == "phase3_6a7_2_1_v1"
 
 
 # Section 51: Neutral prompt de-biasing

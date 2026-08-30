@@ -1,7 +1,8 @@
-# VLM Functional Specification Interface Contract (Pass 3.6A.7.2)
+# VLM Functional Specification Interface Contract (Pass 3.6B.0)
 
-**Canonicalization Version**: `phase3_6a7_2_v1`
+**Canonicalization Version**: `phase3_6a7_2_1_v1`
 **VLM Interface Implementation Frozen**: YES
+**Pass 3.6B.0 Evaluator Preflight**: COMPLETE
 **Phase 3 Frozen**: NO (Live audit & evaluation in Pass 3.6B)
 **Ready for Phase 4**: NO
 
@@ -22,7 +23,7 @@ raw VLM output (raw_vlm_response)
         ↓
 strict generic schema validation (validated_vlm_specification)
         ↓
-lossless deterministic canonicalization (phase3_6a7_2_v1, canonicalization_trace)
+lossless deterministic canonicalization (phase3_6a7_2_1_v1, canonicalization_trace)
         ↓
 generic domain-independent runtime G_F validation (validate_runtime_gf)
         ↓
@@ -35,7 +36,7 @@ canonical G_F (with complete roles, relations, and operation groups)
 G_O (sequential inspection) → grounding (phi*) → symbolic compiler → A*
 ```
 
-*Note on Evaluation Separation*: Offline task/domain evaluation (e.g. assessing candidate $G_F$ recall/completeness against reference specifications) is strictly decoupled from runtime and performed via `gf_reference_evaluator.py:evaluate_gf_against_reference()`. The proposed-method runtime execution path contains zero task oracle lists or expected benchmark nouns.
+*Note on Evaluation Separation*: Offline task/domain evaluation (e.g. assessing candidate $G_F$ recall/completeness against reference specifications) is strictly decoupled from runtime and performed via `gf_reference_evaluator.py:evaluate_gf_against_reference()`. The proposed-method runtime execution path contains zero task oracle lists or expected benchmark nouns. Representational differences (such as legacy Workshop role-function markers and Kitchen reusable point-count vs interval representation) are normalized strictly in offline evaluation code without modifying runtime representation. See Pass 3.6B.0 verification report for exact local test count.
 
 ---
 
@@ -166,7 +167,7 @@ Downstream backend code compiles the VLM's natural-language output deterministic
    - `raw_vlm_response`: Exact decoded JSON before validation.
    - `validated_vlm_specification`: Validated schema document.
    - `canonicalization_trace`: Detailed mappings of role IDs, categories, and predicates.
-   - `vlm_canonicalization_version`: Fixed to `phase3_6a7_2_v1`.
+   - `vlm_canonicalization_version`: Fixed to `phase3_6a7_2_1_v1`.
 
 ---
 

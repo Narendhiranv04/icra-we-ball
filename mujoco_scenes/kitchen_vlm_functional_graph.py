@@ -15,7 +15,7 @@ from mujoco_scenes.functional_tamp_pipeline.errors import VLMSpecificationError
 from .workshop_phase1.fm_adapter import validate_kitchen_functional_specification
 from .task_witness import load_task_requirements
 
-VLM_CANONICALIZATION_VERSION = "phase3_6a7_2_v1"
+VLM_CANONICALIZATION_VERSION = "phase3_6a7_2_1_v1"
 
 
 # Stable Kitchen Canonical Role Registry

@@ -549,7 +549,7 @@ def test_o_kitchen_synthetic_raw_to_canonical_provenance():
     assert "raw_vlm_response" in gf.metadata
     assert "validated_vlm_specification" in gf.metadata
     assert "canonicalization_trace" in gf.metadata
-    assert gf.metadata["vlm_canonicalization_version"] == "phase3_6a7_2_v1"
+    assert gf.metadata["vlm_canonicalization_version"] == "phase3_6a7_2_1_v1"
     assert gf.metadata["raw_vlm_response"] == raw_doc
 
 
@@ -569,7 +569,7 @@ def test_p_workshop_synthetic_raw_to_canonical_provenance():
     assert "raw_vlm_response" in gf.metadata
     assert "validated_vlm_specification" in gf.metadata
     assert "canonicalization_trace" in gf.metadata
-    assert gf.metadata["vlm_canonicalization_version"] == "phase3_6a7_2_v1"
+    assert gf.metadata["vlm_canonicalization_version"] == "phase3_6a7_2_1_v1"
     assert gf.metadata["raw_vlm_response"] == raw_doc
 
 
@@ -592,7 +592,7 @@ def test_q_living_room_synthetic_raw_to_canonical_provenance():
     assert "raw_vlm_response" in gf.metadata
     assert "validated_vlm_specification" in gf.metadata
     assert "canonicalization_trace" in gf.metadata
-    assert gf.metadata["vlm_canonicalization_version"] == "phase3_6a7_2_v1"
+    assert gf.metadata["vlm_canonicalization_version"] == "phase3_6a7_2_1_v1"
 
 
 # ===========================================================================
@@ -704,9 +704,9 @@ def test_t_workshop_open_vocab_categories_evaluate_on_go():
 # 7. Version Constants and Zero Benchmark Leakage
 # ===========================================================================
 def test_u_canonicalization_version_constants_consistent():
-    assert VLM_CANONICALIZATION_VERSION == "phase3_6a7_2_v1"
-    assert ENV_VLM_VERSION == "phase3_6a7_2_v1"
-    assert KITCHEN_VLM_VERSION == "phase3_6a7_2_v1"
+    assert VLM_CANONICALIZATION_VERSION == "phase3_6a7_2_1_v1"
+    assert ENV_VLM_VERSION == "phase3_6a7_2_1_v1"
+    assert KITCHEN_VLM_VERSION == "phase3_6a7_2_1_v1"
 
 
 def test_v_zero_prompt_and_schema_leakage():

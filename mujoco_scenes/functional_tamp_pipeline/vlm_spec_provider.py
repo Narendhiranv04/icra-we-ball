@@ -13,7 +13,7 @@ from .models import (
 )
 from .spec_provider import FunctionalSpecProvider
 
-VLM_CANONICALIZATION_VERSION = "phase3_6a7_2_v1"
+VLM_CANONICALIZATION_VERSION = "phase3_6a7_2_1_v1"
 
 
 class VLMSpecProvider(FunctionalSpecProvider):
