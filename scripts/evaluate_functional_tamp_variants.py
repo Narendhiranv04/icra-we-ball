@@ -49,6 +49,17 @@ REQUIRED_MANIFEST_FIELDS = [
     "specification_sha256",
 ]
 
+# Fields that must contain meaningful non-empty values on a completed scientific run
+NONEMPTY_MANIFEST_FIELDS = [
+    "spec_mode",
+    "spec_acquisition",
+    "search_order_source_requested",
+    "search_order_source_effective",
+    "terminal_status",
+    "exploration_actuation",
+    "specification_sha256",
+]
+
 
 def load_grounding_info(run_dir: str) -> Tuple[str, Optional[bool]]:
     """
@@ -339,6 +350,10 @@ def evaluate_variant(
         for field in REQUIRED_MANIFEST_FIELDS:
             if field not in manifest:
                 provenance_mismatches.append(f"manifest missing field: {field}")
+            elif field in NONEMPTY_MANIFEST_FIELDS:
+                val = manifest[field]
+                if val is None or (isinstance(val, str) and not val.strip()):
+                    provenance_mismatches.append(f"manifest empty field: {field}")
 
         if manifest_spec_mode != evaluator_mode_requested:
             provenance_mismatches.append(f"spec_mode: evaluator='{evaluator_mode_requested}' != manifest='{manifest_spec_mode}'")
@@ -719,7 +734,7 @@ def aggregate_random_trials(
                 f"{agg['replay_valid_rate']:.4f}" if agg["replay_valid_rate"] is not None else "N/A",
                 json.dumps(agg["pairing_status_counts"]),
                 agg["provenance_failure_count"],
-                str(agg["specification_hash_all_match"]),
+                "N/A" if agg["specification_hash_all_match"] is None else str(agg["specification_hash_all_match"]),
             ]
             for k in range(global_max_k + 1):
                 row.append(str(p_k.get(str(k), "N/A")))

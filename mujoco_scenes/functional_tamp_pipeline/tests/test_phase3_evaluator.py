@@ -424,6 +424,23 @@ def test_spec_acquisition_mismatch_invalidates_evaluation(tmp_path: Path):
     assert any("spec_acquisition" in m for m in res["provenance_mismatches"])
 
 
+def test_spec_acquisition_reverse_mismatch_live_requested_manifest_replay(tmp_path: Path):
+    run_dir = tmp_path / "out" / "kitchen" / "K1" / "gt"
+    run_dir.mkdir(parents=True)
+    (run_dir / "result.json").write_text(json.dumps({"status": "ACTION_SEQUENCE_READY", "inspected_regions": []}), encoding="utf-8")
+
+    # Live run requested (specification_json=None), but manifest says replayed_provider_output
+    manifest = make_valid_manifest(spec_acquisition="replayed_provider_output")
+    (run_dir / "run_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+    with patch("subprocess.run", return_value=MagicMock(returncode=0)):
+        res = evaluate_variant("kitchen", "K1", str(tmp_path / "out"))
+
+    assert res["provenance_match"] is False
+    assert res["evaluation_valid"] is False
+    assert any("spec_acquisition" in m for m in res["provenance_mismatches"])
+
+
 # 7. Seed Provenance Comparison with None (Issue #3)
 def test_seed_provenance_comparison_with_none(tmp_path: Path):
     run_dir = tmp_path / "out" / "kitchen" / "K1" / "gt"
@@ -522,6 +539,36 @@ def test_manifest_missing_required_field_invalidates_trial(tmp_path: Path):
     assert res["provenance_match"] is False
     assert res["evaluation_valid"] is False
     assert any("manifest missing field: terminal_status" in m for m in res["provenance_mismatches"])
+
+
+def test_manifest_empty_field_invalidates_trial(tmp_path: Path):
+    run_dir = tmp_path / "out" / "kitchen" / "K1" / "gt"
+    run_dir.mkdir(parents=True)
+    (run_dir / "result.json").write_text(json.dumps({"status": "ACTION_SEQUENCE_READY", "inspected_regions": []}), encoding="utf-8")
+
+    # Case A: specification_sha256 is None
+    manifest_a = make_valid_manifest()
+    manifest_a["specification_sha256"] = None
+    (run_dir / "run_manifest.json").write_text(json.dumps(manifest_a), encoding="utf-8")
+
+    with patch("subprocess.run", return_value=MagicMock(returncode=0)):
+        res_a = evaluate_variant("kitchen", "K1", str(tmp_path / "out"))
+
+    assert res_a["provenance_match"] is False
+    assert res_a["evaluation_valid"] is False
+    assert any("manifest empty field: specification_sha256" in m for m in res_a["provenance_mismatches"])
+
+    # Case B: terminal_status is empty string ""
+    manifest_b = make_valid_manifest()
+    manifest_b["terminal_status"] = "   "
+    (run_dir / "run_manifest.json").write_text(json.dumps(manifest_b), encoding="utf-8")
+
+    with patch("subprocess.run", return_value=MagicMock(returncode=0)):
+        res_b = evaluate_variant("kitchen", "K1", str(tmp_path / "out"))
+
+    assert res_b["provenance_match"] is False
+    assert res_b["evaluation_valid"] is False
+    assert any("manifest empty field: terminal_status" in m for m in res_b["provenance_mismatches"])
 
 
 # 9. Dynamic K Range with Canonical Region IDs (Issue #5 & #6)
@@ -677,6 +724,34 @@ def test_zero_valid_trials_reports_none_and_na(tmp_path: Path):
     assert row[headers.index("PlanLengthMean")] == "N/A"
     assert row[headers.index("RuntimeMean")] == "N/A"
     assert row[headers.index("RuntimeAttemptMean")] == "2.0000"
+    assert row[headers.index("SpecificationHashAllMatch")] == "False"
+
+
+def test_non_replay_aggregate_csv_specification_hash_all_match_na(tmp_path: Path):
+    synthetic_rows = [
+        {
+            "domain": "workshop", "variant": "W1", "completed": True, "match": "YES", "evaluation_valid": True,
+            "actual_status": "ACTION_SEQUENCE_READY", "expected_status": "ACTION_SEQUENCE_READY",
+            "inspection_count": 1, "inspected_regions": ["TOOL_CABINET"], "runtime_sec": 1.0,
+            "region_order_used": ["LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"],
+            "plan_length": 2, "plan_replay_valid": True, "grounding_complete": True,
+            "search_seed_requested": 0, "pairing_status": "NOT_APPLICABLE", # Non-replay!
+        },
+    ]
+
+    out_dir = str(tmp_path / "agg_non_replay")
+    os.makedirs(out_dir)
+    summary_data, json_p, csv_p = aggregate_random_trials(synthetic_rows, out_dir)
+
+    assert summary_data["aggregates"][0]["specification_hash_all_match"] is None
+
+    with open(csv_p, "r", newline="", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        headers = next(reader)
+        row = next(reader)
+
+    # Must be "N/A", not "None"
+    assert row[headers.index("SpecificationHashAllMatch")] == "N/A"
 
 
 def test_invalid_trial_excluded_from_numeric_stats(tmp_path: Path):
