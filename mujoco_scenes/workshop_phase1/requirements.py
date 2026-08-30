@@ -307,6 +307,18 @@ def map_workshop_relation(relation_text: str) -> str | None:
     return None
 
 
+def map_workshop_unary_property(property_text: str) -> str | None:
+    """Deterministic concept matching for Workshop unary properties."""
+    norm = " ".join(re.findall(r"[a-z0-9]+", str(property_text).casefold()))
+    if not norm:
+        return None
+    if any(k in norm for k in ("planar support", "planar_support", "flat surface")):
+        return "PLANAR_SUPPORT"
+    if any(k in norm for k in ("open cavity", "open_cavity", "container", "hollow")):
+        return "OPEN_CAVITY"
+    return None
+
+
 class FMRequirementProvider(RequirementProvider):
     """Dynamic VLM requirement provider for Workshop domain."""
 
@@ -374,13 +386,12 @@ class FMRequirementProvider(RequirementProvider):
         if len(matches) == 1:
             return next(iter(matches))
         if len(matches) > 1:
-            raise ValueError(f"Ambiguous category match for {phrase!r}: {sorted(matches)}")
+            raise VLMSpecificationError(f"Ambiguous category match for {phrase!r}: {sorted(matches)}")
         return None
 
     def _map_function(
-        self, raw: dict[str, Any], categories: list[str]
+        self, raw: dict[str, Any]
     ) -> str:
-        del categories
         text = f"{raw.get('function', '')} {raw.get('description', '')}"
         comp = map_workshop_role_function(text)
         if comp is not None:
@@ -402,27 +413,6 @@ class FMRequirementProvider(RequirementProvider):
             f"VLM_SPEC_FAILED: VLM function phrase {raw.get('function')!r} is ambiguous across functions: {sorted(matches)}"
         )
 
-    def _map_relations(self, properties: list[str]) -> set[str]:
-        mapped: set[str] = set()
-        for property_text in properties:
-            rel = map_workshop_relation(property_text)
-            if rel is not None:
-                mapped.add(rel)
-                continue
-            normalized = self._phrase(property_text)
-            prop_matches = set()
-            for relation, aliases in self._relation_aliases.items():
-                for alias in aliases:
-                    if self._contains_phrase(normalized, alias):
-                        prop_matches.add(relation)
-                        break
-            if len(prop_matches) == 0:
-                raise VLMSpecificationError(
-                    f"VLM_SPEC_FAILED: VLM property {property_text!r} cannot be mapped to any reviewed relation"
-                )
-            mapped.update(prop_matches)
-        return mapped
-
     def _ensure_generated(
         self,
         task_instruction: str = CANONICAL_WORKSHOP_INSTRUCTION,
@@ -442,66 +432,66 @@ class FMRequirementProvider(RequirementProvider):
             )
 
         normalized: dict[str, FunctionalRequirement] = {}
-        raw_requirements = document.get("functional_roles") or document.get("functional_requirements") or []
+        raw_requirements = document.get("functional_roles", [])
         self.transformation_trace = []
         raw_id_to_canon: dict[str, str] = {}
 
         for rank_idx, raw in enumerate(raw_requirements, start=1):
-            if raw.get("entity_kind") in {"REGION", "FIXED_TARGET"}:
-                r_id = str(raw.get("id", "")).lower()
-                r_desc = str(raw.get("description", "")).lower()
-                r_fn = str(raw.get("function", "")).lower()
-                text = f"{r_id} {r_desc} {r_fn}"
-                if any(self._contains_phrase(self._phrase(text), self._phrase(k)) for k in FIXED_TARGET_ALIASES):
-                    raw_id_to_canon[raw.get("id")] = "repair_target"
+            raw_kind = raw.get("entity_kind")
+            raw_id = raw.get("id")
+            if raw_kind == "FIXED_TARGET":
+                fn_text = f"{raw.get('function', '')} {raw.get('description', '')}"
+                norm_fn = self._phrase(fn_text)
+                if any(self._contains_phrase(norm_fn, self._phrase(k)) for k in FIXED_TARGET_ALIASES):
+                    raw_id_to_canon[raw_id] = "repair_target"
                     self.transformation_trace.append({
-                        "raw_role": raw.get("id"),
-                        "raw_entity_kind": raw.get("entity_kind"),
+                        "raw_role": raw_id,
+                        "raw_entity_kind": raw_kind,
                         "transformation": "SYSTEM_OWNED_FIXED_TARGET_REPRESENTATION",
                         "canonical_role": "repair_target",
                     })
                     continue
-                raise VLMSpecificationError(f"VLM_SPEC_FAILED: Unsupported REGION role {raw.get('id')!r}")
-            if raw.get("entity_kind") != "OBJECT":
-                continue
-            categories: list[str] = []
-            for cat_item in raw.get("candidate_categories", []):
-                if isinstance(cat_item, str) and cat_item.strip():
-                    canon_c = self._map_category(cat_item)
-                    if canon_c is not None and canon_c not in categories:
-                        categories.append(canon_c)
-                        self._category_rank.setdefault(canon_c, len(self._category_rank) + 1)
-            for candidate in raw.get("candidate_objects", []) or raw.get("visible_candidates", []):
+                raise VLMSpecificationError(f"VLM_SPEC_FAILED: Unsupported FIXED_TARGET role {raw_id!r}: {fn_text}")
+            elif raw_kind == "REGION":
+                raise VLMSpecificationError(f"VLM_SPEC_FAILED: Unsupported REGION role {raw_id!r} in Workshop specification")
+            elif raw_kind != "OBJECT":
+                raise VLMSpecificationError(f"VLM_SPEC_FAILED: Invalid entity_kind {raw_kind!r} for role {raw_id!r}")
+
+            cand_cats = [str(c).strip().lower() for c in raw.get("candidate_categories", []) if str(c).strip()]
+            if not cand_cats:
+                raise VLMSpecificationError(f"VLM_SPEC_FAILED: Role {raw_id!r} has no candidate categories")
+
+            for cat in cand_cats:
+                canon_c = self._map_category(cat)
+                if canon_c is not None:
+                    self._category_rank.setdefault(canon_c, len(self._category_rank) + 1)
+
+            cand_objs = raw.get("visible_candidates", [])
+            for candidate in cand_objs:
                 for field in ("label", "visual_description"):
                     val = candidate.get(field)
                     if val:
-                        canonical = self._map_category(val)
-                        if canonical is not None and canonical not in categories:
-                            categories.append(canonical)
-                            self._category_rank.setdefault(canonical, len(self._category_rank) + 1)
+                        canon_c = self._map_category(val)
+                        if canon_c is not None:
+                            self._category_rank.setdefault(canon_c, len(self._category_rank) + 1)
                             break
-            if not categories and not raw.get("candidate_objects") and not raw.get("visible_candidates"):
-                for phrase in (raw.get("id"), raw.get("description"), raw.get("function")):
-                    if phrase:
-                        cat = self._map_category(phrase)
-                        if cat and cat not in categories:
-                            categories.append(cat)
-                            self._category_rank.setdefault(cat, len(self._category_rank) + 1)
-            if not categories:
-                raise VLMSpecificationError(
-                    f"VLM_SPEC_FAILED: VLM candidates for role {raw['id']!r} could not be mapped to supported categories"
-                )
-            function_name = self._map_function(raw, categories)
+
+            function_name = self._map_function(raw)
             if function_name in normalized:
                 raise VLMSpecificationError(f"VLM_SPEC_FAILED: VLM emitted duplicate role {function_name}")
-            if raw.get("required_count", 1) != 1:
-                raise VLMSpecificationError(
-                    f"VLM_SPEC_FAILED: VLM role {function_name} required_count must be 1 for Workshop"
-                )
-            raw_id_to_canon[raw["id"]] = function_name
-            mapped_relations = self._map_relations(raw.get("required_properties", []))
+            raw_id_to_canon[raw_id] = function_name
 
-            cand_objs = raw.get("candidate_objects", []) or raw.get("visible_candidates", [])
+            raw_props = raw.get("required_properties", [])
+            unary_predicates: list[str] = []
+            for prop in raw_props:
+                mapped_u = map_workshop_unary_property(prop)
+                if mapped_u is None:
+                    raise VLMSpecificationError(
+                        f"VLM_SPEC_FAILED: VLM unary property {prop!r} for role {raw_id!r} is not supported in Workshop"
+                    )
+                if mapped_u not in unary_predicates:
+                    unary_predicates.append(mapped_u)
+
             normalized[function_name] = FunctionalRequirement(
                 requirement_id=raw["id"],
                 entity_type=EntityType.OBJECT,
@@ -509,24 +499,43 @@ class FMRequirementProvider(RequirementProvider):
                 description=raw.get("description", ""),
                 rank=rank_idx,
                 source=RequirementSource.FM,
-                accepted_categories=list(categories),
+                accepted_categories=cand_cats,
                 semantic_hints=[
                     candidate["label"] for candidate in cand_objs if candidate.get("label")
                 ],
                 geometric_constraints={},
-                required_relations=list(mapped_relations),
+                required_relations=unary_predicates,
                 provenance="qwen_vlm_normalized_by_workshop_ontology",
             )
 
-        # Handle top-level functional_relations
+        # Handle top-level functional_relations with strict fail-closed matching
         for rel in document.get("functional_relations", []):
             s = rel.get("subject_role")
             r = rel.get("relation")
             o = rel.get("object_role")
-            s_canon = raw_id_to_canon.get(s)
-            o_canon = raw_id_to_canon.get(o)
+            if s not in raw_id_to_canon:
+                raise VLMSpecificationError(f"VLM_SPEC_FAILED: Relation subject role {s!r} not declared")
+            if o not in raw_id_to_canon:
+                raise VLMSpecificationError(f"VLM_SPEC_FAILED: Relation object role {o!r} not declared")
+            s_canon = raw_id_to_canon[s]
+            o_canon = raw_id_to_canon[o]
             mapped_rel = map_workshop_relation(r)
-            if mapped_rel is not None and s_canon in normalized:
+            if mapped_rel is None:
+                norm_r = self._phrase(r)
+                prop_matches = set()
+                for relation_name, aliases in self._relation_aliases.items():
+                    for alias in aliases:
+                        if self._contains_phrase(norm_r, alias):
+                            prop_matches.add(relation_name)
+                            break
+                if len(prop_matches) == 1:
+                    mapped_rel = next(iter(prop_matches))
+                elif len(prop_matches) > 1:
+                    raise VLMSpecificationError(f"VLM_SPEC_FAILED: Ambiguous relation {r!r}: {sorted(prop_matches)}")
+                else:
+                    raise VLMSpecificationError(f"VLM_SPEC_FAILED: Relation {r!r} cannot be mapped to any Workshop relation")
+
+            if s_canon in normalized:
                 if mapped_rel not in normalized[s_canon].required_relations:
                     normalized[s_canon].required_relations.append(mapped_rel)
 

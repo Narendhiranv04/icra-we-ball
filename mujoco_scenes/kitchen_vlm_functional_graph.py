@@ -56,7 +56,6 @@ UNARY_PROPERTY_ALIASES: dict[str, tuple[str, ...]] = {
         "open cavity", "open_cavity", "cavity", "container", "hollow",
         "deep container", "liquid container", "holds liquid",
         "hold liquid", "contain liquid", "capable of containing", "receptacle",
-        "contain coffee", "contain soup", "contain liquid serving",
         "hollow receptacle", "capable of holding liquid",
     ),
     "ELONGATED_OBJECT": (
@@ -338,6 +337,7 @@ def compile_vlm_functional_graph(
             "allow_empty_geometry": not bool(unary),
             "semantic_preferences": preferences,
             "unary_geometry": unary,
+            "visible_candidates": list(row.get("visible_candidates", [])),
         }
 
     relations = []
@@ -381,19 +381,16 @@ def compile_vlm_functional_graph(
         tool_role = raw_role_to_canonical[raw_tool_role]
         target_role = raw_role_to_canonical[raw_target_role]
 
-        # Map group to canonical group name
+        # Map group to canonical group name using canonical tool and target roles (fail-closed, no rescue)
         if tool_role == "coffee_stirrer" and target_role == "coffee_container":
             canon_group_id = "coffee_stirring"
         elif tool_role == "soup_eating_utensil" and target_role == "soup_container":
             canon_group_id = "soup_serving"
         else:
-            norm_fn = _phrase(row.get("function", ""))
-            if "stir" in norm_fn or "mix" in norm_fn:
-                canon_group_id = "coffee_stirring"
-            elif "soup" in norm_fn or "utensil" in norm_fn or "serve" in norm_fn:
-                canon_group_id = "soup_serving"
-            else:
-                raise VLMSpecificationError(f"Unmapped operation group: tool={tool_role}, target={target_role}, fn={row.get('function')}")
+            raise VLMSpecificationError(
+                f"VLM operation group with tool={tool_role!r} and target={target_role!r} "
+                f"does not match any canonical kitchen operation group"
+            )
 
         if canon_group_id in operations:
             raise VLMSpecificationError(f"Duplicate canonical operation group: {canon_group_id}")
@@ -501,7 +498,7 @@ def compile_vlm_functional_graph(
     }
     trace = {
         "schema_version": 2,
-        "vlm_canonicalization_version": "phase3_6a2_v1",
+        "vlm_canonicalization_version": "phase3_6a3_v1",
         "transformation": "DETERMINISTIC_NATURAL_LANGUAGE_CANONICALIZATION",
         "raw_roles_preserved": raw_role_ids,
         "raw_role_to_canonical": raw_role_to_canonical,

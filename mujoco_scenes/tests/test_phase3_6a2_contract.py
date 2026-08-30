@@ -46,7 +46,7 @@ from mujoco_scenes.workshop_phase1.requirements import (
 
 
 def test_vlm_canonicalization_version_constant():
-    assert VLM_CANONICALIZATION_VERSION == "phase3_6a2_v1"
+    assert VLM_CANONICALIZATION_VERSION == "phase3_6a3_v1"
 
 
 def test_kitchen_render_resolution_configured():
@@ -116,7 +116,7 @@ def test_unsupported_contract_enforcement():
     # Invalid UNSUPPORTED: has non-empty roles
     invalid_unsupported = dict(valid_unsupported)
     invalid_unsupported["functional_roles"] = [
-        {"id": "r1", "entity_kind": "OBJECT", "function": "foo", "required_count": 1, "binding_policy": "DISTINCT", "candidate_categories": ["c"]}
+        {"id": "r1", "entity_kind": "OBJECT", "function": "foo", "required_count": 1, "binding_policy": "DISTINCT", "candidate_categories": ["c"], "visible_candidates": [], "required_properties": []}
     ]
     with pytest.raises(FMResponseValidationError, match="must have empty functional_roles"):
         validate_requirement_response(invalid_unsupported)

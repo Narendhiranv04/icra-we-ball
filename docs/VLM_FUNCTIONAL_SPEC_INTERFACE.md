@@ -1,6 +1,6 @@
-# VLM Functional Specification Interface Contract (Frozen: Pass 3.6A.2)
+# VLM Functional Specification Interface Contract (Pass 3.6A.3)
 
-**Canonicalization Version**: `phase3_6a2_v1`
+**Canonicalization Version**: `phase3_6a3_v1`
 
 This document defines the authoritative scientific interface contract between the Vision-Language Model (VLM) specification provider and downstream perception, grounding, and task-and-motion planning (TAMP) components.
 
@@ -17,7 +17,7 @@ TASK + INITIAL MULTI-VIEW RGB
         ↓
 complete natural-language functional specification
         ↓
-strict deterministic representation & canonicalization (phase3_6a2_v1)
+strict deterministic representation & canonicalization (phase3_6a3_v1)
         ↓
 canonical G_F
         ↓
@@ -37,7 +37,8 @@ The VLM specification prompt receives strictly:
 1. **Natural-Language Task Goal**: The human task instruction (e.g. *"Prepare and serve coffee and soup for two people using the available kitchenware. Stir both coffees and provide each soup bowl with a suitable utensil. Search closed kitchen storage for anything still required."*).
 2. **Initial Multi-View RGB Scene Captures**:
    - Kitchen: 5 unoccluded camera views rendered at **1280×960** resolution (`overhead_camera`, `front_camera`, `side_camera`, `left_shoulder_camera`, `right_shoulder_camera`).
-   - Living Room & Workshop: 5 unoccluded camera views.
+   - Living Room: 5 unoccluded camera views rendered at **1280×960** resolution (`l2_camera_front`, `l2_camera_close`, `l2_camera_top`, `l2_camera_left`, `l2_camera_right`).
+   - Workshop: 3 logical unoccluded camera views (`initial_iso_left`, `initial_iso_right`, `initial_detail`).
 3. **Generic Schema and Instructions**: Explains abstract concept kinds (`OBJECT`, `REGION`, `FIXED_TARGET`), binding policies (`DISTINCT`, `REUSABLE`, `SHARED`), unary vs binary relations, and output JSON structure.
 
 ### Strictly Forbidden Inputs (Zero-Leakage Boundary)
@@ -124,7 +125,7 @@ If the VLM determines that the task cannot be represented with this abstraction:
 
 ---
 
-## 4. Deterministic Backend Canonicalization (`phase3_6a2_v1`)
+## 4. Deterministic Backend Canonicalization (`phase3_6a3_v1`)
 
 Downstream backend code compiles the VLM's natural-language output deterministically and fails closed on invalid or ambiguous specifications:
 
@@ -145,7 +146,7 @@ Downstream backend code compiles the VLM's natural-language output deterministic
    - The resulting $G_F$ `candidate_regions` contains **ONLY** successfully resolved VLM proposals. No fallback to the full canonical catalog is permitted.
 5. **Strict Validation & No Semantic Repairs**:
    - Fails closed on unmapped properties, relations, roles, or mismatched policies.
-   - Attaches `vlm_canonicalization_version: "phase3_6a2_v1"` and full transformation provenance to $G_F$ metadata.
+   - Attaches `vlm_canonicalization_version: "phase3_6a3_v1"` and full transformation provenance to $G_F$ metadata.
 
 ---
 

@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 
 import pytest
+from mujoco_scenes.functional_tamp_pipeline.errors import VLMSpecificationError
 from mujoco_scenes.kitchen_vlm_functional_graph import (
     compile_vlm_functional_graph,
     resolve_kitchen_region_proposal,
@@ -40,6 +41,7 @@ def natural_kitchen_spec() -> dict:
                 "required_count": 2,
                 "binding_policy": "DISTINCT",
                 "candidate_categories": ["cup", "coffee mug"],
+                "visible_candidates": [],
                 "required_properties": ["open cavity", "capable of containing liquid"],
             },
             {
@@ -49,6 +51,7 @@ def natural_kitchen_spec() -> dict:
                 "required_count": 2,
                 "binding_policy": "DISTINCT",
                 "candidate_categories": ["bowl", "soup bowl"],
+                "visible_candidates": [],
                 "required_properties": ["open cavity", "holds liquid"],
             },
             {
@@ -58,6 +61,7 @@ def natural_kitchen_spec() -> dict:
                 "required_count": 1,
                 "binding_policy": "REUSABLE",
                 "candidate_categories": ["spoon", "metal spoon"],
+                "visible_candidates": [],
                 "required_properties": ["elongated", "slender"],
             },
             {
@@ -67,6 +71,7 @@ def natural_kitchen_spec() -> dict:
                 "required_count": 2,
                 "binding_policy": "DISTINCT",
                 "candidate_categories": ["soup_spoon", "soup spoon"],
+                "visible_candidates": [],
                 "required_properties": ["elongated object"],
             },
             {
@@ -76,6 +81,7 @@ def natural_kitchen_spec() -> dict:
                 "required_count": 1,
                 "binding_policy": "REUSABLE",
                 "candidate_categories": ["kettle", "water jug"],
+                "visible_candidates": [],
                 "required_properties": [],
             },
             {
@@ -85,6 +91,7 @@ def natural_kitchen_spec() -> dict:
                 "required_count": 1,
                 "binding_policy": "REUSABLE",
                 "candidate_categories": ["coffee_jar", "coffee jar"],
+                "visible_candidates": [],
                 "required_properties": [],
             },
         ],
@@ -220,7 +227,7 @@ def test_entity_kind_preservation():
 
 def test_object_nouns_do_not_prove_geometry():
     """Object nouns like 'spoon' or 'cup' in required_properties must not map to physical geometry."""
-    with pytest.raises((ValueError, Exception), match="no exact or alias checker mapping exists"):
+    with pytest.raises(VLMSpecificationError, match="no exact or alias checker mapping exists"):
         spec = natural_kitchen_spec()
         spec["functional_roles"][2]["required_properties"] = ["spoon", "metal spoon"]
         compile_vlm_functional_graph(
@@ -293,7 +300,7 @@ def test_unsupported_task_fails_closed():
     spec["inspectable_regions"] = []
     spec["inspection_order"] = []
 
-    with pytest.raises((ValueError, Exception), match="VLM marked task unsupported"):
+    with pytest.raises(VLMSpecificationError, match="VLM marked task unsupported"):
         compile_vlm_functional_graph(
             spec,
             task_instruction="Prepare two coffees and two soups.",
@@ -307,7 +314,7 @@ def test_inconsistent_role_count_fails_closed():
     spec["functional_roles"][0]["required_count"] = 1
     spec["interaction_groups"][0]["required_target_count"] = 2
 
-    with pytest.raises((ValueError, FMResponseValidationError)):
+    with pytest.raises(VLMSpecificationError, match="has required_count 1, but group requires 2"):
         compile_vlm_functional_graph(
             spec,
             task_instruction="Prepare two coffees and two soups.",

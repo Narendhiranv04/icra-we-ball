@@ -307,15 +307,17 @@ def test_workshop_vlm_anti_oracle(monkeypatch) -> None:
         "status": "SUPPORTED",
         "task_summary": "Repair workpiece with screwdriver and screw",
         "unsupported_reason": "",
-        "functional_requirements": [
+        "functional_roles": [
             {
                 "id": "driver_role",
                 "entity_kind": "OBJECT",
                 "function": "drive fastener",
                 "description": "Phillips screwdriver",
                 "required_count": 1,
-                "candidate_objects": [{"label": "Phillips screwdriver", "visual_description": "tool", "suitability_reason": "ok"}],
-                "required_properties": ["reaches repair hole", "compatible with screw head"],
+                "binding_policy": "DISTINCT",
+                "candidate_categories": ["screwdriver"],
+                "visible_candidates": [{"label": "Phillips screwdriver", "visual_description": "tool", "suitability_reason": "ok"}],
+                "required_properties": [],
             },
             {
                 "id": "fastener_role",
@@ -323,10 +325,46 @@ def test_workshop_vlm_anti_oracle(monkeypatch) -> None:
                 "function": "thread into joint",
                 "description": "Phillips screw",
                 "required_count": 1,
-                "candidate_objects": [{"label": "Phillips screw", "visual_description": "screw", "suitability_reason": "ok"}],
-                "required_properties": ["thread into hole"],
+                "binding_policy": "DISTINCT",
+                "candidate_categories": ["screw"],
+                "visible_candidates": [{"label": "Phillips screw", "visual_description": "screw", "suitability_reason": "ok"}],
+                "required_properties": [],
+            },
+            {
+                "id": "target_role",
+                "entity_kind": "FIXED_TARGET",
+                "function": "target repair hole on workpiece",
+                "description": "hole in frame",
+                "required_count": 1,
+                "binding_policy": "DISTINCT",
+                "candidate_categories": ["workbench_hole"],
+                "visible_candidates": [],
+                "required_properties": [],
             },
         ],
+        "functional_relations": [
+            {
+                "subject_role": "driver_role",
+                "relation": "reaches repair hole",
+                "object_role": "target_role",
+            },
+            {
+                "subject_role": "driver_role",
+                "relation": "compatible with screw head",
+                "object_role": "fastener_role",
+            },
+            {
+                "subject_role": "fastener_role",
+                "relation": "thread into hole",
+                "object_role": "target_role",
+            },
+        ],
+        "inspectable_regions": [
+            {"id": "r1", "label": "workbench right drawer", "visual_description": "right drawer"},
+            {"id": "r2", "label": "workbench left drawer", "visual_description": "left drawer"},
+            {"id": "r3", "label": "tool cabinet", "visual_description": "cabinet"},
+        ],
+        "inspection_order": ["r1", "r2", "r3"],
     }
 
     class MockAdapter:
@@ -362,15 +400,17 @@ def test_living_room_vlm_anti_oracle() -> None:
         "status": "SUPPORTED",
         "task_summary": "Living room custom placement",
         "unsupported_reason": "",
-        "functional_requirements": [
+        "functional_roles": [
             {
                 "id": "personal_support_role",
                 "entity_kind": "REGION",
                 "function": "support drink",
                 "description": "personal side table",
                 "required_count": 2,
-                "candidate_objects": [{"label": "side table", "visual_description": "small table", "suitability_reason": "near seat"}],
-                "required_properties": ["planar support", "near seating area"],
+                "binding_policy": "DISTINCT",
+                "candidate_categories": ["side table"],
+                "visible_candidates": [{"label": "side table", "visual_description": "small table", "suitability_reason": "near seat"}],
+                "required_properties": ["planar support"],
             },
             {
                 "id": "shared_support_role",
@@ -378,10 +418,15 @@ def test_living_room_vlm_anti_oracle() -> None:
                 "function": "support remote control",
                 "description": "shared coffee table",
                 "required_count": 1,
-                "candidate_objects": [{"label": "coffee table", "visual_description": "central table", "suitability_reason": "accessible"}],
-                "required_properties": ["planar support", "accessible from both seats"],
+                "binding_policy": "SHARED",
+                "candidate_categories": ["coffee table"],
+                "visible_candidates": [{"label": "coffee table", "visual_description": "central table", "suitability_reason": "accessible"}],
+                "required_properties": ["planar support"],
             },
         ],
+        "functional_relations": [],
+        "inspectable_regions": [],
+        "inspection_order": [],
     }
 
     class FakeAdapter:
@@ -987,17 +1032,22 @@ def test_living_room_vlm_anti_oracle_count_and_relations() -> None:
         "status": "SUPPORTED",
         "task_summary": "Single drink placement",
         "unsupported_reason": "",
-        "functional_requirements": [
+        "functional_roles": [
             {
                 "id": "personal_table",
                 "entity_kind": "REGION",
                 "function": "support a cup and saucer",
                 "description": "one side table for coffee",
                 "required_count": 1,
-                "candidate_objects": [{"label": "side table", "visual_description": "table", "suitability_reason": "fits set"}],
-                "required_properties": ["planar support", "fit the complete set"],
+                "binding_policy": "DISTINCT",
+                "candidate_categories": ["side table"],
+                "visible_candidates": [{"label": "side table", "visual_description": "table", "suitability_reason": "fits set"}],
+                "required_properties": ["planar support"],
             },
         ],
+        "functional_relations": [],
+        "inspectable_regions": [],
+        "inspection_order": [],
     }
 
     class FakeAdapter:
@@ -1015,31 +1065,34 @@ def test_living_room_vlm_anti_oracle_count_and_relations() -> None:
     assert len(records) == 1
     # Check count is preserved as 1 (not forced to 2 from GT)
     assert records[0]["vlm_required_count"] == 1
-    # Check required_properties does not contain NEAR_SEAT since VLM omitted it
-    assert "NEAR_SEAT" not in records[0]["required_properties"]
-    assert "FITS_SET_ON" in records[0]["required_properties"]
     assert "PLANAR_SUPPORT" in records[0]["required_properties"]
 
 
 # Suite 26: Workshop VLM unmapped category fails closed
 def test_workshop_vlm_unmapped_category_fails_closed() -> None:
     from mujoco_scenes.workshop_phase1.requirements import FMRequirementProvider
+    from mujoco_scenes.functional_tamp_pipeline.errors import VLMSpecificationError
 
     mock_doc = {
         "status": "SUPPORTED",
         "task_summary": "Workshop unmapped tool",
         "unsupported_reason": "",
-        "functional_requirements": [
+        "functional_roles": [
             {
                 "id": "driver_tool",
                 "entity_kind": "OBJECT",
-                "function": "drive screws into wood",
+                "function": "unknown alien task",
                 "description": "mysterious alien tool",
                 "required_count": 1,
-                "candidate_objects": [{"label": "alien_blaster_9000", "visual_description": "shiny", "suitability_reason": "drives"}],
-                "required_properties": ["reaches target recess"],
+                "binding_policy": "DISTINCT",
+                "candidate_categories": ["alien_blaster_9000"],
+                "visible_candidates": [{"label": "alien_blaster_9000", "visual_description": "shiny", "suitability_reason": "drives"}],
+                "required_properties": [],
             },
         ],
+        "functional_relations": [],
+        "inspectable_regions": [],
+        "inspection_order": [],
     }
 
     class FakeAdapter:
@@ -1052,7 +1105,7 @@ def test_workshop_vlm_unmapped_category_fails_closed() -> None:
             return mock_doc
 
     provider = FMRequirementProvider(fm_adapter=FakeAdapter())
-    with pytest.raises(ValueError, match="VLM_SPEC_FAILED"):
+    with pytest.raises(VLMSpecificationError):
         provider.get_requirements("repair joint", observation_images=[Path("/fake/image.png")])
 
 
@@ -1279,15 +1332,17 @@ def test_workshop_vlm_omitted_target_relation_omits_repair_target_node() -> None
         "status": "SUPPORTED",
         "task_summary": "Workshop driver fastener pair without frame target",
         "unsupported_reason": "",
-        "functional_requirements": [
+        "functional_roles": [
             {
                 "id": "driver_req",
                 "entity_kind": "OBJECT",
                 "function": "drive screws",
                 "description": "screwdriver",
                 "required_count": 1,
-                "candidate_objects": [{"label": "screwdriver", "visual_description": "screwdriver", "suitability_reason": "drives"}],
-                "required_properties": ["compatible with phillips screw"],
+                "binding_policy": "DISTINCT",
+                "candidate_categories": ["screwdriver"],
+                "visible_candidates": [{"label": "screwdriver", "visual_description": "screwdriver", "suitability_reason": "drives"}],
+                "required_properties": [],
             },
             {
                 "id": "fastener_req",
@@ -1295,10 +1350,21 @@ def test_workshop_vlm_omitted_target_relation_omits_repair_target_node() -> None
                 "function": "fasten wood",
                 "description": "phillips screw",
                 "required_count": 1,
-                "candidate_objects": [{"label": "screw", "visual_description": "screw", "suitability_reason": "threads"}],
+                "binding_policy": "DISTINCT",
+                "candidate_categories": ["screw"],
+                "visible_candidates": [{"label": "screw", "visual_description": "screw", "suitability_reason": "threads"}],
                 "required_properties": [],
             },
         ],
+        "functional_relations": [
+            {
+                "subject_role": "driver_req",
+                "relation": "compatible with phillips screw",
+                "object_role": "fastener_req",
+            }
+        ],
+        "inspectable_regions": [],
+        "inspection_order": [],
     }
 
     class FakeAdapter:

@@ -141,7 +141,6 @@ class EnvironmentVLMRequirementProvider:
                 properties = [
                     item["predicate"] for item in role.get("unary_geometry", [])
                 ]
-                properties.extend(relations_by_subject.get(role_id, []))
                 specifications.append(
                     {
                         "role_id": role_id,
@@ -251,8 +250,12 @@ class EnvironmentVLMRequirementProvider:
 
     def _candidate_categories(self, raw: dict[str, Any]) -> list[str]:
         categories: list[str] = []
-        for candidate in raw.get("candidate_objects", []):
-            canonical = self._map_category(candidate["label"])
+        for candidate in raw.get("visible_candidates", []) or raw.get("candidate_objects", []):
+            canonical = self._map_category(candidate.get("label", ""))
+            if canonical is not None and canonical not in categories:
+                categories.append(canonical)
+        for cat in raw.get("candidate_categories", []):
+            canonical = self._map_category(cat)
             if canonical is not None and canonical not in categories:
                 categories.append(canonical)
         return categories
@@ -336,11 +339,11 @@ class EnvironmentVLMRequirementProvider:
                 observation_images=observation_images or [],
             )
         if document.get("status") != "SUPPORTED":
-            raise ValueError(
+            raise VLMSpecificationError(
                 f"VLM marked {self.environment} unsupported: "
                 f"{document.get('unsupported_reason', 'no reason')}"
             )
-        raw_requirements = document["functional_requirements"]
+        raw_requirements = document.get("functional_roles", [])
         normalized_records = []
         category_rank: dict[str, int] = {}
         issues: list[str] = []
@@ -355,15 +358,15 @@ class EnvironmentVLMRequirementProvider:
                     "function": " / ".join(item["function"] for item in raw_group),
                     "description": " ".join(item["description"] for item in raw_group),
                     "required_count": sum(item["required_count"] for item in raw_group),
-                    "candidate_objects": [
+                    "visible_candidates": [
                         candidate
                         for item in raw_group
-                        for candidate in item["candidate_objects"]
+                        for candidate in item.get("visible_candidates", [])
                     ],
                     "required_properties": list(dict.fromkeys(
                         property_text
                         for item in raw_group
-                        for property_text in item["required_properties"]
+                        for property_text in item.get("required_properties", [])
                     )),
                 }
                 categories = self._candidate_categories(raw)
@@ -395,25 +398,10 @@ class EnvironmentVLMRequirementProvider:
                         "reviewed_required_count": spec["required_count"],
                         "description": raw["description"],
                         "accepted_categories": list(spec["categories"]),
-                        "visible_candidate_objects": [
-                            candidate
-                            for item in raw_group
-                            for candidate in item["candidate_objects"]
-                        ],
-                        "mapped_visible_candidates": [
-                            {
-                                **deepcopy(candidate),
-                                "canonical_category": self._map_category(candidate["label"]),
-                                "accepted_for_role": (
-                                    self._map_category(candidate["label"])
-                                    in spec["categories"]
-                                ),
-                            }
-                            for candidate in raw["candidate_objects"]
-                        ],
+                        "visible_candidates": raw["visible_candidates"],
                         "required_properties": list(spec["properties"]),
                         "semantic_hints": [
-                            candidate["label"] for candidate in raw["candidate_objects"]
+                            candidate["label"] for candidate in raw["visible_candidates"] if candidate.get("label")
                         ],
                         "source": "FM",
                         "provenance": "qwen_vlm_normalized_by_reviewed_ontology",
@@ -482,12 +470,12 @@ class EnvironmentVLMRequirementProvider:
                 raw_group = [item["raw"] for item in group]
                 canonical_func = group[0]["canonical_func"]
                 raw_vlm_role_ids = [raw["id"] for raw in raw_group]
-                entity_kinds = {raw.get("entity_kind", "REGION") for raw in raw_group}
+                entity_kinds = {raw.get("entity_kind") for raw in raw_group}
                 if len(entity_kinds) != 1:
                     raise VLMSpecificationError(f"Mixed entity kinds in canonical group {role_id}: {entity_kinds}")
                 entity_kind = entity_kinds.pop()
 
-                binding_policies = {raw.get("binding_policy", "DISTINCT") for raw in raw_group}
+                binding_policies = {raw.get("binding_policy") for raw in raw_group}
                 if len(binding_policies) > 1:
                     raise VLMSpecificationError(f"Conflicting binding policies in canonical group {role_id}: {binding_policies}")
                 binding_policy = binding_policies.pop()
@@ -506,13 +494,13 @@ class EnvironmentVLMRequirementProvider:
                 hints = list(dict.fromkeys(
                     candidate["label"]
                     for raw in raw_group
-                    for candidate in (raw.get("candidate_objects", []) or raw.get("visible_candidates", []))
+                    for candidate in raw.get("visible_candidates", [])
                     if candidate.get("label")
                 ))
                 accepted_categories = list(dict.fromkeys(
                     self._map_category(candidate.get("label", "")) or candidate.get("label", "")
                     for raw in raw_group
-                    for candidate in (raw.get("candidate_objects", []) or raw.get("visible_candidates", []))
+                    for candidate in raw.get("visible_candidates", [])
                     if candidate.get("label")
                 ))
                 accepted_categories = [c for c in accepted_categories if c]
@@ -538,20 +526,15 @@ class EnvironmentVLMRequirementProvider:
                         "candidate_categories": cand_cats,
                         "accepted_categories": accepted_categories,
                         "required_properties": required_properties,
-                        "candidate_objects": [
-                            candidate
-                            for raw in raw_group
-                            for candidate in (raw.get("candidate_objects", []) or raw.get("visible_candidates", []))
-                        ],
                         "visible_candidates": [
                             candidate
                             for raw in raw_group
-                            for candidate in (raw.get("candidate_objects", []) or raw.get("visible_candidates", []))
+                            for candidate in raw.get("visible_candidates", [])
                         ],
                         "semantic_hints": hints,
                         "source": "FM",
                         "provenance": "qwen_vlm_normalized_by_generic_ontology",
-                        "vlm_canonicalization_version": "phase3_6a2_v1",
+                        "vlm_canonicalization_version": "phase3_6a3_v1",
                         "normalization_status": "COMPLETE",
                     }
                 )

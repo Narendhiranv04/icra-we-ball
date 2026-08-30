@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import pytest
 
+from mujoco_scenes.functional_tamp_pipeline.errors import VLMSpecificationError
 from mujoco_scenes.functional_tamp_pipeline.models import FunctionalRequirementGraph
 from mujoco_scenes.functional_tamp_pipeline.vlm_spec_provider import VLMSpecProvider
 from mujoco_scenes.kitchen_vlm_functional_graph import (
@@ -56,6 +57,7 @@ def test_zero_leakage_in_kitchen_and_workshop_payloads(tmp_path):
                 "required_count": 2,
                 "binding_policy": "DISTINCT",
                 "candidate_categories": ["cup"],
+                "visible_candidates": [],
                 "required_properties": ["open cavity container"],
             },
             {
@@ -65,6 +67,7 @@ def test_zero_leakage_in_kitchen_and_workshop_payloads(tmp_path):
                 "required_count": 1,
                 "binding_policy": "REUSABLE",
                 "candidate_categories": ["spoon"],
+                "visible_candidates": [],
                 "required_properties": ["elongated utensil"],
             },
             {
@@ -74,6 +77,7 @@ def test_zero_leakage_in_kitchen_and_workshop_payloads(tmp_path):
                 "required_count": 1,
                 "binding_policy": "REUSABLE",
                 "candidate_categories": ["kettle"],
+                "visible_candidates": [],
                 "required_properties": [],
             },
             {
@@ -83,6 +87,7 @@ def test_zero_leakage_in_kitchen_and_workshop_payloads(tmp_path):
                 "required_count": 1,
                 "binding_policy": "REUSABLE",
                 "candidate_categories": ["coffee_jar"],
+                "visible_candidates": [],
                 "required_properties": [],
             },
         ],
@@ -118,17 +123,19 @@ def test_zero_leakage_in_kitchen_and_workshop_payloads(tmp_path):
         "status": "SUPPORTED",
         "task_summary": "Drive screw",
         "unsupported_reason": "",
-        "functional_requirements": [
+        "functional_roles": [
             {
                 "id": "driver_tool",
                 "entity_kind": "OBJECT",
                 "function": "drive a screw",
                 "description": "screwdriver or power driver",
                 "required_count": 1,
-                "candidate_objects": [
+                "binding_policy": "DISTINCT",
+                "candidate_categories": ["screwdriver", "power driver"],
+                "visible_candidates": [
                     {"label": "cordless power driver", "visual_description": "driver", "suitability_reason": "fits screw"}
                 ],
-                "required_properties": ["reach target hole", "compatible with screw head"],
+                "required_properties": [],
             },
             {
                 "id": "fastener_obj",
@@ -136,12 +143,23 @@ def test_zero_leakage_in_kitchen_and_workshop_payloads(tmp_path):
                 "function": "fasten joint",
                 "description": "screw fastener",
                 "required_count": 1,
-                "candidate_objects": [
+                "binding_policy": "DISTINCT",
+                "candidate_categories": ["screw"],
+                "visible_candidates": [
                     {"label": "phillips screw", "visual_description": "screw", "suitability_reason": "fits hole"}
                 ],
-                "required_properties": ["compatible with workbench hole"],
+                "required_properties": [],
             },
         ],
+        "functional_relations": [
+            {
+                "subject_role": "driver_tool",
+                "relation": "compatible with screw head",
+                "object_role": "fastener_obj",
+            }
+        ],
+        "inspectable_regions": [],
+        "inspection_order": [],
     }
 
     workshop_insp_doc = {
@@ -155,7 +173,7 @@ def test_zero_leakage_in_kitchen_and_workshop_payloads(tmp_path):
 
     transport = MockTransport({
         "kitchen_functional_requirement_graph": kitchen_doc,
-        "functional_requirements": workshop_req_doc,
+        "functional_specification": workshop_req_doc,
         "inspection_policy": workshop_insp_doc,
     })
     adapter = FMAdapter(model="test_model", transport=transport)
@@ -213,6 +231,7 @@ def test_fail_closed_on_unmapped_kitchen_property():
                 "required_count": 1,
                 "binding_policy": "REUSABLE",
                 "candidate_categories": ["spoon"],
+                "visible_candidates": [],
                 "required_properties": ["quantum magnetic superconductor"],  # Unmappable!
             }
         ],
@@ -222,7 +241,7 @@ def test_fail_closed_on_unmapped_kitchen_property():
         "inspection_order": [],
         "unsupported_reason": "",
     }
-    with pytest.raises((ValueError, Exception), match="no exact or alias checker mapping exists"):
+    with pytest.raises(VLMSpecificationError, match="no exact or alias checker mapping exists"):
         compile_vlm_functional_graph(spec, task_instruction="Test", observable_regions=("D1", "C2"))
 
 
@@ -231,25 +250,30 @@ def test_fail_closed_on_unsupported_workshop_region_role(tmp_path):
         "status": "SUPPORTED",
         "task_summary": "Drive screw",
         "unsupported_reason": "",
-        "functional_requirements": [
+        "functional_roles": [
             {
                 "id": "unsupported_table_region",
                 "entity_kind": "REGION",
                 "function": "rest workpiece",
                 "description": "tabletop surface",
                 "required_count": 1,
-                "candidate_objects": [{"label": "table surface", "visual_description": "table", "suitability_reason": "flat"}],
-                "required_properties": ["flat"],
+                "binding_policy": "DISTINCT",
+                "candidate_categories": ["table surface"],
+                "visible_candidates": [{"label": "table surface", "visual_description": "table", "suitability_reason": "flat"}],
+                "required_properties": ["planar support"],
             }
         ],
+        "functional_relations": [],
+        "inspectable_regions": [],
+        "inspection_order": [],
     }
-    transport = MockTransport({"functional_requirements": doc})
+    transport = MockTransport({"functional_specification": doc})
     adapter = FMAdapter(model="test_model", transport=transport)
     provider = FMRequirementProvider(fm_adapter=adapter)
 
     img = tmp_path / "img.png"
     img.write_bytes(PNG_1X1)
-    with pytest.raises((ValueError, Exception), match="Unsupported REGION role"):
+    with pytest.raises(VLMSpecificationError, match="Unsupported REGION role"):
         provider.get_requirements("Drive screw", observation_images=[img])
 
 
@@ -265,17 +289,19 @@ def test_living_room_detector_vocabulary_uses_only_vlm_categories(tmp_path):
         "status": "SUPPORTED",
         "task_summary": "Serve drinks and remote",
         "unsupported_reason": "",
-        "functional_requirements": [
+        "functional_roles": [
             {
                 "id": "personal_support",
                 "entity_kind": "REGION",
                 "function": "support cup and saucer",
                 "description": "side table near armchair",
                 "required_count": 2,
-                "candidate_objects": [
+                "binding_policy": "DISTINCT",
+                "candidate_categories": ["side table"],
+                "visible_candidates": [
                     {"label": "small round side table", "visual_description": "wood table", "suitability_reason": "near chair"}
                 ],
-                "required_properties": ["planar horizontal support surface", "near seat"],
+                "required_properties": ["planar support"],
             },
             {
                 "id": "shared_support",
@@ -283,14 +309,30 @@ def test_living_room_detector_vocabulary_uses_only_vlm_categories(tmp_path):
                 "function": "support remote control",
                 "description": "coffee table between seats",
                 "required_count": 1,
-                "candidate_objects": [
+                "binding_policy": "SHARED",
+                "candidate_categories": ["coffee table"],
+                "visible_candidates": [
                     {"label": "low coffee table", "visual_description": "central table", "suitability_reason": "central"}
                 ],
-                "required_properties": ["planar horizontal support surface", "between seats"],
+                "required_properties": ["planar support"],
             },
         ],
+        "functional_relations": [
+            {
+                "subject_role": "personal_support",
+                "relation": "near seat",
+                "object_role": "personal_support",
+            },
+            {
+                "subject_role": "shared_support",
+                "relation": "between seats",
+                "object_role": "shared_support",
+            },
+        ],
+        "inspectable_regions": [],
+        "inspection_order": [],
     }
-    transport = MockTransport({"functional_requirements": doc})
+    transport = MockTransport({"functional_specification": doc})
     provider.fm_adapter = FMAdapter(model="test_model", transport=transport)
 
     graph = spec_prov._living_room("Prepare living room", [img], provider=provider)

@@ -1,14 +1,14 @@
 # Phase 3 Freeze and Phase 4 Handoff
 
 > [!NOTE]
-> **PASS 3.6A.2 COMPLETE — VLM → G_F CONTRACT FROZEN**
-> Pass 3.6A.2 completes the final architectural correction of the live VLM → Functional Requirement Graph ($G_F$) interface. The contract is canonicalized under version `phase3_6a2_v1` and frozen across all three benchmark domains (Kitchen, Living Room, Workshop).
+> **PASS 3.6A.3 COMPLETE — SEMANTIC PRESERVATION AND VLM → G_F CONTRACT FROZEN**
+> Pass 3.6A.3 enforces strict semantic preservation across the live VLM → Functional Requirement Graph ($G_F$) interface. The contract is canonicalized under version `phase3_6a3_v1` and frozen across all three benchmark domains (Kitchen, Living Room, Workshop).
 
 ---
 
 ## 1. Executive Summary
 
-Phase 3 establishes the canonical functional-grounding Task and Motion Planning (TAMP) pipeline architecture. Under Pass 3.6A.1 and Pass 3.6A.2, the interface boundary between the live Vision-Language Model (VLM) and downstream execution has been realigned to adhere strictly to scientific zero-leakage principles with deterministic, semantic-preserving canonicalization.
+Phase 3 establishes the canonical functional-grounding Task and Motion Planning (TAMP) pipeline architecture. Under Pass 3.6A.1, Pass 3.6A.2, and Pass 3.6A.3, the interface boundary between the live Vision-Language Model (VLM) and downstream execution has been realigned to adhere strictly to scientific zero-leakage principles with deterministic, semantic-preserving canonicalization.
 
 The scientific pipeline is established as:
 ```
@@ -18,7 +18,7 @@ TASK + INITIAL MULTI-VIEW RGB
         ↓
 complete natural-language functional specification
         ↓
-strict deterministic representation & canonicalization (phase3_6a2_v1)
+strict deterministic representation & canonicalization (phase3_6a3_v1)
         ↓
 canonical G_F
         ↓
@@ -31,7 +31,7 @@ G_O (sequential inspection) → grounding (phi*) → symbolic compiler → A*
 
 ---
 
-## 2. Pass 3.6A.2 Contract and Canonicalization Summary
+## 2. Pass 3.6A.3 Contract and Canonicalization Summary
 
 1. **Complete Natural-Language Schema**:
    - `status` (`SUPPORTED` / `UNSUPPORTED`)
@@ -44,12 +44,12 @@ G_O (sequential inspection) → grounding (phi*) → symbolic compiler → A*
    - `unsupported_reason`: non-empty diagnostic for `UNSUPPORTED` status.
 
 2. **Domain Canonicalization & Compositional Concept Matchers**:
-   - **Kitchen**: Canonical roles (`coffee_container`, `soup_container`, `coffee_stirrer`, `soup_eating_utensil`, `coffee_source`, `water_source`) and operation groups (`coffee_stirring`, `soup_serving`). Initial RGB render resolution standardized to **1280×960**.
-   - **Living Room**: Compositional concept matchers for `personal_cup_saucer` (surface + personal/drink) and `shared_remote` (surface + shared/remote). Role consolidation preserves binding policies and kinds.
-   - **Workshop**: Compositional concept matchers for `CAN_DRIVE_SCREW` (driving action), `CAN_FASTEN` (fastener concept), and `repair_target` (`FIXED_TARGET`). Unary-only properties and explicit binary relations (`COMPATIBLE_WITH`, `REACHES_TARGET`, `COMPATIBLE_WITH_TARGET`).
+   - **Kitchen**: Canonical roles (`coffee_container`, `soup_container`, `coffee_stirrer`, `soup_eating_utensil`, `coffee_source`, `water_source`) and operation groups (`coffee_stirring`, `soup_serving`). Initial RGB render resolution standardized to **1280×960** across 5 views.
+   - **Living Room**: Compositional concept matchers for `personal_cup_saucer` (surface + personal/drink) and `shared_remote` (surface + shared/remote). Role consolidation preserves raw binding policies, counts, and kinds. Mode-independent task entities handled downstream.
+   - **Workshop**: Compositional concept matchers for `CAN_DRIVE_SCREW` (driving action), `CAN_FASTEN` (fastener concept), and `repair_target` (`FIXED_TARGET`). Unary-only properties and explicit binary relations (`COMPATIBLE_WITH`, `REACHES_TARGET`, `COMPATIBLE_WITH_TARGET`). Open-vocabulary candidate detector categories preserved.
 
 3. **Strict Validation & Traceability**:
-   - `VLM_CANONICALIZATION_VERSION = "phase3_6a2_v1"` attached to all $G_F$ metadata.
+   - `VLM_CANONICALIZATION_VERSION = "phase3_6a3_v1"` attached to all $G_F$ metadata.
    - Complete transformation trace, raw decompositions, and normalization audits recorded in all run artifacts.
 
 ---

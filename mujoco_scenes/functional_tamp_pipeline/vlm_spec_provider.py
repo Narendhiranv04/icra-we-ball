@@ -13,7 +13,7 @@ from .models import (
 )
 from .spec_provider import FunctionalSpecProvider
 
-VLM_CANONICALIZATION_VERSION = "phase3_6a2_v1"
+VLM_CANONICALIZATION_VERSION = "phase3_6a3_v1"
 
 
 class VLMSpecProvider(FunctionalSpecProvider):
@@ -296,111 +296,62 @@ class VLMSpecProvider(FunctionalSpecProvider):
         requirements = result["normalized_requirements"]
         nodes: dict[str, FunctionalRole] = {}
         relations: list[FunctionalRelation] = []
-        operation_groups: list[OperationGroup] = []
-
         all_categories: list[str] = []
-        has_seating_relation = False
 
         for row in requirements:
             func_id = row["function"]
-            binding = "SHARED" if "SHARED" in func_id else "DISTINCT"
+            binding = row.get("binding_policy", "SHARED" if "SHARED" in func_id else "DISTINCT")
             count = int(row["vlm_required_count"])
+            entity_kind = row.get("entity_kind", "REGION")
             cats = tuple(row["accepted_categories"])
             all_categories.extend(cats)
             unary = tuple(
-                prop for prop in row["required_properties"] if prop == "PLANAR_SUPPORT"
+                prop for prop in row.get("required_properties", []) if prop == "PLANAR_SUPPORT"
             )
             nodes[func_id] = FunctionalRole(
                 name=func_id,
-                entity_kind="REGION",
+                entity_kind=entity_kind,
                 count=count,
                 semantic_categories=cats,
                 unary_predicates=unary,
                 binding_policy=binding,
-                verification_mode="SEMANTIC_AND_GEOMETRIC",
+                verification_mode="SEMANTIC_AND_GEOMETRIC" if unary else "SEMANTIC_ONLY",
                 description=row.get("description", ""),
                 semantic_hints=tuple(row.get("semantic_hints", ())),
             )
 
-            req_rels = [prop for prop in row["required_properties"] if prop != "PLANAR_SUPPORT"]
-            if any("SEAT" in r for r in req_rels):
-                has_seating_relation = True
+        raw_to_canonical = {}
+        for row in requirements:
+            for raw_id in row.get("raw_vlm_role_ids", []):
+                raw_to_canonical[raw_id] = row["function"]
+            if "raw_vlm_role_id" in row:
+                raw_to_canonical[row["raw_vlm_role_id"]] = row["function"]
+            raw_to_canonical[row["function"]] = row["function"]
+            raw_to_canonical[row["role_id"]] = row["function"]
 
-            if "SHARED" in func_id:
-                nodes["REMOTE"] = FunctionalRole(
-                    name="REMOTE",
-                    entity_kind="OBJECT",
-                    count=count,
-                    semantic_categories=("remote_control", "tv_remote"),
-                    binding_policy="DISTINCT",
-                    verification_mode="SEMANTIC_ONLY",
-                    description="System-owned task entity representing remote control",
-                )
-                nodes["SEATING_PAIR"] = FunctionalRole(
-                    name="SEATING_PAIR",
-                    entity_kind="FIXED_TARGET",
-                    count=1,
-                    semantic_categories=("armchair", "chair", "sofa", "seating_pair"),
-                    binding_policy="SHARED",
-                    verification_mode="SEMANTIC_ONLY",
-                    description="System-owned task entity representing shared seating pair",
-                )
-                for rel in req_rels:
-                    target_role = "SEATING_PAIR" if "SEAT" in rel else "REMOTE"
+        raw_relations = result.get("raw_vlm_decomposition", {}).get("functional_relations", [])
+        for rel_item in raw_relations:
+            s = rel_item.get("subject_role")
+            r = rel_item.get("relation")
+            o = rel_item.get("object_role")
+            if s and r and o:
+                canon_s = raw_to_canonical.get(str(s), str(s))
+                canon_o = raw_to_canonical.get(str(o), str(o))
+                if canon_s in nodes and canon_o in nodes:
                     relations.append(FunctionalRelation(
-                        subject_role=func_id,
-                        predicate=rel,
-                        object_role=target_role,
+                        subject_role=canon_s,
+                        predicate=str(r),
+                        object_role=canon_o,
                         expected=True,
                     ))
-            else:
-                nodes["CUP_SAUCER_SET"] = FunctionalRole(
-                    name="CUP_SAUCER_SET",
-                    entity_kind="OBJECT",
-                    count=count,
-                    semantic_categories=("cup_saucer_set", "cup", "saucer"),
-                    binding_policy="DISTINCT",
-                    verification_mode="SEMANTIC_ONLY",
-                    description="System-owned task entity representing cup and saucer set",
-                )
-                nodes["SEATING_POSITION"] = FunctionalRole(
-                    name="SEATING_POSITION",
-                    entity_kind="FIXED_TARGET",
-                    count=count,
-                    semantic_categories=("armchair", "chair", "sofa", "seating_position"),
-                    binding_policy="DISTINCT",
-                    verification_mode="SEMANTIC_ONLY",
-                    description="System-owned task entity representing seating location",
-                )
-                target_req_rels = tuple(r for r in req_rels if "SEAT" not in r)
-                context_rels = tuple(r for r in req_rels if "SEAT" in r)
-                operation_groups.append(OperationGroup(
-                    id=f"{func_id.lower()}_group",
-                    function="SUPPORT_DRINKWARE",
-                    tool_role=func_id,
-                    target_role="CUP_SAUCER_SET",
-                    usage_policy="DEDICATED_PER_TARGET",
-                    required_relations=target_req_rels,
-                    context_role="SEATING_POSITION" if context_rels else None,
-                    context_relations=context_rels,
-                    required_target_count=count,
-                    distinct_within_group=True,
-                    same_tool_must_cover_all_targets=False,
-                ))
 
-        for n in nodes.values():
-            if n.entity_kind == "OBJECT":
-                all_categories.extend(n.semantic_categories)
-        if has_seating_relation:
-            all_categories.extend(["armchair", "chair", "sofa"])
-
+        role_categories = set(all_categories)
+        role_categories.update(["armchair", "chair", "sofa", "remote_control", "tv_remote", "cup", "saucer", "cup_saucer_set"])
         aliases = provider._vocabulary_aliases()
         prompts: list[str] = []
-        for cat in all_categories:
-            if cat in aliases:
+        for cat in aliases:
+            if cat in role_categories:
                 prompts.extend(aliases[cat])
-            else:
-                prompts.append(cat.replace("_", " "))
         vocabulary = tuple(dict.fromkeys(prompts))
 
         return FunctionalRequirementGraph(
@@ -408,19 +359,18 @@ class VLMSpecProvider(FunctionalSpecProvider):
             task_instruction=task_instruction,
             nodes=nodes,
             relations=tuple(relations),
-            operation_groups=tuple(operation_groups),
+            operation_groups=(),
             cross_group_reuse_allowed=False,
             detector_vocabulary=vocabulary,
             candidate_regions=(),
             region_ranking=(),
             source="VLM_FUNCTIONAL_SPEC",
-            raw_requirements=(result["normalized_task_contract"],),
+            raw_requirements=(result.get("normalized_task_contract") or result["raw_vlm_decomposition"],),
             metadata={
                 "vlm_canonicalization_version": VLM_CANONICALIZATION_VERSION,
                 "semantic_vocabulary_path": str(provider.vocabulary_path),
                 "raw_decomposition": result["raw_vlm_decomposition"],
                 "normalization_audit": result["reviewed_ontology_audit"],
-                "system_owned_task_entities": ["REMOTE", "SEATING_PAIR", "CUP_SAUCER_SET", "SEATING_POSITION"],
             },
         )
 

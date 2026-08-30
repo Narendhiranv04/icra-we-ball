@@ -42,20 +42,19 @@ def natural_decomposition() -> dict:
     return {
         "status": "SUPPORTED",
         "task_summary": "Choose a compatible driver and threaded fastener.",
-        "functional_requirements": [
+        "functional_roles": [
             {
                 "id": "rotating_tool",
                 "entity_kind": "OBJECT",
                 "function": "tighten a screw",
                 "description": "A device that rotates the screw into the repair joint.",
                 "required_count": 1,
-                "candidate_objects": [
+                "binding_policy": "DISTINCT",
+                "candidate_categories": ["screwdriver"],
+                "visible_candidates": [
                     candidate("Phillips screwdriver", "hand tool on the workbench")
                 ],
-                "required_properties": [
-                    "must reach the screw head",
-                    "tip must fit the screw head and transmit torque",
-                ],
+                "required_properties": [],
             },
             {
                 "id": "threaded_joiner",
@@ -63,14 +62,44 @@ def natural_decomposition() -> dict:
                 "function": "secure the joint",
                 "description": "A threaded component that holds the repair joint.",
                 "required_count": 1,
-                "candidate_objects": [
+                "binding_policy": "DISTINCT",
+                "candidate_categories": ["screw"],
+                "visible_candidates": [
                     candidate("Phillips screw", "small threaded fastener in the tray")
                 ],
-                "required_properties": [
-                    "must fit the workbench target hole and thread into the hole"
-                ],
+                "required_properties": [],
+            },
+            {
+                "id": "repair_hole",
+                "entity_kind": "FIXED_TARGET",
+                "function": "target repair hole on workpiece",
+                "description": "hole in the frame joint to receive screw",
+                "required_count": 1,
+                "binding_policy": "DISTINCT",
+                "candidate_categories": ["workbench_hole"],
+                "visible_candidates": [],
+                "required_properties": [],
             },
         ],
+        "functional_relations": [
+            {
+                "subject_role": "rotating_tool",
+                "relation": "tip must fit the screw head and transmit torque",
+                "object_role": "threaded_joiner",
+            },
+            {
+                "subject_role": "rotating_tool",
+                "relation": "must reach the workpiece hole recess",
+                "object_role": "repair_hole",
+            },
+            {
+                "subject_role": "threaded_joiner",
+                "relation": "must fit the workbench target hole and thread into the hole",
+                "object_role": "repair_hole",
+            },
+        ],
+        "inspectable_regions": [],
+        "inspection_order": [],
         "unsupported_reason": "",
     }
 
@@ -105,7 +134,6 @@ def test_adapter_builds_multimodal_planning_free_request(observation_image):
     prompt = payload["messages"][0]["content"].lower()
     assert "infer the complete set" in prompt
     assert "do not produce an action sequence" in prompt
-    assert "candidate_objects" in prompt
     assert payload["messages"][1]["content"][1]["type"] == "image_url"
 
 
@@ -158,27 +186,23 @@ def test_result_records_image_provenance_and_no_execution(observation_image):
 
 
 def test_vlm_organic_geometric_property_accepted(observation_image):
-    # Pass 2A removed strict requirement constraints to allow organic VLM output
     document = natural_decomposition()
-    # The VLM might omit or rephrase geometric properties; we just parse what we get.
-    document["functional_requirements"][0]["required_properties"] = [
-        "must be capable of reaching the deep screw head recess"
+    document["functional_roles"][0]["required_properties"] = [
+        "planar support"
     ]
     provider, _ = provider_for(document)
-    # This should not raise any exceptions
     graph = provider.get_requirements(observation_images=[observation_image])
     assert graph is not None
-    # The string is just captured as qualitative context (if at all) but does not crash.
 
 
 def test_transport_schema_rejects_old_candidate_types_and_extra_fields():
     document = natural_decomposition()
     document["actions"] = []
-    with pytest.raises(FMResponseValidationError, match="fields must be exactly|Unexpected top-level fields"):
+    with pytest.raises(FMResponseValidationError, match="Unexpected top-level fields"):
         validate_requirement_response(document)
 
     document = natural_decomposition()
-    role = document["functional_requirements"][0]
+    role = document["functional_roles"][0]
     role["candidate_types"] = ["screwdriver"]
     with pytest.raises(FMResponseValidationError, match="invalid fields"):
         validate_requirement_response(document)
@@ -216,15 +240,6 @@ def test_workshop_local_id_collision_independence():
 
 def test_workshop_fixed_target_role_tracing(observation_image):
     doc = natural_decomposition()
-    doc["functional_requirements"].append({
-        "id": "workbench_repair_hole",
-        "entity_kind": "REGION",
-        "function": "target repair hole on workpiece",
-        "description": "hole in the frame joint to receive screw",
-        "required_count": 1,
-        "candidate_objects": [],
-        "required_properties": ["fit the workbench hole"],
-    })
     provider, _ = provider_for(doc)
     reqs = provider.get_requirements(observation_images=[observation_image])
     assert len(reqs) == 2

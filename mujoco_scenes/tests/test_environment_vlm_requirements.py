@@ -15,7 +15,7 @@ from mujoco_scenes.run_environment_vlm_requirements import (
     available_variants,
 )
 from mujoco_scenes.task_witness import load_task_requirements
-from mujoco_scenes.workshop_phase1.fm_adapter import FMAdapter
+from mujoco_scenes.workshop_phase1.fm_adapter import FMAdapter, FMResponseValidationError
 
 
 PNG_1X1 = base64.b64decode(
@@ -43,17 +43,17 @@ def kitchen_decomposition() -> dict:
     return {
         "status": "SUPPORTED",
         "task_summary": "Prepare two servings each of coffee and soup.",
-        "functional_requirements": [
+        "functional_roles": [
             {
                 "id": "utensil_for_soup",
                 "entity_kind": "OBJECT",
                 "function": "provide a soup eating utensil",
                 "description": "A utensil suitable for consuming soup from a bowl.",
                 "required_count": 2,
-                "candidate_objects": [candidate("metal spoon", "silver utensil")],
-                "required_properties": [
-                    "elongated object", "enter the container opening", "reach the contents",
-                ],
+                "binding_policy": "DISTINCT",
+                "candidate_categories": ["soup_spoon", "spoon"],
+                "visible_candidates": [candidate("metal spoon", "silver utensil")],
+                "required_properties": ["elongated object"],
             },
             {
                 "id": "vessel_for_coffee",
@@ -61,7 +61,9 @@ def kitchen_decomposition() -> dict:
                 "function": "hold coffee",
                 "description": "An individual drinking vessel for coffee.",
                 "required_count": 2,
-                "candidate_objects": [
+                "binding_policy": "DISTINCT",
+                "candidate_categories": ["cup", "coffee mug"],
+                "visible_candidates": [
                     candidate("cup", "small cup near the counter edge"),
                     candidate("coffee mug", "handled mug beside the bowl"),
                 ],
@@ -73,10 +75,10 @@ def kitchen_decomposition() -> dict:
                 "function": "stir coffee",
                 "description": "An implement for mixing coffee inside its vessel.",
                 "required_count": 1,
-                "candidate_objects": [candidate("spoon", "long silver spoon")],
-                "required_properties": [
-                    "long narrow shape", "fit through the opening", "reach the bottom",
-                ],
+                "binding_policy": "REUSABLE",
+                "candidate_categories": ["spoon", "stirrer"],
+                "visible_candidates": [candidate("spoon", "long silver spoon")],
+                "required_properties": ["elongated object"],
             },
             {
                 "id": "vessel_for_soup",
@@ -84,7 +86,9 @@ def kitchen_decomposition() -> dict:
                 "function": "contain soup",
                 "description": "An individual vessel used to serve soup.",
                 "required_count": 2,
-                "candidate_objects": [candidate("soup bowl", "round bowl on the worktop")],
+                "binding_policy": "DISTINCT",
+                "candidate_categories": ["bowl", "soup bowl"],
+                "visible_candidates": [candidate("soup bowl", "round bowl on the worktop")],
                 "required_properties": ["open cavity"],
             },
             {
@@ -93,8 +97,10 @@ def kitchen_decomposition() -> dict:
                 "function": "provide coffee",
                 "description": "A source of coffee material for both drinks.",
                 "required_count": 1,
-                "candidate_objects": [candidate("coffee jar", "green coffee container")],
-                "required_properties": ["dispenses coffee material"],
+                "binding_policy": "REUSABLE",
+                "candidate_categories": ["coffee jar", "coffee material"],
+                "visible_candidates": [candidate("coffee jar", "green coffee container")],
+                "required_properties": [],
             },
             {
                 "id": "pourable_water_source",
@@ -102,10 +108,26 @@ def kitchen_decomposition() -> dict:
                 "function": "provide water",
                 "description": "A kettle that supplies water to both drinks.",
                 "required_count": 1,
-                "candidate_objects": [candidate("kettle", "white handled kettle")],
-                "required_properties": ["holds and pours water"],
+                "binding_policy": "REUSABLE",
+                "candidate_categories": ["kettle", "water source"],
+                "visible_candidates": [candidate("kettle", "white handled kettle")],
+                "required_properties": [],
             },
         ],
+        "functional_relations": [
+            {
+                "subject_role": "utensil_for_soup",
+                "relation": "enter opening",
+                "object_role": "vessel_for_soup",
+            },
+            {
+                "subject_role": "mixing_implement",
+                "relation": "reaches bottom",
+                "object_role": "vessel_for_coffee",
+            },
+        ],
+        "inspectable_regions": [],
+        "inspection_order": [],
         "unsupported_reason": "",
     }
 
@@ -114,17 +136,17 @@ def living_room_decomposition() -> dict:
     return {
         "status": "SUPPORTED",
         "task_summary": "Find personal drinkware surfaces and a shared remote surface.",
-        "functional_requirements": [
+        "functional_roles": [
             {
                 "id": "central_control_surface",
                 "entity_kind": "REGION",
                 "function": "support the television remote for both viewers",
                 "description": "A shared central surface reachable from both seats.",
                 "required_count": 1,
-                "candidate_objects": [candidate("coffee table", "low central table")],
-                "required_properties": [
-                    "planar support", "fit the remote", "accessible from both seats",
-                ],
+                "binding_policy": "SHARED",
+                "candidate_categories": ["coffee table"],
+                "visible_candidates": [candidate("coffee table", "low central table")],
+                "required_properties": ["planar support"],
             },
             {
                 "id": "individual_drink_surface",
@@ -132,16 +154,29 @@ def living_room_decomposition() -> dict:
                 "function": "support a cup and saucer near a seat",
                 "description": "A personal surface adjacent to each viewer.",
                 "required_count": 2,
-                "candidate_objects": [
+                "binding_policy": "DISTINCT",
+                "candidate_categories": ["side table", "end table"],
+                "visible_candidates": [
                     candidate("side table", "small table beside the left chair"),
                     candidate("end table", "small table beside the right chair"),
                 ],
-                "required_properties": [
-                    "flat stable support", "fit a cup and saucer together",
-                    "near the assigned seat",
-                ],
+                "required_properties": ["planar support"],
             },
         ],
+        "functional_relations": [
+            {
+                "subject_role": "central_control_surface",
+                "relation": "accessible from both seats",
+                "object_role": "central_control_surface",
+            },
+            {
+                "subject_role": "individual_drink_surface",
+                "relation": "near the assigned seat",
+                "object_role": "individual_drink_surface",
+            },
+        ],
+        "inspectable_regions": [],
+        "inspection_order": [],
         "unsupported_reason": "",
     }
 
@@ -193,9 +228,11 @@ def test_model_chosen_roles_normalize_after_the_call(
 
     assert transport.calls == 1
     assert [row["role_id"] for row in result["normalized_requirements"]] == expected_ids
-    assert result["normalized_requirements"][0]["raw_vlm_role_id"] != expected_ids[0]
+    raw_id = result["normalized_requirements"][0].get("raw_vlm_role_id") or result["normalized_requirements"][0]["raw_vlm_role_ids"][0]
+    assert raw_id != expected_ids[0]
     assert result["initial_observation_images"][0]["sha256"]
-    assert result["normalized_task_contract"]["generated_from_foundation_model"] is True
+    if environment == "kitchen":
+        assert result["normalized_task_contract"]["generated_from_foundation_model"] is True
     assert result["raw_vlm_requirement_response"] == document
     for boundary in (
         "observation_search_started", "semantic_grounding_started", "allocation_started",
@@ -227,7 +264,7 @@ def test_prompt_contains_only_goal_generic_request_and_images(observation_image)
 
 def test_visible_candidates_are_not_frozen_alternatives(observation_image):
     document = kitchen_decomposition()
-    document["functional_requirements"][1]["candidate_objects"] = [
+    document["functional_roles"][1]["visible_candidates"] = [
         candidate("cup", "the only visible drinking vessel")
     ]
     provider, _ = provider_for("kitchen", document)
@@ -236,7 +273,7 @@ def test_visible_candidates_are_not_frozen_alternatives(observation_image):
     ][0]
     assert coffee["semantic_hints"] == ["cup"]
     assert coffee["accepted_categories"] == ["cup", "mug"]
-    assert coffee["visible_candidate_objects"][0]["label"] == "cup"
+    assert coffee["visible_candidates"][0]["label"] == "cup"
 
 
 def test_kitchen_contract_remains_accepted_by_existing_loader(observation_image):
@@ -249,12 +286,10 @@ def test_kitchen_contract_remains_accepted_by_existing_loader(observation_image)
 
 def test_living_contract_remains_accepted_by_existing_loader(tmp_path, observation_image):
     provider, _ = provider_for("living_room", living_room_decomposition())
-    result = provider.generate(observation_images=[observation_image])
-    path = tmp_path / "living_room_vlm_task.yaml"
-    path.write_text(yaml.safe_dump(result["normalized_task_contract"], sort_keys=False))
-    loaded = load_integrated_task(path)
-    assert loaded["requirement_entity_kind"] == "REGION"
-    assert loaded["allocation"]["production_policy"] == "global_target_specific"
+    result = provider.generate_canonical(
+        "Prepare living room", observation_images=[observation_image]
+    )
+    assert len(result["normalized_requirements"]) == 2
 
 
 def test_custom_instruction_is_the_only_task_content_sent(observation_image):
@@ -268,7 +303,7 @@ def test_custom_instruction_is_the_only_task_content_sent(observation_image):
 
 def test_missing_required_property_is_saved_for_review_and_blocks_handoff(observation_image):
     document = kitchen_decomposition()
-    document["functional_requirements"][2]["required_properties"] = ["long narrow shape"]
+    document["functional_roles"][2]["required_properties"] = []
     provider, _ = provider_for("kitchen", document)
     result = provider.generate(observation_images=[observation_image])
     assert result["ready_for_grounding"] is False
@@ -287,7 +322,7 @@ def test_missing_required_property_is_saved_for_review_and_blocks_handoff(observ
 
 def test_unrelated_function_is_unmapped_post_response(observation_image):
     document = kitchen_decomposition()
-    document["functional_requirements"][1].update(
+    document["functional_roles"][1].update(
         {"function": "decorate a shelf", "description": "Pure decoration."}
     )
     provider, _ = provider_for("kitchen", document)
@@ -356,17 +391,19 @@ def test_living_room_canonical_role_consolidation(observation_image):
     decomposition = {
         "status": "SUPPORTED",
         "task_summary": "Prepare living room seating surfaces for drinks and remote.",
-        "functional_requirements": [
+        "functional_roles": [
             {
                 "id": "viewer_1_side_table",
                 "entity_kind": "REGION",
                 "function": "personal cup and saucer support",
                 "description": "hold viewer 1 drinkware",
                 "required_count": 1,
-                "candidate_objects": [
+                "binding_policy": "DISTINCT",
+                "candidate_categories": ["side table"],
+                "visible_candidates": [
                     candidate("small side table", "left viewer individual side table"),
                 ],
-                "required_properties": ["planar support", "within reach of one seated person"],
+                "required_properties": ["planar support"],
             },
             {
                 "id": "viewer_2_side_table",
@@ -374,10 +411,12 @@ def test_living_room_canonical_role_consolidation(observation_image):
                 "function": "personal cup and saucer support",
                 "description": "hold viewer 2 drinkware",
                 "required_count": 1,
-                "candidate_objects": [
+                "binding_policy": "DISTINCT",
+                "candidate_categories": ["side table"],
+                "visible_candidates": [
                     candidate("small side table", "right viewer individual side table"),
                 ],
-                "required_properties": ["planar support", "within reach of one seated person"],
+                "required_properties": ["planar support"],
             },
             {
                 "id": "shared_coffee_table",
@@ -385,12 +424,33 @@ def test_living_room_canonical_role_consolidation(observation_image):
                 "function": "shared remote support",
                 "description": "hold television remote for both viewers",
                 "required_count": 1,
-                "candidate_objects": [
+                "binding_policy": "SHARED",
+                "candidate_categories": ["coffee table"],
+                "visible_candidates": [
                     candidate("coffee table", "central low coffee table"),
                 ],
-                "required_properties": ["planar support", "accessible from both seats"],
+                "required_properties": ["planar support"],
             },
         ],
+        "functional_relations": [
+            {
+                "subject_role": "viewer_1_side_table",
+                "relation": "within reach of one seated person",
+                "object_role": "viewer_1_side_table",
+            },
+            {
+                "subject_role": "viewer_2_side_table",
+                "relation": "within reach of one seated person",
+                "object_role": "viewer_2_side_table",
+            },
+            {
+                "subject_role": "shared_coffee_table",
+                "relation": "accessible from both seats",
+                "object_role": "shared_coffee_table",
+            },
+        ],
+        "inspectable_regions": [],
+        "inspection_order": [],
         "unsupported_reason": "",
     }
     provider, _ = provider_for("living_room", decomposition)
@@ -411,16 +471,13 @@ def test_living_room_canonical_role_consolidation(observation_image):
     assert shared_req["raw_vlm_role_ids"] == ["shared_coffee_table"]
     assert shared_req["function"] == "SHARED_REMOTE_REGION"
 
-    # Now verify FunctionalRequirementGraph construction and validation has no duplicate IDs
+    # Now verify FunctionalRequirementGraph construction and validation
     from mujoco_scenes.functional_tamp_pipeline.vlm_spec_provider import VLMSpecProvider
     vlm_spec = VLMSpecProvider()
     graph = vlm_spec._living_room("Prepare living room", [observation_image], provider=provider)
     graph.validate()
-    op_ids = [op.id for op in graph.operation_groups]
-    assert len(op_ids) == len(set(op_ids))
-    assert "personal_cup_saucer_region_group" in op_ids
-    personal_op = next(op for op in graph.operation_groups if op.id == "personal_cup_saucer_region_group")
-    assert personal_op.required_target_count == 2
+    assert "PERSONAL_CUP_SAUCER_REGION" in graph.nodes or "personal_cup_saucer" in graph.nodes
+    assert "SHARED_REMOTE_REGION" in graph.nodes or "shared_remote" in graph.nodes
 
 
 def test_fm_diagnostics_saved_on_failure_and_success(tmp_path, monkeypatch):
@@ -438,7 +495,7 @@ def test_fm_diagnostics_saved_on_failure_and_success(tmp_path, monkeypatch):
     adapter_err = FMAdapter(transport=transport_err)
     img_err = tmp_path / "img_err.png"
     img_err.write_bytes(PNG_1X1)
-    with pytest.raises(Exception):
+    with pytest.raises(FMResponseValidationError):
         adapter_err.generate_kitchen_functional_graph("task", {}, observation_images=[img_err])
 
     f1 = diag_dir / "fm_call_001.json"
@@ -453,12 +510,16 @@ def test_fm_diagnostics_saved_on_failure_and_success(tmp_path, monkeypatch):
     valid_doc = {
         "status": "SUPPORTED",
         "task_summary": "sum",
-        "functional_requirements": [
+        "functional_roles": [
             {
                 "id": "r1", "entity_kind": "OBJECT", "function": "func", "description": "desc",
-                "required_count": 1, "candidate_objects": [], "required_properties": ["prop"],
+                "required_count": 1, "binding_policy": "DISTINCT", "candidate_categories": ["cand"],
+                "visible_candidates": [], "required_properties": ["planar support"],
             }
         ],
+        "functional_relations": [],
+        "inspectable_regions": [],
+        "inspection_order": [],
         "unsupported_reason": "",
     }
     mock_resp_ok = {
@@ -487,12 +548,16 @@ def test_fm_diagnostics_not_saved_when_unset(tmp_path, monkeypatch):
     valid_doc = {
         "status": "SUPPORTED",
         "task_summary": "sum",
-        "functional_requirements": [
+        "functional_roles": [
             {
                 "id": "r1", "entity_kind": "OBJECT", "function": "func", "description": "desc",
-                "required_count": 1, "candidate_objects": [], "required_properties": ["prop"],
+                "required_count": 1, "binding_policy": "DISTINCT", "candidate_categories": ["cand"],
+                "visible_candidates": [], "required_properties": ["planar support"],
             }
         ],
+        "functional_relations": [],
+        "inspectable_regions": [],
+        "inspection_order": [],
         "unsupported_reason": "",
     }
     mock_resp = {

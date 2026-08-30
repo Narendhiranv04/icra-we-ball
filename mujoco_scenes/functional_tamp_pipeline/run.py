@@ -219,13 +219,7 @@ def _load_or_acquire_specification(
         return graph, "replayed_provider_output", str(spec_path.resolve())
 
     provider = provider_for_mode(mode)
-    try:
-        specification = provider.provide(domain, task, images)
-    except (VLMSpecificationError, ValueError) as err:
-        if mode == "vlm":
-            if not isinstance(err, VLMSpecificationError):
-                raise VLMSpecificationError(str(err)) from err
-        raise
+    specification = provider.provide(domain, task, images)
     return specification, "live_provider", None
 
 
