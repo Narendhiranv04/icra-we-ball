@@ -32,6 +32,8 @@ class VLMSpecProvider(FunctionalSpecProvider):
         else:
             raise NotImplementedError(f"VLM specification adapter is not implemented for {domain}")
         graph.validate()
+        from .task_interface_validator import validate_canonical_task_interface
+        validate_canonical_task_interface(graph)
         return graph
 
     @staticmethod
@@ -316,6 +318,9 @@ class VLMSpecProvider(FunctionalSpecProvider):
                 "semantic_vocabulary_path": str(provider.vocabulary_path),
                 "vlm_derived_role_vocabulary": vlm_prompts,
                 "task_explicit_context_vocabulary": context_prompts,
+                "raw_vlm_response": result.get("raw_vlm_response"),
+                "validated_vlm_specification": result.get("validated_vlm_specification"),
+                "canonicalization_trace": result.get("canonicalization_trace"),
                 "raw_decomposition": result["raw_vlm_decomposition"],
                 "normalization_audit": result["reviewed_ontology_audit"],
             },

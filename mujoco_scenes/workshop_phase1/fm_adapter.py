@@ -847,7 +847,7 @@ def validate_requirement_response(document: Mapping[str, Any]) -> dict[str, Any]
         }
         grp_required = {
             "id", "function", "tool_role", "target_role",
-            "required_target_count", "usage_policy",
+            "required_target_count", "usage_policy", "required_relations",
         }
         if not grp_required.issubset(set(grp)):
             raise FMResponseValidationError(f"interaction_groups[{g_idx}] missing required fields: {sorted(grp_required - set(grp))}")
@@ -866,10 +866,38 @@ def validate_requirement_response(document: Mapping[str, Any]) -> dict[str, Any]
         req_tgt_c = grp.get("required_target_count")
         if isinstance(req_tgt_c, bool) or not isinstance(req_tgt_c, int) or req_tgt_c < 1 or req_tgt_c > 20:
             raise FMResponseValidationError(f"interaction_groups[{g_idx}].required_target_count must be an integer from 1 to 20")
+
+        raw_req_rels = grp.get("required_relations")
+        if not isinstance(raw_req_rels, list) or len(raw_req_rels) < 1:
+            raise FMResponseValidationError(f"interaction_groups[{g_idx}].required_relations must be a non-empty list")
+        cleaned_req_rels = []
+        for r_idx, r in enumerate(raw_req_rels):
+            if not isinstance(r, str) or not r.strip():
+                raise FMResponseValidationError(f"interaction_groups[{g_idx}].required_relations[{r_idx}] must be a non-empty string")
+            cleaned_req_rels.append(r.strip())
+        if len(cleaned_req_rels) != len(set(cleaned_req_rels)):
+            raise FMResponseValidationError(f"interaction_groups[{g_idx}].required_relations contains duplicate relations")
+
         ctx_role = grp.get("context_role")
+        raw_ctx_rels = grp.get("context_relations")
         if ctx_role is not None:
-            if not isinstance(ctx_role, str) or ctx_role not in seen_ids:
+            if not isinstance(ctx_role, str) or not ctx_role.strip() or ctx_role not in seen_ids:
                 raise FMResponseValidationError(f"interaction_groups[{g_idx}].context_role references undeclared role {ctx_role!r}")
+            if not isinstance(raw_ctx_rels, list) or len(raw_ctx_rels) < 1:
+                raise FMResponseValidationError(f"interaction_groups[{g_idx}].context_relations must be a non-empty list when context_role is provided")
+            cleaned_ctx_rels = []
+            for r_idx, r in enumerate(raw_ctx_rels):
+                if not isinstance(r, str) or not r.strip():
+                    raise FMResponseValidationError(f"interaction_groups[{g_idx}].context_relations[{r_idx}] must be a non-empty string")
+                cleaned_ctx_rels.append(r.strip())
+            if len(cleaned_ctx_rels) != len(set(cleaned_ctx_rels)):
+                raise FMResponseValidationError(f"interaction_groups[{g_idx}].context_relations contains duplicate relations")
+        else:
+            if raw_ctx_rels is not None:
+                if not isinstance(raw_ctx_rels, list) or len(raw_ctx_rels) > 0:
+                    raise FMResponseValidationError(f"interaction_groups[{g_idx}].context_relations provided without context_role")
+            cleaned_ctx_rels = []
+
         cleaned_groups.append({
             "id": str(gid).strip(),
             "function": str(grp.get("function", "")).strip(),
@@ -877,9 +905,9 @@ def validate_requirement_response(document: Mapping[str, Any]) -> dict[str, Any]
             "target_role": str(tgt_role).strip(),
             "required_target_count": req_tgt_c,
             "usage_policy": str(grp.get("usage_policy")),
-            "required_relations": [str(r).strip() for r in grp.get("required_relations", []) if isinstance(r, str)],
+            "required_relations": cleaned_req_rels,
             "context_role": str(ctx_role).strip() if ctx_role else None,
-            "context_relations": [str(r).strip() for r in grp.get("context_relations", []) if isinstance(r, str)],
+            "context_relations": cleaned_ctx_rels,
         })
 
     return {

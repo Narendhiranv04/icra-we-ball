@@ -344,9 +344,8 @@ def test_f_workshop_fails_on_missing_driver_or_fastener():
         candidate_regions=(),
         region_ranking=(),
     )
-    adapter = WorkshopDomainAdapter("F0_MANUAL_FIRST_ONE_REGION", bad_spec)
     with pytest.raises(MalformedVLMSpecificationError) as exc_info:
-        adapter._sync_common_graph()
+        WorkshopDomainAdapter("F0_MANUAL_FIRST_ONE_REGION", bad_spec)
     assert "driver" in str(exc_info.value)
 
 

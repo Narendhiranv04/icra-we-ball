@@ -657,7 +657,8 @@ def test_manifest_failure_on_pipeline_exception_preserves_original_exception(tmp
 def test_kitchen_semantic_vocabulary_retains_aliases(tmp_path: Path):
     from mujoco_scenes.functional_tamp_pipeline.domains.kitchen import run_to_plan
 
-    spec = _make_dummy_spec(domain="kitchen")
+    from mujoco_scenes.functional_tamp_pipeline.gt_spec_provider import GTSpecProvider
+    spec = GTSpecProvider().provide("kitchen", "prepare coffee and soup")
     dummy_session = MagicMock()
     dummy_session.events_path.read_text.return_value = ""
     dummy_session.run_dir = tmp_path

@@ -1,4 +1,4 @@
-# VLM Functional Specification Interface Contract (Pass 3.6A.7)
+# VLM Functional Specification Interface Contract (Pass 3.6A.7.1)
 
 **Canonicalization Version**: `phase3_6a7_v1`
 **VLM Interface Implementation Frozen**: YES
@@ -18,9 +18,13 @@ TASK + INITIAL MULTI-VIEW RGB
         ↓
        VLM (Qwen / Foundation Model)
         ↓
-complete natural-language functional specification
+raw VLM output (raw_vlm_response)
         ↓
-lossless deterministic canonicalization (phase3_6a7_v1)
+strict generic schema validation (validated_vlm_specification)
+        ↓
+lossless deterministic canonicalization (phase3_6a7_v1, canonicalization_trace)
+        ↓
+mode-safe task-interface completeness validation
         ↓
 canonical G_F (with complete roles, relations, and operation groups)
         ↓
@@ -132,24 +136,33 @@ If the VLM determines that the task cannot be represented with this abstraction:
 
 Downstream backend code compiles the VLM's natural-language output deterministically and fails closed on invalid or ambiguous specifications:
 
-1. **Role Canonicalization (Local ID Independence)**:
-   - Maps role function phrases to reviewed domain canonical roles ignoring local VLM IDs:
-     - **Kitchen**: `coffee_container`, `soup_container`, `coffee_stirrer`, `soup_eating_utensil`, `coffee_source`, `water_source`.
-     - **Living Room**: `personal_cup_saucer`, `shared_remote`.
-     - **Workshop**: `driver`, `fastener`, `repair_target` (`FIXED_TARGET`).
-2. **Unary Properties vs Binary Relations Separation**:
-   - `required_properties` contains **UNARY ONLY** physical properties of one role mapped strictly through `unary_property_aliases`. Any unknown required property fails closed with `UnsupportedCheckerCapabilityError`.
-   - Relations (`functional_relations`, `interaction_groups.required_relations`, `context_relations`) map strictly through `binary_relation_aliases` to reviewed binary relations (`NEAR_SEAT`, `ACCESSIBLE_FROM_BOTH_SEATS`, `FITS_SET_ON`, `FITS_ON`, `INSERTABLE_IN`, `REACHES_BOTTOM`, `REACHES_TARGET`, `COMPATIBLE_WITH_TARGET`, `COMPATIBLE_WITH`). Unmapped relations raise `UnmappedFunctionalConceptError`.
-3. **Selectable Role Non-Empty Candidate Categories**:
-   - For discoverable/selectable functional assets (`PERSONAL_CUP_SAUCER_REGION`, `SHARED_REMOTE_REGION`, `driver`, `fastener`), `candidate_categories` must be non-empty. Otherwise fails closed with `MalformedVLMSpecificationError`.
-4. **Region Proposal Resolution**:
-   - Matches visually proposed region descriptions (`"upper wall cupboard"`) against domain region alias tables $\to$ `C2`.
-   - Local VLM IDs (e.g., `"c2"`) are completely ignored; resolution uses only natural language `label` and `visual_description`.
-   - The resulting $G_F$ `candidate_regions` contains **ONLY** successfully resolved VLM proposals. No fallback to the full canonical catalog is permitted.
-5. **Strict Validation & Zero Silent Dropping**:
-   - Fails closed on unmapped properties, relations, roles, or mismatched policies.
-   - All accepted `required_properties` directly become `FunctionalRole.unary_predicates` without hardcoded filtering.
-   - Attaches `vlm_canonicalization_version: "phase3_6a7_v1"` and full transformation provenance to $G_F$ metadata.
+1. **Role Canonicalization & Entity-Kind Compatibility**:
+   - Maps role function phrases to reviewed domain canonical roles:
+     - **Kitchen**: `coffee_container` (`OBJECT`), `soup_container` (`OBJECT`), `coffee_stirrer` (`OBJECT`), `soup_eating_utensil` (`OBJECT`), `coffee_source` (`OBJECT`), `water_source` (`OBJECT`).
+     - **Living Room**: `PERSONAL_CUP_SAUCER_REGION` (`REGION`), `SHARED_REMOTE_REGION` (`REGION`), `CUP_SAUCER_SET` (`OBJECT`), `REMOTE` (`OBJECT`), `SEATING_POSITION` (`FIXED_TARGET`), `SEATING_PAIR` (`FIXED_TARGET`).
+     - **Workshop**: `driver` (`OBJECT`), `fastener` (`OBJECT`), `repair_target` (`FIXED_TARGET`).
+   - Rejects mismatched `entity_kind` with `MalformedVLMSpecificationError`.
+
+2. **Living Task-Anchors vs Discoverable Support Regions**:
+   - Task anchors (`CUP_SAUCER_SET`, `REMOTE`, `SEATING_POSITION`, `SEATING_PAIR`) contain reviewed graph-anchor canonical categories matching production $G_O$ nodes, while preserving raw candidate categories and canonical graph categories.
+   - Discoverable support regions (`PERSONAL_CUP_SAUCER_REGION`, `SHARED_REMOTE_REGION`) preserve strictly VLM-derived open-vocabulary candidate categories.
+
+3. **Domain-Scoped Unary Checker Capabilities**:
+   - Living Room supports **ONLY** `PLANAR_SUPPORT`. Kitchen checkers (`OPEN_CAVITY`, `ELONGATED_OBJECT`) fail closed with `UnsupportedCheckerCapabilityError` if referenced in Living Room.
+   - All relations map strictly through `binary_relation_aliases`.
+
+4. **Strict Interaction Group Schema Validation**:
+   - `required_relations` is mandatory (`minItems=1`).
+   - Paired `context_role` and `context_relations`: if `context_role` is present, `context_relations` must be non-empty; if `context_role` is absent, `context_relations` cannot be specified.
+   - Zero silent dropping of interaction groups.
+
+5. **Mode-Safe Task-Interface Completeness Validation**:
+   - Before planning/grounding, `validate_canonical_task_interface` verifies that canonical $G_F$ contains all required roles, relations, and operation groups needed for downstream solvers.
+
+6. **Separate Provenance Layers**:
+   - `raw_vlm_response`: Exact decoded JSON before validation.
+   - `validated_vlm_specification`: Validated schema document.
+   - `canonicalization_trace`: Detailed mappings of role IDs, categories, and predicates.
 
 ---
 

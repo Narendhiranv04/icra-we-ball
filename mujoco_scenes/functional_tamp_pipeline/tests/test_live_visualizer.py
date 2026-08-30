@@ -102,10 +102,29 @@ def _make_canonical_test_gf() -> FunctionalRequirementGraph:
         semantic_categories=("screw",),
         binding_policy="DISTINCT",
     )
-    rel = FunctionalRelation(
+    role3 = FunctionalRole(
+        name="repair_target",
+        entity_kind="FIXED_TARGET",
+        count=1,
+        semantic_categories=("workbench_hole",),
+        binding_policy="DISTINCT",
+    )
+    rel1 = FunctionalRelation(
         subject_role="driver",
         predicate="COMPATIBLE_WITH",
         object_role="fastener",
+        expected=True,
+    )
+    rel2 = FunctionalRelation(
+        subject_role="driver",
+        predicate="REACHES_TARGET",
+        object_role="repair_target",
+        expected=True,
+    )
+    rel3 = FunctionalRelation(
+        subject_role="fastener",
+        predicate="COMPATIBLE_WITH_TARGET",
+        object_role="repair_target",
         expected=True,
     )
     op = OperationGroup(
@@ -122,8 +141,8 @@ def _make_canonical_test_gf() -> FunctionalRequirementGraph:
     return FunctionalRequirementGraph(
         domain="workshop",
         task_instruction="Fasten workpiece screw",
-        nodes={"driver": role1, "fastener": role2},
-        relations=(rel,),
+        nodes={"driver": role1, "fastener": role2, "repair_target": role3},
+        relations=(rel1, rel2, rel3),
         operation_groups=(op,),
         candidate_regions=("TOOL_CABINET", "DRAWER_LEFT"),
         region_ranking=("TOOL_CABINET", "DRAWER_LEFT"),
