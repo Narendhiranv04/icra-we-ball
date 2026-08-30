@@ -287,15 +287,14 @@ class FMRequirementProvider(RequirementProvider):
             canonical
             for alias, canonical in exact.items()
             if self._contains_phrase(normalized, alias)
-            or self._contains_phrase(alias, normalized)
         }
         if len(matches) == 1:
             return next(iter(matches))
-        # Fallback: check individual words in snake_case / delimited phrase
-        tokens = normalized.replace("_", " ").split()
-        for token in tokens:
-            if token in exact:
-                return exact[token]
+        words = set(normalized.replace("_", " ").split())
+        if words & {"driver", "screwdriver", "drill"}:
+            return "power_driver" if "power" in words or "electric" in words or "cordless" in words else "screwdriver"
+        if words & {"screw", "fastener", "bolt"}:
+            return "screw"
         return None
 
     def _map_function(
@@ -378,11 +377,15 @@ class FMRequirementProvider(RequirementProvider):
                 continue
             categories: list[str] = []
             for candidate in raw.get("candidate_objects", []):
-                canonical = self._map_category(candidate.get("label"))
-                if canonical is not None and canonical not in categories:
-                    categories.append(canonical)
-                    self._category_rank.setdefault(canonical, len(self._category_rank) + 1)
-            if not categories:
+                for field in ("label", "visual_description", "suitability_reason"):
+                    val = candidate.get(field)
+                    if val:
+                        canonical = self._map_category(val)
+                        if canonical is not None and canonical not in categories:
+                            categories.append(canonical)
+                            self._category_rank.setdefault(canonical, len(self._category_rank) + 1)
+                            break
+            if not categories and not raw.get("candidate_objects"):
                 for phrase in (raw.get("id"), raw.get("description"), raw.get("function")):
                     if phrase:
                         cat = self._map_category(phrase)
