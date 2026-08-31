@@ -20,7 +20,8 @@ from mujoco_scenes.functional_tamp_pipeline.errors import (
 from .workshop_phase1.fm_adapter import validate_kitchen_functional_specification
 from .task_witness import load_task_requirements
 
-VLM_CANONICALIZATION_VERSION = "phase3_6a7_2_1_v1"
+KITCHEN_VLM_CANONICALIZATION_VERSION = "phase3_p3e_1_v1"
+VLM_CANONICALIZATION_VERSION = KITCHEN_VLM_CANONICALIZATION_VERSION
 
 
 # Stable Kitchen Canonical Role Registry
@@ -100,6 +101,26 @@ BINARY_RELATION_ALIASES: dict[str, tuple[str, ...]] = {
         "extend to bottom", "contacts bottom", "contact bottom", "touches bottom", "touch bottom",
         "reaches container bottom", "reach container bottom", "reaches bottom of container",
         "reach bottom of container",
+    ),
+}
+
+# Reviewed semantic aliases for Kitchen interaction group functions
+KITCHEN_INTERACTION_GROUP_ALIASES: dict[str, tuple[str, ...]] = {
+    "coffee_stirring": (
+        "coffee stirring", "coffee_stirring", "stir coffee", "mix coffee",
+        "stir beverage", "stir drinks", "stir beverage in cups", "mix beverage",
+        "stir", "mix", "agitate coffee", "stirring", "mixing", "beverage stirring",
+        "coffee preparation", "prepare coffee",
+    ),
+    "soup_serving": (
+        "soup serving", "soup_serving", "serve soup", "provide utensil",
+        "provide eating utensil", "provide utensil for soup",
+        "provide a suitable eating utensil for each soup bowl",
+        "provide a suitable utensil for each soup bowl",
+        "provide eating utensil for each soup bowl",
+        "soup utensil provision", "eating utensil", "soup eating utensil",
+        "equip soup", "serve with soup", "soup utensil", "eating utensil provision",
+        "soup consumption",
     ),
 }
 
@@ -253,12 +274,12 @@ def map_kitchen_role_function(raw: dict[str, Any] | str) -> str | None:
     if (has_soup or has_bowl) and has_contain and not has_utensil and not has_source and not has_spoon:
         return "soup_container"
 
-    # 5. Registry dictionary match
+    # 5. Registry dictionary match (exact alias or alias contained as a phrase in norm, forward-only)
     matches = set()
     for role_name, aliases in KITCHEN_ROLE_REGISTRY.items():
         for alias in aliases:
             a_norm = _phrase(alias)
-            if a_norm == norm or _contains_phrase(norm, a_norm) or _contains_phrase(a_norm, norm):
+            if a_norm == norm or _contains_phrase(norm, a_norm):
                 matches.add(role_name)
                 break
     if len(matches) == 1:
@@ -277,7 +298,11 @@ def map_kitchen_role_function(raw: dict[str, Any] | str) -> str | None:
 
 
 def map_unary_property(text: str) -> str | None:
-    """Map natural language property to unique canonical predicate or None."""
+    """Map natural language property to unique canonical predicate or None.
+
+    Requires exact reviewed alias or reviewed alias occurring as a full phrase
+    inside the raw text. Reverse short-fragment containment is strictly disallowed.
+    """
     norm = _phrase(text)
     if not norm:
         return None
@@ -285,7 +310,7 @@ def map_unary_property(text: str) -> str | None:
     for pred, aliases in UNARY_PROPERTY_ALIASES.items():
         for alias in aliases:
             a_norm = _phrase(alias)
-            if a_norm == norm or _contains_phrase(norm, a_norm) or _contains_phrase(a_norm, norm):
+            if a_norm == norm or _contains_phrase(norm, a_norm):
                 matches.add(pred)
                 break
     if len(matches) == 1:
@@ -296,7 +321,11 @@ def map_unary_property(text: str) -> str | None:
 
 
 def map_binary_relation(text: str) -> str | None:
-    """Map natural language relation to unique canonical relation or None."""
+    """Map natural language relation to unique canonical relation or None.
+
+    Requires exact reviewed alias or reviewed alias occurring as a full phrase
+    inside the raw text. Reverse short-fragment containment is strictly disallowed.
+    """
     norm = _phrase(text)
     if not norm:
         return None
@@ -304,13 +333,38 @@ def map_binary_relation(text: str) -> str | None:
     for pred, aliases in BINARY_RELATION_ALIASES.items():
         for alias in aliases:
             a_norm = _phrase(alias)
-            if a_norm == norm or _contains_phrase(norm, a_norm) or _contains_phrase(a_norm, norm):
+            if a_norm == norm or _contains_phrase(norm, a_norm):
                 matches.add(pred)
                 break
     if len(matches) == 1:
         return next(iter(matches))
     if len(matches) > 1:
         raise AmbiguousCanonicalizationError(f"Ambiguous binary relation {text!r} matches multiple relations: {sorted(matches)}")
+    return None
+
+
+def map_kitchen_interaction_group_function(text: str) -> str | None:
+    """Map natural language operation group function to unique canonical group ID or None.
+
+    Requires exact reviewed alias or reviewed alias occurring as a full phrase
+    inside the raw text. Reverse short-fragment containment is strictly disallowed.
+    """
+    norm = _phrase(text)
+    if not norm:
+        return None
+    matches = set()
+    for group_id, aliases in KITCHEN_INTERACTION_GROUP_ALIASES.items():
+        for alias in aliases:
+            a_norm = _phrase(alias)
+            if a_norm == norm or _contains_phrase(norm, a_norm):
+                matches.add(group_id)
+                break
+    if len(matches) == 1:
+        return next(iter(matches))
+    if len(matches) > 1:
+        raise AmbiguousCanonicalizationError(
+            f"Ambiguous kitchen interaction group function {text!r} matches multiple groups: {sorted(matches)}"
+        )
     return None
 
 
@@ -388,7 +442,9 @@ def compile_vlm_functional_graph(
                 f"Kitchen functional role {raw_role_id!r} must have entity_kind 'OBJECT', got {raw_entity_kind!r}"
             )
 
-        binding_policy = str(row.get("binding_policy") or "DISTINCT")
+        if "binding_policy" not in row:
+            raise MalformedVLMSpecificationError(f"Role {raw_role_id!r} is missing binding_policy")
+        binding_policy = str(row["binding_policy"])
         if binding_policy not in {"DISTINCT", "REUSABLE", "SHARED"}:
             raise MalformedVLMSpecificationError(
                 f"Unknown binding_policy {binding_policy!r} for role {raw_role_id!r}"
@@ -461,8 +517,8 @@ def compile_vlm_functional_graph(
                 })
 
         cand_cats = row.get("candidate_categories", [])
-        if not cand_cats:
-            cand_cats = [canon_role_name]
+        if not isinstance(cand_cats, list) or not cand_cats:
+            raise MalformedVLMSpecificationError(f"Role {raw_role_id!r} must specify non-empty candidate_categories")
         preferences = []
         seen_canon = set()
         for cat in cand_cats:
@@ -603,14 +659,33 @@ def compile_vlm_functional_graph(
         tool_role = raw_role_to_canonical[raw_tool_role]
         target_role = raw_role_to_canonical[raw_target_role]
 
+        raw_fn = row.get("function")
+        if not raw_fn or not isinstance(raw_fn, str):
+            raise MalformedVLMSpecificationError(f"Operation group {raw_group_id!r} is missing non-empty 'function' field")
+
+        fn_group = map_kitchen_interaction_group_function(raw_fn)
+        if fn_group is None:
+            raise UnmappedFunctionalConceptError(
+                f"Operation group {raw_group_id!r} function {raw_fn!r} cannot be mapped to any active Kitchen "
+                f"operation group (available: {list(KITCHEN_INTERACTION_GROUP_ALIASES.keys())})"
+            )
+
         if tool_role == "coffee_stirrer" and target_role == "coffee_container":
-            canon_group_id = "coffee_stirring"
+            endpoint_group = "coffee_stirring"
         elif tool_role == "soup_eating_utensil" and target_role == "soup_container":
-            canon_group_id = "soup_serving"
+            endpoint_group = "soup_serving"
         else:
             raise MalformedVLMSpecificationError(
                 f"Unsupported Kitchen operation group tool/target pair: {tool_role!r} (raw {raw_tool_role!r}) -> {target_role!r} (raw {raw_target_role!r})"
             )
+
+        if fn_group != endpoint_group:
+            raise MalformedVLMSpecificationError(
+                f"Operation group {raw_group_id!r} function semantics {raw_fn!r} (maps to {fn_group!r}) "
+                f"contradicts tool/target endpoint pair ({tool_role!r} -> {target_role!r}, maps to {endpoint_group!r})"
+            )
+
+        canon_group_id = endpoint_group
 
         if canon_group_id in operations:
             existing_raw_gid = operations[canon_group_id]["raw_vlm_group_id"]
@@ -667,17 +742,15 @@ def compile_vlm_functional_graph(
                     "subject_role": tool_role, "predicate": mapped_op_rel, "object_role": target_role
                 })
 
-        raw_policy = row.get("usage_policy")
-        if raw_policy is None:
-            policy = "SEQUENTIAL_REUSE_ALLOWED"
-        else:
-            policy = str(raw_policy)
-            if policy not in {"SEQUENTIAL_REUSE_ALLOWED", "DEDICATED_PER_TARGET"}:
-                raise MalformedVLMSpecificationError(f"Operation group {raw_group_id!r} has unknown usage_policy: {policy!r}")
+        if "usage_policy" not in row:
+            raise MalformedVLMSpecificationError(f"Operation group {raw_group_id!r} missing usage_policy")
+        policy = str(row["usage_policy"])
+        if policy not in {"SEQUENTIAL_REUSE_ALLOWED", "DEDICATED_PER_TARGET"}:
+            raise MalformedVLMSpecificationError(f"Operation group {raw_group_id!r} has unknown usage_policy: {policy!r}")
 
         operations[canon_group_id] = {
             "raw_vlm_group_id": raw_group_id,
-            "function": str(row.get("function", "")),
+            "function": str(raw_fn),
             "tool_role": tool_role,
             "target_role": target_role,
             "required_target_count": req_target_count,
@@ -695,6 +768,9 @@ def compile_vlm_functional_graph(
         concept_accounting["operation_groups"].append({
             "raw_group_id": raw_group_id,
             "canonical_group": canon_group_id,
+            "raw_function": str(raw_fn),
+            "canonical_function": fn_group,
+            "function_mapping_status": "PRESERVED",
             "tool_role": tool_role,
             "target_role": target_role,
             "required_target_count": req_target_count,
@@ -760,7 +836,7 @@ def compile_vlm_functional_graph(
     }
     trace = {
         "schema_version": 2,
-        "vlm_canonicalization_version": VLM_CANONICALIZATION_VERSION,
+        "vlm_canonicalization_version": KITCHEN_VLM_CANONICALIZATION_VERSION,
         "transformation": "DETERMINISTIC_NATURAL_LANGUAGE_CANONICALIZATION",
         "raw_roles_preserved": raw_role_ids,
         "raw_role_to_canonical": raw_role_to_canonical,
@@ -777,3 +853,4 @@ def compile_vlm_functional_graph(
         "detector_vocabulary": detector_vocabulary,
     }
     return contract, {"object": detector_vocabulary}, trace
+

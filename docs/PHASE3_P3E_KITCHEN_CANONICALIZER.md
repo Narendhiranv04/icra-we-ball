@@ -94,6 +94,39 @@ Kitchen K1 GT control path was re-verified end-to-end:
 
 ## 7. Comprehensive Test Suite Results
 
-- `mujoco_scenes/tests/test_kitchen_vlm_functional_graph.py`: **25 / 25 PASSED**
+- `mujoco_scenes/tests/test_kitchen_vlm_functional_graph.py`: **33 / 33 PASSED**
 - `mujoco_scenes/functional_tamp_pipeline/tests/`: **255 / 255 PASSED**
-- Total Test Suite: **280 / 280 PASSED (100%)**
+- Total Test Suite: **288 / 288 PASSED (100%)**
+
+---
+
+## 8. Pass P3-E.1: Kitchen Lexical Precision & Provenance Closure
+
+**Pass ID**: `P3-E.1`  
+**Commit Type**: `Pass 3.7G.1 (P3-E.1): Close Kitchen lexical and provenance gaps`  
+**Canonicalizer Version**: `phase3_p3e_1_v1` (bumped from legacy `phase3_6a7_2_1_v1`)
+
+### Accomplished Improvements:
+1. **Eliminated Reverse Short-Fragment Relation Matching**:
+   - `map_binary_relation()` now requires exact reviewed alias or reviewed alias occurring as a full phrase inside a richer raw sentence (`a_norm == norm or _contains_phrase(norm, a_norm)`).
+   - Reverse substring matching (`_contains_phrase(a_norm, norm)`) removed.
+   - Verified that short fragments (`"fit"`, `"inside"`, `"bottom"`, `"reach"`) return `None` rather than fabricating binary predicates.
+2. **Eliminated Reverse Short-Fragment Property Matching**:
+   - `map_unary_property()` now requires exact reviewed alias or forward full-phrase occurrence.
+   - Fragments like `"open"` and `"shape"` return `None` rather than matching `OPEN_CAVITY` or `ELONGATED_OBJECT`.
+3. **Audited & Tightened Role-Alias Matching**:
+   - Removed reverse containment from `map_kitchen_role_function()` dictionary stage.
+   - Generic isolated words (`"serving"`, `"vessel"`, `"material"`, `"individual"`) fail closed with `None`.
+4. **Validated Raw Interaction-Group Function Semantics**:
+   - Introduced reviewed `KITCHEN_INTERACTION_GROUP_ALIASES` mapping for `coffee_stirring` and `soup_serving`.
+   - Requires both raw function phrase and endpoint pairs to agree on canonical group identity.
+   - Contradictory functions (e.g. coffee stirring function with soup utensils/bowls) and unmapped functions fail closed with structured exceptions.
+5. **Full Concept Accounting Coverage**:
+   - Every operation group trace entry records `raw_function`, `canonical_function`, and `function_mapping_status: "PRESERVED"`.
+   - Full 1:1 coverage confirmed on ideal `kitchen_K1.json` fixture for all roles, properties, relations, and operation groups.
+6. **Removed Dead Self-Repair Fallbacks**:
+   - Compiler strictly consumes required schema fields (`binding_policy`, `candidate_categories`, `usage_policy`, `required_relations`) without fallback defaults.
+7. **Provenance & Version Isolation**:
+   - Kitchen compiler version bumped to `phase3_p3e_1_v1`.
+   - `VLMSpecProvider._kitchen` attaches `phase3_p3e_1_v1` to graph metadata matching trace version, while Living Room and Workshop remain unaffected.
+

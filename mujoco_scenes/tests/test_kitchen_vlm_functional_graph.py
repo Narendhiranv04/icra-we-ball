@@ -14,6 +14,7 @@ from mujoco_scenes.kitchen_vlm_functional_graph import (
     resolve_kitchen_region_proposal,
     map_unary_property,
     map_binary_relation,
+    map_kitchen_role_function,
 )
 from mujoco_scenes.workshop_phase1.fm_adapter import (
     FMAdapter,
@@ -483,7 +484,7 @@ def test_unsupported_operation_group_pair_fails_closed():
     spec = natural_kitchen_spec()
     spec["interaction_groups"].append({
         "id": "unsupported_group",
-        "function": "pour water into coffee jar",
+        "function": "stir coffee",
         "tool_role": "water_source",
         "target_role": "coffee_source",
         "required_target_count": 1,
@@ -614,4 +615,127 @@ def test_cardinality_and_reusable_policy_preservation():
     assert "concept_accounting" in trace
     assert trace["concept_accounting"]["roles"]["drink_receptacle"]["status"] == "PRESERVED"
     assert trace["concept_accounting"]["operation_groups"][0]["status"] == "PRESERVED"
+
+
+# ============================================================
+# P3-E.1 Lexical Precision, Function Semantics & Provenance Tests
+# ============================================================
+
+
+def test_binary_relation_short_fragments_fail_closed():
+    """P3-E.1 Step 1: Binary relation reverse short fragments must return None, not match longer aliases."""
+    assert map_binary_relation("fit") is None
+    assert map_binary_relation("inside") is None
+    assert map_binary_relation("bottom") is None
+    assert map_binary_relation("reach") is None
+
+    # Valid richer phrases must continue to map accurately
+    assert map_binary_relation("the utensil must fit inside the vessel") == "INSERTABLE_IN"
+    assert map_binary_relation("the spoon must reach the bottom of the bowl") == "REACHES_BOTTOM"
+
+
+def test_unary_property_short_fragments_fail_closed():
+    """P3-E.1 Step 2: Unary property reverse short fragments must return None."""
+    assert map_unary_property("open") is None
+    assert map_unary_property("shape") is None
+
+    # Valid richer phrases must continue to map accurately
+    assert map_unary_property("must have an open cavity") == "OPEN_CAVITY"
+    assert map_unary_property("must have an elongated shape") == "ELONGATED_OBJECT"
+
+
+def test_role_alias_short_fragments_fail_closed():
+    """P3-E.1 Step 3: Generic isolated words must not match a specific role merely via reverse containment."""
+    assert map_kitchen_role_function("serving") is None
+    assert map_kitchen_role_function("vessel") is None
+    assert map_kitchen_role_function("material") is None
+    assert map_kitchen_role_function("individual") is None
+
+
+def test_interaction_group_function_validation_success():
+    """P3-E.1 Step 4A & 4B: Valid interaction group function semantics succeed."""
+    spec = natural_kitchen_spec()
+    contract, _, trace = compile_vlm_functional_graph(
+        spec, task_instruction="Task", observable_regions=REGIONS
+    )
+    assert "coffee_stirring" in contract["operation_groups"]
+    assert "soup_serving" in contract["operation_groups"]
+
+
+def test_interaction_group_unmapped_function_fails_closed():
+    """P3-E.1 Step 4C: Unmapped interaction group function fails closed."""
+    from mujoco_scenes.functional_tamp_pipeline.errors import UnmappedFunctionalConceptError
+
+    spec = natural_kitchen_spec()
+    spec["interaction_groups"][0]["function"] = "hammer a nail into the table"
+
+    with pytest.raises(UnmappedFunctionalConceptError, match="cannot be mapped to any active Kitchen operation group"):
+        compile_vlm_functional_graph(spec, task_instruction="Task", observable_regions=REGIONS)
+
+
+def test_interaction_group_contradictory_function_fails_closed():
+    """P3-E.1 Step 4D: Contradiction between group function semantics and tool/target endpoints fails closed."""
+    from mujoco_scenes.functional_tamp_pipeline.errors import MalformedVLMSpecificationError
+
+    spec = natural_kitchen_spec()
+    # Coffee stirring function assigned to soup spoon -> soup bowl endpoints
+    spec["interaction_groups"][1]["function"] = "stir coffee thoroughly"
+
+    with pytest.raises(MalformedVLMSpecificationError, match="contradicts tool/target endpoint pair"):
+        compile_vlm_functional_graph(spec, task_instruction="Task", observable_regions=REGIONS)
+
+
+def test_concept_accounting_complete_coverage_on_ideal_k1():
+    """P3-E.1 Step 5 & Step 8: Full concept accounting coverage on ideal K1 fixture."""
+    from mujoco_scenes.functional_tamp_pipeline.tests.test_ideal_fixtures import FIXTURES_DIR
+
+    k1_path = FIXTURES_DIR / "kitchen_K1.json"
+    k1_doc = json.loads(k1_path.read_text(encoding="utf-8"))
+
+    contract, _, trace = compile_vlm_functional_graph(
+        k1_doc, task_instruction="Task", observable_regions=REGIONS
+    )
+
+    accounting = trace["concept_accounting"]
+    # 1. Exact raw role count accounting
+    assert len(accounting["roles"]) == len(k1_doc["functional_roles"])
+    for r in k1_doc["functional_roles"]:
+        assert r["id"] in accounting["roles"]
+        assert accounting["roles"][r["id"]]["status"] == "PRESERVED"
+
+    # 2. Exact raw property count accounting
+    total_raw_props = sum(len(r.get("required_properties", [])) for r in k1_doc["functional_roles"])
+    assert len(accounting["properties"]) == total_raw_props
+
+    # 3. Exact raw relation count accounting
+    assert len(accounting["relations"]) == len(k1_doc["functional_relations"])
+
+    # 4. Exact raw operation group count and function accounting
+    assert len(accounting["operation_groups"]) == len(k1_doc["interaction_groups"])
+    for op_row in accounting["operation_groups"]:
+        assert op_row["status"] == "PRESERVED"
+        assert op_row["function_mapping_status"] == "PRESERVED"
+        assert bool(op_row["raw_function"])
+        assert bool(op_row["canonical_function"])
+
+
+def test_kitchen_canonicalizer_version_provenance():
+    """P3-E.1 Step 7: Kitchen canonicalizer version is bumped and matches metadata trace."""
+    from mujoco_scenes.kitchen_vlm_functional_graph import KITCHEN_VLM_CANONICALIZATION_VERSION
+    from mujoco_scenes.functional_tamp_pipeline.tests.test_ideal_fixtures import MockFMAdapter, FIXTURES_DIR
+
+    assert KITCHEN_VLM_CANONICALIZATION_VERSION == "phase3_p3e_1_v1"
+    assert KITCHEN_VLM_CANONICALIZATION_VERSION != "phase3_6a7_2_1_v1"
+
+    k1_doc = json.loads((FIXTURES_DIR / "kitchen_K1.json").read_text(encoding="utf-8"))
+    adapter = MockFMAdapter(k1_doc)
+    gf = VLMSpecProvider._kitchen("Task", [], adapter=adapter)
+
+    assert gf.metadata["vlm_canonicalization_version"] == "phase3_p3e_1_v1"
+    assert gf.metadata["canonicalization_trace"]["vlm_canonicalization_version"] == "phase3_p3e_1_v1"
+    assert (
+        gf.metadata["canonicalization_trace"]["vlm_canonicalization_version"]
+        == gf.metadata["vlm_canonicalization_version"]
+    )
+
 

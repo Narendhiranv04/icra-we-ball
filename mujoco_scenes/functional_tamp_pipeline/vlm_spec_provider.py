@@ -241,7 +241,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
             source="VLM_FUNCTIONAL_SPEC",
             raw_requirements=(contract,),
             metadata={
-                "vlm_canonicalization_version": VLM_CANONICALIZATION_VERSION,
+                "vlm_canonicalization_version": trace.get("vlm_canonicalization_version", VLM_CANONICALIZATION_VERSION),
                 "object_vocabulary": object_vocab,
                 "raw_vlm_response": raw_resp,
                 "validated_vlm_specification": valid_spec,
