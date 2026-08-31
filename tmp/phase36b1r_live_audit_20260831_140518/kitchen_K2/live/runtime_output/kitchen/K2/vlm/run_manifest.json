@@ -1,0 +1,33 @@
+{
+  "artifacts": {
+    "result": "result.json"
+  },
+  "domain": "kitchen",
+  "execution_state": "planning_only",
+  "exploration_actuation": "direct_sim_articulation",
+  "failure_category": "UNMAPPED_FUNCTIONAL_CONCEPT",
+  "failure_reason": "VLM role 'role_0' with function 'COFFEE_PREPARATION' cannot be mapped to any reviewed Kitchen canonical role",
+  "finished_at_utc": "2026-08-31T08:36:09.390696+00:00",
+  "git_commit": "a0149206eca005d5f7026986d499c9236d986031",
+  "git_dirty": false,
+  "internal_variant": "F1_HIDDEN_COFFEE_VESSEL",
+  "observer_errors": [],
+  "pipeline_runtime_seconds": 48.0062,
+  "provider_model": "qwen35-9b",
+  "provider_region_ranking": [],
+  "region_order_used": [],
+  "schema_version": 1,
+  "search_order_source_effective": null,
+  "search_order_source_requested": "provider",
+  "search_seed_effective": null,
+  "search_seed_requested": null,
+  "spec_acquisition": "live_provider",
+  "spec_mode": "vlm",
+  "spec_provider_source": null,
+  "specification_input": null,
+  "specification_sha256": null,
+  "started_at_utc": "2026-08-31T08:35:21.384469+00:00",
+  "terminal_status": "VLM_SPEC_FAILED",
+  "variant": "K2",
+  "visualization_requested": false
+}

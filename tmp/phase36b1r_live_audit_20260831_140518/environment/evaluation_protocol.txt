@@ -1,0 +1,7 @@
+PASS 3.6B.1R Frozen-SHA Connected Representative Live VLM Audit Protocol:
+- Runtime Code SHA: a0149206eca005d5f7026986d499c9236d986031 (detached worktree)
+- Exactly 1 live VLM generation attempt per case (Kitchen K2, Living Room L1, Workshop W1)
+- Exact RGB inputs persisted under inputs/ and passed via --observation-image
+- Full runtime output tree preserved under live/runtime_output/
+- Offline GT reference evaluated with evaluate_gf_against_reference()
+- Provider and random replays executed from exact saved G_F (specification SHA matched)

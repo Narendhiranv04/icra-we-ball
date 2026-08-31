@@ -1,0 +1,60 @@
+{
+  "model": "qwen35-9b",
+  "call_kind": "task_requirements",
+  "sanitized_request": {
+    "system_prompt": "You are a vision-language functional-requirement specification generator.\n\nReturn only the requested JSON object. Do not produce an action sequence.\n\nRules:\n- Infer the complete set of physical or spatial functional roles from the task\n  instruction and initial multi-view RGB images yourself. The user will not supply\n  expected roles, functions, object categories, or properties.\n- Create functional roles for scene assets whose identity, suitability, or\n  functional capability must be discovered or selected to accomplish the task.\n  Objects explicitly specified by the task as payloads or fixed contextual\n  entities need not be reintroduced as selectable functional roles unless their\n  functional suitability itself must be discovered.\n- Use SHORT ATOMIC PHRASES for all functions, properties, and relations:\n  - Use a short atomic function phrase for each role function.\n  - Use a short atomic unary-property phrase for each required property.\n  - Use a short atomic binary-relation phrase for each functional relation.\n  Do not write long narrative sentences. Do not use complex compound clauses.\n- When a role must be paired independently with multiple task targets or\n  contextual references, represent that dependency using an interaction group\n  rather than relying on an unconstrained many-to-many relation.\n- Set `entity_kind` to:\n  - OBJECT: a selectable/manipulable physical item.\n  - REGION: a selectable support surface, placement area, or spatial destination.\n  - FIXED_TARGET: a non-selectable contextual reference or fixed target feature that participates in relations.\n- Set `binding_policy` to:\n  - DISTINCT: separate simultaneous physical items are required.\n  - REUSABLE: one physical item may be reused sequentially across targets.\n  - SHARED: one physical region/entity intentionally serves multiple items/users.\n- `candidate_categories`: list open-vocabulary semantic search phrases that could satisfy the role, even if nothing is currently visible.\n- `visible_candidates`: list visually apparent items/regions in the initial RGB views.\n  This array may be empty ([]).\n- `required_properties`: list UNARY-ONLY physical properties of this single role.\n  Never place binary relations or compatibility statements here.\n- `functional_relations`: list explicit role-to-role relations using `subject_role`, `relation`, and `object_role`.\n  Both subject_role and object_role must reference declared role IDs.\n- `interaction_groups`: list structured interaction groups with tool_role, target_role, required_target_count, usage_policy, required_relations, and optional context_role/context_relations.\n- `inspectable_regions`: propose visible closed/storage regions in the initial images that could be inspected if required items are missing.\n- `inspection_order`: rank the proposed inspectable region IDs.\n- Status semantics:\n  - `SUPPORTED`: task can be represented with functional roles and relations. `functional_roles` must be non-empty, `unsupported_reason` must be empty (\"\").\n  - `UNSUPPORTED`: use only when the task itself cannot be represented by this abstraction. `functional_roles`, `functional_relations`, `interaction_groups`, `inspectable_regions`, `inspection_order` must be empty ([]), and `unsupported_reason` must be a non-empty explanation.\n  - Partial observability, missing visible candidates, unmeasured continuous geometry, or needing inspection/search are NOT reasons for UNSUPPORTED.\n",
+    "user_prompt": {
+      "task_instruction": "Prepare the living room for two people watching television: put one cup and saucer on each personal support and the remote on a shared support.",
+      "request": "Using the task goal and initial-observation images, infer the functional roles, describe the qualitative properties each role requires, and rank any visually plausible candidate objects or regions for each role. Decide all role and property content yourself."
+    },
+    "schema_name": "functional_specification",
+    "num_images": 5,
+    "image_metadata": [
+      {
+        "path": "/home/naren/RA_iiith/tmp/phase36b1r_live_audit_20260831_140518/living_L1/inputs/l2_camera_left.png",
+        "mime_type": "image/png",
+        "bytes": 213485,
+        "sha256": "ad811d239678709197095826abe1f0a9d9478ae4a240c3195039d7dc12ad122c"
+      },
+      {
+        "path": "/home/naren/RA_iiith/tmp/phase36b1r_live_audit_20260831_140518/living_L1/inputs/l2_camera_right.png",
+        "mime_type": "image/png",
+        "bytes": 209336,
+        "sha256": "01ef7cae3cf8bd2f40b9437d5ee4061546ae9be5e35686b9480864423b6a9c0a"
+      },
+      {
+        "path": "/home/naren/RA_iiith/tmp/phase36b1r_live_audit_20260831_140518/living_L1/inputs/l2_camera_top.png",
+        "mime_type": "image/png",
+        "bytes": 229310,
+        "sha256": "d5bef930a52c856f0dae2af968badced468cb43e08d8218f6335b4de8ba74b56"
+      },
+      {
+        "path": "/home/naren/RA_iiith/tmp/phase36b1r_live_audit_20260831_140518/living_L1/inputs/l2_camera_front.png",
+        "mime_type": "image/png",
+        "bytes": 650783,
+        "sha256": "1133571efbac4d166c10e09cde81b8b4783241619e5c3714d8b8992b64df0688"
+      },
+      {
+        "path": "/home/naren/RA_iiith/tmp/phase36b1r_live_audit_20260831_140518/living_L1/inputs/l2_camera_close.png",
+        "mime_type": "image/png",
+        "bytes": 513972,
+        "sha256": "a68e6a9ac037f20c13bcaf88920155c507243274624ae25ae601864bad4584e4"
+      }
+    ]
+  },
+  "finish_reason": "stop",
+  "usage": {
+    "prompt_tokens": 6800,
+    "total_tokens": 8178,
+    "completion_tokens": 1378,
+    "prompt_tokens_details": null,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    }
+  },
+  "content_length_chars": 4654,
+  "content_sha256": "dfbdd641b8004424c1236b762545361a811b9b805c353224d7df0e1241182f93",
+  "content": "{\n  \"status\": \"SUPPORTED\",\n  \"task_summary\": \"Place one cup and saucer on each personal support, and place the remote on a shared support.\",\n  \"functional_roles\": [\n    {\n      \"id\": \"role_cup\",\n      \"entity_kind\": \"OBJECT\",\n      \"function\": \"hold_liquid\",\n      \"description\": \"A vessel for holding liquid, to be placed on a personal support.\",\n      \"required_count\": 2,\n      \"binding_policy\": \"DISTINCT\"\n    , \n    \"candidate_categories\": [\n      \"cup\",\n      \"mug\",\n      \"glass\",\n      \"tumbler\"\n    ],\n    \"visible_candidates\": [\n      {\"label\": \"red_cup_left\", \"visual_description\": \"Red mug on the large desk\"},\n      {\"label\": \"red_cup_right\", \"visual_description\": \"Red mug on the large desk\"}\n    ]\n  , \n    \"required_properties\": [\n      \"is_rigid\",\n      \"has_open_top\",\n      \"is_portable\"\n    ]\n  },\n  {\n    \"id\": \"role_saucer\",\n    \"entity_kind\": \"OBJECT\",\n    \"function\": \"support_drink\",\n    \"description\": \"A flat dish to support a cup, to be placed on a personal support.\",\n    \"required_count\": 2,\n    \"binding_policy\": \"SHARED\"\n  , \n    \"candidate_categories\": [\n      \"saucer\",\n      \"plate\",\n      \"dish\"\n    ],\n    \"visible_candidates\": [\n      {\"label\": \"white_plate_left\", \"visual_description\": \"White plate on the large desk\"},\n      {\"label\": \"white_plate_right\", \"visual_description\": \"White plate on the large desk\"}\n    ]\n  , \n    \"required_properties\": [\n      \"is_flat\",\n      \"is_rigid\",\n      \"has_horizontal_surface\"\n    ]\n  },\n  {\n    \"id\": \"role_remote\",\n    \"entity_kind\": \"OBJECT\",\n    \"function\": \"control_tv\",\n    \"description\": \"A device to control the television, to be placed on a shared support.\",\n    \"required_count\": 1,\n    \"binding_policy\": \"REUSABLE\"\n  , \n    \"candidate_categories\": [\n      \"remote_control\",\n      \"tv_remote\",\n      \"electronic_controller\"\n    ],\n    \"visible_candidates\": [\n      {\"label\": \"black_remote\", \"visual_description\": \"Black remote on the large desk\"}\n    ]\n  , \n    \"required_properties\": [\n      \"is_small\",\n      \"is_handheld\",\n      \"has_buttons\"\n    ]\n  },\n  {\n    \"id\": \"role_personal_support\",\n    \"entity_kind\": \"REGION\",\n    \"function\": \"hold_items_for_person\",\n    \"description\": \"A surface next to a chair intended for personal items.\",\n    \"required_count\": 2,\n    \"binding_policy\": \"DISTINCT\"\n  , \n    \"candidate_categories\": [\n      \"side_table\",\n      \"end_table\",\n      \"nightstand\",\n      \"armrest\"\n    ],\n    \"visible_candidates\": []\n  , \n    \"required_properties\": [\n      \"has_horizontal_surface\",\n      \"is_near_seat\"\n    ]\n  },\n  {\n    \"id\": \"role_shared_support\",\n    \"entity_kind\": \"REGION\",\n    \"function\": \"hold_common_items\",\n    \"description\": \"A central or accessible surface for shared items like remotes.\",\n    \"required_count\": 1,\n    \"binding_policy\": \"SHARED\"\n  , \n    \"candidate_categories\": [\n      \"coffee_table\",\n      \"center_table\",\n      \"console_table\",\n      \"desk\"\n    ],\n    \"visible_candidates\": [\n      {\"label\": \"large_desk\", \"visual_description\": \"Large wooden desk in foreground\"}\n    ]\n  , \n    \"required_properties\": [\n      \"has_horizontal_surface\",\n      \"is_accessible\"\n    ]\n  }\n],\n  \"functional_relations\": [\n    {\n      \"subject_role\": \"role_cup\",\n      \"relation\": \"placed_on\",\n      \"object_role\": \"role_personal_support\"\n    },\n    {\n      \"subject_role\": \"role_saucer\",\n      \"relation\": \"placed_on\",\n      \"object_role\": \"role_personal_support\"\n    },\n    {\n      \"subject_role\": \"role_remote\",\n      \"relation\": \"placed_on\",\n      \"object_role\": \"role_shared_support\"\n    }\n  ],\n  \"interaction_groups\": [\n    {\n      \"id\": \"group_setup_one\",\n      \"function\": \"setup_one_set\",\n      \"tool_role\": \"role_cup\",\n      \"target_role\": \"role_personal_support\",\n      \"required_target_count\": 1,\n      \"usage_policy\": \"SEQUENTIAL_REUSE_ALLOWED\",\n      \"required_relations\": [\n        \"role_cup-0_placed_on_role_personal_support-0\"\n      ]\n    },\n    {\n      \"id\": \"group_setup_two\",\n      \"function\": \"setup_second_set\",\n      \"tool_role\": \"role_saucer\",\n      \"target_role\": \"role_personal_support\",\n      \"required_target_count\": 1,\n      \"usage_policy\": \"SEQUENTIAL_REUSE_ALLOWED\",\n      \"required_relations\": [\n        \"role_saucer-0_placed_on_role_personal_support-0\"\n      ]\n    },\n    {\n      \"id\": \"group_place_remote\",\n      \"function\": \"place_remote\",\n      \"tool_role\": \"role_remote\",\n      \"target_role\": \"role_shared_support\",\n      \"required_target_count\": 1,\n      \"usage_policy\": \"SEQUENTIAL_REUSE_ALLOWED\",\n      \"required_relations\": [\n        \"role_remote-0_placed_on_role_shared_support-0\"\n      ]\n    }\n  ],\n  \"inspectable_regions\": [],\n  \"inspection_order\": []\n,\n  \"unsupported_reason\": \"\"\n}",
+  "json_parse_success": true,
+  "parse_error": null
+}

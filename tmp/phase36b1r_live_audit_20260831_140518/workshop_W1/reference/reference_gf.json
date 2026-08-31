@@ -1,0 +1,230 @@
+{
+  "domain": "workshop",
+  "task_instruction": "Find a compatible screw and driver, insert the screw tip-down into the workbench repair hole, drive it fully, and return the driver safely.",
+  "roles": [
+    {
+      "name": "driver",
+      "entity_kind": "OBJECT",
+      "count": 1,
+      "min_count": null,
+      "max_count": null,
+      "preference": null,
+      "semantic_categories": [
+        "screwdriver",
+        "power_driver",
+        "power_drill",
+        "Phillips screwdriver",
+        "cordless power drill"
+      ],
+      "unary_predicates": [
+        "CAN_DRIVE_SCREW"
+      ],
+      "numeric_constraints": [],
+      "binding_policy": "DISTINCT",
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC",
+      "description": "Tool capable of driving a screw into the workpiece",
+      "semantic_hints": [],
+      "distinct": true,
+      "reusable": false,
+      "shared": false
+    },
+    {
+      "name": "fastener",
+      "entity_kind": "OBJECT",
+      "count": 1,
+      "min_count": null,
+      "max_count": null,
+      "preference": null,
+      "semantic_categories": [
+        "screw",
+        "Phillips screw",
+        "Phillips head screw"
+      ],
+      "unary_predicates": [
+        "CAN_FASTEN"
+      ],
+      "numeric_constraints": [],
+      "binding_policy": "DISTINCT",
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC",
+      "description": "Fastener capable of threading into the workpiece hole",
+      "semantic_hints": [],
+      "distinct": true,
+      "reusable": false,
+      "shared": false
+    },
+    {
+      "name": "repair_target",
+      "entity_kind": "FIXED_TARGET",
+      "count": 1,
+      "min_count": null,
+      "max_count": null,
+      "preference": null,
+      "semantic_categories": [
+        "repair_target",
+        "workshop_frame_joint",
+        "recess"
+      ],
+      "unary_predicates": [],
+      "numeric_constraints": [],
+      "binding_policy": "DISTINCT",
+      "verification_mode": "GEOMETRIC_ONLY",
+      "description": "Target repair hole on the workpiece",
+      "semantic_hints": [],
+      "distinct": true,
+      "reusable": false,
+      "shared": false
+    }
+  ],
+  "nodes": {
+    "driver": {
+      "name": "driver",
+      "entity_kind": "OBJECT",
+      "count": 1,
+      "min_count": null,
+      "max_count": null,
+      "preference": null,
+      "semantic_categories": [
+        "screwdriver",
+        "power_driver",
+        "power_drill",
+        "Phillips screwdriver",
+        "cordless power drill"
+      ],
+      "unary_predicates": [
+        "CAN_DRIVE_SCREW"
+      ],
+      "numeric_constraints": [],
+      "binding_policy": "DISTINCT",
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC",
+      "description": "Tool capable of driving a screw into the workpiece",
+      "semantic_hints": [],
+      "distinct": true,
+      "reusable": false,
+      "shared": false
+    },
+    "fastener": {
+      "name": "fastener",
+      "entity_kind": "OBJECT",
+      "count": 1,
+      "min_count": null,
+      "max_count": null,
+      "preference": null,
+      "semantic_categories": [
+        "screw",
+        "Phillips screw",
+        "Phillips head screw"
+      ],
+      "unary_predicates": [
+        "CAN_FASTEN"
+      ],
+      "numeric_constraints": [],
+      "binding_policy": "DISTINCT",
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC",
+      "description": "Fastener capable of threading into the workpiece hole",
+      "semantic_hints": [],
+      "distinct": true,
+      "reusable": false,
+      "shared": false
+    },
+    "repair_target": {
+      "name": "repair_target",
+      "entity_kind": "FIXED_TARGET",
+      "count": 1,
+      "min_count": null,
+      "max_count": null,
+      "preference": null,
+      "semantic_categories": [
+        "repair_target",
+        "workshop_frame_joint",
+        "recess"
+      ],
+      "unary_predicates": [],
+      "numeric_constraints": [],
+      "binding_policy": "DISTINCT",
+      "verification_mode": "GEOMETRIC_ONLY",
+      "description": "Target repair hole on the workpiece",
+      "semantic_hints": [],
+      "distinct": true,
+      "reusable": false,
+      "shared": false
+    }
+  },
+  "relations": [
+    {
+      "subject_role": "driver",
+      "predicate": "COMPATIBLE_WITH",
+      "object_role": "fastener",
+      "expected": true
+    },
+    {
+      "subject_role": "driver",
+      "predicate": "REACHES_TARGET",
+      "object_role": "repair_target",
+      "expected": true
+    },
+    {
+      "subject_role": "fastener",
+      "predicate": "COMPATIBLE_WITH_TARGET",
+      "object_role": "repair_target",
+      "expected": true
+    }
+  ],
+  "operation_groups": [],
+  "cross_group_reuse_allowed": true,
+  "detector_vocabulary": [
+    "screwdriver",
+    "power drill",
+    "screw",
+    "wooden hammer",
+    "Phillips screwdriver",
+    "cordless power drill",
+    "Phillips screw",
+    "Phillips head screw"
+  ],
+  "candidate_regions": [
+    "LEFT_DRAWER",
+    "RIGHT_DRAWER",
+    "TOOL_CABINET"
+  ],
+  "region_ranking": [
+    "LEFT_DRAWER",
+    "RIGHT_DRAWER",
+    "TOOL_CABINET"
+  ],
+  "source": "GT_FUNCTIONAL_SPEC_ONLY",
+  "metadata": {
+    "detector_label_to_canonical": {
+      "screwdriver": "screwdriver",
+      "power drill": "power_driver",
+      "screw": "screw",
+      "wooden hammer": "hammer"
+    },
+    "alias_to_canonical": {
+      "screwdriver": "screwdriver",
+      "hand screwdriver": "screwdriver",
+      "manual screwdriver": "screwdriver",
+      "phillips screwdriver": "screwdriver",
+      "cross-head screwdriver": "screwdriver",
+      "power_driver": "power_driver",
+      "power drill": "power_driver",
+      "powered screwdriver": "power_driver",
+      "electric screwdriver": "power_driver",
+      "cordless screwdriver": "power_driver",
+      "cordless power drill": "power_driver",
+      "cordless drill": "power_driver",
+      "power driver": "power_driver",
+      "drill driver": "power_driver",
+      "screw": "screw",
+      "fastener": "screw",
+      "machine screw": "screw",
+      "threaded screw": "screw",
+      "phillips screw": "screw",
+      "cross-head screw": "screw",
+      "phillips head screw": "screw",
+      "hammer": "hammer",
+      "wooden hammer": "hammer",
+      "mallet": "hammer",
+      "wood mallet": "hammer"
+    }
+  }
+}

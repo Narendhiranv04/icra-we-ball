@@ -1,0 +1,41 @@
+{
+  "request_attempts_total": 3,
+  "responses_received_total": 3,
+  "model": "qwen35-9b",
+  "endpoint": "http://127.0.0.1:18000/v1",
+  "calls": [
+    {
+      "case": "kitchen_K2",
+      "domain": "kitchen",
+      "request_attempts": 1,
+      "responses_received": 1,
+      "diagnostic_file": "kitchen_K2/live/fm_diagnostics/fm_call_001.json",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "content_sha256": "17d18085b627310588f880960bccef8e5d637f4ff745b7e99ee545f60d1df76e",
+      "json_parse_success": true
+    },
+    {
+      "case": "living_L1",
+      "domain": "living_room",
+      "request_attempts": 1,
+      "responses_received": 1,
+      "diagnostic_file": "living_L1/live/fm_diagnostics/fm_call_001.json",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "content_sha256": "dfbdd641b8004424c1236b762545361a811b9b805c353224d7df0e1241182f93",
+      "json_parse_success": true
+    },
+    {
+      "case": "workshop_W1",
+      "domain": "workshop",
+      "request_attempts": 1,
+      "responses_received": 1,
+      "diagnostic_file": "workshop_W1/live/fm_diagnostics/fm_call_001.json",
+      "model": "qwen35-9b",
+      "finish_reason": "stop",
+      "content_sha256": "b0763fc4dcf0b489b991998d80460b4c501d0bb320041248f6aebe830271db17",
+      "json_parse_success": true
+    }
+  ]
+}

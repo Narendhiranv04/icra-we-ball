@@ -1,0 +1,430 @@
+{
+  "domain": "kitchen",
+  "task_instruction": "Prepare and serve coffee and soup for two people using the available kitchenware. Stir both coffees and provide each soup bowl with a suitable utensil. Search closed kitchen storage for anything still required.",
+  "roles": [
+    {
+      "name": "coffee_container",
+      "entity_kind": "OBJECT",
+      "count": 2,
+      "min_count": null,
+      "max_count": null,
+      "preference": null,
+      "semantic_categories": [
+        "cup",
+        "mug"
+      ],
+      "unary_predicates": [
+        "OPEN_CAVITY"
+      ],
+      "numeric_constraints": [],
+      "binding_policy": "DISTINCT",
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC",
+      "description": "",
+      "semantic_hints": [],
+      "distinct": true,
+      "reusable": false,
+      "shared": false
+    },
+    {
+      "name": "coffee_source",
+      "entity_kind": "OBJECT",
+      "count": 1,
+      "min_count": null,
+      "max_count": null,
+      "preference": null,
+      "semantic_categories": [
+        "coffee_source"
+      ],
+      "unary_predicates": [],
+      "numeric_constraints": [],
+      "binding_policy": "DISTINCT",
+      "verification_mode": "SEMANTIC_ONLY",
+      "description": "",
+      "semantic_hints": [],
+      "distinct": true,
+      "reusable": false,
+      "shared": false
+    },
+    {
+      "name": "coffee_stirrer",
+      "entity_kind": "OBJECT",
+      "count": 2,
+      "min_count": 1,
+      "max_count": 2,
+      "preference": "minimize_distinct",
+      "semantic_categories": [
+        "spoon"
+      ],
+      "unary_predicates": [
+        "ELONGATED_OBJECT"
+      ],
+      "numeric_constraints": [],
+      "binding_policy": "REUSABLE",
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC",
+      "description": "",
+      "semantic_hints": [],
+      "distinct": true,
+      "reusable": true,
+      "shared": false
+    },
+    {
+      "name": "soup_container",
+      "entity_kind": "OBJECT",
+      "count": 2,
+      "min_count": null,
+      "max_count": null,
+      "preference": null,
+      "semantic_categories": [
+        "bowl"
+      ],
+      "unary_predicates": [
+        "OPEN_CAVITY"
+      ],
+      "numeric_constraints": [],
+      "binding_policy": "DISTINCT",
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC",
+      "description": "",
+      "semantic_hints": [],
+      "distinct": true,
+      "reusable": false,
+      "shared": false
+    },
+    {
+      "name": "soup_eating_utensil",
+      "entity_kind": "OBJECT",
+      "count": 2,
+      "min_count": 2,
+      "max_count": 2,
+      "preference": null,
+      "semantic_categories": [
+        "spoon"
+      ],
+      "unary_predicates": [
+        "ELONGATED_OBJECT"
+      ],
+      "numeric_constraints": [],
+      "binding_policy": "DISTINCT",
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC",
+      "description": "",
+      "semantic_hints": [],
+      "distinct": true,
+      "reusable": false,
+      "shared": false
+    },
+    {
+      "name": "water_source",
+      "entity_kind": "OBJECT",
+      "count": 1,
+      "min_count": null,
+      "max_count": null,
+      "preference": null,
+      "semantic_categories": [
+        "kettle"
+      ],
+      "unary_predicates": [],
+      "numeric_constraints": [],
+      "binding_policy": "DISTINCT",
+      "verification_mode": "SEMANTIC_ONLY",
+      "description": "",
+      "semantic_hints": [],
+      "distinct": true,
+      "reusable": false,
+      "shared": false
+    }
+  ],
+  "nodes": {
+    "coffee_container": {
+      "name": "coffee_container",
+      "entity_kind": "OBJECT",
+      "count": 2,
+      "min_count": null,
+      "max_count": null,
+      "preference": null,
+      "semantic_categories": [
+        "cup",
+        "mug"
+      ],
+      "unary_predicates": [
+        "OPEN_CAVITY"
+      ],
+      "numeric_constraints": [],
+      "binding_policy": "DISTINCT",
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC",
+      "description": "",
+      "semantic_hints": [],
+      "distinct": true,
+      "reusable": false,
+      "shared": false
+    },
+    "coffee_source": {
+      "name": "coffee_source",
+      "entity_kind": "OBJECT",
+      "count": 1,
+      "min_count": null,
+      "max_count": null,
+      "preference": null,
+      "semantic_categories": [
+        "coffee_source"
+      ],
+      "unary_predicates": [],
+      "numeric_constraints": [],
+      "binding_policy": "DISTINCT",
+      "verification_mode": "SEMANTIC_ONLY",
+      "description": "",
+      "semantic_hints": [],
+      "distinct": true,
+      "reusable": false,
+      "shared": false
+    },
+    "coffee_stirrer": {
+      "name": "coffee_stirrer",
+      "entity_kind": "OBJECT",
+      "count": 2,
+      "min_count": 1,
+      "max_count": 2,
+      "preference": "minimize_distinct",
+      "semantic_categories": [
+        "spoon"
+      ],
+      "unary_predicates": [
+        "ELONGATED_OBJECT"
+      ],
+      "numeric_constraints": [],
+      "binding_policy": "REUSABLE",
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC",
+      "description": "",
+      "semantic_hints": [],
+      "distinct": true,
+      "reusable": true,
+      "shared": false
+    },
+    "soup_container": {
+      "name": "soup_container",
+      "entity_kind": "OBJECT",
+      "count": 2,
+      "min_count": null,
+      "max_count": null,
+      "preference": null,
+      "semantic_categories": [
+        "bowl"
+      ],
+      "unary_predicates": [
+        "OPEN_CAVITY"
+      ],
+      "numeric_constraints": [],
+      "binding_policy": "DISTINCT",
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC",
+      "description": "",
+      "semantic_hints": [],
+      "distinct": true,
+      "reusable": false,
+      "shared": false
+    },
+    "soup_eating_utensil": {
+      "name": "soup_eating_utensil",
+      "entity_kind": "OBJECT",
+      "count": 2,
+      "min_count": 2,
+      "max_count": 2,
+      "preference": null,
+      "semantic_categories": [
+        "spoon"
+      ],
+      "unary_predicates": [
+        "ELONGATED_OBJECT"
+      ],
+      "numeric_constraints": [],
+      "binding_policy": "DISTINCT",
+      "verification_mode": "SEMANTIC_AND_GEOMETRIC",
+      "description": "",
+      "semantic_hints": [],
+      "distinct": true,
+      "reusable": false,
+      "shared": false
+    },
+    "water_source": {
+      "name": "water_source",
+      "entity_kind": "OBJECT",
+      "count": 1,
+      "min_count": null,
+      "max_count": null,
+      "preference": null,
+      "semantic_categories": [
+        "kettle"
+      ],
+      "unary_predicates": [],
+      "numeric_constraints": [],
+      "binding_policy": "DISTINCT",
+      "verification_mode": "SEMANTIC_ONLY",
+      "description": "",
+      "semantic_hints": [],
+      "distinct": true,
+      "reusable": false,
+      "shared": false
+    }
+  },
+  "relations": [
+    {
+      "subject_role": "coffee_stirrer",
+      "predicate": "INSERTABLE_IN",
+      "object_role": "coffee_container",
+      "expected": true
+    },
+    {
+      "subject_role": "coffee_stirrer",
+      "predicate": "REACHES_BOTTOM",
+      "object_role": "coffee_container",
+      "expected": true
+    },
+    {
+      "subject_role": "soup_eating_utensil",
+      "predicate": "INSERTABLE_IN",
+      "object_role": "soup_container",
+      "expected": true
+    },
+    {
+      "subject_role": "soup_eating_utensil",
+      "predicate": "REACHES_BOTTOM",
+      "object_role": "soup_container",
+      "expected": true
+    }
+  ],
+  "operation_groups": [
+    {
+      "id": "coffee_stirring",
+      "function": "STIR_COFFEE",
+      "tool_role": "coffee_stirrer",
+      "target_role": "coffee_container",
+      "required_target_count": 2,
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED",
+      "required_relations": [
+        "INSERTABLE_IN",
+        "REACHES_BOTTOM"
+      ],
+      "context_role": null,
+      "context_relations": [],
+      "distinct_within_group": false,
+      "same_tool_must_cover_all_targets": false,
+      "selection_preference": "minimize_distinct_tools"
+    },
+    {
+      "id": "soup_serving",
+      "function": "PROVIDE_SOUP_EATING_UTENSIL",
+      "tool_role": "soup_eating_utensil",
+      "target_role": "soup_container",
+      "required_target_count": 2,
+      "usage_policy": "DEDICATED_PER_TARGET",
+      "required_relations": [
+        "INSERTABLE_IN",
+        "REACHES_BOTTOM"
+      ],
+      "context_role": null,
+      "context_relations": [],
+      "distinct_within_group": true,
+      "same_tool_must_cover_all_targets": false,
+      "selection_preference": ""
+    }
+  ],
+  "cross_group_reuse_allowed": false,
+  "detector_vocabulary": [
+    "cup",
+    "coffee cup",
+    "mug",
+    "coffee mug",
+    "bowl",
+    "soup bowl",
+    "mixing bowl",
+    "spoon",
+    "teaspoon",
+    "tablespoon",
+    "dessert spoon",
+    "soup spoon",
+    "coffee_source",
+    "kettle"
+  ],
+  "candidate_regions": [
+    "D1",
+    "D2",
+    "C2",
+    "B1",
+    "C1"
+  ],
+  "region_ranking": [
+    "D1",
+    "D2",
+    "C2",
+    "B1",
+    "C1"
+  ],
+  "source": "GT_FUNCTIONAL_SPEC_ONLY",
+  "metadata": {
+    "semantic_vocabulary_path": "/home/naren/RA_iiith/.experiment_worktrees/phase36b1r_runtime/mujoco_scenes/configs/semantic_vocabulary.yaml",
+    "contract_path": "/home/naren/RA_iiith/.experiment_worktrees/phase36b1r_runtime/mujoco_scenes/configs/s1_integrated_kitchen_object_function.yaml",
+    "symbolic_task": {
+      "schema_version": 1,
+      "home_region": "countertop",
+      "initial_observation_region": "countertop",
+      "contents": [
+        "coffee",
+        "water",
+        "soup"
+      ],
+      "source_roles": {
+        "coffee_source": {
+          "accepted_semantic_labels": [
+            "coffee_source"
+          ],
+          "provides": "coffee",
+          "count": 1
+        },
+        "water_source": {
+          "accepted_semantic_labels": [
+            "kettle"
+          ],
+          "provides": "water",
+          "count": 1
+        }
+      },
+      "target_requirements": {
+        "coffee": {
+          "witness_role": "coffee_container",
+          "required_contents": [
+            "coffee",
+            "water"
+          ],
+          "requires_operation_group": "coffee_stirring",
+          "final_goal": "served"
+        },
+        "soup": {
+          "witness_role": "soup_container",
+          "required_contents": [
+            "soup"
+          ],
+          "initial_contents": [
+            "soup"
+          ],
+          "requires_operation_group": "soup_serving",
+          "final_goal": "served"
+        }
+      },
+      "causal_dependencies": [
+        [
+          "coffee_contents_present",
+          "coffee_stirred"
+        ],
+        [
+          "coffee_stirred",
+          "coffee_served"
+        ],
+        [
+          "soup_content_present",
+          "soup_utensil_placed"
+        ],
+        [
+          "soup_utensil_placed",
+          "soup_served"
+        ]
+      ]
+    }
+  }
+}

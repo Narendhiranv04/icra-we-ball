@@ -1,0 +1,48 @@
+{
+  "model": "qwen35-9b",
+  "call_kind": "task_requirements",
+  "sanitized_request": {
+    "system_prompt": "You are a vision-language functional-requirement specification generator.\n\nReturn only the requested JSON object. Do not produce an action sequence.\n\nRules:\n- Infer the complete set of physical or spatial functional roles from the task\n  instruction and initial multi-view RGB images yourself. The user will not supply\n  expected roles, functions, object categories, or properties.\n- Create functional roles for scene assets whose identity, suitability, or\n  functional capability must be discovered or selected to accomplish the task.\n  Objects explicitly specified by the task as payloads or fixed contextual\n  entities need not be reintroduced as selectable functional roles unless their\n  functional suitability itself must be discovered.\n- Use SHORT ATOMIC PHRASES for all functions, properties, and relations:\n  - Use a short atomic function phrase for each role function.\n  - Use a short atomic unary-property phrase for each required property.\n  - Use a short atomic binary-relation phrase for each functional relation.\n  Do not write long narrative sentences. Do not use complex compound clauses.\n- When a role must be paired independently with multiple task targets or\n  contextual references, represent that dependency using an interaction group\n  rather than relying on an unconstrained many-to-many relation.\n- Set `entity_kind` to:\n  - OBJECT: a selectable/manipulable physical item.\n  - REGION: a selectable support surface, placement area, or spatial destination.\n  - FIXED_TARGET: a non-selectable contextual reference or fixed target feature that participates in relations.\n- Set `binding_policy` to:\n  - DISTINCT: separate simultaneous physical items are required.\n  - REUSABLE: one physical item may be reused sequentially across targets.\n  - SHARED: one physical region/entity intentionally serves multiple items/users.\n- `candidate_categories`: list open-vocabulary semantic search phrases that could satisfy the role, even if nothing is currently visible.\n- `visible_candidates`: list visually apparent items/regions in the initial RGB views.\n  This array may be empty ([]).\n- `required_properties`: list UNARY-ONLY physical properties of this single role.\n  Never place binary relations or compatibility statements here.\n- `functional_relations`: list explicit role-to-role relations using `subject_role`, `relation`, and `object_role`.\n  Both subject_role and object_role must reference declared role IDs.\n- `interaction_groups`: list structured interaction groups with tool_role, target_role, required_target_count, usage_policy, required_relations, and optional context_role/context_relations.\n- `inspectable_regions`: propose visible closed/storage regions in the initial images that could be inspected if required items are missing.\n- `inspection_order`: rank the proposed inspectable region IDs.\n- Status semantics:\n  - `SUPPORTED`: task can be represented with functional roles and relations. `functional_roles` must be non-empty, `unsupported_reason` must be empty (\"\").\n  - `UNSUPPORTED`: use only when the task itself cannot be represented by this abstraction. `functional_roles`, `functional_relations`, `interaction_groups`, `inspectable_regions`, `inspection_order` must be empty ([]), and `unsupported_reason` must be a non-empty explanation.\n  - Partial observability, missing visible candidates, unmeasured continuous geometry, or needing inspection/search are NOT reasons for UNSUPPORTED.\n",
+    "user_prompt": {
+      "task_instruction": "Find a compatible screw and driver, insert the screw tip-down into the workbench repair hole, drive it fully, and return the driver safely.",
+      "request": "Using the task goal and initial-observation images, infer the functional roles, describe the qualitative properties each role requires, and rank any visually plausible candidate objects or regions for each role. Decide all role and property content yourself."
+    },
+    "schema_name": "functional_specification",
+    "num_images": 3,
+    "image_metadata": [
+      {
+        "path": "/home/naren/RA_iiith/tmp/phase36b1r_live_audit_20260831_140518/workshop_W1/inputs/initial_iso_left.png",
+        "mime_type": "image/png",
+        "bytes": 516344,
+        "sha256": "f79528ee893c45103539a51da716ba2ad0b6fef65cbfee195632fc560a92c040"
+      },
+      {
+        "path": "/home/naren/RA_iiith/tmp/phase36b1r_live_audit_20260831_140518/workshop_W1/inputs/initial_iso_right.png",
+        "mime_type": "image/png",
+        "bytes": 542739,
+        "sha256": "87b8c35d14371f041bdad0a974289a8da7108a9c696eaefe50bbf2cfb6ef0299"
+      },
+      {
+        "path": "/home/naren/RA_iiith/tmp/phase36b1r_live_audit_20260831_140518/workshop_W1/inputs/initial_detail.png",
+        "mime_type": "image/png",
+        "bytes": 489993,
+        "sha256": "eb6fd2fab00227a26f71be8cb22e9fa9974fad0df4dac47b0e8d11ee11df6b5c"
+      }
+    ]
+  },
+  "finish_reason": "stop",
+  "usage": {
+    "prompt_tokens": 3437,
+    "total_tokens": 4480,
+    "completion_tokens": 1043,
+    "prompt_tokens_details": null,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    }
+  },
+  "content_length_chars": 3519,
+  "content_sha256": "b0763fc4dcf0b489b991998d80460b4c501d0bb320041248f6aebe830271db17",
+  "content": "{\n  \"status\": \"SUPPORTED\",\n  \"task_summary\": \"Find a compatible screw and driver, insert the screw tip-down into the workbench repair hole, drive it fully, and return the driver safely.\",\n  \"functional_roles\": [\n    {\n      \"id\": \"screw\",\n      \"entity_kind\": \"OBJECT\",\n      \"function\": \"fit_into_hole\",\n      \"required_count\": 1,\n      \"binding_policy\": \"DISTINCT\",\n      \"candidate_categories\": [ \"screw\", \"wood_screw\", \"machine_screw\" ],\n      \"visible_candidates\": []\n    ,\n      \"required_properties\": [ \"has_tip\", \"has_thread\" ]\n    },\n    {\n      \"id\": \"driver\",\n      \"entity_kind\": \"OBJECT\",\n      \"function\": \"engage_screw_head\",\n      \"required_count\": 1,\n      \"binding_policy\": \"SHARED\",\n      \"candidate_categories\": [ \"screwdriver\", \"power_driver\", \"manual_driver\" ],\n      \"visible_candidates\": [\n        {\n          \"label\": \"yellow_tool_on_table\",\n          \"visual_description\": \"Yellow tool on table surface\"\n        }\n      ]\n    ,\n      \"required_properties\": [ \"has_drive_bit\" ]\n    },\n    {\n      \"id\": \"workbench_surface\",\n      \"entity_kind\": \"REGION\",\n      \"function\": \"support_workpiece\",\n      \"required_count\": 1,\n      \"binding_policy\": \"SHARED\",\n      \"candidate_categories\": [ \"table\", \"desk\", \"bench\" ],\n      \"visible_candidates\": [\n        {\n          \"label\": \"wooden_table\",\n          \"visual_description\": \"Wooden table with drawers\"\n        }\n      ]\n    ,\n      \"required_properties\": [ \"is_flat\", \"is_horizontal\" ]\n    },\n    {\n      \"id\": \"repair_hole\",\n      \"entity_kind\": \"FIXED_TARGET\",\n      \"function\": \"accept_screw_insertion\",\n      \"required_count\": 1,\n      \"binding_policy\": \"SHARED\",\n      \"candidate_categories\": [ \"hole\", \"slot\", \"mounting_point\" ],\n      \"visible_candidates\": [],\n      \"required_properties\": [ \"is_circular\", \"is_accessible\" ]\n    }\n  ],\n  \"functional_relations\": [\n    {\n      \"subject_role\": \"screw\",\n      \"relation\": \"fits_into\",\n      \"object_role\": \"repair_hole\"\n    },\n    {\n      \"subject_role\": \"driver\",\n      \"relation\": \"engages\",\n      \"object_role\": \"screw\"\n    },\n    {\n      \"subject_role\": \"screw\",\n      \"relation\": \"inserted_into\",\n      \"object_role\": \"repair_hole\"\n    },\n    {\n      \"subject_role\": \"repair_hole\",\n      \"relation\": \"located_in\",\n      \"object_role\": \"workbench_surface\"\n    }\n  ],\n  \"interaction_groups\": [\n    {\n      \"id\": \"group_1\",\n      \"function\": \"perform_screwing_task\",\n      \"tool_role\": \"driver\",\n      \"target_role\": \"screw\",\n      \"required_target_count\": 1,\n      \"usage_policy\": \"SEQUENTIAL_REUSE_ALLOWED\",\n      \"required_relations\": [\n        \"driver.engages.screw\"\n      ],\n      \"context_role\": \"workbench_surface\",\n      \"context_relations\": [\n        \"screw.inserted_into.repair_hole\",\n        \"repair_hole.located_in.workbench_surface\"\n      ]\n    }\n  ],\n  \"inspectable_regions\": [\n    {\n      \"id\": \"drawer_1_left\",\n      \"label\": \"left_drawer_of_table\",\n      \"visual_description\": \"Left drawer under table\"\n    ,\n      \"reason\": \"May contain screws or drivers\"\n    },\n    {\n      \"id\": \"drawer_2_right\",\n      \"label\": \"right_drawer_of_table\",\n      \"visual_description\": \"Right drawer under table\"\n    ,\n      \"reason\": \"May contain screws or drivers\"\n    },\n    {\n      \"id\": \"cabinet_shelf\",\n      \"label\": \"inside_of_blue_cabinet\",\n      \"visual_description\": \"Blue cabinet behind table\"\n    ,\n      \"reason\": \"May store tools or fasteners\"\n    }\n  ],\n  \"inspection_order\": [\n    \"drawer_1_left\",\n    \"drawer_2_right\",\n    \"cabinet_shelf\"\n  ]\n,\n  \"unsupported_reason\": \"\"\n}",
+  "json_parse_success": true,
+  "parse_error": null
+}
