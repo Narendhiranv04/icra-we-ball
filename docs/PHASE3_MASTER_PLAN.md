@@ -367,6 +367,23 @@ When a case fails, apply this tree **in order**:
 
 ---
 
+### P3-C.2: Concept-Exact Diagnostic Closure
+**Status**: `[x] COMPLETE`
+
+**Objective**: Establish concept-exact diagnostic accounting across all three domains: verify exact predicate triples on Kitchen and Workshop relations using unique deterministic keys; derive Kitchen and Living Room property mappings evidence-based from production mapper functions; contextualize Living Room relation mapping with canonical subject/object arguments; resolve Workshop regions 1-to-1; preserve complete evaluator diagnostic structures; and correct documentation regarding Kitchen cardinality interval metrics and Workshop empty-reference recall.
+
+**Accomplished Changes & Empirical Findings**:
+1. **Concept-Exact Relation Keys**: Replaced endpoint-only dictionary keys with unique deterministic keys (`rel:{idx}:{s}:{r}:{o}`), preventing overwriting of multiple distinct relations sharing the same subject/object endpoints.
+2. **Predicate-Specific Relation Verification**: Verified that mapped predicate triples `(s_canon, mapped_pred, o_canon)` explicitly exist in $G_F$ for Kitchen (via `map_binary_relation`) and Workshop (via `provider.normalized_relations`).
+3. **Contextual Living Room Sub-Diagnostic**: Aligned the test-side Living Room relation mapping sub-check with production by passing mapped `subject_role` and `object_role` to `map_living_room_relation`.
+4. **Evidence-Derived Property Traces**: Evaluated Kitchen properties with `map_unary_property` (classifying subsequent identical predicates on the same role as `MERGED_BY_EXPLICIT_RULE`) and Living Room properties with `_map_properties` (`PLANAR_SUPPORT`), while explicitly recording 0 unary property cases for Workshop.
+5. **1-to-1 Workshop Region Resolution**: Resolved each raw proposal (`search_1`, `search_2`, `search_3`) individually to `LEFT_DRAWER`, `RIGHT_DRAWER`, and `TOOL_CABINET` via `resolve_workshop_region_proposal`.
+6. **Corrected Evaluator Explanations**: Documented that Kitchen `role_exact_recall = 0.833` and `exact_structural_match = False` arise strictly from `role_cardinality_diagnostics['coffee_stirrer']` (`candidate_range: [1, 1]` vs `reference_range: [1, 2]`), and that Workshop `operation_group_identity_recall = 1.0` is a vacuous metric over an empty reference.
+
+**Acceptance**: Concept-exact preservation keys, predicate verifications, property traces, 1-to-1 region resolutions, and accurate metric explanations are validated with all Phase-3 tests passing and zero changes to production canonicalizers.
+
+---
+
 ### P3-D: Predicate & System-Context Freeze
 **Status**: `[ ] NOT STARTED`
 
@@ -649,7 +666,7 @@ Per pipeline run, retain:
 
 **Exact Objective**: Freeze the predicate signature registry (§4) in code and establish the formal contract distinguishing task-functional G_F roles from system-owned scene context.
 
-**Prerequisites**: P3-A, P3-B, P3-B.1, P3-C, and P3-C.1 are complete.
+**Prerequisites**: P3-A, P3-B, P3-B.1, P3-C, P3-C.1, and P3-C.2 are complete.
 
 **What to do**:
 1. Create `mujoco_scenes/functional_tamp_pipeline/predicate_registry.py` with the canonical predicate table.

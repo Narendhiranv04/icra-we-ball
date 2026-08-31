@@ -1,13 +1,13 @@
-"""Hardened test harness and diagnostic suite for Ideal Raw VLM Fixtures (Pass P3-C.1).
+"""Hardened test harness and diagnostic suite for Ideal Raw VLM Fixtures (Pass P3-C.2).
 
 Verifies:
 1. Schema compliance of ideal raw fixtures against production schemas.
 2. Comprehensive anti-leakage rules across all relation, group, context relation fields,
    raw IDs, backend handles, and canonical benchmark oracle tokens.
 3. Deterministic, zero-network diagnostic canonicalization over current production canonicalizers.
-4. Evidence-based concept preservation tracing and granular failure localization.
+4. Concept-exact, evidence-derived concept preservation tracing and granular failure localization.
 5. Future-proof test adapter compliance.
-6. Full GT reference metric evaluation and disclosure.
+6. Full GT reference metric evaluation and representation disclosure.
 """
 
 from __future__ import annotations
@@ -29,6 +29,10 @@ from mujoco_scenes.functional_tamp_pipeline.gt_spec_provider import GTSpecProvid
 from mujoco_scenes.functional_tamp_pipeline.models import FunctionalRequirementGraph
 from mujoco_scenes.functional_tamp_pipeline.task_interface_validator import validate_runtime_gf
 from mujoco_scenes.functional_tamp_pipeline.vlm_spec_provider import VLMSpecProvider
+from mujoco_scenes.kitchen_vlm_functional_graph import (
+    map_binary_relation,
+    map_unary_property,
+)
 from mujoco_scenes.workshop_phase1.fm_adapter import (
     FMCallMetrics,
     KITCHEN_FUNCTIONAL_GRAPH_SCHEMA,
@@ -36,6 +40,7 @@ from mujoco_scenes.workshop_phase1.fm_adapter import (
     validate_kitchen_functional_specification,
     validate_requirement_response,
 )
+from mujoco_scenes.workshop_phase1.requirements import resolve_workshop_region_proposal
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures" / "ideal_raw_vlm"
 
@@ -206,7 +211,6 @@ def test_ideal_raw_fixtures_anti_leak_and_purity():
             )
 
         for oracle_region in FORBIDDEN_ORACLE_REGIONS:
-            # Oracle regions should not appear as exact words in raw IDs or labels
             for reg in data.get("inspectable_regions", []):
                 assert reg["id"] != oracle_region, f"Fixture {domain} used oracle region ID {oracle_region}"
 
@@ -224,7 +228,7 @@ def test_mock_fm_adapter_future_proof_interface():
 
 
 def diagnose_fixture_canonicalization(domain: str) -> dict[str, Any]:
-    """Execute current production canonicalizer on the ideal fixture and return an evidence-based diagnostic report."""
+    """Execute current production canonicalizer on the ideal fixture and return a concept-exact diagnostic report."""
     data = load_ideal_fixture(domain)
     task_instructions = {
         "kitchen": "Prepare and serve coffee and soup for two people using available kitchenware.",
@@ -244,6 +248,7 @@ def diagnose_fixture_canonicalization(domain: str) -> dict[str, Any]:
         "first_failing_module": None,
         "concept_preservation": {},
         "reference_metrics": {},
+        "reference_diagnostics": {},
     }
 
     try:
@@ -270,28 +275,44 @@ def diagnose_fixture_canonicalization(domain: str) -> dict[str, Any]:
 
             for role in data["functional_roles"]:
                 rid = role["id"]
-                if rid in canonical_roles_map:
-                    report["concept_preservation"][f"role:{rid}"] = f"PRESERVED -> {canonical_roles_map[rid]}"
+                s_canon = canonical_roles_map.get(rid)
+                if s_canon:
+                    report["concept_preservation"][f"role:{rid}"] = f"PRESERVED -> {s_canon}"
                 else:
                     report["concept_preservation"][f"role:{rid}"] = "DROPPED"
 
+                seen_predicates_on_role: set[str] = set()
                 for prop in role.get("required_properties", []):
-                    report["concept_preservation"][f"prop:{rid}:{prop}"] = "PRESERVED (in unary_geometry)"
+                    mapped_pred = map_unary_property(prop)
+                    if mapped_pred and s_canon and mapped_pred in gf.nodes[s_canon].unary_predicates:
+                        if mapped_pred in seen_predicates_on_role:
+                            report["concept_preservation"][f"prop:{rid}:{prop}"] = f"MERGED_BY_EXPLICIT_RULE -> {mapped_pred}"
+                        else:
+                            report["concept_preservation"][f"prop:{rid}:{prop}"] = f"PRESERVED -> {mapped_pred}"
+                            seen_predicates_on_role.add(mapped_pred)
+                    elif mapped_pred:
+                        report["concept_preservation"][f"prop:{rid}:{prop}"] = f"DROPPED: mapped to {mapped_pred} but absent in role"
+                    else:
+                        report["concept_preservation"][f"prop:{rid}:{prop}"] = f"REJECTED: unmapped property {prop!r}"
 
-            for rel in data["functional_relations"]:
+            for idx, rel in enumerate(data["functional_relations"]):
                 s = rel["subject_role"]
                 r = rel["relation"]
                 o = rel["object_role"]
-                # Verify relation presence in compiled graph
                 s_canon = canonical_roles_map.get(s)
                 o_canon = canonical_roles_map.get(o)
+                mapped_pred = map_binary_relation(r)
                 rel_present = any(
-                    rel_item.subject_role == s_canon and rel_item.object_role == o_canon
+                    rel_item.subject_role == s_canon and rel_item.predicate == mapped_pred and rel_item.object_role == o_canon
                     for rel_item in gf.relations
                 )
-                report["concept_preservation"][f"rel:{s}->{o}"] = (
-                    "PRESERVED" if rel_present else "DROPPED"
-                )
+                rel_key = f"rel:{idx}:{s}:{r}:{o}"
+                if rel_present and mapped_pred:
+                    report["concept_preservation"][rel_key] = f"PRESERVED -> {s_canon} -[{mapped_pred}]-> {o_canon}"
+                elif rel_present:
+                    report["concept_preservation"][rel_key] = f"FABRICATED_WITHOUT_RAW_SUPPORT -> {s_canon} -[{mapped_pred}]-> {o_canon}"
+                else:
+                    report["concept_preservation"][rel_key] = f"REJECTED: unmapped relation {r!r}"
 
             for grp in data.get("interaction_groups", []):
                 gid = grp["id"]
@@ -328,36 +349,57 @@ def diagnose_fixture_canonicalization(domain: str) -> dict[str, Any]:
                     report["first_failing_module"] = f"{Path(last_frame.filename).name}:{last_frame.lineno} ({last_frame.name})"
 
                 # Diagnostic sub-concept trace: test each raw component with production mapping functions
+                raw_id_to_canon: dict[str, str] = {}
                 for r in data["functional_roles"]:
                     rid = r["id"]
                     kind = r["entity_kind"]
                     if kind == "REGION":
                         mapped_r = map_living_room_role_function(r["function"])
-                        report["concept_preservation"][f"role:{rid}"] = (
-                            f"PRESERVED/MAPPABLE -> {mapped_r}" if mapped_r else "REJECTED"
-                        )
+                        if mapped_r:
+                            raw_id_to_canon[rid] = "PERSONAL_CUP_SAUCER_REGION" if "personal" in mapped_r else "SHARED_REMOTE_REGION"
+                            report["concept_preservation"][f"role:{rid}"] = f"PRESERVED/MAPPABLE -> {raw_id_to_canon[rid]}"
+                        else:
+                            report["concept_preservation"][f"role:{rid}"] = "REJECTED"
                     elif kind == "OBJECT":
                         mapped_r = map_living_room_object_payload_role(r)
-                        report["concept_preservation"][f"role:{rid}"] = (
-                            f"PRESERVED/MAPPABLE -> {mapped_r}" if mapped_r else "REJECTED"
-                        )
+                        if mapped_r:
+                            raw_id_to_canon[rid] = mapped_r
+                            report["concept_preservation"][f"role:{rid}"] = f"PRESERVED/MAPPABLE -> {mapped_r}"
+                        else:
+                            report["concept_preservation"][f"role:{rid}"] = "REJECTED"
                     else:
                         mapped_r = map_living_room_fixed_target_role(r)
-                        report["concept_preservation"][f"role:{rid}"] = (
-                            f"SYSTEM_CONTEXT_COMPILED -> {mapped_r}" if mapped_r else "REJECTED"
-                        )
+                        if mapped_r:
+                            raw_id_to_canon[rid] = mapped_r
+                            report["concept_preservation"][f"role:{rid}"] = f"SYSTEM_CONTEXT_COMPILED -> {mapped_r}"
+                        else:
+                            report["concept_preservation"][f"role:{rid}"] = "REJECTED"
 
-                for rel in data["functional_relations"]:
+                    for prop in r.get("required_properties", []):
+                        mapped_props = provider._map_properties([prop], fail_closed=False)
+                        if mapped_props:
+                            report["concept_preservation"][f"prop:{rid}:{prop}"] = f"PRESERVED/MAPPABLE -> {', '.join(sorted(mapped_props))}"
+                        else:
+                            report["concept_preservation"][f"prop:{rid}:{prop}"] = f"REJECTED: unmapped property {prop!r}"
+
+                for idx, rel in enumerate(data["functional_relations"]):
                     s = rel["subject_role"]
                     r = rel["relation"]
                     o = rel["object_role"]
+                    s_canon = raw_id_to_canon.get(s)
+                    o_canon = raw_id_to_canon.get(o)
+                    rel_key = f"rel:{idx}:{s}:{r}:{o}"
                     try:
                         mapped_rel = map_living_room_relation(
-                            r, provider.binary_relation_aliases, fail_closed=True
+                            r,
+                            provider.binary_relation_aliases,
+                            subject_role=s_canon,
+                            object_role=o_canon,
+                            fail_closed=True,
                         )
-                        report["concept_preservation"][f"rel:{s}->{o}"] = f"PRESERVED/MAPPABLE -> {mapped_rel}"
+                        report["concept_preservation"][rel_key] = f"PRESERVED/MAPPABLE -> {s_canon} -[{mapped_rel}]-> {o_canon}"
                     except Exception as rel_exc:
-                        report["concept_preservation"][f"rel:{s}->{o}"] = f"REJECTED: {type(rel_exc).__name__}"
+                        report["concept_preservation"][rel_key] = f"REJECTED: {type(rel_exc).__name__}: {rel_exc}"
 
                 for grp in data.get("interaction_groups", []):
                     report["concept_preservation"][f"group:{grp['id']}"] = "NOT_REACHED_DUE_TO_PRIOR_FAILURE"
@@ -389,18 +431,30 @@ def diagnose_fixture_canonicalization(domain: str) -> dict[str, Any]:
                 else:
                     report["concept_preservation"][f"role:{rid}"] = "DROPPED"
 
-            for rel in data["functional_relations"]:
+            # Workshop raw unary properties explicit status
+            report["concept_preservation"]["properties"] = "Workshop raw unary property count = 0 (no property preservation cases applicable)"
+
+            for idx, rel in enumerate(data["functional_relations"]):
                 s = rel["subject_role"]
+                r = rel["relation"]
                 o = rel["object_role"]
                 s_canon = normalized_roles_map.get(s)
                 o_canon = normalized_roles_map.get(o)
+                # Find matching normalized relation
+                matching_norm = next(
+                    (nr for nr in provider.normalized_relations if nr.raw_subject_role_id == s and nr.raw_object_role_id == o and nr.raw_relation_text == r),
+                    None
+                )
+                canon_pred = matching_norm.canonical_predicate if matching_norm else None
                 rel_present = any(
-                    rel_item.subject_role == s_canon and rel_item.object_role == o_canon
+                    rel_item.subject_role == s_canon and rel_item.predicate == canon_pred and rel_item.object_role == o_canon
                     for rel_item in gf.relations
                 )
-                report["concept_preservation"][f"rel:{s}->{o}"] = (
-                    "PRESERVED" if rel_present else "DROPPED"
-                )
+                rel_key = f"rel:{idx}:{s}:{r}:{o}"
+                if rel_present and canon_pred:
+                    report["concept_preservation"][rel_key] = f"PRESERVED -> {s_canon} -[{canon_pred}]-> {o_canon}"
+                else:
+                    report["concept_preservation"][rel_key] = f"REJECTED: unmapped relation {r!r}"
 
             for grp in data.get("interaction_groups", []):
                 gid = grp["id"]
@@ -411,8 +465,8 @@ def diagnose_fixture_canonicalization(domain: str) -> dict[str, Any]:
 
             for reg in data.get("inspectable_regions", []):
                 reg_id = reg["id"]
-                # Check resolved regions
-                report["concept_preservation"][f"region:{reg_id}"] = f"PRESERVED -> resolved in {gf.candidate_regions}"
+                canon_reg = resolve_workshop_region_proposal(reg)
+                report["concept_preservation"][f"region:{reg_id}"] = f"PRESERVED -> {canon_reg}"
 
         else:
             raise ValueError(f"Unknown domain: {domain}")
@@ -442,6 +496,16 @@ def diagnose_fixture_canonicalization(domain: str) -> dict[str, Any]:
                 "missing_operation_groups": eval_dict["operation_groups"]["missing"],
                 "extra_operation_groups": eval_dict["operation_groups"]["extra"],
             }
+            report["reference_diagnostics"] = {
+                "role_attribute_mismatches": eval_dict["roles"].get("attribute_mismatches", {}),
+                "role_cardinality_diagnostics": eval_dict["roles"].get("cardinality_diagnostics", {}),
+                "role_normalization_diagnostics": eval_dict["roles"].get("normalization_diagnostics", {}),
+                "category_diagnostics": eval_dict["roles"].get("category_diagnostics", {}),
+                "operation_group_mismatches": eval_dict["operation_groups"].get("mismatches", {}),
+                "operation_group_representation_diagnostics": eval_dict["operation_groups"].get("representation_diagnostics", {}),
+                "graph_attribute_mismatches": eval_dict["graph_level"].get("attribute_mismatches", {}),
+                "cross_group_reuse_mismatch": eval_dict["graph_level"].get("cross_group_reuse_mismatch", False),
+            }
 
     except Exception as exc:
         report["status"] = "CANONICALIZATION_FAILED"
@@ -458,7 +522,7 @@ def diagnose_fixture_canonicalization(domain: str) -> dict[str, Any]:
 
 
 def test_diagnostic_canonicalization_outcomes():
-    """Verify evidence-based canonicalization outcomes and metrics across all 3 domains."""
+    """Verify concept-exact evidence-based canonicalization outcomes and metrics across all 3 domains."""
     # 1. Kitchen Diagnostic
     k_diag = diagnose_fixture_canonicalization("kitchen")
     assert k_diag["status"] == "CANONICALIZED"
@@ -466,9 +530,39 @@ def test_diagnostic_canonicalization_outcomes():
     assert k_diag["reference_metrics"]["relation_recall"] == 1.0
     assert k_diag["reference_metrics"]["operation_group_identity_recall"] == 1.0
     assert k_diag["reference_metrics"]["reference_complete"] is True
-    # Verify preservation labels are evidence-based
-    for k, v in k_diag["concept_preservation"].items():
-        assert "PRESERVED" in v
+
+    # Check that Kitchen cardinality difference on reusable stirrer explains role_exact_recall = 0.833
+    assert k_diag["reference_metrics"]["role_exact_recall"] == pytest.approx(5.0 / 6.0)
+    card_diag = k_diag["reference_diagnostics"]["role_cardinality_diagnostics"]["coffee_stirrer"]
+    assert card_diag["cardinality_compatible"] is True
+    assert card_diag["cardinality_exact"] is False
+    assert card_diag["reference_range"] == [1, 2]
+    assert card_diag["candidate_range"] == [1, 1]
+
+    # Verify 4 distinct relation keys exist and are predicate-verified
+    k_rel_keys = [k for k in k_diag["concept_preservation"] if k.startswith("rel:")]
+    assert len(k_rel_keys) == 4
+    assert any("fits inside" in k and "INSERTABLE_IN" in k_diag["concept_preservation"][k] for k in k_rel_keys)
+    assert any("reaches the bottom" in k and "REACHES_BOTTOM" in k_diag["concept_preservation"][k] for k in k_rel_keys)
+
+    # Verify property preservation entries
+    assert "PRESERVED -> OPEN_CAVITY" in k_diag["concept_preservation"]["prop:role_1:open cavity"]
+    assert "MERGED_BY_EXPLICIT_RULE -> OPEN_CAVITY" in k_diag["concept_preservation"]["prop:role_1:capable of holding liquid"]
+    assert "PRESERVED -> ELONGATED_OBJECT" in k_diag["concept_preservation"]["prop:role_3:elongated shape"]
+    assert "MERGED_BY_EXPLICIT_RULE -> ELONGATED_OBJECT" in k_diag["concept_preservation"]["prop:role_3:slender"]
+
+    # Coverage assertion: all expected raw concept keys are diagnosed
+    expected_k_keys = {
+        "role:role_1", "role:role_2", "role:role_3", "role:role_4", "role:role_5", "role:role_6",
+        "prop:role_1:open cavity", "prop:role_1:capable of holding liquid",
+        "prop:role_2:open cavity", "prop:role_2:capable of holding liquid",
+        "prop:role_3:elongated shape", "prop:role_3:slender",
+        "prop:role_4:elongated shape",
+        "rel:0:role_3:fits inside:role_1", "rel:1:role_3:reaches the bottom:role_1",
+        "rel:2:role_4:fits inside:role_2", "rel:3:role_4:reaches the bottom:role_2",
+        "group:group_1", "group:group_2",
+    }
+    assert set(k_diag["concept_preservation"].keys()) == expected_k_keys
 
     # 2. Living Room Diagnostic
     l_diag = diagnose_fixture_canonicalization("living_room")
@@ -476,12 +570,28 @@ def test_diagnostic_canonicalization_outcomes():
     assert l_diag["error_type"] == "UnmappedFunctionalConceptError"
     assert l_diag["error_category"] == "UNMAPPED_FUNCTIONAL_CONCEPT"
     assert "map_living_room_relation" in str(l_diag["first_failing_module"])
-    # Verify sub-concept mapping diagnostic
-    assert "PRESERVED/MAPPABLE -> personal_cup_saucer" in l_diag["concept_preservation"]["role:role_1"]
+
+    # Verify sub-concept mapping diagnostic with contextual arguments
+    assert "PRESERVED/MAPPABLE -> PERSONAL_CUP_SAUCER_REGION" in l_diag["concept_preservation"]["role:role_1"]
     assert "SYSTEM_CONTEXT_COMPILED -> SEATING_POSITION" in l_diag["concept_preservation"]["role:role_5"]
-    assert "REJECTED: UnmappedFunctionalConceptError" in l_diag["concept_preservation"]["rel:role_1->role_3"]
-    assert "PRESERVED/MAPPABLE -> NEAR_SEAT" in l_diag["concept_preservation"]["rel:role_1->role_5"]
+    assert "PRESERVED/MAPPABLE -> PLANAR_SUPPORT" in l_diag["concept_preservation"]["prop:role_1:planar horizontal support"]
+    assert "PRESERVED/MAPPABLE -> PLANAR_SUPPORT" in l_diag["concept_preservation"]["prop:role_2:planar horizontal support"]
+
+    # Verify relations with canonical context
+    assert "REJECTED: UnmappedFunctionalConceptError" in l_diag["concept_preservation"]["rel:0:role_1:can hold drinkware set:role_3"]
+    assert "PRESERVED/MAPPABLE -> PERSONAL_CUP_SAUCER_REGION -[NEAR_SEAT]-> SEATING_POSITION" in l_diag["concept_preservation"]["rel:1:role_1:near seat:role_5"]
+    assert "REJECTED: UnmappedFunctionalConceptError" in l_diag["concept_preservation"]["rel:2:role_2:can hold remote:role_4"]
+    assert "PRESERVED/MAPPABLE -> SHARED_REMOTE_REGION -[ACCESSIBLE_FROM_BOTH_SEATS]-> SEATING_PAIR" in l_diag["concept_preservation"]["rel:3:role_2:accessible from both seats:role_6"]
     assert l_diag["concept_preservation"]["group:group_1"] == "NOT_REACHED_DUE_TO_PRIOR_FAILURE"
+
+    expected_l_keys = {
+        "role:role_1", "role:role_2", "role:role_3", "role:role_4", "role:role_5", "role:role_6",
+        "prop:role_1:planar horizontal support", "prop:role_2:planar horizontal support",
+        "rel:0:role_1:can hold drinkware set:role_3", "rel:1:role_1:near seat:role_5",
+        "rel:2:role_2:can hold remote:role_4", "rel:3:role_2:accessible from both seats:role_6",
+        "group:group_1",
+    }
+    assert set(l_diag["concept_preservation"].keys()) == expected_l_keys
 
     # 3. Workshop Diagnostic
     w_diag = diagnose_fixture_canonicalization("workshop")
@@ -489,7 +599,29 @@ def test_diagnostic_canonicalization_outcomes():
     assert w_diag["reference_metrics"]["role_identity_recall"] == 1.0
     assert w_diag["reference_metrics"]["relation_recall"] == 1.0
     assert w_diag["reference_metrics"]["reference_complete"] is True
-    # Disclose extra operation group wrt GT reference
     assert w_diag["reference_metrics"]["extra_operation_groups"] == ["group_1"]
     assert w_diag["reference_metrics"]["exact_structural_match"] is False
-    assert w_diag["graph"].candidate_regions == ("LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET")
+
+    # Verify 3 distinct relation keys with exact predicate mapping
+    w_rel_keys = [k for k in w_diag["concept_preservation"] if k.startswith("rel:")]
+    assert len(w_rel_keys) == 3
+    assert "PRESERVED -> driver -[COMPATIBLE_WITH]-> fastener" in w_diag["concept_preservation"]["rel:0:role_1:compatible with:role_2"]
+    assert "PRESERVED -> driver -[REACHES_TARGET]-> repair_target" in w_diag["concept_preservation"]["rel:1:role_1:reaches target:role_3"]
+    assert "PRESERVED -> fastener -[COMPATIBLE_WITH_TARGET]-> repair_target" in w_diag["concept_preservation"]["rel:2:role_2:compatible with target:role_3"]
+
+    # Verify exact 1-to-1 region proposals resolution
+    assert w_diag["concept_preservation"]["region:search_1"] == "PRESERVED -> LEFT_DRAWER"
+    assert w_diag["concept_preservation"]["region:search_2"] == "PRESERVED -> RIGHT_DRAWER"
+    assert w_diag["concept_preservation"]["region:search_3"] == "PRESERVED -> TOOL_CABINET"
+
+    # Verify explicit zero property record
+    assert "count = 0" in w_diag["concept_preservation"]["properties"]
+
+    expected_w_keys = {
+        "role:role_1", "role:role_2", "role:role_3",
+        "properties",
+        "rel:0:role_1:compatible with:role_2", "rel:1:role_1:reaches target:role_3", "rel:2:role_2:compatible with target:role_3",
+        "group:group_1",
+        "region:search_1", "region:search_2", "region:search_3",
+    }
+    assert set(w_diag["concept_preservation"].keys()) == expected_w_keys
