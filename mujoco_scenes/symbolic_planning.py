@@ -305,9 +305,9 @@ def compile_observed_symbolic_state(
     soup_group = str(soup_requirement.get("requires_operation_group", ""))
     coffee_targets = list(selected.get(coffee_role, []))
     soup_targets = list(selected.get(soup_role, []))
-    required_coffee = int(task["roles"][coffee_role]["count"])
-    required_soup = int(task["roles"][soup_role]["count"])
-    if len(coffee_targets) != required_coffee or len(soup_targets) != required_soup:
+    required_coffee = int(task["roles"][coffee_role]["count"]) if coffee_role in task.get("roles", {}) else len(coffee_targets)
+    required_soup = int(task["roles"][soup_role]["count"]) if soup_role in task.get("roles", {}) else len(soup_targets)
+    if (coffee_role in task.get("roles", {}) and len(coffee_targets) != required_coffee) or (soup_role in task.get("roles", {}) and len(soup_targets) != required_soup):
         raise SymbolicCompilationError(
             "Witness must bind "
             f"{required_coffee} coffee and {required_soup} soup targets"
