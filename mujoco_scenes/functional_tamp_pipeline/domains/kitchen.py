@@ -176,10 +176,13 @@ def compile_kitchen_contract_from_graph(graph: FunctionalRequirementGraph) -> di
             "expected": r.expected,
         }
         for r in graph.relations
+        if r.subject_role in roles_dict and r.object_role in roles_dict
     ]
 
     op_groups_dict = {}
     for grp in graph.operation_groups:
+        if grp.tool_role not in roles_dict or grp.target_role not in roles_dict:
+            continue
         distinct = (
             grp.distinct_within_group
             if grp.distinct_within_group is not None
