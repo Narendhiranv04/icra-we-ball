@@ -41,6 +41,7 @@ KITCHEN_SEARCH_REGIONS = {
 }
 
 VLM_CANONICALIZATION_VERSION = "phase3_6a7_2_1_v1"
+LIVING_ROOM_VLM_CANONICALIZATION_VERSION = "phase3_p3f_v1"
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -59,39 +60,21 @@ def _phrase(value: object) -> str:
     return " ".join(re.findall(r"[a-z0-9]+", str(value).casefold()))
 
 
+def _contains_phrase(text: str, phrase: str) -> bool:
+    if not phrase:
+        return False
+    words = text.split()
+    p_words = phrase.split()
+    n, k = len(words), len(p_words)
+    return any(words[i:i + k] == p_words for i in range(n - k + 1))
+
+
 def _phrase_score(text: str, alias: str) -> float:
     text_words = set(_phrase(text).split())
     alias_words = set(_phrase(alias).split())
     if not alias_words:
         return 0.0
     return len(text_words & alias_words) / len(alias_words)
-
-
-def map_living_room_role_function(function_text: str) -> str | None:
-    """Deterministic compositional concept matching for Living Room functional REGION roles."""
-    norm = _phrase(function_text)
-    norm_surface = norm.replace("coffee table", "table").replace("coffee_table", "table")
-    words = set(norm_surface.split())
-
-    has_support = any(w in words or w in norm_surface for w in ("support", "surface", "table", "hold", "rest", "platform", "place", "area", "side", "nightstand", "armrest", "desk"))
-    has_personal = any(w in words or w in norm_surface for w in ("personal", "individual", "viewer", "person", "seated", "occupant", "seat", "left", "right", "armchair", "each", "single", "one", "side"))
-    has_drink = any(w in words or w in norm_surface for w in ("cup", "saucer", "drink", "drinkware", "beverage", "tea", "beverages", "drinkwares", "coffee"))
-
-    has_shared = any(w in words or w in norm_surface for w in ("shared", "central", "both", "common", "middle", "mutual", "two", "viewers", "center", "main"))
-    has_remote = any(w in words or w in norm_surface for w in ("remote", "controller", "tv", "television", "control", "common items"))
-
-    is_personal_drink = (has_support or has_personal) and (has_personal or has_drink) and not (has_shared or has_remote)
-    is_shared_remote = (has_support or has_shared) and (has_shared or has_remote) and not (has_personal and has_drink)
-
-    if is_personal_drink and not is_shared_remote:
-        return "personal_cup_saucer"
-    if is_shared_remote and not is_personal_drink:
-        return "shared_remote"
-    if has_personal and not has_shared:
-        return "personal_cup_saucer"
-    if has_shared and not has_personal:
-        return "shared_remote"
-    return None
 
 
 LIVING_SUPPORTED_UNARY_PREDICATES = {"PLANAR_SUPPORT"}
@@ -113,6 +96,502 @@ LIVING_TASK_ANCHOR_CANONICAL_CATEGORIES = {
     "SEATING_PAIR": ("seating_pair", "armchair", "chair", "sofa"),
 }
 
+LIVING_REGION_ROLE_ALIASES = {
+    "PERSONAL_CUP_SAUCER_REGION": (
+        "personal cup and saucer support",
+        "support a cup and saucer near a seat",
+        "personal serving surface",
+        "hold one viewer drinkware",
+        "hold viewer drinkware",
+        "support cup and saucer",
+        "support personal cup and saucer",
+        "personal drinkware support",
+        "cup and saucer support",
+        "personal support for cup and saucer",
+        "support cup and saucer near armchair",
+        "support for cup and saucer set",
+        "support personal drink",
+        "support drinks",
+        "support a cup and saucer",
+        "hold items for viewer",
+        "fixed individual side table surface beside each viewer seating position for supporting drinkware",
+        "side table surface beside viewer",
+        "personal table surface for drinkware",
+        "individual drink surface",
+        "personal drinkware surface",
+        "personal surface",
+        "side table surface",
+        "viewer 1 drinkware",
+        "viewer 2 drinkware",
+        "left viewer individual side table",
+        "right viewer individual side table",
+    ),
+    "SHARED_REMOTE_REGION": (
+        "shared remote support",
+        "support the television remote",
+        "shared control surface",
+        "hold the remote for both viewers",
+        "support the tv remote",
+        "shared media remote support",
+        "support television remote",
+        "central support for television remote",
+        "shared support for tv remote",
+        "television remote support",
+        "support remote control",
+        "support the remote control",
+        "support remote",
+        "hold items for viewers",
+        "fixed central coffee table surface accessible to both seated viewers for supporting the shared tv remote",
+        "central coffee table surface",
+        "coffee table surface for remote",
+        "central control surface",
+        "shared remote surface",
+        "central coffee table",
+        "television remote for both viewers",
+    ),
+}
+
+LIVING_OBJECT_ROLE_ALIASES = {
+    "CUP_SAUCER_SET": (
+        "contain hot beverage and saucer",
+        "individual cup and saucer drinkware set for each person",
+        "cup and saucer set",
+        "cup and saucer",
+        "drinkware set",
+        "cup and saucer drinkware set",
+        "individual cup and saucer set",
+        "contain hot beverage and saucer set",
+        "hot beverage and saucer",
+        "cup and saucer set for each person",
+        "individual cup and saucer",
+        "drinkware set for viewers",
+    ),
+    "CUP_COMPONENT": (
+        "contain hot beverage",
+        "contain coffee",
+        "contain tea",
+        "hold hot beverage",
+        "hold coffee",
+        "hold tea",
+        "drinking cup",
+        "hot beverage cup",
+        "coffee cup",
+        "tea cup",
+        "cup component",
+        "drink vessel",
+        "beverage cup",
+        "individual cup",
+    ),
+    "SAUCER_COMPONENT": (
+        "saucer component",
+        "cup saucer",
+        "saucer plate",
+        "drink saucer",
+        "support cup",
+        "under cup saucer",
+        "saucer for cup",
+        "saucer for drinkware",
+        "saucer for cup component",
+        "individual saucer",
+    ),
+    "REMOTE": (
+        "control television",
+        "handheld television remote control device",
+        "handheld television remote control",
+        "television remote control",
+        "tv remote control",
+        "remote control",
+        "control tv",
+        "tv remote",
+        "television remote",
+        "handheld remote",
+        "shared remote control",
+    ),
+}
+
+LIVING_FIXED_TARGET_ROLE_ALIASES = {
+    "SEATING_POSITION": (
+        "viewer seating position",
+        "individual viewer seating position",
+        "viewer seat",
+        "seating position",
+        "seat position",
+        "viewer armchair position",
+        "armchair position",
+        "seating position for one viewer",
+        "individual seat",
+        "seated viewer position",
+        "viewer chair",
+    ),
+    "SEATING_PAIR": (
+        "paired viewer seating area",
+        "both viewer seating positions collectively",
+        "pair of seats",
+        "paired seats",
+        "both viewer seats",
+        "seating pair",
+        "pair of armchairs",
+        "both seating positions",
+        "paired seating positions",
+        "both seats",
+    ),
+}
+
+LIVING_INTERACTION_GROUP_ALIASES = {
+    "personal_support_group": (
+        "support drinkware set beside seat",
+        "support drinkware beside seat",
+        "place personal drinkware beside viewer",
+        "provide personal drinkware support",
+        "support cup and saucer set near seat",
+        "personal cup and saucer support",
+        "support drinkware",
+        "support personal drinkware",
+        "support cup and saucer",
+        "support personal cup and saucer",
+        "support drinkware set near seat",
+    )
+}
+
+LIVING_BINARY_RELATION_ALIASES = {
+    "FITS_SET_ON": (
+        "can hold drinkware set",
+        "supports drinkware set",
+        "support drinkware set",
+        "suitable for drinkware set",
+        "cup and saucer set fits on",
+        "drinkware set placed on",
+        "drinkware set rests on",
+        "hold drinkware set",
+        "fit the complete set",
+        "fit a cup and saucer together",
+        "support the payload set",
+        "enough usable area for the set",
+        "surface area sufficient to hold both items",
+        "hold a cup and saucer set",
+        "fit cup and saucer",
+        "fits cup and saucer",
+        "fits cup and saucer set",
+        "accommodate cup and saucer set",
+        "support drinkware",
+        "support personal drinkware",
+        "fits personal drinkware",
+        "fit personal drinkware",
+        "fit set",
+        "fits set",
+        "hold cup and saucer",
+        "hold the complete set",
+        "support cup and saucer",
+    ),
+    "FITS_ON": (
+        "can hold remote",
+        "supports remote",
+        "support remote",
+        "suitable for remote",
+        "remote placed on",
+        "remote rests on",
+        "hold remote",
+        "fit the payload",
+        "fit the remote",
+        "fit remote",
+        "fits remote",
+        "support the remote",
+        "enough usable area for the object",
+        "large enough to accommodate the remote",
+        "fit television remote",
+        "support television remote",
+        "accommodate television remote",
+        "fits television remote",
+        "accommodate remote",
+    ),
+    "NEAR_SEAT": (
+        "near seat",
+        "beside seat",
+        "adjacent to seating position",
+        "near the assigned seat",
+        "within reach of one seated person",
+        "within reach of one seated viewer armchair",
+        "within reach of one seated viewer",
+        "within reach of seat",
+        "within reach of armchair",
+        "within reach of the armchair",
+        "reach of one seated",
+        "reach of seat",
+        "reach of armchair",
+        "personal access from the seat",
+        "adjacent to the viewer",
+        "adjacent to viewer",
+        "adjacent to seat",
+        "adjacent to armchair",
+        "position relative to the armchair",
+        "accessibility during viewing",
+        "near the seat",
+        "near armchair",
+        "near assigned seat",
+        "near assigned seating",
+        "near seating area",
+        "near seating",
+        "near seats",
+        "near seat position",
+    ),
+    "ACCESSIBLE_FROM_BOTH_SEATS": (
+        "accessible from both seats",
+        "accessible from both",
+        "accessible to both",
+        "accessible to both viewers",
+        "accessible from both seating positions",
+        "reachable by both",
+        "reachable by both viewers",
+        "shared access",
+        "shared access from both",
+        "shared access from both seating positions",
+        "both viewers",
+        "centrally accessible",
+        "central access",
+        "between seats",
+        "between seating positions",
+        "between armchairs",
+        "within easy reach of both viewers",
+    ),
+}
+
+
+def map_living_room_role_function(raw: dict[str, Any] | str) -> str | None:
+    """Deterministic concept matching for Living Room functional REGION roles using function and description only.
+
+    Candidate categories are strictly excluded from role semantic authority.
+    """
+    if isinstance(raw, dict):
+        text = f"{raw.get('function', '')} {raw.get('description', '')}"
+    else:
+        text = str(raw)
+    norm = _phrase(text)
+    if not norm:
+        return None
+
+    # 1. Exact or forward phrase match against reviewed aliases
+    for role_name, aliases in LIVING_REGION_ROLE_ALIASES.items():
+        for alias in aliases:
+            a_norm = _phrase(alias)
+            if a_norm == norm or _contains_phrase(norm, a_norm):
+                return role_name
+
+    # 2. Semantic analysis on function + description tokens
+    words = set(norm.split())
+    has_personal = any(
+        w in words or _contains_phrase(norm, w)
+        for w in (
+            "personal", "individual", "viewer", "occupant",
+            "beside seat", "near seat", "viewer 1", "viewer 2",
+        )
+    )
+    has_shared = any(
+        w in words or _contains_phrase(norm, w)
+        for w in (
+            "shared", "central", "both", "common", "mutual", "viewers", "accessible to both",
+        )
+    )
+    has_drink = any(
+        w in words or _contains_phrase(norm, w)
+        for w in ("cup", "saucer", "drink", "drinkware", "beverage", "tea", "coffee")
+    )
+    has_remote = any(
+        w in words or _contains_phrase(norm, w)
+        for w in ("remote", "controller", "tv", "television")
+    )
+
+    if (has_personal or has_drink) and not (has_shared or has_remote):
+        return "PERSONAL_CUP_SAUCER_REGION"
+    if (has_shared or has_remote) and not (has_personal and has_drink):
+        return "SHARED_REMOTE_REGION"
+    return None
+
+
+def map_living_room_object_payload_role(raw: dict[str, Any] | str) -> str | None:
+    """Deterministic concept matching for Living Room task-explicit payload OBJECT roles.
+
+    Uses function and description only. Candidate categories are strictly excluded.
+    Returns 'CUP_SAUCER_SET', 'CUP_COMPONENT', 'SAUCER_COMPONENT', 'REMOTE', or None.
+    """
+    if isinstance(raw, dict):
+        if raw.get("entity_kind") not in (None, "OBJECT"):
+            return None
+        text = f"{raw.get('function', '')} {raw.get('description', '')}"
+    else:
+        text = str(raw)
+    norm = _phrase(text)
+    if not norm:
+        return None
+
+    # 1. Forward match against reviewed aliases
+    for role_name, aliases in LIVING_OBJECT_ROLE_ALIASES.items():
+        for alias in aliases:
+            a_norm = _phrase(alias)
+            if a_norm == norm or _contains_phrase(norm, a_norm):
+                return role_name
+
+    # 2. Semantic analysis on function + description tokens
+    words = set(norm.split())
+    has_cup = any(
+        w in words or _contains_phrase(norm, w)
+        for w in ("cup", "drinking cup", "coffee cup", "tea cup", "drink vessel", "hold liquid", "contain liquid", "liquid vessel")
+    )
+    has_saucer = any(
+        w in words or _contains_phrase(norm, w)
+        for w in ("saucer", "saucer plate", "under cup", "support drink", "support cup", "flat dish")
+    )
+    has_drinkware = any(
+        w in words or _contains_phrase(norm, w)
+        for w in ("drinkware", "beverage set", "cup and saucer")
+    )
+    has_remote = any(
+        w in words or _contains_phrase(norm, w)
+        for w in ("remote", "tv remote", "remote control", "television remote", "control television", "control tv")
+    )
+
+    if has_remote and not (has_cup or has_saucer or has_drinkware):
+        return "REMOTE"
+    if (has_cup and has_saucer) or has_drinkware:
+        return "CUP_SAUCER_SET"
+    if has_cup and not has_saucer:
+        return "CUP_COMPONENT"
+    if has_saucer and not has_cup:
+        return "SAUCER_COMPONENT"
+    return None
+
+
+def map_living_room_fixed_target_role(raw: dict[str, Any] | str) -> str | None:
+    """Deterministic concept matching for Living Room contextual FIXED_TARGET roles.
+
+    Uses function and description only. Candidate categories are strictly excluded.
+    Returns 'SEATING_POSITION', 'SEATING_PAIR', or None.
+    """
+    if isinstance(raw, dict):
+        if raw.get("entity_kind") not in (None, "FIXED_TARGET"):
+            return None
+        text = f"{raw.get('function', '')} {raw.get('description', '')}"
+    else:
+        text = str(raw)
+    norm = _phrase(text)
+    if not norm:
+        return None
+
+    # 1. Forward match against reviewed aliases
+    for role_name, aliases in LIVING_FIXED_TARGET_ROLE_ALIASES.items():
+        for alias in aliases:
+            a_norm = _phrase(alias)
+            if a_norm == norm or _contains_phrase(norm, a_norm):
+                return role_name
+
+    # 2. Semantic analysis on function + description tokens
+    words = set(norm.split())
+    has_pair = any(
+        w in words or _contains_phrase(norm, w)
+        for w in ("pair", "both", "paired", "collectively", "both seats", "seating area")
+    )
+    has_seat = any(
+        w in words or _contains_phrase(norm, w)
+        for w in ("seat", "seating", "viewer", "armchair", "position", "chair", "seated")
+    )
+
+    if has_pair and has_seat:
+        return "SEATING_PAIR"
+    if has_seat:
+        return "SEATING_POSITION"
+    return None
+
+
+def map_living_room_operation_group_function(function_text: str) -> str | None:
+    """Map raw interaction group function phrase to canonical Living Room group name."""
+    norm = _phrase(function_text)
+    if not norm:
+        return None
+    for group_name, aliases in LIVING_INTERACTION_GROUP_ALIASES.items():
+        for alias in aliases:
+            a_norm = _phrase(alias)
+            if a_norm == norm or _contains_phrase(norm, a_norm):
+                return group_name
+    return None
+
+
+def canonicalize_living_room_relation(
+    relation_text: str,
+    subject_role: str,
+    object_role: str,
+    relation_aliases: dict[str, list[str]] | None = None,
+) -> tuple[str, str, str, str]:
+    """Signature-aware relation canonicalizer returning (canonical_subject, canonical_predicate, canonical_object, direction_status).
+
+    Allowed canonical signatures:
+    1. (PERSONAL_CUP_SAUCER_REGION, FITS_SET_ON, CUP_SAUCER_SET)
+    2. (PERSONAL_CUP_SAUCER_REGION, NEAR_SEAT, SEATING_POSITION)
+    3. (SHARED_REMOTE_REGION, FITS_ON, REMOTE)
+    4. (SHARED_REMOTE_REGION, ACCESSIBLE_FROM_BOTH_SEATS, SEATING_PAIR)
+    """
+    norm = _phrase(relation_text)
+    if not norm:
+        raise UnmappedFunctionalConceptError("Empty relation text cannot be mapped")
+
+    # Generic fragments that alone cannot establish a relation
+    if norm in {"on", "placed", "holds", "accessible", "near", "support", "fit"}:
+        raise UnmappedFunctionalConceptError(
+            f"Generic relation fragment {relation_text!r} is insufficient to establish a reviewed Living Room relation"
+        )
+
+    alias_table = LIVING_BINARY_RELATION_ALIASES if relation_aliases is None else relation_aliases
+    matched_predicates = set()
+    for pred, aliases in alias_table.items():
+        for alias in aliases:
+            a_norm = _phrase(alias)
+            if a_norm == norm or _contains_phrase(norm, a_norm):
+                matched_predicates.add(pred)
+                break
+
+    # If not matched, check contextual passive/placement verbs with exact pairs
+    if not matched_predicates:
+        if any(_contains_phrase(norm, p) for p in ("placed on", "placed upon", "rests on", "rest on", "sits on", "set on")):
+            if {subject_role, object_role} == {"PERSONAL_CUP_SAUCER_REGION", "CUP_SAUCER_SET"}:
+                matched_predicates.add("FITS_SET_ON")
+            elif {subject_role, object_role} == {"SHARED_REMOTE_REGION", "REMOTE"}:
+                matched_predicates.add("FITS_ON")
+
+    if not matched_predicates:
+        raise UnmappedFunctionalConceptError(
+            f"VLM living room relation {relation_text!r} cannot be mapped to any reviewed relation "
+            f"(available: {sorted(LIVING_BINARY_RELATION_ALIASES.keys())})"
+        )
+    if len(matched_predicates) > 1:
+        raise AmbiguousCanonicalizationError(
+            f"Ambiguous living room relation {relation_text!r} matches multiple predicates: {sorted(matched_predicates)}"
+        )
+
+    predicate = next(iter(matched_predicates))
+
+    # Define expected signatures: (expected_subject, expected_object)
+    expected_signatures = {
+        "FITS_SET_ON": ("PERSONAL_CUP_SAUCER_REGION", "CUP_SAUCER_SET"),
+        "FITS_ON": ("SHARED_REMOTE_REGION", "REMOTE"),
+        "NEAR_SEAT": ("PERSONAL_CUP_SAUCER_REGION", "SEATING_POSITION"),
+        "ACCESSIBLE_FROM_BOTH_SEATS": ("SHARED_REMOTE_REGION", "SEATING_PAIR"),
+    }
+
+    if predicate not in expected_signatures:
+        raise MalformedVLMSpecificationError(f"Unknown predicate {predicate!r} in Living Room domain")
+
+    exp_s, exp_o = expected_signatures[predicate]
+
+    if subject_role == exp_s and object_role == exp_o:
+        return (exp_s, predicate, exp_o, "PRESERVED")
+    elif subject_role == exp_o and object_role == exp_s:
+        return (exp_s, predicate, exp_o, "NORMALIZED_TO_CANONICAL_SIGNATURE")
+    elif subject_role == exp_s and object_role == exp_s and predicate in ("NEAR_SEAT", "ACCESSIBLE_FROM_BOTH_SEATS"):
+        return (exp_s, predicate, exp_o, "NORMALIZED_TO_CANONICAL_SIGNATURE")
+    else:
+        raise MalformedVLMSpecificationError(
+            f"Relation {relation_text!r} mapped to predicate {predicate!r} expects endpoints ({exp_s}, {exp_o}), "
+            f"but got ({subject_role}, {object_role})"
+        )
+
 
 def map_living_room_relation(
     relation_text: str,
@@ -123,93 +602,52 @@ def map_living_room_relation(
     fail_closed: bool = True,
 ) -> str | None:
     """Deterministic concept matching for Living Room binary relations via reviewed alias table."""
-    norm = _phrase(relation_text)
-    if not norm:
+    try:
+        if subject_role is not None and object_role is not None:
+            _, pred, _, _ = canonicalize_living_room_relation(
+                relation_text,
+                subject_role,
+                object_role,
+                relation_aliases=relation_aliases,
+            )
+            return pred
+
+        norm = _phrase(relation_text)
+        if not norm:
+            if fail_closed:
+                raise UnmappedFunctionalConceptError("Empty relation text cannot be mapped")
+            return None
+        if norm in {"on", "placed", "holds", "accessible", "near", "support", "fit"}:
+            if fail_closed:
+                raise UnmappedFunctionalConceptError(
+                    f"Generic relation fragment {relation_text!r} is insufficient to establish a reviewed Living Room relation"
+                )
+            return None
+        alias_table = LIVING_BINARY_RELATION_ALIASES if relation_aliases is None else relation_aliases
+        matches = set()
+        for pred, aliases in alias_table.items():
+            for alias in aliases:
+                a_norm = _phrase(alias)
+                if a_norm == norm or _contains_phrase(norm, a_norm):
+                    matches.add(pred)
+                    break
+        if len(matches) == 1:
+            return next(iter(matches))
+        if len(matches) > 1:
+            if fail_closed:
+                raise AmbiguousCanonicalizationError(
+                    f"Ambiguous living room relation {relation_text!r} matches: {sorted(matches)}"
+                )
+            return None
         if fail_closed:
-            raise UnmappedFunctionalConceptError("Empty relation text cannot be mapped")
+            raise UnmappedFunctionalConceptError(
+                f"VLM living room relation {relation_text!r} cannot be mapped to any reviewed relation"
+            )
         return None
-    matches = set()
-    if relation_aliases is None:
-        try:
-            norm_yaml = _load_yaml(_resolve(DEFAULT_NORMALIZATION))
-            aliases_dict = norm_yaml.get("binary_relation_aliases", {})
-        except Exception:
-            aliases_dict = {}
-    else:
-        aliases_dict = relation_aliases
-    for pred in ("NEAR_SEAT", "ACCESSIBLE_FROM_BOTH_SEATS", "FITS_SET_ON", "FITS_ON"):
-        for alias in aliases_dict.get(pred, []):
-            a_norm = _phrase(alias)
-            if a_norm == norm or f" {a_norm} " in f" {norm} " or f" {norm} " in f" {a_norm} ":
-                matches.add(pred)
-                break
-
-    # Contextual role disambiguation for generic placement verbs (e.g. "placed_on", "placed on", "on")
-    if not matches:
-        if any(p in norm for p in ("placed on", "placed_on", "placed", "on", "rest on", "supports", "holds")):
-            if subject_role in ("CUP_SAUCER_SET", "cup_saucer_set", "cup", "saucer", "role_cup", "role_saucer") or object_role in ("PERSONAL_CUP_SAUCER_REGION", "personal_cup_saucer", "role_personal_support"):
-                matches.add("FITS_SET_ON")
-            elif subject_role in ("REMOTE", "remote", "role_remote") or object_role in ("SHARED_REMOTE_REGION", "shared_remote", "role_shared_support"):
-                matches.add("FITS_ON")
-            else:
-                matches.add("FITS_SET_ON")
-        elif any(p in norm for p in ("near seat", "near_seat", "next to chair", "by seat", "at chair", "for person")):
-            matches.add("NEAR_SEAT")
-        elif any(p in norm for p in ("accessible", "both seats", "shared between", "central")):
-            matches.add("ACCESSIBLE_FROM_BOTH_SEATS")
-
-    if len(matches) == 1:
-        return next(iter(matches))
-    if len(matches) > 1:
-        if subject_role in ("CUP_SAUCER_SET", "cup_saucer_set", "cup", "saucer") and "FITS_SET_ON" in matches:
-            return "FITS_SET_ON"
-        if subject_role in ("REMOTE", "remote") and "FITS_ON" in matches:
-            return "FITS_ON"
-        raise AmbiguousCanonicalizationError(
-            f"Ambiguous living room relation {relation_text!r} matches: {sorted(matches)}"
-        )
-    if fail_closed:
-        raise UnmappedFunctionalConceptError(
-            f"VLM living room relation {relation_text!r} cannot be mapped to any reviewed relation"
-        )
-    return None
-
-
-def map_living_room_object_payload_role(raw: dict[str, Any]) -> str | None:
-    """Deterministic concept matching for Living Room task-explicit payload OBJECT roles."""
-    if raw.get("entity_kind") != "OBJECT":
+    except Exception:
+        if fail_closed:
+            raise
         return None
-    fn_desc = f"{raw.get('function', '')} {raw.get('description', '')}"
-    cand_cats = " ".join(raw.get("candidate_categories", []))
-    norm_all = _phrase(f"{fn_desc} {cand_cats}")
-    if not norm_all:
-        return None
-    has_cup = any(w in norm_all for w in ("cup", "saucer", "drinkware", "drink", "coffee", "tea", "beverage", "cup_saucer_set", "cup saucer", "cups", "hold liquid", "support drink", "vessel", "mug", "glass", "tumbler", "plate", "dish"))
-    has_remote = any(w in norm_all for w in ("remote", "controller", "tv_remote", "remote_control", "television_remote", "control device", "tv", "control tv", "handheld", "buttons"))
-    if has_cup and not has_remote:
-        return "CUP_SAUCER_SET"
-    if has_remote and not has_cup:
-        return "REMOTE"
-    return None
-
-
-def map_living_room_fixed_target_role(raw: dict[str, Any]) -> str | None:
-    """Deterministic concept matching for Living Room contextual FIXED_TARGET roles."""
-    if raw.get("entity_kind") != "FIXED_TARGET":
-        return None
-    fn_desc = f"{raw.get('function', '')} {raw.get('description', '')}"
-    cand_cats = " ".join(raw.get("candidate_categories", []))
-    norm = _phrase(f"{fn_desc} {cand_cats}")
-    if not norm:
-        return None
-    if any(k in norm for k in (
-        "seating pair", "both seats", "seating area", "pair of seats",
-        "armchairs", "armchair positions", "viewer positions", "viewing seats",
-    )):
-        return "SEATING_PAIR"
-    if any(k in norm for k in ("seating position", "seat position", "seating", "seat", "armchair", "chair", "viewer")):
-        return "SEATING_POSITION"
-    return None
 
 
 class EnvironmentVLMRequirementProvider:
@@ -586,222 +1024,693 @@ class EnvironmentVLMRequirementProvider:
             else:
                 self.normalized_task = None
         else:
-            language_roles = self.environment_config.get("roles", {})
-            grouped_requirements: dict[str, list[dict[str, Any]]] = {}
-            raw_id_to_canon: dict[str, str] = {}
-
+            raw_ids_seen = set()
             for raw in raw_requirements:
                 raw_id = raw.get("id")
+                if not raw_id or raw_id in raw_ids_seen:
+                    raise MalformedVLMSpecificationError(f"Duplicate or missing raw role id: {raw_id!r}")
+                raw_ids_seen.add(raw_id)
+
+            raw_id_to_canon: dict[str, str] = {}
+            classified_roles: dict[str, list[dict[str, Any]]] = {}
+
+            for raw in raw_requirements:
+                raw_id = raw["id"]
                 raw_kind = raw.get("entity_kind")
-                func_text = str(raw.get("function", ""))
+                if not raw_kind:
+                    raise MalformedVLMSpecificationError(f"Role {raw_id!r} is missing entity_kind")
 
-                if raw_kind == "OBJECT":
-                    matched_payload = map_living_room_object_payload_role(raw)
-                    if matched_payload is not None:
-                        canonical_func = matched_payload
-                        matched_role_id = matched_payload.lower()
-                    else:
-                        norm_func = _phrase(f"{func_text} {raw.get('description', '')}")
-                        matching_roles = []
-                        for r_id, r_cfg in language_roles.items():
-                            if r_cfg.get("entity_kind") == "REGION":
-                                continue
-                            for alias in r_cfg.get("function_aliases", []):
-                                a_norm = _phrase(alias)
-                                if a_norm == norm_func or f" {a_norm} " in f" {norm_func} ":
-                                    matching_roles.append(r_id)
-                                    break
-                        if len(matching_roles) == 1:
-                            matched_role_id = matching_roles[0]
-                            canonical_func = matched_role_id.upper()
-                        elif len(matching_roles) > 1:
-                            raise AmbiguousCanonicalizationError(
-                                f"VLM OBJECT role {raw_id!r} with function {raw.get('function')!r} "
-                                f"is ambiguous across canonical roles: {sorted(matching_roles)}"
-                            )
-                        else:
-                            raise UnmappedFunctionalConceptError(
-                                f"VLM OBJECT role {raw_id!r} with function {raw.get('function')!r} "
-                                "cannot be mapped to any reviewed canonical role"
-                            )
+                raw_count = int(raw.get("required_count", 1))
+                if raw_count < 1:
+                    raise MalformedVLMSpecificationError(f"Role {raw_id!r} required_count must be >= 1, got {raw_count}")
 
-                elif raw_kind == "REGION":
-                    comp_role = map_living_room_role_function(f"{func_text} {raw.get('description', '')}")
-                    if comp_role is not None:
-                        matched_role_id = comp_role
-                        canonical_func = (
-                            "PERSONAL_CUP_SAUCER_REGION"
-                            if comp_role == "personal_cup_saucer"
-                            else "SHARED_REMOTE_REGION"
-                            if comp_role == "shared_remote"
-                            else comp_role.upper()
+                raw_policy = raw.get("binding_policy", "DISTINCT")
+                if raw_policy not in ("DISTINCT", "SHARED", "REUSABLE"):
+                    raise MalformedVLMSpecificationError(f"Role {raw_id!r} has invalid binding_policy: {raw_policy!r}")
+
+                if raw_kind == "REGION":
+                    mapped = map_living_room_role_function(raw)
+                    if mapped is None:
+                        raise UnmappedFunctionalConceptError(
+                            f"VLM REGION role {raw_id!r} with function {raw.get('function')!r} "
+                            "cannot be mapped to any canonical Living Room region role"
                         )
-                    else:
-                        norm_func = _phrase(f"{func_text} {raw.get('description', '')}")
-                        matching_roles = []
-                        for r_id, r_cfg in language_roles.items():
-                            if r_cfg.get("entity_kind") == "OBJECT":
-                                continue
-                            for alias in r_cfg.get("function_aliases", []):
-                                a_norm = _phrase(alias)
-                                if a_norm == norm_func or f" {a_norm} " in f" {norm_func} ":
-                                    matching_roles.append(r_id)
-                                    break
-                        if len(matching_roles) == 1:
-                            matched_role_id = matching_roles[0]
-                            canonical_func = (
-                                "PERSONAL_CUP_SAUCER_REGION"
-                                if matched_role_id == "personal_cup_saucer"
-                                else "SHARED_REMOTE_REGION"
-                                if matched_role_id == "shared_remote"
-                                else matched_role_id.upper()
-                            )
-                        elif len(matching_roles) > 1:
-                            raise AmbiguousCanonicalizationError(
-                                f"VLM REGION role {raw_id!r} with function {raw.get('function')!r} "
-                                f"is ambiguous across canonical roles: {sorted(matching_roles)}"
-                            )
-                        else:
-                            raise UnmappedFunctionalConceptError(
-                                f"VLM REGION role {raw_id!r} with function {raw.get('function')!r} "
-                                "cannot be mapped to any reviewed canonical role"
-                            )
+                    canon_name = "PERSONAL_CUP_SAUCER_REGION" if "personal" in mapped.lower() else "SHARED_REMOTE_REGION"
+                    classified_roles.setdefault(canon_name, []).append({"raw": raw, "component": canon_name})
+                    raw_id_to_canon[raw_id] = canon_name
+
+                elif raw_kind == "OBJECT":
+                    mapped = map_living_room_object_payload_role(raw)
+                    if mapped is None:
+                        raise UnmappedFunctionalConceptError(
+                            f"VLM OBJECT role {raw_id!r} with function {raw.get('function')!r} "
+                            "cannot be mapped to any canonical Living Room object role"
+                        )
+                    if mapped in ("CUP_SAUCER_SET", "CUP_COMPONENT", "SAUCER_COMPONENT"):
+                        classified_roles.setdefault("CUP_SAUCER_SET", []).append({"raw": raw, "component": mapped})
+                        raw_id_to_canon[raw_id] = "CUP_SAUCER_SET"
+                    elif mapped == "REMOTE":
+                        classified_roles.setdefault("REMOTE", []).append({"raw": raw, "component": "REMOTE"})
+                        raw_id_to_canon[raw_id] = "REMOTE"
 
                 elif raw_kind == "FIXED_TARGET":
-                    matched_fixed = map_living_room_fixed_target_role(raw)
-                    if matched_fixed is not None:
-                        canonical_func = matched_fixed
-                        matched_role_id = matched_fixed.lower()
-                    else:
-                        norm_func = _phrase(f"{func_text} {raw.get('description', '')}")
-                        matching_roles = []
-                        for r_id, r_cfg in language_roles.items():
-                            for alias in r_cfg.get("function_aliases", []):
-                                a_norm = _phrase(alias)
-                                if a_norm == norm_func or f" {a_norm} " in f" {norm_func} ":
-                                    matching_roles.append(r_id)
-                                    break
-                        if len(matching_roles) == 1:
-                            matched_role_id = matching_roles[0]
-                            canonical_func = matched_role_id.upper()
-                        elif len(matching_roles) > 1:
-                            raise AmbiguousCanonicalizationError(
-                                f"VLM FIXED_TARGET role {raw_id!r} with function {raw.get('function')!r} "
-                                f"is ambiguous across canonical roles: {sorted(matching_roles)}"
-                            )
-                        else:
-                            raise UnmappedFunctionalConceptError(
-                                f"VLM FIXED_TARGET role {raw_id!r} with function {raw.get('function')!r} "
-                                "cannot be mapped to any reviewed canonical role"
-                            )
-                else:
-                    raise MalformedVLMSpecificationError(
-                        f"Unknown entity_kind {raw_kind!r} for role {raw_id!r}"
-                    )
+                    mapped = map_living_room_fixed_target_role(raw)
+                    if mapped is None:
+                        raise UnmappedFunctionalConceptError(
+                            f"VLM FIXED_TARGET role {raw_id!r} with function {raw.get('function')!r} "
+                            "cannot be mapped to any canonical Living Room fixed target role"
+                        )
+                    classified_roles.setdefault(mapped, []).append({"raw": raw, "component": mapped})
+                    raw_id_to_canon[raw_id] = mapped
 
-                if canonical_func in LIVING_ROLE_EXPECTED_ENTITY_KINDS:
-                    expected_kind = LIVING_ROLE_EXPECTED_ENTITY_KINDS[canonical_func]
-                    if raw_kind != expected_kind:
+                else:
+                    raise MalformedVLMSpecificationError(f"Unknown entity_kind {raw_kind!r} for role {raw_id!r}")
+
+            concept_accounting: dict[str, Any] = {
+                "roles": {},
+                "properties": [],
+                "relations": [],
+                "operation_groups": [],
+            }
+            role_properties_map: dict[str, list[str]] = {}
+
+            for raw in raw_requirements:
+                raw_id = raw["id"]
+                raw_kind = raw["entity_kind"]
+                seen_props: set[str] = set()
+                for prop in raw.get("required_properties", []):
+                    if not isinstance(prop, str):
+                        raise MalformedVLMSpecificationError(f"Property must be string, got {prop!r}")
+                    norm_p = _phrase(prop)
+                    mapped_p = None
+                    if any(a == norm_p or _contains_phrase(norm_p, a) for a in (
+                        "planar support", "planar horizontal support", "horizontal planar support",
+                        "planar surface", "flat support", "flat surface", "horizontal surface",
+                    )):
+                        mapped_p = "PLANAR_SUPPORT"
+                    elif any(a == norm_p or _contains_phrase(norm_p, a) for a in (
+                        "open cavity", "capable of holding liquid", "cavity",
+                    )):
+                        mapped_p = "OPEN_CAVITY"
+                    elif any(a == norm_p or _contains_phrase(norm_p, a) for a in (
+                        "elongated object", "elongated shape", "slender", "elongated",
+                    )):
+                        mapped_p = "ELONGATED_OBJECT"
+
+                    if mapped_p is None:
+                        raise UnmappedFunctionalConceptError(
+                            f"Required property {prop!r} on role {raw_id!r} cannot be mapped to any Living Room unary property"
+                        )
+                    if mapped_p == "PLANAR_SUPPORT" and raw_kind != "REGION":
                         raise MalformedVLMSpecificationError(
-                            f"Living Room role {canonical_func!r} must have entity_kind {expected_kind!r}, got {raw_kind!r}"
+                            f"PLANAR_SUPPORT requested on non-REGION role {raw_id!r} ({raw_kind})"
+                        )
+                    if mapped_p in ("OPEN_CAVITY", "ELONGATED_OBJECT"):
+                        raise UnsupportedCheckerCapabilityError(
+                            f"Unary predicate {mapped_p!r} is not supported in Living Room domain"
                         )
 
-                raw_id_to_canon[raw_id] = canonical_func
-                grouped_requirements.setdefault(canonical_func, []).append({
-                    "raw": raw,
-                    "canonical_func": canonical_func,
-                    "matched_role_id": matched_role_id,
-                })
+                    canon_role = raw_id_to_canon[raw_id]
+                    if mapped_p not in seen_props:
+                        seen_props.add(mapped_p)
+                        role_properties_map.setdefault(canon_role, [])
+                        if mapped_p not in role_properties_map[canon_role]:
+                            role_properties_map[canon_role].append(mapped_p)
+                        concept_accounting["properties"].append({
+                            "raw_role_id": raw_id,
+                            "raw_phrase": prop,
+                            "canonical_predicate": mapped_p,
+                            "status": "PRESERVED",
+                        })
+                    else:
+                        concept_accounting["properties"].append({
+                            "raw_role_id": raw_id,
+                            "raw_phrase": prop,
+                            "canonical_predicate": mapped_p,
+                            "status": "MERGED_BY_EXPLICIT_RULE",
+                            "reason": f"Duplicate alias for predicate {mapped_p} on same role",
+                        })
 
             vlm_role_vocab: list[str] = []
-            for canonical_func, group in grouped_requirements.items():
-                raw_group = [item["raw"] for item in group]
-                matched_role_id = group[0]["matched_role_id"]
-                raw_vlm_role_ids = [raw["id"] for raw in raw_group]
-                entity_kinds = {raw.get("entity_kind") for raw in raw_group}
-                if len(entity_kinds) != 1:
-                    raise MalformedVLMSpecificationError(f"Mixed entity kinds in canonical group {canonical_func}: {entity_kinds}")
-                entity_kind = entity_kinds.pop()
+            normalized_records: list[dict[str, Any]] = []
 
-                binding_policies = {raw.get("binding_policy") for raw in raw_group if raw.get("binding_policy")}
-                binding_policy = "DISTINCT" if "DISTINCT" in binding_policies else (binding_policies.pop() if binding_policies else "DISTINCT")
-
-                total_count = sum(int(raw.get("required_count", 1)) for raw in raw_group)
-                raw_func = " / ".join(dict.fromkeys(raw.get("function", "") for raw in raw_group if raw.get("function")))
-                raw_desc = " ".join(dict.fromkeys(raw.get("description", "") for raw in raw_group if raw.get("description")))
+            # 1. Synthesis: CUP_SAUCER_SET
+            if "CUP_SAUCER_SET" in classified_roles:
+                items = classified_roles["CUP_SAUCER_SET"]
+                has_composite = any(it["component"] == "CUP_SAUCER_SET" for it in items)
+                if has_composite:
+                    if len(items) > 1:
+                        raise AmbiguousCanonicalizationError(
+                            "Multiple composite drinkware roles or mixed composite+component roles in Living Room specification"
+                        )
+                    raw_item = items[0]["raw"]
+                    c_count = int(raw_item.get("required_count", 1))
+                    c_policy = raw_item.get("binding_policy", "DISTINCT")
+                    concept_accounting["roles"][raw_item["id"]] = {
+                        "canonical_role": "CUP_SAUCER_SET",
+                        "entity_kind": "OBJECT",
+                        "raw_count": c_count,
+                        "canonical_count": c_count,
+                        "binding_policy": c_policy,
+                        "unary_predicates": [],
+                        "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
+                        "candidate_categories_used_for_role_identity": False,
+                        "status": "PRESERVED",
+                    }
+                else:
+                    cups = [it["raw"] for it in items if it["component"] == "CUP_COMPONENT"]
+                    saucers = [it["raw"] for it in items if it["component"] == "SAUCER_COMPONENT"]
+                    if len(cups) != 1 or len(saucers) != 1:
+                        raise AmbiguousCanonicalizationError(
+                            "Component decomposition must have exactly one cup role and one saucer role"
+                        )
+                    cup_raw = cups[0]
+                    saucer_raw = saucers[0]
+                    cup_cnt = int(cup_raw.get("required_count", 1))
+                    saucer_cnt = int(saucer_raw.get("required_count", 1))
+                    if cup_cnt != saucer_cnt:
+                        raise MalformedVLMSpecificationError(
+                            f"Mismatched component counts for cup ({cup_cnt}) and saucer ({saucer_cnt})"
+                        )
+                    cup_pol = cup_raw.get("binding_policy", "DISTINCT")
+                    saucer_pol = saucer_raw.get("binding_policy", "DISTINCT")
+                    if cup_pol != saucer_pol:
+                        raise MalformedVLMSpecificationError(
+                            f"Conflicting binding policies between cup ({cup_pol}) and saucer ({saucer_pol})"
+                        )
+                    c_count = cup_cnt
+                    c_policy = cup_pol
+                    concept_accounting["roles"][cup_raw["id"]] = {
+                        "canonical_role": "CUP_SAUCER_SET",
+                        "entity_kind": "OBJECT",
+                        "raw_count": cup_cnt,
+                        "canonical_count": c_count,
+                        "binding_policy": c_policy,
+                        "unary_predicates": [],
+                        "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
+                        "candidate_categories_used_for_role_identity": False,
+                        "status": "COMPOSED_FROM_COMPONENT_ROLES",
+                        "composition_details": {
+                            "partner_role_id": saucer_raw["id"],
+                            "component_type": "cup",
+                            "raw_count": cup_cnt,
+                            "composite_count": c_count,
+                            "merge_rule": "ONE_SET_PER_CUP_AND_SAUCER_PAIR",
+                        },
+                    }
+                    concept_accounting["roles"][saucer_raw["id"]] = {
+                        "canonical_role": "CUP_SAUCER_SET",
+                        "entity_kind": "OBJECT",
+                        "raw_count": saucer_cnt,
+                        "canonical_count": c_count,
+                        "binding_policy": c_policy,
+                        "unary_predicates": [],
+                        "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
+                        "candidate_categories_used_for_role_identity": False,
+                        "status": "COMPOSED_FROM_COMPONENT_ROLES",
+                        "composition_details": {
+                            "partner_role_id": cup_raw["id"],
+                            "component_type": "saucer",
+                            "raw_count": saucer_cnt,
+                            "composite_count": c_count,
+                            "merge_rule": "ONE_SET_PER_CUP_AND_SAUCER_PAIR",
+                        },
+                    }
 
                 cand_cats = list(dict.fromkeys(
                     cat.strip()
-                    for raw in raw_group
-                    for cat in raw.get("candidate_categories", [])
+                    for it in items
+                    for cat in it["raw"].get("candidate_categories", [])
                     if str(cat).strip()
                 ))
                 vlm_role_vocab.extend(cand_cats)
-                run_local_cats = list(dict.fromkeys(_phrase(c).replace(" ", "_") for c in cand_cats if c))
-
-                if entity_kind in ("OBJECT", "REGION") and canonical_func in ("PERSONAL_CUP_SAUCER_REGION", "SHARED_REMOTE_REGION"):
-                    if not cand_cats:
-                        raise MalformedVLMSpecificationError(
-                            f"Discoverable Living Room role {canonical_func!r} must specify non-empty candidate_categories"
-                        )
-                if canonical_func in LIVING_ROLE_EXPECTED_ENTITY_KINDS:
-                    expected_kind = LIVING_ROLE_EXPECTED_ENTITY_KINDS[canonical_func]
-                    if entity_kind != expected_kind:
-                        raise MalformedVLMSpecificationError(
-                            f"Living Room role {canonical_func!r} must have entity_kind {expected_kind!r}, got {entity_kind!r}"
-                        )
-
-                if canonical_func in LIVING_TASK_ANCHOR_CANONICAL_CATEGORIES:
-                    anchor_cats = LIVING_TASK_ANCHOR_CANONICAL_CATEGORIES[canonical_func]
-                    accepted_cats = list(dict.fromkeys(list(anchor_cats) + run_local_cats))
-                else:
-                    accepted_cats = run_local_cats or cand_cats
-
+                run_local_cats = [_phrase(c).replace(" ", "_") for c in cand_cats if c]
+                accepted_cats = list(dict.fromkeys(list(LIVING_TASK_ANCHOR_CANONICAL_CATEGORIES["CUP_SAUCER_SET"]) + run_local_cats))
                 hints = list(dict.fromkeys(
                     candidate["label"]
-                    for raw in raw_group
-                    for candidate in raw.get("visible_candidates", [])
+                    for it in items
+                    for candidate in it["raw"].get("visible_candidates", [])
                     if candidate.get("label")
                 ))
 
-                raw_props = sorted(
-                    set().union(*(self._map_properties(raw.get("required_properties", []), fail_closed=False) for raw in raw_group))
-                )
-                if entity_kind == "OBJECT":
-                    required_properties = [p for p in raw_props if p in ("OPEN_CAVITY", "ELONGATED_OBJECT")]
-                elif entity_kind == "REGION":
-                    required_properties = [p for p in raw_props if p in ("PLANAR_SUPPORT",)]
-                else:
-                    required_properties = []
-                normalized_records.append(
-                    {
-                        "role_id": matched_role_id,
-                        "raw_vlm_role_ids": raw_vlm_role_ids,
-                        "entity_kind": entity_kind,
-                        "binding_policy": binding_policy,
-                        "function": canonical_func,
-                        "raw_function": raw_func,
-                        "vlm_required_count": total_count,
-                        "description": raw_desc,
-                        "candidate_categories": cand_cats,
-                        "raw_candidate_categories": cand_cats,
-                        "canonical_graph_category": LIVING_TASK_ANCHOR_CANONICAL_CATEGORIES.get(canonical_func),
-                        "accepted_categories": accepted_cats,
-                        "required_properties": required_properties,
-                        "visible_candidates": [
-                            candidate
-                            for raw in raw_group
-                            for candidate in raw.get("visible_candidates", [])
-                        ],
-                        "semantic_hints": hints,
-                        "source": "FM",
-                        "provenance": "qwen_vlm_normalized_by_generic_ontology",
-                        "vlm_canonicalization_version": VLM_CANONICALIZATION_VERSION,
-                        "normalization_status": "COMPLETE",
-                    }
-                )
+                normalized_records.append({
+                    "role_id": "cup_saucer_set",
+                    "raw_vlm_role_ids": [it["raw"]["id"] for it in items],
+                    "entity_kind": "OBJECT",
+                    "binding_policy": c_policy,
+                    "function": "CUP_SAUCER_SET",
+                    "raw_function": " / ".join(dict.fromkeys(it["raw"].get("function", "") for it in items)),
+                    "vlm_required_count": c_count,
+                    "description": " ".join(dict.fromkeys(it["raw"].get("description", "") for it in items)),
+                    "candidate_categories": cand_cats,
+                    "raw_candidate_categories": cand_cats,
+                    "canonical_graph_category": LIVING_TASK_ANCHOR_CANONICAL_CATEGORIES["CUP_SAUCER_SET"],
+                    "accepted_categories": accepted_cats,
+                    "required_properties": [],
+                    "visible_candidates": [
+                        candidate
+                        for it in items
+                        for candidate in it["raw"].get("visible_candidates", [])
+                    ],
+                    "semantic_hints": hints,
+                    "source": "FM",
+                    "provenance": "qwen_vlm_normalized_by_generic_ontology",
+                    "vlm_canonicalization_version": LIVING_ROOM_VLM_CANONICALIZATION_VERSION,
+                    "normalization_status": "COMPLETE",
+                })
 
-            # Canonicalize relations losslessly
+            # 2. Synthesis: PERSONAL_CUP_SAUCER_REGION
+            if "PERSONAL_CUP_SAUCER_REGION" in classified_roles:
+                items = classified_roles["PERSONAL_CUP_SAUCER_REGION"]
+                raw_list = [it["raw"] for it in items]
+                if len(raw_list) == 1:
+                    r = raw_list[0]
+                    cnt = int(r.get("required_count", 1))
+                    pol = r.get("binding_policy", "DISTINCT")
+                    concept_accounting["roles"][r["id"]] = {
+                        "canonical_role": "PERSONAL_CUP_SAUCER_REGION",
+                        "entity_kind": "REGION",
+                        "raw_count": cnt,
+                        "canonical_count": cnt,
+                        "binding_policy": pol,
+                        "unary_predicates": ["PLANAR_SUPPORT"],
+                        "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
+                        "candidate_categories_used_for_role_identity": False,
+                        "status": "PRESERVED",
+                    }
+                else:
+                    pols = {r.get("binding_policy", "DISTINCT") for r in raw_list}
+                    if len(pols) > 1:
+                        raise MalformedVLMSpecificationError(f"Conflicting binding policies in personal side table roles: {pols}")
+                    pol = pols.pop()
+                    cnt = sum(int(r.get("required_count", 1)) for r in raw_list)
+                    for r in raw_list:
+                        r_cnt = int(r.get("required_count", 1))
+                        concept_accounting["roles"][r["id"]] = {
+                            "canonical_role": "PERSONAL_CUP_SAUCER_REGION",
+                            "entity_kind": "REGION",
+                            "raw_count": r_cnt,
+                            "canonical_count": cnt,
+                            "binding_policy": pol,
+                            "unary_predicates": ["PLANAR_SUPPORT"],
+                            "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
+                            "candidate_categories_used_for_role_identity": False,
+                            "status": "MERGED_BY_EXPLICIT_RULE",
+                            "reason": "Disjoint personal slot roles composed into canonical role",
+                        }
+
+                cand_cats = list(dict.fromkeys(
+                    cat.strip()
+                    for r in raw_list
+                    for cat in r.get("candidate_categories", [])
+                    if str(cat).strip()
+                ))
+                vlm_role_vocab.extend(cand_cats)
+                accepted_cats = list(dict.fromkeys(_phrase(c).replace(" ", "_") for c in cand_cats if c))
+                hints = list(dict.fromkeys(
+                    candidate["label"]
+                    for r in raw_list
+                    for candidate in r.get("visible_candidates", [])
+                    if candidate.get("label")
+                ))
+                props = role_properties_map.get("PERSONAL_CUP_SAUCER_REGION", ["PLANAR_SUPPORT"])
+
+                normalized_records.append({
+                    "role_id": "personal_cup_saucer",
+                    "raw_vlm_role_ids": [r["id"] for r in raw_list],
+                    "entity_kind": "REGION",
+                    "binding_policy": pol,
+                    "function": "PERSONAL_CUP_SAUCER_REGION",
+                    "raw_function": " / ".join(dict.fromkeys(r.get("function", "") for r in raw_list)),
+                    "vlm_required_count": cnt,
+                    "description": " ".join(dict.fromkeys(r.get("description", "") for r in raw_list)),
+                    "candidate_categories": cand_cats,
+                    "raw_candidate_categories": cand_cats,
+                    "canonical_graph_category": None,
+                    "accepted_categories": accepted_cats,
+                    "required_properties": props,
+                    "visible_candidates": [
+                        candidate
+                        for r in raw_list
+                        for candidate in r.get("visible_candidates", [])
+                    ],
+                    "semantic_hints": hints,
+                    "source": "FM",
+                    "provenance": "qwen_vlm_normalized_by_generic_ontology",
+                    "vlm_canonicalization_version": LIVING_ROOM_VLM_CANONICALIZATION_VERSION,
+                    "normalization_status": "COMPLETE",
+                })
+
+            # 3. Synthesis: SHARED_REMOTE_REGION
+            if "SHARED_REMOTE_REGION" in classified_roles:
+                items = classified_roles["SHARED_REMOTE_REGION"]
+                raw_list = [it["raw"] for it in items]
+                if len(raw_list) > 1:
+                    raise AmbiguousCanonicalizationError(
+                        f"Multiple raw roles mapping to SHARED_REMOTE_REGION: {[r['id'] for r in raw_list]}"
+                    )
+                r = raw_list[0]
+                cnt = int(r.get("required_count", 1))
+                pol = r.get("binding_policy", "SHARED")
+                concept_accounting["roles"][r["id"]] = {
+                    "canonical_role": "SHARED_REMOTE_REGION",
+                    "entity_kind": "REGION",
+                    "raw_count": cnt,
+                    "canonical_count": cnt,
+                    "binding_policy": pol,
+                    "unary_predicates": ["PLANAR_SUPPORT"],
+                    "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
+                    "candidate_categories_used_for_role_identity": False,
+                    "status": "PRESERVED",
+                }
+                cand_cats = list(dict.fromkeys(
+                    cat.strip()
+                    for cat in r.get("candidate_categories", [])
+                    if str(cat).strip()
+                ))
+                vlm_role_vocab.extend(cand_cats)
+                accepted_cats = list(dict.fromkeys(_phrase(c).replace(" ", "_") for c in cand_cats if c))
+                hints = list(dict.fromkeys(
+                    candidate["label"]
+                    for candidate in r.get("visible_candidates", [])
+                    if candidate.get("label")
+                ))
+                props = role_properties_map.get("SHARED_REMOTE_REGION", ["PLANAR_SUPPORT"])
+
+                normalized_records.append({
+                    "role_id": "shared_remote",
+                    "raw_vlm_role_ids": [r["id"]],
+                    "entity_kind": "REGION",
+                    "binding_policy": pol,
+                    "function": "SHARED_REMOTE_REGION",
+                    "raw_function": r.get("function", ""),
+                    "vlm_required_count": cnt,
+                    "description": r.get("description", ""),
+                    "candidate_categories": cand_cats,
+                    "raw_candidate_categories": cand_cats,
+                    "canonical_graph_category": None,
+                    "accepted_categories": accepted_cats,
+                    "required_properties": props,
+                    "visible_candidates": list(r.get("visible_candidates", [])),
+                    "semantic_hints": hints,
+                    "source": "FM",
+                    "provenance": "qwen_vlm_normalized_by_generic_ontology",
+                    "vlm_canonicalization_version": LIVING_ROOM_VLM_CANONICALIZATION_VERSION,
+                    "normalization_status": "COMPLETE",
+                })
+
+            # 4. Synthesis: REMOTE
+            if "REMOTE" in classified_roles:
+                items = classified_roles["REMOTE"]
+                raw_list = [it["raw"] for it in items]
+                if len(raw_list) > 1:
+                    raise AmbiguousCanonicalizationError(
+                        f"Multiple raw roles mapping to REMOTE: {[r['id'] for r in raw_list]}"
+                    )
+                r = raw_list[0]
+                cnt = int(r.get("required_count", 1))
+                pol = r.get("binding_policy", "DISTINCT")
+                concept_accounting["roles"][r["id"]] = {
+                    "canonical_role": "REMOTE",
+                    "entity_kind": "OBJECT",
+                    "raw_count": cnt,
+                    "canonical_count": cnt,
+                    "binding_policy": pol,
+                    "unary_predicates": [],
+                    "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
+                    "candidate_categories_used_for_role_identity": False,
+                    "status": "PRESERVED",
+                }
+                cand_cats = list(dict.fromkeys(
+                    cat.strip()
+                    for cat in r.get("candidate_categories", [])
+                    if str(cat).strip()
+                ))
+                vlm_role_vocab.extend(cand_cats)
+                run_local_cats = [_phrase(c).replace(" ", "_") for c in cand_cats if c]
+                accepted_cats = list(dict.fromkeys(list(LIVING_TASK_ANCHOR_CANONICAL_CATEGORIES["REMOTE"]) + run_local_cats))
+                hints = list(dict.fromkeys(
+                    candidate["label"]
+                    for candidate in r.get("visible_candidates", [])
+                    if candidate.get("label")
+                ))
+
+                normalized_records.append({
+                    "role_id": "remote",
+                    "raw_vlm_role_ids": [r["id"]],
+                    "entity_kind": "OBJECT",
+                    "binding_policy": pol,
+                    "function": "REMOTE",
+                    "raw_function": r.get("function", ""),
+                    "vlm_required_count": cnt,
+                    "description": r.get("description", ""),
+                    "candidate_categories": cand_cats,
+                    "raw_candidate_categories": cand_cats,
+                    "canonical_graph_category": LIVING_TASK_ANCHOR_CANONICAL_CATEGORIES["REMOTE"],
+                    "accepted_categories": accepted_cats,
+                    "required_properties": [],
+                    "visible_candidates": list(r.get("visible_candidates", [])),
+                    "semantic_hints": hints,
+                    "source": "FM",
+                    "provenance": "qwen_vlm_normalized_by_generic_ontology",
+                    "vlm_canonicalization_version": LIVING_ROOM_VLM_CANONICALIZATION_VERSION,
+                    "normalization_status": "COMPLETE",
+                })
+
+            # 5. Synthesis: SEATING_POSITION
+            if "SEATING_POSITION" in classified_roles:
+                items = classified_roles["SEATING_POSITION"]
+                raw_list = [it["raw"] for it in items]
+                if len(raw_list) == 1:
+                    r = raw_list[0]
+                    cnt = int(r.get("required_count", 1))
+                    pol = r.get("binding_policy", "DISTINCT")
+                    concept_accounting["roles"][r["id"]] = {
+                        "canonical_role": "SEATING_POSITION",
+                        "entity_kind": "FIXED_TARGET",
+                        "raw_count": cnt,
+                        "canonical_count": cnt,
+                        "binding_policy": pol,
+                        "unary_predicates": [],
+                        "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
+                        "candidate_categories_used_for_role_identity": False,
+                        "status": "PRESERVED",
+                    }
+                else:
+                    pols = {r.get("binding_policy", "DISTINCT") for r in raw_list}
+                    if len(pols) > 1:
+                        raise MalformedVLMSpecificationError(f"Conflicting binding policies in seating position roles: {pols}")
+                    pol = pols.pop()
+                    cnt = sum(int(r.get("required_count", 1)) for r in raw_list)
+                    for r in raw_list:
+                        r_cnt = int(r.get("required_count", 1))
+                        concept_accounting["roles"][r["id"]] = {
+                            "canonical_role": "SEATING_POSITION",
+                            "entity_kind": "FIXED_TARGET",
+                            "raw_count": r_cnt,
+                            "canonical_count": cnt,
+                            "binding_policy": pol,
+                            "unary_predicates": [],
+                            "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
+                            "candidate_categories_used_for_role_identity": False,
+                            "status": "MERGED_BY_EXPLICIT_RULE",
+                            "reason": "Disjoint personal seating position roles composed into canonical role",
+                        }
+
+                cand_cats = list(dict.fromkeys(
+                    cat.strip()
+                    for r in raw_list
+                    for cat in r.get("candidate_categories", [])
+                    if str(cat).strip()
+                ))
+                run_local_cats = [_phrase(c).replace(" ", "_") for c in cand_cats if c]
+                accepted_cats = list(dict.fromkeys(list(LIVING_TASK_ANCHOR_CANONICAL_CATEGORIES["SEATING_POSITION"]) + run_local_cats))
+                hints = list(dict.fromkeys(
+                    candidate["label"]
+                    for r in raw_list
+                    for candidate in r.get("visible_candidates", [])
+                    if candidate.get("label")
+                ))
+
+                normalized_records.append({
+                    "role_id": "seating_position",
+                    "raw_vlm_role_ids": [r["id"] for r in raw_list],
+                    "entity_kind": "FIXED_TARGET",
+                    "binding_policy": pol,
+                    "function": "SEATING_POSITION",
+                    "raw_function": " / ".join(dict.fromkeys(r.get("function", "") for r in raw_list)),
+                    "vlm_required_count": cnt,
+                    "description": " ".join(dict.fromkeys(r.get("description", "") for r in raw_list)),
+                    "candidate_categories": cand_cats,
+                    "raw_candidate_categories": cand_cats,
+                    "canonical_graph_category": LIVING_TASK_ANCHOR_CANONICAL_CATEGORIES["SEATING_POSITION"],
+                    "accepted_categories": accepted_cats,
+                    "required_properties": [],
+                    "visible_candidates": [
+                        candidate
+                        for r in raw_list
+                        for candidate in r.get("visible_candidates", [])
+                    ],
+                    "semantic_hints": hints,
+                    "source": "FM",
+                    "provenance": "qwen_vlm_normalized_by_generic_ontology",
+                    "vlm_canonicalization_version": LIVING_ROOM_VLM_CANONICALIZATION_VERSION,
+                    "normalization_status": "COMPLETE",
+                })
+
+            # 6. Synthesis: SEATING_PAIR
+            if "SEATING_PAIR" in classified_roles:
+                items = classified_roles["SEATING_PAIR"]
+                raw_list = [it["raw"] for it in items]
+                if len(raw_list) > 1:
+                    raise AmbiguousCanonicalizationError(
+                        f"Multiple raw roles mapping to SEATING_PAIR: {[r['id'] for r in raw_list]}"
+                    )
+                r = raw_list[0]
+                cnt = int(r.get("required_count", 1))
+                pol = r.get("binding_policy", "SHARED")
+                concept_accounting["roles"][r["id"]] = {
+                    "canonical_role": "SEATING_PAIR",
+                    "entity_kind": "FIXED_TARGET",
+                    "raw_count": cnt,
+                    "canonical_count": cnt,
+                    "binding_policy": pol,
+                    "unary_predicates": [],
+                    "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
+                    "candidate_categories_used_for_role_identity": False,
+                    "status": "PRESERVED",
+                }
+                cand_cats = list(dict.fromkeys(
+                    cat.strip()
+                    for cat in r.get("candidate_categories", [])
+                    if str(cat).strip()
+                ))
+                run_local_cats = [_phrase(c).replace(" ", "_") for c in cand_cats if c]
+                accepted_cats = list(dict.fromkeys(list(LIVING_TASK_ANCHOR_CANONICAL_CATEGORIES["SEATING_PAIR"]) + run_local_cats))
+                hints = list(dict.fromkeys(
+                    candidate["label"]
+                    for candidate in r.get("visible_candidates", [])
+                    if candidate.get("label")
+                ))
+
+                normalized_records.append({
+                    "role_id": "seating_pair",
+                    "raw_vlm_role_ids": [r["id"]],
+                    "entity_kind": "FIXED_TARGET",
+                    "binding_policy": pol,
+                    "function": "SEATING_PAIR",
+                    "raw_function": r.get("function", ""),
+                    "vlm_required_count": cnt,
+                    "description": r.get("description", ""),
+                    "candidate_categories": cand_cats,
+                    "raw_candidate_categories": cand_cats,
+                    "canonical_graph_category": LIVING_TASK_ANCHOR_CANONICAL_CATEGORIES["SEATING_PAIR"],
+                    "accepted_categories": accepted_cats,
+                    "required_properties": [],
+                    "visible_candidates": list(r.get("visible_candidates", [])),
+                    "semantic_hints": hints,
+                    "source": "FM",
+                    "provenance": "qwen_vlm_normalized_by_generic_ontology",
+                    "vlm_canonicalization_version": LIVING_ROOM_VLM_CANONICALIZATION_VERSION,
+                    "normalization_status": "COMPLETE",
+                })
+
+            # Canonicalize interaction groups losslessly into OperationGroup objects
+            canonical_operation_groups: list[dict[str, Any]] = []
+            seen_group_canonical_ids: set[str] = set()
+            for grp in self.raw_decomposition.get("interaction_groups", []):
+                gid = grp.get("id")
+                t_role = grp.get("tool_role")
+                tgt_role = grp.get("target_role")
+                if not t_role or t_role not in raw_id_to_canon:
+                    raise MalformedVLMSpecificationError(f"Interaction group tool role {t_role!r} not declared in roles")
+                if not tgt_role or tgt_role not in raw_id_to_canon:
+                    raise MalformedVLMSpecificationError(f"Interaction group target role {tgt_role!r} not declared in roles")
+
+                t_canon = raw_id_to_canon[t_role]
+                tgt_canon = raw_id_to_canon[tgt_role]
+
+                ctx_role = grp.get("context_role")
+                ctx_canon = raw_id_to_canon[ctx_role] if (ctx_role and ctx_role in raw_id_to_canon) else None
+                if ctx_role and ctx_canon is None:
+                    raise MalformedVLMSpecificationError(f"Interaction group context role {ctx_role!r} not declared in roles")
+
+                fn_canon = map_living_room_operation_group_function(grp.get("function", ""))
+                if fn_canon is None:
+                    raise UnmappedFunctionalConceptError(
+                        f"Interaction group function {grp.get('function')!r} cannot be mapped to any Living Room operation group"
+                    )
+                if fn_canon != "personal_support_group" or (t_canon, tgt_canon, ctx_canon) != (
+                    "PERSONAL_CUP_SAUCER_REGION", "CUP_SAUCER_SET", "SEATING_POSITION"
+                ):
+                    raise MalformedVLMSpecificationError(
+                        f"Group endpoints ({t_canon}, {tgt_canon}, {ctx_canon}) contradict function {grp.get('function')!r}"
+                    )
+                if fn_canon in seen_group_canonical_ids:
+                    raise AmbiguousCanonicalizationError(f"Duplicate interaction group mapping to canonical group {fn_canon!r}")
+                seen_group_canonical_ids.add(fn_canon)
+
+                req_count = int(grp.get("required_target_count", 1))
+                target_rec = next((r for r in normalized_records if r["function"] == "CUP_SAUCER_SET"), None)
+                if target_rec is None or req_count != target_rec["vlm_required_count"]:
+                    raise MalformedVLMSpecificationError(
+                        f"Group required_target_count={req_count} does not match target role count={target_rec['vlm_required_count'] if target_rec else None}"
+                    )
+
+                usage_policy = grp.get("usage_policy")
+                if usage_policy != "DEDICATED_PER_TARGET":
+                    raise MalformedVLMSpecificationError(
+                        f"Living Room group requires usage_policy DEDICATED_PER_TARGET, got {usage_policy!r}"
+                    )
+
+                req_rels: list[str] = []
+                for r in grp.get("required_relations", []):
+                    s, p, o, _ = canonicalize_living_room_relation(r, t_canon, tgt_canon)
+                    if p != "FITS_SET_ON":
+                        raise MalformedVLMSpecificationError(f"Group required_relations must be FITS_SET_ON, got {p}")
+                    req_rels.append(p)
+                if not req_rels:
+                    raise MalformedVLMSpecificationError("Group required_relations cannot be empty")
+
+                ctx_rels: list[str] = []
+                for r in grp.get("context_relations", []):
+                    s, p, o, _ = canonicalize_living_room_relation(r, t_canon, ctx_canon)
+                    if p != "NEAR_SEAT":
+                        raise MalformedVLMSpecificationError(f"Group context_relations must be NEAR_SEAT, got {p}")
+                    ctx_rels.append(p)
+                if not ctx_rels:
+                    raise MalformedVLMSpecificationError("Group context_relations cannot be empty")
+
+                canonical_operation_groups.append({
+                    "id": fn_canon,
+                    "function": "SUPPORT_DRINKWARE",
+                    "tool_role": t_canon,
+                    "target_role": tgt_canon,
+                    "required_target_count": req_count,
+                    "usage_policy": usage_policy,
+                    "required_relations": tuple(req_rels),
+                    "context_role": ctx_canon,
+                    "context_relations": tuple(ctx_rels),
+                    "distinct_within_group": True,
+                    "same_tool_must_cover_all_targets": False,
+                })
+                concept_accounting["operation_groups"].append({
+                    "raw_group_id": str(gid),
+                    "canonical_group_id": fn_canon,
+                    "raw_function": str(grp.get("function", "")),
+                    "canonical_function": "SUPPORT_DRINKWARE",
+                    "tool_role": t_canon,
+                    "target_role": tgt_canon,
+                    "context_role": ctx_canon,
+                    "required_target_count": req_count,
+                    "usage_policy": usage_policy,
+                    "required_relations": list(req_rels),
+                    "context_relations": list(ctx_rels),
+                    "function_mapping_status": "PRESERVED",
+                    "status": "PRESERVED",
+                })
+
+            # Canonicalize relations losslessly and distribute structurally
             canonical_relations: list[dict[str, Any]] = []
             for rel_item in self.raw_decomposition.get("functional_relations", []):
                 s = rel_item.get("subject_role")
@@ -817,75 +1726,121 @@ class EnvironmentVLMRequirementProvider:
                     )
                 s_canon = raw_id_to_canon[s]
                 o_canon = raw_id_to_canon[o]
-                mapped_r = map_living_room_relation(
-                    r, self.binary_relation_aliases, subject_role=s_canon, object_role=o_canon
+                canon_s, canon_p, canon_o, dir_status = canonicalize_living_room_relation(
+                    r, s_canon, o_canon
                 )
-                if mapped_r is None:
-                    raise UnmappedFunctionalConceptError(
-                        f"VLM living room relation {r!r} cannot be mapped to any reviewed relation"
-                    )
-                canonical_relations.append({
+
+                if (canon_s, canon_p, canon_o) == ("PERSONAL_CUP_SAUCER_REGION", "FITS_SET_ON", "CUP_SAUCER_SET") and canonical_operation_groups:
+                    dest = "OPERATION_REQUIRED_RELATION"
+                elif (canon_s, canon_p, canon_o) == ("PERSONAL_CUP_SAUCER_REGION", "NEAR_SEAT", "SEATING_POSITION") and canonical_operation_groups:
+                    dest = "OPERATION_CONTEXT_RELATION"
+                else:
+                    dest = "GRAPH_RELATION"
+                    canonical_relations.append({
+                        "raw_subject_role_id": str(s),
+                        "canonical_subject_role_id": canon_s,
+                        "raw_relation_text": str(r),
+                        "canonical_predicate": canon_p,
+                        "raw_object_role_id": str(o),
+                        "canonical_object_role_id": canon_o,
+                        "direction_status": dir_status,
+                    })
+
+                concept_accounting["relations"].append({
                     "raw_subject_role_id": str(s),
-                    "canonical_subject_role_id": s_canon,
                     "raw_relation_text": str(r),
-                    "canonical_predicate": mapped_r,
                     "raw_object_role_id": str(o),
-                    "canonical_object_role_id": o_canon,
+                    "canonical_subject_role_id": canon_s,
+                    "canonical_predicate": canon_p,
+                    "canonical_object_role_id": canon_o,
+                    "direction_status": dir_status,
+                    "structural_destination": dest,
+                    "status": "PRESERVED",
                 })
 
-            # Canonicalize interaction groups losslessly into OperationGroup objects
-            canonical_operation_groups: list[dict[str, Any]] = []
-            for grp in self.raw_decomposition.get("interaction_groups", []):
-                gid = grp.get("id")
-                t_role = grp.get("tool_role")
-                tgt_role = grp.get("target_role")
-                if t_role not in raw_id_to_canon:
-                    raise MalformedVLMSpecificationError(f"Interaction group tool role {t_role!r} not declared")
-                if tgt_role not in raw_id_to_canon:
-                    raise MalformedVLMSpecificationError(f"Interaction group target role {tgt_role!r} not declared")
-                t_canon = raw_id_to_canon[t_role]
-                tgt_canon = raw_id_to_canon[tgt_role]
-
-                ctx_role = grp.get("context_role")
-                ctx_canon = raw_id_to_canon[ctx_role] if (ctx_role and ctx_role in raw_id_to_canon) else None
-                if ctx_role and ctx_canon is None:
-                    raise MalformedVLMSpecificationError(f"Interaction group context role {ctx_role!r} not declared")
-
-                req_rels: list[str] = []
-                for r in grp.get("required_relations", []):
-                    mapped_r = map_living_room_relation(
-                        r, self.binary_relation_aliases, subject_role=t_canon, object_role=tgt_canon
-                    )
-                    if mapped_r is None:
-                        raise UnmappedFunctionalConceptError(f"Unmapped interaction group relation {r!r}")
-                    req_rels.append(mapped_r)
-
-                ctx_rels: list[str] = []
-                for r in grp.get("context_relations", []):
-                    mapped_r = map_living_room_relation(
-                        r, self.binary_relation_aliases, subject_role=t_canon, object_role=ctx_canon
-                    )
-                    if mapped_r is None:
-                        raise UnmappedFunctionalConceptError(f"Unmapped interaction group context relation {r!r}")
-                    ctx_rels.append(mapped_r)
-
-                usage_policy = grp.get("usage_policy", "DEDICATED_PER_TARGET")
-                canonical_operation_groups.append({
-                    "id": str(gid),
-                    "function": str(grp.get("function", "")),
-                    "tool_role": t_canon,
-                    "target_role": tgt_canon,
-                    "required_target_count": int(grp.get("required_target_count", 1)),
-                    "usage_policy": usage_policy,
-                    "required_relations": tuple(req_rels),
-                    "context_role": ctx_canon,
-                    "context_relations": tuple(ctx_rels),
-                    "distinct_within_group": True,
-                    "same_tool_must_cover_all_targets": False,
+            # If contextual relations reference SEATING_POSITION / SEATING_PAIR but they were not declared in raw roles,
+            # compile system context fixed targets so graph remains valid
+            if "SEATING_POSITION" not in classified_roles and any(
+                r.get("canonical_object_role_id") == "SEATING_POSITION" or r.get("canonical_subject_role_id") == "SEATING_POSITION"
+                for r in canonical_relations + [
+                    {"canonical_object_role_id": og.get("context_role")}
+                    for og in canonical_operation_groups
+                ]
+            ):
+                normalized_records.append({
+                    "role_id": "seating_position",
+                    "raw_vlm_role_ids": ["system_context_seating_position"],
+                    "entity_kind": "FIXED_TARGET",
+                    "binding_policy": "DISTINCT",
+                    "function": "SEATING_POSITION",
+                    "raw_function": "viewer seating position",
+                    "vlm_required_count": 2,
+                    "description": "individual seated viewer location for personal drink access",
+                    "candidate_categories": ["armchair", "chair"],
+                    "raw_candidate_categories": ["armchair", "chair"],
+                    "canonical_graph_category": LIVING_TASK_ANCHOR_CANONICAL_CATEGORIES["SEATING_POSITION"],
+                    "accepted_categories": list(LIVING_TASK_ANCHOR_CANONICAL_CATEGORIES["SEATING_POSITION"]),
+                    "required_properties": [],
+                    "visible_candidates": [],
+                    "semantic_hints": ["armchair", "chair"],
+                    "source": "SYSTEM_CONTEXT",
+                    "provenance": "system_context_compiled",
+                    "vlm_canonicalization_version": LIVING_ROOM_VLM_CANONICALIZATION_VERSION,
+                    "normalization_status": "COMPLETE",
                 })
+                concept_accounting["roles"]["system_context_seating_position"] = {
+                    "canonical_role": "SEATING_POSITION",
+                    "entity_kind": "FIXED_TARGET",
+                    "raw_count": 2,
+                    "canonical_count": 2,
+                    "binding_policy": "DISTINCT",
+                    "unary_predicates": [],
+                    "role_semantic_source": "SYSTEM_CONTEXT",
+                    "candidate_categories_used_for_role_identity": False,
+                    "status": "SYSTEM_CONTEXT_COMPILED",
+                }
+
+            if "SEATING_PAIR" not in classified_roles and any(
+                r.get("canonical_object_role_id") == "SEATING_PAIR" or r.get("canonical_subject_role_id") == "SEATING_PAIR"
+                for r in canonical_relations
+            ):
+                normalized_records.append({
+                    "role_id": "seating_pair",
+                    "raw_vlm_role_ids": ["system_context_seating_pair"],
+                    "entity_kind": "FIXED_TARGET",
+                    "binding_policy": "SHARED",
+                    "function": "SEATING_PAIR",
+                    "raw_function": "paired viewer seating area",
+                    "vlm_required_count": 1,
+                    "description": "both viewer seating positions collectively for shared item accessibility",
+                    "candidate_categories": ["armchairs", "seating area"],
+                    "raw_candidate_categories": ["armchairs", "seating area"],
+                    "canonical_graph_category": LIVING_TASK_ANCHOR_CANONICAL_CATEGORIES["SEATING_PAIR"],
+                    "accepted_categories": list(LIVING_TASK_ANCHOR_CANONICAL_CATEGORIES["SEATING_PAIR"]),
+                    "required_properties": [],
+                    "visible_candidates": [],
+                    "semantic_hints": ["armchairs", "seating area"],
+                    "source": "SYSTEM_CONTEXT",
+                    "provenance": "system_context_compiled",
+                    "vlm_canonicalization_version": LIVING_ROOM_VLM_CANONICALIZATION_VERSION,
+                    "normalization_status": "COMPLETE",
+                })
+                concept_accounting["roles"]["system_context_seating_pair"] = {
+                    "canonical_role": "SEATING_PAIR",
+                    "entity_kind": "FIXED_TARGET",
+                    "raw_count": 1,
+                    "canonical_count": 1,
+                    "binding_policy": "SHARED",
+                    "unary_predicates": [],
+                    "role_semantic_source": "SYSTEM_CONTEXT",
+                    "candidate_categories_used_for_role_identity": False,
+                    "status": "SYSTEM_CONTEXT_COMPILED",
+                }
 
             canonicalization_trace = {
-                "version": VLM_CANONICALIZATION_VERSION,
+                "version": LIVING_ROOM_VLM_CANONICALIZATION_VERSION,
+                "vlm_canonicalization_version": LIVING_ROOM_VLM_CANONICALIZATION_VERSION,
+                "transformation": "DETERMINISTIC_NATURAL_LANGUAGE_CANONICALIZATION",
                 "raw_id_to_canonical": dict(raw_id_to_canon),
                 "roles": [
                     {
@@ -900,15 +1855,13 @@ class EnvironmentVLMRequirementProvider:
                 ],
                 "relations": list(canonical_relations),
                 "operation_groups": list(canonical_operation_groups),
+                "concept_accounting": concept_accounting,
             }
             self.canonicalization_trace = canonicalization_trace
             self.normalized_relations = canonical_relations
             self.normalized_operation_groups = canonical_operation_groups
             self.vlm_derived_role_vocabulary = tuple(dict.fromkeys(vlm_role_vocab))
-            self.task_explicit_context_vocabulary = (
-                "armchair", "chair", "sofa", "remote control", "tv remote",
-                "cup", "saucer", "cup saucer set"
-            )
+            self.task_explicit_context_vocabulary = ("armchair", "chair", "sofa")
             self.normalization_issues = []
             self.ready_for_grounding = True
             self.normalized_task = None

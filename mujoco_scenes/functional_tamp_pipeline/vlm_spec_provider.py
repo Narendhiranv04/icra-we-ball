@@ -257,11 +257,18 @@ class VLMSpecProvider(FunctionalSpecProvider):
         task_instruction: str,
         observation_images: list[Path],
         provider: EnvironmentVLMRequirementProvider | None = None,
+        adapter: FMAdapter | None = None,
     ) -> FunctionalRequirementGraph:
-        from mujoco_scenes.environment_vlm_requirements import EnvironmentVLMRequirementProvider
+        from mujoco_scenes.environment_vlm_requirements import (
+            EnvironmentVLMRequirementProvider,
+            LIVING_ROOM_VLM_CANONICALIZATION_VERSION,
+        )
 
         if provider is None:
-            provider = EnvironmentVLMRequirementProvider("living_room")
+            provider = EnvironmentVLMRequirementProvider("living_room", fm_adapter=adapter)
+        elif adapter is not None and getattr(provider, "fm_adapter", None) is None:
+            provider.fm_adapter = adapter
+
         result = provider.generate_canonical(
             task_instruction,
             observation_images=observation_images,
@@ -323,6 +330,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
         vlm_prompts = list(provider.vlm_derived_role_vocabulary)
         context_prompts = list(provider.task_explicit_context_vocabulary)
         vocabulary = tuple(dict.fromkeys(vlm_prompts + context_prompts))
+        canon_trace = result.get("canonicalization_trace") or {}
 
         return FunctionalRequirementGraph(
             domain="living_room",
@@ -337,13 +345,13 @@ class VLMSpecProvider(FunctionalSpecProvider):
             source="VLM_CANONICAL_G_F",
             raw_requirements=(result.get("normalized_task_contract") or result["raw_vlm_decomposition"],),
             metadata={
-                "vlm_canonicalization_version": VLM_CANONICALIZATION_VERSION,
+                "vlm_canonicalization_version": canon_trace.get("vlm_canonicalization_version", LIVING_ROOM_VLM_CANONICALIZATION_VERSION),
                 "semantic_vocabulary_path": str(provider.vocabulary_path),
                 "vlm_derived_role_vocabulary": vlm_prompts,
                 "task_explicit_context_vocabulary": context_prompts,
                 "raw_vlm_response": result.get("raw_vlm_response"),
                 "validated_vlm_specification": result.get("validated_vlm_specification"),
-                "canonicalization_trace": result.get("canonicalization_trace"),
+                "canonicalization_trace": canon_trace,
                 "raw_decomposition": result["raw_vlm_decomposition"],
                 "normalization_audit": result["reviewed_ontology_audit"],
             },

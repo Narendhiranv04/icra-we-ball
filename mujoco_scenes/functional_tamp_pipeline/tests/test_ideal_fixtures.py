@@ -331,78 +331,66 @@ def diagnose_fixture_canonicalization(domain: str) -> dict[str, Any]:
             )
 
             provider = EnvironmentVLMRequirementProvider("living_room", fm_adapter=adapter)
-            try:
-                gf = VLMSpecProvider._living_room(instruction, [], provider=provider)
-                gf.validate()
-                validate_runtime_gf(gf)
-                report["status"] = "CANONICALIZED"
-                report["graph"] = gf
-            except Exception as exc:
-                report["status"] = "CANONICALIZATION_FAILED"
-                report["error_type"] = type(exc).__name__
-                report["error_message"] = str(exc)
-                report["error_category"] = getattr(exc, "category", "UNCLASSIFIED_ERROR")
-                import traceback
-                tb = traceback.extract_tb(exc.__traceback__)
-                if tb:
-                    last_frame = tb[-1]
-                    report["first_failing_module"] = f"{Path(last_frame.filename).name}:{last_frame.lineno} ({last_frame.name})"
+            gf = VLMSpecProvider._living_room(instruction, [], provider=provider)
+            gf.validate()
+            validate_runtime_gf(gf)
+            report["status"] = "CANONICALIZED"
+            report["graph"] = gf
 
-                # Diagnostic sub-concept trace: test each raw component with production mapping functions
-                raw_id_to_canon: dict[str, str] = {}
-                for r in data["functional_roles"]:
-                    rid = r["id"]
-                    kind = r["entity_kind"]
-                    if kind == "REGION":
-                        mapped_r = map_living_room_role_function(r["function"])
-                        if mapped_r:
-                            raw_id_to_canon[rid] = "PERSONAL_CUP_SAUCER_REGION" if "personal" in mapped_r else "SHARED_REMOTE_REGION"
-                            report["concept_preservation"][f"role:{rid}"] = f"PRESERVED/MAPPABLE -> {raw_id_to_canon[rid]}"
-                        else:
-                            report["concept_preservation"][f"role:{rid}"] = "REJECTED"
-                    elif kind == "OBJECT":
-                        mapped_r = map_living_room_object_payload_role(r)
-                        if mapped_r:
-                            raw_id_to_canon[rid] = mapped_r
-                            report["concept_preservation"][f"role:{rid}"] = f"PRESERVED/MAPPABLE -> {mapped_r}"
-                        else:
-                            report["concept_preservation"][f"role:{rid}"] = "REJECTED"
+            # Concept preservation from concept_accounting trace
+            trace = gf.metadata.get("canonicalization_trace", {})
+            accounting = trace.get("concept_accounting", {})
+            roles_acct = accounting.get("roles", {})
+
+            for r in data["functional_roles"]:
+                rid = r["id"]
+                r_entry = roles_acct.get(rid, {})
+                canon_role = r_entry.get("canonical_role", "UNKNOWN")
+                if r["entity_kind"] == "FIXED_TARGET":
+                    report["concept_preservation"][f"role:{rid}"] = f"SYSTEM_CONTEXT_COMPILED -> {canon_role}"
+                else:
+                    report["concept_preservation"][f"role:{rid}"] = f"PRESERVED -> {canon_role}"
+
+                for prop in r.get("required_properties", []):
+                    prop_entry = next(
+                        (p for p in accounting.get("properties", []) if p["raw_role_id"] == rid and p["raw_phrase"] == prop),
+                        None
+                    )
+                    if prop_entry:
+                        status = prop_entry["status"]
+                        canon_pred = prop_entry["canonical_predicate"]
+                        report["concept_preservation"][f"prop:{rid}:{prop}"] = f"{status} -> {canon_pred}"
                     else:
-                        mapped_r = map_living_room_fixed_target_role(r)
-                        if mapped_r:
-                            raw_id_to_canon[rid] = mapped_r
-                            report["concept_preservation"][f"role:{rid}"] = f"SYSTEM_CONTEXT_COMPILED -> {mapped_r}"
-                        else:
-                            report["concept_preservation"][f"role:{rid}"] = "REJECTED"
+                        report["concept_preservation"][f"prop:{rid}:{prop}"] = f"REJECTED: unmapped property {prop!r}"
 
-                    for prop in r.get("required_properties", []):
-                        mapped_props = provider._map_properties([prop], fail_closed=False)
-                        if mapped_props:
-                            report["concept_preservation"][f"prop:{rid}:{prop}"] = f"PRESERVED/MAPPABLE -> {', '.join(sorted(mapped_props))}"
-                        else:
-                            report["concept_preservation"][f"prop:{rid}:{prop}"] = f"REJECTED: unmapped property {prop!r}"
+            for idx, rel in enumerate(data["functional_relations"]):
+                s = rel["subject_role"]
+                r = rel["relation"]
+                o = rel["object_role"]
+                rel_key = f"rel:{idx}:{s}:{r}:{o}"
+                rel_entry = next(
+                    (item for item in accounting.get("relations", []) if item["raw_subject_role_id"] == s and item["raw_relation_text"] == r and item["raw_object_role_id"] == o),
+                    None
+                )
+                if rel_entry:
+                    s_c = rel_entry["canonical_subject_role_id"]
+                    p_c = rel_entry["canonical_predicate"]
+                    o_c = rel_entry["canonical_object_role_id"]
+                    report["concept_preservation"][rel_key] = f"PRESERVED -> {s_c} -[{p_c}]-> {o_c}"
+                else:
+                    report["concept_preservation"][rel_key] = f"REJECTED: unmapped relation {r!r}"
 
-                for idx, rel in enumerate(data["functional_relations"]):
-                    s = rel["subject_role"]
-                    r = rel["relation"]
-                    o = rel["object_role"]
-                    s_canon = raw_id_to_canon.get(s)
-                    o_canon = raw_id_to_canon.get(o)
-                    rel_key = f"rel:{idx}:{s}:{r}:{o}"
-                    try:
-                        mapped_rel = map_living_room_relation(
-                            r,
-                            provider.binary_relation_aliases,
-                            subject_role=s_canon,
-                            object_role=o_canon,
-                            fail_closed=True,
-                        )
-                        report["concept_preservation"][rel_key] = f"PRESERVED/MAPPABLE -> {s_canon} -[{mapped_rel}]-> {o_canon}"
-                    except Exception as rel_exc:
-                        report["concept_preservation"][rel_key] = f"REJECTED: {type(rel_exc).__name__}: {rel_exc}"
-
-                for grp in data.get("interaction_groups", []):
-                    report["concept_preservation"][f"group:{grp['id']}"] = "NOT_REACHED_DUE_TO_PRIOR_FAILURE"
+            for grp in data.get("interaction_groups", []):
+                gid = grp["id"]
+                grp_entry = next(
+                    (g for g in accounting.get("operation_groups", []) if g["raw_group_id"] == gid),
+                    None
+                )
+                if grp_entry:
+                    c_gid = grp_entry["canonical_group_id"]
+                    report["concept_preservation"][f"group:{gid}"] = f"PRESERVED -> {c_gid}"
+                else:
+                    report["concept_preservation"][f"group:{gid}"] = "DROPPED"
 
         elif domain == "workshop":
             from mujoco_scenes.workshop_phase1.requirements import FMRequirementProvider
@@ -566,23 +554,32 @@ def test_diagnostic_canonicalization_outcomes():
 
     # 2. Living Room Diagnostic
     l_diag = diagnose_fixture_canonicalization("living_room")
-    assert l_diag["status"] == "CANONICALIZATION_FAILED"
-    assert l_diag["error_type"] == "UnmappedFunctionalConceptError"
-    assert l_diag["error_category"] == "UNMAPPED_FUNCTIONAL_CONCEPT"
-    assert "map_living_room_relation" in str(l_diag["first_failing_module"])
+    assert l_diag["status"] == "CANONICALIZED"
+    assert l_diag["reference_metrics"]["role_identity_recall"] == 1.0
+    assert l_diag["reference_metrics"]["role_identity_precision"] == 1.0
+    assert l_diag["reference_metrics"]["role_exact_recall"] == 1.0
+    assert l_diag["reference_metrics"]["relation_recall"] == 1.0
+    assert l_diag["reference_metrics"]["relation_precision"] == 1.0
+    assert l_diag["reference_metrics"]["operation_group_identity_recall"] == 1.0
+    assert l_diag["reference_metrics"]["operation_group_identity_precision"] == 1.0
+    assert l_diag["reference_metrics"]["reference_complete"] is True
 
     # Verify sub-concept mapping diagnostic with contextual arguments
-    assert "PRESERVED/MAPPABLE -> PERSONAL_CUP_SAUCER_REGION" in l_diag["concept_preservation"]["role:role_1"]
+    assert "PRESERVED -> PERSONAL_CUP_SAUCER_REGION" in l_diag["concept_preservation"]["role:role_1"]
+    assert "PRESERVED -> SHARED_REMOTE_REGION" in l_diag["concept_preservation"]["role:role_2"]
+    assert "PRESERVED -> CUP_SAUCER_SET" in l_diag["concept_preservation"]["role:role_3"]
+    assert "PRESERVED -> REMOTE" in l_diag["concept_preservation"]["role:role_4"]
     assert "SYSTEM_CONTEXT_COMPILED -> SEATING_POSITION" in l_diag["concept_preservation"]["role:role_5"]
-    assert "PRESERVED/MAPPABLE -> PLANAR_SUPPORT" in l_diag["concept_preservation"]["prop:role_1:planar horizontal support"]
-    assert "PRESERVED/MAPPABLE -> PLANAR_SUPPORT" in l_diag["concept_preservation"]["prop:role_2:planar horizontal support"]
+    assert "SYSTEM_CONTEXT_COMPILED -> SEATING_PAIR" in l_diag["concept_preservation"]["role:role_6"]
+    assert "PRESERVED -> PLANAR_SUPPORT" in l_diag["concept_preservation"]["prop:role_1:planar horizontal support"]
+    assert "PRESERVED -> PLANAR_SUPPORT" in l_diag["concept_preservation"]["prop:role_2:planar horizontal support"]
 
     # Verify relations with canonical context
-    assert "REJECTED: UnmappedFunctionalConceptError" in l_diag["concept_preservation"]["rel:0:role_1:can hold drinkware set:role_3"]
-    assert "PRESERVED/MAPPABLE -> PERSONAL_CUP_SAUCER_REGION -[NEAR_SEAT]-> SEATING_POSITION" in l_diag["concept_preservation"]["rel:1:role_1:near seat:role_5"]
-    assert "REJECTED: UnmappedFunctionalConceptError" in l_diag["concept_preservation"]["rel:2:role_2:can hold remote:role_4"]
-    assert "PRESERVED/MAPPABLE -> SHARED_REMOTE_REGION -[ACCESSIBLE_FROM_BOTH_SEATS]-> SEATING_PAIR" in l_diag["concept_preservation"]["rel:3:role_2:accessible from both seats:role_6"]
-    assert l_diag["concept_preservation"]["group:group_1"] == "NOT_REACHED_DUE_TO_PRIOR_FAILURE"
+    assert "PRESERVED -> PERSONAL_CUP_SAUCER_REGION -[FITS_SET_ON]-> CUP_SAUCER_SET" in l_diag["concept_preservation"]["rel:0:role_1:can hold drinkware set:role_3"]
+    assert "PRESERVED -> PERSONAL_CUP_SAUCER_REGION -[NEAR_SEAT]-> SEATING_POSITION" in l_diag["concept_preservation"]["rel:1:role_1:near seat:role_5"]
+    assert "PRESERVED -> SHARED_REMOTE_REGION -[FITS_ON]-> REMOTE" in l_diag["concept_preservation"]["rel:2:role_2:can hold remote:role_4"]
+    assert "PRESERVED -> SHARED_REMOTE_REGION -[ACCESSIBLE_FROM_BOTH_SEATS]-> SEATING_PAIR" in l_diag["concept_preservation"]["rel:3:role_2:accessible from both seats:role_6"]
+    assert "PRESERVED -> personal_support_group" in l_diag["concept_preservation"]["group:group_1"]
 
     expected_l_keys = {
         "role:role_1", "role:role_2", "role:role_3", "role:role_4", "role:role_5", "role:role_6",

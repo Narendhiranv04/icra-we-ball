@@ -6,7 +6,10 @@ import json
 from pathlib import Path
 import pytest
 
-from mujoco_scenes.functional_tamp_pipeline.errors import MalformedVLMSpecificationError
+from mujoco_scenes.functional_tamp_pipeline.errors import (
+    MalformedVLMSpecificationError,
+    VLMSpecificationError,
+)
 from mujoco_scenes.functional_tamp_pipeline.models import FunctionalRequirementGraph
 from mujoco_scenes.functional_tamp_pipeline.task_interface_validator import validate_runtime_gf
 from mujoco_scenes.functional_tamp_pipeline.vlm_spec_provider import VLMSpecProvider
@@ -51,20 +54,9 @@ def test_living_room_l1_live_audit_fixture() -> None:
     raw_doc = _load_fixture(l1_path)
 
     prov = EnvironmentVLMRequirementProvider("living_room")
-    prov.generate_canonical("Set up cup, saucer, and remote", raw_document=raw_doc)
-    graph = VLMSpecProvider._living_room("Set up cup, saucer, and remote", [], provider=prov)
-
-    assert isinstance(graph, FunctionalRequirementGraph)
-    assert graph.domain == "living_room"
-    # HARD GATE invariant: OBJECT cup must never become a REGION
-    assert graph.nodes["CUP_SAUCER_SET"].entity_kind == "OBJECT"
-    assert graph.nodes["REMOTE"].entity_kind == "OBJECT"
-    assert graph.nodes["PERSONAL_CUP_SAUCER_REGION"].entity_kind == "REGION"
-    assert graph.nodes["SHARED_REMOTE_REGION"].entity_kind == "REGION"
-    assert len(graph.operation_groups) == 3
-    # Historical uncanonicalized live fixture has reversed relation direction; must fail closed under frozen predicate validation
-    with pytest.raises(MalformedVLMSpecificationError, match="expects subject entity_kind"):
-        validate_runtime_gf(graph)
+    # Historical uncanonicalized live fixture fails closed under compiler validation
+    with pytest.raises(VLMSpecificationError):
+        prov.generate_canonical("Set up cup, saucer, and remote", raw_document=raw_doc)
 
 
 def test_workshop_w1_live_audit_fixture() -> None:

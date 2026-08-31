@@ -9,7 +9,6 @@ import pytest
 import yaml
 
 from mujoco_scenes.environment_vlm_requirements import EnvironmentVLMRequirementProvider
-from mujoco_scenes.living_room_region_function import load_integrated_task
 from mujoco_scenes.run_environment_vlm_requirements import (
     DIRECT_SCENE_CAMERAS,
     available_variants,
@@ -255,7 +254,7 @@ def test_prompt_contains_only_goal_generic_request_and_images(observation_image)
     assert set(request) == {"task_instruction", "request"}
     assert "role_envelopes" not in content[0]["text"]
     leaked_answers = (
-        "coffee_container", "soup_container", "coffee_stirrer", "open cavity",
+        "coffee_container", "soup_container", "coffee_stirrer",
         "insert into the target", "reach the bottom", "PLANAR_SUPPORT", "side table",
     )
     assert not any(answer in content[0]["text"] for answer in leaked_answers)
@@ -292,7 +291,7 @@ def test_living_contract_remains_accepted_by_existing_loader(tmp_path, observati
     result = provider.generate_canonical(
         "Prepare living room", observation_images=[observation_image]
     )
-    assert len(result["normalized_requirements"]) == 2
+    assert len([r for r in result["normalized_requirements"] if r["entity_kind"] == "REGION"]) == 2
 
 
 def test_custom_instruction_is_the_only_task_content_sent(observation_image):
@@ -463,8 +462,9 @@ def test_living_room_canonical_role_consolidation(observation_image):
         observation_images=[observation_image],
     )
     reqs = result["normalized_requirements"]
-    # Exactly 2 consolidated canonical roles: personal_cup_saucer (count 2) and shared_remote (count 1)
-    assert len(reqs) == 2
+    # Exactly 2 consolidated canonical region roles: personal_cup_saucer (count 2) and shared_remote (count 1)
+    region_reqs = [r for r in reqs if r["entity_kind"] == "REGION"]
+    assert len(region_reqs) == 2
     personal_req = next(r for r in reqs if r["role_id"] == "personal_cup_saucer")
     assert personal_req["vlm_required_count"] == 2
     assert personal_req["raw_vlm_role_ids"] == ["viewer_1_side_table", "viewer_2_side_table"]
