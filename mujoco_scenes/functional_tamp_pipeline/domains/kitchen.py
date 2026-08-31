@@ -165,6 +165,7 @@ def compile_kitchen_contract_from_graph(graph: FunctionalRequirementGraph) -> di
             "binding_cardinality": cardinality,
             "semantic_preferences": pref,
             "unary_geometry": unary,
+            "allow_empty_geometry": not bool(unary),
         }
 
     relations_list = [
