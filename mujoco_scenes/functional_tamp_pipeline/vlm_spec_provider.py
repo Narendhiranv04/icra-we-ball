@@ -31,9 +31,13 @@ class VLMSpecProvider(FunctionalSpecProvider):
             graph = self._living_room(task_instruction, observation_images or [])
         else:
             raise NotImplementedError(f"VLM specification adapter is not implemented for {domain}")
-        graph.validate()
-        from .task_interface_validator import validate_runtime_gf
-        validate_runtime_gf(graph)
+        try:
+            graph.validate()
+            from .task_interface_validator import validate_runtime_gf
+            validate_runtime_gf(graph)
+        except Exception as err:
+            from .errors import MalformedVLMSpecificationError
+            raise MalformedVLMSpecificationError(f"MALFORMED_VLM_SPECIFICATION: {err}") from err
         return graph
 
     @staticmethod
