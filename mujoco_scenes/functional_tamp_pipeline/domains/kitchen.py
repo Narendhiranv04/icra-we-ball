@@ -176,13 +176,10 @@ def compile_kitchen_contract_from_graph(graph: FunctionalRequirementGraph) -> di
             "expected": r.expected,
         }
         for r in graph.relations
-        if r.subject_role in roles_dict and r.object_role in roles_dict
     ]
 
     op_groups_dict = {}
     for grp in graph.operation_groups:
-        if grp.tool_role not in roles_dict or grp.target_role not in roles_dict:
-            continue
         distinct = (
             grp.distinct_within_group
             if grp.distinct_within_group is not None
@@ -543,36 +540,43 @@ def run_to_plan(
         json.dumps(witness_payload, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
-    compiled = compile_observed_symbolic_state(session.run_dir, contract)
-    assignments = ground_result.assignment
+    try:
+        compiled = compile_observed_symbolic_state(session.run_dir, contract)
+        assignments = ground_result.assignment
 
-    planned = plan_with_common_astar(
-        KitchenPlanningCompiler(), assignments,
-        {"compiled_observed_state": compiled},
-    )
-    plan_dir = output_dir / "action_sequence"
-    plan_dir.mkdir(parents=True, exist_ok=True)
-    (plan_dir / "action_plan.json").write_text(
-        json.dumps({
-            "planner": planned.search.statistics,
-            "actions": list(planned.actions),
-            "validation": planned.validation,
-            "exploratory_open_actions_excluded": True,
-        }, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
-    from ..audit import audit_plan_grounding
+        planned = plan_with_common_astar(
+            KitchenPlanningCompiler(), assignments,
+            {"compiled_observed_state": compiled},
+        )
+        plan_dir = output_dir / "action_sequence"
+        plan_dir.mkdir(parents=True, exist_ok=True)
+        (plan_dir / "action_plan.json").write_text(
+            json.dumps({
+                "planner": planned.search.statistics,
+                "actions": list(planned.actions),
+                "validation": planned.validation,
+                "exploratory_open_actions_excluded": True,
+            }, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        from ..audit import audit_plan_grounding
 
-    audit = audit_plan_grounding(
-        specification, graph_o, ground_result, planned.actions, home_region=contract["symbolic_task"].get("home_region", "countertop")
-    )
-    (output_dir / "plan_grounding_audit.json").write_text(
-        json.dumps(audit, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
-    return PipelineResult(
-        domain="kitchen", variant=variant_label, mode=mode,
-        status="ACTION_SEQUENCE_READY", inspected_regions=opened,
-        assignment=assignments, plan=planned.actions,
-        search_statistics=planned.search.statistics,
-    )
+        audit = audit_plan_grounding(
+            specification, graph_o, ground_result, planned.actions, home_region=contract["symbolic_task"].get("home_region", "countertop")
+        )
+        (output_dir / "plan_grounding_audit.json").write_text(
+            json.dumps(audit, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        return PipelineResult(
+            domain="kitchen", variant=variant_label, mode=mode,
+            status="ACTION_SEQUENCE_READY", inspected_regions=opened,
+            assignment=assignments, plan=planned.actions,
+            search_statistics=planned.search.statistics,
+        )
+    except Exception as exc:
+        return PipelineResult(
+            domain="kitchen", variant=variant_label, mode=mode,
+            status="INFEASIBLE", inspected_regions=opened,
+            failure_reason=str(exc),
+        )
