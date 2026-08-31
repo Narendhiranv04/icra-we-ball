@@ -7,11 +7,67 @@ from pathlib import Path
 from typing import Any
 
 from .living_room_mobile_execution import run_mobile_execution
-from .phase4_execution import ExecutionFailure, Phase3Handoff
+from .phase4_execution import (
+    ExecutionFailure,
+    Phase4EntityMappingError,
+    Phase3Handoff,
+    audit_strict_telemetry,
+)
 
 
 def _read(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def resolve_living_room_action_arguments(
+    arguments: list[str],
+    object_map: dict[str, dict[str, Any]],
+    region_map: dict[str, dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """Resolve every frozen planner argument and expose all misses."""
+    resolved = []
+    unresolved = []
+    for argument in arguments:
+        if argument in object_map:
+            row = object_map[argument]
+            resolved.append({
+                "planner_id": argument,
+                "entity_kind": "OBJECT",
+                "simulator_id": row["backend_body"],
+                "metadata": row,
+            })
+        elif argument in region_map:
+            row = region_map[argument]
+            resolved.append({
+                "planner_id": argument,
+                "entity_kind": "REGION",
+                "simulator_id": row["backend_support_geom"],
+                "metadata": row,
+            })
+        else:
+            unresolved.append(argument)
+    return resolved, unresolved
+
+
+def validate_living_room_plan_ids(
+    actions: list[dict[str, Any]],
+    payload_registry: dict[str, Any],
+    region_registry: dict[str, Any],
+) -> None:
+    """Fail before controller startup if any immutable argument is unknown."""
+    known = set(payload_registry.get("objects", {})) | set(
+        region_registry.get("regions", {})
+    )
+    for action in actions:
+        unresolved = [
+            argument for argument in action["arguments"] if argument not in known
+        ]
+        if unresolved:
+            raise Phase4EntityMappingError(
+                "Living-Room action "
+                f"{action['action_instance_id']} has unresolved arguments: "
+                f"{unresolved}"
+            )
 
 
 def execute_living_room_handoff(
@@ -34,6 +90,11 @@ def execute_living_room_handoff(
         )
     phase1_dir = handoff.run_dir / "observed_grounding"
     phase2_dir = handoff.run_dir / "action_sequence"
+    validate_living_room_plan_ids(
+        list(handoff.actions),
+        _read(phase1_dir / "payload_registry.json"),
+        _read(phase1_dir / "region_registry.json"),
+    )
     native_dir = output_dir / "domain_execution"
     native = run_mobile_execution(
         phase1_dir,
@@ -68,34 +129,23 @@ def execute_living_room_handoff(
     action_results = []
     for index, action in enumerate(selected_actions):
         controller = task_rows[index] if index < len(task_rows) else None
-        resolved = []
-        for argument in action["arguments"]:
-            if argument in object_map:
-                row = object_map[argument]
-                resolved.append({
-                    "planner_id": argument,
-                    "entity_kind": "OBJECT",
-                    "simulator_id": row["backend_body"],
-                    "metadata": row,
-                })
-            elif argument in region_map:
-                row = region_map[argument]
-                resolved.append({
-                    "planner_id": argument,
-                    "entity_kind": "REGION",
-                    "simulator_id": row["backend_support_geom"],
-                    "metadata": row,
-                })
+        resolved, unresolved = resolve_living_room_action_arguments(
+            list(action["arguments"]), object_map, region_map
+        )
         controller_success = bool(
             controller is not None and controller.get("result") == "SUCCESS"
         )
+        mapping_success = not unresolved
         held_postcondition = (
             next(after_pick_checks, None)
             if action["operator"] == "PICK"
             else None
         )
         failure = ExecutionFailure.NONE.value
-        if not controller_success:
+        if not mapping_success:
+            controller_success = False
+            failure = ExecutionFailure.ENTITY_MAPPING_FAILURE.value
+        elif not controller_success:
             failure = (
                 ExecutionFailure.POSTCONDITION_VERIFICATION_FAILURE.value
                 if controller and controller.get("failure") == "POSTCONDITION_FAILED"
@@ -111,7 +161,11 @@ def execute_living_room_handoff(
             "resolved_arguments": resolved,
             "primitive": "living_room_mobile_execution.run_mobile_execution",
             "pre_check": {
-                "success": controller is not None,
+                "success": controller is not None and mapping_success,
+                "entity_mapping_success": mapping_success,
+                "arguments_requested": len(action["arguments"]),
+                "arguments_resolved": len(resolved),
+                "unresolved_arguments": unresolved,
                 "verification_basis": "DOMAIN_LOOP_STANCE_AND_HELD_STATE_CHECKS",
             },
             "controller_result": controller,
@@ -129,18 +183,30 @@ def execute_living_room_handoff(
                 ),
             },
         })
-    complete = max_actions is None
+    complete = len(selected_actions) == len(handoff.actions)
     final = physical.get("final_physical_goal_validation", {})
     all_actions = (
         len(action_results) == len(selected_actions)
         and all(row["success"] for row in action_results)
     )
+    strict_audit = audit_strict_telemetry([], action_results)
+    if physical.get("initial_payload_qpos_reset_used") is True:
+        strict_audit["verified"] = False
+        strict_audit["violations"].append({
+            "phase": "TASK_ACTION",
+            "path": "physical_execution.initial_payload_qpos_reset_used",
+            "flag": "initial_payload_qpos_reset_used",
+        })
+    strict_verified = bool(strict_audit["verified"])
+    partial_smoke = not complete
+    partial_smoke_success = bool(
+        partial_smoke and all_actions and strict_verified
+    )
     success = bool(
-        all_actions
-        and (
-            not complete
-            or final.get("all_phase2_goals_physically_satisfied", False)
-        )
+        complete
+        and all_actions
+        and strict_verified
+        and final.get("all_phase2_goals_physically_satisfied", False)
     )
     failure = next(
         (row["failure"] for row in action_results if not row["success"]),
@@ -152,6 +218,9 @@ def execute_living_room_handoff(
             if failure == ExecutionFailure.ENTITY_MAPPING_FAILURE.value
             else "TASK_ACTION"
         )
+    elif not strict_verified:
+        failure = "STRICT_EXECUTION_TELEMETRY_VIOLATION"
+        failure_stage = "TASK_ACTION"
     elif complete and not final.get("all_phase2_goals_physically_satisfied", False):
         failure = "FINAL_VERIFICATION_FAILURE"
         failure_stage = "FINAL_VERIFICATION"
@@ -185,6 +254,8 @@ def execute_living_room_handoff(
         "actions_requested": len(selected_actions),
         "actions_completed": sum(row["success"] for row in action_results),
         "full_sequence_requested": complete,
+        "partial_smoke": partial_smoke,
+        "partial_smoke_success": partial_smoke_success,
         "action_results": action_results,
         "final_verification": (
             final if complete else {"performed": False, "reason": "PARTIAL_SEQUENCE"}
@@ -193,7 +264,8 @@ def execute_living_room_handoff(
         "failure": failure,
         "failure_stage": failure_stage,
         "strict_execution": True,
-        "direct_task_state_fallback_used": False,
+        "strict_telemetry_verification": strict_audit,
+        "direct_task_state_fallback_used": not strict_verified,
         "initial_payload_qpos_reset_used": bool(
             physical.get("initial_payload_qpos_reset_used")
         ),

@@ -16,6 +16,21 @@ import time
 from typing import Any, Protocol
 
 
+FORBIDDEN_STRICT_TELEMETRY_FLAGS = frozenset({
+    "assisted_execution",
+    "assisted_postcondition_accepted",
+    "assisted_validation",
+    "direct_payload_pose_write",
+    "direct_object_qpos_write",
+    "direct_fastener_qpos_write",
+    "direct_fastener_qpos_write_used",
+    "direct_task_success_write",
+    "direct_task_success_write_used",
+    "direct_task_state_fallback_used",
+    "initial_payload_qpos_reset_used",
+})
+
+
 class ExecutionFailure(str, Enum):
     NONE = "NONE"
     INVALID_HANDOFF = "INVALID_HANDOFF"
@@ -24,6 +39,14 @@ class ExecutionFailure(str, Enum):
     PRECONDITION_STATE_FAILURE = "PRECONDITION_STATE_FAILURE"
     CONTROLLER_FAILURE = "CONTROLLER_FAILURE"
     POSTCONDITION_VERIFICATION_FAILURE = "POSTCONDITION_VERIFICATION_FAILURE"
+
+
+class UpstreamPhase3Blocked(ValueError):
+    """Raised when Phase 3 explicitly ended without an executable plan."""
+
+
+class Phase4EntityMappingError(ValueError):
+    """Raised before control when a frozen planner ID cannot be resolved."""
 
 
 @dataclass(frozen=True)
@@ -96,6 +119,41 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def audit_strict_telemetry(
+    inspection_results: list[dict[str, Any]],
+    action_results: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Derive strictness from successful primitive telemetry, fail closed."""
+    violations: list[dict[str, str]] = []
+
+    def scan(value: Any, path: str, phase: str) -> None:
+        if isinstance(value, dict):
+            for key, child in value.items():
+                child_path = f"{path}.{key}" if path else key
+                if key in FORBIDDEN_STRICT_TELEMETRY_FLAGS and child is True:
+                    violations.append({
+                        "phase": phase,
+                        "path": child_path,
+                        "flag": key,
+                    })
+                scan(child, child_path, phase)
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                scan(child, f"{path}[{index}]", phase)
+
+    for index, row in enumerate(inspection_results):
+        if row.get("success"):
+            scan(row, f"inspection_results[{index}]", "INSPECTION_OPEN")
+    for index, row in enumerate(action_results):
+        if row.get("success"):
+            scan(row, f"action_results[{index}]", "TASK_ACTION")
+    return {
+        "verified": not violations,
+        "forbidden_flags": sorted(FORBIDDEN_STRICT_TELEMETRY_FLAGS),
+        "violations": violations,
+    }
+
+
 def _validate_actions(actions: Any) -> tuple[dict[str, Any], ...]:
     if not isinstance(actions, list) or not actions:
         raise ValueError("Final action sequence must contain a non-empty actions list")
@@ -146,6 +204,12 @@ def load_phase3_handoff(run_dir: Path) -> Phase3Handoff:
     manifest = _read_json(run_dir / "run_manifest.json")
     result = _read_json(run_dir / "result.json")
     grounding = _read_json(run_dir / "graph_grounding_result.json")
+    if manifest.get("terminal_status") != "ACTION_SEQUENCE_READY":
+        raise UpstreamPhase3Blocked(
+            "CURRENT_UPSTREAM_PHASE3_BLOCKED: Phase-3 terminal_status="
+            f"{manifest.get('terminal_status')!r}, result_status="
+            f"{result.get('status')!r}"
+        )
     final_rel = (manifest.get("artifacts") or {}).get("final_plan")
     if not isinstance(final_rel, str):
         raise ValueError("Phase-3 manifest does not identify a final_plan artifact")
@@ -156,11 +220,6 @@ def load_phase3_handoff(run_dir: Path) -> Phase3Handoff:
 
     if manifest.get("execution_state") != "planning_only":
         raise ValueError("Phase-3 run is not an immutable planning_only handoff")
-    if manifest.get("terminal_status") != "ACTION_SEQUENCE_READY":
-        raise ValueError(
-            "Phase-3 handoff is not executable: "
-            f"terminal_status={manifest.get('terminal_status')!r}"
-        )
     if result.get("status") != "ACTION_SEQUENCE_READY":
         raise ValueError("Phase-3 result does not contain a ready action sequence")
     if not grounding.get("complete") or not isinstance(
@@ -184,6 +243,13 @@ def load_phase3_handoff(run_dir: Path) -> Phase3Handoff:
         "grounding": run_dir / "graph_grounding_result.json",
         "plan": plan_path,
     }
+    observed_graph_rel = (manifest.get("artifacts") or {}).get("observed_graph")
+    if isinstance(observed_graph_rel, str):
+        observed_graph_path = (run_dir / observed_graph_rel).resolve()
+        if run_dir not in observed_graph_path.parents:
+            raise ValueError("Phase-3 observed graph path escapes run directory")
+        if observed_graph_path.is_file():
+            artifacts["observed_graph"] = observed_graph_path
     specification_rel = (manifest.get("artifacts") or {}).get(
         "functional_specification"
     )
@@ -256,14 +322,25 @@ class Phase4Executor:
         all_succeeded = len(records) == len(selected) and all(
             row["success"] for row in records
         )
+        strict_audit = audit_strict_telemetry(inspection_records, records)
+        strict_verified = bool(strict_audit["verified"])
         final = (
             self.adapter.final_verification()
-            if complete_sequence and all_succeeded
+            if complete_sequence and all_succeeded and strict_verified
             else {"performed": False, "reason": "PARTIAL_OR_FAILED_SEQUENCE"}
         )
-        success = bool(
-            inspections_succeeded
+        partial_smoke = not complete_sequence
+        partial_smoke_success = bool(
+            partial_smoke
+            and inspections_succeeded
             and all_succeeded
+            and strict_verified
+        )
+        success = bool(
+            complete_sequence
+            and inspections_succeeded
+            and all_succeeded
+            and strict_verified
             and (not complete_sequence or final.get("success"))
         )
         task_failure = next(
@@ -280,6 +357,16 @@ class Phase4Executor:
                 else "TASK_ACTION"
             )
             failure = task_failure
+        elif not strict_verified:
+            violation_phases = {
+                row["phase"] for row in strict_audit["violations"]
+            }
+            failure_stage = (
+                "INSPECTION_OPEN"
+                if violation_phases == {"INSPECTION_OPEN"}
+                else "TASK_ACTION"
+            )
+            failure = "STRICT_EXECUTION_TELEMETRY_VIOLATION"
         elif complete_sequence and not final.get("success"):
             failure_stage = "FINAL_VERIFICATION"
             failure = "FINAL_VERIFICATION_FAILURE"
@@ -316,12 +403,15 @@ class Phase4Executor:
             "actions_requested": len(selected),
             "actions_completed": sum(row["success"] for row in records),
             "full_sequence_requested": complete_sequence,
+            "partial_smoke": partial_smoke,
+            "partial_smoke_success": partial_smoke_success,
             "action_results": records,
             "final_verification": final,
             "failure": failure,
             "failure_stage": failure_stage,
             "strict_execution": True,
-            "direct_task_state_fallback_used": False,
+            "strict_telemetry_verification": strict_audit,
+            "direct_task_state_fallback_used": not strict_verified,
             "wall_duration_s": time.perf_counter() - started,
             "success": success,
         }

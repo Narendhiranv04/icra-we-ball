@@ -393,10 +393,17 @@ class KitchenPhase4Adapter:
             open_regions
         )
         return {
-            "performed": True,
-            "success": inspections_remain_open,
+            "performed": False,
+            "success": False,
+            "reason": "NO_REUSABLE_PHYSICAL_TERMINAL_VALIDATOR",
             "verified_action_count": completed,
             "verification_basis": "PER_ACTION_SIMULATOR_POSTCONDITIONS",
+            "note": (
+                "The existing validate_feasible_final_state helper consumes "
+                "OracleWorldState symbolic effects. It is not an independent "
+                "physical terminal-state validator and is therefore not used "
+                "to certify strict Phase-4 success."
+            ),
             "held_object": self._held_planner_id(),
             "inspection_regions_remain_physically_open": inspections_remain_open,
             "physically_open_containers": sorted(open_regions),

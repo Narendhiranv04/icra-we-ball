@@ -8,7 +8,12 @@ from pathlib import Path
 import sys
 from typing import Any
 
-from .phase4_execution import Phase4Executor, load_phase3_handoff
+from .phase4_execution import (
+    Phase4Executor,
+    Phase4EntityMappingError,
+    UpstreamPhase3Blocked,
+    load_phase3_handoff,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -102,9 +107,8 @@ def main() -> int:
             max_actions=args.max_actions,
         )
     except Exception as error:
-        upstream_blocked = str(error).startswith(
-            "UPSTREAM_PHASE3_SCENE_ASSIGNMENT_MISMATCH"
-        )
+        upstream_blocked = isinstance(error, UpstreamPhase3Blocked)
+        entity_mapping_failed = isinstance(error, Phase4EntityMappingError)
         failure = {
             "schema_version": 2,
             "phase": "PHASE_4_EXECUTION",
@@ -113,15 +117,27 @@ def main() -> int:
             "success": False,
             "failure": (
                 "BLOCKED_UPSTREAM_PHASE3"
-                if upstream_blocked else "INVALID_HANDOFF_OR_ADAPTER_SETUP"
+                if upstream_blocked
+                else (
+                    "ENTITY_MAPPING_FAILURE"
+                    if entity_mapping_failed
+                    else "INVALID_HANDOFF_OR_ADAPTER_SETUP"
+                )
             ),
             "failure_stage": (
-                "UPSTREAM_PHASE3_BLOCKED" if upstream_blocked else "HANDOFF"
+                "UPSTREAM_PHASE3_BLOCKED"
+                if upstream_blocked
+                else ("ENTITY_RESOLUTION" if entity_mapping_failed else "HANDOFF")
             ),
             "failure_type": type(error).__name__,
             "failure_reason": str(error),
             "strict_execution": True,
             "direct_task_state_fallback_used": False,
+            "strict_telemetry_verification": {
+                "verified": True,
+                "violations": [],
+                "reason": "NO_PRIMITIVE_EXECUTION_ATTEMPTED",
+            },
             "inspection_execution": {
                 "regions": [], "actions_requested": 0,
                 "actions_completed": 0, "results": [], "success": False,

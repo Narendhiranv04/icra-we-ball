@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+import json
 import time
 from typing import Any
+
+import mujoco
 
 from .phase4_execution import (
     ActionExecutionResult,
@@ -16,6 +19,7 @@ from .workshop_ground_truth_execution import (
     WorkshopExecutionDispatcher,
     validate_terminal_state,
 )
+from .phase4_workshop_entities import resolve_workshop_entities
 from .workshop_ground_truth_planner import WorkshopAssignment
 from .workshop_ground_truth_state import initial_workshop_state
 from .workshop_scene import WORKSHOP_REGIONS, WorkshopScene
@@ -33,73 +37,102 @@ class WorkshopPhase4Adapter:
         frame_callback: Any = None,
     ):
         assignment = handoff.assignment
-        required = {
-            "driver", "fastener", "driver_source", "fastener_source",
-            "target_joint", "work_surface",
-        }
+        required = {"driver", "fastener"}
         missing = sorted(required - assignment.keys())
         if missing:
             raise ValueError(f"Workshop phi* handoff is missing fields: {missing}")
+        planner_driver = str(assignment["driver"])
+        planner_fastener = str(assignment["fastener"])
+        screw_actions = [
+            action for action in handoff.actions if action["operator"] == "SCREW"
+        ]
+        if len(screw_actions) != 1 or len(screw_actions[0]["arguments"]) != 3:
+            raise ValueError("Workshop final plan must contain one typed SCREW action")
+        screw_driver, screw_fastener, target_joint = screw_actions[0]["arguments"]
+        if (screw_driver, screw_fastener) != (planner_driver, planner_fastener):
+            raise ValueError(
+                "Workshop final plan objects differ from canonical phi* assignment"
+            )
+        driver_places = [
+            action["arguments"][1]
+            for action in handoff.actions
+            if action["operator"] == "PLACE"
+            and len(action["arguments"]) == 2
+            and action["arguments"][0] == planner_driver
+        ]
+        if len(driver_places) != 1:
+            raise ValueError("Workshop final plan has no unique driver destination")
+        work_surface = str(driver_places[0])
+        self.scene = WorkshopScene(robot="google", variant=handoff.internal_variant)
+        observed_graph_path = handoff.artifacts.get("observed_graph")
+        if observed_graph_path is None:
+            raise ValueError("Workshop handoff has no final observed G_O artifact")
+        observed_graph = json.loads(observed_graph_path.read_text(encoding="utf-8"))
+        simulator_candidates = []
+        for source_region, bodies in self.scene.variant_meta["storage_contents"].items():
+            for simulator_id in bodies:
+                body_id = mujoco.mj_name2id(
+                    self.scene.model, mujoco.mjtObj.mjOBJ_BODY, simulator_id
+                )
+                if body_id < 0:
+                    raise ValueError(f"Workshop scene is missing body {simulator_id}")
+                simulator_candidates.append({
+                    "simulator_id": simulator_id,
+                    "source_region": source_region,
+                    "centroid_world_m": self.scene.data.xpos[body_id].tolist(),
+                })
+        resolution = resolve_workshop_entities(
+            (planner_driver, planner_fastener),
+            observed_graph,
+            handoff.actions,
+            simulator_candidates,
+        )
+        resolution_by_id = {row["planner_id"]: row for row in resolution["objects"]}
+        backend_driver = resolution_by_id[planner_driver]["simulator_id"]
+        backend_fastener = resolution_by_id[planner_fastener]["simulator_id"]
         self.assignment = WorkshopAssignment(
             variant_id=handoff.internal_variant,
             intended_outcome="FEASIBLE",
             is_feasible=True,
-            driver=str(assignment["driver"]),
-            fastener=str(assignment["fastener"]),
-            work_surface=str(assignment["work_surface"]),
-            target_joint=str(assignment["target_joint"]),
+            driver=planner_driver,
+            fastener=planner_fastener,
+            work_surface=work_surface,
+            target_joint=str(target_joint),
             assignment_source="CANONICAL_PHASE3_HANDOFF",
             source_ids={
-                "driver": str(assignment.get("driver_track", "")),
-                "fastener": str(assignment.get("fastener_track", "")),
+                "driver": planner_driver,
+                "fastener": planner_fastener,
             },
         )
-        self.scene = WorkshopScene(robot="google", variant=handoff.internal_variant)
-        storage_contents = self.scene.variant_meta["storage_contents"]
-        for role in ("driver", "fastener"):
-            entity = str(assignment[role])
-            persisted_source = str(assignment[f"{role}_source"])
-            simulator_source = next(
-                (
-                    region
-                    for region, contents in storage_contents.items()
-                    if entity in contents
-                ),
-                None,
-            )
-            if simulator_source != persisted_source:
-                raise ValueError(
-                    "UPSTREAM_PHASE3_SCENE_ASSIGNMENT_MISMATCH: "
-                    f"{role} {entity} is persisted at {persisted_source}, "
-                    f"but manifest scene {handoff.internal_variant} places it "
-                    f"at {simulator_source}"
-                )
-        self.state = initial_workshop_state(
+        self.controller_assignment = WorkshopAssignment(
+            variant_id=handoff.internal_variant,
+            intended_outcome="FEASIBLE",
+            is_feasible=True,
+            driver=backend_driver,
+            fastener=backend_fastener,
+            work_surface=work_surface,
+            target_joint=str(target_joint),
+            assignment_source="PHASE4_EXECUTION_ENTITY_RESOLUTION",
+            source_ids={
+                "driver": planner_driver,
+                "fastener": planner_fastener,
+            },
+        )
+        self.state = initial_workshop_state({})
+        self.controller_state = initial_workshop_state(
             self.scene.variant_meta["storage_contents"]
         )
+        for row in resolution["objects"]:
+            self.state.object_locations[row["planner_id"]] = row["source_region"]
         for region in handoff.inspected_regions:
             if region not in WORKSHOP_REGIONS:
                 raise ValueError(f"Unknown inspected Workshop region {region}")
         self.dispatcher = WorkshopExecutionDispatcher(
-            self.scene, self.assignment, frame_callback=frame_callback
+            self.scene, self.controller_assignment, frame_callback=frame_callback
         )
         self.expected_inspected_regions = tuple(handoff.inspected_regions)
-        object_rows = []
-        for role in ("driver", "fastener"):
-            simulator_id = str(assignment[role])
-            object_rows.append({
-                "planner_id": simulator_id,
-                "simulator_id": simulator_id,
-                "entity_kind": "OBJECT",
-                "grounded_track_id": assignment.get(f"{role}_track"),
-                "source_region": assignment.get(f"{role}_source"),
-                "resolution_method": "PERSISTED_PHASE3_EXECUTION_HANDLE",
-            })
         self.entity_resolution = {
-            "schema_version": 1,
-            "all_resolved": True,
-            "one_to_one": len({row["simulator_id"] for row in object_rows}) == len(object_rows),
-            "objects": object_rows,
+            **resolution,
             "inspection_regions": list(handoff.inspected_regions),
             "direct_search_state_restoration_used": False,
         }
@@ -107,7 +140,7 @@ class WorkshopPhase4Adapter:
             row["planner_id"]: ResolvedEntity(
                 row["planner_id"], "OBJECT", row["simulator_id"], row
             )
-            for row in object_rows
+            for row in resolution["objects"]
         }
         self.successful_actions = 0
 
@@ -129,11 +162,12 @@ class WorkshopPhase4Adapter:
                 "pre_check": {"success": False, "reason": reason},
                 "wall_duration_s": time.perf_counter() - started,
             }
-        controller = self.dispatcher.execute(action, self.state)
+        controller = self.dispatcher.execute(action, self.controller_state)
         articulation = controller.get("articulation", {})
         verified = bool(controller.get("success") and articulation.get("verified"))
         if verified:
             self.state.apply(action)
+            self.controller_state.apply(action)
         return {
             "region": region,
             "success": verified,
@@ -224,8 +258,18 @@ class WorkshopPhase4Adapter:
                 controller, {"success": False, "performed": False},
                 time.perf_counter() - started,
             )
+        physical_action = {
+            **action,
+            "arguments": [
+                self.by_id[argument].simulator_id
+                if argument in self.by_id else argument
+                for argument in arguments
+            ],
+        }
         try:
-            controller = self.dispatcher.execute(action, self.state)
+            controller = self.dispatcher.execute(
+                physical_action, self.controller_state
+            )
         except RuntimeError as error:
             controller = {
                 "success": False,
@@ -242,10 +286,14 @@ class WorkshopPhase4Adapter:
                 time.perf_counter() - started,
             )
         self.state.apply(action)
+        self.controller_state.apply(physical_action)
         if operator == "PICK":
             post_ok = (
                 self.state.held_object == arguments[0]
-                and self.dispatcher.held_object == arguments[0]
+                and self.controller_state.held_object
+                == self.by_id[arguments[0]].simulator_id
+                and self.dispatcher.held_object
+                == self.by_id[arguments[0]].simulator_id
                 and self.dispatcher.active_grasp_weld >= 0
                 and bool(self.scene.data.eq_active[self.dispatcher.active_grasp_weld])
             )
@@ -253,6 +301,7 @@ class WorkshopPhase4Adapter:
             post_ok = (
                 self.state.held_object is None
                 and self.state.object_locations.get(arguments[0]) == arguments[1]
+                and self.controller_state.held_object is None
                 and self.dispatcher.held_object is None
             )
         else:
@@ -270,7 +319,7 @@ class WorkshopPhase4Adapter:
 
     def final_verification(self) -> dict[str, Any]:
         validation = validate_terminal_state(
-            self.scene, self.assignment, self.state
+            self.scene, self.controller_assignment, self.controller_state
         )
         expected = set(self.expected_inspected_regions)
         validation["checks"]["search_stopped_at_expected_region"] = (
