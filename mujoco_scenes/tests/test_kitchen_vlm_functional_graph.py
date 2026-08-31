@@ -225,7 +225,7 @@ def test_entity_kind_preservation():
 
 def test_object_nouns_do_not_prove_geometry():
     """Object nouns like 'spoon' or 'cup' in required_properties must not map to physical geometry."""
-    with pytest.raises(VLMSpecificationError, match="no exact or alias checker mapping exists"):
+    with pytest.raises(VLMSpecificationError, match="cannot be mapped to any active physical unary property"):
         spec = natural_kitchen_spec()
         spec["functional_roles"][2]["required_properties"] = ["spoon", "metal spoon"]
         compile_vlm_functional_graph(
@@ -358,3 +358,260 @@ def test_no_full_catalog_fallback():
     # Must NOT fall back to all 5 regions
     assert trace["candidate_regions"] == ["C2"]
     assert len(trace["candidate_regions"]) == 1
+
+
+# ============================================================
+# P3-E Fail-Closed and Lossless Negative & Invariant Tests
+# ============================================================
+
+
+def test_unmapped_binary_relation_fails_closed():
+    """Step 1 & Step 6: Unknown binary relation must raise UnmappedFunctionalConceptError, never fabricate INSERTABLE_IN."""
+    from mujoco_scenes.functional_tamp_pipeline.errors import UnmappedFunctionalConceptError
+
+    spec = natural_kitchen_spec()
+    # Replace valid relation with an unmapped phrase
+    spec["functional_relations"][0]["relation"] = "must be placed adjacent to"
+
+    with pytest.raises(UnmappedFunctionalConceptError, match="cannot be mapped to any active Kitchen binary predicate") as exc_info:
+        compile_vlm_functional_graph(
+            spec,
+            task_instruction="Prepare two coffees and two soups.",
+            observable_regions=REGIONS,
+        )
+    assert exc_info.value.category == "UNMAPPED_FUNCTIONAL_CONCEPT"
+
+
+def test_broad_keyword_relation_not_fabricated():
+    """Step 2: Broad keywords like 'reach', 'require', 'stir with' must not fabricate INSERTABLE_IN."""
+    assert map_binary_relation("stir with coffee") is None
+    assert map_binary_relation("requires water") is None
+    assert map_binary_relation("reaches near table") is None
+
+
+def test_unmapped_role_fails_closed():
+    """Step 3: Unmapped task-required role must raise UnmappedFunctionalConceptError."""
+    from mujoco_scenes.functional_tamp_pipeline.errors import UnmappedFunctionalConceptError
+
+    spec = natural_kitchen_spec()
+    # Add an unmapped role
+    spec["functional_roles"].append({
+        "id": "vacuum_tool",
+        "entity_kind": "OBJECT",
+        "function": "vacuum the carpet and clean floor",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": ["vacuum_cleaner"],
+        "visible_candidates": [],
+        "required_properties": [],
+    })
+
+    with pytest.raises(UnmappedFunctionalConceptError, match="cannot be mapped to any canonical Kitchen role") as exc_info:
+        compile_vlm_functional_graph(
+            spec,
+            task_instruction="Prepare two coffees and two soups.",
+            observable_regions=REGIONS,
+        )
+    assert exc_info.value.category == "UNMAPPED_FUNCTIONAL_CONCEPT"
+
+
+def test_duplicate_canonical_role_collision_fails_closed():
+    """Step 4 & Step 14D: Multiple raw role IDs mapping to the same canonical role must fail closed, not max()/sum()."""
+    from mujoco_scenes.functional_tamp_pipeline.errors import AmbiguousCanonicalizationError
+
+    spec = natural_kitchen_spec()
+    # Add duplicate raw role for coffee_container with count=3
+    spec["functional_roles"].append({
+        "id": "second_coffee_receptacle",
+        "entity_kind": "OBJECT",
+        "function": "hold coffee serving",
+        "required_count": 3,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": ["coffee_cup"],
+        "visible_candidates": [],
+        "required_properties": ["open cavity"],
+    })
+
+    with pytest.raises(AmbiguousCanonicalizationError, match="Multiple distinct raw roles .* map to the same canonical role 'coffee_container'") as exc_info:
+        compile_vlm_functional_graph(
+            spec,
+            task_instruction="Prepare two coffees and two soups.",
+            observable_regions=REGIONS,
+        )
+    assert exc_info.value.category == "AMBIGUOUS_CANONICALIZATION"
+
+
+def test_unmapped_required_property_fails_closed():
+    """Step 5: Unmapped required property must raise UnmappedFunctionalConceptError."""
+    from mujoco_scenes.functional_tamp_pipeline.errors import UnmappedFunctionalConceptError
+
+    spec = natural_kitchen_spec()
+    spec["functional_roles"][0]["required_properties"].append("heat resistant ceramic material")
+
+    with pytest.raises(UnmappedFunctionalConceptError, match="cannot be mapped to any active physical unary property") as exc_info:
+        compile_vlm_functional_graph(
+            spec,
+            task_instruction="Prepare two coffees and two soups.",
+            observable_regions=REGIONS,
+        )
+    assert exc_info.value.category == "UNMAPPED_FUNCTIONAL_CONCEPT"
+
+
+def test_undeclared_relation_endpoint_fails_closed():
+    """Step 6: Relation with undeclared endpoint must raise MalformedVLMSpecificationError."""
+    from mujoco_scenes.functional_tamp_pipeline.errors import MalformedVLMSpecificationError
+
+    spec = natural_kitchen_spec()
+    spec["functional_relations"].append({
+        "subject_role": "ghost_role_1",
+        "relation": "fits inside",
+        "object_role": "drink_receptacle",
+    })
+
+    with pytest.raises(MalformedVLMSpecificationError, match="undeclared"):
+        compile_vlm_functional_graph(
+            spec,
+            task_instruction="Prepare two coffees and two soups.",
+            observable_regions=REGIONS,
+        )
+
+
+def test_unsupported_operation_group_pair_fails_closed():
+    """Step 7: Operation group with unsupported pair must raise MalformedVLMSpecificationError."""
+    from mujoco_scenes.functional_tamp_pipeline.errors import MalformedVLMSpecificationError
+
+    spec = natural_kitchen_spec()
+    spec["interaction_groups"].append({
+        "id": "unsupported_group",
+        "function": "pour water into coffee jar",
+        "tool_role": "water_source",
+        "target_role": "coffee_source",
+        "required_target_count": 1,
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED",
+        "required_relations": ["fits inside"],
+    })
+
+    with pytest.raises(MalformedVLMSpecificationError, match="Unsupported Kitchen operation group tool/target pair"):
+        compile_vlm_functional_graph(
+            spec,
+            task_instruction="Prepare two coffees and two soups.",
+            observable_regions=REGIONS,
+        )
+
+
+def test_duplicate_operation_group_collision_fails_closed():
+    """Step 7: Multiple raw operation groups mapping to same canonical group must fail closed."""
+    from mujoco_scenes.functional_tamp_pipeline.errors import AmbiguousCanonicalizationError
+
+    spec = natural_kitchen_spec()
+    spec["interaction_groups"].append({
+        "id": "second_mix_drinks",
+        "function": "stir coffee again",
+        "tool_role": "mixing_implement",
+        "target_role": "drink_receptacle",
+        "required_target_count": 2,
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED",
+        "required_relations": ["fits inside"],
+    })
+
+    with pytest.raises(AmbiguousCanonicalizationError, match="Multiple raw operation groups .* map to the same canonical operation group 'coffee_stirring'"):
+        compile_vlm_functional_graph(
+            spec,
+            task_instruction="Prepare two coffees and two soups.",
+            observable_regions=REGIONS,
+        )
+
+
+def test_target_count_clipping_prevented():
+    """Step 8 & Step 14C: required_target_count exceeding target role count must fail closed, never clipped."""
+    from mujoco_scenes.functional_tamp_pipeline.errors import MalformedVLMSpecificationError
+
+    spec = natural_kitchen_spec()
+    # Target role 'drink_receptacle' has count 2, group requires 3
+    spec["interaction_groups"][0]["required_target_count"] = 3
+
+    with pytest.raises(MalformedVLMSpecificationError, match="has required_count 2, but group requires 3"):
+        compile_vlm_functional_graph(
+            spec,
+            task_instruction="Prepare two coffees and two soups.",
+            observable_regions=REGIONS,
+        )
+
+
+def test_empty_operation_relations_fails_closed():
+    """Step 9: Operation group with empty required_relations must fail closed, never default to INSERTABLE_IN."""
+    from mujoco_scenes.functional_tamp_pipeline.errors import MalformedVLMSpecificationError
+
+    spec = natural_kitchen_spec()
+    spec["interaction_groups"][0]["required_relations"] = []
+
+    with pytest.raises(MalformedVLMSpecificationError, match="required_relations"):
+        compile_vlm_functional_graph(
+            spec,
+            task_instruction="Prepare two coffees and two soups.",
+            observable_regions=REGIONS,
+        )
+
+
+def test_unmapped_operation_relation_fails_closed():
+    """Step 9: Unmapped relation in operation group must raise UnmappedFunctionalConceptError."""
+    from mujoco_scenes.functional_tamp_pipeline.errors import UnmappedFunctionalConceptError
+
+    spec = natural_kitchen_spec()
+    spec["interaction_groups"][0]["required_relations"] = ["heats liquid quickly"]
+
+    with pytest.raises(UnmappedFunctionalConceptError, match="cannot be mapped to any active Kitchen predicate"):
+        compile_vlm_functional_graph(
+            spec,
+            task_instruction="Prepare two coffees and two soups.",
+            observable_regions=REGIONS,
+        )
+
+
+def test_invalid_raw_counts_and_policies_fail_closed():
+    """Step 10: Invalid counts and unknown policies must raise MalformedVLMSpecificationError without self-repair."""
+    from mujoco_scenes.functional_tamp_pipeline.errors import MalformedVLMSpecificationError
+
+    # 1. Invalid required_count (0)
+    spec1 = natural_kitchen_spec()
+    spec1["functional_roles"][0]["required_count"] = 0
+    with pytest.raises(MalformedVLMSpecificationError, match="required_count"):
+        compile_vlm_functional_graph(spec1, task_instruction="Task", observable_regions=REGIONS)
+
+    # 2. Unknown binding policy
+    spec2 = natural_kitchen_spec()
+    spec2["functional_roles"][0]["binding_policy"] = "UNKNOWN_BINDING"
+    with pytest.raises(MalformedVLMSpecificationError, match="binding_policy"):
+        compile_vlm_functional_graph(spec2, task_instruction="Task", observable_regions=REGIONS)
+
+    # 3. Unknown usage policy
+    spec3 = natural_kitchen_spec()
+    spec3["interaction_groups"][0]["usage_policy"] = "UNKNOWN_USAGE"
+    with pytest.raises(MalformedVLMSpecificationError, match="usage_policy"):
+        compile_vlm_functional_graph(spec3, task_instruction="Task", observable_regions=REGIONS)
+
+
+def test_cardinality_and_reusable_policy_preservation():
+    """Step 14A, 14B, 14E: Raw counts, target counts, and reusable policies are exactly preserved."""
+    spec = natural_kitchen_spec()
+    spec["functional_roles"][0]["required_count"] = 2
+    spec["functional_roles"][2]["required_count"] = 1
+    spec["functional_roles"][2]["binding_policy"] = "REUSABLE"
+    spec["interaction_groups"][0]["required_target_count"] = 2
+    spec["interaction_groups"][0]["usage_policy"] = "SEQUENTIAL_REUSE_ALLOWED"
+
+    contract, _, trace = compile_vlm_functional_graph(
+        spec, task_instruction="Task", observable_regions=REGIONS
+    )
+
+    assert contract["roles"]["coffee_container"]["count"] == 2
+    assert contract["roles"]["coffee_stirrer"]["count"] == 1
+    assert contract["roles"]["coffee_stirrer"]["vlm_binding_policy"] == "REUSABLE"
+    assert contract["operation_groups"]["coffee_stirring"]["required_target_count"] == 2
+    assert contract["operation_groups"]["coffee_stirring"]["usage_policy"]["mode"] == "sequential_reuse_allowed"
+
+    # Concept accounting trace verified
+    assert "concept_accounting" in trace
+    assert trace["concept_accounting"]["roles"]["drink_receptacle"]["status"] == "PRESERVED"
+    assert trace["concept_accounting"]["operation_groups"][0]["status"] == "PRESERVED"
+

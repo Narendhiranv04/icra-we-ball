@@ -433,27 +433,22 @@ When a case fails, apply this tree **in order**:
 ---
 
 ### P3-E: Kitchen Canonicalizer Repair
-**Status**: `[ ] NOT STARTED`
+**Status**: `[x] COMPLETE`
 
 **Objective**: Repair the Kitchen VLM canonicalizer to achieve 100% concept preservation on the ideal fixture without silent fallbacks.
 
-**Scope of Hypotheses and Tests** (in `kitchen_vlm_functional_graph.py`):
-1. **Role mapping**: Expand natural language function and description matching for `water_source` and `coffee_source` so valid semantic phrases are not dropped.
-2. **Fail-closed relation mapping**: Remove the `INSERTABLE_IN` default fallback in `map_binary_relation()` — unmapped relations must raise `UnmappedFunctionalConceptError` or be explicitly mapped.
-   - **MANDATORY NEGATIVE REGRESSION**: Before repairing relation mapping, add a negative regression with an otherwise-valid raw Kitchen specification containing an unmapped relation phrase. P3-E acceptance must require: `unknown relation -> explicit UnmappedFunctionalConceptError / VLM_SPEC_FAILED` and zero silent predicate fabrication.
-3. **Operation group mapping**: Replace rigid 2-pair gating with generic tool-target pair validation based on mapped roles.
-4. **Cardinality preservation**: Eliminate target count clipping.
+**Accomplished Changes & Empirical Findings**:
+1. **Eliminated Silent Role Dropping**: Roles with unmapped functions or candidate categories raise `UnmappedFunctionalConceptError` rather than silently continuing.
+2. **Eliminated Canonical Role Collision Heuristics**: Colliding raw roles mapping to the same canonical role fail closed with `AmbiguousCanonicalizationError` (zero `max()`/`sum()` heuristics).
+3. **Fail-Closed Binary and Unary Property Mapping**: Removed `INSERTABLE_IN` default fallback in `map_binary_relation()` and broad keyword substring heuristics. Unmapped relations and required properties raise `UnmappedFunctionalConceptError`.
+4. **Strict Operation Group Accounting**: Validates tool/target pairs against declared roles, rejects duplicate group collisions with `AmbiguousCanonicalizationError`, and rejects unmapped/empty operation relations.
+5. **Target Count Preservation**: Removed clipping (`min(req, target_count)`). If required target count exceeds target role count, raises `MalformedVLMSpecificationError`.
+6. **Concept Accounting Trace**: Generates comprehensive `concept_accounting` metadata recording the status (`PRESERVED` or `MERGED_BY_EXPLICIT_RULE`) of all raw roles, properties, relations, and interaction groups.
+7. **Ideal Kitchen K1 Fixture Evaluation**: Yields 100% role recall (6/6), 100% role precision (6/6), 100% relation recall (4/4), 100% relation precision (4/4), and `reference_complete = True` against GT reference.
+8. **Regression & Adversarial Tests**: Added 25 unit/negative regression tests in `test_kitchen_vlm_functional_graph.py` (280/280 full test suite passing).
+9. **Documentation**: Full evidence documented in `docs/PHASE3_P3E_KITCHEN_CANONICALIZER.md`.
 
-**Tests**: `test_ideal_fixtures.py` must pass for `kitchen_K1`. Run `pytest mujoco_scenes/tests/test_kitchen_vlm_functional_graph.py`.
-
-**Acceptance**:
-- Ideal kitchen fixture → canonical G_F with role recall = 1.0, relation recall = 1.0 vs GT reference.
-- Unknown relation fails closed with explicit error (zero silent `INSERTABLE_IN` fabrication).
-- No silent role dropping (`coffee_source`, `water_source` preserved).
-- No `required_target_count` clipping.
-- Operation group preservation and signature validation proven.
-
-**Do not touch**: Living Room or Workshop canonicalizers; GT path; `ground_graph()`.
+**Acceptance**: All P3-E acceptance criteria verified.
 
 ---
 
@@ -702,22 +697,21 @@ Per pipeline run, retain:
 ---
 
 ## 11. CURRENT NEXT PASS
-
-### **CURRENT NEXT PASS: P3-E**
-
-**Exact Objective**: Repair the Kitchen VLM canonicalizer to achieve 100% concept preservation on the ideal fixture without silent fallbacks.
-
-**Prerequisites**: P3-A, P3-B, P3-B.1, P3-C, P3-C.1, P3-C.2, and P3-D are complete.
-
+ 
+### **CURRENT NEXT PASS: P3-F**
+ 
+**Exact Objective**: Repair the Living Room VLM canonicalizer to achieve 100% concept preservation on the ideal fixture (L1) without silent fallbacks, correctly handling composite role cardinalities, relation directions, and system context integration.
+ 
+**Prerequisites**: P3-A, P3-B, P3-B.1, P3-C, P3-C.1, P3-C.2, P3-D, P3-D.1, and P3-E are complete.
+ 
 **What to do**:
-1. Add a mandatory negative regression test verifying that an unmapped Kitchen relation phrase fails closed with `UnmappedFunctionalConceptError` / `MalformedVLMSpecificationError` (zero silent `INSERTABLE_IN` fabrication).
-2. Expand natural language function and description matching for `water_source` and `coffee_source` in `kitchen_vlm_functional_graph.py`.
-3. Remove the `INSERTABLE_IN` default fallback in `map_binary_relation()` so unmapped relations raise explicit errors.
-4. Replace rigid 2-pair gating in operation groups with generic tool-target pair validation based on mapped roles.
-5. Eliminate target count clipping.
-
+1. Establish negative regression tests for unmapped Living Room relations, ambiguous role mappings, and composite role counting.
+2. Repair `map_living_room_relation()` in `environment_vlm_requirements.py` to correctly map valid spatial phrasing without fabricating unmapped predicates.
+3. Formulate strict composite role cardinality handling for multi-part items (`CUP_SAUCER_SET`).
+4. Validate relation directions and context targets against frozen predicate signatures.
+ 
 **Acceptance Criteria**:
-- `test_ideal_fixtures.py` passes for `kitchen_K1` with `role_recall = 1.0`, `relation_recall = 1.0`.
+- `test_ideal_fixtures.py` passes for `living_room_L1` with `role_recall = 1.0`, `relation_recall = 1.0`.
 - All Phase-3 unit and regression tests pass.
-
-**Expected next pass**: P3-F (Living Room Canonicalizer Repair)
+ 
+**Expected next pass**: P3-G (Workshop Canonicalizer Repair)

@@ -39,19 +39,9 @@ def test_kitchen_k2_live_audit_fixture() -> None:
             self.last_validated_kitchen_graph_response = raw_doc
             return raw_doc
 
-    graph = VLMSpecProvider._kitchen("Prepare coffee and soup", [], adapter=MockAdapter())
-    assert isinstance(graph, FunctionalRequirementGraph)
-    assert graph.domain == "kitchen"
-    assert "coffee_container" in graph.nodes
-    assert "soup_container" in graph.nodes
-    assert "coffee_stirrer" in graph.nodes
-    assert "soup_eating_utensil" in graph.nodes
-    assert graph.nodes["coffee_container"].entity_kind == "OBJECT"
-    assert graph.nodes["soup_container"].entity_kind == "OBJECT"
-    assert len(graph.operation_groups) >= 1
-    # Historical uncanonicalized live fixture has reversed relation direction; must fail closed under frozen predicate validation
-    with pytest.raises(MalformedVLMSpecificationError, match="expects subject role"):
-        validate_runtime_gf(graph)
+    # Historical uncanonicalized live fixture fails closed under compiler validation
+    with pytest.raises(MalformedVLMSpecificationError, match="must have entity_kind 'OBJECT'"):
+        VLMSpecProvider._kitchen("Prepare coffee and soup", [], adapter=MockAdapter())
 
 
 def test_living_room_l1_live_audit_fixture() -> None:

@@ -7,7 +7,10 @@ import json
 from pathlib import Path
 import pytest
 
-from mujoco_scenes.functional_tamp_pipeline.errors import VLMSpecificationError
+from mujoco_scenes.functional_tamp_pipeline.errors import (
+    UnmappedFunctionalConceptError,
+    VLMSpecificationError,
+)
 from mujoco_scenes.functional_tamp_pipeline.models import FunctionalRequirementGraph
 from mujoco_scenes.functional_tamp_pipeline.vlm_spec_provider import VLMSpecProvider
 from mujoco_scenes.kitchen_vlm_functional_graph import (
@@ -241,9 +244,8 @@ def test_unmapped_kitchen_property_stored_in_diagnostics():
         "inspection_order": [],
         "unsupported_reason": "",
     }
-    contract, vocab, trace = compile_vlm_functional_graph(spec, task_instruction="Test", observable_regions=("D1", "C2"))
-    assert "coffee_stirrer" in contract["roles"]
-    assert contract["roles"]["coffee_stirrer"]["unary_geometry"] == []
+    with pytest.raises(UnmappedFunctionalConceptError, match="cannot be mapped to any active physical unary property"):
+        compile_vlm_functional_graph(spec, task_instruction="Test", observable_regions=("D1", "C2"))
 
 
 def test_workshop_region_role_mapped_as_context_region(tmp_path):
