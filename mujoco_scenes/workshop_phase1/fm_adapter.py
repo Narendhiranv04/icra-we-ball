@@ -82,23 +82,29 @@ class OpenAICompletionTransport:
             data=json.dumps(payload).encode("utf-8"),
             headers=headers,
         )
-        try:
-            with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
-                decoded = json.load(response)
-        except urllib.error.HTTPError as error:
-            detail = error.read().decode("utf-8", errors="replace")[:1000]
-            raise FMTransportError(
-                f"Inference server returned HTTP {error.code}: {detail}"
-            ) from error
-        except urllib.error.URLError as error:
-            raise FMTransportError(
-                f"Cannot reach inference server at {self.url}: {error.reason}"
-            ) from error
-        except (TimeoutError, json.JSONDecodeError) as error:
-            raise FMTransportError(f"Invalid inference-server response: {error}") from error
-        if not isinstance(decoded, dict):
-            raise FMTransportError("Inference server returned non-object JSON")
-        return decoded
+        last_error = None
+        for attempt in range(3):
+            try:
+                with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
+                    decoded = json.load(response)
+                    if not isinstance(decoded, dict):
+                        raise FMTransportError("Inference server returned non-object JSON")
+                    return decoded
+            except urllib.error.HTTPError as error:
+                detail = error.read().decode("utf-8", errors="replace")[:1000]
+                last_error = FMTransportError(
+                    f"Inference server returned HTTP {error.code}: {detail}"
+                )
+                break
+            except urllib.error.URLError as error:
+                last_error = FMTransportError(
+                    f"Cannot reach inference server at {self.url}: {error.reason}"
+                )
+                time.sleep(1.0)
+            except (TimeoutError, json.JSONDecodeError, ConnectionError, OSError) as error:
+                last_error = FMTransportError(f"Invalid inference-server response or connection error: {error}")
+                time.sleep(1.0)
+        raise last_error or FMTransportError("Transport failed without explicit error")
 
 
 SYSTEM_PROMPT = """You are a vision-language functional-requirement specification generator.
