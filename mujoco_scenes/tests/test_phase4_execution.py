@@ -7,12 +7,20 @@ from mujoco_scenes.phase4_execution import (
     ActionExecutionResult,
     ExecutionFailure,
     Phase4Executor,
+    ResolvedEntity,
     UpstreamPhase3Blocked,
     load_phase3_handoff,
 )
 from mujoco_scenes.phase4_workshop_entities import (
     WorkshopEntityResolutionError,
     resolve_workshop_entities,
+)
+from mujoco_scenes.phase4_workshop import (
+    WorkshopPhase4Adapter,
+    strict_workshop_place_block,
+)
+from mujoco_scenes.living_room_mobile_execution import (
+    post_release_dynamics_modification_enabled,
 )
 from mujoco_scenes.phase4_living_room import (
     resolve_living_room_action_arguments,
@@ -45,7 +53,12 @@ def _handoff(tmp_path: Path, *, inspected_regions=(), action_count=1):
             "specification_sha256": "abc",
             "execution_state": "planning_only",
             "terminal_status": "ACTION_SEQUENCE_READY",
-            "artifacts": {"final_plan": "action_sequence/action_plan.json"},
+            "artifacts": {
+                "final_plan": "action_sequence/action_plan.json",
+                "replay_validation": "action_sequence/replay_validation.json",
+                "plan_grounding_audit": "plan_grounding_audit.json",
+                "observed_graph": "observed_scene_graph.json",
+            },
         },
     )
     _write(
@@ -68,6 +81,19 @@ def _handoff(tmp_path: Path, *, inspected_regions=(), action_count=1):
         tmp_path / "action_sequence/action_plan.json",
         {"actions": actions, "validation": {"status": "VALID"}},
     )
+    _write(
+        tmp_path / "action_sequence/replay_validation.json",
+        {"status": "VALID"},
+    )
+    _write(
+        tmp_path / "plan_grounding_audit.json",
+        {
+            "violations": [],
+            "plan_replay_valid": True,
+            "grounding_complete": True,
+        },
+    )
+    _write(tmp_path / "observed_scene_graph.json", {"objects": {}})
     return load_phase3_handoff(tmp_path)
 
 
@@ -76,7 +102,11 @@ def test_load_phase3_handoff_preserves_exact_plan_contract(tmp_path):
     assert handoff.source == "GT_FUNCTIONAL_SPEC_ONLY"
     assert handoff.assignment == {"tool": "object_0001"}
     assert handoff.actions[0]["arguments"] == ["object_0001"]
-    assert set(handoff.artifact_sha256) == {"manifest", "grounding", "plan"}
+    assert set(handoff.artifact_sha256) == {
+        "manifest", "grounding", "plan", "replay_validation",
+        "plan_grounding_audit",
+        "observed_graph",
+    }
 
 
 def test_load_phase3_handoff_rejects_result_plan_mismatch(tmp_path):
@@ -96,6 +126,30 @@ def test_load_phase3_handoff_classifies_current_upstream_incomplete(tmp_path):
     manifest["artifacts"].pop("final_plan")
     _write(tmp_path / "run_manifest.json", manifest)
     with pytest.raises(UpstreamPhase3Blocked, match="CURRENT_UPSTREAM_PHASE3_BLOCKED"):
+        load_phase3_handoff(tmp_path)
+
+
+def test_upstream_failure_needs_only_manifest(tmp_path):
+    _write(tmp_path / "run_manifest.json", {"terminal_status": "VLM_SPEC_FAILED"})
+    with pytest.raises(UpstreamPhase3Blocked, match="VLM_SPEC_FAILED"):
+        load_phase3_handoff(tmp_path)
+
+
+def test_missing_replay_validation_rejects_handoff(tmp_path):
+    _handoff(tmp_path)
+    (tmp_path / "action_sequence/replay_validation.json").unlink()
+    with pytest.raises(FileNotFoundError, match="replay_validation"):
+        load_phase3_handoff(tmp_path)
+
+
+def test_invalid_plan_grounding_audit_rejects_handoff(tmp_path):
+    _handoff(tmp_path)
+    _write(tmp_path / "plan_grounding_audit.json", {
+        "violations": ["bad"],
+        "plan_replay_valid": True,
+        "grounding_complete": True,
+    })
+    with pytest.raises(ValueError, match="plan-grounding audit"):
         load_phase3_handoff(tmp_path)
 
 
@@ -196,9 +250,31 @@ def test_executor_rejects_success_with_forbidden_strict_telemetry(tmp_path):
     ).run()
     assert not result["success"]
     assert result["failure"] == "STRICT_EXECUTION_TELEMETRY_VIOLATION"
-    assert result["direct_task_state_fallback_used"] is True
+    assert result["direct_payload_state_write_used"] is True
+    assert result["direct_task_state_fallback_used"] is False
     assert result["strict_telemetry_verification"]["violations"][0]["flag"] == (
         "direct_payload_pose_write"
+    )
+
+
+class _FailedViolatingAdapter(_Adapter):
+    def execute_action(self, action):
+        result = super().execute_action(action)
+        result.success = False
+        result.failure = ExecutionFailure.CONTROLLER_FAILURE.value
+        result.controller_result["staging_fixture_used"] = True
+        return result
+
+
+def test_failed_primitive_is_included_in_strict_telemetry_audit(tmp_path):
+    result = Phase4Executor(
+        _handoff(tmp_path), _FailedViolatingAdapter()
+    ).run()
+    assert result["strict_execution_violation_detected"] is True
+    assert result["assisted_task_fixture_used"] is True
+    assert any(
+        row["flag"] == "staging_fixture_used"
+        for row in result["strict_telemetry_verification"]["violations"]
     )
 
 
@@ -265,6 +341,87 @@ def test_workshop_ambiguous_geometry_mapping_fails_closed():
                 },
             ],
         )
+
+
+def test_workshop_source_only_mapping_fails_closed():
+    observed = _workshop_observed()
+    del observed["objects"]["object_0007"]["geometry"]
+    with pytest.raises(WorkshopEntityResolutionError, match="centroid evidence"):
+        resolve_workshop_entities(
+            ["object_0007"], observed, _workshop_pick(), [{
+                "simulator_id": "only_candidate",
+                "source_region": "TOOL_CABINET",
+                "centroid_world_m": [0.2, 0.5, 0.8],
+            }]
+        )
+
+
+def test_workshop_distant_centroid_mapping_fails_closed():
+    with pytest.raises(WorkshopEntityResolutionError, match="absolute gate"):
+        resolve_workshop_entities(
+            ["object_0007"], _workshop_observed(), _workshop_pick(), [{
+                "simulator_id": "distant_candidate",
+                "source_region": "TOOL_CABINET",
+                "centroid_world_m": [1.0, 0.5, 0.8],
+            }]
+        )
+
+
+def test_strict_workshop_never_invokes_legacy_fixture_places():
+    insertion = strict_workshop_place_block({
+        "operator": "PLACE",
+        "arguments": ["object_0001", "workshop_frame_joint"],
+    }, "object_0001")
+    assert insertion["status"] == "STRICT_PHYSICAL_INSERTION_UNAVAILABLE"
+    assert insertion["no_legacy_insertion_invoked"] is True
+    surface = strict_workshop_place_block({
+        "operator": "PLACE",
+        "arguments": ["object_0002", "MAIN_WORKBENCH_ZONE"],
+    }, "object_0001")
+    assert surface["status"] == "STRICT_PHYSICAL_SURFACE_PLACE_UNAVAILABLE"
+    assert surface["no_legacy_surface_place_invoked"] is True
+
+    class _State:
+        def check(self, action, assignment):
+            return True, None
+
+        def to_dict(self):
+            return {}
+
+    class _Dispatcher:
+        def execute(self, action, state):
+            raise AssertionError("legacy dispatcher must not be invoked")
+
+    adapter = WorkshopPhase4Adapter.__new__(WorkshopPhase4Adapter)
+    adapter.by_id = {
+        "object_0001": ResolvedEntity(
+            "object_0001", "OBJECT", "workshop_medium_phillips_screw"
+        ),
+        "object_0002": ResolvedEntity(
+            "object_0002", "OBJECT", "workshop_power_driver"
+        ),
+    }
+    adapter.planner_fastener = "object_0001"
+    adapter.state = _State()
+    adapter.assignment = object()
+    adapter.dispatcher = _Dispatcher()
+    for index, arguments in enumerate((
+        ["object_0001", "workshop_frame_joint"],
+        ["object_0002", "MAIN_WORKBENCH_ZONE"],
+    ), start=1):
+        result = adapter.execute_action({
+            "action_index": index,
+            "action_instance_id": f"fact_{index:03d}_place",
+            "operator": "PLACE",
+            "arguments": arguments,
+        })
+        assert not result.success
+        assert result.failure == ExecutionFailure.CONTROLLER_FAILURE.value
+
+
+def test_strict_living_execution_never_modifies_post_release_damping():
+    assert post_release_dynamics_modification_enabled(False) is False
+    assert post_release_dynamics_modification_enabled(True) is True
 
 
 def test_living_room_unresolved_argument_is_reported_fail_closed():

@@ -28,6 +28,27 @@ FORBIDDEN_STRICT_TELEMETRY_FLAGS = frozenset({
     "direct_task_success_write_used",
     "direct_task_state_fallback_used",
     "initial_payload_qpos_reset_used",
+    "direct_velocity_write",
+    "direct_velocity_reset",
+    "alignment_fixture_used",
+    "staging_fixture_used",
+    "installed_target_fixture_used",
+    "post_release_dynamics_modified",
+})
+
+DIRECT_TASK_STATE_FLAGS = frozenset({
+    "direct_task_success_write", "direct_task_success_write_used",
+    "direct_task_state_fallback_used",
+})
+DIRECT_PAYLOAD_STATE_FLAGS = frozenset({
+    "direct_payload_pose_write", "direct_object_qpos_write",
+    "direct_fastener_qpos_write", "direct_fastener_qpos_write_used",
+    "direct_velocity_write", "direct_velocity_reset",
+    "initial_payload_qpos_reset_used",
+})
+ASSISTED_FIXTURE_FLAGS = frozenset({
+    "alignment_fixture_used", "staging_fixture_used",
+    "installed_target_fixture_used",
 })
 
 
@@ -123,7 +144,12 @@ def audit_strict_telemetry(
     inspection_results: list[dict[str, Any]],
     action_results: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    """Derive strictness from successful primitive telemetry, fail closed."""
+    """Audit every attempted primitive, including failed attempts.
+
+    Contact-gated, zero-snap grasp equalities are intentionally allowed after
+    physical bilateral contact. Target-alignment, staging, and installed-state
+    fixtures are task assistance and are forbidden.
+    """
     violations: list[dict[str, str]] = []
 
     def scan(value: Any, path: str, phase: str) -> None:
@@ -142,13 +168,24 @@ def audit_strict_telemetry(
                 scan(child, f"{path}[{index}]", phase)
 
     for index, row in enumerate(inspection_results):
-        if row.get("success"):
-            scan(row, f"inspection_results[{index}]", "INSPECTION_OPEN")
+        scan(row, f"inspection_results[{index}]", "INSPECTION_OPEN")
     for index, row in enumerate(action_results):
-        if row.get("success"):
-            scan(row, f"action_results[{index}]", "TASK_ACTION")
+        scan(row, f"action_results[{index}]", "TASK_ACTION")
+    flags = {row["flag"] for row in violations}
     return {
         "verified": not violations,
+        "strict_execution_violation_detected": bool(violations),
+        "direct_task_state_write_used": bool(flags & DIRECT_TASK_STATE_FLAGS),
+        "direct_task_state_fallback_used": (
+            "direct_task_state_fallback_used" in flags
+        ),
+        "direct_payload_state_write_used": bool(
+            flags & DIRECT_PAYLOAD_STATE_FLAGS
+        ),
+        "assisted_task_fixture_used": bool(flags & ASSISTED_FIXTURE_FLAGS),
+        "post_release_dynamics_modified": (
+            "post_release_dynamics_modified" in flags
+        ),
         "forbidden_flags": sorted(FORBIDDEN_STRICT_TELEMETRY_FLAGS),
         "violations": violations,
     }
@@ -202,14 +239,13 @@ def load_phase3_handoff(run_dir: Path) -> Phase3Handoff:
     """Load and fail-closed validate the immutable Phase-3 execution handoff."""
     run_dir = run_dir.resolve()
     manifest = _read_json(run_dir / "run_manifest.json")
-    result = _read_json(run_dir / "result.json")
-    grounding = _read_json(run_dir / "graph_grounding_result.json")
     if manifest.get("terminal_status") != "ACTION_SEQUENCE_READY":
         raise UpstreamPhase3Blocked(
             "CURRENT_UPSTREAM_PHASE3_BLOCKED: Phase-3 terminal_status="
-            f"{manifest.get('terminal_status')!r}, result_status="
-            f"{result.get('status')!r}"
+            f"{manifest.get('terminal_status')!r}"
         )
+    result = _read_json(run_dir / "result.json")
+    grounding = _read_json(run_dir / "graph_grounding_result.json")
     final_rel = (manifest.get("artifacts") or {}).get("final_plan")
     if not isinstance(final_rel, str):
         raise ValueError("Phase-3 manifest does not identify a final_plan artifact")
@@ -231,25 +267,48 @@ def load_phase3_handoff(run_dir: Path) -> Phase3Handoff:
     result_actions = _validate_actions(result.get("plan"))
     if actions != result_actions:
         raise ValueError("Persisted final plan differs from result.json plan")
-    validation = plan.get("validation")
     replay_rel = (manifest.get("artifacts") or {}).get("replay_validation")
-    if validation is None and isinstance(replay_rel, str):
-        validation = _read_json(run_dir / replay_rel)
-    if isinstance(validation, dict) and validation.get("status") != "VALID":
+    if isinstance(replay_rel, str):
+        replay_path = (run_dir / replay_rel).resolve()
+        if run_dir not in replay_path.parents:
+            raise ValueError("Phase-3 replay-validation path escapes run directory")
+        validation = _read_json(replay_path)
+    else:
+        # Workshop persists the independent replay inside its final-plan
+        # artifact rather than as a second file.
+        replay_path = plan_path
+        validation = plan.get("validation")
+    if not isinstance(validation, dict) or validation.get("status") != "VALID":
         raise ValueError("Phase-3 independent replay did not validate the final plan")
+    audit_rel = (manifest.get("artifacts") or {}).get("plan_grounding_audit")
+    if not isinstance(audit_rel, str):
+        raise ValueError("Phase-3 manifest has no plan_grounding_audit artifact")
+    audit_path = (run_dir / audit_rel).resolve()
+    if run_dir not in audit_path.parents:
+        raise ValueError("Phase-3 plan-grounding-audit path escapes run directory")
+    audit = _read_json(audit_path)
+    if (
+        audit.get("violations") != []
+        or audit.get("plan_replay_valid") is not True
+        or audit.get("grounding_complete") is not True
+    ):
+        raise ValueError("Phase-3 plan-grounding audit is not valid")
 
     artifacts = {
         "manifest": run_dir / "run_manifest.json",
         "grounding": run_dir / "graph_grounding_result.json",
         "plan": plan_path,
+        "replay_validation": replay_path,
+        "plan_grounding_audit": audit_path,
     }
     observed_graph_rel = (manifest.get("artifacts") or {}).get("observed_graph")
-    if isinstance(observed_graph_rel, str):
-        observed_graph_path = (run_dir / observed_graph_rel).resolve()
-        if run_dir not in observed_graph_path.parents:
-            raise ValueError("Phase-3 observed graph path escapes run directory")
-        if observed_graph_path.is_file():
-            artifacts["observed_graph"] = observed_graph_path
+    if not isinstance(observed_graph_rel, str):
+        raise ValueError("Phase-3 manifest has no final observed_graph artifact")
+    observed_graph_path = (run_dir / observed_graph_rel).resolve()
+    if run_dir not in observed_graph_path.parents:
+        raise ValueError("Phase-3 observed graph path escapes run directory")
+    _read_json(observed_graph_path)
+    artifacts["observed_graph"] = observed_graph_path
     specification_rel = (manifest.get("artifacts") or {}).get(
         "functional_specification"
     )
@@ -411,7 +470,24 @@ class Phase4Executor:
             "failure_stage": failure_stage,
             "strict_execution": True,
             "strict_telemetry_verification": strict_audit,
-            "direct_task_state_fallback_used": not strict_verified,
+            "strict_execution_violation_detected": strict_audit[
+                "strict_execution_violation_detected"
+            ],
+            "direct_task_state_write_used": strict_audit[
+                "direct_task_state_write_used"
+            ],
+            "direct_payload_state_write_used": strict_audit[
+                "direct_payload_state_write_used"
+            ],
+            "assisted_task_fixture_used": strict_audit[
+                "assisted_task_fixture_used"
+            ],
+            "post_release_dynamics_modified": strict_audit[
+                "post_release_dynamics_modified"
+            ],
+            "direct_task_state_fallback_used": strict_audit[
+                "direct_task_state_fallback_used"
+            ],
             "wall_duration_s": time.perf_counter() - started,
             "success": success,
         }

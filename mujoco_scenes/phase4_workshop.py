@@ -26,7 +26,31 @@ from .workshop_scene import WORKSHOP_REGIONS, WorkshopScene
 
 
 SUPPORTED_OPERATORS = frozenset({"PICK", "PLACE", "SCREW"})
-FIXED_TARGETS = frozenset({"workshop_frame_joint", "MAIN_WORKBENCH_ZONE"})
+FIXED_TARGETS = frozenset({"workshop_frame_joint"})
+CONTEXT_SURFACES = frozenset({"MAIN_WORKBENCH_ZONE"})
+
+
+def strict_workshop_place_block(
+    action: dict[str, Any], planner_fastener: str
+) -> dict[str, Any] | None:
+    """Block legacy PLACE implementations that use task fixtures."""
+    if action.get("operator") != "PLACE" or len(action.get("arguments", [])) != 2:
+        return None
+    obj, destination = action["arguments"]
+    if obj == planner_fastener and destination == "workshop_frame_joint":
+        return {
+            "status": "STRICT_PHYSICAL_INSERTION_UNAVAILABLE",
+            "legacy_alignment_fixture_blocked": True,
+            "legacy_installed_fastener_fixture_blocked": True,
+            "no_legacy_insertion_invoked": True,
+        }
+    if destination in CONTEXT_SURFACES:
+        return {
+            "status": "STRICT_PHYSICAL_SURFACE_PLACE_UNAVAILABLE",
+            "legacy_staging_fixture_blocked": True,
+            "no_legacy_surface_place_invoked": True,
+        }
+    return None
 
 
 class WorkshopPhase4Adapter:
@@ -68,18 +92,36 @@ class WorkshopPhase4Adapter:
         if observed_graph_path is None:
             raise ValueError("Workshop handoff has no final observed G_O artifact")
         observed_graph = json.loads(observed_graph_path.read_text(encoding="utf-8"))
+        # Identity association uses a separate scene brought to the persisted
+        # inspection configuration. The real execution scene above remains a
+        # fresh, closed initial scene. Storage membership is currently backend
+        # ground truth, never functional re-grounding or role selection.
+        association_scene = WorkshopScene(
+            robot="google", variant=handoff.internal_variant
+        )
+        source_regions = {
+            action["arguments"][1]
+            for action in handoff.actions
+            if action["operator"] == "PICK" and len(action["arguments"]) >= 2
+        }
+        for source_region in sorted(source_regions):
+            association_scene.open_container(source_region)
         simulator_candidates = []
-        for source_region, bodies in self.scene.variant_meta["storage_contents"].items():
+        for source_region, bodies in association_scene.variant_meta[
+            "storage_contents"
+        ].items():
             for simulator_id in bodies:
                 body_id = mujoco.mj_name2id(
-                    self.scene.model, mujoco.mjtObj.mjOBJ_BODY, simulator_id
+                    association_scene.model, mujoco.mjtObj.mjOBJ_BODY, simulator_id
                 )
                 if body_id < 0:
                     raise ValueError(f"Workshop scene is missing body {simulator_id}")
                 simulator_candidates.append({
                     "simulator_id": simulator_id,
                     "source_region": source_region,
-                    "centroid_world_m": self.scene.data.xpos[body_id].tolist(),
+                    "centroid_world_m": association_scene.data.xpos[
+                        body_id
+                    ].tolist(),
                 })
         resolution = resolve_workshop_entities(
             (planner_driver, planner_fastener),
@@ -131,10 +173,14 @@ class WorkshopPhase4Adapter:
             self.scene, self.controller_assignment, frame_callback=frame_callback
         )
         self.expected_inspected_regions = tuple(handoff.inspected_regions)
+        self.planner_fastener = planner_fastener
         self.entity_resolution = {
             **resolution,
             "inspection_regions": list(handoff.inspected_regions),
             "direct_search_state_restoration_used": False,
+            "association_authority": (
+                "SIMULATION_BACKEND_GROUND_TRUTH_ASSOCIATION_ONLY"
+            ),
         }
         self.by_id = {
             row["planner_id"]: ResolvedEntity(
@@ -197,6 +243,10 @@ class WorkshopPhase4Adapter:
                 rows.append(ResolvedEntity(argument, "REGION", argument))
             elif argument in FIXED_TARGETS:
                 rows.append(ResolvedEntity(argument, "FIXED_TARGET", argument))
+            elif argument in CONTEXT_SURFACES:
+                rows.append(ResolvedEntity(argument, "REGION", argument, {
+                    "planner_context_surface": True,
+                }))
             else:
                 raise KeyError(argument)
         return rows
@@ -231,6 +281,26 @@ class WorkshopPhase4Adapter:
                 arguments, False, ExecutionFailure.PRECONDITION_STATE_FAILURE.value,
                 resolved, f"WorkshopExecutionDispatcher.{operator.lower()}", pre,
                 None, {"success": False, "performed": False},
+                time.perf_counter() - started,
+            )
+        blocked_place = strict_workshop_place_block(
+            action, self.planner_fastener
+        )
+        if blocked_place is not None:
+            controller = {
+                "success": False,
+                **blocked_place,
+                "message": (
+                    "Legacy Workshop placement uses a target-alignment, "
+                    "staging, or installed-state fixture and is disabled in "
+                    "strict Phase 4."
+                ),
+            }
+            return ActionExecutionResult(
+                action["action_index"], action["action_instance_id"], operator,
+                arguments, False, ExecutionFailure.CONTROLLER_FAILURE.value,
+                resolved, None, pre, controller,
+                {"success": False, "performed": False},
                 time.perf_counter() - started,
             )
         if operator == "SCREW":

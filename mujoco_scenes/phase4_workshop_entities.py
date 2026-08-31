@@ -10,6 +10,13 @@ class WorkshopEntityResolutionError(ValueError):
     """Raised when a frozen Phase-3 instance cannot be resolved uniquely."""
 
 
+# Phase-3's Workshop association evaluator accepts a measured centroid as the
+# same physical instance only within 0.16 m (workshop_phase1/evaluation.py).
+# The execution boundary reuses that documented registration tolerance rather
+# than accepting nearest-neighbour rank alone.
+MAX_CENTROID_CORRESPONDENCE_ERROR_M = 0.16
+
+
 def _objects_by_id(observed_graph: dict[str, Any]) -> dict[str, dict[str, Any]]:
     objects = observed_graph.get("objects", {})
     if isinstance(objects, dict):
@@ -48,6 +55,7 @@ def resolve_workshop_entities(
     simulator_candidates: Iterable[dict[str, Any]],
     *,
     ambiguity_margin_m: float = 0.01,
+    maximum_centroid_error_m: float = MAX_CENTROID_CORRESPONDENCE_ERROR_M,
 ) -> dict[str, Any]:
     """Resolve frozen G_O IDs without selecting new functional fillers.
 
@@ -89,43 +97,45 @@ def resolve_workshop_entities(
             )
         geometry = node.get("geometry") or node.get("unary_properties") or {}
         centroid = geometry.get("centroid_world_m")
+        if centroid is None:
+            raise WorkshopEntityResolutionError(
+                f"Frozen planner instance {planner_id} has no centroid evidence"
+            )
+        try:
+            measured = tuple(map(float, centroid))
+            if len(measured) != 3:
+                raise ValueError
+        except (TypeError, ValueError):
+            raise WorkshopEntityResolutionError(
+                f"Invalid observed centroid for {planner_id}: {centroid!r}"
+            )
         ranked: list[tuple[float, dict[str, Any]]] = []
-        if centroid is not None:
-            try:
-                measured = tuple(map(float, centroid))
-                if len(measured) != 3:
-                    raise ValueError
-            except (TypeError, ValueError):
+        for candidate in region_candidates:
+            candidate_centroid = candidate.get("centroid_world_m")
+            if candidate_centroid is None:
                 raise WorkshopEntityResolutionError(
-                    f"Invalid observed centroid for {planner_id}: {centroid!r}"
+                    f"Simulator candidate {candidate.get('simulator_id')} has "
+                    "no centroid evidence"
                 )
-            for candidate in region_candidates:
-                candidate_centroid = candidate.get("centroid_world_m")
-                if candidate_centroid is None:
-                    continue
-                ranked.append((
-                    math.dist(measured, tuple(map(float, candidate_centroid))),
-                    candidate,
-                ))
-            ranked.sort(key=lambda item: (item[0], str(item[1]["simulator_id"])))
-        if len(region_candidates) == 1:
-            selected = region_candidates[0]
-            distance = ranked[0][0] if ranked else None
-            method = "UNIQUE_SOURCE_REGION_CANDIDATE"
-        else:
-            if len(ranked) != len(region_candidates):
-                raise WorkshopEntityResolutionError(
-                    f"Multiple simulator candidates for {planner_id} in "
-                    f"{observed_source} but centroid evidence is incomplete"
-                )
+            ranked.append((
+                math.dist(measured, tuple(map(float, candidate_centroid))),
+                candidate,
+            ))
+        ranked.sort(key=lambda item: (item[0], str(item[1]["simulator_id"])))
+        distance, selected = ranked[0]
+        if distance > maximum_centroid_error_m:
+            raise WorkshopEntityResolutionError(
+                f"Centroid correspondence for {planner_id} exceeds absolute "
+                f"gate: {distance:.6f} m > {maximum_centroid_error_m:.6f} m"
+            )
+        if len(ranked) > 1:
             if ranked[1][0] - ranked[0][0] <= ambiguity_margin_m:
                 raise WorkshopEntityResolutionError(
                     f"Ambiguous simulator mapping for {planner_id} in "
                     f"{observed_source}: nearest distances "
                     f"{ranked[0][0]:.6f} and {ranked[1][0]:.6f} m"
                 )
-            distance, selected = ranked[0]
-            method = "SOURCE_REGION_THEN_UNIQUE_NEAREST_CENTROID_V1"
+        method = "SOURCE_REGION_ABSOLUTE_GATED_UNIQUE_NEAREST_CENTROID_V2"
         semantic = node.get("semantic_labels") or {}
         rows.append({
             "planner_id": planner_id,
@@ -137,6 +147,12 @@ def resolve_workshop_entities(
                 "observed_centroid_world_m": centroid,
                 "simulator_centroid_world_m": selected.get("centroid_world_m"),
                 "centroid_distance_m": distance,
+                "maximum_centroid_correspondence_error_m": (
+                    maximum_centroid_error_m
+                ),
+                "correspondence_threshold_basis": (
+                    "PHASE3_WORKSHOP_ASSOCIATION_EVALUATION_RADIUS"
+                ),
                 "observed_canonical_category": node.get("canonical_category"),
                 "observed_semantic_labels": semantic,
                 "semantic_evidence_used_for_selection": False,

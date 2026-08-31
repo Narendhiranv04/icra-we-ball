@@ -1126,6 +1126,11 @@ def verify_physical_on_relation(
             "status": "TRUE" if verified else "FALSE", "verified": verified}
 
 
+def post_release_dynamics_modification_enabled(assisted_suite: bool) -> bool:
+    """Legacy damping is available only to explicitly non-strict runs."""
+    return bool(assisted_suite)
+
+
 def run_mobile_execution(
     phase1_dir: str | Path,
     phase2_dir: str | Path,
@@ -1486,7 +1491,7 @@ def run_mobile_execution(
                 "physics_steps": steps,
             })
             if operator == "PLACE" and picker.failure is None:
-                if assisted_suite or backend in PAYLOAD_BACKENDS:
+                if post_release_dynamics_modification_enabled(assisted_suite):
                     # Once a payload has been physically released onto its
                     # assigned support, damp residual scanned-mesh edge roll
                     # so later robot motions cannot drift an already validated
@@ -1505,7 +1510,10 @@ def run_mobile_execution(
                         "pose_write": False,
                         "velocity_write": False,
                         "payload_stabilization": True,
+                        "post_release_dynamics_modified": True,
                     }
+                else:
+                    execution_log[-1]["post_release_dynamics_modified"] = False
                 # Release transients differ by payload inertia and support
                 # contact. Require a bounded run of genuinely settled live
                 # velocities instead of validating at one arbitrary fixed

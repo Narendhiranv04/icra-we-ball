@@ -189,14 +189,15 @@ def execute_living_room_handoff(
         len(action_results) == len(selected_actions)
         and all(row["success"] for row in action_results)
     )
-    strict_audit = audit_strict_telemetry([], action_results)
-    if physical.get("initial_payload_qpos_reset_used") is True:
-        strict_audit["verified"] = False
-        strict_audit["violations"].append({
-            "phase": "TASK_ACTION",
-            "path": "physical_execution.initial_payload_qpos_reset_used",
-            "flag": "initial_payload_qpos_reset_used",
-        })
+    telemetry_rows = list(action_results)
+    telemetry_rows.append({
+        "physical_execution": {
+            "initial_payload_qpos_reset_used": bool(
+                physical.get("initial_payload_qpos_reset_used")
+            )
+        }
+    })
+    strict_audit = audit_strict_telemetry([], telemetry_rows)
     strict_verified = bool(strict_audit["verified"])
     partial_smoke = not complete
     partial_smoke_success = bool(
@@ -265,7 +266,24 @@ def execute_living_room_handoff(
         "failure_stage": failure_stage,
         "strict_execution": True,
         "strict_telemetry_verification": strict_audit,
-        "direct_task_state_fallback_used": not strict_verified,
+        "strict_execution_violation_detected": strict_audit[
+            "strict_execution_violation_detected"
+        ],
+        "direct_task_state_write_used": strict_audit[
+            "direct_task_state_write_used"
+        ],
+        "direct_payload_state_write_used": strict_audit[
+            "direct_payload_state_write_used"
+        ],
+        "assisted_task_fixture_used": strict_audit[
+            "assisted_task_fixture_used"
+        ],
+        "post_release_dynamics_modified": strict_audit[
+            "post_release_dynamics_modified"
+        ],
+        "direct_task_state_fallback_used": strict_audit[
+            "direct_task_state_fallback_used"
+        ],
         "initial_payload_qpos_reset_used": bool(
             physical.get("initial_payload_qpos_reset_used")
         ),
