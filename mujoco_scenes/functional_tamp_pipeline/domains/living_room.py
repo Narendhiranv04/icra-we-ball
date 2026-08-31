@@ -188,20 +188,29 @@ def build_living_room_observed_scene_graph(run: Any) -> ObservedSceneGraph:
         )
         graph_o.add_node(node)
 
-    # Add payload bundle nodes and seat nodes from personal_rows
+    # Add payload bundle nodes, individual object nodes, and seat nodes from personal_rows
     personal_rows = getattr(run, "personal_rows", [])
     seen_slots: set[str] = set()
     seen_seats: set[str] = set()
     for row in personal_rows:
         slot_id = row["slot_id"]
         seat_id = row.get("seating_target_id")
+        p_ids = list(row.get("payload_ids", []))
+        for pid in p_ids:
+            if pid not in graph_o.nodes:
+                graph_o.add_node(ObservedNode(
+                    instance_id=pid,
+                    entity_kind="OBJECT",
+                    canonical_category="cup_or_saucer",
+                    source_region="staging_tray",
+                ))
         if slot_id not in seen_slots:
             seen_slots.add(slot_id)
             graph_o.add_node(ObservedNode(
                 instance_id=slot_id,
                 entity_kind="OBJECT",
                 canonical_category="cup_saucer_set",
-                unary_properties={"payload_ids": list(row.get("payload_ids", []))},
+                unary_properties={"payload_ids": p_ids},
             ))
         if seat_id and seat_id not in seen_seats:
             seen_seats.add(seat_id)
@@ -218,14 +227,24 @@ def build_living_room_observed_scene_graph(run: Any) -> ObservedSceneGraph:
     remote_ids: list[str] = []
     for row in shared_rows:
         p_ids = row.get("payload_ids", [])
+        for pid in p_ids:
+            if pid not in graph_o.nodes:
+                graph_o.add_node(ObservedNode(
+                    instance_id=pid,
+                    entity_kind="OBJECT",
+                    canonical_category="tv_remote",
+                    source_region="staging_tray",
+                ))
         if p_ids:
             remote_ids.extend(p_ids)
     remote_id = remote_ids[0] if remote_ids else "tv_remote"
-    graph_o.add_node(ObservedNode(
-        instance_id=remote_id,
-        entity_kind="OBJECT",
-        canonical_category="tv_remote",
-    ))
+    if remote_id not in graph_o.nodes:
+        graph_o.add_node(ObservedNode(
+            instance_id=remote_id,
+            entity_kind="OBJECT",
+            canonical_category="tv_remote",
+            source_region="staging_tray",
+        ))
     graph_o.add_node(ObservedNode(
         instance_id="SEATING_PAIR",
         entity_kind="FIXED_TARGET",
@@ -533,6 +552,14 @@ def run_to_plan(
         "arguments": list(row["arguments"].values()),
     } for index, row in enumerate(plan_payload["actions"]))
     assignment = {row["slot_id"]: row["region_id"] for row in canonical_assignments}
+    from ..audit import audit_plan_grounding
+    plan_audit = audit_plan_grounding(
+        specification, graph_o, ground_result, list(actions), home_region="staging_tray"
+    )
+    (output_dir / "plan_grounding_audit.json").write_text(
+        json.dumps(plan_audit, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     return PipelineResult(
         domain="living_room", variant=variant_label, mode=mode,
         status="ACTION_SEQUENCE_READY", assignment=assignment, plan=actions,

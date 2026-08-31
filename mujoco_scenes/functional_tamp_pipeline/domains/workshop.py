@@ -101,9 +101,13 @@ class WorkshopPlanningCompiler:
     ) -> SymbolicProblem:
         driver = assignment["driver"]
         fastener = assignment["fastener"]
-        driver_source = assignment["driver_source"]
-        fastener_source = assignment["fastener_source"]
+        sources = context.get("sources", {})
+        driver_source = sources.get(driver, assignment.get("driver_source", SURFACE))
+        fastener_source = sources.get(fastener, assignment.get("fastener_source", SURFACE))
         opened = set(context.get("opened_regions", ()))
+        target = context.get("target_joint", TARGET)
+        surface = context.get("work_surface", SURFACE)
+
         initial = {
             ("hand_empty",),
             ("at", driver, driver_source),
@@ -125,9 +129,9 @@ class WorkshopPlanningCompiler:
                 {("hand_empty",), ("at", fastener, fastener_source)},
             ),
             _action(
-                "PLACE", (fastener, TARGET),
+                "PLACE", (fastener, target),
                 {("holding", fastener)},
-                {("hand_empty",), ("at", fastener, TARGET), ("inserted", fastener, TARGET)},
+                {("hand_empty",), ("at", fastener, target), ("inserted", fastener, target)},
                 {("holding", fastener)},
             ),
             _action(
@@ -137,22 +141,22 @@ class WorkshopPlanningCompiler:
                 {("hand_empty",), ("at", driver, driver_source)},
             ),
             _action(
-                "SCREW", (driver, fastener, TARGET),
-                {("holding", driver), ("inserted", fastener, TARGET)},
-                {("repaired", TARGET)},
+                "SCREW", (driver, fastener, target),
+                {("holding", driver), ("inserted", fastener, target)},
+                {("repaired", target)},
                 set(),
             ),
             _action(
-                "PLACE", (driver, SURFACE),
-                {("holding", driver), ("repaired", TARGET)},
-                {("hand_empty",), ("at", driver, SURFACE)},
+                "PLACE", (driver, surface),
+                {("holding", driver), ("repaired", target)},
+                {("hand_empty",), ("at", driver, surface)},
                 {("holding", driver)},
             ),
         )
         return SymbolicProblem(
             initial_atoms=frozenset(initial),
             goal_atoms=frozenset({
-                ("repaired", TARGET), ("at", driver, SURFACE), ("hand_empty",),
+                ("repaired", target), ("at", driver, surface), ("hand_empty",),
             }),
             actions=actions,
         )
@@ -467,26 +471,18 @@ class WorkshopDomainAdapter:
 
         driver_id = ground_result.assignment.get("driver", ground_result.assignment.get("CAN_DRIVE_SCREW"))
         fastener_id = ground_result.assignment.get("fastener", ground_result.assignment.get("CAN_FASTEN"))
-        driver_track = self.controller.tracker.tracks[driver_id]
-        fastener_track = self.controller.tracker.tracks[fastener_id]
-        driver = self._physical_handle(driver_track, role="driver")
-        fastener = self._physical_handle(fastener_track, role="fastener")
-        assignment = {
-            "driver": driver,
-            "fastener": fastener,
-            "driver_track": driver_id,
-            "fastener_track": fastener_id,
-            "driver_source": self._source(driver_track.source_inspection_region_id),
-            "fastener_source": self._source(fastener_track.source_inspection_region_id),
-            "work_surface": SURFACE,
-            "target_joint": TARGET,
-        }
+
+        # Preserving canonical phi*: assignment points to G_O instance IDs directly.
+        # Deterministic planning context (source regions, work surface, target joint)
+        # is supplied via planning_context() without rewriting phi* identity.
+        assignment = dict(ground_result.assignment)
+
         self.physical_assignment = WorkshopAssignment(
             variant_id=self.variant,
             intended_outcome="FEASIBLE",
             is_feasible=True,
-            driver=driver,
-            fastener=fastener,
+            driver=driver_id,
+            fastener=fastener_id,
             work_surface=SURFACE,
             target_joint=TARGET,
             assignment_source="CANONICAL_GRAPH_GROUNDING",
@@ -510,9 +506,7 @@ class WorkshopDomainAdapter:
 
     @staticmethod
     def _physical_handle(track: Any, *, role: str) -> str:
-        # This benchmark has one supported physical fastener class.  The
-        # functional solver, not this adapter, has already established that
-        # the selected observed track satisfies CAN_FASTEN.
+        # Static helper for mapping an observed track's semantic belief to execution handles
         if role == "fastener":
             return "workshop_medium_phillips_screw"
         belief = track.current_semantic_belief
@@ -535,4 +529,15 @@ class WorkshopDomainAdapter:
         )
 
     def planning_context(self) -> dict[str, Any]:
-        return {"opened_regions": tuple(self.graph.inspected_regions)}
+        sources: dict[str, str] = {}
+        for track_id, track in self.controller.tracker.tracks.items():
+            sources[track_id] = self._source(track.source_inspection_region_id)
+        for node_id, node in self.graph.nodes.items():
+            if node.source_region and node_id not in sources:
+                sources[node_id] = self._source(node.source_region)
+        return {
+            "opened_regions": tuple(self.graph.inspected_regions),
+            "sources": sources,
+            "work_surface": SURFACE,
+            "target_joint": TARGET,
+        }

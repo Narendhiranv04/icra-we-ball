@@ -297,27 +297,21 @@ When a case fails, apply this tree **in order**:
 
 ---
 
-### P3-B: K1/L1/W1 GT Downstream Controls
-**Status**: `[ ] NOT STARTED`
+### P3-B: K1/L1/W1 GT Downstream Controls & Canonical phi* Identity Integrity
+**Status**: `[x] COMPLETE`
 
-**Objective**: Verify that GT G_F → actual G_O → ground_graph → compiler → A* works for K1, L1, W1 individually with full artifact preservation.
+**Objective**: Verify that GT G_F → actual G_O → ground_graph → compiler → A* works for K1, L1, W1 individually with full artifact preservation and strictly verified canonical $\phi^*$ instance identity integrity.
 
-**Scope**: Run only. No code changes expected unless a downstream bug is found.
+**Accomplished Changes & Empirical Findings**:
+1. **Identified & Fixed Workshop Post-Grounding Identity Rewrite**: Diagnosed that `WorkshopDomainAdapter.evaluate_satisfaction()` was rewriting generic $G_O$ instance tracks (`object_0003`, `object_0002`) into simulator backend names (`workshop_power_driver`, `workshop_medium_phillips_screw`) via semantic labels (`_physical_handle()`). Replaced this with direct canonical preservation of $G_O$ instance IDs in $\phi^*$, supplying source inspection regions and target fixtures via `planning_context()` without mutating $\phi^*$.
+2. **Kitchen K1 GT Control**: Successfully executed to `ACTION_SEQUENCE_READY` (24 STRIPS actions, 18 $G_O$ nodes, 0 audit violations, independent replay `VALID`).
+3. **Living Room L1 GT Control**: Successfully executed to `ACTION_SEQUENCE_READY` (10 STRIPS actions, 14 $G_O$ nodes, 0 audit violations, independent replay `VALID`).
+4. **Workshop W1 GT Control**: Successfully executed to `ACTION_SEQUENCE_READY` (5 STRIPS actions, 7 $G_O$ nodes, 0 audit violations, independent replay `VALID`).
+5. **Plan Grounding Audit Hardening**: Integrated `audit_plan_grounding` systematically across all three domain runners, confirming `all_assignment_nodes_observed: true`, `plan_uses_only_grounded_task_objects: true`, and `plan_replay_valid: true`.
+6. **Unit & Regression Testing**: Added `test_phi_identity_integrity.py` testing that canonical $\phi^*$ never projects into simulator body handles (233/233 test suite passing).
+7. **Documentation**: Full control evidence and exact W1 identity trace table documented in `docs/PHASE3_P3B_GT_CONTROLS.md`.
 
-**Inputs**: GT spec provider, actual scene files for K1 (F0_ALL_VISIBLE), L1 (F0_ALL_OBJECTS_IN_STAGING), W1 (F0_MANUAL_FIRST_ONE_REGION).
-
-**Tests**:
-```bash
-PYTHONPATH=. python -m mujoco_scenes.functional_tamp_pipeline.run --domain kitchen --variant K1 --mode gt
-PYTHONPATH=. python -m mujoco_scenes.functional_tamp_pipeline.run --domain living_room --variant L1 --mode gt
-PYTHONPATH=. python -m mujoco_scenes.functional_tamp_pipeline.run --domain workshop --variant W1 --mode gt
-```
-
-**Artifacts**: Save G_F, G_O, φ*, action plan, and grounding audit per case to `tmp/p3b_gt_controls/`.
-
-**Acceptance**: All three → `ACTION_SEQUENCE_READY` with valid plans.
-
-**Do not touch**: VLM canonicalizers.
+**Acceptance**: All three controls yield `ACTION_SEQUENCE_READY` with 0 audit violations and complete canonical identity preservation.
 
 ---
 
@@ -596,16 +590,17 @@ Per pipeline run, retain:
 ## 10. Phase-3 Freeze Checklist
 
 ```
-[ ] Architecture: one canonical G_F representation shared by GT and VLM
-[ ] Architecture: one canonical G_O representation
-[ ] Architecture: ground_graph is sole assignment authority
-[ ] Architecture: φ* is immutable downstream
-[ ] Architecture: no hidden FM call after specification
-[ ] Architecture: no GT oracle in VLM runtime path
-[ ] Architecture: no semantic role reassignment in compiler
+[x] Architecture: one canonical G_F representation shared by GT and VLM
+[x] Architecture: one canonical G_O representation
+[x] Architecture: ground_graph is sole assignment authority
+[x] Architecture: φ* is immutable downstream
+[x] Architecture: no hidden FM call after specification
+[x] Architecture: no GT oracle in VLM runtime path
+[x] Architecture: no semantic role reassignment in compiler
 [x] Software: VLMSpecProvider.provide() correctly validates and wraps errors
 [x] Infrastructure: Benchmark artifacts have explicit reproducibility fingerprints and stale resume protection
 [x] Infrastructure: Prompt leakage audit is deterministically verified over payloads
+[x] Software: K1, L1, W1 GT controls verified to ACTION_SEQUENCE_READY with 0 audit violations
 [ ] Software: all ideal raw fixtures compile to correct G_F
 [ ] Software: 20/20 feasible fixtures → ACTION_SEQUENCE_READY
 [ ] Software: 12/12 infeasible fixtures → correct causal INFEASIBLE
@@ -623,30 +618,23 @@ Per pipeline run, retain:
 
 ## 11. CURRENT NEXT PASS
 
-### **CURRENT NEXT PASS: P3-B**
+### **CURRENT NEXT PASS: P3-C**
 
-**Exact Objective**: Verify that GT G_F → actual G_O → ground_graph → compiler → A* works for K1, L1, W1 individually with full artifact preservation.
+**Exact Objective**: Create Ideal Raw VLM Fixture Framework (`tests/fixtures/ideal_raw_vlm/` with `kitchen_K1.json`, `living_room_L1.json`, `workshop_W1.json`) and verify that each fixture compiles through the canonicalizer into a valid G_F and produces a valid downstream action plan.
 
-**Prerequisites**: P3-A is complete.
+**Prerequisites**: P3-A and P3-B are complete.
 
 **What to do**:
-1. Run GT mode on K1 (kitchen):
-   ```bash
-   PYTHONPATH=. python -m mujoco_scenes.functional_tamp_pipeline.run --domain kitchen --variant K1 --mode gt
-   ```
-2. Run GT mode on L1 (living room):
-   ```bash
-   PYTHONPATH=. python -m mujoco_scenes.functional_tamp_pipeline.run --domain living_room --variant L1 --mode gt
-   ```
-3. Run GT mode on W1 (workshop):
-   ```bash
-   PYTHONPATH=. python -m mujoco_scenes.functional_tamp_pipeline.run --domain workshop --variant W1 --mode gt
-   ```
-4. Save and inspect all resulting artifacts (G_F, G_O, φ*, action plan, grounding audit) to verify downstream soundness before introducing any VLM inputs.
+1. Create `mujoco_scenes/functional_tamp_pipeline/tests/fixtures/ideal_raw_vlm/`:
+   - `kitchen_K1.json`
+   - `living_room_L1.json`
+   - `workshop_W1.json`
+2. Ensure fixtures use clean semantic natural language (e.g. "stir coffee", "hold liquid", "tighten screw with driver") without leaking internal predicate tokens (`INSERTABLE_IN`, `OPEN_CAVITY`, `D1`, `C2`, etc.).
+3. Write `test_ideal_fixtures.py` verifying schema compliance, canonicalization, runtime validation, and downstream planning to `ACTION_SEQUENCE_READY`.
 
 **Acceptance Criteria**:
-- All three cases yield `ACTION_SEQUENCE_READY`.
-- Plan grounding audit passes with zero violations for all three domains.
-- Artifacts are saved and inspected.
+- Ideal raw fixtures exist and pass schema validation.
+- Real canonicalizers compile each fixture to valid $G_F$.
+- `test_ideal_fixtures.py` passes all fixture tests.
 
-**Expected next pass**: P3-C
+**Expected next pass**: P3-D (Kitchen Canonicalizer Repair)

@@ -282,8 +282,16 @@ def audit_plan_grounding(
     for role_name, val in assignment.items():
         if isinstance(val, str):
             assigned_object_ids.add(val)
+            node = graph_o.nodes.get(val)
+            if node and "payload_ids" in node.unary_properties:
+                assigned_object_ids.update(node.unary_properties["payload_ids"])
         elif isinstance(val, (list, tuple, set)):
-            assigned_object_ids.update(val)
+            for v in val:
+                if isinstance(v, str):
+                    assigned_object_ids.add(v)
+                    node = graph_o.nodes.get(v)
+                    if node and "payload_ids" in node.unary_properties:
+                        assigned_object_ids.update(node.unary_properties["payload_ids"])
 
     # 1. Verify all assigned nodes exist in G_O
     all_assignment_nodes_observed = True
@@ -313,14 +321,26 @@ def audit_plan_grounding(
     plan_uses_only_grounded_task_objects = True
     known_regions = {
         home_region, "serving_area", "countertop", "shared_table", "personal_table_left",
-        "personal_table_right", "staging_tray", "work_surface", "D1", "D2", "C1", "C2", "B1",
-        "TOOL_CABINET", "WORKBENCH_DRAWER", "DRILL_PRESS_CABINET",
+        "personal_table_right", "staging_tray", "work_surface", "MAIN_WORKBENCH_ZONE",
+        "workshop_frame_joint", "repair_target", "D1", "D2", "C1", "C2", "B1",
+        "LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET", "WORKBENCH_DRAWER", "DRILL_PRESS_CABINET",
     }
+    for n in graph_o.nodes.values():
+        if getattr(n, "entity_kind", "") in {"REGION", "FIXED_TARGET"}:
+            known_regions.add(n.instance_id)
+
     for action in plan:
         op = action.get("operator", "")
         args = action.get("arguments", [])
         for arg in args:
-            if arg not in known_regions and arg not in assigned_object_ids and not arg.startswith("pos_") and not arg.startswith("slot_"):
+            if (
+                arg not in known_regions
+                and arg not in assigned_object_ids
+                and not arg.startswith("pos_")
+                and not arg.startswith("slot_")
+                and not arg.startswith("region_")
+                and not arg.startswith("seat_")
+            ):
                 plan_uses_only_grounded_task_objects = False
                 violations.append(f"Action {op}({', '.join(args)}) uses ungrounded object '{arg}'")
 

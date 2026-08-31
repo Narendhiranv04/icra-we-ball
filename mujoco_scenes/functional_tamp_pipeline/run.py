@@ -499,7 +499,7 @@ def _run_pipeline_impl(
 
     from mujoco_scenes.workshop_scene import WorkshopScene
     from mujoco_scenes.functional_tamp_pipeline.domains.workshop import (
-        WorkshopDomainAdapter, WorkshopPlanningCompiler
+        SURFACE, WorkshopDomainAdapter, WorkshopPlanningCompiler
     )
 
     scene = WorkshopScene(robot="google", variant=state.internal_variant)
@@ -587,8 +587,8 @@ def _run_pipeline_impl(
 
     print("[4/5] Role assignment", flush=True)
     print("ROLE ASSIGNMENT", flush=True)
-    for role in ("driver", "fastener", "work_surface"):
-        print(f"{role} -> {satisfaction.assignment[role]}", flush=True)
+    for role, assigned_val in sorted(satisfaction.assignment.items()):
+        print(f"{role} -> {assigned_val}", flush=True)
 
     print("[5/5] A* planning", flush=True)
     _emit_event(guarded_observer, "stage_changed", {"stage": "planning"})
@@ -601,6 +601,11 @@ def _run_pipeline_impl(
         "validation": planned.validation,
         "exploratory_open_actions_excluded": True,
     })
+    from .audit import audit_plan_grounding
+    plan_audit = audit_plan_grounding(
+        state.specification, adapter.graph, satisfaction, planned.actions, home_region=SURFACE
+    )
+    _write_json(state.run_dir / "plan_grounding_audit.json", plan_audit)
     _emit_event(guarded_observer, "plan_ready", {
         "actions": list(planned.actions),
         "search_statistics": planned.search.statistics,
