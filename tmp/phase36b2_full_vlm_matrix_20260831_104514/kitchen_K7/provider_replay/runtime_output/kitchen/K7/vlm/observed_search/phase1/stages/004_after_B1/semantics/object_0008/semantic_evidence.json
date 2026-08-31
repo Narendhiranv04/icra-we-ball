@@ -1,0 +1,79 @@
+{
+  "alternatives": [
+    {
+      "camera_ids": [
+        "inspection_front",
+        "inspection_left",
+        "inspection_right"
+      ],
+      "label": "bowl",
+      "mean_confidence": 0.4926724334557851,
+      "score": 5.557151756044224,
+      "supporting_view_count": 3
+    },
+    {
+      "camera_ids": [
+        "inspection_close"
+      ],
+      "label": "cup",
+      "mean_confidence": 0.13429172337055206,
+      "score": 0.5932429166089527,
+      "supporting_view_count": 1
+    },
+    {
+      "camera_ids": [
+        "inspection_top"
+      ],
+      "label": "coffee_cup",
+      "mean_confidence": 0.08099345117807388,
+      "score": 0.32943910764876083,
+      "supporting_view_count": 1
+    }
+  ],
+  "ambiguity_hypotheses": [
+    "bowl"
+  ],
+  "association_method": "mask_box_overlap_v1",
+  "canonical_label": "bowl",
+  "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+  "contributing_camera_ids": [
+    "inspection_front",
+    "inspection_left",
+    "inspection_right"
+  ],
+  "detector_name": "ultralytics_yolo_world",
+  "detector_version": "8.4.112",
+  "mean_confidence": 0.4926724334557851,
+  "observation_source": "RGB_DETECTOR",
+  "plausible_labels": [
+    "bowl"
+  ],
+  "quality": {
+    "mean_confidence": 0.4926724334557851,
+    "supporting_view_count": 3,
+    "supporting_view_margin": 2,
+    "validated": true,
+    "weighted_score_margin": 4.9639088394352715,
+    "winner_policy": "supporting_views_then_weighted_score",
+    "winning_label_margin": 2.0,
+    "winning_label_margin_kind": "supporting_view_count"
+  },
+  "reason_codes": [],
+  "semantic_evidence_paths": [
+    "stages/004_after_B1/cameras/inspection_front/rgb.png",
+    "stages/004_after_B1/cameras/inspection_left/rgb.png",
+    "stages/004_after_B1/cameras/inspection_right/rgb.png",
+    "stages/004_after_B1/semantics/cameras/inspection_close/crops/000_object_0008.png",
+    "stages/004_after_B1/semantics/cameras/inspection_top/crops/000_object_0008.png"
+  ],
+  "semantic_record_path": "stages/004_after_B1/semantics/object_0008/semantic_evidence.json",
+  "source_region": "B1",
+  "source_stage": 4,
+  "status": "SUPPORTED",
+  "supporting_view_count": 3,
+  "supporting_view_margin": 2,
+  "weighted_score_margin": 4.9639088394352715,
+  "winner_policy": "supporting_views_then_weighted_score",
+  "winning_label_margin": 2.0,
+  "winning_label_margin_kind": "supporting_view_count"
+}

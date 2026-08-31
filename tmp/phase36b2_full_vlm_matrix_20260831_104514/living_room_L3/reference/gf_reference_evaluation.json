@@ -1,0 +1,84 @@
+{
+  "domain": "living_room",
+  "exact_structural_match": false,
+  "extra_operation_groups": [
+    "GROUP_01",
+    "GROUP_02",
+    "GROUP_03"
+  ],
+  "extra_relations": [
+    [
+      "CUP_SAUCER_SET",
+      "FITS_SET_ON",
+      "CUP_SAUCER_SET",
+      true
+    ],
+    [
+      "CUP_SAUCER_SET",
+      "FITS_SET_ON",
+      "PERSONAL_CUP_SAUCER_REGION",
+      true
+    ],
+    [
+      "CUP_SAUCER_SET",
+      "FITS_SET_ON",
+      "SHARED_REMOTE_REGION",
+      true
+    ]
+  ],
+  "extra_roles": [],
+  "matched_operation_groups": [],
+  "matched_roles": [
+    "CUP_SAUCER_SET",
+    "PERSONAL_CUP_SAUCER_REGION",
+    "SHARED_REMOTE_REGION"
+  ],
+  "missing_operation_groups": [
+    "personal_support_group"
+  ],
+  "missing_relations": [
+    [
+      "SHARED_REMOTE_REGION",
+      "ACCESSIBLE_FROM_BOTH_SEATS",
+      "SEATING_PAIR",
+      true
+    ],
+    [
+      "SHARED_REMOTE_REGION",
+      "FITS_ON",
+      "REMOTE",
+      true
+    ]
+  ],
+  "missing_roles": [
+    "REMOTE",
+    "SEATING_PAIR",
+    "SEATING_POSITION"
+  ],
+  "operation_group_exact_precision": 0.0,
+  "operation_group_exact_recall": 0.0,
+  "operation_group_identity_precision": 0.0,
+  "operation_group_identity_recall": 0.0,
+  "operation_group_mismatches": {},
+  "reference_complete": false,
+  "relation_precision": 0.0,
+  "relation_recall": 0.0,
+  "role_attribute_mismatches": {
+    "CUP_SAUCER_SET": {
+      "cardinality": {
+        "candidate": [
+          4,
+          4
+        ],
+        "reference": [
+          2,
+          2
+        ]
+      }
+    }
+  },
+  "role_exact_precision": 0.6666666666666666,
+  "role_exact_recall": 0.3333333333333333,
+  "role_identity_precision": 1.0,
+  "role_identity_recall": 0.5
+}

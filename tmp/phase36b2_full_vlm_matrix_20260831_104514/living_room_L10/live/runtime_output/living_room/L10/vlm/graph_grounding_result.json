@@ -1,0 +1,104 @@
+{
+  "assignment": null,
+  "complete": false,
+  "evidence": {
+    "candidate_evaluations": {
+      "CUP_SAUCER_SET:SEATING_PAIR": {
+        "checks": {
+          "entity_kind": {
+            "actual": "FIXED_TARGET",
+            "expected": "OBJECT",
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "SEATING_PAIR",
+        "role_name": "CUP_SAUCER_SET"
+      },
+      "CUP_SAUCER_SET:tv_remote": {
+        "checks": {
+          "semantic_categories": {
+            "expected": [
+              "cup_saucer_set",
+              "cup",
+              "saucer",
+              "mug",
+              "glass",
+              "plate",
+              "dish"
+            ],
+            "matched": null,
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "tv_remote",
+        "role_name": "CUP_SAUCER_SET"
+      },
+      "PERSONAL_CUP_SAUCER_REGION:SEATING_PAIR": {
+        "checks": {
+          "entity_kind": {
+            "actual": "FIXED_TARGET",
+            "expected": "REGION",
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "SEATING_PAIR",
+        "role_name": "PERSONAL_CUP_SAUCER_REGION"
+      },
+      "PERSONAL_CUP_SAUCER_REGION:tv_remote": {
+        "checks": {
+          "entity_kind": {
+            "actual": "OBJECT",
+            "expected": "REGION",
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "tv_remote",
+        "role_name": "PERSONAL_CUP_SAUCER_REGION"
+      },
+      "SHARED_REMOTE_REGION:SEATING_PAIR": {
+        "checks": {
+          "entity_kind": {
+            "actual": "FIXED_TARGET",
+            "expected": "REGION",
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "SEATING_PAIR",
+        "role_name": "SHARED_REMOTE_REGION"
+      },
+      "SHARED_REMOTE_REGION:tv_remote": {
+        "checks": {
+          "entity_kind": {
+            "actual": "OBJECT",
+            "expected": "REGION",
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "tv_remote",
+        "role_name": "SHARED_REMOTE_REGION"
+      }
+    }
+  },
+  "missing_requirements": [
+    "CUP_SAUCER_SET",
+    "PERSONAL_CUP_SAUCER_REGION",
+    "SHARED_REMOTE_REGION",
+    "CUP_SAUCER_SET",
+    "PERSONAL_CUP_SAUCER_REGION",
+    "SHARED_REMOTE_REGION"
+  ],
+  "missing_roles": [
+    "CUP_SAUCER_SET",
+    "PERSONAL_CUP_SAUCER_REGION",
+    "SHARED_REMOTE_REGION"
+  ],
+  "operation_bindings": {},
+  "satisfied": false,
+  "status": "INFEASIBLE",
+  "unresolved_constraints": [
+    "CUP_SAUCER_SET",
+    "PERSONAL_CUP_SAUCER_REGION",
+    "SHARED_REMOTE_REGION"
+  ],
+  "unsatisfied_relations": []
+}

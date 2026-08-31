@@ -1,0 +1,1183 @@
+{
+  "call_index": 1,
+  "content": {
+    "candidate_regions": [],
+    "cross_group_reuse_allowed": false,
+    "detector_vocabulary": [
+      "cup",
+      "mug",
+      "glass",
+      "saucer",
+      "plate",
+      "dish",
+      "armchair",
+      "sofa",
+      "seat",
+      "coffee table",
+      "side table",
+      "desk",
+      "shelf",
+      "chair",
+      "remote control",
+      "tv remote",
+      "cup saucer set"
+    ],
+    "domain": "living_room",
+    "metadata": {
+      "canonicalization_trace": {
+        "operation_groups": [
+          {
+            "context_relations": [
+              "NEAR_SEAT"
+            ],
+            "context_role": "SHARED_REMOTE_REGION",
+            "distinct_within_group": true,
+            "function": "Personal Beverage Setup",
+            "id": "group_1",
+            "required_relations": [
+              "FITS_SET_ON"
+            ],
+            "required_target_count": 1,
+            "same_tool_must_cover_all_targets": false,
+            "target_role": "PERSONAL_CUP_SAUCER_REGION",
+            "tool_role": "CUP_SAUCER_SET",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          {
+            "context_relations": [
+              "NEAR_SEAT"
+            ],
+            "context_role": "SHARED_REMOTE_REGION",
+            "distinct_within_group": true,
+            "function": "Personal Drink Support",
+            "id": "group_2",
+            "required_relations": [
+              "FITS_SET_ON"
+            ],
+            "required_target_count": 1,
+            "same_tool_must_cover_all_targets": false,
+            "target_role": "PERSONAL_CUP_SAUCER_REGION",
+            "tool_role": "CUP_SAUCER_SET",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          {
+            "context_relations": [
+              "ACCESSIBLE_FROM_BOTH_SEATS"
+            ],
+            "context_role": "PERSONAL_CUP_SAUCER_REGION",
+            "distinct_within_group": true,
+            "function": "Remote Placement",
+            "id": "group_3",
+            "required_relations": [
+              "FITS_ON"
+            ],
+            "required_target_count": 1,
+            "same_tool_must_cover_all_targets": false,
+            "target_role": "SHARED_REMOTE_REGION",
+            "tool_role": "SHARED_REMOTE_REGION",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          }
+        ],
+        "raw_id_to_canonical": {
+          "role_1": "CUP_SAUCER_SET",
+          "role_2": "CUP_SAUCER_SET",
+          "role_3": "PERSONAL_CUP_SAUCER_REGION",
+          "role_4": "SHARED_REMOTE_REGION"
+        },
+        "relations": [
+          {
+            "canonical_object_role_id": "PERSONAL_CUP_SAUCER_REGION",
+            "canonical_predicate": "FITS_SET_ON",
+            "canonical_subject_role_id": "CUP_SAUCER_SET",
+            "raw_object_role_id": "role_3",
+            "raw_relation_text": "placed_on",
+            "raw_subject_role_id": "role_1"
+          },
+          {
+            "canonical_object_role_id": "PERSONAL_CUP_SAUCER_REGION",
+            "canonical_predicate": "FITS_SET_ON",
+            "canonical_subject_role_id": "CUP_SAUCER_SET",
+            "raw_object_role_id": "role_3",
+            "raw_relation_text": "placed_on",
+            "raw_subject_role_id": "role_2"
+          },
+          {
+            "canonical_object_role_id": "SHARED_REMOTE_REGION",
+            "canonical_predicate": "FITS_SET_ON",
+            "canonical_subject_role_id": "CUP_SAUCER_SET",
+            "raw_object_role_id": "role_4",
+            "raw_relation_text": "placed_on",
+            "raw_subject_role_id": "role_1"
+          },
+          {
+            "canonical_object_role_id": "SHARED_REMOTE_REGION",
+            "canonical_predicate": "FITS_SET_ON",
+            "canonical_subject_role_id": "CUP_SAUCER_SET",
+            "raw_object_role_id": "role_4",
+            "raw_relation_text": "placed_on",
+            "raw_subject_role_id": "role_2"
+          },
+          {
+            "canonical_object_role_id": "PERSONAL_CUP_SAUCER_REGION",
+            "canonical_predicate": "NEAR_SEAT",
+            "canonical_subject_role_id": "CUP_SAUCER_SET",
+            "raw_object_role_id": "role_3",
+            "raw_relation_text": "near",
+            "raw_subject_role_id": "role_1"
+          },
+          {
+            "canonical_object_role_id": "PERSONAL_CUP_SAUCER_REGION",
+            "canonical_predicate": "NEAR_SEAT",
+            "canonical_subject_role_id": "CUP_SAUCER_SET",
+            "raw_object_role_id": "role_3",
+            "raw_relation_text": "near",
+            "raw_subject_role_id": "role_2"
+          },
+          {
+            "canonical_object_role_id": "SHARED_REMOTE_REGION",
+            "canonical_predicate": "NEAR_SEAT",
+            "canonical_subject_role_id": "CUP_SAUCER_SET",
+            "raw_object_role_id": "role_4",
+            "raw_relation_text": "near",
+            "raw_subject_role_id": "role_1"
+          },
+          {
+            "canonical_object_role_id": "SHARED_REMOTE_REGION",
+            "canonical_predicate": "NEAR_SEAT",
+            "canonical_subject_role_id": "CUP_SAUCER_SET",
+            "raw_object_role_id": "role_4",
+            "raw_relation_text": "near",
+            "raw_subject_role_id": "role_2"
+          }
+        ],
+        "roles": [
+          {
+            "accepted_categories": [
+              "cup_saucer_set",
+              "cup",
+              "saucer",
+              "mug",
+              "glass",
+              "plate",
+              "dish"
+            ],
+            "canonical_func": "CUP_SAUCER_SET",
+            "canonical_graph_category": [
+              "cup_saucer_set",
+              "cup",
+              "saucer"
+            ],
+            "raw_categories": [
+              "cup",
+              "mug",
+              "glass",
+              "saucer",
+              "plate",
+              "dish"
+            ],
+            "raw_role_ids": [
+              "role_1",
+              "role_2"
+            ],
+            "required_properties": []
+          },
+          {
+            "accepted_categories": [
+              "armchair",
+              "sofa",
+              "seat"
+            ],
+            "canonical_func": "PERSONAL_CUP_SAUCER_REGION",
+            "canonical_graph_category": null,
+            "raw_categories": [
+              "armchair",
+              "sofa",
+              "seat"
+            ],
+            "raw_role_ids": [
+              "role_3"
+            ],
+            "required_properties": []
+          },
+          {
+            "accepted_categories": [
+              "coffee_table",
+              "side_table",
+              "desk",
+              "shelf"
+            ],
+            "canonical_func": "SHARED_REMOTE_REGION",
+            "canonical_graph_category": null,
+            "raw_categories": [
+              "coffee table",
+              "side table",
+              "desk",
+              "shelf"
+            ],
+            "raw_role_ids": [
+              "role_4"
+            ],
+            "required_properties": [
+              "PLANAR_SUPPORT"
+            ]
+          }
+        ],
+        "version": "phase3_6a7_2_1_v1"
+      },
+      "normalization_audit": {
+        "issues": [],
+        "note": "The reviewed ontology was used only after the VLM response; it was not included in the model prompt.",
+        "status": "PASS"
+      },
+      "raw_decomposition": {
+        "functional_relations": [
+          {
+            "object_role": "role_3",
+            "relation": "placed_on",
+            "subject_role": "role_1"
+          },
+          {
+            "object_role": "role_3",
+            "relation": "placed_on",
+            "subject_role": "role_2"
+          },
+          {
+            "object_role": "role_4",
+            "relation": "placed_on",
+            "subject_role": "role_1"
+          },
+          {
+            "object_role": "role_4",
+            "relation": "placed_on",
+            "subject_role": "role_2"
+          },
+          {
+            "object_role": "role_3",
+            "relation": "near",
+            "subject_role": "role_1"
+          },
+          {
+            "object_role": "role_3",
+            "relation": "near",
+            "subject_role": "role_2"
+          },
+          {
+            "object_role": "role_4",
+            "relation": "near",
+            "subject_role": "role_1"
+          },
+          {
+            "object_role": "role_4",
+            "relation": "near",
+            "subject_role": "role_2"
+          }
+        ],
+        "functional_roles": [
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "cup",
+              "mug",
+              "glass"
+            ],
+            "description": "A container for holding a liquid beverage.",
+            "entity_kind": "OBJECT",
+            "function": "hold beverage",
+            "id": "role_1",
+            "required_count": 2,
+            "required_properties": [
+              "open top",
+              "cylindrical shape",
+              "stable base"
+            ],
+            "visible_candidates": [
+              {
+                "label": "Red Cup (Right)",
+                "suitability_reason": "Already present; may be reused if distinctness policy allows.",
+                "visual_description": "A red cylindrical cup located on the right side of the large coffee table in the foreground."
+              },
+              {
+                "label": "Red Cup (Left)",
+                "suitability_reason": "Already present; may be reused if distinctness policy allows.",
+                "visual_description": "A red cylindrical cup located on the left side of the large coffee table in the foreground."
+              }
+            ]
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "saucer",
+              "plate",
+              "dish"
+            ],
+            "description": "A flat, circular dish used to support a drinking vessel.",
+            "entity_kind": "OBJECT",
+            "function": "support drink",
+            "id": "role_2",
+            "required_count": 2,
+            "required_properties": [
+              "flat surface",
+              "circular shape",
+              "small diameter"
+            ],
+            "visible_candidates": [
+              {
+                "label": "White Saucer (Right)",
+                "suitability_reason": "Already present; may be reused if distinctness policy allows.",
+                "visual_description": "A white circular saucer located on the right side of the large coffee table in the foreground."
+              },
+              {
+                "label": "White Saucer (Left)",
+                "suitability_reason": "Already present; may be reused if distinctness policy allows.",
+                "visual_description": "A white circular saucer located on the left side of the large coffee table in the foreground."
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "armchair",
+              "sofa",
+              "seat"
+            ],
+            "description": "An upholstered chair providing a seat for a person.",
+            "entity_kind": "REGION",
+            "function": "provide seating",
+            "id": "role_3",
+            "required_count": 2,
+            "required_properties": [
+              "upholstered seat",
+              "backrest",
+              "four legs"
+            ],
+            "visible_candidates": [
+              {
+                "label": "Armchair (Front Left)",
+                "suitability_reason": "Clearly suitable as a personal support.",
+                "visual_description": "A wooden armchair with black upholstery positioned on the left side of the room, closer to the camera."
+              },
+              {
+                "label": "Armchair (Back Right)",
+                "suitability_reason": "Clearly suitable as a personal support.",
+                "visual_description": "A wooden armchair with black upholstery positioned on the right side of the room, further from the camera."
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "coffee table",
+              "side table",
+              "desk",
+              "shelf"
+            ],
+            "description": "A horizontal surface accessible to multiple users for placing items.",
+            "entity_kind": "REGION",
+            "function": "provide shared surface",
+            "id": "role_4",
+            "required_count": 1,
+            "required_properties": [
+              "horizontal surface",
+              "planar top",
+              "elevated height"
+            ],
+            "visible_candidates": [
+              {
+                "label": "Large Coffee Table",
+                "suitability_reason": "The only available large surface suitable for shared use.",
+                "visual_description": "A large wooden table with ornate carvings located in the foreground of the room."
+              }
+            ]
+          }
+        ],
+        "inspectable_regions": [],
+        "inspection_order": [],
+        "interaction_groups": [
+          {
+            "context_relations": [
+              "near"
+            ],
+            "context_role": "role_4",
+            "function": "Personal Beverage Setup",
+            "id": "group_1",
+            "required_relations": [
+              "placed_on"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_3",
+            "tool_role": "role_1",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          {
+            "context_relations": [
+              "near"
+            ],
+            "context_role": "role_4",
+            "function": "Personal Drink Support",
+            "id": "group_2",
+            "required_relations": [
+              "placed_on"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_3",
+            "tool_role": "role_2",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          {
+            "context_relations": [
+              "accessible_to"
+            ],
+            "context_role": "role_3",
+            "function": "Remote Placement",
+            "id": "group_3",
+            "required_relations": [
+              "placed_on"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_4",
+            "tool_role": "role_4",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          }
+        ],
+        "status": "SUPPORTED",
+        "task_summary": "Prepare the living room for two people watching television: put one cup and saucer on each personal support and the remote on a shared support.",
+        "unsupported_reason": ""
+      },
+      "raw_vlm_response": {
+        "functional_relations": [
+          {
+            "object_role": "role_3",
+            "relation": "placed_on",
+            "subject_role": "role_1"
+          },
+          {
+            "object_role": "role_3",
+            "relation": "placed_on",
+            "subject_role": "role_2"
+          },
+          {
+            "object_role": "role_4",
+            "relation": "placed_on",
+            "subject_role": "role_1"
+          },
+          {
+            "object_role": "role_4",
+            "relation": "placed_on",
+            "subject_role": "role_2"
+          },
+          {
+            "object_role": "role_3",
+            "relation": "near",
+            "subject_role": "role_1"
+          },
+          {
+            "object_role": "role_3",
+            "relation": "near",
+            "subject_role": "role_2"
+          },
+          {
+            "object_role": "role_4",
+            "relation": "near",
+            "subject_role": "role_1"
+          },
+          {
+            "object_role": "role_4",
+            "relation": "near",
+            "subject_role": "role_2"
+          }
+        ],
+        "functional_roles": [
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "cup",
+              "mug",
+              "glass"
+            ],
+            "description": "A container for holding a liquid beverage.",
+            "entity_kind": "OBJECT",
+            "function": "hold beverage",
+            "id": "role_1",
+            "required_count": 2,
+            "required_properties": [
+              "open top",
+              "cylindrical shape",
+              "stable base"
+            ],
+            "visible_candidates": [
+              {
+                "label": "Red Cup (Right)",
+                "suitability_reason": "Already present; may be reused if distinctness policy allows.",
+                "visual_description": "A red cylindrical cup located on the right side of the large coffee table in the foreground."
+              },
+              {
+                "label": "Red Cup (Left)",
+                "suitability_reason": "Already present; may be reused if distinctness policy allows.",
+                "visual_description": "A red cylindrical cup located on the left side of the large coffee table in the foreground."
+              }
+            ]
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "saucer",
+              "plate",
+              "dish"
+            ],
+            "description": "A flat, circular dish used to support a drinking vessel.",
+            "entity_kind": "OBJECT",
+            "function": "support drink",
+            "id": "role_2",
+            "required_count": 2,
+            "required_properties": [
+              "flat surface",
+              "circular shape",
+              "small diameter"
+            ],
+            "visible_candidates": [
+              {
+                "label": "White Saucer (Right)",
+                "suitability_reason": "Already present; may be reused if distinctness policy allows.",
+                "visual_description": "A white circular saucer located on the right side of the large coffee table in the foreground."
+              },
+              {
+                "label": "White Saucer (Left)",
+                "suitability_reason": "Already present; may be reused if distinctness policy allows.",
+                "visual_description": "A white circular saucer located on the left side of the large coffee table in the foreground."
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "armchair",
+              "sofa",
+              "seat"
+            ],
+            "description": "An upholstered chair providing a seat for a person.",
+            "entity_kind": "REGION",
+            "function": "provide seating",
+            "id": "role_3",
+            "required_count": 2,
+            "required_properties": [
+              "upholstered seat",
+              "backrest",
+              "four legs"
+            ],
+            "visible_candidates": [
+              {
+                "label": "Armchair (Front Left)",
+                "suitability_reason": "Clearly suitable as a personal support.",
+                "visual_description": "A wooden armchair with black upholstery positioned on the left side of the room, closer to the camera."
+              },
+              {
+                "label": "Armchair (Back Right)",
+                "suitability_reason": "Clearly suitable as a personal support.",
+                "visual_description": "A wooden armchair with black upholstery positioned on the right side of the room, further from the camera."
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "coffee table",
+              "side table",
+              "desk",
+              "shelf"
+            ],
+            "description": "A horizontal surface accessible to multiple users for placing items.",
+            "entity_kind": "REGION",
+            "function": "provide shared surface",
+            "id": "role_4",
+            "required_count": 1,
+            "required_properties": [
+              "horizontal surface",
+              "planar top",
+              "elevated height"
+            ],
+            "visible_candidates": [
+              {
+                "label": "Large Coffee Table",
+                "suitability_reason": "The only available large surface suitable for shared use.",
+                "visual_description": "A large wooden table with ornate carvings located in the foreground of the room."
+              }
+            ]
+          }
+        ],
+        "inspectable_regions": [],
+        "inspection_order": [],
+        "interaction_groups": [
+          {
+            "context_relations": [
+              "near"
+            ],
+            "context_role": "role_4",
+            "function": "Personal Beverage Setup",
+            "id": "group_1",
+            "required_relations": [
+              "placed_on"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_3",
+            "tool_role": "role_1",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          {
+            "context_relations": [
+              "near"
+            ],
+            "context_role": "role_4",
+            "function": "Personal Drink Support",
+            "id": "group_2",
+            "required_relations": [
+              "placed_on"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_3",
+            "tool_role": "role_2",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          {
+            "context_relations": [
+              "accessible_to"
+            ],
+            "context_role": "role_3",
+            "function": "Remote Placement",
+            "id": "group_3",
+            "required_relations": [
+              "placed_on"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_4",
+            "tool_role": "role_4",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          }
+        ],
+        "status": "SUPPORTED",
+        "task_summary": "Prepare the living room for two people watching television: put one cup and saucer on each personal support and the remote on a shared support.",
+        "unsupported_reason": ""
+      },
+      "semantic_vocabulary_path": "/home/naren/RA_iiith/mujoco_scenes/configs/l2_integrated_region_function_semantic_vocabulary.yaml",
+      "task_explicit_context_vocabulary": [
+        "armchair",
+        "chair",
+        "sofa",
+        "remote control",
+        "tv remote",
+        "cup",
+        "saucer",
+        "cup saucer set"
+      ],
+      "validated_vlm_specification": {
+        "functional_relations": [
+          {
+            "object_role": "role_3",
+            "relation": "placed_on",
+            "subject_role": "role_1"
+          },
+          {
+            "object_role": "role_3",
+            "relation": "placed_on",
+            "subject_role": "role_2"
+          },
+          {
+            "object_role": "role_4",
+            "relation": "placed_on",
+            "subject_role": "role_1"
+          },
+          {
+            "object_role": "role_4",
+            "relation": "placed_on",
+            "subject_role": "role_2"
+          },
+          {
+            "object_role": "role_3",
+            "relation": "near",
+            "subject_role": "role_1"
+          },
+          {
+            "object_role": "role_3",
+            "relation": "near",
+            "subject_role": "role_2"
+          },
+          {
+            "object_role": "role_4",
+            "relation": "near",
+            "subject_role": "role_1"
+          },
+          {
+            "object_role": "role_4",
+            "relation": "near",
+            "subject_role": "role_2"
+          }
+        ],
+        "functional_roles": [
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "cup",
+              "mug",
+              "glass"
+            ],
+            "description": "A container for holding a liquid beverage.",
+            "entity_kind": "OBJECT",
+            "function": "hold beverage",
+            "id": "role_1",
+            "required_count": 2,
+            "required_properties": [
+              "open top",
+              "cylindrical shape",
+              "stable base"
+            ],
+            "visible_candidates": [
+              {
+                "label": "Red Cup (Right)",
+                "suitability_reason": "Already present; may be reused if distinctness policy allows.",
+                "visual_description": "A red cylindrical cup located on the right side of the large coffee table in the foreground."
+              },
+              {
+                "label": "Red Cup (Left)",
+                "suitability_reason": "Already present; may be reused if distinctness policy allows.",
+                "visual_description": "A red cylindrical cup located on the left side of the large coffee table in the foreground."
+              }
+            ]
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "saucer",
+              "plate",
+              "dish"
+            ],
+            "description": "A flat, circular dish used to support a drinking vessel.",
+            "entity_kind": "OBJECT",
+            "function": "support drink",
+            "id": "role_2",
+            "required_count": 2,
+            "required_properties": [
+              "flat surface",
+              "circular shape",
+              "small diameter"
+            ],
+            "visible_candidates": [
+              {
+                "label": "White Saucer (Right)",
+                "suitability_reason": "Already present; may be reused if distinctness policy allows.",
+                "visual_description": "A white circular saucer located on the right side of the large coffee table in the foreground."
+              },
+              {
+                "label": "White Saucer (Left)",
+                "suitability_reason": "Already present; may be reused if distinctness policy allows.",
+                "visual_description": "A white circular saucer located on the left side of the large coffee table in the foreground."
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "armchair",
+              "sofa",
+              "seat"
+            ],
+            "description": "An upholstered chair providing a seat for a person.",
+            "entity_kind": "REGION",
+            "function": "provide seating",
+            "id": "role_3",
+            "required_count": 2,
+            "required_properties": [
+              "upholstered seat",
+              "backrest",
+              "four legs"
+            ],
+            "visible_candidates": [
+              {
+                "label": "Armchair (Front Left)",
+                "suitability_reason": "Clearly suitable as a personal support.",
+                "visual_description": "A wooden armchair with black upholstery positioned on the left side of the room, closer to the camera."
+              },
+              {
+                "label": "Armchair (Back Right)",
+                "suitability_reason": "Clearly suitable as a personal support.",
+                "visual_description": "A wooden armchair with black upholstery positioned on the right side of the room, further from the camera."
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "coffee table",
+              "side table",
+              "desk",
+              "shelf"
+            ],
+            "description": "A horizontal surface accessible to multiple users for placing items.",
+            "entity_kind": "REGION",
+            "function": "provide shared surface",
+            "id": "role_4",
+            "required_count": 1,
+            "required_properties": [
+              "horizontal surface",
+              "planar top",
+              "elevated height"
+            ],
+            "visible_candidates": [
+              {
+                "label": "Large Coffee Table",
+                "suitability_reason": "The only available large surface suitable for shared use.",
+                "visual_description": "A large wooden table with ornate carvings located in the foreground of the room."
+              }
+            ]
+          }
+        ],
+        "inspectable_regions": [],
+        "inspection_order": [],
+        "interaction_groups": [
+          {
+            "context_relations": [
+              "near"
+            ],
+            "context_role": "role_4",
+            "function": "Personal Beverage Setup",
+            "id": "group_1",
+            "required_relations": [
+              "placed_on"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_3",
+            "tool_role": "role_1",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          {
+            "context_relations": [
+              "near"
+            ],
+            "context_role": "role_4",
+            "function": "Personal Drink Support",
+            "id": "group_2",
+            "required_relations": [
+              "placed_on"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_3",
+            "tool_role": "role_2",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          {
+            "context_relations": [
+              "accessible_to"
+            ],
+            "context_role": "role_3",
+            "function": "Remote Placement",
+            "id": "group_3",
+            "required_relations": [
+              "placed_on"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_4",
+            "tool_role": "role_4",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          }
+        ],
+        "status": "SUPPORTED",
+        "task_summary": "Prepare the living room for two people watching television: put one cup and saucer on each personal support and the remote on a shared support.",
+        "unsupported_reason": ""
+      },
+      "vlm_canonicalization_version": "phase3_6a7_2_1_v1",
+      "vlm_derived_role_vocabulary": [
+        "cup",
+        "mug",
+        "glass",
+        "saucer",
+        "plate",
+        "dish",
+        "armchair",
+        "sofa",
+        "seat",
+        "coffee table",
+        "side table",
+        "desk",
+        "shelf"
+      ]
+    },
+    "nodes": {
+      "CUP_SAUCER_SET": {
+        "binding_policy": "DISTINCT",
+        "count": 4,
+        "description": "A container for holding a liquid beverage. A flat, circular dish used to support a drinking vessel.",
+        "distinct": true,
+        "entity_kind": "OBJECT",
+        "max_count": null,
+        "min_count": null,
+        "name": "CUP_SAUCER_SET",
+        "numeric_constraints": [],
+        "preference": null,
+        "reusable": false,
+        "semantic_categories": [
+          "cup_saucer_set",
+          "cup",
+          "saucer",
+          "mug",
+          "glass",
+          "plate",
+          "dish"
+        ],
+        "semantic_hints": [
+          "Red Cup (Right)",
+          "Red Cup (Left)",
+          "White Saucer (Right)",
+          "White Saucer (Left)"
+        ],
+        "shared": false,
+        "unary_predicates": [],
+        "verification_mode": "SEMANTIC_ONLY"
+      },
+      "PERSONAL_CUP_SAUCER_REGION": {
+        "binding_policy": "SHARED",
+        "count": 2,
+        "description": "An upholstered chair providing a seat for a person.",
+        "distinct": true,
+        "entity_kind": "REGION",
+        "max_count": null,
+        "min_count": null,
+        "name": "PERSONAL_CUP_SAUCER_REGION",
+        "numeric_constraints": [],
+        "preference": null,
+        "reusable": false,
+        "semantic_categories": [
+          "armchair",
+          "sofa",
+          "seat"
+        ],
+        "semantic_hints": [
+          "Armchair (Front Left)",
+          "Armchair (Back Right)"
+        ],
+        "shared": true,
+        "unary_predicates": [],
+        "verification_mode": "SEMANTIC_ONLY"
+      },
+      "SHARED_REMOTE_REGION": {
+        "binding_policy": "SHARED",
+        "count": 1,
+        "description": "A horizontal surface accessible to multiple users for placing items.",
+        "distinct": false,
+        "entity_kind": "REGION",
+        "max_count": null,
+        "min_count": null,
+        "name": "SHARED_REMOTE_REGION",
+        "numeric_constraints": [],
+        "preference": null,
+        "reusable": false,
+        "semantic_categories": [
+          "coffee_table",
+          "side_table",
+          "desk",
+          "shelf"
+        ],
+        "semantic_hints": [
+          "Large Coffee Table"
+        ],
+        "shared": true,
+        "unary_predicates": [
+          "PLANAR_SUPPORT"
+        ],
+        "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+      }
+    },
+    "operation_groups": [
+      {
+        "context_relations": [
+          "NEAR_SEAT"
+        ],
+        "context_role": "SHARED_REMOTE_REGION",
+        "distinct_within_group": true,
+        "function": "Personal Beverage Setup",
+        "id": "group_1",
+        "required_relations": [
+          "FITS_SET_ON"
+        ],
+        "required_target_count": 1,
+        "same_tool_must_cover_all_targets": false,
+        "selection_preference": null,
+        "target_role": "PERSONAL_CUP_SAUCER_REGION",
+        "tool_role": "CUP_SAUCER_SET",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      },
+      {
+        "context_relations": [
+          "NEAR_SEAT"
+        ],
+        "context_role": "SHARED_REMOTE_REGION",
+        "distinct_within_group": true,
+        "function": "Personal Drink Support",
+        "id": "group_2",
+        "required_relations": [
+          "FITS_SET_ON"
+        ],
+        "required_target_count": 1,
+        "same_tool_must_cover_all_targets": false,
+        "selection_preference": null,
+        "target_role": "PERSONAL_CUP_SAUCER_REGION",
+        "tool_role": "CUP_SAUCER_SET",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      },
+      {
+        "context_relations": [
+          "ACCESSIBLE_FROM_BOTH_SEATS"
+        ],
+        "context_role": "PERSONAL_CUP_SAUCER_REGION",
+        "distinct_within_group": true,
+        "function": "Remote Placement",
+        "id": "group_3",
+        "required_relations": [
+          "FITS_ON"
+        ],
+        "required_target_count": 1,
+        "same_tool_must_cover_all_targets": false,
+        "selection_preference": null,
+        "target_role": "SHARED_REMOTE_REGION",
+        "tool_role": "SHARED_REMOTE_REGION",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      }
+    ],
+    "region_ranking": [],
+    "relations": [
+      {
+        "expected": true,
+        "object_role": "PERSONAL_CUP_SAUCER_REGION",
+        "predicate": "FITS_SET_ON",
+        "subject_role": "CUP_SAUCER_SET"
+      },
+      {
+        "expected": true,
+        "object_role": "PERSONAL_CUP_SAUCER_REGION",
+        "predicate": "FITS_SET_ON",
+        "subject_role": "CUP_SAUCER_SET"
+      },
+      {
+        "expected": true,
+        "object_role": "SHARED_REMOTE_REGION",
+        "predicate": "FITS_SET_ON",
+        "subject_role": "CUP_SAUCER_SET"
+      },
+      {
+        "expected": true,
+        "object_role": "SHARED_REMOTE_REGION",
+        "predicate": "FITS_SET_ON",
+        "subject_role": "CUP_SAUCER_SET"
+      },
+      {
+        "expected": true,
+        "object_role": "PERSONAL_CUP_SAUCER_REGION",
+        "predicate": "NEAR_SEAT",
+        "subject_role": "CUP_SAUCER_SET"
+      },
+      {
+        "expected": true,
+        "object_role": "PERSONAL_CUP_SAUCER_REGION",
+        "predicate": "NEAR_SEAT",
+        "subject_role": "CUP_SAUCER_SET"
+      },
+      {
+        "expected": true,
+        "object_role": "SHARED_REMOTE_REGION",
+        "predicate": "NEAR_SEAT",
+        "subject_role": "CUP_SAUCER_SET"
+      },
+      {
+        "expected": true,
+        "object_role": "SHARED_REMOTE_REGION",
+        "predicate": "NEAR_SEAT",
+        "subject_role": "CUP_SAUCER_SET"
+      }
+    ],
+    "roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "count": 4,
+        "description": "A container for holding a liquid beverage. A flat, circular dish used to support a drinking vessel.",
+        "distinct": true,
+        "entity_kind": "OBJECT",
+        "max_count": null,
+        "min_count": null,
+        "name": "CUP_SAUCER_SET",
+        "numeric_constraints": [],
+        "preference": null,
+        "reusable": false,
+        "semantic_categories": [
+          "cup_saucer_set",
+          "cup",
+          "saucer",
+          "mug",
+          "glass",
+          "plate",
+          "dish"
+        ],
+        "semantic_hints": [
+          "Red Cup (Right)",
+          "Red Cup (Left)",
+          "White Saucer (Right)",
+          "White Saucer (Left)"
+        ],
+        "shared": false,
+        "unary_predicates": [],
+        "verification_mode": "SEMANTIC_ONLY"
+      },
+      {
+        "binding_policy": "SHARED",
+        "count": 2,
+        "description": "An upholstered chair providing a seat for a person.",
+        "distinct": true,
+        "entity_kind": "REGION",
+        "max_count": null,
+        "min_count": null,
+        "name": "PERSONAL_CUP_SAUCER_REGION",
+        "numeric_constraints": [],
+        "preference": null,
+        "reusable": false,
+        "semantic_categories": [
+          "armchair",
+          "sofa",
+          "seat"
+        ],
+        "semantic_hints": [
+          "Armchair (Front Left)",
+          "Armchair (Back Right)"
+        ],
+        "shared": true,
+        "unary_predicates": [],
+        "verification_mode": "SEMANTIC_ONLY"
+      },
+      {
+        "binding_policy": "SHARED",
+        "count": 1,
+        "description": "A horizontal surface accessible to multiple users for placing items.",
+        "distinct": false,
+        "entity_kind": "REGION",
+        "max_count": null,
+        "min_count": null,
+        "name": "SHARED_REMOTE_REGION",
+        "numeric_constraints": [],
+        "preference": null,
+        "reusable": false,
+        "semantic_categories": [
+          "coffee_table",
+          "side_table",
+          "desk",
+          "shelf"
+        ],
+        "semantic_hints": [
+          "Large Coffee Table"
+        ],
+        "shared": true,
+        "unary_predicates": [
+          "PLANAR_SUPPORT"
+        ],
+        "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+      }
+    ],
+    "source": "VLM_CANONICAL_G_F",
+    "task_instruction": "Prepare the living room for two people watching television: put one cup and saucer on each personal support and the remote on a shared support."
+  },
+  "model": "qwen35-9b"
+}

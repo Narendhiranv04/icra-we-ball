@@ -1,0 +1,72 @@
+{
+  "alternatives": [
+    {
+      "camera_ids": [
+        "inspection_close",
+        "inspection_front",
+        "inspection_left",
+        "inspection_right"
+      ],
+      "label": "coffee_cup",
+      "mean_confidence": 0.42321137338876724,
+      "score": 6.7265977321049855,
+      "supporting_view_count": 4
+    },
+    {
+      "camera_ids": [
+        "inspection_top"
+      ],
+      "label": "mug",
+      "mean_confidence": 0.5723392963409424,
+      "score": 2.1214633800360994,
+      "supporting_view_count": 1
+    }
+  ],
+  "ambiguity_hypotheses": [
+    "coffee_cup"
+  ],
+  "association_method": "mask_box_overlap_v1",
+  "canonical_label": "coffee_cup",
+  "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+  "contributing_camera_ids": [
+    "inspection_close",
+    "inspection_front",
+    "inspection_left",
+    "inspection_right"
+  ],
+  "detector_name": "ultralytics_yolo_world",
+  "detector_version": "8.4.112",
+  "mean_confidence": 0.42321137338876724,
+  "observation_source": "RGB_DETECTOR",
+  "plausible_labels": [
+    "coffee_cup"
+  ],
+  "quality": {
+    "mean_confidence": 0.42321137338876724,
+    "supporting_view_count": 4,
+    "supporting_view_margin": 3,
+    "validated": true,
+    "weighted_score_margin": 4.605134352068886,
+    "winner_policy": "supporting_views_then_weighted_score",
+    "winning_label_margin": 3.0,
+    "winning_label_margin_kind": "supporting_view_count"
+  },
+  "reason_codes": [],
+  "semantic_evidence_paths": [
+    "stages/000_initial/cameras/inspection_top/rgb.png",
+    "stages/000_initial/semantics/cameras/inspection_close/crops/004_object_0006.png",
+    "stages/000_initial/semantics/cameras/inspection_front/crops/005_object_0006.png",
+    "stages/000_initial/semantics/cameras/inspection_left/crops/005_object_0006.png",
+    "stages/000_initial/semantics/cameras/inspection_right/crops/005_object_0006.png"
+  ],
+  "semantic_record_path": "stages/000_initial/semantics/object_0006/semantic_evidence.json",
+  "source_region": "INITIAL",
+  "source_stage": 0,
+  "status": "SUPPORTED",
+  "supporting_view_count": 4,
+  "supporting_view_margin": 3,
+  "weighted_score_margin": 4.605134352068886,
+  "winner_policy": "supporting_views_then_weighted_score",
+  "winning_label_margin": 3.0,
+  "winning_label_margin_kind": "supporting_view_count"
+}

@@ -1,0 +1,1013 @@
+{
+  "call_index": 1,
+  "content": {
+    "candidate_regions": [],
+    "cross_group_reuse_allowed": false,
+    "detector_vocabulary": [
+      "cup",
+      "mug",
+      "glass",
+      "saucer",
+      "plate",
+      "side_table",
+      "end_table",
+      "armchair_side_surface",
+      "coffee_table",
+      "central_table",
+      "remote_control",
+      "tv_remote",
+      "armchair",
+      "chair",
+      "sofa",
+      "remote control",
+      "tv remote",
+      "cup saucer set"
+    ],
+    "domain": "living_room",
+    "metadata": {
+      "canonicalization_trace": {
+        "operation_groups": [
+          {
+            "context_relations": [
+              "FITS_SET_ON"
+            ],
+            "context_role": "PERSONAL_CUP_SAUCER_REGION",
+            "distinct_within_group": true,
+            "function": "pairing cups and saucers for personal supports",
+            "id": "group_001",
+            "required_relations": [
+              "FITS_SET_ON"
+            ],
+            "required_target_count": 2,
+            "same_tool_must_cover_all_targets": false,
+            "target_role": "CUP_SAUCER_SET",
+            "tool_role": "CUP_SAUCER_SET",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          {
+            "context_relations": [],
+            "context_role": null,
+            "distinct_within_group": true,
+            "function": "placing remote on shared table",
+            "id": "group_002",
+            "required_relations": [
+              "FITS_ON"
+            ],
+            "required_target_count": 1,
+            "same_tool_must_cover_all_targets": false,
+            "target_role": "SHARED_REMOTE_REGION",
+            "tool_role": "REMOTE",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          }
+        ],
+        "raw_id_to_canonical": {
+          "role_001": "CUP_SAUCER_SET",
+          "role_002": "CUP_SAUCER_SET",
+          "role_003": "PERSONAL_CUP_SAUCER_REGION",
+          "role_004": "SHARED_REMOTE_REGION",
+          "role_005": "REMOTE"
+        },
+        "relations": [
+          {
+            "canonical_object_role_id": "CUP_SAUCER_SET",
+            "canonical_predicate": "FITS_SET_ON",
+            "canonical_subject_role_id": "CUP_SAUCER_SET",
+            "raw_object_role_id": "role_002",
+            "raw_relation_text": "placed_on",
+            "raw_subject_role_id": "role_001"
+          },
+          {
+            "canonical_object_role_id": "PERSONAL_CUP_SAUCER_REGION",
+            "canonical_predicate": "FITS_SET_ON",
+            "canonical_subject_role_id": "CUP_SAUCER_SET",
+            "raw_object_role_id": "role_003",
+            "raw_relation_text": "placed_on",
+            "raw_subject_role_id": "role_001"
+          },
+          {
+            "canonical_object_role_id": "PERSONAL_CUP_SAUCER_REGION",
+            "canonical_predicate": "FITS_SET_ON",
+            "canonical_subject_role_id": "CUP_SAUCER_SET",
+            "raw_object_role_id": "role_003",
+            "raw_relation_text": "placed_on",
+            "raw_subject_role_id": "role_002"
+          },
+          {
+            "canonical_object_role_id": "SHARED_REMOTE_REGION",
+            "canonical_predicate": "FITS_ON",
+            "canonical_subject_role_id": "REMOTE",
+            "raw_object_role_id": "role_004",
+            "raw_relation_text": "placed_on",
+            "raw_subject_role_id": "role_005"
+          }
+        ],
+        "roles": [
+          {
+            "accepted_categories": [
+              "cup_saucer_set",
+              "cup",
+              "saucer",
+              "mug",
+              "glass",
+              "plate"
+            ],
+            "canonical_func": "CUP_SAUCER_SET",
+            "canonical_graph_category": [
+              "cup_saucer_set",
+              "cup",
+              "saucer"
+            ],
+            "raw_categories": [
+              "cup",
+              "mug",
+              "glass",
+              "saucer",
+              "plate"
+            ],
+            "raw_role_ids": [
+              "role_001",
+              "role_002"
+            ],
+            "required_properties": []
+          },
+          {
+            "accepted_categories": [
+              "side_table",
+              "end_table",
+              "armchair_side_surface"
+            ],
+            "canonical_func": "PERSONAL_CUP_SAUCER_REGION",
+            "canonical_graph_category": null,
+            "raw_categories": [
+              "side_table",
+              "end_table",
+              "armchair_side_surface"
+            ],
+            "raw_role_ids": [
+              "role_003"
+            ],
+            "required_properties": [
+              "PLANAR_SUPPORT"
+            ]
+          },
+          {
+            "accepted_categories": [
+              "coffee_table",
+              "central_table"
+            ],
+            "canonical_func": "SHARED_REMOTE_REGION",
+            "canonical_graph_category": null,
+            "raw_categories": [
+              "coffee_table",
+              "central_table"
+            ],
+            "raw_role_ids": [
+              "role_004"
+            ],
+            "required_properties": [
+              "PLANAR_SUPPORT"
+            ]
+          },
+          {
+            "accepted_categories": [
+              "tv_remote",
+              "remote_control"
+            ],
+            "canonical_func": "REMOTE",
+            "canonical_graph_category": [
+              "tv_remote",
+              "remote_control"
+            ],
+            "raw_categories": [
+              "remote_control",
+              "tv_remote"
+            ],
+            "raw_role_ids": [
+              "role_005"
+            ],
+            "required_properties": []
+          }
+        ],
+        "version": "phase3_6a7_2_1_v1"
+      },
+      "normalization_audit": {
+        "issues": [],
+        "note": "The reviewed ontology was used only after the VLM response; it was not included in the model prompt.",
+        "status": "PASS"
+      },
+      "raw_decomposition": {
+        "functional_relations": [
+          {
+            "object_role": "role_002",
+            "relation": "placed_on",
+            "subject_role": "role_001"
+          },
+          {
+            "object_role": "role_003",
+            "relation": "placed_on",
+            "subject_role": "role_001"
+          },
+          {
+            "object_role": "role_003",
+            "relation": "placed_on",
+            "subject_role": "role_002"
+          },
+          {
+            "object_role": "role_004",
+            "relation": "placed_on",
+            "subject_role": "role_005"
+          }
+        ],
+        "functional_roles": [
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "cup",
+              "mug",
+              "glass"
+            ],
+            "description": "A small vessel with an open top used to hold liquid.",
+            "entity_kind": "OBJECT",
+            "function": "hold liquid for drinker",
+            "id": "role_001",
+            "required_count": 2,
+            "required_properties": [
+              "open_top",
+              "small_volume"
+            ],
+            "visible_candidates": []
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "saucer",
+              "plate"
+            ],
+            "description": "A flat plate placed under a cup to provide stability and catch spills.",
+            "entity_kind": "OBJECT",
+            "function": "support cup",
+            "id": "role_002",
+            "required_count": 2,
+            "required_properties": [
+              "flat_surface",
+              "circular_shape"
+            ],
+            "visible_candidates": []
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "side_table",
+              "end_table",
+              "armchair_side_surface"
+            ],
+            "description": "A stable surface next to a seating position intended for individual use by one person.",
+            "entity_kind": "REGION",
+            "function": "serve as personal table for drinker",
+            "id": "role_003",
+            "required_count": 2,
+            "required_properties": [
+              "planar_horizontal_support",
+              "stable_base",
+              "accessible_from_seating"
+            ],
+            "visible_candidates": [
+              {
+                "label": "left side table",
+                "suitability_reason": "located next to left armchair; appears to be a dedicated side table.",
+                "visual_description": "light wood side table with white saucer on it"
+              },
+              {
+                "label": "right side table",
+                "suitability_reason": "located next to right armchair; appears to be a dedicated side table.",
+                "visual_description": "light wood side table near right armchair"
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "coffee_table",
+              "central_table"
+            ],
+            "description": "A larger stable surface in the center of the room accessible to both viewers for placing shared items like a remote.",
+            "entity_kind": "REGION",
+            "function": "serve as shared central table",
+            "id": "role_004",
+            "required_count": 1,
+            "required_properties": [
+              "planar_horizontal_support",
+              "stable_base",
+              "accessible_from_both_seats"
+            ],
+            "visible_candidates": [
+              {
+                "label": "center coffee table",
+                "suitability_reason": "located centrally between seating; large enough for shared items.",
+                "visual_description": "rectangular table with light green top between the two chairs"
+              }
+            ]
+          },
+          {
+            "binding_policy": "REUSABLE",
+            "candidate_categories": [
+              "remote_control",
+              "tv_remote"
+            ],
+            "description": "A handheld device used to operate the TV.",
+            "entity_kind": "OBJECT",
+            "function": "control television",
+            "id": "role_005",
+            "required_count": 1,
+            "required_properties": [
+              "handheld_size",
+              "rectangular_shape"
+            ],
+            "visible_candidates": [
+              {
+                "label": "remote control",
+                "suitability_reason": "matches typical appearance of a TV remote control.",
+                "visual_description": "black rectangular device on the foreground table"
+              }
+            ]
+          }
+        ],
+        "inspectable_regions": [],
+        "inspection_order": [],
+        "interaction_groups": [
+          {
+            "context_relations": [
+              "placed_on"
+            ],
+            "context_role": "role_003",
+            "function": "pairing cups and saucers for personal supports",
+            "id": "group_001",
+            "required_relations": [
+              "placed_on"
+            ],
+            "required_target_count": 2,
+            "target_role": "role_002",
+            "tool_role": "role_001",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          {
+            "context_relations": [],
+            "context_role": null,
+            "function": "placing remote on shared table",
+            "id": "group_002",
+            "required_relations": [
+              "placed_on"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_004",
+            "tool_role": "role_005",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          }
+        ],
+        "status": "SUPPORTED",
+        "task_summary": "Prepare the living room for two people watching television: put one cup and saucer on each personal support and the remote on a shared support.",
+        "unsupported_reason": ""
+      },
+      "raw_vlm_response": {
+        "functional_relations": [
+          {
+            "object_role": "role_002",
+            "relation": "placed_on",
+            "subject_role": "role_001"
+          },
+          {
+            "object_role": "role_003",
+            "relation": "placed_on",
+            "subject_role": "role_001"
+          },
+          {
+            "object_role": "role_003",
+            "relation": "placed_on",
+            "subject_role": "role_002"
+          },
+          {
+            "object_role": "role_004",
+            "relation": "placed_on",
+            "subject_role": "role_005"
+          }
+        ],
+        "functional_roles": [
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "cup",
+              "mug",
+              "glass"
+            ],
+            "description": "A small vessel with an open top used to hold liquid.",
+            "entity_kind": "OBJECT",
+            "function": "hold liquid for drinker",
+            "id": "role_001",
+            "required_count": 2,
+            "required_properties": [
+              "open_top",
+              "small_volume"
+            ],
+            "visible_candidates": []
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "saucer",
+              "plate"
+            ],
+            "description": "A flat plate placed under a cup to provide stability and catch spills.",
+            "entity_kind": "OBJECT",
+            "function": "support cup",
+            "id": "role_002",
+            "required_count": 2,
+            "required_properties": [
+              "flat_surface",
+              "circular_shape"
+            ],
+            "visible_candidates": []
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "side_table",
+              "end_table",
+              "armchair_side_surface"
+            ],
+            "description": "A stable surface next to a seating position intended for individual use by one person.",
+            "entity_kind": "REGION",
+            "function": "serve as personal table for drinker",
+            "id": "role_003",
+            "required_count": 2,
+            "required_properties": [
+              "planar_horizontal_support",
+              "stable_base",
+              "accessible_from_seating"
+            ],
+            "visible_candidates": [
+              {
+                "label": "left side table",
+                "suitability_reason": "located next to left armchair; appears to be a dedicated side table.",
+                "visual_description": "light wood side table with white saucer on it"
+              },
+              {
+                "label": "right side table",
+                "suitability_reason": "located next to right armchair; appears to be a dedicated side table.",
+                "visual_description": "light wood side table near right armchair"
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "coffee_table",
+              "central_table"
+            ],
+            "description": "A larger stable surface in the center of the room accessible to both viewers for placing shared items like a remote.",
+            "entity_kind": "REGION",
+            "function": "serve as shared central table",
+            "id": "role_004",
+            "required_count": 1,
+            "required_properties": [
+              "planar_horizontal_support",
+              "stable_base",
+              "accessible_from_both_seats"
+            ],
+            "visible_candidates": [
+              {
+                "label": "center coffee table",
+                "suitability_reason": "located centrally between seating; large enough for shared items.",
+                "visual_description": "rectangular table with light green top between the two chairs"
+              }
+            ]
+          },
+          {
+            "binding_policy": "REUSABLE",
+            "candidate_categories": [
+              "remote_control",
+              "tv_remote"
+            ],
+            "description": "A handheld device used to operate the TV.",
+            "entity_kind": "OBJECT",
+            "function": "control television",
+            "id": "role_005",
+            "required_count": 1,
+            "required_properties": [
+              "handheld_size",
+              "rectangular_shape"
+            ],
+            "visible_candidates": [
+              {
+                "label": "remote control",
+                "suitability_reason": "matches typical appearance of a TV remote control.",
+                "visual_description": "black rectangular device on the foreground table"
+              }
+            ]
+          }
+        ],
+        "inspectable_regions": [],
+        "inspection_order": [],
+        "interaction_groups": [
+          {
+            "context_relations": [
+              "placed_on"
+            ],
+            "context_role": "role_003",
+            "function": "pairing cups and saucers for personal supports",
+            "id": "group_001",
+            "required_relations": [
+              "placed_on"
+            ],
+            "required_target_count": 2,
+            "target_role": "role_002",
+            "tool_role": "role_001",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          {
+            "function": "placing remote on shared table",
+            "id": "group_002",
+            "required_relations": [
+              "placed_on"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_004",
+            "tool_role": "role_005",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          }
+        ],
+        "status": "SUPPORTED",
+        "task_summary": "Prepare the living room for two people watching television: put one cup and saucer on each personal support and the remote on a shared support.",
+        "unsupported_reason": ""
+      },
+      "semantic_vocabulary_path": "/home/naren/RA_iiith/mujoco_scenes/configs/l2_integrated_region_function_semantic_vocabulary.yaml",
+      "task_explicit_context_vocabulary": [
+        "armchair",
+        "chair",
+        "sofa",
+        "remote control",
+        "tv remote",
+        "cup",
+        "saucer",
+        "cup saucer set"
+      ],
+      "validated_vlm_specification": {
+        "functional_relations": [
+          {
+            "object_role": "role_002",
+            "relation": "placed_on",
+            "subject_role": "role_001"
+          },
+          {
+            "object_role": "role_003",
+            "relation": "placed_on",
+            "subject_role": "role_001"
+          },
+          {
+            "object_role": "role_003",
+            "relation": "placed_on",
+            "subject_role": "role_002"
+          },
+          {
+            "object_role": "role_004",
+            "relation": "placed_on",
+            "subject_role": "role_005"
+          }
+        ],
+        "functional_roles": [
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "cup",
+              "mug",
+              "glass"
+            ],
+            "description": "A small vessel with an open top used to hold liquid.",
+            "entity_kind": "OBJECT",
+            "function": "hold liquid for drinker",
+            "id": "role_001",
+            "required_count": 2,
+            "required_properties": [
+              "open_top",
+              "small_volume"
+            ],
+            "visible_candidates": []
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "saucer",
+              "plate"
+            ],
+            "description": "A flat plate placed under a cup to provide stability and catch spills.",
+            "entity_kind": "OBJECT",
+            "function": "support cup",
+            "id": "role_002",
+            "required_count": 2,
+            "required_properties": [
+              "flat_surface",
+              "circular_shape"
+            ],
+            "visible_candidates": []
+          },
+          {
+            "binding_policy": "DISTINCT",
+            "candidate_categories": [
+              "side_table",
+              "end_table",
+              "armchair_side_surface"
+            ],
+            "description": "A stable surface next to a seating position intended for individual use by one person.",
+            "entity_kind": "REGION",
+            "function": "serve as personal table for drinker",
+            "id": "role_003",
+            "required_count": 2,
+            "required_properties": [
+              "planar_horizontal_support",
+              "stable_base",
+              "accessible_from_seating"
+            ],
+            "visible_candidates": [
+              {
+                "label": "left side table",
+                "suitability_reason": "located next to left armchair; appears to be a dedicated side table.",
+                "visual_description": "light wood side table with white saucer on it"
+              },
+              {
+                "label": "right side table",
+                "suitability_reason": "located next to right armchair; appears to be a dedicated side table.",
+                "visual_description": "light wood side table near right armchair"
+              }
+            ]
+          },
+          {
+            "binding_policy": "SHARED",
+            "candidate_categories": [
+              "coffee_table",
+              "central_table"
+            ],
+            "description": "A larger stable surface in the center of the room accessible to both viewers for placing shared items like a remote.",
+            "entity_kind": "REGION",
+            "function": "serve as shared central table",
+            "id": "role_004",
+            "required_count": 1,
+            "required_properties": [
+              "planar_horizontal_support",
+              "stable_base",
+              "accessible_from_both_seats"
+            ],
+            "visible_candidates": [
+              {
+                "label": "center coffee table",
+                "suitability_reason": "located centrally between seating; large enough for shared items.",
+                "visual_description": "rectangular table with light green top between the two chairs"
+              }
+            ]
+          },
+          {
+            "binding_policy": "REUSABLE",
+            "candidate_categories": [
+              "remote_control",
+              "tv_remote"
+            ],
+            "description": "A handheld device used to operate the TV.",
+            "entity_kind": "OBJECT",
+            "function": "control television",
+            "id": "role_005",
+            "required_count": 1,
+            "required_properties": [
+              "handheld_size",
+              "rectangular_shape"
+            ],
+            "visible_candidates": [
+              {
+                "label": "remote control",
+                "suitability_reason": "matches typical appearance of a TV remote control.",
+                "visual_description": "black rectangular device on the foreground table"
+              }
+            ]
+          }
+        ],
+        "inspectable_regions": [],
+        "inspection_order": [],
+        "interaction_groups": [
+          {
+            "context_relations": [
+              "placed_on"
+            ],
+            "context_role": "role_003",
+            "function": "pairing cups and saucers for personal supports",
+            "id": "group_001",
+            "required_relations": [
+              "placed_on"
+            ],
+            "required_target_count": 2,
+            "target_role": "role_002",
+            "tool_role": "role_001",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          },
+          {
+            "context_relations": [],
+            "context_role": null,
+            "function": "placing remote on shared table",
+            "id": "group_002",
+            "required_relations": [
+              "placed_on"
+            ],
+            "required_target_count": 1,
+            "target_role": "role_004",
+            "tool_role": "role_005",
+            "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+          }
+        ],
+        "status": "SUPPORTED",
+        "task_summary": "Prepare the living room for two people watching television: put one cup and saucer on each personal support and the remote on a shared support.",
+        "unsupported_reason": ""
+      },
+      "vlm_canonicalization_version": "phase3_6a7_2_1_v1",
+      "vlm_derived_role_vocabulary": [
+        "cup",
+        "mug",
+        "glass",
+        "saucer",
+        "plate",
+        "side_table",
+        "end_table",
+        "armchair_side_surface",
+        "coffee_table",
+        "central_table",
+        "remote_control",
+        "tv_remote"
+      ]
+    },
+    "nodes": {
+      "CUP_SAUCER_SET": {
+        "binding_policy": "DISTINCT",
+        "count": 4,
+        "description": "A small vessel with an open top used to hold liquid. A flat plate placed under a cup to provide stability and catch spills.",
+        "distinct": true,
+        "entity_kind": "OBJECT",
+        "max_count": null,
+        "min_count": null,
+        "name": "CUP_SAUCER_SET",
+        "numeric_constraints": [],
+        "preference": null,
+        "reusable": false,
+        "semantic_categories": [
+          "cup_saucer_set",
+          "cup",
+          "saucer",
+          "mug",
+          "glass",
+          "plate"
+        ],
+        "semantic_hints": [],
+        "shared": false,
+        "unary_predicates": [],
+        "verification_mode": "SEMANTIC_ONLY"
+      },
+      "PERSONAL_CUP_SAUCER_REGION": {
+        "binding_policy": "DISTINCT",
+        "count": 2,
+        "description": "A stable surface next to a seating position intended for individual use by one person.",
+        "distinct": true,
+        "entity_kind": "REGION",
+        "max_count": null,
+        "min_count": null,
+        "name": "PERSONAL_CUP_SAUCER_REGION",
+        "numeric_constraints": [],
+        "preference": null,
+        "reusable": false,
+        "semantic_categories": [
+          "side_table",
+          "end_table",
+          "armchair_side_surface"
+        ],
+        "semantic_hints": [
+          "left side table",
+          "right side table"
+        ],
+        "shared": false,
+        "unary_predicates": [
+          "PLANAR_SUPPORT"
+        ],
+        "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+      },
+      "REMOTE": {
+        "binding_policy": "REUSABLE",
+        "count": 1,
+        "description": "A handheld device used to operate the TV.",
+        "distinct": false,
+        "entity_kind": "OBJECT",
+        "max_count": null,
+        "min_count": null,
+        "name": "REMOTE",
+        "numeric_constraints": [],
+        "preference": null,
+        "reusable": true,
+        "semantic_categories": [
+          "tv_remote",
+          "remote_control"
+        ],
+        "semantic_hints": [
+          "remote control"
+        ],
+        "shared": false,
+        "unary_predicates": [],
+        "verification_mode": "SEMANTIC_ONLY"
+      },
+      "SHARED_REMOTE_REGION": {
+        "binding_policy": "SHARED",
+        "count": 1,
+        "description": "A larger stable surface in the center of the room accessible to both viewers for placing shared items like a remote.",
+        "distinct": false,
+        "entity_kind": "REGION",
+        "max_count": null,
+        "min_count": null,
+        "name": "SHARED_REMOTE_REGION",
+        "numeric_constraints": [],
+        "preference": null,
+        "reusable": false,
+        "semantic_categories": [
+          "coffee_table",
+          "central_table"
+        ],
+        "semantic_hints": [
+          "center coffee table"
+        ],
+        "shared": true,
+        "unary_predicates": [
+          "PLANAR_SUPPORT"
+        ],
+        "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+      }
+    },
+    "operation_groups": [
+      {
+        "context_relations": [
+          "FITS_SET_ON"
+        ],
+        "context_role": "PERSONAL_CUP_SAUCER_REGION",
+        "distinct_within_group": true,
+        "function": "pairing cups and saucers for personal supports",
+        "id": "group_001",
+        "required_relations": [
+          "FITS_SET_ON"
+        ],
+        "required_target_count": 2,
+        "same_tool_must_cover_all_targets": false,
+        "selection_preference": null,
+        "target_role": "CUP_SAUCER_SET",
+        "tool_role": "CUP_SAUCER_SET",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      },
+      {
+        "context_relations": [],
+        "context_role": null,
+        "distinct_within_group": true,
+        "function": "placing remote on shared table",
+        "id": "group_002",
+        "required_relations": [
+          "FITS_ON"
+        ],
+        "required_target_count": 1,
+        "same_tool_must_cover_all_targets": false,
+        "selection_preference": null,
+        "target_role": "SHARED_REMOTE_REGION",
+        "tool_role": "REMOTE",
+        "usage_policy": "SEQUENTIAL_REUSE_ALLOWED"
+      }
+    ],
+    "region_ranking": [],
+    "relations": [
+      {
+        "expected": true,
+        "object_role": "CUP_SAUCER_SET",
+        "predicate": "FITS_SET_ON",
+        "subject_role": "CUP_SAUCER_SET"
+      },
+      {
+        "expected": true,
+        "object_role": "PERSONAL_CUP_SAUCER_REGION",
+        "predicate": "FITS_SET_ON",
+        "subject_role": "CUP_SAUCER_SET"
+      },
+      {
+        "expected": true,
+        "object_role": "PERSONAL_CUP_SAUCER_REGION",
+        "predicate": "FITS_SET_ON",
+        "subject_role": "CUP_SAUCER_SET"
+      },
+      {
+        "expected": true,
+        "object_role": "SHARED_REMOTE_REGION",
+        "predicate": "FITS_ON",
+        "subject_role": "REMOTE"
+      }
+    ],
+    "roles": [
+      {
+        "binding_policy": "DISTINCT",
+        "count": 4,
+        "description": "A small vessel with an open top used to hold liquid. A flat plate placed under a cup to provide stability and catch spills.",
+        "distinct": true,
+        "entity_kind": "OBJECT",
+        "max_count": null,
+        "min_count": null,
+        "name": "CUP_SAUCER_SET",
+        "numeric_constraints": [],
+        "preference": null,
+        "reusable": false,
+        "semantic_categories": [
+          "cup_saucer_set",
+          "cup",
+          "saucer",
+          "mug",
+          "glass",
+          "plate"
+        ],
+        "semantic_hints": [],
+        "shared": false,
+        "unary_predicates": [],
+        "verification_mode": "SEMANTIC_ONLY"
+      },
+      {
+        "binding_policy": "DISTINCT",
+        "count": 2,
+        "description": "A stable surface next to a seating position intended for individual use by one person.",
+        "distinct": true,
+        "entity_kind": "REGION",
+        "max_count": null,
+        "min_count": null,
+        "name": "PERSONAL_CUP_SAUCER_REGION",
+        "numeric_constraints": [],
+        "preference": null,
+        "reusable": false,
+        "semantic_categories": [
+          "side_table",
+          "end_table",
+          "armchair_side_surface"
+        ],
+        "semantic_hints": [
+          "left side table",
+          "right side table"
+        ],
+        "shared": false,
+        "unary_predicates": [
+          "PLANAR_SUPPORT"
+        ],
+        "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+      },
+      {
+        "binding_policy": "REUSABLE",
+        "count": 1,
+        "description": "A handheld device used to operate the TV.",
+        "distinct": false,
+        "entity_kind": "OBJECT",
+        "max_count": null,
+        "min_count": null,
+        "name": "REMOTE",
+        "numeric_constraints": [],
+        "preference": null,
+        "reusable": true,
+        "semantic_categories": [
+          "tv_remote",
+          "remote_control"
+        ],
+        "semantic_hints": [
+          "remote control"
+        ],
+        "shared": false,
+        "unary_predicates": [],
+        "verification_mode": "SEMANTIC_ONLY"
+      },
+      {
+        "binding_policy": "SHARED",
+        "count": 1,
+        "description": "A larger stable surface in the center of the room accessible to both viewers for placing shared items like a remote.",
+        "distinct": false,
+        "entity_kind": "REGION",
+        "max_count": null,
+        "min_count": null,
+        "name": "SHARED_REMOTE_REGION",
+        "numeric_constraints": [],
+        "preference": null,
+        "reusable": false,
+        "semantic_categories": [
+          "coffee_table",
+          "central_table"
+        ],
+        "semantic_hints": [
+          "center coffee table"
+        ],
+        "shared": true,
+        "unary_predicates": [
+          "PLANAR_SUPPORT"
+        ],
+        "verification_mode": "SEMANTIC_AND_GEOMETRIC"
+      }
+    ],
+    "source": "VLM_CANONICAL_G_F",
+    "task_instruction": "Prepare the living room for two people watching television: put one cup and saucer on each personal support and the remote on a shared support."
+  },
+  "model": "qwen35-9b"
+}

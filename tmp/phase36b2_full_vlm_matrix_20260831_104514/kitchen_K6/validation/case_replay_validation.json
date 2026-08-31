@@ -1,0 +1,50 @@
+{
+  "case_id": "kitchen_K6",
+  "checks": [],
+  "provider_replay_details": {
+    "checks": {
+      "candidate_permutation": "N/A",
+      "deterministic_provider_replay": "PASS",
+      "exact_gf_sha": "PASS",
+      "identity": "PASS",
+      "live_provider_baseline": "N/A",
+      "provenance": "PASS",
+      "provider_order_used": "PASS",
+      "provider_ranking_preserved": "PASS",
+      "random_seed_order": "N/A",
+      "structural_gf_identity": "PASS",
+      "terminal_result_consistency": "PASS",
+      "vlm_source": "PASS"
+    },
+    "domain": "kitchen",
+    "failures": [],
+    "live": {
+      "dir": "/home/naren/RA_iiith/tmp/phase36b2_full_vlm_matrix_20260831_104514/kitchen_K6/live/runtime_output/kitchen/K6/vlm",
+      "n_open": 4,
+      "plan_length": 0,
+      "provider_ranking": [],
+      "region_order_used": [],
+      "search_effective": "provider",
+      "spec_acquisition": "live_provider",
+      "specification_sha256": "cd9b0ad144ac0a17c30b2fcc023d31baf0e0f79a2fc6d4694731efefeb7628f6",
+      "terminal_status": "INFEASIBLE"
+    },
+    "replay": {
+      "dir": "/home/naren/RA_iiith/tmp/phase36b2_full_vlm_matrix_20260831_104514/kitchen_K6/provider_replay/runtime_output/kitchen/K6/vlm",
+      "n_open": 4,
+      "plan_length": 0,
+      "provider_ranking": [],
+      "region_order_used": [],
+      "search_effective": "provider",
+      "search_seed_effective": null,
+      "search_seed_requested": null,
+      "spec_acquisition": "replayed_provider_output",
+      "specification_sha256": "cd9b0ad144ac0a17c30b2fcc023d31baf0e0f79a2fc6d4694731efefeb7628f6",
+      "terminal_status": "INFEASIBLE"
+    },
+    "success": true,
+    "variant": "K6"
+  },
+  "provider_replay_valid": true,
+  "random_replays_valid": true
+}

@@ -1,0 +1,52 @@
+{
+  "case_id": "kitchen_K8",
+  "checks": [],
+  "provider_replay_details": {
+    "checks": {
+      "candidate_permutation": "N/A",
+      "deterministic_provider_replay": "FAIL",
+      "exact_gf_sha": "PASS",
+      "identity": "PASS",
+      "live_provider_baseline": "N/A",
+      "provenance": "PASS",
+      "provider_order_used": "PASS",
+      "provider_ranking_preserved": "PASS",
+      "random_seed_order": "N/A",
+      "structural_gf_identity": "PASS",
+      "terminal_result_consistency": "PASS",
+      "vlm_source": "PASS"
+    },
+    "domain": "kitchen",
+    "failures": [
+      "grounding missing_roles differs between live and provider replay: ['soup_container', 'coffee_stirrer', 'soup_eating_utensil'] != ['coffee_stirrer', 'soup_container', 'soup_eating_utensil']"
+    ],
+    "live": {
+      "dir": "/home/naren/RA_iiith/tmp/phase36b2_full_vlm_matrix_20260831_104514/kitchen_K8/live/runtime_output/kitchen/K8/vlm",
+      "n_open": 5,
+      "plan_length": 0,
+      "provider_ranking": [],
+      "region_order_used": [],
+      "search_effective": "provider",
+      "spec_acquisition": "live_provider",
+      "specification_sha256": "0ade4df8496e057a458423bbbc6a7e1337c0cf389a06d1741a78b70cb84d85eb",
+      "terminal_status": "INCOMPLETE"
+    },
+    "replay": {
+      "dir": "/home/naren/RA_iiith/tmp/phase36b2_full_vlm_matrix_20260831_104514/kitchen_K8/provider_replay/runtime_output/kitchen/K8/vlm",
+      "n_open": 5,
+      "plan_length": 0,
+      "provider_ranking": [],
+      "region_order_used": [],
+      "search_effective": "provider",
+      "search_seed_effective": null,
+      "search_seed_requested": null,
+      "spec_acquisition": "replayed_provider_output",
+      "specification_sha256": "0ade4df8496e057a458423bbbc6a7e1337c0cf389a06d1741a78b70cb84d85eb",
+      "terminal_status": "INCOMPLETE"
+    },
+    "success": false,
+    "variant": "K8"
+  },
+  "provider_replay_valid": false,
+  "random_replays_valid": true
+}

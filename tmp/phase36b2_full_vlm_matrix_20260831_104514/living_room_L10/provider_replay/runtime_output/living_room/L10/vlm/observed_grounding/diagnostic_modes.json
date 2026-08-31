@@ -1,0 +1,94 @@
+{
+  "geometry_only": {
+    "adjacency": {
+      "personal_table_slot_1": [],
+      "personal_table_slot_2": [],
+      "shared_remote_slot": []
+    },
+    "assignments": [],
+    "claim_scope": "No complete verified region-functional allocation exists within the controlled fully observed candidate set.",
+    "complete_solution_count": 0,
+    "controlled_candidate_set_fully_observed": true,
+    "mode": "geometry_only",
+    "reason": "NO_COMPLETE_GLOBAL_REGION_ALLOCATION",
+    "status": "INFEASIBLE",
+    "uncovered_slots": [
+      "personal_table_slot_1",
+      "personal_table_slot_2",
+      "shared_remote_slot"
+    ]
+  },
+  "global_target_specific": {
+    "adjacency": {
+      "personal_table_slot_1": [],
+      "personal_table_slot_2": [],
+      "shared_remote_slot": []
+    },
+    "assignments": [],
+    "claim_scope": "No complete verified region-functional allocation exists within the controlled fully observed candidate set.",
+    "complete_solution_count": 0,
+    "controlled_candidate_set_fully_observed": true,
+    "mode": "joint",
+    "policy": "global_target_specific",
+    "reason": "NO_COMPLETE_GLOBAL_REGION_ALLOCATION",
+    "status": "INFEASIBLE",
+    "uncovered_slots": [
+      "personal_table_slot_1",
+      "personal_table_slot_2",
+      "shared_remote_slot"
+    ]
+  },
+  "greedy_target_specific": {
+    "assignments": [],
+    "blocked_slot": "shared_remote_slot",
+    "diagnostic_only": true,
+    "policy": "greedy_target_specific",
+    "status": "INFEASIBLE"
+  },
+  "joint": {
+    "adjacency": {
+      "personal_table_slot_1": [],
+      "personal_table_slot_2": [],
+      "shared_remote_slot": []
+    },
+    "assignments": [],
+    "claim_scope": "No complete verified region-functional allocation exists within the controlled fully observed candidate set.",
+    "complete_solution_count": 0,
+    "controlled_candidate_set_fully_observed": true,
+    "mode": "joint",
+    "reason": "NO_COMPLETE_GLOBAL_REGION_ALLOCATION",
+    "status": "INFEASIBLE",
+    "uncovered_slots": [
+      "personal_table_slot_1",
+      "personal_table_slot_2",
+      "shared_remote_slot"
+    ]
+  },
+  "semantic_only": {
+    "adjacency": {
+      "personal_table_slot_1": [],
+      "personal_table_slot_2": [],
+      "shared_remote_slot": []
+    },
+    "assignments": [],
+    "claim_scope": "No complete verified region-functional allocation exists within the controlled fully observed candidate set.",
+    "complete_solution_count": 0,
+    "controlled_candidate_set_fully_observed": true,
+    "mode": "semantic_only",
+    "reason": "NO_COMPLETE_GLOBAL_REGION_ALLOCATION",
+    "status": "INFEASIBLE",
+    "uncovered_slots": [
+      "personal_table_slot_1",
+      "personal_table_slot_2",
+      "shared_remote_slot"
+    ]
+  },
+  "target_agnostic_count": {
+    "counted_personal_region_count": 0,
+    "decision_used_target_specific_relations": false,
+    "diagnostic_only": true,
+    "policy": "target_agnostic_count",
+    "shared_candidate_count": 0,
+    "status": "INFEASIBLE"
+  }
+}

@@ -1,0 +1,253 @@
+{
+  "diagnostic_only": true,
+  "shared_observation_evidence": true,
+  "stages": [
+    {
+      "modes": {
+        "geometry-only": {
+          "reason_codes": [
+            "REQUIRED_EVIDENCE_UNKNOWN"
+          ],
+          "selected_candidate_edges": [],
+          "selected_witness": null,
+          "status": "INDETERMINATE"
+        },
+        "joint": {
+          "reason_codes": [
+            "REQUIRED_EVIDENCE_UNKNOWN"
+          ],
+          "selected_candidate_edges": [],
+          "selected_witness": null,
+          "status": "INDETERMINATE"
+        },
+        "semantic-only": {
+          "reason_codes": [
+            "REQUIRED_EVIDENCE_UNKNOWN"
+          ],
+          "selected_candidate_edges": [],
+          "selected_witness": null,
+          "status": "INDETERMINATE"
+        }
+      },
+      "region_id": "INITIAL",
+      "stage": 0
+    },
+    {
+      "modes": {
+        "geometry-only": {
+          "reason_codes": [
+            "REQUIRED_EVIDENCE_UNKNOWN"
+          ],
+          "selected_candidate_edges": [],
+          "selected_witness": null,
+          "status": "INDETERMINATE"
+        },
+        "joint": {
+          "reason_codes": [
+            "REQUIRED_EVIDENCE_UNKNOWN"
+          ],
+          "selected_candidate_edges": [],
+          "selected_witness": null,
+          "status": "INDETERMINATE"
+        },
+        "semantic-only": {
+          "reason_codes": [
+            "REQUIRED_EVIDENCE_UNKNOWN"
+          ],
+          "selected_candidate_edges": [],
+          "selected_witness": null,
+          "status": "INDETERMINATE"
+        }
+      },
+      "region_id": "D1",
+      "stage": 1
+    },
+    {
+      "modes": {
+        "geometry-only": {
+          "reason_codes": [
+            "REQUIRED_EVIDENCE_UNKNOWN"
+          ],
+          "selected_candidate_edges": [],
+          "selected_witness": null,
+          "status": "INDETERMINATE"
+        },
+        "joint": {
+          "reason_codes": [
+            "REQUIRED_EVIDENCE_UNKNOWN"
+          ],
+          "selected_candidate_edges": [],
+          "selected_witness": null,
+          "status": "INDETERMINATE"
+        },
+        "semantic-only": {
+          "reason_codes": [
+            "REQUIRED_EVIDENCE_UNKNOWN"
+          ],
+          "selected_candidate_edges": [],
+          "selected_witness": null,
+          "status": "INDETERMINATE"
+        }
+      },
+      "region_id": "D2",
+      "stage": 2
+    },
+    {
+      "modes": {
+        "geometry-only": {
+          "reason_codes": [
+            "REQUIRED_EVIDENCE_UNKNOWN"
+          ],
+          "selected_candidate_edges": [],
+          "selected_witness": null,
+          "status": "INDETERMINATE"
+        },
+        "joint": {
+          "reason_codes": [
+            "REQUIRED_EVIDENCE_UNKNOWN"
+          ],
+          "selected_candidate_edges": [],
+          "selected_witness": null,
+          "status": "INDETERMINATE"
+        },
+        "semantic-only": {
+          "reason_codes": [
+            "COMPLETE_SEMANTIC_ONLY_ABLATION"
+          ],
+          "selected_candidate_edges": [
+            {
+              "canonical_label": "cabinet",
+              "confidence": 0.3086511939764023,
+              "object_id": "object_0009",
+              "role": "coffee_container",
+              "semantic_rank": 3
+            },
+            {
+              "canonical_label": "flat_seating_surface",
+              "confidence": 0.04274404297272364,
+              "object_id": "object_0004",
+              "role": "soup_eating_utensil",
+              "semantic_rank": 4
+            }
+          ],
+          "selected_witness": {
+            "coffee_container": [
+              "object_0009"
+            ],
+            "soup_eating_utensil": [
+              "object_0004"
+            ]
+          },
+          "status": "COMPLETE"
+        }
+      },
+      "region_id": "C2",
+      "stage": 3
+    },
+    {
+      "modes": {
+        "geometry-only": {
+          "reason_codes": [
+            "REQUIRED_EVIDENCE_UNKNOWN"
+          ],
+          "selected_candidate_edges": [],
+          "selected_witness": null,
+          "status": "INDETERMINATE"
+        },
+        "joint": {
+          "reason_codes": [
+            "REQUIRED_EVIDENCE_UNKNOWN"
+          ],
+          "selected_candidate_edges": [],
+          "selected_witness": null,
+          "status": "INDETERMINATE"
+        },
+        "semantic-only": {
+          "reason_codes": [
+            "COMPLETE_SEMANTIC_ONLY_ABLATION"
+          ],
+          "selected_candidate_edges": [
+            {
+              "canonical_label": "cabinet",
+              "confidence": 0.3086511939764023,
+              "object_id": "object_0009",
+              "role": "coffee_container",
+              "semantic_rank": 3
+            },
+            {
+              "canonical_label": "flat_seating_surface",
+              "confidence": 0.04274404297272364,
+              "object_id": "object_0004",
+              "role": "soup_eating_utensil",
+              "semantic_rank": 4
+            }
+          ],
+          "selected_witness": {
+            "coffee_container": [
+              "object_0009"
+            ],
+            "soup_eating_utensil": [
+              "object_0004"
+            ]
+          },
+          "status": "COMPLETE"
+        }
+      },
+      "region_id": "B1",
+      "stage": 4
+    },
+    {
+      "modes": {
+        "geometry-only": {
+          "reason_codes": [
+            "REQUIRED_EVIDENCE_UNKNOWN"
+          ],
+          "selected_candidate_edges": [],
+          "selected_witness": null,
+          "status": "INDETERMINATE"
+        },
+        "joint": {
+          "reason_codes": [
+            "REQUIRED_EVIDENCE_UNKNOWN"
+          ],
+          "selected_candidate_edges": [],
+          "selected_witness": null,
+          "status": "INDETERMINATE"
+        },
+        "semantic-only": {
+          "reason_codes": [
+            "COMPLETE_SEMANTIC_ONLY_ABLATION"
+          ],
+          "selected_candidate_edges": [
+            {
+              "canonical_label": "cabinet",
+              "confidence": 0.3086511939764023,
+              "object_id": "object_0009",
+              "role": "coffee_container",
+              "semantic_rank": 3
+            },
+            {
+              "canonical_label": "flat_seating_surface",
+              "confidence": 0.04274404297272364,
+              "object_id": "object_0004",
+              "role": "soup_eating_utensil",
+              "semantic_rank": 4
+            }
+          ],
+          "selected_witness": {
+            "coffee_container": [
+              "object_0009"
+            ],
+            "soup_eating_utensil": [
+              "object_0004"
+            ]
+          },
+          "status": "COMPLETE"
+        }
+      },
+      "region_id": "C1",
+      "stage": 5
+    }
+  ],
+  "task_id": "s1_integrated_prepare_and_serve_coffee_and_soup"
+}

@@ -1,0 +1,149 @@
+schema_version: 2
+camera_slots:
+  room_left: l2_camera_left
+  room_right: l2_camera_right
+  room_high: l2_camera_top
+  room_front: l2_camera_front
+  room_rear: l2_camera_close
+capture:
+  target_world_m:
+  - 0.0
+  - 0.2
+  - 0.65
+  up_world:
+  - 0.0
+  - 0.0
+  - 1.0
+  near_depth_m: 0.15
+  far_depth_m: 7.0
+  settle_steps: 500
+  cameras:
+    room_left:
+      position_world_m:
+      - -3.05
+      - -2.72
+      - 2.25
+      look_at_world_m:
+      - 0.0
+      - 0.25
+      - 0.65
+      fovy_degrees: 74.0
+    room_right:
+      position_world_m:
+      - 3.05
+      - -2.72
+      - 2.25
+      look_at_world_m:
+      - 0.0
+      - 0.25
+      - 0.65
+      fovy_degrees: 74.0
+    room_high:
+      position_world_m:
+      - 0.0
+      - -0.25
+      - 4.65
+      look_at_world_m:
+      - 0.0
+      - 0.2
+      - 0.3
+      fovy_degrees: 72.0
+    room_front:
+      position_world_m:
+      - 0.0
+      - -2.75
+      - 1.45
+      look_at_world_m:
+      - 0.0
+      - -1.66
+      - 0.72
+      fovy_degrees: 56.0
+    room_rear:
+      position_world_m:
+      - -1.7
+      - 2.5
+      - 1.75
+      look_at_world_m:
+      - -0.8
+      - 0.82
+      - 0.5
+      fovy_degrees: 65.0
+view_validation:
+  minimum_valid_rig_cameras: 4
+  minimum_entity_camera_count: 2
+  minimum_valid_depth_pixels: 500
+  maximum_target_angle_degrees: 12.0
+processing:
+  exclude_payload_points_from_regions: true
+  voxel_size_m: 0.003
+  plane_band_m: 0.009
+  minimum_region_points: 250
+  minimum_payload_points: 80
+  minimum_seating_points: 300
+  payload_primary_component_radius_m: 0.25
+  robust_percentiles:
+  - 2.0
+  - 98.0
+region_selectors:
+  surface_01:
+    candidate_rank: 1
+    volume:
+      minimum_world_m:
+      - -2.04
+      - 0.75
+      - 0.494
+      maximum_world_m:
+      - -1.4
+      - 1.29
+      - 0.5910000000000001
+  surface_02:
+    candidate_rank: 2
+    volume:
+      minimum_world_m:
+      - 1.4
+      - 0.75
+      - 0.494
+      maximum_world_m:
+      - 2.04
+      - 1.29
+      - 0.5910000000000001
+  surface_03:
+    candidate_rank: 3
+    volume:
+      minimum_world_m:
+      - -0.623
+      - 0.21000000000000002
+      - 0.33599999999999997
+      maximum_world_m:
+      - 0.623
+      - 1.03
+      - 0.433
+seating_selectors:
+  target_01:
+    volume:
+      minimum_world_m:
+      - -1.4800000000000002
+      - 0.54
+      - 0.0
+      maximum_world_m:
+      - -0.48
+      - 1.58
+      - 1.1400000000000001
+  target_02:
+    volume:
+      minimum_world_m:
+      - 0.48
+      - 0.54
+      - 0.0
+      maximum_world_m:
+      - 1.4800000000000002
+      - 1.58
+      - 1.1400000000000001
+entity_id_prefixes:
+  seating_target: seat
+region_proposal_provenance:
+  region_proposal_source: SIMULATOR_DERIVED_NEUTRAL_SPATIAL_GATE
+  region_proposal_encodes_function: false
+  region_proposal_encodes_semantic_class: false
+  region_proposal_encodes_expected_validity: false
+  region_dimensions_for_functional_reasoning: OBSERVED_RGBD_POINT_CLOUD

@@ -1,0 +1,177 @@
+{
+  "active_function_groups": [
+    "personal_cup_saucer_region",
+    "shared_remote_region"
+  ],
+  "allocation": {
+    "deterministic_tie_break": [
+      "complete_target_coverage",
+      "total_signed_margin_descending",
+      "total_candidate_rank",
+      "persistent_region_ids"
+    ],
+    "diagnostic_modes": [
+      "semantic_only",
+      "geometry_only",
+      "joint",
+      "target_agnostic_count",
+      "greedy_target_specific",
+      "global_target_specific"
+    ],
+    "production_policy": "global_target_specific"
+  },
+  "allow_cross_function_region_sharing": false,
+  "function_groups": {
+    "personal_cup_saucer_region": {
+      "candidate_entity_kind": "REGION",
+      "function_id": "PERSONAL_CUP_SAUCER_REGION",
+      "payload_groups": [
+        "shared_remote"
+      ],
+      "region_role": "personal_cup_saucer_region",
+      "required_relations": [
+        "PLANAR_SUPPORT",
+        "FITS_ON",
+        "ACCESSIBLE_FROM_BOTH_SEATS"
+      ],
+      "required_target_count": 2,
+      "target_assignment_policy": "SHARED_REGION",
+      "target_role": "both_seating_positions",
+      "usage_policy": "SHARED_REGION_REQUIRED"
+    },
+    "shared_remote_region": {
+      "candidate_entity_kind": "REGION",
+      "function_id": "SHARED_REMOTE_REGION",
+      "payload_groups": [
+        "shared_remote"
+      ],
+      "region_role": "shared_remote_region",
+      "required_relations": [
+        "PLANAR_SUPPORT",
+        "FITS_ON",
+        "ACCESSIBLE_FROM_BOTH_SEATS"
+      ],
+      "required_target_count": 1,
+      "target_assignment_policy": "SHARED_REGION",
+      "target_role": "both_seating_positions",
+      "usage_policy": "SHARED_REGION_REQUIRED"
+    }
+  },
+  "geometric_requirements": {
+    "control_context": {
+      "maximum_distance_to_each_seat_m": 1.65,
+      "relation": "ACCESSIBLE_FROM_BOTH_SEATS"
+    },
+    "payload_region": {
+      "allowed_orientations_degrees": [
+        0,
+        90
+      ],
+      "edge_clearance_margin_m": 0.015,
+      "relation": "FITS_ON"
+    },
+    "payload_set_region": {
+      "allowed_orientations_degrees": [
+        0,
+        90
+      ],
+      "arrangements": [
+        "ALONG_LENGTH",
+        "ALONG_WIDTH"
+      ],
+      "edge_clearance_margin_m": 0.02,
+      "inter_payload_clearance_m": 0.025,
+      "relation": "FITS_SET_ON"
+    },
+    "personal_context": {
+      "maximum_centroid_distance_m": 1.2,
+      "relation": "NEAR_SEAT"
+    },
+    "unary_region": {
+      "maximum_normal_angle_degrees": 12.0,
+      "minimum_planarity_score": 0.9,
+      "minimum_usable_area_m2": 0.03,
+      "predicate": "PLANAR_SUPPORT"
+    }
+  },
+  "natural_language_goal": "Prepare the living room for two people watching television: put one cup and saucer on each personal support and the remote on a shared support.",
+  "payload_groups": {
+    "personal_cup_saucer_sets": {
+      "count": 2,
+      "each_requires": {
+        "cup": 1,
+        "saucer": 1
+      },
+      "grouping_policy": "MINIMUM_TOTAL_OBSERVED_CENTROID_DISTANCE",
+      "target_assignment_policy": "OBSERVED_X_ORDER",
+      "target_role": "seating_position"
+    },
+    "shared_remote": {
+      "count": 1,
+      "each_requires": {
+        "tv_remote": 1
+      },
+      "grouping_policy": "ALL_REQUIRED_ROLES"
+    }
+  },
+  "requirement_entity_kind": "REGION",
+  "schema_version": 1,
+  "semantic_requirements": {
+    "minimum_mean_confidence": 0.03,
+    "minimum_supporting_views": 1,
+    "minimum_winning_score_margin": 0.015,
+    "payload_roles": {
+      "cup": [
+        "cup"
+      ],
+      "saucer": [
+        "saucer",
+        "plate"
+      ],
+      "tv_remote": [
+        "remote_control",
+        "tv_remote"
+      ]
+    },
+    "region_roles": {
+      "personal_cup_saucer_region": {
+        "accepted_categories": {
+          "armchair": 1,
+          "seat": 1,
+          "sofa": 1
+        },
+        "rejected_categories": {
+          "bookshelf": 1,
+          "chair": 1,
+          "floor": 1,
+          "media_console": 1,
+          "rug": 1
+        }
+      },
+      "shared_remote_region": {
+        "accepted_categories": {
+          "coffee_table": 1,
+          "desk": 1,
+          "shelf": 1,
+          "side_table": 1
+        },
+        "rejected_categories": {
+          "armchair": 1,
+          "bookshelf": 1,
+          "chair": 1,
+          "floor": 1,
+          "media_console": 1,
+          "rug": 1,
+          "sofa": 1
+        }
+      }
+    },
+    "seating_categories": [
+      "armchair",
+      "chair",
+      "sofa"
+    ]
+  },
+  "specification_source": "VLM_CANONICAL_G_F",
+  "task_id": "l2_integrated_living_room_region_function_phase1"
+}

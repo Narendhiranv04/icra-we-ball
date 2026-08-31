@@ -1,0 +1,72 @@
+{
+  "alternatives": [
+    {
+      "camera_ids": [
+        "inspection_left",
+        "inspection_top"
+      ],
+      "label": "coffee_cup",
+      "mean_confidence": 0.7723305523395538,
+      "score": 5.586233349650126,
+      "supporting_view_count": 2
+    },
+    {
+      "camera_ids": [
+        "inspection_front",
+        "inspection_right"
+      ],
+      "label": "mug",
+      "mean_confidence": 0.7815585434436798,
+      "score": 4.9689877743672675,
+      "supporting_view_count": 2
+    }
+  ],
+  "ambiguity_hypotheses": [
+    "coffee_cup",
+    "mug"
+  ],
+  "association_method": "mask_box_overlap_v1",
+  "canonical_label": null,
+  "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+  "contributing_camera_ids": [
+    "inspection_left",
+    "inspection_top"
+  ],
+  "detector_name": "ultralytics_yolo_world",
+  "detector_version": "8.4.112",
+  "mean_confidence": 0.7723305523395538,
+  "observation_source": "RGB_DETECTOR",
+  "plausible_labels": [
+    "coffee_cup",
+    "mug"
+  ],
+  "quality": {
+    "mean_confidence": 0.7723305523395538,
+    "supporting_view_count": 2,
+    "supporting_view_margin": 0,
+    "validated": false,
+    "weighted_score_margin": 0.6172455752828583,
+    "winner_policy": "supporting_views_then_weighted_score",
+    "winning_label_margin": 0.6172455752828583,
+    "winning_label_margin_kind": "weighted_score"
+  },
+  "reason_codes": [
+    "CONFLICTING_MULTI_VIEW_LABELS"
+  ],
+  "semantic_evidence_paths": [
+    "stages/000_initial/cameras/inspection_front/rgb.png",
+    "stages/000_initial/cameras/inspection_left/rgb.png",
+    "stages/000_initial/cameras/inspection_right/rgb.png",
+    "stages/000_initial/cameras/inspection_top/rgb.png"
+  ],
+  "semantic_record_path": "stages/000_initial/semantics/object_0001/semantic_evidence.json",
+  "source_region": "INITIAL",
+  "source_stage": 0,
+  "status": "UNKNOWN",
+  "supporting_view_count": 2,
+  "supporting_view_margin": 0,
+  "weighted_score_margin": 0.6172455752828583,
+  "winner_policy": "supporting_views_then_weighted_score",
+  "winning_label_margin": 0.6172455752828583,
+  "winning_label_margin_kind": "weighted_score"
+}

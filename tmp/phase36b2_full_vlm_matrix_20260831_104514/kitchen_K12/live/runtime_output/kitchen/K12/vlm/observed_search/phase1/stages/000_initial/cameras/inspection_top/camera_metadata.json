@@ -1,0 +1,68 @@
+{
+  "camera_id": "inspection_top",
+  "depth_png_unit": "mm",
+  "intrinsics": [
+    [
+      798.8541515282486,
+      0.0,
+      640.0
+    ],
+    [
+      0.0,
+      798.8541515282486,
+      480.0
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "model_camera_name": "overhead_camera",
+  "position_world_m": [
+    0.0,
+    -0.78,
+    1.4
+  ],
+  "resolution": [
+    1280,
+    960
+  ],
+  "rotation_world_from_camera": [
+    [
+      1.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.819759137879043,
+      -0.5727084387922081
+    ],
+    [
+      0.0,
+      0.5727084387922081,
+      0.819759137879043
+    ]
+  ],
+  "target_world_m": [
+    0.0,
+    -0.27,
+    0.6699999999999999
+  ],
+  "validation": {
+    "camera_transform_valid": true,
+    "intrinsics_match_resolution": true,
+    "reasons": [],
+    "target_angle_degrees": 0.0,
+    "target_depth_m": 0.8905054744357275,
+    "target_in_front": true,
+    "target_in_frustum": true,
+    "target_pixel": [
+      640.0,
+      480.0
+    ],
+    "usable": true,
+    "valid_depth_pixels": 1028426
+  }
+}

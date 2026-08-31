@@ -15,6 +15,7 @@ import os
 import re
 import urllib.error
 import urllib.request
+import time
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path

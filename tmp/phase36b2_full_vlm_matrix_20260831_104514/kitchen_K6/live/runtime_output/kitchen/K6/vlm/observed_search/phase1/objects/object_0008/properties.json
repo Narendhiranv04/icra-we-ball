@@ -1,0 +1,1634 @@
+{
+  "centroid_world_m": {
+    "cloud_purpose": "MEASUREMENT_EVIDENCE",
+    "contributing_camera_ids": [
+      "inspection_left",
+      "inspection_right",
+      "inspection_top",
+      "inspection_front",
+      "inspection_close"
+    ],
+    "extractor_version": "geometry_properties_v3",
+    "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+    "method": "finite_point_coordinate_median",
+    "point_count": 4932,
+    "source_region": "B1",
+    "source_stage": 4,
+    "status": "MEASURED",
+    "unit": "m",
+    "value": [
+      0.44487541913986206,
+      0.1915588676929474,
+      0.6205340623855591
+    ]
+  },
+  "contributing_camera_count": {
+    "cloud_purpose": "MEASUREMENT_EVIDENCE",
+    "contributing_camera_ids": [
+      "inspection_left",
+      "inspection_right",
+      "inspection_top",
+      "inspection_front",
+      "inspection_close"
+    ],
+    "extractor_version": "geometry_properties_v3",
+    "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+    "method": "validated_inspection_camera_contributors",
+    "point_count": 4932,
+    "source_region": "B1",
+    "source_stage": 4,
+    "status": "DERIVED",
+    "unit": "cameras",
+    "value": 5
+  },
+  "cumulative_cloud_path": "objects/object_0008/cumulative.ply",
+  "cumulative_cloud_purpose": "CUMULATIVE_VISUALIZATION_NOT_MEASUREMENT",
+  "cumulative_visualization_cloud_path": "objects/object_0008/cumulative_visualization.ply",
+  "cumulative_visualization_point_count": 4932,
+  "dimensions_m": {
+    "height": {
+      "cloud_purpose": "MEASUREMENT_EVIDENCE",
+      "contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "extractor_version": "geometry_properties_v3",
+      "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+      "method": "robust_pca_obb",
+      "point_count": 4932,
+      "source_region": "B1",
+      "source_stage": 4,
+      "status": "MEASURED",
+      "unit": "m",
+      "value": 0.07405357713849234
+    },
+    "length": {
+      "cloud_purpose": "MEASUREMENT_EVIDENCE",
+      "contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "extractor_version": "geometry_properties_v3",
+      "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+      "method": "robust_pca_obb",
+      "point_count": 4932,
+      "source_region": "B1",
+      "source_stage": 4,
+      "status": "MEASURED",
+      "unit": "m",
+      "value": 0.12986145904795582
+    },
+    "width": {
+      "cloud_purpose": "MEASUREMENT_EVIDENCE",
+      "contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "extractor_version": "geometry_properties_v3",
+      "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+      "method": "robust_pca_obb",
+      "point_count": 4932,
+      "source_region": "B1",
+      "source_stage": 4,
+      "status": "MEASURED",
+      "unit": "m",
+      "value": 0.12307663209754263
+    }
+  },
+  "first_seen_stage": 4,
+  "functional_role_evaluations": {
+    "coffee_container": {
+      "decision": "ROLE_CANDIDATE",
+      "geometry_gate_status": "TRUE",
+      "grounding_mode": "joint",
+      "object_id": "object_0008",
+      "role": "coffee_container",
+      "semantic": {
+        "canonical_label": "bowl",
+        "confidence": 0.5310827692349752,
+        "preference": {
+          "canonical_label": "bowl",
+          "detector_aliases": [
+            "bowl"
+          ],
+          "rank": 4
+        },
+        "provenance": {
+          "alternatives": [
+            {
+              "camera_ids": [
+                "inspection_front",
+                "inspection_left",
+                "inspection_right"
+              ],
+              "label": "bowl",
+              "mean_confidence": 0.5310827692349752,
+              "score": 5.9802979990963,
+              "supporting_view_count": 3
+            },
+            {
+              "camera_ids": [
+                "inspection_close"
+              ],
+              "label": "cup",
+              "mean_confidence": 0.1379012167453766,
+              "score": 0.6091881016391059,
+              "supporting_view_count": 1
+            },
+            {
+              "camera_ids": [
+                "inspection_top"
+              ],
+              "label": "coffee_cup",
+              "mean_confidence": 0.08303909003734589,
+              "score": 0.33775969938263467,
+              "supporting_view_count": 1
+            }
+          ],
+          "ambiguity_hypotheses": [
+            "bowl"
+          ],
+          "association_method": "mask_box_overlap_v1",
+          "canonical_label": "bowl",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "contributing_camera_ids": [
+            "inspection_front",
+            "inspection_left",
+            "inspection_right"
+          ],
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "mean_confidence": 0.5310827692349752,
+          "observation_source": "RGB_DETECTOR",
+          "plausible_labels": [
+            "bowl"
+          ],
+          "quality": {
+            "mean_confidence": 0.5310827692349752,
+            "supporting_view_count": 3,
+            "supporting_view_margin": 2,
+            "validated": true,
+            "weighted_score_margin": 5.3711098974571945,
+            "winner_policy": "supporting_views_then_weighted_score",
+            "winning_label_margin": 2.0,
+            "winning_label_margin_kind": "supporting_view_count"
+          },
+          "reason_codes": [],
+          "semantic_evidence_paths": [
+            "stages/004_after_B1/cameras/inspection_front/rgb.png",
+            "stages/004_after_B1/cameras/inspection_left/rgb.png",
+            "stages/004_after_B1/cameras/inspection_right/rgb.png",
+            "stages/004_after_B1/semantics/cameras/inspection_close/crops/000_object_0008.png",
+            "stages/004_after_B1/semantics/cameras/inspection_top/crops/000_object_0008.png"
+          ],
+          "semantic_record_path": "stages/004_after_B1/semantics/object_0008/semantic_evidence.json",
+          "source_region": "B1",
+          "source_stage": 4,
+          "status": "SUPPORTED",
+          "supporting_view_count": 3,
+          "supporting_view_margin": 2,
+          "weighted_score_margin": 5.3711098974571945,
+          "winner_policy": "supporting_views_then_weighted_score",
+          "winning_label_margin": 2.0,
+          "winning_label_margin_kind": "supporting_view_count"
+        },
+        "reason": "SUPPORTED_ACCEPTABLE_LABEL",
+        "semantic_rank": 4,
+        "status": "TRUE"
+      },
+      "semantic_gate_status": "TRUE",
+      "status": "TRUE",
+      "target_assignment_mode": "joint-target-specific",
+      "unary_geometry": {
+        "checks": [
+          {
+            "evidence": {
+              "angular_bin_count": 12,
+              "central_top_occupancy_fraction": 0.0,
+              "central_top_point_count": 0,
+              "contributing_camera_count": 5,
+              "definition": "enclosed_rim AND open_centre AND observed_interior_below_rim",
+              "estimated_cavity_depth_m": 0.04752682447433476,
+              "estimated_opening_length_m": 0.1432656729877517,
+              "estimated_opening_width_m": 0.14123111784285802,
+              "interior_camera_count": 5,
+              "interior_camera_ids": [
+                "inspection_left",
+                "inspection_right",
+                "inspection_top",
+                "inspection_front",
+                "inspection_close"
+              ],
+              "interior_point_count": 573,
+              "minimum_resolvable_depth_m": 0.006,
+              "minimum_resolvable_opening_m": 0.009,
+              "minimum_resolvable_vertical_extent_m": 0.006,
+              "occupied_angular_bins": 12,
+              "outlier_fraction": 0.0,
+              "planarity_score": 0.7468264730658332,
+              "point_count": 4932,
+              "rim_enclosure_ratio": 1.0,
+              "rim_normal_alignment": 0.9999490120995463,
+              "rim_normal_world": [
+                -7.664987154934787e-05,
+                0.010097887201715635,
+                0.9999490120995463
+              ],
+              "rim_point_count": 691,
+              "rim_shell_fraction": 1.0,
+              "structural_components": {
+                "ENCLOSED_RIM": "TRUE",
+                "INTERIOR_BELOW_RIM": "TRUE",
+                "OPEN_CENTRE": "TRUE"
+              },
+              "top_candidate_point_count": 691,
+              "top_height_spread_m": 0.004619866609573364,
+              "vertical_extent_m": 0.07426501870155333
+            },
+            "kind": "predicate",
+            "method": "open_cavity_structure_v3",
+            "name": "OPEN_CAVITY",
+            "reason": null,
+            "required_status": "TRUE",
+            "status": "TRUE"
+          }
+        ],
+        "status": "TRUE"
+      }
+    },
+    "coffee_stirrer": {
+      "decision": "REJECTED_SEMANTIC",
+      "geometry_gate_status": "FALSE",
+      "grounding_mode": "joint",
+      "object_id": "object_0008",
+      "role": "coffee_stirrer",
+      "semantic": {
+        "acceptable_labels": [
+          "spoon",
+          "stirrer",
+          "utensil",
+          "implement"
+        ],
+        "canonical_label": "bowl",
+        "confidence": 0.5310827692349752,
+        "provenance": {
+          "alternatives": [
+            {
+              "camera_ids": [
+                "inspection_front",
+                "inspection_left",
+                "inspection_right"
+              ],
+              "label": "bowl",
+              "mean_confidence": 0.5310827692349752,
+              "score": 5.9802979990963,
+              "supporting_view_count": 3
+            },
+            {
+              "camera_ids": [
+                "inspection_close"
+              ],
+              "label": "cup",
+              "mean_confidence": 0.1379012167453766,
+              "score": 0.6091881016391059,
+              "supporting_view_count": 1
+            },
+            {
+              "camera_ids": [
+                "inspection_top"
+              ],
+              "label": "coffee_cup",
+              "mean_confidence": 0.08303909003734589,
+              "score": 0.33775969938263467,
+              "supporting_view_count": 1
+            }
+          ],
+          "ambiguity_hypotheses": [
+            "bowl"
+          ],
+          "association_method": "mask_box_overlap_v1",
+          "canonical_label": "bowl",
+          "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+          "contributing_camera_ids": [
+            "inspection_front",
+            "inspection_left",
+            "inspection_right"
+          ],
+          "detector_name": "ultralytics_yolo_world",
+          "detector_version": "8.4.112",
+          "mean_confidence": 0.5310827692349752,
+          "observation_source": "RGB_DETECTOR",
+          "plausible_labels": [
+            "bowl"
+          ],
+          "quality": {
+            "mean_confidence": 0.5310827692349752,
+            "supporting_view_count": 3,
+            "supporting_view_margin": 2,
+            "validated": true,
+            "weighted_score_margin": 5.3711098974571945,
+            "winner_policy": "supporting_views_then_weighted_score",
+            "winning_label_margin": 2.0,
+            "winning_label_margin_kind": "supporting_view_count"
+          },
+          "reason_codes": [],
+          "semantic_evidence_paths": [
+            "stages/004_after_B1/cameras/inspection_front/rgb.png",
+            "stages/004_after_B1/cameras/inspection_left/rgb.png",
+            "stages/004_after_B1/cameras/inspection_right/rgb.png",
+            "stages/004_after_B1/semantics/cameras/inspection_close/crops/000_object_0008.png",
+            "stages/004_after_B1/semantics/cameras/inspection_top/crops/000_object_0008.png"
+          ],
+          "semantic_record_path": "stages/004_after_B1/semantics/object_0008/semantic_evidence.json",
+          "source_region": "B1",
+          "source_stage": 4,
+          "status": "SUPPORTED",
+          "supporting_view_count": 3,
+          "supporting_view_margin": 2,
+          "weighted_score_margin": 5.3711098974571945,
+          "winner_policy": "supporting_views_then_weighted_score",
+          "winning_label_margin": 2.0,
+          "winning_label_margin_kind": "supporting_view_count"
+        },
+        "reason": "SUPPORTED_EXCLUDED_LABEL",
+        "semantic_rank": null,
+        "status": "FALSE"
+      },
+      "semantic_gate_status": "FALSE",
+      "status": "FALSE",
+      "target_assignment_mode": "joint-target-specific",
+      "unary_geometry": {
+        "checks": [
+          {
+            "evidence": {
+              "absolute_length_used_for_decision": false,
+              "definition": "largest robust extent dominates middle robust extent",
+              "dominant_axis_ratio": 1.0551268493034158,
+              "minimum_dominant_axis_ratio": 2.4,
+              "total_length_m": 0.12986145904795582
+            },
+            "kind": "predicate",
+            "method": "scale_independent_principal_axis_dominance_v2",
+            "name": "ELONGATED_OBJECT",
+            "reason": null,
+            "required_status": "TRUE",
+            "status": "FALSE"
+          }
+        ],
+        "status": "FALSE"
+      }
+    }
+  },
+  "functional_usage_evaluations": {
+    "coffee_stirring": {
+      "assignments": [],
+      "counts": {
+        "distinct_assigned_physical_objects": 1,
+        "functionally_assignable_utensils": 2,
+        "geometrically_eligible_utensils": 2,
+        "grounding_eligible_utensils": 2,
+        "raw_observed_utensils": 1,
+        "required_distinct_physical_objects": 1,
+        "required_target_slots": 2,
+        "satisfied_target_slots": 2,
+        "semantically_eligible_utensils": 2
+      },
+      "evaluated_usage_policy_mode": "function-aware",
+      "function": "stir coffee",
+      "stage": 4,
+      "status": "COMPLETE"
+    }
+  },
+  "geometric_predicates": {
+    "ELONGATED_OBJECT": {
+      "cloud_purpose": "MEASUREMENT_EVIDENCE",
+      "contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "evidence": {
+        "absolute_length_used_for_decision": false,
+        "definition": "largest robust extent dominates middle robust extent",
+        "dominant_axis_ratio": 1.0551268493034158,
+        "minimum_dominant_axis_ratio": 2.4,
+        "total_length_m": 0.12986145904795582
+      },
+      "extractor_version": "geometry_properties_v3",
+      "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+      "method": "scale_independent_principal_axis_dominance_v2",
+      "point_count": 4932,
+      "source_region": "B1",
+      "source_stage": 4,
+      "status": "FALSE",
+      "value": false
+    },
+    "OPEN_CAVITY": {
+      "cloud_purpose": "MEASUREMENT_EVIDENCE",
+      "contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "evidence": {
+        "angular_bin_count": 12,
+        "central_top_occupancy_fraction": 0.0,
+        "central_top_point_count": 0,
+        "contributing_camera_count": 5,
+        "definition": "enclosed_rim AND open_centre AND observed_interior_below_rim",
+        "estimated_cavity_depth_m": 0.04752682447433476,
+        "estimated_opening_length_m": 0.1432656729877517,
+        "estimated_opening_width_m": 0.14123111784285802,
+        "interior_camera_count": 5,
+        "interior_camera_ids": [
+          "inspection_left",
+          "inspection_right",
+          "inspection_top",
+          "inspection_front",
+          "inspection_close"
+        ],
+        "interior_point_count": 573,
+        "minimum_resolvable_depth_m": 0.006,
+        "minimum_resolvable_opening_m": 0.009,
+        "minimum_resolvable_vertical_extent_m": 0.006,
+        "occupied_angular_bins": 12,
+        "outlier_fraction": 0.0,
+        "planarity_score": 0.7468264730658332,
+        "point_count": 4932,
+        "rim_enclosure_ratio": 1.0,
+        "rim_normal_alignment": 0.9999490120995463,
+        "rim_normal_world": [
+          -7.664987154934787e-05,
+          0.010097887201715635,
+          0.9999490120995463
+        ],
+        "rim_point_count": 691,
+        "rim_shell_fraction": 1.0,
+        "structural_components": {
+          "ENCLOSED_RIM": "TRUE",
+          "INTERIOR_BELOW_RIM": "TRUE",
+          "OPEN_CENTRE": "TRUE"
+        },
+        "top_candidate_point_count": 691,
+        "top_height_spread_m": 0.004619866609573364,
+        "vertical_extent_m": 0.07426501870155333
+      },
+      "extractor_version": "open_cavity_structure_v3",
+      "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+      "method": "open_cavity_structure_v3",
+      "point_count": 4932,
+      "source_region": "B1",
+      "source_stage": 4,
+      "status": "TRUE",
+      "value": true
+    },
+    "PLANAR_SUPPORT": {
+      "cloud_purpose": "MEASUREMENT_EVIDENCE",
+      "contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "evidence": {
+        "planarity_score": 0.7468264730658332,
+        "support_area_m2": 0.015982911018895356,
+        "support_length_m": 0.12986145904795582,
+        "support_thickness_m": 0.07405357713849234,
+        "support_width_m": 0.12307663209754263,
+        "upward_alignment": 0.9840348479570556
+      },
+      "extractor_version": "geometry_properties_v3",
+      "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+      "method": "robust_pca_support_plane",
+      "point_count": 4932,
+      "source_region": "B1",
+      "source_stage": 4,
+      "status": "FALSE",
+      "value": false
+    }
+  },
+  "geometric_properties": {
+    "cavity_depth_m": {
+      "cloud_purpose": "MEASUREMENT_EVIDENCE",
+      "contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "extractor_version": "open_cavity_structure_v3",
+      "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+      "method": "open_cavity_structure_v3",
+      "point_count": 4932,
+      "source_region": "B1",
+      "source_stage": 4,
+      "status": "MEASURED",
+      "unit": "m",
+      "value": 0.04752682447433476
+    },
+    "dominant_plane_normal_world": {
+      "cloud_purpose": "MEASUREMENT_EVIDENCE",
+      "contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "extractor_version": "geometry_properties_v3",
+      "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+      "method": "robust_pca_obb",
+      "point_count": 4932,
+      "source_region": "B1",
+      "source_stage": 4,
+      "status": "DERIVED",
+      "unit": "unit_vector",
+      "value": [
+        0.03411552800496808,
+        -0.17467555282602304,
+        0.9840348479570556
+      ]
+    },
+    "elongation_ratio": {
+      "cloud_purpose": "MEASUREMENT_EVIDENCE",
+      "contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "extractor_version": "geometry_properties_v3",
+      "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+      "method": "robust_pca_obb",
+      "point_count": 4932,
+      "source_region": "B1",
+      "source_stage": 4,
+      "status": "DERIVED",
+      "unit": "ratio",
+      "value": 1.0551268493034158
+    },
+    "flatness_ratio": {
+      "cloud_purpose": "MEASUREMENT_EVIDENCE",
+      "contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "extractor_version": "geometry_properties_v3",
+      "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+      "method": "robust_pca_obb",
+      "point_count": 4932,
+      "source_region": "B1",
+      "source_stage": 4,
+      "status": "DERIVED",
+      "unit": "ratio",
+      "value": 1.6619944215168585
+    },
+    "maximum_cross_section_m": {
+      "cloud_purpose": "MEASUREMENT_EVIDENCE",
+      "contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "extractor_version": "geometry_properties_v3",
+      "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+      "method": "robust_pca_obb",
+      "point_count": 4932,
+      "source_region": "B1",
+      "source_stage": 4,
+      "status": "DERIVED",
+      "unit": "m",
+      "value": 0.12307663209754263
+    },
+    "opening_length_m": {
+      "cloud_purpose": "MEASUREMENT_EVIDENCE",
+      "contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "extractor_version": "open_cavity_structure_v3",
+      "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+      "method": "open_cavity_structure_v3",
+      "point_count": 4932,
+      "source_region": "B1",
+      "source_stage": 4,
+      "status": "MEASURED",
+      "unit": "m",
+      "value": 0.1432656729877517
+    },
+    "opening_width_m": {
+      "cloud_purpose": "MEASUREMENT_EVIDENCE",
+      "contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "extractor_version": "open_cavity_structure_v3",
+      "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+      "method": "open_cavity_structure_v3",
+      "point_count": 4932,
+      "source_region": "B1",
+      "source_stage": 4,
+      "status": "MEASURED",
+      "unit": "m",
+      "value": 0.14123111784285802
+    },
+    "planarity_score": {
+      "cloud_purpose": "MEASUREMENT_EVIDENCE",
+      "contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "extractor_version": "geometry_properties_v3",
+      "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+      "method": "robust_pca_obb",
+      "point_count": 4932,
+      "source_region": "B1",
+      "source_stage": 4,
+      "status": "DERIVED",
+      "unit": "ratio",
+      "value": 0.7468264730658332
+    },
+    "support_area_m2": {
+      "cloud_purpose": "MEASUREMENT_EVIDENCE",
+      "contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "extractor_version": "geometry_properties_v3",
+      "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+      "method": "robust_pca_obb",
+      "point_count": 4932,
+      "source_region": "B1",
+      "source_stage": 4,
+      "status": "DERIVED",
+      "unit": "m2",
+      "value": 0.015982911018895356
+    },
+    "support_length_m": {
+      "cloud_purpose": "MEASUREMENT_EVIDENCE",
+      "contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "extractor_version": "geometry_properties_v3",
+      "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+      "method": "robust_pca_obb",
+      "point_count": 4932,
+      "source_region": "B1",
+      "source_stage": 4,
+      "status": "DERIVED",
+      "unit": "m",
+      "value": 0.12986145904795582
+    },
+    "support_thickness_m": {
+      "cloud_purpose": "MEASUREMENT_EVIDENCE",
+      "contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "extractor_version": "geometry_properties_v3",
+      "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+      "method": "robust_pca_obb",
+      "point_count": 4932,
+      "source_region": "B1",
+      "source_stage": 4,
+      "status": "DERIVED",
+      "unit": "m",
+      "value": 0.07405357713849234
+    },
+    "support_width_m": {
+      "cloud_purpose": "MEASUREMENT_EVIDENCE",
+      "contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "extractor_version": "geometry_properties_v3",
+      "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+      "method": "robust_pca_obb",
+      "point_count": 4932,
+      "source_region": "B1",
+      "source_stage": 4,
+      "status": "DERIVED",
+      "unit": "m",
+      "value": 0.12307663209754263
+    },
+    "total_length_m": {
+      "cloud_purpose": "MEASUREMENT_EVIDENCE",
+      "contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "extractor_version": "geometry_properties_v3",
+      "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+      "method": "robust_pca_obb",
+      "point_count": 4932,
+      "source_region": "B1",
+      "source_stage": 4,
+      "status": "DERIVED",
+      "unit": "m",
+      "value": 0.12986145904795582
+    },
+    "usable_length_m": {
+      "cloud_purpose": "MEASUREMENT_EVIDENCE",
+      "contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "extractor_version": "geometry_properties_v3",
+      "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+      "method": "robust_pca_obb",
+      "point_count": 4932,
+      "source_region": "B1",
+      "source_stage": 4,
+      "status": "DERIVED",
+      "unit": "m",
+      "value": 0.12986145904795582
+    }
+  },
+  "geometry": {
+    "centroid_world_m": {
+      "cloud_purpose": "MEASUREMENT_EVIDENCE",
+      "contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "extractor_version": "geometry_properties_v3",
+      "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+      "method": "finite_point_coordinate_median",
+      "point_count": 4932,
+      "source_region": "B1",
+      "source_stage": 4,
+      "status": "MEASURED",
+      "unit": "m",
+      "value": [
+        0.44487541913986206,
+        0.1915588676929474,
+        0.6205340623855591
+      ]
+    },
+    "dimensions_m": {
+      "height": {
+        "cloud_purpose": "MEASUREMENT_EVIDENCE",
+        "contributing_camera_ids": [
+          "inspection_left",
+          "inspection_right",
+          "inspection_top",
+          "inspection_front",
+          "inspection_close"
+        ],
+        "extractor_version": "geometry_properties_v3",
+        "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+        "method": "robust_pca_obb",
+        "point_count": 4932,
+        "source_region": "B1",
+        "source_stage": 4,
+        "status": "MEASURED",
+        "unit": "m",
+        "value": 0.07405357713849234
+      },
+      "length": {
+        "cloud_purpose": "MEASUREMENT_EVIDENCE",
+        "contributing_camera_ids": [
+          "inspection_left",
+          "inspection_right",
+          "inspection_top",
+          "inspection_front",
+          "inspection_close"
+        ],
+        "extractor_version": "geometry_properties_v3",
+        "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+        "method": "robust_pca_obb",
+        "point_count": 4932,
+        "source_region": "B1",
+        "source_stage": 4,
+        "status": "MEASURED",
+        "unit": "m",
+        "value": 0.12986145904795582
+      },
+      "width": {
+        "cloud_purpose": "MEASUREMENT_EVIDENCE",
+        "contributing_camera_ids": [
+          "inspection_left",
+          "inspection_right",
+          "inspection_top",
+          "inspection_front",
+          "inspection_close"
+        ],
+        "extractor_version": "geometry_properties_v3",
+        "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+        "method": "robust_pca_obb",
+        "point_count": 4932,
+        "source_region": "B1",
+        "source_stage": 4,
+        "status": "MEASURED",
+        "unit": "m",
+        "value": 0.12307663209754263
+      }
+    },
+    "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+    "measurement_quality": {
+      "cloud_purpose": "MEASUREMENT_EVIDENCE",
+      "contributing_camera_count": 5,
+      "contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "controller_source_region": "B1",
+      "expected_source_region": "B1",
+      "inside_fraction": 1.0,
+      "outlier_points_removed": 0,
+      "point_count": 4932,
+      "quality_is_valid": true,
+      "raw_current_point_count": 69023,
+      "raw_inside_point_count": 69023,
+      "reasons": [],
+      "status": "VALID",
+      "valid_rig_camera_count": 5
+    },
+    "predicates": {
+      "ELONGATED_OBJECT": {
+        "cloud_purpose": "MEASUREMENT_EVIDENCE",
+        "contributing_camera_ids": [
+          "inspection_left",
+          "inspection_right",
+          "inspection_top",
+          "inspection_front",
+          "inspection_close"
+        ],
+        "evidence": {
+          "absolute_length_used_for_decision": false,
+          "definition": "largest robust extent dominates middle robust extent",
+          "dominant_axis_ratio": 1.0551268493034158,
+          "minimum_dominant_axis_ratio": 2.4,
+          "total_length_m": 0.12986145904795582
+        },
+        "extractor_version": "geometry_properties_v3",
+        "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+        "method": "scale_independent_principal_axis_dominance_v2",
+        "point_count": 4932,
+        "source_region": "B1",
+        "source_stage": 4,
+        "status": "FALSE",
+        "value": false
+      },
+      "OPEN_CAVITY": {
+        "cloud_purpose": "MEASUREMENT_EVIDENCE",
+        "contributing_camera_ids": [
+          "inspection_left",
+          "inspection_right",
+          "inspection_top",
+          "inspection_front",
+          "inspection_close"
+        ],
+        "evidence": {
+          "angular_bin_count": 12,
+          "central_top_occupancy_fraction": 0.0,
+          "central_top_point_count": 0,
+          "contributing_camera_count": 5,
+          "definition": "enclosed_rim AND open_centre AND observed_interior_below_rim",
+          "estimated_cavity_depth_m": 0.04752682447433476,
+          "estimated_opening_length_m": 0.1432656729877517,
+          "estimated_opening_width_m": 0.14123111784285802,
+          "interior_camera_count": 5,
+          "interior_camera_ids": [
+            "inspection_left",
+            "inspection_right",
+            "inspection_top",
+            "inspection_front",
+            "inspection_close"
+          ],
+          "interior_point_count": 573,
+          "minimum_resolvable_depth_m": 0.006,
+          "minimum_resolvable_opening_m": 0.009,
+          "minimum_resolvable_vertical_extent_m": 0.006,
+          "occupied_angular_bins": 12,
+          "outlier_fraction": 0.0,
+          "planarity_score": 0.7468264730658332,
+          "point_count": 4932,
+          "rim_enclosure_ratio": 1.0,
+          "rim_normal_alignment": 0.9999490120995463,
+          "rim_normal_world": [
+            -7.664987154934787e-05,
+            0.010097887201715635,
+            0.9999490120995463
+          ],
+          "rim_point_count": 691,
+          "rim_shell_fraction": 1.0,
+          "structural_components": {
+            "ENCLOSED_RIM": "TRUE",
+            "INTERIOR_BELOW_RIM": "TRUE",
+            "OPEN_CENTRE": "TRUE"
+          },
+          "top_candidate_point_count": 691,
+          "top_height_spread_m": 0.004619866609573364,
+          "vertical_extent_m": 0.07426501870155333
+        },
+        "extractor_version": "open_cavity_structure_v3",
+        "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+        "method": "open_cavity_structure_v3",
+        "point_count": 4932,
+        "source_region": "B1",
+        "source_stage": 4,
+        "status": "TRUE",
+        "value": true
+      },
+      "PLANAR_SUPPORT": {
+        "cloud_purpose": "MEASUREMENT_EVIDENCE",
+        "contributing_camera_ids": [
+          "inspection_left",
+          "inspection_right",
+          "inspection_top",
+          "inspection_front",
+          "inspection_close"
+        ],
+        "evidence": {
+          "planarity_score": 0.7468264730658332,
+          "support_area_m2": 0.015982911018895356,
+          "support_length_m": 0.12986145904795582,
+          "support_thickness_m": 0.07405357713849234,
+          "support_width_m": 0.12307663209754263,
+          "upward_alignment": 0.9840348479570556
+        },
+        "extractor_version": "geometry_properties_v3",
+        "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+        "method": "robust_pca_support_plane",
+        "point_count": 4932,
+        "source_region": "B1",
+        "source_stage": 4,
+        "status": "FALSE",
+        "value": false
+      }
+    },
+    "principal_axis_world": {
+      "cloud_purpose": "MEASUREMENT_EVIDENCE",
+      "contributing_camera_ids": [
+        "inspection_left",
+        "inspection_right",
+        "inspection_top",
+        "inspection_front",
+        "inspection_close"
+      ],
+      "extractor_version": "geometry_properties_v3",
+      "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+      "method": "robust_pca_obb",
+      "point_count": 4932,
+      "source_region": "B1",
+      "source_stage": 4,
+      "status": "MEASURED",
+      "unit": "unit_vector",
+      "value": [
+        0.9592963842717334,
+        0.2819021051931196,
+        0.01678243757223285
+      ]
+    },
+    "properties": {
+      "cavity_depth_m": {
+        "cloud_purpose": "MEASUREMENT_EVIDENCE",
+        "contributing_camera_ids": [
+          "inspection_left",
+          "inspection_right",
+          "inspection_top",
+          "inspection_front",
+          "inspection_close"
+        ],
+        "extractor_version": "open_cavity_structure_v3",
+        "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+        "method": "open_cavity_structure_v3",
+        "point_count": 4932,
+        "source_region": "B1",
+        "source_stage": 4,
+        "status": "MEASURED",
+        "unit": "m",
+        "value": 0.04752682447433476
+      },
+      "dominant_plane_normal_world": {
+        "cloud_purpose": "MEASUREMENT_EVIDENCE",
+        "contributing_camera_ids": [
+          "inspection_left",
+          "inspection_right",
+          "inspection_top",
+          "inspection_front",
+          "inspection_close"
+        ],
+        "extractor_version": "geometry_properties_v3",
+        "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+        "method": "robust_pca_obb",
+        "point_count": 4932,
+        "source_region": "B1",
+        "source_stage": 4,
+        "status": "DERIVED",
+        "unit": "unit_vector",
+        "value": [
+          0.03411552800496808,
+          -0.17467555282602304,
+          0.9840348479570556
+        ]
+      },
+      "elongation_ratio": {
+        "cloud_purpose": "MEASUREMENT_EVIDENCE",
+        "contributing_camera_ids": [
+          "inspection_left",
+          "inspection_right",
+          "inspection_top",
+          "inspection_front",
+          "inspection_close"
+        ],
+        "extractor_version": "geometry_properties_v3",
+        "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+        "method": "robust_pca_obb",
+        "point_count": 4932,
+        "source_region": "B1",
+        "source_stage": 4,
+        "status": "DERIVED",
+        "unit": "ratio",
+        "value": 1.0551268493034158
+      },
+      "flatness_ratio": {
+        "cloud_purpose": "MEASUREMENT_EVIDENCE",
+        "contributing_camera_ids": [
+          "inspection_left",
+          "inspection_right",
+          "inspection_top",
+          "inspection_front",
+          "inspection_close"
+        ],
+        "extractor_version": "geometry_properties_v3",
+        "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+        "method": "robust_pca_obb",
+        "point_count": 4932,
+        "source_region": "B1",
+        "source_stage": 4,
+        "status": "DERIVED",
+        "unit": "ratio",
+        "value": 1.6619944215168585
+      },
+      "maximum_cross_section_m": {
+        "cloud_purpose": "MEASUREMENT_EVIDENCE",
+        "contributing_camera_ids": [
+          "inspection_left",
+          "inspection_right",
+          "inspection_top",
+          "inspection_front",
+          "inspection_close"
+        ],
+        "extractor_version": "geometry_properties_v3",
+        "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+        "method": "robust_pca_obb",
+        "point_count": 4932,
+        "source_region": "B1",
+        "source_stage": 4,
+        "status": "DERIVED",
+        "unit": "m",
+        "value": 0.12307663209754263
+      },
+      "opening_length_m": {
+        "cloud_purpose": "MEASUREMENT_EVIDENCE",
+        "contributing_camera_ids": [
+          "inspection_left",
+          "inspection_right",
+          "inspection_top",
+          "inspection_front",
+          "inspection_close"
+        ],
+        "extractor_version": "open_cavity_structure_v3",
+        "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+        "method": "open_cavity_structure_v3",
+        "point_count": 4932,
+        "source_region": "B1",
+        "source_stage": 4,
+        "status": "MEASURED",
+        "unit": "m",
+        "value": 0.1432656729877517
+      },
+      "opening_width_m": {
+        "cloud_purpose": "MEASUREMENT_EVIDENCE",
+        "contributing_camera_ids": [
+          "inspection_left",
+          "inspection_right",
+          "inspection_top",
+          "inspection_front",
+          "inspection_close"
+        ],
+        "extractor_version": "open_cavity_structure_v3",
+        "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+        "method": "open_cavity_structure_v3",
+        "point_count": 4932,
+        "source_region": "B1",
+        "source_stage": 4,
+        "status": "MEASURED",
+        "unit": "m",
+        "value": 0.14123111784285802
+      },
+      "planarity_score": {
+        "cloud_purpose": "MEASUREMENT_EVIDENCE",
+        "contributing_camera_ids": [
+          "inspection_left",
+          "inspection_right",
+          "inspection_top",
+          "inspection_front",
+          "inspection_close"
+        ],
+        "extractor_version": "geometry_properties_v3",
+        "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+        "method": "robust_pca_obb",
+        "point_count": 4932,
+        "source_region": "B1",
+        "source_stage": 4,
+        "status": "DERIVED",
+        "unit": "ratio",
+        "value": 0.7468264730658332
+      },
+      "support_area_m2": {
+        "cloud_purpose": "MEASUREMENT_EVIDENCE",
+        "contributing_camera_ids": [
+          "inspection_left",
+          "inspection_right",
+          "inspection_top",
+          "inspection_front",
+          "inspection_close"
+        ],
+        "extractor_version": "geometry_properties_v3",
+        "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+        "method": "robust_pca_obb",
+        "point_count": 4932,
+        "source_region": "B1",
+        "source_stage": 4,
+        "status": "DERIVED",
+        "unit": "m2",
+        "value": 0.015982911018895356
+      },
+      "support_length_m": {
+        "cloud_purpose": "MEASUREMENT_EVIDENCE",
+        "contributing_camera_ids": [
+          "inspection_left",
+          "inspection_right",
+          "inspection_top",
+          "inspection_front",
+          "inspection_close"
+        ],
+        "extractor_version": "geometry_properties_v3",
+        "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+        "method": "robust_pca_obb",
+        "point_count": 4932,
+        "source_region": "B1",
+        "source_stage": 4,
+        "status": "DERIVED",
+        "unit": "m",
+        "value": 0.12986145904795582
+      },
+      "support_thickness_m": {
+        "cloud_purpose": "MEASUREMENT_EVIDENCE",
+        "contributing_camera_ids": [
+          "inspection_left",
+          "inspection_right",
+          "inspection_top",
+          "inspection_front",
+          "inspection_close"
+        ],
+        "extractor_version": "geometry_properties_v3",
+        "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+        "method": "robust_pca_obb",
+        "point_count": 4932,
+        "source_region": "B1",
+        "source_stage": 4,
+        "status": "DERIVED",
+        "unit": "m",
+        "value": 0.07405357713849234
+      },
+      "support_width_m": {
+        "cloud_purpose": "MEASUREMENT_EVIDENCE",
+        "contributing_camera_ids": [
+          "inspection_left",
+          "inspection_right",
+          "inspection_top",
+          "inspection_front",
+          "inspection_close"
+        ],
+        "extractor_version": "geometry_properties_v3",
+        "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+        "method": "robust_pca_obb",
+        "point_count": 4932,
+        "source_region": "B1",
+        "source_stage": 4,
+        "status": "DERIVED",
+        "unit": "m",
+        "value": 0.12307663209754263
+      },
+      "total_length_m": {
+        "cloud_purpose": "MEASUREMENT_EVIDENCE",
+        "contributing_camera_ids": [
+          "inspection_left",
+          "inspection_right",
+          "inspection_top",
+          "inspection_front",
+          "inspection_close"
+        ],
+        "extractor_version": "geometry_properties_v3",
+        "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+        "method": "robust_pca_obb",
+        "point_count": 4932,
+        "source_region": "B1",
+        "source_stage": 4,
+        "status": "DERIVED",
+        "unit": "m",
+        "value": 0.12986145904795582
+      },
+      "usable_length_m": {
+        "cloud_purpose": "MEASUREMENT_EVIDENCE",
+        "contributing_camera_ids": [
+          "inspection_left",
+          "inspection_right",
+          "inspection_top",
+          "inspection_front",
+          "inspection_close"
+        ],
+        "extractor_version": "geometry_properties_v3",
+        "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+        "method": "robust_pca_obb",
+        "point_count": 4932,
+        "source_region": "B1",
+        "source_stage": 4,
+        "status": "DERIVED",
+        "unit": "m",
+        "value": 0.12986145904795582
+      }
+    }
+  },
+  "inference_basis": "JOINT",
+  "instance_token": "70a8ee2ae575f617b63af80b",
+  "last_evidence_source_region": "B1",
+  "last_evidence_stage": 4,
+  "last_property_source_region": "B1",
+  "last_property_update_stage": 4,
+  "last_seen_stage": 4,
+  "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+  "measurement_quality": {
+    "cloud_purpose": "MEASUREMENT_EVIDENCE",
+    "contributing_camera_count": 5,
+    "contributing_camera_ids": [
+      "inspection_left",
+      "inspection_right",
+      "inspection_top",
+      "inspection_front",
+      "inspection_close"
+    ],
+    "controller_source_region": "B1",
+    "expected_source_region": "B1",
+    "inside_fraction": 1.0,
+    "outlier_points_removed": 0,
+    "point_count": 4932,
+    "quality_is_valid": true,
+    "raw_current_point_count": 69023,
+    "raw_inside_point_count": 69023,
+    "reasons": [],
+    "status": "VALID",
+    "valid_rig_camera_count": 5
+  },
+  "object_id": "object_0008",
+  "observation_count": 1,
+  "point_count": {
+    "cloud_purpose": "MEASUREMENT_EVIDENCE",
+    "contributing_camera_ids": [
+      "inspection_left",
+      "inspection_right",
+      "inspection_top",
+      "inspection_front",
+      "inspection_close"
+    ],
+    "extractor_version": "geometry_properties_v3",
+    "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+    "method": "finite_stage_local_measurement_cloud",
+    "point_count": 4932,
+    "source_region": "B1",
+    "source_stage": 4,
+    "status": "DERIVED",
+    "unit": "points",
+    "value": 4932
+  },
+  "principal_axis_world": {
+    "cloud_purpose": "MEASUREMENT_EVIDENCE",
+    "contributing_camera_ids": [
+      "inspection_left",
+      "inspection_right",
+      "inspection_top",
+      "inspection_front",
+      "inspection_close"
+    ],
+    "extractor_version": "geometry_properties_v3",
+    "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+    "method": "robust_pca_obb",
+    "point_count": 4932,
+    "source_region": "B1",
+    "source_stage": 4,
+    "status": "MEASURED",
+    "unit": "unit_vector",
+    "value": [
+      0.9592963842717334,
+      0.2819021051931196,
+      0.01678243757223285
+    ]
+  },
+  "property_status": "MEASURED",
+  "semantics": {
+    "last_validated_source_region": "B1",
+    "last_validated_stage": 4,
+    "latest_observation": {
+      "alternatives": [
+        {
+          "camera_ids": [
+            "inspection_front",
+            "inspection_left",
+            "inspection_right"
+          ],
+          "label": "bowl",
+          "mean_confidence": 0.5310827692349752,
+          "score": 5.9802979990963,
+          "supporting_view_count": 3
+        },
+        {
+          "camera_ids": [
+            "inspection_close"
+          ],
+          "label": "cup",
+          "mean_confidence": 0.1379012167453766,
+          "score": 0.6091881016391059,
+          "supporting_view_count": 1
+        },
+        {
+          "camera_ids": [
+            "inspection_top"
+          ],
+          "label": "coffee_cup",
+          "mean_confidence": 0.08303909003734589,
+          "score": 0.33775969938263467,
+          "supporting_view_count": 1
+        }
+      ],
+      "ambiguity_hypotheses": [
+        "bowl"
+      ],
+      "association_method": "mask_box_overlap_v1",
+      "canonical_label": "bowl",
+      "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+      "contributing_camera_ids": [
+        "inspection_front",
+        "inspection_left",
+        "inspection_right"
+      ],
+      "detector_name": "ultralytics_yolo_world",
+      "detector_version": "8.4.112",
+      "mean_confidence": 0.5310827692349752,
+      "observation_source": "RGB_DETECTOR",
+      "plausible_labels": [
+        "bowl"
+      ],
+      "quality": {
+        "mean_confidence": 0.5310827692349752,
+        "supporting_view_count": 3,
+        "supporting_view_margin": 2,
+        "validated": true,
+        "weighted_score_margin": 5.3711098974571945,
+        "winner_policy": "supporting_views_then_weighted_score",
+        "winning_label_margin": 2.0,
+        "winning_label_margin_kind": "supporting_view_count"
+      },
+      "reason_codes": [],
+      "semantic_evidence_paths": [
+        "stages/004_after_B1/cameras/inspection_front/rgb.png",
+        "stages/004_after_B1/cameras/inspection_left/rgb.png",
+        "stages/004_after_B1/cameras/inspection_right/rgb.png",
+        "stages/004_after_B1/semantics/cameras/inspection_close/crops/000_object_0008.png",
+        "stages/004_after_B1/semantics/cameras/inspection_top/crops/000_object_0008.png"
+      ],
+      "semantic_record_path": "stages/004_after_B1/semantics/object_0008/semantic_evidence.json",
+      "source_region": "B1",
+      "source_stage": 4,
+      "status": "SUPPORTED",
+      "supporting_view_count": 3,
+      "supporting_view_margin": 2,
+      "weighted_score_margin": 5.3711098974571945,
+      "winner_policy": "supporting_views_then_weighted_score",
+      "winning_label_margin": 2.0,
+      "winning_label_margin_kind": "supporting_view_count"
+    },
+    "observations": [
+      {
+        "alternatives": [
+          {
+            "camera_ids": [
+              "inspection_front",
+              "inspection_left",
+              "inspection_right"
+            ],
+            "label": "bowl",
+            "mean_confidence": 0.5310827692349752,
+            "score": 5.9802979990963,
+            "supporting_view_count": 3
+          },
+          {
+            "camera_ids": [
+              "inspection_close"
+            ],
+            "label": "cup",
+            "mean_confidence": 0.1379012167453766,
+            "score": 0.6091881016391059,
+            "supporting_view_count": 1
+          },
+          {
+            "camera_ids": [
+              "inspection_top"
+            ],
+            "label": "coffee_cup",
+            "mean_confidence": 0.08303909003734589,
+            "score": 0.33775969938263467,
+            "supporting_view_count": 1
+          }
+        ],
+        "ambiguity_hypotheses": [
+          "bowl"
+        ],
+        "association_method": "mask_box_overlap_v1",
+        "canonical_label": "bowl",
+        "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+        "contributing_camera_ids": [
+          "inspection_front",
+          "inspection_left",
+          "inspection_right"
+        ],
+        "detector_name": "ultralytics_yolo_world",
+        "detector_version": "8.4.112",
+        "mean_confidence": 0.5310827692349752,
+        "observation_source": "RGB_DETECTOR",
+        "plausible_labels": [
+          "bowl"
+        ],
+        "quality": {
+          "mean_confidence": 0.5310827692349752,
+          "supporting_view_count": 3,
+          "supporting_view_margin": 2,
+          "validated": true,
+          "weighted_score_margin": 5.3711098974571945,
+          "winner_policy": "supporting_views_then_weighted_score",
+          "winning_label_margin": 2.0,
+          "winning_label_margin_kind": "supporting_view_count"
+        },
+        "reason_codes": [],
+        "semantic_evidence_paths": [
+          "stages/004_after_B1/cameras/inspection_front/rgb.png",
+          "stages/004_after_B1/cameras/inspection_left/rgb.png",
+          "stages/004_after_B1/cameras/inspection_right/rgb.png",
+          "stages/004_after_B1/semantics/cameras/inspection_close/crops/000_object_0008.png",
+          "stages/004_after_B1/semantics/cameras/inspection_top/crops/000_object_0008.png"
+        ],
+        "semantic_record_path": "stages/004_after_B1/semantics/object_0008/semantic_evidence.json",
+        "source_region": "B1",
+        "source_stage": 4,
+        "status": "SUPPORTED",
+        "supporting_view_count": 3,
+        "supporting_view_margin": 2,
+        "weighted_score_margin": 5.3711098974571945,
+        "winner_policy": "supporting_views_then_weighted_score",
+        "winning_label_margin": 2.0,
+        "winning_label_margin_kind": "supporting_view_count"
+      }
+    ],
+    "validated": {
+      "alternatives": [
+        {
+          "camera_ids": [
+            "inspection_front",
+            "inspection_left",
+            "inspection_right"
+          ],
+          "label": "bowl",
+          "mean_confidence": 0.5310827692349752,
+          "score": 5.9802979990963,
+          "supporting_view_count": 3
+        },
+        {
+          "camera_ids": [
+            "inspection_close"
+          ],
+          "label": "cup",
+          "mean_confidence": 0.1379012167453766,
+          "score": 0.6091881016391059,
+          "supporting_view_count": 1
+        },
+        {
+          "camera_ids": [
+            "inspection_top"
+          ],
+          "label": "coffee_cup",
+          "mean_confidence": 0.08303909003734589,
+          "score": 0.33775969938263467,
+          "supporting_view_count": 1
+        }
+      ],
+      "ambiguity_hypotheses": [
+        "bowl"
+      ],
+      "association_method": "mask_box_overlap_v1",
+      "canonical_label": "bowl",
+      "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+      "contributing_camera_ids": [
+        "inspection_front",
+        "inspection_left",
+        "inspection_right"
+      ],
+      "detector_name": "ultralytics_yolo_world",
+      "detector_version": "8.4.112",
+      "mean_confidence": 0.5310827692349752,
+      "observation_source": "RGB_DETECTOR",
+      "plausible_labels": [
+        "bowl"
+      ],
+      "quality": {
+        "mean_confidence": 0.5310827692349752,
+        "supporting_view_count": 3,
+        "supporting_view_margin": 2,
+        "validated": true,
+        "weighted_score_margin": 5.3711098974571945,
+        "winner_policy": "supporting_views_then_weighted_score",
+        "winning_label_margin": 2.0,
+        "winning_label_margin_kind": "supporting_view_count"
+      },
+      "reason_codes": [],
+      "semantic_evidence_paths": [
+        "stages/004_after_B1/cameras/inspection_front/rgb.png",
+        "stages/004_after_B1/cameras/inspection_left/rgb.png",
+        "stages/004_after_B1/cameras/inspection_right/rgb.png",
+        "stages/004_after_B1/semantics/cameras/inspection_close/crops/000_object_0008.png",
+        "stages/004_after_B1/semantics/cameras/inspection_top/crops/000_object_0008.png"
+      ],
+      "semantic_record_path": "stages/004_after_B1/semantics/object_0008/semantic_evidence.json",
+      "source_region": "B1",
+      "source_stage": 4,
+      "status": "SUPPORTED",
+      "supporting_view_count": 3,
+      "supporting_view_margin": 2,
+      "weighted_score_margin": 5.3711098974571945,
+      "winner_policy": "supporting_views_then_weighted_score",
+      "winning_label_margin": 2.0,
+      "winning_label_margin_kind": "supporting_view_count"
+    }
+  },
+  "source_region": "B1",
+  "source_region_basis": "REGION_GATED_OBSERVATION",
+  "target_assignment_evaluations": {}
+}

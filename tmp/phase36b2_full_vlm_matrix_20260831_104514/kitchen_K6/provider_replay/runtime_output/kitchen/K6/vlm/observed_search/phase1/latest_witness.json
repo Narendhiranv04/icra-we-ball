@@ -1,0 +1,74 @@
+{
+  "inference_basis": "CANONICAL_GRAPH_GROUNDING_PLUS_OBSERVED_RELATION_EVIDENCE",
+  "operation_assignments": [
+    {
+      "assignment_status": "TRUE",
+      "context": {},
+      "function_group_id": "coffee_stirring",
+      "pair_geometry_status": "TRUE",
+      "relation_checks": [
+        {
+          "evidence": {
+            "clearance_margin_m": 0.005,
+            "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+            "inference_basis": "GEOMETRY_ONLY",
+            "maximum_cross_section_m": 0.05695912770985368,
+            "method": "cross_section_clearance_vs_opening_v1",
+            "opening_width_m": 0.13839864355946258,
+            "pass_margin_m": 0.0764395158496089,
+            "reason": null,
+            "source_measurement_cloud_path": "stages/001_after_D1/evidence/object_0005/fused.ply",
+            "status": "TRUE",
+            "target_measurement_cloud_path": "stages/000_initial/evidence/object_0002/fused.ply"
+          },
+          "relation": "INSERTABLE_IN",
+          "status": "TRUE"
+        }
+      ],
+      "target_object_id": "object_0002",
+      "utensil_object_id": "object_0005"
+    },
+    {
+      "assignment_status": "TRUE",
+      "context": {},
+      "function_group_id": "coffee_stirring",
+      "pair_geometry_status": "TRUE",
+      "relation_checks": [
+        {
+          "evidence": {
+            "clearance_margin_m": 0.005,
+            "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+            "inference_basis": "GEOMETRY_ONLY",
+            "maximum_cross_section_m": 0.05695912770985368,
+            "method": "cross_section_clearance_vs_opening_v1",
+            "opening_width_m": 0.14123111784285802,
+            "pass_margin_m": 0.07927199013300434,
+            "reason": null,
+            "source_measurement_cloud_path": "stages/001_after_D1/evidence/object_0005/fused.ply",
+            "status": "TRUE",
+            "target_measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply"
+          },
+          "relation": "INSERTABLE_IN",
+          "status": "TRUE"
+        }
+      ],
+      "target_object_id": "object_0008",
+      "utensil_object_id": "object_0005"
+    }
+  ],
+  "selected_witness": {
+    "coffee_container": [
+      "object_0002",
+      "object_0008"
+    ],
+    "coffee_stirrer": [
+      "object_0005",
+      "object_0006"
+    ],
+    "soup_eating_utensil": [
+      "object_0007",
+      "object_0008"
+    ]
+  },
+  "status": "COMPLETE"
+}

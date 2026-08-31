@@ -1,0 +1,66 @@
+{
+  "alternatives": [
+    {
+      "camera_ids": [
+        "inspection_front",
+        "inspection_left"
+      ],
+      "label": "container_for_liquid",
+      "mean_confidence": 0.047266704961657524,
+      "score": 0.34091614910681595,
+      "supporting_view_count": 2
+    },
+    {
+      "camera_ids": [
+        "inspection_right"
+      ],
+      "label": "kettle",
+      "mean_confidence": 0.3136829137802124,
+      "score": 0.9432749588789066,
+      "supporting_view_count": 1
+    }
+  ],
+  "ambiguity_hypotheses": [
+    "container_for_liquid"
+  ],
+  "association_method": "mask_box_overlap_v1",
+  "canonical_label": "container_for_liquid",
+  "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+  "contributing_camera_ids": [
+    "inspection_front",
+    "inspection_left"
+  ],
+  "detector_name": "ultralytics_yolo_world",
+  "detector_version": "8.4.112",
+  "mean_confidence": 0.047266704961657524,
+  "observation_source": "RGB_DETECTOR",
+  "plausible_labels": [
+    "container_for_liquid"
+  ],
+  "quality": {
+    "mean_confidence": 0.047266704961657524,
+    "supporting_view_count": 2,
+    "supporting_view_margin": 1,
+    "validated": true,
+    "weighted_score_margin": -0.6023588097720907,
+    "winner_policy": "supporting_views_then_weighted_score",
+    "winning_label_margin": 1.0,
+    "winning_label_margin_kind": "supporting_view_count"
+  },
+  "reason_codes": [],
+  "semantic_evidence_paths": [
+    "stages/000_initial/cameras/inspection_left/rgb.png",
+    "stages/000_initial/cameras/inspection_right/rgb.png",
+    "stages/000_initial/semantics/cameras/inspection_front/crops/000_object_0001.png"
+  ],
+  "semantic_record_path": "stages/000_initial/semantics/object_0001/semantic_evidence.json",
+  "source_region": "INITIAL",
+  "source_stage": 0,
+  "status": "SUPPORTED",
+  "supporting_view_count": 2,
+  "supporting_view_margin": 1,
+  "weighted_score_margin": -0.6023588097720907,
+  "winner_policy": "supporting_views_then_weighted_score",
+  "winning_label_margin": 1.0,
+  "winning_label_margin_kind": "supporting_view_count"
+}

@@ -1,0 +1,72 @@
+{
+  "alternatives": [
+    {
+      "camera_ids": [
+        "inspection_front",
+        "inspection_left",
+        "inspection_right",
+        "inspection_top"
+      ],
+      "label": "bowl_with_handle",
+      "mean_confidence": 0.6751404628157616,
+      "score": 10.216121400707287,
+      "supporting_view_count": 4
+    },
+    {
+      "camera_ids": [
+        "inspection_close"
+      ],
+      "label": "cup",
+      "mean_confidence": 0.1162557527422905,
+      "score": 0.5135677769143081,
+      "supporting_view_count": 1
+    }
+  ],
+  "ambiguity_hypotheses": [
+    "bowl_with_handle"
+  ],
+  "association_method": "mask_box_overlap_v1",
+  "canonical_label": "bowl_with_handle",
+  "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+  "contributing_camera_ids": [
+    "inspection_front",
+    "inspection_left",
+    "inspection_right",
+    "inspection_top"
+  ],
+  "detector_name": "ultralytics_yolo_world",
+  "detector_version": "8.4.112",
+  "mean_confidence": 0.6751404628157616,
+  "observation_source": "RGB_DETECTOR",
+  "plausible_labels": [
+    "bowl_with_handle"
+  ],
+  "quality": {
+    "mean_confidence": 0.6751404628157616,
+    "supporting_view_count": 4,
+    "supporting_view_margin": 3,
+    "validated": true,
+    "weighted_score_margin": 9.70255362379298,
+    "winner_policy": "supporting_views_then_weighted_score",
+    "winning_label_margin": 3.0,
+    "winning_label_margin_kind": "supporting_view_count"
+  },
+  "reason_codes": [],
+  "semantic_evidence_paths": [
+    "stages/004_after_B1/cameras/inspection_front/rgb.png",
+    "stages/004_after_B1/cameras/inspection_left/rgb.png",
+    "stages/004_after_B1/cameras/inspection_right/rgb.png",
+    "stages/004_after_B1/cameras/inspection_top/rgb.png",
+    "stages/004_after_B1/semantics/cameras/inspection_close/crops/000_object_0009.png"
+  ],
+  "semantic_record_path": "stages/004_after_B1/semantics/object_0009/semantic_evidence.json",
+  "source_region": "B1",
+  "source_stage": 4,
+  "status": "SUPPORTED",
+  "supporting_view_count": 4,
+  "supporting_view_margin": 3,
+  "weighted_score_margin": 9.70255362379298,
+  "winner_policy": "supporting_views_then_weighted_score",
+  "winning_label_margin": 3.0,
+  "winning_label_margin_kind": "supporting_view_count"
+}

@@ -1,0 +1,76 @@
+{
+  "created_at": "2026-08-31T16:23:03.614274+05:30",
+  "cumulative_cloud_purpose": "CUMULATIVE_VISUALIZATION_NOT_MEASUREMENT",
+  "geometry_config": "configs/geometry_inference.yaml",
+  "grounding_mode": "joint",
+  "inference_basis": "JOINT",
+  "inspection_rig_config": "configs/inspection_rigs.yaml",
+  "inspection_sequence": [
+    "D1",
+    "D2",
+    "C2",
+    "B1",
+    "C1"
+  ],
+  "mode": "sequential_inspection",
+  "opening_actuation_steps": 200,
+  "opening_adapter": "KitchenScene.open_container",
+  "pairing_strategy": "semantic_role_scoped",
+  "property_measurement_source": "STAGE_LOCAL_REGION_GATED_MEASUREMENT_EVIDENCE",
+  "record_oracle_diagnostics": false,
+  "regions": [
+    "countertop",
+    "C1",
+    "C2",
+    "D1",
+    "D2",
+    "B1"
+  ],
+  "requested_grounding_mode": "joint",
+  "resolution": [
+    1280,
+    960
+  ],
+  "run_id": "phase1",
+  "runtime_dependency_versions": {
+    "Pillow": "12.0.0",
+    "clip": "1.0",
+    "mujoco": "3.10.0",
+    "numpy": "2.4.0",
+    "python": "3.13.11",
+    "torch": "2.9.1",
+    "ultralytics": "8.4.112"
+  },
+  "save_semantic_overlays": false,
+  "scene_layout": {
+    "mode": "configured",
+    "seed": null
+  },
+  "scene_name": "S1_integrated_kitchen_object_function_feasibility_I0",
+  "schema_version": 3,
+  "semantic_backend": "yolo_world",
+  "semantic_confidence_threshold": 0.03,
+  "semantic_detector": {
+    "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+    "confidence_threshold": 0.03,
+    "device": "cpu",
+    "inference_size": 640,
+    "name": "ultralytics_yolo_world",
+    "process_isolation": false,
+    "version": "8.4.112"
+  },
+  "semantic_detector_enabled": true,
+  "semantic_device": "cpu",
+  "semantic_maximum_conflicting_view_fraction": 0.6,
+  "semantic_min_supporting_views": 2,
+  "semantic_minimum_mean_confidence": 0.03,
+  "semantic_model": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+  "semantic_winner_policy": "supporting_views_then_weighted_score",
+  "stop_on_complete": true,
+  "task_id": "s1_integrated_prepare_and_serve_coffee_and_soup",
+  "task_requirements": "inline",
+  "uses_mobile_base": false,
+  "uses_robot": false,
+  "uses_virtual_inspection_rig": true,
+  "voxel_size_m": 0.003
+}

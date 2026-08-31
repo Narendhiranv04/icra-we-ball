@@ -1,0 +1,33 @@
+{
+  "artifacts": {
+    "result": "result.json"
+  },
+  "domain": "living_room",
+  "execution_state": "planning_only",
+  "exploration_actuation": "not_applicable",
+  "failure_category": "MALFORMED_VLM_SPECIFICATION",
+  "failure_reason": "functional_relations[0] references undeclared role ('ROLE_PERSONAL_SUPPORT_1', 'ROLE_CUP_SAUCER_SET_1')",
+  "finished_at_utc": "2026-08-31T11:19:41.487025+00:00",
+  "git_commit": "33a340ba8b33ee93b1349bab9341ff6977262b15",
+  "git_dirty": true,
+  "internal_variant": "F3_LEFT_CUP_ON_SHARED",
+  "observer_errors": [],
+  "pipeline_runtime_seconds": 12.8402,
+  "provider_model": "qwen35-9b",
+  "provider_region_ranking": [],
+  "region_order_used": [],
+  "schema_version": 1,
+  "search_order_source_effective": null,
+  "search_order_source_requested": "auto",
+  "search_seed_effective": null,
+  "search_seed_requested": null,
+  "spec_acquisition": "live_provider",
+  "spec_mode": "vlm",
+  "spec_provider_source": null,
+  "specification_input": null,
+  "specification_sha256": null,
+  "started_at_utc": "2026-08-31T11:19:28.646797+00:00",
+  "terminal_status": "VLM_SPEC_FAILED",
+  "variant": "L4",
+  "visualization_requested": false
+}

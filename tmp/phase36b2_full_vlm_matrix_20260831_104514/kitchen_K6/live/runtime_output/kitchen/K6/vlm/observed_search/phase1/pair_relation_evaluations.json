@@ -1,0 +1,1422 @@
+{
+  "elapsed_seconds": 0.000375773997802753,
+  "observed_object_ids": [
+    "object_0001",
+    "object_0002",
+    "object_0003",
+    "object_0004",
+    "object_0005",
+    "object_0006",
+    "object_0007",
+    "object_0008"
+  ],
+  "ordered_distinct_object_pair_count": 56,
+  "pairing_scope": "SEMANTIC_ROLE_SCOPED_OBJECT_PAIRS",
+  "pairing_strategy": "semantic_role_scoped",
+  "region_id": "B1",
+  "relation_evaluation_count": 42,
+  "relation_names": [
+    "INSERTABLE_IN"
+  ],
+  "relations": [
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.055451146955756106,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.13839864355946258,
+        "pass_margin_m": 0.07794749660370646,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply",
+        "status": "TRUE",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0002/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0001",
+      "status": "TRUE",
+      "target_object_id": "object_0002"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "inference_basis": "GEOMETRY_ONLY",
+        "method": "cached_stage_local_geometry_relation_v1",
+        "reason": "TARGET_OPEN_CAVITY_NOT_TRUE",
+        "source_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply",
+        "status": "UNKNOWN",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0003/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": false,
+      "source_object_id": "object_0001",
+      "status": "UNKNOWN",
+      "target_object_id": "object_0003"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.055451146955756106,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.05915316993418338,
+        "pass_margin_m": -0.0012979770215727241,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply",
+        "status": "FALSE",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0004/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0001",
+      "status": "FALSE",
+      "target_object_id": "object_0004"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.055451146955756106,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.07594131690440932,
+        "pass_margin_m": 0.015490169948653213,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply",
+        "status": "TRUE",
+        "target_measurement_cloud_path": "stages/003_after_C2/evidence/object_0007/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0001",
+      "status": "TRUE",
+      "target_object_id": "object_0007"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.055451146955756106,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.14123111784285802,
+        "pass_margin_m": 0.08077997088710191,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply",
+        "status": "TRUE",
+        "target_measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0001",
+      "status": "TRUE",
+      "target_object_id": "object_0008"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.12390982321055813,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.056870122388864665,
+        "pass_margin_m": -0.07203970082169348,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/000_initial/evidence/object_0002/fused.ply",
+        "status": "FALSE",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0002",
+      "status": "FALSE",
+      "target_object_id": "object_0001"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "inference_basis": "GEOMETRY_ONLY",
+        "method": "cached_stage_local_geometry_relation_v1",
+        "reason": "TARGET_OPEN_CAVITY_NOT_TRUE",
+        "source_measurement_cloud_path": "stages/000_initial/evidence/object_0002/fused.ply",
+        "status": "UNKNOWN",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0003/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": false,
+      "source_object_id": "object_0002",
+      "status": "UNKNOWN",
+      "target_object_id": "object_0003"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.12390982321055813,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.05915316993418338,
+        "pass_margin_m": -0.06975665327637476,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/000_initial/evidence/object_0002/fused.ply",
+        "status": "FALSE",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0004/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0002",
+      "status": "FALSE",
+      "target_object_id": "object_0004"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.12390982321055813,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.07594131690440932,
+        "pass_margin_m": -0.052968506306148806,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/000_initial/evidence/object_0002/fused.ply",
+        "status": "FALSE",
+        "target_measurement_cloud_path": "stages/003_after_C2/evidence/object_0007/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0002",
+      "status": "FALSE",
+      "target_object_id": "object_0007"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.12390982321055813,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.14123111784285802,
+        "pass_margin_m": 0.012321294632299893,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/000_initial/evidence/object_0002/fused.ply",
+        "status": "TRUE",
+        "target_measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0002",
+      "status": "TRUE",
+      "target_object_id": "object_0008"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.11738987764055334,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.056870122388864665,
+        "pass_margin_m": -0.06551975525168867,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/000_initial/evidence/object_0003/fused.ply",
+        "status": "FALSE",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": false,
+      "source_object_id": "object_0003",
+      "status": "FALSE",
+      "target_object_id": "object_0001"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.11738987764055334,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.13839864355946258,
+        "pass_margin_m": 0.016008765918909238,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/000_initial/evidence/object_0003/fused.ply",
+        "status": "TRUE",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0002/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": false,
+      "source_object_id": "object_0003",
+      "status": "TRUE",
+      "target_object_id": "object_0002"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.11738987764055334,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.05915316993418338,
+        "pass_margin_m": -0.06323670770636995,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/000_initial/evidence/object_0003/fused.ply",
+        "status": "FALSE",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0004/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": false,
+      "source_object_id": "object_0003",
+      "status": "FALSE",
+      "target_object_id": "object_0004"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.11738987764055334,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.07594131690440932,
+        "pass_margin_m": -0.046448560736144014,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/000_initial/evidence/object_0003/fused.ply",
+        "status": "FALSE",
+        "target_measurement_cloud_path": "stages/003_after_C2/evidence/object_0007/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": false,
+      "source_object_id": "object_0003",
+      "status": "FALSE",
+      "target_object_id": "object_0007"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.11738987764055334,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.14123111784285802,
+        "pass_margin_m": 0.018841240202304686,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/000_initial/evidence/object_0003/fused.ply",
+        "status": "TRUE",
+        "target_measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": false,
+      "source_object_id": "object_0003",
+      "status": "TRUE",
+      "target_object_id": "object_0008"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.07240680466721755,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.056870122388864665,
+        "pass_margin_m": -0.020536682278352886,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/000_initial/evidence/object_0004/fused.ply",
+        "status": "FALSE",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0004",
+      "status": "FALSE",
+      "target_object_id": "object_0001"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.07240680466721755,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.13839864355946258,
+        "pass_margin_m": 0.06099183889224503,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/000_initial/evidence/object_0004/fused.ply",
+        "status": "TRUE",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0002/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0004",
+      "status": "TRUE",
+      "target_object_id": "object_0002"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "inference_basis": "GEOMETRY_ONLY",
+        "method": "cached_stage_local_geometry_relation_v1",
+        "reason": "TARGET_OPEN_CAVITY_NOT_TRUE",
+        "source_measurement_cloud_path": "stages/000_initial/evidence/object_0004/fused.ply",
+        "status": "UNKNOWN",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0003/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": false,
+      "source_object_id": "object_0004",
+      "status": "UNKNOWN",
+      "target_object_id": "object_0003"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.07240680466721755,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.07594131690440932,
+        "pass_margin_m": -0.0014654877628082303,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/000_initial/evidence/object_0004/fused.ply",
+        "status": "FALSE",
+        "target_measurement_cloud_path": "stages/003_after_C2/evidence/object_0007/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0004",
+      "status": "FALSE",
+      "target_object_id": "object_0007"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.07240680466721755,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.14123111784285802,
+        "pass_margin_m": 0.06382431317564047,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/000_initial/evidence/object_0004/fused.ply",
+        "status": "TRUE",
+        "target_measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0004",
+      "status": "TRUE",
+      "target_object_id": "object_0008"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.05695912770985368,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.056870122388864665,
+        "pass_margin_m": -0.005089005320989016,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/001_after_D1/evidence/object_0005/fused.ply",
+        "status": "FALSE",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0005",
+      "status": "FALSE",
+      "target_object_id": "object_0001"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.05695912770985368,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.13839864355946258,
+        "pass_margin_m": 0.0764395158496089,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/001_after_D1/evidence/object_0005/fused.ply",
+        "status": "TRUE",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0002/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0005",
+      "status": "TRUE",
+      "target_object_id": "object_0002"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "inference_basis": "GEOMETRY_ONLY",
+        "method": "cached_stage_local_geometry_relation_v1",
+        "reason": "TARGET_OPEN_CAVITY_NOT_TRUE",
+        "source_measurement_cloud_path": "stages/001_after_D1/evidence/object_0005/fused.ply",
+        "status": "UNKNOWN",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0003/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": false,
+      "source_object_id": "object_0005",
+      "status": "UNKNOWN",
+      "target_object_id": "object_0003"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.05695912770985368,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.05915316993418338,
+        "pass_margin_m": -0.0028059577756702992,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/001_after_D1/evidence/object_0005/fused.ply",
+        "status": "FALSE",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0004/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0005",
+      "status": "FALSE",
+      "target_object_id": "object_0004"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.05695912770985368,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.07594131690440932,
+        "pass_margin_m": 0.013982189194555638,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/001_after_D1/evidence/object_0005/fused.ply",
+        "status": "TRUE",
+        "target_measurement_cloud_path": "stages/003_after_C2/evidence/object_0007/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0005",
+      "status": "TRUE",
+      "target_object_id": "object_0007"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.05695912770985368,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.14123111784285802,
+        "pass_margin_m": 0.07927199013300434,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/001_after_D1/evidence/object_0005/fused.ply",
+        "status": "TRUE",
+        "target_measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0005",
+      "status": "TRUE",
+      "target_object_id": "object_0008"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.0273397224109913,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.056870122388864665,
+        "pass_margin_m": 0.024530399977873363,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/002_after_D2/evidence/object_0006/fused.ply",
+        "status": "TRUE",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0006",
+      "status": "TRUE",
+      "target_object_id": "object_0001"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.0273397224109913,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.13839864355946258,
+        "pass_margin_m": 0.10605892114847126,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/002_after_D2/evidence/object_0006/fused.ply",
+        "status": "TRUE",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0002/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0006",
+      "status": "TRUE",
+      "target_object_id": "object_0002"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "inference_basis": "GEOMETRY_ONLY",
+        "method": "cached_stage_local_geometry_relation_v1",
+        "reason": "TARGET_OPEN_CAVITY_NOT_TRUE",
+        "source_measurement_cloud_path": "stages/002_after_D2/evidence/object_0006/fused.ply",
+        "status": "UNKNOWN",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0003/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": false,
+      "source_object_id": "object_0006",
+      "status": "UNKNOWN",
+      "target_object_id": "object_0003"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.0273397224109913,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.05915316993418338,
+        "pass_margin_m": 0.02681344752319208,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/002_after_D2/evidence/object_0006/fused.ply",
+        "status": "TRUE",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0004/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0006",
+      "status": "TRUE",
+      "target_object_id": "object_0004"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.0273397224109913,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.07594131690440932,
+        "pass_margin_m": 0.04360159449341802,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/002_after_D2/evidence/object_0006/fused.ply",
+        "status": "TRUE",
+        "target_measurement_cloud_path": "stages/003_after_C2/evidence/object_0007/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0006",
+      "status": "TRUE",
+      "target_object_id": "object_0007"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.0273397224109913,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.14123111784285802,
+        "pass_margin_m": 0.10889139543186671,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/002_after_D2/evidence/object_0006/fused.ply",
+        "status": "TRUE",
+        "target_measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0006",
+      "status": "TRUE",
+      "target_object_id": "object_0008"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.08244994070984724,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.056870122388864665,
+        "pass_margin_m": -0.030579818320982572,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/003_after_C2/evidence/object_0007/fused.ply",
+        "status": "FALSE",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0007",
+      "status": "FALSE",
+      "target_object_id": "object_0001"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.08244994070984724,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.13839864355946258,
+        "pass_margin_m": 0.05094870284961534,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/003_after_C2/evidence/object_0007/fused.ply",
+        "status": "TRUE",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0002/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0007",
+      "status": "TRUE",
+      "target_object_id": "object_0002"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "inference_basis": "GEOMETRY_ONLY",
+        "method": "cached_stage_local_geometry_relation_v1",
+        "reason": "TARGET_OPEN_CAVITY_NOT_TRUE",
+        "source_measurement_cloud_path": "stages/003_after_C2/evidence/object_0007/fused.ply",
+        "status": "UNKNOWN",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0003/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": false,
+      "source_object_id": "object_0007",
+      "status": "UNKNOWN",
+      "target_object_id": "object_0003"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.08244994070984724,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.05915316993418338,
+        "pass_margin_m": -0.028296770775663855,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/003_after_C2/evidence/object_0007/fused.ply",
+        "status": "FALSE",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0004/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0007",
+      "status": "FALSE",
+      "target_object_id": "object_0004"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.08244994070984724,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.14123111784285802,
+        "pass_margin_m": 0.05378117713301079,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/003_after_C2/evidence/object_0007/fused.ply",
+        "status": "TRUE",
+        "target_measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0007",
+      "status": "TRUE",
+      "target_object_id": "object_0008"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.12307663209754263,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.056870122388864665,
+        "pass_margin_m": -0.07120650970867798,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+        "status": "FALSE",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0008",
+      "status": "FALSE",
+      "target_object_id": "object_0001"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.12307663209754263,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.13839864355946258,
+        "pass_margin_m": 0.010322011461919942,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+        "status": "TRUE",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0002/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0008",
+      "status": "TRUE",
+      "target_object_id": "object_0002"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "inference_basis": "GEOMETRY_ONLY",
+        "method": "cached_stage_local_geometry_relation_v1",
+        "reason": "TARGET_OPEN_CAVITY_NOT_TRUE",
+        "source_measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+        "status": "UNKNOWN",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0003/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": false,
+      "source_object_id": "object_0008",
+      "status": "UNKNOWN",
+      "target_object_id": "object_0003"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.12307663209754263,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.05915316993418338,
+        "pass_margin_m": -0.06892346216335926,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+        "status": "FALSE",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0004/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0008",
+      "status": "FALSE",
+      "target_object_id": "object_0004"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "coffee_container"
+        },
+        {
+          "from_role": "coffee_stirrer",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "clearance_margin_m": 0.005,
+        "evaluated_inequality": "maximum_cross_section_m + clearance_margin_m < opening_width_m",
+        "inference_basis": "GEOMETRY_ONLY",
+        "maximum_cross_section_m": 0.12307663209754263,
+        "method": "cross_section_clearance_vs_opening_v1",
+        "opening_width_m": 0.07594131690440932,
+        "pass_margin_m": -0.05213531519313331,
+        "reason": null,
+        "source_measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+        "status": "FALSE",
+        "target_measurement_cloud_path": "stages/003_after_C2/evidence/object_0007/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0008",
+      "status": "FALSE",
+      "target_object_id": "object_0007"
+    }
+  ],
+  "role_binding_phase": "AFTER_SEMANTIC_GATING_AND_PAIRWISE_GEOMETRY",
+  "schema_version": 1,
+  "skipped_relation_pair_count": 14,
+  "stage": 4,
+  "task_id": "s1_integrated_prepare_and_serve_coffee_and_soup",
+  "unary_geometry_scope": "ALL_OBSERVED_OBJECTS"
+}

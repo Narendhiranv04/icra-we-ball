@@ -1,0 +1,108 @@
+{
+  "function_groups": [
+    {
+      "candidate_target_evaluations": [],
+      "complete_target_coverage_exists": false,
+      "counts": {
+        "distinct_assigned_physical_objects": 0,
+        "functionally_assignable_utensils": 0,
+        "geometrically_eligible_utensils": 0,
+        "grounding_eligible_utensils": 0,
+        "raw_observed_utensils": 0,
+        "required_distinct_physical_objects": 1,
+        "required_target_slots": 2,
+        "satisfied_target_slots": 0,
+        "semantically_eligible_utensils": 0
+      },
+      "covered_target_object_ids": [],
+      "cross_group_reuse_allowed": true,
+      "declared_usage_policy": {
+        "distinct_within_group": false,
+        "mode": "sequential_reuse_allowed",
+        "same_tool_must_cover_all_targets": false,
+        "selection_preference": "minimize_distinct_tools"
+      },
+      "distinctness_satisfied": true,
+      "eligible_target_object_ids": [
+        "object_0001",
+        "object_0004"
+      ],
+      "evaluated_usage_policy_mode": "function-aware",
+      "function": "stir coffee",
+      "function_group_id": "coffee_stirring",
+      "functionally_assignable_object_ids": [],
+      "geometrically_eligible_object_ids": [],
+      "grounding_evidence_mode": "joint",
+      "maximum_matching_cardinality": 0,
+      "minimum_distinct_tool_count": null,
+      "raw_utensil_object_ids": [],
+      "reason": "INSUFFICIENT_VALID_ASSIGNMENTS",
+      "selected_assignments": [],
+      "semantically_eligible_object_ids": [],
+      "status": "INCOMPLETE",
+      "target_assignment_mode": "joint-target-specific",
+      "target_role": "coffee_container",
+      "tool_role": "coffee_stirrer",
+      "uncovered_target_object_ids": [
+        "object_0001",
+        "object_0004"
+      ],
+      "unknown_target_object_ids": [],
+      "valid_target_tool_edges": []
+    },
+    {
+      "candidate_target_evaluations": [],
+      "complete_target_coverage_exists": false,
+      "counts": {
+        "distinct_assigned_physical_objects": 0,
+        "functionally_assignable_utensils": 0,
+        "geometrically_eligible_utensils": 3,
+        "grounding_eligible_utensils": 0,
+        "raw_observed_utensils": 0,
+        "required_distinct_physical_objects": 1,
+        "required_target_slots": 2,
+        "satisfied_target_slots": 0,
+        "semantically_eligible_utensils": 0
+      },
+      "covered_target_object_ids": [],
+      "cross_group_reuse_allowed": true,
+      "declared_usage_policy": {
+        "distinct_within_group": false,
+        "mode": "sequential_reuse_allowed",
+        "same_tool_must_cover_all_targets": false,
+        "selection_preference": "minimize_distinct_tools"
+      },
+      "distinctness_satisfied": true,
+      "eligible_target_object_ids": [],
+      "evaluated_usage_policy_mode": "function-aware",
+      "function": "serve soup",
+      "function_group_id": "soup_serving",
+      "functionally_assignable_object_ids": [],
+      "geometrically_eligible_object_ids": [
+        "object_0001",
+        "object_0002",
+        "object_0004"
+      ],
+      "grounding_evidence_mode": "joint",
+      "maximum_matching_cardinality": 0,
+      "minimum_distinct_tool_count": null,
+      "raw_utensil_object_ids": [],
+      "reason": "REQUIRED_EVIDENCE_UNKNOWN",
+      "selected_assignments": [],
+      "semantically_eligible_object_ids": [],
+      "status": "INDETERMINATE",
+      "target_assignment_mode": "joint-target-specific",
+      "target_role": "soup_container",
+      "tool_role": "soup_eating_utensil",
+      "uncovered_target_object_ids": [],
+      "unknown_target_object_ids": [
+        "object_0001",
+        "object_0002"
+      ],
+      "valid_target_tool_edges": []
+    }
+  ],
+  "production_mode": "function-aware",
+  "stage": 0,
+  "task_id": "s1_integrated_prepare_and_serve_coffee_and_soup"
+}

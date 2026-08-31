@@ -1,0 +1,135 @@
+schema_version: 1
+task_id: l2_integrated_living_room_region_function_phase1
+requirement_entity_kind: REGION
+natural_language_goal: 'Prepare the living room for two people watching television:
+  put one cup and saucer on each personal support and the remote on a shared support.'
+specification_source: VLM_CANONICAL_G_F
+payload_groups:
+  personal_cup_saucer_sets:
+    count: 2
+    each_requires:
+      cup: 1
+      saucer: 1
+    grouping_policy: MINIMUM_TOTAL_OBSERVED_CENTROID_DISTANCE
+    target_assignment_policy: OBSERVED_X_ORDER
+    target_role: seating_position
+  shared_remote:
+    count: 1
+    each_requires:
+      tv_remote: 1
+    grouping_policy: ALL_REQUIRED_ROLES
+function_groups:
+  personal_cup_saucer_region:
+    function_id: PERSONAL_CUP_SAUCER_REGION
+    candidate_entity_kind: REGION
+    region_role: personal_cup_saucer_region
+    usage_policy: SHARED_REGION_REQUIRED
+    target_assignment_policy: SHARED_REGION
+    target_role: both_seating_positions
+    required_target_count: 2
+    payload_groups:
+    - shared_remote
+    required_relations:
+    - PLANAR_SUPPORT
+    - FITS_ON
+    - ACCESSIBLE_FROM_BOTH_SEATS
+  shared_remote_region:
+    function_id: SHARED_REMOTE_REGION
+    candidate_entity_kind: REGION
+    region_role: shared_remote_region
+    usage_policy: SHARED_REGION_REQUIRED
+    target_assignment_policy: SHARED_REGION
+    target_role: both_seating_positions
+    required_target_count: 1
+    payload_groups:
+    - shared_remote
+    required_relations:
+    - PLANAR_SUPPORT
+    - FITS_ON
+    - ACCESSIBLE_FROM_BOTH_SEATS
+allow_cross_function_region_sharing: false
+semantic_requirements:
+  region_roles:
+    personal_cup_saucer_region:
+      accepted_categories:
+        armchair: 1
+        sofa_seat: 1
+        recliner: 1
+      rejected_categories:
+        floor: 1
+        rug: 1
+        media_console: 1
+        bookshelf: 1
+        chair: 1
+        sofa: 1
+    shared_remote_region:
+      accepted_categories:
+        coffee_table: 1
+        center_console: 1
+        side_table: 1
+      rejected_categories:
+        floor: 1
+        rug: 1
+        media_console: 1
+        bookshelf: 1
+        chair: 1
+        armchair: 1
+        sofa: 1
+  payload_roles:
+    cup:
+    - cup
+    saucer:
+    - saucer
+    - plate
+    tv_remote:
+    - remote_control
+    - tv_remote
+  seating_categories:
+  - armchair
+  - chair
+  - sofa
+  minimum_supporting_views: 1
+  minimum_mean_confidence: 0.03
+  minimum_winning_score_margin: 0.015
+geometric_requirements:
+  unary_region:
+    predicate: PLANAR_SUPPORT
+    maximum_normal_angle_degrees: 12.0
+    minimum_planarity_score: 0.9
+    minimum_usable_area_m2: 0.03
+  payload_region:
+    relation: FITS_ON
+    edge_clearance_margin_m: 0.015
+    allowed_orientations_degrees:
+    - 0
+    - 90
+  payload_set_region:
+    relation: FITS_SET_ON
+    edge_clearance_margin_m: 0.02
+    inter_payload_clearance_m: 0.025
+    allowed_orientations_degrees:
+    - 0
+    - 90
+    arrangements:
+    - ALONG_LENGTH
+    - ALONG_WIDTH
+  personal_context:
+    relation: NEAR_SEAT
+    maximum_centroid_distance_m: 1.2
+  control_context:
+    relation: ACCESSIBLE_FROM_BOTH_SEATS
+    maximum_distance_to_each_seat_m: 1.65
+allocation:
+  production_policy: global_target_specific
+  diagnostic_modes:
+  - semantic_only
+  - geometry_only
+  - joint
+  - target_agnostic_count
+  - greedy_target_specific
+  - global_target_specific
+  deterministic_tie_break:
+  - complete_target_coverage
+  - total_signed_margin_descending
+  - total_candidate_rank
+  - persistent_region_ids

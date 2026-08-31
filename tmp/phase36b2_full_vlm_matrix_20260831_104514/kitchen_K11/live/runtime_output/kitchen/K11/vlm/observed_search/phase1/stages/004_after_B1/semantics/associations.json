@@ -1,0 +1,680 @@
+{
+  "cameras": [
+    {
+      "accepted": [
+        {
+          "association_score": 0.9359822673153106,
+          "detection": {
+            "bbox_xyxy": [
+              560.8755493164062,
+              386.35430908203125,
+              719.0314331054688,
+              494.58209228515625
+            ],
+            "canonical_label": "bowl",
+            "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+            "confidence": 0.5987381935119629,
+            "crop_source_object_id": null,
+            "detection_id": "inspection_left_full_000",
+            "detector_name": "ultralytics_yolo_world",
+            "detector_version": "8.4.112",
+            "inference_resolution": [
+              1280,
+              960
+            ],
+            "input_crop_box_xyxy": null,
+            "input_image_path": "cameras/inspection_left/rgb.png",
+            "input_kind": "FULL_FRAME",
+            "raw_label": "bowl",
+            "source_camera": "inspection_left"
+          },
+          "detection_index": 0,
+          "input_kind_multiplier": 1.0,
+          "matching_score": 0.5604083318916002,
+          "metrics": {
+            "box_fraction_on_mask": 0.6482224770642202,
+            "box_mask_iou": 0.9571100917431192,
+            "box_pixels": 17440,
+            "center_consistency": 0.9947137281989777,
+            "intersection_pixels": 11305,
+            "mask_fraction_inside_box": 1.0,
+            "visible_mask_pixels": 11305
+          },
+          "object_id": "object_0007",
+          "status": "ACCEPTED",
+          "weak": false
+        }
+      ],
+      "camera_id": "inspection_left",
+      "method": "mask_box_overlap_v1",
+      "rejected": [
+        {
+          "association_score": 0.0,
+          "detection_index": 1,
+          "input_kind_multiplier": 1.0,
+          "matching_score": 0.0,
+          "metrics": {
+            "box_fraction_on_mask": 0.0,
+            "box_mask_iou": 0.0,
+            "box_pixels": 17280,
+            "center_consistency": 0.0,
+            "intersection_pixels": 0,
+            "mask_fraction_inside_box": 0.0,
+            "visible_mask_pixels": 11305
+          },
+          "object_id": "object_0007",
+          "reason": "WEAK_ASSOCIATION",
+          "status": "REJECTED",
+          "weak": true
+        },
+        {
+          "association_score": 0.0,
+          "detection_index": 2,
+          "input_kind_multiplier": 1.0,
+          "matching_score": 0.0,
+          "metrics": {
+            "box_fraction_on_mask": 0.0,
+            "box_mask_iou": 0.0,
+            "box_pixels": 16756,
+            "center_consistency": 0.0,
+            "intersection_pixels": 0,
+            "mask_fraction_inside_box": 0.0,
+            "visible_mask_pixels": 11305
+          },
+          "object_id": "object_0007",
+          "reason": "WEAK_ASSOCIATION",
+          "status": "REJECTED",
+          "weak": true
+        },
+        {
+          "association_score": 0.9490868382642259,
+          "detection_index": 3,
+          "input_kind_multiplier": 1.5,
+          "matching_score": 0.11130351864744684,
+          "metrics": {
+            "box_fraction_on_mask": 0.6729567236145009,
+            "box_mask_iou": 0.9936305732484076,
+            "box_pixels": 16799,
+            "center_consistency": 0.9973568640994889,
+            "intersection_pixels": 11305,
+            "mask_fraction_inside_box": 1.0,
+            "visible_mask_pixels": 11305
+          },
+          "object_id": "object_0007",
+          "reason": "ONE_TO_ONE_CONFLICT",
+          "status": "REJECTED",
+          "weak": false
+        }
+      ],
+      "unmatched_detection_indices": [
+        1,
+        2,
+        3
+      ],
+      "unmatched_object_ids": []
+    },
+    {
+      "accepted": [
+        {
+          "association_score": 0.9323492566166689,
+          "detection": {
+            "bbox_xyxy": [
+              559.518310546875,
+              386.848876953125,
+              719.920654296875,
+              493.39666748046875
+            ],
+            "canonical_label": "bowl",
+            "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+            "confidence": 0.5289761424064636,
+            "crop_source_object_id": null,
+            "detection_id": "inspection_right_full_000",
+            "detector_name": "ultralytics_yolo_world",
+            "detector_version": "8.4.112",
+            "inference_resolution": [
+              1280,
+              960
+            ],
+            "input_crop_box_xyxy": null,
+            "input_image_path": "cameras/inspection_right/rgb.png",
+            "input_kind": "FULL_FRAME",
+            "raw_label": "bowl",
+            "source_camera": "inspection_right"
+          },
+          "detection_index": 0,
+          "input_kind_multiplier": 1.0,
+          "matching_score": 0.49319051314061957,
+          "metrics": {
+            "box_fraction_on_mask": 0.6506211180124224,
+            "box_mask_iou": 0.9425444596443229,
+            "box_pixels": 17388,
+            "center_consistency": 0.9916416703890247,
+            "intersection_pixels": 11313,
+            "mask_fraction_inside_box": 0.9999116139296447,
+            "visible_mask_pixels": 11314
+          },
+          "object_id": "object_0007",
+          "status": "ACCEPTED",
+          "weak": false
+        }
+      ],
+      "camera_id": "inspection_right",
+      "method": "mask_box_overlap_v1",
+      "rejected": [
+        {
+          "association_score": 0.0,
+          "detection_index": 1,
+          "input_kind_multiplier": 1.0,
+          "matching_score": 0.0,
+          "metrics": {
+            "box_fraction_on_mask": 0.0,
+            "box_mask_iou": 0.0,
+            "box_pixels": 15120,
+            "center_consistency": 0.0,
+            "intersection_pixels": 0,
+            "mask_fraction_inside_box": 0.0,
+            "visible_mask_pixels": 11314
+          },
+          "object_id": "object_0007",
+          "reason": "WEAK_ASSOCIATION",
+          "status": "REJECTED",
+          "weak": true
+        },
+        {
+          "association_score": 0.0,
+          "detection_index": 2,
+          "input_kind_multiplier": 1.0,
+          "matching_score": 0.0,
+          "metrics": {
+            "box_fraction_on_mask": 0.0,
+            "box_mask_iou": 0.0,
+            "box_pixels": 15052,
+            "center_consistency": 0.0,
+            "intersection_pixels": 0,
+            "mask_fraction_inside_box": 0.0,
+            "visible_mask_pixels": 11314
+          },
+          "object_id": "object_0007",
+          "reason": "WEAK_ASSOCIATION",
+          "status": "REJECTED",
+          "weak": true
+        },
+        {
+          "association_score": 0.0,
+          "detection_index": 3,
+          "input_kind_multiplier": 1.0,
+          "matching_score": 0.0,
+          "metrics": {
+            "box_fraction_on_mask": 0.0,
+            "box_mask_iou": 0.0,
+            "box_pixels": 24596,
+            "center_consistency": 0.0,
+            "intersection_pixels": 0,
+            "mask_fraction_inside_box": 0.0,
+            "visible_mask_pixels": 11314
+          },
+          "object_id": "object_0007",
+          "reason": "WEAK_ASSOCIATION",
+          "status": "REJECTED",
+          "weak": true
+        },
+        {
+          "association_score": 0.0,
+          "detection_index": 4,
+          "input_kind_multiplier": 1.0,
+          "matching_score": 0.0,
+          "metrics": {
+            "box_fraction_on_mask": 0.0,
+            "box_mask_iou": 0.0,
+            "box_pixels": 25375,
+            "center_consistency": 0.0,
+            "intersection_pixels": 0,
+            "mask_fraction_inside_box": 0.0,
+            "visible_mask_pixels": 11314
+          },
+          "object_id": "object_0007",
+          "reason": "WEAK_ASSOCIATION",
+          "status": "REJECTED",
+          "weak": true
+        },
+        {
+          "association_score": 0.0,
+          "detection_index": 5,
+          "input_kind_multiplier": 1.0,
+          "matching_score": 0.0,
+          "metrics": {
+            "box_fraction_on_mask": 0.0,
+            "box_mask_iou": 0.0,
+            "box_pixels": 58830,
+            "center_consistency": 0.0,
+            "intersection_pixels": 0,
+            "mask_fraction_inside_box": 0.0,
+            "visible_mask_pixels": 11314
+          },
+          "object_id": "object_0007",
+          "reason": "WEAK_ASSOCIATION",
+          "status": "REJECTED",
+          "weak": true
+        },
+        {
+          "association_score": 0.9516714593817397,
+          "detection_index": 6,
+          "input_kind_multiplier": 1.5,
+          "matching_score": 0.19181828775666093,
+          "metrics": {
+            "box_fraction_on_mask": 0.6778097292115983,
+            "box_mask_iou": 1.0,
+            "box_pixels": 16692,
+            "center_consistency": 1.0,
+            "intersection_pixels": 11314,
+            "mask_fraction_inside_box": 1.0,
+            "visible_mask_pixels": 11314
+          },
+          "object_id": "object_0007",
+          "reason": "ONE_TO_ONE_CONFLICT",
+          "status": "REJECTED",
+          "weak": false
+        }
+      ],
+      "unmatched_detection_indices": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "unmatched_object_ids": []
+    },
+    {
+      "accepted": [
+        {
+          "association_score": 0.967346823312186,
+          "detection": {
+            "bbox_xyxy": [
+              569.8776092529297,
+              400.24987411499023,
+              710.0342102050781,
+              528.4678649902344
+            ],
+            "canonical_label": "coffee_cup",
+            "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+            "confidence": 0.0728885754942894,
+            "crop_source_object_id": "object_0007",
+            "detection_id": "inspection_top_crop_000_000",
+            "detector_name": "ultralytics_yolo_world",
+            "detector_version": "8.4.112",
+            "inference_resolution": [
+              228,
+              204
+            ],
+            "input_crop_box_xyxy": [
+              526,
+              362,
+              754,
+              566
+            ],
+            "input_image_path": "semantics/cameras/inspection_top/crops/000_object_0007.png",
+            "input_kind": "MASK_BOUNDED_RGB_CROP",
+            "raw_label": "coffee_cup",
+            "source_camera": "inspection_top"
+          },
+          "detection_index": 1,
+          "input_kind_multiplier": 1.5,
+          "matching_score": 0.10576279794022696,
+          "metrics": {
+            "box_fraction_on_mask": 0.7969756523637952,
+            "box_mask_iou": 0.9922480620155039,
+            "box_pixels": 18318,
+            "center_consistency": 0.9973845995374072,
+            "intersection_pixels": 14599,
+            "mask_fraction_inside_box": 1.0,
+            "visible_mask_pixels": 14599
+          },
+          "object_id": "object_0007",
+          "status": "ACCEPTED",
+          "weak": false
+        }
+      ],
+      "camera_id": "inspection_top",
+      "method": "mask_box_overlap_v1",
+      "rejected": [
+        {
+          "association_score": 0.0,
+          "detection_index": 0,
+          "input_kind_multiplier": 1.0,
+          "matching_score": 0.0,
+          "metrics": {
+            "box_fraction_on_mask": 0.0,
+            "box_mask_iou": 0.0,
+            "box_pixels": 26634,
+            "center_consistency": 0.0,
+            "intersection_pixels": 0,
+            "mask_fraction_inside_box": 0.0,
+            "visible_mask_pixels": 14599
+          },
+          "object_id": "object_0007",
+          "reason": "WEAK_ASSOCIATION",
+          "status": "REJECTED",
+          "weak": true
+        },
+        {
+          "association_score": 0.9653321750775752,
+          "detection_index": 2,
+          "input_kind_multiplier": 1.5,
+          "matching_score": 0.10532126002695855,
+          "metrics": {
+            "box_fraction_on_mask": 0.8080287929125138,
+            "box_mask_iou": 0.9783795588556453,
+            "box_pixels": 18060,
+            "center_consistency": 0.9973845995374072,
+            "intersection_pixels": 14593,
+            "mask_fraction_inside_box": 0.9995890129460921,
+            "visible_mask_pixels": 14599
+          },
+          "object_id": "object_0007",
+          "reason": "ONE_TO_ONE_CONFLICT",
+          "status": "REJECTED",
+          "weak": false
+        }
+      ],
+      "unmatched_detection_indices": [
+        0,
+        2
+      ],
+      "unmatched_object_ids": []
+    },
+    {
+      "accepted": [
+        {
+          "association_score": 0.9410697782489648,
+          "detection": {
+            "bbox_xyxy": [
+              560.0411376953125,
+              387.58929443359375,
+              718.9754638671875,
+              465.02740478515625
+            ],
+            "canonical_label": "bowl",
+            "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+            "confidence": 0.3999926745891571,
+            "crop_source_object_id": null,
+            "detection_id": "inspection_front_full_000",
+            "detector_name": "ultralytics_yolo_world",
+            "detector_version": "8.4.112",
+            "inference_resolution": [
+              1280,
+              960
+            ],
+            "input_crop_box_xyxy": null,
+            "input_image_path": "cameras/inspection_front/rgb.png",
+            "input_kind": "FULL_FRAME",
+            "raw_label": "bowl",
+            "source_camera": "inspection_front"
+          },
+          "detection_index": 0,
+          "input_kind_multiplier": 1.0,
+          "matching_score": 0.3764210175768284,
+          "metrics": {
+            "box_fraction_on_mask": 0.6842608072605684,
+            "box_mask_iou": 0.9562932887508956,
+            "box_pixels": 12561,
+            "center_consistency": 0.9935733497215563,
+            "intersection_pixels": 8595,
+            "mask_fraction_inside_box": 1.0,
+            "visible_mask_pixels": 8595
+          },
+          "object_id": "object_0007",
+          "status": "ACCEPTED",
+          "weak": false
+        }
+      ],
+      "camera_id": "inspection_front",
+      "method": "mask_box_overlap_v1",
+      "rejected": [
+        {
+          "association_score": 0.0,
+          "detection_index": 1,
+          "input_kind_multiplier": 1.0,
+          "matching_score": 0.0,
+          "metrics": {
+            "box_fraction_on_mask": 0.0,
+            "box_mask_iou": 0.0,
+            "box_pixels": 17442,
+            "center_consistency": 0.0,
+            "intersection_pixels": 0,
+            "mask_fraction_inside_box": 0.0,
+            "visible_mask_pixels": 8595
+          },
+          "object_id": "object_0007",
+          "reason": "WEAK_ASSOCIATION",
+          "status": "REJECTED",
+          "weak": true
+        },
+        {
+          "association_score": 0.0,
+          "detection_index": 2,
+          "input_kind_multiplier": 1.0,
+          "matching_score": 0.0,
+          "metrics": {
+            "box_fraction_on_mask": 0.0,
+            "box_mask_iou": 0.0,
+            "box_pixels": 17328,
+            "center_consistency": 0.0,
+            "intersection_pixels": 0,
+            "mask_fraction_inside_box": 0.0,
+            "visible_mask_pixels": 8595
+          },
+          "object_id": "object_0007",
+          "reason": "WEAK_ASSOCIATION",
+          "status": "REJECTED",
+          "weak": true
+        },
+        {
+          "association_score": 0.0,
+          "detection_index": 3,
+          "input_kind_multiplier": 1.0,
+          "matching_score": 0.0,
+          "metrics": {
+            "box_fraction_on_mask": 0.0,
+            "box_mask_iou": 0.0,
+            "box_pixels": 7372,
+            "center_consistency": 0.0,
+            "intersection_pixels": 0,
+            "mask_fraction_inside_box": 0.0,
+            "visible_mask_pixels": 8595
+          },
+          "object_id": "object_0007",
+          "reason": "WEAK_ASSOCIATION",
+          "status": "REJECTED",
+          "weak": true
+        },
+        {
+          "association_score": 0.0,
+          "detection_index": 4,
+          "input_kind_multiplier": 1.0,
+          "matching_score": 0.0,
+          "metrics": {
+            "box_fraction_on_mask": 0.0,
+            "box_mask_iou": 0.0,
+            "box_pixels": 7942,
+            "center_consistency": 0.0,
+            "intersection_pixels": 0,
+            "mask_fraction_inside_box": 0.0,
+            "visible_mask_pixels": 8595
+          },
+          "object_id": "object_0007",
+          "reason": "WEAK_ASSOCIATION",
+          "status": "REJECTED",
+          "weak": true
+        },
+        {
+          "association_score": 0.9547667729494982,
+          "detection_index": 5,
+          "input_kind_multiplier": 1.5,
+          "matching_score": 0.15293694485992224,
+          "metrics": {
+            "box_fraction_on_mask": 0.7109769211680039,
+            "box_mask_iou": 0.9936305732484076,
+            "box_pixels": 12089,
+            "center_consistency": 0.9971259146219563,
+            "intersection_pixels": 8595,
+            "mask_fraction_inside_box": 1.0,
+            "visible_mask_pixels": 8595
+          },
+          "object_id": "object_0007",
+          "reason": "ONE_TO_ONE_CONFLICT",
+          "status": "REJECTED",
+          "weak": false
+        },
+        {
+          "association_score": 0.9547667729494982,
+          "detection_index": 6,
+          "input_kind_multiplier": 1.5,
+          "matching_score": 0.12495483712653208,
+          "metrics": {
+            "box_fraction_on_mask": 0.7109769211680039,
+            "box_mask_iou": 0.9936305732484076,
+            "box_pixels": 12089,
+            "center_consistency": 0.9971259146219563,
+            "intersection_pixels": 8595,
+            "mask_fraction_inside_box": 1.0,
+            "visible_mask_pixels": 8595
+          },
+          "object_id": "object_0007",
+          "reason": "ONE_TO_ONE_CONFLICT",
+          "status": "REJECTED",
+          "weak": false
+        }
+      ],
+      "unmatched_detection_indices": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "unmatched_object_ids": []
+    },
+    {
+      "accepted": [
+        {
+          "association_score": 0.9685998594428827,
+          "detection": {
+            "bbox_xyxy": [
+              549.3871459960938,
+              377.15722274780273,
+              730.5808563232422,
+              548.1523742675781
+            ],
+            "canonical_label": "cup",
+            "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+            "confidence": 0.11759360134601593,
+            "crop_source_object_id": "object_0007",
+            "detection_id": "inspection_close_crop_000_000",
+            "detector_name": "ultralytics_yolo_world",
+            "detector_version": "8.4.112",
+            "inference_resolution": [
+              292,
+              276
+            ],
+            "input_crop_box_xyxy": [
+              494,
+              325,
+              786,
+              601
+            ],
+            "input_image_path": "semantics/cameras/inspection_close/crops/000_object_0007.png",
+            "input_kind": "MASK_BOUNDED_RGB_CROP",
+            "raw_label": "cup",
+            "source_camera": "inspection_close"
+          },
+          "detection_index": 1,
+          "input_kind_multiplier": 1.5,
+          "matching_score": 0.17085171860270013,
+          "metrics": {
+            "box_fraction_on_mask": 0.790665729619218,
+            "box_mask_iou": 1.0,
+            "box_pixels": 31304,
+            "center_consistency": 1.0,
+            "intersection_pixels": 24751,
+            "mask_fraction_inside_box": 1.0,
+            "visible_mask_pixels": 24751
+          },
+          "object_id": "object_0007",
+          "status": "ACCEPTED",
+          "weak": false
+        }
+      ],
+      "camera_id": "inspection_close",
+      "method": "mask_box_overlap_v1",
+      "rejected": [
+        {
+          "association_score": 0.955907790919541,
+          "detection_index": 0,
+          "input_kind_multiplier": 1.0,
+          "matching_score": 0.036252900297956595,
+          "metrics": {
+            "box_fraction_on_mask": 0.7642971837944664,
+            "box_mask_iou": 0.9666501976284585,
+            "box_pixels": 32384,
+            "center_consistency": 0.9960066394325646,
+            "intersection_pixels": 24751,
+            "mask_fraction_inside_box": 1.0,
+            "visible_mask_pixels": 24751
+          },
+          "object_id": "object_0007",
+          "reason": "ONE_TO_ONE_CONFLICT",
+          "status": "REJECTED",
+          "weak": false
+        },
+        {
+          "association_score": 0.9685998594428827,
+          "detection_index": 2,
+          "input_kind_multiplier": 1.5,
+          "matching_score": 0.13649192965008014,
+          "metrics": {
+            "box_fraction_on_mask": 0.790665729619218,
+            "box_mask_iou": 1.0,
+            "box_pixels": 31304,
+            "center_consistency": 1.0,
+            "intersection_pixels": 24751,
+            "mask_fraction_inside_box": 1.0,
+            "visible_mask_pixels": 24751
+          },
+          "object_id": "object_0007",
+          "reason": "ONE_TO_ONE_CONFLICT",
+          "status": "REJECTED",
+          "weak": false
+        },
+        {
+          "association_score": 0.9685998594428827,
+          "detection_index": 3,
+          "input_kind_multiplier": 1.5,
+          "matching_score": 0.08225129746314347,
+          "metrics": {
+            "box_fraction_on_mask": 0.790665729619218,
+            "box_mask_iou": 1.0,
+            "box_pixels": 31304,
+            "center_consistency": 1.0,
+            "intersection_pixels": 24751,
+            "mask_fraction_inside_box": 1.0,
+            "visible_mask_pixels": 24751
+          },
+          "object_id": "object_0007",
+          "reason": "ONE_TO_ONE_CONFLICT",
+          "status": "REJECTED",
+          "weak": false
+        }
+      ],
+      "unmatched_detection_indices": [
+        0,
+        2,
+        3
+      ],
+      "unmatched_object_ids": []
+    }
+  ],
+  "method": "mask_box_overlap_v1"
+}

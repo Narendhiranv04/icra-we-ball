@@ -1,0 +1,137 @@
+{
+  "domain": "kitchen",
+  "exact_structural_match": false,
+  "extra_operation_groups": [],
+  "extra_relations": [
+    [
+      "coffee_container",
+      "INSERTABLE_IN",
+      "soup_eating_utensil",
+      true
+    ],
+    [
+      "soup_eating_utensil",
+      "INSERTABLE_IN",
+      "soup_eating_utensil",
+      true
+    ],
+    [
+      "water_source",
+      "INSERTABLE_IN",
+      "soup_eating_utensil",
+      true
+    ]
+  ],
+  "extra_roles": [],
+  "matched_operation_groups": [],
+  "matched_roles": [
+    "coffee_container",
+    "soup_eating_utensil",
+    "water_source"
+  ],
+  "missing_operation_groups": [
+    "coffee_stirring",
+    "soup_serving"
+  ],
+  "missing_relations": [
+    [
+      "coffee_stirrer",
+      "INSERTABLE_IN",
+      "coffee_container",
+      true
+    ],
+    [
+      "coffee_stirrer",
+      "REACHES_BOTTOM",
+      "coffee_container",
+      true
+    ],
+    [
+      "soup_eating_utensil",
+      "INSERTABLE_IN",
+      "soup_container",
+      true
+    ],
+    [
+      "soup_eating_utensil",
+      "REACHES_BOTTOM",
+      "soup_container",
+      true
+    ]
+  ],
+  "missing_roles": [
+    "coffee_source",
+    "coffee_stirrer",
+    "soup_container"
+  ],
+  "operation_group_exact_precision": 0.0,
+  "operation_group_exact_recall": 0.0,
+  "operation_group_identity_precision": 0.0,
+  "operation_group_identity_recall": 0.0,
+  "operation_group_mismatches": {},
+  "reference_complete": false,
+  "relation_precision": 0.0,
+  "relation_recall": 0.0,
+  "role_attribute_mismatches": {
+    "coffee_container": {
+      "binding_policy": {
+        "candidate": "SHARED",
+        "reference": "DISTINCT"
+      },
+      "cardinality": {
+        "candidate": [
+          1,
+          1
+        ],
+        "reference": [
+          2,
+          2
+        ]
+      },
+      "unary_predicates": {
+        "candidate": [],
+        "reference": [
+          "OPEN_CAVITY"
+        ]
+      }
+    },
+    "soup_eating_utensil": {
+      "binding_policy": {
+        "candidate": "SHARED",
+        "reference": "DISTINCT"
+      },
+      "cardinality": {
+        "candidate": [
+          1,
+          1
+        ],
+        "reference": [
+          2,
+          2
+        ]
+      },
+      "unary_predicates": {
+        "candidate": [],
+        "reference": [
+          "ELONGATED_OBJECT"
+        ]
+      }
+    },
+    "water_source": {
+      "binding_policy": {
+        "candidate": "SHARED",
+        "reference": "DISTINCT"
+      },
+      "unary_predicates": {
+        "candidate": [
+          "OPEN_CAVITY"
+        ],
+        "reference": []
+      }
+    }
+  },
+  "role_exact_precision": 0.0,
+  "role_exact_recall": 0.0,
+  "role_identity_precision": 1.0,
+  "role_identity_recall": 0.5
+}

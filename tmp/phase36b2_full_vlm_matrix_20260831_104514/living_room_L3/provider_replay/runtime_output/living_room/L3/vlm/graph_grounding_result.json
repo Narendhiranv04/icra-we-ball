@@ -1,0 +1,385 @@
+{
+  "assignment": null,
+  "complete": false,
+  "evidence": {
+    "candidate_evaluations": {
+      "CUP_SAUCER_SET:SEATING_PAIR": {
+        "checks": {
+          "entity_kind": {
+            "actual": "FIXED_TARGET",
+            "expected": "OBJECT",
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "SEATING_PAIR",
+        "role_name": "CUP_SAUCER_SET"
+      },
+      "CUP_SAUCER_SET:object_0002": {
+        "checks": {
+          "semantic_categories": {
+            "expected": [
+              "cup_saucer_set",
+              "cup",
+              "saucer",
+              "mug",
+              "glass",
+              "beverage_container",
+              "plate",
+              "dish"
+            ],
+            "matched": null,
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "object_0002",
+        "role_name": "CUP_SAUCER_SET"
+      },
+      "CUP_SAUCER_SET:personal_table_slot_1": {
+        "checks": {
+          "semantic_categories": {
+            "expected": [
+              "cup_saucer_set",
+              "cup",
+              "saucer",
+              "mug",
+              "glass",
+              "beverage_container",
+              "plate",
+              "dish"
+            ],
+            "matched": "cup_saucer_set",
+            "status": "TRUE"
+          }
+        },
+        "instance_id": "personal_table_slot_1",
+        "role_name": "CUP_SAUCER_SET"
+      },
+      "CUP_SAUCER_SET:personal_table_slot_2": {
+        "checks": {
+          "semantic_categories": {
+            "expected": [
+              "cup_saucer_set",
+              "cup",
+              "saucer",
+              "mug",
+              "glass",
+              "beverage_container",
+              "plate",
+              "dish"
+            ],
+            "matched": "cup_saucer_set",
+            "status": "TRUE"
+          }
+        },
+        "instance_id": "personal_table_slot_2",
+        "role_name": "CUP_SAUCER_SET"
+      },
+      "CUP_SAUCER_SET:region_0001": {
+        "checks": {
+          "entity_kind": {
+            "actual": "REGION",
+            "expected": "OBJECT",
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "region_0001",
+        "role_name": "CUP_SAUCER_SET"
+      },
+      "CUP_SAUCER_SET:region_0002": {
+        "checks": {
+          "entity_kind": {
+            "actual": "REGION",
+            "expected": "OBJECT",
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "region_0002",
+        "role_name": "CUP_SAUCER_SET"
+      },
+      "CUP_SAUCER_SET:region_0003": {
+        "checks": {
+          "entity_kind": {
+            "actual": "REGION",
+            "expected": "OBJECT",
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "region_0003",
+        "role_name": "CUP_SAUCER_SET"
+      },
+      "CUP_SAUCER_SET:seat_0001": {
+        "checks": {
+          "entity_kind": {
+            "actual": "FIXED_TARGET",
+            "expected": "OBJECT",
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "seat_0001",
+        "role_name": "CUP_SAUCER_SET"
+      },
+      "CUP_SAUCER_SET:seat_0002": {
+        "checks": {
+          "entity_kind": {
+            "actual": "FIXED_TARGET",
+            "expected": "OBJECT",
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "seat_0002",
+        "role_name": "CUP_SAUCER_SET"
+      },
+      "PERSONAL_CUP_SAUCER_REGION:SEATING_PAIR": {
+        "checks": {
+          "entity_kind": {
+            "actual": "FIXED_TARGET",
+            "expected": "REGION",
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "SEATING_PAIR",
+        "role_name": "PERSONAL_CUP_SAUCER_REGION"
+      },
+      "PERSONAL_CUP_SAUCER_REGION:object_0002": {
+        "checks": {
+          "entity_kind": {
+            "actual": "OBJECT",
+            "expected": "REGION",
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "object_0002",
+        "role_name": "PERSONAL_CUP_SAUCER_REGION"
+      },
+      "PERSONAL_CUP_SAUCER_REGION:personal_table_slot_1": {
+        "checks": {
+          "entity_kind": {
+            "actual": "OBJECT",
+            "expected": "REGION",
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "personal_table_slot_1",
+        "role_name": "PERSONAL_CUP_SAUCER_REGION"
+      },
+      "PERSONAL_CUP_SAUCER_REGION:personal_table_slot_2": {
+        "checks": {
+          "entity_kind": {
+            "actual": "OBJECT",
+            "expected": "REGION",
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "personal_table_slot_2",
+        "role_name": "PERSONAL_CUP_SAUCER_REGION"
+      },
+      "PERSONAL_CUP_SAUCER_REGION:region_0001": {
+        "checks": {
+          "semantic_categories": {
+            "expected": [
+              "side_table",
+              "armchair_side_surface",
+              "personal_table"
+            ],
+            "matched": "side_table",
+            "status": "TRUE"
+          },
+          "unary_predicate_PLANAR_SUPPORT": {
+            "predicate": "PLANAR_SUPPORT",
+            "status": "TRUE"
+          }
+        },
+        "instance_id": "region_0001",
+        "role_name": "PERSONAL_CUP_SAUCER_REGION"
+      },
+      "PERSONAL_CUP_SAUCER_REGION:region_0002": {
+        "checks": {
+          "semantic_categories": {
+            "expected": [
+              "side_table",
+              "armchair_side_surface",
+              "personal_table"
+            ],
+            "matched": null,
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "region_0002",
+        "role_name": "PERSONAL_CUP_SAUCER_REGION"
+      },
+      "PERSONAL_CUP_SAUCER_REGION:region_0003": {
+        "checks": {
+          "semantic_categories": {
+            "expected": [
+              "side_table",
+              "armchair_side_surface",
+              "personal_table"
+            ],
+            "matched": "side_table",
+            "status": "TRUE"
+          },
+          "unary_predicate_PLANAR_SUPPORT": {
+            "predicate": "PLANAR_SUPPORT",
+            "status": "TRUE"
+          }
+        },
+        "instance_id": "region_0003",
+        "role_name": "PERSONAL_CUP_SAUCER_REGION"
+      },
+      "PERSONAL_CUP_SAUCER_REGION:seat_0001": {
+        "checks": {
+          "entity_kind": {
+            "actual": "FIXED_TARGET",
+            "expected": "REGION",
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "seat_0001",
+        "role_name": "PERSONAL_CUP_SAUCER_REGION"
+      },
+      "PERSONAL_CUP_SAUCER_REGION:seat_0002": {
+        "checks": {
+          "entity_kind": {
+            "actual": "FIXED_TARGET",
+            "expected": "REGION",
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "seat_0002",
+        "role_name": "PERSONAL_CUP_SAUCER_REGION"
+      },
+      "SHARED_REMOTE_REGION:SEATING_PAIR": {
+        "checks": {
+          "entity_kind": {
+            "actual": "FIXED_TARGET",
+            "expected": "REGION",
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "SEATING_PAIR",
+        "role_name": "SHARED_REMOTE_REGION"
+      },
+      "SHARED_REMOTE_REGION:object_0002": {
+        "checks": {
+          "entity_kind": {
+            "actual": "OBJECT",
+            "expected": "REGION",
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "object_0002",
+        "role_name": "SHARED_REMOTE_REGION"
+      },
+      "SHARED_REMOTE_REGION:personal_table_slot_1": {
+        "checks": {
+          "entity_kind": {
+            "actual": "OBJECT",
+            "expected": "REGION",
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "personal_table_slot_1",
+        "role_name": "SHARED_REMOTE_REGION"
+      },
+      "SHARED_REMOTE_REGION:personal_table_slot_2": {
+        "checks": {
+          "entity_kind": {
+            "actual": "OBJECT",
+            "expected": "REGION",
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "personal_table_slot_2",
+        "role_name": "SHARED_REMOTE_REGION"
+      },
+      "SHARED_REMOTE_REGION:region_0001": {
+        "checks": {
+          "semantic_categories": {
+            "expected": [
+              "coffee_table",
+              "center_table",
+              "shared_table",
+              "desk"
+            ],
+            "matched": null,
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "region_0001",
+        "role_name": "SHARED_REMOTE_REGION"
+      },
+      "SHARED_REMOTE_REGION:region_0002": {
+        "checks": {
+          "semantic_categories": {
+            "expected": [
+              "coffee_table",
+              "center_table",
+              "shared_table",
+              "desk"
+            ],
+            "matched": "coffee_table",
+            "status": "TRUE"
+          },
+          "unary_predicate_PLANAR_SUPPORT": {
+            "predicate": "PLANAR_SUPPORT",
+            "status": "TRUE"
+          }
+        },
+        "instance_id": "region_0002",
+        "role_name": "SHARED_REMOTE_REGION"
+      },
+      "SHARED_REMOTE_REGION:region_0003": {
+        "checks": {
+          "semantic_categories": {
+            "expected": [
+              "coffee_table",
+              "center_table",
+              "shared_table",
+              "desk"
+            ],
+            "matched": null,
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "region_0003",
+        "role_name": "SHARED_REMOTE_REGION"
+      },
+      "SHARED_REMOTE_REGION:seat_0001": {
+        "checks": {
+          "entity_kind": {
+            "actual": "FIXED_TARGET",
+            "expected": "REGION",
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "seat_0001",
+        "role_name": "SHARED_REMOTE_REGION"
+      },
+      "SHARED_REMOTE_REGION:seat_0002": {
+        "checks": {
+          "entity_kind": {
+            "actual": "FIXED_TARGET",
+            "expected": "REGION",
+            "status": "FALSE"
+          }
+        },
+        "instance_id": "seat_0002",
+        "role_name": "SHARED_REMOTE_REGION"
+      }
+    }
+  },
+  "missing_requirements": [
+    "CUP_SAUCER_SET",
+    "CUP_SAUCER_SET"
+  ],
+  "missing_roles": [
+    "CUP_SAUCER_SET"
+  ],
+  "operation_bindings": {},
+  "satisfied": false,
+  "status": "INFEASIBLE",
+  "unresolved_constraints": [
+    "CUP_SAUCER_SET"
+  ],
+  "unsatisfied_relations": []
+}

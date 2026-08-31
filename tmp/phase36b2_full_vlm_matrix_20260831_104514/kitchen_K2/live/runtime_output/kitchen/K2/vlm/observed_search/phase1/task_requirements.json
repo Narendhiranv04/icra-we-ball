@@ -1,0 +1,214 @@
+{
+  "constraints": {
+    "distinct_objects": true,
+    "distinct_role_assignments": true,
+    "pairwise": [
+      {
+        "apply_to": "all_selected_targets",
+        "from_role": "coffee_container",
+        "relation": "INSERTABLE_IN",
+        "required_status": "TRUE",
+        "to_role": "soup_eating_utensil"
+      },
+      {
+        "apply_to": "all_selected_targets",
+        "from_role": "soup_eating_utensil",
+        "relation": "INSERTABLE_IN",
+        "required_status": "TRUE",
+        "to_role": "soup_eating_utensil"
+      }
+    ]
+  },
+  "cross_group_reuse": {
+    "allowed": true
+  },
+  "diagnostics": {
+    "max_representative_rejections": 50
+  },
+  "goal_instruction": "Prepare and serve coffee and soup for two people using the available kitchenware. Stir both coffees and provide each soup bowl with a suitable utensil. Search closed kitchen storage for anything still required.",
+  "pairing": {
+    "semantic_unknown_policy": "defer_relation_evaluation",
+    "strategy": "semantic_role_scoped",
+    "unary_geometry_scope": "all_observed_objects"
+  },
+  "relations": [
+    {
+      "expected": true,
+      "object_role": "soup_eating_utensil",
+      "predicate": "INSERTABLE_IN",
+      "subject_role": "coffee_container"
+    },
+    {
+      "expected": true,
+      "object_role": "soup_eating_utensil",
+      "predicate": "INSERTABLE_IN",
+      "subject_role": "soup_eating_utensil"
+    }
+  ],
+  "roles": {
+    "coffee_container": {
+      "allow_empty_geometry": true,
+      "assignment_order": 1,
+      "binding_cardinality": {
+        "maximum_distinct_physical_objects": 1,
+        "minimum_distinct_physical_objects": 1,
+        "mode": "assignment_driven"
+      },
+      "count": 1,
+      "geometric_requirements": [],
+      "semantic_preferences": [
+        {
+          "canonical_label": "drawer",
+          "detector_aliases": [
+            "drawer"
+          ],
+          "rank": 1
+        },
+        {
+          "canonical_label": "cupboard",
+          "detector_aliases": [
+            "cupboard"
+          ],
+          "rank": 2
+        },
+        {
+          "canonical_label": "cabinet",
+          "detector_aliases": [
+            "cabinet"
+          ],
+          "rank": 3
+        },
+        {
+          "canonical_label": "storage_compartment",
+          "detector_aliases": [
+            "storage_compartment"
+          ],
+          "rank": 4
+        },
+        {
+          "canonical_label": "enclosed_storage_space",
+          "detector_aliases": [
+            "enclosed_storage_space"
+          ],
+          "rank": 5
+        }
+      ],
+      "unary_geometry": []
+    },
+    "soup_eating_utensil": {
+      "allow_empty_geometry": true,
+      "assignment_order": 0,
+      "binding_cardinality": {
+        "maximum_distinct_physical_objects": 1,
+        "minimum_distinct_physical_objects": 1,
+        "mode": "assignment_driven"
+      },
+      "count": 1,
+      "geometric_requirements": [],
+      "semantic_preferences": [
+        {
+          "canonical_label": "stool_seat",
+          "detector_aliases": [
+            "stool_seat"
+          ],
+          "rank": 1
+        },
+        {
+          "canonical_label": "chair_seat",
+          "detector_aliases": [
+            "chair_seat"
+          ],
+          "rank": 2
+        },
+        {
+          "canonical_label": "bench_seat",
+          "detector_aliases": [
+            "bench_seat"
+          ],
+          "rank": 3
+        },
+        {
+          "canonical_label": "flat_seating_surface",
+          "detector_aliases": [
+            "flat_seating_surface"
+          ],
+          "rank": 4
+        }
+      ],
+      "unary_geometry": []
+    }
+  },
+  "schema_version": 2,
+  "selection": {
+    "policy": "ranked_valid_candidate",
+    "semantic_confidence_is_only_a_gate": true
+  },
+  "specification_source": "VLM_FUNCTIONAL_SPEC",
+  "symbolic_task": {
+    "causal_dependencies": [
+      [
+        "coffee_contents_present",
+        "coffee_stirred"
+      ],
+      [
+        "coffee_stirred",
+        "coffee_served"
+      ],
+      [
+        "soup_content_present",
+        "soup_utensil_placed"
+      ],
+      [
+        "soup_utensil_placed",
+        "soup_served"
+      ]
+    ],
+    "contents": [
+      "coffee",
+      "water",
+      "soup"
+    ],
+    "home_region": "countertop",
+    "initial_observation_region": "countertop",
+    "schema_version": 1,
+    "source_roles": {
+      "coffee_source": {
+        "accepted_semantic_labels": [
+          "coffee_source"
+        ],
+        "count": 1,
+        "provides": "coffee"
+      },
+      "water_source": {
+        "accepted_semantic_labels": [
+          "kettle"
+        ],
+        "count": 1,
+        "provides": "water"
+      }
+    },
+    "target_requirements": {
+      "coffee": {
+        "final_goal": "served",
+        "required_contents": [
+          "coffee",
+          "water"
+        ],
+        "requires_operation_group": "coffee_stirring",
+        "witness_role": "coffee_container"
+      },
+      "soup": {
+        "final_goal": "served",
+        "initial_contents": [
+          "soup"
+        ],
+        "required_contents": [
+          "soup"
+        ],
+        "requires_operation_group": "soup_serving",
+        "witness_role": "soup_container"
+      }
+    }
+  },
+  "task_id": "s1_integrated_prepare_and_serve_coffee_and_soup"
+}

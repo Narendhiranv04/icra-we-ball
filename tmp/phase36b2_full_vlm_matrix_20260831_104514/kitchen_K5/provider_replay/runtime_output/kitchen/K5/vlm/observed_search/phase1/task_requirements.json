@@ -1,0 +1,396 @@
+{
+  "constraints": {
+    "distinct_objects": true,
+    "distinct_role_assignments": true,
+    "pairwise": [
+      {
+        "apply_to": "all_selected_targets",
+        "from_role": "coffee_stirrer",
+        "relation": "INSERTABLE_IN",
+        "required_status": "TRUE",
+        "to_role": "coffee_container"
+      },
+      {
+        "apply_to": "all_selected_targets",
+        "from_role": "coffee_stirrer",
+        "relation": "INSERTABLE_IN",
+        "required_status": "TRUE",
+        "to_role": "soup_container"
+      },
+      {
+        "apply_to": "all_selected_targets",
+        "from_role": "soup_eating_utensil",
+        "relation": "INSERTABLE_IN",
+        "required_status": "TRUE",
+        "to_role": "soup_container"
+      }
+    ]
+  },
+  "cross_group_reuse": {
+    "allowed": true,
+    "selection_preference": "neutral"
+  },
+  "diagnostics": {
+    "max_representative_rejections": 50
+  },
+  "goal_instruction": "Prepare and serve coffee and soup for two people using the available kitchenware. Stir both coffees and provide each soup bowl with a suitable utensil. Search closed kitchen storage for anything still required.",
+  "operation_groups": {
+    "coffee_stirring": {
+      "function": "stir coffee",
+      "relations": [
+        "INSERTABLE_IN"
+      ],
+      "required_target_count": 2,
+      "target_role": "coffee_container",
+      "tool_role": "coffee_stirrer",
+      "usage_policy": {
+        "distinct_within_group": false,
+        "mode": "sequential_reuse_allowed",
+        "same_tool_must_cover_all_targets": false,
+        "selection_preference": "minimize_distinct_tools"
+      }
+    },
+    "soup_serving": {
+      "function": "serve soup",
+      "relations": [
+        "INSERTABLE_IN"
+      ],
+      "required_target_count": 2,
+      "target_role": "soup_container",
+      "tool_role": "soup_eating_utensil",
+      "usage_policy": {
+        "distinct_within_group": false,
+        "mode": "sequential_reuse_allowed",
+        "same_tool_must_cover_all_targets": false,
+        "selection_preference": "minimize_distinct_tools"
+      }
+    }
+  },
+  "pairing": {
+    "semantic_unknown_policy": "defer_relation_evaluation",
+    "strategy": "semantic_role_scoped",
+    "unary_geometry_scope": "all_observed_objects"
+  },
+  "relations": [
+    {
+      "expected": true,
+      "object_role": "coffee_container",
+      "predicate": "INSERTABLE_IN",
+      "subject_role": "coffee_stirrer"
+    },
+    {
+      "expected": true,
+      "object_role": "soup_container",
+      "predicate": "INSERTABLE_IN",
+      "subject_role": "coffee_stirrer"
+    },
+    {
+      "expected": true,
+      "object_role": "soup_container",
+      "predicate": "INSERTABLE_IN",
+      "subject_role": "soup_eating_utensil"
+    }
+  ],
+  "roles": {
+    "coffee_container": {
+      "allow_empty_geometry": false,
+      "assignment_order": 0,
+      "binding_cardinality": {
+        "maximum_distinct_physical_objects": 2,
+        "minimum_distinct_physical_objects": 2,
+        "mode": "assignment_driven"
+      },
+      "count": 2,
+      "geometric_requirements": [
+        {
+          "predicate": "OPEN_CAVITY",
+          "required_status": "TRUE"
+        }
+      ],
+      "semantic_preferences": [
+        {
+          "canonical_label": "mug",
+          "detector_aliases": [
+            "mug"
+          ],
+          "rank": 1
+        },
+        {
+          "canonical_label": "cup",
+          "detector_aliases": [
+            "cup"
+          ],
+          "rank": 2
+        },
+        {
+          "canonical_label": "bowl",
+          "detector_aliases": [
+            "bowl"
+          ],
+          "rank": 3
+        },
+        {
+          "canonical_label": "teacup",
+          "detector_aliases": [
+            "teacup"
+          ],
+          "rank": 4
+        },
+        {
+          "canonical_label": "coffee_cup",
+          "detector_aliases": [
+            "coffee_cup"
+          ],
+          "rank": 5
+        },
+        {
+          "canonical_label": "soup_bowl",
+          "detector_aliases": [
+            "soup_bowl"
+          ],
+          "rank": 6
+        }
+      ],
+      "unary_geometry": [
+        {
+          "expected": true,
+          "predicate": "OPEN_CAVITY"
+        }
+      ]
+    },
+    "coffee_stirrer": {
+      "allow_empty_geometry": false,
+      "assignment_order": 1,
+      "binding_cardinality": {
+        "maximum_distinct_physical_objects": 2,
+        "minimum_distinct_physical_objects": 2,
+        "mode": "assignment_driven",
+        "preferred": "minimize_distinct"
+      },
+      "count": 2,
+      "geometric_requirements": [
+        {
+          "predicate": "ELONGATED_OBJECT",
+          "required_status": "TRUE"
+        },
+        {
+          "predicate": "OPEN_CAVITY",
+          "required_status": "TRUE"
+        }
+      ],
+      "semantic_preferences": [
+        {
+          "canonical_label": "spoon",
+          "detector_aliases": [
+            "spoon"
+          ],
+          "rank": 1
+        },
+        {
+          "canonical_label": "stirrer",
+          "detector_aliases": [
+            "stirrer"
+          ],
+          "rank": 2
+        },
+        {
+          "canonical_label": "utensil",
+          "detector_aliases": [
+            "utensil"
+          ],
+          "rank": 3
+        },
+        {
+          "canonical_label": "ladle",
+          "detector_aliases": [
+            "ladle"
+          ],
+          "rank": 4
+        }
+      ],
+      "unary_geometry": [
+        {
+          "expected": true,
+          "predicate": "ELONGATED_OBJECT"
+        },
+        {
+          "expected": true,
+          "predicate": "OPEN_CAVITY"
+        }
+      ]
+    },
+    "soup_container": {
+      "allow_empty_geometry": false,
+      "assignment_order": 2,
+      "binding_cardinality": {
+        "maximum_distinct_physical_objects": 2,
+        "minimum_distinct_physical_objects": 2,
+        "mode": "assignment_driven"
+      },
+      "count": 2,
+      "geometric_requirements": [
+        {
+          "predicate": "OPEN_CAVITY",
+          "required_status": "TRUE"
+        }
+      ],
+      "semantic_preferences": [
+        {
+          "canonical_label": "soup_bowl",
+          "detector_aliases": [
+            "soup_bowl"
+          ],
+          "rank": 1
+        },
+        {
+          "canonical_label": "bowl",
+          "detector_aliases": [
+            "bowl"
+          ],
+          "rank": 2
+        },
+        {
+          "canonical_label": "dish",
+          "detector_aliases": [
+            "dish"
+          ],
+          "rank": 3
+        }
+      ],
+      "unary_geometry": [
+        {
+          "expected": true,
+          "predicate": "OPEN_CAVITY"
+        }
+      ]
+    },
+    "soup_eating_utensil": {
+      "allow_empty_geometry": false,
+      "assignment_order": 3,
+      "binding_cardinality": {
+        "maximum_distinct_physical_objects": 2,
+        "minimum_distinct_physical_objects": 2,
+        "mode": "assignment_driven",
+        "preferred": "minimize_distinct"
+      },
+      "count": 2,
+      "geometric_requirements": [
+        {
+          "predicate": "ELONGATED_OBJECT",
+          "required_status": "TRUE"
+        },
+        {
+          "predicate": "OPEN_CAVITY",
+          "required_status": "TRUE"
+        }
+      ],
+      "semantic_preferences": [
+        {
+          "canonical_label": "spoon",
+          "detector_aliases": [
+            "spoon"
+          ],
+          "rank": 1
+        },
+        {
+          "canonical_label": "utensil",
+          "detector_aliases": [
+            "utensil"
+          ],
+          "rank": 2
+        },
+        {
+          "canonical_label": "ladle",
+          "detector_aliases": [
+            "ladle"
+          ],
+          "rank": 3
+        }
+      ],
+      "unary_geometry": [
+        {
+          "expected": true,
+          "predicate": "ELONGATED_OBJECT"
+        },
+        {
+          "expected": true,
+          "predicate": "OPEN_CAVITY"
+        }
+      ]
+    }
+  },
+  "schema_version": 2,
+  "selection": {
+    "policy": "ranked_valid_candidate",
+    "semantic_confidence_is_only_a_gate": true
+  },
+  "specification_source": "VLM_FUNCTIONAL_SPEC",
+  "symbolic_task": {
+    "causal_dependencies": [
+      [
+        "coffee_contents_present",
+        "coffee_stirred"
+      ],
+      [
+        "coffee_stirred",
+        "coffee_served"
+      ],
+      [
+        "soup_content_present",
+        "soup_utensil_placed"
+      ],
+      [
+        "soup_utensil_placed",
+        "soup_served"
+      ]
+    ],
+    "contents": [
+      "coffee",
+      "water",
+      "soup"
+    ],
+    "home_region": "countertop",
+    "initial_observation_region": "countertop",
+    "schema_version": 1,
+    "source_roles": {
+      "coffee_source": {
+        "accepted_semantic_labels": [
+          "coffee_source"
+        ],
+        "count": 1,
+        "provides": "coffee"
+      },
+      "water_source": {
+        "accepted_semantic_labels": [
+          "kettle"
+        ],
+        "count": 1,
+        "provides": "water"
+      }
+    },
+    "target_requirements": {
+      "coffee": {
+        "final_goal": "served",
+        "required_contents": [
+          "coffee",
+          "water"
+        ],
+        "requires_operation_group": "coffee_stirring",
+        "witness_role": "coffee_container"
+      },
+      "soup": {
+        "final_goal": "served",
+        "initial_contents": [
+          "soup"
+        ],
+        "required_contents": [
+          "soup"
+        ],
+        "requires_operation_group": "soup_serving",
+        "witness_role": "soup_container"
+      }
+    }
+  },
+  "target_assignment_ablation": false,
+  "task_id": "s1_integrated_prepare_and_serve_coffee_and_soup"
+}

@@ -1,0 +1,82 @@
+{
+  "alternatives": [
+    {
+      "camera_ids": [
+        "inspection_close",
+        "inspection_right"
+      ],
+      "label": "coffee_cup",
+      "mean_confidence": 0.8055088222026825,
+      "score": 6.326667882060542,
+      "supporting_view_count": 2
+    },
+    {
+      "camera_ids": [
+        "inspection_front",
+        "inspection_top"
+      ],
+      "label": "cup",
+      "mean_confidence": 0.8119245767593384,
+      "score": 5.978078940334539,
+      "supporting_view_count": 2
+    },
+    {
+      "camera_ids": [
+        "inspection_left"
+      ],
+      "label": "mug",
+      "mean_confidence": 0.9066699147224426,
+      "score": 3.7060533929641184,
+      "supporting_view_count": 1
+    }
+  ],
+  "ambiguity_hypotheses": [
+    "coffee_cup",
+    "cup"
+  ],
+  "association_method": "mask_box_overlap_v1",
+  "canonical_label": null,
+  "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+  "contributing_camera_ids": [
+    "inspection_close",
+    "inspection_right"
+  ],
+  "detector_name": "ultralytics_yolo_world",
+  "detector_version": "8.4.112",
+  "mean_confidence": 0.8055088222026825,
+  "observation_source": "RGB_DETECTOR",
+  "plausible_labels": [
+    "coffee_cup",
+    "cup"
+  ],
+  "quality": {
+    "mean_confidence": 0.8055088222026825,
+    "supporting_view_count": 2,
+    "supporting_view_margin": 0,
+    "validated": false,
+    "weighted_score_margin": 0.3485889417260033,
+    "winner_policy": "supporting_views_then_weighted_score",
+    "winning_label_margin": 0.3485889417260033,
+    "winning_label_margin_kind": "weighted_score"
+  },
+  "reason_codes": [
+    "CONFLICTING_MULTI_VIEW_LABELS"
+  ],
+  "semantic_evidence_paths": [
+    "stages/000_initial/cameras/inspection_close/rgb.png",
+    "stages/000_initial/cameras/inspection_front/rgb.png",
+    "stages/000_initial/cameras/inspection_left/rgb.png",
+    "stages/000_initial/cameras/inspection_right/rgb.png",
+    "stages/000_initial/cameras/inspection_top/rgb.png"
+  ],
+  "semantic_record_path": "stages/000_initial/semantics/object_0002/semantic_evidence.json",
+  "source_region": "INITIAL",
+  "source_stage": 0,
+  "status": "UNKNOWN",
+  "supporting_view_count": 2,
+  "supporting_view_margin": 0,
+  "weighted_score_margin": 0.3485889417260033,
+  "winner_policy": "supporting_views_then_weighted_score",
+  "winning_label_margin": 0.3485889417260033,
+  "winning_label_margin_kind": "weighted_score"
+}

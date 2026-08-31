@@ -1,0 +1,79 @@
+{
+  "elapsed_seconds": 3.4294003853574395e-05,
+  "observed_object_ids": [
+    "object_0001",
+    "object_0002",
+    "object_0003",
+    "object_0004",
+    "object_0005",
+    "object_0006",
+    "object_0007",
+    "object_0008"
+  ],
+  "ordered_distinct_object_pair_count": 56,
+  "pairing_scope": "SEMANTIC_ROLE_SCOPED_OBJECT_PAIRS",
+  "pairing_strategy": "semantic_role_scoped",
+  "region_id": "D2",
+  "relation_evaluation_count": 2,
+  "relation_names": [
+    "INSERTABLE_IN"
+  ],
+  "relations": [
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "soup_eating_utensil"
+        },
+        {
+          "from_role": "soup_eating_utensil",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "inference_basis": "GEOMETRY_ONLY",
+        "method": "cached_stage_local_geometry_relation_v1",
+        "reason": "TARGET_OPEN_CAVITY_NOT_TRUE",
+        "source_measurement_cloud_path": "stages/000_initial/evidence/object_0004/fused.ply",
+        "status": "UNKNOWN",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0005/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0004",
+      "status": "UNKNOWN",
+      "target_object_id": "object_0005"
+    },
+    {
+      "applicable_role_pairs": [
+        {
+          "from_role": "coffee_container",
+          "to_role": "soup_eating_utensil"
+        },
+        {
+          "from_role": "soup_eating_utensil",
+          "to_role": "soup_eating_utensil"
+        }
+      ],
+      "evidence": {
+        "inference_basis": "GEOMETRY_ONLY",
+        "method": "cached_stage_local_geometry_relation_v1",
+        "reason": "TARGET_OPEN_CAVITY_NOT_TRUE",
+        "source_measurement_cloud_path": "stages/000_initial/evidence/object_0005/fused.ply",
+        "status": "UNKNOWN",
+        "target_measurement_cloud_path": "stages/000_initial/evidence/object_0004/fused.ply"
+      },
+      "relation": "INSERTABLE_IN",
+      "role_projection_eligible": true,
+      "source_object_id": "object_0005",
+      "status": "UNKNOWN",
+      "target_object_id": "object_0004"
+    }
+  ],
+  "role_binding_phase": "AFTER_SEMANTIC_GATING_AND_PAIRWISE_GEOMETRY",
+  "schema_version": 1,
+  "skipped_relation_pair_count": 54,
+  "stage": 2,
+  "task_id": "s1_integrated_prepare_and_serve_coffee_and_soup",
+  "unary_geometry_scope": "ALL_OBSERVED_OBJECTS"
+}

@@ -1,0 +1,220 @@
+{"event": "SETTLE_COMPLETED", "region_id": "INITIAL", "settle_steps": 50, "stage": 0}
+{"event": "VIRTUAL_INSPECTION_RIG_POSITIONED", "region_id": "INITIAL", "stage": 0}
+{"event": "INSPECTION_CAPTURED", "region_id": "INITIAL", "stage": 0, "valid_camera_count": 5}
+{"event": "OBJECT_DISCOVERED", "instance_token": "d5ce0f446045ba0f64021941", "object_id": "object_0001", "stage": 0}
+{"event": "OBJECT_EVIDENCE_ACCEPTED", "object_id": "object_0001", "point_count": 1776, "region_id": "INITIAL", "stage": 0}
+{"event": "PROPERTY_UPDATED", "measurement_cloud_path": "stages/000_initial/evidence/object_0001/fused.ply", "object_id": "object_0001", "property": "OPEN_CAVITY", "source_region": "INITIAL", "stage": 0, "value": true}
+{"event": "OBJECT_DISCOVERED", "instance_token": "d8b004988b7ac16754ced579", "object_id": "object_0002", "stage": 0}
+{"event": "OBJECT_EVIDENCE_ACCEPTED", "object_id": "object_0002", "point_count": 4030, "region_id": "INITIAL", "stage": 0}
+{"event": "PROPERTY_UPDATED", "measurement_cloud_path": "stages/000_initial/evidence/object_0002/fused.ply", "object_id": "object_0002", "property": "OPEN_CAVITY", "source_region": "INITIAL", "stage": 0, "value": true}
+{"event": "OBJECT_DISCOVERED", "instance_token": "630250409d0d23fc5f1be84b", "object_id": "object_0003", "stage": 0}
+{"event": "OBJECT_EVIDENCE_ACCEPTED", "object_id": "object_0003", "point_count": 5320, "region_id": "INITIAL", "stage": 0}
+{"event": "PROPERTY_UPDATED", "measurement_cloud_path": "stages/000_initial/evidence/object_0003/fused.ply", "object_id": "object_0003", "property": "OPEN_CAVITY", "source_region": "INITIAL", "stage": 0, "value": true}
+{"event": "OBJECT_DISCOVERED", "instance_token": "1be6d9ca7f02a504e9cd1b50", "object_id": "object_0004", "stage": 0}
+{"event": "OBJECT_EVIDENCE_ACCEPTED", "object_id": "object_0004", "point_count": 893, "region_id": "INITIAL", "stage": 0}
+{"event": "PROPERTY_UPDATED", "measurement_cloud_path": "stages/000_initial/evidence/object_0004/fused.ply", "object_id": "object_0004", "property": "OPEN_CAVITY", "source_region": "INITIAL", "stage": 0, "value": null}
+{"event": "OBJECT_DISCOVERED", "instance_token": "be36e2f02858c60a310f3495", "object_id": "object_0005", "stage": 0}
+{"event": "OBJECT_EVIDENCE_ACCEPTED", "object_id": "object_0005", "point_count": 1364, "region_id": "INITIAL", "stage": 0}
+{"event": "PROPERTY_UPDATED", "measurement_cloud_path": "stages/000_initial/evidence/object_0005/fused.ply", "object_id": "object_0005", "property": "OPEN_CAVITY", "source_region": "INITIAL", "stage": 0, "value": false}
+{"event": "OBJECT_DISCOVERED", "instance_token": "35929e2fdf3f83090b7d8246", "object_id": "object_0006", "stage": 0}
+{"event": "OBJECT_EVIDENCE_ACCEPTED", "object_id": "object_0006", "point_count": 505, "region_id": "INITIAL", "stage": 0}
+{"event": "PROPERTY_UPDATED", "measurement_cloud_path": "stages/000_initial/evidence/object_0006/fused.ply", "object_id": "object_0006", "property": "OPEN_CAVITY", "source_region": "INITIAL", "stage": 0, "value": null}
+{"event": "OBJECT_DISCOVERED", "instance_token": "68d54c628e14b5f25599dec9", "object_id": "object_0007", "stage": 0}
+{"event": "OBJECT_EVIDENCE_ACCEPTED", "object_id": "object_0007", "point_count": 4323, "region_id": "INITIAL", "stage": 0}
+{"event": "PROPERTY_UPDATED", "measurement_cloud_path": "stages/000_initial/evidence/object_0007/fused.ply", "object_id": "object_0007", "property": "OPEN_CAVITY", "source_region": "INITIAL", "stage": 0, "value": false}
+{"event": "OBJECT_DISCOVERED", "instance_token": "54218f1cd2573a09b25adea2", "object_id": "object_0008", "stage": 0}
+{"event": "OBJECT_EVIDENCE_ACCEPTED", "object_id": "object_0008", "point_count": 2315, "region_id": "INITIAL", "stage": 0}
+{"event": "PROPERTY_UPDATED", "measurement_cloud_path": "stages/000_initial/evidence/object_0008/fused.ply", "object_id": "object_0008", "property": "OPEN_CAVITY", "source_region": "INITIAL", "stage": 0, "value": true}
+{"camera_id": "inspection_left", "detection_count": 33, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 0}
+{"camera_id": "inspection_right", "detection_count": 31, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 0}
+{"camera_id": "inspection_top", "detection_count": 19, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 0}
+{"camera_id": "inspection_front", "detection_count": 35, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 0}
+{"camera_id": "inspection_close", "detection_count": 21, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 0}
+{"association_score": 0.9109426321944311, "camera_id": "inspection_left", "confidence": 0.8931425213813782, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "kettle", "object_id": "object_0007", "stage": 0}
+{"association_score": 0.9462102760661205, "camera_id": "inspection_left", "confidence": 0.24258048832416534, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "container_for_liquid", "object_id": "object_0008", "stage": 0}
+{"association_score": 0.9531496334181033, "camera_id": "inspection_left", "confidence": 0.15524855256080627, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "container_for_liquid", "object_id": "object_0002", "stage": 0}
+{"association_score": 0.9574093111485215, "camera_id": "inspection_left", "confidence": 0.1285594403743744, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "container_for_liquid", "object_id": "object_0003", "stage": 0}
+{"association_score": 0.7210993455953463, "camera_id": "inspection_left", "confidence": 0.03740231692790985, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "flat_seating_surface", "object_id": "object_0004", "stage": 0}
+{"association_score": 0.9276091746048476, "camera_id": "inspection_left", "confidence": 0.04237527772784233, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "container_for_liquid", "object_id": "object_0001", "stage": 0}
+{"association_score": 0.9017449884660361, "camera_id": "inspection_right", "confidence": 0.9699049592018127, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "kettle", "object_id": "object_0007", "stage": 0}
+{"association_score": 0.9624129768866612, "camera_id": "inspection_right", "confidence": 0.25092974305152893, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "container_for_liquid", "object_id": "object_0002", "stage": 0}
+{"association_score": 0.9446510297482837, "camera_id": "inspection_right", "confidence": 0.22722290456295013, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "container_for_liquid", "object_id": "object_0008", "stage": 0}
+{"association_score": 0.9092806520328476, "camera_id": "inspection_right", "confidence": 0.3136829137802124, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "kettle", "object_id": "object_0001", "stage": 0}
+{"association_score": 0.9567936031054837, "camera_id": "inspection_right", "confidence": 0.15547050535678864, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "container_for_liquid", "object_id": "object_0003", "stage": 0}
+{"association_score": 0.7312067562067562, "camera_id": "inspection_right", "confidence": 0.034716468304395676, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "flat_seating_surface", "object_id": "object_0005", "stage": 0}
+{"association_score": 0.9100425735488404, "camera_id": "inspection_top", "confidence": 0.6395362615585327, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "kettle", "object_id": "object_0007", "stage": 0}
+{"association_score": 0.9192255157380854, "camera_id": "inspection_top", "confidence": 0.21027955412864685, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "container_for_liquid", "object_id": "object_0008", "stage": 0}
+{"association_score": 0.9448005462945969, "camera_id": "inspection_top", "confidence": 0.13881950080394745, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "container_for_liquid", "object_id": "object_0003", "stage": 0}
+{"association_score": 0.724631860776439, "camera_id": "inspection_top", "confidence": 0.03373546525835991, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "flat_seating_surface", "object_id": "object_0006", "stage": 0}
+{"association_score": 0.7222261304040899, "camera_id": "inspection_top", "confidence": 0.03203262388706207, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "flat_seating_surface", "object_id": "object_0004", "stage": 0}
+{"association_score": 0.8457423010561667, "camera_id": "inspection_top", "confidence": 0.03654717281460762, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "container_for_liquid", "object_id": "object_0002", "stage": 0}
+{"association_score": 0.8926374150217122, "camera_id": "inspection_front", "confidence": 0.9469566345214844, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "kettle", "object_id": "object_0007", "stage": 0}
+{"association_score": 0.9584615474140012, "camera_id": "inspection_front", "confidence": 0.23340298235416412, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "container_for_liquid", "object_id": "object_0002", "stage": 0}
+{"association_score": 0.9458574709321552, "camera_id": "inspection_front", "confidence": 0.22858311235904694, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "container_for_liquid", "object_id": "object_0008", "stage": 0}
+{"association_score": 0.956664533204915, "camera_id": "inspection_front", "confidence": 0.20065410435199738, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "container_for_liquid", "object_id": "object_0003", "stage": 0}
+{"association_score": 0.7339063714063714, "camera_id": "inspection_front", "confidence": 0.08875343948602676, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "flat_seating_surface", "object_id": "object_0005", "stage": 0}
+{"association_score": 0.9643872549019608, "camera_id": "inspection_front", "confidence": 0.05215813219547272, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "container_for_liquid", "object_id": "object_0001", "stage": 0}
+{"association_score": 0.8931274491757887, "camera_id": "inspection_close", "confidence": 0.8808196187019348, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "kettle", "object_id": "object_0007", "stage": 0}
+{"association_score": 0.954606288981289, "camera_id": "inspection_close", "confidence": 0.35505759716033936, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "container_for_liquid", "object_id": "object_0008", "stage": 0}
+{"association_score": 0.9623623991257937, "camera_id": "inspection_close", "confidence": 0.057268816977739334, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "container_for_liquid", "object_id": "object_0002", "stage": 0}
+{"association_score": 0.7257261519981438, "camera_id": "inspection_close", "confidence": 0.058797188103199005, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "flat_seating_surface", "object_id": "object_0004", "stage": 0}
+{"association_score": 0.9632153418905356, "camera_id": "inspection_close", "confidence": 0.03267313539981842, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "container_for_liquid", "object_id": "object_0003", "stage": 0}
+{"elapsed_seconds": 2.8343005396891385e-05, "event": "SEMANTIC_ROLE_SCOPED_PAIRS_EVALUATED", "observed_object_count": 8, "ordered_distinct_object_pair_count": 56, "pairing_strategy": "semantic_role_scoped", "region_id": "INITIAL", "relation_evaluation_count": 2, "role_binding_phase": "AFTER_SEMANTIC_GATING_AND_PAIRWISE_GEOMETRY", "skipped_relation_pair_count": 54, "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0001", "role": "soup_eating_utensil", "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0002", "role": "soup_eating_utensil", "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0003", "role": "soup_eating_utensil", "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0007", "role": "soup_eating_utensil", "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0008", "role": "soup_eating_utensil", "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0001", "role": "coffee_container", "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0002", "role": "coffee_container", "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0003", "role": "coffee_container", "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0004", "role": "coffee_container", "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0005", "role": "coffee_container", "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0007", "role": "coffee_container", "stage": 0}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0008", "role": "coffee_container", "stage": 0}
+{"event": "WITNESS_EVALUATED", "stage": 0, "status": "INDETERMINATE", "task_id": "s1_integrated_prepare_and_serve_coffee_and_soup"}
+{"event": "REGION_OPENED", "region_id": "D1", "stage": 1}
+{"event": "SETTLE_COMPLETED", "region_id": "D1", "settle_steps": 80, "stage": 1}
+{"event": "VIRTUAL_INSPECTION_RIG_POSITIONED", "region_id": "D1", "stage": 1}
+{"event": "INSPECTION_CAPTURED", "region_id": "D1", "stage": 1, "valid_camera_count": 5}
+{"event": "OBJECT_OUTSIDE_INSPECTION_VOLUME", "instance_token": "d5ce0f446045ba0f64021941", "object_id": "object_0001", "point_count_inside": 0, "raw_visible_point_count": 39675, "reasons": ["SOURCE_REGION_MISMATCH", "INSUFFICIENT_POINTS_INSIDE_VOLUME", "INSUFFICIENT_INSIDE_FRACTION"], "region_id": "D1", "stage": 1}
+{"event": "OBJECT_OUTSIDE_INSPECTION_VOLUME", "instance_token": "d8b004988b7ac16754ced579", "object_id": "object_0002", "point_count_inside": 0, "raw_visible_point_count": 17585, "reasons": ["SOURCE_REGION_MISMATCH", "INSUFFICIENT_POINTS_INSIDE_VOLUME", "INSUFFICIENT_INSIDE_FRACTION"], "region_id": "D1", "stage": 1}
+{"event": "OBJECT_OUTSIDE_INSPECTION_VOLUME", "instance_token": "630250409d0d23fc5f1be84b", "object_id": "object_0003", "point_count_inside": 0, "raw_visible_point_count": 93076, "reasons": ["SOURCE_REGION_MISMATCH", "INSUFFICIENT_POINTS_INSIDE_VOLUME", "INSUFFICIENT_INSIDE_FRACTION"], "region_id": "D1", "stage": 1}
+{"event": "OBJECT_OUTSIDE_INSPECTION_VOLUME", "instance_token": "1be6d9ca7f02a504e9cd1b50", "object_id": "object_0004", "point_count_inside": 0, "raw_visible_point_count": 10314, "reasons": ["SOURCE_REGION_MISMATCH", "INSUFFICIENT_POINTS_INSIDE_VOLUME", "INSUFFICIENT_INSIDE_FRACTION"], "region_id": "D1", "stage": 1}
+{"event": "OBJECT_OUTSIDE_INSPECTION_VOLUME", "instance_token": "be36e2f02858c60a310f3495", "object_id": "object_0005", "point_count_inside": 0, "raw_visible_point_count": 11353, "reasons": ["SOURCE_REGION_MISMATCH", "INSUFFICIENT_POINTS_INSIDE_VOLUME", "INSUFFICIENT_INSIDE_FRACTION"], "region_id": "D1", "stage": 1}
+{"event": "OBJECT_OUTSIDE_INSPECTION_VOLUME", "instance_token": "35929e2fdf3f83090b7d8246", "object_id": "object_0006", "point_count_inside": 0, "raw_visible_point_count": 55, "reasons": ["SOURCE_REGION_MISMATCH", "INSUFFICIENT_POINTS_INSIDE_VOLUME", "INSUFFICIENT_INSIDE_FRACTION"], "region_id": "D1", "stage": 1}
+{"event": "OBJECT_OUTSIDE_INSPECTION_VOLUME", "instance_token": "68d54c628e14b5f25599dec9", "object_id": "object_0007", "point_count_inside": 0, "raw_visible_point_count": 7402, "reasons": ["SOURCE_REGION_MISMATCH", "INSUFFICIENT_POINTS_INSIDE_VOLUME", "INSUFFICIENT_INSIDE_FRACTION"], "region_id": "D1", "stage": 1}
+{"camera_id": "inspection_left", "detection_count": 11, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 1}
+{"camera_id": "inspection_right", "detection_count": 12, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 1}
+{"camera_id": "inspection_top", "detection_count": 3, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 1}
+{"camera_id": "inspection_front", "detection_count": 7, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 1}
+{"camera_id": "inspection_close", "detection_count": 6, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 1}
+{"elapsed_seconds": 3.692899917950854e-05, "event": "SEMANTIC_ROLE_SCOPED_PAIRS_EVALUATED", "observed_object_count": 8, "ordered_distinct_object_pair_count": 56, "pairing_strategy": "semantic_role_scoped", "region_id": "D1", "relation_evaluation_count": 2, "role_binding_phase": "AFTER_SEMANTIC_GATING_AND_PAIRWISE_GEOMETRY", "skipped_relation_pair_count": 54, "stage": 1}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0001", "role": "soup_eating_utensil", "stage": 1}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0002", "role": "soup_eating_utensil", "stage": 1}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0003", "role": "soup_eating_utensil", "stage": 1}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0007", "role": "soup_eating_utensil", "stage": 1}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0008", "role": "soup_eating_utensil", "stage": 1}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0001", "role": "coffee_container", "stage": 1}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0002", "role": "coffee_container", "stage": 1}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0003", "role": "coffee_container", "stage": 1}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0004", "role": "coffee_container", "stage": 1}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0005", "role": "coffee_container", "stage": 1}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0007", "role": "coffee_container", "stage": 1}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0008", "role": "coffee_container", "stage": 1}
+{"event": "WITNESS_EVALUATED", "stage": 1, "status": "INDETERMINATE", "task_id": "s1_integrated_prepare_and_serve_coffee_and_soup"}
+{"event": "REGION_OPENED", "region_id": "D2", "stage": 2}
+{"event": "SETTLE_COMPLETED", "region_id": "D2", "settle_steps": 80, "stage": 2}
+{"event": "VIRTUAL_INSPECTION_RIG_POSITIONED", "region_id": "D2", "stage": 2}
+{"event": "INSPECTION_CAPTURED", "region_id": "D2", "stage": 2, "valid_camera_count": 5}
+{"event": "OBJECT_OUTSIDE_INSPECTION_VOLUME", "instance_token": "d8b004988b7ac16754ced579", "object_id": "object_0002", "point_count_inside": 0, "raw_visible_point_count": 88680, "reasons": ["SOURCE_REGION_MISMATCH", "INSUFFICIENT_POINTS_INSIDE_VOLUME", "INSUFFICIENT_INSIDE_FRACTION"], "region_id": "D2", "stage": 2}
+{"event": "OBJECT_OUTSIDE_INSPECTION_VOLUME", "instance_token": "630250409d0d23fc5f1be84b", "object_id": "object_0003", "point_count_inside": 0, "raw_visible_point_count": 8398, "reasons": ["SOURCE_REGION_MISMATCH", "INSUFFICIENT_POINTS_INSIDE_VOLUME", "INSUFFICIENT_INSIDE_FRACTION"], "region_id": "D2", "stage": 2}
+{"event": "OBJECT_OUTSIDE_INSPECTION_VOLUME", "instance_token": "be36e2f02858c60a310f3495", "object_id": "object_0005", "point_count_inside": 0, "raw_visible_point_count": 802, "reasons": ["SOURCE_REGION_MISMATCH", "INSUFFICIENT_POINTS_INSIDE_VOLUME", "INSUFFICIENT_INSIDE_FRACTION"], "region_id": "D2", "stage": 2}
+{"event": "OBJECT_OUTSIDE_INSPECTION_VOLUME", "instance_token": "35929e2fdf3f83090b7d8246", "object_id": "object_0006", "point_count_inside": 0, "raw_visible_point_count": 4228, "reasons": ["SOURCE_REGION_MISMATCH", "INSUFFICIENT_POINTS_INSIDE_VOLUME", "INSUFFICIENT_INSIDE_FRACTION"], "region_id": "D2", "stage": 2}
+{"event": "OBJECT_OUTSIDE_INSPECTION_VOLUME", "instance_token": "68d54c628e14b5f25599dec9", "object_id": "object_0007", "point_count_inside": 0, "raw_visible_point_count": 102425, "reasons": ["SOURCE_REGION_MISMATCH", "INSUFFICIENT_POINTS_INSIDE_VOLUME", "INSUFFICIENT_INSIDE_FRACTION"], "region_id": "D2", "stage": 2}
+{"event": "OBJECT_OUTSIDE_INSPECTION_VOLUME", "instance_token": "54218f1cd2573a09b25adea2", "object_id": "object_0008", "point_count_inside": 0, "raw_visible_point_count": 14988, "reasons": ["SOURCE_REGION_MISMATCH", "INSUFFICIENT_POINTS_INSIDE_VOLUME", "INSUFFICIENT_INSIDE_FRACTION"], "region_id": "D2", "stage": 2}
+{"camera_id": "inspection_left", "detection_count": 10, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 2}
+{"camera_id": "inspection_right", "detection_count": 26, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 2}
+{"camera_id": "inspection_top", "detection_count": 4, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 2}
+{"camera_id": "inspection_front", "detection_count": 7, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 2}
+{"camera_id": "inspection_close", "detection_count": 7, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 2}
+{"elapsed_seconds": 3.4002994652837515e-05, "event": "SEMANTIC_ROLE_SCOPED_PAIRS_EVALUATED", "observed_object_count": 8, "ordered_distinct_object_pair_count": 56, "pairing_strategy": "semantic_role_scoped", "region_id": "D2", "relation_evaluation_count": 2, "role_binding_phase": "AFTER_SEMANTIC_GATING_AND_PAIRWISE_GEOMETRY", "skipped_relation_pair_count": 54, "stage": 2}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0001", "role": "soup_eating_utensil", "stage": 2}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0002", "role": "soup_eating_utensil", "stage": 2}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0003", "role": "soup_eating_utensil", "stage": 2}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0007", "role": "soup_eating_utensil", "stage": 2}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0008", "role": "soup_eating_utensil", "stage": 2}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0001", "role": "coffee_container", "stage": 2}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0002", "role": "coffee_container", "stage": 2}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0003", "role": "coffee_container", "stage": 2}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0004", "role": "coffee_container", "stage": 2}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0005", "role": "coffee_container", "stage": 2}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0007", "role": "coffee_container", "stage": 2}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0008", "role": "coffee_container", "stage": 2}
+{"event": "WITNESS_EVALUATED", "stage": 2, "status": "INDETERMINATE", "task_id": "s1_integrated_prepare_and_serve_coffee_and_soup"}
+{"event": "REGION_OPENED", "region_id": "C2", "stage": 3}
+{"event": "SETTLE_COMPLETED", "region_id": "C2", "settle_steps": 80, "stage": 3}
+{"event": "VIRTUAL_INSPECTION_RIG_POSITIONED", "region_id": "C2", "stage": 3}
+{"event": "INSPECTION_CAPTURED", "region_id": "C2", "stage": 3, "valid_camera_count": 5}
+{"event": "OBJECT_DISCOVERED", "instance_token": "fce3a212d642eae761251097", "object_id": "object_0009", "stage": 3}
+{"event": "OBJECT_EVIDENCE_ACCEPTED", "object_id": "object_0009", "point_count": 2129, "region_id": "C2", "stage": 3}
+{"event": "PROPERTY_UPDATED", "measurement_cloud_path": "stages/003_after_C2/evidence/object_0009/fused.ply", "object_id": "object_0009", "property": "OPEN_CAVITY", "source_region": "C2", "stage": 3, "value": true}
+{"camera_id": "inspection_left", "detection_count": 7, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 3}
+{"camera_id": "inspection_right", "detection_count": 8, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 3}
+{"camera_id": "inspection_top", "detection_count": 2, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 3}
+{"camera_id": "inspection_front", "detection_count": 6, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 3}
+{"camera_id": "inspection_close", "detection_count": 8, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 3}
+{"association_score": 0.9686711522287637, "camera_id": "inspection_right", "confidence": 0.18370114266872406, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "container_for_liquid", "object_id": "object_0009", "stage": 3}
+{"association_score": 0.5590786138491979, "camera_id": "inspection_top", "confidence": 0.1333319991827011, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cabinet", "object_id": "object_0009", "stage": 3}
+{"association_score": 0.5169853163884706, "camera_id": "inspection_front", "confidence": 0.5143314599990845, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cabinet", "object_id": "object_0009", "stage": 3}
+{"association_score": 0.5072224505874696, "camera_id": "inspection_close", "confidence": 0.27829012274742126, "event": "SEMANTIC_EVIDENCE_ASSOCIATED", "label": "cabinet", "object_id": "object_0009", "stage": 3}
+{"elapsed_seconds": 4.826099757337943e-05, "event": "SEMANTIC_ROLE_SCOPED_PAIRS_EVALUATED", "observed_object_count": 9, "ordered_distinct_object_pair_count": 72, "pairing_strategy": "semantic_role_scoped", "region_id": "C2", "relation_evaluation_count": 4, "role_binding_phase": "AFTER_SEMANTIC_GATING_AND_PAIRWISE_GEOMETRY", "skipped_relation_pair_count": 68, "stage": 3}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0001", "role": "soup_eating_utensil", "stage": 3}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0002", "role": "soup_eating_utensil", "stage": 3}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0003", "role": "soup_eating_utensil", "stage": 3}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0007", "role": "soup_eating_utensil", "stage": 3}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0008", "role": "soup_eating_utensil", "stage": 3}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0009", "role": "soup_eating_utensil", "stage": 3}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0001", "role": "coffee_container", "stage": 3}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0002", "role": "coffee_container", "stage": 3}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0003", "role": "coffee_container", "stage": 3}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0004", "role": "coffee_container", "stage": 3}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0005", "role": "coffee_container", "stage": 3}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0007", "role": "coffee_container", "stage": 3}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0008", "role": "coffee_container", "stage": 3}
+{"event": "WITNESS_EVALUATED", "stage": 3, "status": "INDETERMINATE", "task_id": "s1_integrated_prepare_and_serve_coffee_and_soup"}
+{"event": "REGION_OPENED", "region_id": "B1", "stage": 4}
+{"event": "SETTLE_COMPLETED", "region_id": "B1", "settle_steps": 80, "stage": 4}
+{"event": "VIRTUAL_INSPECTION_RIG_POSITIONED", "region_id": "B1", "stage": 4}
+{"event": "INSPECTION_CAPTURED", "region_id": "B1", "stage": 4, "valid_camera_count": 5}
+{"event": "OBJECT_OUTSIDE_INSPECTION_VOLUME", "instance_token": "d8b004988b7ac16754ced579", "object_id": "object_0002", "point_count_inside": 0, "raw_visible_point_count": 37605, "reasons": ["SOURCE_REGION_MISMATCH", "INSUFFICIENT_POINTS_INSIDE_VOLUME", "INSUFFICIENT_INSIDE_FRACTION"], "region_id": "B1", "stage": 4}
+{"event": "OBJECT_OUTSIDE_INSPECTION_VOLUME", "instance_token": "630250409d0d23fc5f1be84b", "object_id": "object_0003", "point_count_inside": 0, "raw_visible_point_count": 2686, "reasons": ["SOURCE_REGION_MISMATCH", "INSUFFICIENT_POINTS_INSIDE_VOLUME", "INSUFFICIENT_INSIDE_FRACTION"], "region_id": "B1", "stage": 4}
+{"event": "OBJECT_OUTSIDE_INSPECTION_VOLUME", "instance_token": "be36e2f02858c60a310f3495", "object_id": "object_0005", "point_count_inside": 0, "raw_visible_point_count": 3435, "reasons": ["SOURCE_REGION_MISMATCH", "INSUFFICIENT_POINTS_INSIDE_VOLUME", "INSUFFICIENT_INSIDE_FRACTION"], "region_id": "B1", "stage": 4}
+{"event": "OBJECT_OUTSIDE_INSPECTION_VOLUME", "instance_token": "35929e2fdf3f83090b7d8246", "object_id": "object_0006", "point_count_inside": 0, "raw_visible_point_count": 16146, "reasons": ["SOURCE_REGION_MISMATCH", "INSUFFICIENT_POINTS_INSIDE_VOLUME", "INSUFFICIENT_INSIDE_FRACTION"], "region_id": "B1", "stage": 4}
+{"event": "OBJECT_OUTSIDE_INSPECTION_VOLUME", "instance_token": "68d54c628e14b5f25599dec9", "object_id": "object_0007", "point_count_inside": 0, "raw_visible_point_count": 52918, "reasons": ["SOURCE_REGION_MISMATCH", "INSUFFICIENT_POINTS_INSIDE_VOLUME", "INSUFFICIENT_INSIDE_FRACTION"], "region_id": "B1", "stage": 4}
+{"event": "OBJECT_OUTSIDE_INSPECTION_VOLUME", "instance_token": "54218f1cd2573a09b25adea2", "object_id": "object_0008", "point_count_inside": 0, "raw_visible_point_count": 46530, "reasons": ["SOURCE_REGION_MISMATCH", "INSUFFICIENT_POINTS_INSIDE_VOLUME", "INSUFFICIENT_INSIDE_FRACTION"], "region_id": "B1", "stage": 4}
+{"camera_id": "inspection_left", "detection_count": 9, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 4}
+{"camera_id": "inspection_right", "detection_count": 7, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 4}
+{"camera_id": "inspection_top", "detection_count": 5, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 4}
+{"camera_id": "inspection_front", "detection_count": 7, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 4}
+{"camera_id": "inspection_close", "detection_count": 3, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 4}
+{"elapsed_seconds": 4.8791996960062534e-05, "event": "SEMANTIC_ROLE_SCOPED_PAIRS_EVALUATED", "observed_object_count": 9, "ordered_distinct_object_pair_count": 72, "pairing_strategy": "semantic_role_scoped", "region_id": "B1", "relation_evaluation_count": 4, "role_binding_phase": "AFTER_SEMANTIC_GATING_AND_PAIRWISE_GEOMETRY", "skipped_relation_pair_count": 68, "stage": 4}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0001", "role": "soup_eating_utensil", "stage": 4}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0002", "role": "soup_eating_utensil", "stage": 4}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0003", "role": "soup_eating_utensil", "stage": 4}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0007", "role": "soup_eating_utensil", "stage": 4}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0008", "role": "soup_eating_utensil", "stage": 4}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0009", "role": "soup_eating_utensil", "stage": 4}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0001", "role": "coffee_container", "stage": 4}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0002", "role": "coffee_container", "stage": 4}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0003", "role": "coffee_container", "stage": 4}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0004", "role": "coffee_container", "stage": 4}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0005", "role": "coffee_container", "stage": 4}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0007", "role": "coffee_container", "stage": 4}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0008", "role": "coffee_container", "stage": 4}
+{"event": "WITNESS_EVALUATED", "stage": 4, "status": "INDETERMINATE", "task_id": "s1_integrated_prepare_and_serve_coffee_and_soup"}
+{"event": "REGION_OPENED", "region_id": "C1", "stage": 5}
+{"event": "SETTLE_COMPLETED", "region_id": "C1", "settle_steps": 80, "stage": 5}
+{"event": "VIRTUAL_INSPECTION_RIG_POSITIONED", "region_id": "C1", "stage": 5}
+{"event": "INSPECTION_CAPTURED", "region_id": "C1", "stage": 5, "valid_camera_count": 5}
+{"camera_id": "inspection_left", "detection_count": 4, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 5}
+{"camera_id": "inspection_right", "detection_count": 4, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 5}
+{"camera_id": "inspection_top", "detection_count": 2, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 5}
+{"camera_id": "inspection_front", "detection_count": 5, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 5}
+{"camera_id": "inspection_close", "detection_count": 2, "detector": "ultralytics_yolo_world", "event": "SEMANTIC_DETECTION_COMPLETED", "stage": 5}
+{"elapsed_seconds": 5.151599907549098e-05, "event": "SEMANTIC_ROLE_SCOPED_PAIRS_EVALUATED", "observed_object_count": 9, "ordered_distinct_object_pair_count": 72, "pairing_strategy": "semantic_role_scoped", "region_id": "C1", "relation_evaluation_count": 4, "role_binding_phase": "AFTER_SEMANTIC_GATING_AND_PAIRWISE_GEOMETRY", "skipped_relation_pair_count": 68, "stage": 5}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0001", "role": "soup_eating_utensil", "stage": 5}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0002", "role": "soup_eating_utensil", "stage": 5}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0003", "role": "soup_eating_utensil", "stage": 5}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0007", "role": "soup_eating_utensil", "stage": 5}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0008", "role": "soup_eating_utensil", "stage": 5}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0009", "role": "soup_eating_utensil", "stage": 5}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0001", "role": "coffee_container", "stage": 5}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0002", "role": "coffee_container", "stage": 5}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0003", "role": "coffee_container", "stage": 5}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0004", "role": "coffee_container", "stage": 5}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0005", "role": "coffee_container", "stage": 5}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0007", "role": "coffee_container", "stage": 5}
+{"event": "CANDIDATE_REJECTED_SEMANTIC", "object_id": "object_0008", "role": "coffee_container", "stage": 5}
+{"event": "WITNESS_EVALUATED", "stage": 5, "status": "INDETERMINATE", "task_id": "s1_integrated_prepare_and_serve_coffee_and_soup"}
+{"event": "INSPECTION_ORDER_EXHAUSTED", "final_witness_status": "INDETERMINATE", "stage": 5, "terminal_status": "EXHAUSTED"}

@@ -1,0 +1,96 @@
+{
+  "domain": "living_room",
+  "exact_structural_match": false,
+  "extra_operation_groups": [
+    "group_drinkware_to_seat",
+    "group_one_per_seat",
+    "group_remote_placement"
+  ],
+  "extra_relations": [
+    [
+      "CUP_SAUCER_SET",
+      "FITS_SET_ON",
+      "CUP_SAUCER_SET",
+      true
+    ],
+    [
+      "CUP_SAUCER_SET",
+      "FITS_SET_ON",
+      "PERSONAL_CUP_SAUCER_REGION",
+      true
+    ],
+    [
+      "REMOTE",
+      "FITS_ON",
+      "SHARED_REMOTE_REGION",
+      true
+    ]
+  ],
+  "extra_roles": [],
+  "matched_operation_groups": [],
+  "matched_roles": [
+    "CUP_SAUCER_SET",
+    "PERSONAL_CUP_SAUCER_REGION",
+    "REMOTE",
+    "SHARED_REMOTE_REGION"
+  ],
+  "missing_operation_groups": [
+    "personal_support_group"
+  ],
+  "missing_relations": [
+    [
+      "SHARED_REMOTE_REGION",
+      "ACCESSIBLE_FROM_BOTH_SEATS",
+      "SEATING_PAIR",
+      true
+    ],
+    [
+      "SHARED_REMOTE_REGION",
+      "FITS_ON",
+      "REMOTE",
+      true
+    ]
+  ],
+  "missing_roles": [
+    "SEATING_PAIR",
+    "SEATING_POSITION"
+  ],
+  "operation_group_exact_precision": 0.0,
+  "operation_group_exact_recall": 0.0,
+  "operation_group_identity_precision": 0.0,
+  "operation_group_identity_recall": 0.0,
+  "operation_group_mismatches": {},
+  "reference_complete": false,
+  "relation_precision": 0.0,
+  "relation_recall": 0.0,
+  "role_attribute_mismatches": {
+    "CUP_SAUCER_SET": {
+      "cardinality": {
+        "candidate": [
+          4,
+          4
+        ],
+        "reference": [
+          2,
+          2
+        ]
+      }
+    },
+    "PERSONAL_CUP_SAUCER_REGION": {
+      "binding_policy": {
+        "candidate": "SHARED",
+        "reference": "DISTINCT"
+      }
+    },
+    "REMOTE": {
+      "binding_policy": {
+        "candidate": "REUSABLE",
+        "reference": "DISTINCT"
+      }
+    }
+  },
+  "role_exact_precision": 0.25,
+  "role_exact_recall": 0.16666666666666666,
+  "role_identity_precision": 1.0,
+  "role_identity_recall": 0.6666666666666666
+}

@@ -1,0 +1,116 @@
+{
+  "domain": "kitchen",
+  "exact_structural_match": false,
+  "extra_operation_groups": [],
+  "extra_relations": [
+    [
+      "coffee_stirrer",
+      "INSERTABLE_IN",
+      "soup_container",
+      true
+    ]
+  ],
+  "extra_roles": [],
+  "matched_operation_groups": [
+    [
+      "coffee_stirring",
+      "coffee_stirring"
+    ],
+    [
+      "soup_serving",
+      "soup_serving"
+    ]
+  ],
+  "matched_roles": [
+    "coffee_container",
+    "coffee_stirrer",
+    "soup_container",
+    "soup_eating_utensil"
+  ],
+  "missing_operation_groups": [],
+  "missing_relations": [
+    [
+      "coffee_stirrer",
+      "REACHES_BOTTOM",
+      "coffee_container",
+      true
+    ],
+    [
+      "soup_eating_utensil",
+      "REACHES_BOTTOM",
+      "soup_container",
+      true
+    ]
+  ],
+  "missing_roles": [
+    "coffee_source",
+    "water_source"
+  ],
+  "operation_group_exact_precision": 0.0,
+  "operation_group_exact_recall": 0.0,
+  "operation_group_identity_precision": 1.0,
+  "operation_group_identity_recall": 1.0,
+  "operation_group_mismatches": {
+    "coffee_stirring": {
+      "required_relations": {
+        "candidate": [
+          "INSERTABLE_IN"
+        ],
+        "reference": [
+          "INSERTABLE_IN",
+          "REACHES_BOTTOM"
+        ]
+      }
+    },
+    "soup_serving": {
+      "required_relations": {
+        "candidate": [
+          "INSERTABLE_IN"
+        ],
+        "reference": [
+          "INSERTABLE_IN",
+          "REACHES_BOTTOM"
+        ]
+      },
+      "usage_policy": {
+        "candidate": "SEQUENTIAL_REUSE_ALLOWED",
+        "reference": "DEDICATED_PER_TARGET"
+      }
+    }
+  },
+  "reference_complete": false,
+  "relation_precision": 0.6666666666666666,
+  "relation_recall": 0.5,
+  "role_attribute_mismatches": {
+    "coffee_stirrer": {
+      "unary_predicates": {
+        "candidate": [
+          "ELONGATED_OBJECT",
+          "OPEN_CAVITY"
+        ],
+        "reference": [
+          "ELONGATED_OBJECT"
+        ]
+      }
+    },
+    "soup_eating_utensil": {
+      "binding_policy": {
+        "candidate": "REUSABLE",
+        "reference": "DISTINCT"
+      },
+      "unary_predicates": {
+        "candidate": [
+          "ELONGATED_OBJECT",
+          "OPEN_CAVITY"
+        ],
+        "reference": [
+          "ELONGATED_OBJECT"
+        ]
+      }
+    }
+  },
+  "role_exact_precision": 0.5,
+  "role_exact_recall": 0.3333333333333333,
+  "role_identity_precision": 1.0,
+  "role_identity_recall": 0.6666666666666666
+}

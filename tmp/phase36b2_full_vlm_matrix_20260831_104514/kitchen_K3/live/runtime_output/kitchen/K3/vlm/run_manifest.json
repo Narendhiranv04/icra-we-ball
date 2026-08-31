@@ -1,0 +1,33 @@
+{
+  "artifacts": {
+    "result": "result.json"
+  },
+  "domain": "kitchen",
+  "execution_state": "planning_only",
+  "exploration_actuation": "direct_sim_articulation",
+  "failure_category": "MALFORMED_VLM_SPECIFICATION",
+  "failure_reason": "interaction_groups[1] target role role_0 has required_count 2, but group requires 1",
+  "finished_at_utc": "2026-08-31T10:48:45.061764+00:00",
+  "git_commit": "6d0828c2078fe1f6289accb08d8ae34f47cadfcd",
+  "git_dirty": true,
+  "internal_variant": "F2_HIDDEN_SOUP_BOWL",
+  "observer_errors": [],
+  "pipeline_runtime_seconds": 23.2845,
+  "provider_model": "qwen35-9b",
+  "provider_region_ranking": [],
+  "region_order_used": [],
+  "schema_version": 1,
+  "search_order_source_effective": null,
+  "search_order_source_requested": "auto",
+  "search_seed_effective": null,
+  "search_seed_requested": null,
+  "spec_acquisition": "live_provider",
+  "spec_mode": "vlm",
+  "spec_provider_source": null,
+  "specification_input": null,
+  "specification_sha256": null,
+  "started_at_utc": "2026-08-31T10:48:21.777321+00:00",
+  "terminal_status": "VLM_SPEC_FAILED",
+  "variant": "K3",
+  "visualization_requested": false
+}

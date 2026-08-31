@@ -1,0 +1,84 @@
+{
+  "accepted_instance_count": 1,
+  "accepted_objects": [
+    {
+      "measurement_cloud_path": "stages/001_after_D1/evidence/object_0008/fused.ply",
+      "object_id": "object_0008",
+      "point_count": 937,
+      "quality_is_valid": true
+    }
+  ],
+  "capture_quality_is_valid": true,
+  "minimum_valid_rig_cameras": 5,
+  "region_id": "D1",
+  "rejected_instance_count": 6,
+  "rejected_objects": [
+    {
+      "instance_token": "ad297da7a1e088fc37277b1d",
+      "object_id": "object_0001",
+      "point_count_inside": 0,
+      "raw_visible_point_count": 39675,
+      "reasons": [
+        "SOURCE_REGION_MISMATCH",
+        "INSUFFICIENT_POINTS_INSIDE_VOLUME",
+        "INSUFFICIENT_INSIDE_FRACTION"
+      ]
+    },
+    {
+      "instance_token": "074133203062dcd2c9abdcf7",
+      "object_id": "object_0002",
+      "point_count_inside": 0,
+      "raw_visible_point_count": 73720,
+      "reasons": [
+        "SOURCE_REGION_MISMATCH",
+        "INSUFFICIENT_POINTS_INSIDE_VOLUME",
+        "INSUFFICIENT_INSIDE_FRACTION"
+      ]
+    },
+    {
+      "instance_token": "215938969d5cce69273ebb3c",
+      "object_id": "object_0003",
+      "point_count_inside": 0,
+      "raw_visible_point_count": 17585,
+      "reasons": [
+        "SOURCE_REGION_MISMATCH",
+        "INSUFFICIENT_POINTS_INSIDE_VOLUME",
+        "INSUFFICIENT_INSIDE_FRACTION"
+      ]
+    },
+    {
+      "instance_token": "258b17d690a938eb74a09035",
+      "object_id": "object_0004",
+      "point_count_inside": 0,
+      "raw_visible_point_count": 92145,
+      "reasons": [
+        "SOURCE_REGION_MISMATCH",
+        "INSUFFICIENT_POINTS_INSIDE_VOLUME",
+        "INSUFFICIENT_INSIDE_FRACTION"
+      ]
+    },
+    {
+      "instance_token": "cc3ca43f95b5dc47d16b2958",
+      "object_id": "object_0005",
+      "point_count_inside": 0,
+      "raw_visible_point_count": 9565,
+      "reasons": [
+        "SOURCE_REGION_MISMATCH",
+        "INSUFFICIENT_POINTS_INSIDE_VOLUME",
+        "INSUFFICIENT_INSIDE_FRACTION"
+      ]
+    },
+    {
+      "instance_token": "8348a4ae24c12c81bb6375c2",
+      "object_id": "object_0006",
+      "point_count_inside": 0,
+      "raw_visible_point_count": 7402,
+      "reasons": [
+        "SOURCE_REGION_MISMATCH",
+        "INSUFFICIENT_POINTS_INSIDE_VOLUME",
+        "INSUFFICIENT_INSIDE_FRACTION"
+      ]
+    }
+  ],
+  "valid_camera_count": 5
+}

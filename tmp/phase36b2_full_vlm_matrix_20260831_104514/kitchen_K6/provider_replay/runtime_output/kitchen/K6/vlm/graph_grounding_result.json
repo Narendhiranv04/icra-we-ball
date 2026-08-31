@@ -1,0 +1,40 @@
+{
+  "assignment": {
+    "coffee_container": [
+      "object_0002",
+      "object_0008"
+    ],
+    "coffee_stirrer": [
+      "object_0005",
+      "object_0006"
+    ],
+    "soup_eating_utensil": [
+      "object_0007",
+      "object_0008"
+    ]
+  },
+  "complete": true,
+  "evidence": {
+    "valid_assignment_count": 1
+  },
+  "missing_requirements": [],
+  "missing_roles": [],
+  "operation_bindings": {
+    "coffee_stirring": [
+      {
+        "context": {},
+        "target_id": "object_0002",
+        "tool_id": "object_0005"
+      },
+      {
+        "context": {},
+        "target_id": "object_0008",
+        "tool_id": "object_0005"
+      }
+    ]
+  },
+  "satisfied": true,
+  "status": "COMPLETE",
+  "unresolved_constraints": [],
+  "unsatisfied_relations": []
+}

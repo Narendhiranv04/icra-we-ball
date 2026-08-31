@@ -1,0 +1,50 @@
+{
+  "case_id": "living_room_L3",
+  "checks": [],
+  "provider_replay_details": {
+    "checks": {
+      "candidate_permutation": "N/A",
+      "deterministic_provider_replay": "PASS",
+      "exact_gf_sha": "PASS",
+      "identity": "PASS",
+      "live_provider_baseline": "N/A",
+      "provenance": "PASS",
+      "provider_order_used": "N/A",
+      "provider_ranking_preserved": "PASS",
+      "random_seed_order": "N/A",
+      "structural_gf_identity": "PASS",
+      "terminal_result_consistency": "PASS",
+      "vlm_source": "PASS"
+    },
+    "domain": "living_room",
+    "failures": [],
+    "live": {
+      "dir": "tmp/phase36b2_full_vlm_matrix_20260831_104514/living_room_L3/live/runtime_output/living_room/L3/vlm",
+      "n_open": 0,
+      "plan_length": 0,
+      "provider_ranking": [],
+      "region_order_used": [],
+      "search_effective": "not_applicable",
+      "spec_acquisition": "live_provider",
+      "specification_sha256": "371fff5e6cdb8489fc0e3030fcf392e4c9ae9d12d71c4499adda31e3fd0e0a8f",
+      "terminal_status": "INFEASIBLE"
+    },
+    "replay": {
+      "dir": "tmp/phase36b2_full_vlm_matrix_20260831_104514/living_room_L3/provider_replay/runtime_output/living_room/L3/vlm",
+      "n_open": 0,
+      "plan_length": 0,
+      "provider_ranking": [],
+      "region_order_used": [],
+      "search_effective": "not_applicable",
+      "search_seed_effective": null,
+      "search_seed_requested": null,
+      "spec_acquisition": "replayed_provider_output",
+      "specification_sha256": "371fff5e6cdb8489fc0e3030fcf392e4c9ae9d12d71c4499adda31e3fd0e0a8f",
+      "terminal_status": "INFEASIBLE"
+    },
+    "success": true,
+    "variant": "L3"
+  },
+  "provider_replay_valid": true,
+  "random_replays_valid": true
+}

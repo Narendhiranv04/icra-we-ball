@@ -1,0 +1,73 @@
+{
+  "accepted_instance_count": 1,
+  "accepted_objects": [
+    {
+      "measurement_cloud_path": "stages/004_after_B1/evidence/object_0008/fused.ply",
+      "object_id": "object_0008",
+      "point_count": 4932,
+      "quality_is_valid": true
+    }
+  ],
+  "capture_quality_is_valid": true,
+  "minimum_valid_rig_cameras": 5,
+  "region_id": "B1",
+  "rejected_instance_count": 5,
+  "rejected_objects": [
+    {
+      "instance_token": "2ca27a53eacf6946bf3b922b",
+      "object_id": "object_0002",
+      "point_count_inside": 0,
+      "raw_visible_point_count": 37605,
+      "reasons": [
+        "SOURCE_REGION_MISMATCH",
+        "INSUFFICIENT_POINTS_INSIDE_VOLUME",
+        "INSUFFICIENT_INSIDE_FRACTION"
+      ]
+    },
+    {
+      "instance_token": "bb3d049821cba01fdf96cc63",
+      "object_id": "object_0004",
+      "point_count_inside": 0,
+      "raw_visible_point_count": 3435,
+      "reasons": [
+        "SOURCE_REGION_MISMATCH",
+        "INSUFFICIENT_POINTS_INSIDE_VOLUME",
+        "INSUFFICIENT_INSIDE_FRACTION"
+      ]
+    },
+    {
+      "instance_token": "f80e85091cc14a6c8f049c2f",
+      "object_id": "object_0005",
+      "point_count_inside": 0,
+      "raw_visible_point_count": 16146,
+      "reasons": [
+        "SOURCE_REGION_MISMATCH",
+        "INSUFFICIENT_POINTS_INSIDE_VOLUME",
+        "INSUFFICIENT_INSIDE_FRACTION"
+      ]
+    },
+    {
+      "instance_token": "097a69f2427e04d5b39cee88",
+      "object_id": "object_0006",
+      "point_count_inside": 0,
+      "raw_visible_point_count": 52918,
+      "reasons": [
+        "SOURCE_REGION_MISMATCH",
+        "INSUFFICIENT_POINTS_INSIDE_VOLUME",
+        "INSUFFICIENT_INSIDE_FRACTION"
+      ]
+    },
+    {
+      "instance_token": "acea77d04d3601dbe2ba16e9",
+      "object_id": "object_0007",
+      "point_count_inside": 0,
+      "raw_visible_point_count": 46530,
+      "reasons": [
+        "SOURCE_REGION_MISMATCH",
+        "INSUFFICIENT_POINTS_INSIDE_VOLUME",
+        "INSUFFICIENT_INSIDE_FRACTION"
+      ]
+    }
+  ],
+  "valid_camera_count": 5
+}

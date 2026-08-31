@@ -1,0 +1,68 @@
+{
+  "camera_id": "inspection_front",
+  "depth_png_unit": "mm",
+  "intrinsics": [
+    [
+      865.9429225302833,
+      0.0,
+      640.0
+    ],
+    [
+      0.0,
+      865.9429225302833,
+      480.0
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "model_camera_name": "side_camera",
+  "position_world_m": [
+    0.32,
+    -0.86,
+    1.12
+  ],
+  "resolution": [
+    1280,
+    960
+  ],
+  "rotation_world_from_camera": [
+    [
+      0.9470658794157986,
+      -0.17946323479085302,
+      0.2661938530559694
+    ],
+    [
+      0.3210392811578979,
+      0.5294165426330161,
+      -0.7852718665151094
+    ],
+    [
+      5.551115123125783e-17,
+      0.8291628740753573,
+      0.5590070914175355
+    ]
+  ],
+  "target_world_m": [
+    0.12,
+    -0.27,
+    0.7
+  ],
+  "validation": {
+    "camera_transform_valid": true,
+    "intrinsics_match_resolution": true,
+    "reasons": [],
+    "target_angle_degrees": 1.2074182697257333e-06,
+    "target_depth_m": 0.7513321502504734,
+    "target_in_front": true,
+    "target_in_frustum": true,
+    "target_pixel": [
+      640.0,
+      480.0000000000001
+    ],
+    "usable": true,
+    "valid_depth_pixels": 962492
+  }
+}

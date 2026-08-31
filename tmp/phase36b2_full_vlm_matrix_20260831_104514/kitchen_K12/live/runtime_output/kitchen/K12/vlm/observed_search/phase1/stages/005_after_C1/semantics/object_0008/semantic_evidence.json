@@ -1,0 +1,56 @@
+{
+  "alternatives": [
+    {
+      "camera_ids": [
+        "inspection_left",
+        "inspection_top"
+      ],
+      "label": "spoon",
+      "mean_confidence": 0.05867926776409149,
+      "score": 0.32334696042358124,
+      "supporting_view_count": 2
+    }
+  ],
+  "ambiguity_hypotheses": [
+    "spoon"
+  ],
+  "association_method": "mask_box_overlap_v1",
+  "canonical_label": "spoon",
+  "checkpoint": "/home/naren/RA_iiith/semantic_model_cache/yolov8m-worldv2.pt",
+  "contributing_camera_ids": [
+    "inspection_left",
+    "inspection_top"
+  ],
+  "detector_name": "ultralytics_yolo_world",
+  "detector_version": "8.4.112",
+  "mean_confidence": 0.05867926776409149,
+  "observation_source": "RGB_DETECTOR",
+  "plausible_labels": [
+    "spoon"
+  ],
+  "quality": {
+    "mean_confidence": 0.05867926776409149,
+    "supporting_view_count": 2,
+    "supporting_view_margin": 2,
+    "validated": true,
+    "weighted_score_margin": 0.32334696042358124,
+    "winner_policy": "supporting_views_then_weighted_score",
+    "winning_label_margin": 2.0,
+    "winning_label_margin_kind": "supporting_view_count"
+  },
+  "reason_codes": [],
+  "semantic_evidence_paths": [
+    "stages/005_after_C1/cameras/inspection_top/rgb.png",
+    "stages/005_after_C1/semantics/cameras/inspection_left/crops/000_object_0008.png"
+  ],
+  "semantic_record_path": "stages/005_after_C1/semantics/object_0008/semantic_evidence.json",
+  "source_region": "C1",
+  "source_stage": 5,
+  "status": "SUPPORTED",
+  "supporting_view_count": 2,
+  "supporting_view_margin": 2,
+  "weighted_score_margin": 0.32334696042358124,
+  "winner_policy": "supporting_views_then_weighted_score",
+  "winning_label_margin": 2.0,
+  "winning_label_margin_kind": "supporting_view_count"
+}
