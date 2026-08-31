@@ -429,3 +429,236 @@ def test_operation_group_validation():
     doc_bad_ep["interaction_groups"][0]["tool_role"] = "role_2"  # SHARED_REMOTE_REGION instead of PERSONAL
     with pytest.raises(MalformedVLMSpecificationError, match="contradict function"):
         provider.generate_canonical(raw_document=doc_bad_ep)
+
+
+def test_missing_fixed_target_roles_fail_closed():
+    """Verify that missing raw FIXED_TARGET roles are never fabricated and fail closed."""
+    provider = EnvironmentVLMRequirementProvider("living_room")
+
+    # A: Remove raw SEATING_POSITION role, keep personal group / NEAR_SEAT -> MalformedVLMSpecificationError
+    doc_a = create_ideal_living_room_doc()
+    doc_a["functional_roles"] = [r for r in doc_a["functional_roles"] if r["id"] != "role_5"]
+    with pytest.raises(MalformedVLMSpecificationError, match="role 'role_5' not declared"):
+        provider.generate_canonical(raw_document=doc_a)
+
+    # B: Remove raw SEATING_PAIR role, keep ACCESSIBLE_FROM_BOTH_SEATS -> MalformedVLMSpecificationError
+    doc_b = create_ideal_living_room_doc()
+    doc_b["functional_roles"] = [r for r in doc_b["functional_roles"] if r["id"] != "role_6"]
+    with pytest.raises(MalformedVLMSpecificationError, match="role 'role_6' not declared"):
+        provider.generate_canonical(raw_document=doc_b)
+
+    # C: Remove both fixed target roles -> MalformedVLMSpecificationError
+    doc_c = create_ideal_living_room_doc()
+    doc_c["functional_roles"] = [r for r in doc_c["functional_roles"] if r["id"] not in ("role_5", "role_6")]
+    with pytest.raises(MalformedVLMSpecificationError):
+        provider.generate_canonical(raw_document=doc_c)
+
+    # Verify no canonical trace contains fabricated IDs like system_context_seating_*
+    doc_valid = create_ideal_living_room_doc()
+    res = provider.generate_canonical(raw_document=doc_valid)
+    trace_json = str(res["canonicalization_trace"])
+    assert "system_context_seating_position" not in trace_json
+    assert "system_context_seating_pair" not in trace_json
+
+
+def test_self_relations_fail_closed():
+    """Verify that self-relations cannot invent fixed-target endpoints and fail closed."""
+    # 1. PERSONAL_REGION -- near seat --> PERSONAL_REGION -> MalformedVLMSpecificationError
+    with pytest.raises(MalformedVLMSpecificationError, match="expects endpoints"):
+        canonicalize_living_room_relation(
+            "near seat",
+            "PERSONAL_CUP_SAUCER_REGION",
+            "PERSONAL_CUP_SAUCER_REGION",
+        )
+
+    # 2. SHARED_REGION -- accessible from both seats --> SHARED_REGION -> MalformedVLMSpecificationError
+    with pytest.raises(MalformedVLMSpecificationError, match="expects endpoints"):
+        canonicalize_living_room_relation(
+            "accessible from both seats",
+            "SHARED_REMOTE_REGION",
+            "SHARED_REMOTE_REGION",
+        )
+
+    # 3. PERSONAL_REGION -- can hold drinkware set --> PERSONAL_REGION -> MalformedVLMSpecificationError
+    with pytest.raises(MalformedVLMSpecificationError, match="expects endpoints"):
+        canonicalize_living_room_relation(
+            "can hold drinkware set",
+            "PERSONAL_CUP_SAUCER_REGION",
+            "PERSONAL_CUP_SAUCER_REGION",
+        )
+
+    # 4. SHARED_REGION -- can hold remote --> SHARED_REGION -> MalformedVLMSpecificationError
+    with pytest.raises(MalformedVLMSpecificationError, match="expects endpoints"):
+        canonicalize_living_room_relation(
+            "can hold remote",
+            "SHARED_REMOTE_REGION",
+            "SHARED_REMOTE_REGION",
+        )
+
+
+def test_disjoint_slot_composition_rules():
+    """Verify deterministic disjoint slot composition and rejection of generic duplicates."""
+    provider = EnvironmentVLMRequirementProvider("living_room")
+
+    # A: Two generic personal-region roles count 1 each (no disjoint slot identity) -> AmbiguousCanonicalizationError
+    doc_a = create_ideal_living_room_doc()
+    doc_a["functional_roles"] = [r for r in doc_a["functional_roles"] if r["id"] != "role_1"]
+    doc_a["functional_roles"].extend([
+        {
+            "id": "drink_surface_a",
+            "entity_kind": "REGION",
+            "function": "personal cup and saucer support",
+            "description": "side table surface for drinks",
+            "required_count": 1,
+            "binding_policy": "DISTINCT",
+            "candidate_categories": ["side table"],
+            "visible_candidates": [],
+            "required_properties": ["planar horizontal support"],
+        },
+        {
+            "id": "drink_surface_b",
+            "entity_kind": "REGION",
+            "function": "personal cup and saucer support",
+            "description": "side table surface for drinks",
+            "required_count": 1,
+            "binding_policy": "DISTINCT",
+            "candidate_categories": ["side table"],
+            "visible_candidates": [],
+            "required_properties": ["planar horizontal support"],
+        },
+    ])
+    for rel in doc_a["functional_relations"]:
+        if rel["subject_role"] == "role_1":
+            rel["subject_role"] = "drink_surface_a"
+    doc_a["interaction_groups"][0]["tool_role"] = "drink_surface_a"
+    with pytest.raises(AmbiguousCanonicalizationError, match="lack explicit disjoint slot identities"):
+        provider.generate_canonical(raw_document=doc_a)
+
+    # B: Explicit left + right personal-region roles count 1 each -> count 2 (MERGED_BY_EXPLICIT_RULE)
+    doc_b = deepcopy(doc_a)
+    doc_b["functional_roles"][-2]["description"] = "left viewer drink table"
+    doc_b["functional_roles"][-1]["description"] = "right viewer drink table"
+    res_b = provider.generate_canonical(raw_document=doc_b)
+    p_req = next(r for r in res_b["normalized_requirements"] if r["function"] == "PERSONAL_CUP_SAUCER_REGION")
+    assert p_req["vlm_required_count"] == 2
+    acct_b = res_b["canonicalization_trace"]["concept_accounting"]["roles"]
+    assert acct_b["drink_surface_a"]["status"] == "MERGED_BY_EXPLICIT_RULE"
+    assert acct_b["drink_surface_b"]["status"] == "MERGED_BY_EXPLICIT_RULE"
+
+    # C: Duplicate slot identity: left + left -> AmbiguousCanonicalizationError
+    doc_c = deepcopy(doc_a)
+    doc_c["functional_roles"][-2]["description"] = "left viewer drink table"
+    doc_c["functional_roles"][-1]["description"] = "left seat drink table"
+    with pytest.raises(AmbiguousCanonicalizationError, match="declare duplicate slot identity"):
+        provider.generate_canonical(raw_document=doc_c)
+
+    # D: Two generic SEATING_POSITION roles count 1 each -> AmbiguousCanonicalizationError
+    doc_d = create_ideal_living_room_doc()
+    doc_d["functional_roles"] = [r for r in doc_d["functional_roles"] if r["id"] != "role_5"]
+    doc_d["functional_roles"].extend([
+        {
+            "id": "seat_a",
+            "entity_kind": "FIXED_TARGET",
+            "function": "viewer seating position",
+            "description": "seated viewer position",
+            "required_count": 1,
+            "binding_policy": "DISTINCT",
+            "candidate_categories": ["armchair"],
+            "visible_candidates": [],
+            "required_properties": [],
+        },
+        {
+            "id": "seat_b",
+            "entity_kind": "FIXED_TARGET",
+            "function": "viewer seating position",
+            "description": "seated viewer position",
+            "required_count": 1,
+            "binding_policy": "DISTINCT",
+            "candidate_categories": ["armchair"],
+            "visible_candidates": [],
+            "required_properties": [],
+        },
+    ])
+    for rel in doc_d["functional_relations"]:
+        if rel["object_role"] == "role_5":
+            rel["object_role"] = "seat_a"
+    doc_d["interaction_groups"][0]["context_role"] = "seat_a"
+    with pytest.raises(AmbiguousCanonicalizationError, match="lack explicit disjoint slot identities"):
+        provider.generate_canonical(raw_document=doc_d)
+
+    # E: Explicit left/right seating positions -> count 2 (MERGED_BY_EXPLICIT_RULE)
+    doc_e = deepcopy(doc_d)
+    doc_e["functional_roles"][-2]["description"] = "first viewer seat 1"
+    doc_e["functional_roles"][-1]["description"] = "second viewer seat 2"
+    res_e = provider.generate_canonical(raw_document=doc_e)
+    seat_req = next(r for r in res_e["normalized_requirements"] if r["function"] == "SEATING_POSITION")
+    assert seat_req["vlm_required_count"] == 2
+    acct_e = res_e["canonicalization_trace"]["concept_accounting"]["roles"]
+    assert acct_e["seat_a"]["status"] == "MERGED_BY_EXPLICIT_RULE"
+    assert acct_e["seat_b"]["status"] == "MERGED_BY_EXPLICIT_RULE"
+
+    # F: Aggregate SEATING_POSITION count 2 -> preserved count 2 directly
+    doc_f = create_ideal_living_room_doc()
+    res_f = provider.generate_canonical(raw_document=doc_f)
+    seat_f = next(r for r in res_f["normalized_requirements"] if r["function"] == "SEATING_POSITION")
+    assert seat_f["vlm_required_count"] == 2
+    assert res_f["canonicalization_trace"]["concept_accounting"]["roles"]["role_5"]["status"] == "PRESERVED"
+
+
+def test_planar_support_omission_fails_closed():
+    """Verify that support REGION roles missing PLANAR_SUPPORT fail closed."""
+    provider = EnvironmentVLMRequirementProvider("living_room")
+
+    # 1. Support REGION with required_properties=[] -> MalformedVLMSpecificationError
+    doc_empty_prop = create_ideal_living_room_doc()
+    doc_empty_prop["functional_roles"][0]["required_properties"] = []
+    with pytest.raises(MalformedVLMSpecificationError, match="omitted required executable property 'PLANAR_SUPPORT'"):
+        provider.generate_canonical(raw_document=doc_empty_prop)
+
+    # 2. Support REGION with PLANAR_SUPPORT -> PRESERVED
+    doc_valid = create_ideal_living_room_doc()
+    res_valid = provider.generate_canonical(raw_document=doc_valid)
+    assert res_valid["ready_for_grounding"] is True
+
+    # 3. Two synonymous planar properties -> one canonical property + MERGED_BY_EXPLICIT_RULE trace
+    doc_syn = create_ideal_living_room_doc()
+    doc_syn["functional_roles"][0]["required_properties"] = ["planar support", "horizontal planar support"]
+    res_syn = provider.generate_canonical(raw_document=doc_syn)
+    prop_acct = res_syn["canonicalization_trace"]["concept_accounting"]["properties"]
+    assert any(p["status"] == "MERGED_BY_EXPLICIT_RULE" for p in prop_acct)
+
+
+def test_missing_schema_required_fields_fail_closed():
+    """Verify that schema-required role and group fields without values fail closed (no silent defaults)."""
+    provider = EnvironmentVLMRequirementProvider("living_room")
+
+    # 1. Missing role.required_count -> MalformedVLMSpecificationError
+    doc_no_count = create_ideal_living_room_doc()
+    del doc_no_count["functional_roles"][0]["required_count"]
+    with pytest.raises(MalformedVLMSpecificationError, match="missing required 'required_count'"):
+        provider.generate_canonical(raw_document=doc_no_count)
+
+    # 2. Missing role.binding_policy -> MalformedVLMSpecificationError
+    doc_no_pol = create_ideal_living_room_doc()
+    del doc_no_pol["functional_roles"][0]["binding_policy"]
+    with pytest.raises(MalformedVLMSpecificationError, match="missing required 'binding_policy'"):
+        provider.generate_canonical(raw_document=doc_no_pol)
+
+    # 3. Missing group.required_target_count -> MalformedVLMSpecificationError
+    doc_no_tgt_cnt = create_ideal_living_room_doc()
+    del doc_no_tgt_cnt["interaction_groups"][0]["required_target_count"]
+    with pytest.raises(MalformedVLMSpecificationError, match="missing required 'required_target_count'"):
+        provider.generate_canonical(raw_document=doc_no_tgt_cnt)
+
+    # 4. Missing group.usage_policy -> MalformedVLMSpecificationError
+    doc_no_grp_pol = create_ideal_living_room_doc()
+    del doc_no_grp_pol["interaction_groups"][0]["usage_policy"]
+    with pytest.raises(MalformedVLMSpecificationError, match="missing required 'usage_policy'"):
+        provider.generate_canonical(raw_document=doc_no_grp_pol)
+
+    # 5. Missing group.required_relations -> MalformedVLMSpecificationError
+    doc_no_req_rels = create_ideal_living_room_doc()
+    del doc_no_req_rels["interaction_groups"][0]["required_relations"]
+    with pytest.raises(MalformedVLMSpecificationError, match="missing non-empty required_relations"):
+        provider.generate_canonical(raw_document=doc_no_req_rels)
+

@@ -345,11 +345,9 @@ def diagnose_fixture_canonicalization(domain: str) -> dict[str, Any]:
             for r in data["functional_roles"]:
                 rid = r["id"]
                 r_entry = roles_acct.get(rid, {})
+                status = r_entry.get("status", "PRESERVED")
                 canon_role = r_entry.get("canonical_role", "UNKNOWN")
-                if r["entity_kind"] == "FIXED_TARGET":
-                    report["concept_preservation"][f"role:{rid}"] = f"SYSTEM_CONTEXT_COMPILED -> {canon_role}"
-                else:
-                    report["concept_preservation"][f"role:{rid}"] = f"PRESERVED -> {canon_role}"
+                report["concept_preservation"][f"role:{rid}"] = f"{status} -> {canon_role}"
 
                 for prop in r.get("required_properties", []):
                     prop_entry = next(
@@ -569,8 +567,8 @@ def test_diagnostic_canonicalization_outcomes():
     assert "PRESERVED -> SHARED_REMOTE_REGION" in l_diag["concept_preservation"]["role:role_2"]
     assert "PRESERVED -> CUP_SAUCER_SET" in l_diag["concept_preservation"]["role:role_3"]
     assert "PRESERVED -> REMOTE" in l_diag["concept_preservation"]["role:role_4"]
-    assert "SYSTEM_CONTEXT_COMPILED -> SEATING_POSITION" in l_diag["concept_preservation"]["role:role_5"]
-    assert "SYSTEM_CONTEXT_COMPILED -> SEATING_PAIR" in l_diag["concept_preservation"]["role:role_6"]
+    assert "PRESERVED -> SEATING_POSITION" in l_diag["concept_preservation"]["role:role_5"]
+    assert "PRESERVED -> SEATING_PAIR" in l_diag["concept_preservation"]["role:role_6"]
     assert "PRESERVED -> PLANAR_SUPPORT" in l_diag["concept_preservation"]["prop:role_1:planar horizontal support"]
     assert "PRESERVED -> PLANAR_SUPPORT" in l_diag["concept_preservation"]["prop:role_2:planar horizontal support"]
 

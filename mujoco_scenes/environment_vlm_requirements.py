@@ -514,6 +514,31 @@ def map_living_room_operation_group_function(function_text: str) -> str | None:
     return None
 
 
+def _extract_disjoint_slot_identity(function_text: str, description_text: str) -> str | None:
+    """Extract explicit disjoint slot identity (VIEWER_1 vs VIEWER_2) from function and description ONLY."""
+    text = f"{function_text} {description_text}".lower()
+
+    v1_indicators = (
+        "viewer 1", "viewer_1", "viewer 1's", "viewer 1s", "first viewer", "viewer one",
+        "left viewer", "left seat", "left side", "left chair", "left armchair",
+        "first seat", "seat 1", "seat_1", "seat one",
+    )
+    v2_indicators = (
+        "viewer 2", "viewer_2", "viewer 2's", "viewer 2s", "second viewer", "viewer two",
+        "right viewer", "right seat", "right side", "right chair", "right armchair",
+        "second seat", "seat 2", "seat_2", "seat two",
+    )
+
+    has_v1 = any(_contains_phrase(text, ind) for ind in v1_indicators)
+    has_v2 = any(_contains_phrase(text, ind) for ind in v2_indicators)
+
+    if has_v1 and not has_v2:
+        return "VIEWER_1"
+    if has_v2 and not has_v1:
+        return "VIEWER_2"
+    return None
+
+
 def canonicalize_living_room_relation(
     relation_text: str,
     subject_role: str,
@@ -583,8 +608,6 @@ def canonicalize_living_room_relation(
     if subject_role == exp_s and object_role == exp_o:
         return (exp_s, predicate, exp_o, "PRESERVED")
     elif subject_role == exp_o and object_role == exp_s:
-        return (exp_s, predicate, exp_o, "NORMALIZED_TO_CANONICAL_SIGNATURE")
-    elif subject_role == exp_s and object_role == exp_s and predicate in ("NEAR_SEAT", "ACCESSIBLE_FROM_BOTH_SEATS"):
         return (exp_s, predicate, exp_o, "NORMALIZED_TO_CANONICAL_SIGNATURE")
     else:
         raise MalformedVLMSpecificationError(
@@ -1024,29 +1047,81 @@ class EnvironmentVLMRequirementProvider:
             else:
                 self.normalized_task = None
         else:
+            # Validate schema-required role fields before semantic compilation (fail-closed, no silent defaults)
             raw_ids_seen = set()
             for raw in raw_requirements:
+                if not isinstance(raw, dict):
+                    raise MalformedVLMSpecificationError(f"Role specification must be a dictionary, got {type(raw)}")
                 raw_id = raw.get("id")
-                if not raw_id or raw_id in raw_ids_seen:
+                if not raw_id or not isinstance(raw_id, str):
+                    raise MalformedVLMSpecificationError(f"Duplicate or missing raw role id: {raw_id!r}")
+                if raw_id in raw_ids_seen:
                     raise MalformedVLMSpecificationError(f"Duplicate or missing raw role id: {raw_id!r}")
                 raw_ids_seen.add(raw_id)
+
+                if raw.get("entity_kind") is None or not isinstance(raw.get("entity_kind"), str):
+                    raise MalformedVLMSpecificationError(f"Role {raw_id!r} is missing required 'entity_kind'")
+                if raw.get("function") is None or not isinstance(raw.get("function"), str):
+                    raise MalformedVLMSpecificationError(f"Role {raw_id!r} is missing required 'function'")
+                if raw.get("required_count") is None or not isinstance(raw.get("required_count"), int):
+                    raise MalformedVLMSpecificationError(f"Role {raw_id!r} is missing required 'required_count'")
+                if raw.get("binding_policy") is None or not isinstance(raw.get("binding_policy"), str):
+                    raise MalformedVLMSpecificationError(f"Role {raw_id!r} is missing required 'binding_policy'")
+                if raw.get("candidate_categories") is None or not isinstance(raw.get("candidate_categories"), list):
+                    raise MalformedVLMSpecificationError(f"Role {raw_id!r} is missing candidate_categories list")
+                if raw.get("visible_candidates") is None or not isinstance(raw.get("visible_candidates"), list):
+                    raise MalformedVLMSpecificationError(f"Role {raw_id!r} is missing visible_candidates list")
+                if raw.get("required_properties") is None or not isinstance(raw.get("required_properties"), list):
+                    raise MalformedVLMSpecificationError(f"Role {raw_id!r} is missing required_properties list")
+
+                raw_kind = raw["entity_kind"]
+                raw_count = raw["required_count"]
+                if raw_count < 1:
+                    raise MalformedVLMSpecificationError(f"Role {raw_id!r} required_count must be >= 1, got {raw_count}")
+
+                raw_policy = raw["binding_policy"]
+                if raw_policy not in ("DISTINCT", "SHARED", "REUSABLE"):
+                    raise MalformedVLMSpecificationError(f"Role {raw_id!r} has invalid binding_policy: {raw_policy!r}")
+
+            # Validate schema-required interaction group fields before semantic compilation
+            for grp in self.raw_decomposition.get("interaction_groups", []):
+                if not isinstance(grp, dict):
+                    raise MalformedVLMSpecificationError(f"Interaction group must be a dict, got {type(grp)}")
+                gid = grp.get("id")
+                if not gid or not isinstance(gid, str):
+                    raise MalformedVLMSpecificationError(f"Interaction group is missing required 'id': {grp!r}")
+                if grp.get("function") is None or not isinstance(grp.get("function"), str):
+                    raise MalformedVLMSpecificationError(f"Interaction group {gid!r} is missing required 'function'")
+                if grp.get("tool_role") is None or not isinstance(grp.get("tool_role"), str):
+                    raise MalformedVLMSpecificationError(f"Interaction group {gid!r} is missing required 'tool_role'")
+                if grp.get("target_role") is None or not isinstance(grp.get("target_role"), str):
+                    raise MalformedVLMSpecificationError(f"Interaction group {gid!r} is missing required 'target_role'")
+                if grp.get("required_target_count") is None or not isinstance(grp.get("required_target_count"), int):
+                    raise MalformedVLMSpecificationError(f"Interaction group {gid!r} is missing required 'required_target_count'")
+                if grp["required_target_count"] < 1:
+                    raise MalformedVLMSpecificationError(f"Interaction group {gid!r} required_target_count must be >= 1, got {grp['required_target_count']}")
+                if grp.get("usage_policy") is None or not isinstance(grp.get("usage_policy"), str):
+                    raise MalformedVLMSpecificationError(f"Interaction group {gid!r} is missing required 'usage_policy'")
+                if grp.get("required_relations") is None or not isinstance(grp.get("required_relations"), list) or not grp["required_relations"]:
+                    raise MalformedVLMSpecificationError(f"Interaction group {gid!r} is missing non-empty required_relations")
+
+            # Validate schema-required functional relation fields before semantic compilation
+            for rel in self.raw_decomposition.get("functional_relations", []):
+                if not isinstance(rel, dict):
+                    raise MalformedVLMSpecificationError(f"Functional relation must be a dict, got {type(rel)}")
+                if not rel.get("subject_role") or not isinstance(rel.get("subject_role"), str):
+                    raise MalformedVLMSpecificationError(f"Functional relation is missing required 'subject_role': {rel!r}")
+                if not rel.get("relation") or not isinstance(rel.get("relation"), str):
+                    raise MalformedVLMSpecificationError(f"Functional relation is missing required 'relation': {rel!r}")
+                if not rel.get("object_role") or not isinstance(rel.get("object_role"), str):
+                    raise MalformedVLMSpecificationError(f"Functional relation is missing required 'object_role': {rel!r}")
 
             raw_id_to_canon: dict[str, str] = {}
             classified_roles: dict[str, list[dict[str, Any]]] = {}
 
             for raw in raw_requirements:
                 raw_id = raw["id"]
-                raw_kind = raw.get("entity_kind")
-                if not raw_kind:
-                    raise MalformedVLMSpecificationError(f"Role {raw_id!r} is missing entity_kind")
-
-                raw_count = int(raw.get("required_count", 1))
-                if raw_count < 1:
-                    raise MalformedVLMSpecificationError(f"Role {raw_id!r} required_count must be >= 1, got {raw_count}")
-
-                raw_policy = raw.get("binding_policy", "DISTINCT")
-                if raw_policy not in ("DISTINCT", "SHARED", "REUSABLE"):
-                    raise MalformedVLMSpecificationError(f"Role {raw_id!r} has invalid binding_policy: {raw_policy!r}")
+                raw_kind = raw["entity_kind"]
 
                 if raw_kind == "REGION":
                     mapped = map_living_room_role_function(raw)
@@ -1164,8 +1239,8 @@ class EnvironmentVLMRequirementProvider:
                             "Multiple composite drinkware roles or mixed composite+component roles in Living Room specification"
                         )
                     raw_item = items[0]["raw"]
-                    c_count = int(raw_item.get("required_count", 1))
-                    c_policy = raw_item.get("binding_policy", "DISTINCT")
+                    c_count = int(raw_item["required_count"])
+                    c_policy = raw_item["binding_policy"]
                     concept_accounting["roles"][raw_item["id"]] = {
                         "canonical_role": "CUP_SAUCER_SET",
                         "entity_kind": "OBJECT",
@@ -1186,14 +1261,14 @@ class EnvironmentVLMRequirementProvider:
                         )
                     cup_raw = cups[0]
                     saucer_raw = saucers[0]
-                    cup_cnt = int(cup_raw.get("required_count", 1))
-                    saucer_cnt = int(saucer_raw.get("required_count", 1))
+                    cup_cnt = int(cup_raw["required_count"])
+                    saucer_cnt = int(saucer_raw["required_count"])
                     if cup_cnt != saucer_cnt:
                         raise MalformedVLMSpecificationError(
                             f"Mismatched component counts for cup ({cup_cnt}) and saucer ({saucer_cnt})"
                         )
-                    cup_pol = cup_raw.get("binding_policy", "DISTINCT")
-                    saucer_pol = saucer_raw.get("binding_policy", "DISTINCT")
+                    cup_pol = cup_raw["binding_policy"]
+                    saucer_pol = saucer_raw["binding_policy"]
                     if cup_pol != saucer_pol:
                         raise MalformedVLMSpecificationError(
                             f"Conflicting binding policies between cup ({cup_pol}) and saucer ({saucer_pol})"
@@ -1285,8 +1360,8 @@ class EnvironmentVLMRequirementProvider:
                 raw_list = [it["raw"] for it in items]
                 if len(raw_list) == 1:
                     r = raw_list[0]
-                    cnt = int(r.get("required_count", 1))
-                    pol = r.get("binding_policy", "DISTINCT")
+                    cnt = int(r["required_count"])
+                    pol = r["binding_policy"]
                     concept_accounting["roles"][r["id"]] = {
                         "canonical_role": "PERSONAL_CUP_SAUCER_REGION",
                         "entity_kind": "REGION",
@@ -1298,26 +1373,49 @@ class EnvironmentVLMRequirementProvider:
                         "candidate_categories_used_for_role_identity": False,
                         "status": "PRESERVED",
                     }
-                else:
-                    pols = {r.get("binding_policy", "DISTINCT") for r in raw_list}
-                    if len(pols) > 1:
-                        raise MalformedVLMSpecificationError(f"Conflicting binding policies in personal side table roles: {pols}")
-                    pol = pols.pop()
-                    cnt = sum(int(r.get("required_count", 1)) for r in raw_list)
+                elif len(raw_list) == 2:
+                    slot_0 = _extract_disjoint_slot_identity(raw_list[0].get("function", ""), raw_list[0].get("description", ""))
+                    slot_1 = _extract_disjoint_slot_identity(raw_list[1].get("function", ""), raw_list[1].get("description", ""))
+                    if slot_0 is None or slot_1 is None:
+                        raise AmbiguousCanonicalizationError(
+                            f"Multiple personal cup/saucer region roles lack explicit disjoint slot identities (e.g. viewer 1 / viewer 2 or left / right): {[r['id'] for r in raw_list]}"
+                        )
+                    if slot_0 == slot_1:
+                        raise AmbiguousCanonicalizationError(
+                            f"Multiple personal cup/saucer region roles declare duplicate slot identity {slot_0!r}: {[r['id'] for r in raw_list]}"
+                        )
+                    cnt_0 = int(raw_list[0]["required_count"])
+                    cnt_1 = int(raw_list[1]["required_count"])
+                    if cnt_0 != 1 or cnt_1 != 1:
+                        raise MalformedVLMSpecificationError(
+                            f"Disjoint personal cup/saucer region roles must each have required_count=1, got counts ({cnt_0}, {cnt_1})"
+                        )
+                    pol_0 = raw_list[0]["binding_policy"]
+                    pol_1 = raw_list[1]["binding_policy"]
+                    if pol_0 != "DISTINCT" or pol_1 != "DISTINCT":
+                        raise MalformedVLMSpecificationError(
+                            f"Disjoint personal cup/saucer region roles must have binding_policy DISTINCT, got ({pol_0}, {pol_1})"
+                        )
+                    cnt = 2
+                    pol = "DISTINCT"
                     for r in raw_list:
-                        r_cnt = int(r.get("required_count", 1))
+                        r_slot = _extract_disjoint_slot_identity(r.get("function", ""), r.get("description", ""))
                         concept_accounting["roles"][r["id"]] = {
                             "canonical_role": "PERSONAL_CUP_SAUCER_REGION",
                             "entity_kind": "REGION",
-                            "raw_count": r_cnt,
-                            "canonical_count": cnt,
-                            "binding_policy": pol,
+                            "raw_count": 1,
+                            "canonical_count": 2,
+                            "binding_policy": "DISTINCT",
                             "unary_predicates": ["PLANAR_SUPPORT"],
                             "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
                             "candidate_categories_used_for_role_identity": False,
                             "status": "MERGED_BY_EXPLICIT_RULE",
-                            "reason": "Disjoint personal slot roles composed into canonical role",
+                            "reason": f"Disjoint personal slot role ({r_slot}) composed into canonical role",
                         }
+                else:
+                    raise AmbiguousCanonicalizationError(
+                        f"Unsupported number of personal cup/saucer region roles: {len(raw_list)} (expected 1 aggregate or 2 disjoint slots)"
+                    )
 
                 cand_cats = list(dict.fromkeys(
                     cat.strip()
@@ -1333,7 +1431,12 @@ class EnvironmentVLMRequirementProvider:
                     for candidate in r.get("visible_candidates", [])
                     if candidate.get("label")
                 ))
-                props = role_properties_map.get("PERSONAL_CUP_SAUCER_REGION", ["PLANAR_SUPPORT"])
+                props = role_properties_map.get("PERSONAL_CUP_SAUCER_REGION", [])
+                if "PLANAR_SUPPORT" not in props:
+                    raw_ids = [r["id"] for r in raw_list]
+                    raise MalformedVLMSpecificationError(
+                        f"Living Room support role(s) {raw_ids} omitted required executable property 'PLANAR_SUPPORT'"
+                    )
 
                 normalized_records.append({
                     "role_id": "personal_cup_saucer",
@@ -1370,8 +1473,8 @@ class EnvironmentVLMRequirementProvider:
                         f"Multiple raw roles mapping to SHARED_REMOTE_REGION: {[r['id'] for r in raw_list]}"
                     )
                 r = raw_list[0]
-                cnt = int(r.get("required_count", 1))
-                pol = r.get("binding_policy", "SHARED")
+                cnt = int(r["required_count"])
+                pol = r["binding_policy"]
                 concept_accounting["roles"][r["id"]] = {
                     "canonical_role": "SHARED_REMOTE_REGION",
                     "entity_kind": "REGION",
@@ -1395,7 +1498,11 @@ class EnvironmentVLMRequirementProvider:
                     for candidate in r.get("visible_candidates", [])
                     if candidate.get("label")
                 ))
-                props = role_properties_map.get("SHARED_REMOTE_REGION", ["PLANAR_SUPPORT"])
+                props = role_properties_map.get("SHARED_REMOTE_REGION", [])
+                if "PLANAR_SUPPORT" not in props:
+                    raise MalformedVLMSpecificationError(
+                        f"Living Room support role {r['id']!r} omitted required executable property 'PLANAR_SUPPORT'"
+                    )
 
                 normalized_records.append({
                     "role_id": "shared_remote",
@@ -1428,8 +1535,8 @@ class EnvironmentVLMRequirementProvider:
                         f"Multiple raw roles mapping to REMOTE: {[r['id'] for r in raw_list]}"
                     )
                 r = raw_list[0]
-                cnt = int(r.get("required_count", 1))
-                pol = r.get("binding_policy", "DISTINCT")
+                cnt = int(r["required_count"])
+                pol = r["binding_policy"]
                 concept_accounting["roles"][r["id"]] = {
                     "canonical_role": "REMOTE",
                     "entity_kind": "OBJECT",
@@ -1483,8 +1590,8 @@ class EnvironmentVLMRequirementProvider:
                 raw_list = [it["raw"] for it in items]
                 if len(raw_list) == 1:
                     r = raw_list[0]
-                    cnt = int(r.get("required_count", 1))
-                    pol = r.get("binding_policy", "DISTINCT")
+                    cnt = int(r["required_count"])
+                    pol = r["binding_policy"]
                     concept_accounting["roles"][r["id"]] = {
                         "canonical_role": "SEATING_POSITION",
                         "entity_kind": "FIXED_TARGET",
@@ -1496,26 +1603,49 @@ class EnvironmentVLMRequirementProvider:
                         "candidate_categories_used_for_role_identity": False,
                         "status": "PRESERVED",
                     }
-                else:
-                    pols = {r.get("binding_policy", "DISTINCT") for r in raw_list}
-                    if len(pols) > 1:
-                        raise MalformedVLMSpecificationError(f"Conflicting binding policies in seating position roles: {pols}")
-                    pol = pols.pop()
-                    cnt = sum(int(r.get("required_count", 1)) for r in raw_list)
+                elif len(raw_list) == 2:
+                    slot_0 = _extract_disjoint_slot_identity(raw_list[0].get("function", ""), raw_list[0].get("description", ""))
+                    slot_1 = _extract_disjoint_slot_identity(raw_list[1].get("function", ""), raw_list[1].get("description", ""))
+                    if slot_0 is None or slot_1 is None:
+                        raise AmbiguousCanonicalizationError(
+                            f"Multiple seating position roles lack explicit disjoint slot identities (e.g. viewer 1 / viewer 2 or left / right): {[r['id'] for r in raw_list]}"
+                        )
+                    if slot_0 == slot_1:
+                        raise AmbiguousCanonicalizationError(
+                            f"Multiple seating position roles declare duplicate slot identity {slot_0!r}: {[r['id'] for r in raw_list]}"
+                        )
+                    cnt_0 = int(raw_list[0]["required_count"])
+                    cnt_1 = int(raw_list[1]["required_count"])
+                    if cnt_0 != 1 or cnt_1 != 1:
+                        raise MalformedVLMSpecificationError(
+                            f"Disjoint seating position roles must each have required_count=1, got counts ({cnt_0}, {cnt_1})"
+                        )
+                    pol_0 = raw_list[0]["binding_policy"]
+                    pol_1 = raw_list[1]["binding_policy"]
+                    if pol_0 != "DISTINCT" or pol_1 != "DISTINCT":
+                        raise MalformedVLMSpecificationError(
+                            f"Disjoint seating position roles must have binding_policy DISTINCT, got ({pol_0}, {pol_1})"
+                        )
+                    cnt = 2
+                    pol = "DISTINCT"
                     for r in raw_list:
-                        r_cnt = int(r.get("required_count", 1))
+                        r_slot = _extract_disjoint_slot_identity(r.get("function", ""), r.get("description", ""))
                         concept_accounting["roles"][r["id"]] = {
                             "canonical_role": "SEATING_POSITION",
                             "entity_kind": "FIXED_TARGET",
-                            "raw_count": r_cnt,
-                            "canonical_count": cnt,
-                            "binding_policy": pol,
+                            "raw_count": 1,
+                            "canonical_count": 2,
+                            "binding_policy": "DISTINCT",
                             "unary_predicates": [],
                             "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
                             "candidate_categories_used_for_role_identity": False,
                             "status": "MERGED_BY_EXPLICIT_RULE",
-                            "reason": "Disjoint personal seating position roles composed into canonical role",
+                            "reason": f"Disjoint personal seating position role ({r_slot}) composed into canonical role",
                         }
+                else:
+                    raise AmbiguousCanonicalizationError(
+                        f"Unsupported number of seating position roles: {len(raw_list)} (expected 1 aggregate or 2 disjoint slots)"
+                    )
 
                 cand_cats = list(dict.fromkeys(
                     cat.strip()
@@ -1567,8 +1697,8 @@ class EnvironmentVLMRequirementProvider:
                         f"Multiple raw roles mapping to SEATING_PAIR: {[r['id'] for r in raw_list]}"
                     )
                 r = raw_list[0]
-                cnt = int(r.get("required_count", 1))
-                pol = r.get("binding_policy", "SHARED")
+                cnt = int(r["required_count"])
+                pol = r["binding_policy"]
                 concept_accounting["roles"][r["id"]] = {
                     "canonical_role": "SEATING_PAIR",
                     "entity_kind": "FIXED_TARGET",
@@ -1619,23 +1749,23 @@ class EnvironmentVLMRequirementProvider:
             canonical_operation_groups: list[dict[str, Any]] = []
             seen_group_canonical_ids: set[str] = set()
             for grp in self.raw_decomposition.get("interaction_groups", []):
-                gid = grp.get("id")
-                t_role = grp.get("tool_role")
-                tgt_role = grp.get("target_role")
-                if not t_role or t_role not in raw_id_to_canon:
+                gid = grp["id"]
+                t_role = grp["tool_role"]
+                tgt_role = grp["target_role"]
+                if t_role not in raw_id_to_canon:
                     raise MalformedVLMSpecificationError(f"Interaction group tool role {t_role!r} not declared in roles")
-                if not tgt_role or tgt_role not in raw_id_to_canon:
+                if tgt_role not in raw_id_to_canon:
                     raise MalformedVLMSpecificationError(f"Interaction group target role {tgt_role!r} not declared in roles")
 
                 t_canon = raw_id_to_canon[t_role]
                 tgt_canon = raw_id_to_canon[tgt_role]
 
                 ctx_role = grp.get("context_role")
-                ctx_canon = raw_id_to_canon[ctx_role] if (ctx_role and ctx_role in raw_id_to_canon) else None
-                if ctx_role and ctx_canon is None:
+                if not ctx_role or ctx_role not in raw_id_to_canon:
                     raise MalformedVLMSpecificationError(f"Interaction group context role {ctx_role!r} not declared in roles")
+                ctx_canon = raw_id_to_canon[ctx_role]
 
-                fn_canon = map_living_room_operation_group_function(grp.get("function", ""))
+                fn_canon = map_living_room_operation_group_function(grp["function"])
                 if fn_canon is None:
                     raise UnmappedFunctionalConceptError(
                         f"Interaction group function {grp.get('function')!r} cannot be mapped to any Living Room operation group"
@@ -1650,21 +1780,21 @@ class EnvironmentVLMRequirementProvider:
                     raise AmbiguousCanonicalizationError(f"Duplicate interaction group mapping to canonical group {fn_canon!r}")
                 seen_group_canonical_ids.add(fn_canon)
 
-                req_count = int(grp.get("required_target_count", 1))
+                req_count = int(grp["required_target_count"])
                 target_rec = next((r for r in normalized_records if r["function"] == "CUP_SAUCER_SET"), None)
                 if target_rec is None or req_count != target_rec["vlm_required_count"]:
                     raise MalformedVLMSpecificationError(
                         f"Group required_target_count={req_count} does not match target role count={target_rec['vlm_required_count'] if target_rec else None}"
                     )
 
-                usage_policy = grp.get("usage_policy")
+                usage_policy = grp["usage_policy"]
                 if usage_policy != "DEDICATED_PER_TARGET":
                     raise MalformedVLMSpecificationError(
                         f"Living Room group requires usage_policy DEDICATED_PER_TARGET, got {usage_policy!r}"
                     )
 
                 req_rels: list[str] = []
-                for r in grp.get("required_relations", []):
+                for r in grp["required_relations"]:
                     s, p, o, _ = canonicalize_living_room_relation(r, t_canon, tgt_canon)
                     if p != "FITS_SET_ON":
                         raise MalformedVLMSpecificationError(f"Group required_relations must be FITS_SET_ON, got {p}")
@@ -1697,7 +1827,7 @@ class EnvironmentVLMRequirementProvider:
                 concept_accounting["operation_groups"].append({
                     "raw_group_id": str(gid),
                     "canonical_group_id": fn_canon,
-                    "raw_function": str(grp.get("function", "")),
+                    "raw_function": str(grp["function"]),
                     "canonical_function": "SUPPORT_DRINKWARE",
                     "tool_role": t_canon,
                     "target_role": tgt_canon,
@@ -1713,9 +1843,9 @@ class EnvironmentVLMRequirementProvider:
             # Canonicalize relations losslessly and distribute structurally
             canonical_relations: list[dict[str, Any]] = []
             for rel_item in self.raw_decomposition.get("functional_relations", []):
-                s = rel_item.get("subject_role")
-                r = rel_item.get("relation")
-                o = rel_item.get("object_role")
+                s = rel_item["subject_role"]
+                r = rel_item["relation"]
+                o = rel_item["object_role"]
                 if s not in raw_id_to_canon:
                     raise MalformedVLMSpecificationError(
                         f"VLM relation subject role {s!r} not declared in living room roles"
@@ -1757,85 +1887,6 @@ class EnvironmentVLMRequirementProvider:
                     "structural_destination": dest,
                     "status": "PRESERVED",
                 })
-
-            # If contextual relations reference SEATING_POSITION / SEATING_PAIR but they were not declared in raw roles,
-            # compile system context fixed targets so graph remains valid
-            if "SEATING_POSITION" not in classified_roles and any(
-                r.get("canonical_object_role_id") == "SEATING_POSITION" or r.get("canonical_subject_role_id") == "SEATING_POSITION"
-                for r in canonical_relations + [
-                    {"canonical_object_role_id": og.get("context_role")}
-                    for og in canonical_operation_groups
-                ]
-            ):
-                normalized_records.append({
-                    "role_id": "seating_position",
-                    "raw_vlm_role_ids": ["system_context_seating_position"],
-                    "entity_kind": "FIXED_TARGET",
-                    "binding_policy": "DISTINCT",
-                    "function": "SEATING_POSITION",
-                    "raw_function": "viewer seating position",
-                    "vlm_required_count": 2,
-                    "description": "individual seated viewer location for personal drink access",
-                    "candidate_categories": ["armchair", "chair"],
-                    "raw_candidate_categories": ["armchair", "chair"],
-                    "canonical_graph_category": LIVING_TASK_ANCHOR_CANONICAL_CATEGORIES["SEATING_POSITION"],
-                    "accepted_categories": list(LIVING_TASK_ANCHOR_CANONICAL_CATEGORIES["SEATING_POSITION"]),
-                    "required_properties": [],
-                    "visible_candidates": [],
-                    "semantic_hints": ["armchair", "chair"],
-                    "source": "SYSTEM_CONTEXT",
-                    "provenance": "system_context_compiled",
-                    "vlm_canonicalization_version": LIVING_ROOM_VLM_CANONICALIZATION_VERSION,
-                    "normalization_status": "COMPLETE",
-                })
-                concept_accounting["roles"]["system_context_seating_position"] = {
-                    "canonical_role": "SEATING_POSITION",
-                    "entity_kind": "FIXED_TARGET",
-                    "raw_count": 2,
-                    "canonical_count": 2,
-                    "binding_policy": "DISTINCT",
-                    "unary_predicates": [],
-                    "role_semantic_source": "SYSTEM_CONTEXT",
-                    "candidate_categories_used_for_role_identity": False,
-                    "status": "SYSTEM_CONTEXT_COMPILED",
-                }
-
-            if "SEATING_PAIR" not in classified_roles and any(
-                r.get("canonical_object_role_id") == "SEATING_PAIR" or r.get("canonical_subject_role_id") == "SEATING_PAIR"
-                for r in canonical_relations
-            ):
-                normalized_records.append({
-                    "role_id": "seating_pair",
-                    "raw_vlm_role_ids": ["system_context_seating_pair"],
-                    "entity_kind": "FIXED_TARGET",
-                    "binding_policy": "SHARED",
-                    "function": "SEATING_PAIR",
-                    "raw_function": "paired viewer seating area",
-                    "vlm_required_count": 1,
-                    "description": "both viewer seating positions collectively for shared item accessibility",
-                    "candidate_categories": ["armchairs", "seating area"],
-                    "raw_candidate_categories": ["armchairs", "seating area"],
-                    "canonical_graph_category": LIVING_TASK_ANCHOR_CANONICAL_CATEGORIES["SEATING_PAIR"],
-                    "accepted_categories": list(LIVING_TASK_ANCHOR_CANONICAL_CATEGORIES["SEATING_PAIR"]),
-                    "required_properties": [],
-                    "visible_candidates": [],
-                    "semantic_hints": ["armchairs", "seating area"],
-                    "source": "SYSTEM_CONTEXT",
-                    "provenance": "system_context_compiled",
-                    "vlm_canonicalization_version": LIVING_ROOM_VLM_CANONICALIZATION_VERSION,
-                    "normalization_status": "COMPLETE",
-                })
-                concept_accounting["roles"]["system_context_seating_pair"] = {
-                    "canonical_role": "SEATING_PAIR",
-                    "entity_kind": "FIXED_TARGET",
-                    "raw_count": 1,
-                    "canonical_count": 1,
-                    "binding_policy": "SHARED",
-                    "unary_predicates": [],
-                    "role_semantic_source": "SYSTEM_CONTEXT",
-                    "candidate_categories_used_for_role_identity": False,
-                    "status": "SYSTEM_CONTEXT_COMPILED",
-                }
 
             canonicalization_trace = {
                 "version": LIVING_ROOM_VLM_CANONICALIZATION_VERSION,

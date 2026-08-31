@@ -163,17 +163,39 @@ def living_room_decomposition() -> dict:
                 ],
                 "required_properties": ["planar support"],
             },
+            {
+                "id": "viewer_seating_position",
+                "entity_kind": "FIXED_TARGET",
+                "function": "viewer seating position",
+                "description": "individual seated viewer location for personal drink access",
+                "required_count": 2,
+                "binding_policy": "DISTINCT",
+                "candidate_categories": ["armchair", "chair"],
+                "visible_candidates": [],
+                "required_properties": [],
+            },
+            {
+                "id": "paired_seating_area",
+                "entity_kind": "FIXED_TARGET",
+                "function": "paired viewer seating area",
+                "description": "both viewer seating positions collectively for shared item accessibility",
+                "required_count": 1,
+                "binding_policy": "SHARED",
+                "candidate_categories": ["armchairs", "seating area"],
+                "visible_candidates": [],
+                "required_properties": [],
+            },
         ],
         "functional_relations": [
             {
                 "subject_role": "central_control_surface",
                 "relation": "accessible from both seats",
-                "object_role": "central_control_surface",
+                "object_role": "paired_seating_area",
             },
             {
                 "subject_role": "individual_drink_surface",
                 "relation": "near the assigned seat",
-                "object_role": "individual_drink_surface",
+                "object_role": "viewer_seating_position",
             },
         ],
         "interaction_groups": [],
@@ -433,22 +455,55 @@ def test_living_room_canonical_role_consolidation(observation_image):
                 ],
                 "required_properties": ["planar support"],
             },
+            {
+                "id": "viewer_1_seat",
+                "entity_kind": "FIXED_TARGET",
+                "function": "viewer seating position",
+                "description": "left viewer seating position",
+                "required_count": 1,
+                "binding_policy": "DISTINCT",
+                "candidate_categories": ["armchair"],
+                "visible_candidates": [],
+                "required_properties": [],
+            },
+            {
+                "id": "viewer_2_seat",
+                "entity_kind": "FIXED_TARGET",
+                "function": "viewer seating position",
+                "description": "right viewer seating position",
+                "required_count": 1,
+                "binding_policy": "DISTINCT",
+                "candidate_categories": ["armchair"],
+                "visible_candidates": [],
+                "required_properties": [],
+            },
+            {
+                "id": "paired_seats",
+                "entity_kind": "FIXED_TARGET",
+                "function": "paired viewer seating area",
+                "description": "paired seating positions",
+                "required_count": 1,
+                "binding_policy": "SHARED",
+                "candidate_categories": ["armchairs"],
+                "visible_candidates": [],
+                "required_properties": [],
+            },
         ],
         "functional_relations": [
             {
                 "subject_role": "viewer_1_side_table",
                 "relation": "within reach of one seated person",
-                "object_role": "viewer_1_side_table",
+                "object_role": "viewer_1_seat",
             },
             {
                 "subject_role": "viewer_2_side_table",
                 "relation": "within reach of one seated person",
-                "object_role": "viewer_2_side_table",
+                "object_role": "viewer_2_seat",
             },
             {
                 "subject_role": "shared_coffee_table",
                 "relation": "accessible from both seats",
-                "object_role": "shared_coffee_table",
+                "object_role": "paired_seats",
             },
         ],
         "interaction_groups": [],
@@ -474,6 +529,10 @@ def test_living_room_canonical_role_consolidation(observation_image):
     assert shared_req["vlm_required_count"] == 1
     assert shared_req["raw_vlm_role_ids"] == ["shared_coffee_table"]
     assert shared_req["function"] == "SHARED_REMOTE_REGION"
+
+    seating_req = next(r for r in reqs if r["role_id"] == "seating_position")
+    assert seating_req["vlm_required_count"] == 2
+    assert seating_req["raw_vlm_role_ids"] == ["viewer_1_seat", "viewer_2_seat"]
 
     # Now verify FunctionalRequirementGraph construction and validation
     from mujoco_scenes.functional_tamp_pipeline.vlm_spec_provider import VLMSpecProvider

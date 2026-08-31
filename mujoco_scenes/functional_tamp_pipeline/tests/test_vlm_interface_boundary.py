@@ -322,22 +322,45 @@ def test_living_room_detector_vocabulary_uses_only_vlm_categories(tmp_path):
                 ],
                 "required_properties": ["planar support"],
             },
+            {
+                "id": "viewer_seat",
+                "entity_kind": "FIXED_TARGET",
+                "function": "viewer seating position",
+                "description": "seated viewer position",
+                "required_count": 2,
+                "binding_policy": "DISTINCT",
+                "candidate_categories": ["armchair"],
+                "visible_candidates": [],
+                "required_properties": [],
+            },
+            {
+                "id": "paired_seating",
+                "entity_kind": "FIXED_TARGET",
+                "function": "paired viewer seating area",
+                "description": "paired seating positions",
+                "required_count": 1,
+                "binding_policy": "SHARED",
+                "candidate_categories": ["armchairs"],
+                "visible_candidates": [],
+                "required_properties": [],
+            },
         ],
         "functional_relations": [
             {
                 "subject_role": "personal_support",
                 "relation": "near seat",
-                "object_role": "personal_support",
+                "object_role": "viewer_seat",
             },
             {
                 "subject_role": "shared_support",
                 "relation": "between seats",
-                "object_role": "shared_support",
+                "object_role": "paired_seating",
             },
         ],
         "interaction_groups": [],
         "inspectable_regions": [],
         "inspection_order": [],
+        "unsupported_reason": "",
     }
     transport = MockTransport({"functional_specification": doc})
     provider.fm_adapter = FMAdapter(model="test_model", transport=transport)
