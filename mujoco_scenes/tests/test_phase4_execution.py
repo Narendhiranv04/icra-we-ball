@@ -1,4 +1,5 @@
 import json
+import inspect
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -29,6 +30,9 @@ from mujoco_scenes.phase4_workshop import (
 )
 from mujoco_scenes.workshop_ground_truth_execution import (
     WorkshopExecutionDispatcher,
+    strict_insertion_verified,
+    strict_surface_place_verified,
+    workshop_preclose_limit_m,
 )
 from mujoco_scenes.living_room_mobile_execution import (
     post_release_dynamics_modification_enabled,
@@ -470,13 +474,77 @@ def test_workshop_open_without_handle_contact_never_activates_weld():
     assert int(dispatcher.scene.data.eq_active[0]) == 0
 
 
-def test_strict_workshop_never_invokes_legacy_fixture_places():
+def test_workshop_large_preclose_miss_is_never_a_tolerance_fix():
+    for source, object_name in (
+        ("TOOL_CABINET", "workshop_wooden_hammer"),
+        ("LEFT_DRAWER", "workshop_medium_phillips_screw"),
+        ("RIGHT_DRAWER", "workshop_power_driver"),
+    ):
+        assert workshop_preclose_limit_m(source, object_name) < 0.4
+
+
+def test_workshop_pick_attachment_remains_bilateral_contact_gated():
+    source = inspect.getsource(WorkshopExecutionDispatcher._activate_grasp)
+    assert "require_bilateral" in source
+    assert "attachment requested without bilateral" in source
+    assert "eq_active" in source
+
+
+def test_workshop_pick_uses_live_resolved_object_geometry():
+    source = inspect.getsource(WorkshopExecutionDispatcher._object_grasp_position)
+    assert "mjOBJ_GEOM" in source
+    assert "geom_xpos" in source
+    assert "data.xpos" not in source
+
+
+def test_strict_insertion_source_has_no_legacy_target_fixture_calls():
+    source = inspect.getsource(
+        WorkshopExecutionDispatcher._strict_insert_fastener
+    )
+    assert "_activate_installed_fastener" not in source
+    assert "workshop_alignment_weld" not in source
+    assert "qpos[" not in source
+    assert '"target_alignment_constraint_used": False' in source
+    assert '"installed_fastener_constraint_used": False' in source
+
+
+def test_strict_surface_release_skips_staging_constraint():
+    source = inspect.getsource(WorkshopExecutionDispatcher.execute)
+    assert "and not self.strict_physical_execution" in source
+    assert 'result["staging_constraint_used"] = False' in source
+
+
+def test_strict_surface_place_rejects_fall_or_retained_grasp():
+    valid = dict(
+        xy_margin_m=0.1, height_m=0.05, support_contact=True,
+        grasp_inactive=True, held=False, linear_velocity_m_s=0.0,
+        angular_velocity_rad_s=0.0,
+    )
+    assert strict_surface_place_verified(**valid)
+    assert not strict_surface_place_verified(**(valid | {"support_contact": False}))
+    assert not strict_surface_place_verified(**(valid | {"held": True}))
+    assert not strict_surface_place_verified(**(valid | {"linear_velocity_m_s": 0.1}))
+
+
+def test_strict_insertion_rejects_tip_axis_depth_and_contact_failures():
+    valid = dict(
+        lateral_error_m=0.001, axis_error_rad=0.01, depth_m=0.012,
+        target_contact=True, held=False, linear_velocity_m_s=0.0,
+        angular_velocity_rad_s=0.0,
+    )
+    assert strict_insertion_verified(**valid)
+    assert not strict_insertion_verified(**(valid | {"lateral_error_m": 0.004}))
+    assert not strict_insertion_verified(**(valid | {"axis_error_rad": 0.06}))
+    assert not strict_insertion_verified(**(valid | {"depth_m": 0.004}))
+    assert not strict_insertion_verified(**(valid | {"target_contact": False}))
+
+
+def test_strict_workshop_routes_valid_places_to_new_physical_controllers():
     insertion = strict_workshop_place_block({
         "operator": "PLACE",
         "arguments": ["object_0001", "workshop_frame_joint"],
     }, "object_0001")
-    assert insertion["status"] == "STRICT_PHYSICAL_INSERTION_UNAVAILABLE"
-    assert insertion["no_legacy_insertion_invoked"] is True
+    assert insertion is None
     wrong_object = strict_workshop_place_block({
         "operator": "PLACE",
         "arguments": ["object_0002", "workshop_frame_joint"],
@@ -487,9 +555,7 @@ def test_strict_workshop_never_invokes_legacy_fixture_places():
         "operator": "PLACE",
         "arguments": ["object_0002", "MAIN_WORKBENCH_ZONE"],
     }, "object_0001")
-    assert surface["status"] == "STRICT_PHYSICAL_SURFACE_PLACE_UNAVAILABLE"
-    assert surface["no_legacy_surface_place_invoked"] is True
-
+    assert surface is None
     class _State:
         def check(self, action, assignment):
             return True, None
@@ -515,9 +581,7 @@ def test_strict_workshop_never_invokes_legacy_fixture_places():
     adapter.assignment = object()
     adapter.dispatcher = _Dispatcher()
     for index, arguments in enumerate((
-        ["object_0001", "workshop_frame_joint"],
         ["object_0002", "workshop_frame_joint"],
-        ["object_0002", "MAIN_WORKBENCH_ZONE"],
     ), start=1):
         result = adapter.execute_action({
             "action_index": index,
@@ -530,6 +594,13 @@ def test_strict_workshop_never_invokes_legacy_fixture_places():
             ExecutionFailure.CONTROLLER_FAILURE.value,
             ExecutionFailure.PRECONDITION_STATE_FAILURE.value,
         }
+
+
+def test_strict_workshop_screw_remains_blocked():
+    source = inspect.getsource(WorkshopPhase4Adapter.execute_action)
+    assert 'operator == "SCREW"' in source
+    assert "STRICT_PHYSICAL_SCREW_UNAVAILABLE" in source
+    assert "legacy_direct_fastener_qpos_write_blocked" in source
 
 
 def test_strict_living_execution_never_modifies_post_release_damping():

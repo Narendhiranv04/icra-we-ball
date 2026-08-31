@@ -34,6 +34,10 @@ FORBIDDEN_STRICT_TELEMETRY_FLAGS = frozenset({
     "staging_fixture_used",
     "installed_target_fixture_used",
     "post_release_dynamics_modified",
+    "target_alignment_constraint_used",
+    "installed_fastener_constraint_used",
+    "payload_pose_snap_used",
+    "staging_constraint_used",
 })
 
 DIRECT_TASK_STATE_FLAGS = frozenset({

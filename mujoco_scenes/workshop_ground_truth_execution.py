@@ -19,14 +19,19 @@ from .workshop_scene import (
 )
 
 
-# Local +X approaches the storage front along world +Y.  For horizontal
-# drawer bars local +Y is vertical; for the cabinet's vertical bar local +Y is
-# horizontal.  These attitudes keep the wrist facing the handle instead of
-# using the former top-down object-picking attitude.
+# The Google fingers extend along local +Z, not local +X.  Point local +Z
+# through the storage front along world +Y.  Local +Y is the jaw-closing axis:
+# vertical for horizontal drawer bars and horizontal for the cabinet bar.
 DRAWER_FRONT_GRASP_ROTATION = np.array(
-    ((0.0, 0.0, 1.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0))
+    ((-1.0, 0.0, 0.0), (0.0, 0.0, 1.0), (0.0, 1.0, 0.0))
 )
 CABINET_FRONT_GRASP_ROTATION = np.array(
+    ((0.0, 1.0, 0.0), (0.0, 0.0, 1.0), (1.0, 0.0, 0.0))
+)
+LEGACY_DRAWER_FRONT_GRASP_ROTATION = np.array(
+    ((0.0, 0.0, 1.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0))
+)
+LEGACY_CABINET_FRONT_GRASP_ROTATION = np.array(
     ((0.0, 0.0, -1.0), (1.0, 0.0, 0.0), (0.0, -1.0, 0.0))
 )
 # Cabinet payloads are reached from the open front: local +X points into the
@@ -43,6 +48,48 @@ DRAWER_OBJECT_FRONT_GRASP_ROTATION = CABINET_OBJECT_FRONT_GRASP_ROTATION.copy()
 POWER_TOP_DOWN_GRASP_ROTATION = np.array(
     ((0.0, -1.0, 0.0), (1.0, 0.0, 0.0), (0.0, 0.0, 1.0))
 ) @ np.asarray(manipulation_profile("google").top_down_rotation)
+
+
+def workshop_preclose_limit_m(source: str, object_name: str) -> float:
+    if source == "TOOL_CABINET" and object_name == "workshop_wooden_hammer":
+        return 0.045
+    if source == "TOOL_CABINET" and object_name == "workshop_long_phillips_driver":
+        return 0.060
+    if source == "TOOL_CABINET":
+        return 0.040
+    if source in {"LEFT_DRAWER", "RIGHT_DRAWER"} and object_name == "workshop_medium_phillips_screw":
+        return 0.075
+    if source in {"LEFT_DRAWER", "RIGHT_DRAWER"} and object_name in {
+        "workshop_long_phillips_driver", "workshop_power_driver",
+    }:
+        return 0.040
+    return 0.025
+
+
+def strict_surface_place_verified(
+    *, xy_margin_m: float, height_m: float, support_contact: bool,
+    grasp_inactive: bool, held: bool, linear_velocity_m_s: float,
+    angular_velocity_rad_s: float,
+) -> bool:
+    """Pure live-state acceptance gate for a fixture-free surface release."""
+    return bool(
+        xy_margin_m >= -0.01 and -0.01 <= height_m <= 0.25
+        and support_contact and grasp_inactive and not held
+        and linear_velocity_m_s <= 0.03 and angular_velocity_rad_s <= 0.20
+    )
+
+
+def strict_insertion_verified(
+    *, lateral_error_m: float, axis_error_rad: float, depth_m: float,
+    target_contact: bool, held: bool, linear_velocity_m_s: float,
+    angular_velocity_rad_s: float,
+) -> bool:
+    """Pure live-state acceptance gate for fixture-free partial insertion."""
+    return bool(
+        lateral_error_m <= 0.003 and axis_error_rad <= 0.05
+        and 0.008 <= depth_m <= 0.018 and target_contact and not held
+        and linear_velocity_m_s <= 0.03 and angular_velocity_rad_s <= 0.20
+    )
 
 
 class WorkshopExecutionDispatcher:
@@ -155,6 +202,27 @@ class WorkshopExecutionDispatcher:
     def _body_position(self, name: str) -> list[float] | None:
         body_id = mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_BODY, name)
         return self.scene.data.xpos[body_id].tolist() if body_id >= 0 else None
+
+    def _body_velocity(self, name: str) -> tuple[float, float]:
+        body_id = mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_BODY, name)
+        joint_id = int(self.scene.model.body_jntadr[body_id])
+        dof = int(self.scene.model.jnt_dofadr[joint_id])
+        velocity = self.scene.data.qvel[dof:dof + 6]
+        return float(np.linalg.norm(velocity[:3])), float(np.linalg.norm(velocity[3:]))
+
+    def _body_contact_names(self, name: str) -> list[str]:
+        body_id = mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_BODY, name)
+        contacts: set[str] = set()
+        for contact in self.scene.data.contact:
+            body1 = int(self.scene.model.geom_bodyid[contact.geom1])
+            body2 = int(self.scene.model.geom_bodyid[contact.geom2])
+            if body_id not in {body1, body2}:
+                continue
+            other = contact.geom2 if body1 == body_id else contact.geom1
+            contacts.add(mujoco.mj_id2name(
+                self.scene.model, mujoco.mjtObj.mjOBJ_GEOM, other
+            ) or f"geom_{other}")
+        return sorted(contacts)
 
     def _object_grasp_position(self, object_name: str) -> np.ndarray:
         """Return the live centre of the physical geometry the jaws must hold."""
@@ -893,9 +961,11 @@ class WorkshopExecutionDispatcher:
             if opening else 0.0
         )
         grasp_rotation = (
-            CABINET_FRONT_GRASP_ROTATION.copy()
-            if region == "TOOL_CABINET"
-            else DRAWER_FRONT_GRASP_ROTATION.copy()
+            (CABINET_FRONT_GRASP_ROTATION if self.strict_physical_execution
+             else LEGACY_CABINET_FRONT_GRASP_ROTATION).copy()
+            if region == "TOOL_CABINET" else
+            (self.arm_profile.top_down_rotation if self.strict_physical_execution
+             else LEGACY_DRAWER_FRONT_GRASP_ROTATION).copy()
         )
         moving_body_id = mujoco.mj_name2id(
             self.scene.model,
@@ -921,15 +991,29 @@ class WorkshopExecutionDispatcher:
         elif region == "RIGHT_DRAWER":
             handle[0] -= 0.040
         approach_axis = grasp_rotation[:, 0]
+        # The Google ``grip_site`` lies in the finger-pad contact plane for
+        # these front-facing wrist rotations.  The old negative offset left
+        # both pads 40--55 mm in front of the handle, making contact
+        # impossible despite a small IK error.
         grasp_offset = (
-            -0.055 if region in {"LEFT_DRAWER", "RIGHT_DRAWER"}
-            else -0.040
+            0.0 if self.strict_physical_execution else
+            -0.055 if region in {"LEFT_DRAWER", "RIGHT_DRAWER"} else -0.040
         )
-        grasp = handle + grasp_offset * approach_axis
+        grasp = (
+            handle + np.array([0.0, 0.0, 0.075])
+            if self.strict_physical_execution
+            and region in {"LEFT_DRAWER", "RIGHT_DRAWER"}
+            else handle + grasp_offset * approach_axis
+        )
         # Remain entirely in front of the workbench while descending.  The
         # former overhead point was below the tabletop and the joint-space
         # transition visibly cut through it.
-        pregrasp = grasp - 0.200 * approach_axis
+        pregrasp = (
+            grasp + np.array([0.0, 0.0, 0.18])
+            if self.strict_physical_execution
+            and region in {"LEFT_DRAWER", "RIGHT_DRAWER"}
+            else grasp - 0.200 * approach_axis
+        )
         overhead = pregrasp + np.array([0.0, 0.0, 0.35])
         overhead[2] = 1.02 if region == "TOOL_CABINET" else 0.75
         corridor = np.array([
@@ -1071,7 +1155,12 @@ class WorkshopExecutionDispatcher:
                         half_matrix.reshape(3, 3) @ grasp_rotation
                     )
                 live_approach = live_rotation[:, 0]
-                live_grasp = live_handle + grasp_offset * live_approach
+                live_grasp = (
+                    live_handle + np.array([0.0, 0.0, 0.075])
+                    if self.strict_physical_execution
+                    and region in {"LEFT_DRAWER", "RIGHT_DRAWER"}
+                    else live_handle + grasp_offset * live_approach
+                )
                 follow = self._reach(
                     live_grasp,
                     samples=4,
@@ -1700,6 +1789,89 @@ class WorkshopExecutionDispatcher:
             return self.scene.data.xpos[body_id].copy() + np.array([0.0, 0.0, -0.10])
         raise ValueError(f"No assisted destination pose for {name}")
 
+    def _strict_insert_fastener(self, object_name: str) -> dict[str, Any]:
+        """Insert by robot motion with the original fixed grasp only."""
+        self.robot_destination = "workshop_frame_joint"
+        self._navigate_robot("workshop_frame_joint")
+        object_id = mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_BODY, object_name)
+        tip_site = mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_SITE, f"{object_name}_tip_site")
+        entry_site = mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_SITE, "workshop_target_hole_entry")
+        seated_site = mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_SITE, "workshop_target_hole_seated_tip")
+        entry = self.scene.data.site_xpos[entry_site].copy()
+        seated = self.scene.data.site_xpos[seated_site].copy()
+        desired_rotation = self._rotation_from_quaternion(np.array([0.0, 1.0, 0.0, 0.0]))
+        grip_rotation = self.scene.data.site_xmat[self.grip_site_id].reshape(3, 3).copy()
+        body_rotation = self.scene.data.xmat[object_id].reshape(3, 3).copy()
+        body_in_grip = grip_rotation.T @ body_rotation
+        body_offset = grip_rotation.T @ (
+            self.scene.data.xpos[object_id] - self.scene.data.site_xpos[self.grip_site_id]
+        )
+        target_grip_rotation = desired_rotation @ body_in_grip.T
+        tip_local = self.scene.model.site_pos[tip_site].copy()
+        allowed = (
+            object_name, "workshop_frame_joint", "workshop_frame_fixture",
+            "workbench", "left_tool_drawer", "right_tool_drawer",
+            "workshop_parts_tray", "workshop_hardware_bin",
+        )
+
+        def grip_for_tip(tip: np.ndarray) -> np.ndarray:
+            body_position = tip - desired_rotation @ tip_local
+            return body_position - target_grip_rotation @ body_offset
+
+        motion = []
+        for tip_target in (
+            entry + np.array([0.0, 0.0, 0.10]),
+            entry + np.array([0.0, 0.0, 0.012]),
+            entry + np.array([0.0, 0.0, -0.012]),
+        ):
+            motion.append(self._reach(
+                grip_for_tip(tip_target), rotation=target_grip_rotation,
+                orientation_weight=0.20, allowed_body_names=allowed,
+                cartesian_step_m=0.006, ik_tolerance_m=0.018,
+            ))
+            self._hold(0.20)
+        self._release_grasp()
+        self._set_gripper(False)
+        self._hold(1.0)
+        final_tip = self.scene.data.site_xpos[tip_site].copy()
+        axis = self.scene.data.xmat[object_id].reshape(3, 3)[:, 2]
+        lateral = float(np.linalg.norm(final_tip[:2] - entry[:2]))
+        angular = float(math.acos(np.clip(np.dot(
+            axis, np.array([0.0, 0.0, -1.0])
+        ), -1.0, 1.0)))
+        depth = float(entry[2] - final_tip[2])
+        target_contacts = [
+            name for name in self._body_contact_names(object_name)
+            if name.startswith("frame_") or name.startswith("fixture_")
+        ]
+        linear_velocity, angular_velocity = self._body_velocity(object_name)
+        success = strict_insertion_verified(
+            lateral_error_m=lateral, axis_error_rad=angular, depth_m=depth,
+            target_contact=bool(target_contacts), held=self.held_object is not None,
+            linear_velocity_m_s=linear_velocity,
+            angular_velocity_rad_s=angular_velocity,
+        )
+        return {
+            "success": success,
+            "status": "STRICT_PHYSICAL_INSERTION_VERIFIED" if success else "STRICT_PHYSICAL_INSERTION_FAILED",
+            "robot_motion": motion,
+            "fastener_tip_position_m": final_tip.tolist(),
+            "target_hole_entry_m": entry.tolist(),
+            "target_hole_seated_tip_m": seated.tolist(),
+            "lateral_tip_error_m": lateral,
+            "angular_axis_error_rad": angular,
+            "insertion_depth_m": depth,
+            "target_contacts": target_contacts,
+            "held_after_insertion": self.held_object is not None,
+            "linear_velocity_m_s": linear_velocity,
+            "angular_velocity_rad_s": angular_velocity,
+            "target_alignment_constraint_used": False,
+            "installed_fastener_constraint_used": False,
+            "payload_pose_snap_used": False,
+            "direct_payload_pose_write": False,
+            "direct_task_state_write": False,
+        }
+
     def execute(self, action: dict[str, Any], state: WorkshopWorldState) -> dict[str, Any]:
         valid, reason = state.check(action, self.assignment)
         if not valid:
@@ -1837,6 +2009,10 @@ class WorkshopExecutionDispatcher:
                 # straight toward the cabinet for the deeper shelf pickup.
                 cabinet_pick_base = self.scene.data.qpos[self.base_qpos].copy()
                 cabinet_pick_base[0] += 0.10
+                # Re-centre laterally on the resolved object's live grasp
+                # geometry.  The OPEN stance is deliberately offset for the
+                # door swing and otherwise leaves a 0.32--0.43 m PICK miss.
+                cabinet_pick_base[1] = -float(grasp_point[0])
                 self._audit_base_waypoint(cabinet_pick_base, "cabinet_interior_pick")
                 self._animate_configuration(
                     self.base_qpos, self.base_dofs, self.base_actuators,
@@ -2028,29 +2204,7 @@ class WorkshopExecutionDispatcher:
             result["preclose_measured_gripper_error_m"] = result["reach"][
                 "measured_gripper_target_error_m"
             ]
-            preclose_limit = (
-                0.045
-                if source == "TOOL_CABINET"
-                and obj == "workshop_wooden_hammer"
-                else 0.060
-                if source == "TOOL_CABINET"
-                and obj == "workshop_long_phillips_driver"
-                else 0.040 if source == "TOOL_CABINET"
-                # The kitchen-style drawer has a shallow, fully extended tray.
-                # A thin screw can be safely contacted with this calibrated
-                # 35 mm arrival tolerance; bilateral finger contact remains
-                # mandatory below, so this does not bypass physical grasping.
-                else 0.075
-                if source in {"LEFT_DRAWER", "RIGHT_DRAWER"}
-                and obj == "workshop_medium_phillips_screw"
-                else 0.040
-                if source in {"LEFT_DRAWER", "RIGHT_DRAWER"}
-                and obj in {
-                    "workshop_long_phillips_driver",
-                    "workshop_power_driver",
-                }
-                else 0.025
-            )
+            preclose_limit = workshop_preclose_limit_m(source, obj)
             if result["preclose_measured_gripper_error_m"] > preclose_limit:
                 raise RuntimeError(
                     "GRASP_REJECTED: physical gripper missed its calibrated "
@@ -2365,7 +2519,10 @@ class WorkshopExecutionDispatcher:
                 ),
             )
             self._hold(0.75)
-            if execution_op in {"PLACE_ON_SURFACE", "PLACE_IN_CONTAINER"}:
+            if (
+                execution_op in {"PLACE_ON_SURFACE", "PLACE_IN_CONTAINER"}
+                and not self.strict_physical_execution
+            ):
                 # Establish a zero-motion support handoff at the physically
                 # reached pose *before* opening the fingers. Small round parts
                 # otherwise have time to roll or fall while the gripper opens.
@@ -2386,6 +2543,9 @@ class WorkshopExecutionDispatcher:
                 mujoco.mj_forward(self.scene.model, self.scene.data)
                 result["staging_constraint_active"] = True
                 result["staged_object_static_after_contact"] = True
+            elif execution_op == "PLACE_ON_SURFACE":
+                result["staging_constraint_active"] = False
+                result["staging_constraint_used"] = False
             self._release_grasp()
             self._set_gripper(False)
             if execution_op in {"PLACE_ON_SURFACE", "PLACE_IN_CONTAINER"}:
@@ -2450,8 +2610,30 @@ class WorkshopExecutionDispatcher:
                 height = float(position[2] - center[2])
                 result["surface_xy_signed_margin_m"] = xy_margin
                 result["surface_height_above_center_m"] = height
-                result["success"] = bool(
-                    xy_margin >= -0.01 and -0.01 <= height <= 0.25
+                contacts = self._body_contact_names(obj)
+                linear_velocity, angular_velocity = self._body_velocity(obj)
+                result["destination_bounds"] = {
+                    "center_world_m": center.tolist(),
+                    "dimensions_m": dimensions.tolist(),
+                }
+                result["support_contacts"] = contacts
+                result["workbench_support_contact"] = (
+                    "workbench_top_col" in contacts
+                )
+                result["settled_linear_velocity_m_s"] = linear_velocity
+                result["settled_angular_velocity_rad_s"] = angular_velocity
+                result["grasp_constraint_inactive"] = self.active_grasp_weld < 0
+                result["held_after_release"] = self.held_object is not None
+                result["success"] = (
+                    strict_surface_place_verified(
+                        xy_margin_m=xy_margin, height_m=height,
+                        support_contact=result["workbench_support_contact"],
+                        grasp_inactive=result["grasp_constraint_inactive"],
+                        held=result["held_after_release"],
+                        linear_velocity_m_s=linear_velocity,
+                        angular_velocity_rad_s=angular_velocity,
+                    ) if self.strict_physical_execution else
+                    bool(xy_margin >= -0.01 and -0.01 <= height <= 0.25)
                 )
             else:
                 result["success"] = bool(
@@ -2459,6 +2641,9 @@ class WorkshopExecutionDispatcher:
                 )
         elif execution_op == "INSERT_FASTENER":
             obj, target = args
+            if self.strict_physical_execution:
+                result.update(self._strict_insert_fastener(obj))
+                return result
             self.robot_destination = target
             self._navigate_robot(target)
             result["reorientation"] = self._regrasp_vertical_fastener(obj)

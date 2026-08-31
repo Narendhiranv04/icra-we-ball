@@ -51,22 +51,14 @@ def strict_workshop_place_block(
         return None
     obj, destination = action["arguments"]
     if destination == "workshop_frame_joint":
+        if obj == planner_fastener:
+            return None
         return {
-            "status": (
-                "STRICT_PHYSICAL_INSERTION_UNAVAILABLE"
-                if obj == planner_fastener
-                else "INVALID_IMMUTABLE_WORKSHOP_PLAN"
-            ),
-            "immutable_plan_precondition_mismatch": obj != planner_fastener,
+            "status": "INVALID_IMMUTABLE_WORKSHOP_PLAN",
+            "immutable_plan_precondition_mismatch": True,
             "legacy_alignment_fixture_blocked": True,
             "legacy_installed_fastener_fixture_blocked": True,
             "no_legacy_insertion_invoked": True,
-        }
-    if destination in CONTEXT_SURFACES:
-        return {
-            "status": "STRICT_PHYSICAL_SURFACE_PLACE_UNAVAILABLE",
-            "legacy_staging_fixture_blocked": True,
-            "no_legacy_surface_place_invoked": True,
         }
     return None
 
