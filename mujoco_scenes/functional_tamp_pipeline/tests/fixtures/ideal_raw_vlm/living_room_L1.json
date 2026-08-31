@@ -1,0 +1,143 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Prepare the living room for two people watching television by placing individual drinkware on personal side tables and the remote control on the shared coffee table.",
+  "functional_roles": [
+    {
+      "id": "role_personal_table",
+      "entity_kind": "REGION",
+      "function": "hold items for viewer",
+      "description": "Fixed individual side table surface beside each viewer seating position for supporting drinkware",
+      "required_count": 2,
+      "binding_policy": "DISTINCT",
+      "candidate_categories": [
+        "side table",
+        "end table",
+        "personal table"
+      ],
+      "visible_candidates": [],
+      "required_properties": [
+        "planar horizontal support"
+      ]
+    },
+    {
+      "id": "role_shared_table",
+      "entity_kind": "REGION",
+      "function": "hold items for viewers",
+      "description": "Fixed central coffee table surface accessible to both seated viewers for supporting the shared TV remote",
+      "required_count": 1,
+      "binding_policy": "SHARED",
+      "candidate_categories": [
+        "coffee table",
+        "shared table",
+        "center table"
+      ],
+      "visible_candidates": [],
+      "required_properties": [
+        "planar horizontal support"
+      ]
+    },
+    {
+      "id": "role_drinkware_set",
+      "entity_kind": "OBJECT",
+      "function": "contain hot beverage and saucer",
+      "description": "Individual cup and saucer drinkware set for each person",
+      "required_count": 2,
+      "binding_policy": "DISTINCT",
+      "candidate_categories": [
+        "cup and saucer set",
+        "cup",
+        "saucer"
+      ],
+      "visible_candidates": [],
+      "required_properties": [
+        "open cavity"
+      ]
+    },
+    {
+      "id": "role_tv_remote",
+      "entity_kind": "OBJECT",
+      "function": "control television",
+      "description": "Handheld television remote control device",
+      "required_count": 1,
+      "binding_policy": "DISTINCT",
+      "candidate_categories": [
+        "tv remote",
+        "remote control"
+      ],
+      "visible_candidates": [],
+      "required_properties": []
+    },
+    {
+      "id": "role_viewer_seat",
+      "entity_kind": "FIXED_TARGET",
+      "function": "viewer seating position",
+      "description": "Individual viewer seating position",
+      "required_count": 2,
+      "binding_policy": "DISTINCT",
+      "candidate_categories": [
+        "armchair",
+        "chair",
+        "sofa"
+      ],
+      "visible_candidates": [],
+      "required_properties": []
+    },
+    {
+      "id": "role_seating_pair",
+      "entity_kind": "FIXED_TARGET",
+      "function": "paired viewer seating area",
+      "description": "Both viewer seating positions collectively",
+      "required_count": 1,
+      "binding_policy": "SHARED",
+      "candidate_categories": [
+        "armchair",
+        "chair",
+        "sofa"
+      ],
+      "visible_candidates": [],
+      "required_properties": []
+    }
+  ],
+  "functional_relations": [
+    {
+      "subject_role": "role_personal_table",
+      "relation": "can hold drinkware set",
+      "object_role": "role_drinkware_set"
+    },
+    {
+      "subject_role": "role_personal_table",
+      "relation": "near seat",
+      "object_role": "role_viewer_seat"
+    },
+    {
+      "subject_role": "role_shared_table",
+      "relation": "can hold remote",
+      "object_role": "role_tv_remote"
+    },
+    {
+      "subject_role": "role_shared_table",
+      "relation": "accessible from both seats",
+      "object_role": "role_seating_pair"
+    }
+  ],
+  "interaction_groups": [
+    {
+      "id": "group_personal_support",
+      "function": "support drinkware set beside seat",
+      "tool_role": "role_personal_table",
+      "target_role": "role_drinkware_set",
+      "required_target_count": 2,
+      "usage_policy": "DEDICATED_PER_TARGET",
+      "required_relations": [
+        "can hold drinkware set"
+      ],
+      "context_role": "role_viewer_seat",
+      "context_relations": [
+        "near seat"
+      ]
+    }
+  ],
+  "inspectable_regions": [],
+  "inspection_order": [],
+  "unsupported_reason": ""
+}

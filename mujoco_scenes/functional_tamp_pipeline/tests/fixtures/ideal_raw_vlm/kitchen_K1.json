@@ -1,0 +1,158 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Prepare and serve coffee and soup for two people using available kitchenware, stirring utensils, and eating utensils.",
+  "functional_roles": [
+    {
+      "id": "role_coffee_cup",
+      "entity_kind": "OBJECT",
+      "function": "contain an individual serving of coffee",
+      "required_count": 2,
+      "binding_policy": "DISTINCT",
+      "candidate_categories": [
+        "mug",
+        "coffee cup",
+        "ceramic mug"
+      ],
+      "visible_candidates": [],
+      "required_properties": [
+        "open cavity",
+        "capable of holding liquid"
+      ]
+    },
+    {
+      "id": "role_soup_bowl",
+      "entity_kind": "OBJECT",
+      "function": "contain an individual serving of soup",
+      "required_count": 2,
+      "binding_policy": "DISTINCT",
+      "candidate_categories": [
+        "bowl",
+        "soup bowl",
+        "deep bowl"
+      ],
+      "visible_candidates": [],
+      "required_properties": [
+        "open cavity",
+        "capable of holding liquid"
+      ]
+    },
+    {
+      "id": "role_coffee_stirrer",
+      "entity_kind": "OBJECT",
+      "function": "stir beverage",
+      "required_count": 1,
+      "binding_policy": "REUSABLE",
+      "candidate_categories": [
+        "spoon",
+        "stirring utensil",
+        "coffee stirrer"
+      ],
+      "visible_candidates": [],
+      "required_properties": [
+        "elongated shape",
+        "slender"
+      ]
+    },
+    {
+      "id": "role_soup_utensil",
+      "entity_kind": "OBJECT",
+      "function": "provide a suitable eating utensil for each soup bowl",
+      "required_count": 2,
+      "binding_policy": "DISTINCT",
+      "candidate_categories": [
+        "soup spoon",
+        "spoon",
+        "eating utensil"
+      ],
+      "visible_candidates": [],
+      "required_properties": [
+        "elongated shape",
+        "open cavity"
+      ]
+    },
+    {
+      "id": "role_water_source",
+      "entity_kind": "OBJECT",
+      "function": "source of water",
+      "required_count": 1,
+      "binding_policy": "DISTINCT",
+      "candidate_categories": [
+        "kettle",
+        "water pitcher",
+        "water container"
+      ],
+      "visible_candidates": [],
+      "required_properties": [
+        "capable of holding liquid"
+      ]
+    },
+    {
+      "id": "role_coffee_source",
+      "entity_kind": "OBJECT",
+      "function": "source of coffee",
+      "required_count": 1,
+      "binding_policy": "DISTINCT",
+      "candidate_categories": [
+        "coffee jar",
+        "coffee grounds",
+        "instant coffee jar"
+      ],
+      "visible_candidates": [],
+      "required_properties": [
+        "container"
+      ]
+    }
+  ],
+  "functional_relations": [
+    {
+      "subject_role": "role_coffee_stirrer",
+      "relation": "fits inside",
+      "object_role": "role_coffee_cup"
+    },
+    {
+      "subject_role": "role_coffee_stirrer",
+      "relation": "reaches the bottom",
+      "object_role": "role_coffee_cup"
+    },
+    {
+      "subject_role": "role_soup_utensil",
+      "relation": "fits inside",
+      "object_role": "role_soup_bowl"
+    },
+    {
+      "subject_role": "role_soup_utensil",
+      "relation": "reaches the bottom",
+      "object_role": "role_soup_bowl"
+    }
+  ],
+  "interaction_groups": [
+    {
+      "id": "group_stir_coffee",
+      "function": "stir beverage in cups",
+      "tool_role": "role_coffee_stirrer",
+      "target_role": "role_coffee_cup",
+      "required_target_count": 2,
+      "usage_policy": "SEQUENTIAL_REUSE_ALLOWED",
+      "required_relations": [
+        "fits inside",
+        "reaches the bottom"
+      ]
+    },
+    {
+      "id": "group_serve_soup",
+      "function": "provide eating utensil for each soup bowl",
+      "tool_role": "role_soup_utensil",
+      "target_role": "role_soup_bowl",
+      "required_target_count": 2,
+      "usage_policy": "DEDICATED_PER_TARGET",
+      "required_relations": [
+        "fits inside",
+        "reaches the bottom"
+      ]
+    }
+  ],
+  "cross_group_reuse_allowed": false,
+  "inspectable_regions": [],
+  "inspection_order": [],
+  "unsupported_reason": ""
+}

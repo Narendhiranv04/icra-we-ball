@@ -1,0 +1,117 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Repair the loose frame joint using a compatible screw and a tool capable of driving it into the joint.",
+  "functional_roles": [
+    {
+      "id": "role_driver_tool",
+      "entity_kind": "OBJECT",
+      "function": "drive screw",
+      "description": "Tool capable of driving a screw into the frame joint",
+      "required_count": 1,
+      "binding_policy": "DISTINCT",
+      "candidate_categories": [
+        "power driver",
+        "cordless power drill",
+        "Phillips screwdriver"
+      ],
+      "visible_candidates": [],
+      "required_properties": [
+        "rotational drive",
+        "screwdriver bit tip"
+      ]
+    },
+    {
+      "id": "role_threaded_fastener",
+      "entity_kind": "OBJECT",
+      "function": "fasten joint",
+      "description": "Threaded fastener capable of securing the frame joint hole",
+      "required_count": 1,
+      "binding_policy": "DISTINCT",
+      "candidate_categories": [
+        "Phillips screw",
+        "screw",
+        "threaded screw"
+      ],
+      "visible_candidates": [],
+      "required_properties": [
+        "threaded shank",
+        "slotted head"
+      ]
+    },
+    {
+      "id": "role_joint_target",
+      "entity_kind": "FIXED_TARGET",
+      "function": "frame joint repair target",
+      "description": "Target joint hole on the loose frame structure",
+      "required_count": 1,
+      "binding_policy": "DISTINCT",
+      "candidate_categories": [
+        "frame joint",
+        "screw hole",
+        "repair joint"
+      ],
+      "visible_candidates": [],
+      "required_properties": []
+    }
+  ],
+  "functional_relations": [
+    {
+      "subject_role": "role_driver_tool",
+      "relation": "compatible with",
+      "object_role": "role_threaded_fastener"
+    },
+    {
+      "subject_role": "role_driver_tool",
+      "relation": "reaches target",
+      "object_role": "role_joint_target"
+    },
+    {
+      "subject_role": "role_threaded_fastener",
+      "relation": "compatible with target",
+      "object_role": "role_joint_target"
+    }
+  ],
+  "interaction_groups": [
+    {
+      "id": "group_fasten_repair",
+      "function": "drive screw into joint target",
+      "tool_role": "role_driver_tool",
+      "target_role": "role_threaded_fastener",
+      "required_target_count": 1,
+      "usage_policy": "DEDICATED_PER_TARGET",
+      "required_relations": [
+        "compatible with"
+      ],
+      "context_role": "role_joint_target",
+      "context_relations": [
+        "reaches target"
+      ]
+    }
+  ],
+  "inspectable_regions": [
+    {
+      "id": "storage_drawer_left",
+      "label": "left storage drawer",
+      "visual_description": "left storage drawer beneath the workbench",
+      "reason": "May contain screws or fasteners"
+    },
+    {
+      "id": "storage_drawer_right",
+      "label": "right storage drawer",
+      "visual_description": "right storage drawer beneath the workbench",
+      "reason": "May contain screwdrivers or power drills"
+    },
+    {
+      "id": "tall_tool_cabinet",
+      "label": "tall tool cabinet",
+      "visual_description": "tall tool cabinet beside the workbench",
+      "reason": "May contain additional tools and hardware"
+    }
+  ],
+  "inspection_order": [
+    "storage_drawer_left",
+    "storage_drawer_right",
+    "tall_tool_cabinet"
+  ],
+  "unsupported_reason": ""
+}
