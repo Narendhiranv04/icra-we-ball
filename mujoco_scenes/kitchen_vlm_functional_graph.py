@@ -175,14 +175,13 @@ def _contains_phrase(text: str, phrase: str) -> bool:
 
 
 def map_kitchen_role_function(raw: dict[str, Any] | str) -> str | None:
-    """Map natural language role to unique canonical Kitchen role using multi-signal evidence."""
+    """Map natural language role to unique canonical Kitchen role using function and description only.
+
+    Candidate categories are strictly excluded from role semantic authority and are
+    reserved for detector vocabulary / semantic preferences.
+    """
     if isinstance(raw, dict):
-        fn_text = f"{raw.get('function', '')} {raw.get('description', '')}"
-        cand_cats = " ".join(
-            c.get("canonical_label", "") if isinstance(c, dict) else str(c)
-            for c in raw.get("candidate_categories", [])
-        )
-        text = f"{fn_text} {cand_cats}"
+        text = f"{raw.get('function', '')} {raw.get('description', '')}"
     else:
         text = str(raw)
     norm = _phrase(text)
@@ -559,6 +558,8 @@ def compile_vlm_functional_graph(
             "count": required_count,
             "binding_policy": binding_policy,
             "unary_predicates": list(seen_predicates_on_role),
+            "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
+            "candidate_categories_used_for_role_identity": False,
             "status": "PRESERVED",
         }
 

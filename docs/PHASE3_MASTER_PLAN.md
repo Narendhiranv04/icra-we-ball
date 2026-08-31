@@ -432,10 +432,10 @@ When a case fails, apply this tree **in order**:
 
 ---
 
-### P3-E / P3-E.1: Kitchen Canonicalizer Repair & Lexical Precision
+### P3-E / P3-E.1 / P3-E.2: Kitchen Canonicalizer Repair, Lexical Precision & Role Semantic Authority
 **Status**: `[x] COMPLETE (FROZEN)`
 
-**Objective**: Repair the Kitchen VLM canonicalizer to achieve 100% concept preservation on the ideal fixture without silent fallbacks, enforce lexical precision, validate group function semantics, and ensure provenance closure.
+**Objective**: Repair the Kitchen VLM canonicalizer to achieve 100% concept preservation on the ideal fixture without silent fallbacks, enforce lexical precision, validate group function semantics, isolate role semantic authority from candidate categories, and ensure provenance closure.
 
 **Accomplished Changes & Empirical Findings**:
 1. **Eliminated Silent Role Dropping**: Roles with unmapped functions or candidate categories raise `UnmappedFunctionalConceptError` rather than silently continuing.
@@ -443,15 +443,16 @@ When a case fails, apply this tree **in order**:
 3. **Fail-Closed Binary and Unary Property Mapping**: Removed `INSERTABLE_IN` default fallback in `map_binary_relation()` and broad keyword substring heuristics. Unmapped relations and required properties raise `UnmappedFunctionalConceptError`.
 4. **Eliminated Reverse Short-Fragment Containment (P3-E.1)**: Enforced forward-only phrase/exact matching for binary relations, unary properties, and roles (`a_norm == norm or _contains_phrase(norm, a_norm)`). Reverse fragments (`"fit"`, `"inside"`, `"bottom"`, `"reach"`, `"open"`, `"shape"`) strictly return `None`.
 5. **Interaction Group Function Semantic Validation (P3-E.1)**: Validates raw interaction group function phrases against `KITCHEN_INTERACTION_GROUP_ALIASES` and verifies semantic consistency with tool/target endpoint pairs. Contradictory/unmapped group functions fail closed.
-6. **Strict Operation Group Accounting & Cardinality**: Validates tool/target pairs against declared roles, rejects duplicate group collisions with `AmbiguousCanonicalizationError`, and rejects unmapped/empty operation relations. Removed target count clipping (`min(req, target_count)`).
-7. **Removed Dead Self-Repair Fallbacks (P3-E.1)**: Consumes schema-required fields directly without fallback defaults.
-8. **Concept Accounting Trace**: Generates comprehensive `concept_accounting` metadata recording the status (`PRESERVED` or `MERGED_BY_EXPLICIT_RULE`) of all raw roles, properties, relations, and interaction groups (including `raw_function` and `canonical_function`).
-9. **Provenance & Version Isolation (P3-E.1)**: Bumped Kitchen canonicalization version to `phase3_p3e_1_v1` across compiler and `VLMSpecProvider._kitchen`, keeping other domains isolated.
-10. **Ideal Kitchen K1 Fixture Evaluation**: Yields 100% role recall (6/6), 100% role precision (6/6), 100% relation recall (4/4), 100% relation precision (4/4), and `reference_complete = True` against GT reference.
-11. **Regression & Adversarial Tests**: Full unit/negative regression suite in `test_kitchen_vlm_functional_graph.py` (33/33 passed; full Phase-3 suite: 288/288 passed).
-12. **Documentation**: Full evidence documented in `docs/PHASE3_P3E_KITCHEN_CANONICALIZER.md`.
+6. **Role Semantic Authority Decoupled from Candidate Categories (P3-E.2)**: `map_kitchen_role_function()` determines role identity strictly and exclusively from `function` + `description`. Nonsense functions (e.g. `"hammer a nail"`) fail closed with `UnmappedFunctionalConceptError` regardless of candidate categories; contradictory categories (e.g. `["bowl"]` on coffee stirrer) do not distort the role identity.
+7. **Strict Operation Group Accounting & Cardinality**: Validates tool/target pairs against declared roles, rejects duplicate group collisions with `AmbiguousCanonicalizationError`, and rejects unmapped/empty operation relations. Removed target count clipping (`min(req, target_count)`).
+8. **Removed Dead Self-Repair Fallbacks (P3-E.1)**: Consumes schema-required fields directly without fallback defaults.
+9. **Concept Accounting Trace & Provenance (P3-E.2)**: Generates comprehensive `concept_accounting` metadata recording factual counts on ideal K1 (6/6 raw roles with `role_semantic_source: "FUNCTION_AND_DESCRIPTION"`, 7/7 raw property phrases with 4 PRESERVED and 3 MERGED_BY_EXPLICIT_RULE, 4/4 relations, and 2/2 operation groups).
+10. **Provenance & Version Isolation (P3-E.1)**: Bumped Kitchen canonicalization version to `phase3_p3e_1_v1` across compiler and `VLMSpecProvider._kitchen`, keeping other domains isolated.
+11. **Ideal Kitchen K1 Fixture Evaluation**: Yields 100% role recall (6/6), 100% role precision (6/6), 100% relation recall (4/4), 100% relation precision (4/4), and `reference_complete = True` against GT reference.
+12. **Regression & Adversarial Tests**: Full unit/negative regression suite in `test_kitchen_vlm_functional_graph.py` (36/36 passed; full Phase-3 suite: 291/291 passed).
+13. **Documentation**: Full evidence documented in `docs/PHASE3_P3E_KITCHEN_CANONICALIZER.md`.
 
-**Acceptance**: All P3-E and P3-E.1 acceptance criteria verified. P3-E/P3-E.1 FROZEN.
+**Acceptance**: All P3-E, P3-E.1, and P3-E.2 acceptance criteria verified. P3-E / P3-E.1 / P3-E.2 FROZEN.
 
 ---
 
@@ -705,7 +706,7 @@ Per pipeline run, retain:
  
 **Exact Objective**: Repair the Living Room VLM canonicalizer to achieve 100% concept preservation on the ideal fixture (L1) without silent fallbacks, correctly handling composite role cardinalities, relation directions, and system context integration.
  
-**Prerequisites**: P3-A, P3-B, P3-B.1, P3-C, P3-C.1, P3-C.2, P3-D, P3-D.1, P3-E, and P3-E.1 are complete and frozen.
+**Prerequisites**: P3-A, P3-B, P3-B.1, P3-C, P3-C.1, P3-C.2, P3-D, P3-D.1, P3-E, P3-E.1, and P3-E.2 are complete and frozen.
  
 **What to do**:
 1. Establish negative regression tests for unmapped Living Room relations, ambiguous role mappings, and composite role counting.

@@ -94,9 +94,9 @@ Kitchen K1 GT control path was re-verified end-to-end:
 
 ## 7. Comprehensive Test Suite Results
 
-- `mujoco_scenes/tests/test_kitchen_vlm_functional_graph.py`: **33 / 33 PASSED**
+- `mujoco_scenes/tests/test_kitchen_vlm_functional_graph.py`: **36 / 36 PASSED**
 - `mujoco_scenes/functional_tamp_pipeline/tests/`: **255 / 255 PASSED**
-- Total Test Suite: **288 / 288 PASSED (100%)**
+- Total Test Suite: **291 / 291 PASSED (100%)**
 
 ---
 
@@ -129,4 +129,26 @@ Kitchen K1 GT control path was re-verified end-to-end:
 7. **Provenance & Version Isolation**:
    - Kitchen compiler version bumped to `phase3_p3e_1_v1`.
    - `VLMSpecProvider._kitchen` attaches `phase3_p3e_1_v1` to graph metadata matching trace version, while Living Room and Workshop remain unaffected.
+
+---
+
+## 9. Pass P3-E.2: Kitchen Role Semantic Authority Closure
+
+**Pass ID**: `P3-E.2`  
+**Commit Type**: `Pass 3.7G.2 (P3-E.2): Separate Kitchen role semantics from candidate categories`  
+**Status**: `FROZEN`
+
+### Architectural Boundary:
+- **Role Authority**: Canonical functional role identity is determined **strictly and exclusively** from `raw.function` + `raw.description`.
+- **Candidate Categories**: Candidate categories are decoupled from role identity resolution; they populate detector vocabulary / `semantic_preferences` in raw order without influencing canonical role classification.
+- **Fail-Closed Function Semantics**: If `function` and `description` are unmapped (e.g. `function = "hammer a nail"`), the compiler raises `UnmappedFunctionalConceptError` even if valid object categories like `["cup", "coffee mug"]` are present.
+- **Contradictory Category Invariance**: If a valid semantic role function is paired with contradictory categories (e.g. `function = "stir coffee"` with `candidate_categories = ["bowl"]`), the canonical role remains `coffee_stirrer`.
+
+### Factual Concept Accounting on Ideal K1 Fixture:
+- **Roles (6/6 accounted)**: 6 raw roles $\longrightarrow$ 6 canonical roles, all `status: "PRESERVED"`, `role_semantic_source: "FUNCTION_AND_DESCRIPTION"`, `candidate_categories_used_for_role_identity: false`.
+- **Properties (7/7 accounted)**: 7 raw required-property phrases across 4 roles:
+  - 4 `status: "PRESERVED"`
+  - 3 `status: "MERGED_BY_EXPLICIT_RULE"` (same-role duplicate aliases e.g. `"capable of holding liquid"` merged into `"OPEN_CAVITY"`, `"slender"` merged into `"ELONGATED_OBJECT"`).
+- **Relations (4/4 accounted)**: 4 raw relations $\longrightarrow$ 4 canonical relations, all `status: "PRESERVED"`.
+- **Operation Groups (2/2 accounted)**: 2 raw groups $\longrightarrow$ 2 canonical groups (`coffee_stirring`, `soup_serving`), all `status: "PRESERVED"` with verified group function semantics.
 

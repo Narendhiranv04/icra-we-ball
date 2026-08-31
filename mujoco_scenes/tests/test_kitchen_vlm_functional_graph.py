@@ -739,3 +739,93 @@ def test_kitchen_canonicalizer_version_provenance():
     )
 
 
+# ============================================================
+# P3-E.2 Role Semantic Authority & Provenance Tests
+# ============================================================
+
+
+def test_nonsense_function_with_cup_categories_fails_closed():
+    """P3-E.2 Step 2: Unmapped function cannot inherit a role identity from candidate categories."""
+    from mujoco_scenes.functional_tamp_pipeline.errors import UnmappedFunctionalConceptError
+
+    spec = natural_kitchen_spec()
+    spec["functional_roles"][0]["function"] = "hammer a nail"
+    spec["functional_roles"][0]["description"] = "tool for driving a nail"
+    spec["functional_roles"][0]["candidate_categories"] = ["cup", "coffee mug"]
+
+    with pytest.raises(UnmappedFunctionalConceptError, match="cannot be mapped to any canonical Kitchen role"):
+        compile_vlm_functional_graph(spec, task_instruction="Task", observable_regions=REGIONS)
+
+
+def test_contradictory_category_does_not_alter_role_identity():
+    """P3-E.2 Step 3 & 4: Contradictory candidate categories do not alter role semantic identity."""
+    spec = natural_kitchen_spec()
+
+    # 1. Coffee stirring function with bowl candidate category -> role MUST remain coffee_stirrer
+    spec["functional_roles"][2]["function"] = "stir coffee"
+    spec["functional_roles"][2]["description"] = "implement used to stir the beverage"
+    spec["functional_roles"][2]["candidate_categories"] = ["bowl"]
+
+    # 2. Coffee container function with spoon candidate category -> role MUST remain coffee_container
+    spec["functional_roles"][0]["function"] = "contain an individual serving of coffee"
+    spec["functional_roles"][0]["description"] = ""
+    spec["functional_roles"][0]["candidate_categories"] = ["spoon"]
+
+    contract, vocab, trace = compile_vlm_functional_graph(
+        spec, task_instruction="Task", observable_regions=REGIONS
+    )
+
+    # Role identities strictly dictated by function
+    assert "coffee_stirrer" in contract["roles"]
+    assert "coffee_container" in contract["roles"]
+    assert contract["roles"]["coffee_stirrer"]["raw_vlm_role_id"] == "mixing_implement"
+    assert contract["roles"]["coffee_container"]["raw_vlm_role_id"] == "drink_receptacle"
+
+    # Detector vocabulary preserves supplied categories
+    assert "bowl" in vocab["object"]["canonical_labels"]
+    assert "spoon" in vocab["object"]["canonical_labels"]
+
+    # Role accounting records function-only source and false category usage flag
+    role_acc = trace["concept_accounting"]["roles"]
+    assert role_acc["mixing_implement"]["role_semantic_source"] == "FUNCTION_AND_DESCRIPTION"
+    assert role_acc["mixing_implement"]["candidate_categories_used_for_role_identity"] is False
+    assert role_acc["drink_receptacle"]["role_semantic_source"] == "FUNCTION_AND_DESCRIPTION"
+    assert role_acc["drink_receptacle"]["candidate_categories_used_for_role_identity"] is False
+
+
+def test_ideal_k1_exact_concept_accounting_counts():
+    """P3-E.2 Step 6 & 7: Ideal K1 fixture exact 6 roles, 7 properties (4 preserved, 3 merged), 4 relations, 2 groups."""
+    from mujoco_scenes.functional_tamp_pipeline.tests.test_ideal_fixtures import FIXTURES_DIR
+
+    k1_path = FIXTURES_DIR / "kitchen_K1.json"
+    k1_doc = json.loads(k1_path.read_text(encoding="utf-8"))
+
+    contract, _, trace = compile_vlm_functional_graph(
+        k1_doc, task_instruction="Task", observable_regions=REGIONS
+    )
+
+    acc = trace["concept_accounting"]
+    # 6/6 raw roles
+    assert len(acc["roles"]) == 6
+    for r_id, r_info in acc["roles"].items():
+        assert r_info["status"] == "PRESERVED"
+        assert r_info["role_semantic_source"] == "FUNCTION_AND_DESCRIPTION"
+        assert r_info["candidate_categories_used_for_role_identity"] is False
+
+    # 7/7 raw property phrases
+    assert len(acc["properties"]) == 7
+    preserved_props = [p for p in acc["properties"] if p["status"] == "PRESERVED"]
+    merged_props = [p for p in acc["properties"] if p["status"] == "MERGED_BY_EXPLICIT_RULE"]
+    assert len(preserved_props) == 4
+    assert len(merged_props) == 3
+
+    # 4/4 raw relations
+    assert len(acc["relations"]) == 4
+    assert all(rel["status"] == "PRESERVED" for rel in acc["relations"])
+
+    # 2/2 raw operation groups
+    assert len(acc["operation_groups"]) == 2
+    assert all(g["status"] == "PRESERVED" for g in acc["operation_groups"])
+
+
+
