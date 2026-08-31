@@ -12,6 +12,7 @@ from typing import Any, Sequence
 
 from .models import FunctionalSpecification
 from .scene_graph import ObservedSceneGraph
+from .system_context_registry import is_valid_planner_argument
 from .vlm_spec_provider import VLM_CANONICALIZATION_VERSION
 from ..workshop_phase1.fm_adapter import (
     INSPECTION_POLICY_SCHEMA,
@@ -305,7 +306,13 @@ def audit_plan_grounding(
     all_required_relations_true = True
     for group_id, bindings in operation_bindings.items():
         matching_group = next((g for g in specification.operation_groups if g.id == group_id), None)
-        required_rels = matching_group.required_relations if matching_group else ("INSERTABLE_IN", "REACHES_BOTTOM")
+        if matching_group is None:
+            all_required_relations_true = False
+            violations.append(
+                f"Operation binding specifies interaction group '{group_id}' not declared in functional specification"
+            )
+            continue
+        required_rels = matching_group.required_relations
         for binding in bindings:
             tool_id = binding.get("tool_id")
             target_id = binding.get("target_id")
@@ -320,22 +327,20 @@ def audit_plan_grounding(
 
     # 3. Plan argument consistency: fail-closed validation against G_O nodes and explicit domain constants
     plan_uses_only_grounded_task_objects = True
-    known_entities: set[str] = {
-        home_region, "serving_area", "countertop", "staging_tray", "work_surface",
-        "MAIN_WORKBENCH_ZONE", "workshop_frame_joint", "repair_target",
-    }
-    if allowed_context_ids:
-        known_entities.update(allowed_context_ids)
-
-    for n in graph_o.nodes.values():
-        if getattr(n, "entity_kind", "") in {"REGION", "FIXED_TARGET"}:
-            known_entities.add(n.instance_id)
-
     for action in plan:
         op = action.get("operator", "")
         args = action.get("arguments", [])
         for arg in args:
-            if arg not in known_entities and arg not in assigned_object_ids:
+            # Home region is allowed for current domain
+            if arg == home_region:
+                continue
+            if not is_valid_planner_argument(
+                domain=specification.domain,
+                argument=arg,
+                graph_o=graph_o,
+                assigned_object_ids=assigned_object_ids,
+                allowed_context_ids=allowed_context_ids,
+            ):
                 plan_uses_only_grounded_task_objects = False
                 violations.append(f"Action {op}({', '.join(args)}) uses ungrounded object '{arg}'")
 

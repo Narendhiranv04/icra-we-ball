@@ -1,10 +1,10 @@
 """Generic runtime G_F structural consistency validation.
 
-Enforces domain-independent structural consistency on canonical
-FunctionalRequirementGraph without any expected-task oracle knowledge.
+Enforces domain-independent structural consistency and frozen predicate signature
+compliance on canonical FunctionalRequirementGraph without any expected-task oracle knowledge.
 
 IMPORTANT SCIENTIFIC BOUNDARY:
-- Runtime validation checks ONLY domain-independent representation consistency.
+- Runtime validation checks representation consistency against the frozen Predicate Registry.
 - Runtime NEVER checks or rejects against ground-truth/reference task specifications.
 - Expected task roles and relations are evaluated offline in Pass 3.6B.
 """
@@ -15,10 +15,11 @@ from typing import Any
 
 from .errors import MalformedVLMSpecificationError
 from .models import FunctionalRequirementGraph
+from .predicate_registry import validate_predicate_signature
 
 
 def validate_runtime_gf(graph: FunctionalRequirementGraph) -> None:
-    """Validate domain-independent structural consistency of canonical FunctionalRequirementGraph."""
+    """Validate domain-independent structural consistency and predicate signatures of canonical FunctionalRequirementGraph."""
     if not isinstance(graph, FunctionalRequirementGraph):
         raise MalformedVLMSpecificationError(
             f"Expected FunctionalRequirementGraph instance, got {type(graph).__name__}"
@@ -54,6 +55,15 @@ def validate_runtime_gf(graph: FunctionalRequirementGraph) -> None:
                 f"Role {name!r} has invalid binding_policy {node.binding_policy!r}"
             )
 
+        # Validate unary predicates against frozen predicate registry
+        for unary_pred in node.unary_predicates:
+            validate_predicate_signature(
+                domain=domain_norm,
+                predicate=unary_pred,
+                subject_kind=node.entity_kind,
+                subject_role=name,
+            )
+
     for rel in graph.relations:
         if rel.subject_role not in graph.nodes:
             raise MalformedVLMSpecificationError(
@@ -67,6 +77,18 @@ def validate_runtime_gf(graph: FunctionalRequirementGraph) -> None:
             raise MalformedVLMSpecificationError(
                 f"Relation between {rel.subject_role!r} and {rel.object_role!r} has empty predicate"
             )
+
+        s_node = graph.nodes[rel.subject_role]
+        o_node = graph.nodes[rel.object_role]
+        # Validate binary predicate signature and direction against frozen registry
+        validate_predicate_signature(
+            domain=domain_norm,
+            predicate=rel.predicate,
+            subject_kind=s_node.entity_kind,
+            object_kind=o_node.entity_kind,
+            subject_role=rel.subject_role,
+            object_role=rel.object_role,
+        )
 
     seen_op_ids: set[str] = set()
     for grp in graph.operation_groups:
@@ -114,6 +136,17 @@ def validate_runtime_gf(graph: FunctionalRequirementGraph) -> None:
                 f"Operation group {grp.id!r} required_relations contains duplicates"
             )
 
+        tool_node = graph.nodes[grp.tool_role]
+        for req_rel in cleaned_req_rels:
+            validate_predicate_signature(
+                domain=domain_norm,
+                predicate=req_rel,
+                subject_kind=tool_node.entity_kind,
+                object_kind=target_node.entity_kind,
+                subject_role=grp.tool_role,
+                object_role=grp.target_role,
+            )
+
         if grp.context_role is not None:
             if not isinstance(grp.context_role, str) or not grp.context_role.strip():
                 raise MalformedVLMSpecificationError(
@@ -139,6 +172,17 @@ def validate_runtime_gf(graph: FunctionalRequirementGraph) -> None:
                 raise MalformedVLMSpecificationError(
                     f"Operation group {grp.id!r} context_relations contains duplicates"
                 )
+
+            context_node = graph.nodes[grp.context_role]
+            for ctx_rel in cleaned_ctx_rels:
+                validate_predicate_signature(
+                    domain=domain_norm,
+                    predicate=ctx_rel,
+                    subject_kind=tool_node.entity_kind,
+                    object_kind=context_node.entity_kind,
+                    subject_role=grp.tool_role,
+                    object_role=grp.context_role,
+                )
         else:
             if grp.context_relations:
                 raise MalformedVLMSpecificationError(
@@ -150,11 +194,8 @@ def validate_runtime_gf(graph: FunctionalRequirementGraph) -> None:
             raise MalformedVLMSpecificationError(
                 f"Duplicate regions in region_ranking: {graph.region_ranking}"
             )
-        if set(graph.region_ranking) != set(graph.candidate_regions):
-            raise MalformedVLMSpecificationError(
-                f"region_ranking {graph.region_ranking} must match candidate_regions {graph.candidate_regions}"
-            )
-
-
-# Backward-compatible alias for entry points
-validate_canonical_task_interface = validate_runtime_gf
+        for r in graph.region_ranking:
+            if r not in graph.candidate_regions:
+                raise MalformedVLMSpecificationError(
+                    f"Region {r!r} in region_ranking not in candidate_regions"
+                )

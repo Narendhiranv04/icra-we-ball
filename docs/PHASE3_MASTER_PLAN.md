@@ -100,7 +100,11 @@ Task instruction + initial RGB
 | VLM prompt leak protection & deterministic audit | `audit.py`, `test_vlm_interface_boundary.py`, `test_provenance_and_audit.py` |
 | Provenance fingerprinting & stale resume prevention | `audit.py::compute_provenance_fingerprint`, `scripts/run_phase36b2_matrix.py` |
 | FM adapter retry/reconnect | `fm_adapter.py` — 3-attempt retry with socket error handling |
-| 230 unit tests pass | `pytest mujoco_scenes/functional_tamp_pipeline/tests/` |
+| Ideal raw VLM fixture suite & MockFMAdapter | `test_ideal_fixtures.py`, `fixtures/ideal_raw_vlm/` |
+| Concept-exact canonicalization preservation diagnostics | `docs/PHASE3_P3C_IDEAL_FIXTURE_DIAGNOSIS.md`, `test_ideal_fixtures.py` |
+| Frozen Predicate Signature Registry | `predicate_registry.py` — immutable domain-scoped predicate signatures and direction rules |
+| System Context & Planner Constants Registry | `system_context_registry.py` — formal separation of selectable assets, fixed anchors, planner constants, and search regions |
+| 248 unit/integration tests pass | `pytest mujoco_scenes/functional_tamp_pipeline/tests/` |
 
 ### PARTIALLY VERIFIED ~
 | Component | Status |
@@ -123,8 +127,6 @@ Task instruction + initial RGB
 ### NOT YET TESTED
 | Component | Note |
 |---|---|
-| Ideal raw VLM fixture framework | No manually-crafted "perfect VLM response" fixtures exist |
-| Canonicalization preservation metrics | No quantitative measurement of what raw concepts survive canonicalization |
 | 9B vs 27B raw specification comparison | Not performed |
 | Clean benchmark with single frozen commit | Pass 3.6B.2 mixed artifacts across commits |
 
@@ -385,17 +387,22 @@ When a case fails, apply this tree **in order**:
 ---
 
 ### P3-D: Predicate & System-Context Freeze
-**Status**: `[ ] NOT STARTED`
+**Status**: `[x] COMPLETE`
 
 **Objective**: Freeze the predicate signature registry (§4) in code and establish the formal contract distinguishing task-functional G_F roles from system-owned scene context.
 
-**Scope**: Create `functional_tamp_pipeline/predicate_registry.py` with the canonical predicate table. Formulate clear rules for system-known fixtures:
-- Distinguish task-functional roles (whose physical selection is variable and discovered) from system-known domain geometry/fixtures (e.g. seating positions, workbench boundaries).
-- Define whether system context is represented via G_O initial bindings or explicit context annotations.
+**Scope**:
+1. Created `mujoco_scenes/functional_tamp_pipeline/predicate_registry.py` defining immutable domain-scoped predicate signatures, arities, role families, directional constraints, checker ownership, and active/legacy status.
+2. Created `mujoco_scenes/functional_tamp_pipeline/system_context_registry.py` formalizing the four system context categories: `SELECTABLE_FUNCTIONAL_ASSET`, `SYSTEM_FIXED_FUNCTIONAL_ANCHOR`, `PLANNER_CONTEXT_CONSTANT`, and `SEARCH_REGION`.
+3. Resolved Workshop `CAN_DRIVE_SCREW` / `CAN_FASTEN` as legacy observation-diagnostic capability markers and normalized GTSpecProvider Workshop G_F to `unary_predicates=()`, establishing unified GT/VLM canonical predicate contract.
+4. Updated `task_interface_validator.py` (`validate_runtime_gf`) to strictly enforce frozen predicate signatures and directions across unary predicates, binary relations, and operation groups.
+5. Hardened `audit_plan_grounding` by eliminating cross-domain global allowlists and generic Kitchen fallback.
+6. Corrected Living Room planner-projection documentation comment in `domains/living_room.py`.
+7. Re-verified K1, L1, W1 GT downstream controls to `ACTION_SEQUENCE_READY` with zero audit violations.
 
-**Tests**: Add assertions to `test_executable_grounding_ir.py` verifying predicate signatures across all domains.
+**Tests**: `test_predicate_and_context_registry.py`, `test_executable_grounding_ir.py`, `test_ideal_fixtures.py`, `test_live_visualizer.py`.
 
-**Acceptance**: Predicate registry is a frozen code artifact. All existing tests pass.
+**Acceptance**: Predicate registry and system context registries are frozen code artifacts. All 248 Phase-3 tests pass.
 
 **Do not touch**: `ground_graph()` internals.
 
@@ -409,6 +416,7 @@ When a case fails, apply this tree **in order**:
 **Scope of Hypotheses and Tests** (in `kitchen_vlm_functional_graph.py`):
 1. **Role mapping**: Expand natural language function and description matching for `water_source` and `coffee_source` so valid semantic phrases are not dropped.
 2. **Fail-closed relation mapping**: Remove the `INSERTABLE_IN` default fallback in `map_binary_relation()` — unmapped relations must raise `UnmappedFunctionalConceptError` or be explicitly mapped.
+   - **MANDATORY NEGATIVE REGRESSION**: Before repairing relation mapping, add a negative regression with an otherwise-valid raw Kitchen specification containing an unmapped relation phrase. P3-E acceptance must require: `unknown relation -> explicit UnmappedFunctionalConceptError / VLM_SPEC_FAILED` and zero silent predicate fabrication.
 3. **Operation group mapping**: Replace rigid 2-pair gating with generic tool-target pair validation based on mapped roles.
 4. **Cardinality preservation**: Eliminate target count clipping.
 
@@ -662,21 +670,21 @@ Per pipeline run, retain:
 
 ## 11. CURRENT NEXT PASS
 
-### **CURRENT NEXT PASS: P3-D**
+### **CURRENT NEXT PASS: P3-E**
 
-**Exact Objective**: Freeze the predicate signature registry (§4) in code and establish the formal contract distinguishing task-functional G_F roles from system-owned scene context.
+**Exact Objective**: Repair the Kitchen VLM canonicalizer to achieve 100% concept preservation on the ideal fixture without silent fallbacks.
 
-**Prerequisites**: P3-A, P3-B, P3-B.1, P3-C, P3-C.1, and P3-C.2 are complete.
+**Prerequisites**: P3-A, P3-B, P3-B.1, P3-C, P3-C.1, P3-C.2, and P3-D are complete.
 
 **What to do**:
-1. Create `mujoco_scenes/functional_tamp_pipeline/predicate_registry.py` with the canonical predicate table.
-2. Formulate formal per-domain system-context contracts distinguishing selectable/discoverable functional roles from fixed domain geometry/context constants.
-3. Replace hardcoded context constants in `audit_plan_grounding` with the formal registry.
-4. Correct Living Room stale comment regarding phase1 artifacts vs canonical $\phi^*$.
-5. Add predicate signature validation to test suite.
+1. Add a mandatory negative regression test verifying that an unmapped Kitchen relation phrase fails closed with `UnmappedFunctionalConceptError` / `MalformedVLMSpecificationError` (zero silent `INSERTABLE_IN` fabrication).
+2. Expand natural language function and description matching for `water_source` and `coffee_source` in `kitchen_vlm_functional_graph.py`.
+3. Remove the `INSERTABLE_IN` default fallback in `map_binary_relation()` so unmapped relations raise explicit errors.
+4. Replace rigid 2-pair gating in operation groups with generic tool-target pair validation based on mapped roles.
+5. Eliminate target count clipping.
 
 **Acceptance Criteria**:
-- `predicate_registry.py` is a frozen code artifact.
-- All existing contract and downstream tests pass.
+- `test_ideal_fixtures.py` passes for `kitchen_K1` with `role_recall = 1.0`, `relation_recall = 1.0`.
+- All Phase-3 unit and regression tests pass.
 
-**Expected next pass**: P3-E (Kitchen Canonicalizer Repair)
+**Expected next pass**: P3-F (Living Room Canonicalizer Repair)

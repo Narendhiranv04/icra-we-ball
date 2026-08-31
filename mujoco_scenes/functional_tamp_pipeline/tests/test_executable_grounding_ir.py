@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import pytest
 
+from mujoco_scenes.functional_tamp_pipeline.errors import MalformedVLMSpecificationError
 from mujoco_scenes.functional_tamp_pipeline.models import FunctionalRequirementGraph
 from mujoco_scenes.functional_tamp_pipeline.task_interface_validator import validate_runtime_gf
 from mujoco_scenes.functional_tamp_pipeline.vlm_spec_provider import VLMSpecProvider
@@ -48,7 +49,9 @@ def test_kitchen_k2_live_audit_fixture() -> None:
     assert graph.nodes["coffee_container"].entity_kind == "OBJECT"
     assert graph.nodes["soup_container"].entity_kind == "OBJECT"
     assert len(graph.operation_groups) >= 1
-    validate_runtime_gf(graph)
+    # Historical uncanonicalized live fixture has reversed relation direction; must fail closed under frozen predicate validation
+    with pytest.raises(MalformedVLMSpecificationError, match="expects subject role"):
+        validate_runtime_gf(graph)
 
 
 def test_living_room_l1_live_audit_fixture() -> None:
@@ -69,7 +72,9 @@ def test_living_room_l1_live_audit_fixture() -> None:
     assert graph.nodes["PERSONAL_CUP_SAUCER_REGION"].entity_kind == "REGION"
     assert graph.nodes["SHARED_REMOTE_REGION"].entity_kind == "REGION"
     assert len(graph.operation_groups) == 3
-    validate_runtime_gf(graph)
+    # Historical uncanonicalized live fixture has reversed relation direction; must fail closed under frozen predicate validation
+    with pytest.raises(MalformedVLMSpecificationError, match="expects subject entity_kind"):
+        validate_runtime_gf(graph)
 
 
 def test_workshop_w1_live_audit_fixture() -> None:
@@ -94,7 +99,9 @@ def test_workshop_w1_live_audit_fixture() -> None:
     assert graph.nodes["repair_target"].entity_kind == "FIXED_TARGET"
     assert len(graph.operation_groups) == 1
     assert graph.candidate_regions == ("LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET")
-    validate_runtime_gf(graph)
+    # Historical uncanonicalized live fixture has unknown predicate LOCATED_ON; must fail closed under frozen predicate validation
+    with pytest.raises(MalformedVLMSpecificationError, match="Unknown predicate 'LOCATED_ON'"):
+        validate_runtime_gf(graph)
 
 
 def test_static_runtime_isolation() -> None:

@@ -89,7 +89,7 @@ def _make_canonical_test_gf() -> FunctionalRequirementGraph:
         entity_kind="OBJECT",
         count=1,
         semantic_categories=("screwdriver", "drill"),
-        unary_predicates=("TOOL_HEAD_MATCH",),
+        unary_predicates=(),
         numeric_constraints=(
             NumericConstraint(property_name="length", operator=">=", threshold=0.12, unit="m"),
         ),
@@ -135,8 +135,8 @@ def _make_canonical_test_gf() -> FunctionalRequirementGraph:
         required_target_count=1,
         usage_policy="SEQUENTIAL_REUSE_ALLOWED",
         required_relations=("COMPATIBLE_WITH",),
-        context_role="fastener",
-        context_relations=("NEAR_TARGET",),
+        context_role="repair_target",
+        context_relations=("REACHES_TARGET",),
     )
     return FunctionalRequirementGraph(
         domain="workshop",
@@ -144,8 +144,8 @@ def _make_canonical_test_gf() -> FunctionalRequirementGraph:
         nodes={"driver": role1, "fastener": role2, "repair_target": role3},
         relations=(rel1, rel2, rel3),
         operation_groups=(op,),
-        candidate_regions=("TOOL_CABINET", "DRAWER_LEFT"),
-        region_ranking=("TOOL_CABINET", "DRAWER_LEFT"),
+        candidate_regions=("LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"),
+        region_ranking=("LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"),
         source="GT_WORKSHOP_SPEC",
     )
 
@@ -233,7 +233,7 @@ def test_2_real_schema_gf(fake_viewer_factory):
             s = viz._state
             assert s.spec_graph == gf_dict
             assert s.spec_source == "GT_WORKSHOP_SPEC"
-            assert s.resolved_region_order == ["TOOL_CABINET", "DRAWER_LEFT"]
+            assert s.resolved_region_order == ["LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"]
     finally:
         viz.close()
 

@@ -532,7 +532,7 @@ def run_to_plan(
             },
         })
 
-    # Overwrite phase1 artifacts with canonical phi before invoking symbolic planner
+    # Write deterministic compiler/planner projection artifacts before invoking symbolic planner (note: these are compiler projections, not canonical phi*)
     (phase1 / "region_assignments.json").write_text(
         json.dumps({"assignments": canonical_assignments}, indent=2), encoding="utf-8"
     )
