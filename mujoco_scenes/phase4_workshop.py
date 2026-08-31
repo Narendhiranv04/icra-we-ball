@@ -12,6 +12,7 @@ import mujoco
 from .phase4_execution import (
     ActionExecutionResult,
     ExecutionFailure,
+    Phase4EntityMappingError,
     Phase3Handoff,
     ResolvedEntity,
 )
@@ -19,7 +20,11 @@ from .workshop_ground_truth_execution import (
     WorkshopExecutionDispatcher,
     validate_terminal_state,
 )
-from .phase4_workshop_entities import resolve_workshop_entities
+from .phase4_workshop_entities import (
+    WorkshopEntityResolutionError,
+    resolve_workshop_entities,
+    workshop_body_world_geometry_aabb_center,
+)
 from .workshop_ground_truth_planner import WorkshopAssignment
 from .workshop_ground_truth_state import initial_workshop_state
 from .workshop_scene import WORKSHOP_REGIONS, WorkshopScene
@@ -30,6 +35,14 @@ FIXED_TARGETS = frozenset({"workshop_frame_joint"})
 CONTEXT_SURFACES = frozenset({"MAIN_WORKBENCH_ZONE"})
 
 
+def resolve_workshop_entities_for_execution(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    """Translate resolver failures into the public Phase-4 classification."""
+    try:
+        return resolve_workshop_entities(*args, **kwargs)
+    except WorkshopEntityResolutionError as error:
+        raise Phase4EntityMappingError(str(error)) from error
+
+
 def strict_workshop_place_block(
     action: dict[str, Any], planner_fastener: str
 ) -> dict[str, Any] | None:
@@ -37,9 +50,14 @@ def strict_workshop_place_block(
     if action.get("operator") != "PLACE" or len(action.get("arguments", [])) != 2:
         return None
     obj, destination = action["arguments"]
-    if obj == planner_fastener and destination == "workshop_frame_joint":
+    if destination == "workshop_frame_joint":
         return {
-            "status": "STRICT_PHYSICAL_INSERTION_UNAVAILABLE",
+            "status": (
+                "STRICT_PHYSICAL_INSERTION_UNAVAILABLE"
+                if obj == planner_fastener
+                else "INVALID_IMMUTABLE_WORKSHOP_PLAN"
+            ),
+            "immutable_plan_precondition_mismatch": obj != planner_fastener,
             "legacy_alignment_fixture_blocked": True,
             "legacy_installed_fastener_fixture_blocked": True,
             "no_legacy_insertion_invoked": True,
@@ -116,18 +134,20 @@ class WorkshopPhase4Adapter:
                 )
                 if body_id < 0:
                     raise ValueError(f"Workshop scene is missing body {simulator_id}")
+                centroid, centroid_definition = (
+                    workshop_body_world_geometry_aabb_center(
+                        association_scene.model, association_scene.data, body_id
+                    )
+                )
                 simulator_candidates.append({
                     "simulator_id": simulator_id,
                     "source_region": source_region,
-                    "centroid_world_m": association_scene.data.xpos[
-                        body_id
-                    ].tolist(),
+                    "centroid_world_m": centroid,
+                    "centroid_definition": centroid_definition,
                 })
-        resolution = resolve_workshop_entities(
-            (planner_driver, planner_fastener),
-            observed_graph,
-            handoff.actions,
-            simulator_candidates,
+        resolution = resolve_workshop_entities_for_execution(
+            (planner_driver, planner_fastener), observed_graph,
+            handoff.actions, simulator_candidates,
         )
         resolution_by_id = {row["planner_id"]: row for row in resolution["objects"]}
         backend_driver = resolution_by_id[planner_driver]["simulator_id"]
@@ -170,7 +190,8 @@ class WorkshopPhase4Adapter:
             if region not in WORKSHOP_REGIONS:
                 raise ValueError(f"Unknown inspected Workshop region {region}")
         self.dispatcher = WorkshopExecutionDispatcher(
-            self.scene, self.controller_assignment, frame_callback=frame_callback
+            self.scene, self.controller_assignment, frame_callback=frame_callback,
+            strict_physical_execution=True,
         )
         self.expected_inspected_regions = tuple(handoff.inspected_regions)
         self.planner_fastener = planner_fastener
@@ -298,7 +319,11 @@ class WorkshopPhase4Adapter:
             }
             return ActionExecutionResult(
                 action["action_index"], action["action_instance_id"], operator,
-                arguments, False, ExecutionFailure.CONTROLLER_FAILURE.value,
+                arguments, False, (
+                    ExecutionFailure.PRECONDITION_STATE_FAILURE.value
+                    if blocked_place.get("immutable_plan_precondition_mismatch")
+                    else ExecutionFailure.CONTROLLER_FAILURE.value
+                ),
                 resolved, None, pre, controller,
                 {"success": False, "performed": False},
                 time.perf_counter() - started,

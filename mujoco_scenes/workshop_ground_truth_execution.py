@@ -61,10 +61,12 @@ class WorkshopExecutionDispatcher:
         assignment: WorkshopAssignment,
         *,
         frame_callback: Callable[[bool], None] | None = None,
+        strict_physical_execution: bool = False,
     ) -> None:
         self.scene = scene
         self.assignment = assignment
         self.frame_callback = frame_callback
+        self.strict_physical_execution = strict_physical_execution
         self.held_object: str | None = None
         self.robot_destination = "HOME"
         self.mobile_profile = mobile_profile("google")
@@ -231,6 +233,55 @@ class WorkshopExecutionDispatcher:
             f"bilateral finger contact (best streak={maximum_streak})"
         )
 
+    def _finger_contact_sides_for_geom(
+        self, target_geom_name: str
+    ) -> tuple[set[int], list[str]]:
+        """Return finger sides contacting exactly the requested handle geom."""
+        target_id = mujoco.mj_name2id(
+            self.scene.model, mujoco.mjtObj.mjOBJ_GEOM, target_geom_name
+        )
+        if target_id < 0:
+            raise RuntimeError(f"Missing Workshop handle geometry {target_geom_name}")
+        sides: set[int] = set()
+        contacts: set[str] = set()
+        for contact in self.scene.data.contact:
+            if target_id not in {int(contact.geom1), int(contact.geom2)}:
+                continue
+            other_id = int(contact.geom2) if int(contact.geom1) == target_id else int(contact.geom1)
+            other_name = mujoco.mj_id2name(
+                self.scene.model, mujoco.mjtObj.mjOBJ_GEOM, other_id
+            ) or f"geom_{other_id}"
+            for side, family in enumerate(self.arm_profile.finger_contact_geoms):
+                if other_name in family:
+                    sides.add(side)
+                    contacts.add(f"{other_name}<->{target_geom_name}")
+        return sides, sorted(contacts)
+
+    def _close_gripper_on_handle(self, target_geom_name: str) -> dict[str, Any]:
+        """Require 25 consecutive bilateral contacts on the exact handle."""
+        target_value = float(self.arm_profile.closed_command)
+        dt = float(self.scene.model.opt.timestep)
+        streak = maximum_streak = 0
+        observed: set[str] = set()
+        for _ in range(int(round(20.0 / max(self.motion_rate_scale, 1e-6) / dt))):
+            command = self.scene.data.ctrl[self.finger_actuators].copy()
+            self.scene.data.ctrl[self.finger_actuators] = np.minimum(
+                target_value, command + 0.18 * self.motion_rate_scale * dt
+            )
+            self._step()
+            sides, contacts = self._finger_contact_sides_for_geom(target_geom_name)
+            observed.update(contacts)
+            streak = streak + 1 if sides == {0, 1} else 0
+            maximum_streak = max(maximum_streak, streak)
+            if streak >= 25:
+                break
+        return {
+            "bilateral_handle_contact_confirmed": streak >= 25,
+            "bilateral_handle_contact_steps": maximum_streak,
+            "handle_contact_geometry": target_geom_name,
+            "finger_handle_contacts": sorted(observed),
+        }
+
     def _free_qpos_address(self, body_name: str) -> int:
         body_id = mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_BODY, body_name)
         if body_id < 0 or self.scene.model.body_jntnum[body_id] != 1:
@@ -269,6 +320,56 @@ class WorkshopExecutionDispatcher:
         )
         self.scene.model.eq_data[equality_id, 3:6] = relative_pos
         self.scene.model.eq_data[equality_id, 6:10] = relative_quat
+
+    def _activate_handle_grasp_constraint(
+        self,
+        equality_id: int,
+        moving_body_id: int,
+        contact_gate: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Activate a zero-snap weld only after the physical contact gate."""
+        if not contact_gate.get("bilateral_handle_contact_confirmed"):
+            return {
+                **contact_gate,
+                "status": "STRICT_PHYSICAL_HANDLE_GRASP_UNAVAILABLE",
+                "physical_handle_grasp_constraint_used": False,
+                "handle_grasp_constraint_contact_gated": False,
+                "attachment_translation_snap_m": None,
+                "attachment_angle_snap_rad": None,
+                "storage_joint_intentionally_opened": False,
+            }
+        before_position = self.scene.data.xpos[moving_body_id].copy()
+        before_quaternion = self.scene.data.xquat[moving_body_id].copy()
+        self._set_weld_world_pose(
+            equality_id, self.gripper_body_id, moving_body_id
+        )
+        self.scene.data.eq_active[equality_id] = 1
+        mujoco.mj_forward(self.scene.model, self.scene.data)
+        translation_snap = float(np.linalg.norm(
+            self.scene.data.xpos[moving_body_id] - before_position
+        ))
+        quaternion_dot = abs(float(np.dot(
+            self.scene.data.xquat[moving_body_id], before_quaternion
+        )))
+        angle_snap = 2.0 * math.acos(float(np.clip(
+            quaternion_dot, -1.0, 1.0
+        )))
+        accepted = translation_snap <= 0.004 and angle_snap <= 0.02
+        if not accepted:
+            self.scene.data.eq_active[equality_id] = 0
+        return {
+            **contact_gate,
+            "status": (
+                "CONTACT_GATED_ZERO_SNAP_HANDLE_GRASP"
+                if accepted else "STRICT_PHYSICAL_HANDLE_GRASP_UNAVAILABLE"
+            ),
+            "physical_handle_grasp_constraint_used": True,
+            "handle_grasp_constraint_contact_gated": True,
+            "attachment_translation_snap_m": translation_snap,
+            "attachment_angle_snap_rad": angle_snap,
+            "attachment_accepted": accepted,
+            "storage_joint_intentionally_opened": False,
+        }
 
     def _set_weld_desired_world_pose(
         self,
@@ -870,7 +971,11 @@ class WorkshopExecutionDispatcher:
             cartesian_step_m=0.020,
             ik_tolerance_m=(0.018 if region == "TOOL_CABINET" else 0.030),
         )
-        self._set_gripper(True)
+        handle_collision = {
+            "LEFT_DRAWER": "left_drawer_handle_col",
+            "RIGHT_DRAWER": "right_drawer_handle_col",
+            "TOOL_CABINET": "tool_cabinet_door_handle_col",
+        }[region]
         handle_weld_id = mujoco.mj_name2id(
             self.scene.model,
             mujoco.mjtObj.mjOBJ_EQUALITY,
@@ -878,11 +983,50 @@ class WorkshopExecutionDispatcher:
         )
         if handle_weld_id < 0:
             raise RuntimeError(f"Missing physical handle grasp constraint for {region}")
-        self._set_weld_world_pose(
-            handle_weld_id, self.gripper_body_id, moving_body_id
-        )
-        self.scene.data.eq_active[handle_weld_id] = 1
-        mujoco.mj_forward(self.scene.model, self.scene.data)
+        self.scene.data.eq_active[handle_weld_id] = 0
+        if self.strict_physical_execution:
+            contact_gate = self._close_gripper_on_handle(handle_collision)
+            attachment = self._activate_handle_grasp_constraint(
+                handle_weld_id, moving_body_id, contact_gate
+            )
+        else:
+            # Historical/assisted experiment compatibility only. Phase 4
+            # always constructs this dispatcher with strict mode enabled.
+            self._set_gripper(True)
+            before_position = self.scene.data.xpos[moving_body_id].copy()
+            before_quaternion = self.scene.data.xquat[moving_body_id].copy()
+            self._set_weld_world_pose(
+                handle_weld_id, self.gripper_body_id, moving_body_id
+            )
+            self.scene.data.eq_active[handle_weld_id] = 1
+            mujoco.mj_forward(self.scene.model, self.scene.data)
+            attachment = {
+                "bilateral_handle_contact_confirmed": False,
+                "bilateral_handle_contact_steps": 0,
+                "handle_contact_geometry": handle_collision,
+                "finger_handle_contacts": [],
+                "status": "LEGACY_ASSISTED_HANDLE_GRASP",
+                "physical_handle_grasp_constraint_used": True,
+                "handle_grasp_constraint_contact_gated": False,
+                "attachment_translation_snap_m": float(np.linalg.norm(
+                    self.scene.data.xpos[moving_body_id] - before_position
+                )),
+                "attachment_angle_snap_rad": 2.0 * math.acos(float(np.clip(
+                    abs(float(np.dot(
+                        self.scene.data.xquat[moving_body_id], before_quaternion
+                    ))), -1.0, 1.0
+                ))),
+                "attachment_accepted": True,
+                "storage_joint_intentionally_opened": False,
+            }
+        if not attachment.get("attachment_accepted", False):
+            return {
+                **attachment,
+                "storage_joint_intentionally_opened": False,
+                "measured_joint_position": float(self.scene.data.qpos[qpos_address]),
+                "verified": False,
+                "initial_reach": reach,
+            }
         self._hold(0.35)
         start = float(self.scene.data.qpos[qpos_address])
         joint_axis = self.scene.data.xaxis[joint_id].copy()
@@ -947,11 +1091,6 @@ class WorkshopExecutionDispatcher:
                 handle_errors.append(
                     follow["measured_gripper_target_error_m"]
                 )
-                handle_collision = {
-                    "LEFT_DRAWER": "left_drawer_handle_col",
-                    "RIGHT_DRAWER": "right_drawer_handle_col",
-                    "TOOL_CABINET": "tool_cabinet_door_handle_col",
-                }[region]
                 for contact in self.scene.data.contact:
                     first = mujoco.mj_id2name(
                         self.scene.model,
@@ -1037,6 +1176,7 @@ class WorkshopExecutionDispatcher:
         for _ in range(4):
             self._capture(True)
         return {
+            **attachment,
             "joint_name": joint_name,
             "commanded_joint_position": final_target,
             "measured_joint_position": measured,
@@ -1045,6 +1185,8 @@ class WorkshopExecutionDispatcher:
             "handle_contact_frames": contact_frames,
             "handle_contact_semantics": "front-facing closed gripper follows the physical handle joint path",
             "physical_handle_grasp_constraint_used": True,
+            "handle_grasp_constraint_contact_gated": True,
+            "storage_joint_intentionally_opened": True,
             "physical_motion_source": "GOOGLE_ROBOT_HANDLE_MANIPULATION",
             "direct_container_actuator_used": False,
             "verified": opened_enough if opening else closed_enough,
@@ -1602,6 +1744,10 @@ class WorkshopExecutionDispatcher:
             )
             result["robot_actuated_motion"] = True
             result["success"] = bool(result["articulation"]["verified"])
+            if not result["success"]:
+                result["status"] = result["articulation"].get(
+                    "status", "PHYSICAL_OPEN_VERIFICATION_FAILED"
+                )
             # OPEN is deliberately the inspection action as well: a region is
             # exposed once and stays open for the rest of the task.
             result["observed_instances"] = self.scene.get_observed_instances()
@@ -1615,6 +1761,10 @@ class WorkshopExecutionDispatcher:
         elif execution_op == "OPEN_STORAGE":
             result["articulation"] = self._articulate_storage(args[0], opening=True)
             result["success"] = bool(result["articulation"]["verified"])
+            if not result["success"]:
+                result["status"] = result["articulation"].get(
+                    "status", "PHYSICAL_OPEN_VERIFICATION_FAILED"
+                )
         elif execution_op == "INSPECT_STORAGE":
             result["observed_instances"] = self.scene.get_observed_instances()
             self._hold(0.80)

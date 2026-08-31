@@ -5,6 +5,9 @@ from __future__ import annotations
 import math
 from typing import Any, Iterable
 
+import mujoco
+import numpy as np
+
 
 class WorkshopEntityResolutionError(ValueError):
     """Raised when a frozen Phase-3 instance cannot be resolved uniquely."""
@@ -15,6 +18,39 @@ class WorkshopEntityResolutionError(ValueError):
 # The execution boundary reuses that documented registration tolerance rather
 # than accepting nearest-neighbour rank alone.
 MAX_CENTROID_CORRESPONDENCE_ERROR_M = 0.16
+
+
+def workshop_body_world_geometry_aabb_center(
+    model: Any, data: Any, body_id: int
+) -> tuple[list[float], str]:
+    """Match Phase-3's world-geometry AABB centroid definition exactly."""
+    lower = np.full(3, np.inf)
+    upper = np.full(3, -np.inf)
+    for geom_id in range(model.ngeom):
+        if int(model.geom_bodyid[geom_id]) != int(body_id):
+            continue
+        position = data.geom_xpos[geom_id]
+        rotation = data.geom_xmat[geom_id].reshape(3, 3)
+        geom_type = model.geom_type[geom_id]
+        points = None
+        if geom_type == mujoco.mjtGeom.mjGEOM_MESH:
+            mesh_id = int(model.geom_dataid[geom_id])
+            start = int(model.mesh_vertadr[mesh_id])
+            count = int(model.mesh_vertnum[mesh_id])
+            points = (rotation @ model.mesh_vert[start:start + count].T).T + position
+        elif geom_type == mujoco.mjtGeom.mjGEOM_BOX:
+            size = model.geom_size[geom_id]
+            local = np.array([
+                [sx * size[0], sy * size[1], sz * size[2]]
+                for sx in (-1, 1) for sy in (-1, 1) for sz in (-1, 1)
+            ])
+            points = (rotation @ local.T).T + position
+        if points is not None and len(points):
+            lower = np.minimum(lower, points.min(axis=0))
+            upper = np.maximum(upper, points.max(axis=0))
+    if np.all(np.isfinite(lower)):
+        return ((lower + upper) / 2.0).tolist(), "WORLD_GEOMETRY_AABB_CENTER"
+    return data.xpos[body_id].tolist(), "BODY_XPOS_FALLBACK_NO_BOX_OR_MESH_GEOMETRY"
 
 
 def _objects_by_id(observed_graph: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -146,6 +182,9 @@ def resolve_workshop_entities(
             "evidence": {
                 "observed_centroid_world_m": centroid,
                 "simulator_centroid_world_m": selected.get("centroid_world_m"),
+                "simulator_centroid_definition": selected.get(
+                    "centroid_definition"
+                ),
                 "centroid_distance_m": distance,
                 "maximum_centroid_correspondence_error_m": (
                     maximum_centroid_error_m

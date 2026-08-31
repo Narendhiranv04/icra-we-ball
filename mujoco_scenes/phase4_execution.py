@@ -111,6 +111,7 @@ class Phase3Handoff:
     actions: tuple[dict[str, Any], ...]
     artifacts: dict[str, Path]
     artifact_sha256: dict[str, str]
+    replay_validation_source: str
 
 
 class DomainExecutionAdapter(Protocol):
@@ -154,6 +155,15 @@ def audit_strict_telemetry(
 
     def scan(value: Any, path: str, phase: str) -> None:
         if isinstance(value, dict):
+            if (
+                value.get("physical_handle_grasp_constraint_used") is True
+                and value.get("handle_grasp_constraint_contact_gated") is not True
+            ):
+                violations.append({
+                    "phase": phase,
+                    "path": path,
+                    "flag": "ungated_handle_grasp_constraint_used",
+                })
             for key, child in value.items():
                 child_path = f"{path}.{key}" if path else key
                 if key in FORBIDDEN_STRICT_TELEMETRY_FLAGS and child is True:
@@ -244,9 +254,16 @@ def load_phase3_handoff(run_dir: Path) -> Phase3Handoff:
             "CURRENT_UPSTREAM_PHASE3_BLOCKED: Phase-3 terminal_status="
             f"{manifest.get('terminal_status')!r}"
         )
-    result = _read_json(run_dir / "result.json")
+    artifacts_manifest = manifest.get("artifacts") or {}
+    result_rel = artifacts_manifest.get("result")
+    if not isinstance(result_rel, str):
+        raise ValueError("Phase-3 manifest does not identify a result artifact")
+    result_path = (run_dir / result_rel).resolve()
+    if run_dir not in result_path.parents:
+        raise ValueError("Phase-3 result path escapes the run directory")
+    result = _read_json(result_path)
     grounding = _read_json(run_dir / "graph_grounding_result.json")
-    final_rel = (manifest.get("artifacts") or {}).get("final_plan")
+    final_rel = artifacts_manifest.get("final_plan")
     if not isinstance(final_rel, str):
         raise ValueError("Phase-3 manifest does not identify a final_plan artifact")
     plan_path = (run_dir / final_rel).resolve()
@@ -267,17 +284,22 @@ def load_phase3_handoff(run_dir: Path) -> Phase3Handoff:
     result_actions = _validate_actions(result.get("plan"))
     if actions != result_actions:
         raise ValueError("Persisted final plan differs from result.json plan")
-    replay_rel = (manifest.get("artifacts") or {}).get("replay_validation")
+    replay_rel = artifacts_manifest.get("replay_validation")
     if isinstance(replay_rel, str):
         replay_path = (run_dir / replay_rel).resolve()
         if run_dir not in replay_path.parents:
             raise ValueError("Phase-3 replay-validation path escapes run directory")
         validation = _read_json(replay_path)
+        replay_validation_source = "EXPLICIT_REPLAY_ARTIFACT"
     else:
-        # Workshop persists the independent replay inside its final-plan
-        # artifact rather than as a second file.
+        if str(manifest.get("domain", "")).lower() != "workshop":
+            raise ValueError(
+                "Phase-3 manifest has no replay_validation artifact; embedded "
+                "final-plan replay is permitted only for Workshop"
+            )
         replay_path = plan_path
         validation = plan.get("validation")
+        replay_validation_source = "WORKSHOP_EMBEDDED_FINAL_PLAN_VALIDATION"
     if not isinstance(validation, dict) or validation.get("status") != "VALID":
         raise ValueError("Phase-3 independent replay did not validate the final plan")
     audit_rel = (manifest.get("artifacts") or {}).get("plan_grounding_audit")
@@ -296,6 +318,7 @@ def load_phase3_handoff(run_dir: Path) -> Phase3Handoff:
 
     artifacts = {
         "manifest": run_dir / "run_manifest.json",
+        "result": result_path,
         "grounding": run_dir / "graph_grounding_result.json",
         "plan": plan_path,
         "replay_validation": replay_path,
@@ -334,6 +357,7 @@ def load_phase3_handoff(run_dir: Path) -> Phase3Handoff:
         actions=actions,
         artifacts=artifacts,
         artifact_sha256={key: _sha256(path) for key, path in artifacts.items()},
+        replay_validation_source=replay_validation_source,
     )
 
 
@@ -444,6 +468,9 @@ class Phase4Executor:
                 key: str(value) for key, value in self.handoff.artifacts.items()
             },
             "phase3_artifact_sha256": dict(self.handoff.artifact_sha256),
+            "phase3_replay_validation_source": (
+                self.handoff.replay_validation_source
+            ),
             "final_action_sequence": list(self.handoff.actions),
             "entity_resolution": self.adapter.entity_resolution,
             "inspection_execution": {

@@ -1,23 +1,34 @@
 import json
 from pathlib import Path
+from types import SimpleNamespace
+
+import numpy as np
 
 import pytest
+import mujoco
 
 from mujoco_scenes.phase4_execution import (
     ActionExecutionResult,
     ExecutionFailure,
     Phase4Executor,
+    Phase4EntityMappingError,
     ResolvedEntity,
     UpstreamPhase3Blocked,
     load_phase3_handoff,
+    audit_strict_telemetry,
 )
 from mujoco_scenes.phase4_workshop_entities import (
     WorkshopEntityResolutionError,
     resolve_workshop_entities,
+    workshop_body_world_geometry_aabb_center,
 )
 from mujoco_scenes.phase4_workshop import (
     WorkshopPhase4Adapter,
     strict_workshop_place_block,
+    resolve_workshop_entities_for_execution,
+)
+from mujoco_scenes.workshop_ground_truth_execution import (
+    WorkshopExecutionDispatcher,
 )
 from mujoco_scenes.living_room_mobile_execution import (
     post_release_dynamics_modification_enabled,
@@ -58,6 +69,7 @@ def _handoff(tmp_path: Path, *, inspected_regions=(), action_count=1):
                 "replay_validation": "action_sequence/replay_validation.json",
                 "plan_grounding_audit": "plan_grounding_audit.json",
                 "observed_graph": "observed_scene_graph.json",
+                "result": "result.json",
             },
         },
     )
@@ -103,10 +115,43 @@ def test_load_phase3_handoff_preserves_exact_plan_contract(tmp_path):
     assert handoff.assignment == {"tool": "object_0001"}
     assert handoff.actions[0]["arguments"] == ["object_0001"]
     assert set(handoff.artifact_sha256) == {
-        "manifest", "grounding", "plan", "replay_validation",
+        "manifest", "result", "grounding", "plan", "replay_validation",
         "plan_grounding_audit",
         "observed_graph",
     }
+    assert handoff.replay_validation_source == "EXPLICIT_REPLAY_ARTIFACT"
+
+
+def test_ready_handoff_requires_manifest_declared_result(tmp_path):
+    _handoff(tmp_path)
+    manifest = json.loads((tmp_path / "run_manifest.json").read_text())
+    manifest["artifacts"].pop("result")
+    _write(tmp_path / "run_manifest.json", manifest)
+    with pytest.raises(ValueError, match="result artifact"):
+        load_phase3_handoff(tmp_path)
+
+
+@pytest.mark.parametrize("domain", ["kitchen", "living_room"])
+def test_non_workshop_handoff_requires_explicit_replay(tmp_path, domain):
+    _handoff(tmp_path)
+    manifest = json.loads((tmp_path / "run_manifest.json").read_text())
+    manifest["domain"] = domain
+    manifest["artifacts"].pop("replay_validation")
+    _write(tmp_path / "run_manifest.json", manifest)
+    with pytest.raises(ValueError, match="only for Workshop"):
+        load_phase3_handoff(tmp_path)
+
+
+def test_workshop_embedded_replay_is_explicitly_allowed(tmp_path):
+    _handoff(tmp_path)
+    manifest = json.loads((tmp_path / "run_manifest.json").read_text())
+    manifest["domain"] = "workshop"
+    manifest["artifacts"].pop("replay_validation")
+    _write(tmp_path / "run_manifest.json", manifest)
+    handoff = load_phase3_handoff(tmp_path)
+    assert handoff.replay_validation_source == (
+        "WORKSHOP_EMBEDDED_FINAL_PLAN_VALIDATION"
+    )
 
 
 def test_load_phase3_handoff_rejects_result_plan_mismatch(tmp_path):
@@ -257,6 +302,17 @@ def test_executor_rejects_success_with_forbidden_strict_telemetry(tmp_path):
     )
 
 
+def test_strict_audit_rejects_ungated_handle_constraint():
+    audit = audit_strict_telemetry([{
+        "physical_handle_grasp_constraint_used": True,
+        "handle_grasp_constraint_contact_gated": False,
+    }], [])
+    assert not audit["verified"]
+    assert audit["violations"][0]["flag"] == (
+        "ungated_handle_grasp_constraint_used"
+    )
+
+
 class _FailedViolatingAdapter(_Adapter):
     def execute_action(self, action):
         result = super().execute_action(action)
@@ -367,6 +423,53 @@ def test_workshop_distant_centroid_mapping_fails_closed():
         )
 
 
+def test_workshop_candidate_centroid_uses_geometry_aabb_not_body_origin():
+    model = mujoco.MjModel.from_xml_string("""
+        <mujoco><worldbody><body name="payload" pos="0 0 0">
+          <freejoint/><geom type="box" pos="1 0 0" size="0.2 0.1 0.1"/>
+        </body></worldbody></mujoco>
+    """)
+    data = mujoco.MjData(model)
+    mujoco.mj_forward(model, data)
+    body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "payload")
+    centroid, definition = workshop_body_world_geometry_aabb_center(
+        model, data, body_id
+    )
+    assert centroid == pytest.approx([1.0, 0.0, 0.0])
+    assert centroid != pytest.approx(data.xpos[body_id].tolist())
+    assert definition == "WORLD_GEOMETRY_AABB_CENTER"
+
+
+def test_workshop_resolution_failure_has_phase4_mapping_type():
+    with pytest.raises(Phase4EntityMappingError, match="absolute gate"):
+        resolve_workshop_entities_for_execution(
+            ["object_0007"], _workshop_observed(), _workshop_pick(), [{
+                "simulator_id": "distant_candidate",
+                "source_region": "TOOL_CABINET",
+                "centroid_world_m": [1.0, 0.5, 0.8],
+            }]
+        )
+
+
+def test_workshop_open_without_handle_contact_never_activates_weld():
+    dispatcher = WorkshopExecutionDispatcher.__new__(
+        WorkshopExecutionDispatcher
+    )
+    dispatcher.scene = SimpleNamespace(
+        data=SimpleNamespace(eq_active=np.array([0], dtype=np.uint8))
+    )
+    result = dispatcher._activate_handle_grasp_constraint(0, 0, {
+        "bilateral_handle_contact_confirmed": False,
+        "bilateral_handle_contact_steps": 0,
+        "handle_contact_geometry": "left_drawer_handle_col",
+        "finger_handle_contacts": [],
+    })
+    assert result["status"] == "STRICT_PHYSICAL_HANDLE_GRASP_UNAVAILABLE"
+    assert not result["physical_handle_grasp_constraint_used"]
+    assert not result["storage_joint_intentionally_opened"]
+    assert int(dispatcher.scene.data.eq_active[0]) == 0
+
+
 def test_strict_workshop_never_invokes_legacy_fixture_places():
     insertion = strict_workshop_place_block({
         "operator": "PLACE",
@@ -374,6 +477,12 @@ def test_strict_workshop_never_invokes_legacy_fixture_places():
     }, "object_0001")
     assert insertion["status"] == "STRICT_PHYSICAL_INSERTION_UNAVAILABLE"
     assert insertion["no_legacy_insertion_invoked"] is True
+    wrong_object = strict_workshop_place_block({
+        "operator": "PLACE",
+        "arguments": ["object_0002", "workshop_frame_joint"],
+    }, "object_0001")
+    assert wrong_object["status"] == "INVALID_IMMUTABLE_WORKSHOP_PLAN"
+    assert wrong_object["immutable_plan_precondition_mismatch"] is True
     surface = strict_workshop_place_block({
         "operator": "PLACE",
         "arguments": ["object_0002", "MAIN_WORKBENCH_ZONE"],
@@ -407,6 +516,7 @@ def test_strict_workshop_never_invokes_legacy_fixture_places():
     adapter.dispatcher = _Dispatcher()
     for index, arguments in enumerate((
         ["object_0001", "workshop_frame_joint"],
+        ["object_0002", "workshop_frame_joint"],
         ["object_0002", "MAIN_WORKBENCH_ZONE"],
     ), start=1):
         result = adapter.execute_action({
@@ -416,7 +526,10 @@ def test_strict_workshop_never_invokes_legacy_fixture_places():
             "arguments": arguments,
         })
         assert not result.success
-        assert result.failure == ExecutionFailure.CONTROLLER_FAILURE.value
+        assert result.failure in {
+            ExecutionFailure.CONTROLLER_FAILURE.value,
+            ExecutionFailure.PRECONDITION_STATE_FAILURE.value,
+        }
 
 
 def test_strict_living_execution_never_modifies_post_release_damping():
