@@ -88,7 +88,27 @@ In P3-B:
 ### 3.2 Living Room (L1 GT Control)
 - **Specification Source**: `GT_FUNCTIONAL_SPEC_ONLY`
 - **Candidate Supports Evaluated**: 3 regions (`region_0001`, `region_0002`, `region_0003`).
-- **Canonical Assignment $\phi^*$**:
+- **Canonical Assignment $\phi^*$ (`ground_graph(G_F, G_O)`)**:
+  ```json
+  {
+    "CUP_SAUCER_SET": [
+      "personal_table_slot_1",
+      "personal_table_slot_2"
+    ],
+    "PERSONAL_CUP_SAUCER_REGION": [
+      "region_0001",
+      "region_0003"
+    ],
+    "REMOTE": "object_0003",
+    "SEATING_PAIR": "SEATING_PAIR",
+    "SEATING_POSITION": [
+      "seat_0001",
+      "seat_0002"
+    ],
+    "SHARED_REMOTE_REGION": "region_0002"
+  }
+  ```
+- **Planner-Specific Projection (`planner_projection.json` / `region_assignments.json`)**:
   ```json
   {
     "personal_table_slot_1": "region_0001",
@@ -172,3 +192,4 @@ In P3-B:
 2. **Identity Preservation Invariant**: No domain adapter may rewrite $\phi^*[r]$ into simulator backend entity names based on semantic labels.
 3. **Planning Input Invariant**: Symbolic planning compilers operate on canonical $\phi^*$ instance IDs. Auxiliary locations (source containers, target joints, support surfaces) are supplied as contextual planning facts.
 4. **Audit Consistency Invariant**: All action sequences pass `audit_plan_grounding` with 0 ungrounded object violations and successful independent symbolic replay validation across all three domains.
+

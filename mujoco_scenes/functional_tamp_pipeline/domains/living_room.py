@@ -551,7 +551,11 @@ def run_to_plan(
         "operator": row["operator"],
         "arguments": list(row["arguments"].values()),
     } for index, row in enumerate(plan_payload["actions"]))
-    assignment = {row["slot_id"]: row["region_id"] for row in canonical_assignments}
+    planner_projection = {row["slot_id"]: row["region_id"] for row in canonical_assignments}
+    (output_dir / "planner_projection.json").write_text(
+        json.dumps(planner_projection, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     from ..audit import audit_plan_grounding
     plan_audit = audit_plan_grounding(
         specification, graph_o, ground_result, list(actions), home_region="staging_tray"
@@ -562,6 +566,6 @@ def run_to_plan(
     )
     return PipelineResult(
         domain="living_room", variant=variant_label, mode=mode,
-        status="ACTION_SEQUENCE_READY", assignment=assignment, plan=actions,
+        status="ACTION_SEQUENCE_READY", assignment=ground_result.assignment, plan=actions,
         search_statistics=planning.get("search_statistics", {}),
     )

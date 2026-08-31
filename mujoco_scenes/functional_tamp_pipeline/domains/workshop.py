@@ -32,13 +32,6 @@ TUNED_CONFIG = (
     "mujoco_scenes/configs/workshop_phase1_yoloworld_l_five_view_close.yaml"
 )
 CURRENT_GEOMETRY_CONFIG = "mujoco_scenes/configs/workshop_geometry_inference.yaml"
-SEMANTIC_ENTITY_HANDLES = {
-    "screwdriver": "workshop_long_phillips_driver",
-    "manual_screwdriver": "workshop_long_phillips_driver",
-    "power_driver": "workshop_power_driver",
-    "power_drill": "workshop_power_driver",
-    "screw": "workshop_medium_phillips_screw",
-}
 
 
 def compile_workshop_requirements_from_graph(
@@ -503,30 +496,6 @@ class WorkshopDomainAdapter:
     @staticmethod
     def _source(source: str) -> str:
         return SURFACE if source in {"INITIAL", "INITIAL_WORKBENCH", "workbench"} else source
-
-    @staticmethod
-    def _physical_handle(track: Any, *, role: str) -> str:
-        # Static helper for mapping an observed track's semantic belief to execution handles
-        if role == "fastener":
-            return "workshop_medium_phillips_screw"
-        belief = track.current_semantic_belief
-        labels = [
-            belief.get("canonical_label"), belief.get("evaluated_label"),
-            belief.get("raw_label"), belief.get("predicted_label"),
-        ]
-        support = belief.get("label_supporting_view_count", {})
-        labels.extend(sorted(support, key=support.get, reverse=True))
-        for label in labels:
-            normalized = str(label or "").strip().lower().replace(" ", "_")
-            handle = SEMANTIC_ENTITY_HANDLES.get(normalized)
-            if handle in {
-                "workshop_long_phillips_driver", "workshop_power_driver"
-            }:
-                return handle
-        raise RuntimeError(
-            f"No execution handle for observed track {track.instance_id}; "
-            f"semantic evidence={belief}"
-        )
 
     def planning_context(self) -> dict[str, Any]:
         sources: dict[str, str] = {}

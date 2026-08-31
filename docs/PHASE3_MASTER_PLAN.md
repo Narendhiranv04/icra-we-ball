@@ -315,6 +315,21 @@ When a case fails, apply this tree **in order**:
 
 ---
 
+### P3-B.1: Canonical phi* Output Contract & Grounding Audit Hardening
+**Status**: `[x] COMPLETE`
+
+**Objective**: Enforce the invariant that `PipelineResult.assignment == GraphGroundingResult.assignment` on successful runs, separate domain-specific compiler projections into explicit non-$\phi^*$ artifacts, harden `audit_plan_grounding` to fail closed without heuristic string prefixes, and purge unused semantic backend handle helpers.
+
+**Accomplished Changes & Empirical Findings**:
+1. **Canonical Output Normalization**: Normalized `PipelineResult.assignment` in Living Room to return `ground_result.assignment` directly. The slot $\to$ region support mapping is preserved separately as a compiler projection in `planner_projection.json`, `region_assignments.json`, and `functional_region_witness.json`, ensuring `result.json.assignment == graph_grounding_result.json.assignment` across all 3 domains.
+2. **Grounding Audit Hardening**: Eliminated permissive string-prefix allowlists (`region_*`, `seat_*`, `pos_*`, `slot_*`) from `audit_plan_grounding()`. Audit now strictly checks that every plan argument is an assigned $\phi^*$ object, an observed $G_O$ node (`REGION` or `FIXED_TARGET`), or an explicitly passed domain constant via `allowed_context_ids`.
+3. **Dead Code Elimination**: Removed dead `WorkshopDomainAdapter._physical_handle()` and `SEMANTIC_ENTITY_HANDLES` from `domains/workshop.py` to prevent latent reintroduction of simulator backend handles on canonical Phase-3 paths.
+4. **Regression & Unit Tests**: Added negative regression tests for unobserved region/seat/object arguments and verified that `PipelineResult.assignment == GraphGroundingResult.assignment` across Kitchen K1, Living Room L1, and Workshop W1 (236/236 test suite passing).
+
+**Acceptance**: All three domain controls pass with 0 violations under the hardened audit, and `PipelineResult.assignment` strictly equals canonical $\phi^*$.
+
+---
+
 ### P3-C: Ideal Raw VLM Fixture Framework
 **Status**: `[ ] NOT STARTED`
 
@@ -622,7 +637,7 @@ Per pipeline run, retain:
 
 **Exact Objective**: Create Ideal Raw VLM Fixture Framework (`tests/fixtures/ideal_raw_vlm/` with `kitchen_K1.json`, `living_room_L1.json`, `workshop_W1.json`) and verify that each fixture compiles through the canonicalizer into a valid G_F and produces a valid downstream action plan.
 
-**Prerequisites**: P3-A and P3-B are complete.
+**Prerequisites**: P3-A, P3-B, and P3-B.1 are complete.
 
 **What to do**:
 1. Create `mujoco_scenes/functional_tamp_pipeline/tests/fixtures/ideal_raw_vlm/`:
@@ -637,4 +652,4 @@ Per pipeline run, retain:
 - Real canonicalizers compile each fixture to valid $G_F$.
 - `test_ideal_fixtures.py` passes all fixture tests.
 
-**Expected next pass**: P3-D (Kitchen Canonicalizer Repair)
+**Expected next pass**: P3-D (Predicate & System-Context Freeze)

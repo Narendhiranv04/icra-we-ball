@@ -268,6 +268,7 @@ def audit_plan_grounding(
     ground_result: Any,
     plan: list[dict[str, Any]] | tuple[dict[str, Any], ...],
     home_region: str = "countertop",
+    allowed_context_ids: Any = None,
 ) -> dict[str, Any]:
     """Audit that A* plan adheres to phi* grounding and causal accessibility."""
     violations: list[str] = []
@@ -317,30 +318,24 @@ def audit_plan_grounding(
                         f"Operation binding ({tool_id}, {target_id}) for group '{group_id}' has relation '{rel}' with status '{status_str}' (expected TRUE)"
                     )
 
-    # 3. Plan argument consistency
+    # 3. Plan argument consistency: fail-closed validation against G_O nodes and explicit domain constants
     plan_uses_only_grounded_task_objects = True
-    known_regions = {
-        home_region, "serving_area", "countertop", "shared_table", "personal_table_left",
-        "personal_table_right", "staging_tray", "work_surface", "MAIN_WORKBENCH_ZONE",
-        "workshop_frame_joint", "repair_target", "D1", "D2", "C1", "C2", "B1",
-        "LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET", "WORKBENCH_DRAWER", "DRILL_PRESS_CABINET",
+    known_entities: set[str] = {
+        home_region, "serving_area", "countertop", "staging_tray", "work_surface",
+        "MAIN_WORKBENCH_ZONE", "workshop_frame_joint", "repair_target",
     }
+    if allowed_context_ids:
+        known_entities.update(allowed_context_ids)
+
     for n in graph_o.nodes.values():
         if getattr(n, "entity_kind", "") in {"REGION", "FIXED_TARGET"}:
-            known_regions.add(n.instance_id)
+            known_entities.add(n.instance_id)
 
     for action in plan:
         op = action.get("operator", "")
         args = action.get("arguments", [])
         for arg in args:
-            if (
-                arg not in known_regions
-                and arg not in assigned_object_ids
-                and not arg.startswith("pos_")
-                and not arg.startswith("slot_")
-                and not arg.startswith("region_")
-                and not arg.startswith("seat_")
-            ):
+            if arg not in known_entities and arg not in assigned_object_ids:
                 plan_uses_only_grounded_task_objects = False
                 violations.append(f"Action {op}({', '.join(args)}) uses ungrounded object '{arg}'")
 
