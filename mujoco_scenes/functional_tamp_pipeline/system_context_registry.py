@@ -9,35 +9,69 @@ Distinguishes four formal architectural categories across domains:
 
 from __future__ import annotations
 
+from types import MappingProxyType
 from typing import Any, Iterable
 
-PLANNER_CONTEXT_CONSTANTS: dict[str, frozenset[str]] = {
-    "kitchen": frozenset({"countertop", "serving_area"}),
-    "living_room": frozenset({"staging_tray"}),
-    "workshop": frozenset({"MAIN_WORKBENCH_ZONE", "workshop_frame_joint", "work_surface"}),
+
+_SELECTABLE_ROLES_RAW: dict[str, frozenset[str]] = {
+    "kitchen": frozenset({
+        "coffee_container",
+        "soup_container",
+        "coffee_stirrer",
+        "soup_eating_utensil",
+        "water_source",
+        "coffee_source",
+    }),
+    "living_room": frozenset({
+        "PERSONAL_CUP_SAUCER_REGION",
+        "SHARED_REMOTE_REGION",
+        "CUP_SAUCER_SET",
+        "REMOTE",
+    }),
+    "workshop": frozenset({
+        "driver",
+        "fastener",
+    }),
 }
 
-SYSTEM_FIXED_ANCHORS: dict[str, frozenset[str]] = {
+_SYSTEM_FIXED_ANCHORS_RAW: dict[str, frozenset[str]] = {
     "kitchen": frozenset(),
     "living_room": frozenset({"SEATING_POSITION", "SEATING_PAIR"}),
     "workshop": frozenset({"repair_target"}),
 }
 
-SEARCH_REGIONS: dict[str, frozenset[str]] = {
+_PLANNER_CONTEXT_CONSTANTS_RAW: dict[str, frozenset[str]] = {
+    "kitchen": frozenset({"countertop", "serving_area"}),
+    "living_room": frozenset({"staging_tray"}),
+    "workshop": frozenset({"MAIN_WORKBENCH_ZONE", "workshop_frame_joint"}),
+}
+
+_SEARCH_REGIONS_RAW: dict[str, frozenset[str]] = {
     "kitchen": frozenset({"D1", "D2", "C1", "C2", "B1"}),
     "living_room": frozenset(),
     "workshop": frozenset({"LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"}),
 }
 
+# Authoritative read-only registry mappings
+SELECTABLE_ROLES: MappingProxyType[str, frozenset[str]] = MappingProxyType(_SELECTABLE_ROLES_RAW)
+SYSTEM_FIXED_ANCHORS: MappingProxyType[str, frozenset[str]] = MappingProxyType(_SYSTEM_FIXED_ANCHORS_RAW)
+PLANNER_CONTEXT_CONSTANTS: MappingProxyType[str, frozenset[str]] = MappingProxyType(_PLANNER_CONTEXT_CONSTANTS_RAW)
+SEARCH_REGIONS: MappingProxyType[str, frozenset[str]] = MappingProxyType(_SEARCH_REGIONS_RAW)
 
-def get_domain_planner_context_constants(domain: str) -> frozenset[str]:
-    """Return immutable set of registered symbolic planner constants for domain."""
-    return PLANNER_CONTEXT_CONSTANTS.get(domain.strip().lower(), frozenset())
+
+def get_domain_selectable_roles(domain: str) -> frozenset[str]:
+    """Return immutable set of registered selectable functional role names for domain."""
+    return SELECTABLE_ROLES.get(domain.strip().lower(), frozenset())
 
 
 def get_domain_system_fixed_anchors(domain: str) -> frozenset[str]:
     """Return immutable set of registered system-owned fixed functional anchors for domain."""
     return SYSTEM_FIXED_ANCHORS.get(domain.strip().lower(), frozenset())
+
+
+def get_domain_planner_context_constants(domain: str) -> frozenset[str]:
+    """Return immutable set of registered symbolic planner constants for domain."""
+    return PLANNER_CONTEXT_CONSTANTS.get(domain.strip().lower(), frozenset())
 
 
 def get_domain_search_regions(domain: str) -> frozenset[str]:
@@ -68,14 +102,19 @@ def is_valid_planner_argument(
     if argument in domain_constants:
         return True
 
-    # 4. Explicitly allowed context IDs (restricted: for standard domains, must be a known domain constant or node)
+    # 4. Explicitly allowed context IDs (restricted: for standard domains, must be a known domain constant
+    # or actual observed REGION/FIXED_TARGET node; NEVER an unassigned OBJECT)
     if allowed_context_ids is not None:
         allowed_set = set(allowed_context_ids)
         if argument in allowed_set:
             d_norm = domain.strip().lower()
             if d_norm in {"kitchen", "living_room", "workshop"}:
-                if argument in domain_constants or (hasattr(graph_o, "nodes") and argument in graph_o.nodes):
+                if argument in domain_constants:
                     return True
+                if hasattr(graph_o, "nodes") and argument in graph_o.nodes:
+                    node = graph_o.nodes[argument]
+                    if getattr(node, "entity_kind", "") in {"REGION", "FIXED_TARGET"}:
+                        return True
             else:
                 # Custom/test domain
                 return True

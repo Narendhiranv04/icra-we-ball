@@ -104,7 +104,7 @@ Task instruction + initial RGB
 | Concept-exact canonicalization preservation diagnostics | `docs/PHASE3_P3C_IDEAL_FIXTURE_DIAGNOSIS.md`, `test_ideal_fixtures.py` |
 | Frozen Predicate Signature Registry | `predicate_registry.py` — immutable domain-scoped predicate signatures and direction rules |
 | System Context & Planner Constants Registry | `system_context_registry.py` — formal separation of selectable assets, fixed anchors, planner constants, and search regions |
-| 248 unit/integration tests pass | `pytest mujoco_scenes/functional_tamp_pipeline/tests/` |
+| 255 unit/integration tests pass | `pytest mujoco_scenes/functional_tamp_pipeline/tests/` |
 
 ### PARTIALLY VERIFIED ~
 | Component | Status |
@@ -408,6 +408,30 @@ When a case fails, apply this tree **in order**:
 
 ---
 
+### P3-D.1: Context Authority & Registry Closure
+**Status**: `[x] COMPLETE`
+
+**Objective**: Close remaining context authority bypasses, enforce read-only registry immutability, make domain role-ownership binding in runtime validation, and source-audit Workshop emittable predicates.
+
+**Scope**:
+1. **Removed `home_region` unconditional audit bypass**: Removed `if arg == home_region: continue` in `audit_plan_grounding`. All plan arguments (including home regions) must be valid under `is_valid_planner_argument`.
+2. **Closed `allowed_context_ids` OBJECT bypass**: On standard domains, `allowed_context_ids` cannot authorize unassigned `OBJECT` nodes. Only registered planner constants or actual $G_O$ `REGION`/`FIXED_TARGET` nodes are authorized.
+3. **Removed false Workshop constant `work_surface`**: Verified from source that `work_surface` was only a compiler dictionary key. Workshop planner constants frozen as `MAIN_WORKBENCH_ZONE` and `workshop_frame_joint`.
+4. **Enforced strict role ownership in `validate_runtime_gf`**:
+   - `SELECTABLE_FUNCTIONAL_ASSET`: allowed as ordinary functional $G_F$ roles.
+   - `SYSTEM_FIXED_FUNCTIONAL_ANCHOR`: must have `entity_kind == 'FIXED_TARGET'`.
+   - `PLANNER_CONTEXT_CONSTANT`: forbidden from appearing as $G_F$ roles.
+   - `SEARCH_REGION`: forbidden from appearing as selectable $G_F$ roles.
+   - Unauthorized roles (e.g. `workbench_surface` in Workshop) fail closed.
+5. **Enforced search region contract**: Candidate regions must belong to domain search ontology and `set(region_ranking) == set(candidate_regions)`.
+6. **Classified Workshop unsupported emittables**: `LOCATED_ON`, `PLANAR_SUPPORT`, `OPEN_CAVITY`, `ELONGATED_OBJECT` classified as `CANONICALIZER_EMITTABLE_BUT_UNSUPPORTED` in `predicate_registry.py` and rejected by runtime validation; production disposition carried to P3-G.
+7. **Read-only registry immutability**: Wrapped exported mappings in `types.MappingProxyType` to guarantee runtime immutability.
+8. **Self-contained tests**: 15 comprehensive unit/regression tests committed in `test_predicate_and_context_registry.py`.
+
+**Tests**: `test_predicate_and_context_registry.py`, `test_executable_grounding_ir.py`, `test_phase3_vlm_replay_validator.py`, full suite (255 passed).
+
+---
+
 ### P3-E: Kitchen Canonicalizer Repair
 **Status**: `[ ] NOT STARTED`
 
@@ -422,7 +446,12 @@ When a case fails, apply this tree **in order**:
 
 **Tests**: `test_ideal_fixtures.py` must pass for `kitchen_K1`. Run `pytest mujoco_scenes/tests/test_kitchen_vlm_functional_graph.py`.
 
-**Acceptance**: Ideal kitchen fixture → canonical G_F with role recall = 1.0, relation recall = 1.0 vs GT reference.
+**Acceptance**:
+- Ideal kitchen fixture → canonical G_F with role recall = 1.0, relation recall = 1.0 vs GT reference.
+- Unknown relation fails closed with explicit error (zero silent `INSERTABLE_IN` fabrication).
+- No silent role dropping (`coffee_source`, `water_source` preserved).
+- No `required_target_count` clipping.
+- Operation group preservation and signature validation proven.
 
 **Do not touch**: Living Room or Workshop canonicalizers; GT path; `ground_graph()`.
 
@@ -458,10 +487,14 @@ When a case fails, apply this tree **in order**:
    - Ambiguous proposals → reject explicitly.
 2. **Capability vocabulary**: Expand ontology phrase mappings for fastener driving and holding capabilities.
 3. **Operation group validation**: Validate group cardinalities and context relations consistently against declared roles.
+4. **P3-D.1 Canonicalizer Obligations**:
+   - Resolve `workbench_surface` role emission (must not be emitted as a selectable G_F role; belongs to system/planner context).
+   - Resolve `LOCATED_ON` relation emission (remove or convert to system context; reject in canonical G_F).
+   - Resolve generic unary properties (`PLANAR_SUPPORT`, `OPEN_CAVITY`, `ELONGATED_OBJECT`) emitted by `map_workshop_unary_property` (must not pollute canonical Workshop G_F).
 
 **Tests**: `test_ideal_fixtures.py` must pass for `workshop_W1`. Run `pytest mujoco_scenes/tests/test_workshop_vlm_requirements.py`.
 
-**Acceptance**: Ideal workshop fixture → canonical G_F matching GT structure.
+**Acceptance**: Ideal workshop fixture → canonical G_F matching GT structure with zero unauthorized roles or predicates.
 
 ---
 

@@ -99,8 +99,8 @@ def test_workshop_w1_live_audit_fixture() -> None:
     assert graph.nodes["repair_target"].entity_kind == "FIXED_TARGET"
     assert len(graph.operation_groups) == 1
     assert graph.candidate_regions == ("LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET")
-    # Historical uncanonicalized live fixture has unknown predicate LOCATED_ON; must fail closed under frozen predicate validation
-    with pytest.raises(MalformedVLMSpecificationError, match="Unknown predicate 'LOCATED_ON'"):
+    # Historical uncanonicalized live fixture emits unauthorized role workbench_surface; must fail closed under role ownership validation
+    with pytest.raises(MalformedVLMSpecificationError, match="Unknown or unauthorized role 'workbench_surface'"):
         validate_runtime_gf(graph)
 
 

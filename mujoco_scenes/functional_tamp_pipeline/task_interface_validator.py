@@ -1,10 +1,11 @@
 """Generic runtime G_F structural consistency validation.
 
-Enforces domain-independent structural consistency and frozen predicate signature
-compliance on canonical FunctionalRequirementGraph without any expected-task oracle knowledge.
+Enforces domain-independent structural consistency, frozen predicate signature
+compliance, and role/context ownership on canonical FunctionalRequirementGraph
+without any expected-task oracle knowledge.
 
 IMPORTANT SCIENTIFIC BOUNDARY:
-- Runtime validation checks representation consistency against the frozen Predicate Registry.
+- Runtime validation checks representation consistency against the frozen Predicate Registry and System Context Registry.
 - Runtime NEVER checks or rejects against ground-truth/reference task specifications.
 - Expected task roles and relations are evaluated offline in Pass 3.6B.
 """
@@ -16,10 +17,16 @@ from typing import Any
 from .errors import MalformedVLMSpecificationError
 from .models import FunctionalRequirementGraph
 from .predicate_registry import validate_predicate_signature
+from .system_context_registry import (
+    get_domain_planner_context_constants,
+    get_domain_search_regions,
+    get_domain_selectable_roles,
+    get_domain_system_fixed_anchors,
+)
 
 
 def validate_runtime_gf(graph: FunctionalRequirementGraph) -> None:
-    """Validate domain-independent structural consistency and predicate signatures of canonical FunctionalRequirementGraph."""
+    """Validate structural consistency, role ownership, and predicate signatures of canonical FunctionalRequirementGraph."""
     if not isinstance(graph, FunctionalRequirementGraph):
         raise MalformedVLMSpecificationError(
             f"Expected FunctionalRequirementGraph instance, got {type(graph).__name__}"
@@ -34,6 +41,11 @@ def validate_runtime_gf(graph: FunctionalRequirementGraph) -> None:
 
     if not graph.nodes:
         raise MalformedVLMSpecificationError("FunctionalRequirementGraph must have at least one node")
+
+    selectable_roles = get_domain_selectable_roles(domain_norm)
+    fixed_anchors = get_domain_system_fixed_anchors(domain_norm)
+    planner_constants = get_domain_planner_context_constants(domain_norm)
+    search_regions = get_domain_search_regions(domain_norm)
 
     for name, node in graph.nodes.items():
         if not isinstance(name, str) or not name.strip():
@@ -53,6 +65,28 @@ def validate_runtime_gf(graph: FunctionalRequirementGraph) -> None:
         if node.binding_policy not in {"DISTINCT", "REUSABLE", "SHARED"}:
             raise MalformedVLMSpecificationError(
                 f"Role {name!r} has invalid binding_policy {node.binding_policy!r}"
+            )
+
+        # Role ownership validation
+        if name in planner_constants:
+            raise MalformedVLMSpecificationError(
+                f"Role {name!r} is a planner context constant and must not appear as a G_F role in domain {graph.domain!r}"
+            )
+        if name in search_regions:
+            raise MalformedVLMSpecificationError(
+                f"Role {name!r} is a search region and must not appear as a selectable G_F role in domain {graph.domain!r}"
+            )
+        if name in fixed_anchors:
+            if node.entity_kind != "FIXED_TARGET":
+                raise MalformedVLMSpecificationError(
+                    f"System fixed anchor role {name!r} in domain {graph.domain!r} must have entity_kind 'FIXED_TARGET', got {node.entity_kind!r}"
+                )
+        elif name in selectable_roles:
+            # Selectable functional role
+            pass
+        else:
+            raise MalformedVLMSpecificationError(
+                f"Unknown or unauthorized role {name!r} for domain {graph.domain!r}"
             )
 
         # Validate unary predicates against frozen predicate registry
@@ -189,13 +223,24 @@ def validate_runtime_gf(graph: FunctionalRequirementGraph) -> None:
                     f"Operation group {grp.id!r} has context_relations without context_role"
                 )
 
+    # Search region validation
+    if graph.candidate_regions:
+        for r in graph.candidate_regions:
+            if r not in search_regions:
+                raise MalformedVLMSpecificationError(
+                    f"Candidate search region {r!r} is not a registered search region for domain {graph.domain!r}"
+                )
+
     if graph.candidate_regions and graph.region_ranking:
         if len(graph.region_ranking) != len(set(graph.region_ranking)):
             raise MalformedVLMSpecificationError(
                 f"Duplicate regions in region_ranking: {graph.region_ranking}"
             )
-        for r in graph.region_ranking:
-            if r not in graph.candidate_regions:
-                raise MalformedVLMSpecificationError(
-                    f"Region {r!r} in region_ranking not in candidate_regions"
-                )
+        if set(graph.region_ranking) != set(graph.candidate_regions):
+            raise MalformedVLMSpecificationError(
+                f"region_ranking {graph.region_ranking} must match candidate_regions {graph.candidate_regions}"
+            )
+    elif graph.region_ranking and not graph.candidate_regions:
+        raise MalformedVLMSpecificationError(
+            f"region_ranking {graph.region_ranking} provided but candidate_regions is empty"
+        )

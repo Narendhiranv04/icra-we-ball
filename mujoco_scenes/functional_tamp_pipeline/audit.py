@@ -331,9 +331,6 @@ def audit_plan_grounding(
         op = action.get("operator", "")
         args = action.get("arguments", [])
         for arg in args:
-            # Home region is allowed for current domain
-            if arg == home_region:
-                continue
             if not is_valid_planner_argument(
                 domain=specification.domain,
                 argument=arg,
