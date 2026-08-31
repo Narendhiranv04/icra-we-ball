@@ -1,9 +1,9 @@
 # Phase 3 Master Plan
 
-> **Version**: 1.0
+> **Version**: 1.1 (Corrected Post-Audit)
 > **Created**: 2026-08-31
 > **Branch**: `naren/pipeline_check`
-> **HEAD at creation**: `3df35c34` (Pass 3.6B.2)
+> **HEAD at creation**: `5551f67c`
 
 ---
 
@@ -89,6 +89,7 @@ Task instruction + initial RGB
 | `GTSpecProvider` for all 3 domains | Produces valid G_F; 32/32 GT regression passes |
 | GT downstream: K1-K12, L1-L10, W1-W10 | All 20 feasible → `ACTION_SEQUENCE_READY`, all 12 infeasible → `INFEASIBLE` |
 | `validate_runtime_gf()` structural validator | `task_interface_validator.py` |
+| `VLMSpecProvider.provide()` structural validation & error wrapping | `vlm_spec_provider.py` — complete method body with try/except wrapping in `MalformedVLMSpecificationError`, and `@staticmethod` on `_workshop` (prior truncation diagnosis was a tooling/display artifact) |
 | Kitchen domain adapter (symbolic compiler) | `domains/kitchen.py` — `KitchenPlanningCompiler`, `build_kitchen_observed_scene_graph` |
 | Living Room domain adapter | `domains/living_room.py` — `compile_living_room_task_from_graph`, `build_living_room_observed_scene_graph` |
 | Workshop domain adapter | `domains/workshop.py` — `build_workshop_observed_scene_graph` |
@@ -96,30 +97,28 @@ Task instruction + initial RGB
 | A* planner | `planning.py` + `symbolic_planning_core.py` |
 | Reference evaluator | `gf_reference_evaluator.py` — structural comparison metrics |
 | Runtime isolation (no GT imports in VLM path) | `test_executable_grounding_ir.py::test_static_runtime_isolation` |
-| VLM prompt leak protection | `test_vlm_interface_boundary.py::test_zero_leakage_in_kitchen_and_workshop_payloads` |
+| VLM prompt leak protection & deterministic audit | `audit.py`, `test_vlm_interface_boundary.py`, `test_provenance_and_audit.py` |
+| Provenance fingerprinting & stale resume prevention | `audit.py::compute_provenance_fingerprint`, `scripts/run_phase36b2_matrix.py` |
 | FM adapter retry/reconnect | `fm_adapter.py` — 3-attempt retry with socket error handling |
-| 223 unit tests pass | `pytest mujoco_scenes/functional_tamp_pipeline/tests/` |
+| 230 unit tests pass | `pytest mujoco_scenes/functional_tamp_pipeline/tests/` |
 
 ### PARTIALLY VERIFIED ~
 | Component | Status |
 |---|---|
-| Kitchen VLM canonicalizer | Compiles valid G_F for some inputs; role recall ~67%, missing `water_source`/`coffee_source` for many VLM outputs; unmapped relations default to `INSERTABLE_IN`; operation groups only accepted for 2 hard-coded tool↔target pairs |
-| Living Room VLM canonicalizer | Entity-kind hard gate works; but CUP_SAUCER_SET count merging untested with diverse VLM outputs; FIXED_TARGET context nodes (SEATING_POSITION, SEATING_PAIR) may not be emitted by VLM |
-| Workshop VLM canonicalizer | Role normalization exists; but 10/10 live cases → VLM_SPEC_FAILED (all Qwen outputs had structural problems or duplicate role collisions) |
+| Kitchen VLM canonicalizer | Compiles valid G_F for some inputs; role recall ~67%; unmapped relations default to `INSERTABLE_IN`; operation groups only accepted for 2 hard-coded tool↔target pairs |
+| Living Room VLM canonicalizer | Entity-kind hard gate works; but compositional cup+saucer cardinality rules untested across diverse raw outputs; context nodes require systematic contract |
+| Workshop VLM canonicalizer | Role normalization exists; but 10/10 live cases failed at spec stage due to multiple distinct VLM raw patterns |
 | Region resolution (Kitchen) | Maps natural language to D1/D2/C2/B1/C1 via fuzzy matching; but VLM-emitted local IDs not always resolvable |
 
-### BROKEN ✗
+### BROKEN / UNRESOLVED ISSUES ✗
 | Component | Evidence |
 |---|---|
-| `VLMSpecProvider.provide()` method body | Lines 34-36: `try: graph.validate(); from .task_interface_validator import validate_runtime_gf` — **truncated**, no except block, no return. The `_workshop` def at line 37 overwrites the incomplete try block. This is a **syntax-level bug** that means the validation/error-wrapping in `provide()` is dead code. |
 | VLM → ACTION_SEQUENCE_READY | 0/20 feasible variants succeeded in Pass 3.6B.2 |
-| VLM → correct INFEASIBLE | Only 4/12 infeasible variants matched (K7, K9, L8, L10) — but these were accidental via VLM_SPEC_FAILED |
-| Kitchen: canonicalizer drops `water_source` and `coffee_source` | Role recall 0.50-0.67; these roles consistently present in GT but missing from VLM G_F |
-| Kitchen: unmapped binary relation defaults to `INSERTABLE_IN` | `map_binary_relation()` line 232-233 and line 394 — any unrecognized relation text silently becomes INSERTABLE_IN |
-| Kitchen: operation groups hard-gated to 2 patterns | Lines 420-425: only `coffee_stirrer→coffee_container` and `soup_eating_utensil→soup_container` are accepted; all others silently dropped |
-| Kitchen: `required_target_count` clipped to role count | Line 460: `min(req_target_count, int(roles[target_role]["count"]))` |
-| Living Room: system-owned context nodes not auto-injected | `SEATING_POSITION` and `SEATING_PAIR` must come from VLM; if VLM omits them → validation failure |
-| Workshop: all live VLM cases VLM_SPEC_FAILED | Qwen emits `required_target_count: 2` with `fastener max_count: 1`, or non-compliant category types |
+| VLM → correct INFEASIBLE | 4/12 infeasible variants matched terminal label (K7, K9, L8, L10), but had low role recall (0.50-0.67) and zero exact structural match — terminal label correctness did not reflect verified causal correctness of the inferred deficiency |
+| Kitchen: canonicalizer unmapped relations | `map_binary_relation()` falls back to `INSERTABLE_IN` rather than failing closed or mapping explicitly |
+| Kitchen: operation groups hard-gated | Lines 420-425: only `coffee_stirrer→coffee_container` and `soup_eating_utensil→soup_container` are accepted; other valid pairings are dropped |
+| Kitchen: concept dropping vs raw absence | In some cases raw VLM omits secondary roles (e.g. `coffee_source`), while in other cases canonicalization drops or clips counts (`required_target_count`) |
+| Workshop: live VLM failure modes | 10/10 live cases failed at spec validation, with 4 distinct failure modes: (1) duplicate `driver` role collisions, (2) unmapped capability phrases, (3) undeclared role references in relations/groups, (4) malformed operation group context relations |
 
 ### NOT YET TESTED
 | Component | Note |
@@ -136,33 +135,28 @@ Task instruction + initial RGB
 ### Kitchen
 | Layer | Failure | Severity |
 |---|---|---|
-| **Canonicalizer** | `water_source` and `coffee_source` roles silently dropped when VLM emits them with generic function text | HIGH — causes INCOMPLETE/INFEASIBLE even when VLM understood task |
+| **Raw VLM / Model** | VLM frequently omits secondary source roles (`coffee_source`, `soup_container`) in raw response | HIGH — causes downstream INCOMPLETE/INFEASIBLE |
 | **Canonicalizer** | Unmapped binary relations default to `INSERTABLE_IN` (line 394, line 232) instead of failing closed | MEDIUM — masks wrong relations |
 | **Canonicalizer** | Operation groups hard-gated to exactly 2 canonical patterns (lines 420-425) | MEDIUM — any VLM variation in tool↔target naming gets dropped |
-| **Canonicalizer** | `required_target_count` silently clipped (line 460) | LOW — but violates semantic preservation |
-| **G_F↔G_O** | If VLM omits `coffee_source`/`water_source`, symbolic planner can't find contents → compile exception → caught as `INFEASIBLE` | HIGH |
-| **Downstream** | `KitchenPlanningCompiler` builds STRIPS from `compile_observed_symbolic_state()` which hardcodes `symbolic_task` defaults (coffee, water, soup contents) — legitimate fixed domain knowledge but boundary not explicit | LOW |
+| **Canonicalizer** | `required_target_count` silently clipped (line 460) | LOW — violates semantic preservation |
+| **G_F↔G_O** | If VLM omits required sources, symbolic planner cannot find contents → caught as `INFEASIBLE` | HIGH |
+| **Downstream** | `KitchenPlanningCompiler` builds STRIPS from `compile_observed_symbolic_state()` which hardcodes `symbolic_task` defaults (coffee, water, soup contents) | LOW |
 
 ### Living Room
 | Layer | Failure | Severity |
 |---|---|---|
-| **Canonicalizer** | 2 cups + 2 saucers can merge into `total_count=4` for `CUP_SAUCER_SET` if VLM emits separate cup and saucer roles that both map to `CUP_SAUCER_SET` | HIGH |
-| **Canonicalizer** | `SEATING_POSITION` and `SEATING_PAIR` context nodes must be VLM-emitted; if missing, operation groups referencing them fail validation | HIGH |
-| **G_F↔G_O** | G_O stores relations as `REGION --FITS_SET_ON--> CUP_SAUCER_SET` (subject=region), while VLM may describe `cup placed_on table` (subject=cup). Canonicalizer disambiguates via role type but fragile for novel phrasings | MEDIUM |
-| **VLM raw** | 5/10 variants → VLM_SPEC_FAILED (L4-L7, L9) — needs diagnosis | UNKNOWN |
+| **Canonicalizer** | Raw VLM emitting separate cup (2) and saucer (2) roles can lead to count distortion if naive summation or naive max is applied | HIGH |
+| **Canonicalizer** | Context targets (`SEATING_POSITION`, `SEATING_PAIR`) must be integrated systematically without penalizing VLM for omitting scene fixtures | HIGH |
+| **G_F↔G_O** | G_O stores relations as `REGION --FITS_SET_ON--> CUP_SAUCER_SET` (subject=region), while VLM describes `cup placed_on table` (subject=cup). Canonicalizer disambiguates via role type but fragile for novel phrasings | MEDIUM |
+| **VLM raw** | 5/10 variants → VLM_SPEC_FAILED (L4-L7, L9) — needs layer diagnosis | MEDIUM |
 
 ### Workshop
 | Layer | Failure | Severity |
 |---|---|---|
-| **VLM raw** | Qwen emits `required_target_count: 2` for operation groups while `fastener.max_count = 1` → graph validation rejects | HIGH — 10/10 VLM_SPEC_FAILED |
-| **Canonicalizer** | Duplicate raw role descriptions for "driver" functionality can collide during normalization | MEDIUM |
-| **System context** | `repair_target` and `workbench_surface` are deterministic scene fixtures but VLM must currently emit them | MEDIUM |
-
-### Infrastructure
-| Layer | Failure | Severity |
-|---|---|---|
-| **`VLMSpecProvider.provide()`** | Incomplete try block (lines 34-37) — `validate()` and `validate_runtime_gf()` calls are dead code | HIGH — error wrapping in `MalformedVLMSpecificationError` does not function |
-| **Benchmark provenance** | Pass 3.6B.2 resumed old cases from different commits; `total_runtime_seconds: 0.45` is wrapper overhead, not execution time | MEDIUM |
+| **VLM raw & Canonicalizer** | Duplicate canonical `driver` role collisions (W1, W2, W6, W9) when VLM emits multiple alternative tools | HIGH |
+| **Canonicalizer** | Unmapped natural language capability phrases for fastener/screw (W5, W7, W10) | HIGH |
+| **VLM raw** | Relations/groups referencing undeclared or raw role IDs (W3, W4) | MEDIUM |
+| **VLM raw** | Malformed operation group specifications with duplicate context relations (W8) | MEDIUM |
 
 ---
 
@@ -280,23 +274,23 @@ When a case fails, apply this tree **in order**:
 
 ## 6. Ordered Implementation Passes
 
-### P3-A: Fix VLMSpecProvider & Benchmark Infrastructure
-**Status**: `[ ] NOT STARTED`
+### P3-A: Benchmark Provenance & Diagnostic Infrastructure
+**Status**: `[x] COMPLETE`
 
-**Objective**: Fix the broken `VLMSpecProvider.provide()` method and establish clean benchmark infrastructure.
+**Objective**: Establish immutable configuration fingerprinting, prevent silent stale-case reuse, harden runtime accounting, ensure raw VLM failure artifact retention, and implement deterministic prompt leakage auditing.
 
-**Scope**: `vlm_spec_provider.py`, `scripts/run_phase36b2_matrix.py`
+**Scope**: `mujoco_scenes/functional_tamp_pipeline/audit.py`, `scripts/run_phase36b2_matrix.py`, `mujoco_scenes/functional_tamp_pipeline/tests/test_provenance_and_audit.py`
 
-**Required Changes**:
-1. Fix `VLMSpecProvider.provide()` — complete the try/except block at lines 34-37 so that `validate()` and `validate_runtime_gf()` are called, and validation errors are wrapped in `MalformedVLMSpecificationError`.
-2. Verify all three `_kitchen()`, `_living_room()`, `_workshop()` static methods have `@staticmethod` decorators consistently.
-3. Add provenance fingerprint (git commit, canonicalizer version, model, prompt hash) to benchmark output.
+**Accomplished Changes**:
+1. Added `compute_provenance_fingerprint()` to `audit.py` providing immutable SHA-256 configuration hashes covering git commit, git dirty state, model identifier, FM endpoint, canonicalization version, prompt/schema hash, task instruction hash, and search order mode.
+2. Updated `scripts/run_phase36b2_matrix.py` to require exact fingerprint match for case reuse, supported `--no-resume` / `--fresh` CLI flags, and eliminated silent stale case reuse.
+3. Implemented deterministic `audit_prompt_leakage()` in `audit.py` scanning model payloads for forbidden internal checker predicates, canonical benchmark region IDs, and GT oracle class symbols.
+4. Hardened benchmark runtime accounting: distinct tracking for `invocation_wall_time_seconds`, `summed_live_case_runtime_seconds`, `summed_newly_executed_runtime_seconds`, `number_of_cases_executed_this_invocation`, and `number_of_cases_reused`.
+5. Explicitly clarified provider replay terminology as deterministic downstream solver replay of saved G_F (not stochastic VLM generation reproducibility).
+6. Ensured `TAMP_FM_DIAGNOSTICS_DIR` is set for all live runs so raw model responses are retained on disk even when validation or canonicalization fails.
+7. Added comprehensive unit tests in `test_provenance_and_audit.py` (230/230 tests pass).
 
-**Tests**: `pytest mujoco_scenes/functional_tamp_pipeline/tests/ -v`
-
-**Acceptance**: `VLMSpecProvider.provide()` correctly validates and wraps errors for all three domains. All existing tests pass.
-
-**Do not touch**: `ground_graph()`, domain adapters, GT path.
+**Acceptance**: All P3-A acceptance criteria verified.
 
 ---
 
@@ -352,21 +346,15 @@ PYTHONPATH=. python -m mujoco_scenes.functional_tamp_pipeline.run --domain works
 ### P3-D: Predicate & System-Context Freeze
 **Status**: `[ ] NOT STARTED`
 
-**Objective**: Freeze the predicate signature registry (§4) in code and resolve the system-owned context node question.
+**Objective**: Freeze the predicate signature registry (§4) in code and establish the formal contract distinguishing task-functional G_F roles from system-owned scene context.
 
-**Scope**: Create `functional_tamp_pipeline/predicate_registry.py` with the canonical predicate table. Decide and implement which nodes are system-owned:
+**Scope**: Create `functional_tamp_pipeline/predicate_registry.py` with the canonical predicate table. Formulate clear rules for system-known fixtures:
+- Distinguish task-functional roles (whose physical selection is variable and discovered) from system-known domain geometry/fixtures (e.g. seating positions, workbench boundaries).
+- Define whether system context is represented via G_O initial bindings or explicit context annotations.
 
-**Likely system-owned** (deterministic scene fixtures):
-- `SEATING_POSITION` — always present in living room G_O
-- `SEATING_PAIR` — always present in living room G_O
-- `repair_target` — always present in workshop scene
-- `workbench_surface` — always present in workshop scene
+**Tests**: Add assertions to `test_executable_grounding_ir.py` verifying predicate signatures across all domains.
 
-**Design decision**: System-owned context nodes should be injected by the canonicalizer during G_F construction if the VLM does not emit them, with explicit `source: "SYSTEM_OWNED_DOMAIN_CONTEXT"` provenance. The VLM should NOT be penalized for omitting them.
-
-**Tests**: Add assertions to `test_executable_grounding_ir.py` that system-owned nodes are present in every valid G_F regardless of source.
-
-**Acceptance**: Predicate registry is a frozen code artifact. System-owned injection is explicit and traced. All existing tests still pass.
+**Acceptance**: Predicate registry is a frozen code artifact. All existing tests pass.
 
 **Do not touch**: `ground_graph()` internals.
 
@@ -375,15 +363,15 @@ PYTHONPATH=. python -m mujoco_scenes.functional_tamp_pipeline.run --domain works
 ### P3-E: Kitchen Canonicalizer Repair
 **Status**: `[ ] NOT STARTED`
 
-**Objective**: Fix the Kitchen VLM canonicalizer to achieve 100% concept preservation on the ideal fixture.
+**Objective**: Repair the Kitchen VLM canonicalizer to achieve 100% concept preservation on the ideal fixture without silent fallbacks.
 
-**Required Changes** (in `kitchen_vlm_functional_graph.py`):
-1. **Extend `KITCHEN_ROLE_REGISTRY`** to cover `water_source` and `coffee_source` with broader natural language aliases (kettle, water pitcher, coffee jar, coffee grounds, etc.)
-2. **Remove the `INSERTABLE_IN` default fallback** in `map_binary_relation()` (line 232-233) and in the relation compilation (line 394). Unmapped relations should either be explicitly mapped or raise `UnmappedFunctionalConceptError`.
-3. **Widen operation group acceptance** (lines 420-425): instead of hard-coding only `coffee_stirrer→coffee_container` and `soup_eating_utensil→soup_container`, accept any operation group whose tool_role and target_role are both present in the mapped roles, and assign a deterministic canonical group ID based on the tool→target pair.
-4. **Remove `required_target_count` clipping** (line 460): if the VLM says `required_target_count: 3` but the target role has `count: 2`, either preserve the VLM's count and let validation reject it, or explicitly log a diagnostic.
+**Scope of Hypotheses and Tests** (in `kitchen_vlm_functional_graph.py`):
+1. **Role mapping**: Expand natural language function and description matching for `water_source` and `coffee_source` so valid semantic phrases are not dropped.
+2. **Fail-closed relation mapping**: Remove the `INSERTABLE_IN` default fallback in `map_binary_relation()` — unmapped relations must raise `UnmappedFunctionalConceptError` or be explicitly mapped.
+3. **Operation group mapping**: Replace rigid 2-pair gating with generic tool-target pair validation based on mapped roles.
+4. **Cardinality preservation**: Eliminate target count clipping.
 
-**Tests**: `test_ideal_fixtures.py` must pass for kitchen_K1. Run `pytest mujoco_scenes/tests/test_kitchen_vlm_functional_graph.py`.
+**Tests**: `test_ideal_fixtures.py` must pass for `kitchen_K1`. Run `pytest mujoco_scenes/tests/test_kitchen_vlm_functional_graph.py`.
 
 **Acceptance**: Ideal kitchen fixture → canonical G_F with role recall = 1.0, relation recall = 1.0 vs GT reference.
 
@@ -394,14 +382,14 @@ PYTHONPATH=. python -m mujoco_scenes.functional_tamp_pipeline.run --domain works
 ### P3-F: Living Room Canonicalizer Repair
 **Status**: `[ ] NOT STARTED`
 
-**Objective**: Fix the Living Room VLM canonicalizer for correct count merging and system-owned context injection.
+**Objective**: Repair the Living Room VLM canonicalizer to correctly handle composite role cardinalities and relation directions.
 
-**Required Changes** (in `environment_vlm_requirements.py`):
-1. **Fix CUP_SAUCER_SET count merging**: If VLM emits separate "cup" (count=2) and "saucer" (count=2) roles that both map to `CUP_SAUCER_SET`, do NOT sum to 4. The count should be `max(cup_count, saucer_count)` = 2, representing 2 cup+saucer bundles.
-2. **Inject system-owned SEATING_POSITION and SEATING_PAIR** if not emitted by VLM, with explicit provenance.
-3. **Verify relation direction**: Ensure all VLM-emitted "placed_on" / "on" relations compile to `REGION --FITS_SET_ON--> CUP_SAUCER_SET` (subject=region) regardless of grammatical direction.
+**Scope of Hypotheses and Tests** (in `environment_vlm_requirements.py`):
+1. **Composite role cardinality**: Formulate and test compositional rules for multi-part items (e.g. cup + saucer bundles) to ensure bundle counts reflect task semantics across diverse raw decomposition patterns.
+2. **System context integration**: Establish consistent handling of seating positions and pairs.
+3. **Relation direction**: Verify that spatial relations ("placed on", "near") compile to canonical signatures (`REGION --FITS_SET_ON--> CUP_SAUCER_SET`, etc.) regardless of grammatical active/passive phrasing.
 
-**Tests**: `test_ideal_fixtures.py` must pass for living_room_L1. Run existing living room tests.
+**Tests**: `test_ideal_fixtures.py` must pass for `living_room_L1`. Run existing living room tests.
 
 **Acceptance**: Ideal living room fixture → canonical G_F matching GT structure.
 
@@ -412,15 +400,17 @@ PYTHONPATH=. python -m mujoco_scenes.functional_tamp_pipeline.run --domain works
 ### P3-G: Workshop Canonicalizer Repair
 **Status**: `[ ] NOT STARTED`
 
-**Objective**: Fix the Workshop VLM canonicalizer for deterministic duplicate merging and context injection.
+**Objective**: Repair the Workshop VLM canonicalizer to handle alternative role proposals, unmapped capability phrases, and operation group validation.
 
-**Required Changes** (in `workshop_phase1/requirements.py` and `vlm_spec_provider.py`):
-1. **Merge semantically duplicate driver roles**: If VLM emits "manual_screwdriver" and "power_screwdriver" as separate roles both mapping to `driver`, merge deterministically (max count, union of categories).
-2. **Inject system-owned `repair_target` and `workbench_surface`** if not emitted by VLM.
-3. **Validate `required_target_count <= target_role.max_count`** before graph construction, or clip with explicit diagnostic.
-4. **Ensure operation group validation** handles the common Qwen failure pattern (required_target_count=2 with fastener.max_count=1).
+**Scope of Hypotheses and Tests** (in `workshop_phase1/requirements.py` and `vlm_spec_provider.py`):
+1. **Duplicate / alternative role resolution**: Classify duplicate canonical role emissions:
+   - Equivalent alternatives (e.g. manual screwdriver vs cordless drill) → merge with explicit rule.
+   - Genuinely distinct requirements → preserve separately.
+   - Ambiguous proposals → reject explicitly.
+2. **Capability vocabulary**: Expand ontology phrase mappings for fastener driving and holding capabilities.
+3. **Operation group validation**: Validate group cardinalities and context relations consistently against declared roles.
 
-**Tests**: `test_ideal_fixtures.py` must pass for workshop_W1. Run `pytest mujoco_scenes/tests/test_workshop_vlm_requirements.py`.
+**Tests**: `test_ideal_fixtures.py` must pass for `workshop_W1`. Run `pytest mujoco_scenes/tests/test_workshop_vlm_requirements.py`.
 
 **Acceptance**: Ideal workshop fixture → canonical G_F matching GT structure.
 
@@ -429,18 +419,18 @@ PYTHONPATH=. python -m mujoco_scenes.functional_tamp_pipeline.run --domain works
 ### P3-H: Region Resolution & Search Contract
 **Status**: `[ ] NOT STARTED`
 
-**Objective**: Ensure VLM-proposed inspectable regions resolve correctly to physical scene regions across all domains.
+**Objective**: Establish a strict region proposal resolution contract across all domains without leaking unpermitted variant information.
 
-**Scope**: Kitchen region resolution (D1-C1), Workshop region resolution (LEFT_DRAWER, RIGHT_DRAWER, TOOL_CABINET). Living Room has no articulated search regions.
+**Scope**: Kitchen region resolution (D1-C1), Workshop region resolution (LEFT_DRAWER, RIGHT_DRAWER, TOOL_CABINET).
 
-**Required Changes**:
-1. Document which regions are discoverable vs fixed in each domain.
-2. Ensure region resolution handles common VLM phrasings without silent failures.
-3. If VLM proposes no resolvable regions, fall back to the domain's complete known region set (with explicit provenance).
+**Key Rules**:
+1. Clarify what candidate regions are observable/discoverable per domain.
+2. Ensure natural language region aliases resolve deterministically.
+3. If VLM proposes invalid/empty search regions, handle via explicit domain fallback policy without accessing hidden variant state.
 
-**Tests**: Extend `test_vlm_interface_boundary.py` with additional region resolution edge cases.
+**Tests**: Extend `test_vlm_interface_boundary.py` with region resolution edge cases.
 
-**Acceptance**: All known region phrasings from historical VLM outputs resolve correctly.
+**Acceptance**: All valid region proposals resolve deterministically.
 
 ---
 
@@ -449,19 +439,13 @@ PYTHONPATH=. python -m mujoco_scenes.functional_tamp_pipeline.run --domain works
 
 **Objective**: End-to-end validation that ideal raw fixtures → canonicalizer → G_F → G_O → φ* → action sequence for K1/L1/W1.
 
-**Scope**: Integration test. No new code changes unless issues are found.
+**Scope**: Integration test across all 3 domains.
 
 **Inputs**: Ideal fixtures from P3-C, canonicalizers repaired in P3-E/F/G.
 
-**Tests**: Run each ideal fixture through the full pipeline using a test harness that:
-1. Feeds the fixture JSON as if it were a VLM response
-2. Canonicalizes to G_F
-3. Builds G_O from the actual scene
-4. Runs `ground_graph()`
-5. Compiles symbolic problem
-6. Runs A* planner
+**Tests**: Run each ideal fixture through the full pipeline test harness.
 
-**Acceptance**: All three → `ACTION_SEQUENCE_READY`. This proves the software interface is correct.
+**Acceptance**: All three → `ACTION_SEQUENCE_READY`. Proves the software interface is fully functional.
 
 **Do not touch**: VLM prompt, FM adapter, model configuration.
 
@@ -470,16 +454,15 @@ PYTHONPATH=. python -m mujoco_scenes.functional_tamp_pipeline.run --domain works
 ### P3-J: Live 9B Causal Diagnosis
 **Status**: `[ ] NOT STARTED`
 
-**Objective**: Run Qwen3.5-9B once on K1/L1/W1 and perform causal layer diagnosis.
+**Objective**: Run Qwen3.5-9B once on K1/L1/W1 and perform causal layer diagnosis using the decision tree (§5).
 
 **Scope**: Live VLM call + raw response analysis. No code changes.
 
 **Protocol**:
 1. Save raw VLM response BEFORE canonicalization.
-2. For each expected semantic concept, classify: CORRECT / MISSING / EXTRA / WRONG_CARDINALITY / WRONG_BINDING_POLICY / WRONG_RELATION / WRONG_ENTITY_KIND
-3. Attempt canonicalization. If it fails, identify the canonicalizer gap.
-4. If canonicalization succeeds, run downstream. If downstream fails, identify the layer.
-5. Record diagnosis per §5 decision tree.
+2. Audit raw concepts: CORRECT / MISSING / EXTRA / WRONG_CARDINALITY / WRONG_BINDING_POLICY / WRONG_RELATION / WRONG_ENTITY_KIND.
+3. Attempt canonicalization and record any gaps.
+4. If canonicalization succeeds, run downstream and identify failure layer (if any).
 
 **Artifacts**: Save per-case `{raw_response.json, concept_audit.json, canonical_gf.json, layer_diagnosis.txt}`.
 
@@ -492,18 +475,17 @@ PYTHONPATH=. python -m mujoco_scenes.functional_tamp_pipeline.run --domain works
 
 **Objective**: If P3-J reveals model capacity limitations, compare raw specification quality between Qwen3.5-9B and Qwen3.5-27B on K1/L1/W1.
 
-**Metrics** (evaluated at RAW specification level, not terminal outcome):
+**Metrics** (evaluated at RAW specification level):
 - Schema-valid rate
 - Role identity recall / precision
 - Role cardinality accuracy
 - Binding policy accuracy
 - Relation recall / precision
 - Operation group recall
-- Context-role correctness
 - Region proposal correctness
 - Malformed specification rate
 
-**Decision**: If 9B raw is correct but canonicalizer breaks → fix canonicalizer (not a model problem). If 9B raw is fundamentally wrong and 27B fixes it → adopt 27B.
+**Decision Rule**: If 9B raw is correct but canonicalizer breaks → fix canonicalizer (software issue). If 9B raw is fundamentally missing required concepts and 27B provides them → adopt 27B.
 
 **Acceptance**: Documented comparison with decision on model selection.
 
@@ -512,15 +494,11 @@ PYTHONPATH=. python -m mujoco_scenes.functional_tamp_pipeline.run --domain works
 ### P3-L: Full 32-Variant Deterministic Fixture Matrix
 **Status**: `[ ] NOT STARTED`
 
-**Objective**: Validate all 32 variants using reviewed deterministic fixtures (not live VLM).
-
-**Scope**: Create fixtures for all 32 variants or verify GT-generated G_F works for all.
+**Objective**: Validate all 32 variants using reviewed deterministic fixtures.
 
 **Gate**:
 - 20/20 feasible → `ACTION_SEQUENCE_READY`
 - 12/12 infeasible → `INFEASIBLE` with correct causal deficiency
-
-This tests the SOFTWARE INTERFACE independently of live FM variability.
 
 **Acceptance**: 32/32 correct terminal outcomes from deterministic fixtures.
 
@@ -529,21 +507,19 @@ This tests the SOFTWARE INTERFACE independently of live FM variability.
 ### P3-M: Clean Live VLM Benchmark
 **Status**: `[ ] NOT STARTED`
 
-**Objective**: Run the complete 32-variant matrix against the selected live model on a single frozen commit.
+**Objective**: Run the complete 32-variant matrix against the selected live model on a single frozen commit with hardened provenance and accounting.
 
 **Protocol**:
-1. Single frozen git commit; clean worktree (`git status` shows no changes).
+1. Single frozen git commit; clean worktree.
 2. Exact model identifier, prompt version, canonicalizer version recorded.
-3. No mixing artifacts from earlier commits.
-4. No stale-case resume unless fingerprint proves exact configuration match.
-5. Raw VLM response retained even when canonicalization fails.
-6. Full artifact chain retained per case: raw → validated → canonical G_F → G_O → φ* → plan.
-7. Per-case provenance fingerprint: `{git_commit, prompt_hash, model, canonicalizer_version}`.
-8. Total actual runtime recorded (not wrapper overhead).
+3. Exact configuration fingerprint checked for every case.
+4. Raw VLM response retained for every case (including `VLM_SPEC_FAILED`).
+5. Full artifact chain retained per case.
+6. Distinct accounting for invocation wall time vs summed case runtime.
 
 **Artifacts**: `tmp/p3m_clean_benchmark_YYYYMMDD_HHMMSS/` with `summary.json`, `results.csv`, per-case directories.
 
-**Acceptance**: Results are scientifically reportable. Each failure has a layer diagnosis.
+**Acceptance**: Results are scientifically reportable with layer diagnoses for all failures.
 
 ---
 
@@ -598,7 +574,8 @@ Per pipeline run, retain:
 | `plan_grounding_audit.json` | Audit that plan respects φ* | YES (if plan exists) |
 | `canonicalization_trace.json` | Mapping from raw to canonical concepts | YES (VLM mode) |
 | `layer_diagnosis.txt` | Which layer caused failure | YES (if failed) |
-| `provenance.json` | git commit, model, prompt hash, config hashes | YES |
+| `prompt_leakage_audit.json` | Deterministic prompt/payload leak verification | YES (VLM mode) |
+| `case_manifest.json` | Includes immutable provenance fingerprint | YES |
 
 ---
 
@@ -623,7 +600,9 @@ Per pipeline run, retain:
 [ ] Architecture: no hidden FM call after specification
 [ ] Architecture: no GT oracle in VLM runtime path
 [ ] Architecture: no semantic role reassignment in compiler
-[ ] Software: VLMSpecProvider.provide() correctly validates and wraps errors
+[x] Software: VLMSpecProvider.provide() correctly validates and wraps errors
+[x] Infrastructure: Benchmark artifacts have explicit reproducibility fingerprints and stale resume protection
+[x] Infrastructure: Prompt leakage audit is deterministically verified over payloads
 [ ] Software: all ideal raw fixtures compile to correct G_F
 [ ] Software: 20/20 feasible fixtures → ACTION_SEQUENCE_READY
 [ ] Software: 12/12 infeasible fixtures → correct causal INFEASIBLE
@@ -641,22 +620,30 @@ Per pipeline run, retain:
 
 ## 11. CURRENT NEXT PASS
 
-### **CURRENT NEXT PASS: P3-A**
+### **CURRENT NEXT PASS: P3-B**
 
-**Exact Objective**: Fix the broken `VLMSpecProvider.provide()` method and establish clean benchmark infrastructure.
+**Exact Objective**: Verify that GT G_F → actual G_O → ground_graph → compiler → A* works for K1, L1, W1 individually with full artifact preservation.
 
-**Prerequisites**: None — this is the first pass.
+**Prerequisites**: P3-A is complete.
 
 **What to do**:
-1. Open `mujoco_scenes/functional_tamp_pipeline/vlm_spec_provider.py`
-2. Fix lines 34-37: the `provide()` method's try block is truncated — the `_workshop` method definition starts inside it. Complete the try/except/return logic matching the `GTSpecProvider.provide()` pattern (which correctly calls `validate()` + `validate_runtime_gf()` and returns the graph).
-3. Verify `_workshop` has `@staticmethod` decorator (currently missing at line 37).
-4. Run: `pytest mujoco_scenes/functional_tamp_pipeline/tests/ -v`
-5. Run: `python -c "from mujoco_scenes.functional_tamp_pipeline.vlm_spec_provider import VLMSpecProvider; print('import OK')"` to verify no syntax errors.
+1. Run GT mode on K1 (kitchen):
+   ```bash
+   PYTHONPATH=. python -m mujoco_scenes.functional_tamp_pipeline.run --domain kitchen --variant K1 --mode gt
+   ```
+2. Run GT mode on L1 (living room):
+   ```bash
+   PYTHONPATH=. python -m mujoco_scenes.functional_tamp_pipeline.run --domain living_room --variant L1 --mode gt
+   ```
+3. Run GT mode on W1 (workshop):
+   ```bash
+   PYTHONPATH=. python -m mujoco_scenes.functional_tamp_pipeline.run --domain workshop --variant W1 --mode gt
+   ```
+4. Save and inspect all resulting artifacts (G_F, G_O, φ*, action plan, grounding audit) to verify downstream soundness before introducing any VLM inputs.
 
 **Acceptance Criteria**:
-- `VLMSpecProvider.provide()` has a complete method body that calls `validate()`, calls `validate_runtime_gf()`, wraps validation errors in `MalformedVLMSpecificationError`, and returns the validated graph.
-- All 223+ existing tests pass.
-- Import succeeds without syntax error.
+- All three cases yield `ACTION_SEQUENCE_READY`.
+- Plan grounding audit passes with zero violations for all three domains.
+- Artifacts are saved and inspected.
 
-**Expected next pass**: P3-B
+**Expected next pass**: P3-C

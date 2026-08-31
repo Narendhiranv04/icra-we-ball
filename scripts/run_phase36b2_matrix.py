@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Pass 3.6B.2: Full 32-Variant VLM Phase-3 Evaluation Orchestrator."""
+"""Pass 3.6B.2: Full 32-Variant VLM Phase-3 Evaluation Orchestrator (Hardened Provenance & Accounting)."""
 
 from __future__ import annotations
 
+import argparse
 import csv
 from datetime import datetime, timezone
 import hashlib
@@ -17,11 +18,16 @@ import time
 from typing import Any
 
 from mujoco_scenes.final_paper_variant_labels import resolve_variant_name
+from mujoco_scenes.functional_tamp_pipeline.audit import (
+    audit_prompt_leakage,
+    compute_provenance_fingerprint,
+)
 from mujoco_scenes.functional_tamp_pipeline.domains.kitchen import TASK as KITCHEN_TASK
 from mujoco_scenes.functional_tamp_pipeline.domains.living_room import TASK as LIVING_ROOM_TASK
 from mujoco_scenes.workshop_phase1.requirements import (
     CANONICAL_WORKSHOP_INSTRUCTION,
 )
+from mujoco_scenes.workshop_phase1.fm_adapter import SYSTEM_PROMPT
 from mujoco_scenes.functional_tamp_pipeline.gf_reference_evaluator import (
     evaluate_gf_against_reference,
 )
@@ -93,14 +99,26 @@ def ensure_tunnel_alive() -> bool:
     return False
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Run full 32-variant VLM evaluation matrix.")
+    parser.add_argument("bundle_dir", nargs="?", default=None, help="Target output bundle directory")
+    parser.add_argument("--bundle-dir", dest="bundle_dir_opt", default=None, help="Target output bundle directory")
+    parser.add_argument("--no-resume", "--fresh", dest="no_resume", action="store_true", default=False,
+                        help="Refuse stale case reuse and execute all cases fresh")
+    parser.add_argument("--domain", dest="filter_domain", default=None, help="Filter to specific domain")
+    parser.add_argument("--variant", dest="filter_variant", default=None, help="Filter to specific variant (e.g. K1)")
+    return parser.parse_args()
+
+
 def main() -> None:
+    args = parse_args()
     start_ts = datetime.now(timezone.utc)
     target_env = os.environ.get("TARGET_BUNDLE_DIR")
-    if target_env:
-        bundle_dir = Path(target_env)
-        ts_str = bundle_dir.name.replace("phase36b2_full_vlm_matrix_", "")
-    elif len(sys.argv) > 1:
-        bundle_dir = Path(sys.argv[1])
+    target_path = args.bundle_dir_opt or args.bundle_dir or target_env
+    no_resume = bool(args.no_resume or os.environ.get("TAMP_NO_RESUME", "").lower() in {"1", "true", "yes"})
+
+    if target_path:
+        bundle_dir = Path(target_path)
         ts_str = bundle_dir.name.replace("phase36b2_full_vlm_matrix_", "")
     else:
         ts_str = start_ts.strftime("%Y%m%d_%H%M%S")
@@ -109,6 +127,7 @@ def main() -> None:
 
     print(f"=== PASS 3.6B.2 FULL 32-VARIANT VLM MATRIX EVALUATION ===")
     print(f"Target directory: {bundle_dir}")
+    print(f"Resume allowed: {not no_resume}")
     print(f"Started at UTC: {start_ts.isoformat()}\n")
 
     # Set up environment variables
@@ -126,16 +145,18 @@ def main() -> None:
     (env_dir / "python_version.txt").write_text(f"{sys.version}\n")
     (env_dir / "evaluation_protocol.txt").write_text(
         "PASS 3.6B.2: Full 32-variant VLM evaluation on Qwen 3.5 9B with lossless executable IR, "
-        "provider replay, random order search replays (seeds 0-9 for >=2 candidate regions), "
+        "provider replay (deterministic downstream solver check), random order search replays (seeds 0-9 for >=2 candidate regions), "
         "and offline GT reference evaluation.\n"
     )
 
     try:
         git_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True, cwd=str(ROOT)).strip()
         git_status = subprocess.check_output(["git", "status", "--porcelain"], text=True, cwd=str(ROOT)).strip()
-        (env_dir / "git_state.txt").write_text(f"commit: {git_commit}\ndirty: {bool(git_status)}\nstatus:\n{git_status}\n")
+        git_dirty = bool(git_status)
+        (env_dir / "git_state.txt").write_text(f"commit: {git_commit}\ndirty: {git_dirty}\nstatus:\n{git_status}\n")
     except Exception as e:
         git_commit = "unknown"
+        git_dirty = None
         (env_dir / "git_state.txt").write_text(f"error: {e}\n")
 
     # Test curl endpoint
@@ -155,7 +176,11 @@ def main() -> None:
     # 2. Case Registry
     case_registry = {}
     for domain, variants in DOMAINS.items():
+        if args.filter_domain and domain != args.filter_domain:
+            continue
         for v in variants:
+            if args.filter_variant and v != args.filter_variant:
+                continue
             case_id = f"{domain}_{v}"
             internal = resolve_variant_name(domain, v)
             case_registry[case_id] = {
@@ -173,6 +198,10 @@ def main() -> None:
     case_summaries = {}
     gt_spec_provider = GTSpecProvider()
 
+    newly_executed_count = 0
+    reused_count = 0
+    newly_executed_runtime_seconds = 0.0
+
     for case_idx, (case_id, cinfo) in enumerate(case_registry.items(), start=1):
         domain = cinfo["domain"]
         variant = cinfo["paper_label"]
@@ -180,7 +209,17 @@ def main() -> None:
         task_instruction = cinfo["exact_task_instruction"]
         expected_status = EXPECTED_STATUSES[domain][variant]
 
-        print(f"[{case_idx}/32] Executing {case_id} ({internal_variant})...", flush=True)
+        current_fingerprint = compute_provenance_fingerprint(
+            domain=domain,
+            variant=variant,
+            model=os.environ.get("TAMP_FM_MODEL", "qwen35-9b"),
+            base_url=os.environ.get("TAMP_FM_BASE_URL", "http://127.0.0.1:18000/v1"),
+            task_instruction=task_instruction,
+            search_order="auto",
+            repo_root=ROOT,
+        )
+
+        print(f"[{case_idx}/{len(case_registry)}] Evaluating {case_id} ({internal_variant})...", flush=True)
         ensure_tunnel_alive()
         case_dir = bundle_dir / case_id
         case_dir.mkdir(parents=True, exist_ok=True)
@@ -195,121 +234,141 @@ def main() -> None:
         for d in (inputs_dir, live_dir, provider_replay_dir, random_replays_dir, ref_dir, val_dir):
             d.mkdir(parents=True, exist_ok=True)
 
-        # Check if case is already fully completed
-        if (case_dir / "case_manifest.json").is_file() and (val_dir / "case_replay_validation.json").is_file():
-            print(f"  -> Case {case_id} already completed, loading existing artifacts...", flush=True)
+        # Check if case is already completed under the identical configuration fingerprint
+        can_resume = (
+            not no_resume
+            and (case_dir / "case_manifest.json").is_file()
+            and (val_dir / "case_replay_validation.json").is_file()
+        )
+        if can_resume:
             case_manifest = json.loads((case_dir / "case_manifest.json").read_text(encoding="utf-8"))
-            case_summaries[case_id] = case_manifest
-            ref_eval_dict = {}
-            if (ref_dir / "gf_reference_evaluation.json").is_file():
-                ref_eval_dict = json.loads((ref_dir / "gf_reference_evaluation.json").read_text(encoding="utf-8"))
-            
-            # Live manifest and result
-            live_manifest = {}
-            live_result_data = {}
-            live_m_vlm = live_dir / "runtime_output" / domain / variant / "vlm" / "run_manifest.json"
-            live_r_vlm = live_dir / "runtime_output" / domain / variant / "vlm" / "result.json"
-            if live_m_vlm.is_file():
-                live_manifest = json.loads(live_m_vlm.read_text(encoding="utf-8"))
-            if live_r_vlm.is_file():
-                live_result_data = json.loads(live_r_vlm.read_text(encoding="utf-8"))
+            saved_fp = case_manifest.get("provenance_fingerprint", {})
+            saved_fp_sha = saved_fp.get("fingerprint_sha256")
+            curr_fp_sha = current_fingerprint.get("fingerprint_sha256")
 
-            inspected_live = live_result_data.get("inspected_regions", [])
-            plan_live = live_result_data.get("plan", [])
+            if saved_fp_sha and saved_fp_sha == curr_fp_sha:
+                print(f"  -> Case {case_id} matches configuration fingerprint ({curr_fp_sha[:8]}), reusing existing artifacts...", flush=True)
+                reused_count += 1
+                case_summaries[case_id] = case_manifest
+                ref_eval_dict = {}
+                if (ref_dir / "gf_reference_evaluation.json").is_file():
+                    ref_eval_dict = json.loads((ref_dir / "gf_reference_evaluation.json").read_text(encoding="utf-8"))
 
-            all_trials_records.append({
-                "case_id": case_id,
-                "domain": domain,
-                "variant": variant,
-                "internal_variant": internal_variant,
-                "trial_type": "live",
-                "search_order": "auto",
-                "seed": "",
-                "expected_status": expected_status,
-                "actual_status": case_manifest.get("live_terminal_status", ""),
-                "status_match": case_manifest.get("live_status_matches_expected", False),
-                "inspected_count": len(inspected_live),
-                "inspected_regions": ";".join(inspected_live),
-                "plan_length": len(plan_live) if plan_live else 0,
-                "runtime_sec": round(case_manifest.get("runtime_seconds", 0.0), 4),
-                "ref_complete": ref_eval_dict.get("reference_complete", False),
-                "exact_structural_match": ref_eval_dict.get("exact_structural_match", False),
-                "role_precision": ref_eval_dict.get("role_identity_precision", 0.0),
-                "role_recall": ref_eval_dict.get("role_identity_recall", 0.0),
-                "relation_precision": ref_eval_dict.get("relation_precision", 0.0),
-                "relation_recall": ref_eval_dict.get("relation_recall", 0.0),
-                "spec_sha256": live_manifest.get("specification_sha256", ""),
-            })
+                # Live manifest and result
+                live_manifest = {}
+                live_result_data = {}
+                live_m_vlm = live_dir / "runtime_output" / domain / variant / "vlm" / "run_manifest.json"
+                live_r_vlm = live_dir / "runtime_output" / domain / variant / "vlm" / "result.json"
+                if live_m_vlm.is_file():
+                    live_manifest = json.loads(live_m_vlm.read_text(encoding="utf-8"))
+                if live_r_vlm.is_file():
+                    live_result_data = json.loads(live_r_vlm.read_text(encoding="utf-8"))
 
-            # Provider replay
-            prov_m_vlm = provider_replay_dir / "runtime_output" / domain / variant / "vlm" / "run_manifest.json"
-            prov_r_vlm = provider_replay_dir / "runtime_output" / domain / variant / "vlm" / "result.json"
-            if prov_m_vlm.is_file():
-                prov_manifest = json.loads(prov_m_vlm.read_text(encoding="utf-8"))
-                prov_result_data = json.loads(prov_r_vlm.read_text(encoding="utf-8")) if prov_r_vlm.is_file() else {}
-                inspected_prov = prov_result_data.get("inspected_regions", [])
-                plan_prov = prov_result_data.get("plan", [])
+                inspected_live = live_result_data.get("inspected_regions", [])
+                plan_live = live_result_data.get("plan", [])
+
                 all_trials_records.append({
                     "case_id": case_id,
                     "domain": domain,
                     "variant": variant,
                     "internal_variant": internal_variant,
-                    "trial_type": "provider_replay",
-                    "search_order": "provider",
+                    "trial_type": "live",
+                    "search_order": "auto",
                     "seed": "",
                     "expected_status": expected_status,
-                    "actual_status": case_manifest.get("provider_replay_status", ""),
-                    "status_match": (case_manifest.get("provider_replay_status") == expected_status),
-                    "inspected_count": len(inspected_prov),
-                    "inspected_regions": ";".join(inspected_prov),
-                    "plan_length": len(plan_prov) if plan_prov else 0,
-                    "runtime_sec": round(prov_manifest.get("pipeline_runtime_seconds", 0.0), 4),
+                    "actual_status": case_manifest.get("live_terminal_status", ""),
+                    "status_match": case_manifest.get("live_status_matches_expected", False),
+                    "inspected_count": len(inspected_live),
+                    "inspected_regions": ";".join(inspected_live),
+                    "plan_length": len(plan_live) if plan_live else 0,
+                    "runtime_sec": round(case_manifest.get("runtime_seconds", 0.0), 4),
                     "ref_complete": ref_eval_dict.get("reference_complete", False),
                     "exact_structural_match": ref_eval_dict.get("exact_structural_match", False),
                     "role_precision": ref_eval_dict.get("role_identity_precision", 0.0),
                     "role_recall": ref_eval_dict.get("role_identity_recall", 0.0),
                     "relation_precision": ref_eval_dict.get("relation_precision", 0.0),
                     "relation_recall": ref_eval_dict.get("relation_recall", 0.0),
-                    "spec_sha256": prov_manifest.get("specification_sha256", ""),
+                    "spec_sha256": live_manifest.get("specification_sha256", ""),
                 })
 
-            # Random replays
-            for seed_p in sorted(random_replays_dir.glob("seed_*")):
-                seed_num = int(seed_p.name.replace("seed_", ""))
-                seed_m_path = seed_p / "runtime_output" / domain / variant / "vlm" / "run_manifest.json"
-                seed_r_path = seed_p / "runtime_output" / domain / variant / "vlm" / "result.json"
-                if seed_m_path.is_file():
-                    sm = json.loads(seed_m_path.read_text(encoding="utf-8"))
-                    sr = json.loads(seed_r_path.read_text(encoding="utf-8")) if seed_r_path.is_file() else {}
-                    inspected_rand = sr.get("inspected_regions", [])
+                # Provider replay
+                prov_m_vlm = provider_replay_dir / "runtime_output" / domain / variant / "vlm" / "run_manifest.json"
+                prov_r_vlm = provider_replay_dir / "runtime_output" / domain / variant / "vlm" / "result.json"
+                if prov_m_vlm.is_file():
+                    prov_manifest = json.loads(prov_m_vlm.read_text(encoding="utf-8"))
+                    prov_result_data = json.loads(prov_r_vlm.read_text(encoding="utf-8")) if prov_r_vlm.is_file() else {}
+                    inspected_prov = prov_result_data.get("inspected_regions", [])
+                    plan_prov = prov_result_data.get("plan", [])
                     all_trials_records.append({
                         "case_id": case_id,
                         "domain": domain,
                         "variant": variant,
                         "internal_variant": internal_variant,
-                        "trial_type": "random_replay",
-                        "search_order": "random",
-                        "seed": str(seed_num),
+                        "trial_type": "provider_replay",
+                        "search_order": "provider",
+                        "seed": "",
                         "expected_status": expected_status,
-                        "actual_status": sm.get("terminal_status", ""),
-                        "status_match": (sm.get("terminal_status") == expected_status),
-                        "inspected_count": len(inspected_rand),
-                        "inspected_regions": ";".join(inspected_rand),
-                        "plan_length": 0,
-                        "runtime_sec": round(sm.get("pipeline_runtime_seconds", 0.0), 4),
+                        "actual_status": case_manifest.get("provider_replay_status", ""),
+                        "status_match": (case_manifest.get("provider_replay_status") == expected_status),
+                        "inspected_count": len(inspected_prov),
+                        "inspected_regions": ";".join(inspected_prov),
+                        "plan_length": len(plan_prov) if plan_prov else 0,
+                        "runtime_sec": round(prov_manifest.get("pipeline_runtime_seconds", 0.0), 4),
                         "ref_complete": ref_eval_dict.get("reference_complete", False),
                         "exact_structural_match": ref_eval_dict.get("exact_structural_match", False),
                         "role_precision": ref_eval_dict.get("role_identity_precision", 0.0),
                         "role_recall": ref_eval_dict.get("role_identity_recall", 0.0),
                         "relation_precision": ref_eval_dict.get("relation_precision", 0.0),
                         "relation_recall": ref_eval_dict.get("relation_recall", 0.0),
-                        "spec_sha256": sm.get("specification_sha256", ""),
+                        "spec_sha256": prov_manifest.get("specification_sha256", ""),
                     })
-            continue
+
+                # Random replays
+                for seed_p in sorted(random_replays_dir.glob("seed_*")):
+                    seed_num = int(seed_p.name.replace("seed_", ""))
+                    seed_m_path = seed_p / "runtime_output" / domain / variant / "vlm" / "run_manifest.json"
+                    seed_r_path = seed_p / "runtime_output" / domain / variant / "vlm" / "result.json"
+                    if seed_m_path.is_file():
+                        sm = json.loads(seed_m_path.read_text(encoding="utf-8"))
+                        sr = json.loads(seed_r_path.read_text(encoding="utf-8")) if seed_r_path.is_file() else {}
+                        inspected_rand = sr.get("inspected_regions", [])
+                        all_trials_records.append({
+                            "case_id": case_id,
+                            "domain": domain,
+                            "variant": variant,
+                            "internal_variant": internal_variant,
+                            "trial_type": "random_replay",
+                            "search_order": "random",
+                            "seed": str(seed_num),
+                            "expected_status": expected_status,
+                            "actual_status": sm.get("terminal_status", ""),
+                            "status_match": (sm.get("terminal_status") == expected_status),
+                            "inspected_count": len(inspected_rand),
+                            "inspected_regions": ";".join(inspected_rand),
+                            "plan_length": 0,
+                            "runtime_sec": round(sm.get("pipeline_runtime_seconds", 0.0), 4),
+                            "ref_complete": ref_eval_dict.get("reference_complete", False),
+                            "exact_structural_match": ref_eval_dict.get("exact_structural_match", False),
+                            "role_precision": ref_eval_dict.get("role_identity_precision", 0.0),
+                            "role_recall": ref_eval_dict.get("role_identity_recall", 0.0),
+                            "relation_precision": ref_eval_dict.get("relation_precision", 0.0),
+                            "relation_recall": ref_eval_dict.get("relation_recall", 0.0),
+                            "spec_sha256": sm.get("specification_sha256", ""),
+                        })
+                continue
+            else:
+                print(f"  -> Case {case_id} fingerprint mismatch (saved: {str(saved_fp_sha)[:8]}, current: {curr_fp_sha[:8]}); executing fresh...", flush=True)
 
         # --- A. LIVE VLM RUN ---
+        newly_executed_count += 1
         live_out_root = live_dir / "runtime_output"
         live_log_path = live_dir / "combined.log"
+        fm_diag_dir = live_dir / "fm_diagnostics"
+        fm_diag_dir.mkdir(parents=True, exist_ok=True)
+
+        # Ensure raw VLM responses are retained even if validation or canonicalization fails
+        os.environ["TAMP_FM_DIAGNOSTICS_DIR"] = str(fm_diag_dir)
+
         live_start = time.perf_counter()
 
         live_result = run_pipeline(
@@ -320,6 +379,8 @@ def main() -> None:
             output_root=live_out_root,
         )
         live_elapsed = time.perf_counter() - live_start
+        newly_executed_runtime_seconds += live_elapsed
+
         (live_dir / "exit_code.txt").write_text("0\n")
         (live_dir / "command.txt").write_text(
             f"run_pipeline(domain={domain!r}, variant={variant!r}, mode=vlm, dry_run=True)\n"
@@ -329,13 +390,15 @@ def main() -> None:
         live_manifest_path = live_run_dir / "run_manifest.json"
         live_manifest = json.loads(live_manifest_path.read_text(encoding="utf-8")) if live_manifest_path.exists() else {}
 
-        # Save FM diagnostics
-        fm_diag_dir = live_dir / "fm_diagnostics"
-        fm_diag_dir.mkdir(parents=True, exist_ok=True)
-        # Search for any fm diagnostics produced in live_run_dir or subdirs
+        # Copy any additional FM diagnostic files created in live_run_dir
         diag_files = list(live_run_dir.glob("**/fm_call_*.json")) or list(live_run_dir.glob("fm_call_*.json"))
-        if not diag_files:
-            # Check vlm_spec_provider / fm_adapter cached responses
+        for df in diag_files:
+            if df.parent != fm_diag_dir:
+                shutil.copy(df, fm_diag_dir / df.name)
+
+        # If no fm diagnostic was written yet, fallback to functional_specification if exists
+        all_fm_diag = list(fm_diag_dir.glob("fm_call_*.json"))
+        if not all_fm_diag:
             spec_path = live_run_dir / "functional_specification.json"
             if spec_path.exists():
                 write_json(fm_diag_dir / "fm_call_001.json", {
@@ -343,23 +406,33 @@ def main() -> None:
                     "content": json.loads(spec_path.read_text()),
                     "model": os.environ.get("TAMP_FM_MODEL", "qwen35-9b"),
                 })
-        else:
-            for df in diag_files:
-                shutil.copy(df, fm_diag_dir / df.name)
+                all_fm_diag = list(fm_diag_dir.glob("fm_call_*.json"))
 
         # Copy captured inputs to inputs_dir
         captured_inputs = list(live_run_dir.glob("vlm_inputs/*.png")) or list(live_run_dir.glob("*.png"))
         for img_p in captured_inputs:
             shutil.copy(img_p, inputs_dir / img_p.name)
 
-        # Audit prompt leakage
+        # Deterministic Prompt Leakage Audit over actual payloads
+        if all_fm_diag:
+            diag_payloads = []
+            for df in sorted(all_fm_diag):
+                try:
+                    diag_payloads.append(json.loads(df.read_text(encoding="utf-8")))
+                except Exception:
+                    pass
+            prompt_leak_report = audit_prompt_leakage(diag_payloads, domain=domain)
+        else:
+            prompt_leak_report = audit_prompt_leakage(
+                {"system_prompt": SYSTEM_PROMPT, "task_instruction": task_instruction},
+                domain=domain,
+            )
+
         prompt_leakage_audit = {
             "case_id": case_id,
             "domain": domain,
             "variant": variant,
-            "zero_leakage": True,
-            "gt_imports_found": False,
-            "oracle_labels_in_prompt": False,
+            **prompt_leak_report,
         }
         write_json(live_dir / "prompt_leakage_audit.json", prompt_leakage_audit)
 
@@ -370,7 +443,7 @@ def main() -> None:
         candidate_regions = tuple(live_gf.candidate_regions) if live_gf else ()
         region_ranking = tuple(live_gf.region_ranking) if live_gf else ()
 
-        # --- B. PROVIDER REPLAY ---
+        # --- B. PROVIDER REPLAY (Deterministic Downstream Solver Check) ---
         prov_replay_out_root = provider_replay_dir / "runtime_output"
         prov_replay_result = None
         if live_spec_file.exists():
@@ -488,6 +561,7 @@ def main() -> None:
             "domain": domain,
             "variant": variant,
             "internal_variant": internal_variant,
+            "provenance_fingerprint": current_fingerprint,
             "expected_terminal_status": expected_status,
             "live_terminal_status": live_result.status,
             "live_status_matches_expected": (live_result.status == expected_status),
@@ -592,6 +666,7 @@ def main() -> None:
 
     # 4. Top-level Summaries
     total_time = (datetime.now(timezone.utc) - start_ts).total_seconds()
+    summed_case_time = sum(c.get("runtime_seconds", 0.0) for c in case_summaries.values())
 
     # Write results.csv
     csv_fields = [
@@ -625,27 +700,35 @@ def main() -> None:
 
     summary = {
         "benchmark": "PASS_3_6B_2_VLM_FULL_EVALUATION",
+        "benchmark_provenance_version": "phase3_6b2_hardened_v1",
         "model": os.environ.get("TAMP_FM_MODEL", "qwen35-9b"),
         "git_commit": git_commit,
+        "git_dirty": git_dirty,
         "started_at_utc": start_ts.isoformat(),
         "finished_at_utc": datetime.now(timezone.utc).isoformat(),
-        "total_runtime_seconds": round(total_time, 2),
+        "invocation_wall_time_seconds": round(total_time, 2),
+        "summed_live_case_runtime_seconds": round(summed_case_time, 2),
+        "summed_newly_executed_runtime_seconds": round(newly_executed_runtime_seconds, 2),
         "total_cases": len(case_registry),
+        "number_of_cases_executed_this_invocation": newly_executed_count,
+        "number_of_cases_reused": reused_count,
+        "total_runtime_seconds": round(total_time, 2),  # Backward compatibility alias
         "total_trials_executed": len(all_trials_records),
         "live_status_distribution": status_counts,
         "live_matches_expected_terminal_status_count": expected_matches,
-        "live_matches_expected_terminal_status_rate": round(expected_matches / len(live_records), 4),
+        "live_matches_expected_terminal_status_rate": round(expected_matches / len(live_records), 4) if live_records else 0.0,
         "reference_evaluator": {
             "reference_complete_count": ref_completes,
-            "reference_complete_rate": round(ref_completes / len(live_records), 4),
+            "reference_complete_rate": round(ref_completes / len(live_records), 4) if live_records else 0.0,
             "exact_structural_match_count": structural_matches,
-            "exact_structural_match_rate": round(structural_matches / len(live_records), 4),
+            "exact_structural_match_rate": round(structural_matches / len(live_records), 4) if live_records else 0.0,
             "mean_role_identity_precision": round(mean_role_p, 4),
             "mean_role_identity_recall": round(mean_role_r, 4),
             "mean_relation_precision": round(mean_rel_p, 4),
             "mean_relation_recall": round(mean_rel_r, 4),
         },
         "replay_determinism": {
+            "description": "Provider Replay (Deterministic Downstream Replay of Saved Functional Specification; does not measure stochastic VLM reproducibility)",
             "provider_replay_trials": len(replay_records),
             "provider_replay_exact_match_count": replay_pass,
             "provider_replay_exact_match_rate": round(replay_pass / len(replay_records), 4) if replay_records else 1.0,
@@ -660,18 +743,22 @@ def main() -> None:
     readme_content = f"""# Pass 3.6B.2: Full 32-Variant Live VLM Evaluation Report
 
 - **Model**: `{model_name}`
-- **Git Commit**: `{git_commit}`
-- **Total Cases**: 32 (Kitchen K1-K12, Living Room L1-L10, Workshop W1-W10)
+- **Git Commit**: `{git_commit}` (dirty: `{git_dirty}`)
+- **Total Cases**: {len(case_registry)} (Kitchen K1-K12, Living Room L1-L10, Workshop W1-W10)
+- **Newly Executed Cases**: {newly_executed_count}
+- **Reused Cases (Matching Fingerprint)**: {reused_count}
+- **Invocation Wall Time**: {total_time:.2f} seconds
+- **Summed Live Case Runtime**: {summed_case_time:.2f} seconds
+- **Summed Newly Executed Runtime**: {newly_executed_runtime_seconds:.2f} seconds
 - **Total Trials Executed**: {len(all_trials_records)}
-- **Runtime**: {total_time:.2f} seconds
 
 ## Summary Metrics
-- **Live Terminal Status Match with Reference Expected**: {expected_matches}/32 ({expected_matches/32*100:.1f}%)
-- **Reference Complete Rate**: {ref_completes}/32 ({ref_completes/32*100:.1f}%)
-- **Exact Structural Match Rate**: {structural_matches}/32 ({structural_matches/32*100:.1f}%)
+- **Live Terminal Status Match with Reference Expected**: {expected_matches}/{len(live_records)} ({expected_matches/len(live_records)*100:.1f}%)
+- **Reference Complete Rate**: {ref_completes}/{len(live_records)} ({ref_completes/len(live_records)*100:.1f}%)
+- **Exact Structural Match Rate**: {structural_matches}/{len(live_records)} ({structural_matches/len(live_records)*100:.1f}%)
 - **Mean Role Precision / Recall**: {mean_role_p:.3f} / {mean_role_r:.3f}
 - **Mean Relation Precision / Recall**: {mean_rel_p:.3f} / {mean_rel_r:.3f}
-- **Provider Replay Determinism**: {replay_pass}/{len(replay_records)} ({replay_pct_str})
+- **Provider Replay Determinism (Downstream Replay of Saved G_F)**: {replay_pass}/{len(replay_records)} ({replay_pct_str})
 """
     (bundle_dir / "README.md").write_text(readme_content, encoding="utf-8")
 
@@ -686,9 +773,9 @@ def main() -> None:
 
     print(f"\n=== EVALUATION COMPLETE ===")
     print(f"Artifacts preserved at: {bundle_dir}")
-    print(f"Total cases: 32 | Total trials: {len(all_trials_records)}")
+    print(f"Total cases: {len(case_registry)} (executed: {newly_executed_count}, reused: {reused_count}) | Total trials: {len(all_trials_records)}")
     print(f"Live terminal status distribution: {status_counts}")
-    print(f"Reference complete: {ref_completes}/32 | Mean role recall: {mean_role_r:.3f}\n")
+    print(f"Reference complete: {ref_completes}/{len(live_records)} | Mean role recall: {mean_role_r:.3f}\n")
 
 
 if __name__ == "__main__":
