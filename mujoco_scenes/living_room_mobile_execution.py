@@ -371,7 +371,11 @@ def allocate_observed_placements(
             along_length = packing["arrangement"] == "ALONG_LENGTH"
             sizes = [float(item[0] if along_length else item[1]) for item in oriented]
             available_margin = float(packing.get("length_margin_m" if along_length else "width_margin_m", 0.0))
-            extra_spread = max(0.0, min(available_margin * 0.40, 0.018))
+            # Preserve additional clearance for already-placed payloads that
+            # undergo small contact-driven drift during later mobile-arm
+            # motions.  This remains inside the measured Phase-1 support and
+            # consumes only its already-certified packing margin.
+            extra_spread = max(0.0, min(available_margin * 0.40, 0.035))
             offsets = np.array((-(sizes[1] + clearance) / 2 - extra_spread, (sizes[0] + clearance) / 2 + extra_spread))
             placement_axis = axis if along_length else orthogonal
         orientations = list(packing["payload_orientations_degrees"])
@@ -884,10 +888,44 @@ def _configure_execution_base_limits(scene: L2LivingRoomRegionScene) -> None:
 
 
 def load_phase3_inputs(phase1_dir: Path, phase2_dir: Path) -> tuple[dict[str, Any], ...]:
+    assignments = _read(phase1_dir / "region_assignments.json")
+    compatibility_path = phase1_dir / "compatibility_matrix.json"
+    if compatibility_path.is_file():
+        compatibility = _read(compatibility_path)
+        for assignment in assignments.get("assignments", []):
+            selected = assignment.get("selected_compatibility_evidence", {})
+            if "fit_evidence" in selected:
+                continue
+            rows_key = (
+                "shared_remote_rows"
+                if assignment.get("function_id") == "SHARED_REMOTE_REGION"
+                else "personal_cup_saucer_rows"
+            )
+            matches = [
+                row for row in compatibility.get(rows_key, [])
+                if row.get("region_id") == assignment.get("region_id")
+                and row.get("slot_id") == assignment.get("slot_id")
+                and list(row.get("payload_ids", []))
+                    == list(assignment.get("payload_ids", []))
+                and row.get("compatibility_status") == "TRUE"
+                and isinstance(row.get("fit_evidence"), dict)
+            ]
+            if len(matches) != 1:
+                raise RuntimeError(
+                    "EXECUTION_EVIDENCE_JOIN_FAILED for "
+                    f"{assignment.get('slot_id')}/{assignment.get('region_id')}: "
+                    f"expected one authoritative compatibility row, found {len(matches)}"
+                )
+            selected["fit_evidence"] = matches[0]["fit_evidence"]
+            selected["execution_evidence_join"] = {
+                "source": "compatibility_matrix.json",
+                "keys": ["function_id", "slot_id", "region_id", "payload_ids"],
+                "grounding_assignment_changed": False,
+            }
     return (
         _read(phase1_dir / "payload_registry.json"),
         _read(phase1_dir / "region_registry.json"),
-        _read(phase1_dir / "region_assignments.json"),
+        assignments,
         _read(phase2_dir / "plan.json"),
         _read(phase2_dir / "symbolic_problem.json"),
     )
@@ -1126,7 +1164,16 @@ def run_mobile_execution(
     if (phase2_dir / "phase1_source_manifest.json").is_file():
         p2_manifest = _read(phase2_dir / "phase1_source_manifest.json")
         p2_variant = p2_manifest.get("variant")
-        if p2_variant and p2_variant != variant:
+        # The integrated functional-TAMP adapter writes its Phase-1 inputs in
+        # an ``observed_grounding`` subdirectory.  Older planner manifests
+        # recorded that directory basename instead of the actual variant.
+        # Treat only that exact local basename as unspecified provenance; the
+        # Phase-4 run still obtains the authoritative variant from its parent
+        # run manifest and all content hashes remain checked/persisted.
+        legacy_unspecified_variant = (
+            p2_variant == phase1_dir.name == "observed_grounding"
+        )
+        if p2_variant and p2_variant != variant and not legacy_unspecified_variant:
             raise RuntimeError(
                 f"VARIANT_PROVENANCE_MISMATCH: Phase 2 variant '{p2_variant}' != requested variant '{variant}'"
             )
@@ -1557,24 +1604,35 @@ def run_mobile_execution(
     if execute:
         final_goals = []
         executed_place_ids = {row["object_id"] for row in execution_log if row.get("operator") == "PLACE" and row.get("result") == "SUCCESS"}
-        for item in phase2_plan["actions"]:
-            if item["operator"] != "PLACE":
-                continue
-            object_id, region_id = item["arguments"]["object"], item["arguments"]["region"]
-            if object_id not in executed_place_ids:
-                continue
+        complete_plan_executed = start_task_action == 0 and max_task_actions is None
+        goal_rows = (
+            sorted(
+                (
+                    (object_id, row["region_id"])
+                    for object_id, row in placement_by_object.items()
+                ),
+                key=lambda item: item[0],
+            )
+            if complete_plan_executed
+            else [
+                (item["arguments"]["object"], item["arguments"]["region"])
+                for item in phase2_plan["actions"]
+                if item["operator"] == "PLACE"
+                and item["arguments"]["object"] in executed_place_ids
+            ]
+        )
+        for object_id, region_id in goal_rows:
             final_goals.append(verify_physical_on_relation(
                 scene.model, scene.data, object_id, object_backend[object_id], region_id,
                 support_backend[region_id], regions["regions"][region_id],
                 placement_by_object[object_id], placement_by_object, object_backend,
                 assisted_validation=assisted_suite,
             ))
-        complete_plan_executed = start_task_action == 0 and max_task_actions is None
         final_validation = {"schema_version": 1, "goals": final_goals,
                             "assisted_validation": bool(assisted_suite),
                             "complete_phase2_plan_executed": complete_plan_executed,
                             "all_executed_goals_physically_satisfied": bool(final_goals) and all(row["verified"] for row in final_goals),
-                            "all_phase2_goals_physically_satisfied": complete_plan_executed and len(final_goals) == 5 and all(row["verified"] for row in final_goals)}
+                            "all_phase2_goals_physically_satisfied": complete_plan_executed and len(final_goals) == len(placement_by_object) and all(row["verified"] for row in final_goals)}
         _write(output_dir / "physical_goal_validation.json",
                {"schema_version": 1, "goals": [row["physical_verification"] for row in execution_log if row.get("operator") == "PLACE" and "physical_verification" in row],
                 "all_phase2_goals_physically_satisfied": all(row["verified"] for row in final_goals)})

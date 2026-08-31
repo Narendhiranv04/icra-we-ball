@@ -237,6 +237,8 @@ class KitchenGroundTruthExecutionDispatcher:
         scene,
         assignment: GroundTruthAssignment,
         *,
+        inventory: dict[str, Any] | None = None,
+        resolution: dict[str, Any] | None = None,
         step_callback: Callable[[], None] | None = None,
         assisted_suite: bool = False,
         allow_assisted_pick_recovery: bool = True,
@@ -247,7 +249,14 @@ class KitchenGroundTruthExecutionDispatcher:
         self.assisted_suite = bool(assisted_suite)
         self.allow_assisted_pick_recovery = bool(allow_assisted_pick_recovery)
 
-        inventory, resolution = build_oracle_inventory_and_resolution(scene, assignment)
+        if (inventory is None) != (resolution is None):
+            raise ValueError(
+                "Kitchen execution inventory and resolution must be supplied together"
+            )
+        if inventory is None:
+            inventory, resolution = build_oracle_inventory_and_resolution(
+                scene, assignment
+            )
         self.inventory = inventory
         self.resolution = resolution
 
@@ -959,7 +968,11 @@ class KitchenGroundTruthExecutionDispatcher:
                 ),
                 None,
             )
-            if is_cupboard_utensil and coffee_target is not None:
+            if (
+                is_cupboard_utensil
+                and coffee_target is not None
+                and not self.assisted_suite
+            ):
                 try:
                     stir_ready = self.phase_c.orient_cupboard_utensil_stir_ready(
                         object_id,
