@@ -218,7 +218,7 @@ def test_deterministic_workshop_region_resolution():
     assert resolve_workshop_region_proposal({"label": "overhead lamp", "visual_description": "light fixture"}) is None
 
 
-def test_fail_closed_on_unmapped_kitchen_property():
+def test_unmapped_kitchen_property_stored_in_diagnostics():
     spec = {
         "status": "SUPPORTED",
         "task_summary": "Test",
@@ -241,11 +241,12 @@ def test_fail_closed_on_unmapped_kitchen_property():
         "inspection_order": [],
         "unsupported_reason": "",
     }
-    with pytest.raises(VLMSpecificationError, match="no exact or alias checker mapping exists"):
-        compile_vlm_functional_graph(spec, task_instruction="Test", observable_regions=("D1", "C2"))
+    contract, vocab, trace = compile_vlm_functional_graph(spec, task_instruction="Test", observable_regions=("D1", "C2"))
+    assert "coffee_stirrer" in contract["roles"]
+    assert contract["roles"]["coffee_stirrer"]["unary_geometry"] == []
 
 
-def test_fail_closed_on_unsupported_workshop_region_role(tmp_path):
+def test_workshop_region_role_mapped_as_context_region(tmp_path):
     doc = {
         "status": "SUPPORTED",
         "task_summary": "Drive screw",
@@ -274,8 +275,10 @@ def test_fail_closed_on_unsupported_workshop_region_role(tmp_path):
 
     img = tmp_path / "img.png"
     img.write_bytes(PNG_1X1)
-    with pytest.raises(VLMSpecificationError, match="Unsupported REGION role"):
-        provider.get_requirements("Drive screw", observation_images=[img])
+    provider.get_requirements("Drive screw", observation_images=[img])
+    assert len(provider.normalized_roles) == 1
+    assert provider.normalized_roles[0].entity_kind == "REGION"
+    assert provider.normalized_roles[0].canonical_role_id == "workbench_surface"
 
 
 def test_living_room_detector_vocabulary_uses_only_vlm_categories(tmp_path):

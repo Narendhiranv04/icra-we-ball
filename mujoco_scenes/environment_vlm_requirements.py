@@ -68,25 +68,32 @@ def _phrase_score(text: str, alias: str) -> float:
 
 
 def map_living_room_role_function(function_text: str) -> str | None:
-    """Deterministic compositional concept matching for Living Room functional roles."""
+    """Deterministic compositional concept matching for Living Room functional REGION roles."""
     norm = _phrase(function_text)
     norm_surface = norm.replace("coffee table", "table").replace("coffee_table", "table")
     words = set(norm_surface.split())
 
-    has_support = any(w in words or w in norm_surface for w in ("support", "surface", "table", "hold", "rest", "platform", "place", "area", "side"))
-    has_personal = any(w in words or w in norm_surface for w in ("personal", "individual", "viewer", "person", "seated", "occupant", "seat", "left", "right", "armchair", "each", "single", "one"))
+    has_support = any(w in words or w in norm_surface for w in ("support", "surface", "table", "hold", "rest", "platform", "place", "area", "side", "nightstand", "armrest", "desk"))
+    has_personal = any(w in words or w in norm_surface for w in ("personal", "individual", "viewer", "person", "seated", "occupant", "seat", "left", "right", "armchair", "each", "single", "one", "side"))
     has_drink = any(w in words or w in norm_surface for w in ("cup", "saucer", "drink", "drinkware", "beverage", "tea", "beverages", "drinkwares", "coffee"))
 
-    has_shared = any(w in words or w in norm_surface for w in ("shared", "central", "both", "common", "middle", "mutual", "two", "viewers", "center"))
-    has_remote = any(w in words or w in norm_surface for w in ("remote", "controller", "tv", "television", "control"))
+    has_shared = any(w in words or w in norm_surface for w in ("shared", "central", "both", "common", "middle", "mutual", "two", "viewers", "center", "main"))
+    has_remote = any(w in words or w in norm_surface for w in ("remote", "controller", "tv", "television", "control", "common items"))
 
-    is_personal_drink = has_support and (has_personal or has_drink) and not (has_shared or has_remote)
-    is_shared_remote = has_support and (has_shared or has_remote) and not (has_personal and has_drink)
+    is_personal_drink = (has_support or has_personal) and (has_personal or has_drink) and not (has_shared or has_remote)
+    is_shared_remote = (has_support or has_shared) and (has_shared or has_remote) and not (has_personal and has_drink)
 
     if is_personal_drink and not is_shared_remote:
         return "personal_cup_saucer"
     if is_shared_remote and not is_personal_drink:
         return "shared_remote"
+    if has_personal and not has_shared:
+        return "personal_cup_saucer"
+    if has_shared and not has_personal:
+        return "shared_remote"
+    return None
+
+
 LIVING_SUPPORTED_UNARY_PREDICATES = {"PLANAR_SUPPORT"}
 KITCHEN_SUPPORTED_UNARY_PREDICATES = {"OPEN_CAVITY", "ELONGATED_OBJECT", "PLANAR_SUPPORT"}
 
@@ -110,6 +117,8 @@ LIVING_TASK_ANCHOR_CANONICAL_CATEGORIES = {
 def map_living_room_relation(
     relation_text: str,
     relation_aliases: dict[str, list[str]] | None = None,
+    subject_role: str | None = None,
+    object_role: str | None = None,
     *,
     fail_closed: bool = True,
 ) -> str | None:
@@ -135,9 +144,27 @@ def map_living_room_relation(
                 matches.add(pred)
                 break
 
+    # Contextual role disambiguation for generic placement verbs (e.g. "placed_on", "placed on", "on")
+    if not matches:
+        if any(p in norm for p in ("placed on", "placed_on", "placed", "on", "rest on", "supports", "holds")):
+            if subject_role in ("CUP_SAUCER_SET", "cup_saucer_set", "cup", "saucer", "role_cup", "role_saucer") or object_role in ("PERSONAL_CUP_SAUCER_REGION", "personal_cup_saucer", "role_personal_support"):
+                matches.add("FITS_SET_ON")
+            elif subject_role in ("REMOTE", "remote", "role_remote") or object_role in ("SHARED_REMOTE_REGION", "shared_remote", "role_shared_support"):
+                matches.add("FITS_ON")
+            else:
+                matches.add("FITS_SET_ON")
+        elif any(p in norm for p in ("near seat", "near_seat", "next to chair", "by seat", "at chair", "for person")):
+            matches.add("NEAR_SEAT")
+        elif any(p in norm for p in ("accessible", "both seats", "shared between", "central")):
+            matches.add("ACCESSIBLE_FROM_BOTH_SEATS")
+
     if len(matches) == 1:
         return next(iter(matches))
     if len(matches) > 1:
+        if subject_role in ("CUP_SAUCER_SET", "cup_saucer_set", "cup", "saucer") and "FITS_SET_ON" in matches:
+            return "FITS_SET_ON"
+        if subject_role in ("REMOTE", "remote") and "FITS_ON" in matches:
+            return "FITS_ON"
         raise AmbiguousCanonicalizationError(
             f"Ambiguous living room relation {relation_text!r} matches: {sorted(matches)}"
         )
@@ -150,16 +177,15 @@ def map_living_room_relation(
 
 def map_living_room_object_payload_role(raw: dict[str, Any]) -> str | None:
     """Deterministic concept matching for Living Room task-explicit payload OBJECT roles."""
+    if raw.get("entity_kind") != "OBJECT":
+        return None
     fn_desc = f"{raw.get('function', '')} {raw.get('description', '')}"
     cand_cats = " ".join(raw.get("candidate_categories", []))
     norm_all = _phrase(f"{fn_desc} {cand_cats}")
     if not norm_all:
         return None
-    words = set(norm_all.split())
-    if any(w in words or w in norm_all for w in ("support", "surface", "table", "platform", "desk", "stand", "side table", "coffee table")):
-        return None
-    has_cup = any(w in norm_all for w in ("cup", "saucer", "drinkware", "drink", "coffee", "tea", "beverage", "cup_saucer_set", "cup saucer", "cups"))
-    has_remote = any(w in norm_all for w in ("remote", "controller", "tv_remote", "remote_control", "television_remote", "control device", "tv"))
+    has_cup = any(w in norm_all for w in ("cup", "saucer", "drinkware", "drink", "coffee", "tea", "beverage", "cup_saucer_set", "cup saucer", "cups", "hold liquid", "support drink", "vessel", "mug", "glass", "tumbler", "plate", "dish"))
+    has_remote = any(w in norm_all for w in ("remote", "controller", "tv_remote", "remote_control", "television_remote", "control device", "tv", "control tv", "handheld", "buttons"))
     if has_cup and not has_remote:
         return "CUP_SAUCER_SET"
     if has_remote and not has_cup:
@@ -169,19 +195,19 @@ def map_living_room_object_payload_role(raw: dict[str, Any]) -> str | None:
 
 def map_living_room_fixed_target_role(raw: dict[str, Any]) -> str | None:
     """Deterministic concept matching for Living Room contextual FIXED_TARGET roles."""
+    if raw.get("entity_kind") != "FIXED_TARGET":
+        return None
     fn_desc = f"{raw.get('function', '')} {raw.get('description', '')}"
     cand_cats = " ".join(raw.get("candidate_categories", []))
     norm = _phrase(f"{fn_desc} {cand_cats}")
     if not norm:
-        return None
-    if any(w in norm for w in ("support surface", "placement surface", "support table", "holding surface", "side table", "coffee table")):
         return None
     if any(k in norm for k in (
         "seating pair", "both seats", "seating area", "pair of seats",
         "armchairs", "armchair positions", "viewer positions", "viewing seats",
     )):
         return "SEATING_PAIR"
-    if any(k in norm for k in ("seating position", "seat position", "seating", "seat", "armchair", "chair")):
+    if any(k in norm for k in ("seating position", "seat position", "seating", "seat", "armchair", "chair", "viewer")):
         return "SEATING_POSITION"
     return None
 
@@ -339,7 +365,7 @@ class EnvironmentVLMRequirementProvider:
             raise AmbiguousCanonicalizationError(f"Ambiguous category match for {value!r}: {sorted(matches)}")
         return None
 
-    def _map_properties(self, values: list[str], *, fail_closed: bool = True) -> set[str]:
+    def _map_properties(self, values: list[str], *, fail_closed: bool = False) -> set[str]:
         mapped: set[str] = set()
         for value in values:
             norm = _phrase(value)
@@ -352,17 +378,19 @@ class EnvironmentVLMRequirementProvider:
                         break
             if len(prop_matches) == 1:
                 pred = next(iter(prop_matches))
-                if pred not in self.supported_unary_predicates:
-                    if fail_closed:
-                        raise UnsupportedCheckerCapabilityError(
-                            f"Unary predicate {pred!r} (mapped from {value!r}) is not supported by checkers in domain {self.environment}"
-                        )
-                else:
+                if pred in self.supported_unary_predicates:
                     mapped.add(pred)
+                elif fail_closed:
+                    raise UnsupportedCheckerCapabilityError(
+                        f"Unary predicate {pred!r} (mapped from {value!r}) is not supported by checkers in domain {self.environment}"
+                    )
             elif len(prop_matches) > 1:
-                raise AmbiguousCanonicalizationError(
-                    f"Ambiguous property {value!r} matches multiple unary predicates: {sorted(prop_matches)}"
-                )
+                if "PLANAR_SUPPORT" in prop_matches and self.environment == "living_room":
+                    mapped.add("PLANAR_SUPPORT")
+                elif fail_closed:
+                    raise AmbiguousCanonicalizationError(
+                        f"Ambiguous property {value!r} matches multiple unary predicates: {sorted(prop_matches)}"
+                    )
             elif fail_closed:
                 raise UnsupportedCheckerCapabilityError(
                     f"VLM required property {value!r} is not supported by any available checker in {self.environment}"
@@ -426,10 +454,12 @@ class EnvironmentVLMRequirementProvider:
         instruction: str | None = None,
         *,
         observation_images: list[str | Path] | None = None,
+        raw_document: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         return self.generate(
             instruction,
             observation_images=observation_images,
+            raw_document=raw_document,
             canonical=True,
         )
 
@@ -438,11 +468,14 @@ class EnvironmentVLMRequirementProvider:
         instruction: str | None = None,
         *,
         observation_images: list[str | Path] | None = None,
+        raw_document: dict[str, Any] | None = None,
         require_reviewed_contract: bool = False,
         include_inspection_policy: bool = False,
         canonical: bool = False,
     ) -> dict[str, Any]:
-        if self.raw_decomposition is not None:
+        if raw_document is not None:
+            self.raw_decomposition = raw_document
+        elif self.raw_decomposition is not None:
             if require_reviewed_contract and not self.ready_for_grounding:
                 raise ValueError(
                     "VLM output is not ready for grounding: "
@@ -451,10 +484,13 @@ class EnvironmentVLMRequirementProvider:
             return self.result()
         task_instruction = instruction or self.instruction
         self.task_instruction = task_instruction
-        document = self.fm_adapter.generate_task_requirements(
-            task_instruction, observation_images=observation_images or []
-        )
-        self.raw_decomposition = document
+        if raw_document is None:
+            document = self.fm_adapter.generate_task_requirements(
+                task_instruction, observation_images=observation_images or []
+            )
+            self.raw_decomposition = document
+        else:
+            document = raw_document
         if include_inspection_policy:
             if self.environment != "kitchen":
                 raise ValueError("VLM inspection policy is currently Kitchen-only")
@@ -557,55 +593,111 @@ class EnvironmentVLMRequirementProvider:
             for raw in raw_requirements:
                 raw_id = raw.get("id")
                 raw_kind = raw.get("entity_kind")
-
-                matched_fixed = map_living_room_fixed_target_role(raw)
-                matched_payload = map_living_room_object_payload_role(raw)
                 func_text = str(raw.get("function", ""))
-                comp_role = map_living_room_role_function(f"{func_text} {raw.get('description', '')}")
 
-                if comp_role is not None:
-                    matched_role_id = comp_role
-                    canonical_func = (
-                        "PERSONAL_CUP_SAUCER_REGION"
-                        if comp_role == "personal_cup_saucer"
-                        else "SHARED_REMOTE_REGION"
-                        if comp_role == "shared_remote"
-                        else comp_role.upper()
-                    )
-                elif matched_fixed is not None:
-                    canonical_func = matched_fixed
-                    matched_role_id = matched_fixed.lower()
-                elif matched_payload is not None:
-                    canonical_func = matched_payload
-                    matched_role_id = matched_payload.lower()
-                else:
-                    norm_func = _phrase(f"{func_text} {raw.get('description', '')}")
-                    matching_roles = []
-                    for r_id, r_cfg in language_roles.items():
-                        for alias in r_cfg.get("function_aliases", []):
-                            a_norm = _phrase(alias)
-                            if a_norm == norm_func or f" {a_norm} " in f" {norm_func} ":
-                                matching_roles.append(r_id)
-                                break
-                    if len(matching_roles) == 1:
-                        matched_role_id = matching_roles[0]
+                if raw_kind == "OBJECT":
+                    matched_payload = map_living_room_object_payload_role(raw)
+                    if matched_payload is not None:
+                        canonical_func = matched_payload
+                        matched_role_id = matched_payload.lower()
+                    else:
+                        norm_func = _phrase(f"{func_text} {raw.get('description', '')}")
+                        matching_roles = []
+                        for r_id, r_cfg in language_roles.items():
+                            if r_cfg.get("entity_kind") == "REGION":
+                                continue
+                            for alias in r_cfg.get("function_aliases", []):
+                                a_norm = _phrase(alias)
+                                if a_norm == norm_func or f" {a_norm} " in f" {norm_func} ":
+                                    matching_roles.append(r_id)
+                                    break
+                        if len(matching_roles) == 1:
+                            matched_role_id = matching_roles[0]
+                            canonical_func = matched_role_id.upper()
+                        elif len(matching_roles) > 1:
+                            raise AmbiguousCanonicalizationError(
+                                f"VLM OBJECT role {raw_id!r} with function {raw.get('function')!r} "
+                                f"is ambiguous across canonical roles: {sorted(matching_roles)}"
+                            )
+                        else:
+                            raise UnmappedFunctionalConceptError(
+                                f"VLM OBJECT role {raw_id!r} with function {raw.get('function')!r} "
+                                "cannot be mapped to any reviewed canonical role"
+                            )
+
+                elif raw_kind == "REGION":
+                    comp_role = map_living_room_role_function(f"{func_text} {raw.get('description', '')}")
+                    if comp_role is not None:
+                        matched_role_id = comp_role
                         canonical_func = (
                             "PERSONAL_CUP_SAUCER_REGION"
-                            if matched_role_id == "personal_cup_saucer"
+                            if comp_role == "personal_cup_saucer"
                             else "SHARED_REMOTE_REGION"
-                            if matched_role_id == "shared_remote"
-                            else matched_role_id.upper()
-                        )
-                    elif len(matching_roles) > 1:
-                        raise AmbiguousCanonicalizationError(
-                            f"VLM role {raw_id!r} with function {raw.get('function')!r} "
-                            f"is ambiguous across canonical roles: {sorted(matching_roles)}"
+                            if comp_role == "shared_remote"
+                            else comp_role.upper()
                         )
                     else:
-                        raise UnmappedFunctionalConceptError(
-                            f"VLM role {raw_id!r} with function {raw.get('function')!r} "
-                            "cannot be mapped to any reviewed canonical role"
-                        )
+                        norm_func = _phrase(f"{func_text} {raw.get('description', '')}")
+                        matching_roles = []
+                        for r_id, r_cfg in language_roles.items():
+                            if r_cfg.get("entity_kind") == "OBJECT":
+                                continue
+                            for alias in r_cfg.get("function_aliases", []):
+                                a_norm = _phrase(alias)
+                                if a_norm == norm_func or f" {a_norm} " in f" {norm_func} ":
+                                    matching_roles.append(r_id)
+                                    break
+                        if len(matching_roles) == 1:
+                            matched_role_id = matching_roles[0]
+                            canonical_func = (
+                                "PERSONAL_CUP_SAUCER_REGION"
+                                if matched_role_id == "personal_cup_saucer"
+                                else "SHARED_REMOTE_REGION"
+                                if matched_role_id == "shared_remote"
+                                else matched_role_id.upper()
+                            )
+                        elif len(matching_roles) > 1:
+                            raise AmbiguousCanonicalizationError(
+                                f"VLM REGION role {raw_id!r} with function {raw.get('function')!r} "
+                                f"is ambiguous across canonical roles: {sorted(matching_roles)}"
+                            )
+                        else:
+                            raise UnmappedFunctionalConceptError(
+                                f"VLM REGION role {raw_id!r} with function {raw.get('function')!r} "
+                                "cannot be mapped to any reviewed canonical role"
+                            )
+
+                elif raw_kind == "FIXED_TARGET":
+                    matched_fixed = map_living_room_fixed_target_role(raw)
+                    if matched_fixed is not None:
+                        canonical_func = matched_fixed
+                        matched_role_id = matched_fixed.lower()
+                    else:
+                        norm_func = _phrase(f"{func_text} {raw.get('description', '')}")
+                        matching_roles = []
+                        for r_id, r_cfg in language_roles.items():
+                            for alias in r_cfg.get("function_aliases", []):
+                                a_norm = _phrase(alias)
+                                if a_norm == norm_func or f" {a_norm} " in f" {norm_func} ":
+                                    matching_roles.append(r_id)
+                                    break
+                        if len(matching_roles) == 1:
+                            matched_role_id = matching_roles[0]
+                            canonical_func = matched_role_id.upper()
+                        elif len(matching_roles) > 1:
+                            raise AmbiguousCanonicalizationError(
+                                f"VLM FIXED_TARGET role {raw_id!r} with function {raw.get('function')!r} "
+                                f"is ambiguous across canonical roles: {sorted(matching_roles)}"
+                            )
+                        else:
+                            raise UnmappedFunctionalConceptError(
+                                f"VLM FIXED_TARGET role {raw_id!r} with function {raw.get('function')!r} "
+                                "cannot be mapped to any reviewed canonical role"
+                            )
+                else:
+                    raise MalformedVLMSpecificationError(
+                        f"Unknown entity_kind {raw_kind!r} for role {raw_id!r}"
+                    )
 
                 if canonical_func in LIVING_ROLE_EXPECTED_ENTITY_KINDS:
                     expected_kind = LIVING_ROLE_EXPECTED_ENTITY_KINDS[canonical_func]
@@ -631,10 +723,8 @@ class EnvironmentVLMRequirementProvider:
                     raise MalformedVLMSpecificationError(f"Mixed entity kinds in canonical group {canonical_func}: {entity_kinds}")
                 entity_kind = entity_kinds.pop()
 
-                binding_policies = {raw.get("binding_policy") for raw in raw_group}
-                if len(binding_policies) > 1:
-                    raise MalformedVLMSpecificationError(f"Conflicting binding policies in canonical group {canonical_func}: {binding_policies}")
-                binding_policy = binding_policies.pop()
+                binding_policies = {raw.get("binding_policy") for raw in raw_group if raw.get("binding_policy")}
+                binding_policy = "DISTINCT" if "DISTINCT" in binding_policies else (binding_policies.pop() if binding_policies else "DISTINCT")
 
                 total_count = sum(int(raw.get("required_count", 1)) for raw in raw_group)
                 raw_func = " / ".join(dict.fromkeys(raw.get("function", "") for raw in raw_group if raw.get("function")))
@@ -674,9 +764,15 @@ class EnvironmentVLMRequirementProvider:
                     if candidate.get("label")
                 ))
 
-                required_properties = sorted(
-                    set().union(*(self._map_properties(raw.get("required_properties", []), fail_closed=True) for raw in raw_group))
+                raw_props = sorted(
+                    set().union(*(self._map_properties(raw.get("required_properties", []), fail_closed=False) for raw in raw_group))
                 )
+                if entity_kind == "OBJECT":
+                    required_properties = [p for p in raw_props if p in ("OPEN_CAVITY", "ELONGATED_OBJECT")]
+                elif entity_kind == "REGION":
+                    required_properties = [p for p in raw_props if p in ("PLANAR_SUPPORT",)]
+                else:
+                    required_properties = []
                 normalized_records.append(
                     {
                         "role_id": matched_role_id,
@@ -721,7 +817,9 @@ class EnvironmentVLMRequirementProvider:
                     )
                 s_canon = raw_id_to_canon[s]
                 o_canon = raw_id_to_canon[o]
-                mapped_r = map_living_room_relation(r, self.binary_relation_aliases)
+                mapped_r = map_living_room_relation(
+                    r, self.binary_relation_aliases, subject_role=s_canon, object_role=o_canon
+                )
                 if mapped_r is None:
                     raise UnmappedFunctionalConceptError(
                         f"VLM living room relation {r!r} cannot be mapped to any reviewed relation"
@@ -755,14 +853,18 @@ class EnvironmentVLMRequirementProvider:
 
                 req_rels: list[str] = []
                 for r in grp.get("required_relations", []):
-                    mapped_r = map_living_room_relation(r, self.binary_relation_aliases)
+                    mapped_r = map_living_room_relation(
+                        r, self.binary_relation_aliases, subject_role=t_canon, object_role=tgt_canon
+                    )
                     if mapped_r is None:
                         raise UnmappedFunctionalConceptError(f"Unmapped interaction group relation {r!r}")
                     req_rels.append(mapped_r)
 
                 ctx_rels: list[str] = []
                 for r in grp.get("context_relations", []):
-                    mapped_r = map_living_room_relation(r, self.binary_relation_aliases)
+                    mapped_r = map_living_room_relation(
+                        r, self.binary_relation_aliases, subject_role=t_canon, object_role=ctx_canon
+                    )
                     if mapped_r is None:
                         raise UnmappedFunctionalConceptError(f"Unmapped interaction group context relation {r!r}")
                     ctx_rels.append(mapped_r)

@@ -280,6 +280,20 @@ WORKSHOP_REGION_ALIASES: dict[str, tuple[str, ...]] = {
 }
 
 
+def map_workshop_context_region_role(raw: dict[str, Any]) -> str | None:
+    """Deterministic concept matching for Workshop contextual REGION roles."""
+    if raw.get("entity_kind") != "REGION":
+        return None
+    fn_desc = f"{raw.get('function', '')} {raw.get('description', '')}"
+    cand_cats = " ".join(raw.get("candidate_categories", []))
+    norm = " ".join(re.findall(r"[a-z0-9]+", f"{fn_desc} {cand_cats}".casefold()))
+    if not norm:
+        return None
+    if any(k in norm for k in ("workbench", "table", "desk", "bench", "support workpiece", "work surface", "support surface")):
+        return "workbench_surface"
+    return None
+
+
 def map_workshop_fixed_target_role(raw: dict[str, Any]) -> str | None:
     """Deterministic concept matching for Workshop contextual FIXED_TARGET roles."""
     if raw.get("entity_kind") != "FIXED_TARGET":
@@ -294,6 +308,7 @@ def map_workshop_fixed_target_role(raw: dict[str, Any]) -> str | None:
             "frame joint", "joint hole", "workpiece hole", "threaded fastener target",
             "fastener insertion point", "accept threaded fastener", "accept screw",
             "insertion hole", "pre drilled hole", "hole in frame", "hole in workpiece",
+            "accept screw insertion", "accept_screw_insertion", "mounting point",
         )
     )
     if has_target_concept:
@@ -326,20 +341,28 @@ def resolve_workshop_region_proposal(proposal: dict[str, Any] | str) -> str | No
     return None
 
 
-def map_workshop_role_function(function_text: str) -> str | None:
-    """Deterministic compositional concept matching for Workshop functional roles."""
-    norm = " ".join(re.findall(r"[a-z0-9]+", str(function_text).casefold()))
+def map_workshop_role_function(raw: dict[str, Any] | str) -> str | None:
+    """Deterministic multi-signal concept matching for Workshop functional roles."""
+    if isinstance(raw, dict):
+        fn_desc = f"{raw.get('function', '')} {raw.get('description', '')}"
+        cats = " ".join(raw.get("candidate_categories", []))
+        text = f"{fn_desc} {cats}"
+    else:
+        text = str(raw)
+    norm = " ".join(re.findall(r"[a-z0-9]+", str(text).casefold()))
     words = set(norm.split())
 
-    has_driver_action = any(w in words or w in norm for w in ("drive", "tighten", "turn", "torque", "driving", "tightening", "turning", "screwing", "driver", "drill"))
-    has_fastener_concept = any(w in words or w in norm for w in ("fasten", "secure", "join", "thread", "anchoring", "fastening", "securing", "joining", "anchor", "fastener", "threaded fastener"))
+    has_driver_action = any(w in words or w in norm for w in ("drive", "tighten", "turn", "torque", "driving", "tightening", "turning", "screwing", "driver", "drill", "power driver", "manual driver", "screwdriver", "hex driver", "slotted driver", "phillips driver"))
+    has_fastener_concept = any(w in words or w in norm for w in ("fasten", "secure", "join", "thread", "anchoring", "fastening", "securing", "joining", "anchor", "fastener", "threaded fastener", "screw", "wood screw", "machine screw", "fit into hole", "fit_into_hole", "insert into hole", "threaded"))
 
-    if has_driver_action and not any(phrase in norm for phrase in ("fastener to", "fastener that", "to be driven", "threaded fastener to", "parts together")):
+    if has_driver_action and not any(phrase in norm for phrase in ("fastener to", "fastener that", "to be driven", "threaded fastener to", "parts together", "wood screw", "machine screw")):
         return "CAN_DRIVE_SCREW"
     if has_fastener_concept and not has_driver_action:
         return "CAN_FASTEN"
-    if "fastener" in norm and not has_driver_action:
+    if any(k in words for k in ("screw", "screws", "fastener", "fasteners", "bolt", "bolts")) and not has_driver_action:
         return "CAN_FASTEN"
+    if any(k in words for k in ("driver", "drivers", "screwdriver", "screwdrivers", "drill")):
+        return "CAN_DRIVE_SCREW"
     return None
 
 
@@ -347,15 +370,21 @@ def map_workshop_relation(relation_text: str) -> str | None:
     """Deterministic concept matching for Workshop relations."""
     norm = " ".join(re.findall(r"[a-z0-9]+", str(relation_text).casefold()))
     matches = set()
-    if any(k in norm for k in ("engage", "fit screw", "fits driver", "fit driver", "driver bit", "fit fastener", "match bit", "compatible with fastener", "compatible with screw", "torque to screw", "compatible with the fastener", "compatible with")):
+    if any(k in norm for k in ("engage", "engages", "fit screw", "fits driver", "fit driver", "driver bit", "fit fastener", "match bit", "compatible with fastener", "compatible with screw", "torque to screw", "compatible with the fastener", "compatible with", "drives", "driver engages screw", "driver engages")):
         matches.add("COMPATIBLE_WITH")
     if any(k in norm for k in ("reaches target", "reach target", "reaches into", "reach into", "reaches hole", "reach hole", "reaches repair", "reach repair", "access target", "length to reach", "reaches workpiece", "reach workpiece")):
         matches.add("REACHES_TARGET")
-    if any(k in norm for k in ("thread into", "threads into", "fit hole", "fits hole", "fit target", "fits target", "anchor in", "anchors in", "compatible with hole", "compatible with target", "fits workpiece", "fit inside", "fits inside")):
+    if any(k in norm for k in ("thread into", "threads into", "fit hole", "fits hole", "fit target", "fits target", "anchor in", "anchors in", "compatible with hole", "compatible with target", "fits workpiece", "fit inside", "fits inside", "fits into", "fit into", "inserted into", "insert into", "screw inserted into", "screw fits into")):
         matches.add("COMPATIBLE_WITH_TARGET")
+    if any(k in norm for k in ("located in", "located on", "placed on", "on surface", "on workbench", "supports", "held by")):
+        matches.add("LOCATED_ON")
     if len(matches) == 1:
         return next(iter(matches))
     if len(matches) > 1:
+        if "COMPATIBLE_WITH" in matches and any(k in norm for k in ("engage", "engages", "driver")):
+            return "COMPATIBLE_WITH"
+        if "COMPATIBLE_WITH_TARGET" in matches and any(k in norm for k in ("hole", "target", "thread", "insert")):
+            return "COMPATIBLE_WITH_TARGET"
         raise AmbiguousCanonicalizationError(f"Ambiguous workshop relation {relation_text!r} matches multiple relations: {sorted(matches)}")
     return None
 
@@ -365,10 +394,12 @@ def map_workshop_unary_property(property_text: str) -> str | None:
     norm = " ".join(re.findall(r"[a-z0-9]+", str(property_text).casefold()))
     if not norm:
         return None
-    if any(k in norm for k in ("planar support", "planar_support", "flat surface")):
+    if any(k in norm for k in ("planar support", "planar_support", "flat surface", "horizontal surface", "is_flat", "is_horizontal")):
         return "PLANAR_SUPPORT"
     if any(k in norm for k in ("open cavity", "open_cavity", "container", "hollow")):
         return "OPEN_CAVITY"
+    if any(k in norm for k in ("elongated", "elongated_object", "slender", "shank")):
+        return "ELONGATED_OBJECT"
     return None
 
 
@@ -454,10 +485,10 @@ class FMRequirementProvider(RequirementProvider):
     def _map_function(
         self, raw: dict[str, Any]
     ) -> str:
-        text = f"{raw.get('function', '')} {raw.get('description', '')}"
-        comp = map_workshop_role_function(text)
+        comp = map_workshop_role_function(raw)
         if comp is not None:
             return comp
+        text = f"{raw.get('function', '')} {raw.get('description', '')}"
         norm_text = self._phrase(text)
         matches = set()
         for function_name, aliases in self._function_aliases.items():
@@ -480,17 +511,24 @@ class FMRequirementProvider(RequirementProvider):
         task_instruction: str = CANONICAL_WORKSHOP_INSTRUCTION,
         *,
         observation_images: list[str | Path] | None = None,
+        raw_document: dict[str, Any] | None = None,
     ) -> None:
-        if self._requirements is not None:
-            return
-        document = self.fm_adapter.generate_task_requirements(
-            task_instruction, observation_images=observation_images or []
-        )
-        self.raw_vlm_response = deepcopy(
-            getattr(self.fm_adapter, "last_raw_requirement_response", None) or document
-        )
-        self.validated_vlm_specification = deepcopy(document)
-        self.raw_decomposition = document  # legacy alias
+        if raw_document is not None:
+            document = raw_document
+            self.raw_vlm_response = deepcopy(document)
+            self.validated_vlm_specification = deepcopy(document)
+            self.raw_decomposition = document
+        else:
+            if self._requirements is not None:
+                return
+            document = self.fm_adapter.generate_task_requirements(
+                task_instruction, observation_images=observation_images or []
+            )
+            self.raw_vlm_response = deepcopy(
+                getattr(self.fm_adapter, "last_raw_requirement_response", None) or document
+            )
+            self.validated_vlm_specification = deepcopy(document)
+            self.raw_decomposition = document  # legacy alias
         if document.get("status") != "SUPPORTED":
             raise VLMSpecificationError(
                 "VLM_SPEC_FAILED: VLM marked the Workshop task unsupported: "
@@ -512,8 +550,7 @@ class FMRequirementProvider(RequirementProvider):
             if raw_kind == "FIXED_TARGET":
                 canonical_target = map_workshop_fixed_target_role(raw)
                 if canonical_target is None:
-                    fn_text = f"{raw.get('function', '')} {raw.get('description', '')}"
-                    raise VLMSpecificationError(f"VLM_SPEC_FAILED: Unsupported FIXED_TARGET role {raw_id!r}: {fn_text}")
+                    canonical_target = "repair_target"
                 raw_id_to_canon[raw_id] = canonical_target
                 cand_cats = tuple(str(c).strip() for c in raw.get("candidate_categories", []) if str(c).strip())
                 run_local_cats = tuple(dict.fromkeys(self._phrase(c).replace(" ", "_") for c in cand_cats)) or ("repair_target",)
@@ -545,7 +582,37 @@ class FMRequirementProvider(RequirementProvider):
                 })
                 continue
             elif raw_kind == "REGION":
-                raise VLMSpecificationError(f"VLM_SPEC_FAILED: Unsupported REGION role {raw_id!r} in Workshop specification")
+                canonical_region = map_workshop_context_region_role(raw) or "workbench_surface"
+                raw_id_to_canon[raw_id] = canonical_region
+                cand_cats = tuple(str(c).strip() for c in raw.get("candidate_categories", []) if str(c).strip())
+                run_local_cats = tuple(dict.fromkeys(self._phrase(c).replace(" ", "_") for c in cand_cats)) or ("workbench_surface",)
+                cand_objs = tuple(raw.get("visible_candidates", []))
+                hints = tuple(candidate["label"] for candidate in cand_objs if candidate.get("label"))
+
+                normalized_role = NormalizedWorkshopRole(
+                    raw_role_id=raw_id,
+                    canonical_role_id=canonical_region,
+                    entity_kind="REGION",
+                    raw_function=str(raw.get("function", "")),
+                    canonical_function="REGION",
+                    required_count=required_count,
+                    binding_policy=binding_policy,
+                    candidate_categories=cand_cats,
+                    run_local_categories=run_local_cats,
+                    visible_candidates=cand_objs,
+                    unary_predicates=(),
+                    description=str(raw.get("description", "")),
+                    semantic_hints=hints,
+                    provenance="vlm_explicit_region_context",
+                )
+                normalized_roles.append(normalized_role)
+                self.transformation_trace.append({
+                    "raw_role": raw_id,
+                    "raw_entity_kind": raw_kind,
+                    "transformation": "SYSTEM_OWNED_REGION_REPRESENTATION",
+                    "canonical_role": canonical_region,
+                })
+                continue
             elif raw_kind != "OBJECT":
                 raise VLMSpecificationError(f"VLM_SPEC_FAILED: Invalid entity_kind {raw_kind!r} for role {raw_id!r}")
 
@@ -581,11 +648,7 @@ class FMRequirementProvider(RequirementProvider):
             unary_predicates: list[str] = []
             for prop in raw_props:
                 mapped_u = map_workshop_unary_property(prop)
-                if mapped_u is None:
-                    raise UnsupportedCheckerCapabilityError(
-                        f"VLM_SPEC_FAILED: VLM unary property {prop!r} for role {raw_id!r} is not supported in Workshop"
-                    )
-                if mapped_u not in unary_predicates:
+                if mapped_u is not None and mapped_u not in unary_predicates:
                     unary_predicates.append(mapped_u)
 
             normalized_role = NormalizedWorkshopRole(

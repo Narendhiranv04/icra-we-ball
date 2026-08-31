@@ -115,10 +115,16 @@ Rules:
   entities need not be reintroduced as selectable functional roles unless their
   functional suitability itself must be discovered.
 - Use SHORT ATOMIC PHRASES for all functions, properties, and relations:
-  - Use a short atomic function phrase for each role function.
-  - Use a short atomic unary-property phrase for each required property.
-  - Use a short atomic binary-relation phrase for each functional relation.
+  - Role function: describe what the physical candidate must be capable of doing (e.g. "contain hot liquid", "stir drink", "drive fastener", "hold items for viewer"), rather than abstract workflow stages (e.g. "coffee preparation", "serving process").
+  - Required properties: list only task-critical physical or geometric characteristics of this single role used to decide candidate suitability (e.g. open cavity, elongated shape, planar horizontal support). Do NOT include non-physical adjectives (e.g. good, useful, safe, edible, hot), task state descriptions, or semantic class labels already covered in candidate_categories.
+  - Functional relations: describe physical spatial or interface compatibility relations between roles (e.g. "fits into", "reaches into", "compatible with", "placed on", "near seat").
   Do not write long narrative sentences. Do not use complex compound clauses.
+- Robot Verifier Capabilities:
+  The robot is equipped with physical and geometric verifiers that can check concepts such as:
+  * Unary physical shapes: whether an object has an open/deep cavity or container volume; whether an object is elongated enough to serve as an implement; whether a surface is a flat/planar support.
+  * Spatial & container relations: whether one object/implement can fit into or enter another object's opening; whether an implement reaches sufficiently deep into a container; whether a region can support a payload.
+  * Seating & proximity relations: relative proximity or accessibility of support surfaces to seating/viewers; whether a support is accessible to multiple seating positions.
+  * Tool & fastener interfaces: interface compatibility between a tool/driver and a fastener; whether a tool reaches a target workpiece/hole; whether a fastener is compatible with a target opening.
 - When a role must be paired independently with multiple task targets or
   contextual references, represent that dependency using an interaction group
   rather than relying on an unconstrained many-to-many relation.
@@ -1181,25 +1187,7 @@ class FMAdapter:
         image_blocks, self.last_observation_images = _encode_observation_images(
             observation_images
         )
-        system_prompt = (
-            "You are a vision-language functional-requirement graph generator. "
-            "Return only the requested JSON. Infer the functional roles, qualitative "
-            "properties, qualitative relations between roles, interaction groups with "
-            "reuse policies, candidate categories, and visually proposed inspectable "
-            "closed storage regions from the task instruction and initial multi-view RGB images. "
-            "Never assume hidden contents, ground-truth identities, poses, measurements, "
-            "assignments, feasibility labels, or plans.\n\n"
-            "Status semantics:\n"
-            "- SUPPORTED:\n"
-            "  * The task can be represented using the schema.\n"
-            "  * functional_roles must be non-empty.\n"
-            "  * unsupported_reason MUST be empty (\"\").\n"
-            "- UNSUPPORTED:\n"
-            "  * Use only when the task itself cannot be represented by this abstraction.\n"
-            "  * functional_roles = [], functional_relations = [], interaction_groups = [], inspectable_regions = [], inspection_order = [].\n"
-            "  * unsupported_reason must be a non-empty explanation.\n"
-            "- Partial observability, missing visible candidates, unmeasured geometry, or needing inspection/search are NOT reasons for UNSUPPORTED."
-        )
+        system_prompt = SYSTEM_PROMPT
         prompt = {
             "task_instruction": task_instruction.strip(),
             "request": (
