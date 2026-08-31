@@ -3,7 +3,7 @@
   "task_summary": "Prepare the living room for two people watching television by placing individual drinkware on personal side tables and the remote control on the shared coffee table.",
   "functional_roles": [
     {
-      "id": "role_personal_table",
+      "id": "role_1",
       "entity_kind": "REGION",
       "function": "hold items for viewer",
       "description": "Fixed individual side table surface beside each viewer seating position for supporting drinkware",
@@ -20,7 +20,7 @@
       ]
     },
     {
-      "id": "role_shared_table",
+      "id": "role_2",
       "entity_kind": "REGION",
       "function": "hold items for viewers",
       "description": "Fixed central coffee table surface accessible to both seated viewers for supporting the shared TV remote",
@@ -37,7 +37,7 @@
       ]
     },
     {
-      "id": "role_drinkware_set",
+      "id": "role_3",
       "entity_kind": "OBJECT",
       "function": "contain hot beverage and saucer",
       "description": "Individual cup and saucer drinkware set for each person",
@@ -49,12 +49,10 @@
         "saucer"
       ],
       "visible_candidates": [],
-      "required_properties": [
-        "open cavity"
-      ]
+      "required_properties": []
     },
     {
-      "id": "role_tv_remote",
+      "id": "role_4",
       "entity_kind": "OBJECT",
       "function": "control television",
       "description": "Handheld television remote control device",
@@ -68,7 +66,7 @@
       "required_properties": []
     },
     {
-      "id": "role_viewer_seat",
+      "id": "role_5",
       "entity_kind": "FIXED_TARGET",
       "function": "viewer seating position",
       "description": "Individual viewer seating position",
@@ -83,7 +81,7 @@
       "required_properties": []
     },
     {
-      "id": "role_seating_pair",
+      "id": "role_6",
       "entity_kind": "FIXED_TARGET",
       "function": "paired viewer seating area",
       "description": "Both viewer seating positions collectively",
@@ -100,38 +98,38 @@
   ],
   "functional_relations": [
     {
-      "subject_role": "role_personal_table",
+      "subject_role": "role_1",
       "relation": "can hold drinkware set",
-      "object_role": "role_drinkware_set"
+      "object_role": "role_3"
     },
     {
-      "subject_role": "role_personal_table",
+      "subject_role": "role_1",
       "relation": "near seat",
-      "object_role": "role_viewer_seat"
+      "object_role": "role_5"
     },
     {
-      "subject_role": "role_shared_table",
+      "subject_role": "role_2",
       "relation": "can hold remote",
-      "object_role": "role_tv_remote"
+      "object_role": "role_4"
     },
     {
-      "subject_role": "role_shared_table",
+      "subject_role": "role_2",
       "relation": "accessible from both seats",
-      "object_role": "role_seating_pair"
+      "object_role": "role_6"
     }
   ],
   "interaction_groups": [
     {
-      "id": "group_personal_support",
+      "id": "group_1",
       "function": "support drinkware set beside seat",
-      "tool_role": "role_personal_table",
-      "target_role": "role_drinkware_set",
+      "tool_role": "role_1",
+      "target_role": "role_3",
       "required_target_count": 2,
       "usage_policy": "DEDICATED_PER_TARGET",
       "required_relations": [
         "can hold drinkware set"
       ],
-      "context_role": "role_viewer_seat",
+      "context_role": "role_5",
       "context_relations": [
         "near seat"
       ]

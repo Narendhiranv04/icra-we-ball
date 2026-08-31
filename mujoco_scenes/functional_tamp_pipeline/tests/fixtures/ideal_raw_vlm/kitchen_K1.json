@@ -3,7 +3,7 @@
   "task_summary": "Prepare and serve coffee and soup for two people using available kitchenware, stirring utensils, and eating utensils.",
   "functional_roles": [
     {
-      "id": "role_coffee_cup",
+      "id": "role_1",
       "entity_kind": "OBJECT",
       "function": "contain an individual serving of coffee",
       "required_count": 2,
@@ -20,7 +20,7 @@
       ]
     },
     {
-      "id": "role_soup_bowl",
+      "id": "role_2",
       "entity_kind": "OBJECT",
       "function": "contain an individual serving of soup",
       "required_count": 2,
@@ -37,7 +37,7 @@
       ]
     },
     {
-      "id": "role_coffee_stirrer",
+      "id": "role_3",
       "entity_kind": "OBJECT",
       "function": "stir beverage",
       "required_count": 1,
@@ -54,7 +54,7 @@
       ]
     },
     {
-      "id": "role_soup_utensil",
+      "id": "role_4",
       "entity_kind": "OBJECT",
       "function": "provide a suitable eating utensil for each soup bowl",
       "required_count": 2,
@@ -66,12 +66,11 @@
       ],
       "visible_candidates": [],
       "required_properties": [
-        "elongated shape",
-        "open cavity"
+        "elongated shape"
       ]
     },
     {
-      "id": "role_water_source",
+      "id": "role_5",
       "entity_kind": "OBJECT",
       "function": "source of water",
       "required_count": 1,
@@ -82,12 +81,10 @@
         "water container"
       ],
       "visible_candidates": [],
-      "required_properties": [
-        "capable of holding liquid"
-      ]
+      "required_properties": []
     },
     {
-      "id": "role_coffee_source",
+      "id": "role_6",
       "entity_kind": "OBJECT",
       "function": "source of coffee",
       "required_count": 1,
@@ -98,39 +95,37 @@
         "instant coffee jar"
       ],
       "visible_candidates": [],
-      "required_properties": [
-        "container"
-      ]
+      "required_properties": []
     }
   ],
   "functional_relations": [
     {
-      "subject_role": "role_coffee_stirrer",
+      "subject_role": "role_3",
       "relation": "fits inside",
-      "object_role": "role_coffee_cup"
+      "object_role": "role_1"
     },
     {
-      "subject_role": "role_coffee_stirrer",
+      "subject_role": "role_3",
       "relation": "reaches the bottom",
-      "object_role": "role_coffee_cup"
+      "object_role": "role_1"
     },
     {
-      "subject_role": "role_soup_utensil",
+      "subject_role": "role_4",
       "relation": "fits inside",
-      "object_role": "role_soup_bowl"
+      "object_role": "role_2"
     },
     {
-      "subject_role": "role_soup_utensil",
+      "subject_role": "role_4",
       "relation": "reaches the bottom",
-      "object_role": "role_soup_bowl"
+      "object_role": "role_2"
     }
   ],
   "interaction_groups": [
     {
-      "id": "group_stir_coffee",
+      "id": "group_1",
       "function": "stir beverage in cups",
-      "tool_role": "role_coffee_stirrer",
-      "target_role": "role_coffee_cup",
+      "tool_role": "role_3",
+      "target_role": "role_1",
       "required_target_count": 2,
       "usage_policy": "SEQUENTIAL_REUSE_ALLOWED",
       "required_relations": [
@@ -139,10 +134,10 @@
       ]
     },
     {
-      "id": "group_serve_soup",
+      "id": "group_2",
       "function": "provide eating utensil for each soup bowl",
-      "tool_role": "role_soup_utensil",
-      "target_role": "role_soup_bowl",
+      "tool_role": "role_4",
+      "target_role": "role_2",
       "required_target_count": 2,
       "usage_policy": "DEDICATED_PER_TARGET",
       "required_relations": [

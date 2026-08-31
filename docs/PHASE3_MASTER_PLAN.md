@@ -350,6 +350,23 @@ When a case fails, apply this tree **in order**:
 
 ---
 
+### P3-C.1: Ideal Fixture & Diagnostic Validity Hardening
+**Status**: `[x] COMPLETE`
+
+**Objective**: Neutralize all raw fixture local identifiers, prune semantically unjustified unary property assertions, harden anti-leakage validation across all relation and group fields, replace tautological preservation labels with evidence-based traces, make the test-side FM adapter future-proof for post-repair Living Room canonicalization, and disclose full GT reference comparison metrics.
+
+**Accomplished Changes & Empirical Findings**:
+1. **Neutral Model-Local Identifiers**: Refactored all raw fixtures to use neutral local identifiers (`role_1`..`role_6`, `group_1`..`group_2`, `search_1`..`search_3`), ensuring canonicalizers deduce meaning exclusively from natural language semantic fields without ID leakage.
+2. **Pruned Unjustified Unary Properties**: Removed unnecessary shape constraints from Kitchen source roles (`water_source`, `coffee_source`), Kitchen soup spoons (`open cavity`), Living Room composite drinkware sets (`open cavity`), and Workshop screws (`slotted head`).
+3. **Hardened Anti-Leak Assertions**: Verified all relation-bearing fields (`functional_relations[].relation`, `interaction_groups[].required_relations[]`, `interaction_groups[].context_relations[]`), all raw IDs, and all serialized text against canonical predicates, simulator backend handles, and benchmark oracle region/object tokens.
+4. **Evidence-Derived Preservation Tracing**: Replaced automatic `PRESERVED` labels with granular trace inspections across `raw_vlm_role_id`, `raw_vlm_group_id`, `normalized_roles`, `normalized_relations`, `normalized_operation_groups`, and individual Living Room mapping functions.
+5. **Future-Proof Living Room Test Adapter**: Equipped `MockFMAdapter` with complete mock state (`last_raw_response`, `last_raw_requirement_response`, `last_raw_inspection_response`, `metrics`, `last_observation_images`), ensuring tests remain green when P3-F implements Living Room relation repair.
+6. **Full GT Reference Metrics & Structural Disclosure**: Evaluated canonicalized graphs with `evaluate_gf_against_reference()`, disclosing that Workshop candidate G_F declares a valid interaction group not present in the static GT reference (`extra_operation_groups: ['group_1']`, `exact_structural_match: False`).
+
+**Acceptance**: All 3 fixtures are schema-compliant and neutralized, anti-leak checks pass comprehensively, preservation traces are evidence-derived, and full reference metrics are recorded without altering production canonicalizers.
+
+---
+
 ### P3-D: Predicate & System-Context Freeze
 **Status**: `[ ] NOT STARTED`
 
@@ -632,7 +649,7 @@ Per pipeline run, retain:
 
 **Exact Objective**: Freeze the predicate signature registry (§4) in code and establish the formal contract distinguishing task-functional G_F roles from system-owned scene context.
 
-**Prerequisites**: P3-A, P3-B, P3-B.1, and P3-C are complete.
+**Prerequisites**: P3-A, P3-B, P3-B.1, P3-C, and P3-C.1 are complete.
 
 **What to do**:
 1. Create `mujoco_scenes/functional_tamp_pipeline/predicate_registry.py` with the canonical predicate table.

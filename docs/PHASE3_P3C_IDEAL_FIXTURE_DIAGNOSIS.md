@@ -1,102 +1,113 @@
-# Phase 3 Pass P3-C: Ideal Raw VLM Fixture Framework & Canonicalization Loss Diagnosis
+# Phase 3 Pass P3-C / P3-C.1: Ideal Raw VLM Fixture Framework & Canonicalization Loss Diagnosis
 
-**Execution Date**: 2026-08-31  
+**Execution Date**: 2026-09-01  
 **Target Branch**: `naren/pipeline_check`  
-**Status**: **COMPLETE — ZERO-NETWORK DIAGNOSTIC CONTROL ESTABLISHED**
+**Status**: **P3-C / P3-C.1 COMPLETE — EVIDENCE-BASED DIAGNOSTIC CONTROL ESTABLISHED**
 
 ---
 
-## 1. Executive Summary & Diagnostic Control Purpose
+## 1. Executive Summary & Scientific Purpose
 
-Pass P3-C establishes an offline, deterministic semantic control to answer:
-> *"If the VLM had produced a semantically excellent, schema-valid raw response using natural open-vocabulary language, what would the current deterministic canonicalization software do with it?"*
+Pass P3-C / P3-C.1 establishes a deterministic, evidence-based offline semantic control to answer:
+> *"If the VLM had produced a semantically excellent, schema-valid raw response using neutral model-local identifiers and natural open-vocabulary language, what would the current deterministic software do with it?"*
 
-This cleanly decouples **Model Capacity Failures** from **Canonicalizer / Interface Failures** across all three benchmark domains.
+This cleanly separates:
+1. **Model Capacity Failures** (which did not occur here since zero live model calls were made) from
+2. **Canonicalizer / Interface Failures** (deterministic software defects in `kitchen_vlm_functional_graph.py`, `environment_vlm_requirements.py`, and `workshop_phase1/requirements.py`).
 
-All three ideal raw fixtures:
-1. Adhere strictly to the production model-facing schemas (`KITCHEN_FUNCTIONAL_GRAPH_SCHEMA` and `RESPONSE_SCHEMA`) without relaxations.
-2. Comply with strict anti-leakage invariants: zero internal canonical role IDs as raw IDs, zero canonical predicate tokens (`INSERTABLE_IN`, `FITS_SET_ON`, `CAN_DRIVE_SCREW`, etc.), zero simulator backend handles (`workshop_power_driver`), and zero benchmark oracle tokens (`F0`, `K1`, `object_0001`, `region_0001`, `LEFT_DRAWER`, etc.).
-3. Execute through the **real, unmodified production canonicalizers** with **zero live VLM/network calls** via dependency injection.
-
----
-
-## 2. Canonicalization Diagnostic Summary Table
-
-| Domain | Fixture File | Schema | Semantic Completeness | Current Canonicalizer Outcome | Role Recall | Relation Recall | First Failing Layer |
-|---|---|---|:---:|:---:|:---:|:---:|---|
-| **Kitchen** | `kitchen_K1.json` | `KITCHEN_FUNCTIONAL_GRAPH_SCHEMA` | Complete (6 roles, 4 rels, 2 groups) | `CANONICALIZED` | 1.0 (6/6) | 1.0 (4/4) | None on ideal fixture (P3-E addresses noisy/clipped VLM raw variations) |
-| **Living Room** | `living_room_L1.json` | `RESPONSE_SCHEMA` | Complete (6 roles, 4 rels, 1 group) | `CANONICALIZATION_FAILED` | N/A | N/A | **Layer B (Canonicalizer)**: `environment_vlm_requirements.py:172` (`map_living_room_relation`) |
-| **Workshop** | `workshop_W1.json` | `RESPONSE_SCHEMA` | Complete (3 roles, 3 rels, 1 group, 3 regions) | `CANONICALIZED` | 1.0 (3/3) | 1.0 (3/3) | None on ideal fixture (P3-G addresses duplicate role collisions & context relations) |
+### Anti-Leak Invariants & Neutral Identifiers
+- **Neutral Model-Local IDs**: All fixtures use neutral identifiers (`role_1`..`role_6`, `group_1`..`group_2`, `search_1`..`search_3`). No semantic hints are conveyed through ID strings.
+- **Zero Predicate Leakage**: All relation-bearing fields (`functional_relations[].relation`, `interaction_groups[].required_relations[]`, `interaction_groups[].context_relations[]`) are verified to contain zero internal canonical predicate tokens (`INSERTABLE_IN`, `FITS_SET_ON`, `NEAR_SEAT`, `CAN_DRIVE_SCREW`, `COMPATIBLE_WITH`, etc.).
+- **Zero Oracle Tokens**: Zero simulator backend handles (`workshop_power_driver`, `workshop_medium_phillips_screw`) and zero benchmark oracle region/object IDs (`LEFT_DRAWER`, `RIGHT_DRAWER`, `TOOL_CABINET`, `D1`, `D2`, `C1`, `C2`, `B1`, `object_0001`, `region_0001`, `K1`, `L1`, `W1`).
 
 ---
 
-## 3. Detailed Per-Domain Diagnostics & Concept Loss Traces
+## 2. Canonicalization Diagnostic & Reference Summary
+
+| Domain | Fixture File | Production Schema | Raw Semantics | Current Canonicalizer Outcome | Role Identity Recall | Relation Recall | OpGroup Identity Recall | Reference Complete | Exact Structural Match | First Failing Layer / Notes |
+|---|---|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|---|
+| **Kitchen** | `kitchen_K1.json` | `KITCHEN_FUNCTIONAL_GRAPH_SCHEMA` | Complete (6 roles, 4 rels, 2 groups) | **`CANONICALIZED`** | **1.0** (6/6) | **1.0** (4/4) | **1.0** (2/2) | **True** | False | No failure on ideal fixture. Exact match is False due to minor `selection_preference` string representation nuance (`deterministic_rank` vs `""`). |
+| **Living Room** | `living_room_L1.json` | `RESPONSE_SCHEMA` | Complete (6 roles, 4 rels, 1 group) | **`CANONICALIZATION_FAILED`** | N/A | N/A | N/A | N/A | N/A | **Layer B (Canonicalizer)**: `environment_vlm_requirements.py:172` in `map_living_room_relation()` (`UnmappedFunctionalConceptError`). |
+| **Workshop** | `workshop_W1.json` | `RESPONSE_SCHEMA` | Complete (3 roles, 3 rels, 1 group, 3 regions) | **`CANONICALIZED`** | **1.0** (3/3) | **1.0** (3/3) | 1.0 (0 missing) | **True** | False | No failure on ideal fixture. Exact match is False because candidate declares semantically valid `group_1` (`extra_operation_groups`), which is absent in static GT reference. |
+
+---
+
+## 3. Evidence-Based Concept Preservation & Loss Breakdown
 
 ### 3.1 Kitchen (K1 Ideal Fixture)
-- **Raw Fixture Semantic Summary**:
-  - Expresses 6 distinct functional roles using raw local IDs: `role_coffee_cup` (count 2), `role_soup_bowl` (count 2), `role_coffee_stirrer` (count 1, `REUSABLE`), `role_soup_utensil` (count 2, `DISTINCT`), `role_water_source` (count 1), `role_coffee_source` (count 1).
-  - Expresses 4 natural binary relations: `fits inside`, `reaches the bottom` across tool/target pairs.
-  - Expresses 2 interaction groups: `group_stir_coffee` (`SEQUENTIAL_REUSE_ALLOWED`, count 2) and `group_serve_soup` (`DEDICATED_PER_TARGET`, count 2).
-- **Current Canonicalizer Outcome**: `CANONICALIZED` via `kitchen_vlm_functional_graph.py::compile_vlm_functional_graph`.
-- **Concept Preservation Classification**:
-  - `role_coffee_cup` $\to$ `coffee_container` (`PRESERVED`, count 2)
-  - `role_soup_bowl` $\to$ `soup_container` (`PRESERVED`, count 2)
-  - `role_coffee_stirrer` $\to$ `coffee_stirrer` (`PRESERVED`, count 1)
-  - `role_soup_utensil` $\to$ `soup_eating_utensil` (`PRESERVED`, count 2)
-  - `role_water_source` $\to$ `water_source` (`PRESERVED`, count 1)
-  - `role_coffee_source` $\to$ `coffee_source` (`PRESERVED`, count 1)
-  - `fits inside`, `reaches the bottom` $\to$ `INSERTABLE_IN`, `REACHES_BOTTOM` (`PRESERVED`)
-  - Interaction groups $\to$ `coffee_stirring`, `soup_serving` (`PRESERVED`)
-- **Offline Reference Comparison**:
-  - `role_precision`: 1.0, `role_recall`: 1.0
-  - `relation_precision`: 1.0, `relation_recall`: 1.0
-- **Identified Failure Surface for P3-E**:
-  - Although the ideal fixture succeeds, the canonicalizer contains rigid hardcoding (e.g. only 2 specific tool-target pair patterns accepted in operation group compiler; unmapped relations silently fallback to `INSERTABLE_IN`). Pass P3-E will harden these pathways against raw concept loss.
+- **Trace Evidence Source**: `gf_k.raw_requirements[0]["roles"]` (`raw_vlm_role_id`) and `gf_k.raw_requirements[0]["operation_groups"]` (`raw_vlm_group_id`).
+- **Concept Trace**:
+  - `role:role_1` (contain coffee) $\to$ `PRESERVED -> coffee_container` (count: 2, `DISTINCT`, `OPEN_CAVITY`)
+  - `role:role_2` (contain soup) $\to$ `PRESERVED -> soup_container` (count: 2, `DISTINCT`, `OPEN_CAVITY`)
+  - `role:role_3` (stir beverage) $\to$ `PRESERVED -> coffee_stirrer` (count: 1, `REUSABLE`, `ELONGATED_OBJECT`)
+  - `role:role_4` (provide eating utensil) $\to$ `PRESERVED -> soup_eating_utensil` (count: 2, `DISTINCT`, `ELONGATED_OBJECT`)
+  - `role:role_5` (source of water) $\to$ `PRESERVED -> water_source` (count: 1, `DISTINCT`, `SEMANTIC_ONLY`)
+  - `role:role_6` (source of coffee) $\to$ `PRESERVED -> coffee_source` (count: 1, `DISTINCT`, `SEMANTIC_ONLY`)
+  - `rel:role_3->role_1` ("fits inside", "reaches the bottom") $\to$ `PRESERVED -> INSERTABLE_IN, REACHES_BOTTOM`
+  - `rel:role_4->role_2` ("fits inside", "reaches the bottom") $\to$ `PRESERVED -> INSERTABLE_IN, REACHES_BOTTOM`
+  - `group:group_1` $\to$ `PRESERVED -> coffee_stirring` (`SEQUENTIAL_REUSE_ALLOWED`)
+  - `group:group_2` $\to$ `PRESERVED -> soup_serving` (`DEDICATED_PER_TARGET`)
+- **Full GT Evaluator Metrics**:
+  - `role_identity_recall`: 1.0, `role_identity_precision`: 1.0
+  - `role_exact_recall`: 0.833, `role_exact_precision`: 0.833 (due to slight differences in candidate category lists)
+  - `relation_recall`: 1.0, `relation_precision`: 1.0
+  - `operation_group_identity_recall`: 1.0, `operation_group_identity_precision`: 1.0
+  - `reference_complete`: True, `exact_structural_match`: False
+  - `missing_roles`: `[]`, `extra_roles`: `[]`, `missing_relations`: `[]`, `extra_relations`: `[]`
 
 ---
 
 ### 3.2 Living Room (L1 Ideal Fixture)
-- **Raw Fixture Semantic Summary**:
-  - Expresses 6 functional roles: `role_personal_table` (REGION count 2), `role_shared_table` (REGION count 1, `SHARED`), `role_drinkware_set` (OBJECT count 2), `role_tv_remote` (OBJECT count 1), `role_viewer_seat` (FIXED_TARGET count 2), `role_seating_pair` (FIXED_TARGET count 1).
-  - Expresses 4 natural relations: `can hold drinkware set`, `near seat`, `can hold remote`, `accessible from both seats`.
-  - Expresses 1 interaction group: `group_personal_support` for pairing side tables with drinkware and seating context.
-- **Current Canonicalizer Outcome**: `CANONICALIZATION_FAILED`.
-- **Exact Failure Details**:
+- **End-to-End Failure**:
   - **Exception Type**: `UnmappedFunctionalConceptError`
-  - **Error Category**: `UNMAPPED_FUNCTIONAL_CONCEPT`
-  - **First Failing Module**: `environment_vlm_requirements.py:172` in `map_living_room_relation()`
-  - **Error Message**: `VLM living room relation 'can hold drinkware set' cannot be mapped to any reviewed relation`
-- **Concept Loss & Diagnosis**:
-  - **Lost Concepts**: The entire graph fails to compile because `map_living_room_relation` fails closed on natural placement verb phrases like `"can hold drinkware set"`.
-  - **Root Cause**: The Living Room relation alias matcher only permits a narrow dictionary of rigid phrases (`"placed on"`, `"supports"`, `"holds"` without noun suffixes) and lacks flexible semantic relation normalization.
-  - **Target Pass for Repair**: `P3-F` (Living Room Canonicalizer Repair).
+  - **Category**: `UNMAPPED_FUNCTIONAL_CONCEPT`
+  - **Module**: `environment_vlm_requirements.py:172` in `map_living_room_relation()`
+  - **Message**: `VLM living room relation 'can hold drinkware set' cannot be mapped to any reviewed relation`
+- **Granular Sub-Concept Mapping Breakdown**:
+  Because end-to-end execution halts at the first unmapped relation, each raw component was evaluated independently through production mapping functions:
+
+| Raw Component | Raw Type & Text | Mapping Function | Outcome | Target Canonical Concept / Error |
+|---|---|---|:---:|---|
+| `role_1` | `REGION`: "hold items for viewer" | `map_living_room_role_function` | **PRESERVED/MAPPABLE** | `PERSONAL_CUP_SAUCER_REGION` |
+| `role_2` | `REGION`: "hold items for viewers" | `map_living_room_role_function` | **PRESERVED/MAPPABLE** | `SHARED_REMOTE_REGION` |
+| `role_3` | `OBJECT`: "contain hot beverage and saucer" | `map_living_room_object_payload_role` | **PRESERVED/MAPPABLE** | `CUP_SAUCER_SET` |
+| `role_4` | `OBJECT`: "control television" | `map_living_room_object_payload_role` | **PRESERVED/MAPPABLE** | `REMOTE` |
+| `role_5` | `FIXED_TARGET`: "viewer seating position" | `map_living_room_fixed_target_role` | **SYSTEM_CONTEXT_COMPILED** | `SEATING_POSITION` |
+| `role_6` | `FIXED_TARGET`: "paired viewer seating area" | `map_living_room_fixed_target_role` | **SYSTEM_CONTEXT_COMPILED** | `SEATING_PAIR` |
+| `rel:role_1->role_3` | "can hold drinkware set" | `map_living_room_relation` | **REJECTED** | `UnmappedFunctionalConceptError` (modal phrase "can hold" missing in alias dictionary) |
+| `rel:role_1->role_5` | "near seat" | `map_living_room_relation` | **PRESERVED/MAPPABLE** | `NEAR_SEAT` |
+| `rel:role_2->role_4` | "can hold remote" | `map_living_room_relation` | **REJECTED** | `UnmappedFunctionalConceptError` (modal phrase "can hold" missing in alias dictionary) |
+| `rel:role_2->role_6` | "accessible from both seats" | `map_living_room_relation` | **PRESERVED/MAPPABLE** | `ACCESSIBLE_FROM_BOTH_SEATS` |
+| `group_1` | Support drinkware beside seat | `_compile_operation_groups` | **NOT_REACHED_DUE_TO_PRIOR_FAILURE** | Blocked by unmapped `rel:role_1->role_3` |
+
+- **Root Cause & Repair Target**:
+  Current `map_living_room_relation` recognizes exact verbs `"supports"`, `"holds"`, `"placed on"`, `"rest on"`, but fails on `"can hold"`. This is a clear canonicalizer defect scheduled for repair in `P3-F`.
 
 ---
 
 ### 3.3 Workshop (W1 Ideal Fixture)
-- **Raw Fixture Semantic Summary**:
-  - Expresses 3 functional roles: `role_driver_tool` (OBJECT count 1), `role_threaded_fastener` (OBJECT count 1), `role_joint_target` (FIXED_TARGET count 1).
-  - Expresses 3 natural relations: `compatible with`, `reaches target`, `compatible with target`.
-  - Expresses 1 interaction group: `group_fasten_repair`.
-  - Proposes 3 natural candidate inspectable regions: `storage_drawer_left`, `storage_drawer_right`, `tall_tool_cabinet`.
-- **Current Canonicalizer Outcome**: `CANONICALIZED` via `workshop_phase1/requirements.py::FMRequirementProvider`.
-- **Concept Preservation Classification**:
-  - `role_driver_tool` $\to$ `driver` (`PRESERVED`, count 1)
-  - `role_threaded_fastener` $\to$ `fastener` (`PRESERVED`, count 1)
-  - `role_joint_target` $\to$ `repair_target` (`PRESERVED`, count 1)
-  - `compatible with`, `reaches target`, `compatible with target` $\to$ `COMPATIBLE_WITH`, `REACHES_TARGET`, `COMPATIBLE_WITH_TARGET` (`PRESERVED`)
-  - `group_fasten_repair` $\to$ `group_fasten_repair` (`PRESERVED`)
-  - Natural region proposals $\to$ `('LEFT_DRAWER', 'RIGHT_DRAWER', 'TOOL_CABINET')` (`PRESERVED` via natural region resolution).
-- **Offline Reference Comparison**:
-  - `role_precision`: 1.0, `role_recall`: 1.0
-  - `relation_precision`: 1.0, `relation_recall`: 1.0
-- **Identified Failure Surface for P3-G**:
-  - The ideal fixture canonicalizes cleanly; however, live VLM outputs frequently trigger duplicate `driver` role collisions and undeclared role references. Pass P3-G will repair these edge cases.
+- **Trace Evidence Source**: `FMRequirementProvider.normalized_roles`, `normalized_relations`, `normalized_operation_groups`, and `candidate_regions`.
+- **Concept Trace**:
+  - `role:role_1` (drive screw) $\to$ `PRESERVED -> driver` (count: 1, `DISTINCT`)
+  - `role:role_2` (fasten joint) $\to$ `PRESERVED -> fastener` (count: 1, `DISTINCT`)
+  - `role:role_3` (frame joint repair target) $\to$ `PRESERVED -> repair_target` (`SYSTEM_OWNED_FIXED_TARGET_REPRESENTATION`)
+  - `rel:role_1->role_2` ("compatible with") $\to$ `PRESERVED -> COMPATIBLE_WITH`
+  - `rel:role_1->role_3` ("reaches target") $\to$ `PRESERVED -> REACHES_TARGET`
+  - `rel:role_2->role_3` ("compatible with target") $\to$ `PRESERVED -> COMPATIBLE_WITH_TARGET`
+  - `group:group_1` $\to$ `PRESERVED -> group_1` (tool: `driver`, target: `fastener`, context: `repair_target`)
+  - `search_1`, `search_2`, `search_3` $\to$ `PRESERVED -> resolved as ('LEFT_DRAWER', 'RIGHT_DRAWER', 'TOOL_CABINET')`
+- **Full GT Evaluator Metrics & Disclosure**:
+  - `role_identity_recall`: 1.0, `role_identity_precision`: 1.0
+  - `role_exact_recall`: 1.0, `role_exact_precision`: 1.0
+  - `relation_recall`: 1.0, `relation_precision`: 1.0
+  - `operation_group_identity_recall`: 1.0, `operation_group_identity_precision`: 0.0 (`extra_operation_groups: ['group_1']`)
+  - `reference_complete`: True, `exact_structural_match`: False
+  - **Structural Difference Disclosure**: The ideal raw fixture expresses a semantically valid interaction group (`group_1` for driving the fastener into the target joint). The offline static GT reference does not declare an operation group (`operation_groups: ()`). This is preserved as an extra representational structure rather than pruned to artificially force an exact structural match.
 
 ---
 
-## 4. Architectural Rules Formally Validated
+## 4. Summary of Hardened Contracts
 
-1. **No Oracle Leakage**: Fixtures rely solely on open-vocabulary descriptions and local role IDs.
-2. **Zero Network Requirement**: All diagnostic tests run completely offline with mocked transports.
-3. **Deterministic Failure Localization**: Failures are isolated to exact source code lines and functions without guessing or live model variance.
+1. **Zero Tautological Labels**: Preservation classifications are directly tied to transformation trace metadata and mapping function outputs.
+2. **Zero Network Dependence**: All diagnostic executions use `MockFMAdapter` with zero HTTP or socket calls.
+3. **P3-F Repair Readiness**: The test-side `MockFMAdapter` implements all attributes required for full post-repair Living Room canonicalization without test suite breakage.
