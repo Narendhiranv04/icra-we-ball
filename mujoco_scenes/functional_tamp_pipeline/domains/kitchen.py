@@ -176,10 +176,13 @@ def compile_kitchen_contract_from_graph(graph: FunctionalRequirementGraph) -> di
             "expected": r.expected,
         }
         for r in graph.relations
+        if r.subject_role in roles_dict and r.object_role in roles_dict
     ]
 
     op_groups_dict = {}
     for grp in graph.operation_groups:
+        if grp.tool_role not in roles_dict or grp.target_role not in roles_dict:
+            continue
         distinct = (
             grp.distinct_within_group
             if grp.distinct_within_group is not None
@@ -243,17 +246,19 @@ def compile_kitchen_contract_from_graph(graph: FunctionalRequirementGraph) -> di
             ],
         }
 
-    return {
+    contract_result = {
         "schema_version": 2,
         "task_id": "s1_integrated_prepare_and_serve_coffee_and_soup",
         "specification_source": graph.source,
         "goal_instruction": graph.task_instruction,
         "roles": roles_dict,
         "relations": relations_list,
-        "operation_groups": op_groups_dict,
         "cross_group_reuse": {"allowed": graph.cross_group_reuse_allowed},
         "symbolic_task": symbolic_task,
     }
+    if op_groups_dict:
+        contract_result["operation_groups"] = op_groups_dict
+    return contract_result
 
 
 def build_kitchen_observed_scene_graph(session: Any) -> ObservedSceneGraph:
