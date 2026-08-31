@@ -282,15 +282,18 @@ When a case fails, apply this tree **in order**:
 **Scope**: `mujoco_scenes/functional_tamp_pipeline/audit.py`, `scripts/run_phase36b2_matrix.py`, `mujoco_scenes/functional_tamp_pipeline/tests/test_provenance_and_audit.py`
 
 **Accomplished Changes**:
-1. Added `compute_provenance_fingerprint()` to `audit.py` providing immutable SHA-256 configuration hashes covering git commit, git dirty state, model identifier, FM endpoint, canonicalization version, prompt/schema hash, task instruction hash, and search order mode.
+1. Added `compute_provenance_fingerprint()` to `audit.py` providing immutable SHA-256 configuration hashes covering git commit, git dirty state, source tree diff hash (`git_dirty_source_hash`), model identifier, FM endpoint, canonicalization version, prompt/schema hash, task instruction hash, and search order mode.
 2. Updated `scripts/run_phase36b2_matrix.py` to require exact fingerprint match for case reuse, supported `--no-resume` / `--fresh` CLI flags, and eliminated silent stale case reuse.
-3. Implemented deterministic `audit_prompt_leakage()` in `audit.py` scanning model payloads for forbidden internal checker predicates, canonical benchmark region IDs, and GT oracle class symbols.
-4. Hardened benchmark runtime accounting: distinct tracking for `invocation_wall_time_seconds`, `summed_live_case_runtime_seconds`, `summed_newly_executed_runtime_seconds`, `number_of_cases_executed_this_invocation`, and `number_of_cases_reused`.
-5. Explicitly clarified provider replay terminology as deterministic downstream solver replay of saved G_F (not stochastic VLM generation reproducibility).
-6. Ensured `TAMP_FM_DIAGNOSTICS_DIR` is set for all live runs so raw model responses are retained on disk even when validation or canonicalization fails.
-7. Added comprehensive unit tests in `test_provenance_and_audit.py` (230/230 tests pass).
+3. Added `clean_case_directory()` ensuring that when `--fresh` or a fingerprint mismatch occurs, old case artifacts (such as stale `fm_call_*.json` logs) are wiped before execution.
+4. Implemented request-only `audit_prompt_leakage()` in `audit.py` strictly scanning outgoing model requests while excluding generated model completions from false leakage flagging.
+5. Removed synthetic `fm_call_001.json` creation from canonical G_F fallback, ensuring raw diagnostic unavailability is truthfully recorded.
+6. Updated provider replay matrix aggregation to use the strong `validate_vlm_replay()` validator boolean (`provider_replay_validation_pass_count` / `provider_replay_validation_pass_rate`).
+7. Hardened benchmark accounting: distinct tracking for `invocation_wall_time_seconds`, `summed_live_case_runtime_seconds`, `summed_newly_executed_runtime_seconds`, `number_of_cases_executed_this_invocation`, `number_of_cases_reused`, and `total_trial_records`.
+8. Explicitly clarified provider replay terminology as deterministic downstream solver replay of saved G_F (not stochastic VLM generation reproducibility).
+9. Ensured `TAMP_FM_DIAGNOSTICS_DIR` is set for all live runs so raw model responses are retained on disk even when validation or canonicalization fails.
+10. Added comprehensive unit tests in `test_provenance_and_audit.py` (232/232 tests pass).
 
-**Acceptance**: All P3-A acceptance criteria verified.
+**Acceptance**: All P3-A and P3-A.1 acceptance criteria verified.
 
 ---
 

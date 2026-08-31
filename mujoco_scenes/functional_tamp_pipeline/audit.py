@@ -51,7 +51,8 @@ FORBIDDEN_ORACLE_STRINGS: tuple[str, ...] = (
 )
 
 
-def get_git_info(repo_root: Path | str | None = None) -> tuple[str, bool | None]:
+def get_git_info(repo_root: Path | str | None = None) -> dict[str, Any]:
+    """Retrieve git provenance including commit, dirty flag, and dirty source tree diff hash."""
     root = str(repo_root) if repo_root else str(Path(__file__).resolve().parents[2])
     try:
         commit = subprocess.check_output(
@@ -62,17 +63,39 @@ def get_git_info(repo_root: Path | str | None = None) -> tuple[str, bool | None]
         ).strip()
     except Exception:
         commit = "unknown"
+
     try:
-        status = subprocess.check_output(
-            ["git", "status", "--porcelain"],
+        status_output = subprocess.check_output(
+            ["git", "status", "--porcelain", "--", "mujoco_scenes", "scripts", "configs"],
             cwd=root,
             stderr=subprocess.DEVNULL,
             text=True,
         ).strip()
-        dirty = bool(status)
+        dirty = bool(status_output)
     except Exception:
+        status_output = ""
         dirty = None
-    return commit, dirty
+
+    dirty_source_hash: str | None = None
+    if dirty:
+        try:
+            diff_output = subprocess.check_output(
+                ["git", "diff", "HEAD", "--", "mujoco_scenes", "scripts", "configs"],
+                cwd=root,
+                stderr=subprocess.DEVNULL,
+                text=True,
+            )
+            dirty_blob = f"{status_output}\n---DIFF---\n{diff_output}"
+            dirty_source_hash = hashlib.sha256(dirty_blob.encode("utf-8")).hexdigest()
+        except Exception:
+            dirty_source_hash = hashlib.sha256(status_output.encode("utf-8")).hexdigest()
+
+    return {
+        "git_commit": commit,
+        "git_dirty": dirty,
+        "git_dirty_source_hash": dirty_source_hash,
+        "is_clean_source_tree": dirty is False,
+    }
 
 
 def compute_prompt_and_schema_hash() -> str:
@@ -99,7 +122,7 @@ def compute_provenance_fingerprint(
     repo_root: Path | str | None = None,
 ) -> dict[str, Any]:
     """Compute an immutable, reproducible provenance fingerprint dictionary."""
-    git_commit, git_dirty = get_git_info(repo_root)
+    git_info = get_git_info(repo_root)
     model_id = model or os.environ.get("TAMP_FM_MODEL", "qwen35-9b")
     endpoint = base_url or os.environ.get("TAMP_FM_BASE_URL", "http://127.0.0.1:18000/v1")
     schema_hash = compute_prompt_and_schema_hash()
@@ -110,11 +133,13 @@ def compute_provenance_fingerprint(
     )
 
     fingerprint_core = {
-        "schema_version": 1,
+        "schema_version": 2,
         "domain": domain,
         "variant": variant,
-        "git_commit": git_commit,
-        "git_dirty": git_dirty,
+        "git_commit": git_info["git_commit"],
+        "git_dirty": git_info["git_dirty"],
+        "git_dirty_source_hash": git_info["git_dirty_source_hash"],
+        "is_clean_source_tree": git_info["is_clean_source_tree"],
         "model_identifier": model_id,
         "fm_endpoint": endpoint,
         "vlm_canonicalization_version": VLM_CANONICALIZATION_VERSION,
@@ -128,21 +153,88 @@ def compute_provenance_fingerprint(
     return fingerprint_core
 
 
+def _extract_model_request_data(payload: Any) -> tuple[Any, bool]:
+    """Extract model-facing request information while strictly excluding generated model outputs."""
+    if isinstance(payload, dict):
+        if "sanitized_request" in payload and payload["sanitized_request"] is not None:
+            return payload["sanitized_request"], True
+        if "request" in payload and payload["request"] is not None:
+            return payload["request"], True
+
+        # If it contains both request and response keys (e.g. raw response wrapper),
+        # exclude response-only fields.
+        response_keys = {
+            "content",
+            "raw_response",
+            "parsed_response",
+            "choices",
+            "usage",
+            "finish_reason",
+            "parse_error",
+            "json_parse_success",
+            "content_length_chars",
+            "content_sha256",
+        }
+        filtered = {k: v for k, v in payload.items() if k not in response_keys}
+        if filtered:
+            return filtered, True
+        return None, False
+
+    if isinstance(payload, list):
+        extracted_items = []
+        for item in payload:
+            extracted, ok = _extract_model_request_data(item)
+            if ok and extracted is not None:
+                extracted_items.append(extracted)
+        if extracted_items:
+            return extracted_items, True
+        return None, False
+
+    if isinstance(payload, Path):
+        try:
+            data = json.loads(payload.read_text(encoding="utf-8"))
+            return _extract_model_request_data(data)
+        except Exception:
+            return payload.read_text(encoding="utf-8"), True
+
+    if isinstance(payload, str):
+        try:
+            data = json.loads(payload)
+            return _extract_model_request_data(data)
+        except Exception:
+            return payload, True
+
+    return str(payload), True
+
+
 def audit_prompt_leakage(
     payload_or_messages: Any,
     *,
     domain: str | None = None,
 ) -> dict[str, Any]:
-    """Deterministically audit that model prompt/payload contains no leaked internal checkers, canonical regions, or oracles."""
+    """Deterministically audit that the outgoing model request contains no leaked internal checkers, canonical regions, or oracles.
+
+    Crucially, model responses/outputs are excluded and never scanned as prompt leakage.
+    """
     del domain
-    if isinstance(payload_or_messages, (dict, list)):
-        serialized = json.dumps(payload_or_messages, sort_keys=True)
-    elif isinstance(payload_or_messages, Path):
-        serialized = payload_or_messages.read_text(encoding="utf-8")
-    elif isinstance(payload_or_messages, str):
-        serialized = payload_or_messages
+    request_data, has_request = _extract_model_request_data(payload_or_messages)
+    if not has_request or request_data is None:
+        return {
+            "audited": False,
+            "zero_leakage": None,
+            "audit_status": "SKIPPED_NO_REQUEST_PAYLOAD",
+            "reason": "No model-facing request payload available for leakage audit (response-only data was excluded)",
+            "forbidden_checkers_found": [],
+            "forbidden_regions_found": [],
+            "forbidden_oracle_symbols_found": [],
+            "inspected_size_bytes": 0,
+            "payload_sha256": "",
+        }
+
+    if isinstance(request_data, (dict, list)):
+        serialized = json.dumps(request_data, sort_keys=True)
     else:
-        serialized = str(payload_or_messages)
+        serialized = str(request_data)
 
     checkers_found = [c for c in FORBIDDEN_CHECKER_STRINGS if c in serialized]
     regions_found = [
@@ -158,11 +250,13 @@ def audit_prompt_leakage(
     return {
         "audited": True,
         "zero_leakage": zero_leakage,
-        "gt_imports_found": len(oracles_found) > 0,
-        "oracle_labels_in_prompt": len(regions_found) > 0 or len(checkers_found) > 0,
+        "audit_status": "AUDIT_PASSED" if zero_leakage else "AUDIT_FAILED_LEAKAGE_DETECTED",
+        "forbidden_oracle_symbols_found": sorted(oracles_found),
+        "oracle_symbols_in_prompt": len(oracles_found) > 0,
+        "checker_predicates_in_prompt": len(checkers_found) > 0,
+        "canonical_regions_in_prompt": len(regions_found) > 0,
         "forbidden_checkers_found": sorted(checkers_found),
         "forbidden_regions_found": sorted(regions_found),
-        "forbidden_oracles_found": sorted(oracles_found),
         "inspected_size_bytes": len(serialized.encode("utf-8")),
         "payload_sha256": hashlib.sha256(serialized.encode("utf-8")).hexdigest(),
     }
@@ -201,7 +295,6 @@ def audit_plan_grounding(
     # 2. Verify all required relations in operation bindings are TRUE
     all_required_relations_true = True
     for group_id, bindings in operation_bindings.items():
-        # Find group definition if present
         matching_group = next((g for g in specification.operation_groups if g.id == group_id), None)
         required_rels = matching_group.required_relations if matching_group else ("INSERTABLE_IN", "REACHES_BOTTOM")
         for binding in bindings:
@@ -216,9 +309,8 @@ def audit_plan_grounding(
                         f"Operation binding ({tool_id}, {target_id}) for group '{group_id}' has relation '{rel}' with status '{status_str}' (expected TRUE)"
                     )
 
-    # 3. Plan argument consistency: ensure task objects used in plan come from assigned objects
+    # 3. Plan argument consistency
     plan_uses_only_grounded_task_objects = True
-    # Known region/surface identifiers that are not physical manipulable objects
     known_regions = {
         home_region, "serving_area", "countertop", "shared_table", "personal_table_left",
         "personal_table_right", "staging_tray", "work_surface", "D1", "D2", "C1", "C2", "B1",
@@ -232,7 +324,7 @@ def audit_plan_grounding(
                 plan_uses_only_grounded_task_objects = False
                 violations.append(f"Action {op}({', '.join(args)}) uses ungrounded object '{arg}'")
 
-    # 4. Preparation accessibility check: POUR and STIR targets must be at home_region
+    # 4. Preparation accessibility check
     preparation_accessibility_valid = True
     object_locations: dict[str, str] = {}
     for node_id, node in graph_o.nodes.items():
