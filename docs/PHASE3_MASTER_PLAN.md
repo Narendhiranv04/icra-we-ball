@@ -456,10 +456,10 @@ When a case fails, apply this tree **in order**:
 
 ---
 
-### P3-F / P3-F.1: Living Room Canonicalizer Repair & Fail-Closed Authority Closure
+### P3-F / P3-F.1 / P3-F.2: Living Room Canonicalizer Repair, Fail-Closed Authority & Per-Role Property Evidence Closure
 **Status**: `[x] COMPLETE (FROZEN)`
 
-**Objective**: Repair the Living Room VLM canonicalizer to correctly handle composite role cardinalities, relation directions, unary property validation, operation group distribution, concept accounting traces, and enforce strict fail-closed authority closure (no endpoint fabrication, no synthetic fixed targets, disjoint slot composition rules, property fail-closed enforcement).
+**Objective**: Repair the Living Room VLM canonicalizer to correctly handle composite role cardinalities, relation directions, unary property validation, operation group distribution, concept accounting traces, and enforce strict fail-closed authority closure (no endpoint fabrication, no synthetic fixed targets, disjoint slot composition rules, and per-raw-role property evidence closure).
 
 **Accomplished Changes & Empirical Findings**:
 1. **Forward-Only Phrase Matching & Role Semantic Authority**: Implemented `map_living_room_role_function`, `map_living_room_object_payload_role`, and `map_living_room_fixed_target_role` with forward-only phrase matching and strict role semantic authority based exclusively on `function` and `description` (excluding candidate categories).
@@ -467,14 +467,15 @@ When a case fails, apply this tree **in order**:
 3. **Relation Canonicalization & Rejection of Endpoint Fabrication (P3-F.1)**: Implemented `canonicalize_living_room_relation` mapping relations to the 4 canonical Living Room signatures with direction normalization for passive/reverse phrasing (`direction_status: "NORMALIZED_TO_CANONICAL_SIGNATURE"`). Self-relations on regions are strictly rejected with `MalformedVLMSpecificationError` (zero endpoint fabrication).
 4. **Removal of Fixed-Target Synthesis (P3-F.1)**: Deleted synthetic fixed-target compilation fallback. If relations or groups reference fixed anchors without explicit raw declarations, the compiler fails closed with `MalformedVLMSpecificationError`. Explicit raw fixed targets are accurately labeled `PRESERVED`.
 5. **Disjoint Slot Composition (P3-F.1)**: Implemented `_extract_disjoint_slot_identity()` for `PERSONAL_CUP_SAUCER_REGION` and `SEATING_POSITION`. Multi-role synthesis requires explicit disjoint slot identity (e.g. viewer 1 / viewer 2 or left / right), count=1, and `DISTINCT` binding policy. Generic duplicates fail closed with `AmbiguousCanonicalizationError`.
-6. **Unary Property Fail-Closed Enforcement (P3-F.1)**: Support REGION roles omitting `PLANAR_SUPPORT` fail closed with `MalformedVLMSpecificationError` (zero default dictionary injection). Duplicate synonymous planar properties merge with `MERGED_BY_EXPLICIT_RULE`. Unsupported properties (`OPEN_CAVITY`, `ELONGATED_OBJECT`) raise `UnsupportedCheckerCapabilityError`.
-7. **Schema-Required Field Validation (P3-F.1)**: Validates all schema-required fields before compilation; missing fields fail closed immediately without silent fallback defaults.
-8. **Structural Operation Group Distribution**: Canonical operation group `personal_support_group` encapsulates `FITS_SET_ON` and `NEAR_SEAT`, leaving top-level `gf.relations` containing only un-grouped relations (`SHARED_REMOTE_REGION FITS_ON REMOTE` and `SHARED_REMOTE_REGION ACCESSIBLE_FROM_BOTH_SEATS SEATING_PAIR`), achieving 100% precision/recall against GT reference graph.
-9. **Concept Accounting Trace & Version Bump**: Added full concept accounting trace across roles, properties, relations, and operation groups; version set to `phase3_p3f_v1`.
-10. **Comprehensive Testing & Downstream Verification**: Ideal fixture `living_room_L1` canonicalizes with 100% role/relation/group recall and precision and `reference_complete = True`. Full 282-test suite passes (100%). Downstream evaluation on Living Room L1 GT yields `ACTION_SEQUENCE_READY`, 10 action steps, 0 audit violations, and independent replay `VALID`.
-11. **Documentation**: Full architecture and empirical results documented in `docs/PHASE3_P3F_LIVING_CANONICALIZER.md`.
+6. **Per-Raw-Role Property Evidence Closure (P3-F.2)**: Tracked property evidence per raw role (`raw_role_properties_map[raw_id]`). Every physical support raw role contributing to `PERSONAL_CUP_SAUCER_REGION` or `SHARED_REMOTE_REGION` must independently provide its own raw evidence mapping to `PLANAR_SUPPORT`. Property borrowing between raw roles is strictly prohibited. Omission of `PLANAR_SUPPORT` on any raw role raises `MalformedVLMSpecificationError` identifying the offending raw role ID.
+7. **Unary Property Fail-Closed & Alias Merging (P3-F.1 / P3-F.2)**: Synonymous property aliases on the *same* raw role merge with `MERGED_BY_EXPLICIT_RULE`; separate raw roles are independently `PRESERVED` (no cross-role merging). Unsupported properties (`OPEN_CAVITY`, `ELONGATED_OBJECT`) raise `UnsupportedCheckerCapabilityError`.
+8. **Schema-Required Field Validation (P3-F.1)**: Validates all schema-required fields before compilation; missing fields fail closed immediately without silent fallback defaults.
+9. **Structural Operation Group Distribution**: Canonical operation group `personal_support_group` encapsulates `FITS_SET_ON` and `NEAR_SEAT`, leaving top-level `gf.relations` containing only un-grouped relations (`SHARED_REMOTE_REGION FITS_ON REMOTE` and `SHARED_REMOTE_REGION ACCESSIBLE_FROM_BOTH_SEATS SEATING_PAIR`), achieving 100% precision/recall against GT reference graph.
+10. **Concept Accounting Trace & Version Bump**: Added full concept accounting trace across roles, properties, relations, and operation groups; version set to `phase3_p3f_2_v1`.
+11. **Comprehensive Testing & Downstream Verification**: Ideal fixture `living_room_L1` canonicalizes with 100% role/relation/group recall and precision and `reference_complete = True`. Full 318-test suite passes (100%). Downstream evaluation on Living Room L1 GT yields `ACTION_SEQUENCE_READY`, 10 action steps, 0 audit violations, and independent replay `VALID`.
+12. **Documentation**: Full architecture and empirical results documented in `docs/PHASE3_P3F_LIVING_CANONICALIZER.md`.
 
-**Acceptance**: All P3-F and P3-F.1 acceptance criteria verified. P3-F / P3-F.1 FROZEN.
+**Acceptance**: All P3-F, P3-F.1, and P3-F.2 acceptance criteria verified. P3-F / P3-F.1 / P3-F.2 FROZEN.
 
 ---
 

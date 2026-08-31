@@ -179,7 +179,7 @@ def test_ideal_living_room_canonicalization():
     # Verify canonical trace and version
     trace = res["canonicalization_trace"]
     assert trace["version"] == LIVING_ROOM_VLM_CANONICALIZATION_VERSION
-    assert trace["vlm_canonicalization_version"] == "phase3_p3f_v1"
+    assert trace["vlm_canonicalization_version"] == "phase3_p3f_2_v1"
 
     # Build G_F and validate runtime executable constraints
     gf = VLMSpecProvider._living_room(
@@ -606,26 +606,84 @@ def test_disjoint_slot_composition_rules():
 
 
 def test_planar_support_omission_fails_closed():
-    """Verify that support REGION roles missing PLANAR_SUPPORT fail closed."""
+    """Verify that support REGION roles missing PLANAR_SUPPORT fail closed per raw role."""
     provider = EnvironmentVLMRequirementProvider("living_room")
 
-    # 1. Support REGION with required_properties=[] -> MalformedVLMSpecificationError
-    doc_empty_prop = create_ideal_living_room_doc()
-    doc_empty_prop["functional_roles"][0]["required_properties"] = []
-    with pytest.raises(MalformedVLMSpecificationError, match="omitted required executable property 'PLANAR_SUPPORT'"):
-        provider.generate_canonical(raw_document=doc_empty_prop)
+    # A: Left has property, right omits -> MalformedVLMSpecificationError identifying drink_surface_b
+    doc_a = create_ideal_living_room_doc()
+    doc_a["functional_roles"] = [r for r in doc_a["functional_roles"] if r["id"] != "role_1"]
+    doc_a["functional_roles"].extend([
+        {
+            "id": "drink_surface_a",
+            "entity_kind": "REGION",
+            "function": "personal cup and saucer support",
+            "description": "left viewer drink table",
+            "required_count": 1,
+            "binding_policy": "DISTINCT",
+            "candidate_categories": ["side table"],
+            "visible_candidates": [],
+            "required_properties": ["planar horizontal support"],
+        },
+        {
+            "id": "drink_surface_b",
+            "entity_kind": "REGION",
+            "function": "personal cup and saucer support",
+            "description": "right viewer drink table",
+            "required_count": 1,
+            "binding_policy": "DISTINCT",
+            "candidate_categories": ["side table"],
+            "visible_candidates": [],
+            "required_properties": [],  # Omits PLANAR_SUPPORT!
+        },
+    ])
+    for rel in doc_a["functional_relations"]:
+        if rel["subject_role"] == "role_1":
+            rel["subject_role"] = "drink_surface_a"
+    doc_a["interaction_groups"][0]["tool_role"] = "drink_surface_a"
+    with pytest.raises(MalformedVLMSpecificationError, match="Living Room support role 'drink_surface_b' omitted required executable property 'PLANAR_SUPPORT'"):
+        provider.generate_canonical(raw_document=doc_a)
 
-    # 2. Support REGION with PLANAR_SUPPORT -> PRESERVED
-    doc_valid = create_ideal_living_room_doc()
-    res_valid = provider.generate_canonical(raw_document=doc_valid)
-    assert res_valid["ready_for_grounding"] is True
+    # B: Right has property, left omits -> MalformedVLMSpecificationError identifying drink_surface_a
+    doc_b = deepcopy(doc_a)
+    doc_b["functional_roles"][-2]["required_properties"] = []  # left omits!
+    doc_b["functional_roles"][-1]["required_properties"] = ["planar horizontal support"]  # right has it!
+    with pytest.raises(MalformedVLMSpecificationError, match="Living Room support role 'drink_surface_a' omitted required executable property 'PLANAR_SUPPORT'"):
+        provider.generate_canonical(raw_document=doc_b)
 
-    # 3. Two synonymous planar properties -> one canonical property + MERGED_BY_EXPLICIT_RULE trace
-    doc_syn = create_ideal_living_room_doc()
-    doc_syn["functional_roles"][0]["required_properties"] = ["planar support", "horizontal planar support"]
-    res_syn = provider.generate_canonical(raw_document=doc_syn)
-    prop_acct = res_syn["canonicalization_trace"]["concept_accounting"]["properties"]
-    assert any(p["status"] == "MERGED_BY_EXPLICIT_RULE" for p in prop_acct)
+    # C: Both provide property -> canonicalization succeeds, count=2, both accounting show PLANAR_SUPPORT
+    doc_c = deepcopy(doc_a)
+    doc_c["functional_roles"][-2]["required_properties"] = ["planar horizontal support"]
+    doc_c["functional_roles"][-1]["required_properties"] = ["planar support"]
+    res_c = provider.generate_canonical(raw_document=doc_c)
+    p_req = next(r for r in res_c["normalized_requirements"] if r["function"] == "PERSONAL_CUP_SAUCER_REGION")
+    assert p_req["vlm_required_count"] == 2
+    roles_acct = res_c["canonicalization_trace"]["concept_accounting"]["roles"]
+    assert roles_acct["drink_surface_a"]["unary_predicates"] == ["PLANAR_SUPPORT"]
+    assert roles_acct["drink_surface_b"]["unary_predicates"] == ["PLANAR_SUPPORT"]
+    # Check that property entries for both distinct raw roles are independently PRESERVED (no cross-role merging)
+    prop_acct = res_c["canonicalization_trace"]["concept_accounting"]["properties"]
+    assert any(p["raw_role_id"] == "drink_surface_a" and p["status"] == "PRESERVED" for p in prop_acct)
+    assert any(p["raw_role_id"] == "drink_surface_b" and p["status"] == "PRESERVED" for p in prop_acct)
+
+    # D: Aggregate personal support role omits property -> MalformedVLMSpecificationError identifying role_1
+    doc_d = create_ideal_living_room_doc()
+    doc_d["functional_roles"][0]["required_properties"] = []
+    with pytest.raises(MalformedVLMSpecificationError, match="Living Room support role 'role_1' omitted required executable property 'PLANAR_SUPPORT'"):
+        provider.generate_canonical(raw_document=doc_d)
+
+    # E: Shared region role omits property -> MalformedVLMSpecificationError identifying role_2
+    doc_e = create_ideal_living_room_doc()
+    doc_e["functional_roles"][1]["required_properties"] = []
+    with pytest.raises(MalformedVLMSpecificationError, match="Living Room support role 'role_2' omitted required executable property 'PLANAR_SUPPORT'"):
+        provider.generate_canonical(raw_document=doc_e)
+
+    # F: Two synonymous planar properties on SAME raw role -> one canonical property + MERGED_BY_EXPLICIT_RULE trace
+    doc_f = create_ideal_living_room_doc()
+    doc_f["functional_roles"][0]["required_properties"] = ["planar support", "horizontal planar support"]
+    res_f = provider.generate_canonical(raw_document=doc_f)
+    prop_acct_f = res_f["canonicalization_trace"]["concept_accounting"]["properties"]
+    assert any(p["status"] == "MERGED_BY_EXPLICIT_RULE" for p in prop_acct_f)
+    assert any(p["status"] == "PRESERVED" for p in prop_acct_f)
 
 
 def test_missing_schema_required_fields_fail_closed():

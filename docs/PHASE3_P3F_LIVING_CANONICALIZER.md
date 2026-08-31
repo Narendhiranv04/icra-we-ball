@@ -1,17 +1,18 @@
-# Phase 3 Pass P3-F & P3-F.1: Living Room Canonicalizer Repair & Fail-Closed Authority Closure
+# Phase 3 Pass P3-F, P3-F.1 & P3-F.2: Living Room Canonicalizer Repair & Per-Role Property Evidence Closure
 
 > **Pass**: P3-F — Living Room Semantic Compiler Repair  
 > **Pass**: P3-F.1 — Living Room Fail-Closed Authority Closure  
+> **Pass**: P3-F.2 — Living Room Per-Raw-Role Property Evidence Closure  
 > **Date**: 2026-09-01  
 > **Branch**: `naren/pipeline_check`  
-> **Status**: COMPLETE  
-> **Version**: `phase3_p3f_v1`  
+> **Status**: COMPLETE (FROZEN)  
+> **Version**: `phase3_p3f_2_v1`  
 
 ---
 
 ## 1. Executive Summary
 
-In Pass P3-F and Pass P3-F.1, the Living Room VLM-to-Canonical-$G_F$ semantic compiler was comprehensively repaired and sealed to produce deterministic, inspectable, strictly fail-closed canonical requirement graphs without heuristics, silent role/relation loss, predicate fabrication, or cardinality distortion.
+In Passes P3-F, P3-F.1, and P3-F.2, the Living Room VLM-to-Canonical-$G_F$ semantic compiler was comprehensively repaired, sealed, and hardened to produce deterministic, inspectable, strictly fail-closed canonical requirement graphs without heuristics, silent role/relation loss, predicate fabrication, cardinality distortion, or cross-role property leakage.
 
 The repaired compiler was verified against the curated ideal raw fixture `fixtures/ideal_raw_vlm/living_room_L1.json`, achieving:
 - **100% Role Identity Recall (6/6)** and **100% Role Identity Precision (6/6)**
@@ -62,11 +63,12 @@ Relations are mapped into the frozen Living Room predicate signatures:
 - Multiple roles mapping to `PERSONAL_CUP_SAUCER_REGION` or `SEATING_POSITION` may ONLY compose if each has explicit distinct slot identities, counts == 1, and `DISTINCT` binding policy.
 - Generic duplicate roles without disjoint slot evidence fail closed with `AmbiguousCanonicalizationError`.
 
-### 2.6 Unary Property Fail-Closed Policy (P3-F.1)
-- Removed default property injection (`role_properties_map.get(..., ["PLANAR_SUPPORT"])`).
-- If a support REGION role omits `PLANAR_SUPPORT`: **fails closed** with `MalformedVLMSpecificationError`.
-- Duplicate synonymous planar property mentions on the same role are merged with `MERGED_BY_EXPLICIT_RULE`.
-- Unsupported properties (`OPEN_CAVITY`, `ELONGATED_OBJECT`): raises `UnsupportedCheckerCapabilityError`.
+### 2.6 Per-Raw-Role Property Evidence Closure (P3-F.2)
+- Replaced canonical-union property checking with strict per-raw-role tracking via `raw_role_properties_map[raw_id]`.
+- **Core Invariant**: Every independently required physical support raw role contributing to `PERSONAL_CUP_SAUCER_REGION` or `SHARED_REMOTE_REGION` must independently provide its own raw VLM evidence mapping to `PLANAR_SUPPORT` ($\text{PLANAR\_SUPPORT} \in \text{canonicalize}(r_i.\text{required\_properties})$).
+- A contributing raw support role cannot borrow `PLANAR_SUPPORT` evidence from another raw role. If any contributing role omits it, canonicalization fails closed with `MalformedVLMSpecificationError` identifying the offending raw role ID.
+- Role concept accounting accurately reflects unary predicates supplied by that specific raw role. Property concept accounting records distinct raw roles' properties independently as `PRESERVED` (no false cross-role duplicate merging).
+- Synonymous property aliases on the *same* raw role merge with `MERGED_BY_EXPLICIT_RULE`.
 
 ### 2.7 Schema-Required Field Validation Without Fallback Defaults (P3-F.1)
 - Strict validation of all schema-required fields on raw roles (`id`, `entity_kind`, `function`, `required_count`, `binding_policy`, `candidate_categories`, `visible_candidates`, `required_properties`), interaction groups (`id`, `function`, `tool_role`, `target_role`, `required_target_count`, `usage_policy`, `required_relations`), and functional relations (`subject_role`, `relation`, `object_role`). Missing fields fail closed immediately.
@@ -83,7 +85,7 @@ Relations are mapped into the frozen Living Room predicate signatures:
 | Environment VLM Requirements | `pytest mujoco_scenes/tests/test_environment_vlm_requirements.py` | 16/16 PASSED (100%) |
 | Kitchen Regression Suite (Frozen) | `pytest mujoco_scenes/tests/test_kitchen_vlm_functional_graph.py` | 36/36 PASSED (100%) |
 | Full Pipeline Regression Suite | `pytest mujoco_scenes/functional_tamp_pipeline/tests/` | 255/255 PASSED (100%) |
-| Combined Test Suite | `pytest ...` | 282/282 PASSED (100%) |
+| Combined Test Suite | `pytest ...` | 318/318 PASSED (100%) |
 | Downstream Execution (L1 GT) | `scripts/evaluate_functional_tamp_variants.py --domains living_room --variants L1 --mode gt` | ACTION_SEQUENCE_READY (10 actions, Audit VALID, Replay VALID) |
 
 ---
@@ -92,6 +94,6 @@ Relations are mapped into the frozen Living Room predicate signatures:
 
 The canonicalization version for Living Room is tracked as:
 ```python
-LIVING_ROOM_VLM_CANONICALIZATION_VERSION = "phase3_p3f_v1"
+LIVING_ROOM_VLM_CANONICALIZATION_VERSION = "phase3_p3f_2_v1"
 ```
 and is recorded in `metadata["vlm_canonicalization_version"]` and `metadata["canonicalization_trace"]["version"]`.

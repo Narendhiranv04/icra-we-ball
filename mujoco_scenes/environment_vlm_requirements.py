@@ -41,7 +41,7 @@ KITCHEN_SEARCH_REGIONS = {
 }
 
 VLM_CANONICALIZATION_VERSION = "phase3_6a7_2_1_v1"
-LIVING_ROOM_VLM_CANONICALIZATION_VERSION = "phase3_p3f_v1"
+LIVING_ROOM_VLM_CANONICALIZATION_VERSION = "phase3_p3f_2_v1"
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -1168,6 +1168,7 @@ class EnvironmentVLMRequirementProvider:
                 "operation_groups": [],
             }
             role_properties_map: dict[str, list[str]] = {}
+            raw_role_properties_map: dict[str, list[str]] = {}
 
             for raw in raw_requirements:
                 raw_id = raw["id"]
@@ -1206,6 +1207,10 @@ class EnvironmentVLMRequirementProvider:
                         )
 
                     canon_role = raw_id_to_canon[raw_id]
+                    raw_role_properties_map.setdefault(raw_id, [])
+                    if mapped_p not in raw_role_properties_map[raw_id]:
+                        raw_role_properties_map[raw_id].append(mapped_p)
+
                     if mapped_p not in seen_props:
                         seen_props.add(mapped_p)
                         role_properties_map.setdefault(canon_role, [])
@@ -1358,6 +1363,15 @@ class EnvironmentVLMRequirementProvider:
             if "PERSONAL_CUP_SAUCER_REGION" in classified_roles:
                 items = classified_roles["PERSONAL_CUP_SAUCER_REGION"]
                 raw_list = [it["raw"] for it in items]
+
+                # Validate each contributing raw support role independently for PLANAR_SUPPORT evidence
+                for r in raw_list:
+                    r_props = raw_role_properties_map.get(r["id"], [])
+                    if "PLANAR_SUPPORT" not in r_props:
+                        raise MalformedVLMSpecificationError(
+                            f"Living Room support role {r['id']!r} omitted required executable property 'PLANAR_SUPPORT'"
+                        )
+
                 if len(raw_list) == 1:
                     r = raw_list[0]
                     cnt = int(r["required_count"])
@@ -1368,7 +1382,7 @@ class EnvironmentVLMRequirementProvider:
                         "raw_count": cnt,
                         "canonical_count": cnt,
                         "binding_policy": pol,
-                        "unary_predicates": ["PLANAR_SUPPORT"],
+                        "unary_predicates": list(raw_role_properties_map.get(r["id"], [])),
                         "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
                         "candidate_categories_used_for_role_identity": False,
                         "status": "PRESERVED",
@@ -1406,7 +1420,7 @@ class EnvironmentVLMRequirementProvider:
                             "raw_count": 1,
                             "canonical_count": 2,
                             "binding_policy": "DISTINCT",
-                            "unary_predicates": ["PLANAR_SUPPORT"],
+                            "unary_predicates": list(raw_role_properties_map.get(r["id"], [])),
                             "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
                             "candidate_categories_used_for_role_identity": False,
                             "status": "MERGED_BY_EXPLICIT_RULE",
@@ -1432,11 +1446,6 @@ class EnvironmentVLMRequirementProvider:
                     if candidate.get("label")
                 ))
                 props = role_properties_map.get("PERSONAL_CUP_SAUCER_REGION", [])
-                if "PLANAR_SUPPORT" not in props:
-                    raw_ids = [r["id"] for r in raw_list]
-                    raise MalformedVLMSpecificationError(
-                        f"Living Room support role(s) {raw_ids} omitted required executable property 'PLANAR_SUPPORT'"
-                    )
 
                 normalized_records.append({
                     "role_id": "personal_cup_saucer",
@@ -1473,6 +1482,12 @@ class EnvironmentVLMRequirementProvider:
                         f"Multiple raw roles mapping to SHARED_REMOTE_REGION: {[r['id'] for r in raw_list]}"
                     )
                 r = raw_list[0]
+                r_props = raw_role_properties_map.get(r["id"], [])
+                if "PLANAR_SUPPORT" not in r_props:
+                    raise MalformedVLMSpecificationError(
+                        f"Living Room support role {r['id']!r} omitted required executable property 'PLANAR_SUPPORT'"
+                    )
+
                 cnt = int(r["required_count"])
                 pol = r["binding_policy"]
                 concept_accounting["roles"][r["id"]] = {
@@ -1481,7 +1496,7 @@ class EnvironmentVLMRequirementProvider:
                     "raw_count": cnt,
                     "canonical_count": cnt,
                     "binding_policy": pol,
-                    "unary_predicates": ["PLANAR_SUPPORT"],
+                    "unary_predicates": list(raw_role_properties_map.get(r["id"], [])),
                     "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
                     "candidate_categories_used_for_role_identity": False,
                     "status": "PRESERVED",
@@ -1499,10 +1514,6 @@ class EnvironmentVLMRequirementProvider:
                     if candidate.get("label")
                 ))
                 props = role_properties_map.get("SHARED_REMOTE_REGION", [])
-                if "PLANAR_SUPPORT" not in props:
-                    raise MalformedVLMSpecificationError(
-                        f"Living Room support role {r['id']!r} omitted required executable property 'PLANAR_SUPPORT'"
-                    )
 
                 normalized_records.append({
                     "role_id": "shared_remote",
