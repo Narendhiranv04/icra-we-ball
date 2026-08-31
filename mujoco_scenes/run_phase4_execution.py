@@ -30,8 +30,6 @@ def execute_phase3_run(
     *,
     output_dir: Path,
     max_actions: int | None = None,
-    assisted_suite: bool = False,
-    allow_assisted_pick_recovery: bool = True,
 ) -> dict[str, Any]:
     handoff = load_phase3_handoff(run_dir)
     if handoff.domain == "living_room":
@@ -41,7 +39,6 @@ def execute_phase3_run(
             handoff,
             output_dir=output_dir,
             max_actions=max_actions,
-            assisted_suite=assisted_suite,
         )
         _write_json(output_dir / "execution_result.json", result)
         _write_json(
@@ -50,23 +47,20 @@ def execute_phase3_run(
         )
         _write_json(
             output_dir / "execution_trace.json",
-            {"actions": result["action_results"]},
+            {
+                "inspection_execution": result["inspection_execution"],
+                "task_plan_execution": result["task_plan_execution"],
+            },
         )
         return result
     if handoff.domain == "kitchen":
         from .phase4_kitchen import KitchenPhase4Adapter
 
-        adapter = KitchenPhase4Adapter(
-            handoff,
-            assisted_suite=assisted_suite,
-            allow_assisted_pick_recovery=allow_assisted_pick_recovery,
-        )
+        adapter = KitchenPhase4Adapter(handoff)
     elif handoff.domain == "workshop":
         from .phase4_workshop import WorkshopPhase4Adapter
 
-        adapter = WorkshopPhase4Adapter(
-            handoff, assisted_suite=assisted_suite
-        )
+        adapter = WorkshopPhase4Adapter(handoff)
     else:
         raise NotImplementedError(
             f"Phase-4 adapter is not implemented yet for {handoff.domain}"
@@ -74,7 +68,13 @@ def execute_phase3_run(
     result = Phase4Executor(handoff, adapter).run(max_actions=max_actions)
     _write_json(output_dir / "execution_result.json", result)
     _write_json(output_dir / "execution_entity_resolution.json", adapter.entity_resolution)
-    _write_json(output_dir / "execution_trace.json", {"actions": result["action_results"]})
+    _write_json(
+        output_dir / "execution_trace.json",
+        {
+            "inspection_execution": result["inspection_execution"],
+            "task_plan_execution": result["task_plan_execution"],
+        },
+    )
     return result
 
 
@@ -89,8 +89,6 @@ def main() -> int:
     parser.add_argument("--phase3-run", type=Path)
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
     parser.add_argument("--max-actions", type=int)
-    parser.add_argument("--assisted-suite", action="store_true")
-    parser.add_argument("--strict-pick", action="store_true")
     args = parser.parse_args()
 
     run_dir = args.phase3_run or (
@@ -102,21 +100,47 @@ def main() -> int:
             run_dir,
             output_dir=output_dir,
             max_actions=args.max_actions,
-            assisted_suite=args.assisted_suite,
-            allow_assisted_pick_recovery=not args.strict_pick,
         )
     except Exception as error:
+        upstream_blocked = str(error).startswith(
+            "UPSTREAM_PHASE3_SCENE_ASSIGNMENT_MISMATCH"
+        )
         failure = {
-            "schema_version": 1,
+            "schema_version": 2,
             "phase": "PHASE_4_EXECUTION",
             "domain": args.domain,
             "variant": args.variant.upper(),
             "success": False,
-            "failure": "INVALID_HANDOFF_OR_ADAPTER_SETUP",
+            "failure": (
+                "BLOCKED_UPSTREAM_PHASE3"
+                if upstream_blocked else "INVALID_HANDOFF_OR_ADAPTER_SETUP"
+            ),
+            "failure_stage": (
+                "UPSTREAM_PHASE3_BLOCKED" if upstream_blocked else "HANDOFF"
+            ),
             "failure_type": type(error).__name__,
             "failure_reason": str(error),
+            "strict_execution": True,
+            "direct_task_state_fallback_used": False,
+            "inspection_execution": {
+                "regions": [], "actions_requested": 0,
+                "actions_completed": 0, "results": [], "success": False,
+            },
+            "task_plan_execution": {"actions": [], "results": []},
+            "final_verification": {"performed": False},
         }
         _write_json(output_dir / "execution_result.json", failure)
+        _write_json(
+            output_dir / "execution_entity_resolution.json",
+            {"all_resolved": False, "failure_stage": failure["failure_stage"]},
+        )
+        _write_json(
+            output_dir / "execution_trace.json",
+            {
+                "inspection_execution": failure["inspection_execution"],
+                "task_plan_execution": failure["task_plan_execution"],
+            },
+        )
         print(f"PHASE 4 FAILED: {type(error).__name__}: {error}", file=sys.stderr)
         return 1
     print(

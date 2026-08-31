@@ -142,8 +142,6 @@ class KitchenPhase4Adapter:
         self,
         handoff: Phase3Handoff,
         *,
-        assisted_suite: bool = False,
-        allow_assisted_pick_recovery: bool = True,
         step_callback: Any = None,
     ):
         registry_path = (
@@ -197,9 +195,10 @@ class KitchenPhase4Adapter:
             inventory=inventory,
             resolution=resolution,
             step_callback=step_callback,
-            assisted_suite=assisted_suite,
-            allow_assisted_pick_recovery=allow_assisted_pick_recovery,
+            assisted_suite=False,
+            allow_assisted_pick_recovery=False,
         )
+        self.expected_inspected_regions = tuple(handoff.inspected_regions)
         self.inventory = inventory
         self.entity_resolution = resolution
         self.by_id = {
@@ -217,6 +216,40 @@ class KitchenPhase4Adapter:
             for row in resolution["accepted"]
         }
         self.successful_actions: list[dict[str, Any]] = []
+
+    def execute_inspection_open(self, region: str) -> dict[str, Any]:
+        """Physically replay one persisted Phase-3 inspection OPEN."""
+        started = time.perf_counter()
+        if region not in REGION_IDS - {"countertop", "serving_area"}:
+            return {
+                "region": region,
+                "success": False,
+                "failure": ExecutionFailure.ENTITY_MAPPING_FAILURE.value,
+                "failure_reason": "unknown Kitchen articulated region",
+                "wall_duration_s": time.perf_counter() - started,
+            }
+        controller = self.dispatcher.open_container(region)
+        physically_open = region in self.dispatcher.physically_open_containers()
+        success = bool(controller.get("success") and physically_open)
+        return {
+            "region": region,
+            "success": success,
+            "failure": (
+                ExecutionFailure.NONE.value
+                if success
+                else ExecutionFailure.POSTCONDITION_VERIFICATION_FAILURE.value
+            ),
+            "primitive": "KitchenGroundTruthExecutionDispatcher.open_container",
+            "controller_result": controller,
+            "post_check": {
+                "success": physically_open,
+                "physically_open_containers": sorted(
+                    self.dispatcher.physically_open_containers()
+                ),
+            },
+            "direct_container_state_write_used": False,
+            "wall_duration_s": time.perf_counter() - started,
+        }
 
     def _resolve_arguments(self, action: dict[str, Any]) -> list[ResolvedEntity]:
         resolved = []
@@ -355,10 +388,16 @@ class KitchenPhase4Adapter:
 
     def final_verification(self) -> dict[str, Any]:
         completed = len(self.successful_actions)
+        open_regions = self.dispatcher.physically_open_containers()
+        inspections_remain_open = set(self.expected_inspected_regions).issubset(
+            open_regions
+        )
         return {
             "performed": True,
-            "success": True,
+            "success": inspections_remain_open,
             "verified_action_count": completed,
             "verification_basis": "PER_ACTION_SIMULATOR_POSTCONDITIONS",
             "held_object": self._held_planner_id(),
+            "inspection_regions_remain_physically_open": inspections_remain_open,
+            "physically_open_containers": sorted(open_regions),
         }

@@ -1138,6 +1138,7 @@ def run_mobile_execution(
     recorder: Any | None = None,
     step_callback: Any | None = None,
     assisted_suite: bool = False,
+    reset_payloads_from_observation: bool = True,
 ) -> dict[str, Any]:
     run_started = time.monotonic()
     phase1_dir, phase2_dir, output_dir = map(Path, (phase1_dir, phase2_dir, output_dir))
@@ -1244,7 +1245,8 @@ def run_mobile_execution(
     mujoco.mj_forward(scene.model, scene.data)
     resolution = resolve_execution_entities(scene.model, scene.data, payloads, regions)
     _write(output_dir / "execution_entity_resolution.json", resolution)
-    _physical_payload_reset_from_observation(scene, payloads, resolution)
+    if reset_payloads_from_observation:
+        _physical_payload_reset_from_observation(scene, payloads, resolution)
     manipulation = manipulation_profile("google")
     arm_ids = np.array([
         mujoco.mj_name2id(scene.model, mujoco.mjtObj.mjOBJ_JOINT, name)
@@ -1596,6 +1598,7 @@ def run_mobile_execution(
         "actions": execution_log,
         "success": execute and len(execution_log) > 0 and all(item.get("result") != "FAILED" for item in execution_log),
         "normal_execution_object_qpos_edits": False,
+        "initial_payload_qpos_reset_used": bool(reset_payloads_from_observation),
         "execution_profile": (
             "ASSISTED_STRUCTURAL_POSTCONDITION"
             if assisted_suite else "STRICT_PHYSICAL_POSTCONDITION"

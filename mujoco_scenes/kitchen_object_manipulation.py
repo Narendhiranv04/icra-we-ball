@@ -1226,6 +1226,16 @@ def make_kitchen_pick_specs(
                 target_rotation_world=rotation.copy(),
                 approach_clearance_m=0.12,
             ),)
+        bowl_candidates = ()
+        if family == "BOWL":
+            bowl_candidates = StorageGraspCandidateGenerator.box(
+                scene,
+                mujoco.mj_name2id(
+                    scene.model, mujoco.mjtObj.mjOBJ_SITE, f"{body}_grasp"
+                ),
+                manipulation_profile("google").top_down_rotation,
+                family,
+            )
         utensil_reference = GOOGLE_PICK_SPECS["spoon"] if family == "UTENSIL" else None
         grasp_offset = {
             "UTENSIL": 0.020,
@@ -1313,6 +1323,7 @@ def make_kitchen_pick_specs(
                         scene.model, mujoco.mjtObj.mjOBJ_SITE, f"{body}_grasp"
                     ),
                 ) if family == "JAR_SOURCE" else kettle_candidates
+                if family == "KETTLE" else bowl_candidates
             ),
             ik_restart_offsets=(
                 (
@@ -2603,7 +2614,23 @@ class KitchenObjectManipulationExecutor:
         saved_attributes = {name: getattr(low, name) for name in names}
         saved_base_stance = low.base_stance.copy()
         profile = mobile_profile("google")
-        checker = MuJoCoBaseCollisionChecker(model, data, profile)
+        ignored_payload_geoms = frozenset(
+            name
+            for body_id in low.allowed_collision_body_ids
+            for geom_id in range(
+                int(model.body_geomadr[body_id]),
+                int(model.body_geomadr[body_id]) + int(model.body_geomnum[body_id]),
+            )
+            if (name := mujoco.mj_id2name(
+                model, mujoco.mjtObj.mjOBJ_GEOM, geom_id
+            ))
+        )
+        checker = MuJoCoBaseCollisionChecker(
+            model,
+            data,
+            profile,
+            ignored_environment_geoms=ignored_payload_geoms,
+        )
         body_id = mujoco.mj_name2id(
             model, mujoco.mjtObj.mjOBJ_BODY, str(low.held_object)
         )

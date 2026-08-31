@@ -1912,33 +1912,25 @@ class KitchenGroundTruthExecutionDispatcher:
                 # stance. Drawer utensils are grasped nearer their middle, so
                 # the fingers sit lower relative to the bowl even though the
                 # spoon body reaches the same release pose.
-                clearance_tip_position = (
-                    desired_tip_position + 0.08 * opening_normal
-                )
-                clearance_position, clearance_rotation = (
-                    self.phase_c._grip_pose_for_body_feature(
-                        utensil_body,
-                        np.asarray(
-                            tool_geometry.active_tip_local_m, dtype=float
-                        ),
-                        clearance_tip_position,
-                        np.asarray(
-                            vertical_orientations[selected_family]["rotation"],
-                            dtype=float,
-                        ),
-                    )
+                # After release the gripper is empty, so retreat its live
+                # release pose straight up.  Re-imposing the utensil's
+                # vertical body-feature transform on an empty wrist created
+                # an unnecessary, occasionally unreachable orientation
+                # constraint for the shorter spoon.
+                clearance_position = (
+                    release_position + 0.08 * opening_normal
                 )
                 clearance_ik = ProfiledIK(
                     self.scene.model,
                     self.scene.data,
                     low.profile,
-                    orientation_weight=0.45,
+                    orientation_weight=0.20,
                 )
                 clearance_arm, clearance_position_error, clearance_angle_error = (
                     clearance_ik.solve(
                         clearance_position,
                         release_arm,
-                        clearance_rotation,
+                        release_rotation,
                     )
                 )
                 if (
@@ -2357,6 +2349,24 @@ class KitchenGroundTruthExecutionDispatcher:
                 }
 
         if record.get("success", False):
+            if is_soup_serving_pair:
+                nested_backend = self.binding_by_id[object_id][
+                    "physical_backend_body"
+                ]
+                nested_body = mujoco.mj_name2id(
+                    self.scene.model,
+                    mujoco.mjtObj.mjOBJ_BODY,
+                    nested_backend,
+                )
+                if nested_body >= 0:
+                    # The released utensil is a physically verified payload
+                    # inside the bowl.  Keep that exact body in the scoped
+                    # collision allowance while the bowl is transported;
+                    # neither object pose nor attachment state is changed.
+                    low.allowed_collision_body_ids = frozenset((
+                        *low.allowed_collision_body_ids,
+                        nested_body,
+                    ))
             if destination == "countertop":
                 self.update_object_to_countertop_location(object_id)
             try:

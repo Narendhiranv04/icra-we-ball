@@ -19,7 +19,6 @@ def execute_living_room_handoff(
     *,
     output_dir: Path,
     max_actions: int | None = None,
-    assisted_suite: bool = False,
 ) -> dict[str, Any]:
     """Execute the exact plan using the domain's existing per-action loop.
 
@@ -28,6 +27,11 @@ def execute_living_room_handoff(
     goal revalidation in one cohesive loop.  This bridge preserves that loop
     and normalizes its records into the common Phase-4 artifact schema.
     """
+    if handoff.inspected_regions:
+        raise ValueError(
+            "Living-Room handoff contains inspection regions but has no "
+            "domain physical OPEN primitive"
+        )
     phase1_dir = handoff.run_dir / "observed_grounding"
     phase2_dir = handoff.run_dir / "action_sequence"
     native_dir = output_dir / "domain_execution"
@@ -38,7 +42,8 @@ def execute_living_room_handoff(
         variant=handoff.internal_variant,
         execute=True,
         max_task_actions=max_actions,
-        assisted_suite=assisted_suite,
+        assisted_suite=False,
+        reset_payloads_from_observation=False,
     )
     resolution = _read(native_dir / "execution_entity_resolution.json")
     physical = _read(native_dir / "physical_execution.json")
@@ -137,8 +142,23 @@ def execute_living_room_handoff(
             or final.get("all_phase2_goals_physically_satisfied", False)
         )
     )
+    failure = next(
+        (row["failure"] for row in action_results if not row["success"]),
+        ExecutionFailure.NONE.value,
+    )
+    if failure != ExecutionFailure.NONE.value:
+        failure_stage = (
+            "ENTITY_RESOLUTION"
+            if failure == ExecutionFailure.ENTITY_MAPPING_FAILURE.value
+            else "TASK_ACTION"
+        )
+    elif complete and not final.get("all_phase2_goals_physically_satisfied", False):
+        failure = "FINAL_VERIFICATION_FAILURE"
+        failure_stage = "FINAL_VERIFICATION"
+    else:
+        failure_stage = None
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "phase": "PHASE_4_EXECUTION",
         "domain": handoff.domain,
         "variant": handoff.variant,
@@ -148,8 +168,20 @@ def execute_living_room_handoff(
         "phase3_artifacts": {
             key: str(value) for key, value in handoff.artifacts.items()
         },
+        "phase3_artifact_sha256": dict(handoff.artifact_sha256),
         "final_action_sequence": list(handoff.actions),
         "entity_resolution": resolution,
+        "inspection_execution": {
+            "regions": [],
+            "actions_requested": 0,
+            "actions_completed": 0,
+            "results": [],
+            "success": True,
+        },
+        "task_plan_execution": {
+            "actions": selected_actions,
+            "results": action_results,
+        },
         "actions_requested": len(selected_actions),
         "actions_completed": sum(row["success"] for row in action_results),
         "full_sequence_requested": complete,
@@ -158,9 +190,12 @@ def execute_living_room_handoff(
             final if complete else {"performed": False, "reason": "PARTIAL_SEQUENCE"}
         ),
         "domain_execution_summary": native,
-        "failure": next(
-            (row["failure"] for row in action_results if not row["success"]),
-            ExecutionFailure.NONE.value,
+        "failure": failure,
+        "failure_stage": failure_stage,
+        "strict_execution": True,
+        "direct_task_state_fallback_used": False,
+        "initial_payload_qpos_reset_used": bool(
+            physical.get("initial_payload_qpos_reset_used")
         ),
         "wall_duration_s": native.get("wall_time_s"),
         "success": success,

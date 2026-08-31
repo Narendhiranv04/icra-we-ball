@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 from enum import Enum
+import hashlib
 import json
 from pathlib import Path
 import time
@@ -65,10 +66,13 @@ class Phase3Handoff:
     inspected_regions: tuple[str, ...]
     actions: tuple[dict[str, Any], ...]
     artifacts: dict[str, Path]
+    artifact_sha256: dict[str, str]
 
 
 class DomainExecutionAdapter(Protocol):
     entity_resolution: dict[str, Any]
+
+    def execute_inspection_open(self, region: str) -> dict[str, Any]: ...
 
     def execute_action(self, action: dict[str, Any]) -> ActionExecutionResult: ...
 
@@ -82,6 +86,14 @@ def _read_json(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError(f"Expected JSON object in {path}")
     return value
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _validate_actions(actions: Any) -> tuple[dict[str, Any], ...]:
@@ -172,6 +184,15 @@ def load_phase3_handoff(run_dir: Path) -> Phase3Handoff:
         "grounding": run_dir / "graph_grounding_result.json",
         "plan": plan_path,
     }
+    specification_rel = (manifest.get("artifacts") or {}).get(
+        "functional_specification"
+    )
+    if isinstance(specification_rel, str):
+        specification_path = (run_dir / specification_rel).resolve()
+        if run_dir not in specification_path.parents:
+            raise ValueError("Phase-3 functional specification path escapes run directory")
+        if specification_path.is_file():
+            artifacts["functional_specification"] = specification_path
     return Phase3Handoff(
         run_dir=run_dir,
         domain=str(manifest["domain"]),
@@ -187,6 +208,7 @@ def load_phase3_handoff(run_dir: Path) -> Phase3Handoff:
         inspected_regions=tuple(map(str, result.get("inspected_regions", ()))),
         actions=actions,
         artifacts=artifacts,
+        artifact_sha256={key: _sha256(path) for key, path in artifacts.items()},
     )
 
 
@@ -204,12 +226,32 @@ class Phase4Executor:
                 raise ValueError("max_actions must be positive")
             selected = selected[:max_actions]
         started = time.perf_counter()
-        records = []
-        for action in selected:
-            record = self.adapter.execute_action(action)
-            records.append(record.to_dict())
-            if not record.success:
+        inspection_records = []
+        for region in self.handoff.inspected_regions:
+            try:
+                record = self.adapter.execute_inspection_open(region)
+            except Exception as error:
+                record = {
+                    "region": region,
+                    "success": False,
+                    "failure": ExecutionFailure.CONTROLLER_FAILURE.value,
+                    "failure_type": type(error).__name__,
+                    "failure_reason": str(error),
+                }
+            inspection_records.append(record)
+            if not record.get("success"):
                 break
+        inspections_succeeded = (
+            len(inspection_records) == len(self.handoff.inspected_regions)
+            and all(row.get("success") for row in inspection_records)
+        )
+        records = []
+        if inspections_succeeded:
+            for action in selected:
+                record = self.adapter.execute_action(action)
+                records.append(record.to_dict())
+                if not record.success:
+                    break
         complete_sequence = len(selected) == len(self.handoff.actions)
         all_succeeded = len(records) == len(selected) and all(
             row["success"] for row in records
@@ -219,9 +261,33 @@ class Phase4Executor:
             if complete_sequence and all_succeeded
             else {"performed": False, "reason": "PARTIAL_OR_FAILED_SEQUENCE"}
         )
-        success = bool(all_succeeded and (not complete_sequence or final.get("success")))
+        success = bool(
+            inspections_succeeded
+            and all_succeeded
+            and (not complete_sequence or final.get("success"))
+        )
+        task_failure = next(
+            (row["failure"] for row in records if not row["success"]),
+            ExecutionFailure.NONE.value,
+        )
+        if not inspections_succeeded:
+            failure_stage = "INSPECTION_OPEN"
+            failure = "INSPECTION_EXECUTION_FAILURE"
+        elif task_failure != ExecutionFailure.NONE.value:
+            failure_stage = (
+                "ENTITY_RESOLUTION"
+                if task_failure == ExecutionFailure.ENTITY_MAPPING_FAILURE.value
+                else "TASK_ACTION"
+            )
+            failure = task_failure
+        elif complete_sequence and not final.get("success"):
+            failure_stage = "FINAL_VERIFICATION"
+            failure = "FINAL_VERIFICATION_FAILURE"
+        else:
+            failure_stage = None
+            failure = ExecutionFailure.NONE.value
         return {
-            "schema_version": 1,
+            "schema_version": 2,
             "phase": "PHASE_4_EXECUTION",
             "domain": self.handoff.domain,
             "variant": self.handoff.variant,
@@ -231,17 +297,31 @@ class Phase4Executor:
             "phase3_artifacts": {
                 key: str(value) for key, value in self.handoff.artifacts.items()
             },
+            "phase3_artifact_sha256": dict(self.handoff.artifact_sha256),
             "final_action_sequence": list(self.handoff.actions),
             "entity_resolution": self.adapter.entity_resolution,
+            "inspection_execution": {
+                "regions": list(self.handoff.inspected_regions),
+                "actions_requested": len(self.handoff.inspected_regions),
+                "actions_completed": sum(
+                    bool(row.get("success")) for row in inspection_records
+                ),
+                "results": inspection_records,
+                "success": inspections_succeeded,
+            },
+            "task_plan_execution": {
+                "actions": list(selected),
+                "results": records,
+            },
             "actions_requested": len(selected),
             "actions_completed": sum(row["success"] for row in records),
             "full_sequence_requested": complete_sequence,
             "action_results": records,
             "final_verification": final,
-            "failure": next(
-                (row["failure"] for row in records if not row["success"]),
-                ExecutionFailure.NONE.value,
-            ),
+            "failure": failure,
+            "failure_stage": failure_stage,
+            "strict_execution": True,
+            "direct_task_state_fallback_used": False,
             "wall_duration_s": time.perf_counter() - started,
             "success": success,
         }

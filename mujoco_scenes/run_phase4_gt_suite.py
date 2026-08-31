@@ -40,7 +40,6 @@ def main() -> int:
     )
     parser.add_argument("--phase3-root", type=Path, default=DEFAULT_PHASE3_ROOT)
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
-    parser.add_argument("--assisted-suite", action="store_true")
     parser.add_argument("--fail-fast", action="store_true")
     parser.add_argument("--max-actions", type=int)
     args = parser.parse_args()
@@ -61,7 +60,6 @@ def main() -> int:
                 run_dir,
                 output_dir=output_dir,
                 max_actions=args.max_actions,
-                assisted_suite=args.assisted_suite,
             )
             record = {
                 "domain": domain,
@@ -69,20 +67,67 @@ def main() -> int:
                 "success": bool(result["success"]),
                 "actions_completed": result["actions_completed"],
                 "actions_requested": result["actions_requested"],
+                "inspection_actions_requested": result["inspection_execution"]["actions_requested"],
+                "inspection_actions_completed": result["inspection_execution"]["actions_completed"],
+                "final_verification": result["final_verification"],
+                "failure_stage": result.get("failure_stage"),
                 "failure": result["failure"],
                 "result_path": str(output_dir / "execution_result.json"),
             }
         except Exception as error:
+            upstream_blocked = str(error).startswith(
+                "UPSTREAM_PHASE3_SCENE_ASSIGNMENT_MISMATCH"
+            )
             record = {
                 "domain": domain,
                 "variant": variant,
                 "success": False,
                 "actions_completed": 0,
                 "actions_requested": None,
-                "failure": "SETUP_OR_EXECUTION_EXCEPTION",
+                "inspection_actions_requested": None,
+                "inspection_actions_completed": 0,
+                "final_verification": {"performed": False},
+                "failure_stage": (
+                    "UPSTREAM_PHASE3_BLOCKED" if upstream_blocked else "HANDOFF"
+                ),
+                "failure": (
+                    "BLOCKED_UPSTREAM_PHASE3"
+                    if upstream_blocked else "SETUP_OR_EXECUTION_EXCEPTION"
+                ),
                 "failure_type": type(error).__name__,
                 "failure_reason": str(error),
             }
+            failure_artifact = {
+                "schema_version": 2,
+                "phase": "PHASE_4_EXECUTION",
+                "domain": domain,
+                "variant": variant,
+                "success": False,
+                "failure": record["failure"],
+                "failure_stage": record["failure_stage"],
+                "failure_type": type(error).__name__,
+                "failure_reason": str(error),
+                "strict_execution": True,
+                "direct_task_state_fallback_used": False,
+                "inspection_execution": {
+                    "regions": [], "actions_requested": 0,
+                    "actions_completed": 0, "results": [], "success": False,
+                },
+                "task_plan_execution": {"actions": [], "results": []},
+                "final_verification": {"performed": False},
+            }
+            _write(output_dir / "execution_result.json", failure_artifact)
+            _write(
+                output_dir / "execution_entity_resolution.json",
+                {"all_resolved": False, "failure_stage": record["failure_stage"]},
+            )
+            _write(
+                output_dir / "execution_trace.json",
+                {
+                    "inspection_execution": failure_artifact["inspection_execution"],
+                    "task_plan_execution": failure_artifact["task_plan_execution"],
+                },
+            )
         records.append(record)
         print(
             f"  -> {'PASS' if record['success'] else 'FAIL'} "
@@ -94,8 +139,9 @@ def main() -> int:
             break
     summary = {
         "schema_version": 1,
-        "suite": "PHASE4_GT_FEASIBLE_VARIANTS",
-        "assisted_suite": bool(args.assisted_suite),
+        "suite": "STRICT_GT_EXECUTION",
+        "strict_execution": True,
+        "direct_task_state_fallback_used": False,
         "max_actions": args.max_actions,
         "conditions_requested": len(conditions),
         "conditions_completed": len(records),
