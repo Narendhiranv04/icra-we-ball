@@ -244,3 +244,7 @@ def validate_runtime_gf(graph: FunctionalRequirementGraph) -> None:
         raise MalformedVLMSpecificationError(
             f"region_ranking {graph.region_ranking} provided but candidate_regions is empty"
         )
+
+
+# Backward-compatible alias
+validate_canonical_task_interface = validate_runtime_gf

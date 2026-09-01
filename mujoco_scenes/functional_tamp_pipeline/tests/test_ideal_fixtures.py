@@ -442,10 +442,18 @@ def diagnose_fixture_canonicalization(domain: str) -> dict[str, Any]:
                 else:
                     report["concept_preservation"][rel_key] = f"REJECTED: unmapped relation {r!r}"
 
+            trace_accounting = getattr(provider, "canonicalization_trace", {}).get("concept_accounting", {}) or {}
             for grp in data.get("interaction_groups", []):
                 gid = grp["id"]
-                if gid in normalized_groups_map:
-                    report["concept_preservation"][f"group:{gid}"] = f"PRESERVED -> {gid} (extra wrt GT reference)"
+                grp_entry = next(
+                    (g for g in trace_accounting.get("operation_groups", []) if g.get("raw_group_id") == gid),
+                    None
+                )
+                if grp_entry:
+                    status = grp_entry.get("status", "MERGED_BY_EXPLICIT_RULE")
+                    report["concept_preservation"][f"group:{gid}"] = f"{status} -> {gid} (redundant with graph relations)"
+                elif gid in normalized_groups_map:
+                    report["concept_preservation"][f"group:{gid}"] = f"PRESERVED -> {gid}"
                 else:
                     report["concept_preservation"][f"group:{gid}"] = "DROPPED"
 
@@ -592,10 +600,16 @@ def test_diagnostic_canonicalization_outcomes():
     w_diag = diagnose_fixture_canonicalization("workshop")
     assert w_diag["status"] == "CANONICALIZED"
     assert w_diag["reference_metrics"]["role_identity_recall"] == 1.0
+    assert w_diag["reference_metrics"]["role_identity_precision"] == 1.0
+    assert w_diag["reference_metrics"]["role_exact_recall"] == 1.0
+    assert w_diag["reference_metrics"]["role_exact_precision"] == 1.0
     assert w_diag["reference_metrics"]["relation_recall"] == 1.0
+    assert w_diag["reference_metrics"]["relation_precision"] == 1.0
+    assert w_diag["reference_metrics"]["operation_group_identity_recall"] == 1.0
+    assert w_diag["reference_metrics"]["operation_group_identity_precision"] == 1.0
     assert w_diag["reference_metrics"]["reference_complete"] is True
-    assert w_diag["reference_metrics"]["extra_operation_groups"] == ["group_1"]
-    assert w_diag["reference_metrics"]["exact_structural_match"] is False
+    assert w_diag["reference_metrics"]["extra_operation_groups"] == []
+    assert w_diag["reference_metrics"]["exact_structural_match"] is True
 
     # Verify 3 distinct relation keys with exact predicate mapping
     w_rel_keys = [k for k in w_diag["concept_preservation"] if k.startswith("rel:")]

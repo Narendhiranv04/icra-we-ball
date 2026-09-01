@@ -45,14 +45,20 @@ class VLMSpecProvider(FunctionalSpecProvider):
         task_instruction: str,
         observation_images: list[Path],
         provider: FMRequirementProvider | None = None,
+        adapter: FMAdapter | None = None,
     ) -> FunctionalRequirementGraph:
         from mujoco_scenes.functional_tamp_pipeline.errors import MalformedVLMSpecificationError
         from mujoco_scenes.workshop_phase1.requirements import (
-            FMRequirementProvider, WORKSHOP_SEARCH_REGIONS,
+            FMRequirementProvider,
+            WORKSHOP_SEARCH_REGIONS,
+            WORKSHOP_VLM_CANONICALIZATION_VERSION,
         )
 
         if provider is None:
-            provider = FMRequirementProvider()
+            provider = FMRequirementProvider(fm_adapter=adapter)
+        elif adapter is not None and getattr(provider, "fm_adapter", None) is None:
+            provider.fm_adapter = adapter
+
         provider.get_requirements(
             task_instruction, observation_images=observation_images
         )
@@ -95,7 +101,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
 
         raw_resp = getattr(provider, "raw_vlm_response", None) or provider.raw_decomposition
         valid_spec = getattr(provider, "validated_vlm_specification", None) or provider.raw_decomposition
-        trace = getattr(provider, "transformation_trace", [])
+        trace = getattr(provider, "canonicalization_trace", {})
 
         return FunctionalRequirementGraph(
             domain="workshop",
@@ -110,7 +116,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
             raw_requirements=tuple(provider._requirements or []),
             metadata={
                 "schema_version": 2,
-                "vlm_canonicalization_version": VLM_CANONICALIZATION_VERSION,
+                "vlm_canonicalization_version": trace.get("vlm_canonicalization_version", WORKSHOP_VLM_CANONICALIZATION_VERSION),
                 "transformation": "LOSSLESS_CANONICAL_G_F_CONSTRUCTION",
                 "raw_roles_count": len(provider.normalized_roles),
                 "raw_relations_count": len(provider.normalized_relations),
@@ -123,7 +129,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
                 "validated_vlm_specification": valid_spec,
                 "canonicalization_trace": trace,
                 "raw_decomposition": provider.raw_decomposition,
-                "transformation_trace": trace,
+                "transformation_trace": trace.get("transformation_trace", []),
             },
         )
 

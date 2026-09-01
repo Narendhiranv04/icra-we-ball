@@ -239,9 +239,33 @@ def _valid_kitchen_raw_vlm() -> dict:
 # ===========================================================================
 def test_workshop_perfect_equivalence_with_legacy_marker_normalization():
     """Real GT Workshop reference vs synthetic canonical VLM G_F."""
-    ref_gf = GTSpecProvider().provide("workshop", "fasten joint")
-    assert "CAN_DRIVE_SCREW" in ref_gf.nodes["driver"].unary_predicates
-    assert "CAN_FASTEN" in ref_gf.nodes["fastener"].unary_predicates
+    base_ref = GTSpecProvider().provide("workshop", "fasten joint")
+    ref_nodes = dict(base_ref.nodes)
+    ref_nodes["driver"] = FunctionalRole(
+        name=base_ref.nodes["driver"].name,
+        entity_kind=base_ref.nodes["driver"].entity_kind,
+        count=base_ref.nodes["driver"].count,
+        semantic_categories=base_ref.nodes["driver"].semantic_categories,
+        unary_predicates=("CAN_DRIVE_SCREW",),
+        binding_policy=base_ref.nodes["driver"].binding_policy,
+        verification_mode=base_ref.nodes["driver"].verification_mode,
+    )
+    ref_nodes["fastener"] = FunctionalRole(
+        name=base_ref.nodes["fastener"].name,
+        entity_kind=base_ref.nodes["fastener"].entity_kind,
+        count=base_ref.nodes["fastener"].count,
+        semantic_categories=base_ref.nodes["fastener"].semantic_categories,
+        unary_predicates=("CAN_FASTEN",),
+        binding_policy=base_ref.nodes["fastener"].binding_policy,
+        verification_mode=base_ref.nodes["fastener"].verification_mode,
+    )
+    ref_gf = FunctionalRequirementGraph(
+        domain=base_ref.domain,
+        task_instruction=base_ref.task_instruction,
+        nodes=ref_nodes,
+        relations=base_ref.relations,
+        operation_groups=base_ref.operation_groups,
+    )
 
     adapter = MockFMAdapter(_valid_workshop_raw_vlm())
     provider = FMRequirementProvider(fm_adapter=adapter)

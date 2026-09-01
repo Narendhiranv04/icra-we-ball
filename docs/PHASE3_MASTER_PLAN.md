@@ -480,7 +480,7 @@ When a case fails, apply this tree **in order**:
 ---
 
 ### P3-G: Workshop Canonicalizer Repair
-**Status**: `[ ] NOT STARTED`
+**Status**: `[x] COMPLETE (FROZEN)`
 
 **Objective**: Repair the Workshop VLM canonicalizer to handle alternative role proposals, unmapped capability phrases, and operation group validation.
 
@@ -492,13 +492,13 @@ When a case fails, apply this tree **in order**:
 2. **Capability vocabulary**: Expand ontology phrase mappings for fastener driving and holding capabilities.
 3. **Operation group validation**: Validate group cardinalities and context relations consistently against declared roles.
 4. **P3-D.1 Canonicalizer Obligations**:
-   - Resolve `workbench_surface` role emission (must not be emitted as a selectable G_F role; belongs to system/planner context).
-   - Resolve `LOCATED_ON` relation emission (remove or convert to system context; reject in canonical G_F).
-   - Resolve generic unary properties (`PLANAR_SUPPORT`, `OPEN_CAVITY`, `ELONGATED_OBJECT`) emitted by `map_workshop_unary_property` (must not pollute canonical Workshop G_F).
+   - Resolve `workbench_surface` role emission (absorbed into planner context `MAIN_WORKBENCH_ZONE`; not emitted in active G_F).
+   - Resolve `LOCATED_ON` relation emission (absorbed into planner context for repair_target on workbench; rejected on functional roles).
+   - Resolve generic unary properties (`PLANAR_SUPPORT`, `OPEN_CAVITY`, `ELONGATED_OBJECT`) emitted by `map_workshop_unary_property` (absorbed for workbench context; rejected on functional roles; zero runtime unary predicates in G_F).
 
-**Tests**: `test_ideal_fixtures.py` must pass for `workshop_W1`. Run `pytest mujoco_scenes/tests/test_workshop_vlm_requirements.py`.
+**Tests**: `test_ideal_fixtures.py` passes for `workshop_W1` with 100% recall/precision and exact structural match. `test_workshop_vlm_requirements.py` passes (23/23).
 
-**Acceptance**: Ideal workshop fixture → canonical G_F matching GT structure with zero unauthorized roles or predicates.
+**Acceptance**: Ideal workshop fixture → canonical G_F matching GT structure with zero unauthorized roles or predicates. Downstream W1 GT execution valid.
 
 ---
 
@@ -707,20 +707,19 @@ Per pipeline run, retain:
 
 ## 11. CURRENT NEXT PASS
  
-### **CURRENT NEXT PASS: P3-F**
+### **CURRENT NEXT PASS: P3-H**
  
-**Exact Objective**: Repair the Living Room VLM canonicalizer to achieve 100% concept preservation on the ideal fixture (L1) without silent fallbacks, correctly handling composite role cardinalities, relation directions, and system context integration.
+**Exact Objective**: Establish a strict region proposal resolution contract across all domains without leaking unpermitted variant information.
  
-**Prerequisites**: P3-A, P3-B, P3-B.1, P3-C, P3-C.1, P3-C.2, P3-D, P3-D.1, P3-E, P3-E.1, and P3-E.2 are complete and frozen.
+**Prerequisites**: P3-A through P3-G are complete and frozen.
  
 **What to do**:
-1. Establish negative regression tests for unmapped Living Room relations, ambiguous role mappings, and composite role counting.
-2. Repair `map_living_room_relation()` in `environment_vlm_requirements.py` to correctly map valid spatial phrasing without fabricating unmapped predicates.
-3. Formulate strict composite role cardinality handling for multi-part items (`CUP_SAUCER_SET`).
-4. Validate relation directions and context targets against frozen predicate signatures.
+1. Clarify what candidate regions are observable/discoverable per domain.
+2. Ensure natural language region aliases resolve deterministically.
+3. If VLM proposes invalid/empty search regions, handle via explicit domain fallback policy without accessing hidden variant state.
  
 **Acceptance Criteria**:
-- `test_ideal_fixtures.py` passes for `living_room_L1` with `role_recall = 1.0`, `relation_recall = 1.0`.
+- All valid region proposals resolve deterministically.
 - All Phase-3 unit and regression tests pass.
  
-**Expected next pass**: P3-G (Workshop Canonicalizer Repair)
+**Expected next pass**: P3-I (K1/L1/W1 Full Ideal-Fixture Convergence)

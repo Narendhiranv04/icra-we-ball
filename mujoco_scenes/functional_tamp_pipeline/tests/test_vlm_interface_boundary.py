@@ -255,16 +255,38 @@ def test_workshop_region_role_mapped_as_context_region(tmp_path):
         "unsupported_reason": "",
         "functional_roles": [
             {
-                "id": "unsupported_table_region",
-                "entity_kind": "REGION",
-                "function": "rest workpiece",
-                "description": "tabletop surface",
+                "id": "driver_role",
+                "entity_kind": "OBJECT",
+                "function": "drive screw",
+                "description": "screwdriver tool",
                 "required_count": 1,
                 "binding_policy": "DISTINCT",
-                "candidate_categories": ["table surface"],
-                "visible_candidates": [{"label": "table surface", "visual_description": "table", "suitability_reason": "flat"}],
+                "candidate_categories": ["screwdriver"],
+                "visible_candidates": [],
+                "required_properties": [],
+            },
+            {
+                "id": "fastener_role",
+                "entity_kind": "OBJECT",
+                "function": "fasten joint",
+                "description": "threaded fastener",
+                "required_count": 1,
+                "binding_policy": "DISTINCT",
+                "candidate_categories": ["screw"],
+                "visible_candidates": [],
+                "required_properties": [],
+            },
+            {
+                "id": "workbench_region",
+                "entity_kind": "REGION",
+                "function": "rest workpiece",
+                "description": "workbench support surface",
+                "required_count": 1,
+                "binding_policy": "DISTINCT",
+                "candidate_categories": ["workbench"],
+                "visible_candidates": [{"label": "workbench surface", "visual_description": "table", "suitability_reason": "flat"}],
                 "required_properties": ["planar support"],
-            }
+            },
         ],
         "functional_relations": [],
         "interaction_groups": [],
@@ -278,9 +300,12 @@ def test_workshop_region_role_mapped_as_context_region(tmp_path):
     img = tmp_path / "img.png"
     img.write_bytes(PNG_1X1)
     provider.get_requirements("Drive screw", observation_images=[img])
-    assert len(provider.normalized_roles) == 1
-    assert provider.normalized_roles[0].entity_kind == "REGION"
-    assert provider.normalized_roles[0].canonical_role_id == "workbench_surface"
+    assert len(provider.normalized_roles) == 2
+    assert {r.canonical_role_id for r in provider.normalized_roles} == {"driver", "fastener"}
+    # Workbench context region absorbed into planner context
+    accounting = provider.canonicalization_trace["concept_accounting"]
+    assert accounting["roles"]["workbench_region"]["status"] == "ABSORBED_INTO_PLANNER_CONTEXT"
+    assert accounting["roles"]["workbench_region"]["canonical_role"] == "MAIN_WORKBENCH_ZONE"
 
 
 def test_living_room_detector_vocabulary_uses_only_vlm_categories(tmp_path):

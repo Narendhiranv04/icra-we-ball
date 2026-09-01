@@ -66,24 +66,9 @@ def test_workshop_w1_live_audit_fixture() -> None:
     raw_doc = _load_fixture(w1_path)
 
     prov = FMRequirementProvider()
-    prov._ensure_generated("Find screw and driver", raw_document=raw_doc)
-    graph = VLMSpecProvider._workshop("Find screw and driver", [], provider=prov)
-
-    assert isinstance(graph, FunctionalRequirementGraph)
-    assert graph.domain == "workshop"
-    assert "fastener" in graph.nodes
-    assert "driver" in graph.nodes
-    assert graph.nodes["fastener"].entity_kind == "OBJECT"
-    assert graph.nodes["driver"].entity_kind == "OBJECT"
-    assert "workbench_surface" in graph.nodes
-    assert graph.nodes["workbench_surface"].entity_kind == "REGION"
-    assert "repair_target" in graph.nodes
-    assert graph.nodes["repair_target"].entity_kind == "FIXED_TARGET"
-    assert len(graph.operation_groups) == 1
-    assert graph.candidate_regions == ("LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET")
-    # Historical uncanonicalized live fixture emits unauthorized role workbench_surface; must fail closed under role ownership validation
-    with pytest.raises(MalformedVLMSpecificationError, match="Unknown or unauthorized role 'workbench_surface'"):
-        validate_runtime_gf(graph)
+    # Historical uncanonicalized live fixture fails closed under compiler validation
+    with pytest.raises(VLMSpecificationError):
+        prov._ensure_generated("Find screw and driver", raw_document=raw_doc)
 
 
 def test_static_runtime_isolation() -> None:

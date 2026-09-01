@@ -186,14 +186,261 @@ def test_result_records_image_provenance_and_no_execution(observation_image):
     assert transport.calls == 1
 
 
-def test_vlm_organic_geometric_property_accepted(observation_image):
+def test_vlm_unsupported_property_on_object_role_fails_closed(observation_image):
     document = natural_decomposition()
     document["functional_roles"][0]["required_properties"] = [
         "planar support"
     ]
     provider, _ = provider_for(document)
-    graph = provider.get_requirements(observation_images=[observation_image])
-    assert graph is not None
+    from mujoco_scenes.functional_tamp_pipeline.errors import UnsupportedCheckerCapabilityError
+    with pytest.raises(UnsupportedCheckerCapabilityError, match="not supported in canonical Workshop G_F"):
+        provider.get_requirements(observation_images=[observation_image])
+
+
+def test_vlm_unmapped_unary_property_fails_closed(observation_image):
+    document = natural_decomposition()
+    document["functional_roles"][0]["required_properties"] = [
+        "completely unmapped property"
+    ]
+    provider, _ = provider_for(document)
+    from mujoco_scenes.functional_tamp_pipeline.errors import UnmappedFunctionalConceptError
+    with pytest.raises(UnmappedFunctionalConceptError, match="cannot be mapped to any Workshop unary property"):
+        provider.get_requirements(observation_images=[observation_image])
+
+
+def test_role_authority_function_and_description_only():
+    from mujoco_scenes.workshop_phase1.requirements import map_workshop_role_function
+    # Driver function with non-driver categories
+    raw_driver = {
+        "function": "tool to drive screws into frame",
+        "description": "hand tool for tightening screws",
+        "candidate_categories": ["wooden hammer", "mallet"],
+    }
+    assert map_workshop_role_function(raw_driver) == "CAN_DRIVE_SCREW"
+
+    # Fastener function with non-fastener categories
+    raw_fastener = {
+        "function": "threaded fastener to secure the loose joint",
+        "description": "fastener to hold joint together",
+        "candidate_categories": ["power drill", "wrench"],
+    }
+    assert map_workshop_role_function(raw_fastener) == "CAN_FASTEN"
+
+
+def test_candidate_categories_cannot_manufacture_driver_or_fastener():
+    from mujoco_scenes.workshop_phase1.requirements import map_workshop_role_function
+    # Non-driver function with driver candidate categories
+    raw_unmapped = {
+        "function": "paint the wall surface",
+        "description": "decorative coating applicator",
+        "candidate_categories": ["screwdriver", "power driver"],
+    }
+    assert map_workshop_role_function(raw_unmapped) is None
+
+    # Non-fastener function with fastener candidate categories
+    raw_unmapped_2 = {
+        "function": "illuminate workspace",
+        "description": "lighting fixture",
+        "candidate_categories": ["screw", "Phillips screw"],
+    }
+    assert map_workshop_role_function(raw_unmapped_2) is None
+
+
+def test_unknown_fixed_target_fails_closed():
+    from mujoco_scenes.workshop_phase1.requirements import FMRequirementProvider
+    from mujoco_scenes.functional_tamp_pipeline.errors import UnmappedFunctionalConceptError
+    doc = natural_decomposition()
+    doc["functional_roles"][2] = {
+        "id": "unknown_target",
+        "entity_kind": "FIXED_TARGET",
+        "function": "display shelf target",
+        "description": "shelf for ornaments",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": ["shelf"],
+        "visible_candidates": [],
+        "required_properties": [],
+    }
+    doc["functional_relations"][1]["object_role"] = "unknown_target"
+    doc["functional_relations"][2]["object_role"] = "unknown_target"
+    provider = FMRequirementProvider()
+    with pytest.raises(UnmappedFunctionalConceptError, match="cannot be mapped to any Workshop fixed target"):
+        provider.generate_canonical(raw_document=doc)
+
+
+def test_unknown_region_fails_closed():
+    from mujoco_scenes.workshop_phase1.requirements import FMRequirementProvider
+    from mujoco_scenes.functional_tamp_pipeline.errors import UnmappedFunctionalConceptError
+    doc = natural_decomposition()
+    doc["functional_roles"].append({
+        "id": "unknown_region",
+        "entity_kind": "REGION",
+        "function": "seating rest",
+        "description": "cushioned armchair",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": ["chair"],
+        "visible_candidates": [],
+        "required_properties": [],
+    })
+    provider = FMRequirementProvider()
+    with pytest.raises(UnmappedFunctionalConceptError, match="cannot be mapped to any Workshop context region"):
+        provider.generate_canonical(raw_document=doc)
+
+
+def test_duplicate_roles_fail_closed_without_alternative_evidence():
+    from mujoco_scenes.workshop_phase1.requirements import FMRequirementProvider
+    from mujoco_scenes.functional_tamp_pipeline.errors import AmbiguousCanonicalizationError
+    doc = natural_decomposition()
+    doc["functional_roles"].append({
+        "id": "second_driver",
+        "entity_kind": "OBJECT",
+        "function": "tighten a screw",
+        "description": "another screwdriver",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": ["screwdriver"],
+        "visible_candidates": [],
+        "required_properties": [],
+    })
+    provider = FMRequirementProvider()
+    with pytest.raises(AmbiguousCanonicalizationError, match="without explicit alternative evidence"):
+        provider.generate_canonical(raw_document=doc)
+
+
+def test_explicit_alternative_driver_roles_merged():
+    from mujoco_scenes.workshop_phase1.requirements import FMRequirementProvider
+    doc = natural_decomposition()
+    doc["functional_roles"][0] = {
+        "id": "driver_option_1",
+        "entity_kind": "OBJECT",
+        "function": "tighten screw with alternative driver option",
+        "description": "manual driver tool candidate",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": ["screwdriver", "Phillips screwdriver"],
+        "visible_candidates": [],
+        "required_properties": [],
+    }
+    doc["functional_roles"].append({
+        "id": "driver_option_2",
+        "entity_kind": "OBJECT",
+        "function": "tighten screw with interchangeable tool candidate",
+        "description": "power driver tool candidate",
+        "required_count": 1,
+        "binding_policy": "DISTINCT",
+        "candidate_categories": ["power drill", "cordless power drill"],
+        "visible_candidates": [],
+        "required_properties": [],
+    })
+    doc["functional_relations"][0]["subject_role"] = "driver_option_1"
+    doc["functional_relations"][1]["subject_role"] = "driver_option_1"
+    provider = FMRequirementProvider()
+    res = provider.generate_canonical(raw_document=doc)
+    assert res["status"] == "CANONICALIZED"
+    driver_roles = [r for r in provider.normalized_roles if r.canonical_role_id == "driver"]
+    assert len(driver_roles) == 1
+    assert driver_roles[0].required_count == 1
+    assert "screwdriver" in driver_roles[0].candidate_categories
+    assert "power drill" in driver_roles[0].candidate_categories
+    accounting = provider.canonicalization_trace["concept_accounting"]
+    assert accounting["roles"]["driver_option_1"]["status"] == "MERGED_BY_EXPLICIT_ALTERNATIVE_RULE"
+    assert accounting["roles"]["driver_option_2"]["status"] == "MERGED_BY_EXPLICIT_ALTERNATIVE_RULE"
+
+
+def test_schema_missing_required_fields_fail_closed():
+    from mujoco_scenes.workshop_phase1.requirements import FMRequirementProvider
+    from mujoco_scenes.functional_tamp_pipeline.errors import MalformedVLMSpecificationError
+
+    # Missing required_count
+    doc = natural_decomposition()
+    del doc["functional_roles"][0]["required_count"]
+    provider = FMRequirementProvider()
+    with pytest.raises(MalformedVLMSpecificationError, match="missing required schema field 'required_count'"):
+        provider.generate_canonical(raw_document=doc)
+
+    # Missing binding_policy
+    doc = natural_decomposition()
+    del doc["functional_roles"][0]["binding_policy"]
+    with pytest.raises(MalformedVLMSpecificationError, match="missing required schema field 'binding_policy'"):
+        provider.generate_canonical(raw_document=doc)
+
+
+def test_signature_aware_relation_canonicalization():
+    from mujoco_scenes.workshop_phase1.requirements import canonicalize_workshop_relation
+    # Forward relations
+    assert canonicalize_workshop_relation("d", "driver", "compatible with fastener", "f", "fastener") == (
+        "driver", "COMPATIBLE_WITH", "fastener", "PRESERVED", "GRAPH_RELATION"
+    )
+    assert canonicalize_workshop_relation("d", "driver", "reaches target hole", "t", "repair_target") == (
+        "driver", "REACHES_TARGET", "repair_target", "PRESERVED", "GRAPH_RELATION"
+    )
+    assert canonicalize_workshop_relation("f", "fastener", "threads into target repair hole", "t", "repair_target") == (
+        "fastener", "COMPATIBLE_WITH_TARGET", "repair_target", "PRESERVED", "GRAPH_RELATION"
+    )
+
+    # Reverse relations normalized
+    assert canonicalize_workshop_relation("f", "fastener", "is driven by tool", "d", "driver") == (
+        "driver", "COMPATIBLE_WITH", "fastener", "NORMALIZED_TO_CANONICAL_SIGNATURE", "GRAPH_RELATION"
+    )
+    assert canonicalize_workshop_relation("t", "repair_target", "is reached by driver", "d", "driver") == (
+        "driver", "REACHES_TARGET", "repair_target", "NORMALIZED_TO_CANONICAL_SIGNATURE", "GRAPH_RELATION"
+    )
+    assert canonicalize_workshop_relation("t", "repair_target", "receives fastener", "f", "fastener") == (
+        "fastener", "COMPATIBLE_WITH_TARGET", "repair_target", "NORMALIZED_TO_CANONICAL_SIGNATURE", "GRAPH_RELATION"
+    )
+
+
+def test_self_relations_fail_closed():
+    from mujoco_scenes.workshop_phase1.requirements import canonicalize_workshop_relation
+    from mujoco_scenes.functional_tamp_pipeline.errors import MalformedVLMSpecificationError
+    with pytest.raises(MalformedVLMSpecificationError, match="Self-relations are not supported"):
+        canonicalize_workshop_relation("role_1", "driver", "compatible with", "role_1", "driver")
+
+
+def test_unsupported_functional_located_on_fails_closed():
+    from mujoco_scenes.workshop_phase1.requirements import canonicalize_workshop_relation
+    from mujoco_scenes.functional_tamp_pipeline.errors import UnsupportedCheckerCapabilityError
+    with pytest.raises(UnsupportedCheckerCapabilityError, match="LOCATED_ON on role 'role_1' is not supported"):
+        canonicalize_workshop_relation("role_1", "driver", "located on workbench", "role_2", "MAIN_WORKBENCH_ZONE")
+
+
+def test_operation_group_redundancy_validation():
+    from mujoco_scenes.workshop_phase1.requirements import FMRequirementProvider
+    from mujoco_scenes.functional_tamp_pipeline.vlm_spec_provider import VLMSpecProvider
+    from mujoco_scenes.functional_tamp_pipeline.tests.test_ideal_fixtures import load_ideal_fixture, MockFMAdapter
+    data = load_ideal_fixture("workshop")
+    adapter = MockFMAdapter(data)
+    provider = FMRequirementProvider(fm_adapter=adapter)
+    gf = VLMSpecProvider._workshop("Repair frame", [], provider=provider)
+
+    # Runtime G_F has NO operation groups
+    assert len(gf.operation_groups) == 0
+
+    # Operation group validated and recorded in concept accounting
+    accounting = provider.canonicalization_trace["concept_accounting"]
+    assert len(accounting["operation_groups"]) == 1
+    grp_entry = accounting["operation_groups"][0]
+    assert grp_entry["raw_group_id"] == "group_1"
+    assert grp_entry["status"] == "MERGED_BY_EXPLICIT_RULE"
+    assert grp_entry["structural_destination"] == "REDUNDANT_WITH_CANONICAL_GRAPH_RELATIONS"
+    assert set(grp_entry["represented_relations"]) == {"COMPATIBLE_WITH", "REACHES_TARGET"}
+
+
+def test_workshop_vlm_canonicalization_version():
+    from mujoco_scenes.workshop_phase1.requirements import (
+        FMRequirementProvider,
+        WORKSHOP_VLM_CANONICALIZATION_VERSION,
+    )
+    from mujoco_scenes.functional_tamp_pipeline.vlm_spec_provider import VLMSpecProvider
+    from mujoco_scenes.functional_tamp_pipeline.tests.test_ideal_fixtures import load_ideal_fixture, MockFMAdapter
+    assert WORKSHOP_VLM_CANONICALIZATION_VERSION == "phase3_p3g_v1"
+    data = load_ideal_fixture("workshop")
+    adapter = MockFMAdapter(data)
+    provider = FMRequirementProvider(fm_adapter=adapter)
+    gf = VLMSpecProvider._workshop("Repair frame", [], provider=provider)
+    assert gf.metadata["vlm_canonicalization_version"] == "phase3_p3g_v1"
+    assert provider.canonicalization_trace["vlm_canonicalization_version"] == "phase3_p3g_v1"
 
 
 def test_transport_schema_rejects_old_candidate_types_and_extra_fields():
@@ -217,6 +464,7 @@ def test_image_required_before_network(monkeypatch):
         adapter.generate_task_requirements(
             "Find a compatible screw and driver", observation_images=[]
         )
+
 
 def test_missing_endpoint_after_image_validation(observation_image, monkeypatch):
     for variable in ("TAMP_FM_BASE_URL", "FM_BASE_URL", "TAMP_FM_MODEL", "FM_MODEL"):
