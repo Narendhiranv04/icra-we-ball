@@ -18,17 +18,19 @@ from typing import Any, Callable
 from mujoco_scenes.final_paper_variant_labels import resolve_variant_name
 
 try:
-    from .errors import PipelineError, VLMSpecificationError, ReplaySpecificationError
-    from .models import FunctionalRequirementGraph, PipelineResult
+    from .errors import PipelineError, VLMSpecificationError, ReplaySpecificationError, SearchRegionContractError
+    from .models import FunctionalRequirementGraph, PipelineResult, SearchRegionContract, freeze_search_region_contract
     from .planning import plan_with_common_astar
     from .search import search_until_satisfied
     from .search_order import resolve_search_order, validate_search_order_preflight
     from .spec_provider import provider_for_mode
 except ImportError:
     from mujoco_scenes.functional_tamp_pipeline.errors import (
-        PipelineError, VLMSpecificationError, ReplaySpecificationError
+        PipelineError, VLMSpecificationError, ReplaySpecificationError, SearchRegionContractError
     )
-    from mujoco_scenes.functional_tamp_pipeline.models import FunctionalRequirementGraph, PipelineResult
+    from mujoco_scenes.functional_tamp_pipeline.models import (
+        FunctionalRequirementGraph, PipelineResult, SearchRegionContract, freeze_search_region_contract
+    )
     from mujoco_scenes.functional_tamp_pipeline.planning import plan_with_common_astar
     from mujoco_scenes.functional_tamp_pipeline.search import search_until_satisfied
     from mujoco_scenes.functional_tamp_pipeline.search_order import resolve_search_order, validate_search_order_preflight
@@ -37,6 +39,7 @@ except ImportError:
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT = ROOT / "runs" / "functional_tamp_pipeline"
+
 
 EventCallback = Callable[[str, dict[str, Any]], None]
 
@@ -58,6 +61,7 @@ class _RunState:
     search_seed_requested: int | None = None
     search_seed_effective: int | None = None
     resolved_search_order: tuple[str, ...] = ()
+    search_contract: SearchRegionContract | None = None
     exploration_actuation: str = "unknown"
     visualization_requested: bool = False
     git_commit: str | None = None
@@ -285,6 +289,8 @@ def _write_run_manifest(state: _RunState) -> None:
         "search_seed_effective": state.search_seed_effective,
         "provider_region_ranking": list(state.specification.region_ranking) if state.specification else [],
         "region_order_used": list(state.resolved_search_order),
+        "search_policy_version": state.search_contract.policy_version if state.search_contract else "phase3_p3h_v1",
+        "search_contract": state.search_contract.to_dict() if state.search_contract else None,
         "exploration_actuation": state.exploration_actuation,
         "execution_state": "planning_only",
         "visualization_requested": state.visualization_requested,
@@ -366,16 +372,22 @@ def _run_pipeline_impl(
         _write_json(state.run_dir / "functional_requirement_graph.json", state.specification.to_dict())
         state.specification_sha256 = _compute_file_sha256(state.run_dir / "functional_specification.json")
 
-        state.resolved_search_order, state.search_order_source_effective, state.search_seed_effective = (
-            resolve_search_order(
-                state.specification,
-                state.domain,
-                state.search_order,
-                mode=state.mode,
-                variant=state.variant,
-                seed=state.search_seed_requested,
-            )
+        state.search_contract = freeze_search_region_contract(
+            state.specification,
+            domain=state.domain,
+            source=state.search_order,
+            mode=state.mode,
+            variant=state.variant,
+            seed=state.search_seed_requested,
         )
+        state.resolved_search_order = state.search_contract.canonical_region_ids
+        if state.search_contract.no_search_required:
+            state.search_order_source_effective = "not_applicable"
+        elif state.search_order in {"oracle", "provider", "random", "fixed"}:
+            state.search_order_source_effective = "oracle" if state.search_order == "fixed" else state.search_order
+        else:
+            state.search_order_source_effective = "oracle" if (state.mode == "gt" and state.variant is not None) else "provider"
+        state.search_seed_effective = state.search_contract.search_seed
         _emit_event(guarded_observer, "spec_ready", {
             "graph": state.specification.to_dict(),
             "source": state.specification.source,
@@ -448,16 +460,22 @@ def _run_pipeline_impl(
         _write_json(state.run_dir / "functional_requirement_graph.json", state.specification.to_dict())
         state.specification_sha256 = _compute_file_sha256(state.run_dir / "functional_specification.json")
 
-        state.resolved_search_order, state.search_order_source_effective, state.search_seed_effective = (
-            resolve_search_order(
-                state.specification,
-                state.domain,
-                state.search_order,
-                mode=state.mode,
-                variant=state.variant,
-                seed=state.search_seed_requested,
-            )
+        state.search_contract = freeze_search_region_contract(
+            state.specification,
+            domain=state.domain,
+            source=state.search_order,
+            mode=state.mode,
+            variant=state.variant,
+            seed=state.search_seed_requested,
         )
+        state.resolved_search_order = state.search_contract.canonical_region_ids
+        if state.search_contract.no_search_required:
+            state.search_order_source_effective = "not_applicable"
+        elif state.search_order in {"oracle", "provider", "random", "fixed"}:
+            state.search_order_source_effective = "oracle" if state.search_order == "fixed" else state.search_order
+        else:
+            state.search_order_source_effective = "oracle" if (state.mode == "gt" and state.variant is not None) else "provider"
+        state.search_seed_effective = state.search_contract.search_seed
         _emit_event(guarded_observer, "spec_ready", {
             "graph": state.specification.to_dict(),
             "source": state.specification.source,
@@ -522,16 +540,22 @@ def _run_pipeline_impl(
     _write_json(state.run_dir / "functional_requirement_graph.json", state.specification.to_dict())
     state.specification_sha256 = _compute_file_sha256(state.run_dir / "functional_specification.json")
 
-    state.resolved_search_order, state.search_order_source_effective, state.search_seed_effective = (
-        resolve_search_order(
-            state.specification,
-            state.domain,
-            state.search_order,
-            mode=state.mode,
-            variant=state.variant,
-            seed=state.search_seed_requested,
-        )
+    state.search_contract = freeze_search_region_contract(
+        state.specification,
+        domain=state.domain,
+        source=state.search_order,
+        mode=state.mode,
+        variant=state.variant,
+        seed=state.search_seed_requested,
     )
+    state.resolved_search_order = state.search_contract.canonical_region_ids
+    if state.search_contract.no_search_required:
+        state.search_order_source_effective = "not_applicable"
+    elif state.search_order in {"oracle", "provider", "random", "fixed"}:
+        state.search_order_source_effective = "oracle" if state.search_order == "fixed" else state.search_order
+    else:
+        state.search_order_source_effective = "oracle" if (state.mode == "gt" and state.variant is not None) else "provider"
+    state.search_seed_effective = state.search_contract.search_seed
     _emit_event(guarded_observer, "spec_ready", {
         "graph": state.specification.to_dict(),
         "source": state.specification.source,
@@ -554,12 +578,21 @@ def _run_pipeline_impl(
     _emit_event(guarded_observer, "stage_changed", {"stage": "perception"})
     print("[3/5] Functional grounding and ranked region search", flush=True)
     _emit_event(guarded_observer, "stage_changed", {"stage": "search_grounding"})
-    satisfaction, inspected = search_until_satisfied(
-        adapter,
-        state.specification,
-        search_order=state.resolved_search_order,
-        observer=guarded_observer,
-    )
+    try:
+        satisfaction, inspected = search_until_satisfied(
+            adapter,
+            state.specification,
+            search_contract=state.search_contract,
+            search_order=state.resolved_search_order,
+            observer=guarded_observer,
+        )
+    except TypeError:
+        satisfaction, inspected = search_until_satisfied(
+            adapter,
+            state.specification,
+            search_order=state.resolved_search_order,
+            observer=guarded_observer,
+        )
     _write_json(state.run_dir / "observed_scene_graph.json", adapter.graph.to_dict())
     _write_json(state.run_dir / "detection_diagnostics.json", {
         "records": adapter.controller.detection_diagnostics,

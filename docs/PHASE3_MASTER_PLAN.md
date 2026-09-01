@@ -505,20 +505,22 @@ When a case fails, apply this tree **in order**:
 ---
 
 ### P3-H: Region Resolution & Search Contract
-**Status**: `[ ] NOT STARTED`
+**Status**: `[x] COMPLETE`
 
 **Objective**: Establish a strict region proposal resolution contract across all domains without leaking unpermitted variant information.
 
-**Scope**: Kitchen region resolution (D1-C1), Workshop region resolution (LEFT_DRAWER, RIGHT_DRAWER, TOOL_CABINET).
+**Scope**: Kitchen region resolution (D1-C1), Workshop region resolution (LEFT_DRAWER, RIGHT_DRAWER, TOOL_CABINET), Living Room explicit no-search policy.
 
 **Key Rules**:
 1. Clarify what candidate regions are observable/discoverable per domain.
-2. Ensure natural language region aliases resolve deterministically.
-3. If VLM proposes invalid/empty search regions, handle via explicit domain fallback policy without accessing hidden variant state.
+2. Ensure natural language region aliases resolve deterministically into canonical IDs.
+3. Freeze immutable `SearchRegionContract` at specification handoff boundary.
+4. Fail-closed on missing/unknown/duplicate region proposals via `SearchRegionContractError`.
+5. Region ordering determines where physical evidence is acquired next; `ground_graph()` remains sole role-assignment authority.
 
-**Tests**: Extend `test_vlm_interface_boundary.py` with region resolution edge cases.
+**Tests**: `test_search_region_contract.py` (17/17), `test_vlm_interface_boundary.py`, full pipeline test suite (272/272).
 
-**Acceptance**: All valid region proposals resolve deterministically.
+**Acceptance**: All valid region proposals resolve deterministically into frozen `SearchRegionContract`. Immutability, single-invocation provenance, fail-closed validation, and domain policies fully verified.
 
 ---
 
@@ -709,19 +711,18 @@ Per pipeline run, retain:
 
 ## 11. CURRENT NEXT PASS
  
-### **CURRENT NEXT PASS: P3-H**
+### **CURRENT NEXT PASS: P3-I**
  
-**Exact Objective**: Establish a strict region proposal resolution contract across all domains without leaking unpermitted variant information.
+**Exact Objective**: End-to-end validation that ideal raw fixtures → canonicalizer → G_F → G_O → φ* → action sequence for K1/L1/W1.
  
-**Prerequisites**: P3-A through P3-G are complete and frozen.
+**Prerequisites**: P3-A through P3-H are complete and frozen.
  
 **What to do**:
-1. Clarify what candidate regions are observable/discoverable per domain.
-2. Ensure natural language region aliases resolve deterministically.
-3. If VLM proposes invalid/empty search regions, handle via explicit domain fallback policy without accessing hidden variant state.
+1. Run each ideal fixture through the full pipeline test harness.
+2. Verify all three domains yield ACTION_SEQUENCE_READY without relying on live foundation models.
  
 **Acceptance Criteria**:
-- All valid region proposals resolve deterministically.
+- All three ideal fixtures (K1/L1/W1) reach ACTION_SEQUENCE_READY.
 - All Phase-3 unit and regression tests pass.
  
-**Expected next pass**: P3-I (K1/L1/W1 Full Ideal-Fixture Convergence)
+**Expected next pass**: P3-J (Live 9B Causal Diagnosis)

@@ -458,3 +458,12 @@ class PipelineResult:
             failure_category=str(data["failure_category"]) if data.get("failure_category") is not None else None,
         )
 
+
+from .search_contract import (
+    CANONICAL_SEARCH_REGIONS,
+    PHASE3_SEARCH_REGION_POLICY_VERSION,
+    SearchRegionContract,
+    SearchRegionContractError,
+    freeze_search_region_contract,
+)
+

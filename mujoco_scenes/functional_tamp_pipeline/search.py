@@ -9,6 +9,8 @@ from .models import (
     FunctionalSpecification,
     GraphGroundingResult,
     SatisfactionResult,
+    SearchRegionContract,
+    freeze_search_region_contract,
 )
 
 
@@ -30,11 +32,21 @@ def search_until_satisfied(
     domain: SearchDomain,
     specification: FunctionalSpecification,
     *,
-    search_order: tuple[str, ...] | None = None,
+    search_order: tuple[str, ...] | SearchRegionContract | None = None,
+    search_contract: SearchRegionContract | None = None,
     observer: Any = None,
     emit=print,
 ) -> tuple[SatisfactionResult, tuple[str, ...]]:
-    order = tuple(search_order) if search_order is not None else tuple(specification.region_ranking)
+    if search_contract is not None:
+        order = tuple(search_contract.canonical_region_ids)
+    elif isinstance(search_order, SearchRegionContract):
+        order = tuple(search_order.canonical_region_ids)
+    elif search_order is not None:
+        order = tuple(search_order)
+    elif hasattr(specification, "region_ranking") and specification.region_ranking:
+        order = tuple(specification.region_ranking)
+    else:
+        order = tuple(freeze_search_region_contract(specification).canonical_region_ids)
     domain.observe_initial()
     if observer is not None:
         sg_dict = _extract_scene_graph_dict(domain)

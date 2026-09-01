@@ -457,11 +457,12 @@ def run_to_plan(
     vocabulary_path.write_text(yaml.safe_dump(vocab_dict, sort_keys=False), encoding="utf-8")
 
     phase1_dir = output_dir / "observed_search" / "phase1"
-    if phase1_dir.exists():
-        import shutil
-        shutil.rmtree(phase1_dir, ignore_errors=True)
+    from ..search_contract import freeze_search_region_contract
 
-    order = tuple(search_order) if search_order is not None else tuple(specification.region_ranking)
+    if search_order is not None:
+        order = tuple(search_order.canonical_region_ids if hasattr(search_order, "canonical_region_ids") else search_order)
+    else:
+        order = tuple(freeze_search_region_contract(specification).canonical_region_ids)
 
     def kitchen_completion_predicate(current: Any) -> bool:
         current_go = build_kitchen_observed_scene_graph(current)
