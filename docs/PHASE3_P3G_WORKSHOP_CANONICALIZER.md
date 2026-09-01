@@ -102,4 +102,20 @@ and is recorded in `metadata["vlm_canonicalization_version"]` and `metadata["can
 | Living Room VLM (Frozen) | `pytest mujoco_scenes/tests/test_living_room_vlm_canonicalization.py` | 11/11 PASSED (100%) |
 | Workshop W1 GT Dry-Run Evaluation | `scripts/evaluate_functional_tamp_variants.py --domains workshop --variants W1 --mode gt` | ACTION_SEQUENCE_READY (Combined: 6, Match: YES, Valid: 1/1) |
 
+---
+
+## 4. Fresh W1 GT Reproducibility Record (P3-G.2 Tested Code SHA: `5a337261`)
+
+Three independent trials of `evaluate_functional_tamp_variants.py --domains workshop --variants W1 --mode gt` were executed into isolated output roots on clean code commit `5a337261`:
+
+| Trial | Output Root | Terminal Status | Inspected Regions | PlanLen (Comb) | Grounding | Audit | Replay | Access | Spec SHA256 |
+|---|---|---|---|---|---|---|---|---|---|
+| Trial 1 | `/tmp/w1_gt_repro_run1_20260901_162815` | `ACTION_SEQUENCE_READY` | `["LEFT_DRAWER"]` (1) | 5 (6) | `COMPLETE` | `VALID` | `VALID` | `VALID` | `c92a080e...` |
+| Trial 2 | `/tmp/w1_gt_repro_run2_20260901_162815` | `ACTION_SEQUENCE_READY` | `["LEFT_DRAWER"]` (1) | 5 (6) | `COMPLETE` | `VALID` | `VALID` | `VALID` | `c92a080e...` |
+| Trial 3 | `/tmp/w1_gt_repro_run3_20260901_162815` | `ACTION_SEQUENCE_READY` | `["LEFT_DRAWER"]` (1) | 5 (6) | `COMPLETE` | `VALID` | `VALID` | `VALID` | `c92a080e...` |
+
+### Classification: `W1_GT_REPRODUCIBLE_READY_ON_P3G2_SHA`
+All 3 runs identically yielded `ACTION_SEQUENCE_READY` with 1 inspection (`LEFT_DRAWER`), plan length 5, and full validation across grounding audit, replay, and access check.
+
+
 
