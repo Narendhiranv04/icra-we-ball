@@ -1,28 +1,83 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "pass": "P4-C1.1",
-  "starting_remote_sha": "9a7eea5f0b4864c4a051c11a2652c40a048b7ef0",
-  "integrated_phase3_sha": "579d2e882f09e3b16c3c6eea302b84d868afc01c",
-  "tested_code_sha": "6dec5d60e3a66c2afe04b8c57c76c29603f5156a",
+  "recorded_at": "2026-09-01T18:29:42+05:30",
+  "branch": "naren/pipeline_check",
+  "tested_code_sha": "34b76b46c0de87bc143711fa01b121aad9b4c7e9",
+  "parent_sha": "56a448571dfbfbd0c38dd2044c05718433d84025",
+  "integrated_phase3_head": "56a448571dfbfbd0c38dd2044c05718433d84025",
   "tested_tree_clean": true,
+  "tested_code_pushed": true,
   "phase3_untouched": true,
   "ground_graph_untouched": true,
+  "artifact_root": "/tmp/p4-c11-final-pushed-34b76b46",
   "phase3_gt": {
-    "W1": {"status": "INCOMPLETE", "classification": "CURRENT_UPSTREAM_PHASE3_BLOCKED", "inspected_regions": ["LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"], "result_sha256": "51f92dabd4411bbe020f3de4524f9810cbde9798fea0b959baf4250c514a46f3"},
-    "W6": {"status": "INCOMPLETE", "classification": "CURRENT_UPSTREAM_PHASE3_BLOCKED", "inspected_regions": ["TOOL_CABINET", "LEFT_DRAWER", "RIGHT_DRAWER"], "result_sha256": "086c327443dbab684245dc342ca39ddf474232cec3bc05c2661c5b57e1b4935"},
-    "L1": {"status": "ACTION_SEQUENCE_READY", "inspected_regions": [], "result_sha256": "91f4dd4d11be3b2f4c49d4a471588857601eda523f2c093a94414438003dbfa4"}
+    "W1": {
+      "status": "INCOMPLETE",
+      "classification": "CURRENT_UPSTREAM_PHASE3_BLOCKED",
+      "inspected_regions": ["LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"],
+      "result_sha256": "1830a1e932e44dc2ffc8a47acfb2348f18a44f7b20ebbb45976c08e0b79db9e8"
+    },
+    "W6": {
+      "status": "INCOMPLETE",
+      "classification": "CURRENT_UPSTREAM_PHASE3_BLOCKED",
+      "inspected_regions": ["TOOL_CABINET", "LEFT_DRAWER", "RIGHT_DRAWER"],
+      "result_sha256": "ab1e48e53451f3d4424ff27e32ef98b33bca7c6745d18b95e9b95d006e9b9f02"
+    },
+    "L1": {
+      "fresh_generation_status": "LOCAL_SEMANTIC_MODEL_UNAVAILABLE",
+      "execution_input": "/tmp/p4-c11-final-phase3/living_room/L1/gt"
+    }
   },
-  "living_strict": {"success": true, "actions_requested": 10, "actions_completed": 10, "strict_execution_violation_detected": false, "assisted_task_fixture_used": false, "direct_task_state_write_used": false, "direct_payload_state_write_used": false, "post_release_dynamics_modified": false, "artifact_sha256": "6caf697189d66419e3c7374fee2574a89204aa9ea0827a783ea17cacca521b75"},
+  "living_strict": {
+    "success": true,
+    "actions_requested": 10,
+    "actions_completed": 10,
+    "strict_execution_violation_detected": false,
+    "assisted_task_fixture_used": false,
+    "direct_task_state_write_used": false,
+    "direct_payload_state_write_used": false,
+    "post_release_dynamics_modified": false,
+    "artifact_sha256": "74b7f64133e0c61f09b0a1511d3b0b2f31d3ed24149b96d8b987b466be02a835"
+  },
   "controller_evidence": {
     "label": "CONTROLLER_DEVELOPMENT_ONLY",
     "contributes_to_tamp_success_metrics": false,
-    "left_drawer_driver": {"success": true, "open_joint_m": 0.2491857235, "shell_penetration_observed": false, "preclose_error_m": 0.0067523341, "bilateral_contact_steps": 25, "attachment_translation_snap_m": 0.0000041163, "attachment_angle_snap_rad": 0.0000462024, "lift_displacement_m": 0.159, "artifact_sha256": "eba3c693f7885ba94cc29ae9d24c6a439d1f5558c40e62fb5f2a2190cd9079de"},
-    "right_drawer_power": {"success": true, "open_joint_m": 0.2491385433, "shell_penetration_observed": false, "preclose_error_m": 0.0095450821, "bilateral_contact_steps": 25, "attachment_translation_snap_m": 0.0000066275, "attachment_angle_snap_rad": 0.0000157417, "lift_displacement_m": 0.175, "artifact_sha256": "d912f9d2b8f69604ea85a4dc0898c56a3e628d1e355d2e44d457727551f103d8"},
-    "cabinet_screw": {"success": true, "open_joint_rad": 1.2147446337, "preclose_error_before_m": 0.2219, "preclose_error_after_m": 0.0068696872, "bilateral_contact_steps": 25, "attachment_translation_snap_m": 0.0000024616, "attachment_angle_snap_rad": 0.0000050261, "lift_displacement_m": 0.210, "artifact_sha256": "dcc1080abe48c1b0df3534671044c386be3d4eddb79925d5e2bb4300477340c0"},
-    "cabinet_driver": {"success": false, "failure_class": "PREGRASP_POSITION_ERROR", "preclose_error_m": 0.1998, "bilateral_contact": false, "attachment_activated": false, "artifact_sha256": "c13cd2dcf143cfc213e755f9612fdb26d76928621d93e1002b63db5ddfe8f220"}
+    "repetitions_per_case": 2,
+    "deterministic": true,
+    "left_drawer_open": {
+      "success": false,
+      "failure": "FORBIDDEN_FURNITURE_PENETRATION",
+      "minimum_signed_distance_m": -0.008243890742817934,
+      "pair": ["google:left_finger_pad_5", "left_drawer_col_front"],
+      "artifact_sha256": "094c3f4cd4087bde689776e4d7471ac494d1d98d7a752c09b6faf8d774c05432"
+    },
+    "right_drawer_open": {
+      "success": false,
+      "failure": "FORBIDDEN_FURNITURE_PENETRATION",
+      "minimum_signed_distance_m": -0.0060546394651894275,
+      "pair": ["google:left_finger_pad_5", "right_drawer_col_front"],
+      "artifact_sha256": "28d7f7012117d1bd47aaf7680aff7adfa504920f0c6b22d2f7a0e045a9f9075f"
+    },
+    "tool_cabinet_open": {
+      "success": false,
+      "failure": "COLLISION_BLOCKED",
+      "minimum_signed_distance_m": -0.007,
+      "pair": ["google:link_finger_tip_right", "tool_cabinet_door_col"],
+      "artifact_sha256": "722818c93f0fb490df94089266a21f91dde0f92d23591a1654be136f266bd09f"
+    },
+    "cabinet_driver_pick": {
+      "success": false,
+      "failure": "COLLISION_BLOCKED_DURING_REQUIRED_OPEN",
+      "object_attachment_activated": false,
+      "artifact_sha256": "21abdbd365bea9dd2f07f8b8c762ee43f4c01c11569c05d8c99036cf9c0d7b01"
+    }
   },
-  "strict_guards": {"direct_payload_qpos_write": false, "direct_task_state_write": false, "staging_weld": false, "target_alignment_weld": false, "installed_fastener_weld": false, "screw_status": "STRICT_PHYSICAL_SCREW_UNAVAILABLE"},
-  "tests": {"passed": 45, "failed": 0},
-  "status": "BLOCKED_AT_CABINET_DRIVER_PICK",
-  "next_phase4_step": "P4-C1.1 cabinet driver aperture and approach geometry"
+  "tests": {
+    "passed": 86,
+    "failed": 0,
+    "command": "python -m pytest -q mujoco_scenes/tests/test_phase4_execution.py mujoco_scenes/tests/test_workshop_ground_truth_execution.py mujoco_scenes/tests/test_living_room_execution.py mujoco_scenes/tests/test_living_room_mobile_execution.py"
+  },
+  "status": "BLOCKED_AT_STRICT_STORAGE_OPEN_GEOMETRY",
+  "next_phase4_step": "Collision-free physical handle contact/follow using unchanged scene geometry"
 }

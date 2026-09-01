@@ -1,51 +1,38 @@
 # Phase 4 P4-C1.1 — strict Workshop access and PICK closure
 
-Tested controller commit: `6dec5d60e3a66c2afe04b8c57c76c29603f5156a` (GitHub-resolvable, clean tree). The code was rebased above Phase-3 P3-G commit `579d2e882f09e3b16c3c6eea302b84d868afc01c`. No Phase-3 file or `ground_graph()` changed.
+Tested code commit: `34b76b46c0de87bc143711fa01b121aad9b4c7e9` (clean, pushed, and contained by `origin/naren/pipeline_check`). It is based on current integrated Phase-3 head `56a448571dfbfbd0c38dd2044c05718433d84025`. No Phase-3 source or `ground_graph()` changed.
 
-## Current GT status
+## Changes frozen in the tested code
 
-- W1 GT: `INCOMPLETE`; inspected LEFT_DRAWER, RIGHT_DRAWER, TOOL_CABINET; `CURRENT_UPSTREAM_PHASE3_BLOCKED`.
-- W6 GT: `INCOMPLETE`; inspected TOOL_CABINET, LEFT_DRAWER, RIGHT_DRAWER; `CURRENT_UPSTREAM_PHASE3_BLOCKED`.
-- L1 GT: `ACTION_SEQUENCE_READY`; exact-code strict execution passed 10/10 with no strict violation, assisted fixture, state write, payload write, or post-release dynamics modification.
+- Strict Workshop reaches use exact task-contact geoms; furniture bodies are no longer broad collision exemptions.
+- Object attachment requires live bilateral contact on reviewed grasp geoms and both snap gates: translation <= 4 mm and angle <= 0.02 rad.
+- PICK records live pre/post AABBs and requires displacement plus geometric source clearance.
+- OPEN changes observation state only after verified physical articulation; failed OPEN stays closed and does not reveal hidden contents.
+- Storage collision audit covers drawer/cabinet envelopes and records the minimum signed contact pair.
+- The controller-development harness now applies the common nested strict telemetry audit to successes and failures.
 
-## Physical controller evidence
+## Exact-code physical evidence
 
-All Workshop runs are `CONTROLLER_DEVELOPMENT_ONLY` and excluded from TAMP metrics.
+All Workshop artifacts are `CONTROLLER_DEVELOPMENT_ONLY` and excluded from TAMP metrics. Each case was run twice from a fresh F0/F3/F5 simulator. Both repetitions were byte-identical and failed closed with no strict-fixture violation:
 
-- LEFT_DRAWER OPEN: prior -3 mm shell-top collision eliminated by a front-facing handle frame and a mirrored contact-gated mobile-base pull. Final slide 0.249186 m; exact handle; 25 bilateral frames; attachment snap 0.000002497 m / 0 rad; no shell contact observed; no direct articulation write.
-- RIGHT_DRAWER OPEN: final slide 0.249139 m; exact handle; 25 bilateral frames; attachment snap 0.000002468 m / 0 rad; no shell contact observed; no direct articulation write.
-- TOOL_CABINET OPEN: 1.214745 rad; exact handle; 25 bilateral frames; attachment snap 0 m / 0.000001190 rad; no direct articulation write.
-- LEFT drawer long-driver PICK: preclose 0.006752 m; 25 bilateral `*_col_handle` frames; snap 0.000004116 m / 0.000046202 rad; object displacement about 0.159 m; held identity preserved.
-- RIGHT drawer power-driver PICK: preclose 0.009545 m; 25 bilateral `*_col_handle` frames; snap 0.000006627 m / 0.000015742 rad; object displacement about 0.175 m; held identity preserved.
-- Cabinet screw PICK: old 0.2219 m miss was a frame/door-aperture problem. Full contact-driven door motion, the saved collision-free handle IK seed, world-coordinate base centering, and physically narrowed free-space jaw preshape reduce preclose error to 0.006870 m. It records 25 bilateral shaft contacts, 0.000002462 m / 0.000005026 rad snap, and about 0.210 m retrieval/lift displacement. This is a real fastener acquisition.
-- Cabinet long-driver PICK remains `PREGRASP_POSITION_ERROR`: 0.1998 m. The driver lies near the cabinet right wall; the front-facing gripper cannot enter to its handle without pad/wall interference. No tolerance increase, attachment, substitution, or state repair was accepted.
+- LEFT_DRAWER OPEN: exact handle bilateral contact reached 25 steps and articulation reached 0.249216 m, but the left fingertip penetrated `left_drawer_col_front` by 8.244 mm. Strict result: failure.
+- RIGHT_DRAWER OPEN: exact handle bilateral contact reached 25 steps and articulation reached 0.249168 m, but the left fingertip penetrated `right_drawer_col_front` by 6.055 mm. Strict result: failure.
+- TOOL_CABINET OPEN: collision checking stopped articulation follow at `google:link_finger_tip_right` versus `tool_cabinet_door_col`, signed distance -7 mm. Strict result: `COLLISION_BLOCKED`.
+- Cabinet long-driver PICK: cannot begin because its required physical cabinet OPEN fails at the same door-panel collision. No object attachment or fallback occurred.
 
-The earlier hammer actuator failure is now precisely attributed by actuator telemetry rather than hidden by a global settle relaxation. Contact-driven cabinet base following uses a local contact-stall mode, but success still depends on measured articulation and the frozen exact-handle gate.
+The exact geom audit therefore invalidates earlier apparent OPEN/PICK successes that depended on whole-furniture body exemptions. P4-C1.1 cannot freeze. The remaining issue is physical handle/panel/gripper compatibility and a collision-free handle-follow controller; changing collision geometry, tolerances, spawn poses, or task state was explicitly rejected.
 
-Strict telemetry aggregation now treats `target_alignment_constraint_used`, `installed_fastener_constraint_used`, and `staging_constraint_used` as assisted task fixtures. A nested regression proves both aggregate and strict-violation flags become true.
+## Cross-phase controls and regression
 
-PLACE and insertion mechanics were not tuned. `_destination_position("MAIN_WORKBENCH_ZONE")` remains `P4-C1.2 REQUIRED CLEANUP`; strict insertion remains physically unvalidated and its broad `frame_*`/`fixture_*` contact policy is not expanded. SCREW remains blocked.
+- Fresh W1 GT: `INCOMPLETE`, inspected LEFT_DRAWER, RIGHT_DRAWER, TOOL_CABINET; `CURRENT_UPSTREAM_PHASE3_BLOCKED`.
+- Fresh W6 GT: `INCOMPLETE`, inspected TOOL_CABINET, LEFT_DRAWER, RIGHT_DRAWER; `CURRENT_UPSTREAM_PHASE3_BLOCKED`.
+- Fresh L1 GT regeneration was unavailable because its semantic detector weights were absent locally; no downloaded model was introduced into execution. The previously persisted GT handoff was executed on the tested code and passed strict physical execution 10/10 with every prohibited strict flag false.
+- Tests on the integrated code: 86 passed (Workshop/Phase-4 plus shared Living execution regressions).
 
-## Commands and artifacts
-
-Commands used the prefixes `MUJOCO_MENAGERIE_PATH=/home/naren/third_party/mujoco_menagerie`, `MUJOCO_GL=egl`, and `/home/naren/miniconda3/bin/python`:
-
-```text
--m mujoco_scenes.functional_tamp_pipeline.run --domain workshop --variant W1 --mode gt --search-order auto --dry-run --output-root /tmp/p4-c11-final-phase3
--m mujoco_scenes.functional_tamp_pipeline.run --domain workshop --variant W6 --mode gt --search-order auto --dry-run --output-root /tmp/p4-c11-final-phase3
--m mujoco_scenes.functional_tamp_pipeline.run --domain living_room --variant L1 --mode gt --search-order auto --dry-run --output-root /tmp/p4-c11-final-phase3
--m mujoco_scenes.run_workshop_phase4_controller_development --variant F0_MANUAL_FIRST_ONE_REGION --case left_drawer_driver_pick --output /tmp/p4-c11-exact/left_driver.json
--m mujoco_scenes.run_workshop_phase4_controller_development --variant F3_POWER_FIRST_TWO_REGIONS --case right_drawer_power_pick --output /tmp/p4-c11-exact/right_power.json
--m mujoco_scenes.run_workshop_phase4_controller_development --variant F5_POWER_FIRST_THREE_REGIONS --case cabinet_screw_pick --output /tmp/p4-c11-exact/cabinet_screw.json
--m mujoco_scenes.run_workshop_phase4_controller_development --variant F5_POWER_FIRST_THREE_REGIONS --case cabinet_driver_pick --output /tmp/p4-c11-exact/cabinet_driver.json
--m mujoco_scenes.run_phase4_execution --domain living_room --variant L1 --mode gt --phase3-run /tmp/p4-c11-final-phase3/living_room/L1/gt --output-root /tmp/p4-c11-exact-execution
--m pytest -q mujoco_scenes/tests/test_workshop_ground_truth_execution.py mujoco_scenes/tests/test_phase4_execution.py
-```
-
-Tests: 45 passed. Large artifacts/videos are not committed.
+Artifacts: `/tmp/p4-c11-final-pushed-34b76b46/`.
 
 ## Status
 
-`P4-C1.1 = BLOCKED_AT_CABINET_DRIVER_PICK`.
+`P4-C1.1 = BLOCKED_AT_STRICT_STORAGE_OPEN_GEOMETRY`.
 
-Next Phase-4 work must remain P4-C1.1 and solve the cabinet-side driver aperture/approach geometry. Do not start P4-C1.2 until that PICK family is physically closed.
+Next Phase-4 step: redesign the robot-actuated storage-handle contact/follow strategy using the unchanged scene geometry so bilateral handle contact does not penetrate the drawer fronts or cabinet door. Do not start P4-C1.2.
