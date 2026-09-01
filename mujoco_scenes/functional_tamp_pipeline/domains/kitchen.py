@@ -195,7 +195,7 @@ def compile_kitchen_contract_from_graph(graph: FunctionalRequirementGraph) -> di
         )
         pref = grp.selection_preference or (
             "minimize_distinct_tools"
-            if grp.usage_policy == "SHARED_ACROSS_ALL_TARGETS"
+            if grp.usage_policy in {"SEQUENTIAL_REUSE_ALLOWED", "SHARED_ACROSS_ALL_TARGETS"}
             else "deterministic_rank"
         )
         op_groups_dict[grp.id] = {
@@ -448,9 +448,12 @@ def run_to_plan(
         "schema_version": 1,
         "canonical_labels": canonical_labels,
     }
+    vocab_text = yaml.safe_dump(vocab_dict, sort_keys=False)
     vocabulary_path = phase1_dir / "yolo_world_dynamic_vocabulary.yaml"
     vocabulary_path.parent.mkdir(parents=True, exist_ok=True)
-    vocabulary_path.write_text(yaml.safe_dump(vocab_dict, sort_keys=False), encoding="utf-8")
+    vocabulary_path.write_text(vocab_text, encoding="utf-8")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "kitchen_vocabulary.yaml").write_text(vocab_text, encoding="utf-8")
     from ..search_contract import SearchRegionContract, freeze_search_region_contract
 
     if search_contract is None:

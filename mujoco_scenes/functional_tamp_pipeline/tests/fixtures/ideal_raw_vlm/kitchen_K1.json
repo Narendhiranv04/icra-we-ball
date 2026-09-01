@@ -11,7 +11,7 @@
       "candidate_categories": [
         "mug",
         "coffee cup",
-        "ceramic mug"
+        "cup"
       ],
       "visible_candidates": [],
       "required_properties": [
@@ -40,8 +40,13 @@
       "id": "role_3",
       "entity_kind": "OBJECT",
       "function": "stir beverage",
-      "required_count": 1,
+      "required_count": 2,
       "binding_policy": "REUSABLE",
+      "binding_cardinality": {
+        "minimum_distinct_physical_objects": 1,
+        "maximum_distinct_physical_objects": 2,
+        "preferred": "minimize_distinct"
+      },
       "candidate_categories": [
         "spoon",
         "stirring utensil",
@@ -59,10 +64,14 @@
       "function": "provide a suitable eating utensil for each soup bowl",
       "required_count": 2,
       "binding_policy": "DISTINCT",
+      "binding_cardinality": {
+        "minimum_distinct_physical_objects": 2,
+        "maximum_distinct_physical_objects": 2
+      },
       "candidate_categories": [
         "soup spoon",
         "spoon",
-        "eating utensil"
+        "metal spoon"
       ],
       "visible_candidates": [],
       "required_properties": [

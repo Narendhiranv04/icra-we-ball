@@ -199,11 +199,17 @@ class VLMSpecProvider(FunctionalSpecProvider):
 
             binding = str(role.get("vlm_binding_policy") or "DISTINCT")
             raw_count = int(role["count"])
+            min_count = role.get("min_count")
+            max_count = role.get("max_count")
+            preferred = role.get("preference")
 
             nodes[name] = FunctionalRole(
                 name=name,
                 entity_kind=raw_entity_kind,
                 count=raw_count,
+                min_count=min_count,
+                max_count=max_count,
+                preference=preferred,
                 semantic_categories=system_cats,
                 unary_predicates=tuple(unary_preds),
                 numeric_constraints=tuple(numeric_reqs),
@@ -228,14 +234,17 @@ class VLMSpecProvider(FunctionalSpecProvider):
             mode_str = str(policy.get("mode", "sequential_reuse_allowed")).upper()
             if mode_str == "SEQUENTIAL_REUSE_ALLOWED":
                 usage_policy = "SEQUENTIAL_REUSE_ALLOWED"
+                sel_pref = "minimize_distinct_tools"
             else:
                 usage_policy = "DEDICATED_PER_TARGET"
+                sel_pref = ""
             distinct_within = bool(policy.get("distinct_within_group", policy.get("distinct_tools_within_group", usage_policy == "DEDICATED_PER_TARGET")))
             same_tool_covers_all = bool(policy.get("same_tool_must_cover_all_targets", False))
-            selection_pref = policy.get("selection_preference")
+            if "selection_preference" in policy:
+                sel_pref = str(policy["selection_preference"])
             operation_groups.append(OperationGroup(
                 id=gid,
-                function=str(grp["function"]),
+                function=str(grp.get("canonical_function") or grp["function"]),
                 tool_role=str(grp["tool_role"]),
                 target_role=str(grp["target_role"]),
                 required_target_count=int(grp["required_target_count"]),
@@ -243,7 +252,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
                 required_relations=tuple(map(str, grp.get("relations", ()))),
                 distinct_within_group=distinct_within,
                 same_tool_must_cover_all_targets=same_tool_covers_all,
-                selection_preference=str(selection_pref) if selection_pref is not None else None,
+                selection_preference=sel_pref,
             ))
 
         resolved_order = tuple(trace.get("inspection_order", ()))

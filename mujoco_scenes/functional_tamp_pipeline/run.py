@@ -322,7 +322,7 @@ def _safe_write_run_manifest(state: _RunState) -> Exception | None:
 
 
 def _capture_workshop_vlm_inputs(scene: Any, output_dir: Path) -> list[Path]:
-    import cv2
+    from PIL import Image
     from mujoco_scenes.workshop_phase1.capture import MultiViewCameraRig
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -332,8 +332,7 @@ def _capture_workshop_vlm_inputs(scene: Any, output_dir: Path) -> list[Path]:
     paths = []
     for observation in observations:
         path = output_dir / f"initial_{observation.camera_id.lower()}.png"
-        if not cv2.imwrite(str(path), cv2.cvtColor(observation.rgb, cv2.COLOR_RGB2BGR)):
-            raise RuntimeError(f"Could not write VLM input image {path}")
+        Image.fromarray(observation.rgb).save(path)
         paths.append(path)
     return paths
 

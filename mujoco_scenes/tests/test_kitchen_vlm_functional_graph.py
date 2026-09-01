@@ -8,7 +8,10 @@ import json
 from pathlib import Path
 
 import pytest
-from mujoco_scenes.functional_tamp_pipeline.errors import VLMSpecificationError
+from mujoco_scenes.functional_tamp_pipeline.errors import (
+    VLMSpecificationError,
+    UnmappedFunctionalConceptError,
+)
 from mujoco_scenes.kitchen_vlm_functional_graph import (
     compile_vlm_functional_graph,
     resolve_kitchen_region_proposal,
@@ -321,7 +324,7 @@ def test_inconsistent_role_count_fails_closed():
         )
 
 
-def test_unresolved_region_proposal_excluded_from_candidate_regions():
+def test_unresolved_region_proposal_fails_closed():
     spec = natural_kitchen_spec()
     spec["inspectable_regions"] = [
         {"id": "reg_1", "label": "upper wall cupboard", "visual_description": "cupboard", "reason": "storage"},
@@ -329,17 +332,12 @@ def test_unresolved_region_proposal_excluded_from_candidate_regions():
     ]
     spec["inspection_order"] = ["reg_1", "reg_2"]
 
-    contract, vocabularies, trace = compile_vlm_functional_graph(
-        spec,
-        task_instruction="Prepare two coffees and two soups.",
-        observable_regions=REGIONS,
-    )
-
-    # Only C2 should be in candidate_regions
-    assert trace["candidate_regions"] == ["C2"]
-    assert trace["inspection_order"] == ["C2"]
-    assert len(trace["unresolved_proposals"]) == 1
-    assert trace["unresolved_proposals"][0]["label"] == "bookshelf in bedroom"
+    with pytest.raises(UnmappedFunctionalConceptError):
+        compile_vlm_functional_graph(
+            spec,
+            task_instruction="Prepare two coffees and two soups.",
+            observable_regions=REGIONS,
+        )
 
 
 def test_no_full_catalog_fallback():

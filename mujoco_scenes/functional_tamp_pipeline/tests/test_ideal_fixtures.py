@@ -525,13 +525,13 @@ def test_diagnostic_canonicalization_outcomes():
     assert k_diag["reference_metrics"]["operation_group_identity_recall"] == 1.0
     assert k_diag["reference_metrics"]["reference_complete"] is True
 
-    # Check that Kitchen cardinality difference on reusable stirrer explains role_exact_recall = 0.833
-    assert k_diag["reference_metrics"]["role_exact_recall"] == pytest.approx(5.0 / 6.0)
+    # Kitchen exact structural equality and cardinality match
+    assert k_diag["reference_metrics"]["role_exact_recall"] == 1.0
     card_diag = k_diag["reference_diagnostics"]["role_cardinality_diagnostics"]["coffee_stirrer"]
     assert card_diag["cardinality_compatible"] is True
-    assert card_diag["cardinality_exact"] is False
+    assert card_diag["cardinality_exact"] is True
     assert card_diag["reference_range"] == [1, 2]
-    assert card_diag["candidate_range"] == [1, 1]
+    assert card_diag["candidate_range"] == [1, 2]
 
     # Verify 4 distinct relation keys exist and are predicate-verified
     k_rel_keys = [k for k in k_diag["concept_preservation"] if k.startswith("rel:")]

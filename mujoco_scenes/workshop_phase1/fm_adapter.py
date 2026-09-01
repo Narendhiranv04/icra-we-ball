@@ -362,8 +362,13 @@ KITCHEN_FUNCTIONAL_GRAPH_SCHEMA: dict[str, Any] = {
                     "id": {"type": "string"},
                     "entity_kind": {"type": "string", "enum": ["OBJECT", "REGION", "FIXED_TARGET"]},
                     "function": {"type": "string"},
+                    "description": {"type": "string"},
                     "required_count": {"type": "integer", "minimum": 1, "maximum": 20},
                     "binding_policy": {"type": "string", "enum": ["DISTINCT", "REUSABLE", "SHARED"]},
+                    "binding_cardinality": {"type": "object"},
+                    "min_count": {"type": "integer"},
+                    "max_count": {"type": "integer"},
+                    "preference": {"type": "string"},
                     "candidate_categories": {
                         "type": "array", "minItems": 1, "maxItems": 12,
                         "items": {"type": "string"},
@@ -1012,7 +1017,8 @@ def validate_kitchen_functional_specification(document: dict[str, Any]) -> dict[
         }
         role_allowed_fields = {
             "id", "entity_kind", "function", "description", "required_count",
-            "binding_policy", "candidate_categories", "visible_candidates", "required_properties",
+            "binding_policy", "binding_cardinality", "min_count", "max_count", "preference",
+            "candidate_categories", "visible_candidates", "required_properties",
         }
         if not role_req_fields.issubset(set(role)):
             missing = role_req_fields - set(role)
@@ -1023,6 +1029,10 @@ def validate_kitchen_functional_specification(document: dict[str, Any]) -> dict[
             unexpected = set(role) - role_allowed_fields
             raise FMResponseValidationError(
                 f"functional_roles[{index}] has invalid fields: {sorted(unexpected)}"
+            )
+        if "binding_cardinality" in role and not isinstance(role["binding_cardinality"], dict):
+            raise FMResponseValidationError(
+                f"functional_roles[{index}].binding_cardinality must be a dict"
             )
         r_id = role.get("id")
         if not isinstance(r_id, str) or not re.fullmatch(r"[a-zA-Z0-9_]+", r_id):

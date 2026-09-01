@@ -211,7 +211,7 @@ class GTSpecProvider(FunctionalSpecProvider):
                 required_relations=tuple(map(str, grp.get("relations", ()))),
                 distinct_within_group=bool(policy.get("distinct_within_group", True)),
                 same_tool_must_cover_all_targets=bool(policy.get("same_tool_must_cover_all_targets", False)),
-                selection_preference=str(policy.get("selection_preference", "")),
+                selection_preference=str(policy.get("selection_preference", "deterministic_rank" if usage_policy == "DEDICATED_PER_TARGET" else "minimize_distinct_tools")),
             ))
 
         regions = ("D1", "D2", "C2", "B1", "C1")

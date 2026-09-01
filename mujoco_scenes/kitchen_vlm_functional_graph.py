@@ -540,10 +540,32 @@ def compile_vlm_functional_graph(
                 "detector_aliases": phrases,
             })
 
-        roles[canon_role_name] = {
+        raw_card = row.get("binding_cardinality")
+        if isinstance(raw_card, dict) and (
+            "minimum_distinct_physical_objects" in raw_card
+            or "maximum_distinct_physical_objects" in raw_card
+        ):
+            cardinality_data: dict[str, Any] | None = dict(raw_card)
+            cardinality_data.setdefault("mode", "assignment_driven")
+            min_count = cardinality_data.get("minimum_distinct_physical_objects")
+            max_count = cardinality_data.get("maximum_distinct_physical_objects")
+            preferred = cardinality_data.get("preferred")
+        else:
+            cardinality_data = None
+            min_count = row.get("min_count")
+            max_count = row.get("max_count")
+            preferred = row.get("preference")
+
+        if preferred is None and binding_policy == "REUSABLE":
+            preferred = "minimize_distinct"
+
+        role_entry: dict[str, Any] = {
             "raw_vlm_role_id": raw_role_id,
             "entity_kind": "OBJECT",
             "count": required_count,
+            "min_count": min_count,
+            "max_count": max_count,
+            "preference": preferred,
             "assignment_order": order,
             "vlm_function": str(row.get("function", "")),
             "vlm_binding_policy": binding_policy,
@@ -553,9 +575,15 @@ def compile_vlm_functional_graph(
             "unary_geometry": unary,
             "visible_candidates": list(row.get("visible_candidates", [])),
         }
+        if cardinality_data is not None:
+            role_entry["binding_cardinality"] = cardinality_data
+        roles[canon_role_name] = role_entry
         concept_accounting["roles"][raw_role_id] = {
             "canonical_role": canon_role_name,
             "count": required_count,
+            "min_count": min_count,
+            "max_count": max_count,
+            "preference": preferred,
             "binding_policy": binding_policy,
             "unary_predicates": list(seen_predicates_on_role),
             "role_semantic_source": "FUNCTION_AND_DESCRIPTION",
@@ -749,9 +777,12 @@ def compile_vlm_functional_graph(
         if policy not in {"SEQUENTIAL_REUSE_ALLOWED", "DEDICATED_PER_TARGET"}:
             raise MalformedVLMSpecificationError(f"Operation group {raw_group_id!r} has unknown usage_policy: {policy!r}")
 
+        canon_fn = "STIR_COFFEE" if fn_group == "coffee_stirring" else "PROVIDE_SOUP_EATING_UTENSIL"
         operations[canon_group_id] = {
             "raw_vlm_group_id": raw_group_id,
-            "function": str(raw_fn),
+            "function": canon_fn,
+            "canonical_function": canon_fn,
+            "raw_function": str(raw_fn),
             "tool_role": tool_role,
             "target_role": target_role,
             "required_target_count": req_target_count,
@@ -770,7 +801,7 @@ def compile_vlm_functional_graph(
             "raw_group_id": raw_group_id,
             "canonical_group": canon_group_id,
             "raw_function": str(raw_fn),
-            "canonical_function": fn_group,
+            "canonical_function": canon_fn,
             "function_mapping_status": "PRESERVED",
             "tool_role": tool_role,
             "target_role": target_role,
@@ -780,10 +811,28 @@ def compile_vlm_functional_graph(
             "status": "PRESERVED",
         })
 
+    # Reconcile role cardinality with operation groups if not explicitly set
+    for canon_gid, op_info in operations.items():
+        t_role = op_info["tool_role"]
+        if t_role in roles:
+            r_entry = roles[t_role]
+            t_req_count = op_info["required_target_count"]
+            if op_info["usage_policy"]["mode"] == "sequential_reuse_allowed":
+                if r_entry.get("min_count") is None:
+                    r_entry["min_count"] = 1
+                if r_entry.get("max_count") is None:
+                    r_entry["max_count"] = t_req_count
+                if r_entry.get("preference") is None:
+                    r_entry["preference"] = "minimize_distinct"
+            elif op_info["usage_policy"]["mode"] == "dedicated_per_target":
+                if r_entry.get("min_count") is None:
+                    r_entry["min_count"] = t_req_count
+                if r_entry.get("max_count") is None:
+                    r_entry["max_count"] = t_req_count
+
     # Deterministic Region Resolution: resolve ONLY through label/visual_description (ignore VLM local ID)
     local_id_to_canonical: dict[str, str] = {}
     region_proposal_trace: list[dict[str, Any]] = []
-    unresolved_proposals: list[dict[str, Any]] = []
     canonical_to_raw_ids: dict[str, str] = {}
     raw_regions = valid_doc.get("inspectable_regions", [])
     for idx, prop in enumerate(raw_regions):
@@ -798,17 +847,11 @@ def compile_vlm_functional_graph(
 
         canon_reg = resolve_kitchen_region_proposal(prop)
         if canon_reg is None or canon_reg not in observable_regions:
-            unresolved_proposals.append({
-                "raw_index": idx,
-                "raw_id": prop_id,
-                "label": raw_label,
-                "raw_label": raw_label,
-                "raw_visual_description": raw_desc,
-                "canonical_region_id": None,
-                "resolution_status": "UNRESOLVED",
-                "reason": "Unmapped visual proposal",
-            })
-            continue
+            raise UnmappedFunctionalConceptError(
+                f"Kitchen inspectable region proposal {prop_id!r} (label={raw_label!r}, "
+                f"visual_description={raw_desc!r}) cannot be mapped to any known system search region "
+                f"(available: {sorted(observable_regions)})"
+            )
 
         if canon_reg in canonical_to_raw_ids:
             prev_raw_id = canonical_to_raw_ids[canon_reg]
@@ -883,7 +926,6 @@ def compile_vlm_functional_graph(
         "concept_accounting": concept_accounting,
         "resolved_regions": local_id_to_canonical,
         "region_proposal_trace": region_proposal_trace,
-        "unresolved_proposals": unresolved_proposals,
         "candidate_regions": list(resolved_candidate_regions),
         "inspection_order": resolved_order,
         "task_contract": {

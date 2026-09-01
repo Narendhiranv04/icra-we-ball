@@ -48,7 +48,7 @@ from mujoco_scenes.workshop_phase1.fm_adapter import FMCallMetrics
 FIXTURES_DIR = Path(__file__).parent / "fixtures" / "ideal_raw_vlm"
 
 EXPECTED_FIXTURE_SHA256 = {
-    "kitchen": "076fa9379e517e26b07acb0905f4a52ffbe9829d3c5bccf10badb965aa260cd2",
+    "kitchen": "8aa50952216fd01270b95a4a5fa22f7206cf648bd81fa1054f6b64229cafadfe",
     "living_room": "a72d86cf1e054f6d7a9533be6e04b5ad6eeb5400190d6f52abb75447d29c30a4",
     "workshop": "42e8c9215ec7f5f946c050ef65c978c4edb9c8efcf524c0fc6095d6fb01eba72",
 }
@@ -149,6 +149,7 @@ def structural_gf_projection(gf: FunctionalRequirementGraph) -> dict[str, Any]:
     ops_proj = sorted([
         {
             "id": op.id,
+            "function": op.function,
             "tool_role": op.tool_role,
             "target_role": op.target_role,
             "required_target_count": op.required_target_count,
@@ -158,6 +159,7 @@ def structural_gf_projection(gf: FunctionalRequirementGraph) -> dict[str, Any]:
             "context_relations": sorted(op.context_relations),
             "distinct_within_group": op.distinct_within_group,
             "same_tool_must_cover_all_targets": op.same_tool_must_cover_all_targets,
+            "selection_preference": op.selection_preference,
         }
         for op in gf.operation_groups
     ], key=lambda x: x["id"])
@@ -572,12 +574,15 @@ def test_p3i_gt_vs_ideal_vlm_structural_control(domain: str, variant: str):
 
     eval_res = evaluate_gf_against_reference(vlm_gf, gt_gf)
     assert eval_res.role_identity_recall == 1.0
+    assert eval_res.role_identity_precision == 1.0
+    assert eval_res.role_exact_recall == 1.0
+    assert eval_res.role_exact_precision == 1.0
     assert eval_res.relation_recall == 1.0
+    assert eval_res.relation_precision == 1.0
+    assert eval_res.operation_group_identity_recall == 1.0
+    assert eval_res.operation_group_identity_precision == 1.0
+    assert eval_res.operation_group_exact_recall == 1.0
+    assert eval_res.operation_group_exact_precision == 1.0
     assert eval_res.reference_complete is True
-
-    if domain in ("workshop", "living_room"):
-        assert eval_res.exact_structural_match is True
-        assert eval_res.role_exact_recall == 1.0
-        assert compute_dict_hash(structural_gf_projection(vlm_gf)) == compute_dict_hash(structural_gf_projection(gt_gf))
-    else:
-        assert eval_res.role_exact_recall == pytest.approx(0.833, abs=0.01)
+    assert eval_res.exact_structural_match is True
+    assert compute_dict_hash(structural_gf_projection(vlm_gf)) == compute_dict_hash(structural_gf_projection(gt_gf))
