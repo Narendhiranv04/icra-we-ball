@@ -565,3 +565,152 @@ def test_strict_kitchen_cardinality_validation():
     clean_doc = validate_kitchen_functional_specification(base_k)
     assert clean_doc["status"] == "SUPPORTED"
 
+
+# ==============================================================================
+# 9. PASS P3-I.4 — PUSHED-TREE INTEGRITY & HARDENED CONTRACT REGRESSION TESTS
+# ==============================================================================
+
+def test_p3i_4_workshop_declarative_authority_and_fail_closed(tmp_path):
+    """Verify Workshop declarative functional_roles loading and fail-closed behavior."""
+    from mujoco_scenes.functional_tamp_pipeline.errors import SemanticOntologyConfigurationError
+    from mujoco_scenes.functional_tamp_pipeline.role_semantic_ontology import (
+        _load_declarative_system_ontology,
+        get_system_role_semantic_categories,
+    )
+
+    # 1. Real production tree loads workshop roles correctly
+    driver_cats = get_system_role_semantic_categories("workshop", "driver")
+    assert "screwdriver" in driver_cats
+    assert "power_driver" in driver_cats
+
+    fastener_cats = get_system_role_semantic_categories("workshop", "fastener")
+    assert "screw" in fastener_cats
+
+    # 2. Config missing workshop functional_roles fails closed
+    (tmp_path / "s1_integrated_kitchen_object_function.yaml").write_text(
+        yaml.dump({
+            "roles": {
+                "coffee_container": {"semantic_preferences": [{"canonical_label": "cup"}]},
+                "soup_container": {"semantic_preferences": [{"canonical_label": "bowl"}]},
+                "coffee_stirrer": {"semantic_preferences": [{"canonical_label": "spoon"}]},
+                "soup_eating_utensil": {"semantic_preferences": [{"canonical_label": "spoon"}]},
+            },
+            "symbolic_task": {
+                "source_roles": {
+                    "coffee_source": {"accepted_semantic_labels": ["coffee_source"]},
+                    "water_source": {"accepted_semantic_labels": ["kettle"]},
+                }
+            }
+        })
+    )
+    (tmp_path / "l2_integrated_region_function_task.yaml").write_text(
+        yaml.dump({
+            "semantic_requirements": {
+                "functional_roles": {
+                    "PERSONAL_CUP_SAUCER_REGION": ["side_table"],
+                    "SHARED_REMOTE_REGION": ["coffee_table"],
+                    "CUP_SAUCER_SET": ["cup_saucer_set"],
+                    "REMOTE": ["remote"],
+                    "SEATING_POSITION": ["armchair", "sofa"],
+                    "SEATING_PAIR": ["armchair_pair"],
+                }
+            }
+        })
+    )
+    # Missing functional_roles in workshop YAML
+    (tmp_path / "workshop_phase1_fm_contract.yaml").write_text(
+        yaml.dump({
+            "functional_requirements": [
+                {"requirement_id": "req_obj_driver", "accepted_categories": ["screwdriver"]}
+            ]
+        })
+    )
+    with pytest.raises(SemanticOntologyConfigurationError) as exc_info:
+        _load_declarative_system_ontology(configs_dir=tmp_path)
+    assert "workshop" in str(exc_info.value).lower()
+
+
+def test_p3i_4_generic_schema_agrees_with_generic_validator():
+    """Verify generic RESPONSE_SCHEMA does not expose kitchen-specific cardinality fields and rejects them."""
+    from mujoco_scenes.workshop_phase1.fm_adapter import (
+        RESPONSE_SCHEMA,
+        FMResponseValidationError,
+        validate_requirement_response,
+    )
+
+    # Generic schema properties must not contain Kitchen cardinality fields
+    role_props = RESPONSE_SCHEMA["properties"]["functional_roles"]["items"]["properties"]
+    assert "binding_cardinality" not in role_props
+    assert "min_count" not in role_props
+    assert "max_count" not in role_props
+    assert "preference" not in role_props
+
+    # Valid generic response
+    valid_generic = {
+        "status": "SUPPORTED",
+        "task_summary": "Valid workshop task",
+        "functional_roles": [
+            {
+                "id": "driver",
+                "entity_kind": "OBJECT",
+                "function": "CAN_DRIVE_SCREW",
+                "description": "screwdriver",
+                "required_count": 1,
+                "binding_policy": "DISTINCT",
+                "candidate_categories": ["screwdriver"],
+                "visible_candidates": [],
+                "required_properties": [],
+            }
+        ],
+        "functional_relations": [],
+        "interaction_groups": [],
+        "inspectable_regions": [],
+        "inspection_order": [],
+        "unsupported_reason": "",
+    }
+    validated = validate_requirement_response(valid_generic)
+    assert validated["status"] == "SUPPORTED"
+
+    # Kitchen cardinality injected into generic requirement response -> fails closed
+    bad_generic = deepcopy(valid_generic)
+    bad_generic["functional_roles"][0]["binding_cardinality"] = {"mode": "assignment_driven"}
+    with pytest.raises(FMResponseValidationError):
+        validate_requirement_response(bad_generic)
+
+
+def test_p3i_4_preferred_vs_preference_conflict_fails_closed():
+    """Verify conflicting preferred vs preference fails closed in both validator and compiler."""
+    from mujoco_scenes.kitchen_vlm_functional_graph import (
+        MalformedVLMSpecificationError,
+        compile_vlm_functional_graph,
+    )
+    from mujoco_scenes.workshop_phase1.fm_adapter import (
+        FMResponseValidationError,
+        validate_kitchen_functional_specification,
+    )
+
+    base_k = load_fixture("kitchen")
+
+    # 1. Matching preferred and preference succeeds
+    good_doc = deepcopy(base_k)
+    good_doc["functional_roles"][2]["binding_cardinality"]["preferred"] = "minimize_distinct"
+    good_doc["functional_roles"][2]["binding_cardinality"]["preference"] = "minimize_distinct"
+    res = validate_kitchen_functional_specification(good_doc)
+    assert res["status"] == "SUPPORTED"
+
+    # 2. Conflicting preferred and preference fails validator
+    bad_doc = deepcopy(base_k)
+    bad_doc["functional_roles"][2]["binding_cardinality"]["preferred"] = "minimize_distinct"
+    bad_doc["functional_roles"][2]["binding_cardinality"]["preference"] = "maximize_distinct"
+    with pytest.raises(FMResponseValidationError) as exc_info:
+        validate_kitchen_functional_specification(bad_doc)
+    assert "conflict" in str(exc_info.value).lower() or "preference" in str(exc_info.value).lower()
+
+    # 3. Conflicting preferred and preference fails kitchen VLM compiler
+    bad_vlm_spec = deepcopy(base_k)
+    bad_vlm_spec["functional_roles"][2]["binding_cardinality"]["preferred"] = "minimize_distinct"
+    bad_vlm_spec["functional_roles"][2]["binding_cardinality"]["preference"] = "maximize_distinct"
+    with pytest.raises(FMResponseValidationError):
+        compile_vlm_functional_graph(bad_vlm_spec, task_instruction="Prepare coffee and soup")
+
+

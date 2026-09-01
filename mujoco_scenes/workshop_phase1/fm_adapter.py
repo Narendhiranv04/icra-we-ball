@@ -187,40 +187,6 @@ RESPONSE_SCHEMA: dict[str, Any] = {
                         "type": "string",
                         "enum": ["DISTINCT", "REUSABLE", "SHARED"],
                     },
-                    "binding_cardinality": {
-                        "type": "object",
-                        "properties": {
-                            "minimum_distinct_physical_objects": {
-                                "type": "integer",
-                                "minimum": 1,
-                                "maximum": 20,
-                            },
-                            "maximum_distinct_physical_objects": {
-                                "type": "integer",
-                                "minimum": 1,
-                                "maximum": 20,
-                            },
-                            "preferred": {
-                                "type": "string",
-                                "enum": ["minimize_distinct", "maximize_distinct", "deterministic_rank"],
-                            },
-                            "preference": {
-                                "type": "string",
-                                "enum": ["minimize_distinct", "maximize_distinct", "deterministic_rank"],
-                            },
-                        },
-                        "required": [
-                            "minimum_distinct_physical_objects",
-                            "maximum_distinct_physical_objects",
-                        ],
-                        "additionalProperties": False,
-                    },
-                    "min_count": {"type": "integer", "minimum": 1, "maximum": 20},
-                    "max_count": {"type": "integer", "minimum": 1, "maximum": 20},
-                    "preference": {
-                        "type": "string",
-                        "enum": ["minimize_distinct", "maximize_distinct", "deterministic_rank"],
-                    },
                     "candidate_categories": {
                         "type": "array",
                         "minItems": 0,
@@ -1187,7 +1153,12 @@ def validate_kitchen_functional_specification(document: dict[str, Any]) -> dict[
                 raise FMResponseValidationError(
                     f"functional_roles[{index}].binding_cardinality maximum ({c_max}) > required_count ({req_count})"
                 )
-            c_pref = card_data.get("preferred") or card_data.get("preference")
+            if "preferred" in card_data and "preference" in card_data:
+                if card_data["preferred"] != card_data["preference"]:
+                    raise FMResponseValidationError(
+                        f"functional_roles[{index}].binding_cardinality conflicting preferred ({card_data['preferred']!r}) and preference ({card_data['preference']!r})"
+                    )
+            c_pref = card_data.get("preferred") if "preferred" in card_data else card_data.get("preference")
             if c_pref is not None and c_pref not in {"minimize_distinct", "maximize_distinct", "deterministic_rank"}:
                 raise FMResponseValidationError(
                     f"functional_roles[{index}].binding_cardinality invalid preference: {c_pref!r}"

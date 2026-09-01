@@ -582,7 +582,12 @@ def compile_vlm_functional_graph(
                 raise MalformedVLMSpecificationError(
                     f"Role {raw_role_id!r} binding_cardinality maximum ({c_max}) > required_count ({required_count})"
                 )
-            c_pref = raw_card.get("preferred") or raw_card.get("preference")
+            if "preferred" in raw_card and "preference" in raw_card:
+                if raw_card["preferred"] != raw_card["preference"]:
+                    raise MalformedVLMSpecificationError(
+                        f"Role {raw_role_id!r} binding_cardinality conflicting preferred ({raw_card['preferred']!r}) and preference ({raw_card['preference']!r})"
+                    )
+            c_pref = raw_card.get("preferred") if "preferred" in raw_card else raw_card.get("preference")
             if c_pref is not None and c_pref not in {"minimize_distinct", "maximize_distinct", "deterministic_rank"}:
                 raise MalformedVLMSpecificationError(
                     f"Role {raw_role_id!r} binding_cardinality invalid preference: {c_pref!r}"

@@ -2106,18 +2106,21 @@ def evaluate_usage_policy_task_witness(
                 for tool_id in option["tool_choices"]
                 if tool_id is not None
             ]
-            require_global_distinct = (
-                usage_policy_mode == "always-distinct"
-                or (
-                    usage_policy_mode == "function-aware"
-                    and not config["cross_group_reuse"]["allowed"]
-                )
-            )
-            if (
-                require_global_distinct
-                and len(all_tool_slots) != len(set(all_tool_slots))
+            if usage_policy_mode == "always-distinct":
+                if len(all_tool_slots) != len(set(all_tool_slots)):
+                    continue
+            elif (
+                usage_policy_mode == "function-aware"
+                and not config["cross_group_reuse"]["allowed"]
             ):
-                continue
+                group_tool_sets = [
+                    set(option["distinct_tool_object_ids"])
+                    for option in group_choices
+                ]
+                if group_tool_sets and sum(len(s) for s in group_tool_sets) != len(
+                    set().union(*group_tool_sets)
+                ):
+                    continue
             global_options.append(
                 {
                     "groups": dict(zip(group_ids, group_choices)),

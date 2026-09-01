@@ -14,7 +14,7 @@ import yaml
 
 from .errors import SemanticOntologyConfigurationError
 
-PHASE3_ROLE_SEMANTIC_ONTOLOGY_VERSION = "phase3_p3i_3_semantic_ontology_v1"
+PHASE3_ROLE_SEMANTIC_ONTOLOGY_VERSION = "phase3_p3i_4_semantic_ontology_v1"
 
 _CACHED_ONTOLOGY: dict[str, dict[str, tuple[str, ...]]] | None = None
 
@@ -48,26 +48,40 @@ def _load_declarative_system_ontology(
         raise SemanticOntologyConfigurationError(
             f"Missing reviewed semantic ontology for kitchen: {kitchen_cfg_path}"
         )
-    kitchen_cfg = yaml.safe_load(kitchen_cfg_path.read_text(encoding="utf-8"))
+    try:
+        kitchen_cfg = yaml.safe_load(kitchen_cfg_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        raise SemanticOntologyConfigurationError(
+            f"Malformed kitchen semantic ontology YAML in {kitchen_cfg_path}: {e}"
+        ) from e
     if not isinstance(kitchen_cfg, dict):
         raise SemanticOntologyConfigurationError(
             f"Malformed kitchen semantic ontology config in {kitchen_cfg_path}"
         )
-    k_roles: dict[str, tuple[str, ...]] = {}
-    for r_name, r_data in kitchen_cfg.get("roles", {}).items():
-        cats = tuple(
-            item["canonical_label"]
-            for item in r_data.get("semantic_preferences", [])
-            if isinstance(item, dict) and "canonical_label" in item
-        )
-        if cats:
-            k_roles[r_name] = cats
-    for r_name, r_data in (
-        kitchen_cfg.get("symbolic_task", {}).get("source_roles", {}).items()
-    ):
-        labels = tuple(r_data.get("accepted_semantic_labels", []))
-        if labels:
-            k_roles[r_name] = labels
+    try:
+        k_roles: dict[str, tuple[str, ...]] = {}
+        for r_name, r_data in kitchen_cfg.get("roles", {}).items():
+            if not isinstance(r_data, dict):
+                continue
+            cats = tuple(
+                item["canonical_label"]
+                for item in r_data.get("semantic_preferences", [])
+                if isinstance(item, dict) and "canonical_label" in item
+            )
+            if cats:
+                k_roles[r_name] = cats
+        for r_name, r_data in (
+            kitchen_cfg.get("symbolic_task", {}).get("source_roles", {}).items()
+        ):
+            if not isinstance(r_data, dict):
+                continue
+            labels = tuple(r_data.get("accepted_semantic_labels", []))
+            if labels:
+                k_roles[r_name] = labels
+    except Exception as e:
+        raise SemanticOntologyConfigurationError(
+            f"Malformed kitchen roles section in {kitchen_cfg_path}: {e}"
+        ) from e
 
     required_k_roles = {
         "coffee_container",
@@ -90,32 +104,37 @@ def _load_declarative_system_ontology(
         raise SemanticOntologyConfigurationError(
             f"Missing reviewed semantic ontology for living_room: {living_cfg_path}"
         )
-    living_cfg = yaml.safe_load(living_cfg_path.read_text(encoding="utf-8"))
+    try:
+        living_cfg = yaml.safe_load(living_cfg_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        raise SemanticOntologyConfigurationError(
+            f"Malformed living_room semantic ontology YAML in {living_cfg_path}: {e}"
+        ) from e
     if not isinstance(living_cfg, dict):
         raise SemanticOntologyConfigurationError(
             f"Malformed living_room semantic ontology config in {living_cfg_path}"
         )
     l_roles: dict[str, tuple[str, ...]] = {}
-    sem_reqs = living_cfg.get("semantic_requirements", {})
+    sem_reqs = living_cfg.get("semantic_requirements")
+    if not isinstance(sem_reqs, dict):
+        raise SemanticOntologyConfigurationError(
+            f"Missing or malformed semantic_requirements section in {living_cfg_path}"
+        )
 
-    # Check explicit functional_roles first
-    explicit_l_roles = sem_reqs.get("functional_roles", {})
-    if isinstance(explicit_l_roles, dict) and explicit_l_roles:
+    # Explicit functional_roles is authoritative
+    explicit_l_roles = sem_reqs.get("functional_roles")
+    if not isinstance(explicit_l_roles, dict) or not explicit_l_roles:
+        raise SemanticOntologyConfigurationError(
+            f"Missing or empty semantic_requirements.functional_roles in {living_cfg_path}"
+        )
+    try:
         for r_name, r_cats in explicit_l_roles.items():
             if isinstance(r_cats, (list, tuple)) and r_cats:
                 l_roles[r_name] = tuple(str(c) for c in r_cats)
-
-    # Fallback to deriving from region_roles, function_groups, and payloads
-    if "PERSONAL_CUP_SAUCER_REGION" not in l_roles:
-        reg_cfg = sem_reqs.get("region_roles", {}).get("personal_cup_saucer_region", {})
-        cats = tuple(reg_cfg.get("accepted_categories", {}).keys())
-        if cats:
-            l_roles["PERSONAL_CUP_SAUCER_REGION"] = cats
-    if "SHARED_REMOTE_REGION" not in l_roles:
-        reg_cfg = sem_reqs.get("region_roles", {}).get("shared_remote_region", {})
-        cats = tuple(reg_cfg.get("accepted_categories", {}).keys())
-        if cats:
-            l_roles["SHARED_REMOTE_REGION"] = cats
+    except Exception as e:
+        raise SemanticOntologyConfigurationError(
+            f"Malformed living_room functional_roles in {living_cfg_path}: {e}"
+        ) from e
 
     required_l_roles = {
         "PERSONAL_CUP_SAUCER_REGION",
@@ -138,21 +157,34 @@ def _load_declarative_system_ontology(
         raise SemanticOntologyConfigurationError(
             f"Missing reviewed semantic ontology for workshop: {workshop_cfg_path}"
         )
-    workshop_cfg = yaml.safe_load(workshop_cfg_path.read_text(encoding="utf-8"))
+    try:
+        workshop_cfg = yaml.safe_load(workshop_cfg_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        raise SemanticOntologyConfigurationError(
+            f"Malformed workshop semantic ontology YAML in {workshop_cfg_path}: {e}"
+        ) from e
     if not isinstance(workshop_cfg, dict):
         raise SemanticOntologyConfigurationError(
             f"Malformed workshop semantic ontology config in {workshop_cfg_path}"
         )
     w_roles: dict[str, tuple[str, ...]] = {}
 
-    # Check explicit functional_roles / system_role_acceptance
+    # Explicit functional_roles is authoritative
     explicit_w_roles = workshop_cfg.get("functional_roles") or workshop_cfg.get(
         "system_role_acceptance"
     )
-    if isinstance(explicit_w_roles, dict) and explicit_w_roles:
+    if not isinstance(explicit_w_roles, dict) or not explicit_w_roles:
+        raise SemanticOntologyConfigurationError(
+            f"Missing or empty functional_roles in {workshop_cfg_path}"
+        )
+    try:
         for r_name, r_cats in explicit_w_roles.items():
             if isinstance(r_cats, (list, tuple)) and r_cats:
                 w_roles[r_name] = tuple(str(c) for c in r_cats)
+    except Exception as e:
+        raise SemanticOntologyConfigurationError(
+            f"Malformed workshop functional_roles in {workshop_cfg_path}: {e}"
+        ) from e
 
     required_w_roles = {"driver", "fastener", "repair_target"}
     missing_w = required_w_roles - set(w_roles)
