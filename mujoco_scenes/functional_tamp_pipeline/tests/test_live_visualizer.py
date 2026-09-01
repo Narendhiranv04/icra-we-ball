@@ -35,6 +35,8 @@ from mujoco_scenes.functional_tamp_pipeline.models import (
     GraphGroundingResult,
     SatisfactionResult,
     PipelineResult,
+    SearchRegionContract,
+    freeze_search_region_contract,
 )
 from mujoco_scenes.functional_tamp_pipeline.scene_graph import (
     ObservedSceneGraph,
@@ -535,8 +537,9 @@ def test_11_zero_overhead_when_observer_is_none():
     domain = FakeDomain()
     spec = _make_canonical_test_gf()
 
+    contract = freeze_search_region_contract(spec)
     with patch("mujoco_scenes.functional_tamp_pipeline.search._extract_scene_graph_dict") as mock_extract:
-        result, inspected = search_until_satisfied(domain, spec, observer=None)
+        result, inspected = search_until_satisfied(domain, spec, search_contract=contract, observer=None)
         assert result.complete is True
         mock_extract.assert_not_called()
 

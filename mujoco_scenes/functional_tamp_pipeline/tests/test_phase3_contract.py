@@ -288,7 +288,7 @@ def test_manifest_success_mocked(tmp_path: Path):
     assert manifest["spec_mode"] == "gt"
     assert manifest["spec_acquisition"] == "live_provider"
     assert manifest["search_order_source_requested"] == "auto"
-    assert manifest["search_order_source_effective"] == "oracle"
+    assert manifest["search_order_source_effective"] == "gt_system"
     assert manifest["execution_state"] == "planning_only"
     assert manifest["visualization_requested"] is False
     assert manifest["terminal_status"] == "ACTION_SEQUENCE_READY"
@@ -371,7 +371,7 @@ def test_default_provider_call_when_spec_json_absent(tmp_path: Path):
 def test_search_order_auto_resolution():
     spec = _make_dummy_spec(domain="kitchen")
     _, eff_gt, _ = resolve_search_order(spec, "kitchen", "auto", mode="gt", variant="K1")
-    assert eff_gt == "oracle"
+    assert eff_gt == "gt_system"
 
     _, eff_vlm, _ = resolve_search_order(spec, "kitchen", "auto", mode="vlm", variant="K1")
     assert eff_vlm == "provider"

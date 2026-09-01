@@ -1587,16 +1587,44 @@ class FMRequirementProvider(RequirementProvider):
 
         # Resolve regions
         resolved_map: dict[str, str] = {}
-        for item in document.get("inspectable_regions", []):
+        region_proposal_trace: list[dict[str, Any]] = []
+        canonical_to_raw_ids: dict[str, str] = {}
+        for idx, item in enumerate(document.get("inspectable_regions", [])):
             if isinstance(item, dict):
-                prop_id = item.get("id") or item.get("region_id") or ""
-                canon_reg = resolve_workshop_region_proposal(item)
-                if canon_reg is not None and canon_reg in WORKSHOP_SEARCH_REGIONS:
-                    resolved_map[prop_id] = canon_reg
-            elif isinstance(item, str):
-                canon_reg = resolve_workshop_region_proposal(item)
-                if canon_reg is not None and canon_reg in WORKSHOP_SEARCH_REGIONS:
-                    resolved_map[item] = canon_reg
+                prop_id = str(item.get("id") or item.get("region_id") or "")
+                raw_label = str(item.get("label") or "")
+                raw_desc = str(item.get("visual_description") or "")
+            else:
+                prop_id = str(item)
+                raw_label = str(item)
+                raw_desc = ""
+
+            canon_reg = resolve_workshop_region_proposal(item)
+            if canon_reg is None or canon_reg not in WORKSHOP_SEARCH_REGIONS:
+                raise UnmappedFunctionalConceptError(
+                    f"Workshop inspectable region proposal {prop_id!r} (label={raw_label!r}, "
+                    f"visual_description={raw_desc!r}) cannot be mapped to any known system search region "
+                    f"(available: {sorted(WORKSHOP_SEARCH_REGIONS)})"
+                )
+
+            if canon_reg in canonical_to_raw_ids:
+                prev_raw_id = canonical_to_raw_ids[canon_reg]
+                raise AmbiguousCanonicalizationError(
+                    f"Multiple raw region proposals ({prev_raw_id!r} and {prop_id!r}) map to the same "
+                    f"canonical search region {canon_reg!r}. Duplicate search region proposal collision fails closed."
+                )
+
+            canonical_to_raw_ids[canon_reg] = prop_id
+            resolved_map[prop_id] = canon_reg
+            region_proposal_trace.append({
+                "raw_index": idx,
+                "raw_id": prop_id,
+                "raw_label": raw_label,
+                "raw_visual_description": raw_desc,
+                "canonical_region_id": canon_reg,
+                "resolution_status": "RESOLVED",
+                "reason": "Deterministic label/visual_description match",
+            })
 
         raw_order = document.get("inspection_order", [])
         order = []
@@ -1629,6 +1657,7 @@ class FMRequirementProvider(RequirementProvider):
             "raw_roles_count": len(raw_requirements),
             "raw_relations_count": len(document.get("functional_relations", [])),
             "raw_operation_groups_count": len(raw_groups),
+            "region_proposal_trace": region_proposal_trace,
             "transformation_trace": self.transformation_trace,
         }
 

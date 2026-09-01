@@ -289,7 +289,7 @@ def _write_run_manifest(state: _RunState) -> None:
         "search_seed_effective": state.search_seed_effective,
         "provider_region_ranking": list(state.specification.region_ranking) if state.specification else [],
         "region_order_used": list(state.resolved_search_order),
-        "search_policy_version": state.search_contract.policy_version if state.search_contract else "phase3_p3h_v1",
+        "search_policy_version": state.search_contract.policy_version if state.search_contract else None,
         "search_contract": state.search_contract.to_dict() if state.search_contract else None,
         "exploration_actuation": state.exploration_actuation,
         "execution_state": "planning_only",
@@ -383,10 +383,14 @@ def _run_pipeline_impl(
         state.resolved_search_order = state.search_contract.canonical_region_ids
         if state.search_contract.no_search_required:
             state.search_order_source_effective = "not_applicable"
-        elif state.search_order in {"oracle", "provider", "random", "fixed"}:
-            state.search_order_source_effective = "oracle" if state.search_order == "fixed" else state.search_order
+        elif state.search_contract.source == "PRIVILEGED_GT_ORACLE_DIAGNOSTIC":
+            state.search_order_source_effective = "oracle"
+        elif "RANDOM" in state.search_contract.source:
+            state.search_order_source_effective = "random"
+        elif state.search_contract.source == "GT_SYSTEM_SEARCH_POLICY":
+            state.search_order_source_effective = "gt_system" if state.search_order == "auto" else "provider"
         else:
-            state.search_order_source_effective = "oracle" if (state.mode == "gt" and state.variant is not None) else "provider"
+            state.search_order_source_effective = "provider"
         state.search_seed_effective = state.search_contract.search_seed
         _emit_event(guarded_observer, "spec_ready", {
             "graph": state.specification.to_dict(),
@@ -408,7 +412,7 @@ def _run_pipeline_impl(
             specification=state.specification,
             output_dir=state.run_dir,
             scene=scene,
-            search_order=state.resolved_search_order,
+            search_contract=state.search_contract,
             observer=guarded_observer,
         )
         if result.assignment:
@@ -469,12 +473,7 @@ def _run_pipeline_impl(
             seed=state.search_seed_requested,
         )
         state.resolved_search_order = state.search_contract.canonical_region_ids
-        if state.search_contract.no_search_required:
-            state.search_order_source_effective = "not_applicable"
-        elif state.search_order in {"oracle", "provider", "random", "fixed"}:
-            state.search_order_source_effective = "oracle" if state.search_order == "fixed" else state.search_order
-        else:
-            state.search_order_source_effective = "oracle" if (state.mode == "gt" and state.variant is not None) else "provider"
+        state.search_order_source_effective = "not_applicable"
         state.search_seed_effective = state.search_contract.search_seed
         _emit_event(guarded_observer, "spec_ready", {
             "graph": state.specification.to_dict(),
@@ -551,10 +550,14 @@ def _run_pipeline_impl(
     state.resolved_search_order = state.search_contract.canonical_region_ids
     if state.search_contract.no_search_required:
         state.search_order_source_effective = "not_applicable"
-    elif state.search_order in {"oracle", "provider", "random", "fixed"}:
-        state.search_order_source_effective = "oracle" if state.search_order == "fixed" else state.search_order
+    elif state.search_contract.source == "PRIVILEGED_GT_ORACLE_DIAGNOSTIC":
+        state.search_order_source_effective = "oracle"
+    elif "RANDOM" in state.search_contract.source:
+        state.search_order_source_effective = "random"
+    elif state.search_contract.source == "GT_SYSTEM_SEARCH_POLICY":
+        state.search_order_source_effective = "gt_system" if state.search_order == "auto" else "provider"
     else:
-        state.search_order_source_effective = "oracle" if (state.mode == "gt" and state.variant is not None) else "provider"
+        state.search_order_source_effective = "provider"
     state.search_seed_effective = state.search_contract.search_seed
     _emit_event(guarded_observer, "spec_ready", {
         "graph": state.specification.to_dict(),
@@ -578,21 +581,12 @@ def _run_pipeline_impl(
     _emit_event(guarded_observer, "stage_changed", {"stage": "perception"})
     print("[3/5] Functional grounding and ranked region search", flush=True)
     _emit_event(guarded_observer, "stage_changed", {"stage": "search_grounding"})
-    try:
-        satisfaction, inspected = search_until_satisfied(
-            adapter,
-            state.specification,
-            search_contract=state.search_contract,
-            search_order=state.resolved_search_order,
-            observer=guarded_observer,
-        )
-    except TypeError:
-        satisfaction, inspected = search_until_satisfied(
-            adapter,
-            state.specification,
-            search_order=state.resolved_search_order,
-            observer=guarded_observer,
-        )
+    satisfaction, inspected = search_until_satisfied(
+        adapter,
+        state.specification,
+        search_contract=state.search_contract,
+        observer=guarded_observer,
+    )
     _write_json(state.run_dir / "observed_scene_graph.json", adapter.graph.to_dict())
     _write_json(state.run_dir / "detection_diagnostics.json", {
         "records": adapter.controller.detection_diagnostics,

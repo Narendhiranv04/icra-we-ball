@@ -461,7 +461,10 @@ class PipelineResult:
 
 from .search_contract import (
     CANONICAL_SEARCH_REGIONS,
+    DOMAIN_CANONICAL_SEARCH_BASE_ORDERS,
     PHASE3_SEARCH_REGION_POLICY_VERSION,
+    RegionProposalTraceEntry,
+    SearchPolicyTraceEntry,
     SearchRegionContract,
     SearchRegionContractError,
     freeze_search_region_contract,

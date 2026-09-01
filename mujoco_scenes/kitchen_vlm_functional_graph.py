@@ -782,15 +782,45 @@ def compile_vlm_functional_graph(
 
     # Deterministic Region Resolution: resolve ONLY through label/visual_description (ignore VLM local ID)
     local_id_to_canonical: dict[str, str] = {}
-    unresolved_proposals: list[dict[str, Any]] = []
+    region_proposal_trace: list[dict[str, Any]] = []
+    canonical_to_raw_ids: dict[str, str] = {}
     raw_regions = valid_doc.get("inspectable_regions", [])
-    for prop in raw_regions:
-        prop_id = str(prop.get("id") or "")
-        canon_reg = resolve_kitchen_region_proposal(prop)
-        if canon_reg is not None and canon_reg in observable_regions:
-            local_id_to_canonical[prop_id] = canon_reg
+    for idx, prop in enumerate(raw_regions):
+        if isinstance(prop, dict):
+            prop_id = str(prop.get("id") or "")
+            raw_label = str(prop.get("label") or "")
+            raw_desc = str(prop.get("visual_description") or "")
         else:
-            unresolved_proposals.append(prop)
+            prop_id = str(prop)
+            raw_label = str(prop)
+            raw_desc = ""
+
+        canon_reg = resolve_kitchen_region_proposal(prop)
+        if canon_reg is None or canon_reg not in observable_regions:
+            raise UnmappedFunctionalConceptError(
+                f"Kitchen inspectable region proposal {prop_id!r} (label={raw_label!r}, "
+                f"visual_description={raw_desc!r}) cannot be mapped to any known system search region "
+                f"(available: {sorted(observable_regions)})"
+            )
+
+        if canon_reg in canonical_to_raw_ids:
+            prev_raw_id = canonical_to_raw_ids[canon_reg]
+            raise AmbiguousCanonicalizationError(
+                f"Multiple raw region proposals ({prev_raw_id!r} and {prop_id!r}) map to the same "
+                f"canonical search region {canon_reg!r}. Duplicate search region proposal collision fails closed."
+            )
+
+        canonical_to_raw_ids[canon_reg] = prop_id
+        local_id_to_canonical[prop_id] = canon_reg
+        region_proposal_trace.append({
+            "raw_index": idx,
+            "raw_id": prop_id,
+            "raw_label": raw_label,
+            "raw_visual_description": raw_desc,
+            "canonical_region_id": canon_reg,
+            "resolution_status": "RESOLVED",
+            "reason": "Deterministic label/visual_description match",
+        })
 
     resolved_candidate_regions = tuple(dict.fromkeys(local_id_to_canonical.values()))
 
@@ -845,7 +875,7 @@ def compile_vlm_functional_graph(
         "canonical_predicates_dispatched": canonical_predicates,
         "concept_accounting": concept_accounting,
         "resolved_regions": local_id_to_canonical,
-        "unresolved_proposals": unresolved_proposals,
+        "region_proposal_trace": region_proposal_trace,
         "candidate_regions": list(resolved_candidate_regions),
         "inspection_order": resolved_order,
         "task_contract": {

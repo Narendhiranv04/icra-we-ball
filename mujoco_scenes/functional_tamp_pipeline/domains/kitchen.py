@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import shutil
 from typing import Any
 
 import yaml
@@ -414,7 +415,8 @@ def run_to_plan(
     specification: FunctionalSpecification,
     output_dir: Path,
     scene: KitchenScene | None = None,
-    search_order: tuple[str, ...] | None = None,
+    search_contract: SearchRegionContract | None = None,
+    search_order: tuple[str, ...] | SearchRegionContract | None = None,
     observer: Any = None,
 ) -> PipelineResult:
     from ..grounding import ground_graph
@@ -423,6 +425,7 @@ def run_to_plan(
 
     scene = scene or scene_for_variant(internal_variant)
     contract = compile_kitchen_contract_from_graph(specification)
+
     vocabulary_path = output_dir / "kitchen_vocabulary.yaml"
     canonical_labels: dict[str, list[str]] = {}
     root = Path(__file__).resolve().parents[2]
@@ -457,12 +460,22 @@ def run_to_plan(
     vocabulary_path.write_text(yaml.safe_dump(vocab_dict, sort_keys=False), encoding="utf-8")
 
     phase1_dir = output_dir / "observed_search" / "phase1"
-    from ..search_contract import freeze_search_region_contract
+    if phase1_dir.exists():
+        shutil.rmtree(phase1_dir, ignore_errors=True)
+    from ..search_contract import SearchRegionContract, freeze_search_region_contract
 
-    if search_order is not None:
-        order = tuple(search_order.canonical_region_ids if hasattr(search_order, "canonical_region_ids") else search_order)
-    else:
-        order = tuple(freeze_search_region_contract(specification).canonical_region_ids)
+    if search_contract is None:
+        if isinstance(search_order, SearchRegionContract):
+            search_contract = search_order
+        else:
+            search_contract = freeze_search_region_contract(
+                specification,
+                domain="kitchen",
+                mode=mode,
+                variant=variant_label,
+            )
+
+    order = tuple(search_contract.canonical_region_ids)
 
     def kitchen_completion_predicate(current: Any) -> bool:
         current_go = build_kitchen_observed_scene_graph(current)

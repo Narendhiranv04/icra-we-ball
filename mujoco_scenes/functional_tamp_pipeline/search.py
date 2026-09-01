@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Protocol
 
+from .errors import SearchRegionContractError
 from .models import (
     FunctionalRequirementGraph,
     FunctionalSpecification,
@@ -32,21 +33,15 @@ def search_until_satisfied(
     domain: SearchDomain,
     specification: FunctionalSpecification,
     *,
-    search_order: tuple[str, ...] | SearchRegionContract | None = None,
-    search_contract: SearchRegionContract | None = None,
+    search_contract: SearchRegionContract,
     observer: Any = None,
     emit=print,
 ) -> tuple[SatisfactionResult, tuple[str, ...]]:
-    if search_contract is not None:
-        order = tuple(search_contract.canonical_region_ids)
-    elif isinstance(search_order, SearchRegionContract):
-        order = tuple(search_order.canonical_region_ids)
-    elif search_order is not None:
-        order = tuple(search_order)
-    elif hasattr(specification, "region_ranking") and specification.region_ranking:
-        order = tuple(specification.region_ranking)
-    else:
-        order = tuple(freeze_search_region_contract(specification).canonical_region_ids)
+    if not isinstance(search_contract, SearchRegionContract):
+        raise SearchRegionContractError(
+            f"search_contract must be an instance of SearchRegionContract, got {type(search_contract).__name__}"
+        )
+    order = tuple(search_contract.canonical_region_ids)
     domain.observe_initial()
     if observer is not None:
         sg_dict = _extract_scene_graph_dict(domain)

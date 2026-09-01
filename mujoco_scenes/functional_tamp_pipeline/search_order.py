@@ -43,9 +43,13 @@ def resolve_search_order(
     if contract.no_search_required:
         return (), "not_applicable", None
 
-    if source in {"oracle", "provider", "random", "fixed"}:
-        eff_source = "oracle" if source == "fixed" else source
+    if source == "oracle":
+        eff_source = "oracle"
+    elif source == "random":
+        eff_source = "random"
+    elif mode == "gt":
+        eff_source = "gt_system" if source == "auto" else "provider"
     else:
-        eff_source = "oracle" if mode == "gt" else "provider"
+        eff_source = "provider"
 
     return contract.canonical_region_ids, eff_source, contract.search_seed
