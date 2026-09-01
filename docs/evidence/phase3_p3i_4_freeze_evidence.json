@@ -1,0 +1,148 @@
+{
+  "phase": "PHASE_3",
+  "pass": "P3-I.4",
+  "status": "DETERMINISTIC_PHASE_3_FROZEN",
+  "tested_code_commit_sha": "38c1bdf7e7f22bed5e2ad0906c80b46bef0c2de0",
+  "starting_remote_sha": "ac638d893042f0ee82ee77e8d89684a385d19584",
+  "ontology_version": "phase3_p3i_4_semantic_ontology_v1",
+  "search_policy_version": "phase3_p3h_1_v1",
+  "ideal_fixtures": {
+    "kitchen_K1": {
+      "fixture_path": "mujoco_scenes/functional_tamp_pipeline/tests/fixtures/ideal_raw_vlm/kitchen_K1.json",
+      "sha256": "8aa50952216fd01270b95a4a5fa22f7206cf648bd81fa1054f6b64229cafadfe"
+    },
+    "living_room_L1": {
+      "fixture_path": "mujoco_scenes/functional_tamp_pipeline/tests/fixtures/ideal_raw_vlm/living_room_L1.json",
+      "sha256": "a72d86cf1e054f6d7a9533be6e04b5ad6eeb5400190d6f52abb75447d29c30a4"
+    },
+    "workshop_W1": {
+      "fixture_path": "mujoco_scenes/functional_tamp_pipeline/tests/fixtures/ideal_raw_vlm/workshop_W1.json",
+      "sha256": "42e8c9215ec7f5f946c050ef65c978c4edb9c8efcf524c0fc6095d6fb01eba72"
+    }
+  },
+  "deterministic_convergence": {
+    "runs_per_domain": 3,
+    "kitchen_K1": {
+      "converged": 3,
+      "status": "ACTION_SEQUENCE_READY",
+      "exact_gt_structural_equality": true,
+      "gf_sha256": "af9261fd9eac6d2216d09fd8066ef745b081996bcbe25950ff6ba6491c8df1ba",
+      "search_contract_sha256": "d110d2efad4ca269f98101540d1902513df033f56051058468476d810d76f865",
+      "final_go_sha256": "cf696bf0632e0a0b0fa5225b375f8edfc33aa526bdeeb8284a15ea054b1bbae2",
+      "phi_star_sha256": "57e60530123427976c48c5de55791bd37da730ad77e8776eff91037d2294d84a",
+      "plan_sha256": "570ee9bf88d14aec5266a2599674f69c81f68e66045732766098c6bb7ab04e44"
+    },
+    "living_room_L1": {
+      "converged": 3,
+      "status": "ACTION_SEQUENCE_READY",
+      "exact_gt_structural_equality": true,
+      "gf_sha256": "66527516d39f07e40bed67b898ef5b6b931635938248e86f3023a654ee2cf4d7",
+      "search_contract_sha256": "092a8ab7aaf930d400544fc46eac2ee0e005e7e010cc0c86eda195fd613211bd",
+      "final_go_sha256": "db04ba9ead53b6596ada4714ef4c43a99b8ab64edfbce81c5b97ce46696fb60d",
+      "phi_star_sha256": "6ee23f00ec43aa723cccf86272fcb6910a7b0c38f6a105b8acb7626a2c1a2fd7",
+      "plan_sha256": "358c7f285910d8001950f7f85c4161406b48d3096d8c819a0344a82d587bdc4d"
+    },
+    "workshop_W1": {
+      "converged": 3,
+      "status": "ACTION_SEQUENCE_READY",
+      "exact_gt_structural_equality": true,
+      "gf_sha256": "adec449b43019f80466c53bed72fc19a88006aabd8c8209951cc805816506e54",
+      "search_contract_sha256": "e85b9357f45438e9d73370e6f62110747cea3c2fcd9979eb07667db13ca7029d",
+      "final_go_sha256": "a664ff1134c82d1adcb835f5bc15107ccc48dd11e26823f2c84fdf7bd5cd21d8",
+      "phi_star_sha256": "3cac91aac1e88e0f5f5b239a9e4d6dadc24c1aa6d49f79e5a7718020a833b9ed",
+      "plan_sha256": "1a5db75ee18e2e079bcbe01a4fe2c531d0ed0f09e77418b937bc471383e27961"
+    }
+  },
+  "gt_matrix_summary": {
+    "total_attempted": 32,
+    "total_matched": 32,
+    "feasible_cases": {
+      "attempted": 20,
+      "action_sequence_ready": 20,
+      "failed": 0
+    },
+    "infeasible_cases": {
+      "attempted": 12,
+      "infeasible": 12,
+      "failed": 0
+    },
+    "per_domain": {
+      "kitchen": {
+        "feasible": [
+          "K1",
+          "K2",
+          "K3",
+          "K4",
+          "K5",
+          "K6"
+        ],
+        "infeasible": [
+          "K7",
+          "K8",
+          "K9",
+          "K10",
+          "K11",
+          "K12"
+        ],
+        "feasible_ready_count": 6,
+        "infeasible_count": 6
+      },
+      "living_room": {
+        "feasible": [
+          "L1",
+          "L2",
+          "L3",
+          "L4",
+          "L5",
+          "L6"
+        ],
+        "infeasible": [
+          "L7",
+          "L8",
+          "L9",
+          "L10"
+        ],
+        "feasible_ready_count": 6,
+        "infeasible_count": 4
+      },
+      "workshop": {
+        "feasible": [
+          "W1",
+          "W2",
+          "W3",
+          "W4",
+          "W5",
+          "W6",
+          "W7",
+          "W8"
+        ],
+        "infeasible": [
+          "W9",
+          "W10"
+        ],
+        "feasible_ready_count": 8,
+        "infeasible_count": 2
+      }
+    }
+  },
+  "semantic_authority_provenance": {
+    "provider_boundary": "SINGLE_SHARED_AUTHORITY",
+    "authority_function": "role_semantic_ontology.get_system_role_semantic_categories",
+    "declarative_sources": {
+      "kitchen": "mujoco_scenes/configs/s1_integrated_kitchen_object_function.yaml",
+      "living_room": "mujoco_scenes/configs/l2_integrated_region_function_task.yaml",
+      "workshop": "mujoco_scenes/configs/workshop_phase1_fm_contract.yaml"
+    },
+    "fallback_tables_retained": false,
+    "missing_config_behavior": "SemanticOntologyConfigurationError",
+    "consumers": [
+      "mujoco_scenes.functional_tamp_pipeline.gt_spec_provider.GTSpecProvider",
+      "mujoco_scenes.functional_tamp_pipeline.vlm_spec_provider.VLMSpecProvider"
+    ]
+  },
+  "test_suite_summary": {
+    "total_pipeline_tests": 306,
+    "passed": 306,
+    "failed": 0
+  }
+}

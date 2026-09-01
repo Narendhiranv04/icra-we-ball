@@ -710,7 +710,7 @@ Per pipeline run, retain:
  
 **Exact Objective**: Run Qwen3.5-9B once on K1/L1/W1 and perform causal layer diagnosis using the decision tree (§5).
  
-**Prerequisites**: Phase 3 deterministic foundation is FROZEN (P3-A through P3-I.3 complete).
+**Prerequisites**: Phase 3 deterministic foundation is FROZEN (P3-A through P3-I.4 complete).
  
 **What to do**:
 1. Save raw VLM response BEFORE canonicalization.
