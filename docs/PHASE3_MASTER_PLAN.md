@@ -524,20 +524,16 @@ When a case fails, apply this tree **in order**:
 
 ---
 
-### P3-I: K1/L1/W1 Full Ideal-Fixture Convergence
-**Status**: `[ ] NOT STARTED`
+### P3-I: K1/L1/W1 Full Ideal-Fixture Convergence & P3-I.1 Semantic Authority
+**Status**: `[x] COMPLETE` (Closed in Pass P3-I.1)
 
-**Objective**: End-to-end validation that ideal raw fixtures → canonicalizer → G_F → G_O → φ* → action sequence for K1/L1/W1.
+**Objective**: End-to-end validation that ideal raw fixtures → canonicalizer → G_F → G_O → φ* → action sequence for K1/L1/W1, with unified system semantic authority.
 
 **Scope**: Integration test across all 3 domains.
 
-**Inputs**: Ideal fixtures from P3-C, canonicalizers repaired in P3-E/F/G.
+**Evidence**: See `docs/PHASE3_P3I_IDEAL_CONVERGENCE.md` and `test_p3i_full_ideal_convergence.py` (6/6 tests PASS across 3 deterministic runs each; 100% ACTION_SEQUENCE_READY; 0 FM calls during replay). Dedicated semantic authority verified in `test_p3i_1_semantic_authority.py` (8/8 tests PASS).
 
-**Tests**: Run each ideal fixture through the full pipeline test harness.
-
-**Acceptance**: All three → `ACTION_SEQUENCE_READY`. Proves the software interface is fully functional.
-
-**Do not touch**: VLM prompt, FM adapter, model configuration.
+**Acceptance**: All three → `ACTION_SEQUENCE_READY`. Software interface and deterministic pipeline architecture fully functional and FROZEN.
 
 ---
 
@@ -711,18 +707,20 @@ Per pipeline run, retain:
 
 ## 11. CURRENT NEXT PASS
  
-### **CURRENT NEXT PASS: P3-I**
+### **CURRENT NEXT PASS: P3-J**
  
-**Exact Objective**: End-to-end validation that ideal raw fixtures → canonicalizer → G_F → G_O → φ* → action sequence for K1/L1/W1.
+**Exact Objective**: Run Qwen3.5-9B once on K1/L1/W1 and perform causal layer diagnosis using the decision tree (§5).
  
-**Prerequisites**: P3-A through P3-H are complete and frozen.
+**Prerequisites**: P3-A through P3-I.1 are complete and frozen.
  
 **What to do**:
-1. Run each ideal fixture through the full pipeline test harness.
-2. Verify all three domains yield ACTION_SEQUENCE_READY without relying on live foundation models.
+1. Save raw VLM response BEFORE canonicalization.
+2. Audit raw concepts: CORRECT / MISSING / EXTRA / WRONG_CARDINALITY / WRONG_BINDING_POLICY / WRONG_RELATION / WRONG_ENTITY_KIND.
+3. Attempt canonicalization and record any gaps.
+4. If canonicalization succeeds, run downstream and identify failure layer (if any).
  
 **Acceptance Criteria**:
-- All three ideal fixtures (K1/L1/W1) reach ACTION_SEQUENCE_READY.
-- All Phase-3 unit and regression tests pass.
+- Clear per-case layer diagnosis for K1/L1/W1.
+- All per-case artifacts preserved.
  
-**Expected next pass**: P3-J (Live 9B Causal Diagnosis)
+**Expected next pass**: P3-K (9B vs 27B Raw Specification Comparison)
