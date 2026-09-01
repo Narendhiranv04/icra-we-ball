@@ -11,8 +11,8 @@ from .living_room_mobile_execution import run_mobile_execution
 from .phase4_execution import (
     ExecutionFailure,
     emit_phase4_progress,
+    guard_phase4_live_viewer,
     normalize_planner_failure_code,
-    Phase4LiveViewer,
     Phase4EntityMappingError,
     Phase3Handoff,
     audit_strict_telemetry,
@@ -152,12 +152,21 @@ def execute_living_room_handoff(
         _read(phase1_dir / "region_registry.json"),
     )
     native_dir = output_dir / "domain_execution"
-    live_viewers: list[Phase4LiveViewer] = []
+    live_recorders: list[Any] = []
 
-    def create_viewer(model: Any, data: Any) -> Any:
-        live_viewer = Phase4LiveViewer(model, data)
-        live_viewers.append(live_viewer)
-        return live_viewer.sync
+    def create_viewer(scene: Any) -> Any:
+        from .living_room_recorder import LivingRoomRecorder
+
+        recorder = LivingRoomRecorder(
+            scene, output_path=None, tile_width=320, tile_height=180,
+            fps=5, show=True, record=False,
+        )
+        live_recorders.append(recorder)
+
+        def capture() -> None:
+            guard_phase4_live_viewer(recorder.step_callback)
+
+        return capture
 
     def report_progress(
         event: str,
@@ -204,8 +213,8 @@ def execute_living_room_handoff(
             progress_callback=report_progress,
         )
     finally:
-        for live_viewer in live_viewers:
-            live_viewer.close()
+        for recorder in live_recorders:
+            recorder.close()
     visual_output = {
         "enabled": bool(record_video is not None or viewer),
         "viewer_enabled": bool(viewer),

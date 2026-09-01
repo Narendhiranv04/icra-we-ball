@@ -13,6 +13,10 @@ import subprocess
 import numpy as np
 
 
+class LiveMosaicViewerClosed(RuntimeError):
+    """Raised when the user closes the external live-view window."""
+
+
 class LiveMosaicViewer:
     """Display fixed-size RGB24 frames in a low-latency ffplay window."""
 
@@ -40,7 +44,7 @@ class LiveMosaicViewer:
 
     def show(self, frame_rgb: np.ndarray) -> None:
         if self.process.poll() is not None or self.process.stdin is None:
-            raise RuntimeError(
+            raise LiveMosaicViewerClosed(
                 "The ffplay live-view window exited. Ensure this command is run "
                 "from the desktop session with DISPLAY available."
             )
@@ -49,7 +53,9 @@ class LiveMosaicViewer:
             self.process.stdin.write(frame.tobytes())
             self.process.stdin.flush()
         except (BrokenPipeError, OSError) as error:
-            raise RuntimeError("The ffplay live-view window closed") from error
+            raise LiveMosaicViewerClosed(
+                "The ffplay live-view window closed"
+            ) from error
 
     def close(self) -> None:
         if self.process.stdin is not None:

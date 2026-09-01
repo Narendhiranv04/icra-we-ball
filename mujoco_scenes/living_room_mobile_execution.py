@@ -1244,7 +1244,7 @@ def run_mobile_execution(
         if step_callback is None:
             step_callback = recorder.step_callback
     if step_callback_factory is not None:
-        live_callback = step_callback_factory(scene.model, scene.data)
+        live_callback = step_callback_factory(scene)
         if step_callback is None:
             step_callback = live_callback
         else:

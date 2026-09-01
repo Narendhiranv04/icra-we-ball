@@ -16,7 +16,7 @@ from .phase4_execution import (
     normalize_planner_failure_code,
     ExecutionFailure,
     Phase4EntityMappingError,
-    Phase4LiveViewer,
+    guard_phase4_live_viewer,
     Phase3Handoff,
     ResolvedEntity,
 )
@@ -112,21 +112,23 @@ class WorkshopPhase4Adapter:
             raise ValueError("Workshop final plan has no unique driver destination")
         work_surface = str(driver_places[0])
         self.scene = WorkshopScene(robot="google", variant=handoff.internal_variant)
-        self.live_viewer = (
-            Phase4LiveViewer(self.scene.model, self.scene.data)
-            if viewer else None
-        )
         self.viewer_requested = bool(viewer)
         self.recorder = None
         self.record_video = record_video
-        if record_video is not None:
+        if record_video is not None or viewer:
             from .workshop_ground_truth_recorder import WorkshopRecorder
 
             self.recorder = WorkshopRecorder(
                 self.scene, record_video, width=320, height=180, fps=5,
-                show=False,
+                show=viewer,
             )
             recorder_callback = self.recorder.capture
+            if viewer:
+                recorder_capture = recorder_callback
+
+                def recorder_callback(force: bool = True) -> None:
+                    guard_phase4_live_viewer(recorder_capture, force)
+
             if frame_callback is None:
                 frame_callback = recorder_callback
             else:
@@ -137,18 +139,6 @@ class WorkshopPhase4Adapter:
                     recorder_callback(force)
 
                 frame_callback = combined_callback
-        if self.live_viewer is not None:
-            viewer_callback = self.live_viewer.sync
-            if frame_callback is None:
-                frame_callback = viewer_callback
-            else:
-                external_callback = frame_callback
-
-                def combined_viewer_callback(force: bool = True) -> None:
-                    external_callback(force)
-                    viewer_callback()
-
-                frame_callback = combined_viewer_callback
         observed_graph_path = handoff.artifacts.get("observed_graph")
         if observed_graph_path is None:
             raise ValueError("Workshop handoff has no final observed G_O artifact")
@@ -263,9 +253,6 @@ class WorkshopPhase4Adapter:
         if self.recorder is not None:
             self.recorder.close()
             frames = int(self.recorder.frames)
-        if self.live_viewer is not None:
-            self.live_viewer.close()
-            self.live_viewer = None
         return {
             "enabled": bool(self.record_video or self.viewer_requested),
             "viewer_enabled": self.viewer_requested,

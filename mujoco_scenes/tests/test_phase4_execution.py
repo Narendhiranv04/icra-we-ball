@@ -12,9 +12,9 @@ from mujoco_scenes.generic_manipulation import environment_collision_is_allowed
 from mujoco_scenes.phase4_execution import (
     ActionExecutionResult,
     ExecutionFailure,
+    guard_phase4_live_viewer,
     Phase4Executor,
     Phase4EntityMappingError,
-    Phase4LiveViewer,
     Phase4ViewerClosed,
     ResolvedEntity,
     UpstreamPhase3Blocked,
@@ -342,41 +342,14 @@ def test_phase4_cli_viewer_flag_defaults_off_and_parses_on():
     assert inspect.signature(execute_phase3_run).parameters["viewer"].default is False
 
 
-def test_passive_viewer_syncs_same_model_data_and_closes(monkeypatch):
-    model, data = object(), object()
+def test_live_mosaic_window_close_becomes_safe_phase4_abort():
+    from mujoco_scenes.live_mosaic_viewer import LiveMosaicViewerClosed
 
-    class Handle:
-        running = True
-        sync_calls = 0
-        closed = False
+    def closed_window():
+        raise LiveMosaicViewerClosed("closed for test")
 
-        def is_running(self):
-            return self.running
-
-        def sync(self):
-            self.sync_calls += 1
-
-        def close(self):
-            self.closed = True
-
-    handle = Handle()
-    import mujoco.viewer
-    launch = []
-    monkeypatch.setattr(
-        mujoco.viewer, "launch_passive",
-        lambda received_model, received_data: (
-            launch.append((received_model, received_data)) or handle
-        ),
-    )
-    viewer = Phase4LiveViewer(model, data)
-    viewer.sync()
-    assert launch == [(model, data)]
-    assert handle.sync_calls == 1
-    handle.running = False
-    with pytest.raises(Phase4ViewerClosed):
-        viewer.sync()
-    viewer.close()
-    assert handle.closed
+    with pytest.raises(Phase4ViewerClosed, match="closed for test"):
+        guard_phase4_live_viewer(closed_window)
 
 
 def test_executor_prints_one_based_task_progress_without_changing_result(

@@ -135,11 +135,8 @@ def main() -> int:
     )
     try:
         result = execute_phase3_run(
-            run_dir,
-            output_dir=output_dir,
-            max_actions=args.max_actions,
-            record_video=args.record_video,
-            viewer=args.viewer,
+            run_dir, output_dir=output_dir, max_actions=args.max_actions,
+            record_video=args.record_video, viewer=args.viewer,
         )
     except Exception as error:
         upstream_blocked = isinstance(error, UpstreamPhase3Blocked)

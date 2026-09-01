@@ -148,23 +148,14 @@ class Phase4ViewerClosed(RuntimeError):
     """Raised when a user closes the optional live execution viewer."""
 
 
-class Phase4LiveViewer:
-    """Passive MuJoCo viewer for the exact model/data being controlled."""
+def guard_phase4_live_viewer(callback: Any, *args: Any, **kwargs: Any) -> None:
+    """Translate an intentionally closed ffplay window into a safe abort."""
+    from .live_mosaic_viewer import LiveMosaicViewerClosed
 
-    def __init__(self, model: Any, data: Any):
-        import mujoco.viewer
-
-        self._viewer = mujoco.viewer.launch_passive(model, data)
-
-    def sync(self, *_args: Any, **_kwargs: Any) -> None:
-        if not self._viewer.is_running():
-            raise Phase4ViewerClosed("Live MuJoCo viewer was closed by the user")
-        self._viewer.sync()
-
-    def close(self) -> None:
-        if self._viewer is not None:
-            self._viewer.close()
-            self._viewer = None
+    try:
+        callback(*args, **kwargs)
+    except LiveMosaicViewerClosed as error:
+        raise Phase4ViewerClosed(str(error)) from error
 
 
 def emit_phase4_progress(

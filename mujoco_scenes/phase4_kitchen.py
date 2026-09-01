@@ -19,7 +19,7 @@ from .phase4_execution import (
     classify_planner_failure,
     normalize_planner_failure_code,
     ExecutionFailure,
-    Phase4LiveViewer,
+    guard_phase4_live_viewer,
     Phase3Handoff,
     ResolvedEntity,
 )
@@ -175,13 +175,9 @@ class KitchenPhase4Adapter:
         self.scene = KitchenScene(
             inventory["scene_name"], include_robot=True, robot="google"
         )
-        self.live_viewer = (
-            Phase4LiveViewer(self.scene.model, self.scene.data)
-            if viewer else None
-        )
         self.viewer_requested = bool(viewer)
         self.recorder = None
-        if record_video is not None:
+        if record_video is not None or viewer:
             from .kitchen_ground_truth_recorder import KitchenGroundTruthRecorder
 
             self.recorder = KitchenGroundTruthRecorder(
@@ -190,10 +186,16 @@ class KitchenPhase4Adapter:
                 tile_width=320,
                 tile_height=180,
                 fps=5,
-                show=False,
-                record=True,
+                show=viewer,
+                record=record_video is not None,
             )
             recorder_callback = self.recorder.step_callback
+            if viewer:
+                recorder_step = recorder_callback
+
+                def recorder_callback(*args: Any, **kwargs: Any) -> None:
+                    guard_phase4_live_viewer(recorder_step, *args, **kwargs)
+
             if step_callback is None:
                 step_callback = recorder_callback
             else:
@@ -204,18 +206,6 @@ class KitchenPhase4Adapter:
                     recorder_callback(*args, **kwargs)
 
                 step_callback = combined_callback
-        if self.live_viewer is not None:
-            viewer_callback = self.live_viewer.sync
-            if step_callback is None:
-                step_callback = viewer_callback
-            else:
-                external_callback = step_callback
-
-                def combined_viewer_callback(*args: Any, **kwargs: Any) -> None:
-                    external_callback(*args, **kwargs)
-                    viewer_callback()
-
-                step_callback = combined_viewer_callback
         resolver = KitchenExecutionEntityResolver()
         observed_regions = {
             row["source_context"]["source_container"]
@@ -276,9 +266,6 @@ class KitchenPhase4Adapter:
             self.recorder.hold_final_frame(duration_s=1.0)
             frames = int(self.recorder.total_frames_captured)
             self.recorder.close()
-        if self.live_viewer is not None:
-            self.live_viewer.close()
-            self.live_viewer = None
         return {
             "enabled": bool(self.record_video or self.viewer_requested),
             "viewer_enabled": self.viewer_requested,
