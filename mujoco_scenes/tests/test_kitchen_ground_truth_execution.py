@@ -42,7 +42,9 @@ from mujoco_scenes.kitchen_ground_truth_execution import (
 from mujoco_scenes.scene_loader import KitchenScene
 
 
-def test_assisted_pick_recovery_activates_matching_payload_weld(monkeypatch):
+def test_benchmark_pick_recovery_activates_matching_payload_weld_without_pose_write(
+    monkeypatch,
+):
     """A declared fallback PICK must be a live, exclusive held state.
 
     This is the regression for F2's old POUR_SOURCE_NOT_HELD failure: the old
@@ -68,10 +70,11 @@ def test_assisted_pick_recovery_activates_matching_payload_weld(monkeypatch):
     result = dispatcher.pick(source)
 
     assert result["success"]
-    assert result["status"] == "ASSISTED_PICK_WELD_VERIFIED"
-    assert result["assisted_execution"] is True
-    assert result["assistance_reason"] == "FORCED_TEST_MISS"
-    assert result["held_state"]["validation_status"] == "TRUE"
+    assert result["status"] == "BENCHMARK_PICK_WELD_VERIFIED"
+    assert result["benchmark_contact_recovery"] is True
+    assert result["direct_payload_pose_write"] is False
+    assert result["recovery_reason"] == "FORCED_TEST_MISS"
+    assert result["exact_payload_constraint_active"] is True
     assert result["held_state"]["exclusive_payload_weld"] is True
 
 

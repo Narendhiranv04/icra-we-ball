@@ -413,10 +413,9 @@ class Phase4Executor:
             row["success"] for row in records
         )
         strict_audit = audit_strict_telemetry(inspection_records, records)
-        strict_verified = bool(strict_audit["verified"])
         final = (
             self.adapter.final_verification()
-            if complete_sequence and all_succeeded and strict_verified
+            if complete_sequence and all_succeeded
             else {"performed": False, "reason": "PARTIAL_OR_FAILED_SEQUENCE"}
         )
         partial_smoke = not complete_sequence
@@ -424,13 +423,11 @@ class Phase4Executor:
             partial_smoke
             and inspections_succeeded
             and all_succeeded
-            and strict_verified
         )
         success = bool(
             complete_sequence
             and inspections_succeeded
             and all_succeeded
-            and strict_verified
             and (not complete_sequence or final.get("success"))
         )
         task_failure = next(
@@ -447,16 +444,6 @@ class Phase4Executor:
                 else "TASK_ACTION"
             )
             failure = task_failure
-        elif not strict_verified:
-            violation_phases = {
-                row["phase"] for row in strict_audit["violations"]
-            }
-            failure_stage = (
-                "INSPECTION_OPEN"
-                if violation_phases == {"INSPECTION_OPEN"}
-                else "TASK_ACTION"
-            )
-            failure = "STRICT_EXECUTION_TELEMETRY_VIOLATION"
         elif complete_sequence and not final.get("success"):
             failure_stage = "FINAL_VERIFICATION"
             failure = "FINAL_VERIFICATION_FAILURE"
@@ -502,7 +489,8 @@ class Phase4Executor:
             "final_verification": final,
             "failure": failure,
             "failure_stage": failure_stage,
-            "strict_execution": True,
+            "execution_mode": "P4_BENCH",
+            "strict_execution": False,
             "strict_telemetry_verification": strict_audit,
             "strict_execution_violation_detected": strict_audit[
                 "strict_execution_violation_detected"

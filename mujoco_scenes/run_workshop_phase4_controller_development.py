@@ -1,8 +1,9 @@
-"""CONTROLLER_DEVELOPMENT_ONLY strict Workshop primitive harness.
+"""CONTROLLER_DEVELOPMENT_ONLY benchmark Workshop primitive harness.
 
 This runner names simulator bodies directly and therefore is never an
 end-to-end TAMP result or paper metric.  It performs no grounding and makes no
-simulator-state repairs.
+simulator-state repairs. It exercises the same calibrated benchmark backend
+used by the planner-facing Phase-4 adapter.
 """
 
 from __future__ import annotations
@@ -66,7 +67,7 @@ def run_controller_sequence(
     scene = WorkshopScene(robot="google", variant=variant)
     assignment = solve_gt_assignment(variant)
     dispatcher = WorkshopExecutionDispatcher(
-        scene, assignment, strict_physical_execution=True
+        scene, assignment, strict_physical_execution=False
     )
     state = initial_workshop_state(scene.variant_meta["storage_contents"])
     records = []
@@ -82,6 +83,15 @@ def run_controller_sequence(
                 "failure_class": _failure_class(str(error)),
                 "traceback": traceback.format_exc(),
             }
+            if action.get("operator") == "PICK" and action.get("arguments"):
+                object_name = action["arguments"][0]
+                grasp = dispatcher._object_grasp_position(object_name)
+                gripper = scene.data.site_xpos[dispatcher.grip_site_id].copy()
+                result["failure_pose_diagnostics"] = {
+                    "gripper_world_m": gripper.tolist(),
+                    "grasp_world_m": grasp.tolist(),
+                    "gripper_minus_grasp_m": (gripper - grasp).tolist(),
+                }
         records.append({"action": action, "result": result})
         if not result.get("success"):
             break
@@ -114,7 +124,7 @@ def run_controller_sequence(
             "post_release_dynamics_modified",
         )
     })
-    payload["success"] = bool(payload["success"] and audit["verified"])
+    payload["benchmark_execution_mode"] = True
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
     return payload

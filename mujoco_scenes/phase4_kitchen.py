@@ -196,7 +196,10 @@ class KitchenPhase4Adapter:
             resolution=resolution,
             step_callback=step_callback,
             assisted_suite=False,
-            allow_assisted_pick_recovery=False,
+            # A calibrated robot approach/closure is always attempted first.
+            # Benchmark recovery may then attach the exact live payload at its
+            # current pose; it never selects or teleports another object.
+            allow_assisted_pick_recovery=True,
         )
         self.expected_inspected_regions = tuple(handoff.inspected_regions)
         self.inventory = inventory

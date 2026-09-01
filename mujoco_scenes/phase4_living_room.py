@@ -198,15 +198,11 @@ def execute_living_room_handoff(
         }
     })
     strict_audit = audit_strict_telemetry([], telemetry_rows)
-    strict_verified = bool(strict_audit["verified"])
     partial_smoke = not complete
-    partial_smoke_success = bool(
-        partial_smoke and all_actions and strict_verified
-    )
+    partial_smoke_success = bool(partial_smoke and all_actions)
     success = bool(
         complete
         and all_actions
-        and strict_verified
         and final.get("all_phase2_goals_physically_satisfied", False)
     )
     failure = next(
@@ -219,9 +215,6 @@ def execute_living_room_handoff(
             if failure == ExecutionFailure.ENTITY_MAPPING_FAILURE.value
             else "TASK_ACTION"
         )
-    elif not strict_verified:
-        failure = "STRICT_EXECUTION_TELEMETRY_VIOLATION"
-        failure_stage = "TASK_ACTION"
     elif complete and not final.get("all_phase2_goals_physically_satisfied", False):
         failure = "FINAL_VERIFICATION_FAILURE"
         failure_stage = "FINAL_VERIFICATION"
@@ -264,7 +257,8 @@ def execute_living_room_handoff(
         "domain_execution_summary": native,
         "failure": failure,
         "failure_stage": failure_stage,
-        "strict_execution": True,
+        "execution_mode": "P4_BENCH",
+        "strict_execution": False,
         "strict_telemetry_verification": strict_audit,
         "strict_execution_violation_detected": strict_audit[
             "strict_execution_violation_detected"

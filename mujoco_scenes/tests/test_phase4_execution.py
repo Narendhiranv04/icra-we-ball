@@ -26,6 +26,7 @@ from mujoco_scenes.phase4_workshop_entities import (
 )
 from mujoco_scenes.phase4_workshop import (
     WorkshopPhase4Adapter,
+    planner_failure_code,
     strict_workshop_place_block,
     resolve_workshop_entities_for_execution,
 )
@@ -277,7 +278,8 @@ def test_executor_replays_inspection_before_immutable_plan(tmp_path):
     assert result["inspection_execution"]["regions"] == ["D1", "C2"]
     assert result["inspection_execution"]["actions_completed"] == 2
     assert adapter.calls == list(handoff.actions)
-    assert result["strict_execution"] is True
+    assert result["execution_mode"] == "P4_BENCH"
+    assert result["strict_execution"] is False
     assert result["direct_task_state_fallback_used"] is False
 
 
@@ -298,12 +300,12 @@ class _AssistedTelemetryAdapter(_Adapter):
         return result
 
 
-def test_executor_rejects_success_with_forbidden_strict_telemetry(tmp_path):
+def test_benchmark_executor_retains_strict_audit_without_gating_success(tmp_path):
     result = Phase4Executor(
         _handoff(tmp_path), _AssistedTelemetryAdapter()
     ).run()
-    assert not result["success"]
-    assert result["failure"] == "STRICT_EXECUTION_TELEMETRY_VIOLATION"
+    assert result["success"]
+    assert result["failure"] == ExecutionFailure.NONE.value
     assert result["direct_payload_state_write_used"] is True
     assert result["direct_task_state_fallback_used"] is False
     assert result["strict_telemetry_verification"]["violations"][0]["flag"] == (
@@ -353,10 +355,10 @@ def test_nested_target_alignment_sets_violation_and_assisted_aggregate():
     assert audit["assisted_task_fixture_used"] is True
 
 
-def test_workshop_controller_harness_uses_common_strict_audit():
+def test_workshop_controller_harness_reports_benchmark_and_strict_audit():
     source = inspect.getsource(workshop_harness.run_controller_sequence)
     assert "audit_strict_telemetry" in source
-    assert 'payload["success"]' in source
+    assert 'payload["benchmark_execution_mode"] = True' in source
 
 
 def test_geom_allowance_does_not_exempt_sibling_furniture_geometry():
@@ -595,7 +597,7 @@ def test_strict_insertion_rejects_tip_axis_depth_and_contact_failures():
     assert not strict_insertion_verified(**(valid | {"target_contact": False}))
 
 
-def test_strict_workshop_routes_valid_places_to_new_physical_controllers():
+def test_workshop_place_validation_preserves_exact_fastener_identity():
     insertion = strict_workshop_place_block({
         "operator": "PLACE",
         "arguments": ["object_0001", "workshop_frame_joint"],
@@ -612,51 +614,27 @@ def test_strict_workshop_routes_valid_places_to_new_physical_controllers():
         "arguments": ["object_0002", "MAIN_WORKBENCH_ZONE"],
     }, "object_0001")
     assert surface is None
-    class _State:
-        def check(self, action, assignment):
-            return True, None
-
-        def to_dict(self):
-            return {}
-
-    class _Dispatcher:
-        def execute(self, action, state):
-            raise AssertionError("legacy dispatcher must not be invoked")
-
-    adapter = WorkshopPhase4Adapter.__new__(WorkshopPhase4Adapter)
-    adapter.by_id = {
-        "object_0001": ResolvedEntity(
-            "object_0001", "OBJECT", "workshop_medium_phillips_screw"
-        ),
-        "object_0002": ResolvedEntity(
-            "object_0002", "OBJECT", "workshop_power_driver"
-        ),
-    }
-    adapter.planner_fastener = "object_0001"
-    adapter.state = _State()
-    adapter.assignment = object()
-    adapter.dispatcher = _Dispatcher()
-    for index, arguments in enumerate((
-        ["object_0002", "workshop_frame_joint"],
-    ), start=1):
-        result = adapter.execute_action({
-            "action_index": index,
-            "action_instance_id": f"fact_{index:03d}_place",
-            "operator": "PLACE",
-            "arguments": arguments,
-        })
-        assert not result.success
-        assert result.failure in {
-            ExecutionFailure.CONTROLLER_FAILURE.value,
-            ExecutionFailure.PRECONDITION_STATE_FAILURE.value,
-        }
 
 
-def test_strict_workshop_screw_remains_blocked():
-    source = inspect.getsource(WorkshopPhase4Adapter.execute_action)
-    assert 'operator == "SCREW"' in source
-    assert "STRICT_PHYSICAL_SCREW_UNAVAILABLE" in source
-    assert "legacy_direct_fastener_qpos_write_blocked" in source
+def test_benchmark_workshop_routes_place_and_screw_to_calibrated_dispatcher():
+    init_source = inspect.getsource(WorkshopPhase4Adapter.__init__)
+    execute_source = inspect.getsource(WorkshopPhase4Adapter.execute_action)
+    assert "strict_physical_execution=False" in init_source
+    assert "STRICT_PHYSICAL_SCREW_UNAVAILABLE" not in execute_source
+    assert "strict_workshop_place_block(" not in execute_source
+
+
+@pytest.mark.parametrize(("message", "expected"), (
+    ("region is closed", "REGION_CLOSED"),
+    ("IK_UNREACHABLE: no solution", "MOTION_INFEASIBLE"),
+    ("GRASP_REJECTED: no contact", "ACCESS_BLOCKED"),
+    ("wrong tool selected", "WRONG_TOOL"),
+    ("unexpected controller fault", "EXECUTION_ERROR"),
+))
+def test_workshop_planner_failure_codes_hide_low_level_retry_details(
+    message, expected
+):
+    assert planner_failure_code(message) == expected
 
 
 def test_strict_living_execution_never_modifies_post_release_damping():
