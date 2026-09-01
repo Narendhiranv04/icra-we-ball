@@ -320,6 +320,38 @@ def _validate_actions(actions: Any) -> tuple[dict[str, Any], ...]:
     return tuple(validated)
 
 
+def _validate_replay_evidence(
+    validation: Any,
+    actions: tuple[dict[str, Any], ...],
+) -> None:
+    """Fail closed unless evidence is the independent replay of this plan."""
+    if not isinstance(validation, dict):
+        raise ValueError("Phase-3 independent replay evidence is missing")
+    if (
+        validation.get("status") != "VALID"
+        or validation.get("goal_status") != "GOAL_SATISFIED"
+        or validation.get("missing_goals") != []
+        or validation.get("validator") != "independent_symbolic_replay_v1"
+        or validation.get("uses_planner_transition") is not False
+    ):
+        raise ValueError("Phase-3 independent replay did not validate the final plan")
+    steps = validation.get("steps")
+    if not isinstance(steps, list) or len(steps) != len(actions):
+        raise ValueError("Phase-3 replay steps do not match the final plan")
+    for expected_step, (step, action) in enumerate(zip(steps, actions)):
+        if not isinstance(step, dict) or (
+            step.get("step") != expected_step
+            or step.get("status") != "VALID"
+            or step.get("failure") is not None
+            or str(step.get("operator", "")).upper() != action["operator"]
+            or step.get("arguments") != action["arguments"]
+        ):
+            raise ValueError(
+                "Phase-3 replay step differs from final action "
+                f"{action['action_index']}"
+            )
+
+
 def load_phase3_handoff(run_dir: Path) -> Phase3Handoff:
     """Load and fail-closed validate the immutable Phase-3 execution handoff."""
     run_dir = run_dir.resolve()
@@ -367,16 +399,10 @@ def load_phase3_handoff(run_dir: Path) -> Phase3Handoff:
         validation = _read_json(replay_path)
         replay_validation_source = "EXPLICIT_REPLAY_ARTIFACT"
     else:
-        if str(manifest.get("domain", "")).lower() != "workshop":
-            raise ValueError(
-                "Phase-3 manifest has no replay_validation artifact; embedded "
-                "final-plan replay is permitted only for Workshop"
-            )
         replay_path = plan_path
         validation = plan.get("validation")
-        replay_validation_source = "WORKSHOP_EMBEDDED_FINAL_PLAN_VALIDATION"
-    if not isinstance(validation, dict) or validation.get("status") != "VALID":
-        raise ValueError("Phase-3 independent replay did not validate the final plan")
+        replay_validation_source = "EMBEDDED_FINAL_PLAN_VALIDATION"
+    _validate_replay_evidence(validation, actions)
     audit_rel = (manifest.get("artifacts") or {}).get("plan_grounding_audit")
     if not isinstance(audit_rel, str):
         raise ValueError("Phase-3 manifest has no plan_grounding_audit artifact")

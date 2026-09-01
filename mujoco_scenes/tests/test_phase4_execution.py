@@ -69,6 +69,24 @@ def _handoff(tmp_path: Path, *, inspected_regions=(), action_count=1):
         }
         for index in range(1, action_count + 1)
     ]
+    replay = {
+        "status": "VALID",
+        "goal_status": "GOAL_SATISFIED",
+        "missing_goals": [],
+        "final_atoms": [],
+        "steps": [
+            {
+                "step": index,
+                "operator": action["operator"],
+                "arguments": action["arguments"],
+                "status": "VALID",
+                "failure": None,
+            }
+            for index, action in enumerate(actions)
+        ],
+        "validator": "independent_symbolic_replay_v1",
+        "uses_planner_transition": False,
+    }
     _write(
         tmp_path / "run_manifest.json",
         {
@@ -106,11 +124,11 @@ def _handoff(tmp_path: Path, *, inspected_regions=(), action_count=1):
     )
     _write(
         tmp_path / "action_sequence/action_plan.json",
-        {"actions": actions, "validation": {"status": "VALID"}},
+        {"actions": actions, "validation": replay},
     )
     _write(
         tmp_path / "action_sequence/replay_validation.json",
-        {"status": "VALID"},
+        replay,
     )
     _write(
         tmp_path / "plan_grounding_audit.json",
@@ -137,6 +155,18 @@ def test_load_phase3_handoff_preserves_exact_plan_contract(tmp_path):
     assert handoff.replay_validation_source == "EXPLICIT_REPLAY_ARTIFACT"
 
 
+def test_living_room_explicit_replay_handoff_still_loads(tmp_path):
+    _handoff(tmp_path)
+    manifest = json.loads((tmp_path / "run_manifest.json").read_text())
+    manifest["domain"] = "living_room"
+    manifest["variant"] = "L1"
+    _write(tmp_path / "run_manifest.json", manifest)
+    handoff = load_phase3_handoff(tmp_path)
+    assert handoff.domain == "living_room"
+    assert handoff.variant == "L1"
+    assert handoff.replay_validation_source == "EXPLICIT_REPLAY_ARTIFACT"
+
+
 def test_ready_handoff_requires_manifest_declared_result(tmp_path):
     _handoff(tmp_path)
     manifest = json.loads((tmp_path / "run_manifest.json").read_text())
@@ -146,27 +176,52 @@ def test_ready_handoff_requires_manifest_declared_result(tmp_path):
         load_phase3_handoff(tmp_path)
 
 
-@pytest.mark.parametrize("domain", ["kitchen", "living_room"])
-def test_non_workshop_handoff_requires_explicit_replay(tmp_path, domain):
+@pytest.mark.parametrize("domain", ["kitchen", "living_room", "workshop"])
+def test_valid_embedded_replay_is_accepted_generically(tmp_path, domain):
     _handoff(tmp_path)
     manifest = json.loads((tmp_path / "run_manifest.json").read_text())
     manifest["domain"] = domain
     manifest["artifacts"].pop("replay_validation")
     _write(tmp_path / "run_manifest.json", manifest)
-    with pytest.raises(ValueError, match="only for Workshop"):
+    handoff = load_phase3_handoff(tmp_path)
+    assert handoff.replay_validation_source == (
+        "EMBEDDED_FINAL_PLAN_VALIDATION"
+    )
+    assert handoff.actions[0]["arguments"] == ["object_0001"]
+
+
+def test_missing_explicit_and_embedded_replay_evidence_fails_closed(tmp_path):
+    _handoff(tmp_path)
+    manifest = json.loads((tmp_path / "run_manifest.json").read_text())
+    manifest["artifacts"].pop("replay_validation")
+    _write(tmp_path / "run_manifest.json", manifest)
+    plan = json.loads(
+        (tmp_path / "action_sequence/action_plan.json").read_text()
+    )
+    plan.pop("validation")
+    _write(tmp_path / "action_sequence/action_plan.json", plan)
+    with pytest.raises(ValueError, match="evidence is missing"):
         load_phase3_handoff(tmp_path)
 
 
-def test_workshop_embedded_replay_is_explicitly_allowed(tmp_path):
+def test_non_valid_replay_status_is_rejected(tmp_path):
     _handoff(tmp_path)
-    manifest = json.loads((tmp_path / "run_manifest.json").read_text())
-    manifest["domain"] = "workshop"
-    manifest["artifacts"].pop("replay_validation")
-    _write(tmp_path / "run_manifest.json", manifest)
-    handoff = load_phase3_handoff(tmp_path)
-    assert handoff.replay_validation_source == (
-        "WORKSHOP_EMBEDDED_FINAL_PLAN_VALIDATION"
-    )
+    validation_path = tmp_path / "action_sequence/replay_validation.json"
+    validation = json.loads(validation_path.read_text())
+    validation["status"] = "INVALID"
+    _write(validation_path, validation)
+    with pytest.raises(ValueError, match="did not validate"):
+        load_phase3_handoff(tmp_path)
+
+
+def test_replay_steps_must_equal_generated_action_sequence(tmp_path):
+    _handoff(tmp_path)
+    validation_path = tmp_path / "action_sequence/replay_validation.json"
+    validation = json.loads(validation_path.read_text())
+    validation["steps"][0]["arguments"] = ["different_object"]
+    _write(validation_path, validation)
+    with pytest.raises(ValueError, match="differs from final action"):
+        load_phase3_handoff(tmp_path)
 
 
 def test_load_phase3_handoff_rejects_result_plan_mismatch(tmp_path):
