@@ -53,6 +53,9 @@ DIRECT_PAYLOAD_STATE_FLAGS = frozenset({
 ASSISTED_FIXTURE_FLAGS = frozenset({
     "alignment_fixture_used", "staging_fixture_used",
     "installed_target_fixture_used",
+    "target_alignment_constraint_used",
+    "installed_fastener_constraint_used",
+    "staging_constraint_used",
 })
 
 

@@ -37,10 +37,10 @@ LEGACY_CABINET_FRONT_GRASP_ROTATION = np.array(
 # Cabinet payloads are reached from the open front: local +X points into the
 # cabinet, local +Y closes left/right around the upright tool, and local +Z
 # points down.  This avoids the previous 90-degree side-on wrist attitude.
-CABINET_OBJECT_FRONT_GRASP_ROTATION = np.array(
+CABINET_OBJECT_FRONT_GRASP_ROTATION = CABINET_FRONT_GRASP_ROTATION.copy()
+DRAWER_OBJECT_FRONT_GRASP_ROTATION = np.array(
     ((0.0, 1.0, 0.0), (1.0, 0.0, 0.0), (0.0, 0.0, -1.0))
 )
-DRAWER_OBJECT_FRONT_GRASP_ROTATION = CABINET_OBJECT_FRONT_GRASP_ROTATION.copy()
 
 # A 90-degree yaw of the same vertical-down attitude. The powered driver's
 # flat resting pose points its handle along world Y, so its jaws must close
@@ -159,6 +159,9 @@ class WorkshopExecutionDispatcher:
         self.drive_metrics: dict[str, float] = {}
         self.navigation_audit: list[dict[str, Any]] = []
         self.motion_audit: list[dict[str, Any]] = []
+        self.storage_grasp_arm_seed: np.ndarray | None = None
+        self.active_drawer_shell_geom: str | None = None
+        self.minimum_drawer_shell_contact_distance_m: float | None = None
         self.object_pick_sources: dict[str, str] = {}
         self.horizontal_transport_objects: set[str] = set()
         # Deliberately slower than the original benchmark motion. This scales
@@ -173,6 +176,27 @@ class WorkshopExecutionDispatcher:
         """Advance physics while recording at the configured simulation FPS."""
         for _ in range(count):
             mujoco.mj_step(self.scene.model, self.scene.data)
+            if self.active_drawer_shell_geom:
+                for contact in self.scene.data.contact:
+                    names = {
+                        mujoco.mj_id2name(
+                            self.scene.model, mujoco.mjtObj.mjOBJ_GEOM,
+                            contact.geom1,
+                        ) or "",
+                        mujoco.mj_id2name(
+                            self.scene.model, mujoco.mjtObj.mjOBJ_GEOM,
+                            contact.geom2,
+                        ) or "",
+                    }
+                    if self.active_drawer_shell_geom not in names:
+                        continue
+                    if not any(name.startswith("google:") for name in names):
+                        continue
+                    distance = float(contact.dist)
+                    self.minimum_drawer_shell_contact_distance_m = (
+                        distance if self.minimum_drawer_shell_contact_distance_m is None
+                        else min(self.minimum_drawer_shell_contact_distance_m, distance)
+                    )
             self._capture(False)
 
     def _hold(self, duration_s: float) -> None:
@@ -582,8 +606,18 @@ class WorkshopExecutionDispatcher:
             if contact_stalled >= 50:
                 break
         else:
+            worst_index = int(np.argmax(np.abs(
+                self.scene.data.qpos[qpos_addresses] - target
+            )))
+            actuator_name = mujoco.mj_id2name(
+                self.scene.model, mujoco.mjtObj.mjOBJ_ACTUATOR,
+                int(actuator_ids[worst_index]),
+            )
             raise RuntimeError(
-                f"Actuator motion failed to settle: error={error:.4f}, speed={speed:.4f}"
+                "ACTUATOR_STALL: motion failed to settle: "
+                f"actuator={actuator_name}, desired={target[worst_index]:.6f}, "
+                f"achieved={self.scene.data.qpos[qpos_addresses[worst_index]]:.6f}, "
+                f"error={error:.4f}, speed={speed:.4f}"
             )
         self._hold(0.25)
 
@@ -673,7 +707,7 @@ class WorkshopExecutionDispatcher:
             # extracted drawer and its payload then remain in front of the
             # workbench but cannot collide with the chassis; the arm supplies
             # the handle reach and later top-down object reach.
-            forward = 0.0
+            forward = 0.07 if self.strict_physical_execution else 0.0
         if (
             destination == "TOOL_CART_TOP"
             and self.held_object == "workshop_long_phillips_driver"
@@ -806,6 +840,7 @@ class WorkshopExecutionDispatcher:
         cartesian_step_m: float | None = None,
         ik_tolerance_m: float = 0.018,
         joint_tolerance: float = 0.014,
+        ik_seed: np.ndarray | None = None,
     ) -> dict[str, Any]:
         del samples
         target = np.asarray(target, dtype=float)
@@ -813,7 +848,7 @@ class WorkshopExecutionDispatcher:
         # collision-checked home branch before solving task-space motion.
         if np.linalg.norm(
             self.scene.data.qpos[self.arm_qpos] - self.arm_profile.navigation_joints
-        ) < 0.12:
+        ) < 0.12 and ik_seed is None:
             self._animate_configuration(
                 self.arm_qpos,
                 self.arm_dofs,
@@ -869,7 +904,10 @@ class WorkshopExecutionDispatcher:
             max(1, int(math.ceil(distance / cartesian_step_m)))
             if cartesian_step_m is not None else 1
         )
-        seed = start_configuration.copy()
+        seed = (
+            start_configuration.copy()
+            if ik_seed is None else np.asarray(ik_seed, dtype=float).copy()
+        )
         planned_start = start_configuration.copy()
         position_error = float("inf")
         angle_error = float("inf")
@@ -888,7 +926,9 @@ class WorkshopExecutionDispatcher:
             mujoco.mj_forward(self.scene.model, self.scene.data)
             if position_error > ik_tolerance_m:
                 raise RuntimeError(
-                    f"Unreachable Cartesian waypoint: error={position_error:.4f} m"
+                    "IK_UNREACHABLE: Cartesian waypoint "
+                    f"{waypoint.tolist()} toward {target.tolist()}: "
+                    f"error={position_error:.4f} m"
                 )
             collision_free, reason = checker.segment_valid(
                 planned_start, solution, allowed_body_ids, resolution=0.025
@@ -948,6 +988,11 @@ class WorkshopExecutionDispatcher:
             "RIGHT_DRAWER": "right_tool_drawer_slide",
             "TOOL_CABINET": "tool_cabinet_door_hinge",
         }[region]
+        self.active_drawer_shell_geom = (
+            f"{region.lower().replace('_drawer', '')}_drawer_shell_top_col"
+            if region in {"LEFT_DRAWER", "RIGHT_DRAWER"} else None
+        )
+        self.minimum_drawer_shell_contact_distance_m = None
         joint_id = mujoco.mj_name2id(
             self.scene.model, mujoco.mjtObj.mjOBJ_JOINT, joint_name
         )
@@ -964,7 +1009,7 @@ class WorkshopExecutionDispatcher:
             (CABINET_FRONT_GRASP_ROTATION if self.strict_physical_execution
              else LEGACY_CABINET_FRONT_GRASP_ROTATION).copy()
             if region == "TOOL_CABINET" else
-            (self.arm_profile.top_down_rotation if self.strict_physical_execution
+            (DRAWER_FRONT_GRASP_ROTATION if self.strict_physical_execution
              else LEGACY_DRAWER_FRONT_GRASP_ROTATION).copy()
         )
         moving_body_id = mujoco.mj_name2id(
@@ -999,17 +1044,12 @@ class WorkshopExecutionDispatcher:
             0.0 if self.strict_physical_execution else
             -0.055 if region in {"LEFT_DRAWER", "RIGHT_DRAWER"} else -0.040
         )
-        grasp = (
-            handle + np.array([0.0, 0.0, 0.075])
-            if self.strict_physical_execution
-            and region in {"LEFT_DRAWER", "RIGHT_DRAWER"}
-            else handle + grasp_offset * approach_axis
-        )
+        grasp = handle + grasp_offset * approach_axis
         # Remain entirely in front of the workbench while descending.  The
         # former overhead point was below the tabletop and the joint-space
         # transition visibly cut through it.
         pregrasp = (
-            grasp + np.array([0.0, 0.0, 0.18])
+            grasp - 0.180 * grasp_rotation[:, 2]
             if self.strict_physical_execution
             and region in {"LEFT_DRAWER", "RIGHT_DRAWER"}
             else grasp - 0.200 * approach_axis
@@ -1021,35 +1061,44 @@ class WorkshopExecutionDispatcher:
             1.02 if region == "TOOL_CABINET" else 0.94,
         ])
         allowed_handle_body = (moving_body_name,)
+        def storage_reach(stage: str, target: np.ndarray, **kwargs: Any) -> dict[str, Any]:
+            try:
+                return self._reach(target, **kwargs)
+            except RuntimeError as error:
+                raise RuntimeError(
+                    f"{stage}: target={np.asarray(target).tolist()}: {error}"
+                ) from error
         if region != "TOOL_CABINET":
-            self._reach(
-                corridor, samples=12, allowed_body_names=allowed_handle_body
+            storage_reach("DRAWER_CORRIDOR", corridor,
+                samples=12, allowed_body_names=allowed_handle_body
             )
             # Descend in front of the bench before entering the under-top
             # drawer corridor.  Descending above the handle made the forearm
             # sweep through the tabletop even though the jaws faced forward.
-            low_front = np.array([pregrasp[0], -0.40, grasp[2] + 0.035])
-            self._reach(
-                low_front, samples=10, rotation=grasp_rotation,
+            low_front = np.array([
+                pregrasp[0], pregrasp[1], grasp[2] + 0.035
+            ])
+            storage_reach(
+                "DRAWER_LOW_FRONT", low_front, samples=10, rotation=grasp_rotation,
                 orientation_weight=0.03,
                 allowed_body_names=allowed_handle_body,
                 ik_tolerance_m=0.030,
             )
         else:
-            self._reach(
-                overhead, samples=10, rotation=grasp_rotation,
+            storage_reach(
+                "CABINET_OVERHEAD", overhead, samples=10, rotation=grasp_rotation,
                 orientation_weight=0.15,
                 allowed_body_names=allowed_handle_body,
                 ik_tolerance_m=0.018,
             )
-        self._reach(
-            pregrasp, samples=8, rotation=grasp_rotation,
+        storage_reach(
+            "STORAGE_PREGRASP", pregrasp, samples=8, rotation=grasp_rotation,
             orientation_weight=(0.15 if region == "TOOL_CABINET" else 0.03),
             allowed_body_names=allowed_handle_body,
             ik_tolerance_m=(0.018 if region == "TOOL_CABINET" else 0.030),
         )
-        reach = self._reach(
-            grasp, samples=8, rotation=grasp_rotation,
+        reach = storage_reach(
+            "STORAGE_CONTACT", grasp, samples=8, rotation=grasp_rotation,
             orientation_weight=(0.15 if region == "TOOL_CABINET" else 0.03),
             allowed_body_names=allowed_handle_body,
             cartesian_step_m=0.020,
@@ -1129,6 +1178,7 @@ class WorkshopExecutionDispatcher:
         self.scene.model.actuator_biasprm[actuator_id] = 0.0
         self.scene.data.ctrl[actuator_id] = 0.0
         tracking_measurement = start
+        storage_pull_base = self.scene.data.qpos[self.base_qpos].copy()
         try:
             for fraction in np.linspace(0.0, 1.0, 17)[1:]:
                 planned_q = start + float(fraction) * (final_target - start)
@@ -1155,27 +1205,62 @@ class WorkshopExecutionDispatcher:
                         half_matrix.reshape(3, 3) @ grasp_rotation
                     )
                 live_approach = live_rotation[:, 0]
-                live_grasp = (
-                    live_handle + np.array([0.0, 0.0, 0.075])
-                    if self.strict_physical_execution
-                    and region in {"LEFT_DRAWER", "RIGHT_DRAWER"}
-                    else live_handle + grasp_offset * live_approach
-                )
-                follow = self._reach(
-                    live_grasp,
-                    samples=4,
-                    rotation=live_rotation,
-                    # Handle position/contact is the hard requirement. A small
-                    # attitude weight lets the wrist relax under drawer load.
-                    orientation_weight=(
-                        0.005 if region == "TOOL_CABINET" else 0.025
-                    ),
-                    allowed_body_names=allowed_handle_body,
-                    cartesian_step_m=0.025,
-                    ik_tolerance_m=(
-                        0.050 if region == "TOOL_CABINET" else 0.030
-                    ),
-                )
+                live_grasp = live_handle + grasp_offset * live_approach
+                if region in {"LEFT_DRAWER", "RIGHT_DRAWER"}:
+                    # A drawer is prismatic along world -Y. Once the exact
+                    # handle is grasped, pull with the mobile base so the arm
+                    # retains its contact configuration instead of folding
+                    # into a singular elbow branch as the handle approaches.
+                    if self.strict_physical_execution:
+                        pull_target = storage_pull_base.copy()
+                        pull_target[0] -= joint_delta
+                        self._audit_base_waypoint(
+                            pull_target, "drawer_contact_gated_base_pull"
+                        )
+                        self._animate_configuration(
+                            self.base_qpos, self.base_dofs, self.base_actuators,
+                            pull_target,
+                            maximum_rate=np.array([0.10, 0.10, 0.30]),
+                            tolerance=0.025, velocity_tolerance=0.025,
+                            timeout_s=18.0,
+                        )
+                        follow = {
+                            "measured_gripper_target_error_m": float(np.linalg.norm(
+                                self.scene.data.site_xpos[self.grip_site_id]
+                                - live_grasp
+                            ))
+                        }
+                    else:
+                        follow = storage_reach(
+                            "STORAGE_ARTICULATION_FOLLOW", live_grasp,
+                            samples=4, rotation=live_rotation,
+                            orientation_weight=0.025,
+                            allowed_body_names=allowed_handle_body,
+                            cartesian_step_m=0.025, ik_tolerance_m=0.030,
+                        )
+                else:
+                    if self.strict_physical_execution:
+                        handle_delta = live_handle - handle
+                        pull_target = storage_pull_base.copy()
+                        pull_target[0] += 2.0 * handle_delta[1]
+                        pull_target[1] -= 2.0 * handle_delta[0]
+                        self._audit_base_waypoint(
+                            pull_target, "cabinet_contact_gated_base_follow"
+                        )
+                        self._animate_configuration(
+                            self.base_qpos, self.base_dofs, self.base_actuators,
+                            pull_target,
+                            maximum_rate=np.array([0.10, 0.10, 0.30]),
+                            tolerance=0.025, velocity_tolerance=0.025,
+                            timeout_s=18.0, allow_contact_stall=True,
+                        )
+                    follow = storage_reach(
+                        "STORAGE_ARTICULATION_FOLLOW", live_grasp,
+                        samples=4, rotation=live_rotation,
+                        orientation_weight=0.005,
+                        allowed_body_names=allowed_handle_body,
+                        cartesian_step_m=0.025, ik_tolerance_m=0.050,
+                    )
                 self._step(35)
                 handle_errors.append(
                     follow["measured_gripper_target_error_m"]
@@ -1220,34 +1305,32 @@ class WorkshopExecutionDispatcher:
             self.scene.state.opened_containers.add(region)
         else:
             self.scene.state.container_open_state[region] = False
+        self.storage_grasp_arm_seed = self.scene.data.qpos[self.arm_qpos].copy()
         self._set_gripper(False)
         live_grip = self.scene.data.site_xpos[self.grip_site_id].copy()
         if region == "TOOL_CABINET":
-            retreat = live_grip + np.array([0.0, -0.18, 0.06])
-            retreat_high = retreat + np.array([0.0, 0.0, 0.10])
+            current_base = self.scene.data.qpos[self.base_qpos].copy()
+            base_retreat = np.array([0.0, -0.68, 0.0])
+            self._audit_base_waypoint(base_retreat, "cabinet_release_base_retreat")
+            self._animate_configuration(
+                self.base_qpos, self.base_dofs, self.base_actuators,
+                base_retreat, maximum_rate=np.array([0.18, 0.18, 0.40]),
+                tolerance=0.030, velocity_tolerance=0.025, timeout_s=18.0,
+            )
         else:
-            # Withdraw horizontally into the free band between the drawer
-            # front and mobile base, then rise in place.  Keeping the second
-            # segment vertical avoids a visible elbow-branch jump after the
-            # robot completes the pull.
-            retreat = live_grip - 0.14 * live_rotation[:, 0]
-            retreat_high = retreat + np.array([0.0, 0.0, 0.10])
-        self._reach(
-            retreat,
-            samples=8,
-            rotation=live_rotation,
-            allowed_body_names=allowed_handle_body,
-            cartesian_step_m=0.015,
-            ik_tolerance_m=(0.050 if region == "TOOL_CABINET" else 0.018),
-        )
-        self._reach(
-            retreat_high,
-            samples=8,
-            rotation=live_rotation,
-            allowed_body_names=allowed_handle_body,
-            cartesian_step_m=0.025,
-            ik_tolerance_m=0.050,
-        )
+            # At full extension a fixed-base Cartesian retreat has no valid
+            # elbow branch.  Release the handle, then roll the mobile base
+            # straight back through the already-audited front corridor. This
+            # increases hand/drawer clearance without changing either pose by
+            # direct state writes or permitting shell collisions.
+            current_base = self.scene.data.qpos[self.base_qpos].copy()
+            base_retreat = np.array([0.0, current_base[1], 0.0])
+            self._audit_base_waypoint(base_retreat, "drawer_release_base_retreat")
+            self._animate_configuration(
+                self.base_qpos, self.base_dofs, self.base_actuators,
+                base_retreat, maximum_rate=np.array([0.18, 0.18, 0.40]),
+                tolerance=0.030, velocity_tolerance=0.025, timeout_s=18.0,
+            )
         self._fold_arm()
         # The restored actuator holds only the robot-reached pose while the
         # arm clears the mechanism; it does not complete the OPEN operation.
@@ -1264,6 +1347,8 @@ class WorkshopExecutionDispatcher:
         closed_enough = measured <= (0.12 if region == "TOOL_CABINET" else 0.04)
         for _ in range(4):
             self._capture(True)
+        shell_contact_minimum = self.minimum_drawer_shell_contact_distance_m
+        self.active_drawer_shell_geom = None
         return {
             **attachment,
             "joint_name": joint_name,
@@ -1278,6 +1363,13 @@ class WorkshopExecutionDispatcher:
             "storage_joint_intentionally_opened": True,
             "physical_motion_source": "GOOGLE_ROBOT_HANDLE_MANIPULATION",
             "direct_container_actuator_used": False,
+            "drawer_shell_minimum_contact_distance_m": (
+                shell_contact_minimum
+            ),
+            "forbidden_drawer_shell_penetration_observed": bool(
+                shell_contact_minimum is not None
+                and shell_contact_minimum < -0.001
+            ),
             "verified": opened_enough if opening else closed_enough,
             "initial_reach": reach,
         }
@@ -2004,38 +2096,69 @@ class WorkshopExecutionDispatcher:
                 grasp_point = self.scene.data.geom_xpos[shaft_geom].copy()
             result["physical_grasp_point_before_m"] = grasp_point.tolist()
             if source == "TOOL_CABINET":
-                # The door-handle stance is intentionally farther back so the
-                # swing arc clears the torso. Once the door is open, advance
-                # straight toward the cabinet for the deeper shelf pickup.
-                cabinet_pick_base = self.scene.data.qpos[self.base_qpos].copy()
+                # Re-centre the front stance in world coordinates. The door
+                # is now physically pulled through its complete arc, so this
+                # direct front corridor is no longer occluded by its panel.
+                current_base = self.scene.data.qpos[self.base_qpos].copy()
+                cabinet_pick_base = current_base.copy()
                 cabinet_pick_base[0] += 0.10
-                # Re-centre laterally on the resolved object's live grasp
-                # geometry.  The OPEN stance is deliberately offset for the
-                # door swing and otherwise leaves a 0.32--0.43 m PICK miss.
                 cabinet_pick_base[1] = -float(grasp_point[0])
+                result["cabinet_pick_transform_audit"] = {
+                    "grasp_world_m": grasp_point.tolist(),
+                    "base_world_before_m": self._base_world_xy(current_base).tolist(),
+                    "base_world_target_m": self._base_world_xy(cabinet_pick_base).tolist(),
+                }
                 self._audit_base_waypoint(cabinet_pick_base, "cabinet_interior_pick")
                 self._animate_configuration(
                     self.base_qpos, self.base_dofs, self.base_actuators,
-                    cabinet_pick_base, samples=8,
-                    maximum_rate=np.array([0.18, 0.18, 0.35]),
+                    cabinet_pick_base, maximum_rate=np.array([0.18, 0.18, 0.35]),
                     tolerance=0.008, velocity_tolerance=0.025,
                     timeout_s=20.0,
                 )
+                result["cabinet_pick_transform_audit"].update({
+                    "base_world_after_m": self._base_world_xy(
+                        self.scene.data.qpos[self.base_qpos]
+                    ).tolist(),
+                    "gripper_world_before_reach_m": self.scene.data.site_xpos[
+                        self.grip_site_id
+                    ].tolist(),
+                    "predicted_base_to_grasp_delta_m": (
+                        grasp_point[:2] - self._base_world_xy(cabinet_pick_base)
+                    ).tolist(),
+                })
                 rotation = CABINET_OBJECT_FRONT_GRASP_ROTATION.copy()
                 allowed = (obj, "tool_cabinet_door", "tool_cabinet")
+                if obj in {
+                    "workshop_medium_phillips_screw",
+                    "workshop_long_phillips_driver",
+                }:
+                    # Pre-shape the jaws for the slender shaft before entering
+                    # the cabinet. Fully open pads span into the left wall and
+                    # stop 5.4 cm before the live grasp point.
+                    preshape = (
+                        0.65 if obj == "workshop_long_phillips_driver" else 0.35
+                    )
+                    self._animate_configuration(
+                        self.finger_qpos, self.finger_dofs,
+                        self.finger_actuators, np.full(2, preshape),
+                        maximum_rate=0.35, tolerance=0.01,
+                        velocity_tolerance=0.03, timeout_s=8.0,
+                    )
                 # Enter horizontally through the open front. The gripper-site
                 # offset leaves the finger pads centred on the named grasp
                 # geometry instead of descending through the tabletop.
                 self._reach(
-                    grasp_point + np.array([0.0, -0.26, 0.08]),
+                    grasp_point + np.array([0.0, -0.26, 0.18]),
                     rotation=rotation, orientation_weight=0.05,
-                    allowed_body_names=allowed, ik_tolerance_m=0.025,
+                    allowed_body_names=allowed, cartesian_step_m=0.030,
+                    ik_tolerance_m=0.025,
+                    ik_seed=self.storage_grasp_arm_seed,
                 )
                 self._reach(
                     grasp_point + np.array([0.0, -0.13, 0.0]),
                     rotation=rotation, orientation_weight=0.05,
                     allowed_body_names=allowed, cartesian_step_m=0.025,
-                    ik_tolerance_m=0.022,
+                    ik_tolerance_m=0.030,
                 )
                 cabinet_contact_offset = (
                     np.array([-0.012, -0.031, 0.0])

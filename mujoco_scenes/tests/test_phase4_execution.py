@@ -338,6 +338,16 @@ def test_failed_primitive_is_included_in_strict_telemetry_audit(tmp_path):
     )
 
 
+def test_nested_target_alignment_sets_violation_and_assisted_aggregate():
+    audit = audit_strict_telemetry([], [{
+        "controller_result": {
+            "insertion": {"target_alignment_constraint_used": True}
+        }
+    }])
+    assert audit["strict_execution_violation_detected"] is True
+    assert audit["assisted_task_fixture_used"] is True
+
+
 def _workshop_observed(x=0.2):
     return {
         "objects": {
