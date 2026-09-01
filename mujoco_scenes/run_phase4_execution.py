@@ -35,6 +35,7 @@ def execute_phase3_run(
     *,
     output_dir: Path,
     max_actions: int | None = None,
+    record_video: Path | None = None,
 ) -> dict[str, Any]:
     handoff = load_phase3_handoff(run_dir)
     if handoff.domain == "living_room":
@@ -44,6 +45,7 @@ def execute_phase3_run(
             handoff,
             output_dir=output_dir,
             max_actions=max_actions,
+            record_video=record_video,
         )
         _write_json(output_dir / "execution_result.json", result)
         _write_json(
@@ -61,16 +63,20 @@ def execute_phase3_run(
     if handoff.domain == "kitchen":
         from .phase4_kitchen import KitchenPhase4Adapter
 
-        adapter = KitchenPhase4Adapter(handoff)
+        adapter = KitchenPhase4Adapter(handoff, record_video=record_video)
     elif handoff.domain == "workshop":
         from .phase4_workshop import WorkshopPhase4Adapter
 
-        adapter = WorkshopPhase4Adapter(handoff)
+        adapter = WorkshopPhase4Adapter(handoff, record_video=record_video)
     else:
         raise NotImplementedError(
             f"Phase-4 adapter is not implemented yet for {handoff.domain}"
         )
-    result = Phase4Executor(handoff, adapter).run(max_actions=max_actions)
+    try:
+        result = Phase4Executor(handoff, adapter).run(max_actions=max_actions)
+    finally:
+        visual_output = adapter.close_visualization()
+    result["visual_output"] = visual_output
     _write_json(output_dir / "execution_result.json", result)
     _write_json(output_dir / "execution_entity_resolution.json", adapter.entity_resolution)
     _write_json(
@@ -94,6 +100,10 @@ def main() -> int:
     parser.add_argument("--phase3-run", type=Path)
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
     parser.add_argument("--max-actions", type=int)
+    parser.add_argument(
+        "--record-video", type=Path,
+        help="Write a synchronized manual-review MP4 to this path.",
+    )
     args = parser.parse_args()
 
     run_dir = args.phase3_run or (
@@ -105,6 +115,7 @@ def main() -> int:
             run_dir,
             output_dir=output_dir,
             max_actions=args.max_actions,
+            record_video=args.record_video,
         )
     except Exception as error:
         upstream_blocked = isinstance(error, UpstreamPhase3Blocked)
@@ -131,6 +142,7 @@ def main() -> int:
             ),
             "failure_type": type(error).__name__,
             "failure_reason": str(error),
+            "failure_code": "EXECUTION_ERROR",
             "execution_mode": "P4_BENCH",
             "strict_execution": False,
             "strict_execution_violation_detected": False,

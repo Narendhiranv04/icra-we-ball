@@ -841,6 +841,70 @@ class KitchenGroundTruthExecutionDispatcher:
             pass
         return self.phase_b.phase_a.request("CLOSE", container, execute=True)
 
+    @staticmethod
+    def _preclose_errors(payload: Any) -> list[float]:
+        errors: list[float] = []
+        if isinstance(payload, dict):
+            for key, value in payload.items():
+                if key in {
+                    "preclose_cartesian_error_m",
+                    "measured_gripper_target_error_m",
+                } and isinstance(value, (int, float)):
+                    errors.append(float(value))
+                else:
+                    errors.extend(
+                        KitchenGroundTruthExecutionDispatcher._preclose_errors(value)
+                    )
+        elif isinstance(payload, list):
+            for value in payload:
+                errors.extend(
+                    KitchenGroundTruthExecutionDispatcher._preclose_errors(value)
+                )
+        return errors
+
+    def _benchmark_pick_recovery_evidence(
+        self, object_id: str, physical_result: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Require a real approach near the exact payload before welding."""
+        low = self.phase_b.manipulation.executor
+        backend = self.binding_by_id.get(object_id, {}).get(
+            "physical_backend_body", object_id
+        )
+        body_id = mujoco.mj_name2id(
+            self.scene.model, mujoco.mjtObj.mjOBJ_BODY, backend
+        )
+        distances: list[float] = []
+        if body_id >= 0:
+            grip = self.scene.data.site_xpos[low.grip_site_id]
+            distances.append(float(np.linalg.norm(
+                grip - self.scene.data.xpos[body_id]
+            )))
+            for geom_id in range(self.scene.model.ngeom):
+                if int(self.scene.model.geom_bodyid[geom_id]) == body_id:
+                    distances.append(float(np.linalg.norm(
+                        grip - self.scene.data.geom_xpos[geom_id]
+                    )))
+        preclose_errors = self._preclose_errors(physical_result)
+        measured_distance = min(distances, default=float("inf"))
+        measured_preclose = min(preclose_errors, default=float("inf"))
+        threshold = 0.10
+        accepted = bool(
+            not self.assisted_suite
+            and min(measured_distance, measured_preclose) <= threshold
+        )
+        return {
+            "accepted": accepted,
+            "threshold_m": threshold,
+            "minimum_gripper_object_geometry_distance_m": measured_distance,
+            "minimum_reported_preclose_error_m": measured_preclose,
+            "evidence_mode": (
+                "LIVE_GEOMETRY_OR_CONTROLLER_PRECLOSE"
+                if accepted else "APPROACH_NOT_REACHED"
+            ),
+            "exact_planned_object": object_id,
+            "backend_body": backend,
+        }
+
     def pick(self, object_id: str) -> dict[str, Any]:
         """Pick object with Google Robot."""
         low = self.phase_b.manipulation.executor
@@ -870,6 +934,17 @@ class KitchenGroundTruthExecutionDispatcher:
             not result.get("success", False)
             and self.allow_assisted_pick_recovery
         ):
+            recovery_evidence = self._benchmark_pick_recovery_evidence(
+                object_id, result
+            )
+            if not recovery_evidence["accepted"]:
+                return {
+                    **result,
+                    "success": False,
+                    "failure_code": "ACCESS_BLOCKED",
+                    "benchmark_contact_recovery": False,
+                    "benchmark_recovery_evidence": recovery_evidence,
+                }
             backend = self.binding_by_id.get(object_id, {}).get("physical_backend_body", object_id)
             body_id = mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_BODY, backend)
             weld_id = mujoco.mj_name2id(
@@ -927,6 +1002,7 @@ class KitchenGroundTruthExecutionDispatcher:
                     ),
                     "request": {"action": "PICK", "arguments": [object_id]},
                     "benchmark_contact_recovery": True,
+                    "benchmark_recovery_evidence": recovery_evidence,
                     "direct_payload_pose_write": False,
                     "recovery_reason": result.get("status", "PHYSICAL_PICK_FAILED"),
                     "held_state": held_state,

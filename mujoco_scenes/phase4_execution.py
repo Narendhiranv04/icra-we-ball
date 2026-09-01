@@ -69,6 +69,55 @@ class ExecutionFailure(str, Enum):
     POSTCONDITION_VERIFICATION_FAILURE = "POSTCONDITION_VERIFICATION_FAILURE"
 
 
+PLANNER_FAILURE_CODES = frozenset({
+    "REGION_CLOSED", "OBJECT_NOT_VISIBLE", "ACCESS_BLOCKED",
+    "TARGET_OCCUPIED", "WRONG_TOOL", "INCOMPATIBLE_TARGET",
+    "MOTION_INFEASIBLE", "LOGICAL_PRECONDITION_FAILED", "EXECUTION_ERROR",
+})
+
+
+def classify_planner_failure(
+    message: str | None,
+    *,
+    infrastructure_failure: str,
+    operator: str | None = None,
+) -> str | None:
+    """Map domain diagnostics to a stable planner-facing failure code."""
+    if infrastructure_failure == ExecutionFailure.NONE.value:
+        return None
+    normalized = str(message or "").upper()
+    if "CLOSED" in normalized or "NOT OPEN" in normalized:
+        return "REGION_CLOSED"
+    if any(token in normalized for token in (
+        "OBJECT_NOT_VISIBLE", "NOT VISIBLE", "UNRESOLVED",
+        "MISSING_OBJECT", "MISSING OBJECT",
+    )):
+        return "OBJECT_NOT_VISIBLE"
+    if "TARGET_OCCUPIED" in normalized or "TARGET OCCUPIED" in normalized:
+        return "TARGET_OCCUPIED"
+    if (
+        "WRONG_TOOL" in normalized
+        or ("WRONG" in normalized and "TOOL" in normalized)
+    ):
+        return "WRONG_TOOL"
+    if "INCOMPATIBLE" in normalized:
+        return "INCOMPATIBLE_TARGET"
+    if any(token in normalized for token in (
+        "IK_UNREACHABLE", "MOTION_INFEASIBLE", "NO COLLISION-FREE IK",
+        "UNSAFE", "COLLISION", "REACHABILITY",
+    )):
+        return "MOTION_INFEASIBLE"
+    if any(token in normalized for token in (
+        "GRASP", "CONTACT", "ACCESS_BLOCKED", "APPROACH_NOT_REACHED",
+    )):
+        return "ACCESS_BLOCKED"
+    if infrastructure_failure == ExecutionFailure.PRECONDITION_STATE_FAILURE.value:
+        return "LOGICAL_PRECONDITION_FAILED"
+    if infrastructure_failure == ExecutionFailure.ENTITY_MAPPING_FAILURE.value:
+        return "OBJECT_NOT_VISIBLE" if operator == "PICK" else "INCOMPATIBLE_TARGET"
+    return "EXECUTION_ERROR"
+
+
 class UpstreamPhase3Blocked(ValueError):
     """Raised when Phase 3 explicitly ended without an executable plan."""
 
@@ -99,6 +148,7 @@ class ActionExecutionResult:
     controller_result: dict[str, Any] | None
     post_check: dict[str, Any]
     wall_duration_s: float
+    failure_code: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -393,6 +443,11 @@ class Phase4Executor:
                     "failure": ExecutionFailure.CONTROLLER_FAILURE.value,
                     "failure_type": type(error).__name__,
                     "failure_reason": str(error),
+                    "failure_code": classify_planner_failure(
+                        str(error),
+                        infrastructure_failure=ExecutionFailure.CONTROLLER_FAILURE.value,
+                        operator="OPEN",
+                    ),
                 }
             inspection_records.append(record)
             if not record.get("success"):
@@ -433,6 +488,10 @@ class Phase4Executor:
         task_failure = next(
             (row["failure"] for row in records if not row["success"]),
             ExecutionFailure.NONE.value,
+        )
+        task_failure_code = next(
+            (row.get("failure_code") for row in records if not row["success"]),
+            None,
         )
         if not inspections_succeeded:
             failure_stage = "INSPECTION_OPEN"
@@ -488,6 +547,14 @@ class Phase4Executor:
             "action_results": records,
             "final_verification": final,
             "failure": failure,
+            "failure_code": (
+                next(
+                    (row.get("failure_code") for row in inspection_records
+                     if not row.get("success")),
+                    None,
+                )
+                if not inspections_succeeded else task_failure_code
+            ),
             "failure_stage": failure_stage,
             "execution_mode": "P4_BENCH",
             "strict_execution": False,

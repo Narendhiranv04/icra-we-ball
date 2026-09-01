@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import shutil
 from typing import Any
 
 from .living_room_mobile_execution import run_mobile_execution
 from .phase4_execution import (
     ExecutionFailure,
+    classify_planner_failure,
     Phase4EntityMappingError,
     Phase3Handoff,
     audit_strict_telemetry,
@@ -75,6 +77,7 @@ def execute_living_room_handoff(
     *,
     output_dir: Path,
     max_actions: int | None = None,
+    record_video: Path | None = None,
 ) -> dict[str, Any]:
     """Execute the exact plan using the domain's existing per-action loop.
 
@@ -106,6 +109,17 @@ def execute_living_room_handoff(
         assisted_suite=False,
         reset_payloads_from_observation=False,
     )
+    visual_output = {
+        "enabled": record_video is not None,
+        "video_path": str(record_video) if record_video else None,
+        "video_created": False,
+    }
+    if record_video is not None:
+        native_video = native_dir / "execution_timeline.mp4"
+        if native_video.is_file():
+            record_video.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(native_video, record_video)
+            visual_output["video_created"] = bool(record_video.stat().st_size)
     resolution = _read(native_dir / "execution_entity_resolution.json")
     physical = _read(native_dir / "physical_execution.json")
     held_checks = _read(native_dir / "held_object_validation.json").get(
@@ -151,6 +165,10 @@ def execute_living_room_handoff(
                 if controller and controller.get("failure") == "POSTCONDITION_FAILED"
                 else ExecutionFailure.CONTROLLER_FAILURE.value
             )
+        failure_message = (
+            str(unresolved)
+            if unresolved else str(controller or "controller result unavailable")
+        )
         action_results.append({
             "action_index": action["action_index"],
             "action_instance_id": action["action_instance_id"],
@@ -158,6 +176,11 @@ def execute_living_room_handoff(
             "arguments": list(action["arguments"]),
             "success": controller_success,
             "failure": failure,
+            "failure_code": classify_planner_failure(
+                failure_message,
+                infrastructure_failure=failure,
+                operator=action["operator"],
+            ),
             "resolved_arguments": resolved,
             "primitive": "living_room_mobile_execution.run_mobile_execution",
             "pre_check": {
@@ -209,6 +232,10 @@ def execute_living_room_handoff(
         (row["failure"] for row in action_results if not row["success"]),
         ExecutionFailure.NONE.value,
     )
+    failure_code = next(
+        (row.get("failure_code") for row in action_results if not row["success"]),
+        None,
+    )
     if failure != ExecutionFailure.NONE.value:
         failure_stage = (
             "ENTITY_RESOLUTION"
@@ -255,7 +282,9 @@ def execute_living_room_handoff(
             final if complete else {"performed": False, "reason": "PARTIAL_SEQUENCE"}
         ),
         "domain_execution_summary": native,
+        "visual_output": visual_output,
         "failure": failure,
+        "failure_code": failure_code,
         "failure_stage": failure_stage,
         "execution_mode": "P4_BENCH",
         "strict_execution": False,

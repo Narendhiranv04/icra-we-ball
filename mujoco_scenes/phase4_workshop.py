@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import asdict
 import json
+from pathlib import Path
 import time
 from typing import Any
 
@@ -11,6 +12,7 @@ import mujoco
 
 from .phase4_execution import (
     ActionExecutionResult,
+    classify_planner_failure,
     ExecutionFailure,
     Phase4EntityMappingError,
     Phase3Handoff,
@@ -36,22 +38,11 @@ CONTEXT_SURFACES = frozenset({"MAIN_WORKBENCH_ZONE"})
 
 
 def planner_failure_code(message: str) -> str:
-    """Collapse controller diagnostics into stable planner-facing semantics."""
-    normalized = message.upper()
-    if "CLOSED" in normalized or "NOT OPEN" in normalized:
-        return "REGION_CLOSED"
-    if "WRONG" in normalized and "TOOL" in normalized:
-        return "WRONG_TOOL"
-    if "INCOMPATIBLE" in normalized:
-        return "INCOMPATIBLE_TARGET"
-    if any(token in normalized for token in (
-        "IK_UNREACHABLE", "MOTION_INFEASIBLE", "UNSAFE WORKSHOP ARM PATH",
-        "COLLISION",
-    )):
-        return "MOTION_INFEASIBLE"
-    if "GRASP" in normalized or "CONTACT" in normalized:
-        return "ACCESS_BLOCKED"
-    return "EXECUTION_ERROR"
+    """Compatibility wrapper for the common planner-facing classifier."""
+    return classify_planner_failure(
+        message,
+        infrastructure_failure=ExecutionFailure.CONTROLLER_FAILURE.value,
+    ) or "EXECUTION_ERROR"
 
 
 def resolve_workshop_entities_for_execution(*args: Any, **kwargs: Any) -> dict[str, Any]:
@@ -88,6 +79,8 @@ class WorkshopPhase4Adapter:
         handoff: Phase3Handoff,
         *,
         frame_callback: Any = None,
+        record_video: Path | None = None,
+        viewer: bool = False,
     ):
         assignment = handoff.assignment
         required = {"driver", "fastener"}
@@ -117,6 +110,26 @@ class WorkshopPhase4Adapter:
             raise ValueError("Workshop final plan has no unique driver destination")
         work_surface = str(driver_places[0])
         self.scene = WorkshopScene(robot="google", variant=handoff.internal_variant)
+        self.recorder = None
+        self.record_video = record_video
+        if record_video is not None or viewer:
+            from .workshop_ground_truth_recorder import WorkshopRecorder
+
+            self.recorder = WorkshopRecorder(
+                self.scene, record_video, width=320, height=180, fps=5,
+                show=viewer,
+            )
+            recorder_callback = self.recorder.capture
+            if frame_callback is None:
+                frame_callback = recorder_callback
+            else:
+                external_callback = frame_callback
+
+                def combined_callback(force: bool = True) -> None:
+                    external_callback(force)
+                    recorder_callback(force)
+
+                frame_callback = combined_callback
         observed_graph_path = handoff.artifacts.get("observed_graph")
         if observed_graph_path is None:
             raise ValueError("Workshop handoff has no final observed G_O artifact")
@@ -226,6 +239,21 @@ class WorkshopPhase4Adapter:
         }
         self.successful_actions = 0
 
+    def close_visualization(self) -> dict[str, Any]:
+        if self.recorder is None:
+            return {"enabled": False, "frames": 0, "video_path": None}
+        self.recorder.close()
+        return {
+            "enabled": True,
+            "frames": int(self.recorder.frames),
+            "video_path": str(self.record_video) if self.record_video else None,
+            "video_created": bool(
+                self.record_video
+                and self.record_video.exists()
+                and self.record_video.stat().st_size > 0
+            ),
+        }
+
     def execute_inspection_open(self, region: str) -> dict[str, Any]:
         """Replay a Phase-3 inspection by physically opening its storage."""
         started = time.perf_counter()
@@ -241,6 +269,11 @@ class WorkshopPhase4Adapter:
                 "region": region,
                 "success": False,
                 "failure": ExecutionFailure.PRECONDITION_STATE_FAILURE.value,
+                "failure_code": classify_planner_failure(
+                    reason,
+                    infrastructure_failure=ExecutionFailure.PRECONDITION_STATE_FAILURE.value,
+                    operator="OPEN",
+                ),
                 "pre_check": {"success": False, "reason": reason},
                 "wall_duration_s": time.perf_counter() - started,
             }
@@ -257,6 +290,13 @@ class WorkshopPhase4Adapter:
                 ExecutionFailure.NONE.value
                 if verified
                 else ExecutionFailure.POSTCONDITION_VERIFICATION_FAILURE.value
+            ),
+            "failure_code": (
+                None if verified else classify_planner_failure(
+                    controller.get("message") or controller.get("status") or str(controller),
+                    infrastructure_failure=ExecutionFailure.POSTCONDITION_VERIFICATION_FAILURE.value,
+                    operator="OPEN",
+                )
             ),
             "primitive": "WorkshopExecutionDispatcher.OPEN",
             "pre_check": {"success": True, "reason": None},
@@ -300,6 +340,11 @@ class WorkshopPhase4Adapter:
                 [], None, {"success": False, "reason": f"unresolved entity {error.args[0]}"},
                 None, {"success": False, "performed": False},
                 time.perf_counter() - started,
+                failure_code=classify_planner_failure(
+                    f"unresolved entity {error.args[0]}",
+                    infrastructure_failure=ExecutionFailure.ENTITY_MAPPING_FAILURE.value,
+                    operator=operator,
+                ),
             )
         if operator not in SUPPORTED_OPERATORS:
             return ActionExecutionResult(
@@ -308,6 +353,7 @@ class WorkshopPhase4Adapter:
                 resolved, None, {"success": False, "reason": "unsupported operator"},
                 None, {"success": False, "performed": False},
                 time.perf_counter() - started,
+                failure_code="EXECUTION_ERROR",
             )
         valid, reason = self.state.check(action, self.assignment)
         pre = {"success": valid, "reason": reason, "state": self.state.to_dict()}
@@ -318,6 +364,11 @@ class WorkshopPhase4Adapter:
                 resolved, f"WorkshopExecutionDispatcher.{operator.lower()}", pre,
                 None, {"success": False, "performed": False},
                 time.perf_counter() - started,
+                failure_code=classify_planner_failure(
+                    reason,
+                    infrastructure_failure=ExecutionFailure.PRECONDITION_STATE_FAILURE.value,
+                    operator=operator,
+                ),
             )
         physical_action = {
             **action,
@@ -353,6 +404,7 @@ class WorkshopPhase4Adapter:
                 resolved, f"WorkshopExecutionDispatcher.{operator.lower()}", pre,
                 controller, {"success": False, "performed": False},
                 time.perf_counter() - started,
+                failure_code=(controller.get("failure_code") or "EXECUTION_ERROR"),
             )
         self.state.apply(action)
         self.controller_state.apply(physical_action)
@@ -384,6 +436,7 @@ class WorkshopPhase4Adapter:
             ExecutionFailure.NONE.value if post_ok else ExecutionFailure.POSTCONDITION_VERIFICATION_FAILURE.value,
             resolved, f"WorkshopExecutionDispatcher.{operator.lower()}", pre,
             controller, post, time.perf_counter() - started,
+            failure_code=(None if post_ok else "EXECUTION_ERROR"),
         )
 
     def final_verification(self) -> dict[str, Any]:

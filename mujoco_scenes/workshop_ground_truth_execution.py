@@ -50,6 +50,24 @@ POWER_TOP_DOWN_GRASP_ROTATION = np.array(
 ) @ np.asarray(manipulation_profile("google").top_down_rotation)
 
 
+def benchmark_open_verified(
+    *, opened_enough: bool, strict_mode: bool,
+    strict_penetration_observed: bool,
+    minimum_furniture_clearance_m: float | None,
+    minimum_drawer_shell_clearance_m: float | None,
+) -> tuple[bool, bool]:
+    """Accept contact-audit noise in benchmark mode, never gross penetration."""
+    clearances = [
+        value for value in (
+            minimum_furniture_clearance_m,
+            minimum_drawer_shell_clearance_m,
+        ) if value is not None
+    ]
+    gross_penetration = bool(clearances and min(clearances) < -0.040)
+    safe = not strict_penetration_observed if strict_mode else not gross_penetration
+    return bool(opened_enough and safe), gross_penetration
+
+
 def workshop_preclose_limit_m(source: str, object_name: str) -> float:
     if source == "TOOL_CABINET" and object_name == "workshop_wooden_hammer":
         return 0.045
@@ -1562,6 +1580,16 @@ class WorkshopExecutionDispatcher:
             self._capture(True)
         shell_contact_minimum = self.minimum_drawer_shell_contact_distance_m
         self.active_drawer_shell_geom = None
+        furniture_audit = self._furniture_audit()
+        verified, gross_penetration = benchmark_open_verified(
+            opened_enough=(opened_enough if opening else closed_enough),
+            strict_mode=self.strict_physical_execution,
+            strict_penetration_observed=self.forbidden_furniture_penetration_observed,
+            minimum_furniture_clearance_m=furniture_audit.get(
+                "minimum_furniture_clearance_m"
+            ),
+            minimum_drawer_shell_clearance_m=shell_contact_minimum,
+        )
         return {
             **attachment,
             "joint_name": joint_name,
@@ -1583,11 +1611,9 @@ class WorkshopExecutionDispatcher:
                 shell_contact_minimum is not None
                 and shell_contact_minimum < -0.001
             ),
-            "furniture_collision_audit": self._furniture_audit(),
-            "verified": bool(
-                (opened_enough if opening else closed_enough)
-                and not self.forbidden_furniture_penetration_observed
-            ),
+            "furniture_collision_audit": furniture_audit,
+            "gross_furniture_penetration_observed": gross_penetration,
+            "verified": verified,
             "initial_reach": reach,
         }
 

@@ -18,7 +18,9 @@ from mujoco_scenes.phase4_execution import (
     UpstreamPhase3Blocked,
     load_phase3_handoff,
     audit_strict_telemetry,
+    classify_planner_failure,
 )
+from mujoco_scenes.phase4_kitchen import KitchenPhase4Adapter
 from mujoco_scenes.phase4_workshop_entities import (
     WorkshopEntityResolutionError,
     resolve_workshop_entities,
@@ -37,6 +39,7 @@ from mujoco_scenes.workshop_ground_truth_execution import (
     strict_grasp_attachment_verified,
     strict_pick_source_clearance_verified,
     reviewed_workshop_grasp_geometries,
+    benchmark_open_verified,
     workshop_preclose_limit_m,
 )
 from mujoco_scenes.living_room_mobile_execution import (
@@ -635,6 +638,122 @@ def test_workshop_planner_failure_codes_hide_low_level_retry_details(
     message, expected
 ):
     assert planner_failure_code(message) == expected
+
+
+def test_workshop_failure_code_propagates_alongside_infrastructure_failure():
+    class State:
+        def check(self, action, assignment):
+            return True, None
+
+        def to_dict(self):
+            return {}
+
+    class Dispatcher:
+        def execute(self, action, state):
+            raise RuntimeError("MOTION_INFEASIBLE: no collision-free IK candidate")
+
+    adapter = WorkshopPhase4Adapter.__new__(WorkshopPhase4Adapter)
+    adapter.by_id = {
+        "object_0001": ResolvedEntity(
+            "object_0001", "OBJECT", "workshop_power_driver"
+        )
+    }
+    adapter.state = State()
+    adapter.controller_state = object()
+    adapter.assignment = object()
+    adapter.dispatcher = Dispatcher()
+    result = adapter.execute_action({
+        "action_index": 1,
+        "action_instance_id": "fact_001_pick",
+        "operator": "PICK",
+        "arguments": ["object_0001"],
+    })
+    assert result.failure == ExecutionFailure.CONTROLLER_FAILURE.value
+    assert result.failure_code == "MOTION_INFEASIBLE"
+
+
+def test_closed_region_precondition_uses_public_region_closed_code():
+    class State:
+        def check(self, action, assignment):
+            return False, "source region LEFT_DRAWER is closed"
+
+        def to_dict(self):
+            return {}
+
+    adapter = WorkshopPhase4Adapter.__new__(WorkshopPhase4Adapter)
+    adapter.by_id = {
+        "object_0001": ResolvedEntity(
+            "object_0001", "OBJECT", "workshop_power_driver"
+        )
+    }
+    adapter.state = State()
+    adapter.assignment = object()
+    result = adapter.execute_action({
+        "action_index": 1,
+        "action_instance_id": "fact_001_pick",
+        "operator": "PICK",
+        "arguments": ["object_0001"],
+    })
+    assert result.failure == ExecutionFailure.PRECONDITION_STATE_FAILURE.value
+    assert result.failure_code == "REGION_CLOSED"
+
+
+def test_kitchen_terminal_verifier_requires_exact_actions_held_state_and_open_regions():
+    class Dispatcher:
+        def physically_open_containers(self):
+            return {"D1"}
+
+    actions = [{
+        "action_index": 1,
+        "action_instance_id": "fact_001_pick",
+        "operator": "PICK",
+        "arguments": ["object_0001"],
+    }, {
+        "action_index": 2,
+        "action_instance_id": "fact_002_place",
+        "operator": "PLACE",
+        "arguments": ["object_0001", "countertop"],
+    }]
+    adapter = KitchenPhase4Adapter.__new__(KitchenPhase4Adapter)
+    adapter.dispatcher = Dispatcher()
+    adapter.expected_inspected_regions = ("D1",)
+    adapter.expected_actions = actions
+    adapter.by_id = {"object_0001": object()}
+    adapter.successful_actions = [
+        {"action": action, "post_check": {"success": True}}
+        for action in actions
+    ]
+    adapter._held_planner_id = lambda: None
+    result = adapter.final_verification()
+    assert result["performed"] is True
+    assert result["success"] is True
+    adapter._held_planner_id = lambda: "object_0001"
+    assert adapter.final_verification()["success"] is False
+
+
+def test_common_kitchen_failure_mapping_is_normalized():
+    assert classify_planner_failure(
+        "source region C2 is closed",
+        infrastructure_failure=ExecutionFailure.PRECONDITION_STATE_FAILURE.value,
+        operator="PICK",
+    ) == "REGION_CLOSED"
+
+
+def test_benchmark_open_relaxes_minor_contact_but_rejects_gross_penetration():
+    minor, minor_gross = benchmark_open_verified(
+        opened_enough=True, strict_mode=False,
+        strict_penetration_observed=True,
+        minimum_furniture_clearance_m=-0.004,
+        minimum_drawer_shell_clearance_m=-0.003,
+    )
+    gross, gross_flag = benchmark_open_verified(
+        opened_enough=True, strict_mode=False,
+        strict_penetration_observed=True,
+        minimum_furniture_clearance_m=-0.060,
+        minimum_drawer_shell_clearance_m=None,
+    )
+    assert minor and not minor_gross
+    assert not gross and gross_flag
 
 
 def test_strict_living_execution_never_modifies_post_release_damping():

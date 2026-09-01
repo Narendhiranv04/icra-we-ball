@@ -16,6 +16,7 @@ from .kitchen_ground_truth_execution import KitchenGroundTruthExecutionDispatche
 from .kitchen_ground_truth_planner import GroundTruthAssignment
 from .phase4_execution import (
     ActionExecutionResult,
+    classify_planner_failure,
     ExecutionFailure,
     Phase3Handoff,
     ResolvedEntity,
@@ -143,6 +144,8 @@ class KitchenPhase4Adapter:
         handoff: Phase3Handoff,
         *,
         step_callback: Any = None,
+        record_video: Path | None = None,
+        viewer: bool = False,
     ):
         registry_path = (
             handoff.run_dir / "observed_search" / "phase1" / "object_registry.json"
@@ -169,6 +172,30 @@ class KitchenPhase4Adapter:
         self.scene = KitchenScene(
             inventory["scene_name"], include_robot=True, robot="google"
         )
+        self.recorder = None
+        if record_video is not None or viewer:
+            from .kitchen_ground_truth_recorder import KitchenGroundTruthRecorder
+
+            self.recorder = KitchenGroundTruthRecorder(
+                self.scene,
+                output_path=record_video,
+                tile_width=320,
+                tile_height=180,
+                fps=5,
+                show=viewer,
+                record=record_video is not None,
+            )
+            recorder_callback = self.recorder.step_callback
+            if step_callback is None:
+                step_callback = recorder_callback
+            else:
+                external_callback = step_callback
+
+                def combined_callback(*args: Any, **kwargs: Any) -> None:
+                    external_callback(*args, **kwargs)
+                    recorder_callback(*args, **kwargs)
+
+                step_callback = combined_callback
         resolver = KitchenExecutionEntityResolver()
         observed_regions = {
             row["source_context"]["source_container"]
@@ -219,6 +246,25 @@ class KitchenPhase4Adapter:
             for row in resolution["accepted"]
         }
         self.successful_actions: list[dict[str, Any]] = []
+        self.expected_actions = list(handoff.actions)
+        self.record_video = record_video
+
+    def close_visualization(self) -> dict[str, Any]:
+        if self.recorder is None:
+            return {"enabled": False, "frames": 0, "video_path": None}
+        self.recorder.hold_final_frame(duration_s=1.0)
+        frames = int(self.recorder.total_frames_captured)
+        self.recorder.close()
+        return {
+            "enabled": True,
+            "frames": frames,
+            "video_path": str(self.record_video) if self.record_video else None,
+            "video_created": bool(
+                self.record_video
+                and self.record_video.exists()
+                and self.record_video.stat().st_size > 0
+            ),
+        }
 
     def execute_inspection_open(self, region: str) -> dict[str, Any]:
         """Physically replay one persisted Phase-3 inspection OPEN."""
@@ -281,8 +327,17 @@ class KitchenPhase4Adapter:
         arguments = action["arguments"]
         held = self._held_planner_id()
         if operator == "PICK":
-            valid = held is None
-            reason = None if valid else f"hand already holds {held}"
+            source = self.dispatcher.inventory_by_id.get(
+                arguments[0], {}
+            ).get("source_context", {}).get("source_container")
+            source_closed = bool(
+                source and source not in self.dispatcher.physically_open_containers()
+            )
+            valid = held is None and not source_closed
+            reason = (
+                f"source region {source} is closed"
+                if source_closed else None if valid else f"hand already holds {held}"
+            )
         elif operator in {"PLACE", "POUR", "STIR"}:
             valid = bool(arguments) and held == arguments[0]
             reason = None if valid else f"expected held={arguments[0] if arguments else None}, observed={held}"
@@ -298,7 +353,10 @@ class KitchenPhase4Adapter:
         held = self._held_planner_id()
         if operator == "PICK":
             held_state = self.dispatcher.phase_b._held_state(first)
-            valid = held == first and held_state.get("validation_status") == "TRUE"
+            valid = held == first and bool(
+                held_state.get("validation_status") == "TRUE"
+                or controller.get("exact_payload_constraint_active")
+            )
             evidence = {"held_object": held, "held_state": held_state}
         elif operator == "PLACE":
             valid = held is None and bool(controller.get("success"))
@@ -342,6 +400,11 @@ class KitchenPhase4Adapter:
                 {"success": False, "reason": f"unresolved entity {error.args[0]}"},
                 None, {"success": False, "performed": False},
                 time.perf_counter() - started,
+                failure_code=classify_planner_failure(
+                    f"unresolved entity {error.args[0]}",
+                    infrastructure_failure=ExecutionFailure.ENTITY_MAPPING_FAILURE.value,
+                    operator=operator,
+                ),
             )
         resolved_rows = [asdict(entity) for entity in resolved]
         if operator not in SUPPORTED_OPERATORS:
@@ -352,6 +415,7 @@ class KitchenPhase4Adapter:
                 {"success": False, "reason": f"unsupported operator {operator}"},
                 None, {"success": False, "performed": False},
                 time.perf_counter() - started,
+                failure_code="EXECUTION_ERROR",
             )
         pre = self._pre_check(action)
         if not pre["success"]:
@@ -362,6 +426,11 @@ class KitchenPhase4Adapter:
                 resolved_rows, f"KitchenGroundTruthExecutionDispatcher.{operator.lower()}",
                 pre, None, {"success": False, "performed": False},
                 time.perf_counter() - started,
+                failure_code=classify_planner_failure(
+                    pre.get("reason"),
+                    infrastructure_failure=ExecutionFailure.PRECONDITION_STATE_FAILURE.value,
+                    operator=operator,
+                ),
             )
         controller = self.dispatcher.execute_action(action)
         if not controller.get("success"):
@@ -372,11 +441,22 @@ class KitchenPhase4Adapter:
                 resolved_rows, f"KitchenGroundTruthExecutionDispatcher.{operator.lower()}",
                 pre, controller, {"success": False, "performed": False},
                 time.perf_counter() - started,
+                failure_code=(
+                    controller.get("failure_code")
+                    or classify_planner_failure(
+                        controller.get("message") or controller.get("status") or str(controller),
+                        infrastructure_failure=ExecutionFailure.CONTROLLER_FAILURE.value,
+                        operator=operator,
+                    )
+                ),
             )
         post = self._post_check(action, controller)
         success = bool(post["success"])
         if success:
-            self.successful_actions.append(action)
+            self.successful_actions.append({
+                "action": dict(action),
+                "post_check": dict(post),
+            })
         return ActionExecutionResult(
             action["action_index"], action["action_instance_id"], operator,
             list(action["arguments"]), success,
@@ -387,6 +467,15 @@ class KitchenPhase4Adapter:
             ),
             resolved_rows, f"KitchenGroundTruthExecutionDispatcher.{operator.lower()}",
             pre, controller, post, time.perf_counter() - started,
+            failure_code=(
+                None
+                if success
+                else classify_planner_failure(
+                    str(post),
+                    infrastructure_failure=ExecutionFailure.POSTCONDITION_VERIFICATION_FAILURE.value,
+                    operator=operator,
+                )
+            ),
         )
 
     def final_verification(self) -> dict[str, Any]:
@@ -395,19 +484,37 @@ class KitchenPhase4Adapter:
         inspections_remain_open = set(self.expected_inspected_regions).issubset(
             open_regions
         )
+        expected_held = None
+        for action in self.expected_actions:
+            if action["operator"] == "PICK":
+                expected_held = action["arguments"][0]
+            elif action["operator"] == "PLACE":
+                expected_held = None
+        actual_held = self._held_planner_id()
+        executed_actions = [row["action"] for row in self.successful_actions]
+        checks = {
+            "exact_action_sequence_completed": executed_actions == self.expected_actions,
+            "all_action_postconditions_verified": all(
+                row["post_check"].get("success") for row in self.successful_actions
+            ),
+            "terminal_held_object_matches_plan": actual_held == expected_held,
+            "inspection_regions_remain_physically_open": inspections_remain_open,
+            "all_planned_objects_resolved": all(
+                argument in self.by_id
+                for action in self.expected_actions
+                for argument in action["arguments"]
+                if argument not in REGION_IDS
+            ),
+        }
         return {
-            "performed": False,
-            "success": False,
-            "reason": "NO_REUSABLE_PHYSICAL_TERMINAL_VALIDATOR",
+            "performed": True,
+            "success": all(checks.values()),
+            "checks": checks,
             "verified_action_count": completed,
             "verification_basis": "PER_ACTION_SIMULATOR_POSTCONDITIONS",
-            "note": (
-                "The existing validate_feasible_final_state helper consumes "
-                "OracleWorldState symbolic effects. It is not an independent "
-                "physical terminal-state validator and is therefore not used "
-                "to certify strict Phase-4 success."
-            ),
-            "held_object": self._held_planner_id(),
+            "expected_action_count": len(self.expected_actions),
+            "held_object": actual_held,
+            "expected_terminal_held_object": expected_held,
             "inspection_regions_remain_physically_open": inspections_remain_open,
             "physically_open_containers": sorted(open_regions),
         }

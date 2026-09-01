@@ -66,6 +66,21 @@ def test_benchmark_pick_recovery_activates_matching_payload_weld_without_pose_wr
         "pick",
         lambda _object_id: {"success": False, "status": "FORCED_TEST_MISS"},
     )
+    monkeypatch.setattr(
+        dispatcher,
+        "_benchmark_pick_recovery_evidence",
+        lambda object_id, result: {
+            "accepted": True,
+            "threshold_m": 0.10,
+            "exact_planned_object": object_id,
+            "evidence_mode": "TEST_PRECLOSE_REACHED",
+        },
+    )
+    backend = dispatcher.binding_by_id[source]["physical_backend_body"]
+    body_id = dispatcher.phase_b.manipulation.executor.model.body(
+        backend
+    ).id
+    position_before = scene.data.xpos[body_id].copy()
 
     result = dispatcher.pick(source)
 
@@ -76,6 +91,33 @@ def test_benchmark_pick_recovery_activates_matching_payload_weld_without_pose_wr
     assert result["recovery_reason"] == "FORCED_TEST_MISS"
     assert result["exact_payload_constraint_active"] is True
     assert result["held_state"]["exclusive_payload_weld"] is True
+    np.testing.assert_allclose(scene.data.xpos[body_id], position_before, atol=1e-9)
+
+
+def test_benchmark_pick_recovery_is_forbidden_without_grasp_vicinity(monkeypatch):
+    scene = KitchenScene(
+        "S1_integrated_kitchen_object_function_feasibility_F2",
+        include_robot=True,
+        robot="google",
+    )
+    assignment = solve_ground_truth_assignment(
+        scene, "F2_DISTRIBUTED_COFFEE_TWO", "FEASIBLE"
+    )
+    dispatcher = KitchenGroundTruthExecutionDispatcher(scene, assignment)
+    source = assignment.sources["water_source"]
+    monkeypatch.setattr(
+        dispatcher.phase_b, "pick",
+        lambda _object_id: {"success": False, "status": "FORCED_TEST_MISS"},
+    )
+    result = dispatcher.pick(source)
+
+    assert not result["success"]
+    assert result["failure_code"] == "ACCESS_BLOCKED"
+    assert result["benchmark_contact_recovery"] is False
+    assert result["benchmark_recovery_evidence"]["evidence_mode"] == (
+        "APPROACH_NOT_REACHED"
+    )
+    assert dispatcher.phase_b.manipulation.executor.held_object is None
 
 
 def test_strict_pick_does_not_teleport_payload_after_physical_miss(monkeypatch):
