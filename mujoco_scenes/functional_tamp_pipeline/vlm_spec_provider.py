@@ -15,6 +15,21 @@ from .spec_provider import FunctionalSpecProvider
 
 VLM_CANONICALIZATION_VERSION = "phase3_6a7_2_1_v1"
 
+KITCHEN_ROLE_CANONICAL_CATEGORIES: dict[str, tuple[str, ...]] = {
+    "coffee_container": ("cup", "mug"),
+    "soup_container": ("bowl",),
+    "coffee_stirrer": ("spoon", "stirrer"),
+    "soup_eating_utensil": ("spoon", "fork"),
+    "coffee_source": ("coffee_source", "jar", "coffee_jar"),
+    "water_source": ("kettle", "bottle"),
+}
+
+WORKSHOP_ROLE_CANONICAL_CATEGORIES: dict[str, tuple[str, ...]] = {
+    "driver": ("screwdriver", "power_driver", "power_drill", "Phillips screwdriver", "cordless power drill"),
+    "fastener": ("screw", "Phillips screw", "Phillips head screw"),
+    "repair_target": ("repair_target", "workshop_frame_joint", "recess"),
+}
+
 
 class VLMSpecProvider(FunctionalSpecProvider):
     def provide(
@@ -73,11 +88,13 @@ class VLMSpecProvider(FunctionalSpecProvider):
                     raise MalformedVLMSpecificationError(
                         f"Workshop functional role {role_id!r} must have non-empty candidate_categories"
                     )
+            canon_base = WORKSHOP_ROLE_CANONICAL_CATEGORIES.get(role_id, ())
+            merged_cats = tuple(dict.fromkeys((*canon_base, *role.run_local_categories)))
             nodes[role_id] = FunctionalRole(
                 name=role_id,
                 entity_kind=role.entity_kind,
                 count=role.required_count,
-                semantic_categories=role.run_local_categories,
+                semantic_categories=merged_cats,
                 unary_predicates=role.unary_predicates,
                 binding_policy=role.binding_policy,
                 verification_mode=(
@@ -168,9 +185,11 @@ class VLMSpecProvider(FunctionalSpecProvider):
             ))
 
         for name, role in contract["roles"].items():
-            categories = tuple(
+            canon_base = KITCHEN_ROLE_CANONICAL_CATEGORIES.get(name, ())
+            raw_cats = tuple(
                 item["canonical_label"] for item in role.get("semantic_preferences", [])
             )
+            categories = tuple(dict.fromkeys((*canon_base, *raw_cats)))
             unary_preds = []
             numeric_reqs = []
             for item in role.get("unary_geometry", []):

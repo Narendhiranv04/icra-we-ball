@@ -427,31 +427,30 @@ def run_to_plan(
     contract = compile_kitchen_contract_from_graph(specification)
 
     vocabulary_path = output_dir / "kitchen_vocabulary.yaml"
-    canonical_labels: dict[str, list[str]] = {}
     root = Path(__file__).resolve().parents[2]
     base_vocab_path = Path(specification.metadata.get("semantic_vocabulary_path", root / "configs" / "semantic_vocabulary.yaml"))
-    base_canon: dict[str, list[str]] = {}
-    alias_to_base_canon: dict[str, str] = {}
+    canonical_labels: dict[str, list[str]] = {}
     if base_vocab_path.is_file():
         base_vocab = yaml.safe_load(base_vocab_path.read_text(encoding="utf-8"))
-        base_canon = dict(base_vocab.get("canonical_labels", {}))
-        for canon_k, aliases in base_canon.items():
-            for a in aliases:
-                alias_to_base_canon[a.strip().lower()] = canon_k
+        canonical_labels = dict(base_vocab.get("canonical_labels", {}))
 
+    existing_aliases = {
+        alias.strip().lower()
+        for aliases in canonical_labels.values()
+        for alias in aliases
+    }
     for role in specification.nodes.values():
         for cat in role.semantic_categories:
             norm_cat = cat.strip().lower()
-            if norm_cat in base_canon:
-                if norm_cat not in canonical_labels:
-                    canonical_labels[norm_cat] = list(base_canon[norm_cat])
-            elif norm_cat in alias_to_base_canon:
-                resolved_canon = alias_to_base_canon[norm_cat]
-                if resolved_canon not in canonical_labels:
-                    canonical_labels[resolved_canon] = list(base_canon[resolved_canon])
-            else:
-                if norm_cat not in canonical_labels:
-                    canonical_labels[norm_cat] = [norm_cat]
+            norm_space = norm_cat.replace("_", " ")
+            if (
+                norm_cat not in canonical_labels
+                and norm_space not in canonical_labels
+                and norm_space not in existing_aliases
+                and norm_cat not in existing_aliases
+            ):
+                canonical_labels[norm_cat] = [norm_space]
+                existing_aliases.add(norm_space)
     vocab_dict = {
         "schema_version": 1,
         "canonical_labels": canonical_labels,
@@ -500,7 +499,7 @@ def run_to_plan(
         stop_on_complete=True,
         semantic_backend="yolo_world",
         semantic_model=str(LOCAL_YOLO_WORLD),
-        semantic_vocabulary_path=vocabulary_path,
+        semantic_vocabulary_path=base_vocab_path if base_vocab_path.is_file() else vocabulary_path,
         semantic_min_supporting_views=2,
         grounding_mode="joint",
         completion_predicate=kitchen_completion_predicate,

@@ -1732,9 +1732,14 @@ class FMRequirementProvider(RequirementProvider):
     def get_detector_label_to_canonical_map(self) -> dict[str, str]:
         self._ensure_generated()
         mapping = dict(self.ontology_contract.get_detector_label_to_canonical_map())
+        alias_map = self.ontology_contract.get_alias_to_canonical_map()
         for role in getattr(self, "normalized_roles", []):
             for prompt, token in zip(role.candidate_categories, role.run_local_categories):
-                mapping[prompt.lower()] = token
+                norm_p = prompt.lower()
+                if norm_p in alias_map:
+                    mapping[norm_p] = alias_map[norm_p]
+                elif norm_p not in mapping:
+                    mapping[norm_p] = token
         return mapping
 
     def get_alias_to_canonical_map(self) -> dict[str, str]:
@@ -1742,7 +1747,9 @@ class FMRequirementProvider(RequirementProvider):
         mapping = dict(self.ontology_contract.get_alias_to_canonical_map())
         for role in getattr(self, "normalized_roles", []):
             for prompt, token in zip(role.candidate_categories, role.run_local_categories):
-                mapping[prompt.lower()] = token
-                mapping[token.lower()] = token
+                norm_p = prompt.lower()
+                if norm_p not in mapping:
+                    mapping[norm_p] = token
+                    mapping[token.lower()] = token
         return mapping
 
