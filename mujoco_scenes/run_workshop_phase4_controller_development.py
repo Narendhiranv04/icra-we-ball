@@ -13,6 +13,7 @@ import traceback
 from pathlib import Path
 from typing import Any
 
+from .phase4_execution import audit_strict_telemetry
 from .workshop_ground_truth_execution import WorkshopExecutionDispatcher
 from .workshop_ground_truth_planner import solve_gt_assignment
 from .workshop_ground_truth_state import initial_workshop_state
@@ -98,6 +99,22 @@ def run_controller_sequence(
         ),
         "direct_task_state_fallback_used": False,
     }
+    audit = audit_strict_telemetry(
+        [], [row["result"] for row in records]
+    )
+    payload["strict_telemetry_verification"] = audit
+    payload.update({
+        key: audit[key]
+        for key in (
+            "strict_execution_violation_detected",
+            "assisted_task_fixture_used",
+            "direct_task_state_write_used",
+            "direct_task_state_fallback_used",
+            "direct_payload_state_write_used",
+            "post_release_dynamics_modified",
+        )
+    })
+    payload["success"] = bool(payload["success"] and audit["verified"])
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
     return payload

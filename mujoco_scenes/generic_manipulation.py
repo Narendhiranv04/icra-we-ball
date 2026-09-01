@@ -73,6 +73,19 @@ SELF_COLLISION_MOUNT_ALLOWANCES = {
 GOOGLE_SPOON_TOP_DOWN_ROTATION = np.diag((1.0, -1.0, -1.0))
 
 
+def environment_collision_is_allowed(
+    environment_body: int,
+    environment_geom: int,
+    allowed_environment_bodies: frozenset[int],
+    allowed_environment_geoms: frozenset[int],
+) -> bool:
+    """Exact-geom allowances do not implicitly exempt sibling geometry."""
+    return bool(
+        environment_body in allowed_environment_bodies
+        or environment_geom in allowed_environment_geoms
+    )
+
+
 @dataclass(frozen=True)
 class SimplePickSpec:
     label: str
@@ -424,25 +437,28 @@ class RobotConfigurationCollisionChecker:
         self,
         arm_joints: np.ndarray,
         allowed_environment_bodies: frozenset[int] = frozenset(),
+        allowed_environment_geoms: frozenset[int] = frozenset(),
     ) -> tuple[bool, str | None]:
         self.data.qpos[:] = self.reference_qpos
         self.data.qpos[self.arm_qpos] = arm_joints
         mujoco.mj_forward(self.model, self.data)
-        return self._evaluate_current(allowed_environment_bodies)
+        return self._evaluate_current(allowed_environment_bodies, allowed_environment_geoms)
 
     def evaluate_live(
         self,
         live_data: mujoco.MjData,
         allowed_environment_bodies: frozenset[int] = frozenset(),
+        allowed_environment_geoms: frozenset[int] = frozenset(),
         tolerance: float = 0.008,
     ) -> tuple[bool, str | None]:
         self.data.qpos[:] = live_data.qpos
         mujoco.mj_forward(self.model, self.data)
-        return self._evaluate_current(allowed_environment_bodies, tolerance=tolerance)
+        return self._evaluate_current(allowed_environment_bodies, allowed_environment_geoms, tolerance=tolerance)
 
     def _evaluate_current(
         self,
         allowed_environment_bodies: frozenset[int],
+        allowed_environment_geoms: frozenset[int] = frozenset(),
         tolerance: float = ENVIRONMENT_COLLISION_TOLERANCE,
     ) -> tuple[bool, str | None]:
         for first_geom, second_geom, minimum_distance in self.self_pairs:
@@ -476,7 +492,10 @@ class RobotConfigurationCollisionChecker:
                 if environment_geom_name in TRAVERSABLE_GROUND_GEOMS:
                     continue
                 environment_body = int(self.model.geom_bodyid[environment_geom])
-                if environment_body in allowed_environment_bodies:
+                if environment_collision_is_allowed(
+                    environment_body, environment_geom,
+                    allowed_environment_bodies, allowed_environment_geoms,
+                ):
                     continue
                 distance = mujoco.mj_geomDistance(
                     self.model,
@@ -512,6 +531,7 @@ class RobotConfigurationCollisionChecker:
         goal: np.ndarray,
         allowed_environment_bodies: frozenset[int] = frozenset(),
         resolution: float = 0.035,
+        allowed_environment_geoms: frozenset[int] = frozenset(),
     ) -> tuple[bool, str | None]:
         count = max(
             1,
@@ -519,7 +539,7 @@ class RobotConfigurationCollisionChecker:
         )
         for fraction in np.linspace(0.0, 1.0, count + 1):
             joints = start + fraction * (goal - start)
-            valid, reason = self.evaluate(joints, allowed_environment_bodies)
+            valid, reason = self.evaluate(joints, allowed_environment_bodies, allowed_environment_geoms)
             if not valid:
                 return False, reason
         return True, None

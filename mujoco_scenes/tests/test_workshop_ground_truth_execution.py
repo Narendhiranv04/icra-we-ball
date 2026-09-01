@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 import mujoco
+from types import MethodType
 
 from mujoco_scenes.run_workshop_ground_truth_execution import run_variant
 from mujoco_scenes.workshop_execution_handoff import validate_frozen_handoff_suite
@@ -14,6 +15,7 @@ from mujoco_scenes.workshop_ground_truth_planner import (
 from mujoco_scenes.workshop_ground_truth_state import initial_workshop_state, symbolic_preflight
 from mujoco_scenes.workshop_scene import WORKSHOP_CONTAINER_JOINTS, WorkshopScene
 from mujoco_scenes import workshop_actions
+from mujoco_scenes.workshop_ground_truth_execution import WorkshopExecutionDispatcher
 
 
 def test_target_joint_api_uses_actual_recessed_hole_not_fixture_origin():
@@ -58,6 +60,30 @@ def test_drawers_start_closed_and_only_open_through_open_action():
         scene.reset()
         assert abs(scene.data.qpos[scene.model.jnt_qposadr[left_joint]]) < 1e-5
         assert not scene.state.container_open_state["LEFT_DRAWER"]
+
+
+def test_failed_physical_open_does_not_expose_hidden_storage_objects():
+    scene = WorkshopScene(robot="none", variant="F0_MANUAL_FIRST_ONE_REGION")
+    dispatcher = WorkshopExecutionDispatcher.__new__(WorkshopExecutionDispatcher)
+    dispatcher.scene = scene
+    dispatcher.assignment = solve_gt_assignment(scene.variant_name)
+    dispatcher.strict_physical_execution = True
+    dispatcher.robot_destination = "HOME"
+    dispatcher.frame_callback = None
+    dispatcher._navigate_robot = MethodType(lambda self, region: None, dispatcher)
+    dispatcher._hold = MethodType(lambda self, duration: None, dispatcher)
+    dispatcher._articulate_storage = MethodType(
+        lambda self, region, opening: {"verified": False}, dispatcher
+    )
+    state = initial_workshop_state(scene.variant_meta["storage_contents"])
+    before = scene.get_observed_instances()
+    result = dispatcher.execute(
+        {"operator": "OPEN", "arguments": ["LEFT_DRAWER"]}, state
+    )
+    assert not result["success"]
+    assert not scene.state.container_open_state["LEFT_DRAWER"]
+    assert "LEFT_DRAWER" not in scene.state.opened_containers
+    assert scene.get_observed_instances() == before
 
 
 def test_workshop_viewer_delegates_to_actions_panel(monkeypatch):

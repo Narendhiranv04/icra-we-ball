@@ -7,6 +7,7 @@ import numpy as np
 
 import pytest
 import mujoco
+from mujoco_scenes.generic_manipulation import environment_collision_is_allowed
 
 from mujoco_scenes.phase4_execution import (
     ActionExecutionResult,
@@ -32,6 +33,9 @@ from mujoco_scenes.workshop_ground_truth_execution import (
     WorkshopExecutionDispatcher,
     strict_insertion_verified,
     strict_surface_place_verified,
+    strict_grasp_attachment_verified,
+    strict_pick_source_clearance_verified,
+    reviewed_workshop_grasp_geometries,
     workshop_preclose_limit_m,
 )
 from mujoco_scenes.living_room_mobile_execution import (
@@ -41,6 +45,7 @@ from mujoco_scenes.phase4_living_room import (
     resolve_living_room_action_arguments,
     validate_living_room_plan_ids,
 )
+from mujoco_scenes import run_workshop_phase4_controller_development as workshop_harness
 
 
 def _write(path: Path, value) -> None:
@@ -348,6 +353,18 @@ def test_nested_target_alignment_sets_violation_and_assisted_aggregate():
     assert audit["assisted_task_fixture_used"] is True
 
 
+def test_workshop_controller_harness_uses_common_strict_audit():
+    source = inspect.getsource(workshop_harness.run_controller_sequence)
+    assert "audit_strict_telemetry" in source
+    assert 'payload["success"]' in source
+
+
+def test_geom_allowance_does_not_exempt_sibling_furniture_geometry():
+    allowed_geoms = frozenset({11})
+    assert environment_collision_is_allowed(5, 11, frozenset(), allowed_geoms)
+    assert not environment_collision_is_allowed(5, 12, frozenset(), allowed_geoms)
+
+
 def _workshop_observed(x=0.2):
     return {
         "objects": {
@@ -498,6 +515,35 @@ def test_workshop_pick_attachment_remains_bilateral_contact_gated():
     assert "require_bilateral" in source
     assert "attachment requested without bilateral" in source
     assert "eq_active" in source
+
+
+def test_workshop_object_attachment_strict_translation_and_angle_boundaries():
+    valid = dict(bilateral_contact=True, translation_snap_m=0.004, angle_snap_rad=0.02)
+    assert strict_grasp_attachment_verified(**valid)
+    assert not strict_grasp_attachment_verified(**(valid | {"translation_snap_m": 0.004001}))
+    assert not strict_grasp_attachment_verified(**(valid | {"angle_snap_rad": 0.020001}))
+    assert not strict_grasp_attachment_verified(**(valid | {"bilateral_contact": False}))
+
+
+def test_workshop_reviewed_grasp_geometry_is_not_body_wide():
+    assert reviewed_workshop_grasp_geometries(
+        "workshop_long_phillips_driver", "TOOL_CABINET"
+    ) == ("workshop_long_phillips_driver_col_handle",)
+    assert reviewed_workshop_grasp_geometries(
+        "workshop_medium_phillips_screw", "TOOL_CABINET"
+    ) == ("workshop_medium_phillips_screw_col_shaft",)
+    assert reviewed_workshop_grasp_geometries(
+        "workshop_medium_phillips_screw", "LEFT_DRAWER"
+    ) == ("workshop_medium_phillips_screw_col_head",)
+
+
+def test_workshop_pick_requires_source_clearance_not_only_active_grasp():
+    assert strict_pick_source_clearance_verified(
+        source_clearance_m=0.005, displacement_m=0.08
+    )
+    assert not strict_pick_source_clearance_verified(
+        source_clearance_m=-0.001, displacement_m=0.40
+    )
 
 
 def test_workshop_pick_uses_live_resolved_object_geometry():

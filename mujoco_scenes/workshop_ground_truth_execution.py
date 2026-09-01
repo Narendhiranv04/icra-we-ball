@@ -66,6 +66,37 @@ def workshop_preclose_limit_m(source: str, object_name: str) -> float:
     return 0.025
 
 
+def strict_grasp_attachment_verified(
+    *, bilateral_contact: bool, translation_snap_m: float, angle_snap_rad: float
+) -> bool:
+    return bool(
+        bilateral_contact
+        and translation_snap_m <= 0.004
+        and angle_snap_rad <= 0.02
+    )
+
+
+def reviewed_workshop_grasp_geometries(
+    object_name: str, source: str
+) -> tuple[str, ...]:
+    if object_name in {
+        "workshop_long_phillips_driver",
+        "workshop_power_driver",
+        "workshop_wooden_hammer",
+    }:
+        return (f"{object_name}_col_handle",)
+    if object_name == "workshop_medium_phillips_screw":
+        suffix = "_col_shaft" if source == "TOOL_CABINET" else "_col_head"
+        return (f"{object_name}{suffix}",)
+    return (f"{object_name}_col",)
+
+
+def strict_pick_source_clearance_verified(
+    *, source_clearance_m: float, displacement_m: float
+) -> bool:
+    return bool(source_clearance_m >= 0.005 and displacement_m >= 0.08)
+
+
 def strict_surface_place_verified(
     *, xy_margin_m: float, height_m: float, support_contact: bool,
     grasp_inactive: bool, held: bool, linear_velocity_m_s: float,
@@ -162,6 +193,10 @@ class WorkshopExecutionDispatcher:
         self.storage_grasp_arm_seed: np.ndarray | None = None
         self.active_drawer_shell_geom: str | None = None
         self.minimum_drawer_shell_contact_distance_m: float | None = None
+        self.monitored_furniture_geoms: set[str] = set()
+        self.minimum_furniture_clearance_m: float | None = None
+        self.minimum_furniture_clearance_pair: list[str] | None = None
+        self.forbidden_furniture_penetration_observed = False
         self.object_pick_sources: dict[str, str] = {}
         self.horizontal_transport_objects: set[str] = set()
         # Deliberately slower than the original benchmark motion. This scales
@@ -197,7 +232,55 @@ class WorkshopExecutionDispatcher:
                         distance if self.minimum_drawer_shell_contact_distance_m is None
                         else min(self.minimum_drawer_shell_contact_distance_m, distance)
                     )
+            if self.monitored_furniture_geoms:
+                for contact in self.scene.data.contact:
+                    names = {
+                        mujoco.mj_id2name(self.scene.model, mujoco.mjtObj.mjOBJ_GEOM, contact.geom1) or "",
+                        mujoco.mj_id2name(self.scene.model, mujoco.mjtObj.mjOBJ_GEOM, contact.geom2) or "",
+                    }
+                    if not names & self.monitored_furniture_geoms or not any(name.startswith("google:") for name in names):
+                        continue
+                    distance = float(contact.dist)
+                    if (
+                        self.minimum_furniture_clearance_m is None
+                        or distance < self.minimum_furniture_clearance_m
+                    ):
+                        self.minimum_furniture_clearance_m = distance
+                        self.minimum_furniture_clearance_pair = sorted(names)
+                    self.forbidden_furniture_penetration_observed |= distance < -0.001
             self._capture(False)
+
+    def _begin_furniture_audit(self, source: str) -> None:
+        if source in {"LEFT_DRAWER", "RIGHT_DRAWER"}:
+            prefix = "left" if source == "LEFT_DRAWER" else "right"
+            self.monitored_furniture_geoms = {
+                name for name in (
+                    f"{prefix}_drawer_back_col", f"{prefix}_drawer_shell_side_l_col",
+                    f"{prefix}_drawer_shell_side_r_col", f"{prefix}_drawer_shell_bottom_col",
+                    f"{prefix}_drawer_shell_top_col", f"{prefix}_drawer_col_floor",
+                    f"{prefix}_drawer_col_side_l", f"{prefix}_drawer_col_side_r",
+                    f"{prefix}_drawer_col_front", "workbench_top_col",
+                )
+            }
+        elif source == "TOOL_CABINET":
+            self.monitored_furniture_geoms = {
+                "cabinet_col_bottom", "cabinet_col_top", "cabinet_col_left",
+                "cabinet_col_right", "cabinet_col_back", "cabinet_shelf_col",
+                "tool_cabinet_door_col",
+            }
+        else:
+            self.monitored_furniture_geoms = set()
+        self.minimum_furniture_clearance_m = None
+        self.minimum_furniture_clearance_pair = None
+        self.forbidden_furniture_penetration_observed = False
+
+    def _furniture_audit(self) -> dict[str, Any]:
+        return {
+            "monitored_furniture_geom_names": sorted(self.monitored_furniture_geoms),
+            "minimum_furniture_clearance_m": self.minimum_furniture_clearance_m,
+            "minimum_furniture_clearance_pair": self.minimum_furniture_clearance_pair,
+            "forbidden_furniture_penetration_observed": self.forbidden_furniture_penetration_observed,
+        }
 
     def _hold(self, duration_s: float) -> None:
         self._step(max(1, int(round(duration_s / self.scene.model.opt.timestep))))
@@ -234,6 +317,33 @@ class WorkshopExecutionDispatcher:
         velocity = self.scene.data.qvel[dof:dof + 6]
         return float(np.linalg.norm(velocity[:3])), float(np.linalg.norm(velocity[3:]))
 
+    def _body_collision_aabb(self, name: str) -> np.ndarray:
+        body_id = mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_BODY, name)
+        lower, upper = np.full(3, np.inf), np.full(3, -np.inf)
+        for geom_id in range(self.scene.model.ngeom):
+            if int(self.scene.model.geom_bodyid[geom_id]) != body_id:
+                continue
+            if not (self.scene.model.geom_contype[geom_id] or self.scene.model.geom_conaffinity[geom_id]):
+                continue
+            rotation = self.scene.data.geom_xmat[geom_id].reshape(3, 3)
+            center = self.scene.data.geom_xpos[geom_id] + rotation @ self.scene.model.geom_aabb[geom_id, :3]
+            half = np.abs(rotation) @ self.scene.model.geom_aabb[geom_id, 3:]
+            lower, upper = np.minimum(lower, center - half), np.maximum(upper, center + half)
+        if not np.all(np.isfinite(lower)):
+            raise RuntimeError(f"{name} has no collision AABB")
+        return np.vstack((lower, upper))
+
+    def _pick_source_clearance(self, source: str, bounds: np.ndarray) -> dict[str, Any]:
+        if source in {"LEFT_DRAWER", "RIGHT_DRAWER"}:
+            prefix = "left" if source == "LEFT_DRAWER" else "right"
+            geom_id = mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_GEOM, f"{prefix}_drawer_shell_top_col")
+            top = float(self.scene.data.geom_xpos[geom_id, 2] + self.scene.model.geom_size[geom_id, 2])
+            return {"mode": "DRAWER_APRON_VERTICAL_CLEARANCE", "exit_plane_world_z_m": top, "source_clearance_m": float(bounds[0, 2] - top)}
+        if source == "TOOL_CABINET":
+            front = 0.46
+            return {"mode": "CABINET_FRONT_EXIT_PLANE_CLEARANCE", "exit_plane_world_y_m": front, "source_clearance_m": float(front - bounds[1, 1])}
+        return {"mode": "NON_STORAGE", "source_clearance_m": float("inf")}
+
     def _body_contact_names(self, name: str) -> list[str]:
         body_id = mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_BODY, name)
         contacts: set[str] = set()
@@ -264,19 +374,23 @@ class WorkshopExecutionDispatcher:
             raise RuntimeError(f"Missing calibrated Workshop grasp geometry {geom_name}")
         return self.scene.data.geom_xpos[geom_id].copy()
 
-    def _finger_contact_sides(self, object_name: str) -> tuple[set[int], list[str]]:
-        body_id = mujoco.mj_name2id(
-            self.scene.model, mujoco.mjtObj.mjOBJ_BODY, object_name
-        )
+    def _finger_contact_sides(
+        self, expected_grasp_geom_names: tuple[str, ...]
+    ) -> tuple[set[int], list[str]]:
+        expected_ids = {
+            mujoco.mj_name2id(self.scene.model, mujoco.mjtObj.mjOBJ_GEOM, name)
+            for name in expected_grasp_geom_names
+        }
+        if -1 in expected_ids:
+            raise RuntimeError(f"Missing reviewed grasp geom {expected_grasp_geom_names}")
         sides: set[int] = set()
         contacts: list[str] = []
         for contact in self.scene.data.contact:
-            body1 = int(self.scene.model.geom_bodyid[contact.geom1])
-            body2 = int(self.scene.model.geom_bodyid[contact.geom2])
-            if body_id not in {body1, body2}:
+            first, second = int(contact.geom1), int(contact.geom2)
+            if first not in expected_ids and second not in expected_ids:
                 continue
-            object_geom = contact.geom1 if body1 == body_id else contact.geom2
-            other_geom = contact.geom2 if body1 == body_id else contact.geom1
+            object_geom = first if first in expected_ids else second
+            other_geom = second if first in expected_ids else first
             object_name_geom = mujoco.mj_id2name(
                 self.scene.model, mujoco.mjtObj.mjOBJ_GEOM, object_geom
             ) or f"geom_{object_geom}"
@@ -289,7 +403,9 @@ class WorkshopExecutionDispatcher:
                     contacts.append(f"{other_name}<->{object_name_geom}")
         return sides, sorted(set(contacts))
 
-    def _close_gripper_on_object(self, object_name: str) -> dict[str, Any]:
+    def _close_gripper_on_object(
+        self, object_name: str, expected_grasp_geom_names: tuple[str, ...]
+    ) -> dict[str, Any]:
         """Close slowly and require sustained left+right finger contact."""
         target_value = float(self.arm_profile.closed_command)
         dt = float(self.scene.model.opt.timestep)
@@ -307,7 +423,7 @@ class WorkshopExecutionDispatcher:
                 command + 0.18 * self.motion_rate_scale * dt,
             )
             self._step()
-            sides, names = self._finger_contact_sides(object_name)
+            sides, names = self._finger_contact_sides(expected_grasp_geom_names)
             observed_contacts.update(names)
             bilateral_streak = bilateral_streak + 1 if sides == {0, 1} else 0
             maximum_streak = max(maximum_streak, bilateral_streak)
@@ -316,6 +432,10 @@ class WorkshopExecutionDispatcher:
                     "bilateral_contact_confirmed": True,
                     "bilateral_contact_steps": bilateral_streak,
                     "finger_object_contacts": sorted(observed_contacts),
+                    "expected_grasp_geom_names": list(expected_grasp_geom_names),
+                    "observed_grasp_contact_names": sorted(observed_contacts),
+                    "left_finger_expected_geom_contact": True,
+                    "right_finger_expected_geom_contact": True,
                     "finger_joint_positions": self.scene.data.qpos[
                         self.finger_qpos
                     ].tolist(),
@@ -487,7 +607,8 @@ class WorkshopExecutionDispatcher:
         self.scene.model.eq_data[equality_id, 6:10] = relative_quat
 
     def _activate_grasp(
-        self, object_name: str, *, require_bilateral: bool = False
+        self, object_name: str, *, expected_grasp_geom_names: tuple[str, ...],
+        require_bilateral: bool = False
     ) -> dict[str, Any]:
         object_id = mujoco.mj_name2id(
             self.scene.model, mujoco.mjtObj.mjOBJ_BODY, object_name
@@ -498,7 +619,7 @@ class WorkshopExecutionDispatcher:
         )
         if object_id < 0 or equality_id < 0:
             raise RuntimeError(f"Missing constrained grasp for {object_name}")
-        sides, contact_names = self._finger_contact_sides(object_name)
+        sides, contact_names = self._finger_contact_sides(expected_grasp_geom_names)
         if require_bilateral and sides != {0, 1}:
             raise RuntimeError(
                 f"GRASP_REJECTED: attachment requested without bilateral "
@@ -520,19 +641,26 @@ class WorkshopExecutionDispatcher:
             self.scene.data.xquat[object_id], before_quaternion
         )))
         angle_snap = 2.0 * math.acos(float(np.clip(quaternion_dot, -1.0, 1.0)))
-        if require_bilateral and translation_snap > 0.004:
+        accepted = strict_grasp_attachment_verified(
+            bilateral_contact=sides == {0, 1},
+            translation_snap_m=translation_snap,
+            angle_snap_rad=angle_snap,
+        )
+        if require_bilateral and not accepted:
             self.scene.data.eq_active[equality_id] = 0
             self.active_grasp_weld = -1
             self.held_object = None
             raise RuntimeError(
-                f"GRASP_REJECTED: attachment translated {object_name} by "
-                f"{translation_snap:.4f} m"
+                f"GRASP_REJECTED: attachment snap for {object_name}: "
+                f"translation={translation_snap:.4f} m angle={angle_snap:.4f} rad"
             )
         return {
             "bilateral_contact_confirmed": sides == {0, 1},
             "finger_object_contacts": contact_names,
+            "expected_grasp_geom_names": list(expected_grasp_geom_names),
             "attachment_translation_snap_m": translation_snap,
             "attachment_angle_snap_rad": angle_snap,
+            "attachment_accepted": accepted,
         }
 
     def _release_grasp(self) -> None:
@@ -837,6 +965,7 @@ class WorkshopExecutionDispatcher:
         rotation: np.ndarray | None = None,
         orientation_weight: float = 0.15,
         allowed_body_names: tuple[str, ...] = (),
+        allowed_environment_geom_names: tuple[str, ...] = (),
         cartesian_step_m: float | None = None,
         ik_tolerance_m: float = 0.018,
         joint_tolerance: float = 0.014,
@@ -870,10 +999,26 @@ class WorkshopExecutionDispatcher:
         requested_rotation = (
             self.arm_profile.top_down_rotation if rotation is None else rotation
         )
-        allowed_body_ids = frozenset(
-            body_id for name in allowed_body_names
-            if (body_id := mujoco.mj_name2id(
+        allowed_body_ids_set: set[int] = set()
+        for name in allowed_body_names:
+            body_id = mujoco.mj_name2id(
                 self.scene.model, mujoco.mjtObj.mjOBJ_BODY, name
+            )
+            if body_id < 0:
+                continue
+            if self.strict_physical_execution:
+                joint_count = int(self.scene.model.body_jntnum[body_id])
+                if joint_count != 1:
+                    continue
+                joint_id = int(self.scene.model.body_jntadr[body_id])
+                if self.scene.model.jnt_type[joint_id] != mujoco.mjtJoint.mjJNT_FREE:
+                    continue
+            allowed_body_ids_set.add(body_id)
+        allowed_body_ids = frozenset(allowed_body_ids_set)
+        allowed_geom_ids = frozenset(
+            geom_id for name in allowed_environment_geom_names
+            if (geom_id := mujoco.mj_name2id(
+                self.scene.model, mujoco.mjtObj.mjOBJ_GEOM, name
             )) >= 0
         )
         checker = RobotConfigurationCollisionChecker(
@@ -931,7 +1076,8 @@ class WorkshopExecutionDispatcher:
                     f"error={position_error:.4f} m"
                 )
             collision_free, reason = checker.segment_valid(
-                planned_start, solution, allowed_body_ids, resolution=0.025
+                planned_start, solution, allowed_body_ids, resolution=0.025,
+                allowed_environment_geoms=allowed_geom_ids,
             )
             if not collision_free:
                 raise RuntimeError(f"Unsafe Workshop arm path: {reason}")
@@ -964,6 +1110,16 @@ class WorkshopExecutionDispatcher:
             "collision_checked": True,
             "cartesian_waypoints": waypoint_count,
             "gripper_angle_error_rad": angle_error,
+            "collision_allowance_mode": (
+                "EXACT_GEOM_TASK_CONTACT" if allowed_environment_geom_names
+                else "PAYLOAD_CONTACT" if allowed_body_ids else "NONE"
+            ),
+            "allowed_environment_geom_names": list(allowed_environment_geom_names),
+            "allowed_environment_body_names": [
+                mujoco.mj_id2name(
+                    self.scene.model, mujoco.mjtObj.mjOBJ_BODY, body_id
+                ) for body_id in sorted(allowed_body_ids)
+            ],
         }
 
     def _robot_gesture(self, cycles: float = 1.0, amplitude: float = 0.18) -> None:
@@ -983,6 +1139,7 @@ class WorkshopExecutionDispatcher:
 
     def _articulate_storage(self, region: str, *, opening: bool) -> dict[str, Any]:
         """Approach, grasp, and track a physical handle along its joint path."""
+        self._begin_furniture_audit(region)
         joint_name = {
             "LEFT_DRAWER": "left_tool_drawer_slide",
             "RIGHT_DRAWER": "right_tool_drawer_slide",
@@ -1060,6 +1217,11 @@ class WorkshopExecutionDispatcher:
             pregrasp[0], min(pregrasp[1], -0.40),
             1.02 if region == "TOOL_CABINET" else 0.94,
         ])
+        handle_collision = {
+            "LEFT_DRAWER": "left_drawer_handle_col",
+            "RIGHT_DRAWER": "right_drawer_handle_col",
+            "TOOL_CABINET": "tool_cabinet_door_handle_col",
+        }[region]
         allowed_handle_body = (moving_body_name,)
         def storage_reach(stage: str, target: np.ndarray, **kwargs: Any) -> dict[str, Any]:
             try:
@@ -1070,7 +1232,8 @@ class WorkshopExecutionDispatcher:
                 ) from error
         if region != "TOOL_CABINET":
             storage_reach("DRAWER_CORRIDOR", corridor,
-                samples=12, allowed_body_names=allowed_handle_body
+                samples=12, allowed_body_names=allowed_handle_body,
+                allowed_environment_geom_names=(handle_collision,)
             )
             # Descend in front of the bench before entering the under-top
             # drawer corridor.  Descending above the handle made the forearm
@@ -1082,6 +1245,7 @@ class WorkshopExecutionDispatcher:
                 "DRAWER_LOW_FRONT", low_front, samples=10, rotation=grasp_rotation,
                 orientation_weight=0.03,
                 allowed_body_names=allowed_handle_body,
+                allowed_environment_geom_names=(handle_collision,),
                 ik_tolerance_m=0.030,
             )
         else:
@@ -1089,26 +1253,24 @@ class WorkshopExecutionDispatcher:
                 "CABINET_OVERHEAD", overhead, samples=10, rotation=grasp_rotation,
                 orientation_weight=0.15,
                 allowed_body_names=allowed_handle_body,
+                allowed_environment_geom_names=(handle_collision,),
                 ik_tolerance_m=0.018,
             )
         storage_reach(
             "STORAGE_PREGRASP", pregrasp, samples=8, rotation=grasp_rotation,
             orientation_weight=(0.15 if region == "TOOL_CABINET" else 0.03),
             allowed_body_names=allowed_handle_body,
+            allowed_environment_geom_names=(handle_collision,),
             ik_tolerance_m=(0.018 if region == "TOOL_CABINET" else 0.030),
         )
         reach = storage_reach(
             "STORAGE_CONTACT", grasp, samples=8, rotation=grasp_rotation,
             orientation_weight=(0.15 if region == "TOOL_CABINET" else 0.03),
             allowed_body_names=allowed_handle_body,
+            allowed_environment_geom_names=(handle_collision,),
             cartesian_step_m=0.020,
             ik_tolerance_m=(0.018 if region == "TOOL_CABINET" else 0.030),
         )
-        handle_collision = {
-            "LEFT_DRAWER": "left_drawer_handle_col",
-            "RIGHT_DRAWER": "right_drawer_handle_col",
-            "TOOL_CABINET": "tool_cabinet_door_handle_col",
-        }[region]
         handle_weld_id = mujoco.mj_name2id(
             self.scene.model,
             mujoco.mjtObj.mjOBJ_EQUALITY,
@@ -1236,6 +1398,7 @@ class WorkshopExecutionDispatcher:
                             samples=4, rotation=live_rotation,
                             orientation_weight=0.025,
                             allowed_body_names=allowed_handle_body,
+                            allowed_environment_geom_names=(handle_collision,),
                             cartesian_step_m=0.025, ik_tolerance_m=0.030,
                         )
                 else:
@@ -1259,6 +1422,7 @@ class WorkshopExecutionDispatcher:
                         samples=4, rotation=live_rotation,
                         orientation_weight=0.005,
                         allowed_body_names=allowed_handle_body,
+                        allowed_environment_geom_names=(handle_collision,),
                         cartesian_step_m=0.025, ik_tolerance_m=0.050,
                     )
                 self._step(35)
@@ -1300,11 +1464,6 @@ class WorkshopExecutionDispatcher:
             # physically reached—never as an OPEN target command.
             self.scene.data.ctrl[actuator_id] = tracking_measurement
             mujoco.mj_forward(self.scene.model, self.scene.data)
-        if opening:
-            self.scene.state.container_open_state[region] = True
-            self.scene.state.opened_containers.add(region)
-        else:
-            self.scene.state.container_open_state[region] = False
         self.storage_grasp_arm_seed = self.scene.data.qpos[self.arm_qpos].copy()
         self._set_gripper(False)
         live_grip = self.scene.data.site_xpos[self.grip_site_id].copy()
@@ -1370,7 +1529,11 @@ class WorkshopExecutionDispatcher:
                 shell_contact_minimum is not None
                 and shell_contact_minimum < -0.001
             ),
-            "verified": opened_enough if opening else closed_enough,
+            "furniture_collision_audit": self._furniture_audit(),
+            "verified": bool(
+                (opened_enough if opening else closed_enough)
+                and not self.forbidden_furniture_penetration_observed
+            ),
             "initial_reach": reach,
         }
 
@@ -2012,6 +2175,9 @@ class WorkshopExecutionDispatcher:
                 result["status"] = result["articulation"].get(
                     "status", "PHYSICAL_OPEN_VERIFICATION_FAILED"
                 )
+            else:
+                self.scene.state.container_open_state[region] = True
+                self.scene.state.opened_containers.add(region)
             # OPEN is deliberately the inspection action as well: a region is
             # exposed once and stays open for the rest of the task.
             result["observed_instances"] = self.scene.get_observed_instances()
@@ -2025,6 +2191,9 @@ class WorkshopExecutionDispatcher:
         elif execution_op == "OPEN_STORAGE":
             result["articulation"] = self._articulate_storage(args[0], opening=True)
             result["success"] = bool(result["articulation"]["verified"])
+            if result["success"]:
+                self.scene.state.container_open_state[args[0]] = True
+                self.scene.state.opened_containers.add(args[0])
             if not result["success"]:
                 result["status"] = result["articulation"].get(
                     "status", "PHYSICAL_OPEN_VERIFICATION_FAILED"
@@ -2037,6 +2206,9 @@ class WorkshopExecutionDispatcher:
         elif execution_op == "CLOSE_STORAGE":
             result["articulation"] = self._articulate_storage(args[0], opening=False)
             result["success"] = bool(result["articulation"]["verified"])
+            if result["success"]:
+                self.scene.state.container_open_state[args[0]] = False
+                self.scene.state.opened_containers.discard(args[0])
         elif execution_op == "PICK":
             obj = args[0]
             source = args[1] if len(args) > 1 else self.robot_destination
@@ -2044,7 +2216,11 @@ class WorkshopExecutionDispatcher:
             self._navigate_robot(source)
             self.object_pick_sources[obj] = source
             self.horizontal_transport_objects.discard(obj)
+            self._begin_furniture_audit(source)
             result["position_before_m"] = self._body_position(obj)
+            result["object_aabb_before_m"] = self._body_collision_aabb(obj).tolist()
+            expected_grasp_geoms = reviewed_workshop_grasp_geometries(obj, source)
+            result["expected_grasp_geom_names"] = list(expected_grasp_geoms)
             if source == "MAIN_WORKBENCH_ZONE" and obj == "workshop_power_driver":
                 # The power driver is staged in a dedicated right-hand lane
                 # to leave a collision-free screw lane. Re-centre the mobile
@@ -2333,9 +2509,12 @@ class WorkshopExecutionDispatcher:
                     "GRASP_REJECTED: physical gripper missed its calibrated "
                     f"preclose pose by {result['preclose_measured_gripper_error_m']:.4f} m"
                 )
-            result["contact_grasp"] = self._close_gripper_on_object(obj)
+            result["contact_grasp"] = self._close_gripper_on_object(
+                obj, expected_grasp_geoms
+            )
             result["attachment"] = self._activate_grasp(
-                obj, require_bilateral=True
+                obj, expected_grasp_geom_names=expected_grasp_geoms,
+                require_bilateral=True
             )
             # Hold the visibly completed grasp only after the zero-snap
             # constraint is active. Heavy/asymmetric tools can otherwise roll
@@ -2407,6 +2586,28 @@ class WorkshopExecutionDispatcher:
             result["position_after_m"] = self._body_position(obj)
             result["grasp_weld_active"] = bool(self.scene.data.eq_active[self.active_grasp_weld])
             result["robot_grasp_visible"] = True
+            after_bounds = self._body_collision_aabb(obj)
+            displacement = float(np.linalg.norm(
+                np.asarray(result["position_after_m"], dtype=float)
+                - np.asarray(result["position_before_m"], dtype=float)
+            ))
+            clearance = self._pick_source_clearance(source, after_bounds)
+            clearance["verified"] = strict_pick_source_clearance_verified(
+                source_clearance_m=float(clearance["source_clearance_m"]),
+                displacement_m=displacement,
+            )
+            result["object_aabb_after_m"] = after_bounds.tolist()
+            result["object_displacement_m"] = displacement
+            result["source_clearance"] = clearance
+            result["active_held_identity"] = self.held_object
+            result["furniture_collision_audit"] = self._furniture_audit()
+            if (
+                self.strict_physical_execution
+                and self.forbidden_furniture_penetration_observed
+            ):
+                raise RuntimeError("COLLISION_BLOCKED: forbidden furniture penetration")
+            if self.strict_physical_execution and not clearance["verified"]:
+                raise RuntimeError("LIFT_CLEARANCE_FAILED: object remains inside source envelope")
         elif execution_op in {"PLACE_ON_SURFACE", "PLACE_IN_CONTAINER"}:
             obj, destination = args
             self.robot_destination = destination
