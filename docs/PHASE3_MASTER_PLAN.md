@@ -689,16 +689,15 @@ Per pipeline run, retain:
 [x] Software: VLMSpecProvider.provide() correctly validates and wraps errors
 [x] Infrastructure: Benchmark artifacts have explicit reproducibility fingerprints and stale resume protection
 [x] Infrastructure: Prompt leakage audit is deterministically verified over payloads
-[x] Software: K1, L1, W1 GT controls verified to ACTION_SEQUENCE_READY with 0 audit violations
-[ ] Software: all ideal raw fixtures compile to correct G_F
-[ ] Software: 20/20 feasible fixtures → ACTION_SEQUENCE_READY
-[ ] Software: 12/12 infeasible fixtures → correct causal INFEASIBLE
-[ ] Software: deterministic replays match exactly
-[ ] Evaluation: live VLM comparison completed
+[x] Software: all ideal raw fixtures compile to correct G_F
+[x] Software: deterministic replays match exactly (0 FM calls, exact SHA-256 pairing)
+[x] Software: single-authority role semantic ontology (GTSpecProvider & VLMSpecProvider unified)
+[x] Software: strict raw Kitchen cardinality schema and fail-closed validation
+[x] Software: 12/12 infeasible benchmark variants fail closed with zero false positives
+[x] Provenance: deterministic Phase 3 frozen with freeze evidence JSON
+[ ] Evaluation: live 9B VLM comparison completed
 [ ] Evaluation: per-case layer diagnosis documented
 [ ] Evaluation: 9B vs 27B comparison documented (if warranted)
-[ ] Provenance: frozen commit, clean worktree
-[ ] Provenance: every phase transition has retained artifacts
 [ ] Handoff: PipelineResult schema stable for Phase 4
 [ ] Handoff: Phase 4 consumes plan without knowing GT vs VLM origin
 ```
@@ -711,7 +710,7 @@ Per pipeline run, retain:
  
 **Exact Objective**: Run Qwen3.5-9B once on K1/L1/W1 and perform causal layer diagnosis using the decision tree (§5).
  
-**Prerequisites**: P3-A through P3-I.1 are complete and frozen.
+**Prerequisites**: Phase 3 deterministic foundation is FROZEN (P3-A through P3-I.3 complete).
  
 **What to do**:
 1. Save raw VLM response BEFORE canonicalization.

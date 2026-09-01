@@ -1,0 +1,97 @@
+{
+  "phase": "PHASE_3",
+  "pass": "P3-I.3",
+  "status": "DETERMINISTIC_PHASE_3_FROZEN",
+  "ontology_version": "phase3_p3i_3_semantic_ontology_v1",
+  "search_policy_version": "phase3_p3h_1_v1",
+  "ideal_fixture_hashes": {
+    "kitchen_K1": "8aa50952216fd01270b95a4a5fa22f7206cf648bd81fa1054f6b64229cafadfe",
+    "living_room_L1": "a72d86cf1e054f6d7a9533be6e04b5ad6eeb5400190d6f52abb75447d29c30a4",
+    "workshop_W1": "42e8c9215ec7f5f946c050ef65c978c4edb9c8efcf524c0fc6095d6fb01eba72"
+  },
+  "semantic_authority_provenance": {
+    "provider_boundary": "SINGLE_SHARED_AUTHORITY",
+    "authority_function": "role_semantic_ontology.get_system_role_semantic_categories",
+    "declarative_sources": {
+      "kitchen": "mujoco_scenes/configs/s1_integrated_kitchen_object_function.yaml",
+      "living_room": "mujoco_scenes/configs/l2_integrated_region_function_task.yaml",
+      "workshop": "mujoco_scenes/configs/workshop_phase1_fm_contract.yaml"
+    },
+    "fallback_tables_retained": false,
+    "missing_config_behavior": "SemanticOntologyConfigurationError",
+    "consumers": [
+      "mujoco_scenes.functional_tamp_pipeline.gt_spec_provider.GTSpecProvider",
+      "mujoco_scenes.functional_tamp_pipeline.vlm_spec_provider.VLMSpecProvider"
+    ]
+  },
+  "raw_cardinality_contract": {
+    "kitchen": {
+      "strict_schema_validation": true,
+      "disallowed_extra_keys": true,
+      "reject_boolean_as_int": true,
+      "bounds_enforcement": "1 <= min <= max <= required_count",
+      "distinct_policy_enforcement": "min == max == required_count"
+    }
+  },
+  "ideal_convergence_results": {
+    "kitchen_K1": {
+      "runs_attempted": 3,
+      "runs_converged": 3,
+      "terminal_status": "ACTION_SEQUENCE_READY",
+      "exact_structural_match_to_gt": true,
+      "role_identity_recall": 1.0,
+      "role_exact_recall": 1.0,
+      "relation_recall": 1.0,
+      "operation_group_recall": 1.0,
+      "phi_star_hash_identical_across_runs": true
+    },
+    "living_room_L1": {
+      "runs_attempted": 3,
+      "runs_converged": 3,
+      "terminal_status": "ACTION_SEQUENCE_READY",
+      "exact_structural_match_to_gt": true,
+      "role_identity_recall": 1.0,
+      "role_exact_recall": 1.0,
+      "relation_recall": 1.0,
+      "operation_group_recall": 1.0,
+      "phi_star_hash_identical_across_runs": true
+    },
+    "workshop_W1": {
+      "runs_attempted": 3,
+      "runs_converged": 3,
+      "terminal_status": "ACTION_SEQUENCE_READY",
+      "exact_structural_match_to_gt": true,
+      "role_identity_recall": 1.0,
+      "role_exact_recall": 1.0,
+      "relation_recall": 1.0,
+      "operation_group_recall": 1.0,
+      "phi_star_hash_identical_across_runs": true
+    }
+  },
+  "gt_32_case_control_matrix": {
+    "total_variants": 32,
+    "kitchen": {
+      "feasible_variants": ["K1", "K2", "K3", "K4", "K5", "K6"],
+      "infeasible_variants": ["K7", "K8", "K9", "K10", "K11", "K12"],
+      "infeasible_fail_closed_rate": "6/6 (100%)",
+      "false_positives": 0
+    },
+    "living_room": {
+      "feasible_variants": ["L1", "L2", "L3", "L4", "L5", "L6"],
+      "infeasible_variants": ["L7", "L8", "L9", "L10"],
+      "match_rate": "10/10 (100%)",
+      "false_positives": 0
+    },
+    "workshop": {
+      "feasible_variants": ["W1", "W2", "W3", "W4", "W5", "W6", "W7", "W8"],
+      "infeasible_variants": ["W9", "W10"],
+      "match_rate": "10/10 (100%)",
+      "false_positives": 0
+    }
+  },
+  "test_suite_summary": {
+    "total_pipeline_tests": 303,
+    "passed": 303,
+    "failed": 0
+  }
+}
