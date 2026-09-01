@@ -187,6 +187,40 @@ RESPONSE_SCHEMA: dict[str, Any] = {
                         "type": "string",
                         "enum": ["DISTINCT", "REUSABLE", "SHARED"],
                     },
+                    "binding_cardinality": {
+                        "type": "object",
+                        "properties": {
+                            "minimum_distinct_physical_objects": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 20,
+                            },
+                            "maximum_distinct_physical_objects": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 20,
+                            },
+                            "preferred": {
+                                "type": "string",
+                                "enum": ["minimize_distinct", "maximize_distinct", "deterministic_rank"],
+                            },
+                            "preference": {
+                                "type": "string",
+                                "enum": ["minimize_distinct", "maximize_distinct", "deterministic_rank"],
+                            },
+                        },
+                        "required": [
+                            "minimum_distinct_physical_objects",
+                            "maximum_distinct_physical_objects",
+                        ],
+                        "additionalProperties": False,
+                    },
+                    "min_count": {"type": "integer", "minimum": 1, "maximum": 20},
+                    "max_count": {"type": "integer", "minimum": 1, "maximum": 20},
+                    "preference": {
+                        "type": "string",
+                        "enum": ["minimize_distinct", "maximize_distinct", "deterministic_rank"],
+                    },
                     "candidate_categories": {
                         "type": "array",
                         "minItems": 0,
@@ -365,10 +399,40 @@ KITCHEN_FUNCTIONAL_GRAPH_SCHEMA: dict[str, Any] = {
                     "description": {"type": "string"},
                     "required_count": {"type": "integer", "minimum": 1, "maximum": 20},
                     "binding_policy": {"type": "string", "enum": ["DISTINCT", "REUSABLE", "SHARED"]},
-                    "binding_cardinality": {"type": "object"},
-                    "min_count": {"type": "integer"},
-                    "max_count": {"type": "integer"},
-                    "preference": {"type": "string"},
+                    "binding_cardinality": {
+                        "type": "object",
+                        "properties": {
+                            "minimum_distinct_physical_objects": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 20,
+                            },
+                            "maximum_distinct_physical_objects": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 20,
+                            },
+                            "preferred": {
+                                "type": "string",
+                                "enum": ["minimize_distinct", "maximize_distinct", "deterministic_rank"],
+                            },
+                            "preference": {
+                                "type": "string",
+                                "enum": ["minimize_distinct", "maximize_distinct", "deterministic_rank"],
+                            },
+                        },
+                        "required": [
+                            "minimum_distinct_physical_objects",
+                            "maximum_distinct_physical_objects",
+                        ],
+                        "additionalProperties": False,
+                    },
+                    "min_count": {"type": "integer", "minimum": 1, "maximum": 20},
+                    "max_count": {"type": "integer", "minimum": 1, "maximum": 20},
+                    "preference": {
+                        "type": "string",
+                        "enum": ["minimize_distinct", "maximize_distinct", "deterministic_rank"],
+                    },
                     "candidate_categories": {
                         "type": "array", "minItems": 1, "maxItems": 12,
                         "items": {"type": "string"},
@@ -1080,6 +1144,103 @@ def validate_kitchen_functional_specification(document: dict[str, Any]) -> dict[
         for p in req_props:
             if not isinstance(p, str) or not p.strip():
                 raise FMResponseValidationError(f"functional_roles[{index}].required_properties items must be non-empty strings")
+
+        # Strict cardinality validation
+        card_data = role.get("binding_cardinality")
+        direct_min = role.get("min_count")
+        direct_max = role.get("max_count")
+        direct_pref = role.get("preference")
+
+        if card_data is not None:
+            if not isinstance(card_data, dict):
+                raise FMResponseValidationError(f"functional_roles[{index}].binding_cardinality must be a dict")
+            allowed_card_keys = {
+                "minimum_distinct_physical_objects",
+                "maximum_distinct_physical_objects",
+                "preferred",
+                "preference",
+            }
+            unexpected_keys = set(card_data) - allowed_card_keys
+            if unexpected_keys:
+                raise FMResponseValidationError(
+                    f"functional_roles[{index}].binding_cardinality has unexpected keys: {sorted(unexpected_keys)}"
+                )
+            if "minimum_distinct_physical_objects" not in card_data or "maximum_distinct_physical_objects" not in card_data:
+                raise FMResponseValidationError(
+                    f"functional_roles[{index}].binding_cardinality missing required minimum/maximum fields"
+                )
+            c_min = card_data["minimum_distinct_physical_objects"]
+            c_max = card_data["maximum_distinct_physical_objects"]
+            if isinstance(c_min, bool) or not isinstance(c_min, int) or c_min < 1:
+                raise FMResponseValidationError(
+                    f"functional_roles[{index}].binding_cardinality minimum_distinct_physical_objects must be integer >= 1"
+                )
+            if isinstance(c_max, bool) or not isinstance(c_max, int) or c_max < 1:
+                raise FMResponseValidationError(
+                    f"functional_roles[{index}].binding_cardinality maximum_distinct_physical_objects must be integer >= 1"
+                )
+            if c_min > c_max:
+                raise FMResponseValidationError(
+                    f"functional_roles[{index}].binding_cardinality minimum ({c_min}) > maximum ({c_max})"
+                )
+            if c_max > req_count:
+                raise FMResponseValidationError(
+                    f"functional_roles[{index}].binding_cardinality maximum ({c_max}) > required_count ({req_count})"
+                )
+            c_pref = card_data.get("preferred") or card_data.get("preference")
+            if c_pref is not None and c_pref not in {"minimize_distinct", "maximize_distinct", "deterministic_rank"}:
+                raise FMResponseValidationError(
+                    f"functional_roles[{index}].binding_cardinality invalid preference: {c_pref!r}"
+                )
+            if role.get("binding_policy") == "DISTINCT":
+                if c_min != req_count or c_max != req_count:
+                    raise FMResponseValidationError(
+                        f"functional_roles[{index}] has DISTINCT binding_policy but cardinality range [{c_min}, {c_max}] != required_count {req_count}"
+                    )
+            if direct_min is not None:
+                if isinstance(direct_min, bool) or not isinstance(direct_min, int) or direct_min != c_min:
+                    raise FMResponseValidationError(
+                        f"functional_roles[{index}].min_count ({direct_min}) contradicts binding_cardinality minimum ({c_min})"
+                    )
+            if direct_max is not None:
+                if isinstance(direct_max, bool) or not isinstance(direct_max, int) or direct_max != c_max:
+                    raise FMResponseValidationError(
+                        f"functional_roles[{index}].max_count ({direct_max}) contradicts binding_cardinality maximum ({c_max})"
+                    )
+            if direct_pref is not None:
+                if direct_pref not in {"minimize_distinct", "maximize_distinct", "deterministic_rank"}:
+                    raise FMResponseValidationError(
+                        f"functional_roles[{index}].preference invalid: {direct_pref!r}"
+                    )
+                if c_pref is not None and direct_pref != c_pref:
+                    raise FMResponseValidationError(
+                        f"functional_roles[{index}].preference ({direct_pref!r}) contradicts binding_cardinality preference ({c_pref!r})"
+                    )
+        else:
+            if direct_min is not None or direct_max is not None:
+                if direct_min is None or direct_max is None:
+                    raise FMResponseValidationError(
+                        f"functional_roles[{index}] must provide both min_count and max_count"
+                    )
+                if isinstance(direct_min, bool) or not isinstance(direct_min, int) or direct_min < 1:
+                    raise FMResponseValidationError(f"functional_roles[{index}].min_count must be integer >= 1")
+                if isinstance(direct_max, bool) or not isinstance(direct_max, int) or direct_max < 1:
+                    raise FMResponseValidationError(f"functional_roles[{index}].max_count must be integer >= 1")
+                if direct_min > direct_max:
+                    raise FMResponseValidationError(
+                        f"functional_roles[{index}].min_count ({direct_min}) > max_count ({direct_max})"
+                    )
+                if direct_max > req_count:
+                    raise FMResponseValidationError(
+                        f"functional_roles[{index}].max_count ({direct_max}) > required_count ({req_count})"
+                    )
+                if role.get("binding_policy") == "DISTINCT":
+                    if direct_min != req_count or direct_max != req_count:
+                        raise FMResponseValidationError(
+                            f"functional_roles[{index}] has DISTINCT binding_policy but cardinality range [{direct_min}, {direct_max}] != required_count {req_count}"
+                        )
+            if direct_pref is not None and direct_pref not in {"minimize_distinct", "maximize_distinct", "deterministic_rank"}:
+                raise FMResponseValidationError(f"functional_roles[{index}].preference invalid: {direct_pref!r}")
 
     declared_region_ids: set[str] = set()
     raw_regions = document.get("inspectable_regions", [])

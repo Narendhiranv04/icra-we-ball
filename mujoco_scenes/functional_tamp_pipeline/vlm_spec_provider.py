@@ -11,6 +11,7 @@ from .models import (
     NumericConstraint,
     OperationGroup,
 )
+from . import role_semantic_ontology as semantic_ontology
 from .role_semantic_ontology import (
     PHASE3_ROLE_SEMANTIC_ONTOLOGY_VERSION,
     get_system_role_semantic_categories,
@@ -77,7 +78,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
                     raise MalformedVLMSpecificationError(
                         f"Workshop functional role {role_id!r} must have non-empty candidate_categories"
                     )
-            system_cats = get_system_role_semantic_categories("workshop", role_id)
+            system_cats = semantic_ontology.get_system_role_semantic_categories("workshop", role_id)
             nodes[role_id] = FunctionalRole(
                 name=role_id,
                 entity_kind=role.entity_kind,
@@ -179,7 +180,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
             ))
 
         for name, role in contract["roles"].items():
-            system_cats = get_system_role_semantic_categories("kitchen", name)
+            system_cats = semantic_ontology.get_system_role_semantic_categories("kitchen", name)
             unary_preds = []
             numeric_reqs = []
             for item in role.get("unary_geometry", []):
@@ -218,7 +219,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
             )
 
         for name, raw in contract.get("symbolic_task", {}).get("source_roles", {}).items():
-            system_cats = get_system_role_semantic_categories("kitchen", name)
+            system_cats = semantic_ontology.get_system_role_semantic_categories("kitchen", name)
             nodes[name] = FunctionalRole(
                 name=name,
                 entity_kind="OBJECT",
@@ -324,7 +325,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
             binding = row["binding_policy"]
             count = int(row["vlm_required_count"])
             entity_kind = row["entity_kind"]
-            system_cats = get_system_role_semantic_categories("living_room", func_id)
+            system_cats = semantic_ontology.get_system_role_semantic_categories("living_room", func_id)
             unary = tuple(row.get("required_properties", []))
             nodes[func_id] = FunctionalRole(
                 name=func_id,

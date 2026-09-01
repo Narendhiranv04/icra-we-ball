@@ -44,6 +44,13 @@ function_groups:
 allow_cross_function_region_sharing: false
 
 semantic_requirements:
+  functional_roles:
+    PERSONAL_CUP_SAUCER_REGION: [side_table, end_table]
+    SHARED_REMOTE_REGION: [coffee_table, central_table, side_table]
+    CUP_SAUCER_SET: [cup_saucer_set, cup, saucer]
+    REMOTE: [remote_control, tv_remote]
+    SEATING_POSITION: [armchair, chair, sofa, seating_position]
+    SEATING_PAIR: [armchair, chair, sofa, seating_pair]
   region_roles:
     personal_cup_saucer_region:
       accepted_categories:

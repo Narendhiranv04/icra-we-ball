@@ -541,20 +541,117 @@ def compile_vlm_functional_graph(
             })
 
         raw_card = row.get("binding_cardinality")
-        if isinstance(raw_card, dict) and (
-            "minimum_distinct_physical_objects" in raw_card
-            or "maximum_distinct_physical_objects" in raw_card
-        ):
+        direct_min = row.get("min_count")
+        direct_max = row.get("max_count")
+        direct_pref = row.get("preference")
+
+        if raw_card is not None:
+            if not isinstance(raw_card, dict):
+                raise MalformedVLMSpecificationError(f"Role {raw_role_id!r} binding_cardinality must be a dict")
+            allowed_card_keys = {
+                "minimum_distinct_physical_objects",
+                "maximum_distinct_physical_objects",
+                "preferred",
+                "preference",
+                "mode",
+            }
+            unexpected_keys = set(raw_card) - allowed_card_keys
+            if unexpected_keys:
+                raise MalformedVLMSpecificationError(
+                    f"Role {raw_role_id!r} binding_cardinality has unexpected keys: {sorted(unexpected_keys)}"
+                )
+            if "minimum_distinct_physical_objects" not in raw_card or "maximum_distinct_physical_objects" not in raw_card:
+                raise MalformedVLMSpecificationError(
+                    f"Role {raw_role_id!r} binding_cardinality missing required minimum/maximum fields"
+                )
+            c_min = raw_card["minimum_distinct_physical_objects"]
+            c_max = raw_card["maximum_distinct_physical_objects"]
+            if isinstance(c_min, bool) or not isinstance(c_min, int) or c_min < 1:
+                raise MalformedVLMSpecificationError(
+                    f"Role {raw_role_id!r} binding_cardinality minimum_distinct_physical_objects must be integer >= 1"
+                )
+            if isinstance(c_max, bool) or not isinstance(c_max, int) or c_max < 1:
+                raise MalformedVLMSpecificationError(
+                    f"Role {raw_role_id!r} binding_cardinality maximum_distinct_physical_objects must be integer >= 1"
+                )
+            if c_min > c_max:
+                raise MalformedVLMSpecificationError(
+                    f"Role {raw_role_id!r} binding_cardinality minimum ({c_min}) > maximum ({c_max})"
+                )
+            if c_max > required_count:
+                raise MalformedVLMSpecificationError(
+                    f"Role {raw_role_id!r} binding_cardinality maximum ({c_max}) > required_count ({required_count})"
+                )
+            c_pref = raw_card.get("preferred") or raw_card.get("preference")
+            if c_pref is not None and c_pref not in {"minimize_distinct", "maximize_distinct", "deterministic_rank"}:
+                raise MalformedVLMSpecificationError(
+                    f"Role {raw_role_id!r} binding_cardinality invalid preference: {c_pref!r}"
+                )
+            if binding_policy == "DISTINCT":
+                if c_min != required_count or c_max != required_count:
+                    raise MalformedVLMSpecificationError(
+                        f"Role {raw_role_id!r} has DISTINCT binding_policy but cardinality range [{c_min}, {c_max}] != required_count {required_count}"
+                    )
+            if direct_min is not None:
+                if isinstance(direct_min, bool) or not isinstance(direct_min, int) or direct_min != c_min:
+                    raise MalformedVLMSpecificationError(
+                        f"Role {raw_role_id!r} min_count ({direct_min}) contradicts binding_cardinality minimum ({c_min})"
+                    )
+            if direct_max is not None:
+                if isinstance(direct_max, bool) or not isinstance(direct_max, int) or direct_max != c_max:
+                    raise MalformedVLMSpecificationError(
+                        f"Role {raw_role_id!r} max_count ({direct_max}) contradicts binding_cardinality maximum ({c_max})"
+                    )
+            if direct_pref is not None:
+                if direct_pref not in {"minimize_distinct", "maximize_distinct", "deterministic_rank"}:
+                    raise MalformedVLMSpecificationError(
+                        f"Role {raw_role_id!r} preference invalid: {direct_pref!r}"
+                    )
+                if c_pref is not None and direct_pref != c_pref:
+                    raise MalformedVLMSpecificationError(
+                        f"Role {raw_role_id!r} preference ({direct_pref!r}) contradicts binding_cardinality preference ({c_pref!r})"
+                    )
             cardinality_data: dict[str, Any] | None = dict(raw_card)
             cardinality_data.setdefault("mode", "assignment_driven")
-            min_count = cardinality_data.get("minimum_distinct_physical_objects")
-            max_count = cardinality_data.get("maximum_distinct_physical_objects")
-            preferred = cardinality_data.get("preferred")
+            min_count = c_min
+            max_count = c_max
+            preferred = c_pref
         else:
             cardinality_data = None
-            min_count = row.get("min_count")
-            max_count = row.get("max_count")
-            preferred = row.get("preference")
+            if direct_min is not None or direct_max is not None:
+                if direct_min is None or direct_max is None:
+                    raise MalformedVLMSpecificationError(
+                        f"Role {raw_role_id!r} must provide both min_count and max_count"
+                    )
+                if isinstance(direct_min, bool) or not isinstance(direct_min, int) or direct_min < 1:
+                    raise MalformedVLMSpecificationError(f"Role {raw_role_id!r} min_count must be integer >= 1")
+                if isinstance(direct_max, bool) or not isinstance(direct_max, int) or direct_max < 1:
+                    raise MalformedVLMSpecificationError(f"Role {raw_role_id!r} max_count must be integer >= 1")
+                if direct_min > direct_max:
+                    raise MalformedVLMSpecificationError(
+                        f"Role {raw_role_id!r} min_count ({direct_min}) > max_count ({direct_max})"
+                    )
+                if direct_max > required_count:
+                    raise MalformedVLMSpecificationError(
+                        f"Role {raw_role_id!r} max_count ({direct_max}) > required_count ({required_count})"
+                    )
+                if binding_policy == "DISTINCT":
+                    if direct_min != required_count or direct_max != required_count:
+                        raise MalformedVLMSpecificationError(
+                            f"Role {raw_role_id!r} has DISTINCT binding_policy but cardinality range [{direct_min}, {direct_max}] != required_count {required_count}"
+                        )
+                min_count = direct_min
+                max_count = direct_max
+            else:
+                min_count = None
+                max_count = None
+
+            if direct_pref is not None:
+                if direct_pref not in {"minimize_distinct", "maximize_distinct", "deterministic_rank"}:
+                    raise MalformedVLMSpecificationError(f"Role {raw_role_id!r} preference invalid: {direct_pref!r}")
+                preferred = direct_pref
+            else:
+                preferred = None
 
         if preferred is None and binding_policy == "REUSABLE":
             preferred = "minimize_distinct"

@@ -51,9 +51,12 @@ class MockFMAdapter:
         self.last_raw_requirement_response = deepcopy(document)
         self.last_raw_kitchen_graph_response = deepcopy(document)
         self.last_validated_kitchen_graph_response = deepcopy(document)
+        self.last_raw_inspection_response = {}
+        self.last_observation_images = []
         self.raw_decomposition = deepcopy(document)
         self.raw_vlm_response = deepcopy(document)
         self.validated_vlm_specification = deepcopy(document)
+        self.metrics = type("Metrics", (), {"total_calls": 1})()
 
     def generate_task_requirements(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
         return deepcopy(self.document)
@@ -357,3 +360,208 @@ def test_provenance_and_metadata():
     assert gf_vlm_w.metadata["candidate_categories_used_for_role_identity"] is False
     assert gf_vlm_w.metadata["candidate_categories_used_for_grounding_acceptance"] is False
     assert gf_vlm_w.metadata["candidate_categories_used_for_detector_vocabulary"] is True
+
+
+# ==============================================================================
+# 7. PASS P3-I.3 — SINGLE SHARED AUTHORITY INSTRUMENTATION SPY & FAIL-CLOSED
+# ==============================================================================
+
+def test_single_shared_semantic_authority_spy_all_domains():
+    """Verify that GTSpecProvider and VLMSpecProvider call the single shared ontology function for every role."""
+    import mujoco_scenes.functional_tamp_pipeline.role_semantic_ontology as sem_ont
+
+    calls = []
+    original_fn = sem_ont.get_system_role_semantic_categories
+
+    def spy_fn(domain: str, canonical_role_id: str):
+        res = original_fn(domain, canonical_role_id)
+        calls.append((domain, canonical_role_id, res))
+        return res
+
+    gt = GTSpecProvider()
+    vlm = VLMSpecProvider()
+
+    with patch.object(sem_ont, "get_system_role_semantic_categories", side_effect=spy_fn):
+        # 1. Workshop GT and VLM
+        calls.clear()
+        w_inst = "Fasten the frame joint on the workpiece using a compatible screw and a driver from the workshop storage."
+        gt_w = gt.provide("workshop", w_inst)
+        gt_w_calls = list(calls)
+
+        calls.clear()
+        w_fixture = load_fixture("workshop")
+        adapter_w = MockFMAdapter(w_fixture)
+        with patch("mujoco_scenes.workshop_phase1.fm_adapter.FMAdapter", return_value=adapter_w), \
+             patch("mujoco_scenes.workshop_phase1.requirements.FMAdapter", return_value=adapter_w), \
+             patch("mujoco_scenes.environment_vlm_requirements.FMAdapter", return_value=adapter_w):
+            vlm_w = vlm.provide("workshop", w_inst, observation_images=[Path("/tmp/dummy_obs.png")])
+        vlm_w_calls = list(calls)
+
+        assert {c[1] for c in gt_w_calls} >= {"driver", "fastener", "repair_target"}
+        assert {c[1] for c in vlm_w_calls} >= {"driver", "fastener", "repair_target"}
+        for r_id in ("driver", "fastener", "repair_target"):
+            assert gt_w.nodes[r_id].semantic_categories == vlm_w.nodes[r_id].semantic_categories
+
+        # 2. Kitchen GT and VLM
+        calls.clear()
+        k_inst = "Prepare and serve coffee and soup for two people using the available kitchenware."
+        gt_k = gt.provide("kitchen", k_inst)
+        gt_k_calls = list(calls)
+
+        calls.clear()
+        k_fixture = load_fixture("kitchen")
+        adapter_k = MockFMAdapter(k_fixture)
+        with patch("mujoco_scenes.workshop_phase1.fm_adapter.FMAdapter", return_value=adapter_k), \
+             patch("mujoco_scenes.workshop_phase1.requirements.FMAdapter", return_value=adapter_k), \
+             patch("mujoco_scenes.environment_vlm_requirements.FMAdapter", return_value=adapter_k):
+            vlm_k = vlm.provide("kitchen", k_inst, observation_images=[Path("/tmp/dummy_obs.png")])
+        vlm_k_calls = list(calls)
+
+        assert {c[1] for c in gt_k_calls} >= {"coffee_container", "soup_container", "coffee_stirrer", "soup_eating_utensil"}
+        assert {c[1] for c in vlm_k_calls} >= {"coffee_container", "soup_container", "coffee_stirrer", "soup_eating_utensil"}
+        for r_id in ("coffee_container", "soup_container", "coffee_stirrer", "soup_eating_utensil"):
+            assert gt_k.nodes[r_id].semantic_categories == vlm_k.nodes[r_id].semantic_categories
+
+        # 3. Living Room GT and VLM
+        calls.clear()
+        l_inst = "Prepare the living room for two people watching television."
+        gt_l = gt.provide("living_room", l_inst)
+        gt_l_calls = list(calls)
+
+        calls.clear()
+        l_fixture = load_fixture("living_room")
+        adapter_l = MockFMAdapter(l_fixture)
+        with patch("mujoco_scenes.workshop_phase1.fm_adapter.FMAdapter", return_value=adapter_l), \
+             patch("mujoco_scenes.workshop_phase1.requirements.FMAdapter", return_value=adapter_l), \
+             patch("mujoco_scenes.environment_vlm_requirements.FMAdapter", return_value=adapter_l):
+            vlm_l = vlm.provide("living_room", l_inst, observation_images=[Path("/tmp/dummy_obs.png")])
+        vlm_l_calls = list(calls)
+
+        assert {c[1] for c in gt_l_calls} >= {"PERSONAL_CUP_SAUCER_REGION", "SHARED_REMOTE_REGION", "CUP_SAUCER_SET", "REMOTE"}
+        assert {c[1] for c in vlm_l_calls} >= {"PERSONAL_CUP_SAUCER_REGION", "SHARED_REMOTE_REGION", "CUP_SAUCER_SET", "REMOTE"}
+        for r_id in ("PERSONAL_CUP_SAUCER_REGION", "SHARED_REMOTE_REGION", "CUP_SAUCER_SET", "REMOTE", "SEATING_POSITION", "SEATING_PAIR"):
+            assert gt_l.nodes[r_id].semantic_categories == vlm_l.nodes[r_id].semantic_categories
+
+
+def test_semantic_ontology_fails_closed_on_missing_or_malformed_config(tmp_path):
+    """Verify that role_semantic_ontology fails closed with SemanticOntologyConfigurationError."""
+    from mujoco_scenes.functional_tamp_pipeline.errors import SemanticOntologyConfigurationError
+    from mujoco_scenes.functional_tamp_pipeline.role_semantic_ontology import (
+        _load_declarative_system_ontology,
+    )
+
+    # Empty directory -> missing kitchen config
+    with pytest.raises(SemanticOntologyConfigurationError) as exc_info:
+        _load_declarative_system_ontology(configs_dir=tmp_path)
+    assert "kitchen" in str(exc_info.value).lower()
+
+    # Create dummy kitchen config, but missing living room
+    (tmp_path / "s1_integrated_kitchen_object_function.yaml").write_text(
+        yaml.dump({
+            "roles": {
+                "coffee_container": {"semantic_preferences": [{"canonical_label": "cup"}]},
+                "soup_container": {"semantic_preferences": [{"canonical_label": "bowl"}]},
+                "coffee_stirrer": {"semantic_preferences": [{"canonical_label": "spoon"}]},
+                "soup_eating_utensil": {"semantic_preferences": [{"canonical_label": "spoon"}]},
+            },
+            "symbolic_task": {
+                "source_roles": {
+                    "coffee_source": {"accepted_semantic_labels": ["coffee_source"]},
+                    "water_source": {"accepted_semantic_labels": ["kettle"]},
+                }
+            }
+        })
+    )
+    with pytest.raises(SemanticOntologyConfigurationError) as exc_info:
+        _load_declarative_system_ontology(configs_dir=tmp_path)
+    assert "living_room" in str(exc_info.value).lower()
+
+    # Create living room missing required role
+    (tmp_path / "l2_integrated_region_function_task.yaml").write_text(
+        yaml.dump({
+            "semantic_requirements": {
+                "functional_roles": {
+                    "PERSONAL_CUP_SAUCER_REGION": ["side_table"],
+                    # missing others
+                }
+            }
+        })
+    )
+    with pytest.raises(SemanticOntologyConfigurationError) as exc_info:
+        _load_declarative_system_ontology(configs_dir=tmp_path)
+    assert "living_room" in str(exc_info.value).lower()
+
+
+# ==============================================================================
+# 8. PASS P3-I.3 — STRICT RAW KITCHEN CARDINALITY CONTRACT TESTS
+# ==============================================================================
+
+def test_strict_kitchen_cardinality_validation():
+    """Verify strict raw validation of binding_cardinality and bounds in Kitchen."""
+    from mujoco_scenes.workshop_phase1.fm_adapter import (
+        FMResponseValidationError,
+        validate_kitchen_functional_specification,
+    )
+
+    base_k = load_fixture("kitchen")
+
+    # 1. Unknown nested key in binding_cardinality -> reject
+    doc_bad = deepcopy(base_k)
+    doc_bad["functional_roles"][2]["binding_cardinality"]["banana"] = "whatever"
+    with pytest.raises(FMResponseValidationError):
+        validate_kitchen_functional_specification(doc_bad)
+
+    # 2. minimum_distinct_physical_objects = 0 -> reject
+    doc_bad = deepcopy(base_k)
+    doc_bad["functional_roles"][2]["binding_cardinality"]["minimum_distinct_physical_objects"] = 0
+    with pytest.raises(FMResponseValidationError):
+        validate_kitchen_functional_specification(doc_bad)
+
+    # 3. maximum < minimum -> reject
+    doc_bad = deepcopy(base_k)
+    doc_bad["functional_roles"][2]["binding_cardinality"]["minimum_distinct_physical_objects"] = 2
+    doc_bad["functional_roles"][2]["binding_cardinality"]["maximum_distinct_physical_objects"] = 1
+    with pytest.raises(FMResponseValidationError):
+        validate_kitchen_functional_specification(doc_bad)
+
+    # 4. maximum > required_count -> reject
+    doc_bad = deepcopy(base_k)
+    doc_bad["functional_roles"][2]["required_count"] = 2
+    doc_bad["functional_roles"][2]["binding_cardinality"]["maximum_distinct_physical_objects"] = 3
+    with pytest.raises(FMResponseValidationError):
+        validate_kitchen_functional_specification(doc_bad)
+
+    # 5. boolean passed as integer -> reject
+    doc_bad = deepcopy(base_k)
+    doc_bad["functional_roles"][2]["binding_cardinality"]["minimum_distinct_physical_objects"] = True
+    with pytest.raises(FMResponseValidationError):
+        validate_kitchen_functional_specification(doc_bad)
+
+    # 6. invalid preference string -> reject
+    doc_bad = deepcopy(base_k)
+    doc_bad["functional_roles"][2]["binding_cardinality"]["preferred"] = "arbitrary_pref"
+    with pytest.raises(FMResponseValidationError):
+        validate_kitchen_functional_specification(doc_bad)
+
+    # 7. DISTINCT policy with bounds not equal to required_count -> reject
+    doc_bad = deepcopy(base_k)
+    doc_bad["functional_roles"][3]["binding_policy"] = "DISTINCT"
+    doc_bad["functional_roles"][3]["required_count"] = 2
+    doc_bad["functional_roles"][3]["binding_cardinality"] = {
+        "minimum_distinct_physical_objects": 1,
+        "maximum_distinct_physical_objects": 2,
+    }
+    with pytest.raises(FMResponseValidationError):
+        validate_kitchen_functional_specification(doc_bad)
+
+    # 8. Contradictory direct min_count and binding_cardinality -> reject
+    doc_bad = deepcopy(base_k)
+    doc_bad["functional_roles"][2]["min_count"] = 2
+    doc_bad["functional_roles"][2]["binding_cardinality"]["minimum_distinct_physical_objects"] = 1
+    with pytest.raises(FMResponseValidationError):
+        validate_kitchen_functional_specification(doc_bad)
+
+    # 9. Clean valid K1 fixture passes validation
+    clean_doc = validate_kitchen_functional_specification(base_k)
+    assert clean_doc["status"] == "SUPPORTED"
+

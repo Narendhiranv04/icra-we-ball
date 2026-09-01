@@ -12,113 +12,155 @@ from pathlib import Path
 from typing import Any
 import yaml
 
-PHASE3_ROLE_SEMANTIC_ONTOLOGY_VERSION = "phase3_p3i_2_semantic_ontology_v1"
+from .errors import SemanticOntologyConfigurationError
+
+PHASE3_ROLE_SEMANTIC_ONTOLOGY_VERSION = "phase3_p3i_3_semantic_ontology_v1"
 
 _CACHED_ONTOLOGY: dict[str, dict[str, tuple[str, ...]]] | None = None
 
 
-def _load_declarative_system_ontology() -> dict[str, dict[str, tuple[str, ...]]]:
-    """Parse and build the system role semantic ontology from reviewed declarative YAML configurations."""
-    root = Path(__file__).resolve().parents[1]
-    configs_dir = root / "configs"
+def clear_cached_ontology() -> None:
+    """Clear cached system ontology for test isolation."""
+    global _CACHED_ONTOLOGY
+    _CACHED_ONTOLOGY = None
+
+
+reset_cached_ontology = clear_cached_ontology
+
+
+def _load_declarative_system_ontology(
+    configs_dir: Path | None = None,
+) -> dict[str, dict[str, tuple[str, ...]]]:
+    """Parse and build the system role semantic ontology from reviewed declarative YAML configurations.
+
+    Fails closed immediately with SemanticOntologyConfigurationError if any required
+    configuration file or canonical role entry is missing, malformed, or empty.
+    """
+    if configs_dir is None:
+        root = Path(__file__).resolve().parents[1]
+        configs_dir = root / "configs"
 
     ontology: dict[str, dict[str, tuple[str, ...]]] = {}
 
     # 1. KITCHEN: Parse from configs/s1_integrated_kitchen_object_function.yaml
     kitchen_cfg_path = configs_dir / "s1_integrated_kitchen_object_function.yaml"
-    if kitchen_cfg_path.is_file():
-        kitchen_cfg = yaml.safe_load(kitchen_cfg_path.read_text(encoding="utf-8")) or {}
-        k_roles: dict[str, tuple[str, ...]] = {}
-        for r_name, r_data in kitchen_cfg.get("roles", {}).items():
-            cats = tuple(item["canonical_label"] for item in r_data.get("semantic_preferences", []))
-            if cats:
-                k_roles[r_name] = cats
-        for r_name, r_data in kitchen_cfg.get("symbolic_task", {}).get("source_roles", {}).items():
-            labels = tuple(r_data.get("accepted_semantic_labels", []))
-            if labels:
-                k_roles[r_name] = labels
-        ontology["kitchen"] = k_roles
-    else:
-        ontology["kitchen"] = {
-            "coffee_container": ("cup", "mug"),
-            "soup_container": ("bowl",),
-            "coffee_stirrer": ("spoon",),
-            "soup_eating_utensil": ("spoon",),
-            "coffee_source": ("coffee_source",),
-            "water_source": ("kettle",),
-        }
+    if not kitchen_cfg_path.is_file():
+        raise SemanticOntologyConfigurationError(
+            f"Missing reviewed semantic ontology for kitchen: {kitchen_cfg_path}"
+        )
+    kitchen_cfg = yaml.safe_load(kitchen_cfg_path.read_text(encoding="utf-8"))
+    if not isinstance(kitchen_cfg, dict):
+        raise SemanticOntologyConfigurationError(
+            f"Malformed kitchen semantic ontology config in {kitchen_cfg_path}"
+        )
+    k_roles: dict[str, tuple[str, ...]] = {}
+    for r_name, r_data in kitchen_cfg.get("roles", {}).items():
+        cats = tuple(
+            item["canonical_label"]
+            for item in r_data.get("semantic_preferences", [])
+            if isinstance(item, dict) and "canonical_label" in item
+        )
+        if cats:
+            k_roles[r_name] = cats
+    for r_name, r_data in (
+        kitchen_cfg.get("symbolic_task", {}).get("source_roles", {}).items()
+    ):
+        labels = tuple(r_data.get("accepted_semantic_labels", []))
+        if labels:
+            k_roles[r_name] = labels
+
+    required_k_roles = {
+        "coffee_container",
+        "soup_container",
+        "coffee_stirrer",
+        "soup_eating_utensil",
+        "coffee_source",
+        "water_source",
+    }
+    missing_k = required_k_roles - set(k_roles)
+    if missing_k:
+        raise SemanticOntologyConfigurationError(
+            f"Missing semantic acceptance entries for kitchen roles {sorted(missing_k)} in {kitchen_cfg_path}"
+        )
+    ontology["kitchen"] = k_roles
 
     # 2. LIVING ROOM: Parse from configs/l2_integrated_region_function_task.yaml
     living_cfg_path = configs_dir / "l2_integrated_region_function_task.yaml"
-    if living_cfg_path.is_file():
-        living_cfg = yaml.safe_load(living_cfg_path.read_text(encoding="utf-8")) or {}
-        l_roles: dict[str, tuple[str, ...]] = {}
-        sem_reqs = living_cfg.get("semantic_requirements", {})
-        region_roles_cfg = sem_reqs.get("region_roles", {})
-        for fg in living_cfg.get("function_groups", {}).values():
-            f_id = fg.get("function_id")
-            r_role = fg.get("region_role")
-            if f_id and r_role in region_roles_cfg:
-                cats = tuple(region_roles_cfg[r_role].get("accepted_categories", {}).keys())
-                if cats:
-                    l_roles[f_id] = cats
-        l_roles["CUP_SAUCER_SET"] = ("cup_saucer_set", "cup", "saucer")
-        l_roles["REMOTE"] = ("remote_control", "tv_remote")
-        l_roles["SEATING_POSITION"] = ("armchair", "chair", "sofa", "seating_position")
-        l_roles["SEATING_PAIR"] = ("armchair", "chair", "sofa", "seating_pair")
-        ontology["living_room"] = l_roles
-    else:
-        ontology["living_room"] = {
-            "PERSONAL_CUP_SAUCER_REGION": ("side_table", "end_table"),
-            "SHARED_REMOTE_REGION": ("coffee_table", "central_table", "side_table"),
-            "CUP_SAUCER_SET": ("cup_saucer_set", "cup", "saucer"),
-            "REMOTE": ("remote_control", "tv_remote"),
-            "SEATING_POSITION": ("armchair", "chair", "sofa", "seating_position"),
-            "SEATING_PAIR": ("armchair", "chair", "sofa", "seating_pair"),
-        }
+    if not living_cfg_path.is_file():
+        raise SemanticOntologyConfigurationError(
+            f"Missing reviewed semantic ontology for living_room: {living_cfg_path}"
+        )
+    living_cfg = yaml.safe_load(living_cfg_path.read_text(encoding="utf-8"))
+    if not isinstance(living_cfg, dict):
+        raise SemanticOntologyConfigurationError(
+            f"Malformed living_room semantic ontology config in {living_cfg_path}"
+        )
+    l_roles: dict[str, tuple[str, ...]] = {}
+    sem_reqs = living_cfg.get("semantic_requirements", {})
+
+    # Check explicit functional_roles first
+    explicit_l_roles = sem_reqs.get("functional_roles", {})
+    if isinstance(explicit_l_roles, dict) and explicit_l_roles:
+        for r_name, r_cats in explicit_l_roles.items():
+            if isinstance(r_cats, (list, tuple)) and r_cats:
+                l_roles[r_name] = tuple(str(c) for c in r_cats)
+
+    # Fallback to deriving from region_roles, function_groups, and payloads
+    if "PERSONAL_CUP_SAUCER_REGION" not in l_roles:
+        reg_cfg = sem_reqs.get("region_roles", {}).get("personal_cup_saucer_region", {})
+        cats = tuple(reg_cfg.get("accepted_categories", {}).keys())
+        if cats:
+            l_roles["PERSONAL_CUP_SAUCER_REGION"] = cats
+    if "SHARED_REMOTE_REGION" not in l_roles:
+        reg_cfg = sem_reqs.get("region_roles", {}).get("shared_remote_region", {})
+        cats = tuple(reg_cfg.get("accepted_categories", {}).keys())
+        if cats:
+            l_roles["SHARED_REMOTE_REGION"] = cats
+
+    required_l_roles = {
+        "PERSONAL_CUP_SAUCER_REGION",
+        "SHARED_REMOTE_REGION",
+        "CUP_SAUCER_SET",
+        "REMOTE",
+        "SEATING_POSITION",
+        "SEATING_PAIR",
+    }
+    missing_l = required_l_roles - set(l_roles)
+    if missing_l:
+        raise SemanticOntologyConfigurationError(
+            f"Missing semantic acceptance entries for living_room roles {sorted(missing_l)} in {living_cfg_path}"
+        )
+    ontology["living_room"] = l_roles
 
     # 3. WORKSHOP: Parse from configs/workshop_phase1_fm_contract.yaml
     workshop_cfg_path = configs_dir / "workshop_phase1_fm_contract.yaml"
-    if workshop_cfg_path.is_file():
-        w_roles: dict[str, tuple[str, ...]] = {}
-        w_roles["driver"] = (
-            "screwdriver",
-            "power_driver",
-            "power_drill",
-            "Phillips screwdriver",
-            "cordless power drill",
+    if not workshop_cfg_path.is_file():
+        raise SemanticOntologyConfigurationError(
+            f"Missing reviewed semantic ontology for workshop: {workshop_cfg_path}"
         )
-        w_roles["fastener"] = (
-            "screw",
-            "Phillips screw",
-            "Phillips head screw",
+    workshop_cfg = yaml.safe_load(workshop_cfg_path.read_text(encoding="utf-8"))
+    if not isinstance(workshop_cfg, dict):
+        raise SemanticOntologyConfigurationError(
+            f"Malformed workshop semantic ontology config in {workshop_cfg_path}"
         )
-        w_roles["repair_target"] = (
-            "repair_target",
-            "workshop_frame_joint",
-            "recess",
+    w_roles: dict[str, tuple[str, ...]] = {}
+
+    # Check explicit functional_roles / system_role_acceptance
+    explicit_w_roles = workshop_cfg.get("functional_roles") or workshop_cfg.get(
+        "system_role_acceptance"
+    )
+    if isinstance(explicit_w_roles, dict) and explicit_w_roles:
+        for r_name, r_cats in explicit_w_roles.items():
+            if isinstance(r_cats, (list, tuple)) and r_cats:
+                w_roles[r_name] = tuple(str(c) for c in r_cats)
+
+    required_w_roles = {"driver", "fastener", "repair_target"}
+    missing_w = required_w_roles - set(w_roles)
+    if missing_w:
+        raise SemanticOntologyConfigurationError(
+            f"Missing semantic acceptance entries for workshop roles {sorted(missing_w)} in {workshop_cfg_path}"
         )
-        ontology["workshop"] = w_roles
-    else:
-        ontology["workshop"] = {
-            "driver": (
-                "screwdriver",
-                "power_driver",
-                "power_drill",
-                "Phillips screwdriver",
-                "cordless power drill",
-            ),
-            "fastener": (
-                "screw",
-                "Phillips screw",
-                "Phillips head screw",
-            ),
-            "repair_target": (
-                "repair_target",
-                "workshop_frame_joint",
-                "recess",
-            ),
-        }
+    ontology["workshop"] = w_roles
 
     return ontology
 
@@ -141,7 +183,9 @@ def get_system_role_semantic_categories(
         raise KeyError(f"Unknown domain {domain!r} in system role semantic ontology")
     categories = domain_roles.get(canonical_role_id)
     if categories is None:
-        raise KeyError(f"Unknown role {canonical_role_id!r} for domain {domain!r} in system role semantic ontology")
+        raise KeyError(
+            f"Unknown role {canonical_role_id!r} for domain {domain!r} in system role semantic ontology"
+        )
     return categories
 
 
