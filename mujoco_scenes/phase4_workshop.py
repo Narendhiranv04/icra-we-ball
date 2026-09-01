@@ -13,6 +13,7 @@ import mujoco
 from .phase4_execution import (
     ActionExecutionResult,
     classify_planner_failure,
+    normalize_planner_failure_code,
     ExecutionFailure,
     Phase4EntityMappingError,
     Phase3Handoff,
@@ -404,30 +405,44 @@ class WorkshopPhase4Adapter:
                 resolved, f"WorkshopExecutionDispatcher.{operator.lower()}", pre,
                 controller, {"success": False, "performed": False},
                 time.perf_counter() - started,
-                failure_code=(controller.get("failure_code") or "EXECUTION_ERROR"),
+                failure_code=normalize_planner_failure_code(
+                    controller.get("failure_code"),
+                    controller.get("message") or controller.get("status"),
+                    infrastructure_failure=ExecutionFailure.CONTROLLER_FAILURE.value,
+                    operator=operator,
+                ),
             )
-        self.state.apply(action)
-        self.controller_state.apply(physical_action)
         if operator == "PICK":
             post_ok = (
-                self.state.held_object == arguments[0]
-                and self.controller_state.held_object
-                == self.by_id[arguments[0]].simulator_id
-                and self.dispatcher.held_object
+                self.dispatcher.held_object
                 == self.by_id[arguments[0]].simulator_id
                 and self.dispatcher.active_grasp_weld >= 0
                 and bool(self.scene.data.eq_active[self.dispatcher.active_grasp_weld])
+                and bool(controller.get("grasp_weld_active"))
             )
         elif operator == "PLACE":
             post_ok = (
-                self.state.held_object is None
-                and self.state.object_locations.get(arguments[0]) == arguments[1]
-                and self.controller_state.held_object is None
-                and self.dispatcher.held_object is None
+                self.dispatcher.held_object is None
+                and bool(controller.get("success"))
             )
         else:
-            post_ok = self.state.repaired_joint == arguments[2]
-        post = {"success": bool(post_ok), "state": self.state.to_dict()}
+            post_ok = bool(
+                controller.get("joint_repaired_state")
+                and self.scene.state.joint_repaired
+            )
+        physical_post = {
+            "success": bool(post_ok),
+            "dispatcher_held_object": self.dispatcher.held_object,
+            "simulator_joint_repaired": bool(self.scene.state.joint_repaired),
+        }
+        if post_ok:
+            self.state.apply(action)
+            self.controller_state.apply(physical_action)
+        post = {
+            **physical_post,
+            "state": self.state.to_dict(),
+            "controller_state": self.controller_state.to_dict(),
+        }
         if post_ok:
             self.successful_actions += 1
         return ActionExecutionResult(

@@ -842,25 +842,24 @@ class KitchenGroundTruthExecutionDispatcher:
         return self.phase_b.phase_a.request("CLOSE", container, execute=True)
 
     @staticmethod
-    def _preclose_errors(payload: Any) -> list[float]:
-        errors: list[float] = []
-        if isinstance(payload, dict):
-            for key, value in payload.items():
-                if key in {
-                    "preclose_cartesian_error_m",
-                    "measured_gripper_target_error_m",
-                } and isinstance(value, (int, float)):
-                    errors.append(float(value))
-                else:
-                    errors.extend(
-                        KitchenGroundTruthExecutionDispatcher._preclose_errors(value)
-                    )
-        elif isinstance(payload, list):
-            for value in payload:
-                errors.extend(
-                    KitchenGroundTruthExecutionDispatcher._preclose_errors(value)
-                )
-        return errors
+    def _final_preclose_error(payload: dict[str, Any]) -> tuple[float | None, str | None]:
+        """Read only explicit final-attempt telemetry, never historical retries."""
+        paths = (
+            ("preclose_cartesian_error_m",),
+            ("measured_gripper_target_error_m",),
+            ("preclose_telemetry", "preclose_cartesian_error_m"),
+            ("direct_grasp_analysis", "preclose_telemetry", "preclose_cartesian_error_m"),
+        )
+        for path in paths:
+            value: Any = payload
+            for key in path:
+                if not isinstance(value, dict) or key not in value:
+                    value = None
+                    break
+                value = value[key]
+            if isinstance(value, (int, float)):
+                return float(value), ".".join(path)
+        return None, None
 
     def _benchmark_pick_recovery_evidence(
         self, object_id: str, physical_result: dict[str, Any]
@@ -884,21 +883,30 @@ class KitchenGroundTruthExecutionDispatcher:
                     distances.append(float(np.linalg.norm(
                         grip - self.scene.data.geom_xpos[geom_id]
                     )))
-        preclose_errors = self._preclose_errors(physical_result)
         measured_distance = min(distances, default=float("inf"))
-        measured_preclose = min(preclose_errors, default=float("inf"))
+        reported_preclose, reported_path = self._final_preclose_error(
+            physical_result
+        )
         threshold = 0.10
+        evidence_distance = (
+            reported_preclose
+            if reported_preclose is not None else measured_distance
+        )
         accepted = bool(
             not self.assisted_suite
-            and min(measured_distance, measured_preclose) <= threshold
+            and evidence_distance <= threshold
         )
         return {
             "accepted": accepted,
             "threshold_m": threshold,
             "minimum_gripper_object_geometry_distance_m": measured_distance,
-            "minimum_reported_preclose_error_m": measured_preclose,
+            "final_reported_preclose_error_m": reported_preclose,
+            "final_reported_preclose_error_path": reported_path,
+            "authorization_distance_m": evidence_distance,
             "evidence_mode": (
-                "LIVE_GEOMETRY_OR_CONTROLLER_PRECLOSE"
+                "EXPLICIT_FINAL_CONTROLLER_PRECLOSE"
+                if accepted and reported_preclose is not None else
+                "LIVE_EXACT_OBJECT_GEOMETRY"
                 if accepted else "APPROACH_NOT_REACHED"
             ),
             "exact_planned_object": object_id,

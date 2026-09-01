@@ -118,6 +118,24 @@ def classify_planner_failure(
     return "EXECUTION_ERROR"
 
 
+def normalize_planner_failure_code(
+    code: str | None,
+    message: str | None,
+    *,
+    infrastructure_failure: str,
+    operator: str | None = None,
+) -> str | None:
+    """Preserve only public codes; derive a stable code for all other input."""
+    if code in PLANNER_FAILURE_CODES:
+        return code
+    diagnostic = message if message else code
+    return classify_planner_failure(
+        diagnostic,
+        infrastructure_failure=infrastructure_failure,
+        operator=operator,
+    )
+
+
 class UpstreamPhase3Blocked(ValueError):
     """Raised when Phase 3 explicitly ended without an executable plan."""
 
@@ -459,7 +477,41 @@ class Phase4Executor:
         records = []
         if inspections_succeeded:
             for action in selected:
-                record = self.adapter.execute_action(action)
+                try:
+                    record = self.adapter.execute_action(action)
+                except Exception as error:
+                    operator = str(action.get("operator", "UNKNOWN"))
+                    message = f"{type(error).__name__}: {error}"
+                    record = ActionExecutionResult(
+                        action_index=int(action.get("action_index", 0)),
+                        action_instance_id=str(
+                            action.get("action_instance_id", "unknown_action")
+                        ),
+                        operator=operator,
+                        arguments=list(action.get("arguments", [])),
+                        success=False,
+                        failure=ExecutionFailure.CONTROLLER_FAILURE.value,
+                        resolved_arguments=[],
+                        primitive=None,
+                        pre_check={"success": False, "performed": False},
+                        controller_result={
+                            "success": False,
+                            "status": "UNEXPECTED_ADAPTER_EXCEPTION",
+                            "failure_type": type(error).__name__,
+                            "failure_reason": str(error),
+                            "message": str(error),
+                        },
+                        post_check={"success": False, "performed": False},
+                        wall_duration_s=0.0,
+                        failure_code=normalize_planner_failure_code(
+                            None,
+                            message,
+                            infrastructure_failure=(
+                                ExecutionFailure.CONTROLLER_FAILURE.value
+                            ),
+                            operator=operator,
+                        ),
+                    )
                 records.append(record.to_dict())
                 if not record.success:
                     break

@@ -10,11 +10,61 @@ from typing import Any
 from .living_room_mobile_execution import run_mobile_execution
 from .phase4_execution import (
     ExecutionFailure,
-    classify_planner_failure,
+    normalize_planner_failure_code,
     Phase4EntityMappingError,
     Phase3Handoff,
     audit_strict_telemetry,
 )
+
+
+def normalize_living_room_action_result(
+    action: dict[str, Any],
+    controller: dict[str, Any] | None,
+    unresolved: list[str],
+    held_postcondition: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Combine mapping, controller, and independent physical post-checks."""
+    mapping_ok = not unresolved
+    controller_ok = bool(
+        controller is not None and controller.get("result") == "SUCCESS"
+    )
+    post_ok = controller_ok
+    if action["operator"] == "PICK":
+        post_ok = bool(
+            controller_ok
+            and held_postcondition is not None
+            and held_postcondition.get("validation_status") == "TRUE"
+        )
+    success = bool(mapping_ok and controller_ok and post_ok)
+    if not mapping_ok:
+        failure = ExecutionFailure.ENTITY_MAPPING_FAILURE.value
+    elif not controller_ok:
+        failure = (
+            ExecutionFailure.POSTCONDITION_VERIFICATION_FAILURE.value
+            if controller and controller.get("failure") == "POSTCONDITION_FAILED"
+            else ExecutionFailure.CONTROLLER_FAILURE.value
+        )
+    elif not post_ok:
+        failure = ExecutionFailure.POSTCONDITION_VERIFICATION_FAILURE.value
+    else:
+        failure = ExecutionFailure.NONE.value
+    message = str(unresolved) if unresolved else str(
+        controller or "controller result unavailable"
+    )
+    code = "ACCESS_BLOCKED" if (
+        action["operator"] == "PICK" and controller_ok and not post_ok
+    ) else (controller or {}).get("failure_code")
+    return {
+        "success": success,
+        "failure": failure,
+        "failure_code": normalize_planner_failure_code(
+            code,
+            message,
+            infrastructure_failure=failure,
+            operator=action["operator"],
+        ),
+        "post_check_success": post_ok,
+    }
 
 
 def _read(path: Path) -> dict[str, Any]:
@@ -146,41 +196,23 @@ def execute_living_room_handoff(
         resolved, unresolved = resolve_living_room_action_arguments(
             list(action["arguments"]), object_map, region_map
         )
-        controller_success = bool(
-            controller is not None and controller.get("result") == "SUCCESS"
-        )
         mapping_success = not unresolved
         held_postcondition = (
             next(after_pick_checks, None)
             if action["operator"] == "PICK"
             else None
         )
-        failure = ExecutionFailure.NONE.value
-        if not mapping_success:
-            controller_success = False
-            failure = ExecutionFailure.ENTITY_MAPPING_FAILURE.value
-        elif not controller_success:
-            failure = (
-                ExecutionFailure.POSTCONDITION_VERIFICATION_FAILURE.value
-                if controller and controller.get("failure") == "POSTCONDITION_FAILED"
-                else ExecutionFailure.CONTROLLER_FAILURE.value
-            )
-        failure_message = (
-            str(unresolved)
-            if unresolved else str(controller or "controller result unavailable")
+        normalized = normalize_living_room_action_result(
+            action, controller, unresolved, held_postcondition
         )
         action_results.append({
             "action_index": action["action_index"],
             "action_instance_id": action["action_instance_id"],
             "operator": action["operator"],
             "arguments": list(action["arguments"]),
-            "success": controller_success,
-            "failure": failure,
-            "failure_code": classify_planner_failure(
-                failure_message,
-                infrastructure_failure=failure,
-                operator=action["operator"],
-            ),
+            "success": normalized["success"],
+            "failure": normalized["failure"],
+            "failure_code": normalized["failure_code"],
             "resolved_arguments": resolved,
             "primitive": "living_room_mobile_execution.run_mobile_execution",
             "pre_check": {
@@ -193,13 +225,7 @@ def execute_living_room_handoff(
             },
             "controller_result": controller,
             "post_check": {
-                "success": bool(
-                    controller_success
-                    and (
-                        held_postcondition is None
-                        or held_postcondition.get("validation_status") == "TRUE"
-                    )
-                ),
+                "success": normalized["post_check_success"],
                 "held_state": held_postcondition,
                 "physical_verification": (
                     controller.get("physical_verification") if controller else None

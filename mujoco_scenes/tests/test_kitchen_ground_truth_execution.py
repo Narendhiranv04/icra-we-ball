@@ -42,6 +42,27 @@ from mujoco_scenes.kitchen_ground_truth_execution import (
 from mujoco_scenes.scene_loader import KitchenScene
 
 
+def test_pick_recovery_ignores_low_error_from_historical_nested_attempt():
+    value, path = KitchenGroundTruthExecutionDispatcher._final_preclose_error({
+        "attempts": [{"preclose_cartesian_error_m": 0.001}],
+        "direct_grasp_analysis": {
+            "preclose_telemetry": {"preclose_cartesian_error_m": 0.25}
+        },
+    })
+    assert value == 0.25
+    assert path == (
+        "direct_grasp_analysis.preclose_telemetry.preclose_cartesian_error_m"
+    )
+
+
+def test_pick_recovery_does_not_treat_historical_only_error_as_final_evidence():
+    value, path = KitchenGroundTruthExecutionDispatcher._final_preclose_error({
+        "attempts": [{"measured_gripper_target_error_m": 0.001}],
+    })
+    assert value is None
+    assert path is None
+
+
 def test_benchmark_pick_recovery_activates_matching_payload_weld_without_pose_write(
     monkeypatch,
 ):
@@ -91,7 +112,9 @@ def test_benchmark_pick_recovery_activates_matching_payload_weld_without_pose_wr
     assert result["recovery_reason"] == "FORCED_TEST_MISS"
     assert result["exact_payload_constraint_active"] is True
     assert result["held_state"]["exclusive_payload_weld"] is True
-    np.testing.assert_allclose(scene.data.xpos[body_id], position_before, atol=1e-9)
+    # Constraint activation advances physics and may produce sub-0.1 mm
+    # contact settling; this guards against pose rewriting, not natural drift.
+    np.testing.assert_allclose(scene.data.xpos[body_id], position_before, atol=1e-4)
 
 
 def test_benchmark_pick_recovery_is_forbidden_without_grasp_vicinity(monkeypatch):
@@ -118,6 +141,27 @@ def test_benchmark_pick_recovery_is_forbidden_without_grasp_vicinity(monkeypatch
         "APPROACH_NOT_REACHED"
     )
     assert dispatcher.phase_b.manipulation.executor.held_object is None
+
+
+def test_benchmark_pick_recovery_refuses_low_historical_retry_error():
+    scene = KitchenScene(
+        "S1_integrated_kitchen_object_function_feasibility_F2",
+        include_robot=True,
+        robot="google",
+    )
+    assignment = solve_ground_truth_assignment(
+        scene, "F2_DISTRIBUTED_COFFEE_TWO", "FEASIBLE"
+    )
+    dispatcher = KitchenGroundTruthExecutionDispatcher(scene, assignment)
+    source = assignment.sources["water_source"]
+    evidence = dispatcher._benchmark_pick_recovery_evidence(source, {
+        "attempts": [{"preclose_cartesian_error_m": 0.02}],
+        "direct_grasp_analysis": {
+            "preclose_telemetry": {"preclose_cartesian_error_m": 0.20}
+        },
+    })
+    assert not evidence["accepted"]
+    assert evidence["authorization_distance_m"] == 0.20
 
 
 def test_strict_pick_does_not_teleport_payload_after_physical_miss(monkeypatch):

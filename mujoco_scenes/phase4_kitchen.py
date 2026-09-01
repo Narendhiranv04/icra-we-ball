@@ -17,11 +17,13 @@ from .kitchen_ground_truth_planner import GroundTruthAssignment
 from .phase4_execution import (
     ActionExecutionResult,
     classify_planner_failure,
+    normalize_planner_failure_code,
     ExecutionFailure,
     Phase3Handoff,
     ResolvedEntity,
 )
 from .scene_loader import KitchenScene
+from .sequential_inspection import INTERFERING_OPEN_REGIONS
 
 
 REGION_IDS = frozenset({"countertop", "serving_area", "D1", "D2", "C1", "C2", "B1"})
@@ -246,6 +248,7 @@ class KitchenPhase4Adapter:
             for row in resolution["accepted"]
         }
         self.successful_actions: list[dict[str, Any]] = []
+        self.successful_inspection_history: list[str] = []
         self.expected_actions = list(handoff.actions)
         self.record_video = record_video
 
@@ -275,11 +278,15 @@ class KitchenPhase4Adapter:
                 "success": False,
                 "failure": ExecutionFailure.ENTITY_MAPPING_FAILURE.value,
                 "failure_reason": "unknown Kitchen articulated region",
+                "failure_code": "INCOMPATIBLE_TARGET",
                 "wall_duration_s": time.perf_counter() - started,
             }
-        controller = self.dispatcher.open_container(region)
+        access = self._physically_prepare_region(region)
+        controller = access["physical_open_result"]
         physically_open = region in self.dispatcher.physically_open_containers()
-        success = bool(controller.get("success") and physically_open)
+        success = bool(access["success"] and physically_open)
+        if success:
+            self.successful_inspection_history.append(region)
         return {
             "region": region,
             "success": success,
@@ -288,7 +295,11 @@ class KitchenPhase4Adapter:
                 if success
                 else ExecutionFailure.POSTCONDITION_VERIFICATION_FAILURE.value
             ),
+            "failure_code": (
+                None if success else access.get("failure_code", "EXECUTION_ERROR")
+            ),
             "primitive": "KitchenGroundTruthExecutionDispatcher.open_container",
+            "access_preparation": access,
             "controller_result": controller,
             "post_check": {
                 "success": physically_open,
@@ -298,6 +309,90 @@ class KitchenPhase4Adapter:
             },
             "direct_container_state_write_used": False,
             "wall_duration_s": time.perf_counter() - started,
+        }
+
+    def _physically_prepare_region(self, region: str) -> dict[str, Any]:
+        """Close documented interference, then physically open ``region``."""
+        open_before = self.dispatcher.physically_open_containers()
+        conflicting = INTERFERING_OPEN_REGIONS.get(region)
+        conflicting_was_open = bool(conflicting and conflicting in open_before)
+        close_result = None
+        close_verified = True
+        if conflicting_was_open:
+            close_result = self.dispatcher.close_container(conflicting)
+            close_verified = bool(
+                close_result.get("success")
+                and conflicting not in self.dispatcher.physically_open_containers()
+            )
+        open_result = {"success": False, "status": "CONFLICT_CLOSE_FAILED"}
+        if close_verified:
+            open_result = self.dispatcher.open_container(region)
+        open_verified = bool(
+            open_result.get("success")
+            and region in self.dispatcher.physically_open_containers()
+        )
+        return {
+            "success": bool(close_verified and open_verified),
+            "source_region": region,
+            "conflicting_region": conflicting,
+            "conflicting_region_was_open": conflicting_was_open,
+            "physical_close_result": close_result,
+            "physical_close_verified": close_verified,
+            "physical_open_result": open_result,
+            "physical_open_verified": open_verified,
+            "failure_code": (
+                None if close_verified and open_verified else
+                normalize_planner_failure_code(
+                    (
+                        (close_result or {}).get("failure_code")
+                        if not close_verified else open_result.get("failure_code")
+                    ),
+                    str(close_result if not close_verified else open_result),
+                    infrastructure_failure=ExecutionFailure.CONTROLLER_FAILURE.value,
+                    operator="OPEN",
+                )
+            ),
+        }
+
+    def _pick_source_region(self, action: dict[str, Any]) -> str | None:
+        if action["operator"] != "PICK" or not action["arguments"]:
+            return None
+        return self.dispatcher.inventory_by_id.get(
+            action["arguments"][0], {}
+        ).get("source_context", {}).get("source_container")
+
+    def _prepare_pick_access(self, action: dict[str, Any]) -> dict[str, Any]:
+        source = self._pick_source_region(action)
+        if not source:
+            return {
+                "success": True, "source_region": None,
+                "source_was_closed": False, "performed": False,
+            }
+        source_was_closed = source not in self.dispatcher.physically_open_containers()
+        previously_inspected = source in self.successful_inspection_history
+        if not source_was_closed:
+            return {
+                "success": True, "source_region": source,
+                "source_was_closed": False,
+                "source_was_previously_inspected": previously_inspected,
+                "performed": False,
+            }
+        if not previously_inspected:
+            return {
+                "success": False, "source_region": source,
+                "source_was_closed": True,
+                "source_was_previously_inspected": False,
+                "performed": False,
+                "failure": ExecutionFailure.PRECONDITION_STATE_FAILURE.value,
+                "failure_code": "REGION_CLOSED",
+                "reason": f"source region {source} is closed and was not inspected",
+            }
+        prepared = self._physically_prepare_region(source)
+        return {
+            **prepared,
+            "source_was_closed": True,
+            "source_was_previously_inspected": True,
+            "performed": True,
         }
 
     def _resolve_arguments(self, action: dict[str, Any]) -> list[ResolvedEntity]:
@@ -327,16 +422,18 @@ class KitchenPhase4Adapter:
         arguments = action["arguments"]
         held = self._held_planner_id()
         if operator == "PICK":
-            source = self.dispatcher.inventory_by_id.get(
-                arguments[0], {}
-            ).get("source_context", {}).get("source_container")
+            source = self._pick_source_region(action)
             source_closed = bool(
                 source and source not in self.dispatcher.physically_open_containers()
             )
-            valid = held is None and not source_closed
+            closed_without_authority = bool(
+                source_closed and source not in self.successful_inspection_history
+            )
+            valid = held is None and not closed_without_authority
             reason = (
-                f"source region {source} is closed"
-                if source_closed else None if valid else f"hand already holds {held}"
+                f"source region {source} is closed and was not inspected"
+                if closed_without_authority
+                else None if valid else f"hand already holds {held}"
             )
         elif operator in {"PLACE", "POUR", "STIR"}:
             valid = bool(arguments) and held == arguments[0]
@@ -432,7 +529,30 @@ class KitchenPhase4Adapter:
                     operator=operator,
                 ),
             )
+        access_preparation = self._prepare_pick_access(action)
+        if not access_preparation["success"]:
+            failure = access_preparation.get(
+                "failure", ExecutionFailure.CONTROLLER_FAILURE.value
+            )
+            return ActionExecutionResult(
+                action["action_index"], action["action_instance_id"], operator,
+                list(action["arguments"]), False, failure,
+                resolved_rows, f"KitchenGroundTruthExecutionDispatcher.{operator.lower()}",
+                pre, {"success": False, "access_preparation": access_preparation},
+                {"success": False, "performed": False},
+                time.perf_counter() - started,
+                failure_code=(
+                    access_preparation.get("failure_code")
+                    or classify_planner_failure(
+                        str(access_preparation),
+                        infrastructure_failure=failure,
+                        operator=operator,
+                    )
+                ),
+            )
         controller = self.dispatcher.execute_action(action)
+        if operator == "PICK":
+            controller["access_preparation"] = access_preparation
         if not controller.get("success"):
             return ActionExecutionResult(
                 action["action_index"], action["action_instance_id"], operator,
@@ -441,13 +561,11 @@ class KitchenPhase4Adapter:
                 resolved_rows, f"KitchenGroundTruthExecutionDispatcher.{operator.lower()}",
                 pre, controller, {"success": False, "performed": False},
                 time.perf_counter() - started,
-                failure_code=(
-                    controller.get("failure_code")
-                    or classify_planner_failure(
-                        controller.get("message") or controller.get("status") or str(controller),
-                        infrastructure_failure=ExecutionFailure.CONTROLLER_FAILURE.value,
-                        operator=operator,
-                    )
+                failure_code=normalize_planner_failure_code(
+                    controller.get("failure_code"),
+                    controller.get("message") or controller.get("status") or str(controller),
+                    infrastructure_failure=ExecutionFailure.CONTROLLER_FAILURE.value,
+                    operator=operator,
                 ),
             )
         post = self._post_check(action, controller)
@@ -481,9 +599,6 @@ class KitchenPhase4Adapter:
     def final_verification(self) -> dict[str, Any]:
         completed = len(self.successful_actions)
         open_regions = self.dispatcher.physically_open_containers()
-        inspections_remain_open = set(self.expected_inspected_regions).issubset(
-            open_regions
-        )
         expected_held = None
         for action in self.expected_actions:
             if action["operator"] == "PICK":
@@ -498,7 +613,10 @@ class KitchenPhase4Adapter:
                 row["post_check"].get("success") for row in self.successful_actions
             ),
             "terminal_held_object_matches_plan": actual_held == expected_held,
-            "inspection_regions_remain_physically_open": inspections_remain_open,
+            "exact_inspection_history_replayed": (
+                tuple(self.successful_inspection_history)
+                == self.expected_inspected_regions
+            ),
             "all_planned_objects_resolved": all(
                 argument in self.by_id
                 for action in self.expected_actions
@@ -515,6 +633,9 @@ class KitchenPhase4Adapter:
             "expected_action_count": len(self.expected_actions),
             "held_object": actual_held,
             "expected_terminal_held_object": expected_held,
-            "inspection_regions_remain_physically_open": inspections_remain_open,
+            "successful_inspection_history": list(
+                self.successful_inspection_history
+            ),
+            "expected_inspection_history": list(self.expected_inspected_regions),
             "physically_open_containers": sorted(open_regions),
         }

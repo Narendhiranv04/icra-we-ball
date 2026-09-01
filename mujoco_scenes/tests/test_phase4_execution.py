@@ -19,6 +19,7 @@ from mujoco_scenes.phase4_execution import (
     load_phase3_handoff,
     audit_strict_telemetry,
     classify_planner_failure,
+    normalize_planner_failure_code,
 )
 from mujoco_scenes.phase4_kitchen import KitchenPhase4Adapter
 from mujoco_scenes.phase4_workshop_entities import (
@@ -46,6 +47,7 @@ from mujoco_scenes.living_room_mobile_execution import (
     post_release_dynamics_modification_enabled,
 )
 from mujoco_scenes.phase4_living_room import (
+    normalize_living_room_action_result,
     resolve_living_room_action_arguments,
     validate_living_room_plan_ids,
 )
@@ -272,6 +274,42 @@ def test_executor_stops_and_classifies_controller_failure(tmp_path):
     assert not result["success"]
     assert result["actions_completed"] == 0
     assert result["failure"] == ExecutionFailure.CONTROLLER_FAILURE.value
+
+
+def test_executor_contains_unexpected_adapter_exception(tmp_path):
+    class RaisingAdapter(_Adapter):
+        def execute_action(self, action):
+            raise ValueError("unexpected native failure")
+
+    result = Phase4Executor(_handoff(tmp_path), RaisingAdapter()).run()
+    row = result["action_results"][0]
+    assert result["failure_stage"] == "TASK_ACTION"
+    assert row["failure"] == ExecutionFailure.CONTROLLER_FAILURE.value
+    assert row["failure_code"] == "EXECUTION_ERROR"
+    assert row["controller_result"]["failure_type"] == "ValueError"
+
+
+def test_failure_code_normalization_preserves_only_public_codes():
+    assert normalize_planner_failure_code(
+        "MOTION_INFEASIBLE", "ignored",
+        infrastructure_failure=ExecutionFailure.CONTROLLER_FAILURE.value,
+    ) == "MOTION_INFEASIBLE"
+    assert normalize_planner_failure_code(
+        "IK_INTERNAL_17", "IK_UNREACHABLE",
+        infrastructure_failure=ExecutionFailure.CONTROLLER_FAILURE.value,
+    ) == "MOTION_INFEASIBLE"
+    assert normalize_planner_failure_code(
+        None, "collision during approach",
+        infrastructure_failure=ExecutionFailure.CONTROLLER_FAILURE.value,
+    ) == "MOTION_INFEASIBLE"
+    assert normalize_planner_failure_code(
+        None, "bilateral grasp contact missing",
+        infrastructure_failure=ExecutionFailure.CONTROLLER_FAILURE.value,
+    ) == "ACCESS_BLOCKED"
+    assert normalize_planner_failure_code(
+        "PRIVATE_RETRY_CODE", "unknown internal controller issue",
+        infrastructure_failure=ExecutionFailure.CONTROLLER_FAILURE.value,
+    ) == "EXECUTION_ERROR"
 
 
 def test_executor_replays_inspection_before_immutable_plan(tmp_path):
@@ -698,6 +736,208 @@ def test_closed_region_precondition_uses_public_region_closed_code():
     assert result.failure_code == "REGION_CLOSED"
 
 
+def test_living_pick_requires_held_postcondition_even_after_controller_success():
+    action = {"operator": "PICK", "arguments": ["object_0001"]}
+    result = normalize_living_room_action_result(
+        action,
+        {"result": "SUCCESS"},
+        [],
+        {"validation_status": "FALSE"},
+    )
+    assert not result["success"]
+    assert result["failure"] == (
+        ExecutionFailure.POSTCONDITION_VERIFICATION_FAILURE.value
+    )
+    assert result["failure_code"] == "ACCESS_BLOCKED"
+
+
+def test_kitchen_inspection_closes_interfering_region_and_preserves_history():
+    class Dispatcher:
+        def __init__(self):
+            self.open_regions = set()
+            self.closed = []
+
+        def physically_open_containers(self):
+            return set(self.open_regions)
+
+        def open_container(self, region):
+            self.open_regions.add(region)
+            return {"success": True, "status": "OPENED"}
+
+        def close_container(self, region):
+            self.closed.append(region)
+            self.open_regions.discard(region)
+            return {"success": True, "status": "CLOSED"}
+
+    adapter = KitchenPhase4Adapter.__new__(KitchenPhase4Adapter)
+    adapter.dispatcher = Dispatcher()
+    adapter.successful_inspection_history = []
+    assert adapter.execute_inspection_open("C2")["success"]
+    assert adapter.execute_inspection_open("B1")["success"]
+    assert adapter.dispatcher.closed == ["C2"]
+    assert adapter.successful_inspection_history == ["C2", "B1"]
+    assert adapter.dispatcher.physically_open_containers() == {"B1"}
+    adapter.expected_inspected_regions = ("C2", "B1")
+    adapter.expected_actions = []
+    adapter.successful_actions = []
+    adapter.by_id = {}
+    adapter._held_planner_id = lambda: None
+    assert adapter.final_verification()["success"]
+
+
+def test_kitchen_closed_pick_source_requires_prior_inspection():
+    class Dispatcher:
+        inventory_by_id = {
+            "object_0001": {"source_context": {"source_container": "C2"}}
+        }
+
+        def physically_open_containers(self):
+            return set()
+
+    adapter = KitchenPhase4Adapter.__new__(KitchenPhase4Adapter)
+    adapter.dispatcher = Dispatcher()
+    adapter.successful_inspection_history = []
+    action = {"operator": "PICK", "arguments": ["object_0001"]}
+    result = adapter._prepare_pick_access(action)
+    assert not result["success"]
+    assert result["failure_code"] == "REGION_CLOSED"
+
+
+def test_kitchen_inspected_closed_pick_prepares_access_without_changing_plan():
+    class Dispatcher:
+        inventory_by_id = {
+            "object_0001": {"source_context": {"source_container": "C2"}}
+        }
+
+        def __init__(self):
+            self.open_regions = {"B1"}
+
+        def physically_open_containers(self):
+            return set(self.open_regions)
+
+        def close_container(self, region):
+            self.open_regions.discard(region)
+            return {"success": True}
+
+        def open_container(self, region):
+            self.open_regions.add(region)
+            return {"success": True}
+
+    action = {
+        "action_index": 1,
+        "action_instance_id": "fact_001_pick",
+        "operator": "PICK",
+        "arguments": ["object_0001"],
+    }
+    adapter = KitchenPhase4Adapter.__new__(KitchenPhase4Adapter)
+    adapter.dispatcher = Dispatcher()
+    adapter.successful_inspection_history = ["C2", "B1"]
+    adapter.expected_actions = [dict(action)]
+    result = adapter._prepare_pick_access(action)
+    assert result["success"]
+    assert result["conflicting_region"] == "B1"
+    assert result["physical_close_verified"]
+    assert result["physical_open_verified"]
+    assert adapter.expected_actions == [action]
+    assert adapter.dispatcher.open_regions == {"C2"}
+
+
+def test_workshop_failed_physical_postcheck_does_not_apply_symbolic_state():
+    class State:
+        def __init__(self):
+            self.applied = []
+
+        def check(self, action, assignment):
+            return True, None
+
+        def apply(self, action):
+            self.applied.append(action)
+
+        def to_dict(self):
+            return {"applied": len(self.applied)}
+
+    class Dispatcher:
+        held_object = None
+        active_grasp_weld = -1
+
+        def execute(self, action, state):
+            return {"success": True, "grasp_weld_active": False}
+
+    adapter = WorkshopPhase4Adapter.__new__(WorkshopPhase4Adapter)
+    adapter.by_id = {
+        "object_0001": ResolvedEntity(
+            "object_0001", "OBJECT", "workshop_power_driver"
+        )
+    }
+    adapter.state = State()
+    adapter.controller_state = State()
+    adapter.assignment = object()
+    adapter.dispatcher = Dispatcher()
+    adapter.scene = SimpleNamespace(
+        data=SimpleNamespace(eq_active=np.zeros(1, dtype=bool)),
+        state=SimpleNamespace(joint_repaired=False),
+    )
+    adapter.successful_actions = 0
+    result = adapter.execute_action({
+        "action_index": 1,
+        "action_instance_id": "fact_001_pick",
+        "operator": "PICK",
+        "arguments": ["object_0001"],
+    })
+    assert result.failure == (
+        ExecutionFailure.POSTCONDITION_VERIFICATION_FAILURE.value
+    )
+    assert adapter.state.applied == []
+    assert adapter.controller_state.applied == []
+
+
+def test_workshop_verified_physical_postcheck_commits_both_states():
+    class State:
+        def __init__(self):
+            self.applied = []
+
+        def check(self, action, assignment):
+            return True, None
+
+        def apply(self, action):
+            self.applied.append(action)
+
+        def to_dict(self):
+            return {"applied": len(self.applied)}
+
+    class Dispatcher:
+        held_object = "workshop_power_driver"
+        active_grasp_weld = 0
+
+        def execute(self, action, state):
+            return {"success": True, "grasp_weld_active": True}
+
+    adapter = WorkshopPhase4Adapter.__new__(WorkshopPhase4Adapter)
+    adapter.by_id = {
+        "object_0001": ResolvedEntity(
+            "object_0001", "OBJECT", "workshop_power_driver"
+        )
+    }
+    adapter.state = State()
+    adapter.controller_state = State()
+    adapter.assignment = object()
+    adapter.dispatcher = Dispatcher()
+    adapter.scene = SimpleNamespace(
+        data=SimpleNamespace(eq_active=np.ones(1, dtype=bool)),
+        state=SimpleNamespace(joint_repaired=False),
+    )
+    adapter.successful_actions = 0
+    result = adapter.execute_action({
+        "action_index": 1,
+        "action_instance_id": "fact_001_pick",
+        "operator": "PICK",
+        "arguments": ["object_0001"],
+    })
+    assert result.success
+    assert len(adapter.state.applied) == 1
+    assert len(adapter.controller_state.applied) == 1
+
+
 def test_kitchen_terminal_verifier_requires_exact_actions_held_state_and_open_regions():
     class Dispatcher:
         def physically_open_containers(self):
@@ -723,6 +963,7 @@ def test_kitchen_terminal_verifier_requires_exact_actions_held_state_and_open_re
         {"action": action, "post_check": {"success": True}}
         for action in actions
     ]
+    adapter.successful_inspection_history = ["D1"]
     adapter._held_planner_id = lambda: None
     result = adapter.final_verification()
     assert result["performed"] is True
