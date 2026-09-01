@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-import shutil
 from typing import Any
 
 import yaml
@@ -426,41 +425,32 @@ def run_to_plan(
     scene = scene or scene_for_variant(internal_variant)
     contract = compile_kitchen_contract_from_graph(specification)
 
-    vocabulary_path = output_dir / "kitchen_vocabulary.yaml"
+    phase1_dir = output_dir / "observed_search" / "phase1"
+    # Dump task-scoped vocabulary for perception
     root = Path(__file__).resolve().parents[2]
     base_vocab_path = Path(specification.metadata.get("semantic_vocabulary_path", root / "configs" / "semantic_vocabulary.yaml"))
-    canonical_labels: dict[str, list[str]] = {}
+    base_vocab: dict[str, Any] = {}
     if base_vocab_path.is_file():
-        base_vocab = yaml.safe_load(base_vocab_path.read_text(encoding="utf-8"))
-        canonical_labels = dict(base_vocab.get("canonical_labels", {}))
+        base_vocab = yaml.safe_load(base_vocab_path.read_text(encoding="utf-8")) or {}
 
-    existing_aliases = {
-        alias.strip().lower()
-        for aliases in canonical_labels.values()
-        for alias in aliases
-    }
+    all_system_role_cats: set[str] = set()
     for role in specification.nodes.values():
-        for cat in role.semantic_categories:
-            norm_cat = cat.strip().lower()
-            norm_space = norm_cat.replace("_", " ")
-            if (
-                norm_cat not in canonical_labels
-                and norm_space not in canonical_labels
-                and norm_space not in existing_aliases
-                and norm_cat not in existing_aliases
-            ):
-                canonical_labels[norm_cat] = [norm_space]
-                existing_aliases.add(norm_space)
+        all_system_role_cats.update(role.semantic_categories)
+
+    raw_candidates = list(specification.detector_vocabulary)
+    from ..role_semantic_ontology import build_task_detector_vocabulary
+    canonical_labels = build_task_detector_vocabulary(
+        system_role_categories=all_system_role_cats,
+        raw_vlm_candidate_categories=raw_candidates,
+        base_semantic_ontology=base_vocab,
+    )
     vocab_dict = {
         "schema_version": 1,
         "canonical_labels": canonical_labels,
     }
+    vocabulary_path = phase1_dir / "yolo_world_dynamic_vocabulary.yaml"
     vocabulary_path.parent.mkdir(parents=True, exist_ok=True)
     vocabulary_path.write_text(yaml.safe_dump(vocab_dict, sort_keys=False), encoding="utf-8")
-
-    phase1_dir = output_dir / "observed_search" / "phase1"
-    if phase1_dir.exists():
-        shutil.rmtree(phase1_dir, ignore_errors=True)
     from ..search_contract import SearchRegionContract, freeze_search_region_contract
 
     if search_contract is None:
@@ -499,7 +489,7 @@ def run_to_plan(
         stop_on_complete=True,
         semantic_backend="yolo_world",
         semantic_model=str(LOCAL_YOLO_WORLD),
-        semantic_vocabulary_path=base_vocab_path if base_vocab_path.is_file() else vocabulary_path,
+        semantic_vocabulary_path=vocabulary_path,
         semantic_min_supporting_views=2,
         grounding_mode="joint",
         completion_predicate=kitchen_completion_predicate,

@@ -11,24 +11,13 @@ from .models import (
     NumericConstraint,
     OperationGroup,
 )
+from .role_semantic_ontology import (
+    PHASE3_ROLE_SEMANTIC_ONTOLOGY_VERSION,
+    get_system_role_semantic_categories,
+)
 from .spec_provider import FunctionalSpecProvider
 
 VLM_CANONICALIZATION_VERSION = "phase3_6a7_2_1_v1"
-
-KITCHEN_ROLE_CANONICAL_CATEGORIES: dict[str, tuple[str, ...]] = {
-    "coffee_container": ("cup", "mug"),
-    "soup_container": ("bowl",),
-    "coffee_stirrer": ("spoon", "stirrer"),
-    "soup_eating_utensil": ("spoon", "fork"),
-    "coffee_source": ("coffee_source", "jar", "coffee_jar"),
-    "water_source": ("kettle", "bottle"),
-}
-
-WORKSHOP_ROLE_CANONICAL_CATEGORIES: dict[str, tuple[str, ...]] = {
-    "driver": ("screwdriver", "power_driver", "power_drill", "Phillips screwdriver", "cordless power drill"),
-    "fastener": ("screw", "Phillips screw", "Phillips head screw"),
-    "repair_target": ("repair_target", "workshop_frame_joint", "recess"),
-}
 
 
 class VLMSpecProvider(FunctionalSpecProvider):
@@ -88,19 +77,18 @@ class VLMSpecProvider(FunctionalSpecProvider):
                     raise MalformedVLMSpecificationError(
                         f"Workshop functional role {role_id!r} must have non-empty candidate_categories"
                     )
-            canon_base = WORKSHOP_ROLE_CANONICAL_CATEGORIES.get(role_id, ())
-            merged_cats = tuple(dict.fromkeys((*canon_base, *role.run_local_categories)))
+            system_cats = get_system_role_semantic_categories("workshop", role_id)
             nodes[role_id] = FunctionalRole(
                 name=role_id,
                 entity_kind=role.entity_kind,
                 count=role.required_count,
-                semantic_categories=merged_cats,
+                semantic_categories=system_cats,
                 unary_predicates=role.unary_predicates,
                 binding_policy=role.binding_policy,
                 verification_mode=(
                     "GEOMETRIC_ONLY"
                     if role.entity_kind == "FIXED_TARGET"
-                    else ("SEMANTIC_AND_GEOMETRIC" if role.unary_predicates else "SEMANTIC_ONLY")
+                    else "SEMANTIC_AND_GEOMETRIC"
                 ),
                 description=role.description,
                 semantic_hints=role.semantic_hints,
@@ -134,6 +122,12 @@ class VLMSpecProvider(FunctionalSpecProvider):
             metadata={
                 "schema_version": 2,
                 "vlm_canonicalization_version": trace.get("vlm_canonicalization_version", WORKSHOP_VLM_CANONICALIZATION_VERSION),
+                "role_semantic_ontology_version": PHASE3_ROLE_SEMANTIC_ONTOLOGY_VERSION,
+                "semantic_acceptance_source": "SYSTEM_ROLE_SEMANTIC_ONTOLOGY",
+                "detector_vocabulary_source": "VLM_CANDIDATES_PLUS_RELEVANT_SYSTEM_ALIASES",
+                "candidate_categories_used_for_role_identity": False,
+                "candidate_categories_used_for_grounding_acceptance": False,
+                "candidate_categories_used_for_detector_vocabulary": True,
                 "transformation": "LOSSLESS_CANONICAL_G_F_CONSTRUCTION",
                 "raw_roles_count": trace.get("raw_roles_count", len(provider.normalized_roles)),
                 "raw_relations_count": trace.get("raw_relations_count", len(provider.normalized_relations)),
@@ -185,11 +179,7 @@ class VLMSpecProvider(FunctionalSpecProvider):
             ))
 
         for name, role in contract["roles"].items():
-            canon_base = KITCHEN_ROLE_CANONICAL_CATEGORIES.get(name, ())
-            raw_cats = tuple(
-                item["canonical_label"] for item in role.get("semantic_preferences", [])
-            )
-            categories = tuple(dict.fromkeys((*canon_base, *raw_cats)))
+            system_cats = get_system_role_semantic_categories("kitchen", name)
             unary_preds = []
             numeric_reqs = []
             for item in role.get("unary_geometry", []):
@@ -214,11 +204,22 @@ class VLMSpecProvider(FunctionalSpecProvider):
                 name=name,
                 entity_kind=raw_entity_kind,
                 count=raw_count,
-                semantic_categories=categories,
+                semantic_categories=system_cats,
                 unary_predicates=tuple(unary_preds),
                 numeric_constraints=tuple(numeric_reqs),
                 binding_policy=binding,
                 verification_mode=str(role.get("vlm_verification_mode", "SEMANTIC_AND_GEOMETRIC")),
+            )
+
+        for name, raw in contract.get("symbolic_task", {}).get("source_roles", {}).items():
+            system_cats = get_system_role_semantic_categories("kitchen", name)
+            nodes[name] = FunctionalRole(
+                name=name,
+                entity_kind="OBJECT",
+                count=int(raw.get("count", 1)),
+                semantic_categories=system_cats,
+                binding_policy="DISTINCT",
+                verification_mode="SEMANTIC_ONLY",
             )
 
         operation_groups: list[OperationGroup] = []
@@ -267,6 +268,12 @@ class VLMSpecProvider(FunctionalSpecProvider):
             raw_requirements=(contract,),
             metadata={
                 "vlm_canonicalization_version": trace.get("vlm_canonicalization_version", VLM_CANONICALIZATION_VERSION),
+                "role_semantic_ontology_version": PHASE3_ROLE_SEMANTIC_ONTOLOGY_VERSION,
+                "semantic_acceptance_source": "SYSTEM_ROLE_SEMANTIC_ONTOLOGY",
+                "detector_vocabulary_source": "VLM_CANDIDATES_PLUS_RELEVANT_SYSTEM_ALIASES",
+                "candidate_categories_used_for_role_identity": False,
+                "candidate_categories_used_for_grounding_acceptance": False,
+                "candidate_categories_used_for_detector_vocabulary": True,
                 "object_vocabulary": object_vocab,
                 "raw_vlm_response": raw_resp,
                 "validated_vlm_specification": valid_spec,
@@ -308,19 +315,13 @@ class VLMSpecProvider(FunctionalSpecProvider):
             binding = row["binding_policy"]
             count = int(row["vlm_required_count"])
             entity_kind = row["entity_kind"]
-            cats = tuple(row["accepted_categories"])
-            if entity_kind in ("OBJECT", "REGION") and func_id in ("PERSONAL_CUP_SAUCER_REGION", "SHARED_REMOTE_REGION"):
-                if not cats:
-                    from mujoco_scenes.functional_tamp_pipeline.errors import MalformedVLMSpecificationError
-                    raise MalformedVLMSpecificationError(
-                        f"Living Room discoverable functional role {func_id!r} must have non-empty candidate_categories"
-                    )
+            system_cats = get_system_role_semantic_categories("living_room", func_id)
             unary = tuple(row.get("required_properties", []))
             nodes[func_id] = FunctionalRole(
                 name=func_id,
                 entity_kind=entity_kind,
                 count=count,
-                semantic_categories=cats,
+                semantic_categories=system_cats,
                 unary_predicates=unary,
                 binding_policy=binding,
                 verification_mode="SEMANTIC_AND_GEOMETRIC" if unary else "SEMANTIC_ONLY",
@@ -371,6 +372,12 @@ class VLMSpecProvider(FunctionalSpecProvider):
             raw_requirements=(result.get("normalized_task_contract") or result["raw_vlm_decomposition"],),
             metadata={
                 "vlm_canonicalization_version": canon_trace.get("vlm_canonicalization_version", LIVING_ROOM_VLM_CANONICALIZATION_VERSION),
+                "role_semantic_ontology_version": PHASE3_ROLE_SEMANTIC_ONTOLOGY_VERSION,
+                "semantic_acceptance_source": "SYSTEM_ROLE_SEMANTIC_ONTOLOGY",
+                "detector_vocabulary_source": "SYSTEM_REVIEWED_ENVIRONMENT_CONTRACT",
+                "candidate_categories_used_for_role_identity": False,
+                "candidate_categories_used_for_grounding_acceptance": False,
+                "candidate_categories_used_for_detector_vocabulary": True,
                 "semantic_vocabulary_path": str(provider.vocabulary_path),
                 "vlm_derived_role_vocabulary": vlm_prompts,
                 "task_explicit_context_vocabulary": context_prompts,

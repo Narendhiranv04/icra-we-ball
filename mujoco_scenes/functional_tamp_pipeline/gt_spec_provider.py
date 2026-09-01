@@ -12,6 +12,10 @@ from .models import (
     NumericConstraint,
     OperationGroup,
 )
+from .role_semantic_ontology import (
+    PHASE3_ROLE_SEMANTIC_ONTOLOGY_VERSION,
+    get_system_role_semantic_categories,
+)
 from .spec_provider import FunctionalSpecProvider
 
 
@@ -49,7 +53,7 @@ class GTSpecProvider(FunctionalSpecProvider):
             name="driver",
             entity_kind="OBJECT",
             count=1,
-            semantic_categories=("screwdriver", "power_driver", "power_drill", "Phillips screwdriver", "cordless power drill"),
+            semantic_categories=get_system_role_semantic_categories("workshop", "driver"),
             unary_predicates=(),
             binding_policy="DISTINCT",
             verification_mode="SEMANTIC_AND_GEOMETRIC",
@@ -59,7 +63,7 @@ class GTSpecProvider(FunctionalSpecProvider):
             name="fastener",
             entity_kind="OBJECT",
             count=1,
-            semantic_categories=("screw", "Phillips screw", "Phillips head screw"),
+            semantic_categories=get_system_role_semantic_categories("workshop", "fastener"),
             unary_predicates=(),
             binding_policy="DISTINCT",
             verification_mode="SEMANTIC_AND_GEOMETRIC",
@@ -70,7 +74,7 @@ class GTSpecProvider(FunctionalSpecProvider):
             name="repair_target",
             entity_kind="FIXED_TARGET",
             count=1,
-            semantic_categories=("repair_target", "workshop_frame_joint", "recess"),
+            semantic_categories=get_system_role_semantic_categories("workshop", "repair_target"),
             binding_policy="DISTINCT",
             verification_mode="GEOMETRIC_ONLY",
             description="Target repair hole on the workpiece",
@@ -113,6 +117,8 @@ class GTSpecProvider(FunctionalSpecProvider):
             source="GT_FUNCTIONAL_SPEC_ONLY",
             raw_requirements=requirements,
             metadata={
+                "role_semantic_ontology_version": PHASE3_ROLE_SEMANTIC_ONTOLOGY_VERSION,
+                "semantic_acceptance_source": "SYSTEM_ROLE_SEMANTIC_ONTOLOGY",
                 "detector_label_to_canonical": provider.get_detector_label_to_canonical_map(),
                 "alias_to_canonical": provider.get_alias_to_canonical_map(),
             },
@@ -222,6 +228,8 @@ class GTSpecProvider(FunctionalSpecProvider):
             source="GT_FUNCTIONAL_SPEC_ONLY",
             raw_requirements=(contract,),
             metadata={
+                "role_semantic_ontology_version": PHASE3_ROLE_SEMANTIC_ONTOLOGY_VERSION,
+                "semantic_acceptance_source": "SYSTEM_ROLE_SEMANTIC_ONTOLOGY",
                 "semantic_vocabulary_path": str(root / "configs" / "semantic_vocabulary.yaml"),
                 "contract_path": str(contract_path),
                 "symbolic_task": contract.get("symbolic_task", {}),
@@ -335,6 +343,8 @@ class GTSpecProvider(FunctionalSpecProvider):
             source="GT_FUNCTIONAL_SPEC_ONLY",
             raw_requirements=(contract,),
             metadata={
+                "role_semantic_ontology_version": PHASE3_ROLE_SEMANTIC_ONTOLOGY_VERSION,
+                "semantic_acceptance_source": "SYSTEM_ROLE_SEMANTIC_ONTOLOGY",
                 "contract_path": str(contract_path),
                 "semantic_vocabulary_path": str(
                     root / "configs" / "l2_integrated_region_function_semantic_vocabulary.yaml"

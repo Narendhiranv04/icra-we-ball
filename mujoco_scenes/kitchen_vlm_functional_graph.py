@@ -783,6 +783,7 @@ def compile_vlm_functional_graph(
     # Deterministic Region Resolution: resolve ONLY through label/visual_description (ignore VLM local ID)
     local_id_to_canonical: dict[str, str] = {}
     region_proposal_trace: list[dict[str, Any]] = []
+    unresolved_proposals: list[dict[str, Any]] = []
     canonical_to_raw_ids: dict[str, str] = {}
     raw_regions = valid_doc.get("inspectable_regions", [])
     for idx, prop in enumerate(raw_regions):
@@ -797,11 +798,17 @@ def compile_vlm_functional_graph(
 
         canon_reg = resolve_kitchen_region_proposal(prop)
         if canon_reg is None or canon_reg not in observable_regions:
-            raise UnmappedFunctionalConceptError(
-                f"Kitchen inspectable region proposal {prop_id!r} (label={raw_label!r}, "
-                f"visual_description={raw_desc!r}) cannot be mapped to any known system search region "
-                f"(available: {sorted(observable_regions)})"
-            )
+            unresolved_proposals.append({
+                "raw_index": idx,
+                "raw_id": prop_id,
+                "label": raw_label,
+                "raw_label": raw_label,
+                "raw_visual_description": raw_desc,
+                "canonical_region_id": None,
+                "resolution_status": "UNRESOLVED",
+                "reason": "Unmapped visual proposal",
+            })
+            continue
 
         if canon_reg in canonical_to_raw_ids:
             prev_raw_id = canonical_to_raw_ids[canon_reg]
@@ -876,6 +883,7 @@ def compile_vlm_functional_graph(
         "concept_accounting": concept_accounting,
         "resolved_regions": local_id_to_canonical,
         "region_proposal_trace": region_proposal_trace,
+        "unresolved_proposals": unresolved_proposals,
         "candidate_regions": list(resolved_candidate_regions),
         "inspection_order": resolved_order,
         "task_contract": {

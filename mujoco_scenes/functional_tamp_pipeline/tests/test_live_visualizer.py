@@ -35,13 +35,15 @@ from mujoco_scenes.functional_tamp_pipeline.models import (
     GraphGroundingResult,
     SatisfactionResult,
     PipelineResult,
-    SearchRegionContract,
-    freeze_search_region_contract,
 )
 from mujoco_scenes.functional_tamp_pipeline.scene_graph import (
     ObservedSceneGraph,
     ObservedNode,
     ObservedRelation,
+)
+from mujoco_scenes.functional_tamp_pipeline.search_contract import (
+    SearchRegionContract,
+    freeze_search_region_contract,
 )
 
 

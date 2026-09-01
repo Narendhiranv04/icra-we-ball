@@ -14,8 +14,6 @@ from mujoco_scenes.functional_tamp_pipeline.models import (
     GraphGroundingResult,
     PipelineResult,
     SatisfactionResult,
-    SearchRegionContract,
-    freeze_search_region_contract,
 )
 from mujoco_scenes.functional_tamp_pipeline.run import (
     run_pipeline,
@@ -27,6 +25,10 @@ from mujoco_scenes.functional_tamp_pipeline.search import (
 from mujoco_scenes.functional_tamp_pipeline.search_order import (
     ORACLE_SEARCH_ORDERS,
     resolve_search_order,
+)
+from mujoco_scenes.functional_tamp_pipeline.search_contract import (
+    SearchRegionContract,
+    freeze_search_region_contract,
 )
 
 
@@ -329,8 +331,7 @@ def test_central_search_event_enrichment(tmp_path: Path):
             complete=True,
             assignment={"driver": "d1", "fastener": "f1", "work_surface": "w1"},
         )
-        def fake_search(adapter, spec, *args, **kwargs):
-            observer = kwargs.get("observer")
+        def fake_search(adapter, spec, search_order=None, observer=None, **kwargs):
             if observer is not None:
                 observer("search_region_selected", {"region": "LEFT_DRAWER", "index": 0, "total_regions": 3})
                 observer("search_region_opened", {"region": "LEFT_DRAWER", "success": True, "exploratory": True})
