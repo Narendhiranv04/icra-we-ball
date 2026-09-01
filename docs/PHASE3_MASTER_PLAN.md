@@ -479,27 +479,28 @@ When a case fails, apply this tree **in order**:
 
 ---
 
-### P3-G, P3-G.1 & P3-G.2: Workshop Canonicalizer Repair & Closure
+### P3-G, P3-G.1, P3-G.2 & P3-G.3: Workshop Canonicalizer Repair & Closure
 **Status**: `[x] COMPLETE (FROZEN)`
 
-**Objective**: Repair the Workshop VLM canonicalizer to handle alternative role proposals, unmapped capability phrases, full relation direction grammar symmetry (rejecting passive grammar in canonical order), exact-one group relation cardinality with raw phrase provenance, group usage_policy enforcement, mandatory repair_target context, redundancy proof against top-level relations, reverse direction grammar tightening, and raw metadata count provenance.
+**Objective**: Repair the Workshop VLM canonicalizer to handle alternative role proposals, unmapped capability phrases, word-bounded relation matching (eliminating substring direction leaks), strict forward/reverse planner-context grammar, full relation direction grammar symmetry (rejecting passive grammar in canonical order), exact-one group relation cardinality with raw phrase provenance, group usage_policy enforcement, mandatory repair_target context, redundancy proof against top-level relations, reverse direction grammar tightening, and raw metadata count provenance.
 
 **Scope of Hypotheses and Tests** (in `workshop_phase1/requirements.py` and `vlm_spec_provider.py`):
 1. **Duplicate / alternative role resolution**: Classify duplicate canonical role emissions:
    - Equivalent alternatives (e.g. manual screwdriver vs cordless drill) → merge with explicit rule.
    - Genuinely distinct requirements → preserve separately.
    - Ambiguous proposals → reject explicitly.
-2. **Capability vocabulary & full grammar symmetry**: Strict directional relation matching rejecting active phrases with reversed endpoints, and rejecting passive phrases with canonical endpoints.
-3. **Operation group validation, exact cardinality & redundancy proof**: Enforce `len(required_relations) == 1` and `len(context_relations) == 1`, record exact raw phrases in concept accounting, enforce `usage_policy = DEDICATED_PER_TARGET`, require `repair_target` context, and prove canonical relation triples exist in top-level relations before absorbing redundant group wrapper.
-4. **P3-D.1 Canonicalizer Obligations**:
+2. **Capability vocabulary, word-bounded matching & full grammar symmetry**: Word-bounded relation matching preventing substring direction leakage (e.g. "engage" matching "is engaged by"), strict directional relation matching rejecting active phrases with reversed endpoints, and rejecting passive phrases with canonical endpoints.
+3. **Planner context LOCATED_ON direction strictness**: Forward location grammar absorbed into planner context; reversed generic location grammar rejected; explicit reverse support grammar normalized.
+4. **Operation group validation, exact cardinality & redundancy proof**: Enforce `len(required_relations) == 1` and `len(context_relations) == 1`, record exact raw phrases in concept accounting, enforce `usage_policy = DEDICATED_PER_TARGET`, require `repair_target` context, and prove canonical relation triples exist in top-level relations before absorbing redundant group wrapper.
+5. **P3-D.1 Canonicalizer Obligations**:
    - Resolve `workbench_surface` role emission (absorbed into planner context `MAIN_WORKBENCH_ZONE`; not emitted in active G_F).
    - Resolve `LOCATED_ON` relation emission (absorbed into planner context for repair_target on workbench; rejected on functional roles).
    - Resolve generic unary properties (`PLANAR_SUPPORT`, `OPEN_CAVITY`, `ELONGATED_OBJECT`) emitted by `map_workshop_unary_property` (absorbed for workbench context; rejected on functional roles; zero runtime unary predicates in G_F).
-5. **Raw metadata count provenance**: Report true raw counts (`raw_roles_count`, `raw_relations_count`, `raw_operation_groups_count`) in G_F metadata with version `phase3_p3g_2_v1`.
+6. **Raw metadata count provenance**: Report true raw counts (`raw_roles_count`, `raw_relations_count`, `raw_operation_groups_count`) in G_F metadata with version `phase3_p3g_3_v1`.
 
-**Tests**: `test_ideal_fixtures.py` passes for `workshop_W1` with 100% recall/precision and exact structural match. `test_workshop_vlm_requirements.py` passes (32/32).
+**Tests**: `test_ideal_fixtures.py` passes for `workshop_W1` with 100% recall/precision and exact structural match. `test_workshop_vlm_requirements.py` passes (34/34).
 
-**Acceptance**: Ideal workshop fixture → canonical G_F matching GT structure with zero unauthorized roles or predicates. Fully symmetric relation grammar and exact group cardinality enforced. Downstream W1 GT dry-run execution valid.
+**Acceptance**: Ideal workshop fixture → canonical G_F matching GT structure with zero unauthorized roles or predicates. Word-bounded matching, fully symmetric relation grammar, and exact group cardinality enforced. Downstream W1 GT dry-run execution valid.
 
 ---
 

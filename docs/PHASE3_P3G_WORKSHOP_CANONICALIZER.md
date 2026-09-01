@@ -1,19 +1,19 @@
-# Phase 3 Pass P3-G, P3-G.1 & P3-G.2: Workshop Canonicalizer Repair & Closure
+# Phase 3 Pass P3-G, P3-G.1, P3-G.2 & P3-G.3: Workshop Canonicalizer Repair & Closure
 
-> **Passes**: P3-G, P3-G.1 & P3-G.2 — Workshop Canonicalizer Repair & Full Symmetry Closure  
+> **Passes**: P3-G, P3-G.1, P3-G.2 & P3-G.3 — Workshop Canonicalizer Repair, Word-Bounded Grammar & Planner-Context Closure  
 > **Date**: 2026-09-01  
 > **Branch**: `naren/pipeline_check`  
 > **Status**: COMPLETE (FROZEN)  
-> **Version**: `phase3_p3g_2_v1`  
+> **Version**: `phase3_p3g_3_v1`  
 
 ---
 
 ## 1. Executive Summary
 
-In Pass **P3-G**, **P3-G.1**, and **P3-G.2**, the Workshop VLM-to-Canonical-$G_F$ semantic compiler (`mujoco_scenes/workshop_phase1/requirements.py`) was comprehensively refactored and hardened into a deterministic, strictly fail-closed pipeline:
+In Pass **P3-G**, **P3-G.1**, **P3-G.2**, and **P3-G.3**, the Workshop VLM-to-Canonical-$G_F$ semantic compiler (`mujoco_scenes/workshop_phase1/requirements.py`) was comprehensively refactored and hardened into a deterministic, strictly fail-closed pipeline:
 $$\text{Raw VLM Spec} \longrightarrow \text{Deterministic Semantic Compiler} \longrightarrow \text{Canonical } G_F \longrightarrow \text{validate\_runtime\_gf()} \longrightarrow \text{ground\_graph()}$$
 
-The compiler operates without heuristics, candidate-category role manufacture, silent role loss, unsupported predicate emission, schema defaults, arbitrary duplicate-role merging, endpoint fabrication, raw group pass-through, or planner-context contamination of $\phi^*$.
+The compiler uses deterministic reviewed semantic mappings and operates without fail-open repair, candidate-category role manufacture, hidden GT recovery, schema defaults, arbitrary endpoint fabrication, or silent concept loss.
 
 The compiler was verified against the curated ideal raw fixture `mujoco_scenes/functional_tamp_pipeline/tests/fixtures/ideal_raw_vlm/workshop_W1.json`, achieving:
 - **100% Role Identity Recall (3/3)** and **100% Role Identity Precision (3/3)**
@@ -38,21 +38,24 @@ The compiler was verified against the curated ideal raw fixture `mujoco_scenes/f
 - Workbench support REGION roles map to `MAIN_WORKBENCH_ZONE` and are recorded in concept accounting with `status: "ABSORBED_INTO_PLANNER_CONTEXT"`. They are **never** emitted as selectable `FunctionalRole` nodes in active $G_F$.
 - Any unmapped or unknown region role raises `UnmappedFunctionalConceptError`.
 
-### 2.3 Fully Symmetric Active/Passive Relation Direction Grammar (P3-G.2)
-Relations are mapped into the frozen Workshop predicate signatures:
+### 2.3 Word-Bounded Phrase Matching & Fully Symmetric Active/Passive Direction Grammar (P3-G.3)
+Relations are mapped into the frozen Workshop predicate signatures using word-bounded reviewed phrase matching (`_contains_phrase`), completely eliminating substring direction leakage (e.g., active `"engage"` will not match passive `"is engaged by"`):
 1. `(driver, COMPATIBLE_WITH, fastener)`
 2. `(driver, REACHES_TARGET, repair_target)`
 3. `(fastener, COMPATIBLE_WITH_TARGET, repair_target)`
 
 - **Canonical Endpoint Order (`driver -> fastener`, `driver -> repair_target`, `fastener -> repair_target`)**:
-  - Accepts ONLY active grammar (`"compatible with"`, `"reaches target"`, `"threads into"`, `"torque to screw"`, etc.).
-  - Rejects ALL passive grammar (`"is driven by"`, `"driven by"`, `"is reached by"`, `"reached by"`, `"receives fastener"`, `"is threaded by"`, `"fastened by"`), raising `MalformedVLMSpecificationError`.
+  - Accepts ONLY active grammar (`"compatible with"`, `"reaches target"`, `"threads into"`, `"torque to screw"`, `"engage screw"`, etc.).
+  - Rejects ALL passive grammar (`"is driven by"`, `"driven by"`, `"is engaged by"`, `"engaged by"`, `"is reached by"`, `"reached by"`, `"receives fastener"`, `"is threaded by"`, `"fastened by"`, `"receives torque from"`), raising `MalformedVLMSpecificationError`.
   - Yields `direction_status: "PRESERVED"` and `structural_destination: "GRAPH_RELATION"`.
 - **Reversed Endpoint Order (`fastener -> driver`, `repair_target -> driver`, `repair_target -> fastener`)**:
-  - Accepts ONLY explicit reviewed passive/reverse phrases (`"is driven by"`, `"driven by"`, `"is reached by"`, `"reached by"`, `"receives fastener"`, `"threaded by"`, etc.).
+  - Accepts ONLY explicit reviewed passive/reverse phrases (`"is driven by"`, `"driven by"`, `"is engaged by"`, `"engaged by"`, `"is reached by"`, `"reached by"`, `"receives fastener"`, `"threaded by"`, etc.).
   - Rejects active phrases with reversed endpoints, raising `MalformedVLMSpecificationError`.
   - Yields `direction_status: "NORMALIZED_TO_CANONICAL_SIGNATURE"`.
-- **Planner Context Absorption**: `repair_target LOCATED_ON MAIN_WORKBENCH_ZONE` is absorbed into planner context (`structural_destination: "ABSORBED_INTO_PLANNER_CONTEXT"`).
+- **Planner Context Absorption & Direction Strictness (P3-G.3)**:
+  - `repair_target LOCATED_ON MAIN_WORKBENCH_ZONE` accepts reviewed forward location grammar (`"located on"`, `"located on workbench"`, `"on workbench"`, `"supported by workbench"`, etc.) with `direction_status: "PRESERVED"`, `structural_destination: "ABSORBED_INTO_PLANNER_CONTEXT"`.
+  - `MAIN_WORKBENCH_ZONE -> repair_target` rejects generic location grammar (`"located on"`, `"on workbench"`), failing closed with `MalformedVLMSpecificationError`. It accepts ONLY explicit reverse-support grammar (`"supports repair target"`, `"supports target"`, `"holds repair target"`, `"provides support for repair target"`), normalizing to `repair_target LOCATED_ON MAIN_WORKBENCH_ZONE`.
+  - `LOCATED_ON` is never emitted in runtime `gf.relations`. `MAIN_WORKBENCH_ZONE` is never emitted in `gf.roles` or selectable $\phi^*$.
 - **Rejection of Self-Relations**: Self-relations raise `MalformedVLMSpecificationError`.
 - **Unsupported Functional LOCATED_ON**: Functional roles (`driver`, `fastener`) with `LOCATED_ON` raise `UnsupportedCheckerCapabilityError`.
 
@@ -63,14 +66,14 @@ Relations are mapped into the frozen Workshop predicate signatures:
 - Unsupported unary properties on functional roles (`PLANAR_SUPPORT`, `OPEN_CAVITY`, `ELONGATED_OBJECT`) fail closed with `UnsupportedCheckerCapabilityError`.
 - `PLANAR_SUPPORT` on workbench context is absorbed into planner context (`ABSORBED_INTO_PLANNER_CONTEXT`).
 
-### 2.5 Operation Group Cardinality, Redundancy Proof & Provenance (P3-G.2)
-- **Exact Group Relation Cardinality (P3-G.2)**: `required_relations` and `context_relations` must each contain **exactly 1** relation phrase. Lists with 0 or $>1$ phrases raise `MalformedVLMSpecificationError`.
+### 2.5 Operation Group Cardinality, Redundancy Proof & Provenance
+- **Exact Group Relation Cardinality**: `required_relations` and `context_relations` must each contain **exactly 1** relation phrase. Lists with 0 or $>1$ phrases raise `MalformedVLMSpecificationError`.
 - **Mandatory Usage Policy**: Workshop interaction group requires `usage_policy = "DEDICATED_PER_TARGET"`. Any other policy (e.g. `SEQUENTIAL_REUSE_ALLOWED`) raises `MalformedVLMSpecificationError`.
 - **Mandatory Context Target**: Interaction group must explicitly include `context_role` mapping to `repair_target` and non-empty `context_relations` mapping to `REACHES_TARGET`.
 - **Redundancy Proof Rule**: Before recording a group as redundant, the compiler proves that the corresponding canonical top-level graph triples exist:
   $$\{(\text{"driver"}, \text{"COMPATIBLE\_WITH"}, \text{"fastener"}), (\text{"driver"}, \text{"REACHES\_TARGET"}, \text{"repair\_target"})\} \subseteq \text{seen\_canonical\_triples}$$
   If any top-level graph relation is missing, the compiler raises `MalformedVLMSpecificationError`. The group does NOT synthesize or repair missing graph relations.
-- **Trace Provenance (P3-G.2)**: Concept accounting preserves exact raw phrases (`raw_required_relation`, `raw_context_relation`) alongside canonical mapping and represented triples. Active Workshop $G_F$ emits `operation_groups = ()`.
+- **Trace Provenance**: Concept accounting preserves exact raw phrases (`raw_required_relation`, `raw_context_relation`) alongside canonical mapping and represented triples. Active Workshop $G_F$ emits `operation_groups = ()`.
 
 ### 2.6 Raw Metadata Counts Truthfulness
 `VLMSpecProvider._workshop()` reports true raw counts from canonicalization trace:
@@ -82,7 +85,7 @@ Relations are mapped into the frozen Workshop predicate signatures:
 ### 2.7 Canonicalization Version Provenance
 The canonicalization version for Workshop is bumped to:
 ```python
-WORKSHOP_VLM_CANONICALIZATION_VERSION = "phase3_p3g_2_v1"
+WORKSHOP_VLM_CANONICALIZATION_VERSION = "phase3_p3g_3_v1"
 ```
 and is recorded in `metadata["vlm_canonicalization_version"]` and `metadata["canonicalization_trace"]["vlm_canonicalization_version"]`.
 
@@ -92,7 +95,7 @@ and is recorded in `metadata["vlm_canonicalization_version"]` and `metadata["can
 
 | Test Suite | Command | Result |
 |---|---|---|
-| Workshop Dedicated Suite | `pytest mujoco_scenes/tests/test_workshop_vlm_requirements.py` | 32/32 PASSED (100%) |
+| Workshop Dedicated Suite | `pytest mujoco_scenes/tests/test_workshop_vlm_requirements.py` | 34/34 PASSED (100%) |
 | Ideal Fixtures Suite | `pytest mujoco_scenes/functional_tamp_pipeline/tests/test_ideal_fixtures.py` | 4/4 PASSED (100%) |
 | Boundary & Interface Suite | `pytest mujoco_scenes/functional_tamp_pipeline/tests/test_vlm_interface_boundary.py` | 6/6 PASSED (100%) |
 | Architecture Suite | `pytest mujoco_scenes/functional_tamp_pipeline/tests/test_architecture.py` | 57/57 PASSED (100%) |

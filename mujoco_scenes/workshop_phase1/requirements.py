@@ -29,7 +29,7 @@ DEFAULT_FM_CONTRACT_PATH = (
     Path(__file__).resolve().parent.parent / "configs" / "workshop_phase1_fm_contract.yaml"
 )
 
-WORKSHOP_VLM_CANONICALIZATION_VERSION = "phase3_p3g_2_v1"
+WORKSHOP_VLM_CANONICALIZATION_VERSION = "phase3_p3g_3_v1"
 
 CANONICAL_WORKSHOP_INSTRUCTION = (
     "Find the compatible screw and first compatible driver encountered, "
@@ -479,49 +479,57 @@ def map_workshop_relation(relation_text: str) -> str | None:
     if not norm:
         return None
     matches = set()
-    if any(k in norm for k in (
-        "engage", "engages", "fit screw", "fits screw", "fits driver", "fit driver",
-        "driver bit", "fit fastener", "fits fastener", "match bit",
-        "compatible with fastener", "compatible with screw", "torque to screw",
-        "compatible with the fastener", "compatible with", "drives",
-        "driver engages screw", "driver engages", "transmits torque",
-        "transmit torque", "fit the screw head and transmit torque",
-        "tip must fit the screw head and transmit torque",
+    if any(_contains_phrase(norm, k) for k in (
+        "engage", "engages", "engage screw", "engages screw",
+        "driver engages screw", "driver engages", "fit screw", "fits screw",
+        "fits driver", "fit driver", "driver bit", "fit fastener", "fits fastener",
+        "match bit", "compatible with fastener", "compatible with screw", "torque to screw",
+        "compatible with the fastener", "compatible with", "drives", "drives screw",
+        "transmits torque", "transmit torque", "fit the screw head and transmit torque",
+        "tip must fit the screw head and transmit torque", "fit screw head", "fits screw head",
+        "driver bit matches fastener",
         "is driven by", "driven by", "is engaged by", "engaged by",
         "receives torque from", "driven by tool", "is driven by tool",
         "is turned by", "turned by", "receives drive from",
     )):
         matches.add("COMPATIBLE_WITH")
-    if any(k in norm for k in (
+    if any(_contains_phrase(norm, k) for k in (
         "reaches target", "reach target", "reaches into", "reach into",
         "reaches hole", "reach hole", "reaches repair", "reach repair",
         "access target", "accesses target", "length to reach", "reaches workpiece", "reach workpiece",
         "must reach the workpiece hole recess", "long enough to reach workpiece hole recess",
-        "long enough to reach hole",
+        "long enough to reach hole", "long enough to reach",
+        "reaches workpiece hole", "reach workpiece hole", "reach workpiece hole recess",
         "is reached by", "reached by", "target reached by", "accessed by", "target accessed by", "is accessed by",
     )):
         matches.add("REACHES_TARGET")
-    if any(k in norm for k in (
+    if any(_contains_phrase(norm, k) for k in (
         "thread into", "threads into", "fit hole", "fits hole", "fit target",
         "fits target", "anchor in", "anchors in", "compatible with hole",
         "compatible with target", "fits workpiece", "fit workpiece", "fit inside", "fits inside",
         "fits into", "fit into", "inserted into", "insert into", "inserts into",
         "screw inserted into", "screw fits into",
         "must fit the workbench target hole and thread into the hole",
-        "threads into target repair hole",
+        "threads into target repair hole", "thread into target repair hole",
+        "threads into hole", "thread into hole", "fits the hole", "fit the hole",
         "receives fastener", "receives screw", "is fastened by", "fastened by",
         "is threaded by", "threaded by", "fastened with",
     )):
         matches.add("COMPATIBLE_WITH_TARGET")
-    if any(k in norm for k in ("located in", "located on", "placed on", "on surface", "on workbench", "supports", "held by")):
+    if any(_contains_phrase(norm, k) for k in (
+        "located in", "located on", "located on workbench", "placed on", "placed on workbench",
+        "on surface", "on workbench", "supported by workbench", "rests on workbench",
+        "supports repair target", "supports target", "holds repair target", "provides support for repair target",
+        "supports", "held by",
+    )):
         matches.add("LOCATED_ON")
 
     if len(matches) == 1:
         return next(iter(matches))
     if len(matches) > 1:
-        if "COMPATIBLE_WITH" in matches and any(k in norm for k in ("engage", "engages", "driver", "bit", "torque", "driven")):
+        if "COMPATIBLE_WITH" in matches and any(_contains_phrase(norm, k) for k in ("engage", "engages", "driver", "bit", "torque", "driven", "drives")):
             return "COMPATIBLE_WITH"
-        if "COMPATIBLE_WITH_TARGET" in matches and any(k in norm for k in ("hole", "target", "thread", "insert", "fastener", "screw")):
+        if "COMPATIBLE_WITH_TARGET" in matches and any(_contains_phrase(norm, k) for k in ("hole", "target", "thread", "threads", "insert", "fastener", "screw")):
             return "COMPATIBLE_WITH_TARGET"
         raise AmbiguousCanonicalizationError(f"Ambiguous workshop relation {relation_text!r} matches multiple relations: {sorted(matches)}")
     return None
@@ -532,11 +540,11 @@ def map_workshop_unary_property(property_text: str) -> str | None:
     norm = _phrase(property_text)
     if not norm:
         return None
-    if any(k in norm for k in ("planar support", "planar_support", "flat surface", "horizontal surface", "is_flat", "is_horizontal", "planar horizontal support", "horizontal planar support")):
+    if any(_contains_phrase(norm, k) for k in ("planar support", "planar_support", "flat surface", "horizontal surface", "is_flat", "is_horizontal", "planar horizontal support", "horizontal planar support")):
         return "PLANAR_SUPPORT"
-    if any(k in norm for k in ("open cavity", "open_cavity", "container", "hollow", "capable of holding liquid")):
+    if any(_contains_phrase(norm, k) for k in ("open cavity", "open_cavity", "container", "hollow", "capable of holding liquid")):
         return "OPEN_CAVITY"
-    if any(k in norm for k in ("elongated", "elongated_object", "slender", "shank", "elongated shape")):
+    if any(_contains_phrase(norm, k) for k in ("elongated", "elongated_object", "slender", "shank", "elongated shape")):
         return "ELONGATED_OBJECT"
     return None
 
@@ -565,8 +573,9 @@ def canonicalize_workshop_relation(
         )
 
     # Check for unsupported functional LOCATED_ON
-    is_loc_phrase = any(k in norm_rel for k in (
-        "located on", "located in", "placed on", "on surface", "on workbench", "supported by workbench"
+    is_loc_phrase = any(_contains_phrase(norm_rel, k) for k in (
+        "located on", "located on workbench", "located in", "placed on", "placed on workbench",
+        "on surface", "on workbench", "supported by workbench", "rests on workbench",
     ))
     if is_loc_phrase:
         if raw_subject_canon in ("driver", "fastener"):
@@ -575,24 +584,30 @@ def canonicalize_workshop_relation(
             )
         if raw_subject_canon == "repair_target" and raw_object_canon == "MAIN_WORKBENCH_ZONE":
             return ("repair_target", "LOCATED_ON", "MAIN_WORKBENCH_ZONE", "PRESERVED", "ABSORBED_INTO_PLANNER_CONTEXT")
-        if raw_subject_canon == "MAIN_WORKBENCH_ZONE" and raw_object_canon == "repair_target":
+
+    # Explicit reverse support grammar from workbench to repair_target
+    if raw_subject_canon == "MAIN_WORKBENCH_ZONE" and raw_object_canon == "repair_target":
+        if any(_contains_phrase(norm_rel, k) for k in (
+            "supports repair target", "supports target", "holds repair target", "provides support for repair target",
+        )):
             return ("repair_target", "LOCATED_ON", "MAIN_WORKBENCH_ZONE", "NORMALIZED_TO_CANONICAL_SIGNATURE", "ABSORBED_INTO_PLANNER_CONTEXT")
 
     # (driver, fastener) -> COMPATIBLE_WITH
     if raw_subject_canon == "driver" and raw_object_canon == "fastener":
-        if any(k in norm_rel for k in (
+        if any(_contains_phrase(norm_rel, k) for k in (
             "compatible with", "compatible with fastener", "compatible with screw",
-            "compatible with the fastener", "engage", "engages", "fit screw", "fits screw",
+            "compatible with the fastener", "engage", "engages", "engage screw", "engages screw",
+            "driver engages screw", "driver engages", "fit screw", "fits screw",
             "fit driver", "fits driver", "driver bit", "fit fastener", "fits fastener",
-            "match bit", "torque to screw", "drives", "driver engages screw",
-            "driver engages", "transmits torque", "transmit torque",
+            "match bit", "torque to screw", "drives", "drives screw", "driver engages screw",
+            "transmits torque", "transmit torque",
             "fit the screw head and transmit torque", "tip must fit the screw head and transmit torque",
-            "fit screw head", "fits screw head",
+            "fit screw head", "fits screw head", "driver bit matches fastener",
         )):
             return ("driver", "COMPATIBLE_WITH", "fastener", "PRESERVED", "GRAPH_RELATION")
 
     if raw_subject_canon == "fastener" and raw_object_canon == "driver":
-        if any(k in norm_rel for k in (
+        if any(_contains_phrase(norm_rel, k) for k in (
             "is driven by", "driven by", "is engaged by", "engaged by",
             "receives torque from", "driven by tool", "is driven by tool",
             "is turned by", "turned by", "receives drive from",
@@ -601,23 +616,26 @@ def canonicalize_workshop_relation(
 
     # (driver, repair_target) -> REACHES_TARGET
     if raw_subject_canon == "driver" and raw_object_canon == "repair_target":
-        if any(k in norm_rel for k in (
+        if any(_contains_phrase(norm_rel, k) for k in (
             "reaches target", "reach target", "reaches into", "reach into",
             "reaches hole", "reach hole", "reaches repair", "reach repair",
             "access target", "accesses target", "length to reach", "reaches workpiece", "reach workpiece",
             "must reach the workpiece hole recess", "reaches workpiece hole",
             "reach workpiece hole", "reach workpiece hole recess",
             "long enough to reach workpiece hole recess", "long enough to reach hole",
+            "long enough to reach",
         )):
             return ("driver", "REACHES_TARGET", "repair_target", "PRESERVED", "GRAPH_RELATION")
 
     if raw_subject_canon == "repair_target" and raw_object_canon == "driver":
-        if any(k in norm_rel for k in ("is reached by", "reached by", "target reached by", "accessed by", "target accessed by", "is accessed by")):
+        if any(_contains_phrase(norm_rel, k) for k in (
+            "is reached by", "reached by", "target reached by", "accessed by", "target accessed by", "is accessed by",
+        )):
             return ("driver", "REACHES_TARGET", "repair_target", "NORMALIZED_TO_CANONICAL_SIGNATURE", "GRAPH_RELATION")
 
     # (fastener, repair_target) -> COMPATIBLE_WITH_TARGET
     if raw_subject_canon == "fastener" and raw_object_canon == "repair_target":
-        if any(k in norm_rel for k in (
+        if any(_contains_phrase(norm_rel, k) for k in (
             "compatible with target", "compatible with", "compatible with hole",
             "thread into", "threads into", "fit hole", "fits hole", "fit target",
             "fits target", "anchor in", "anchors in", "fits workpiece", "fit workpiece",
@@ -630,7 +648,9 @@ def canonicalize_workshop_relation(
             return ("fastener", "COMPATIBLE_WITH_TARGET", "repair_target", "PRESERVED", "GRAPH_RELATION")
 
     if raw_subject_canon == "repair_target" and raw_object_canon == "fastener":
-        if any(k in norm_rel for k in ("receives fastener", "receives screw", "is fastened by", "fastened by", "is threaded by", "threaded by", "fastened with")):
+        if any(_contains_phrase(norm_rel, k) for k in (
+            "receives fastener", "receives screw", "is fastened by", "fastened by", "is threaded by", "threaded by", "fastened with",
+        )):
             return ("fastener", "COMPATIBLE_WITH_TARGET", "repair_target", "NORMALIZED_TO_CANONICAL_SIGNATURE", "GRAPH_RELATION")
 
     # If none matched, check if relation phrase maps to a known relation but with incompatible endpoints
