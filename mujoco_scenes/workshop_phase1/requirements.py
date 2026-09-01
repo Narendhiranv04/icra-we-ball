@@ -29,7 +29,7 @@ DEFAULT_FM_CONTRACT_PATH = (
     Path(__file__).resolve().parent.parent / "configs" / "workshop_phase1_fm_contract.yaml"
 )
 
-WORKSHOP_VLM_CANONICALIZATION_VERSION = "phase3_p3g_v1"
+WORKSHOP_VLM_CANONICALIZATION_VERSION = "phase3_p3g_1_v1"
 
 CANONICAL_WORKSHOP_INSTRUCTION = (
     "Find the compatible screw and first compatible driver encountered, "
@@ -591,7 +591,8 @@ def canonicalize_workshop_relation(
     if raw_subject_canon == "fastener" and raw_object_canon == "driver":
         if any(k in norm_rel for k in (
             "is driven by", "driven by", "is engaged by", "engaged by",
-            "receives torque from", "driven by tool", "compatible with", "fits driver", "fit driver"
+            "receives torque from", "driven by tool", "is driven by tool",
+            "is turned by", "turned by", "receives drive from",
         )):
             return ("driver", "COMPATIBLE_WITH", "fastener", "NORMALIZED_TO_CANONICAL_SIGNATURE", "GRAPH_RELATION")
 
@@ -606,11 +607,11 @@ def canonicalize_workshop_relation(
             "long enough to reach workpiece hole recess",
         )):
             return ("driver", "REACHES_TARGET", "repair_target", "PRESERVED", "GRAPH_RELATION")
-        if any(k in norm_rel for k in ("is reached by", "reached by", "target reached by", "accessed by")):
+        if any(k in norm_rel for k in ("is reached by", "reached by", "target reached by", "accessed by", "target accessed by", "is accessed by")):
             return ("driver", "REACHES_TARGET", "repair_target", "NORMALIZED_TO_CANONICAL_SIGNATURE", "GRAPH_RELATION")
 
     if raw_subject_canon == "repair_target" and raw_object_canon == "driver":
-        if any(k in norm_rel for k in ("is reached by", "reached by", "target reached by", "accessed by", "reaches target", "reach target")):
+        if any(k in norm_rel for k in ("is reached by", "reached by", "target reached by", "accessed by", "target accessed by", "is accessed by")):
             return ("driver", "REACHES_TARGET", "repair_target", "NORMALIZED_TO_CANONICAL_SIGNATURE", "GRAPH_RELATION")
 
     # (fastener, repair_target) -> COMPATIBLE_WITH_TARGET
@@ -626,11 +627,11 @@ def canonicalize_workshop_relation(
             "threads into hole", "thread into hole", "fits the hole", "fit the hole",
         )):
             return ("fastener", "COMPATIBLE_WITH_TARGET", "repair_target", "PRESERVED", "GRAPH_RELATION")
-        if any(k in norm_rel for k in ("receives fastener", "threaded by", "fastened by")):
+        if any(k in norm_rel for k in ("receives fastener", "is fastened by", "fastened by", "is threaded by", "threaded by", "receives screw", "fastened with")):
             return ("fastener", "COMPATIBLE_WITH_TARGET", "repair_target", "NORMALIZED_TO_CANONICAL_SIGNATURE", "GRAPH_RELATION")
 
     if raw_subject_canon == "repair_target" and raw_object_canon == "fastener":
-        if any(k in norm_rel for k in ("receives fastener", "threaded by", "fastened by", "threads into", "compatible with target")):
+        if any(k in norm_rel for k in ("receives fastener", "is fastened by", "fastened by", "is threaded by", "threaded by", "receives screw", "fastened with")):
             return ("fastener", "COMPATIBLE_WITH_TARGET", "repair_target", "NORMALIZED_TO_CANONICAL_SIGNATURE", "GRAPH_RELATION")
 
     # If none matched, check if relation phrase maps to a known relation but with incompatible endpoints
@@ -879,44 +880,40 @@ class FMRequirementProvider(RequirementProvider):
             for req_field in (
                 "id", "function", "tool_role", "target_role",
                 "required_target_count", "usage_policy", "required_relations",
+                "context_role", "context_relations",
             ):
                 if req_field not in grp:
                     raise MalformedVLMSpecificationError(
                         f"Interaction group missing required field {req_field!r}: {grp}"
                     )
+            grp_id = grp["id"]
             if grp["tool_role"] not in seen_raw_role_ids:
                 raise MalformedVLMSpecificationError(
-                    f"Interaction group tool role {grp['tool_role']!r} not declared in functional_roles"
+                    f"Interaction group {grp_id!r} tool role {grp['tool_role']!r} not declared in functional_roles"
                 )
             if grp["target_role"] not in seen_raw_role_ids:
                 raise MalformedVLMSpecificationError(
-                    f"Interaction group target role {grp['target_role']!r} not declared in functional_roles"
+                    f"Interaction group {grp_id!r} target role {grp['target_role']!r} not declared in functional_roles"
+                )
+            if grp["context_role"] not in seen_raw_role_ids:
+                raise MalformedVLMSpecificationError(
+                    f"Interaction group {grp_id!r} context_role {grp['context_role']!r} not declared in functional_roles"
                 )
             if not isinstance(grp["required_target_count"], int) or isinstance(grp["required_target_count"], bool) or grp["required_target_count"] < 1:
                 raise MalformedVLMSpecificationError(
-                    f"Interaction group required_target_count must be an integer >= 1, got {grp['required_target_count']!r}"
+                    f"Interaction group {grp_id!r} required_target_count must be an integer >= 1, got {grp['required_target_count']!r}"
                 )
-            if grp["usage_policy"] not in {"SEQUENTIAL_REUSE_ALLOWED", "DEDICATED_PER_TARGET"}:
+            if grp["usage_policy"] != "DEDICATED_PER_TARGET":
                 raise MalformedVLMSpecificationError(
-                    f"Interaction group invalid usage_policy {grp['usage_policy']!r}"
+                    f"Interaction group {grp_id!r} has invalid usage_policy {grp['usage_policy']!r}, expected 'DEDICATED_PER_TARGET'"
                 )
             if not isinstance(grp["required_relations"], list) or not grp["required_relations"]:
                 raise MalformedVLMSpecificationError(
-                    f"Interaction group required_relations must be a non-empty list"
+                    f"Interaction group {grp_id!r} required_relations must be a non-empty list"
                 )
-            ctx_role = grp.get("context_role")
-            if ctx_role:
-                if ctx_role not in seen_raw_role_ids:
-                    raise MalformedVLMSpecificationError(
-                        f"Interaction group context_role {ctx_role!r} not declared in functional_roles"
-                    )
-                if not isinstance(grp.get("context_relations"), list) or not grp["context_relations"]:
-                    raise MalformedVLMSpecificationError(
-                        f"Interaction group has context_role {ctx_role!r} but missing/empty context_relations"
-                    )
-            elif grp.get("context_relations"):
+            if not isinstance(grp["context_relations"], list) or not grp["context_relations"]:
                 raise MalformedVLMSpecificationError(
-                    f"Interaction group has context_relations but missing context_role"
+                    f"Interaction group {grp_id!r} context_relations must be a non-empty list"
                 )
 
         concept_accounting: dict[str, Any] = {
@@ -1450,9 +1447,19 @@ class FMRequirementProvider(RequirementProvider):
             ctx_raw = grp.get("context_role")
             ctx_rels_raw = grp.get("context_relations", [])
 
+            if policy != "DEDICATED_PER_TARGET":
+                raise MalformedVLMSpecificationError(
+                    f"Interaction group {g_id!r} has invalid usage_policy {policy!r}, expected 'DEDICATED_PER_TARGET'"
+                )
+
+            if not ctx_raw:
+                raise MalformedVLMSpecificationError(
+                    f"Interaction group {g_id!r} is missing required context_role"
+                )
+
             tool_canon = raw_id_to_canon[tool_raw]
             target_canon = raw_id_to_canon[target_raw]
-            ctx_canon = raw_id_to_canon[ctx_raw] if ctx_raw else None
+            ctx_canon = raw_id_to_canon[ctx_raw]
 
             if tool_canon != "driver":
                 raise MalformedVLMSpecificationError(
@@ -1462,7 +1469,7 @@ class FMRequirementProvider(RequirementProvider):
                 raise MalformedVLMSpecificationError(
                     f"Interaction group target role {target_raw!r} mapped to {target_canon!r}, expected 'fastener'"
                 )
-            if ctx_canon is not None and ctx_canon != "repair_target":
+            if ctx_canon != "repair_target":
                 raise MalformedVLMSpecificationError(
                     f"Interaction group context role {ctx_raw!r} mapped to {ctx_canon!r}, expected 'repair_target'"
                 )
@@ -1489,15 +1496,35 @@ class FMRequirementProvider(RequirementProvider):
                         f"Interaction group required_relation {r_phrase!r} mapped to {m_pred!r}, expected 'COMPATIBLE_WITH'"
                     )
 
-            if ctx_canon:
-                for r_phrase in ctx_rels_raw:
-                    m_sub, m_pred, m_obj, _, _ = canonicalize_workshop_relation(
-                        tool_raw, tool_canon, r_phrase, ctx_raw, ctx_canon
+            if not ctx_rels_raw:
+                raise MalformedVLMSpecificationError(
+                    f"Interaction group {g_id!r} has context_role {ctx_raw!r} but missing/empty context_relations"
+                )
+
+            for r_phrase in ctx_rels_raw:
+                m_sub, m_pred, m_obj, _, _ = canonicalize_workshop_relation(
+                    tool_raw, tool_canon, r_phrase, ctx_raw, ctx_canon
+                )
+                if m_pred != "REACHES_TARGET":
+                    raise MalformedVLMSpecificationError(
+                        f"Interaction group context_relation {r_phrase!r} mapped to {m_pred!r}, expected 'REACHES_TARGET'"
                     )
-                    if m_pred != "REACHES_TARGET":
-                        raise MalformedVLMSpecificationError(
-                            f"Interaction group context_relation {r_phrase!r} mapped to {m_pred!r}, expected 'REACHES_TARGET'"
-                        )
+
+            # Redundancy Proof Rule:
+            # Construct represented group triples and prove they exist in top-level relations
+            seen_canonical_triples = {
+                (r.canonical_subject_role_id, r.canonical_predicate, r.canonical_object_role_id)
+                for r in normalized_relations
+            }
+            represented_group_triples = {
+                ("driver", "COMPATIBLE_WITH", "fastener"),
+                ("driver", "REACHES_TARGET", "repair_target"),
+            }
+            if not (represented_group_triples <= seen_canonical_triples):
+                missing_triples = sorted(represented_group_triples - seen_canonical_triples)
+                raise MalformedVLMSpecificationError(
+                    f"Interaction group {g_id!r} claims redundancy but top-level canonical graph relations are missing required triple(s): {missing_triples}"
+                )
 
             concept_accounting["operation_groups"].append({
                 "raw_group_id": g_id,
@@ -1505,17 +1532,22 @@ class FMRequirementProvider(RequirementProvider):
                 "canonical_function": "DRIVE_FASTENER_INTO_TARGET",
                 "tool_role": f"{tool_raw} -> driver",
                 "target_role": f"{target_raw} -> fastener",
-                "context_role": f"{ctx_raw} -> repair_target" if ctx_raw else None,
+                "context_role": f"{ctx_raw} -> repair_target",
+                "usage_policy": policy,
                 "status": "MERGED_BY_EXPLICIT_RULE",
                 "structural_destination": "REDUNDANT_WITH_CANONICAL_GRAPH_RELATIONS",
                 "represented_relations": ["COMPATIBLE_WITH", "REACHES_TARGET"],
+                "represented_relation_triples": [
+                    ["driver", "COMPATIBLE_WITH", "fastener"],
+                    ["driver", "REACHES_TARGET", "repair_target"],
+                ],
             })
             self.transformation_trace.append({
                 "raw_group": g_id,
                 "transformation": "VALIDATED_REDUNDANT_WITH_GRAPH_RELATIONS",
                 "tool_role": f"{tool_raw} -> driver",
                 "target_role": f"{target_raw} -> fastener",
-                "context_role": f"{ctx_raw} -> repair_target" if ctx_raw else None,
+                "context_role": f"{ctx_raw} -> repair_target",
             })
 
         # Workshop runtime G_F has zero operation groups

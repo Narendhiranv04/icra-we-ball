@@ -479,26 +479,27 @@ When a case fails, apply this tree **in order**:
 
 ---
 
-### P3-G: Workshop Canonicalizer Repair
+### P3-G & P3-G.1: Workshop Canonicalizer Repair & Closure
 **Status**: `[x] COMPLETE (FROZEN)`
 
-**Objective**: Repair the Workshop VLM canonicalizer to handle alternative role proposals, unmapped capability phrases, and operation group validation.
+**Objective**: Repair the Workshop VLM canonicalizer to handle alternative role proposals, unmapped capability phrases, group usage_policy enforcement, mandatory repair_target context, redundancy proof against top-level relations, reverse direction grammar tightening, and raw metadata count provenance.
 
 **Scope of Hypotheses and Tests** (in `workshop_phase1/requirements.py` and `vlm_spec_provider.py`):
 1. **Duplicate / alternative role resolution**: Classify duplicate canonical role emissions:
    - Equivalent alternatives (e.g. manual screwdriver vs cordless drill) → merge with explicit rule.
    - Genuinely distinct requirements → preserve separately.
    - Ambiguous proposals → reject explicitly.
-2. **Capability vocabulary**: Expand ontology phrase mappings for fastener driving and holding capabilities.
-3. **Operation group validation**: Validate group cardinalities and context relations consistently against declared roles.
+2. **Capability vocabulary & reverse grammar**: Strict directional relation matching rejecting active phrases with reversed endpoints.
+3. **Operation group validation & redundancy proof**: Enforce `usage_policy = DEDICATED_PER_TARGET`, require `repair_target` context, and prove canonical relation triples exist in top-level relations before absorbing redundant group wrapper.
 4. **P3-D.1 Canonicalizer Obligations**:
    - Resolve `workbench_surface` role emission (absorbed into planner context `MAIN_WORKBENCH_ZONE`; not emitted in active G_F).
    - Resolve `LOCATED_ON` relation emission (absorbed into planner context for repair_target on workbench; rejected on functional roles).
    - Resolve generic unary properties (`PLANAR_SUPPORT`, `OPEN_CAVITY`, `ELONGATED_OBJECT`) emitted by `map_workshop_unary_property` (absorbed for workbench context; rejected on functional roles; zero runtime unary predicates in G_F).
+5. **Raw metadata count provenance**: Report true raw counts (`raw_roles_count`, `raw_relations_count`, `raw_operation_groups_count`) in G_F metadata.
 
-**Tests**: `test_ideal_fixtures.py` passes for `workshop_W1` with 100% recall/precision and exact structural match. `test_workshop_vlm_requirements.py` passes (23/23).
+**Tests**: `test_ideal_fixtures.py` passes for `workshop_W1` with 100% recall/precision and exact structural match. `test_workshop_vlm_requirements.py` passes (28/28).
 
-**Acceptance**: Ideal workshop fixture → canonical G_F matching GT structure with zero unauthorized roles or predicates. Downstream W1 GT execution valid.
+**Acceptance**: Ideal workshop fixture → canonical G_F matching GT structure with zero unauthorized roles or predicates. Downstream W1 GT dry-run execution valid.
 
 ---
 

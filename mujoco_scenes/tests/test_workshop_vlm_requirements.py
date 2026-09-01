@@ -425,22 +425,145 @@ def test_operation_group_redundancy_validation():
     assert grp_entry["status"] == "MERGED_BY_EXPLICIT_RULE"
     assert grp_entry["structural_destination"] == "REDUNDANT_WITH_CANONICAL_GRAPH_RELATIONS"
     assert set(grp_entry["represented_relations"]) == {"COMPATIBLE_WITH", "REACHES_TARGET"}
+    assert grp_entry["represented_relation_triples"] == [
+        ["driver", "COMPATIBLE_WITH", "fastener"],
+        ["driver", "REACHES_TARGET", "repair_target"],
+    ]
 
 
-def test_workshop_vlm_canonicalization_version():
+def test_workshop_group_usage_policy_enforced():
+    from mujoco_scenes.workshop_phase1.requirements import FMRequirementProvider
+    from mujoco_scenes.functional_tamp_pipeline.errors import MalformedVLMSpecificationError
+    from mujoco_scenes.functional_tamp_pipeline.tests.test_ideal_fixtures import load_ideal_fixture
+    data = load_ideal_fixture("workshop")
+    data["interaction_groups"][0]["usage_policy"] = "SEQUENTIAL_REUSE_ALLOWED"
+    provider = FMRequirementProvider()
+    with pytest.raises(MalformedVLMSpecificationError, match="invalid usage_policy 'SEQUENTIAL_REUSE_ALLOWED', expected 'DEDICATED_PER_TARGET'"):
+        provider.generate_canonical(raw_document=data)
+
+
+def test_workshop_group_context_regressions():
+    from mujoco_scenes.workshop_phase1.requirements import FMRequirementProvider
+    from mujoco_scenes.functional_tamp_pipeline.errors import MalformedVLMSpecificationError
+    from mujoco_scenes.functional_tamp_pipeline.tests.test_ideal_fixtures import load_ideal_fixture
+
+    # Case A: remove context_role and context_relations
+    data_a = load_ideal_fixture("workshop")
+    del data_a["interaction_groups"][0]["context_role"]
+    del data_a["interaction_groups"][0]["context_relations"]
+    provider = FMRequirementProvider()
+    with pytest.raises(MalformedVLMSpecificationError, match="missing required field 'context_role'"):
+        provider.generate_canonical(raw_document=data_a)
+
+    # Case B: context_role = wrong declared role (role_1 instead of role_3)
+    data_b = load_ideal_fixture("workshop")
+    data_b["interaction_groups"][0]["context_role"] = "role_1"
+    with pytest.raises(MalformedVLMSpecificationError, match="expected 'repair_target'"):
+        provider.generate_canonical(raw_document=data_b)
+
+    # Case C: context_role = role_3, context_relations = []
+    data_c = load_ideal_fixture("workshop")
+    data_c["interaction_groups"][0]["context_relations"] = []
+    with pytest.raises(MalformedVLMSpecificationError, match="must be a non-empty list"):
+        provider.generate_canonical(raw_document=data_c)
+
+    # Case D: context_role = role_3, context_relations = ["reaches target"] succeeds
+    data_d = load_ideal_fixture("workshop")
+    res = provider.generate_canonical(raw_document=data_d)
+    assert res["status"] == "CANONICALIZED"
+
+
+def test_workshop_group_redundancy_proven_against_top_level_relations():
+    from mujoco_scenes.workshop_phase1.requirements import FMRequirementProvider
+    from mujoco_scenes.functional_tamp_pipeline.errors import MalformedVLMSpecificationError
+    from mujoco_scenes.functional_tamp_pipeline.tests.test_ideal_fixtures import load_ideal_fixture
+
+    # Case A: remove top-level (driver, COMPATIBLE_WITH, fastener)
+    data_a = load_ideal_fixture("workshop")
+    data_a["functional_relations"] = [
+        rel for rel in data_a["functional_relations"]
+        if rel["relation"] != "compatible with"
+    ]
+    provider = FMRequirementProvider()
+    with pytest.raises(MalformedVLMSpecificationError, match="missing required triple"):
+        provider.generate_canonical(raw_document=data_a)
+
+    # Case B: remove top-level (driver, REACHES_TARGET, repair_target)
+    data_b = load_ideal_fixture("workshop")
+    data_b["functional_relations"] = [
+        rel for rel in data_b["functional_relations"]
+        if rel["relation"] != "reaches target"
+    ]
+    with pytest.raises(MalformedVLMSpecificationError, match="missing required triple"):
+        provider.generate_canonical(raw_document=data_b)
+
+    # Case C: keep all top-level relations + valid group -> succeeds
+    data_c = load_ideal_fixture("workshop")
+    res = provider.generate_canonical(raw_document=data_c)
+    assert res["status"] == "CANONICALIZED"
+
+
+def test_workshop_wrong_direction_adversaries():
+    from mujoco_scenes.workshop_phase1.requirements import canonicalize_workshop_relation
+    from mujoco_scenes.functional_tamp_pipeline.errors import MalformedVLMSpecificationError
+
+    # repair_target -- reaches target --> driver
+    with pytest.raises(MalformedVLMSpecificationError, match="violate signature constraints"):
+        canonicalize_workshop_relation("role_3", "repair_target", "reaches target", "role_1", "driver")
+
+    # repair_target -- reach target --> driver
+    with pytest.raises(MalformedVLMSpecificationError, match="violate signature constraints"):
+        canonicalize_workshop_relation("role_3", "repair_target", "reach target", "role_1", "driver")
+
+    # repair_target -- threads into --> fastener
+    with pytest.raises(MalformedVLMSpecificationError, match="violate signature constraints"):
+        canonicalize_workshop_relation("role_3", "repair_target", "threads into", "role_2", "fastener")
+
+    # repair_target -- compatible with target --> fastener
+    with pytest.raises(MalformedVLMSpecificationError, match="violate signature constraints"):
+        canonicalize_workshop_relation("role_3", "repair_target", "compatible with target", "role_2", "fastener")
+
+    # fastener -- compatible with --> driver
+    with pytest.raises(MalformedVLMSpecificationError, match="violate signature constraints"):
+        canonicalize_workshop_relation("role_2", "fastener", "compatible with", "role_1", "driver")
+
+
+def test_workshop_passive_reverse_normalization_successes():
+    from mujoco_scenes.workshop_phase1.requirements import canonicalize_workshop_relation
+
+    # fastener -- is driven by tool --> driver
+    res_f = canonicalize_workshop_relation("role_2", "fastener", "is driven by tool", "role_1", "driver")
+    assert res_f == ("driver", "COMPATIBLE_WITH", "fastener", "NORMALIZED_TO_CANONICAL_SIGNATURE", "GRAPH_RELATION")
+
+    # repair_target -- is reached by driver --> driver
+    res_r = canonicalize_workshop_relation("role_3", "repair_target", "is reached by driver", "role_1", "driver")
+    assert res_r == ("driver", "REACHES_TARGET", "repair_target", "NORMALIZED_TO_CANONICAL_SIGNATURE", "GRAPH_RELATION")
+
+    # repair_target -- receives fastener --> fastener
+    res_t = canonicalize_workshop_relation("role_3", "repair_target", "receives fastener", "role_2", "fastener")
+    assert res_t == ("fastener", "COMPATIBLE_WITH_TARGET", "repair_target", "NORMALIZED_TO_CANONICAL_SIGNATURE", "GRAPH_RELATION")
+
+
+def test_workshop_vlm_canonicalization_version_and_raw_counts():
     from mujoco_scenes.workshop_phase1.requirements import (
         FMRequirementProvider,
         WORKSHOP_VLM_CANONICALIZATION_VERSION,
     )
     from mujoco_scenes.functional_tamp_pipeline.vlm_spec_provider import VLMSpecProvider
     from mujoco_scenes.functional_tamp_pipeline.tests.test_ideal_fixtures import load_ideal_fixture, MockFMAdapter
-    assert WORKSHOP_VLM_CANONICALIZATION_VERSION == "phase3_p3g_v1"
+    assert WORKSHOP_VLM_CANONICALIZATION_VERSION == "phase3_p3g_1_v1"
     data = load_ideal_fixture("workshop")
     adapter = MockFMAdapter(data)
     provider = FMRequirementProvider(fm_adapter=adapter)
     gf = VLMSpecProvider._workshop("Repair frame", [], provider=provider)
-    assert gf.metadata["vlm_canonicalization_version"] == "phase3_p3g_v1"
-    assert provider.canonicalization_trace["vlm_canonicalization_version"] == "phase3_p3g_v1"
+    assert gf.metadata["vlm_canonicalization_version"] == "phase3_p3g_1_v1"
+    assert provider.canonicalization_trace["vlm_canonicalization_version"] == "phase3_p3g_1_v1"
+
+    # Raw metadata counts must match raw counts
+    assert gf.metadata["raw_roles_count"] == 3
+    assert gf.metadata["raw_relations_count"] == 3
+    assert gf.metadata["raw_operation_groups_count"] == 1
+    assert len(gf.operation_groups) == 0
 
 
 def test_transport_schema_rejects_old_candidate_types_and_extra_fields():
