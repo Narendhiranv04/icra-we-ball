@@ -10,7 +10,9 @@ from typing import Any
 from .living_room_mobile_execution import run_mobile_execution
 from .phase4_execution import (
     ExecutionFailure,
+    emit_phase4_progress,
     normalize_planner_failure_code,
+    Phase4LiveViewer,
     Phase4EntityMappingError,
     Phase3Handoff,
     audit_strict_telemetry,
@@ -128,6 +130,7 @@ def execute_living_room_handoff(
     output_dir: Path,
     max_actions: int | None = None,
     record_video: Path | None = None,
+    viewer: bool = False,
 ) -> dict[str, Any]:
     """Execute the exact plan using the domain's existing per-action loop.
 
@@ -149,18 +152,63 @@ def execute_living_room_handoff(
         _read(phase1_dir / "region_registry.json"),
     )
     native_dir = output_dir / "domain_execution"
-    native = run_mobile_execution(
-        phase1_dir,
-        phase2_dir,
-        native_dir,
-        variant=handoff.internal_variant,
-        execute=True,
-        max_task_actions=max_actions,
-        assisted_suite=False,
-        reset_payloads_from_observation=False,
-    )
+    live_viewers: list[Phase4LiveViewer] = []
+
+    def create_viewer(model: Any, data: Any) -> Any:
+        live_viewer = Phase4LiveViewer(model, data)
+        live_viewers.append(live_viewer)
+        return live_viewer.sync
+
+    def report_progress(
+        event: str,
+        index: int,
+        total: int,
+        operator: str,
+        arguments: list[str],
+        row: dict[str, Any] | None,
+    ) -> None:
+        if event == "start":
+            emit_phase4_progress(
+                "TASK", index, total, operator, arguments
+            )
+            return
+        success = bool(row and row.get("result") == "SUCCESS")
+        failure = (
+            ExecutionFailure.NONE.value if success
+            else ExecutionFailure.CONTROLLER_FAILURE.value
+        )
+        failure_code = normalize_planner_failure_code(
+            None,
+            str((row or {}).get("failure") or row),
+            infrastructure_failure=failure,
+            operator=operator,
+        )
+        emit_phase4_progress(
+            "TASK", index, total, operator, arguments,
+            success=success,
+            controller_status=(row or {}).get("failure"),
+            failure_code=failure_code,
+        )
+
+    try:
+        native = run_mobile_execution(
+            phase1_dir,
+            phase2_dir,
+            native_dir,
+            variant=handoff.internal_variant,
+            execute=True,
+            max_task_actions=max_actions,
+            assisted_suite=False,
+            reset_payloads_from_observation=False,
+            step_callback_factory=create_viewer if viewer else None,
+            progress_callback=report_progress,
+        )
+    finally:
+        for live_viewer in live_viewers:
+            live_viewer.close()
     visual_output = {
-        "enabled": record_video is not None,
+        "enabled": bool(record_video is not None or viewer),
+        "viewer_enabled": bool(viewer),
         "video_path": str(record_video) if record_video else None,
         "video_created": False,
     }

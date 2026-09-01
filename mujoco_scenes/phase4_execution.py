@@ -144,6 +144,55 @@ class Phase4EntityMappingError(ValueError):
     """Raised before control when a frozen planner ID cannot be resolved."""
 
 
+class Phase4ViewerClosed(RuntimeError):
+    """Raised when a user closes the optional live execution viewer."""
+
+
+class Phase4LiveViewer:
+    """Passive MuJoCo viewer for the exact model/data being controlled."""
+
+    def __init__(self, model: Any, data: Any):
+        import mujoco.viewer
+
+        self._viewer = mujoco.viewer.launch_passive(model, data)
+
+    def sync(self, *_args: Any, **_kwargs: Any) -> None:
+        if not self._viewer.is_running():
+            raise Phase4ViewerClosed("Live MuJoCo viewer was closed by the user")
+        self._viewer.sync()
+
+    def close(self) -> None:
+        if self._viewer is not None:
+            self._viewer.close()
+            self._viewer = None
+
+
+def emit_phase4_progress(
+    phase: str,
+    index: int,
+    total: int,
+    operator: str,
+    arguments: list[str],
+    *,
+    success: bool | None = None,
+    controller_status: str | None = None,
+    failure_code: str | None = None,
+) -> None:
+    """Print stable 1-based progress without changing structured results."""
+    rendered = f"{operator}({', '.join(arguments)})"
+    prefix = f"[{phase} {index:02d}/{total:02d}]"
+    if success is None:
+        print(f"{prefix} {rendered}", flush=True)
+        return
+    outcome = "SUCCESS" if success else "FAILED"
+    print(f"{prefix} {outcome} {rendered}", flush=True)
+    if not success:
+        if controller_status:
+            print(f"  controller_status={controller_status}", flush=True)
+        if failure_code:
+            print(f"  failure_code={failure_code}", flush=True)
+
+
 @dataclass(frozen=True)
 class ResolvedEntity:
     planner_id: str
@@ -477,7 +526,14 @@ class Phase4Executor:
             selected = selected[:max_actions]
         started = time.perf_counter()
         inspection_records = []
-        for region in self.handoff.inspected_regions:
+        inspection_total = len(self.handoff.inspected_regions)
+        for inspection_index, region in enumerate(
+            self.handoff.inspected_regions, start=1
+        ):
+            emit_phase4_progress(
+                "INSPECTION", inspection_index, inspection_total,
+                "OPEN", [region],
+            )
             try:
                 record = self.adapter.execute_inspection_open(region)
             except Exception as error:
@@ -494,6 +550,15 @@ class Phase4Executor:
                     ),
                 }
             inspection_records.append(record)
+            emit_phase4_progress(
+                "INSPECTION", inspection_index, inspection_total,
+                "OPEN", [region],
+                success=bool(record.get("success")),
+                controller_status=(
+                    (record.get("controller_result") or {}).get("status")
+                ),
+                failure_code=record.get("failure_code"),
+            )
             if not record.get("success"):
                 break
         inspections_succeeded = (
@@ -503,6 +568,11 @@ class Phase4Executor:
         records = []
         if inspections_succeeded:
             for action in selected:
+                emit_phase4_progress(
+                    "TASK", int(action["action_index"]),
+                    len(self.handoff.actions), str(action["operator"]),
+                    list(action["arguments"]),
+                )
                 try:
                     record = self.adapter.execute_action(action)
                 except Exception as error:
@@ -539,6 +609,15 @@ class Phase4Executor:
                         ),
                     )
                 records.append(record.to_dict())
+                emit_phase4_progress(
+                    "TASK", record.action_index, len(self.handoff.actions),
+                    record.operator, record.arguments,
+                    success=record.success,
+                    controller_status=(
+                        (record.controller_result or {}).get("status")
+                    ),
+                    failure_code=record.failure_code,
+                )
                 if not record.success:
                     break
         complete_sequence = len(selected) == len(self.handoff.actions)

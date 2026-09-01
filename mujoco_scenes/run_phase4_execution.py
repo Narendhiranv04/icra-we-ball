@@ -11,6 +11,7 @@ from typing import Any
 from .phase4_execution import (
     Phase4Executor,
     Phase4EntityMappingError,
+    Phase4ViewerClosed,
     UpstreamPhase3Blocked,
     load_phase3_handoff,
 )
@@ -36,6 +37,7 @@ def execute_phase3_run(
     output_dir: Path,
     max_actions: int | None = None,
     record_video: Path | None = None,
+    viewer: bool = False,
 ) -> dict[str, Any]:
     handoff = load_phase3_handoff(run_dir)
     if handoff.domain == "living_room":
@@ -46,6 +48,7 @@ def execute_phase3_run(
             output_dir=output_dir,
             max_actions=max_actions,
             record_video=record_video,
+            viewer=viewer,
         )
         _write_json(output_dir / "execution_result.json", result)
         _write_json(
@@ -63,11 +66,15 @@ def execute_phase3_run(
     if handoff.domain == "kitchen":
         from .phase4_kitchen import KitchenPhase4Adapter
 
-        adapter = KitchenPhase4Adapter(handoff, record_video=record_video)
+        adapter = KitchenPhase4Adapter(
+            handoff, record_video=record_video, viewer=viewer
+        )
     elif handoff.domain == "workshop":
         from .phase4_workshop import WorkshopPhase4Adapter
 
-        adapter = WorkshopPhase4Adapter(handoff, record_video=record_video)
+        adapter = WorkshopPhase4Adapter(
+            handoff, record_video=record_video, viewer=viewer
+        )
     else:
         raise NotImplementedError(
             f"Phase-4 adapter is not implemented yet for {handoff.domain}"
@@ -89,7 +96,7 @@ def execute_phase3_run(
     return result
 
 
-def main() -> int:
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Execute the exact persisted Phase-3 symbolic action sequence"
     )
@@ -104,22 +111,40 @@ def main() -> int:
         "--record-video", type=Path,
         help="Write a synchronized manual-review MP4 to this path.",
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "--viewer", action="store_true",
+        help=(
+            "Show the controlled model/data in a passive MuJoCo viewer. "
+            "Task indices printed by this CLI are 1-based Phase-3 indices."
+        ),
+    )
+    return parser
+
+
+def main() -> int:
+    args = build_parser().parse_args()
 
     run_dir = args.phase3_run or (
         args.phase3_root / args.domain / args.variant.upper() / args.mode
     )
     output_dir = args.output_root / args.domain / args.variant.upper() / args.mode
+    print(
+        "Phase-4 progress uses 1-based task indices from the persisted "
+        "Phase-3 action sequence.",
+        flush=True,
+    )
     try:
         result = execute_phase3_run(
             run_dir,
             output_dir=output_dir,
             max_actions=args.max_actions,
             record_video=args.record_video,
+            viewer=args.viewer,
         )
     except Exception as error:
         upstream_blocked = isinstance(error, UpstreamPhase3Blocked)
         entity_mapping_failed = isinstance(error, Phase4EntityMappingError)
+        viewer_closed = isinstance(error, Phase4ViewerClosed)
         failure = {
             "schema_version": 2,
             "phase": "PHASE_4_EXECUTION",
@@ -130,19 +155,29 @@ def main() -> int:
                 "BLOCKED_UPSTREAM_PHASE3"
                 if upstream_blocked
                 else (
-                    "ENTITY_MAPPING_FAILURE"
-                    if entity_mapping_failed
-                    else "INVALID_HANDOFF_OR_ADAPTER_SETUP"
+                    "EXECUTION_ABORTED_BY_VIEWER"
+                    if viewer_closed
+                    else (
+                        "ENTITY_MAPPING_FAILURE"
+                        if entity_mapping_failed
+                        else "INVALID_HANDOFF_OR_ADAPTER_SETUP"
+                    )
                 )
             ),
             "failure_stage": (
                 "UPSTREAM_PHASE3_BLOCKED"
                 if upstream_blocked
-                else ("ENTITY_RESOLUTION" if entity_mapping_failed else "HANDOFF")
+                else (
+                    "TASK_ACTION" if viewer_closed
+                    else ("ENTITY_RESOLUTION" if entity_mapping_failed else "HANDOFF")
+                )
             ),
             "failure_type": type(error).__name__,
             "failure_reason": str(error),
-            "failure_code": "EXECUTION_ERROR",
+            "failure_code": (
+                "EXECUTION_ABORTED_BY_VIEWER"
+                if viewer_closed else "EXECUTION_ERROR"
+            ),
             "execution_mode": "P4_BENCH",
             "strict_execution": False,
             "strict_execution_violation_detected": False,

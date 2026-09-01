@@ -1142,6 +1142,8 @@ def run_mobile_execution(
     max_task_actions: int | None = None,
     recorder: Any | None = None,
     step_callback: Any | None = None,
+    step_callback_factory: Any | None = None,
+    progress_callback: Any | None = None,
     assisted_suite: bool = False,
     reset_payloads_from_observation: bool = True,
 ) -> dict[str, Any]:
@@ -1241,6 +1243,18 @@ def run_mobile_execution(
         recorder.renderer = mujoco.Renderer(scene.model, height=recorder.tile_height, width=recorder.tile_width)
         if step_callback is None:
             step_callback = recorder.step_callback
+    if step_callback_factory is not None:
+        live_callback = step_callback_factory(scene.model, scene.data)
+        if step_callback is None:
+            step_callback = live_callback
+        else:
+            existing_callback = step_callback
+
+            def combined_step_callback() -> None:
+                existing_callback()
+                live_callback()
+
+            step_callback = combined_step_callback
 
     # The execution experiment starts from the composed model's deterministic
     # reset, not the long perception settle (whose visual-only scanned mug
@@ -1304,6 +1318,16 @@ def run_mobile_execution(
     for task_action in actions:
         operator, arguments = task_action["operator"], task_action["arguments"]
         object_id = arguments["object"]
+        task_arguments = (
+            [object_id, arguments["region"]]
+            if operator == "PLACE" else [object_id]
+        )
+        progress_index = int(task_action.get("step", 0)) + 1
+        if progress_callback is not None:
+            progress_callback(
+                "start", progress_index, len(phase2_plan["actions"]),
+                operator, task_arguments, None,
+            )
         backend = object_backend[object_id]
         target = (
             np.asarray(payloads["objects"][object_id]["observed_centroid_world_m"], float)
@@ -1573,6 +1597,11 @@ def run_mobile_execution(
                     execution_log[-1]["failure"] = "POSTCONDITION_FAILED"
             execution_frames.append(_capture_execution_frame(scene))
             if execution_log[-1]["result"] == "FAILED":
+                if progress_callback is not None:
+                    progress_callback(
+                        "finish", progress_index, len(phase2_plan["actions"]),
+                        operator, task_arguments, execution_log[-1],
+                    )
                 break
         held = object_id if operator == "PICK" else None
         held_backend = backend if operator == "PICK" else None
@@ -1582,7 +1611,17 @@ def run_mobile_execution(
             if state.validation_status != "TRUE":
                 execution_log[-1]["result"] = "FAILED"
                 execution_log[-1]["failure"] = "HELD_STATE_INVALID"
+                if progress_callback is not None:
+                    progress_callback(
+                        "finish", progress_index, len(phase2_plan["actions"]),
+                        operator, task_arguments, execution_log[-1],
+                    )
                 break
+        if execute and progress_callback is not None:
+            progress_callback(
+                "finish", progress_index, len(phase2_plan["actions"]),
+                operator, task_arguments, execution_log[-1],
+            )
 
     refined_artifact = {
         "schema_version": SCHEMA_VERSION,

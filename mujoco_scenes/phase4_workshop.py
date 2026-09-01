@@ -16,6 +16,7 @@ from .phase4_execution import (
     normalize_planner_failure_code,
     ExecutionFailure,
     Phase4EntityMappingError,
+    Phase4LiveViewer,
     Phase3Handoff,
     ResolvedEntity,
 )
@@ -111,14 +112,19 @@ class WorkshopPhase4Adapter:
             raise ValueError("Workshop final plan has no unique driver destination")
         work_surface = str(driver_places[0])
         self.scene = WorkshopScene(robot="google", variant=handoff.internal_variant)
+        self.live_viewer = (
+            Phase4LiveViewer(self.scene.model, self.scene.data)
+            if viewer else None
+        )
+        self.viewer_requested = bool(viewer)
         self.recorder = None
         self.record_video = record_video
-        if record_video is not None or viewer:
+        if record_video is not None:
             from .workshop_ground_truth_recorder import WorkshopRecorder
 
             self.recorder = WorkshopRecorder(
                 self.scene, record_video, width=320, height=180, fps=5,
-                show=viewer,
+                show=False,
             )
             recorder_callback = self.recorder.capture
             if frame_callback is None:
@@ -131,6 +137,18 @@ class WorkshopPhase4Adapter:
                     recorder_callback(force)
 
                 frame_callback = combined_callback
+        if self.live_viewer is not None:
+            viewer_callback = self.live_viewer.sync
+            if frame_callback is None:
+                frame_callback = viewer_callback
+            else:
+                external_callback = frame_callback
+
+                def combined_viewer_callback(force: bool = True) -> None:
+                    external_callback(force)
+                    viewer_callback()
+
+                frame_callback = combined_viewer_callback
         observed_graph_path = handoff.artifacts.get("observed_graph")
         if observed_graph_path is None:
             raise ValueError("Workshop handoff has no final observed G_O artifact")
@@ -241,12 +259,17 @@ class WorkshopPhase4Adapter:
         self.successful_actions = 0
 
     def close_visualization(self) -> dict[str, Any]:
-        if self.recorder is None:
-            return {"enabled": False, "frames": 0, "video_path": None}
-        self.recorder.close()
+        frames = 0
+        if self.recorder is not None:
+            self.recorder.close()
+            frames = int(self.recorder.frames)
+        if self.live_viewer is not None:
+            self.live_viewer.close()
+            self.live_viewer = None
         return {
-            "enabled": True,
-            "frames": int(self.recorder.frames),
+            "enabled": bool(self.record_video or self.viewer_requested),
+            "viewer_enabled": self.viewer_requested,
+            "frames": frames,
             "video_path": str(self.record_video) if self.record_video else None,
             "video_created": bool(
                 self.record_video

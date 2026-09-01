@@ -19,6 +19,7 @@ from .phase4_execution import (
     classify_planner_failure,
     normalize_planner_failure_code,
     ExecutionFailure,
+    Phase4LiveViewer,
     Phase3Handoff,
     ResolvedEntity,
 )
@@ -174,8 +175,13 @@ class KitchenPhase4Adapter:
         self.scene = KitchenScene(
             inventory["scene_name"], include_robot=True, robot="google"
         )
+        self.live_viewer = (
+            Phase4LiveViewer(self.scene.model, self.scene.data)
+            if viewer else None
+        )
+        self.viewer_requested = bool(viewer)
         self.recorder = None
-        if record_video is not None or viewer:
+        if record_video is not None:
             from .kitchen_ground_truth_recorder import KitchenGroundTruthRecorder
 
             self.recorder = KitchenGroundTruthRecorder(
@@ -184,8 +190,8 @@ class KitchenPhase4Adapter:
                 tile_width=320,
                 tile_height=180,
                 fps=5,
-                show=viewer,
-                record=record_video is not None,
+                show=False,
+                record=True,
             )
             recorder_callback = self.recorder.step_callback
             if step_callback is None:
@@ -198,6 +204,18 @@ class KitchenPhase4Adapter:
                     recorder_callback(*args, **kwargs)
 
                 step_callback = combined_callback
+        if self.live_viewer is not None:
+            viewer_callback = self.live_viewer.sync
+            if step_callback is None:
+                step_callback = viewer_callback
+            else:
+                external_callback = step_callback
+
+                def combined_viewer_callback(*args: Any, **kwargs: Any) -> None:
+                    external_callback(*args, **kwargs)
+                    viewer_callback()
+
+                step_callback = combined_viewer_callback
         resolver = KitchenExecutionEntityResolver()
         observed_regions = {
             row["source_context"]["source_container"]
@@ -253,13 +271,17 @@ class KitchenPhase4Adapter:
         self.record_video = record_video
 
     def close_visualization(self) -> dict[str, Any]:
-        if self.recorder is None:
-            return {"enabled": False, "frames": 0, "video_path": None}
-        self.recorder.hold_final_frame(duration_s=1.0)
-        frames = int(self.recorder.total_frames_captured)
-        self.recorder.close()
+        frames = 0
+        if self.recorder is not None:
+            self.recorder.hold_final_frame(duration_s=1.0)
+            frames = int(self.recorder.total_frames_captured)
+            self.recorder.close()
+        if self.live_viewer is not None:
+            self.live_viewer.close()
+            self.live_viewer = None
         return {
-            "enabled": True,
+            "enabled": bool(self.record_video or self.viewer_requested),
+            "viewer_enabled": self.viewer_requested,
             "frames": frames,
             "video_path": str(self.record_video) if self.record_video else None,
             "video_created": bool(

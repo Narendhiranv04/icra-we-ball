@@ -14,6 +14,8 @@ from mujoco_scenes.phase4_execution import (
     ExecutionFailure,
     Phase4Executor,
     Phase4EntityMappingError,
+    Phase4LiveViewer,
+    Phase4ViewerClosed,
     ResolvedEntity,
     UpstreamPhase3Blocked,
     load_phase3_handoff,
@@ -52,6 +54,7 @@ from mujoco_scenes.phase4_living_room import (
     validate_living_room_plan_ids,
 )
 from mujoco_scenes import run_workshop_phase4_controller_development as workshop_harness
+from mujoco_scenes.run_phase4_execution import build_parser, execute_phase3_run
 
 
 def _write(path: Path, value) -> None:
@@ -329,6 +332,92 @@ def test_executor_stops_and_classifies_controller_failure(tmp_path):
     assert not result["success"]
     assert result["actions_completed"] == 0
     assert result["failure"] == ExecutionFailure.CONTROLLER_FAILURE.value
+
+
+def test_phase4_cli_viewer_flag_defaults_off_and_parses_on():
+    parser = build_parser()
+    base = ["--domain", "kitchen", "--variant", "K1"]
+    assert parser.parse_args(base).viewer is False
+    assert parser.parse_args([*base, "--viewer"]).viewer is True
+    assert inspect.signature(execute_phase3_run).parameters["viewer"].default is False
+
+
+def test_passive_viewer_syncs_same_model_data_and_closes(monkeypatch):
+    model, data = object(), object()
+
+    class Handle:
+        running = True
+        sync_calls = 0
+        closed = False
+
+        def is_running(self):
+            return self.running
+
+        def sync(self):
+            self.sync_calls += 1
+
+        def close(self):
+            self.closed = True
+
+    handle = Handle()
+    import mujoco.viewer
+    launch = []
+    monkeypatch.setattr(
+        mujoco.viewer, "launch_passive",
+        lambda received_model, received_data: (
+            launch.append((received_model, received_data)) or handle
+        ),
+    )
+    viewer = Phase4LiveViewer(model, data)
+    viewer.sync()
+    assert launch == [(model, data)]
+    assert handle.sync_calls == 1
+    handle.running = False
+    with pytest.raises(Phase4ViewerClosed):
+        viewer.sync()
+    viewer.close()
+    assert handle.closed
+
+
+def test_executor_prints_one_based_task_progress_without_changing_result(
+    tmp_path, capsys
+):
+    handoff = _handoff(tmp_path)
+    result = Phase4Executor(handoff, _Adapter()).run()
+    output = capsys.readouterr().out
+    assert "[TASK 01/01] PICK(object_0001)" in output
+    assert "[TASK 01/01] SUCCESS PICK(object_0001)" in output
+    assert result["final_action_sequence"] == list(handoff.actions)
+
+
+def test_executor_prints_inspections_separately_from_task_indices(tmp_path, capsys):
+    Phase4Executor(
+        _handoff(tmp_path, inspected_regions=("C2", "B1")), _Adapter()
+    ).run()
+    output = capsys.readouterr().out
+    assert "[INSPECTION 01/02] OPEN(C2)" in output
+    assert "[INSPECTION 02/02] OPEN(B1)" in output
+    assert "[TASK 01/01] PICK(object_0001)" in output
+
+
+def test_executor_prints_failed_action_status_and_failure_code(tmp_path, capsys):
+    class FailedAdapter(_Adapter):
+        def execute_action(self, action):
+            result = super().execute_action(action)
+            result.success = False
+            result.failure = ExecutionFailure.CONTROLLER_FAILURE.value
+            result.failure_code = "ACCESS_BLOCKED"
+            result.controller_result = {
+                "success": False, "status": "GRASP_FAILED"
+            }
+            return result
+
+    result = Phase4Executor(_handoff(tmp_path), FailedAdapter()).run()
+    output = capsys.readouterr().out
+    assert "[TASK 01/01] FAILED PICK(object_0001)" in output
+    assert "controller_status=GRASP_FAILED" in output
+    assert "failure_code=ACCESS_BLOCKED" in output
+    assert result["failure_code"] == "ACCESS_BLOCKED"
 
 
 def test_executor_contains_unexpected_adapter_exception(tmp_path):
