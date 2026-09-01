@@ -848,7 +848,7 @@ class WorkshopExecutionDispatcher:
         # collision-checked home branch before solving task-space motion.
         if np.linalg.norm(
             self.scene.data.qpos[self.arm_qpos] - self.arm_profile.navigation_joints
-        ) < 0.12 and ik_seed is None:
+        ) < 0.12:
             self._animate_configuration(
                 self.arm_qpos,
                 self.arm_dofs,
