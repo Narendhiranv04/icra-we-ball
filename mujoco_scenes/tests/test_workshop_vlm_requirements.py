@@ -464,7 +464,7 @@ def test_workshop_group_context_regressions():
     # Case C: context_role = role_3, context_relations = []
     data_c = load_ideal_fixture("workshop")
     data_c["interaction_groups"][0]["context_relations"] = []
-    with pytest.raises(MalformedVLMSpecificationError, match="must be a non-empty list"):
+    with pytest.raises(MalformedVLMSpecificationError, match="must contain exactly 1 relation phrase"):
         provider.generate_canonical(raw_document=data_c)
 
     # Case D: context_role = role_3, context_relations = ["reaches target"] succeeds
@@ -544,6 +544,118 @@ def test_workshop_passive_reverse_normalization_successes():
     assert res_t == ("fastener", "COMPATIBLE_WITH_TARGET", "repair_target", "NORMALIZED_TO_CANONICAL_SIGNATURE", "GRAPH_RELATION")
 
 
+def test_workshop_canonical_endpoint_passive_grammar_rejected():
+    from mujoco_scenes.workshop_phase1.requirements import canonicalize_workshop_relation
+    from mujoco_scenes.functional_tamp_pipeline.errors import MalformedVLMSpecificationError
+
+    # driver -- is driven by --> fastener
+    with pytest.raises(MalformedVLMSpecificationError, match="violate signature constraints"):
+        canonicalize_workshop_relation("role_1", "driver", "is driven by", "role_2", "fastener")
+
+    # driver -- driven by --> fastener
+    with pytest.raises(MalformedVLMSpecificationError, match="violate signature constraints"):
+        canonicalize_workshop_relation("role_1", "driver", "driven by", "role_2", "fastener")
+
+    # driver -- is reached by --> repair_target
+    with pytest.raises(MalformedVLMSpecificationError, match="violate signature constraints"):
+        canonicalize_workshop_relation("role_1", "driver", "is reached by", "role_3", "repair_target")
+
+    # driver -- reached by --> repair_target
+    with pytest.raises(MalformedVLMSpecificationError, match="violate signature constraints"):
+        canonicalize_workshop_relation("role_1", "driver", "reached by", "role_3", "repair_target")
+
+    # fastener -- receives fastener --> repair_target
+    with pytest.raises(MalformedVLMSpecificationError, match="violate signature constraints"):
+        canonicalize_workshop_relation("role_2", "fastener", "receives fastener", "role_3", "repair_target")
+
+    # fastener -- is threaded by --> repair_target
+    with pytest.raises(MalformedVLMSpecificationError, match="violate signature constraints"):
+        canonicalize_workshop_relation("role_2", "fastener", "is threaded by", "role_3", "repair_target")
+
+    # fastener -- fastened by --> repair_target
+    with pytest.raises(MalformedVLMSpecificationError, match="violate signature constraints"):
+        canonicalize_workshop_relation("role_2", "fastener", "fastened by", "role_3", "repair_target")
+
+
+def test_workshop_active_canonical_grammar_accepted():
+    from mujoco_scenes.workshop_phase1.requirements import canonicalize_workshop_relation
+
+    # driver -- compatible with --> fastener
+    res1 = canonicalize_workshop_relation("role_1", "driver", "compatible with", "role_2", "fastener")
+    assert res1 == ("driver", "COMPATIBLE_WITH", "fastener", "PRESERVED", "GRAPH_RELATION")
+
+    # driver -- tip must fit the screw head and transmit torque --> fastener
+    res2 = canonicalize_workshop_relation("role_1", "driver", "tip must fit the screw head and transmit torque", "role_2", "fastener")
+    assert res2 == ("driver", "COMPATIBLE_WITH", "fastener", "PRESERVED", "GRAPH_RELATION")
+
+    # driver -- reaches target --> repair_target
+    res3 = canonicalize_workshop_relation("role_1", "driver", "reaches target", "role_3", "repair_target")
+    assert res3 == ("driver", "REACHES_TARGET", "repair_target", "PRESERVED", "GRAPH_RELATION")
+
+    # driver -- must reach the workpiece hole recess --> repair_target
+    res4 = canonicalize_workshop_relation("role_1", "driver", "must reach the workpiece hole recess", "role_3", "repair_target")
+    assert res4 == ("driver", "REACHES_TARGET", "repair_target", "PRESERVED", "GRAPH_RELATION")
+
+    # fastener -- compatible with target --> repair_target
+    res5 = canonicalize_workshop_relation("role_2", "fastener", "compatible with target", "role_3", "repair_target")
+    assert res5 == ("fastener", "COMPATIBLE_WITH_TARGET", "repair_target", "PRESERVED", "GRAPH_RELATION")
+
+    # fastener -- threads into target repair hole --> repair_target
+    res6 = canonicalize_workshop_relation("role_2", "fastener", "threads into target repair hole", "role_3", "repair_target")
+    assert res6 == ("fastener", "COMPATIBLE_WITH_TARGET", "repair_target", "PRESERVED", "GRAPH_RELATION")
+
+
+def test_workshop_group_relation_cardinality_regressions():
+    from mujoco_scenes.workshop_phase1.requirements import FMRequirementProvider
+    from mujoco_scenes.functional_tamp_pipeline.errors import MalformedVLMSpecificationError
+    from mujoco_scenes.functional_tamp_pipeline.tests.test_ideal_fixtures import load_ideal_fixture
+
+    # Case A: required_relations = []
+    data_a = load_ideal_fixture("workshop")
+    data_a["interaction_groups"][0]["required_relations"] = []
+    provider = FMRequirementProvider()
+    with pytest.raises(MalformedVLMSpecificationError, match="must contain exactly 1 relation phrase"):
+        provider.generate_canonical(raw_document=data_a)
+
+    # Case B: required_relations has multiple phrases
+    data_b = load_ideal_fixture("workshop")
+    data_b["interaction_groups"][0]["required_relations"] = ["compatible with", "fits screw head and transmits torque"]
+    with pytest.raises(MalformedVLMSpecificationError, match="must contain exactly 1 relation phrase"):
+        provider.generate_canonical(raw_document=data_b)
+
+    # Case C: context_relations = []
+    data_c = load_ideal_fixture("workshop")
+    data_c["interaction_groups"][0]["context_relations"] = []
+    with pytest.raises(MalformedVLMSpecificationError, match="must contain exactly 1 relation phrase"):
+        provider.generate_canonical(raw_document=data_c)
+
+    # Case D: context_relations has multiple phrases
+    data_d = load_ideal_fixture("workshop")
+    data_d["interaction_groups"][0]["context_relations"] = ["reaches target", "must reach target hole"]
+    with pytest.raises(MalformedVLMSpecificationError, match="must contain exactly 1 relation phrase"):
+        provider.generate_canonical(raw_document=data_d)
+
+    # Case E: exactly 1 valid required + 1 context succeeds
+    data_e = load_ideal_fixture("workshop")
+    res = provider.generate_canonical(raw_document=data_e)
+    assert res["status"] == "CANONICALIZED"
+
+
+def test_workshop_group_raw_relation_provenance():
+    from mujoco_scenes.workshop_phase1.requirements import FMRequirementProvider
+    from mujoco_scenes.functional_tamp_pipeline.tests.test_ideal_fixtures import load_ideal_fixture
+    data = load_ideal_fixture("workshop")
+    provider = FMRequirementProvider()
+    provider.generate_canonical(raw_document=data)
+    accounting = provider.canonicalization_trace["concept_accounting"]
+    assert len(accounting["operation_groups"]) == 1
+    grp_entry = accounting["operation_groups"][0]
+    assert grp_entry["raw_required_relation"] == "compatible with"
+    assert grp_entry["canonical_required_relation"] == "COMPATIBLE_WITH"
+    assert grp_entry["raw_context_relation"] == "reaches target"
+    assert grp_entry["canonical_context_relation"] == "REACHES_TARGET"
+
+
 def test_workshop_vlm_canonicalization_version_and_raw_counts():
     from mujoco_scenes.workshop_phase1.requirements import (
         FMRequirementProvider,
@@ -551,13 +663,13 @@ def test_workshop_vlm_canonicalization_version_and_raw_counts():
     )
     from mujoco_scenes.functional_tamp_pipeline.vlm_spec_provider import VLMSpecProvider
     from mujoco_scenes.functional_tamp_pipeline.tests.test_ideal_fixtures import load_ideal_fixture, MockFMAdapter
-    assert WORKSHOP_VLM_CANONICALIZATION_VERSION == "phase3_p3g_1_v1"
+    assert WORKSHOP_VLM_CANONICALIZATION_VERSION == "phase3_p3g_2_v1"
     data = load_ideal_fixture("workshop")
     adapter = MockFMAdapter(data)
     provider = FMRequirementProvider(fm_adapter=adapter)
     gf = VLMSpecProvider._workshop("Repair frame", [], provider=provider)
-    assert gf.metadata["vlm_canonicalization_version"] == "phase3_p3g_1_v1"
-    assert provider.canonicalization_trace["vlm_canonicalization_version"] == "phase3_p3g_1_v1"
+    assert gf.metadata["vlm_canonicalization_version"] == "phase3_p3g_2_v1"
+    assert provider.canonicalization_trace["vlm_canonicalization_version"] == "phase3_p3g_2_v1"
 
     # Raw metadata counts must match raw counts
     assert gf.metadata["raw_roles_count"] == 3

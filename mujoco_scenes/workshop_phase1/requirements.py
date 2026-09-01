@@ -29,7 +29,7 @@ DEFAULT_FM_CONTRACT_PATH = (
     Path(__file__).resolve().parent.parent / "configs" / "workshop_phase1_fm_contract.yaml"
 )
 
-WORKSHOP_VLM_CANONICALIZATION_VERSION = "phase3_p3g_1_v1"
+WORKSHOP_VLM_CANONICALIZATION_VERSION = "phase3_p3g_2_v1"
 
 CANONICAL_WORKSHOP_INSTRUCTION = (
     "Find the compatible screw and first compatible driver encountered, "
@@ -487,23 +487,30 @@ def map_workshop_relation(relation_text: str) -> str | None:
         "driver engages screw", "driver engages", "transmits torque",
         "transmit torque", "fit the screw head and transmit torque",
         "tip must fit the screw head and transmit torque",
+        "is driven by", "driven by", "is engaged by", "engaged by",
+        "receives torque from", "driven by tool", "is driven by tool",
+        "is turned by", "turned by", "receives drive from",
     )):
         matches.add("COMPATIBLE_WITH")
     if any(k in norm for k in (
         "reaches target", "reach target", "reaches into", "reach into",
         "reaches hole", "reach hole", "reaches repair", "reach repair",
-        "access target", "length to reach", "reaches workpiece", "reach workpiece",
+        "access target", "accesses target", "length to reach", "reaches workpiece", "reach workpiece",
         "must reach the workpiece hole recess", "long enough to reach workpiece hole recess",
+        "long enough to reach hole",
+        "is reached by", "reached by", "target reached by", "accessed by", "target accessed by", "is accessed by",
     )):
         matches.add("REACHES_TARGET")
     if any(k in norm for k in (
         "thread into", "threads into", "fit hole", "fits hole", "fit target",
         "fits target", "anchor in", "anchors in", "compatible with hole",
-        "compatible with target", "fits workpiece", "fit inside", "fits inside",
-        "fits into", "fit into", "inserted into", "insert into",
+        "compatible with target", "fits workpiece", "fit workpiece", "fit inside", "fits inside",
+        "fits into", "fit into", "inserted into", "insert into", "inserts into",
         "screw inserted into", "screw fits into",
         "must fit the workbench target hole and thread into the hole",
         "threads into target repair hole",
+        "receives fastener", "receives screw", "is fastened by", "fastened by",
+        "is threaded by", "threaded by", "fastened with",
     )):
         matches.add("COMPATIBLE_WITH_TARGET")
     if any(k in norm for k in ("located in", "located on", "placed on", "on surface", "on workbench", "supports", "held by")):
@@ -512,9 +519,9 @@ def map_workshop_relation(relation_text: str) -> str | None:
     if len(matches) == 1:
         return next(iter(matches))
     if len(matches) > 1:
-        if "COMPATIBLE_WITH" in matches and any(k in norm for k in ("engage", "engages", "driver", "bit", "torque")):
+        if "COMPATIBLE_WITH" in matches and any(k in norm for k in ("engage", "engages", "driver", "bit", "torque", "driven")):
             return "COMPATIBLE_WITH"
-        if "COMPATIBLE_WITH_TARGET" in matches and any(k in norm for k in ("hole", "target", "thread", "insert")):
+        if "COMPATIBLE_WITH_TARGET" in matches and any(k in norm for k in ("hole", "target", "thread", "insert", "fastener", "screw")):
             return "COMPATIBLE_WITH_TARGET"
         raise AmbiguousCanonicalizationError(f"Ambiguous workshop relation {relation_text!r} matches multiple relations: {sorted(matches)}")
     return None
@@ -583,10 +590,6 @@ def canonicalize_workshop_relation(
             "fit screw head", "fits screw head",
         )):
             return ("driver", "COMPATIBLE_WITH", "fastener", "PRESERVED", "GRAPH_RELATION")
-        if any(k in norm_rel for k in (
-            "is driven by", "driven by", "is engaged by", "engaged by", "receives torque from"
-        )):
-            return ("driver", "COMPATIBLE_WITH", "fastener", "NORMALIZED_TO_CANONICAL_SIGNATURE", "GRAPH_RELATION")
 
     if raw_subject_canon == "fastener" and raw_object_canon == "driver":
         if any(k in norm_rel for k in (
@@ -601,14 +604,12 @@ def canonicalize_workshop_relation(
         if any(k in norm_rel for k in (
             "reaches target", "reach target", "reaches into", "reach into",
             "reaches hole", "reach hole", "reaches repair", "reach repair",
-            "access target", "length to reach", "reaches workpiece", "reach workpiece",
+            "access target", "accesses target", "length to reach", "reaches workpiece", "reach workpiece",
             "must reach the workpiece hole recess", "reaches workpiece hole",
             "reach workpiece hole", "reach workpiece hole recess",
-            "long enough to reach workpiece hole recess",
+            "long enough to reach workpiece hole recess", "long enough to reach hole",
         )):
             return ("driver", "REACHES_TARGET", "repair_target", "PRESERVED", "GRAPH_RELATION")
-        if any(k in norm_rel for k in ("is reached by", "reached by", "target reached by", "accessed by", "target accessed by", "is accessed by")):
-            return ("driver", "REACHES_TARGET", "repair_target", "NORMALIZED_TO_CANONICAL_SIGNATURE", "GRAPH_RELATION")
 
     if raw_subject_canon == "repair_target" and raw_object_canon == "driver":
         if any(k in norm_rel for k in ("is reached by", "reached by", "target reached by", "accessed by", "target accessed by", "is accessed by")):
@@ -621,17 +622,15 @@ def canonicalize_workshop_relation(
             "thread into", "threads into", "fit hole", "fits hole", "fit target",
             "fits target", "anchor in", "anchors in", "fits workpiece", "fit workpiece",
             "fit inside", "fits inside", "fits into", "fit into", "inserted into",
-            "insert into", "screw inserted into", "screw fits into",
+            "insert into", "inserts into", "screw inserted into", "screw fits into",
             "must fit the workbench target hole and thread into the hole",
             "threads into target repair hole", "thread into target repair hole",
             "threads into hole", "thread into hole", "fits the hole", "fit the hole",
         )):
             return ("fastener", "COMPATIBLE_WITH_TARGET", "repair_target", "PRESERVED", "GRAPH_RELATION")
-        if any(k in norm_rel for k in ("receives fastener", "is fastened by", "fastened by", "is threaded by", "threaded by", "receives screw", "fastened with")):
-            return ("fastener", "COMPATIBLE_WITH_TARGET", "repair_target", "NORMALIZED_TO_CANONICAL_SIGNATURE", "GRAPH_RELATION")
 
     if raw_subject_canon == "repair_target" and raw_object_canon == "fastener":
-        if any(k in norm_rel for k in ("receives fastener", "is fastened by", "fastened by", "is threaded by", "threaded by", "receives screw", "fastened with")):
+        if any(k in norm_rel for k in ("receives fastener", "receives screw", "is fastened by", "fastened by", "is threaded by", "threaded by", "fastened with")):
             return ("fastener", "COMPATIBLE_WITH_TARGET", "repair_target", "NORMALIZED_TO_CANONICAL_SIGNATURE", "GRAPH_RELATION")
 
     # If none matched, check if relation phrase maps to a known relation but with incompatible endpoints
@@ -907,13 +906,13 @@ class FMRequirementProvider(RequirementProvider):
                 raise MalformedVLMSpecificationError(
                     f"Interaction group {grp_id!r} has invalid usage_policy {grp['usage_policy']!r}, expected 'DEDICATED_PER_TARGET'"
                 )
-            if not isinstance(grp["required_relations"], list) or not grp["required_relations"]:
+            if not isinstance(grp["required_relations"], list) or len(grp["required_relations"]) != 1:
                 raise MalformedVLMSpecificationError(
-                    f"Interaction group {grp_id!r} required_relations must be a non-empty list"
+                    f"Interaction group {grp_id!r} required_relations must contain exactly 1 relation phrase, got {len(grp['required_relations']) if isinstance(grp['required_relations'], list) else grp['required_relations']!r}"
                 )
-            if not isinstance(grp["context_relations"], list) or not grp["context_relations"]:
+            if not isinstance(grp["context_relations"], list) or len(grp["context_relations"]) != 1:
                 raise MalformedVLMSpecificationError(
-                    f"Interaction group {grp_id!r} context_relations must be a non-empty list"
+                    f"Interaction group {grp_id!r} context_relations must contain exactly 1 relation phrase, got {len(grp['context_relations']) if isinstance(grp['context_relations'], list) else grp['context_relations']!r}"
                 )
 
         concept_accounting: dict[str, Any] = {
@@ -1487,28 +1486,33 @@ class FMRequirementProvider(RequirementProvider):
                     f"Interaction group function {func_desc!r} cannot be mapped to reviewed driving action"
                 )
 
-            for r_phrase in req_rels_raw:
-                m_sub, m_pred, m_obj, _, _ = canonicalize_workshop_relation(
-                    tool_raw, tool_canon, r_phrase, target_raw, target_canon
-                )
-                if m_pred != "COMPATIBLE_WITH":
-                    raise MalformedVLMSpecificationError(
-                        f"Interaction group required_relation {r_phrase!r} mapped to {m_pred!r}, expected 'COMPATIBLE_WITH'"
-                    )
-
-            if not ctx_rels_raw:
+            if len(req_rels_raw) != 1:
                 raise MalformedVLMSpecificationError(
-                    f"Interaction group {g_id!r} has context_role {ctx_raw!r} but missing/empty context_relations"
+                    f"Interaction group {g_id!r} required_relations must contain exactly 1 relation phrase, got {len(req_rels_raw)}"
                 )
 
-            for r_phrase in ctx_rels_raw:
-                m_sub, m_pred, m_obj, _, _ = canonicalize_workshop_relation(
-                    tool_raw, tool_canon, r_phrase, ctx_raw, ctx_canon
+            raw_req_rel = req_rels_raw[0]
+            m_sub, m_pred, m_obj, _, _ = canonicalize_workshop_relation(
+                tool_raw, tool_canon, raw_req_rel, target_raw, target_canon
+            )
+            if m_pred != "COMPATIBLE_WITH":
+                raise MalformedVLMSpecificationError(
+                    f"Interaction group required_relation {raw_req_rel!r} mapped to {m_pred!r}, expected 'COMPATIBLE_WITH'"
                 )
-                if m_pred != "REACHES_TARGET":
-                    raise MalformedVLMSpecificationError(
-                        f"Interaction group context_relation {r_phrase!r} mapped to {m_pred!r}, expected 'REACHES_TARGET'"
-                    )
+
+            if len(ctx_rels_raw) != 1:
+                raise MalformedVLMSpecificationError(
+                    f"Interaction group {g_id!r} context_relations must contain exactly 1 relation phrase, got {len(ctx_rels_raw)}"
+                )
+
+            raw_ctx_rel = ctx_rels_raw[0]
+            m_sub, m_pred, m_obj, _, _ = canonicalize_workshop_relation(
+                tool_raw, tool_canon, raw_ctx_rel, ctx_raw, ctx_canon
+            )
+            if m_pred != "REACHES_TARGET":
+                raise MalformedVLMSpecificationError(
+                    f"Interaction group context_relation {raw_ctx_rel!r} mapped to {m_pred!r}, expected 'REACHES_TARGET'"
+                )
 
             # Redundancy Proof Rule:
             # Construct represented group triples and prove they exist in top-level relations
@@ -1534,6 +1538,10 @@ class FMRequirementProvider(RequirementProvider):
                 "target_role": f"{target_raw} -> fastener",
                 "context_role": f"{ctx_raw} -> repair_target",
                 "usage_policy": policy,
+                "raw_required_relation": raw_req_rel,
+                "canonical_required_relation": "COMPATIBLE_WITH",
+                "raw_context_relation": raw_ctx_rel,
+                "canonical_context_relation": "REACHES_TARGET",
                 "status": "MERGED_BY_EXPLICIT_RULE",
                 "structural_destination": "REDUNDANT_WITH_CANONICAL_GRAPH_RELATIONS",
                 "represented_relations": ["COMPATIBLE_WITH", "REACHES_TARGET"],
