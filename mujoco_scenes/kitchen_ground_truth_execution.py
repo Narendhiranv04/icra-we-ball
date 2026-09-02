@@ -345,6 +345,22 @@ class KitchenGroundTruthExecutionDispatcher:
     def physically_open_containers(self) -> set[str]:
         return self.phase_b.physically_open_containers()
 
+    def _resolved_backend_pick_spec(self, object_id: str):
+        """Return the backend body and its backend-keyed manipulation spec."""
+        binding = self.binding_by_id.get(object_id)
+        backend = binding.get("physical_backend_body") if binding else None
+        if not backend:
+            raise RuntimeError(
+                f"resolved backend body missing for planner object {object_id}"
+            )
+        try:
+            return backend, self.phase_b.manipulation.executor.pick_specs[backend]
+        except KeyError as error:
+            raise RuntimeError(
+                "backend pick specification missing for resolved object "
+                f"{object_id} -> {backend}"
+            ) from error
+
     def _allow_served_payloads_for_next_motion(self) -> None:
         """Scope robot-path allowances to vessels already placed for serving.
 
@@ -1293,7 +1309,7 @@ class KitchenGroundTruthExecutionDispatcher:
                                 self.scene.model.geom_conaffinity[geom_id] = 2
                     allowed_park_fixture_bodies = tuple(allowed_names)
                     mujoco.mj_forward(self.scene.model, self.scene.data)
-                pick_spec = low.pick_specs[object_id]
+                backend, pick_spec = self._resolved_backend_pick_spec(object_id)
                 # Recreate the drawer grasp's palm-down orientation at
                 # release. Using the generic countertop yaw would rotate the
                 # welded K5 spoon around the gripper and sweep its long shaft
@@ -1306,7 +1322,6 @@ class KitchenGroundTruthExecutionDispatcher:
                     ),
                     dtype=float,
                 ).copy()
-                backend = self.binding_by_id[object_id]["physical_backend_body"]
                 body_id = mujoco.mj_name2id(
                     self.scene.model, mujoco.mjtObj.mjOBJ_BODY, backend
                 )

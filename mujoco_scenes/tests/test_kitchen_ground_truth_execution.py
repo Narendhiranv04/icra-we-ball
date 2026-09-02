@@ -15,6 +15,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 import tempfile
+from types import SimpleNamespace
 import pytest
 import numpy as np
 
@@ -487,6 +488,29 @@ def test_stirrer_park_hover_miss_cannot_release_beyond_counter_edge():
     assert '"status": "TOOL_PARK_HOVER_FAILED"' in placement
     assert "Never release a stirrer from an unverified post-stir pose" in placement
     assert "and nearest_soup_bowl_distance >= 0.20" not in placement
+
+
+def test_reusable_coffee_tool_place_uses_backend_keyed_pick_spec():
+    planner_id = "object_generic"
+    backend = "simulator_backend_body"
+    assert planner_id != backend
+    expected_spec = object()
+    dispatcher = object.__new__(KitchenGroundTruthExecutionDispatcher)
+    dispatcher.binding_by_id = {
+        planner_id: {"physical_backend_body": backend},
+    }
+    dispatcher.phase_b = SimpleNamespace(
+        manipulation=SimpleNamespace(
+            executor=SimpleNamespace(pick_specs={backend: expected_spec})
+        )
+    )
+
+    resolved_backend, pick_spec = dispatcher._resolved_backend_pick_spec(
+        planner_id
+    )
+
+    assert resolved_backend == backend
+    assert pick_spec is expected_spec
 
 
 # ── 1. Variant Discovery Tests ────────────────────────────────────────────────
