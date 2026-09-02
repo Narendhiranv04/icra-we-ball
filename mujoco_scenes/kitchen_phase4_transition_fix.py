@@ -20,9 +20,9 @@ The generic grasp planner also distinguishes the non-contact ``Approaching
 above object`` waypoint from the final contact pose. Routed approaches are
 labelled ``Approaching above object route N``; the generic tolerance selector
 matches the canonical label exactly, so routed waypoints can accidentally fall
-back to the strict 2-degree terminal IK tolerance. Kitchen tabletop bowls use a
-bounded 6-degree intermediate orientation tolerance and routed approach labels
-are canonicalized only while solving that non-contact waypoint. Final descent,
+back to the strict terminal IK tolerance. Kitchen tabletop bowls use a bounded
+2 cm / 8 degree intermediate envelope and routed approach labels are
+canonicalized only while solving that non-contact waypoint. Final descent,
 bilateral contact, attachment, and held-state checks remain unchanged.
 """
 
@@ -48,8 +48,8 @@ _ORIGINAL_PLACE = KitchenGroundTruthExecutionDispatcher.place
 _ORIGINAL_SOLVE_POINTS = CalibratedPickPlaceExecutor._solve_points
 _PATCHED = False
 
-_TABLE_BOWL_INTERMEDIATE_POSITION_TOLERANCE_M = 0.012
-_TABLE_BOWL_INTERMEDIATE_ORIENTATION_TOLERANCE_RAD = float(np.deg2rad(6.0))
+_TABLE_BOWL_INTERMEDIATE_POSITION_TOLERANCE_M = 0.020
+_TABLE_BOWL_INTERMEDIATE_ORIENTATION_TOLERANCE_RAD = float(np.deg2rad(8.0))
 
 
 def _safe_name(value: str) -> str:
