@@ -80,6 +80,18 @@ def execute_phase3_run(
         )
         return result
     if handoff.domain == "kitchen":
+        # Kitchen soup bowls become task-terminal served assemblies only after
+        # the normal physical PLACE(bowl, serving_area) has succeeded.  Install
+        # this before composing the Kitchen scene so the required inactive
+        # equality constraints exist in every K1--K6 execution.  The helper is
+        # generic over the Phase-3 assignment; no K-variant or object ID is
+        # hard-coded here.
+        from .run_phase4_execution_served_static import (
+            install_patch as install_kitchen_served_terminal_latch,
+        )
+
+        install_kitchen_served_terminal_latch()
+
         from .phase4_kitchen import KitchenPhase4Adapter
 
         adapter = KitchenPhase4Adapter(
