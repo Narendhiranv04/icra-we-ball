@@ -75,6 +75,66 @@ COFFEE_TOOL_PARK_GRIP_HEIGHT_M = 0.73
 COFFEE_TOOL_PARK_RELEASE_GRIP_HEIGHT_M = 0.73
 
 
+def serving_utensil_containment_evidence(
+    *,
+    active_tip_world: np.ndarray,
+    grasp_end_world: np.ndarray,
+    opening_centre: np.ndarray,
+    opening_normal: np.ndarray,
+    usable_opening_radius_m: float,
+    cavity_depth_m: float,
+    observed_length_m: float,
+    assigned_bowl_contact: bool,
+    counter_contact: bool,
+    serving_contact: bool,
+) -> dict[str, Any]:
+    """Verify that a meaningful utensil segment occupies the bowl cavity."""
+    normal = np.asarray(opening_normal, dtype=float)
+    normal /= np.linalg.norm(normal)
+    tip = np.asarray(active_tip_world, dtype=float)
+    grasp = np.asarray(grasp_end_world, dtype=float)
+    centre = np.asarray(opening_centre, dtype=float)
+    sample_count = 101
+    points = np.linspace(tip, grasp, sample_count)
+    offsets = points - centre
+    axial = offsets @ normal
+    radial = np.linalg.norm(offsets - axial[:, None] * normal, axis=1)
+    inside = (
+        (radial <= float(usable_opening_radius_m))
+        & (axial >= -float(cavity_depth_m) - 0.01)
+        & (axial <= 0.01)
+    )
+    longest_run = current_run = 0
+    for value in inside:
+        current_run = current_run + 1 if bool(value) else 0
+        longest_run = max(longest_run, current_run)
+    segment_length = float(np.linalg.norm(grasp - tip))
+    inside_length = (
+        segment_length * max(0, longest_run - 1) / (sample_count - 1)
+    )
+    required_inside_length = min(0.04, 0.20 * float(observed_length_m))
+    active_tip_inside = bool(inside[0])
+    interior_segment_present = bool(inside_length >= required_inside_length)
+    exterior_support_contact = bool(counter_contact or serving_contact)
+    # Any live counter/serving support means the utensil has escaped the
+    # requested bowl relation, even if it also grazes the bowl's outer wall.
+    exterior_support_only = exterior_support_contact
+    containment_verified = bool(
+        (active_tip_inside or interior_segment_present)
+        and not exterior_support_only
+    )
+    return {
+        "active_tip_inside_cavity": active_tip_inside,
+        "utensil_axis_segment_inside_cavity_length_m": inside_length,
+        "required_axis_segment_inside_cavity_length_m": required_inside_length,
+        "interior_axis_segment_present": interior_segment_present,
+        "exterior_support_contact": exterior_support_contact,
+        "exterior_support_only": exterior_support_only,
+        "assigned_bowl_contact": bool(assigned_bowl_contact),
+        "containment_verified": containment_verified,
+    }
+
+
 def build_oracle_inventory_and_resolution(
     scene,
     assignment: GroundTruthAssignment | None = None,
@@ -1846,13 +1906,44 @@ class KitchenGroundTruthExecutionDispatcher:
                 desired_tip_position = (
                     opening_centre - insertion_depth * opening_normal
                 )
+                usable_opening_radius = max(
+                    0.0,
+                    min(opening.opening_half_extents_m)
+                    - opening.safety_margin_m,
+                )
+                short_utensil_gravity_drop = bool(
+                    float(observed["length"]) <= 2.0 * usable_opening_radius
+                )
+                if short_utensil_gravity_drop:
+                    # A utensil shorter than the measured usable opening can
+                    # be released horizontally over the cavity. This avoids
+                    # forcing its middle-grasped handle through the counter
+                    # plane while still using only robot motion and gravity.
+                    release_feature_local = np.zeros(3, dtype=float)
+                    release_feature_world = (
+                        opening_centre + 0.025 * opening_normal
+                    )
+                    vertical_orientations = [{
+                        "rotation": live_utensil_rotation,
+                        "inclination_deg": 90.0,
+                        "azimuth_deg": 0.0,
+                        "tool_roll_deg": 0.0,
+                        "provenance": (
+                            "MEASURED_SHORT_UTENSIL_HORIZONTAL_GRAVITY_DROP"
+                        ),
+                    }]
+                else:
+                    release_feature_local = np.asarray(
+                        tool_geometry.active_tip_local_m, dtype=float
+                    )
+                    release_feature_world = desired_tip_position
                 release_pose_candidates = []
                 for orientation in vertical_orientations:
                     candidate_position, candidate_rotation = (
                         self.phase_c._grip_pose_for_body_feature(
                             utensil_body,
-                            np.asarray(tool_geometry.active_tip_local_m, dtype=float),
-                            desired_tip_position,
+                            release_feature_local,
+                            release_feature_world,
                             np.asarray(orientation["rotation"], dtype=float),
                         )
                     )
@@ -1868,7 +1959,9 @@ class KitchenGroundTruthExecutionDispatcher:
                         (position, rotation, ())
                         for position, rotation in release_pose_candidates[1:]
                     ),
-                    base_position_tolerance_m=0.10,
+                    base_position_tolerance_m=(
+                        0.02 if float(observed["length"]) < 0.20 else 0.10
+                    ),
                     compact_arm_for_base_motion=False,
                     allowed_robot_contact_body_names=(
                         bowl_backend,
@@ -1890,7 +1983,11 @@ class KitchenGroundTruthExecutionDispatcher:
                 # descent.  The short/second spoon rotates above the rim; the
                 # long/first spoon rotates at its previous depth, then takes
                 # the small additional downward step requested for release.
-                if float(observed["length"]) < 0.20:
+                if short_utensil_gravity_drop:
+                    pre_release_tip_position = (
+                        opening_centre + 0.080 * opening_normal
+                    )
+                elif float(observed["length"]) < 0.20:
                     rotation_height_offset = min(
                         0.06, 0.35 * safe_cavity_depth
                     )
@@ -1903,13 +2000,14 @@ class KitchenGroundTruthExecutionDispatcher:
                         opening_centre
                         - 0.75 * safe_cavity_depth * opening_normal
                     )
+                serving_tracking_tolerance = (
+                    0.005 if float(observed["length"]) < 0.20 else 0.02
+                )
                 if pre_release_tip_position is not None:
                     elevated_position, elevated_rotation = (
                         self.phase_c._grip_pose_for_body_feature(
                             utensil_body,
-                            np.asarray(
-                                tool_geometry.active_tip_local_m, dtype=float
-                            ),
+                            release_feature_local,
                             pre_release_tip_position,
                             np.asarray(
                                 vertical_orientations[selected_family][
@@ -1953,8 +2051,55 @@ class KitchenGroundTruthExecutionDispatcher:
                             self.step_callback(self.scene)
                         if float(np.max(np.abs(
                             self.scene.data.qpos[low.arm_qpos] - elevated_arm
-                        ))) <= 0.02:
+                        ))) <= serving_tracking_tolerance:
                             break
+
+                # The payload-safe base reposition can change the live
+                # compliant weld transform, especially for a short utensil
+                # whose handle passes near the countertop. Recompute the
+                # feature-to-cavity pose from the live held transform rather
+                # than executing the stale arm solution produced during the
+                # stance search.
+                stance_release_position = release_position.copy()
+                stance_release_rotation = release_rotation.copy()
+                stance_release_arm = release_arm.copy()
+                release_position, release_rotation = (
+                    self.phase_c._grip_pose_for_body_feature(
+                        utensil_body,
+                        release_feature_local,
+                        release_feature_world,
+                        np.asarray(
+                            vertical_orientations[selected_family]["rotation"],
+                            dtype=float,
+                        ),
+                    )
+                )
+                live_release_ik = ProfiledIK(
+                    self.scene.model,
+                    self.scene.data,
+                    low.profile,
+                    orientation_weight=0.45,
+                )
+                release_arm, live_position_error, live_angle_error = (
+                    live_release_ik.solve(
+                        release_position,
+                        self.scene.data.qpos[low.arm_qpos].copy(),
+                        release_rotation,
+                    )
+                )
+                if (
+                    live_position_error > low.ik_position_tolerance
+                    or live_angle_error > low.ik_angle_tolerance
+                ):
+                    raise RuntimeError(
+                        "Live serving-spoon release IK failed: "
+                        f"position={live_position_error:.6f}, "
+                        f"angle={live_angle_error:.6f}"
+                    )
+                if float(observed["length"]) >= 0.20:
+                    release_position = stance_release_position
+                    release_rotation = stance_release_rotation
+                    release_arm = stance_release_arm
 
                 for _ in range(1800):
                     command = self.scene.data.ctrl[low.arm_actuators]
@@ -1969,7 +2114,7 @@ class KitchenGroundTruthExecutionDispatcher:
                         self.step_callback(self.scene)
                     if float(np.max(np.abs(
                         self.scene.data.qpos[low.arm_qpos] - release_arm
-                    ))) <= 0.02:
+                    ))) <= serving_tracking_tolerance:
                         break
 
                 # Pre-compute a straight vertical retreat at the live serving
@@ -2014,6 +2159,73 @@ class KitchenGroundTruthExecutionDispatcher:
                 )
                 if weld_id < 0 or not bool(self.scene.data.eq_active[weld_id]):
                     raise RuntimeError("Serving utensil grasp weld is not active")
+                motion_snapshots: dict[str, Any] = {}
+
+                def capture_motion_snapshot(label: str) -> None:
+                    body_position = self.scene.data.xpos[utensil_body].copy()
+                    body_rotation = self.scene.data.xmat[
+                        utensil_body
+                    ].reshape(3, 3).copy()
+                    tip = body_position + body_rotation @ np.asarray(
+                        tool_geometry.active_tip_local_m, dtype=float
+                    )
+                    velocity = np.zeros(6, dtype=float)
+                    mujoco.mj_objectVelocity(
+                        self.scene.model, self.scene.data,
+                        mujoco.mjtObj.mjOBJ_BODY, utensil_body, velocity, 0,
+                    )
+                    contact_pairs: list[list[str]] = []
+                    bowl_pairs: list[list[str]] = []
+                    counter_pairs: list[list[str]] = []
+                    serving_pairs: list[list[str]] = []
+                    for contact in self.scene.data.contact:
+                        first_body = int(
+                            self.scene.model.geom_bodyid[contact.geom1]
+                        )
+                        second_body = int(
+                            self.scene.model.geom_bodyid[contact.geom2]
+                        )
+                        if utensil_body not in {first_body, second_body}:
+                            continue
+                        pair = [
+                            mujoco.mj_id2name(
+                                self.scene.model, mujoco.mjtObj.mjOBJ_GEOM,
+                                int(geom_id),
+                            ) or f"geom_{int(geom_id)}"
+                            for geom_id in (contact.geom1, contact.geom2)
+                        ]
+                        contact_pairs.append(pair)
+                        if bowl_body in {first_body, second_body}:
+                            bowl_pairs.append(pair)
+                        if "counter_surface" in pair:
+                            counter_pairs.append(pair)
+                        if "serving_surface" in pair:
+                            serving_pairs.append(pair)
+                    motion_snapshots[label] = {
+                        "sim_time_s": float(self.scene.data.time),
+                        "gripper_site_position_world_m": self.scene.data.site_xpos[
+                            low.grip_site_id
+                        ].tolist(),
+                        "gripper_site_rotation_world": self.scene.data.site_xmat[
+                            low.grip_site_id
+                        ].reshape(3, 3).tolist(),
+                        "finger_joint_positions": self.scene.data.qpos[
+                            low.finger_qpos
+                        ].tolist(),
+                        "active_tip_position_world_m": tip.tolist(),
+                        "utensil_body_centre_world_m": body_position.tolist(),
+                        "utensil_angular_velocity_radps": velocity[:3].tolist(),
+                        "utensil_linear_velocity_mps": velocity[3:].tolist(),
+                        "grasp_weld_active": bool(
+                            weld_id >= 0 and self.scene.data.eq_active[weld_id]
+                        ),
+                        "utensil_contact_pairs": contact_pairs,
+                        "utensil_bowl_contact_pairs": bowl_pairs,
+                        "utensil_countertop_contact_pairs": counter_pairs,
+                        "utensil_serving_surface_contact_pairs": serving_pairs,
+                    }
+
+                capture_motion_snapshot("before_release")
                 # Open only until the fingers physically clear the utensil
                 # while its weld preserves the verified vertical pose. Fully
                 # spreading a middle-grasped drawer spoon inside the bowl can
@@ -2058,6 +2270,8 @@ class KitchenGroundTruthExecutionDispatcher:
                     if contact_clear_commands >= 2:
                         break
                 self.scene.data.eq_active[weld_id] = 0
+                mujoco.mj_forward(self.scene.model, self.scene.data)
+                capture_motion_snapshot("immediately_after_weld_disable")
 
                 # Withdraw along the vertical tool axis and finish opening
                 # above the rim, after the released spoon is no longer between
@@ -2092,6 +2306,7 @@ class KitchenGroundTruthExecutionDispatcher:
                         ))) <= 0.01
                     ):
                         break
+                capture_motion_snapshot("after_retreat")
                 for _ in range(1800):
                     mujoco.mj_step(self.scene.model, self.scene.data)
                     if self.step_callback is not None:
@@ -2124,6 +2339,7 @@ class KitchenGroundTruthExecutionDispatcher:
                     else:
                         quiet_steps = 0
                 mujoco.mj_forward(self.scene.model, self.scene.data)
+                capture_motion_snapshot("after_final_settling")
                 low.mode = "idle"
                 low.held_object = None
                 low.target_object = None
@@ -2156,17 +2372,17 @@ class KitchenGroundTruthExecutionDispatcher:
                     + utensil_rotation
                     @ np.asarray(tool_geometry.active_tip_local_m, dtype=float)
                 )
+                grasp_end_position = (
+                    utensil_position
+                    + utensil_rotation
+                    @ np.asarray(tool_geometry.grasp_local_m, dtype=float)
+                )
                 tip_from_opening = tip_position - opening_centre
                 tip_axial = float(np.dot(tip_from_opening, opening_normal))
                 tip_radial_vector = (
                     tip_from_opening - tip_axial * opening_normal
                 )
                 tip_radial_distance = float(np.linalg.norm(tip_radial_vector))
-                usable_opening_radius = max(
-                    0.0,
-                    min(opening.opening_half_extents_m)
-                    - opening.safety_margin_m,
-                )
                 tip_inside_bowl = bool(
                     tip_radial_distance <= usable_opening_radius
                     and -opening.cavity_depth_m - 0.01
@@ -2192,6 +2408,60 @@ class KitchenGroundTruthExecutionDispatcher:
                     <= max(0.08, 0.5 * float(observed["length"]))
                 )
                 telemetry.update({
+                    "planner_utensil_id": object_id,
+                    "backend_utensil_body": utensil_backend,
+                    "planner_bowl_id": destination,
+                    "backend_bowl_body": bowl_backend,
+                    "utensil_observed_length_m": float(observed["length"]),
+                    "bowl_opening_half_extents_m": list(
+                        map(float, opening.opening_half_extents_m)
+                    ),
+                    "bowl_cavity_depth_m": float(opening.cavity_depth_m),
+                    "bowl_safety_margin_m": float(opening.safety_margin_m),
+                    "bowl_body_position_world_m": bowl_position.tolist(),
+                    "opening_centre_world_m": opening_centre.tolist(),
+                    "opening_normal_world": opening_normal.tolist(),
+                    "release_orientation_family": {
+                        key: value
+                        for key, value in vertical_orientations[
+                            selected_family
+                        ].items()
+                        if key != "rotation"
+                    },
+                    "release_gripper_position_world_m": release_position.tolist(),
+                    "release_gripper_rotation_world": release_rotation.tolist(),
+                    "pre_release_tip_position_world_m": (
+                        pre_release_tip_position.tolist()
+                    ),
+                    "desired_utensil_tip_position_world_m": (
+                        desired_tip_position.tolist()
+                    ),
+                    "pre_release_actual_tip_error_m": float(np.linalg.norm(
+                        np.asarray(
+                            motion_snapshots["before_release"][
+                                "active_tip_position_world_m"
+                            ], dtype=float
+                        ) - desired_tip_position
+                    )),
+                    "pre_release_feature_tracking_error_m": float(np.linalg.norm(
+                        np.asarray(
+                            motion_snapshots["before_release"][
+                                "utensil_body_centre_world_m"
+                                if short_utensil_gravity_drop
+                                else "active_tip_position_world_m"
+                            ], dtype=float
+                        ) - release_feature_world
+                    )),
+                    "pre_release_actual_gripper_error_m": float(np.linalg.norm(
+                        np.asarray(
+                            motion_snapshots["before_release"][
+                                "gripper_site_position_world_m"
+                            ], dtype=float
+                        ) - release_position
+                    )),
+                    "insertion_depth_m": float(insertion_depth),
+                    "short_utensil_gravity_drop": short_utensil_gravity_drop,
+                    "motion_snapshots": motion_snapshots,
                     "active_tip_position_world_m": tip_position.tolist(),
                     "active_tip_radial_distance_from_opening_m": (
                         tip_radial_distance
@@ -2208,15 +2478,30 @@ class KitchenGroundTruthExecutionDispatcher:
                         body_centre_within_opening_column
                     ),
                     "assigned_bowl_contact": assigned_bowl_contact,
+                    "direct_payload_pose_write": False,
+                    "direct_free_joint_qpos_write": False,
                 })
                 maximum_paired_centre_distance = max(
                     0.14,
                     0.70 * float(observed["length"]),
                 )
+                containment = serving_utensil_containment_evidence(
+                    active_tip_world=tip_position,
+                    grasp_end_world=grasp_end_position,
+                    opening_centre=opening_centre,
+                    opening_normal=opening_normal,
+                    usable_opening_radius_m=usable_opening_radius,
+                    cavity_depth_m=float(opening.cavity_depth_m),
+                    observed_length_m=float(observed["length"]),
+                    assigned_bowl_contact=assigned_bowl_contact,
+                    counter_contact=bool(telemetry.get("counter_contact")),
+                    serving_contact=bool(telemetry.get("serving_contact")),
+                )
                 physically_contained_by_bowl = bool(
-                    (assigned_bowl_contact or body_centre_within_opening_column)
+                    containment["containment_verified"]
                     and bowl_centre_distance <= maximum_paired_centre_distance
                 )
+                telemetry["containment_evidence"] = containment
                 telemetry["maximum_paired_centre_distance_m"] = (
                     maximum_paired_centre_distance
                 )
@@ -2257,6 +2542,7 @@ class KitchenGroundTruthExecutionDispatcher:
                     ),
                     "robot_actuated_motion": True,
                     "direct_payload_pose_write": False,
+                    "requested_physical_relation_verified": valid,
                     "telemetry": telemetry,
                 }
             except RuntimeError as error:
@@ -2275,7 +2561,7 @@ class KitchenGroundTruthExecutionDispatcher:
         # deliberately limited to the kettle/coffee jar.
         if (
             not record.get("success", False)
-            and self.allow_assisted_pick_recovery
+            and self.assisted_suite
             and destination == "countertop"
             and object_id in set(self.assignment.sources.values())
         ):
@@ -2336,7 +2622,7 @@ class KitchenGroundTruthExecutionDispatcher:
         # resolver as assisted-suite mode for the final release only.
         if (
             not record.get("success", False)
-            and self.allow_assisted_pick_recovery
+            and self.assisted_suite
         ):
             resolver = self.phase_b.manipulation.placement_resolver
             try:

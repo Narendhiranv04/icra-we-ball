@@ -465,11 +465,25 @@ class KitchenPhase4Adapter:
             )
             evidence = {"held_object": held, "held_state": held_state}
         elif operator == "PLACE":
-            valid = held is None and bool(controller.get("success"))
+            destination = (
+                action["arguments"][1]
+                if len(action.get("arguments", ())) > 1 else "countertop"
+            )
+            object_relative = destination in self.by_id
+            relation_verified = bool(
+                controller.get("requested_physical_relation_verified")
+            )
+            valid = bool(
+                held is None
+                and controller.get("success")
+                and (not object_relative or relation_verified)
+            )
             evidence = {
                 "held_object": held,
                 "controller_status": controller.get("status"),
                 "placement_telemetry": controller.get("telemetry"),
+                "object_relative_destination": object_relative,
+                "requested_physical_relation_verified": relation_verified,
             }
         elif operator == "POUR":
             valid = held == first and bool(controller.get("pour_motion_verified"))

@@ -12,6 +12,7 @@ Tests cover:
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 import tempfile
 import pytest
@@ -38,7 +39,10 @@ from mujoco_scenes.run_kitchen_ground_truth_execution import (
 )
 from mujoco_scenes.kitchen_ground_truth_execution import (
     KitchenGroundTruthExecutionDispatcher,
+    serving_utensil_containment_evidence,
 )
+from mujoco_scenes.phase4_kitchen import KitchenPhase4Adapter
+from mujoco_scenes.phase4_execution import Phase4Executor, load_phase3_handoff
 from mujoco_scenes.scene_loader import KitchenScene
 
 
@@ -367,7 +371,7 @@ def test_drawer_pick_is_single_physical_attempt():
     assert "for _ in range(2)" not in pick
 
 
-def test_serving_spoon_uses_height_tuned_vertical_drop_and_geometric_containment():
+def test_serving_spoon_uses_geometry_selected_drop_and_geometric_containment():
     source = Path("mujoco_scenes/kitchen_ground_truth_execution.py").read_text()
     placement = source[
         source.index("# Soup utensils belong inside"):
@@ -377,8 +381,101 @@ def test_serving_spoon_uses_height_tuned_vertical_drop_and_geometric_containment
     assert '1.0 if float(observed["length"]) >= 0.20 else 0.70' in placement
     assert "else 0.5" not in placement
     assert "insertion_depth = drop_depth_fraction * safe_cavity_depth" in placement
-    assert "body_centre_within_opening_column" in placement
-    assert "assigned_bowl_contact or body_centre_within_opening_column" in placement
+    assert "short_utensil_gravity_drop" in placement
+    assert "serving_utensil_containment_evidence" in placement
+    assert "assigned_bowl_contact or body_centre_within_opening_column" not in placement
+
+
+def _containment(**overrides):
+    values = {
+        "active_tip_world": np.array((0.0, 0.0, -0.04)),
+        "grasp_end_world": np.array((0.0, 0.0, 0.06)),
+        "opening_centre": np.zeros(3),
+        "opening_normal": np.array((0.0, 0.0, 1.0)),
+        "usable_opening_radius_m": 0.06,
+        "cavity_depth_m": 0.08,
+        "observed_length_m": 0.10,
+        "assigned_bowl_contact": True,
+        "counter_contact": False,
+        "serving_contact": False,
+    }
+    values.update(overrides)
+    return serving_utensil_containment_evidence(**values)
+
+
+def test_serving_containment_accepts_interior_axis_segment():
+    evidence = _containment()
+    assert evidence["interior_axis_segment_present"]
+    assert evidence["containment_verified"]
+
+
+def test_serving_containment_rejects_exterior_bowl_contact():
+    evidence = _containment(
+        active_tip_world=np.array((0.10, 0.0, -0.02)),
+        grasp_end_world=np.array((0.10, 0.0, 0.08)),
+    )
+    assert evidence["assigned_bowl_contact"]
+    assert not evidence["containment_verified"]
+
+
+def test_serving_containment_rejects_spoon_beside_bowl():
+    evidence = _containment(
+        active_tip_world=np.array((0.12, 0.0, 0.0)),
+        grasp_end_world=np.array((0.22, 0.0, 0.0)),
+        assigned_bowl_contact=False,
+        counter_contact=True,
+    )
+    assert evidence["exterior_support_only"]
+    assert not evidence["containment_verified"]
+
+
+def test_serving_containment_rejects_future_serving_surface_staging():
+    evidence = _containment(
+        assigned_bowl_contact=False,
+        serving_contact=True,
+    )
+    assert evidence["exterior_support_only"]
+    assert not evidence["containment_verified"]
+
+
+def test_phase4_object_relative_place_fails_closed_without_relation_evidence():
+    adapter = object.__new__(KitchenPhase4Adapter)
+    adapter.by_id = {"object_0004": object()}
+    adapter._held_planner_id = lambda: None
+    post = adapter._post_check(
+        {"operator": "PLACE", "arguments": ["object_0007", "object_0004"]},
+        {"success": True, "status": "RELEASED_WITHOUT_RELATION_EVIDENCE"},
+    )
+    assert not post["success"]
+    assert post["object_relative_destination"]
+    assert not post["requested_physical_relation_verified"]
+
+
+def test_k1_both_serving_utensil_placements_are_physically_contained():
+    """Real MuJoCo regression for both frozen K1 spoon-to-bowl actions."""
+    fixture = os.environ.get("PHASE4_K1_HANDOFF")
+    if not fixture:
+        pytest.skip("set PHASE4_K1_HANDOFF to run the physical frozen-plan test")
+    handoff = load_phase3_handoff(Path(fixture))
+    adapter = KitchenPhase4Adapter(handoff)
+    try:
+        result = Phase4Executor(handoff, adapter).run(max_actions=6)
+    finally:
+        adapter.close_visualization()
+    by_index = {row["action_index"]: row for row in result["action_results"]}
+    for action_index in (2, 6):
+        row = by_index[action_index]
+        controller = row["controller_result"]
+        telemetry = controller["telemetry"]
+        assert row["success"]
+        assert controller["direct_payload_pose_write"] is False
+        assert row["post_check"]["held_object"] is None
+        assert telemetry["containment_evidence"]["containment_verified"]
+        assert not telemetry["containment_evidence"]["exterior_support_only"]
+        assert controller["requested_physical_relation_verified"] is True
+        assert row["post_check"]["success"]
+    resolver = adapter.dispatcher.phase_b.manipulation.placement_resolver
+    assert not resolver.future_serving_relative_destinations
 
 
 def test_stirrer_park_hover_miss_cannot_release_beyond_counter_edge():
