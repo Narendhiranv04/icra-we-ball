@@ -54,7 +54,17 @@ from mujoco_scenes.phase4_living_room import (
     validate_living_room_plan_ids,
 )
 from mujoco_scenes import run_workshop_phase4_controller_development as workshop_harness
-from mujoco_scenes.run_phase4_execution import build_parser, execute_phase3_run
+from mujoco_scenes.run_phase4_execution import (
+    build_parser,
+    execute_phase3_run,
+    require_supported_mujoco_runtime,
+)
+
+
+def test_phase4_rejects_uncalibrated_mujoco_runtime(monkeypatch):
+    monkeypatch.setattr(mujoco, "__version__", "3.10.0")
+    with pytest.raises(RuntimeError, match=r"calibrated.*3\.3\.5.*3\.10\.0"):
+        require_supported_mujoco_runtime()
 
 
 def _write(path: Path, value) -> None:

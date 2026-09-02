@@ -8,6 +8,8 @@ from pathlib import Path
 import sys
 from typing import Any
 
+import mujoco
+
 from .phase4_execution import (
     Phase4Executor,
     Phase4EntityMappingError,
@@ -20,6 +22,19 @@ from .phase4_execution import (
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_PHASE3_ROOT = ROOT / "runs" / "functional_tamp_pipeline"
 DEFAULT_OUTPUT_ROOT = ROOT / "runs" / "phase4_execution"
+SUPPORTED_MUJOCO_VERSION = "3.3.5"
+
+
+def require_supported_mujoco_runtime() -> None:
+    """Fail before simulation when physics differs from the calibrated runtime."""
+    installed = str(mujoco.__version__)
+    if installed != SUPPORTED_MUJOCO_VERSION:
+        raise RuntimeError(
+            "Phase-4 controllers are calibrated and validated with MuJoCo "
+            f"{SUPPORTED_MUJOCO_VERSION}, but this interpreter has {installed}. "
+            "Use the repository environment (`.venv/bin/python`) installed "
+            "from mujoco_scenes/requirements.txt."
+        )
 
 
 def _write_json(path: Path, payload: Any) -> None:
@@ -39,6 +54,7 @@ def execute_phase3_run(
     record_video: Path | None = None,
     viewer: bool = False,
 ) -> dict[str, Any]:
+    require_supported_mujoco_runtime()
     handoff = load_phase3_handoff(run_dir)
     if handoff.domain == "living_room":
         from .phase4_living_room import execute_living_room_handoff
