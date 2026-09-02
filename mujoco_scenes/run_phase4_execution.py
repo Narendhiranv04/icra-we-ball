@@ -80,6 +80,16 @@ def execute_phase3_run(
         )
         return result
     if handoff.domain == "kitchen":
+        # Container inspection/navigation can leave the empty arm in an
+        # articulation posture.  Normalize it physically before each PICK so
+        # grasp planning starts from the same calibrated navigation state in
+        # all K1--K6 variants, including variants with inspections.
+        from .kitchen_phase4_transition_fix import (
+            install_patch as install_kitchen_transition_fix,
+        )
+
+        install_kitchen_transition_fix()
+
         # Kitchen soup bowls become task-terminal served assemblies only after
         # the normal physical PLACE(bowl, serving_area) has succeeded.  Install
         # this before composing the Kitchen scene so the required inactive
@@ -97,6 +107,12 @@ def execute_phase3_run(
         adapter = KitchenPhase4Adapter(
             handoff, record_video=record_video, viewer=viewer
         )
+        print("[Kitchen execution bindings]", flush=True)
+        for planner_id, entity in sorted(adapter.by_id.items()):
+            print(
+                f"  {planner_id} -> {entity.simulator_id}",
+                flush=True,
+            )
     elif handoff.domain == "workshop":
         from .phase4_workshop import WorkshopPhase4Adapter
 
