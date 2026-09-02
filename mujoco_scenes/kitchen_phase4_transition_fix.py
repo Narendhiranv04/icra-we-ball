@@ -6,12 +6,15 @@ extra physics seconds can let authored spoon/bowl poses drift enough that a
 later grasp no longer matches the calibrated K1 geometry even though the scene
 specification is identical for those objects.
 
-This patch gives initially observed countertop payloads the same presentation
-semantics already used for storage contents: they are rigidly held at their
-AUTHORED CURRENT pose while they are only part of the observed scene, and the
-constraint is released immediately before that exact object is physically
-PICKed. No object qpos/qvel is written and no collision geometry is disabled;
-other countertop objects remain normal collision obstacles.
+This patch gives initially observed countertop payloads temporary presentation
+semantics during the INSPECTION prefix only: they are rigidly held at their
+authored current poses while storage search is being executed. Immediately
+before the first physical task PICK, every temporary countertop hold is released
+in one batch. From that point onward the normal Kitchen manipulation physics is
+unchanged, so a bowl used as the destination of PLACE(utensil, bowl) is never
+still welded to the countertop when the relative placement is executed.
+
+No object qpos/qvel is written and no collision geometry is disabled.
 """
 
 from __future__ import annotations
@@ -186,7 +189,7 @@ def _activate_initial_countertop_presentations(
 
     if store:
         mujoco.mj_forward(model, data)
-        print("[P4-COUNTER-LOCK] authored countertop state preserved", flush=True)
+        print("[P4-COUNTER-LOCK] authored countertop state preserved for inspection", flush=True)
         for planner_id, state in sorted(store.items()):
             print(
                 f"  ACTIVE {planner_id}({state['backend_body']})",
@@ -194,28 +197,39 @@ def _activate_initial_countertop_presentations(
             )
 
 
-def _release_countertop_presentation(
+def _release_all_countertop_presentations(
     dispatcher: KitchenGroundTruthExecutionDispatcher,
-    object_id: str,
-) -> dict[str, Any] | None:
-    state = _presentation_store(dispatcher).pop(object_id, None)
-    if state is None:
-        return None
-    equality_id = int(state["equality_id"])
-    if 0 <= equality_id < dispatcher.scene.model.neq:
-        dispatcher.scene.data.eq_active[equality_id] = 0
-        mujoco.mj_forward(dispatcher.scene.model, dispatcher.scene.data)
+) -> list[dict[str, Any]]:
+    """End the inspection-only presentation phase before task manipulation."""
+    store = _presentation_store(dispatcher)
+    if not store:
+        return []
+
+    released: list[dict[str, Any]] = []
+    for planner_id, state in sorted(store.items()):
+        equality_id = int(state["equality_id"])
+        if 0 <= equality_id < dispatcher.scene.model.neq:
+            dispatcher.scene.data.eq_active[equality_id] = 0
+        released.append({
+            "released": True,
+            "planner_id": planner_id,
+            "backend_body": state["backend_body"],
+            "direct_payload_pose_write": False,
+            "direct_payload_velocity_write": False,
+        })
+
+    store.clear()
+    mujoco.mj_forward(dispatcher.scene.model, dispatcher.scene.data)
     print(
-        f"[P4-COUNTER-LOCK] RELEASED {object_id}({state['backend_body']}) before PICK",
+        "[P4-COUNTER-LOCK] RELEASED ALL inspection-only countertop holds before task execution",
         flush=True,
     )
-    return {
-        "released": True,
-        "planner_id": object_id,
-        "backend_body": state["backend_body"],
-        "direct_payload_pose_write": False,
-        "direct_payload_velocity_write": False,
-    }
+    for item in released:
+        print(
+            f"  RELEASED {item['planner_id']}({item['backend_body']})",
+            flush=True,
+        )
+    return released
 
 
 def _patched_init(
@@ -224,6 +238,7 @@ def _patched_init(
     **kwargs: Any,
 ) -> None:
     _ORIGINAL_INIT(self, *args, **kwargs)
+    self._phase4_countertop_task_phase_started = False
     _activate_initial_countertop_presentations(self)
 
 
@@ -231,10 +246,17 @@ def _patched_pick(
     self: KitchenGroundTruthExecutionDispatcher,
     object_id: str,
 ) -> dict[str, Any]:
-    released = _release_countertop_presentation(self, object_id)
+    released: list[dict[str, Any]] = []
+    if not getattr(self, "_phase4_countertop_task_phase_started", False):
+        released = _release_all_countertop_presentations(self)
+        self._phase4_countertop_task_phase_started = True
+
     result = _ORIGINAL_PICK(self, object_id)
-    if released is not None:
-        result = {**result, "released_countertop_presentation": released}
+    if released:
+        result = {
+            **result,
+            "released_inspection_countertop_presentations": released,
+        }
     return result
 
 
