@@ -1,20 +1,20 @@
 """Kitchen Phase-4 authored-state preservation across long inspection sequences.
 
-Feasible Kitchen variants K2--K6 can execute several OPEN/navigation actions
-before the first manipulation. Countertop payloads are free bodies, so those
-extra physics seconds can let authored spoon/bowl poses drift enough that a
-later grasp no longer matches the calibrated K1 geometry even though the scene
-specification is identical for those objects.
+Feasible Kitchen variants can execute several OPEN/navigation actions before the
+first task manipulation. Countertop payloads are free bodies, so those extra
+physics seconds can let authored spoon/bowl poses drift away from the calibrated
+layout before the task begins.
 
-This patch gives initially observed countertop payloads temporary presentation
-semantics during the INSPECTION prefix only: they are rigidly held at their
-authored current poses while storage search is being executed. Immediately
-before the first physical task PICK, every temporary countertop hold is released
-in one batch. From that point onward the normal Kitchen manipulation physics is
-unchanged, so a bowl used as the destination of PLACE(utensil, bowl) is never
-still welded to the countertop when the relative placement is executed.
+Initially observed countertop payloads are therefore held at their authored
+current poses while they are untouched. A hold is released at the first action
+that physically uses that payload:
+  * before PICK(payload), or
+  * before PLACE(other_payload, payload) when it is the relative destination.
 
-No object qpos/qvel is written and no collision geometry is disabled.
+This keeps untouched scene objects stable through inspection and unrelated
+preceding actions, but guarantees that a bowl is already a normal free body
+before a utensil is physically placed into it. No object qpos/qvel is written
+and no collision geometry is disabled.
 """
 
 from __future__ import annotations
@@ -33,6 +33,7 @@ from .kitchen_ground_truth_execution import KitchenGroundTruthExecutionDispatche
 _ORIGINAL_BUILD_SCENE_XML = scene_loader.build_scene_xml
 _ORIGINAL_INIT = KitchenGroundTruthExecutionDispatcher.__init__
 _ORIGINAL_PICK = KitchenGroundTruthExecutionDispatcher.pick
+_ORIGINAL_PLACE = KitchenGroundTruthExecutionDispatcher.place
 _PATCHED = False
 
 
@@ -189,7 +190,10 @@ def _activate_initial_countertop_presentations(
 
     if store:
         mujoco.mj_forward(model, data)
-        print("[P4-COUNTER-LOCK] authored countertop state preserved for inspection", flush=True)
+        print(
+            "[P4-COUNTER-LOCK] authored countertop state preserved until first manipulation use",
+            flush=True,
+        )
         for planner_id, state in sorted(store.items()):
             print(
                 f"  ACTIVE {planner_id}({state['backend_body']})",
@@ -197,39 +201,33 @@ def _activate_initial_countertop_presentations(
             )
 
 
-def _release_all_countertop_presentations(
+def _release_countertop_presentation(
     dispatcher: KitchenGroundTruthExecutionDispatcher,
-) -> list[dict[str, Any]]:
-    """End the inspection-only presentation phase before task manipulation."""
-    store = _presentation_store(dispatcher)
-    if not store:
-        return []
+    object_id: str,
+    *,
+    reason: str,
+) -> dict[str, Any] | None:
+    state = _presentation_store(dispatcher).pop(object_id, None)
+    if state is None:
+        return None
 
-    released: list[dict[str, Any]] = []
-    for planner_id, state in sorted(store.items()):
-        equality_id = int(state["equality_id"])
-        if 0 <= equality_id < dispatcher.scene.model.neq:
-            dispatcher.scene.data.eq_active[equality_id] = 0
-        released.append({
-            "released": True,
-            "planner_id": planner_id,
-            "backend_body": state["backend_body"],
-            "direct_payload_pose_write": False,
-            "direct_payload_velocity_write": False,
-        })
-
-    store.clear()
+    equality_id = int(state["equality_id"])
+    if 0 <= equality_id < dispatcher.scene.model.neq:
+        dispatcher.scene.data.eq_active[equality_id] = 0
     mujoco.mj_forward(dispatcher.scene.model, dispatcher.scene.data)
+
     print(
-        "[P4-COUNTER-LOCK] RELEASED ALL inspection-only countertop holds before task execution",
+        f"[P4-COUNTER-LOCK] RELEASED {object_id}({state['backend_body']}) before {reason}",
         flush=True,
     )
-    for item in released:
-        print(
-            f"  RELEASED {item['planner_id']}({item['backend_body']})",
-            flush=True,
-        )
-    return released
+    return {
+        "released": True,
+        "planner_id": object_id,
+        "backend_body": state["backend_body"],
+        "reason": reason,
+        "direct_payload_pose_write": False,
+        "direct_payload_velocity_write": False,
+    }
 
 
 def _patched_init(
@@ -238,7 +236,6 @@ def _patched_init(
     **kwargs: Any,
 ) -> None:
     _ORIGINAL_INIT(self, *args, **kwargs)
-    self._phase4_countertop_task_phase_started = False
     _activate_initial_countertop_presentations(self)
 
 
@@ -246,16 +243,36 @@ def _patched_pick(
     self: KitchenGroundTruthExecutionDispatcher,
     object_id: str,
 ) -> dict[str, Any]:
-    released: list[dict[str, Any]] = []
-    if not getattr(self, "_phase4_countertop_task_phase_started", False):
-        released = _release_all_countertop_presentations(self)
-        self._phase4_countertop_task_phase_started = True
-
+    released = _release_countertop_presentation(
+        self, object_id, reason="PICK"
+    )
     result = _ORIGINAL_PICK(self, object_id)
-    if released:
+    if released is not None:
+        result = {**result, "released_countertop_presentation": released}
+    return result
+
+
+def _patched_place(
+    self: KitchenGroundTruthExecutionDispatcher,
+    object_id: str,
+    destination: str,
+) -> dict[str, Any]:
+    # A relative destination must become dynamic before the utensil/object is
+    # inserted into it. Keeping it welded through the PLACE changes the
+    # subsequent nested-object physics and caused the later bowl PICK failure.
+    released_target = None
+    if destination in self.binding_by_id:
+        released_target = _release_countertop_presentation(
+            self,
+            destination,
+            reason=f"RELATIVE PLACE TARGET FOR {object_id}",
+        )
+
+    result = _ORIGINAL_PLACE(self, object_id, destination)
+    if released_target is not None:
         result = {
             **result,
-            "released_inspection_countertop_presentations": released,
+            "released_relative_destination_presentation": released_target,
         }
     return result
 
@@ -267,4 +284,5 @@ def install_patch() -> None:
     scene_loader.build_scene_xml = _patched_build_scene_xml
     KitchenGroundTruthExecutionDispatcher.__init__ = _patched_init
     KitchenGroundTruthExecutionDispatcher.pick = _patched_pick
+    KitchenGroundTruthExecutionDispatcher.place = _patched_place
     _PATCHED = True
