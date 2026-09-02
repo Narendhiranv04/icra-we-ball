@@ -15,10 +15,20 @@ This keeps untouched scene objects stable through inspection and unrelated
 preceding actions, but guarantees that a bowl is already a normal free body
 before a utensil is physically placed into it. No object qpos/qvel is written
 and no collision geometry is disabled.
+
+The generic grasp planner also distinguishes the non-contact ``Approaching
+above object`` waypoint from the final contact pose. Routed approaches are
+labelled ``Approaching above object route N``; the generic tolerance selector
+matches the canonical label exactly, so routed waypoints can accidentally fall
+back to the strict 2-degree terminal IK tolerance. Kitchen tabletop bowls use a
+bounded 6-degree intermediate orientation tolerance and routed approach labels
+are canonicalized only while solving that non-contact waypoint. Final descent,
+bilateral contact, attachment, and held-state checks remain unchanged.
 """
 
 from __future__ import annotations
 
+from dataclasses import replace
 import re
 import xml.etree.ElementTree as ET
 from typing import Any
@@ -27,6 +37,7 @@ import mujoco
 import numpy as np
 
 from . import scene_loader
+from .generic_manipulation import CalibratedPickPlaceExecutor
 from .kitchen_ground_truth_execution import KitchenGroundTruthExecutionDispatcher
 
 
@@ -34,7 +45,11 @@ _ORIGINAL_BUILD_SCENE_XML = scene_loader.build_scene_xml
 _ORIGINAL_INIT = KitchenGroundTruthExecutionDispatcher.__init__
 _ORIGINAL_PICK = KitchenGroundTruthExecutionDispatcher.pick
 _ORIGINAL_PLACE = KitchenGroundTruthExecutionDispatcher.place
+_ORIGINAL_SOLVE_POINTS = CalibratedPickPlaceExecutor._solve_points
 _PATCHED = False
+
+_TABLE_BOWL_INTERMEDIATE_POSITION_TOLERANCE_M = 0.012
+_TABLE_BOWL_INTERMEDIATE_ORIENTATION_TOLERANCE_RAD = float(np.deg2rad(6.0))
 
 
 def _safe_name(value: str) -> str:
@@ -146,6 +161,78 @@ def _set_weld_to_current_relative_pose(
     model.eq_data[equality_id, 6:10] = rel_quat
 
 
+def _configure_table_bowl_intermediate_ik(
+    dispatcher: KitchenGroundTruthExecutionDispatcher,
+) -> None:
+    """Keep routed bowl approach tolerance separate from final grasp tolerance."""
+    executor = dispatcher.phase_b.manipulation.executor
+    adjusted: list[tuple[str, str]] = []
+    for planner_id, row in dispatcher.inventory_by_id.items():
+        context = row.get("source_context") or {}
+        if str(context.get("source_kind")) != "TABLE":
+            continue
+        binding = dispatcher.binding_by_id.get(planner_id) or {}
+        if str(binding.get("grasp_family")) != "BOWL":
+            continue
+        backend = binding.get("physical_backend_body")
+        if not backend:
+            continue
+        spec = executor.pick_specs.get(str(backend))
+        if spec is None:
+            continue
+
+        current_position = spec.intermediate_ik_position_tolerance
+        current_angle = spec.intermediate_ik_angle_tolerance_rad
+        bounded_position = max(
+            float(current_position or 0.0),
+            _TABLE_BOWL_INTERMEDIATE_POSITION_TOLERANCE_M,
+        )
+        bounded_angle = max(
+            float(current_angle or 0.0),
+            _TABLE_BOWL_INTERMEDIATE_ORIENTATION_TOLERANCE_RAD,
+        )
+        executor.pick_specs[str(backend)] = replace(
+            spec,
+            intermediate_ik_position_tolerance=bounded_position,
+            intermediate_ik_angle_tolerance_rad=bounded_angle,
+        )
+        adjusted.append((str(planner_id), str(backend)))
+
+    if adjusted:
+        print(
+            "[P4-ROUTE-IK] TABLE BOWL intermediate approach tolerance: "
+            f"{_TABLE_BOWL_INTERMEDIATE_POSITION_TOLERANCE_M:.3f} m / "
+            f"{np.rad2deg(_TABLE_BOWL_INTERMEDIATE_ORIENTATION_TOLERANCE_RAD):.1f} deg",
+            flush=True,
+        )
+
+
+def _patched_solve_points(
+    self: CalibratedPickPlaceExecutor,
+    ik: Any,
+    points: list[np.ndarray],
+    seed: np.ndarray,
+    label: str,
+    collision_checker: Any,
+    allowed_environment_bodies: frozenset[int],
+    target_rotation: np.ndarray | None = None,
+):
+    """Apply intermediate tolerance semantics to routed approach waypoints."""
+    tolerance_label = label
+    if label.startswith("Approaching above object route "):
+        tolerance_label = "Approaching above object"
+    return _ORIGINAL_SOLVE_POINTS(
+        self,
+        ik,
+        points,
+        seed,
+        tolerance_label,
+        collision_checker,
+        allowed_environment_bodies,
+        target_rotation,
+    )
+
+
 def _activate_initial_countertop_presentations(
     dispatcher: KitchenGroundTruthExecutionDispatcher,
 ) -> None:
@@ -236,6 +323,7 @@ def _patched_init(
     **kwargs: Any,
 ) -> None:
     _ORIGINAL_INIT(self, *args, **kwargs)
+    _configure_table_bowl_intermediate_ik(self)
     _activate_initial_countertop_presentations(self)
 
 
@@ -282,6 +370,7 @@ def install_patch() -> None:
     if _PATCHED:
         return
     scene_loader.build_scene_xml = _patched_build_scene_xml
+    CalibratedPickPlaceExecutor._solve_points = _patched_solve_points
     KitchenGroundTruthExecutionDispatcher.__init__ = _patched_init
     KitchenGroundTruthExecutionDispatcher.pick = _patched_pick
     KitchenGroundTruthExecutionDispatcher.place = _patched_place
