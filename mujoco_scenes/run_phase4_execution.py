@@ -102,6 +102,18 @@ def execute_phase3_run(
 
         install_kitchen_served_terminal_latch()
 
+        # ``allow_assisted_pick_recovery`` is a PICK-only permission, but the
+        # legacy GT PLACE dispatcher also uses it as a relocation gate.  With
+        # the flag enabled, C1/C2/D1/D2/B1 payloads skip the already-existing
+        # physical controlled-upright countertop placement and deterministically
+        # return PLACEMENT_PLAN_NOT_FOUND without attempting a plan.  Restore
+        # that physical PLACE path while leaving PICK recovery unchanged.
+        from .kitchen_phase4_relocation_gate_fix import (
+            install_patch as install_kitchen_relocation_gate_fix,
+        )
+
+        install_kitchen_relocation_gate_fix()
+
         from .phase4_kitchen import KitchenPhase4Adapter
 
         adapter = KitchenPhase4Adapter(
