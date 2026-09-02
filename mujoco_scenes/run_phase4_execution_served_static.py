@@ -1,12 +1,18 @@
-"""Kitchen Phase-4 runner that freezes soup utensils only after serving.
+"""Kitchen Phase-4 runner with a terminal serving-state latch.
 
 The normal physical controller is unchanged through:
   PLACE(utensil, bowl) -> PICK(bowl) -> PLACE(bowl, serving_area).
-After the bowl has been physically placed on the serving table, the assigned
-utensil is fixed to the static serving-area body at its current live world pose
-and its contacts are disabled. This removes the delayed spoon chatter without
-adding spoon weight/torque to the bowl. If that bowl or utensil is later PICKed,
-the serving latch is released first and the utensil collision masks are restored.
+Only after the bowl itself has been physically placed successfully on the
+serving table do we latch the already-achieved serving state.  Both the bowl
+and its assigned utensil are fixed to the static serving-area body at their
+current live poses and their collision geoms are suppressed.  This makes the
+served pair a task-level terminal assembly: it cannot chatter, tip, or be
+knocked off by later unrelated robot motions.  If either member is explicitly
+PICKed later, both latches are released and the original collision masks are
+restored before the physical PICK begins.
+
+No qpos/qvel write is used to establish the served state; the latch is enabled
+only after the original physical PLACE controller reports success.
 """
 
 from __future__ import annotations
@@ -28,16 +34,22 @@ _ORIGINAL_PLACE = KitchenGroundTruthExecutionDispatcher.place
 _ORIGINAL_PICK = KitchenGroundTruthExecutionDispatcher.pick
 _PATCHED = False
 
+# This is only a no-visible-snap guard after an already successful physical
+# PLACE.  It is not a placement-success tolerance.
+MAX_LATCH_POSITION_PROJECTION_M = 1.0e-3
+MAX_LATCH_ORIENTATION_PROJECTION_RAD = 1.0e-2
+
 
 def _safe_name(value: str) -> str:
     return re.sub(r"[^A-Za-z0-9_]", "_", value)
 
 
-def _served_weld_name(tool_backend: str) -> str:
-    return f"phase4_served_static__{_safe_name(tool_backend)}"
+def _served_weld_name(backend_body: str) -> str:
+    return f"phase4_served_terminal__{_safe_name(backend_body)}"
 
 
 def _inject_served_welds(xml: str) -> str:
+    """Compile inactive serving-area welds for bowls and utensils."""
     root = ET.fromstring(xml)
     body_names = {
         body.get("name")
@@ -46,20 +58,24 @@ def _inject_served_welds(xml: str) -> str:
     }
     if "serving_area" not in body_names:
         return xml
-    utensil_tokens = ("spoon", "fork", "utensil", "stirrer")
-    tool_bodies = sorted(
-        name for name in body_names
-        if any(token in name.lower() for token in utensil_tokens)
+
+    tokens = ("bowl", "spoon", "fork", "utensil", "stirrer")
+    payload_bodies = sorted(
+        name
+        for name in body_names
+        if any(token in name.lower() for token in tokens)
         and not name.startswith("google:")
     )
-    if not tool_bodies:
+    if not payload_bodies:
         return xml
+
     equality = root.find("equality")
     if equality is None:
         equality = ET.SubElement(root, "equality")
     existing = {item.get("name") for item in equality if item.get("name")}
-    for tool in tool_bodies:
-        name = _served_weld_name(tool)
+
+    for backend in payload_bodies:
+        name = _served_weld_name(backend)
         if name in existing:
             continue
         ET.SubElement(
@@ -68,12 +84,13 @@ def _inject_served_welds(xml: str) -> str:
             {
                 "name": name,
                 "body1": "serving_area",
-                "body2": tool,
+                "body2": backend,
                 "active": "false",
                 "solref": "0.01 1",
             },
         )
         existing.add(name)
+
     return ET.tostring(root, encoding="unicode")
 
 
@@ -87,90 +104,130 @@ def _body_geom_ids(model: mujoco.MjModel, body_id: int) -> tuple[int, ...]:
     return tuple(range(first, first + count))
 
 
-def _store(dispatcher: KitchenGroundTruthExecutionDispatcher) -> dict[str, dict[str, Any]]:
-    value = getattr(dispatcher, "_phase4_served_static_latches", None)
+def _store(
+    dispatcher: KitchenGroundTruthExecutionDispatcher,
+) -> dict[str, dict[str, Any]]:
+    value = getattr(dispatcher, "_phase4_served_terminal_latches", None)
     if value is None:
         value = {}
-        dispatcher._phase4_served_static_latches = value
+        dispatcher._phase4_served_terminal_latches = value
     return value
 
 
-def _release_tool(dispatcher: KitchenGroundTruthExecutionDispatcher, tool_id: str) -> dict[str, Any] | None:
-    state = _store(dispatcher).pop(tool_id, None)
+def _release_component(
+    dispatcher: KitchenGroundTruthExecutionDispatcher,
+    planner_id: str,
+) -> dict[str, Any] | None:
+    state = _store(dispatcher).pop(planner_id, None)
     if state is None:
         return None
+
     model, data = dispatcher.scene.model, dispatcher.scene.data
     equality_id = int(state["equality_id"])
     if 0 <= equality_id < model.neq:
         data.eq_active[equality_id] = 0
-    for geom_id, contype, conaffinity in state["tool_geom_masks"]:
+
+    for geom_id, contype, conaffinity in state["geom_masks"]:
         model.geom_contype[int(geom_id)] = int(contype)
         model.geom_conaffinity[int(geom_id)] = int(conaffinity)
+
     mujoco.mj_forward(model, data)
     print(
-        f"[P4-SERVED-STATIC] RELEASED {tool_id} from {state['bowl_id']}",
+        f"[P4-SERVED-LOCK] RELEASED {planner_id}({state['backend_body']})",
         flush=True,
     )
-    return {"released": True, "tool_id": tool_id, "bowl_id": state["bowl_id"]}
+    return {
+        "released": True,
+        "planner_id": planner_id,
+        "backend_body": state["backend_body"],
+    }
 
 
-def _release_for_pick(dispatcher: KitchenGroundTruthExecutionDispatcher, object_id: str) -> list[dict[str, Any]]:
+def _release_pair_for_pick(
+    dispatcher: KitchenGroundTruthExecutionDispatcher,
+    object_id: str,
+) -> list[dict[str, Any]]:
+    """If one member of a served pair is PICKed, restore both members."""
+    store = _store(dispatcher)
+    pair_ids: set[str] = set()
+    for state in store.values():
+        pair = tuple(state.get("pair_ids", ()))
+        if object_id in pair:
+            pair_ids.update(str(item) for item in pair)
+    if object_id in store:
+        pair_ids.add(object_id)
+
     released: list[dict[str, Any]] = []
-    # Explicitly picking the utensil releases its latch.
-    state = _store(dispatcher).get(object_id)
-    if state is not None:
-        item = _release_tool(dispatcher, object_id)
-        if item:
+    for planner_id in sorted(pair_ids):
+        item = _release_component(dispatcher, planner_id)
+        if item is not None:
             released.append(item)
-    # Explicitly picking a served bowl also releases its assigned utensil first.
-    for tool_id, tool_state in list(_store(dispatcher).items()):
-        if tool_state.get("bowl_id") == object_id:
-            item = _release_tool(dispatcher, tool_id)
-            if item:
-                released.append(item)
     return released
 
 
-def _activate_served_static(
+def _activate_static_component(
     dispatcher: KitchenGroundTruthExecutionDispatcher,
-    bowl_id: str,
-    tool_id: str,
+    planner_id: str,
+    *,
+    pair_ids: tuple[str, str],
+    role: str,
 ) -> dict[str, Any]:
+    """Fix one already-served payload to serving_area at its current pose."""
     model, data = dispatcher.scene.model, dispatcher.scene.data
-    tool_backend = dispatcher.binding_by_id[tool_id]["physical_backend_body"]
-    tool_body = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, tool_backend)
-    serving_body = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "serving_area")
-    if tool_body < 0 or serving_body < 0:
-        raise RuntimeError("SERVED_STATIC_LATCH: missing tool or serving_area body")
+    binding = dispatcher.binding_by_id.get(planner_id)
+    backend = binding.get("physical_backend_body") if binding else None
+    if not backend:
+        raise RuntimeError(f"SERVED_LOCK: missing backend for {planner_id}")
 
-    equality_name = _served_weld_name(tool_backend)
-    equality_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_EQUALITY, equality_name)
+    body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, backend)
+    serving_body = mujoco.mj_name2id(
+        model, mujoco.mjtObj.mjOBJ_BODY, "serving_area"
+    )
+    if body_id < 0 or serving_body < 0:
+        raise RuntimeError(
+            f"SERVED_LOCK: missing body for {planner_id}->{backend} or serving_area"
+        )
+
+    equality_name = _served_weld_name(backend)
+    equality_id = mujoco.mj_name2id(
+        model, mujoco.mjtObj.mjOBJ_EQUALITY, equality_name
+    )
     if equality_id < 0:
-        raise RuntimeError("SERVED_STATIC_LATCH: equality not compiled: " + equality_name)
+        raise RuntimeError(
+            "SERVED_LOCK: equality not compiled: " + equality_name
+        )
 
-    _release_tool(dispatcher, tool_id)
+    _release_component(dispatcher, planner_id)
 
-    before_pos = data.xpos[tool_body].copy()
-    before_quat = data.xquat[tool_body].copy()
+    before_pos = data.xpos[body_id].copy()
+    before_quat = data.xquat[body_id].copy()
 
     inv_pos = np.empty(3)
     inv_quat = np.empty(4)
     rel_pos = np.empty(3)
     rel_quat = np.empty(4)
-    mujoco.mju_negPose(inv_pos, inv_quat, data.xpos[serving_body], data.xquat[serving_body])
+    mujoco.mju_negPose(
+        inv_pos,
+        inv_quat,
+        data.xpos[serving_body],
+        data.xquat[serving_body],
+    )
     mujoco.mju_mulPose(
         rel_pos,
         rel_quat,
         inv_pos,
         inv_quat,
-        data.xpos[tool_body],
-        data.xquat[tool_body],
+        data.xpos[body_id],
+        data.xquat[body_id],
     )
     model.eq_data[equality_id, 3:6] = rel_pos
     model.eq_data[equality_id, 6:10] = rel_quat
 
+    # Terminal served objects no longer participate in unrelated future
+    # manipulation contacts.  Preserve the exact masks so a later explicit
+    # PICK can restore normal dynamics before grasping.
     masks: list[tuple[int, int, int]] = []
-    for geom_id in _body_geom_ids(model, tool_body):
+    for geom_id in _body_geom_ids(model, body_id):
         contype = int(model.geom_contype[geom_id])
         conaffinity = int(model.geom_conaffinity[geom_id])
         masks.append((geom_id, contype, conaffinity))
@@ -180,39 +237,48 @@ def _activate_served_static(
     data.eq_active[equality_id] = 1
     mujoco.mj_forward(model, data)
 
-    pos_delta = float(np.linalg.norm(data.xpos[tool_body] - before_pos))
-    quat_dot = abs(float(np.dot(data.xquat[tool_body], before_quat)))
-    angle_delta = 2.0 * float(np.arccos(np.clip(quat_dot, -1.0, 1.0)))
-    if pos_delta > 5e-4 or angle_delta > 5e-3:
+    pos_delta = float(np.linalg.norm(data.xpos[body_id] - before_pos))
+    quat_dot = abs(float(np.dot(data.xquat[body_id], before_quat)))
+    angle_delta = 2.0 * float(
+        np.arccos(np.clip(quat_dot, -1.0, 1.0))
+    )
+
+    if (
+        pos_delta > MAX_LATCH_POSITION_PROJECTION_M
+        or angle_delta > MAX_LATCH_ORIENTATION_PROJECTION_RAD
+    ):
         data.eq_active[equality_id] = 0
         for geom_id, contype, conaffinity in masks:
             model.geom_contype[geom_id] = contype
             model.geom_conaffinity[geom_id] = conaffinity
         mujoco.mj_forward(model, data)
         raise RuntimeError(
-            "SERVED_STATIC_LATCH: activation snap too large: "
-            f"{pos_delta:.6g} m / {angle_delta:.6g} rad"
+            "SERVED_LOCK: activation projection too large for "
+            f"{planner_id}: {pos_delta:.6g} m / {angle_delta:.6g} rad"
         )
 
-    _store(dispatcher)[tool_id] = {
-        "bowl_id": bowl_id,
-        "tool_backend": tool_backend,
+    _store(dispatcher)[planner_id] = {
+        "backend_body": backend,
         "equality_id": equality_id,
         "equality_name": equality_name,
-        "tool_geom_masks": masks,
+        "geom_masks": masks,
+        "pair_ids": pair_ids,
+        "role": role,
     }
+
     print(
-        f"[P4-SERVED-STATIC] ACTIVE {tool_id}({tool_backend}) after serving {bowl_id}; "
+        f"[P4-SERVED-LOCK] ACTIVE {role} {planner_id}({backend}); "
         f"delta={pos_delta:.3e} m / {angle_delta:.3e} rad",
         flush=True,
     )
     return {
         "active": True,
-        "mode": "SERVED_UTENSIL_STATIC_LATCH",
-        "tool_id": tool_id,
-        "bowl_id": bowl_id,
+        "mode": "TERMINAL_SERVED_STATE_LATCH",
+        "role": role,
+        "planner_id": planner_id,
+        "backend_body": backend,
         "equality_name": equality_name,
-        "tool_collision_suppressed": True,
+        "collision_suppressed_while_served": True,
         "direct_payload_pose_write": False,
         "direct_payload_velocity_write": False,
         "activation_position_delta_m": pos_delta,
@@ -225,8 +291,7 @@ def _patched_place(
     object_id: str,
     destination: str,
 ) -> dict[str, Any]:
-    # Everything through the bowl's actual serving placement is the original
-    # known-good physical controller. Nothing is latched at PLACE(tool, bowl).
+    # The complete physical action remains the known-good original controller.
     result = _ORIGINAL_PLACE(self, object_id, destination)
     if not result.get("success", False) or destination != "serving_area":
         return result
@@ -234,22 +299,43 @@ def _patched_place(
     tool_id = self.assignment.soup_utensils_by_target.get(object_id)
     if not tool_id:
         return result
+
+    pair_ids = (object_id, tool_id)
+    activated: list[str] = []
     try:
-        latch = _activate_served_static(self, object_id, tool_id)
+        bowl_lock = _activate_static_component(
+            self,
+            object_id,
+            pair_ids=pair_ids,
+            role="SOUP_BOWL",
+        )
+        activated.append(object_id)
+        utensil_lock = _activate_static_component(
+            self,
+            tool_id,
+            pair_ids=pair_ids,
+            role="SOUP_UTENSIL",
+        )
+        activated.append(tool_id)
     except Exception as error:
+        # Never leave a half-latched pair if setup itself fails.
+        for planner_id in reversed(activated):
+            _release_component(self, planner_id)
         message = f"{type(error).__name__}: {error}"
-        print(f"[P4-SERVED-STATIC] FAILED: {message}", flush=True)
+        print(f"[P4-SERVED-LOCK] FAILED: {message}", flush=True)
         return {
             **result,
             "success": False,
-            "status": "SERVED_STATIC_LATCH_FAILED",
+            "status": "SERVED_TERMINAL_LATCH_FAILED",
             "failure_code": "EXECUTION_ERROR",
             "message": message,
         }
+
     return {
         **result,
-        "served_utensil_static_latch": latch,
-        "served_utensil_static_latched": True,
+        "served_terminal_state_latched": True,
+        "served_bowl_lock": bowl_lock,
+        "served_utensil_lock": utensil_lock,
     }
 
 
@@ -257,10 +343,10 @@ def _patched_pick(
     self: KitchenGroundTruthExecutionDispatcher,
     object_id: str,
 ) -> dict[str, Any]:
-    released = _release_for_pick(self, object_id)
+    released = _release_pair_for_pick(self, object_id)
     result = _ORIGINAL_PICK(self, object_id)
     if released:
-        result = {**result, "released_served_static_latches": released}
+        result = {**result, "released_served_terminal_latches": released}
     return result
 
 
