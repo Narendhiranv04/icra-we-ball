@@ -9,10 +9,18 @@ import json
 from pathlib import Path
 from typing import Any
 
+import time
+
 from baseline_common.artifacts import prepare_run_directory, write_json
 from baseline_common.inference import PlanningError
+from baseline_common.living_room_execution import (
+    LivingRoomPhysicalExecutor,
+    build_living_room_physical_runtime,
+)
+from baseline_common.physical_benchmark import write_execution_result
 
 from .executive import ObservationFrame, VLMTAMPExecutive
+from .failure_feedback import model_failure_feedback
 from .living_room_runtime import (
     DEFAULT_EXPECTED_ROOT,
     DEFAULT_PHASE1_ROOT,
@@ -40,11 +48,20 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--expected-root", type=Path, default=DEFAULT_EXPECTED_ROOT)
     parser.add_argument("--base-url")
     parser.add_argument("--model")
-    parser.add_argument("--max-tokens", type=int, default=8192)
+    parser.add_argument("--max-tokens", type=int, default=24576)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--camera-count", type=int, choices=(1, 3, 5), default=5)
     parser.add_argument(
-        "--decoding", choices=("paper", "model-native"), default="paper"
+        "--decoding",
+        choices=("paper", "model-native"),
+        default="model-native",
+        help=(
+            "'paper' reproduces this baseline's own published condition "
+            "(temperature 0.2, top_p 1.0, thinking disabled).  'model-native' "
+            "uses the served checkpoint's published sampling with thinking "
+            "enabled.  Both baselines must run the same choice or the "
+            "comparison measures decoding rather than method."
+        ),
     )
     parser.add_argument(
         "--max-model-calls",
@@ -59,6 +76,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--pddl-timeout", type=float, default=60.0)
     parser.add_argument("--image-width", type=int, default=960)
     parser.add_argument("--image-height", type=int, default=540)
+    parser.add_argument("--protocol", choices=("native", "single_call"), default="native")
+    parser.add_argument(
+        "--physical-execution",
+        action="store_true",
+        help=(
+            "Execute the refined actions through the calibrated Google-robot "
+            "Living Room skills instead of the symbolic executor."
+        ),
+    )
     return parser
 
 
@@ -79,15 +105,25 @@ def main() -> None:
         output = prepare_run_directory(arguments.output_dir)
     except ValueError as error:
         raise SystemExit(str(error)) from error
-    runtime = LivingRoomPlanningRuntime(
-        arguments.variant,
-        output,
-        phase1_root=arguments.phase1_root.resolve(),
-        expected_root=arguments.expected_root.resolve(),
-        image_width=arguments.image_width,
-        image_height=arguments.image_height,
-        camera_count=arguments.camera_count,
-    )
+    if arguments.physical_execution:
+        # The physical runtime owns its own scene/robot construction; its
+        # phase-1 and expected-GT roots are the shared defaults.
+        runtime = build_living_room_physical_runtime(
+            arguments.variant,
+            output,
+            camera_count=arguments.camera_count,
+            show_viewer=False,
+        )
+    else:
+        runtime = LivingRoomPlanningRuntime(
+            arguments.variant,
+            output,
+            phase1_root=arguments.phase1_root.resolve(),
+            expected_root=arguments.expected_root.resolve(),
+            image_width=arguments.image_width,
+            image_height=arguments.image_height,
+            camera_count=arguments.camera_count,
+        )
     goal = arguments.goal or runtime.goal
     config = VLMTAMPPlannerConfig.from_env()
     overrides = {
@@ -112,6 +148,8 @@ def main() -> None:
 
     class TracedPlanner:
         calls = 0
+        raw_vlm_requests = 0
+        planning_latency_s = 0.0
 
         def plan(self, *args: Any, **kwargs: Any):
             self.calls += 1
@@ -120,6 +158,7 @@ def main() -> None:
             try:
                 result = planner_backend.plan(*args, **kwargs)
             except PlanningError as error:
+                self.raw_vlm_requests += len(planner_backend.request_trace)
                 write_json(
                     output / "model_calls" / f"{self.calls:04d}.json",
                     {
@@ -136,6 +175,8 @@ def main() -> None:
                 )
                 print(f"[vlm-tamp model {self.calls}] invalid: {error}", flush=True)
                 raise
+            self.raw_vlm_requests += len(planner_backend.request_trace)
+            self.planning_latency_s += result.latency_ms / 1000.0
             print(f"[vlm-tamp English goals {self.calls}]", flush=True)
             for index, step in enumerate(result.english_plan.steps, start=1):
                 print(f"  {index}. {step}", flush=True)
@@ -156,7 +197,7 @@ def main() -> None:
                 "semantic_labels_exposed": True,
             }
             failure = kwargs.get("failure")
-            trace["failure_feedback"] = failure.as_dict() if failure else None
+            trace["failure_feedback"] = model_failure_feedback(failure)
             trace["model_requests"] = planner_backend.request_trace
             trace["model_responses"] = planner_backend.response_trace
             write_json(output / "model_calls" / f"{self.calls:04d}.json", trace)
@@ -225,10 +266,17 @@ def main() -> None:
             ),
         },
     )
+    planner = TracedPlanner()
+    executor = (
+        LivingRoomPhysicalExecutor(runtime, effect_sink=None, status_sink=None)
+        if arguments.physical_execution
+        else LivingRoomSymbolicExecutor(runtime)
+    )
+    started_at = time.monotonic()
     executive = VLMTAMPExecutive(
-        TracedPlanner(),
+        planner,
         observe,
-        LivingRoomSymbolicExecutor(runtime),
+        executor,
         refiner=refiner,
         goal_verifier=runtime.goal_verifier,
         state_observer=runtime.observe_state,
@@ -272,16 +320,50 @@ def main() -> None:
             "environment": "living_room",
             "variant": runtime.variant,
             "goal": goal,
+            # The serving model belongs in the episode result and not only in
+            # method_manifest.json: the OWL runner records it here, so a
+            # summary keyed on episode_result.json would otherwise read this
+            # method's backbone as null and pool two models into one row.
+            "model": config.model,
             "seed": config.seed,
             "camera_count": arguments.camera_count,
             "planning_rounds": result.model_calls,
-            "raw_vlm_requests": 2 * result.model_calls,
-            "execution_started": False,
-            "physical_execution": False,
+            # Counted from the transport, not assumed: a round that stops after
+            # the English stage issues one request, not the usual two.
+            "raw_vlm_requests": planner.raw_vlm_requests,
+            "protocol": arguments.protocol,
+            "execution_started": bool(arguments.physical_execution),
+            "physical_execution": bool(arguments.physical_execution),
             "result": result.as_dict(),
             "gt_comparison": comparison,
         }
         write_json(output / "episode_result.json", payload)
+        if arguments.physical_execution and result.status != "INFERENCE_FAILED":
+            # An unreachable model server is an infrastructure fault, not an
+            # execution trial.  Recording it would put a 0% row in the physical
+            # table for an episode the robot never attempted.
+            write_execution_result(
+                output,
+                scene="living_room",
+                method="vlm_tamp",
+                protocol=arguments.protocol,
+                variant=runtime.variant,
+                camera_count=arguments.camera_count,
+                seed=config.seed,
+                success=bool(result.success and runtime.goal_verifier()),
+                executed_actions=result.executed_actions,
+                model_calls=result.model_calls,
+                raw_vlm_requests=planner.raw_vlm_requests,
+                replans=result.reprompts,
+                planning_latency_s=planner.planning_latency_s,
+                elapsed_seconds=time.monotonic() - started_at,
+                terminal_status=result.status,
+                terminal_failure=(
+                    result.terminal_failure.as_dict()
+                    if result.terminal_failure
+                    else None
+                ),
+            )
         write_json(output / "gt_sequence_comparison.json", comparison)
         print("[GT sequence comparison]", flush=True)
         print(

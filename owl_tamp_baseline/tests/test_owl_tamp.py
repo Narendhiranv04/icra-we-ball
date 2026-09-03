@@ -3,11 +3,16 @@ from __future__ import annotations
 import base64
 from collections import deque
 
-from baseline_common.models import Entity, Observation, Region
+from baseline_common.models import ActionResult, Entity, Observation, Region
 
 from owl_tamp_baseline.domain import executed_encoding, relaxed_ground
-from owl_tamp_baseline.models import Action, PlanSketch
-from owl_tamp_baseline.planner import OWLTAMPPlanner, OWLTAMPPlannerConfig
+from owl_tamp_baseline.models import Action, PlanSketch, PlanningResult
+from owl_tamp_baseline.planner import (
+    OWLTAMPPlanner,
+    OWLTAMPPlannerConfig,
+    protocol_max_tokens,
+)
+from owl_tamp_baseline.receding_horizon import OWLTAMPRecedingHorizon
 from owl_tamp_baseline.refinement import constrained_breadth_first_search
 
 
@@ -35,6 +40,22 @@ def test_relaxed_grounding_and_executed_encoding() -> None:
     rows = executed_encoding((pick, place))
     assert rows[0]["extra_precondition"] == "Executed(0)"
     assert rows[1]["extra_effect"] == "Executed(2)"
+
+
+def test_workshop_relaxed_grounding_supports_inspection_and_fastening() -> None:
+    grounded = relaxed_ground(
+        "workshop",
+        {"object_0001", "object_0002", "object_0003"},
+        {"region_0001", "region_0004"},
+        {"region_0001"},
+    )
+    assert Action("INSPECT", ("region_0001",)) in grounded
+    assert Action("FASTEN", ("object_0001", "object_0002", "object_0003")) in grounded
+
+
+def test_single_call_protocol_reserves_prompt_context() -> None:
+    assert protocol_max_tokens(8192, "single_call") == 2048
+    assert protocol_max_tokens(8192, "native") == 8192
 
 
 def test_symbolic_search_requires_goal_literals() -> None:
@@ -155,6 +176,75 @@ def test_two_stage_planner_uses_images_and_refines() -> None:
     assert len(planner.response_trace) == 3
 
 
+def test_planner_can_exclude_fixed_scene_objects_from_relaxed_grounding() -> None:
+    image = "data:image/png;base64," + base64.b64encode(b"x").decode("ascii")
+
+    class NoPlanTransport:
+        def complete(self, _payload):
+            return {
+                "choices": [
+                    {
+                        "message": {
+                            "content": {
+                                "status": "NO_PLAN",
+                                "actions": [],
+                                "goal_literals": [],
+                            }
+                        }
+                    }
+                ]
+            }
+
+    planner = OWLTAMPPlanner(OWLTAMPPlannerConfig(), transport=NoPlanTransport())
+    planner.plan(
+        "Inspect the available storage",
+        observation(),
+        ({"camera": "camera_1", "data_url": image},),
+        lambda _action, _constraints, _trial: True,
+        movable_object_ids=(),
+    )
+
+    prompt = planner.trace["model_prompts"]["discrete_sketch"]
+    assert '"operator":"PICK"' not in prompt
+    assert '"operator":"PLACE"' not in prompt
+
+
+def test_single_call_protocol_skips_auxiliary_constraint_queries() -> None:
+    image = "data:image/png;base64," + base64.b64encode(b"x").decode("ascii")
+
+    class SketchOnlyTransport:
+        def __init__(self):
+            self.calls = 0
+
+        def complete(self, _payload):
+            self.calls += 1
+            return {
+                "choices": [{"message": {"content": {
+                    "status": "PLAN",
+                    "actions": [
+                        {"operator": "PICK", "arguments": ["object_0001"]},
+                        {"operator": "PLACE", "arguments": ["object_0001", "region_0001"]},
+                    ],
+                    "goal_literals": ["at(object_0001,region_0001)"],
+                }}}]
+            }
+
+    transport = SketchOnlyTransport()
+    planner = OWLTAMPPlanner(OWLTAMPPlannerConfig(), transport=transport)
+    result = planner.plan(
+        "Put the object on the target support",
+        observation(),
+        ({"camera": "camera_1", "data_url": image},),
+        lambda _action, _constraints, _trial: True,
+        max_vlm_requests=1,
+    )
+
+    assert transport.calls == 1
+    assert len(planner.response_trace) == 1
+    assert planner.trace["constraint_generation_complete"] is False
+    assert result.status == "PLAN"
+
+
 class InvalidConstraintTransport:
     def __init__(self):
         self.responses = deque(
@@ -219,3 +309,51 @@ def test_invalid_json_is_a_scored_failure_not_a_crash() -> None:
     assert result.failure == (
         "Invalid OWL-TAMP discrete sketch: Completion content is not valid JSON"
     )
+
+
+def test_receding_horizon_reobserves_after_each_successful_action() -> None:
+    state = {"revision": 0, "held": False, "done": False}
+
+    class Planner:
+        response_trace = [{"request": 1}, {"request": 2}]
+        trace = {"stage": "initial"}
+
+        def plan(self, _goal, observation, _images, _oracle, **_kwargs):
+            if observation.revision == 0:
+                action = Action("PICK", ("object_0001",))
+            else:
+                action = Action("PLACE", ("object_0001", "region_0001"))
+            return PlanningResult("PLAN", PlanSketch("PLAN", (action,), ()), (action,), (), 1, 1)
+
+    def observe():
+        return (
+            Observation(
+                "living_room",
+                state["revision"],
+                (Entity("object_0001", "object", "object", {}),),
+                (Region("region_0001", "region", "open", True),),
+                {"holding": state["held"]},
+                state["done"],
+            ),
+            (),
+        )
+
+    def execute(action):
+        if action.operator == "PICK":
+            state["held"] = True
+        else:
+            state["held"] = False
+            state["done"] = True
+        state["revision"] += 1
+        return ActionResult.succeeded(f"completed({action.operator})")
+
+    result = OWLTAMPRecedingHorizon(
+        Planner(), observe, execute, lambda row: row.goal_satisfied,
+        lambda _action, _constraints, _trial: True,
+    ).run("Place the object")
+
+    assert result.success
+    assert result.planning_rounds == 2
+    assert result.replans == 1
+    assert result.executed_actions == 2
+    assert result.raw_vlm_requests == 4

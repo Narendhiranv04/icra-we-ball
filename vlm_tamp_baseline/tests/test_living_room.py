@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import json
 
-from baseline_common.models import Action
+from baseline_common.models import Action, Entity, Observation
 
 from vlm_tamp_baseline.living_room_runtime import (
     LivingRoomPlanningRuntime,
@@ -169,7 +169,42 @@ def test_living_room_cli_defaults_to_planning_only_inputs():
     arguments = build_parser().parse_args(
         ["--variant", "L1", "--output-dir", "run"]
     )
-    assert arguments.max_tokens == 8192
-    assert arguments.decoding == "paper"
+    # Thinking is enabled by default, so the token budget is the profile's,
+    # and both baselines default to the same decoding condition.
+    assert arguments.max_tokens == 24576
+    assert arguments.decoding == "model-native"
     assert arguments.max_model_calls == 1
     assert arguments.max_total_actions == 40
+
+
+def test_catalogued_but_unrefinable_predicate_is_a_typed_failure():
+    """The living-room catalogue advertises CLEANED; PDDLStream cannot encode it.
+
+    A real VLM can therefore emit it, and that must surface as a feedable
+    ``unsupported_subgoal`` failure rather than crashing the episode.
+    """
+    from vlm_tamp_baseline.catalog import load_catalog, scene_subgoals
+    from vlm_tamp_baseline.pddlstream_refiner import (
+        PDDLStreamSubgoalRefiner,
+        REFINABLE_PREDICATES,
+    )
+
+    advertised = set(scene_subgoals(load_catalog(), "living_room"))
+    unrefinable = advertised - REFINABLE_PREDICATES
+    assert "CLEANED" in unrefinable, "catalogue no longer advertises CLEANED"
+
+    refiner = PDDLStreamSubgoalRefiner.__new__(PDDLStreamSubgoalRefiner)
+    subgoal = Subgoal("CLEANED", {"tool_id": "object_0001", "target_id": "object_0002"})
+    observation = Observation(
+        "living_room", 0,
+        (Entity("object_0001", "object", "cloth", {}),
+         Entity("object_0002", "object", "table", {})),
+        (), {"held_object": None}, False,
+    )
+
+    result = refiner.refine(subgoal, observation)
+
+    assert not result.success
+    assert result.failure is not None
+    assert result.failure.code == "unsupported_subgoal"
+    assert result.actions == ()

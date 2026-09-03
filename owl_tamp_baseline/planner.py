@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from typing import Any, Mapping, Protocol, Sequence
 
 from baseline_common.inference import (
+    QWEN_THINKING_SAMPLING,
     OpenAITransport,
     PlanningError,
     load_model_profile,
@@ -26,6 +27,26 @@ from .prompt import (
     discrete_response_schema,
 )
 from .refinement import SampleOracle, search_then_sample
+
+
+SINGLE_CALL_MAX_TOKENS = 2048
+
+
+def registry_sampling(profile_name: str, enable_thinking: bool) -> dict[str, object]:
+    """Published sampling for a checkpoint in thinking or non-thinking mode."""
+    planner_profile = load_model_profile(profile_name).get("planner", {})
+    return dict(
+        planner_profile.get("sampling", {}).get(
+            "thinking" if enable_thinking else "direct", QWEN_THINKING_SAMPLING
+        )
+    )
+
+
+def protocol_max_tokens(requested: int, protocol: str) -> int:
+    """Reserve context for the large relaxed-grounding prompt."""
+    if protocol not in {"native", "single_call"}:
+        raise ValueError("protocol must be 'native' or 'single_call'")
+    return min(requested, SINGLE_CALL_MAX_TOKENS) if protocol == "single_call" else requested
 
 
 class CompletionTransport(Protocol):
@@ -57,6 +78,16 @@ class OWLTAMPPlannerConfig:
     def from_env(cls) -> "OWLTAMPPlannerConfig":
         profile_name = os.environ.get("OWL_TAMP_PROFILE", "qwen35-9b")
         profile = load_model_profile(profile_name)
+        enable_thinking = os.environ.get(
+            "OWL_TAMP_ENABLE_THINKING", "false"
+        ).lower() in {"true", "1", "yes"}
+        # Resolve decoding from the model registry, the way VLM-TAMP does.
+        # This loader previously read only served_name and left `sampling` at
+        # the {temperature 0.2, top_p 1.0} placeholder, which happened to match
+        # what the VLM-TAMP runner's default "paper" decoding overrides to, so
+        # the two agreed only by coincidence.  Reading the registry makes the
+        # agreement hold under --decoding model-native too.
+        sampling = registry_sampling(profile_name, enable_thinking)
         return cls(
             base_url=os.environ.get("OWL_TAMP_MODEL_BASE_URL", "http://127.0.0.1:8000/v1"),
             model=os.environ.get("OWL_TAMP_MODEL", str(profile.get("served_name", profile_name))),
@@ -64,8 +95,8 @@ class OWLTAMPPlannerConfig:
             timeout_seconds=float(os.environ.get("OWL_TAMP_TIMEOUT_SECONDS", "600")),
             max_tokens=int(os.environ.get("OWL_TAMP_MAX_TOKENS", "8192")),
             seed=int(os.environ.get("OWL_TAMP_SEED", "0")),
-            enable_thinking=os.environ.get("OWL_TAMP_ENABLE_THINKING", "false").lower()
-            in {"true", "1", "yes"},
+            enable_thinking=enable_thinking,
+            sampling=sampling,
         )
 
 
@@ -87,11 +118,23 @@ class OWLTAMPPlanner:
         observation: Observation,
         images: Sequence[Mapping[str, str]],
         oracle: SampleOracle,
+        *,
+        movable_object_ids: Sequence[str] | None = None,
+        max_vlm_requests: int | None = None,
     ) -> PlanningResult:
         goal = goal.strip()
         if not goal or len(goal) > 4000:
             raise ValidationError("goal must contain between 1 and 4000 characters")
         normalized_images = validate_images(images)
+        if (
+            max_vlm_requests is not None
+            and (
+                isinstance(max_vlm_requests, bool)
+                or not isinstance(max_vlm_requests, int)
+                or max_vlm_requests <= 0
+            )
+        ):
+            raise ValueError("max_vlm_requests must be a positive integer or None")
         self.response_trace = []
         inspectable = (
             region.region_id
@@ -100,7 +143,9 @@ class OWLTAMPPlanner:
         )
         grounded = relaxed_ground(
             observation.scene,
-            observation.object_ids,
+            observation.object_ids
+            if movable_object_ids is None
+            else movable_object_ids,
             observation.region_ids,
             inspectable,
         )
@@ -144,9 +189,17 @@ class OWLTAMPPlanner:
             return result
         constraints: tuple[Constraint, ...] = ()
         constraint_prompts = []
-        if sketch.status == "PLAN":
+        constraint_budget_available = (
+            max_vlm_requests is None or max_vlm_requests > len(self.response_trace)
+        )
+        if sketch.status == "PLAN" and constraint_budget_available:
             generated = []
             for action_index in range(len(sketch.actions)):
+                if (
+                    max_vlm_requests is not None
+                    and len(self.response_trace) >= max_vlm_requests
+                ):
+                    break
                 generated_prompt = constraint_prompt(
                     observation.scene,
                     goal,
@@ -237,6 +290,11 @@ class OWLTAMPPlanner:
                 "continuous_constraints": constraint_prompts,
             },
             "model_responses": self.response_trace,
+            "max_vlm_requests": max_vlm_requests,
+            "constraint_generation_complete": (
+                sketch.status != "PLAN"
+                or len(constraints) == len(sketch.actions)
+            ),
         }
         return result
 

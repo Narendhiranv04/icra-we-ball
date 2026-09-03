@@ -13,18 +13,41 @@ from typing import Any, Mapping, Protocol, Sequence
 
 
 MODEL_REGISTRY = Path(__file__).parents[1] / "inference_server" / "models.json"
+# Fallback decoding when the model registry is unavailable; keep it in step
+# with inference_server/models.json.  These are Qwen3.5-9B's published
+# thinking-mode figures for precise coding rather than the general-task ones
+# (which set presence_penalty 1.5): every planner request here is constrained
+# JSON against a schema, and the general-task penalty measurably makes this
+# checkpoint run past its stopping point on that kind of output -- 18 to 64
+# actions for a 10-action Living Room task, with mutually contradictory goal
+# literals.  Both profiles are prescribed by the model authors; this is the one
+# whose task description matches.  repetition_penalty 1.05 is the single
+# documented deviation from the published figures: it is the smallest value
+# that holds the sketch to its correct length here (1.03 still degenerates to
+# the 64-action cap, 1.05 and 1.10 both return exactly the 10 right actions),
+# and Qwen's own guidance warns this checkpoint produces endless repetitions
+# without a repetition guard.  temperature, top_p, top_k and min_p are the
+# authors' values unchanged.
 QWEN_THINKING_SAMPLING = {
-    "temperature": 1.0,
+    "temperature": 0.6,
     "top_p": 0.95,
     "top_k": 20,
     "min_p": 0.0,
-    "presence_penalty": 1.5,
-    "repetition_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "repetition_penalty": 1.05,
 }
 
 
 class PlanningError(RuntimeError):
     """The model request or completion could not produce valid output."""
+
+
+class ModelTransportError(PlanningError):
+    """The inference service could not return a usable completion response."""
+
+
+class InvalidCompletionError(PlanningError):
+    """The service responded, but the completion violates the output contract."""
 
 
 class TransportConfig(Protocol):
@@ -53,20 +76,22 @@ class OpenAITransport:
                 try:
                     result = json.load(response)
                 except (json.JSONDecodeError, UnicodeError) as error:
-                    raise PlanningError(
+                    raise ModelTransportError(
                         "Model server returned invalid JSON"
                     ) from error
         except urllib.error.HTTPError as error:
             detail = error.read().decode("utf-8", errors="replace")
-            raise PlanningError(
+            raise ModelTransportError(
                 f"Model server returned HTTP {error.code}: {detail}"
             ) from error
         except urllib.error.URLError as error:
-            raise PlanningError(f"Cannot reach model server: {error.reason}") from error
+            raise ModelTransportError(
+                f"Cannot reach model server: {error.reason}"
+            ) from error
         except (OSError, TimeoutError) as error:
-            raise PlanningError(f"Model request failed: {error}") from error
+            raise ModelTransportError(f"Model request failed: {error}") from error
         if not isinstance(result, Mapping):
-            raise PlanningError("Model server response must be a JSON object")
+            raise ModelTransportError("Model server response must be a JSON object")
         return result
 
 
@@ -110,12 +135,14 @@ def response_content(
         choice = response["choices"][0]  # type: ignore[index]
         content = choice["message"]["content"]
     except (KeyError, IndexError, TypeError) as error:
-        raise PlanningError("Completion response has no message content") from error
+        raise InvalidCompletionError(
+            "Completion response has no message content"
+        ) from error
     if isinstance(content, Mapping):
         return content
     if content is None:
         reason = choice.get("finish_reason", "unknown")
-        raise PlanningError(
+        raise InvalidCompletionError(
             "Completion has no final JSON content "
             f"(finish_reason={reason}); increase the baseline token budget"
         )
@@ -126,7 +153,7 @@ def response_content(
             if isinstance(part, Mapping) and part.get("type") == "text"
         )
     if not isinstance(content, str):
-        raise PlanningError("Completion content must be JSON text")
+        raise InvalidCompletionError("Completion content must be JSON text")
     content = content.strip()
     if reasoning_markers and reasoning_markers[1] in content:
         content = content.split(reasoning_markers[1], 1)[1].strip()
@@ -135,9 +162,11 @@ def response_content(
     try:
         result = json.loads(content)
     except json.JSONDecodeError as error:
-        raise PlanningError("Completion content is not valid JSON") from error
+        raise InvalidCompletionError(
+            "Completion content is not valid JSON"
+        ) from error
     if not isinstance(result, Mapping):
-        raise PlanningError("Completion JSON must be an object")
+        raise InvalidCompletionError("Completion JSON must be an object")
     return result
 
 

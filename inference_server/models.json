@@ -5,7 +5,10 @@
       "model_id": "Qwen/Qwen3.5-9B",
       "served_name": "qwen35-9b",
       "default_backend": "vllm",
-      "modalities": ["text", "image"],
+      "modalities": [
+        "text",
+        "image"
+      ],
       "precision": "bfloat16",
       "max_model_len": 32768,
       "max_concurrency": 2,
@@ -15,20 +18,20 @@
         "max_tokens": 24576,
         "sampling": {
           "thinking": {
-            "temperature": 1.0,
+            "temperature": 0.6,
             "top_p": 0.95,
             "top_k": 20,
             "min_p": 0.0,
-            "presence_penalty": 1.5,
-            "repetition_penalty": 1.0
+            "presence_penalty": 0.0,
+            "repetition_penalty": 1.05
           },
           "direct": {
             "temperature": 0.7,
             "top_p": 0.8,
             "top_k": 20,
             "min_p": 0.0,
-            "presence_penalty": 1.5,
-            "repetition_penalty": 1.0
+            "presence_penalty": 0.0,
+            "repetition_penalty": 1.05
           }
         }
       },
@@ -50,7 +53,10 @@
       "model_id": "zai-org/GLM-4.6V-Flash",
       "served_name": "glm46v-flash",
       "default_backend": "vllm",
-      "modalities": ["text", "image"],
+      "modalities": [
+        "text",
+        "image"
+      ],
       "precision": "bfloat16",
       "max_model_len": 16384,
       "max_concurrency": 1,
@@ -91,7 +97,10 @@
       "model_id": "Qwen/Qwen3-VL-8B-Thinking",
       "served_name": "qwen3-vl-8b-thinking",
       "default_backend": "vllm",
-      "modalities": ["text", "image"],
+      "modalities": [
+        "text",
+        "image"
+      ],
       "precision": "bfloat16",
       "max_model_len": 32768,
       "max_concurrency": 2,
@@ -127,7 +136,10 @@
       "model_id": "OpenGVLab/InternVL3_5-14B-HF",
       "served_name": "internvl35-14b",
       "default_backend": "vllm",
-      "modalities": ["text", "image"],
+      "modalities": [
+        "text",
+        "image"
+      ],
       "precision": "fp8-online",
       "max_model_len": 16384,
       "max_concurrency": 1,
@@ -136,7 +148,10 @@
         "thinking_mode": "always",
         "max_tokens": 12288,
         "structured_output": false,
-        "reasoning_markers": ["<think>", "</think>"],
+        "reasoning_markers": [
+          "<think>",
+          "</think>"
+        ],
         "system_prompt_prefix": "Reason through the task inside <think> and </think> tags. After </think>, return only the requested final JSON object. Never include reasoning in that JSON.",
         "sampling": {
           "thinking": {
@@ -159,7 +174,10 @@
       "model_id": "moonshotai/Kimi-VL-A3B-Thinking-2506",
       "served_name": "kimi-vl-a3b-thinking",
       "default_backend": "vllm",
-      "modalities": ["text", "image"],
+      "modalities": [
+        "text",
+        "image"
+      ],
       "precision": "fp8-online",
       "max_model_len": 16384,
       "max_concurrency": 1,
@@ -169,7 +187,10 @@
         "thinking_mode": "always",
         "max_tokens": 12288,
         "structured_output": false,
-        "reasoning_markers": ["◁think▷", "◁/think▷"],
+        "reasoning_markers": [
+          "\u25c1think\u25b7",
+          "\u25c1/think\u25b7"
+        ],
         "sampling": {
           "thinking": {
             "temperature": 0.6
@@ -191,7 +212,10 @@
       "model_id": null,
       "served_name": "muse-glimmer",
       "default_backend": "vllm",
-      "modalities": ["text", "image"],
+      "modalities": [
+        "text",
+        "image"
+      ],
       "precision": "official-quantized-checkpoint-required",
       "notes": "Reserved for Meta Muse Glimmer after an official model ID and supported serving recipe are verified. Muse Spark is API-only and cannot be hosted on this 5090."
     }
