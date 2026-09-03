@@ -139,10 +139,17 @@ def execute_phase3_run(
             )
     elif handoff.domain == "workshop":
         from .phase4_workshop import WorkshopPhase4Adapter
+        from .workshop_tool_cabinet_hinge import (
+            configure_workshop_tool_cabinet_left_hinge,
+        )
 
         adapter = WorkshopPhase4Adapter(
             handoff, record_video=record_video, viewer=viewer
         )
+        # Preserve the current Phase-4 Workshop mechanism calibration while the
+        # Kitchen execution tree stays byte-for-byte at the 9dd667 baseline.
+        hinge_audit = configure_workshop_tool_cabinet_left_hinge(adapter.scene)
+        adapter.entity_resolution["tool_cabinet_hinge"] = hinge_audit
     else:
         raise NotImplementedError(
             f"Phase-4 adapter is not implemented yet for {handoff.domain}"
