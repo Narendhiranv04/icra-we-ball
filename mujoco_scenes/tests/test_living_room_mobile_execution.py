@@ -9,21 +9,27 @@ import mujoco
 import numpy as np
 import pytest
 
-from mujoco_scenes.generic_manipulation import CalibratedPickPlaceExecutor
+from mujoco_scenes.generic_manipulation import CalibratedPickPlaceExecutor, SimplePickSpec
 from mujoco_scenes.living_room_mobile_execution import (
     BasePose,
     SCENE,
+    SAUCER_VERTICAL_LIFT_M,
     _joint_base_to_world,
     _world_to_joint_base,
     allocate_observed_placements,
     candidate_stances,
+    gripper_rotation_for_object_target,
     inspect_held_object_state,
     oriented_rectangle_corners,
     oriented_rectangles_clearance,
     rectangle_inside_observed_support,
+    saucer_pick_spec_for_stance,
     verify_physical_on_relation,
 )
-from mujoco_scenes.living_room_region_scene import build_l2_region_xml
+from mujoco_scenes.living_room_region_scene import (
+    L2LivingRoomRegionScene,
+    build_l2_region_xml,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -42,8 +48,6 @@ def _regions():
 
 
 def _plan():
-    if not (PHASE2 / "plan.json").exists():
-        pytest.skip("authoritative untracked Phase-2 run is unavailable")
     return json.loads((PHASE2 / "plan.json").read_text())
 
 
@@ -123,6 +127,40 @@ def test_base_coordinate_round_trip():
 def test_current_pose_is_always_first_stance_candidate():
     current = BasePose(0.1, -0.2, 0.3)
     assert candidate_stances(np.array((1.0, 1.0, 0.5)), current)[0] == current
+
+
+def test_saucer_pick_profile_approaches_and_lifts_vertically():
+    spec = SimplePickSpec("saucer", "grasp", 0.008)
+    result = saucer_pick_spec_for_stance(
+        spec,
+        np.array((1.0, 1.0, 0.7)),
+        BasePose(1.0, 0.0, 0.0),
+    )
+    assert result.approach_offset_world_m is None
+    assert result.top_down_rotation is None
+    assert result.retreat_route_offsets_world_m == (
+        (0.0, 0.0, SAUCER_VERTICAL_LIFT_M),
+    )
+    assert result.retreat_to_carry_after_route
+
+
+def test_place_rotation_preserves_the_requested_held_object_yaw():
+    scene = L2LivingRoomRegionScene(SCENE, "google")
+    body_id = mujoco.mj_name2id(
+        scene.model, mujoco.mjtObj.mjOBJ_BODY, "a2_snack_left"
+    )
+    gripper_id = mujoco.mj_name2id(
+        scene.model, mujoco.mjtObj.mjOBJ_BODY, "google:link_gripper"
+    )
+    desired = np.array(((0.0, -1.0, 0.0), (1.0, 0.0, 0.0), (0.0, 0.0, 1.0)))
+    place_rotation = gripper_rotation_for_object_target(
+        scene.model, scene.data, "a2_snack_left", desired
+    )
+    relative = (
+        scene.data.xmat[gripper_id].reshape(3, 3).T
+        @ scene.data.xmat[body_id].reshape(3, 3)
+    )
+    assert np.allclose(place_rotation @ relative, desired)
 
 
 def test_stance_generation_is_deterministic():
