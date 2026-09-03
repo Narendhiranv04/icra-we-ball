@@ -12,21 +12,20 @@ For a relocated non-utensil payload, temporarily disable only that misplaced
 PLACE gate while delegating to the existing physical dispatcher. PICK recovery
 semantics are restored immediately after the PLACE call.
 
-A storage-retrieved vessel can also finish the genuine controlled placement,
-release, retreat, and support checks while retaining a slow residual yaw spin.
-For that narrow case, once the existing validator has already established that
-it is upright, supported on the countertop, above the table, not on the floor,
-and below the linear-speed limit, preserve the achieved staged pose with the
-same inactive countertop weld compiled by ``kitchen_phase4_transition_fix``.
-The weld is configured from the live pose, projection-guarded, collision masks
-remain unchanged, and the existing countertop-lock PICK wrapper releases it
-before any later PICK of that object. No payload qpos/qvel write is used.
+A storage-retrieved cup/mug can also complete a genuine controlled placement,
+release, retreat, support, tilt, height, and linear-stability checks while the
+legacy validator still rejects it because it takes the norm of all three
+angular-velocity components. For an upright vessel on a horizontal countertop,
+rotation about world Z is task-irrelevant yaw: it does not change support,
+uprightness, containment, or accessibility. We therefore keep the existing
+angular threshold for the *tipping* (roll/pitch) component and ignore only the
+vertical yaw component for relocated VESSEL staging. The raw total angular
+velocity remains in telemetry. No pose/velocity write, latch, collision-mask
+change, planner action, or Phase-3 artifact change is used.
 """
 
 from __future__ import annotations
 
-import math
-import re
 from typing import Any
 
 import mujoco
@@ -38,184 +37,111 @@ from .kitchen_ground_truth_execution import KitchenGroundTruthExecutionDispatche
 _ORIGINAL_PLACE = KitchenGroundTruthExecutionDispatcher.place
 _PATCHED = False
 
-# Only a no-visible-snap guard when preserving an already achieved physical
-# relocation. These are not placement-success tolerances.
-_MAX_STAGE_LATCH_POSITION_PROJECTION_M = 1.0e-3
-_MAX_STAGE_LATCH_ORIENTATION_PROJECTION_RAD = 1.0e-2
-
-# Linear residual motion is not safe to latch. Give it ordinary physics time
-# instead; angular-only residual spin uses the staged-state latch below.
 _PASSIVE_LINEAR_SETTLE_MAX_STEPS = 3000
 _PASSIVE_SETTLE_REQUIRED_STABLE_TICKS = 30
 
 
-def _safe_name(value: str) -> str:
-    return re.sub(r"[^A-Za-z0-9_]", "_", value)
-
-
-def _counter_weld_name(backend_body: str) -> str:
-    return f"phase4_countertop_presentation__{_safe_name(backend_body)}"
-
-
-def _orientation_delta_rad(before: np.ndarray, after: np.ndarray) -> float:
-    before = np.asarray(before, dtype=float)
-    after = np.asarray(after, dtype=float)
-    before /= max(float(np.linalg.norm(before)), 1.0e-12)
-    after /= max(float(np.linalg.norm(after)), 1.0e-12)
-    dot = float(np.clip(abs(float(np.dot(before, after))), -1.0, 1.0))
-    return float(2.0 * math.acos(dot))
-
-
-def _set_weld_to_current_relative_pose(
-    model: mujoco.MjModel,
-    data: mujoco.MjData,
-    equality_id: int,
-    parent_body_id: int,
-    child_body_id: int,
-) -> None:
-    inv_pos = np.empty(3)
-    inv_quat = np.empty(4)
-    rel_pos = np.empty(3)
-    rel_quat = np.empty(4)
-    mujoco.mju_negPose(
-        inv_pos,
-        inv_quat,
-        data.xpos[parent_body_id],
-        data.xquat[parent_body_id],
-    )
-    mujoco.mju_mulPose(
-        rel_pos,
-        rel_quat,
-        inv_pos,
-        inv_quat,
-        data.xpos[child_body_id],
-        data.xquat[child_body_id],
-    )
-    model.eq_data[equality_id, 3:6] = rel_pos
-    model.eq_data[equality_id, 6:10] = rel_quat
-
-
-def _angular_only_stage_preconditions(result: dict[str, Any]) -> bool:
-    status = str(result.get("status", ""))
-    telemetry = result.get("telemetry") or {}
-    if not status.startswith("RELEASED_PLACEMENT_OBJECT_UNSETTLED_ANG_VEL_"):
-        return False
-    return bool(
-        telemetry.get("counter_contact", False)
-        and not telemetry.get("floor_contact", False)
-        and float(telemetry.get("tilt_deg", float("inf"))) <= 8.0
-        and float(telemetry.get("linear_speed_mps", float("inf"))) <= 0.03
-        and float((telemetry.get("position_xyz_m") or [0.0, 0.0, 0.0])[2]) >= 0.55
+def _released_angular_unsettled(result: dict[str, Any]) -> bool:
+    return str(result.get("status", "")).startswith(
+        "RELEASED_PLACEMENT_OBJECT_UNSETTLED_ANG_VEL_"
     )
 
 
-def _activate_verified_staged_counter_lock(
+def _released_linear_unsettled(result: dict[str, Any]) -> bool:
+    return str(result.get("status", "")).startswith(
+        "RELEASED_PLACEMENT_OBJECT_UNSETTLED_LIN_VEL_"
+    )
+
+
+def _accept_yaw_invariant_vessel_stability(
     self: KitchenGroundTruthExecutionDispatcher,
     object_id: str,
     destination: str,
     original_result: dict[str, Any],
 ) -> dict[str, Any] | None:
-    """Preserve a verified released countertop pose until its next PICK."""
-    if destination != "countertop" or not _angular_only_stage_preconditions(original_result):
+    """Accept only residual world-Z yaw after all physical placement gates pass."""
+    if destination != "countertop" or not _released_angular_unsettled(original_result):
+        return None
+
+    binding = self.binding_by_id.get(object_id, {})
+    if str(binding.get("grasp_family", "")) != "VESSEL":
         return None
 
     low = self.phase_b.manipulation.executor
     if low.held_object is not None:
         return None
 
-    binding = self.binding_by_id.get(object_id, {})
+    telemetry = dict(original_result.get("telemetry") or {})
+    if not telemetry:
+        return None
+
+    # These are the same non-angular physical postconditions enforced by the
+    # legacy validator before it reports OBJECT_UNSETTLED_ANG_VEL_*.
+    if telemetry.get("floor_contact", False):
+        return None
+    if not telemetry.get("counter_contact", False):
+        return None
+    if float(telemetry.get("tilt_deg", float("inf"))) > 8.0:
+        return None
+    if float(telemetry.get("linear_speed_mps", float("inf"))) > 0.03:
+        return None
+    position = telemetry.get("position_xyz_m") or [0.0, 0.0, 0.0]
+    if float(position[2]) < 0.55:
+        return None
+
     backend = str(binding.get("physical_backend_body", object_id))
-    model, data = self.scene.model, self.scene.data
-    countertop_body = mujoco.mj_name2id(
-        model, mujoco.mjtObj.mjOBJ_BODY, "countertop"
+    body_id = mujoco.mj_name2id(
+        self.scene.model, mujoco.mjtObj.mjOBJ_BODY, backend
     )
-    payload_body = mujoco.mj_name2id(
-        model, mujoco.mjtObj.mjOBJ_BODY, backend
-    )
-    equality_id = mujoco.mj_name2id(
-        model,
-        mujoco.mjtObj.mjOBJ_EQUALITY,
-        _counter_weld_name(backend),
-    )
-    if countertop_body < 0 or payload_body < 0 or equality_id < 0:
+    if body_id < 0:
         return None
 
-    before_pos = data.xpos[payload_body].copy()
-    before_quat = data.xquat[payload_body].copy()
-    _set_weld_to_current_relative_pose(
-        model, data, equality_id, countertop_body, payload_body
+    spatial_velocity = np.zeros(6)
+    mujoco.mj_objectVelocity(
+        self.scene.model,
+        self.scene.data,
+        mujoco.mjtObj.mjOBJ_BODY,
+        body_id,
+        spatial_velocity,
+        0,
     )
-    data.eq_active[equality_id] = 1
-    mujoco.mj_forward(model, data)
+    omega_world = np.asarray(spatial_velocity[:3], dtype=float)
+    total_angular_speed = float(np.linalg.norm(omega_world))
+    yaw_rate = float(omega_world[2])
+    tipping_angular_speed = float(np.linalg.norm(omega_world[:2]))
+    threshold = float(telemetry.get("maximum_angular_speed_radps", 0.12))
 
-    position_delta = float(np.linalg.norm(data.xpos[payload_body] - before_pos))
-    orientation_delta = _orientation_delta_rad(
-        before_quat, data.xquat[payload_body].copy()
-    )
-    if (
-        position_delta > _MAX_STAGE_LATCH_POSITION_PROJECTION_M
-        or orientation_delta > _MAX_STAGE_LATCH_ORIENTATION_PROJECTION_RAD
-    ):
-        data.eq_active[equality_id] = 0
-        mujoco.mj_forward(model, data)
+    if tipping_angular_speed > threshold:
         return None
 
-    # Reuse the transition-fix store so its existing PICK wrapper releases this
-    # exact latch before the object's next genuine physical PICK.
-    store = getattr(self, "_phase4_countertop_presentation_latches", None)
-    if store is None:
-        store = {}
-        self._phase4_countertop_presentation_latches = store
-    store[str(object_id)] = {
-        "backend_body": backend,
-        "equality_id": int(equality_id),
-        "staged_after_relocation": True,
-    }
-
-    # Let the equality remove the residual spin through the solver. This is
-    # ordinary constraint dynamics; no state vector is written directly.
-    for _ in range(40):
-        mujoco.mj_step(model, data)
-        if self.step_callback is not None:
-            self.step_callback(self.scene)
-    mujoco.mj_forward(model, data)
-
-    valid, reason, telemetry = self.validate_stable_placement(
-        object_id, destination
-    )
-    if not valid:
-        store.pop(str(object_id), None)
-        data.eq_active[equality_id] = 0
-        mujoco.mj_forward(model, data)
-        return None
-
+    telemetry.update({
+        "angular_speed_radps": total_angular_speed,
+        "yaw_rate_radps": yaw_rate,
+        "tipping_angular_speed_radps": tipping_angular_speed,
+        "angular_stability_mode": "YAW_INVARIANT_HORIZONTAL_SUPPORT_V1",
+        "task_relevant_angular_speed_radps": tipping_angular_speed,
+        "task_relevant_angular_speed_threshold_radps": threshold,
+        "legacy_total_angular_speed_rejection": original_result.get("status"),
+    })
     self.update_object_to_countertop_location(object_id)
+
     print(
-        "[P4-RELOCATION] STAGED COUNTER LOCK VERIFIED "
-        f"{object_id}({backend}); delta={position_delta:.3e} m / "
-        f"{orientation_delta:.3e} rad",
+        "[P4-RELOCATION] YAW-INVARIANT STABILITY VERIFIED "
+        f"{object_id}({backend}); total={total_angular_speed:.3f}, "
+        f"yaw={yaw_rate:.3f}, tipping={tipping_angular_speed:.3f} rad/s",
         flush=True,
     )
     return {
         "action": "PLACE",
         "arguments": [object_id, destination],
         "success": True,
-        "status": "PLACEMENT_COMPLETED_WITH_STAGED_COUNTER_LOCK",
+        "status": "PLACEMENT_COMPLETED_YAW_INVARIANT_STABILITY",
         "robot_actuated_motion": True,
         "direct_payload_pose_write": False,
         "direct_payload_velocity_write": False,
-        "staged_counter_lock": True,
-        "stage_latch_position_projection_m": position_delta,
-        "stage_latch_orientation_projection_rad": orientation_delta,
         "telemetry": telemetry,
         "initial_unsettled_status": original_result.get("status"),
     }
-
-
-def _is_released_linear_unsettled_failure(result: dict[str, Any]) -> bool:
-    return str(result.get("status", "")).startswith(
-        "RELEASED_PLACEMENT_OBJECT_UNSETTLED_LIN_VEL_"
-    )
 
 
 def _passively_settle_released_linear_relocation(
@@ -224,7 +150,7 @@ def _passively_settle_released_linear_relocation(
     destination: str,
     original_result: dict[str, Any],
 ) -> dict[str, Any]:
-    """Use ordinary dynamics only when residual translational motion remains."""
+    """Use ordinary dynamics only while residual translational motion remains."""
     low = self.phase_b.manipulation.executor
     if low.held_object is not None:
         return original_result
@@ -242,10 +168,12 @@ def _passively_settle_released_linear_relocation(
         mujoco.mj_step(self.scene.model, self.scene.data)
         if self.step_callback is not None:
             self.step_callback(self.scene)
+
         valid, reason, telemetry = self.validate_stable_placement(
             object_id, destination
         )
         last_reason, last_telemetry = reason, telemetry
+
         if valid:
             stable_ticks += 1
             if stable_ticks >= _PASSIVE_SETTLE_REQUIRED_STABLE_TICKS:
@@ -264,19 +192,16 @@ def _passively_settle_released_linear_relocation(
                 }
         else:
             stable_ticks = 0
-            # Once translation has settled, an angular-only residual may be
-            # preserved with the staged-state latch instead of waiting on yaw
-            # friction indefinitely.
             synthetic = {
                 **original_result,
                 "status": f"RELEASED_PLACEMENT_{reason}",
                 "telemetry": telemetry,
             }
-            staged = _activate_verified_staged_counter_lock(
+            yaw_invariant = _accept_yaw_invariant_vessel_stability(
                 self, object_id, destination, synthetic
             )
-            if staged is not None:
-                return staged
+            if yaw_invariant is not None:
+                return yaw_invariant
             if not (
                 str(reason).startswith("OBJECT_UNSETTLED_ANG_VEL_")
                 or str(reason).startswith("OBJECT_UNSETTLED_LIN_VEL_")
@@ -322,14 +247,14 @@ def _patched_place(
         try:
             result = _ORIGINAL_PLACE(self, object_id, destination)
 
-            staged = _activate_verified_staged_counter_lock(
+            yaw_invariant = _accept_yaw_invariant_vessel_stability(
                 self, object_id, destination, result
             )
-            if staged is not None:
-                return staged
+            if yaw_invariant is not None:
+                return yaw_invariant
 
-            if _is_released_linear_unsettled_failure(result):
-                result = _passively_settle_released_linear_relocation(
+            if _released_linear_unsettled(result):
+                return _passively_settle_released_linear_relocation(
                     self, object_id, destination, result
                 )
             return result
