@@ -114,6 +114,18 @@ def execute_phase3_run(
 
         install_kitchen_relocation_gate_fix()
 
+        # Object-relative PLACE must execute from the destination object's live
+        # workspace.  A bowl that remains inside B1/C1/C2/D1/D2 cannot be
+        # treated like a countertop/HOME target merely because the held utensil
+        # originated on the counter.  Route the held payload physically to that
+        # existing destination workspace and suppress only the legacy one-shot
+        # HOME recenter inside PLACE.
+        from .kitchen_phase4_relative_storage_place_fix import (
+            install_patch as install_kitchen_relative_storage_place_fix,
+        )
+
+        install_kitchen_relative_storage_place_fix()
+
         from .phase4_kitchen import KitchenPhase4Adapter
 
         adapter = KitchenPhase4Adapter(
