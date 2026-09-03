@@ -1,0 +1,20 @@
+schema_version: 2
+domain: workshop_frame_joint_repair
+execution_contract: ASSISTED_GT_DEMONSTRATION
+operators:
+  OPEN:
+    arguments: [storage_region]
+    preconditions: [closed(storage_region), hand_empty]
+    effects: [open(storage_region), inspected(storage_region)]
+  PICK:
+    arguments: [object, source]
+    preconditions: [hand_empty, at(object,source), accessible(object)]
+    effects: [holding(object), not_at(object,source)]
+  PLACE:
+    arguments: [object, destination]
+    preconditions: [holding(object), valid_destination(object,destination)]
+    effects: [hand_empty, at(object,destination)]
+  SCREW:
+    arguments: [driver, fastener, target_joint]
+    preconditions: [holding(driver), inserted(fastener,target_joint), compatible(driver,fastener,target_joint)]
+    effects: [repaired(target_joint)]

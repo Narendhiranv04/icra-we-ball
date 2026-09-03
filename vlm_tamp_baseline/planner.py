@@ -9,8 +9,8 @@ from dataclasses import dataclass, field
 from typing import Any, Mapping, Protocol, Sequence
 
 from baseline_common.inference import (
+    InvalidCompletionError,
     OpenAITransport,
-    PlanningError,
     QWEN_THINKING_SAMPLING,
     load_model_profile,
     response_content,
@@ -243,9 +243,11 @@ class VLMTAMPPlanner:
                 english_content, max_steps=self.config.max_subgoals
             )
         except ValidationError as error:
-            raise PlanningError(f"Invalid VLM-TAMP English plan: {error}") from error
+            raise InvalidCompletionError(
+                f"Invalid VLM-TAMP English plan: {error}"
+            ) from error
         if english_plan.status == "GOAL_COMPLETE":
-            raise PlanningError(
+            raise InvalidCompletionError(
                 "VLM declared GOAL_COMPLETE although the independent goal "
                 "verifier is false"
             )
@@ -279,9 +281,11 @@ class VLMTAMPPlanner:
                 max_subgoals=self.config.max_subgoals,
             )
         except ValidationError as error:
-            raise PlanningError(f"Invalid VLM-TAMP subgoal plan: {error}") from error
+            raise InvalidCompletionError(
+                f"Invalid VLM-TAMP subgoal plan: {error}"
+            ) from error
         if plan.status == "GOAL_COMPLETE":
-            raise PlanningError(
+            raise InvalidCompletionError(
                 "VLM grounding declared GOAL_COMPLETE although the independent "
                 "goal verifier is false"
             )

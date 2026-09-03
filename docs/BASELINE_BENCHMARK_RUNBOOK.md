@@ -1,5 +1,9 @@
 # VLM-TAMP and OWL-TAMP camera-ablation runbook
 
+The native-method and minimum-call definitions are centralized in
+`docs/BENCHMARK_PROTOCOLS.md`. Keep `native` and `single_call` output roots
+separate; never pool them into one reported condition.
+
 This benchmark is planning-only. It compares each predicted grounded action
 sequence with `EXPECTED_GT_ACTIONS`; it does not score MuJoCo execution.
 
@@ -8,6 +12,7 @@ sequence with `EXPECTED_GT_ACTIONS`; it does not score MuJoCo execution.
 - Methods: VLM-TAMP and OWL-TAMP.
 - Kitchen: K1--K12.
 - Living Room: L1--L10.
+- Workshop: W1--W10.
 - Camera conditions: 1, 3, and 5 fixed views.
 - Trials: seeds 0--9 for every variant and camera condition.
 
@@ -92,11 +97,23 @@ MUJOCO_GL=egl PYOPENGL_PLATFORM=egl .venv/bin/python -m \
   owl_tamp_baseline.run_living_room \
   --variant L1 --camera-count 1 --seed 0 \
   --output-dir runs/smoke/owl_tamp_l1_c1_s0
+
+MUJOCO_GL=egl PYOPENGL_PLATFORM=egl .venv/bin/python -m \
+  vlm_tamp_baseline.run_workshop \
+  --variant W1 --camera-count 1 --seed 0 \
+  --output-dir runs/smoke/vlm_tamp_w1_c1_s0
+
+MUJOCO_GL=egl PYOPENGL_PLATFORM=egl .venv/bin/python -m \
+  owl_tamp_baseline.run_workshop \
+  --variant W1 --camera-count 1 --seed 0 \
+  --output-dir runs/smoke/owl_tamp_w1_c1_s0
 ```
 
-Each successful run must contain `episode_result.json`, `model_trace.json`,
-and its selected annotated camera images. Confirm `camera_count`, seed,
-variant, outcome comparison, and ordered F1 in `episode_result.json`.
+Each successful run must contain `episode_result.json` and its selected
+annotated camera images. OWL-TAMP also writes `model_trace.json`; VLM-TAMP
+writes one trace per model call below `model_calls/`. Confirm `camera_count`,
+seed, variant, outcome comparison, and ordered-F1 diagnostics in
+`episode_result.json`.
 
 ## Full 10-trial benchmark
 
@@ -135,6 +152,29 @@ MUJOCO_GL=egl PYOPENGL_PLATFORM=egl .venv/bin/python -m \
   --continue-on-error --resume
 ```
 
+Workshop:
+
+```bash
+MUJOCO_GL=egl PYOPENGL_PLATFORM=egl .venv/bin/python -m \
+  baseline_common.run_plan_gt_batch \
+  --environment workshop \
+  --methods vlm_tamp,owl_tamp \
+  --camera-counts 1,3,5 \
+  --seeds 0,1,2,3,4,5,6,7,8,9 \
+  --output-root runs/baseline_camera_ablation/workshop \
+  --base-url http://127.0.0.1:18000/v1 \
+  --model qwen35-9b \
+  --max-tokens 8192 \
+  --continue-on-error --resume
+```
+
+Workshop images show the closed three-region cell and the frame joint. Storage
+contents remain private until an `INSPECT` action; neither baseline receives a
+variant inventory, expected action sequence, or compatibility oracle.
+For a VLM-TAMP replan condition (`--max-model-calls > 1`), inspection writes a
+fresh annotated camera set containing only that inspected region's contents.
+The default one-call condition does not add an automatic search.
+
 `--resume` skips completed episodes. An interrupted, nonempty episode without
 `episode_result.json` is deliberately not overwritten; move that one episode
 directory aside, then rerun the same command.
@@ -149,6 +189,8 @@ directory aside, then rerun the same command.
 ```
 
 This prints the Markdown table and writes `table4.csv` and `table4.json`.
+It also reports requested, completed, and failed trials, so a process failure
+is never silently omitted from a batch summary.
 The main table uses goal-level measures rather than sequence F1:
 
 - **Goal completion:** feasible trials where every required final relation holds.

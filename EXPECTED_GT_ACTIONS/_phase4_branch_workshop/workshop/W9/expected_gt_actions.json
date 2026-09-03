@@ -1,0 +1,32 @@
+{
+  "actions": [
+    {
+      "arguments": [
+        "LEFT_DRAWER"
+      ],
+      "operator": "OPEN",
+      "reason": "Open this storage region once for inspection; it remains open."
+    },
+    {
+      "arguments": [
+        "RIGHT_DRAWER"
+      ],
+      "operator": "OPEN",
+      "reason": "Open this storage region once for inspection; it remains open."
+    },
+    {
+      "arguments": [
+        "TOOL_CABINET"
+      ],
+      "operator": "OPEN",
+      "reason": "Open this storage region once for inspection; it remains open."
+    }
+  ],
+  "description": "Screw and hammer present; both compatible drivers absent.",
+  "environment": "workshop",
+  "intended_outcome": "INFEASIBLE",
+  "internal_variant": "I0_NO_DRIVER",
+  "schema_version": 1,
+  "total_actions": 3,
+  "variant": "W9"
+}

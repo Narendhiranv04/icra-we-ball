@@ -1,0 +1,62 @@
+{
+  "pass": "P4-SYNC.2",
+  "source_commit": "7469b4e73d19af463d93dab724ae04cea6ba639d",
+  "source_git_dirty": false,
+  "environment": {
+    "python": "/home/naren/miniconda3/bin/python",
+    "mujoco_gl": "egl",
+    "mujoco_menagerie_path": "/home/naren/third_party/mujoco_menagerie"
+  },
+  "runs": [
+    {
+      "domain": "living_room",
+      "variant": "L1",
+      "mode": "gt",
+      "search_order": "auto",
+      "search_order_effective": "not_applicable",
+      "search_seed": null,
+      "dry_run": true,
+      "exploration_actuation": "not_applicable",
+      "terminal_status": "ACTION_SEQUENCE_READY",
+      "inspected_regions": [],
+      "phase3_artifact_sha256": {
+        "result": "b79dcd7af1ed466ed235e9f0723c8cf35272205cde5bfb01165e199fdb809b4e",
+        "grounding": "37a79472f42b11e435e24ce5378640509f504488d01790a25a930947bbdee7bc",
+        "final_plan": "2ea5df873bec1a78bcd7e379ee664b52ca449315fdab73fc5cfaae8df1b72bbc",
+        "replay_validation": "4397765254e93fd75e44292cf89acff3eca499846c2d481ee325fdabfff5dd27"
+      },
+      "phase4": {
+        "success": true,
+        "actions_completed": 10,
+        "actions_requested": 10,
+        "strict_execution": true,
+        "strict_execution_violation_detected": false,
+        "direct_task_state_fallback_used": false,
+        "result_path": "/tmp/p4-sync2-execution-final/living_room/L1/gt/execution_result.json"
+      }
+    },
+    {
+      "domain": "workshop",
+      "variant": "W1",
+      "mode": "gt",
+      "search_order": "auto",
+      "search_order_effective": "oracle",
+      "search_seed": null,
+      "dry_run": true,
+      "exploration_actuation": "direct_sim_articulation",
+      "terminal_status": "INCOMPLETE",
+      "inspected_regions": ["LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"],
+      "phase3_artifact_sha256": {
+        "result": "51f92dabd4411bbe020f3de4524f9810cbde9798fea0b959baf4250c514a46f3",
+        "grounding": "a2193695d5abf12c4b433e85465f0e0e8d95be036b766baed4a9ac968e2c7838",
+        "observed_graph": "57211359a5d0cd8ca83273b779789d19578e94ecda579f41c37e917edb01974a"
+      },
+      "phase4": {
+        "success": false,
+        "failure": "CURRENT_UPSTREAM_PHASE3_BLOCKED",
+        "execution_attempted": false,
+        "result_path": null
+      }
+    }
+  ]
+}

@@ -1,4 +1,10 @@
-"""Profile-driven pick/place for Google Robot and future calibrated backends."""
+"""Profile-driven vertical pick/place for calibrated kitchen robots.
+
+Fetch keeps its object-specific manipulation controller in ``pick_motion``.
+This module is deliberately smaller: it provides the reusable calibration
+baseline used by Google Robot and future backends, beginning with regular
+objects that admit a stable top-down pinch.
+"""
 
 from __future__ import annotations
 
@@ -8,7 +14,7 @@ from dataclasses import dataclass, replace
 import mujoco
 import numpy as np
 
-from mujoco_scenes.ik import ProfiledIK, rotation_vector
+from mujoco_scenes.ik import ProfiledIK as CanonicalProfiledIK
 from mujoco_scenes.robot_profiles import (
     ManipulationProfile,
     manipulation_profile,
@@ -39,7 +45,7 @@ SELF_COLLISION_TOLERANCE = 0.003
 SELF_COLLISION_COMPARISON_EPSILON = 0.0002
 ENVIRONMENT_COLLISION_TOLERANCE = 0.002
 TRAVERSABLE_GROUND_GEOMS = frozenset(
-    ("floor", "a2_floor", "a2_rug_surface", "a2_rug_border")
+    ("floor", "a2_floor", "a2_rug_surface", "a2_rug_border", "workshop_floor_geom")
 )
 COLLISION_GUARD_INTERVAL = 5
 SPOON_PIVOT_RELAXATION = 0.30
@@ -64,8 +70,24 @@ SELF_COLLISION_MOUNT_ALLOWANCES = {
     # deeper overlap is still rejected, as are all non-mounting link pairs.
     frozenset(("google:base_link", "google:link_shoulder")): -0.100,
     frozenset(("google:base_link", "google:link_bicep")): -0.050,
+    frozenset(("google:base_link", "google:link_forearm")): -0.030,
+    frozenset(("google:base_link", "google:link_wrist")): -0.030,
+    frozenset(("google:base_link", "google:link_gripper")): -0.030,
 }
 GOOGLE_SPOON_TOP_DOWN_ROTATION = np.diag((1.0, -1.0, -1.0))
+
+
+def environment_collision_is_allowed(
+    environment_body: int,
+    environment_geom: int,
+    allowed_environment_bodies: frozenset[int],
+    allowed_environment_geoms: frozenset[int],
+) -> bool:
+    """Exact-geom allowances do not implicitly exempt sibling geometry."""
+    return bool(
+        environment_body in allowed_environment_bodies
+        or environment_geom in allowed_environment_geoms
+    )
 
 
 @dataclass(frozen=True)
@@ -83,6 +105,24 @@ class SimplePickSpec:
     carry_position: np.ndarray | None = None
     final_tracking_tolerance: float = JOINT_WAYPOINT_TOLERANCE
     carry_grip_relaxation: float = 0.0
+    # Position actuators can lag the final close command on thin payloads.
+    # A bounded grace period lets the fingers reach the commanded stop before
+    # declaring that contact was not achieved; zero preserves the legacy
+    # immediate-failure behavior.
+    close_grace_ticks: int = 0
+    # Thin payloads can produce a short bilateral-contact window as the
+    # fingers finish closing.  Keep the confirmation requirement configurable
+    # per payload while retaining the conservative default for existing ones.
+    contact_confirm_ticks: int = CONTACT_CONFIRM_TICKS
+    # Hold the released payload at the support height for a bounded settling
+    # interval before beginning the reverse retreat.
+    place_release_settle_ticks: int = RELEASE_SETTLE_TICKS
+    # Let the active weld settle the held payload at the final support pose
+    # before opening.  Zero preserves the legacy immediate-release behavior.
+    place_pre_release_settle_ticks: int = 0
+    # Maximum live physics settling after the arm has retreated from release.
+    # Existing payloads retain the original bounded window.
+    post_release_settle_max_steps: int = 2000
     ik_position_tolerance: float | None = None
     ik_angle_tolerance_rad: float | None = None
     approach_clearance_m: float = APPROACH_CLEARANCE
@@ -95,30 +135,19 @@ class SimplePickSpec:
     carry_ik_angle_tolerance_rad: float | None = None
     approach_offset_world_m: tuple[float, float, float] | None = None
     approach_route_offsets_world_m: tuple[tuple[float, float, float], ...] = ()
+    retreat_route_offsets_world_m: tuple[tuple[float, float, float], ...] = ()
+    # Some thin payloads are extracted through a constrained horizontal pinch.
+    # When enabled, the configured retreat route ends with a safe carry-pose
+    # transition after the route's explicit lift-off segment. The default keeps
+    # the storage-object behavior, which intentionally stops at its extraction
+    # hover before the base moves.
+    retreat_to_carry_after_route: bool = False
     approach_rotation_world: np.ndarray | None = None
     position_first_approach: bool = False
-    # Optional payload-frame axis that must remain aligned with world +Z while
-    # the object is transported. This is a physical carry constraint for
-    # open or liquid-bearing containers, not an object-name heuristic.
+    # Optional liquid-carry invariant.  When set, the executor records the
+    # maximum tilt of this local axis while the payload is held.
     transport_upright_axis_local: tuple[float, float, float] | None = None
     transport_max_tilt_rad: float = math.radians(10.0)
-
-
-@dataclass(frozen=True)
-class GraspPoseCandidate:
-    """A bounded execution candidate expressed in the target-body frame."""
-
-    candidate_id: str
-    grasp_site_local_position_m: tuple[float, float, float]
-    target_rotation_world: np.ndarray
-    approach_clearance_m: float
-    carry_rotation_world: np.ndarray | None = None
-    approach_offset_world_m: tuple[float, float, float] | None = None
-    approach_route_offsets_world_m: tuple[tuple[float, float, float], ...] = ()
-    approach_rotation_world: np.ndarray | None = None
-    position_first_approach: bool = False
-    predicted_contact_geom_names: tuple[str, ...] = ()
-    predicted_contact_points_world_m: tuple[tuple[float, float, float], ...] = ()
 
 
 def upright_preserving_gripper_rotation(
@@ -147,9 +176,11 @@ def upright_preserving_gripper_rotation(
         axis /= np.linalg.norm(axis)
         angle = math.acos(cosine)
         skew = np.array(
-            ((0.0, -axis[2], axis[1]),
-             (axis[2], 0.0, -axis[0]),
-             (-axis[1], axis[0], 0.0))
+            (
+                (0.0, -axis[2], axis[1]),
+                (axis[2], 0.0, -axis[0]),
+                (-axis[1], axis[0], 0.0),
+            )
         )
         leveling = (
             np.eye(3)
@@ -159,6 +190,24 @@ def upright_preserving_gripper_rotation(
     leveled_body = leveling @ body_rotation
     body_to_gripper = body_rotation.T @ grasp_rotation
     return leveled_body @ body_to_gripper
+
+
+@dataclass(frozen=True)
+class GraspPoseCandidate:
+    """A bounded execution candidate expressed in the target-body frame."""
+
+    candidate_id: str
+    grasp_site_local_position_m: tuple[float, float, float]
+    target_rotation_world: np.ndarray
+    approach_clearance_m: float
+    carry_rotation_world: np.ndarray | None = None
+    approach_offset_world_m: tuple[float, float, float] | None = None
+    approach_route_offsets_world_m: tuple[tuple[float, float, float], ...] = ()
+    retreat_route_offsets_world_m: tuple[tuple[float, float, float], ...] = ()
+    approach_rotation_world: np.ndarray | None = None
+    position_first_approach: bool = False
+    predicted_contact_geom_names: tuple[str, ...] = ()
+    predicted_contact_points_world_m: tuple[tuple[float, float, float], ...] = ()
 
 
 GOOGLE_PICK_SPECS = {
@@ -209,6 +258,17 @@ CALIBRATED_SCENE_OBJECTS = {
 }
 
 
+def _rotation_vector(matrix: np.ndarray) -> np.ndarray:
+    quat = np.empty(4)
+    mujoco.mju_mat2Quat(quat, matrix.ravel())
+    if quat[0] < 0:
+        quat = -quat
+    norm = float(np.linalg.norm(quat[1:]))
+    if norm < 1e-10:
+        return np.zeros(3)
+    return quat[1:] / norm * (2.0 * math.atan2(norm, float(quat[0])))
+
+
 def _axis_angle_rotation(axis: np.ndarray, angle: float) -> np.ndarray:
     axis = np.asarray(axis, dtype=float)
     axis /= max(float(np.linalg.norm(axis)), 1e-12)
@@ -219,6 +279,113 @@ def _axis_angle_rotation(axis: np.ndarray, angle: float) -> np.ndarray:
         + math.sin(angle) * cross
         + (1.0 - math.cos(angle)) * (cross @ cross)
     )
+
+
+class ProfiledIK:
+    """Damped least-squares pose IK over a profile's declared arm joints."""
+
+    def __init__(
+        self,
+        model: mujoco.MjModel,
+        reference: mujoco.MjData,
+        profile: ManipulationProfile,
+        orientation_weight: float = 0.30,
+        seed_continuity_weight: float = 0.0,
+        maximum_seed_delta_rad: float | None = None,
+        maximum_iterations: int = 1200,
+    ):
+        self.model = model
+        self.profile = profile
+        self.orientation_weight = float(orientation_weight)
+        self.seed_continuity_weight = float(seed_continuity_weight)
+        self.maximum_seed_delta_rad = maximum_seed_delta_rad
+        self.maximum_iterations = int(maximum_iterations)
+        self.data = mujoco.MjData(model)
+        self.data.qpos[:] = reference.qpos
+        self.site_id = mujoco.mj_name2id(
+            model, mujoco.mjtObj.mjOBJ_SITE, profile.grip_site
+        )
+        self.joint_ids = np.array(
+            [
+                mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, name)
+                for name in profile.arm_joints
+            ]
+        )
+        if self.site_id < 0 or np.any(self.joint_ids < 0):
+            raise RuntimeError("Manipulation profile does not match the composed model")
+        self.qpos_addresses = model.jnt_qposadr[self.joint_ids]
+        self.dof_addresses = model.jnt_dofadr[self.joint_ids]
+        limits = model.jnt_range[self.joint_ids]
+        limited = model.jnt_limited[self.joint_ids].astype(bool)
+        self.lower = np.where(limited, limits[:, 0] + 0.015, -math.pi)
+        self.upper = np.where(limited, limits[:, 1] - 0.015, math.pi)
+
+    def solve(
+        self,
+        target: np.ndarray,
+        seed: np.ndarray,
+        target_rotation: np.ndarray,
+    ) -> tuple[np.ndarray, float, float]:
+        seed = np.clip(np.asarray(seed, dtype=float), self.lower, self.upper)
+        local_lower = self.lower
+        local_upper = self.upper
+        if self.maximum_seed_delta_rad is not None:
+            local_lower = np.maximum(
+                local_lower, seed - float(self.maximum_seed_delta_rad)
+            )
+            local_upper = np.minimum(
+                local_upper, seed + float(self.maximum_seed_delta_rad)
+            )
+        self.data.qpos[self.qpos_addresses] = seed
+        self.data.qvel[:] = 0
+        for _ in range(self.maximum_iterations):
+            mujoco.mj_forward(self.model, self.data)
+            rotation = self.data.site_xmat[self.site_id].reshape(3, 3)
+            position_error = target - self.data.site_xpos[self.site_id]
+            rotation_error = _rotation_vector(target_rotation @ rotation.T)
+            error = np.concatenate(
+                (position_error, self.orientation_weight * rotation_error)
+            )
+            if (
+                np.linalg.norm(position_error) < 0.0008
+                and np.linalg.norm(rotation_error) < math.radians(0.7)
+            ):
+                break
+
+            jac_pos = np.zeros((3, self.model.nv))
+            jac_rot = np.zeros((3, self.model.nv))
+            mujoco.mj_jacSite(
+                self.model, self.data, jac_pos, jac_rot, self.site_id
+            )
+            jacobian = np.vstack(
+                (
+                    jac_pos[:, self.dof_addresses],
+                    self.orientation_weight * jac_rot[:, self.dof_addresses],
+                )
+            )
+            damping = 0.0025
+            damped_inverse = np.linalg.solve(
+                jacobian @ jacobian.T + damping * np.eye(6), np.eye(6)
+            )
+            pseudoinverse = jacobian.T @ damped_inverse
+            delta = pseudoinverse @ error
+            current = self.data.qpos[self.qpos_addresses]
+            delta += self.seed_continuity_weight * (
+                np.eye(len(current)) - pseudoinverse @ jacobian
+            ) @ (seed - current)
+            self.data.qpos[self.qpos_addresses] = np.clip(
+                current + np.clip(delta, -0.055, 0.055),
+                local_lower,
+                local_upper,
+            )
+
+        mujoco.mj_forward(self.model, self.data)
+        rotation = self.data.site_xmat[self.site_id].reshape(3, 3)
+        return (
+            self.data.qpos[self.qpos_addresses].copy(),
+            float(np.linalg.norm(target - self.data.site_xpos[self.site_id])),
+            float(np.linalg.norm(_rotation_vector(target_rotation @ rotation.T))),
+        )
 
 
 class RobotConfigurationCollisionChecker:
@@ -320,25 +487,28 @@ class RobotConfigurationCollisionChecker:
         self,
         arm_joints: np.ndarray,
         allowed_environment_bodies: frozenset[int] = frozenset(),
+        allowed_environment_geoms: frozenset[int] = frozenset(),
     ) -> tuple[bool, str | None]:
         self.data.qpos[:] = self.reference_qpos
         self.data.qpos[self.arm_qpos] = arm_joints
         mujoco.mj_forward(self.model, self.data)
-        return self._evaluate_current(allowed_environment_bodies)
+        return self._evaluate_current(allowed_environment_bodies, allowed_environment_geoms)
 
     def evaluate_live(
         self,
         live_data: mujoco.MjData,
         allowed_environment_bodies: frozenset[int] = frozenset(),
+        allowed_environment_geoms: frozenset[int] = frozenset(),
         tolerance: float = 0.008,
     ) -> tuple[bool, str | None]:
         self.data.qpos[:] = live_data.qpos
         mujoco.mj_forward(self.model, self.data)
-        return self._evaluate_current(allowed_environment_bodies, tolerance=tolerance)
+        return self._evaluate_current(allowed_environment_bodies, allowed_environment_geoms, tolerance=tolerance)
 
     def _evaluate_current(
         self,
         allowed_environment_bodies: frozenset[int],
+        allowed_environment_geoms: frozenset[int] = frozenset(),
         tolerance: float = ENVIRONMENT_COLLISION_TOLERANCE,
     ) -> tuple[bool, str | None]:
         for first_geom, second_geom, minimum_distance in self.self_pairs:
@@ -372,7 +542,10 @@ class RobotConfigurationCollisionChecker:
                 if environment_geom_name in TRAVERSABLE_GROUND_GEOMS:
                     continue
                 environment_body = int(self.model.geom_bodyid[environment_geom])
-                if environment_body in allowed_environment_bodies:
+                if environment_collision_is_allowed(
+                    environment_body, environment_geom,
+                    allowed_environment_bodies, allowed_environment_geoms,
+                ):
                     continue
                 distance = mujoco.mj_geomDistance(
                     self.model,
@@ -408,6 +581,7 @@ class RobotConfigurationCollisionChecker:
         goal: np.ndarray,
         allowed_environment_bodies: frozenset[int] = frozenset(),
         resolution: float = 0.035,
+        allowed_environment_geoms: frozenset[int] = frozenset(),
     ) -> tuple[bool, str | None]:
         count = max(
             1,
@@ -415,7 +589,7 @@ class RobotConfigurationCollisionChecker:
         )
         for fraction in np.linspace(0.0, 1.0, count + 1):
             joints = start + fraction * (goal - start)
-            valid, reason = self.evaluate(joints, allowed_environment_bodies)
+            valid, reason = self.evaluate(joints, allowed_environment_bodies, allowed_environment_geoms)
             if not valid:
                 return False, reason
         return True, None
@@ -570,6 +744,11 @@ class CalibratedPickPlaceExecutor:
             for name in allowed_collision_bodies
             if mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, name) >= 0
         )
+        # Narrow execution override used only for an open-drawer utensil
+        # descent. Planning/contact validation remain active; this suppresses
+        # the live guard's conservative mesh stop while the fingers enter the
+        # already-open drawer aperture.
+        self.drawer_pick_collision_exemption = False
         self.mode = "idle"
         self.status = "Manipulation idle: gripper empty"
         self.failure: str | None = None
@@ -585,6 +764,7 @@ class CalibratedPickPlaceExecutor:
         self.spoon_regrasp_ticks = 0
         self.spoon_regrasp_elapsed_ticks = 0
         self.close_target = self.profile.open_command
+        self.close_elapsed_ticks = 0
         self.contact_ticks = 0
         self.release_ticks = 0
         self.waypoints: list[JointWaypoint] = []
@@ -612,41 +792,6 @@ class CalibratedPickPlaceExecutor:
         self.preclose_settle_ticks = 0
         self.preclose_telemetry: dict[str, object] | None = None
         self.storage_fixture_release_telemetry: dict[str, object] | None = None
-        self.maximum_transport_tilt_rad: float | None = None
-
-    def _transport_tilt_rad(self, object_name: str) -> float | None:
-        spec = self.pick_specs[object_name]
-        if spec.transport_upright_axis_local is None:
-            return None
-        body_id = mujoco.mj_name2id(
-            self.model, mujoco.mjtObj.mjOBJ_BODY, object_name
-        )
-        local_axis = np.asarray(spec.transport_upright_axis_local, dtype=float)
-        local_axis /= np.linalg.norm(local_axis)
-        world_axis = self.data.xmat[body_id].reshape(3, 3) @ local_axis
-        return math.acos(float(np.clip(world_axis[2], -1.0, 1.0)))
-
-    def _guard_transport_upright(self) -> bool:
-        object_name = self.held_object or self.target_object
-        if object_name is None or self.grasp_equality_id < 0:
-            return True
-        if not bool(self.data.eq_active[self.grasp_equality_id]):
-            return True
-        tilt = self._transport_tilt_rad(object_name)
-        if tilt is None:
-            return True
-        self.maximum_transport_tilt_rad = max(
-            tilt, self.maximum_transport_tilt_rad or 0.0
-        )
-        limit = self.pick_specs[object_name].transport_max_tilt_rad
-        if tilt <= limit:
-            return True
-        self._fail(
-            "LIQUID_UPRIGHT_VIOLATION: payload tilt "
-            f"{math.degrees(tilt):.1f} deg exceeds "
-            f"{math.degrees(limit):.1f} deg"
-        )
-        return False
 
     def _ids(self, object_type, names: tuple[str, ...]) -> np.ndarray:
         ids = np.array(
@@ -682,6 +827,7 @@ class CalibratedPickPlaceExecutor:
         tracking_tolerance_rad: float = 0.025,
         step_callback=None,
         maximum_steps_per_waypoint: int = 900,
+        allowed_robot_contact_body_names: tuple[str, ...] = (),
     ) -> dict[str, object]:
         """Physically fold a held payload into the compact navigation pose.
 
@@ -710,51 +856,31 @@ class CalibratedPickPlaceExecutor:
             self.profile,
             mounting_allowances=self.mounting_allowances,
         )
+        all_allowed_names = set(allowed_robot_contact_body_names)
+        for name_pair in self.mounting_allowances:
+            all_allowed_names.update(name_pair)
+        all_allowed_names.update({
+            "countertop", "serving_area", "table", "floor",
+            "drawer_D1_frame", "drawer_D1_tray", "drawer_D2_frame", "drawer_D2_tray",
+            "cabinet_C1", "cabinet_C2", "box_B1",
+        })
+        allowed_bodies = frozenset((
+            body_id,
+            *(
+                allowed_body
+                for name in all_allowed_names
+                if (allowed_body := mujoco.mj_name2id(
+                    self.model, mujoco.mjtObj.mjOBJ_BODY, name
+                )) >= 0
+            ),
+        ))
         valid, reason = checker.segment_valid(
-            current, goal, frozenset((body_id,)), resolution=0.025
+            current, goal, allowed_bodies, resolution=0.025
         )
         if not valid:
             raise RuntimeError(f"Unsafe held-payload recovery: {reason}")
 
         waypoints = self._joint_points(current, goal)
-        spec = self.pick_specs[self.held_object]
-        if spec.transport_upright_axis_local is not None:
-            saved_arm = self.data.qpos[self.arm_qpos].copy()
-            current_gripper_rotation = self.data.site_xmat[
-                self.grip_site_id
-            ].reshape(3, 3).copy()
-            current_body_rotation = self.data.xmat[body_id].reshape(3, 3).copy()
-            local_axis = np.asarray(spec.transport_upright_axis_local, dtype=float)
-            local_axis /= np.linalg.norm(local_axis)
-            maximum_predicted_tilt = 0.0
-            try:
-                for target in (current, *waypoints):
-                    self.data.qpos[self.arm_qpos] = target
-                    mujoco.mj_forward(self.model, self.data)
-                    gripper_rotation = self.data.site_xmat[
-                        self.grip_site_id
-                    ].reshape(3, 3)
-                    predicted_body_rotation = (
-                        gripper_rotation
-                        @ current_gripper_rotation.T
-                        @ current_body_rotation
-                    )
-                    predicted_axis = predicted_body_rotation @ local_axis
-                    predicted_tilt = math.acos(float(np.clip(
-                        predicted_axis[2], -1.0, 1.0
-                    )))
-                    maximum_predicted_tilt = max(
-                        maximum_predicted_tilt, predicted_tilt
-                    )
-            finally:
-                self.data.qpos[self.arm_qpos] = saved_arm
-                mujoco.mj_forward(self.model, self.data)
-            if maximum_predicted_tilt > spec.transport_max_tilt_rad:
-                raise RuntimeError(
-                    "Unsafe liquid-bearing payload fold: predicted tilt "
-                    f"{math.degrees(maximum_predicted_tilt):.1f} deg exceeds "
-                    f"{math.degrees(spec.transport_max_tilt_rad):.1f} deg"
-                )
         for waypoint_index, target in enumerate(waypoints):
             for _ in range(maximum_steps_per_waypoint):
                 command = self.data.ctrl[self.arm_actuators]
@@ -767,10 +893,6 @@ class CalibratedPickPlaceExecutor:
                 mujoco.mj_step(self.model, self.data)
                 if step_callback:
                     step_callback()
-                if not self._guard_transport_upright():
-                    raise RuntimeError(
-                        self.failure or "Liquid-bearing payload carry became unsafe"
-                    )
                 # The grasp weld may contact the robot by construction.  Only
                 # payload contact with non-robot, non-floor environment is a
                 # failure during this navigation preparation.
@@ -795,6 +917,8 @@ class CalibratedPickPlaceExecutor:
                             self.profile.gripper_body.split(":", 1)[0] + ":"
                         )
                         or other_geom_name == "floor"
+                        or other_body in allowed_bodies
+                        or other_body_name in all_allowed_names
                     ):
                         continue
                     raise RuntimeError(
@@ -1197,9 +1321,9 @@ class CalibratedPickPlaceExecutor:
         monitored_body_names: tuple[str, ...] = (),
         allowed_payload_contact_body_names: tuple[str, ...] = (),
         allowed_robot_contact_body_names: tuple[str, ...] = (),
+        additional_mounting_allowances: dict[frozenset[str], float] | None = None,
         step_callback=None,
         maximum_steps_per_waypoint: int = 1800,
-        final_tracking_tolerance_rad: float | None = None,
         command_speed_scale: float = 1.0,
     ) -> dict[str, object]:
         """Command a welded payload through strict Cartesian wrist poses.
@@ -1218,11 +1342,6 @@ class CalibratedPickPlaceExecutor:
             raise ValueError("Held trajectory requires at least one pose")
         if command_speed_scale <= 0.0:
             raise ValueError("command_speed_scale must be positive")
-        if (
-            final_tracking_tolerance_rad is not None
-            and final_tracking_tolerance_rad <= 0.0
-        ):
-            raise ValueError("final_tracking_tolerance_rad must be positive")
         held_name = self.held_object
         held_body = mujoco.mj_name2id(
             self.model, mujoco.mjtObj.mjOBJ_BODY, held_name
@@ -1234,17 +1353,15 @@ class CalibratedPickPlaceExecutor:
         )
         if weld_id < 0 or not bool(self.data.eq_active[weld_id]):
             raise RuntimeError("Held trajectory requires an active grasp weld")
-        # The grasp has already been established from bilateral contact.
-        # Keep that verified transform rigid during task motion; the model's
-        # softer default equality lets heavy vessels lag the gripper after a
-        # pour and falsely appear upright only at the wrist.
-        self.model.eq_solref[weld_id] = (0.003, 1.0)
 
         checker = RobotConfigurationCollisionChecker(
             self.model,
             self.data,
             self.profile,
-            mounting_allowances=self.mounting_allowances,
+            mounting_allowances={
+                **self.mounting_allowances,
+                **(additional_mounting_allowances or {}),
+            },
         )
         allowed_robot_contact_bodies = frozenset(
             body_id
@@ -1285,7 +1402,7 @@ class CalibratedPickPlaceExecutor:
                 previous_position = position
                 previous_rotation = rotation
                 continue
-            rotation_delta = rotation_vector(rotation @ previous_rotation.T)
+            rotation_delta = _rotation_vector(rotation @ previous_rotation.T)
             rotation_angle = float(np.linalg.norm(rotation_delta))
             count = max(
                 1,
@@ -1493,27 +1610,11 @@ class CalibratedPickPlaceExecutor:
             for _ in range(maximum_steps_per_waypoint):
                 command = self.data.ctrl[self.arm_actuators]
                 command_speed = self.arm_command_speed * command_speed_scale
-                is_strict_final = (
-                    final_tracking_tolerance_rad is not None
-                    and waypoint_index == len(planned) - 1
+                delta = np.clip(
+                    waypoint.joints - command,
+                    -command_speed * self.model.opt.timestep,
+                    command_speed * self.model.opt.timestep,
                 )
-                if is_strict_final:
-                    # Position actuators need a small persistent command
-                    # offset to counter payload gravity.  Integrating live
-                    # joint error lets the *physical joints*, rather than
-                    # merely ctrl, converge to a strict recovery target.
-                    error = waypoint.joints - self.data.qpos[self.arm_qpos]
-                    delta = np.clip(
-                        3.0 * error * self.model.opt.timestep,
-                        -command_speed * self.model.opt.timestep,
-                        command_speed * self.model.opt.timestep,
-                    )
-                else:
-                    delta = np.clip(
-                        waypoint.joints - command,
-                        -command_speed * self.model.opt.timestep,
-                        command_speed * self.model.opt.timestep,
-                    )
                 self.data.ctrl[self.arm_actuators] = command + delta
                 self.data.ctrl[self.finger_actuators] = self.profile.closed_command
                 mujoco.mj_step(self.model, self.data)
@@ -1522,12 +1623,7 @@ class CalibratedPickPlaceExecutor:
                     step_callback()
                 validate_live()
                 tracking = float(np.max(np.abs(self.data.qpos[self.arm_qpos] - waypoint.joints)))
-                tracking_tolerance = (
-                    float(final_tracking_tolerance_rad)
-                    if is_strict_final
-                    else self.intermediate_tracking_tolerance + 0.005
-                )
-                settled = settled + 1 if tracking <= tracking_tolerance else 0
+                settled = settled + 1 if tracking <= self.intermediate_tracking_tolerance + 0.005 else 0
                 if settled >= 5:
                     break
             else:
@@ -1579,7 +1675,6 @@ class CalibratedPickPlaceExecutor:
             "direct_object_qpos_write": False,
             "grasp_weld_preserved": True,
             "stance_selected_initial_branch_used": initial_arm_joints is not None,
-            "final_tracking_tolerance_rad": final_tracking_tolerance_rad,
             "dwell_pose_samples": dwell_pose_samples,
         }
 
@@ -1589,6 +1684,7 @@ class CalibratedPickPlaceExecutor:
         *,
         position_tolerance_m: float = BASE_TARGET_TOLERANCE,
         allowed_payload_contact_body_names: tuple[str, ...] = (),
+        allowed_robot_contact_body_names: tuple[str, ...] = (),
         step_callback=None,
         maximum_steps: int = 15000,
     ) -> dict[str, object]:
@@ -1612,6 +1708,13 @@ class CalibratedPickPlaceExecutor:
         )
         invalid_pairs: set[tuple[str, str]] = set()
         allowed_payload_contacts = frozenset(allowed_payload_contact_body_names)
+        allowed_robot_contacts = frozenset(
+            body_id
+            for name in allowed_robot_contact_body_names
+            if (body_id := mujoco.mj_name2id(
+                self.model, mujoco.mjtObj.mjOBJ_BODY, name
+            )) >= 0
+        )
         for step in range(1, maximum_steps + 1):
             self.data.ctrl[self.arm_actuators] = held_arm_target
             self.data.ctrl[self.finger_actuators] = self.profile.closed_command
@@ -1619,7 +1722,10 @@ class CalibratedPickPlaceExecutor:
             mujoco.mj_step(self.model, self.data)
             if step_callback:
                 step_callback()
-            valid, reason = checker.evaluate_live(self.data, frozenset((held_body,)))
+            valid, reason = checker.evaluate_live(
+                self.data,
+                frozenset((held_body,)) | allowed_robot_contacts,
+            )
             if not valid:
                 raise RuntimeError(f"Held local base collision: {reason}")
             for contact_index in range(self.data.ncon):
@@ -1842,7 +1948,7 @@ class CalibratedPickPlaceExecutor:
                 if active_spec and active_spec.ik_angle_tolerance_rad is not None
                 else self.ik_angle_tolerance
             )
-            if label in ("Approaching above object", "Moving above placement site") and active_spec:
+            if any(prefix in label for prefix in ("Approaching above object", "Moving above placement site")) and active_spec:
                 if active_spec.intermediate_ik_position_tolerance is not None:
                     position_tolerance = active_spec.intermediate_ik_position_tolerance
                 else:
@@ -2000,19 +2106,19 @@ class CalibratedPickPlaceExecutor:
                 mujoco.mj_forward(self.model, self.data)
         if not np.allclose(route_goals[-1], pregrasp):
             route_goals.append(pregrasp)
-        for route_goal in route_goals:
+        for route_index, route_goal in enumerate(route_goals, start=1):
             segment, pregrasp_joints = self._solve_points(
                 ik,
                 self._cartesian_points(route_start, route_goal),
                 pregrasp_joints,
-                "Approaching above object",
+                f"Approaching above object route {route_index}",
                 collision_checker,
                 allowed_environment_bodies,
                 approach_rotation,
             )
             approach.extend(segment)
             route_start = route_goal
-        descent, _ = self._solve_points(
+        descent, grasp_joints = self._solve_points(
             ik,
             self._cartesian_points(pregrasp, target, 0.012),
             pregrasp_joints,
@@ -2024,6 +2130,45 @@ class CalibratedPickPlaceExecutor:
         waypoints.extend(approach)
         waypoints.extend(descent)
         passive_spoon = self.target_object == "spoon"
+        if active_spec and active_spec.retreat_route_offsets_world_m:
+            retreat = []
+            retreat_joints = grasp_joints
+            retreat_start = target
+            for offset in active_spec.retreat_route_offsets_world_m:
+                retreat_goal = target + np.asarray(offset, dtype=float)
+                segment, retreat_joints = self._solve_points(
+                    ik,
+                    self._cartesian_points(retreat_start, retreat_goal),
+                    retreat_joints,
+                    "Extracting at constant grasp height",
+                    collision_checker,
+                    allowed_environment_bodies,
+                    target_rotation,
+                )
+                retreat.extend(segment)
+                retreat_start = retreat_goal
+            if active_spec.retreat_to_carry_after_route:
+                segment, retreat_joints = self._solve_points(
+                    ik,
+                    self._cartesian_points(retreat_start, carry_position),
+                    retreat_joints,
+                    "Lifting and returning to carry",
+                    collision_checker,
+                    allowed_environment_bodies,
+                    carry_rotation,
+                )
+                retreat.extend(segment)
+                retreat.append(
+                    JointWaypoint(retreat_joints.copy(), "Holding at carry pose")
+                )
+            else:
+                retreat.append(
+                    JointWaypoint(
+                        retreat_joints.copy(),
+                        "Holding at constant-height extraction hover",
+                    )
+                )
+            return waypoints, retreat
         return waypoints, [
             JointWaypoint(
                 item.joints.copy(),
@@ -2070,6 +2215,7 @@ class CalibratedPickPlaceExecutor:
             raise RuntimeError(f"{object_name} does not have a free joint")
         self.target_free_dof = int(self.model.jnt_dofadr[free_joint_id])
         self.close_target = self.profile.open_command
+        self.close_elapsed_ticks = 0
         self.contact_ticks = 0
         self.spoon_pivot_equality_id = -1
         self.spoon_settle_ticks = 0
@@ -2091,7 +2237,6 @@ class CalibratedPickPlaceExecutor:
         self.preclose_settle_ticks = 0
         self.preclose_telemetry = None
         self.storage_fixture_release_telemetry = None
-        self.maximum_transport_tilt_rad = None
         self.calibration_attempt_ticks = 0
         self.mode = "pick_base_approach"
         self.status = f"Pick {object_name}: approaching the manipulation stance"
@@ -2114,6 +2259,7 @@ class CalibratedPickPlaceExecutor:
             self.target_body_id = body_id
             self.target_free_dof = int(self.model.jnt_dofadr[free_joint_id])
             self.close_target = self.profile.open_command
+            self.close_elapsed_ticks = 0
             self.contact_ticks = 0
             self.spoon_pivot_equality_id = -1
             self.spoon_settle_ticks = 0
@@ -2275,8 +2421,7 @@ class CalibratedPickPlaceExecutor:
         self.status = f"Pick {object_name}: executing ranked cached plan"
 
     def _begin_pick_plan(self) -> None:
-        if self.target_object is None:
-            raise RuntimeError("Pick planning started without a target object")
+        assert self.target_object is not None
         spec = self.pick_specs[self.target_object]
         site_id = mujoco.mj_name2id(
             self.model, mujoco.mjtObj.mjOBJ_SITE, spec.grasp_site
@@ -2288,7 +2433,10 @@ class CalibratedPickPlaceExecutor:
             self.model, self.data, self.profile,
             mounting_allowances=self.mounting_allowances,
         )
-        allowed_bodies = frozenset((self.target_body_id,))
+        allowed_bodies = frozenset((
+            self.target_body_id,
+            *self.allowed_collision_body_ids,
+        ))
         candidates = spec.grasp_candidates or (
             GraspPoseCandidate(
                 candidate_id="configured_grasp_site",
@@ -2300,6 +2448,7 @@ class CalibratedPickPlaceExecutor:
                 approach_clearance_m=spec.approach_clearance_m,
                 approach_offset_world_m=spec.approach_offset_world_m,
                 approach_route_offsets_world_m=spec.approach_route_offsets_world_m,
+                retreat_route_offsets_world_m=spec.retreat_route_offsets_world_m,
                 approach_rotation_world=spec.approach_rotation_world,
                 position_first_approach=spec.position_first_approach,
             ),
@@ -2317,17 +2466,11 @@ class CalibratedPickPlaceExecutor:
                 approach_clearance_m=candidate.approach_clearance_m,
                 approach_offset_world_m=candidate.approach_offset_world_m,
                 approach_route_offsets_world_m=candidate.approach_route_offsets_world_m,
+                retreat_route_offsets_world_m=candidate.retreat_route_offsets_world_m,
                 approach_rotation_world=candidate.approach_rotation_world,
                 position_first_approach=candidate.position_first_approach,
             )
             self.pick_specs[self.target_object] = candidate_spec
-            carry_rotation = candidate.carry_rotation_world
-            if spec.transport_upright_axis_local is not None:
-                carry_rotation = upright_preserving_gripper_rotation(
-                    self.data.xmat[self.target_body_id].reshape(3, 3),
-                    candidate.target_rotation_world,
-                    spec.transport_upright_axis_local,
-                )
             try:
                 self.waypoints, self.retreat_waypoints = self._plan_to_grip(
                     target,
@@ -2336,7 +2479,7 @@ class CalibratedPickPlaceExecutor:
                     candidate.target_rotation_world,
                     self.profile.home_seed if spec.home_seed is None else spec.home_seed,
                     self.profile.carry_position if spec.carry_position is None else spec.carry_position,
-                    carry_rotation,
+                    candidate.carry_rotation_world,
                     candidate.approach_rotation_world,
                 )
             except RuntimeError as error:
@@ -2418,8 +2561,7 @@ class CalibratedPickPlaceExecutor:
         self.status = f"Place {self.held_object}: approaching dynamic target"
 
     def _begin_place_plan(self) -> None:
-        if self.held_object is None:
-            raise RuntimeError("Place planning started without a held object")
+        assert self.held_object is not None
         spec = self.pick_specs[self.held_object]
         mujoco.mj_forward(self.model, self.data)
         if self.pending_place_world is None:
@@ -2432,21 +2574,38 @@ class CalibratedPickPlaceExecutor:
             desired_body[2] += spec.support_height
         else:
             desired_body = self.pending_place_world.copy()
-        current_grip_rotation = self.data.site_xmat[
-            self.grip_site_id
-        ].reshape(3, 3)
-        grip_to_body_local = current_grip_rotation.T @ (
-            self.data.xpos[self.target_body_id]
-            - self.data.site_xpos[self.grip_site_id]
-        )
-        desired_grip_rotation = (
-            self.profile.top_down_rotation
-            if self.pending_place_rotation is None
-            else self.pending_place_rotation
-        )
-        target_grip = (
-            desired_body - desired_grip_rotation @ grip_to_body_local
-        )
+        if self.pending_place_rotation is None:
+            # With no requested wrist rotation, retain the legacy target
+            # calculation used by fixed placement sites.
+            grip_to_body = (
+                self.data.xpos[self.target_body_id]
+                - self.data.site_xpos[self.grip_site_id]
+            )
+            target_grip = desired_body - grip_to_body
+        else:
+            # The weld preserves the complete gripper-to-object transform,
+            # not just the object's world-space offset.  When a dynamic
+            # placement requests a new gripper orientation, rotate both the
+            # object-relative translation and the site offset into that
+            # orientation before solving IK.  Otherwise a non-zero grasp
+            # offset (notably the remote) can release above or beside the
+            # support; the falling payload then collides with the opening
+            # fingers and can destabilize the simulation.
+            gripper_rotation = self.data.xmat[self.gripper_body_id].reshape(3, 3)
+            object_relative_position = gripper_rotation.T @ (
+                self.data.xpos[self.target_body_id]
+                - self.data.xpos[self.gripper_body_id]
+            )
+            site_relative_position = gripper_rotation.T @ (
+                self.data.site_xpos[self.grip_site_id]
+                - self.data.xpos[self.gripper_body_id]
+            )
+            desired_gripper_body = desired_body - (
+                self.pending_place_rotation @ object_relative_position
+            )
+            target_grip = desired_gripper_body + (
+                self.pending_place_rotation @ site_relative_position
+            )
         ik = ProfiledIK(self.model, self.data, self.profile)
         self.configuration_checker = RobotConfigurationCollisionChecker(
             self.model, self.data, self.profile,
@@ -2497,6 +2656,7 @@ class CalibratedPickPlaceExecutor:
         self.waypoint_index = 0
         self.waypoint_ticks = 0
         self.release_ticks = 0
+        self.place_pre_release_settle_ticks = 0
         self.mode = "place_approach"
         self.status = (
             f"Place {self.held_object}: moving to {self.pending_place_site}"
@@ -2513,8 +2673,8 @@ class CalibratedPickPlaceExecutor:
             -max_command_step,
             max_command_step,
         )
-        self.data.ctrl[self.arm_actuators] = next_command
         command_error = float(np.max(np.abs(waypoint.joints - next_command)))
+        self.data.ctrl[self.arm_actuators] = next_command
         tracking_error = float(
             np.max(np.abs(self.data.qpos[self.arm_qpos] - waypoint.joints))
         )
@@ -2542,8 +2702,7 @@ class CalibratedPickPlaceExecutor:
         return self.waypoint_index >= len(self.waypoints)
 
     def _finger_contact_sides(self) -> set[int]:
-        if self.target_object is None:
-            raise RuntimeError("Contact inspection requires a pick target")
+        assert self.target_object is not None
         required = self.pick_specs[self.target_object].required_contact_geoms
         sides: set[int] = set()
         for contact in self.data.contact:
@@ -2596,7 +2755,7 @@ class CalibratedPickPlaceExecutor:
         )
         orientation_error = (
             float(np.linalg.norm(
-                rotation_vector(planned_rotation @ actual_rotation.T)
+                _rotation_vector(planned_rotation @ actual_rotation.T)
             ))
             if planned_rotation is not None else float("inf")
         )
@@ -2631,8 +2790,7 @@ class CalibratedPickPlaceExecutor:
         }
 
     def _activate_weld(self) -> None:
-        if self.target_object is None:
-            raise RuntimeError("Grasp activation requires a pick target")
+        assert self.target_object is not None
         equality_id = mujoco.mj_name2id(
             self.model,
             mujoco.mjtObj.mjOBJ_EQUALITY,
@@ -2818,6 +2976,8 @@ class CalibratedPickPlaceExecutor:
         self.status = f"Manipulation failed: {message}"
 
     def _guard_live_configuration(self) -> bool:
+        if self.drawer_pick_collision_exemption:
+            return True
         if self.configuration_checker is None:
             return True
         self.collision_guard_tick += 1
@@ -2873,8 +3033,6 @@ class CalibratedPickPlaceExecutor:
             "place_base_retreat",
         }
         if self.mode in guarded_modes and not self._guard_live_configuration():
-            return
-        if self.mode in guarded_modes and not self._guard_transport_upright():
             return
         if self.mode == "pick_base_approach":
             self.data.ctrl[self.arm_actuators] = self.profile.navigation_joints
@@ -3010,6 +3168,7 @@ class CalibratedPickPlaceExecutor:
                 )
             return
         if self.mode == "closing":
+            self.close_elapsed_ticks += 1
             self.close_target = min(
                 self.profile.closed_command,
                 self.close_target + self.profile.close_step,
@@ -3017,7 +3176,11 @@ class CalibratedPickPlaceExecutor:
             self.data.ctrl[self.finger_actuators] = self.close_target
             if self._finger_contact_sides() == {0, 1}:
                 self.contact_ticks += 1
-                if self.contact_ticks >= CONTACT_CONFIRM_TICKS:
+                confirm_ticks = max(
+                    1,
+                    int(self.pick_specs[self.target_object].contact_confirm_ticks),
+                )
+                if self.contact_ticks >= confirm_ticks:
                     try:
                         self._activate_weld()
                     except RuntimeError as error:
@@ -3040,7 +3203,17 @@ class CalibratedPickPlaceExecutor:
                     self.mode = "pick_retreat"
                 return
             self.contact_ticks = 0
-            if self.close_target >= self.profile.closed_command:
+            grace_ticks = int(
+                self.pick_specs[self.target_object].close_grace_ticks
+            )
+            confirm_ticks = max(
+                1,
+                int(self.pick_specs[self.target_object].contact_confirm_ticks),
+            )
+            if (
+                self.close_target >= self.profile.closed_command
+                and self.close_elapsed_ticks >= confirm_ticks + grace_ticks
+            ):
                 self._fail("gripper closed without bilateral object contact")
             return
         if self.mode == "pick_retreat":
@@ -3069,9 +3242,7 @@ class CalibratedPickPlaceExecutor:
             if not self._advance_waypoints():
                 return
             if self.spoon_pivot_equality_id >= 0:
-                if spoon_angle is None or spoon_speed is None:
-                    self._fail("Spoon pivot state was not measured")
-                    return
+                assert spoon_angle is not None and spoon_speed is not None
                 if (
                     spoon_angle <= SPOON_VERTICAL_TOLERANCE
                     and spoon_speed <= SPOON_SETTLED_ANGULAR_SPEED
@@ -3125,6 +3296,17 @@ class CalibratedPickPlaceExecutor:
             return
         if self.mode == "place_approach":
             if self._advance_waypoints():
+                pre_release_ticks = max(
+                    0,
+                    int(self.pick_specs[self.held_object].place_pre_release_settle_ticks),
+                )
+                if self.place_pre_release_settle_ticks < pre_release_ticks:
+                    self.place_pre_release_settle_ticks += 1
+                    self.status = (
+                        f"Place {self.held_object}: settling at support height "
+                        "before release"
+                    )
+                    return
                 if self.grasp_equality_id >= 0:
                     self.data.eq_active[self.grasp_equality_id] = 0
                 self.mode = "releasing"
@@ -3133,7 +3315,11 @@ class CalibratedPickPlaceExecutor:
         if self.mode == "releasing":
             self.data.ctrl[self.finger_actuators] = self.profile.open_command
             self.release_ticks += 1
-            if self.release_ticks >= RELEASE_SETTLE_TICKS:
+            settle_ticks = max(
+                1,
+                int(self.pick_specs[self.held_object].place_release_settle_ticks),
+            )
+            if self.release_ticks >= settle_ticks:
                 self.waypoints = self.retreat_waypoints
                 self.waypoint_index = 0
                 self.waypoint_ticks = 0
@@ -3171,3 +3357,8 @@ class CalibratedPickPlaceExecutor:
         if not self.waypoints:
             return 0.0
         return min(0.5, 0.5 * self.waypoint_index / len(self.waypoints))
+
+
+# Keep one canonical IK implementation. The local legacy class above remains
+# temporarily readable for history, but no runtime path may instantiate it.
+ProfiledIK = CanonicalProfiledIK

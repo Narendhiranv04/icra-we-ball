@@ -193,6 +193,67 @@ class KitchenPhaseCExecutionDispatcher:
                 return True
         return False
 
+    def _serving_utensil_orientation_family(
+        current_body_rotation: np.ndarray,
+        local_axis: np.ndarray,
+        rim_normal: np.ndarray,
+        preferred_tangent: np.ndarray,
+        observed_length_m: float = 0.20,
+    ) -> list[dict[str, Any]]:
+        normal = np.asarray(rim_normal, float)
+        normal /= np.linalg.norm(normal)
+        tangent = np.asarray(preferred_tangent, float)
+        tangent -= normal * float(np.dot(tangent, normal))
+        if np.linalg.norm(tangent) < 1e-9:
+            tangent = np.array((1.0, 0.0, 0.0), dtype=float)
+        tangent /= np.linalg.norm(tangent)
+        lateral = np.cross(normal, tangent)
+        candidates: list[dict[str, Any]] = []
+        seen: set[tuple[float, ...]] = set()
+
+        def append(rotation: np.ndarray, inclination: float, azimuth: float, roll: float, provenance: str) -> None:
+            key = tuple(float(value) for value in np.round(rotation, 7).ravel())
+            if key in seen:
+                return
+            seen.add(key)
+            candidates.append({
+                "rotation": rotation,
+                "inclination_deg": inclination,
+                "azimuth_deg": azimuth,
+                "tool_roll_deg": roll,
+                "provenance": provenance,
+            })
+
+        current_axis = np.asarray(current_body_rotation, float) @ np.asarray(local_axis, float)
+        # PLACE_SERVING_UTENSIL is an insertion relation, not a request to
+        # balance the handle on the rim.  Keep the active utensil end on the
+        # bowl centreline and align the longitudinal axis with the opening
+        # normal.  Tiny deterministic tilt fallbacks remain only for strict IK;
+        # they are deliberately too small to encode a rim-resting posture.
+        _ = observed_length_m
+        for inclination_deg in (0.0, 3.0, 5.0):
+            inclination = math.radians(inclination_deg)
+            azimuths = (
+                (0.0,)
+                if inclination_deg == 0.0
+                else (0.0, 180.0, -90.0, 90.0)
+            )
+            for azimuth_deg in azimuths:
+                azimuth = math.radians(azimuth_deg)
+                radial = math.cos(azimuth) * tangent + math.sin(azimuth) * lateral
+                desired_axis = math.cos(inclination) * normal + math.sin(inclination) * radial
+                aligned = _align_vectors(current_axis, desired_axis) @ current_body_rotation
+                for roll_deg in (0.0, 180.0):
+                    rotation = rotation_about_axis(desired_axis, math.radians(roll_deg)) @ aligned
+                    append(
+                        rotation,
+                        inclination_deg,
+                        azimuth_deg,
+                        roll_deg,
+                        "SERVING_UTENSIL_INSERTION_AXIS_FAMILY",
+                    )
+        return candidates
+
     @staticmethod
     def _stir_orientation_family(
         current_body_rotation: np.ndarray,

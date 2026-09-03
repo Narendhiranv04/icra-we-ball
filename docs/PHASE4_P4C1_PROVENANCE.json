@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "pass": "P4-C1",
+  "source_git_sha": "e4d9a17a431003e258e3c9659c289386116c5b7e",
+  "source_git_dirty": false,
+  "phase3_gt": {
+    "W1": {"status": "INCOMPLETE", "inspected_regions": ["LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"], "classification": "CURRENT_UPSTREAM_PHASE3_BLOCKED", "result_sha256": "51f92dabd4411bbe020f3de4524f9810cbde9798fea0b959baf4250c514a46f3"},
+    "W6": {"status": "INCOMPLETE", "inspected_regions": ["TOOL_CABINET", "LEFT_DRAWER", "RIGHT_DRAWER"], "classification": "CURRENT_UPSTREAM_PHASE3_BLOCKED", "result_sha256": "086c327443dbab684245dc342ca39ddf474232cec3bc2a1f60da0dbb52e473bf"},
+    "L1": {"status": "ACTION_SEQUENCE_READY", "inspected_regions": [], "result_sha256": "2e52d40cc26cc3e6689e323eef6a0f14f8280e2120ec483634b8ee6eb0c0f196"}
+  },
+  "living_strict": {"variant": "L1", "success": true, "actions_requested": 10, "actions_completed": 10, "strict_execution_violation_detected": false, "assisted_task_fixture_used": false, "direct_task_state_fallback_used": false, "execution_result_sha256": "a73d1c70e12c1eede6547f8c4cfe207ca76915c5538ba5ac5b167e4dc12fc411"},
+  "controller_development": {
+    "label": "CONTROLLER_DEVELOPMENT_ONLY",
+    "contributes_to_tamp_success_metrics": false,
+    "cases": [
+      {"scene": "F0_MANUAL_FIRST_ONE_REGION", "backend_object_ids": ["workshop_wooden_hammer"], "open": "PASS", "pick": "ACTUATOR_STALL", "pick_residual": 0.0445, "artifact_sha256": "86853c90b7c53a1e2a99321f34082aebefd2446e3bdbaf0184eb30872e4dd131"},
+      {"scene": "F0_MANUAL_FIRST_ONE_REGION", "backend_object_ids": ["workshop_long_phillips_driver"], "open": "COLLISION_BLOCKED", "collision_signed_distance_m": -0.003, "pick": "NOT_REACHED", "artifact_sha256": "249a17d07a2bae80fd9483518b4b787d0cd05d5581e70caa15fa7a2029cfca85"},
+      {"scene": "F5_POWER_FIRST_THREE_REGIONS", "backend_object_ids": ["workshop_medium_phillips_screw"], "open": "PASS", "pick": "PREGRASP_POSITION_ERROR", "preclose_error_m": 0.2219, "preclose_limit_m": 0.04, "insertion": "NOT_REACHED", "artifact_sha256": "799062f3e4b8fff8711f0598c2bc37306f1d0b69055da5d34173a1d88dba304b"}
+    ],
+    "cabinet_open_telemetry": {"handle_geometry": "tool_cabinet_door_handle_col", "bilateral_contact_steps": 25, "attachment_translation_snap_m": 0.0, "attachment_angle_snap_rad": 0.000001190228792888889, "measured_joint_position_rad": 1.0388784838049205, "direct_container_actuator_used": false}
+  },
+  "strict_guards": {"staging_constraint_used": false, "target_alignment_constraint_used": false, "installed_fastener_constraint_used": false, "payload_pose_snap_used": false, "direct_payload_state_write_used": false, "direct_task_state_write_used": false, "screw_status": "STRICT_PHYSICAL_SCREW_UNAVAILABLE"},
+  "tests": [{"command": "python -m pytest -q mujoco_scenes/tests/test_workshop_ground_truth_execution.py mujoco_scenes/tests/test_phase4_execution.py", "passed": 44, "failed": 0}],
+  "status": "BLOCKED_AT_PHYSICAL_INSERTION",
+  "next_pass": "P4-C1.1 — INSERTION MECHANICS ONLY"
+}

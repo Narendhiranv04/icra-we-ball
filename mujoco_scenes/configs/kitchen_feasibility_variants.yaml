@@ -48,6 +48,7 @@ variants:
     intended_min_coffee_tools: 1
     countertop_objects: {counter_spot_13: ab3_narrow_deep_cup, counter_spot_16: ab3_shallow_bowl, counter_spot_17: s1i_final_long_narrow_spoon, counter_spot_18: s1i_oversized_spoon, counter_spot_20: ab3_partial_spoon, counter_spot_57: s1i_compact_kettle, counter_spot_53: s1i_compact_coffee_jar}
     container_contents: {D1: [], D2: [], C2: [ab3_medium_deep_mug], B1: [ab3_deep_bowl], C1: []}
+    container_slot_overrides: {C2: {ab3_medium_deep_mug: [-0.10, 0.0, -0.032]}}
     description: The second coffee vessel is in C2 and the second soup bowl is in B1.
 
   F4_TOOLS_IN_DRAWERS:
@@ -66,6 +67,7 @@ variants:
     intended_min_coffee_tools: 1
     countertop_objects: {counter_spot_13: ab3_narrow_deep_cup, counter_spot_16: ab3_shallow_bowl, counter_spot_57: s1i_compact_kettle, counter_spot_53: s1i_compact_coffee_jar}
     container_contents: {D1: [s1i_oversized_spoon], D2: [ab3_partial_spoon], C2: [ab3_medium_deep_mug], B1: [ab3_deep_bowl], C1: [s1i_final_long_narrow_spoon]}
+    container_slot_overrides: {C2: {ab3_medium_deep_mug: [-0.10, 0.0, -0.032]}}
     description: One required object is distributed through each storage region.
 
   I0_MISSING_COFFEE_VESSEL:

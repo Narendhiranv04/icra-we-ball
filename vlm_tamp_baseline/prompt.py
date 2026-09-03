@@ -6,10 +6,11 @@ from typing import Any, Mapping, Sequence
 
 from baseline_common.models import Observation
 
+from .failure_feedback import model_action_history, model_failure_feedback
 from .models import ObjectUniverse, RefinementFailure, Subgoal
 
 
-PROMPT_VERSION = 8
+PROMPT_VERSION = 9
 ENGLISH_SYSTEM_PROMPT = """\
 You are an intermediate-goal proposer for a robot planning system.
 Return only the requested JSON object.
@@ -173,8 +174,8 @@ def scene_payload(
         "textualized_state": observation.as_annotated_prompt_dict(),
         "object_universe": universe.as_dict(),
         "succeeded_subgoals": [item.as_dict() for item in succeeded_subgoals],
-        "executed_action_history": list(action_history),
-        "last_refinement_failure": failure.as_dict() if failure else None,
+        "executed_action_history": model_action_history(action_history),
+        "last_refinement_failure": model_failure_feedback(failure),
     }
 
 

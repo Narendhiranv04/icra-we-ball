@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from baseline_common.inference import PlanningError
+from baseline_common.inference import ModelTransportError, PlanningError
 from baseline_common.models import (
     Action,
     ActionResult,
@@ -701,6 +701,25 @@ class InvalidThenValidPlanner(FakePlanner):
         )
 
 
+class TransportFailureThenValidPlanner(FakePlanner):
+    def __init__(self, plan):
+        super().__init__([plan])
+        self.attempts = 0
+
+    def plan(self, *args, failure=None, **kwargs):
+        self.failures.append(failure)
+        self.attempts += 1
+        if self.attempts == 1:
+            raise ModelTransportError("Model server returned HTTP 503")
+        return SubgoalPlanResult(
+            next(self.plans),
+            EnglishPlan("STEPS", ("test",)),
+            "fake",
+            0.0,
+            False,
+        )
+
+
 class FakeRefiner:
     def __init__(self):
         self.calls = 0
@@ -877,3 +896,58 @@ def test_executive_reprompts_instead_of_crashing_on_invalid_model_output():
     assert result.model_calls == 2
     assert result.reprompts == 1
     assert planner.failures[1].code == "invalid_vlm_output"
+
+
+def test_executive_distinguishes_transport_failure_from_invalid_output():
+    subgoal = Subgoal("HOLDING", {"object_id": "mug_1"})
+    planner = TransportFailureThenValidPlanner(
+        SubgoalPlan("SUBGOALS", (subgoal,))
+    )
+    world = FakeWorld()
+
+    result = VLMTAMPExecutive(
+        planner,
+        world.observe,
+        world,
+        refiner=CatalogSubgoalRefiner(),
+        max_model_calls=3,
+    ).run("Pick the mug")
+
+    assert result.success
+    # A transport fault produced no completion, so it must not be charged to
+    # the model-call budget: the retried round is the episode's first call.
+    assert result.model_calls == 1
+    assert result.reprompts == 0
+    assert planner.failures[1].code == "inference_failed"
+
+
+class AlwaysTransportFailingPlanner(FakePlanner):
+    def __init__(self):
+        super().__init__([])
+        self.attempts = 0
+
+    def plan(self, *args, failure=None, **kwargs):
+        self.failures.append(failure)
+        self.attempts += 1
+        raise ModelTransportError("Model server returned HTTP 503")
+
+
+def test_executive_reports_inference_failure_without_spending_model_calls():
+    planner = AlwaysTransportFailingPlanner()
+    world = FakeWorld()
+
+    result = VLMTAMPExecutive(
+        planner,
+        world.observe,
+        world,
+        refiner=CatalogSubgoalRefiner(),
+        max_model_calls=3,
+        max_transport_retries=2,
+    ).run("Pick the mug")
+
+    assert not result.success
+    assert result.status == "INFERENCE_FAILED"
+    assert result.model_calls == 0
+    assert planner.attempts == 3
+    assert result.terminal_failure is not None
+    assert result.terminal_failure.code == "inference_failed"

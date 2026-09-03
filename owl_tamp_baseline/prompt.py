@@ -22,7 +22,7 @@ def discrete_response_schema(max_actions: int = MAX_SKETCH_ACTIONS) -> dict[str,
             "arguments": {
                 "type": "array",
                 "minItems": 1,
-                "maxItems": 2,
+                "maxItems": 3,
                 "items": {"type": "string", "minLength": 1, "maxLength": 64},
             },
         },
@@ -118,10 +118,15 @@ def discrete_prompt(
 ) -> str:
     actions = [row.as_dict() for row in grounded_actions]
     state = observation.as_annotated_prompt_dict()
-    goal_predicates = (
-        ["at(object,region)", "holding(object)"]
-        if scene == "living_room"
-        else [
+    if scene == "living_room":
+        goal_predicates = ["at(object,region)", "holding(object)"]
+    elif scene == "workshop":
+        goal_predicates = [
+            "at(object,destination)", "holding(object)", "open(region)",
+            "inserted(fastener,target)", "fastened(tool,fastener,target)",
+        ]
+    else:
+        goal_predicates = [
             "at(object,destination)",
             "holding(object)",
             "open(region)",
@@ -129,7 +134,6 @@ def discrete_prompt(
             "stirred(tool,target)",
             "served_with(target,tool)",
         ]
-    )
     return (
         "You are the discrete planning stage of OWL-TAMP. Infer a partial action "
         "sketch that is a required subsequence of a valid plan. Continuous poses, "

@@ -1,4 +1,39 @@
-"""Shared FM transport retained for the kitchen/living-room integration.
+"""Workshop Phase 1: Functional Grounding and Joint Prerequisite Satisfaction."""
 
-The workshop scene pipeline is intentionally not ported on this branch.
-"""
+from mujoco_scenes.workshop_phase1.types import (
+    EntityType,
+    EpisodeResult,
+    FunctionalCandidate,
+    FunctionalRequirement,
+    FunctionalWitness,
+    FunctionGroundingResult,
+    GroundingStatus,
+    InspectionDecision,
+    InspectionPolicyType,
+    InspectionTrace,
+    MaskBackendType,
+    ObservedMask,
+    ObservedObjectTrack,
+    ObservedRegion,
+    RequirementSource,
+    ViewObservation,
+)
+
+__all__ = [
+    "EntityType",
+    "EpisodeResult",
+    "FunctionalCandidate",
+    "FunctionalRequirement",
+    "FunctionalWitness",
+    "FunctionGroundingResult",
+    "GroundingStatus",
+    "InspectionDecision",
+    "InspectionPolicyType",
+    "InspectionTrace",
+    "MaskBackendType",
+    "ObservedMask",
+    "ObservedObjectTrack",
+    "ObservedRegion",
+    "RequirementSource",
+    "ViewObservation",
+]

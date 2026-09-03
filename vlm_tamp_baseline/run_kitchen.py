@@ -7,15 +7,18 @@ from collections.abc import Mapping
 from dataclasses import replace
 import json
 from pathlib import Path
+import time
 from typing import Any
 
 from baseline_common.artifacts import prepare_run_directory, write_json
 from baseline_common.inference import PlanningError
+from baseline_common.physical_benchmark import write_execution_result
 from mujoco_scenes.baseline_kitchen_runtime import BaselineKitchenRuntime
 from mujoco_scenes.kitchen_execution_bundle import DEFAULT_TASK
 
 from .execution import VLMTAMPMuJoCoExecutor
 from .executive import ObservationFrame, VLMTAMPExecutive
+from .failure_feedback import model_failure_feedback
 from .kitchen_planning_runtime import (
     DEFAULT_EXPECTED_ROOT,
     KitchenPlanningState,
@@ -44,6 +47,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-tokens", type=int)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--camera-count", type=int, choices=(1, 3, 5), default=5)
+    parser.add_argument("--protocol", choices=("native", "single_call"), default="native")
     parser.add_argument(
         "--decoding",
         choices=("paper", "model-native"),
@@ -65,6 +69,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Symbolically roll out the refined actions and compare them with GT.",
     )
     parser.add_argument("--variant", choices=tuple(f"K{i}" for i in range(1, 13)))
+    parser.add_argument(
+        "--physical-variant",
+        choices=tuple(f"K{i}" for i in range(1, 13)),
+        help=(
+            "Run a benchmark Kitchen variant through the physical Google-robot "
+            "adapter. The expected terminal relations remain evaluator-private."
+        ),
+    )
     parser.add_argument("--expected-root", type=Path, default=DEFAULT_EXPECTED_ROOT)
     parser.add_argument(
         "--refiner",
@@ -158,6 +170,7 @@ def _method_manifest(
         "gt_visible_to_model": False,
         "planning_rounds": max_model_calls,
         "raw_vlm_requests_per_round": 2,
+        "protocol": arguments.protocol,
     }
 
 
@@ -166,12 +179,18 @@ def main() -> None:
     arguments = parser.parse_args()
     if arguments.planning_only and arguments.variant is None:
         parser.error("--planning-only requires --variant K1-K12")
+    if arguments.planning_only and arguments.physical_variant is not None:
+        parser.error("--planning-only cannot be combined with --physical-variant")
     if not arguments.planning_only and arguments.variant is not None:
         parser.error("--variant is only used with --planning-only")
-    if not arguments.planning_only and not arguments.phase1_run_dir:
-        parser.error("physical mode requires --phase1-run-dir")
-    if not arguments.planning_only and not arguments.goal:
-        parser.error("physical mode requires --goal")
+    if (
+        not arguments.planning_only
+        and not arguments.phase1_run_dir
+        and arguments.physical_variant is None
+    ):
+        parser.error("physical mode requires --phase1-run-dir or --physical-variant")
+    if arguments.phase1_run_dir and arguments.physical_variant is not None:
+        parser.error("choose either --phase1-run-dir or --physical-variant")
     if arguments.planning_only and arguments.phase1_run_dir:
         parser.error(
             "planning-only K1-K12 trials construct the variant directly; "
@@ -185,6 +204,8 @@ def main() -> None:
             "Planning-only GT comparison requires exactly one planning round; "
             "use physical mode for failure-triggered replanning."
         )
+    if arguments.protocol == "single_call" and max_model_calls != 1:
+        parser.error("single_call protocol requires exactly one planning round")
     phase1 = (
         Path(arguments.phase1_run_dir).resolve()
         if arguments.phase1_run_dir
@@ -224,16 +245,30 @@ def main() -> None:
             enable_thinking=False,
             sampling={"temperature": 0.2, "top_p": 1.0},
         )
-    runtime = (
-        BaselineKitchenRuntime.from_variant(
+    if arguments.planning_only:
+        runtime = BaselineKitchenRuntime.from_variant(
             arguments.variant,
             output,
             camera_count=arguments.camera_count,
             viewer_camera=arguments.camera,
             show_viewer=False,
         )
-        if arguments.planning_only
-        else BaselineKitchenRuntime.from_phase1(
+    elif arguments.physical_variant is not None:
+        expected_actions = (
+            arguments.expected_root.resolve()
+            / arguments.physical_variant
+            / "expected_gt_actions.json"
+        )
+        runtime = BaselineKitchenRuntime.from_variant(
+            arguments.physical_variant,
+            output,
+            expected_actions=expected_actions,
+            camera_count=arguments.camera_count,
+            viewer_camera=arguments.camera,
+            show_viewer=not arguments.headless,
+        )
+    else:
+        runtime = BaselineKitchenRuntime.from_phase1(
             phase1,
             output,
             task_requirements=arguments.task_requirements,
@@ -241,7 +276,6 @@ def main() -> None:
             viewer_camera=arguments.camera,
             show_viewer=not arguments.headless,
         )
-    )
     goal = arguments.goal or str(runtime.scene.config.goal)
     planning_state = KitchenPlanningState(runtime) if arguments.planning_only else None
 
@@ -256,6 +290,8 @@ def main() -> None:
 
     class LivePlanner:
         calls = 0
+        planning_latency_s = 0.0
+        raw_vlm_requests = 0
 
         def plan(self, *args: Any, **kwargs: Any):
             runtime.sync("Waiting for VLM-TAMP subgoals")
@@ -270,6 +306,7 @@ def main() -> None:
             try:
                 result = planner_backend.plan(*args, **kwargs)
             except PlanningError as error:
+                self.raw_vlm_requests += len(planner_backend.request_trace)
                 failure = kwargs.get("failure")
                 write_json(
                     output / "model_calls" / f"{self.calls:04d}.json",
@@ -284,9 +321,7 @@ def main() -> None:
                             "camera_ids": [image["camera"] for image in args[2]],
                             "semantic_labels_exposed": True,
                         },
-                        "failure_feedback": (
-                            failure.as_dict() if failure is not None else None
-                        ),
+                        "failure_feedback": model_failure_feedback(failure),
                         "model_requests": planner_backend.request_trace,
                         "model_responses": planner_backend.response_trace,
                     },
@@ -296,6 +331,8 @@ def main() -> None:
                     flush=True,
                 )
                 raise
+            self.planning_latency_s += result.latency_ms / 1000.0
+            self.raw_vlm_requests += len(planner_backend.request_trace)
             print(f"[vlm-tamp English goals {self.calls}]", flush=True)
             for index, step in enumerate(result.english_plan.steps, start=1):
                 print(f"  {index}. {step}", flush=True)
@@ -308,9 +345,7 @@ def main() -> None:
                 "camera_ids": [image["camera"] for image in args[2]],
                 "semantic_labels_exposed": True,
             }
-            trace["failure_feedback"] = (
-                failure.as_dict() if failure is not None else None
-            )
+            trace["failure_feedback"] = model_failure_feedback(failure)
             trace["model_requests"] = planner_backend.request_trace
             trace["model_responses"] = planner_backend.response_trace
             write_json(output / "model_calls" / f"{self.calls:04d}.json", trace)
@@ -372,8 +407,9 @@ def main() -> None:
                 "tamp_trace": trace,
             },
         )
+    live_planner = LivePlanner()
     executive = VLMTAMPExecutive(
-        LivePlanner(),
+        live_planner,
         observe,
         executor,
         refiner=refiner,
@@ -395,6 +431,7 @@ def main() -> None:
     try:
         if not arguments.planning_only:
             runtime.open()
+        episode_started = time.monotonic()
         print(
             "[vlm-tamp] Starting two-stage VLM subgoals -> "
             f"{arguments.refiner} refinement -> "
@@ -409,11 +446,14 @@ def main() -> None:
         payload = {
             "baseline": "vlm_tamp",
             "environment": "kitchen",
-            "variant": arguments.variant,
+            "variant": arguments.variant or arguments.physical_variant,
             "goal": goal,
             "model": config.model,
             "seed": config.seed,
             "camera_count": arguments.camera_count,
+            "protocol": arguments.protocol,
+            "planning_rounds": result.model_calls,
+            "raw_vlm_requests": live_planner.raw_vlm_requests,
             "refiner": arguments.refiner,
             "paper_protocol": arguments.refiner == "pddlstream",
             "decoding": arguments.decoding,
@@ -472,6 +512,29 @@ def main() -> None:
                 flush=True,
             )
         write_json(output / "episode_result.json", payload)
+        if not arguments.planning_only:
+            write_execution_result(
+                output,
+                scene="kitchen",
+                method="vlm_tamp",
+                protocol=arguments.protocol,
+                variant=str(arguments.physical_variant or "phase1_custom"),
+                camera_count=arguments.camera_count,
+                seed=config.seed,
+                success=result.success,
+                executed_actions=result.executed_actions,
+                model_calls=result.model_calls,
+                raw_vlm_requests=live_planner.raw_vlm_requests,
+                replans=result.reprompts,
+                planning_latency_s=live_planner.planning_latency_s,
+                elapsed_seconds=time.monotonic() - episode_started,
+                terminal_status=result.status,
+                terminal_failure=(
+                    result.terminal_failure.as_dict()
+                    if result.terminal_failure is not None
+                    else None
+                ),
+            )
         print(json.dumps(payload, indent=2, sort_keys=True))
         runtime.sync("Goal complete" if result.success else f"Stopped: {result.status}")
         if not arguments.planning_only and not arguments.close_on_complete:

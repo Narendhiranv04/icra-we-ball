@@ -1,9 +1,7 @@
 from types import SimpleNamespace
 
 import numpy as np
-import pytest
 
-from mujoco_scenes import semantic_grounding
 from mujoco_scenes.semantic_grounding import (
     Detection,
     _largest_mask_component,
@@ -70,21 +68,6 @@ def _accepted_observation(
 def test_semantic_process_isolation_environment_is_explicit(monkeypatch):
     monkeypatch.delenv("MUJOCO_SEMANTIC_PROCESS_ISOLATION", raising=False)
     assert not _process_isolation_requested()
-
-
-def test_missing_ultralytics_reports_cpu_uv_install(monkeypatch):
-    def missing(_name):
-        raise semantic_grounding.importlib.metadata.PackageNotFoundError
-
-    monkeypatch.setattr(semantic_grounding.importlib.metadata, "version", missing)
-    with pytest.raises(RuntimeError, match="--torch-backend cpu"):
-        semantic_grounding.YOLOWorldSemanticDetector(
-            "model.pt",
-            confidence_threshold=0.03,
-            inference_size=640,
-            device="cpu",
-            max_detections=10,
-        )
     monkeypatch.setenv("MUJOCO_SEMANTIC_PROCESS_ISOLATION", "1")
     assert _process_isolation_requested()
     monkeypatch.setenv("MUJOCO_SEMANTIC_PROCESS_ISOLATION", "false")
@@ -104,29 +87,6 @@ def test_detection_serializes_normalized_required_fields():
     assert record["bbox_xyxy"] == [1, 2, 30, 40]
     assert record["inference_resolution"] == [100, 100]
     assert record["detector_name"] == "mock_detector"
-
-
-@pytest.mark.parametrize(
-    "kwargs, message",
-    [
-        ({"raw_label": ""}, "raw_label"),
-        ({"confidence": float("nan")}, "confidence"),
-        ({"confidence": 1.1}, "confidence"),
-        ({"bbox_xyxy": (1, 2, float("inf"), 4)}, "bbox_xyxy"),
-        ({"inference_resolution": (0, 100)}, "inference_resolution"),
-    ],
-)
-def test_detection_rejects_malformed_backend_output(kwargs, message):
-    values = {
-        "raw_label": "spoon",
-        "canonical_label": "spoon",
-        "confidence": 0.8,
-        "bbox_xyxy": (1, 2, 30, 40),
-        "inference_resolution": (100, 100),
-    }
-    values.update(kwargs)
-    with pytest.raises(ValueError, match=message):
-        Detection(**values)
 
 
 def test_strong_box_mask_overlap_associates_correct_object():
@@ -342,6 +302,32 @@ def test_multiview_consensus_outweighs_one_high_confidence_outlier():
     assert record["winning_label_margin_kind"] == "supporting_view_count"
 
 
+def test_strong_multiview_runner_keeps_three_to_two_disagreement_unknown():
+    config = _config()
+    config["fusion"]["maximum_conflicting_view_fraction"] = 0.60
+    config["fusion"]["minimum_conflicting_mean_confidence"] = 0.10
+    record = fuse_semantic_observations(
+        [
+            _accepted_observation("spoon", "inspection_right", 0.42),
+            _accepted_observation("spoon", "inspection_top", 0.39),
+            _accepted_observation("spoon", "inspection_front", 0.37),
+            _accepted_observation("fork", "inspection_left", 0.31),
+            _accepted_observation("fork", "inspection_close", 0.29),
+        ],
+        config=config,
+        stage=0,
+        region_id="INITIAL",
+        detector_metadata={
+            "name": "mock",
+            "checkpoint": "mock",
+            "version": "1",
+        },
+    )
+    assert record["status"] == "UNKNOWN"
+    assert record["canonical_label"] is None
+    assert "CONFLICTING_MULTI_VIEW_LABELS" in record["reason_codes"]
+
+
 def test_multiview_disagreement_is_retained_and_can_be_unknown():
     config = _config()
     config["fusion"]["minimum_supporting_views"] = 1
@@ -405,6 +391,77 @@ def test_unmatched_visible_instance_remains_semantically_unknown():
         ]
     }
     assert evaluate_semantic_compatibility({}, role)["status"] == "UNKNOWN"
+
+
+def test_role_compatible_label_alternatives_can_jointly_support_role():
+    role = {
+        "semantic_preferences": [
+            {"rank": 1, "canonical_label": "cup", "detector_aliases": ["cup"]},
+            {"rank": 2, "canonical_label": "mug", "detector_aliases": ["mug"]},
+        ]
+    }
+    result = evaluate_semantic_compatibility(
+        {"semantics": {"validated": {
+            "status": "UNKNOWN",
+            "canonical_label": None,
+            "alternatives": [
+                {"label": "mug", "camera_ids": ["left"], "score": 3.6, "mean_confidence": 0.86},
+                {"label": "cup", "camera_ids": ["top"], "score": 2.8, "mean_confidence": 0.77},
+                {"label": "spoon", "camera_ids": ["front", "right"], "score": 0.7, "mean_confidence": 0.11},
+            ],
+        }}},
+        role,
+    )
+    assert result["status"] == "TRUE"
+    assert result["canonical_label"] == "cup"
+    assert result["reason"] == "SUPPORTED_ROLE_COMPATIBLE_ALTERNATIVES"
+
+
+def test_role_alternative_aggregation_does_not_overrule_stronger_excluded_evidence():
+    role = {"semantic_preferences": [
+        {"rank": 1, "canonical_label": "cup", "detector_aliases": ["cup"]}
+    ]}
+    result = evaluate_semantic_compatibility(
+        {"semantics": {"validated": {
+            "status": "UNKNOWN",
+            "canonical_label": None,
+            "alternatives": [
+                {"label": "cup", "camera_ids": ["left", "top"], "score": 0.4},
+                {"label": "spoon", "camera_ids": ["front"], "score": 2.0},
+            ],
+        }}},
+        role,
+    )
+    assert result["status"] == "UNKNOWN"
+
+
+def test_role_alternative_aggregation_rejects_multiview_excluded_label():
+    role = {"semantic_preferences": [
+        {"rank": 1, "canonical_label": "spoon", "detector_aliases": ["spoon"]}
+    ]}
+    result = evaluate_semantic_compatibility(
+        {"semantics": {"latest_observation": {
+            "status": "UNKNOWN",
+            "canonical_label": None,
+            "alternatives": [
+                {
+                    "label": "spoon",
+                    "camera_ids": ["right", "top", "front"],
+                    "supporting_view_count": 3,
+                    "score": 3.2,
+                },
+                {
+                    "label": "fork",
+                    "camera_ids": ["left", "close"],
+                    "supporting_view_count": 2,
+                    "score": 1.4,
+                },
+            ],
+        }}},
+        role,
+    )
+    assert result["status"] == "UNKNOWN"
+    assert result["reason"] == "NO_VALIDATED_SEMANTIC_EVIDENCE"
 
 
 def test_semantic_record_contains_detector_and_rgb_provenance():

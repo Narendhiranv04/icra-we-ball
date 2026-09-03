@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Mapping, Protocol, Sequence
 
-from baseline_common.inference import PlanningError
+from baseline_common.inference import ModelTransportError, PlanningError
 from baseline_common.models import Action, ActionResult, Observation
 
 from .models import ObjectReference, ObjectUniverse, RefinementFailure, Subgoal
@@ -97,6 +97,7 @@ class VLMTAMPExecutive:
         refinement_sink: RefinementSink | None = None,
         max_model_calls: int = 3,
         max_total_actions: int = 40,
+        max_transport_retries: int = 2,
     ):
         if any(
             isinstance(value, bool)
@@ -105,6 +106,12 @@ class VLMTAMPExecutive:
             for value in (max_model_calls, max_total_actions)
         ):
             raise ValueError("Executive limits must be positive")
+        if (
+            isinstance(max_transport_retries, bool)
+            or not isinstance(max_transport_retries, int)
+            or max_transport_retries < 0
+        ):
+            raise ValueError("max_transport_retries must be a non-negative integer")
         self.planner = planner
         self.observer = observer
         self.executor = executor
@@ -123,6 +130,7 @@ class VLMTAMPExecutive:
         self.refinement_sink = refinement_sink
         self.max_model_calls = max_model_calls
         self.max_total_actions = max_total_actions
+        self.max_transport_retries = max_transport_retries
 
     def run(self, goal: str) -> BaselineResult:
         succeeded: list[Subgoal] = []
@@ -130,11 +138,13 @@ class VLMTAMPExecutive:
         failure: RefinementFailure | None = None
         attempted = refined = executed = 0
         observed_objects: set[str] = set()
+        model_call = 0
+        transport_retries = 0
 
-        for model_call in range(1, self.max_model_calls + 1):
+        while model_call < self.max_model_calls:
             frame = self.observer()
             if self.goal_verifier(frame.observation):
-                return self._result(True, "GOAL_COMPLETE", model_call - 1, attempted, refined, executed, succeeded, history)
+                return self._result(True, "GOAL_COMPLETE", model_call, attempted, refined, executed, succeeded, history)
             for item in frame.observation.entities:
                 observed_objects.add(item.entity_id)
             universe = self.object_universe or ObjectUniverse(
@@ -157,12 +167,30 @@ class VLMTAMPExecutive:
                     ),
                     failure=failure,
                 ).plan
+            except ModelTransportError as error:
+                # A transport failure produced no completion, so it is an
+                # infrastructure fault rather than a model call.  It draws on
+                # its own retry budget and never reports the episode as a
+                # model-call budget exhaustion.
+                failure = RefinementFailure(
+                    "inference_failed",
+                    str(error),
+                )
+                if transport_retries >= self.max_transport_retries:
+                    return self._result(
+                        False, "INFERENCE_FAILED", model_call, attempted,
+                        refined, executed, succeeded, history, failure,
+                    )
+                transport_retries += 1
+                continue
             except PlanningError as error:
+                model_call += 1
                 failure = RefinementFailure(
                     "invalid_vlm_output",
                     str(error),
                 )
                 continue
+            model_call += 1
             if proposal.status == "NO_VALID_SUBGOALS":
                 failure = RefinementFailure(
                     "no_valid_subgoals", "The VLM proposed no refinable subgoals."

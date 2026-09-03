@@ -34,18 +34,12 @@ from mujoco_scenes.run_living_room_execution import (
 
 @pytest.fixture
 def phase1_root() -> Path:
-    try:
-        return resolve_phase1_root()
-    except FileNotFoundError:
-        pytest.skip("generated Living-Room Phase-1 benchmark evidence is unavailable")
+    return resolve_phase1_root()
 
 
 @pytest.fixture
 def phase2_root() -> Path:
-    try:
-        return resolve_phase2_root()
-    except FileNotFoundError:
-        pytest.skip("generated Living-Room Phase-2 benchmark evidence is unavailable")
+    return resolve_phase2_root()
 
 
 def test_variant_registry_completeness():

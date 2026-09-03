@@ -34,6 +34,12 @@ TEST_MODEL = """
 
 
 class ProfiledIKTests(unittest.TestCase):
+    def test_wrapper_exposes_solver_joint_bounds(self):
+        ik = ProfiledIK(self.model, self.data, self.profile, backend="legacy")
+        self.assertEqual(ik.lower.shape, ik.upper.shape)
+        self.assertEqual(ik.lower.shape, (len(self.profile.arm_joints),))
+        self.assertTrue((ik.lower < ik.upper).all())
+
     def test_rotation_vector_rejects_malformed_rotation(self):
         for matrix in (np.eye(2), np.full((3, 3), np.nan)):
             with self.subTest(shape=matrix.shape):

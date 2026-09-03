@@ -1,0 +1,21 @@
+schema_version: 1
+description: "Workshop contract with visually explicit YOLO-World L prompts."
+task_instruction: "Repair the loose frame joint using an appropriate tool and fastener. Arrange the required tool and hardware on a suitable nearby work surface, and keep loose small parts in a suitable container."
+functional_requirements:
+  - {requirement_id: req_obj_driver, entity_type: OBJECT, function_name: CAN_DRIVE_SCREW, description: "Tool capable of driving fasteners", rank: 1, accepted_categories: [screwdriver, power_driver], required_relations: [REACHES_TARGET, COMPATIBLE_WITH]}
+  - {requirement_id: req_obj_fastener, entity_type: OBJECT, function_name: CAN_FASTEN, description: "Fastener capable of securing the joint", rank: 2, accepted_categories: [screw, bolt], required_relations: [COMPATIBLE_WITH_TARGET]}
+  - {requirement_id: req_reg_work_surface, entity_type: FUNCTIONAL_REGION, function_name: WORK_SURFACE, description: "Nearby planar work surface", rank: 1, accepted_categories: [workbench, tool_cart, shelf], required_relations: [PLANAR_SUPPORT, FITS_SET_ON]}
+  - {requirement_id: req_reg_parts_container, entity_type: FUNCTIONAL_REGION, function_name: SMALL_PARTS_CONTAINER, description: "Open container for loose parts", rank: 2, accepted_categories: [parts_tray, hardware_bin], required_relations: [OPEN_CAVITY, FITS_IN]}
+vocabulary:
+  canonical_labels:
+    screwdriver: {detector_label: "Phillips screwdriver", detector_rank: 1, aliases: [screwdriver, hand screwdriver, manual screwdriver, flathead screwdriver]}
+    power_driver: {detector_label: "cordless power drill", detector_rank: 2, aliases: [power drill, powered screwdriver, power driver, drill driver]}
+    screw: {detector_label: "Phillips head screw", detector_rank: 3, aliases: [screw, metal screw, fastener, machine screw, threaded screw]}
+    bolt: {detector_label: "hex bolt", detector_rank: 4, aliases: [bolt, machine bolt]}
+    wrench: {detector_label: "combination wrench", detector_rank: 5, aliases: [wrench, adjustable wrench, spanner]}
+    pliers: {detector_label: "pliers", detector_rank: 6, aliases: [combination pliers, locking pliers]}
+    workbench: {detector_label: "wooden workbench", detector_rank: 7, aliases: [workbench, work table, wooden table, table]}
+    tool_cart: {detector_label: "rolling tool cart", detector_rank: 8, aliases: [tool cart, cart, rolling cart, metal cart]}
+    shelf: {detector_label: "wall shelf", detector_rank: 9, aliases: [shelf, narrow shelf]}
+    parts_tray: {detector_label: "small parts tray", detector_rank: 10, aliases: [parts tray, tray, shallow tray]}
+    hardware_bin: {detector_label: "plastic hardware bin", detector_rank: 11, aliases: [hardware bin, bin, plastic bin, parts bin, storage bin]}

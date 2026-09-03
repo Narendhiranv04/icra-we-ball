@@ -1,0 +1,108 @@
+schema_version: 2
+description: "Manual surrogate contract for the fixed-object Workshop W2 benchmark."
+
+task_instruction: "Find the compatible screw and first compatible driver encountered, insert the screw tip-down into the workbench hole, and drive it fully."
+
+# Post-response aliases only. This block is never included in the VLM prompt.
+# It is the deterministic, reviewable boundary that audits the model's natural
+# wording against predicates implemented by the geometric verifier.
+fm_normalization:
+  function_aliases:
+    CAN_DRIVE_SCREW:
+      - "drive a screw"
+      - "drive screws"
+      - "turn a screw"
+      - "tighten a screw"
+      - "screw driving"
+      - "apply torque to a screw"
+      - "drive fastener"
+      - "driving tool"
+      - "apply torque for driving"
+      - "drive the screw"
+      - "engage screw head"
+    CAN_FASTEN:
+      - "fasten the joint"
+      - "secure the joint"
+      - "threaded fastener"
+      - "fastening component"
+      - "screw fastener"
+      - "thread into joint"
+      - "thread into hole"
+      - "fastener with a threaded shank"
+      - "fasten wood"
+      - "fasten component"
+  relation_aliases:
+    REACHES_TARGET:
+      - "reach the target"
+      - "reach the screw head"
+      - "reach the workpiece"
+      - "sufficient reach"
+      - "access the screw head"
+      - "reaches repair hole"
+      - "reaches target"
+      - "reach the deep screw head recess"
+      - "reaches the deep screw head recess"
+      - "reaching the deep screw head recess"
+      - "reach the deep screw head"
+      - "span the repair hole depth"
+    COMPATIBLE_WITH:
+      - "compatible with the screw"
+      - "match the screw recess"
+      - "fit the screw head"
+      - "matching drive interface"
+      - "transmit torque to the screw"
+      - "compatible with screw head"
+      - "matches the selected driver bit"
+      - "bit interface compatible"
+      - "compatible with phillips screw"
+      - "compatible with phillips head screw"
+    COMPATIBLE_WITH_TARGET:
+      - "compatible with the target hole"
+      - "fit the target hole"
+      - "fit the workbench hole"
+      - "thread into the hole"
+      - "suitable for the repair hole"
+      - "thread into hole"
+      - "compatible thread profile"
+
+functional_requirements:
+  - requirement_id: "req_obj_driver"
+    entity_type: "OBJECT"
+    function_name: "CAN_DRIVE_SCREW"
+    description: "Tool capable of driving fasteners into the frame joint"
+    rank: 1
+    accepted_categories:
+      - "screwdriver"
+      - "power_driver"
+    required_relations:
+      - "REACHES_TARGET"
+      - "COMPATIBLE_WITH"
+
+  - requirement_id: "req_obj_fastener"
+    entity_type: "OBJECT"
+    function_name: "CAN_FASTEN"
+    description: "Fastener component capable of securing the frame joint"
+    rank: 2
+    accepted_categories:
+      - "screw"
+    required_relations:
+      - "COMPATIBLE_WITH_TARGET"
+
+vocabulary:
+  canonical_labels:
+    screwdriver:
+      detector_label: "screwdriver"
+      detector_rank: 1
+      aliases: ["hand screwdriver", "manual screwdriver", "Phillips screwdriver", "cross-head screwdriver"]
+    power_driver:
+      detector_label: "power drill"
+      detector_rank: 2
+      aliases: ["powered screwdriver", "electric screwdriver", "cordless screwdriver", "cordless power drill", "cordless drill", "power driver", "drill driver", "power drill"]
+    screw:
+      detector_label: "screw"
+      detector_rank: 3
+      aliases: ["fastener", "machine screw", "threaded screw", "Phillips screw", "cross-head screw", "Phillips head screw"]
+    hammer:
+      detector_label: "wooden hammer"
+      detector_rank: 4
+      aliases: ["hammer", "mallet", "wood mallet"]

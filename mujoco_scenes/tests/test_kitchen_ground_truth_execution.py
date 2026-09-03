@@ -12,8 +12,10 @@ Tests cover:
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 import tempfile
+from types import SimpleNamespace
 import pytest
 import numpy as np
 
@@ -38,11 +40,37 @@ from mujoco_scenes.run_kitchen_ground_truth_execution import (
 )
 from mujoco_scenes.kitchen_ground_truth_execution import (
     KitchenGroundTruthExecutionDispatcher,
+    serving_utensil_containment_evidence,
 )
+from mujoco_scenes.phase4_kitchen import KitchenPhase4Adapter
+from mujoco_scenes.phase4_execution import Phase4Executor, load_phase3_handoff
 from mujoco_scenes.scene_loader import KitchenScene
 
 
-def test_assisted_pick_recovery_activates_matching_payload_weld(monkeypatch):
+def test_pick_recovery_ignores_low_error_from_historical_nested_attempt():
+    value, path = KitchenGroundTruthExecutionDispatcher._final_preclose_error({
+        "attempts": [{"preclose_cartesian_error_m": 0.001}],
+        "direct_grasp_analysis": {
+            "preclose_telemetry": {"preclose_cartesian_error_m": 0.25}
+        },
+    })
+    assert value == 0.25
+    assert path == (
+        "direct_grasp_analysis.preclose_telemetry.preclose_cartesian_error_m"
+    )
+
+
+def test_pick_recovery_does_not_treat_historical_only_error_as_final_evidence():
+    value, path = KitchenGroundTruthExecutionDispatcher._final_preclose_error({
+        "attempts": [{"measured_gripper_target_error_m": 0.001}],
+    })
+    assert value is None
+    assert path is None
+
+
+def test_benchmark_pick_recovery_activates_matching_payload_weld_without_pose_write(
+    monkeypatch,
+):
     """A declared fallback PICK must be a live, exclusive held state.
 
     This is the regression for F2's old POUR_SOURCE_NOT_HELD failure: the old
@@ -64,15 +92,81 @@ def test_assisted_pick_recovery_activates_matching_payload_weld(monkeypatch):
         "pick",
         lambda _object_id: {"success": False, "status": "FORCED_TEST_MISS"},
     )
+    monkeypatch.setattr(
+        dispatcher,
+        "_benchmark_pick_recovery_evidence",
+        lambda object_id, result: {
+            "accepted": True,
+            "threshold_m": 0.10,
+            "exact_planned_object": object_id,
+            "evidence_mode": "TEST_PRECLOSE_REACHED",
+        },
+    )
+    backend = dispatcher.binding_by_id[source]["physical_backend_body"]
+    body_id = dispatcher.phase_b.manipulation.executor.model.body(
+        backend
+    ).id
+    position_before = scene.data.xpos[body_id].copy()
 
     result = dispatcher.pick(source)
 
     assert result["success"]
-    assert result["status"] == "ASSISTED_PICK_WELD_VERIFIED"
-    assert result["assisted_execution"] is True
-    assert result["assistance_reason"] == "FORCED_TEST_MISS"
-    assert result["held_state"]["validation_status"] == "TRUE"
+    assert result["status"] == "BENCHMARK_PICK_WELD_VERIFIED"
+    assert result["benchmark_contact_recovery"] is True
+    assert result["direct_payload_pose_write"] is False
+    assert result["recovery_reason"] == "FORCED_TEST_MISS"
+    assert result["exact_payload_constraint_active"] is True
     assert result["held_state"]["exclusive_payload_weld"] is True
+    # Constraint activation advances physics and may produce sub-0.1 mm
+    # contact settling; this guards against pose rewriting, not natural drift.
+    np.testing.assert_allclose(scene.data.xpos[body_id], position_before, atol=1e-4)
+
+
+def test_benchmark_pick_recovery_is_forbidden_without_grasp_vicinity(monkeypatch):
+    scene = KitchenScene(
+        "S1_integrated_kitchen_object_function_feasibility_F2",
+        include_robot=True,
+        robot="google",
+    )
+    assignment = solve_ground_truth_assignment(
+        scene, "F2_DISTRIBUTED_COFFEE_TWO", "FEASIBLE"
+    )
+    dispatcher = KitchenGroundTruthExecutionDispatcher(scene, assignment)
+    source = assignment.sources["water_source"]
+    monkeypatch.setattr(
+        dispatcher.phase_b, "pick",
+        lambda _object_id: {"success": False, "status": "FORCED_TEST_MISS"},
+    )
+    result = dispatcher.pick(source)
+
+    assert not result["success"]
+    assert result["failure_code"] == "ACCESS_BLOCKED"
+    assert result["benchmark_contact_recovery"] is False
+    assert result["benchmark_recovery_evidence"]["evidence_mode"] == (
+        "APPROACH_NOT_REACHED"
+    )
+    assert dispatcher.phase_b.manipulation.executor.held_object is None
+
+
+def test_benchmark_pick_recovery_refuses_low_historical_retry_error():
+    scene = KitchenScene(
+        "S1_integrated_kitchen_object_function_feasibility_F2",
+        include_robot=True,
+        robot="google",
+    )
+    assignment = solve_ground_truth_assignment(
+        scene, "F2_DISTRIBUTED_COFFEE_TWO", "FEASIBLE"
+    )
+    dispatcher = KitchenGroundTruthExecutionDispatcher(scene, assignment)
+    source = assignment.sources["water_source"]
+    evidence = dispatcher._benchmark_pick_recovery_evidence(source, {
+        "attempts": [{"preclose_cartesian_error_m": 0.02}],
+        "direct_grasp_analysis": {
+            "preclose_telemetry": {"preclose_cartesian_error_m": 0.20}
+        },
+    })
+    assert not evidence["accepted"]
+    assert evidence["authorization_distance_m"] == 0.20
 
 
 def test_strict_pick_does_not_teleport_payload_after_physical_miss(monkeypatch):
@@ -98,8 +192,56 @@ def test_strict_pick_does_not_teleport_payload_after_physical_miss(monkeypatch):
 
     assert not result["success"]
     assert result["status"] == "FORCED_TEST_MISS"
-    assert "assisted_execution" not in result
-    assert "direct_payload_pose_write" not in result
+    assert result.get("assisted_execution", False) is False
+    assert result.get("direct_payload_pose_write", False) is False
+
+
+def test_strict_stirrer_pick_does_not_teleport_payload_after_physical_miss(monkeypatch):
+    """The reusable spoon must obey the same strict PICK contract."""
+    scene = KitchenScene(
+        "S1_integrated_kitchen_object_function_feasibility_F4",
+        include_robot=True,
+        robot="google",
+    )
+    assignment = solve_ground_truth_assignment(
+        scene, "F4_TOOLS_IN_DRAWERS", "FEASIBLE"
+    )
+    dispatcher = KitchenGroundTruthExecutionDispatcher(
+        scene, assignment, allow_assisted_pick_recovery=False
+    )
+    monkeypatch.setattr(
+        dispatcher.phase_b,
+        "pick",
+        lambda _object_id: {"success": False, "status": "FORCED_TEST_MISS"},
+    )
+
+    result = dispatcher.pick("s1i_final_long_narrow_spoon")
+
+    assert not result["success"]
+    assert result["status"] == "FORCED_TEST_MISS"
+    assert result.get("assisted_execution", False) is False
+    assert result.get("direct_payload_pose_write", False) is False
+
+
+def test_failed_physical_stir_is_not_promoted_to_success():
+    source = Path("mujoco_scenes/kitchen_ground_truth_execution.py").read_text()
+    stir = source[
+        source.index("def stir(self, tool_id: str"):
+        source.index("def place_serving_utensil", source.index("def stir(self, tool_id: str"))
+    ]
+
+    assert 'record["success"] = True' not in stir
+    assert 'record["status"] = "STIR_MOTION_VERIFIED"' not in stir
+
+
+def test_normal_runner_disables_pose_write_recovery():
+    source = Path("mujoco_scenes/run_kitchen_ground_truth_execution.py").read_text()
+    construction = source[
+        source.index("dispatcher = KitchenGroundTruthExecutionDispatcher("):
+        source.index("# Initial frame capture")
+    ]
+
+    assert "allow_assisted_pick_recovery=assisted_suite" in construction
 
 
 def test_hidden_targets_use_physically_validated_role_slots():
@@ -168,8 +310,10 @@ def test_every_feasible_variant_uses_the_same_serving_layout(variant, code):
     assert dispatcher.phase_b.manipulation.placement_resolver.serving_slot_by_id == {
         "ab3_narrow_deep_cup": (-0.15, -0.48),
         "ab3_medium_deep_mug": (0.15, -0.48),
-        "ab3_deep_bowl": (-0.15, -0.64),
-        "ab3_shallow_bowl": (0.15, -0.64),
+        # Centred by phase4 commit 74cbdfc to maximise serving-table edge
+        # margins; upstream changed the source without updating this literal.
+        "ab3_deep_bowl": (0.08, -0.54),
+        "ab3_shallow_bowl": (-0.08, -0.54),
     }
 
 
@@ -203,46 +347,172 @@ def test_controlled_serving_recovery_cannot_fall_back_to_countertop_slot():
     assert 'destination == "serving_area" and not serving_contact' in validator
 
 
-def test_soup_utensil_pick_retry_remains_strictly_physical():
+def test_countertop_utensil_validation_does_not_require_vessel_upright_axis():
+    source = Path("mujoco_scenes/kitchen_ground_truth_execution.py").read_text()
+    validator = source[
+        source.index("def validate_stable_placement"):
+        source.index("def update_object_to_countertop_location")
+    ]
+
+    assert 'grasp_family == "UTENSIL"' in validator
+    assert "if not is_countertop_utensil and tilt_deg > 8.0" in validator
+    assert "if is_countertop_utensil and not counter_contact" in validator
+    assert "2.0 if is_countertop_utensil" in validator
+    assert "else 0.30 if is_countertop_source" in validator
+    assert "else 1.00 if is_serving_vessel" in validator
+    assert '"STABLE_SUPPORTED_UTENSIL_PLACEMENT"' in validator
+
+
+def test_drawer_pick_is_single_physical_attempt():
     source = Path("mujoco_scenes/kitchen_ground_truth_execution.py").read_text()
     pick = source[
         source.index("def pick(self, object_id: str)"):
         source.index("def place(self, object_id: str", source.index("def pick(self, object_id: str)"))
     ]
 
-    assert "self.phase_b.manipulation._settle_navigation_posture()" in pick
-    assert 'low.mode = "idle"' in pick
-    assert "low.target_object = None" in pick
-    assert "self.phase_b.pick(object_id)" in pick
-    assert '"physical_regrasp_used": True' in pick
-    retry_start = pick.index("# A bowl transfer can lightly disturb")
-    retry_end = pick.index("if not result.get(\"success\", False) and (", retry_start)
-    retry = pick[retry_start:retry_end]
-    assert "data.qpos[address" not in retry
-    assert "eq_active[weld_id] = 1" not in retry
+    assert "physical_regrasp_attempts" not in pick
+    assert "for _ in range(2)" not in pick
 
 
-def test_serving_spoon_uses_length_scaled_vertical_drop_and_geometric_containment():
+def test_serving_spoon_uses_geometry_selected_drop_and_geometric_containment():
     source = Path("mujoco_scenes/kitchen_ground_truth_execution.py").read_text()
     placement = source[
         source.index("# Soup utensils belong inside"):
         source.index("# Sources do not need to return home")
     ]
 
-    assert '1.0 if float(observed["length"]) >= 0.20 else 0.5' in placement
+    assert '1.0 if float(observed["length"]) >= 0.20 else 0.70' in placement
+    assert "else 0.5" not in placement
     assert "insertion_depth = drop_depth_fraction * safe_cavity_depth" in placement
-    assert "body_centre_within_opening_column" in placement
-    assert "assigned_bowl_contact or body_centre_within_opening_column" in placement
+    assert "short_utensil_gravity_drop" in placement
+    assert "serving_utensil_containment_evidence" in placement
+    assert "assigned_bowl_contact or body_centre_within_opening_column" not in placement
 
 
-def test_stirrer_park_hover_miss_continues_to_physical_release_fallback():
+def _containment(**overrides):
+    values = {
+        "active_tip_world": np.array((0.0, 0.0, -0.04)),
+        "grasp_end_world": np.array((0.0, 0.0, 0.06)),
+        "opening_centre": np.zeros(3),
+        "opening_normal": np.array((0.0, 0.0, 1.0)),
+        "usable_opening_radius_m": 0.06,
+        "cavity_depth_m": 0.08,
+        "observed_length_m": 0.10,
+        "assigned_bowl_contact": True,
+        "counter_contact": False,
+        "serving_contact": False,
+    }
+    values.update(overrides)
+    return serving_utensil_containment_evidence(**values)
+
+
+def test_serving_containment_accepts_interior_axis_segment():
+    evidence = _containment()
+    assert evidence["interior_axis_segment_present"]
+    assert evidence["containment_verified"]
+
+
+def test_serving_containment_rejects_exterior_bowl_contact():
+    evidence = _containment(
+        active_tip_world=np.array((0.10, 0.0, -0.02)),
+        grasp_end_world=np.array((0.10, 0.0, 0.08)),
+    )
+    assert evidence["assigned_bowl_contact"]
+    assert not evidence["containment_verified"]
+
+
+def test_serving_containment_rejects_spoon_beside_bowl():
+    evidence = _containment(
+        active_tip_world=np.array((0.12, 0.0, 0.0)),
+        grasp_end_world=np.array((0.22, 0.0, 0.0)),
+        assigned_bowl_contact=False,
+        counter_contact=True,
+    )
+    assert evidence["exterior_support_only"]
+    assert not evidence["containment_verified"]
+
+
+def test_serving_containment_rejects_future_serving_surface_staging():
+    evidence = _containment(
+        assigned_bowl_contact=False,
+        serving_contact=True,
+    )
+    assert evidence["exterior_support_only"]
+    assert not evidence["containment_verified"]
+
+
+def test_phase4_object_relative_place_fails_closed_without_relation_evidence():
+    adapter = object.__new__(KitchenPhase4Adapter)
+    adapter.by_id = {"object_0004": object()}
+    adapter._held_planner_id = lambda: None
+    post = adapter._post_check(
+        {"operator": "PLACE", "arguments": ["object_0007", "object_0004"]},
+        {"success": True, "status": "RELEASED_WITHOUT_RELATION_EVIDENCE"},
+    )
+    assert not post["success"]
+    assert post["object_relative_destination"]
+    assert not post["requested_physical_relation_verified"]
+
+
+def test_k1_both_serving_utensil_placements_are_physically_contained():
+    """Real MuJoCo regression for both frozen K1 spoon-to-bowl actions."""
+    fixture = os.environ.get("PHASE4_K1_HANDOFF")
+    if not fixture:
+        pytest.skip("set PHASE4_K1_HANDOFF to run the physical frozen-plan test")
+    handoff = load_phase3_handoff(Path(fixture))
+    adapter = KitchenPhase4Adapter(handoff)
+    try:
+        result = Phase4Executor(handoff, adapter).run(max_actions=6)
+    finally:
+        adapter.close_visualization()
+    by_index = {row["action_index"]: row for row in result["action_results"]}
+    for action_index in (2, 6):
+        row = by_index[action_index]
+        controller = row["controller_result"]
+        telemetry = controller["telemetry"]
+        assert row["success"]
+        assert controller["direct_payload_pose_write"] is False
+        assert row["post_check"]["held_object"] is None
+        assert telemetry["containment_evidence"]["containment_verified"]
+        assert not telemetry["containment_evidence"]["exterior_support_only"]
+        assert controller["requested_physical_relation_verified"] is True
+        assert row["post_check"]["success"]
+    resolver = adapter.dispatcher.phase_b.manipulation.placement_resolver
+    assert not resolver.future_serving_relative_destinations
+
+
+def test_stirrer_park_hover_miss_cannot_release_beyond_counter_edge():
     source = Path("mujoco_scenes/kitchen_ground_truth_execution.py").read_text()
     placement = source[
         source.index("def place(self, object_id: str, destination: str)"):
         source.index("def pour(self, source_id: str, target_id: str")
     ]
-    assert "coffee_tool_hover_failure = str(error)" in placement
-    assert '"status": "TOOL_RELEASE_HOVER_FAILED"' not in placement
+    assert '"status": "TOOL_PARK_HOVER_FAILED"' in placement
+    assert "Never release a stirrer from an unverified post-stir pose" in placement
+    assert "and nearest_soup_bowl_distance >= 0.20" not in placement
+
+
+def test_reusable_coffee_tool_place_uses_backend_keyed_pick_spec():
+    planner_id = "object_generic"
+    backend = "simulator_backend_body"
+    assert planner_id != backend
+    expected_spec = object()
+    dispatcher = object.__new__(KitchenGroundTruthExecutionDispatcher)
+    dispatcher.binding_by_id = {
+        planner_id: {"physical_backend_body": backend},
+    }
+    dispatcher.phase_b = SimpleNamespace(
+        manipulation=SimpleNamespace(
+            executor=SimpleNamespace(pick_specs={backend: expected_spec})
+        )
+    )
+
+    resolved_backend, pick_spec = dispatcher._resolved_backend_pick_spec(
+        planner_id
+    )
+
+    assert resolved_backend == backend
+    assert pick_spec is expected_spec
 
 
 # ── 1. Variant Discovery Tests ────────────────────────────────────────────────
@@ -424,6 +694,68 @@ def test_mixed_hidden_vessel_assignment_uses_one_reusable_coffee_tool():
     assignment = solve_ground_truth_assignment(scene, "F3_HIDDEN_VESSELS_MIXED")
     assert assignment.is_feasible
     assert len(assignment.unique_coffee_tools) == 1
+
+
+def test_cupboard_vessel_retreats_at_shelf_height_before_carry():
+    scene = KitchenScene(
+        "S1_integrated_kitchen_object_function_feasibility_F3",
+        include_robot=True,
+        robot="google",
+    )
+    assignment = solve_ground_truth_assignment(
+        scene, "F3_HIDDEN_VESSELS_MIXED", "FEASIBLE"
+    )
+    dispatcher = KitchenGroundTruthExecutionDispatcher(scene, assignment)
+    manipulation = dispatcher.phase_b.manipulation
+    manipulation._configure_source_aware_pick_spec(
+        "ab3_medium_deep_mug", "VESSEL", "CUPBOARD"
+    )
+
+    candidates = manipulation.executor.pick_specs[
+        "ab3_medium_deep_mug"
+    ].grasp_candidates
+    assert candidates
+    assert all(
+        candidate.retreat_route_offsets_world_m == ((0.0, -0.20, 0.0),)
+        for candidate in candidates
+    )
+
+
+def test_both_drawer_spoons_share_compact_top_down_candidate_family():
+    scene = KitchenScene(
+        "S1_integrated_kitchen_object_function_feasibility_F4",
+        include_robot=True,
+        robot="google",
+    )
+    assignment = solve_ground_truth_assignment(
+        scene, "F4_TOOLS_IN_DRAWERS", "FEASIBLE"
+    )
+    dispatcher = KitchenGroundTruthExecutionDispatcher(scene, assignment)
+
+    candidate_ids_by_object = {}
+    for object_id in ("s1i_final_long_narrow_spoon", "ab3_partial_spoon"):
+        candidates = dispatcher.phase_b.manipulation.executor.pick_specs[
+            object_id
+        ].grasp_candidates
+        candidate_ids_by_object[object_id] = tuple(
+            candidate.candidate_id for candidate in candidates
+        )
+        assert len(candidates) == 4
+        assert all(
+            candidate.candidate_id.startswith("drawer_vertical_perpendicular_")
+            for candidate in candidates
+        )
+        assert all(
+            candidate.approach_offset_world_m == (0.0, 0.0, 0.08)
+            for candidate in candidates
+        )
+
+    # Both mirrored drawers use the same bounded handle-frame generator; its
+    # live geometric ranking may choose either central handle fraction.
+    assert all(candidate_ids_by_object.values())
+
+    source = Path("mujoco_scenes/kitchen_object_manipulation.py").read_text()
+    assert "normal bounded pick planner exactly once" in source
 
 
 def test_infeasible_variants_detected():

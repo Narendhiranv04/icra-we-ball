@@ -1,0 +1,32 @@
+{
+  "actions": [
+    {
+      "arguments": [
+        "LEFT_DRAWER"
+      ],
+      "operator": "OPEN",
+      "reason": "Open this storage region once for inspection; it remains open."
+    },
+    {
+      "arguments": [
+        "RIGHT_DRAWER"
+      ],
+      "operator": "OPEN",
+      "reason": "Open this storage region once for inspection; it remains open."
+    },
+    {
+      "arguments": [
+        "TOOL_CABINET"
+      ],
+      "operator": "OPEN",
+      "reason": "Open this storage region once for inspection; it remains open."
+    }
+  ],
+  "description": "Both compatible drivers and hammer present; required screw absent.",
+  "environment": "workshop",
+  "intended_outcome": "INFEASIBLE",
+  "internal_variant": "I1_NO_SCREW",
+  "schema_version": 1,
+  "total_actions": 3,
+  "variant": "W10"
+}

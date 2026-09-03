@@ -129,16 +129,9 @@ def load_ablation2_task(path: str | Path) -> dict[str, Any]:
     path = Path(path)
     with path.open(encoding="utf-8") as source:
         config = yaml.safe_load(source)
-    if not isinstance(config, dict):
-        raise ValueError("Ablation-2 task must be a mapping")
     if "extends" in config:
-        extends = config.pop("extends")
-        if not isinstance(extends, str) or not extends.strip():
-            raise ValueError("Ablation-2 extends must be a non-empty path")
-        base = load_ablation2_task(path.parent / extends)
+        base = load_ablation2_task(path.parent / config.pop("extends"))
         config = _deep_merge(base, config)
-    if not isinstance(config.get("function_groups"), dict):
-        raise ValueError("Ablation-2 task requires function_groups")
     groups = config.get(
         "active_function_groups", list(config["function_groups"])
     )
@@ -383,15 +376,6 @@ class InitialEvidenceCapture:
         width: int,
         height: int,
     ):
-        if (
-            isinstance(width, bool)
-            or not isinstance(width, int)
-            or isinstance(height, bool)
-            or not isinstance(height, int)
-            or width <= 0
-            or height <= 0
-        ):
-            raise ValueError("Initial capture dimensions must be positive integers")
         self.scene = scene
         self.model = scene.model
         self.data = scene.data
@@ -400,12 +384,6 @@ class InitialEvidenceCapture:
         self.task = task_config
         with Path(rig_config).open(encoding="utf-8") as source:
             self.config = yaml.safe_load(source)
-        if not isinstance(self.config, dict):
-            raise ValueError("Initial inspection rig must be a mapping")
-        if not isinstance(self.config.get("camera_slots"), dict):
-            raise ValueError("Initial inspection rig requires camera_slots")
-        if not isinstance(self.config.get("capture"), dict):
-            raise ValueError("Initial inspection rig requires capture settings")
 
     def capture(self, observation_dir: Path) -> InitialObservation:
         started = time.perf_counter()
@@ -420,8 +398,6 @@ class InitialEvidenceCapture:
             model_id = mujoco.mj_name2id(
                 self.model, mujoco.mjtObj.mjOBJ_CAMERA, model_name
             )
-            if model_id < 0:
-                raise ValueError(f"Missing inspection camera: {model_name}")
             camera = capture_config["cameras"][camera_id]
             position = np.asarray(camera["position_world_m"], float)
             target = np.asarray(camera["look_at_world_m"], float)
@@ -521,6 +497,11 @@ class InitialEvidenceCapture:
                     & np.isin(segmentation[..., 0], geom_ids)
                     for index, geom_ids in enumerate(free_groups)
                 }
+                payload_union = (
+                    np.any(np.stack(list(payload_masks.values())), axis=0)
+                    if payload_masks
+                    else np.zeros(depth.shape, dtype=bool)
+                )
                 region_masks = {}
                 region_points = {}
                 for selector_id, selector in self.config[
@@ -532,6 +513,15 @@ class InitialEvidenceCapture:
                         depth.shape,
                         selector["volume"],
                     )
+                    # Measure the fixed support surface, not a movable object
+                    # resting above it.  Instance masks come from rendered
+                    # segmentation and are used only to remove payload pixels
+                    # from the neutral region gate before plane extraction.
+                    if self.config["processing"].get(
+                        "exclude_payload_points_from_regions", False
+                    ):
+                        mask &= ~payload_union
+                        selected = world[mask[pixels[:, 0], pixels[:, 1]]]
                     region_masks[selector_id] = mask
                     region_points[selector_id] = selected
                 seat_masks = {}
@@ -1638,13 +1628,9 @@ class RegionAblation2Run:
         self.rig_config = Path(rig_config)
         with self.rig_config.open(encoding="utf-8") as source:
             self.rig_definition = yaml.safe_load(source)
-        self.detector = (
-            NullSemanticDetector() if semantic_detector is None else semantic_detector
-        )
-        self.semantic_config = (
-            load_semantic_config(vocabulary_path=DEFAULT_SEMANTIC_VOCABULARY)
-            if semantic_config is None
-            else semantic_config
+        self.detector = semantic_detector or NullSemanticDetector()
+        self.semantic_config = semantic_config or load_semantic_config(
+            vocabulary_path=DEFAULT_SEMANTIC_VOCABULARY
         )
         self.width = width
         self.height = height
@@ -1748,8 +1734,7 @@ class RegionAblation2Run:
     def _build_registries(
         self, semantics: dict[str, dict[str, Any]]
     ) -> None:
-        if self.observation is None:
-            raise RuntimeError("Initial region evidence has not been captured")
+        assert self.observation is not None
         for region_id, record in self.observation.regions.items():
             properties = extract_region_properties(
                 record["evidence"], task_config=self.task

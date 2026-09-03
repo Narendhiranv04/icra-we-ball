@@ -49,7 +49,6 @@ from .kitchen_ground_truth_state import (
     initialize_oracle_world_state,
     run_symbolic_preflight,
 )
-from .final_paper_variant_labels import resolve_variant_name
 from .scene_loader import (
     KITCHEN_FEASIBILITY_VARIANTS,
     KitchenScene,
@@ -200,12 +199,8 @@ def run_variant_ground_truth(
     inspection_order: list[str] | None = None,
     assisted_suite: bool = False,
     strict_robot_execution: bool = False,
-    speed: float = 1.0,
 ) -> dict[str, Any]:
     """Execute ground-truth workflow for a single variant."""
-    variant_id = resolve_variant_name("kitchen", variant_id)
-    if speed <= 0.0:
-        raise ValueError("speed must be positive")
     config = load_variants_config()
     variants = config.get("variants", {})
     if variant_id not in variants:
@@ -314,9 +309,11 @@ def run_variant_ground_truth(
         assignment,
         step_callback=recorder.step_callback,
         assisted_suite=assisted_suite,
-        allow_assisted_pick_recovery=not strict_robot_execution,
+        # Normal final-paper runs must expose failed physical grasps/releases.
+        # Pose-write recovery is available only in the explicitly labelled
+        # assisted-suite profile.
+        allow_assisted_pick_recovery=assisted_suite,
     )
-    dispatcher.phase_b.manipulation.executor.arm_command_speed *= float(speed)
 
     # Initial frame capture
     recorder.capture_frame(force=True)
@@ -623,11 +620,10 @@ def main() -> int:
                 if config.get(v, {}).get("intended_outcome") == "FEASIBLE"
             ]
     else:
-        resolved_variant = resolve_variant_name("kitchen", args.variant)
-        if resolved_variant not in all_variants:
+        if args.variant not in all_variants:
             print(f"[ERROR] Variant '{args.variant}' not recognized. Available: {', '.join(all_variants)}", file=sys.stderr)
             return 1
-        variants_to_run = [resolved_variant]
+        variants_to_run = [args.variant]
 
     print(f"\nDiscovered {len(all_variants)} total variants. Selected {len(variants_to_run)} to run.")
 
@@ -647,7 +643,6 @@ def main() -> int:
                 no_overlay=args.no_overlay,
                 assisted_suite=args.assisted_suite,
                 strict_robot_execution=args.strict_robot_execution,
-                speed=args.speed,
             )
             suite_results.append(summary)
             if not summary.get("success", False):

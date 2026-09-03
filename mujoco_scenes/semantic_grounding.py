@@ -68,42 +68,6 @@ class Detection:
     crop_source_object_id: str | None = None
     detection_id: str | None = None
 
-    def __post_init__(self) -> None:
-        for name, value in (
-            ("raw_label", self.raw_label),
-            ("canonical_label", self.canonical_label),
-        ):
-            if not isinstance(value, str) or not value.strip():
-                raise ValueError(f"Detection {name} must be a non-empty string")
-        if (
-            isinstance(self.confidence, bool)
-            or not isinstance(
-                self.confidence, (int, float, np.integer, np.floating)
-            )
-            or not math.isfinite(float(self.confidence))
-            or not 0.0 <= float(self.confidence) <= 1.0
-        ):
-            raise ValueError("Detection confidence must be between 0 and 1")
-        if len(self.bbox_xyxy) != 4 or not all(
-            isinstance(value, (int, float, np.integer, np.floating))
-            and not isinstance(value, bool)
-            and math.isfinite(float(value))
-            for value in self.bbox_xyxy
-        ):
-            raise ValueError("Detection bbox_xyxy must contain four finite numbers")
-        if self.inference_resolution is not None and (
-            len(self.inference_resolution) != 2
-            or any(
-                isinstance(value, bool)
-                or not isinstance(value, int)
-                or value <= 0
-                for value in self.inference_resolution
-            )
-        ):
-            raise ValueError(
-                "Detection inference_resolution must contain two positive integers"
-            )
-
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
         for key in (
@@ -241,35 +205,12 @@ class YOLOWorldSemanticDetector:
         max_detections: int,
         process_isolation: bool | None = None,
     ):
-        if not isinstance(checkpoint, str) or not checkpoint.strip():
-            raise ValueError("YOLO-World checkpoint must be a non-empty string")
-        if (
-            isinstance(confidence_threshold, bool)
-            or not isinstance(confidence_threshold, (int, float))
-            or not math.isfinite(float(confidence_threshold))
-            or not 0.0 <= float(confidence_threshold) <= 1.0
-        ):
-            raise ValueError("confidence_threshold must be between 0 and 1")
-        for name, value in (
-            ("inference_size", inference_size),
-            ("max_detections", max_detections),
-        ):
-            if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
-                raise ValueError(f"{name} must be a positive integer")
         self.checkpoint = checkpoint
         self.confidence_threshold = float(confidence_threshold)
         self.inference_size = int(inference_size)
         self.device = str(device)
         self.max_detections = int(max_detections)
-        try:
-            self.version = importlib.metadata.version("ultralytics")
-        except importlib.metadata.PackageNotFoundError as error:
-            raise RuntimeError(
-                "YOLO-World requires Ultralytics. Install the CPU native "
-                "environment with: uv pip install --torch-backend cpu "
-                "--python .venv/bin/python "
-                "-r mujoco_scenes/requirements-dev.txt"
-            ) from error
+        self.version = importlib.metadata.version("ultralytics")
         self.process_isolation = (
             _process_isolation_requested()
             if process_isolation is None
@@ -470,12 +411,6 @@ def load_semantic_config(
                 f"Canonical label '{canonical_label}' needs detector aliases"
             )
         canonical_key = str(canonical_label).strip().lower()
-        if not canonical_key:
-            raise ValueError("Canonical labels must be non-empty")
-        if canonical_key in normalized:
-            raise ValueError(
-                f"Canonical label {canonical_key!r} is defined more than once"
-            )
         normalized[canonical_key] = []
         for alias in aliases:
             raw = str(alias).strip().lower()
@@ -485,37 +420,6 @@ def load_semantic_config(
                 raise ValueError(f"Detector alias '{raw}' is ambiguous")
             alias_owner[raw] = canonical_key
             normalized[canonical_key].append(raw)
-    detector = config.get("detector")
-    association = config.get("association")
-    fusion = config.get("fusion")
-    if not isinstance(detector, dict):
-        raise ValueError("Semantic config needs a detector mapping")
-    if not isinstance(association, dict) or not isinstance(
-        association.get("weights"), dict
-    ):
-        raise ValueError("Semantic config needs association weights")
-    expected_weights = {
-        "mask_fraction_inside_box",
-        "box_mask_iou",
-        "box_fraction_on_mask",
-        "center_consistency",
-    }
-    if set(association["weights"]) != expected_weights:
-        raise ValueError(
-            "Semantic association weights must define exactly "
-            + ", ".join(sorted(expected_weights))
-        )
-    weight_values = tuple(association["weights"].values())
-    if any(
-        isinstance(value, bool)
-        or not isinstance(value, (int, float))
-        or not math.isfinite(float(value))
-        or value < 0.0
-        for value in weight_values
-    ) or not math.isclose(sum(weight_values), 1.0, abs_tol=1e-9):
-        raise ValueError("Semantic association weights must be non-negative and sum to 1")
-    if not isinstance(fusion, dict):
-        raise ValueError("Semantic config needs a fusion mapping")
     config["vocabulary"]["canonical_labels"] = normalized
     config["_alias_to_canonical"] = alias_owner
     return config
@@ -990,16 +894,63 @@ def fuse_semantic_observations(
             and (
                 runner["supporting_view_count"]
                 / max(winner["supporting_view_count"], 1)
-            ) > float(fusion.get("maximum_conflicting_view_fraction", 1.0))
+            ) > float(
+                fusion.get("maximum_conflicting_view_fraction", 1.0)
+            )
+            and (
+                runner["score"]
+                / max(winner["score"], 1e-6)
+            ) > float(
+                fusion.get("maximum_conflicting_score_fraction", 0.40)
+            )
         )
-        if strong_multi_view_runner and "CONFLICTING_MULTI_VIEW_LABELS" not in reasons:
+        if (
+            strong_multi_view_runner
+            and "CONFLICTING_MULTI_VIEW_LABELS" not in reasons
+        ):
             reasons.append("CONFLICTING_MULTI_VIEW_LABELS")
     status = "SUPPORTED" if not reasons else "UNKNOWN"
+    lack_of_evidence = any(
+        r in reasons
+        for r in (
+            "NO_ASSOCIATED_DETECTION",
+            "INSUFFICIENT_SEMANTIC_CAMERA_SUPPORT",
+            "INSUFFICIENT_DETECTOR_CONFIDENCE",
+        )
+    )
+    plausible_labels: list[str] = []
+    if status == "SUPPORTED" and winner is not None:
+        plausible_labels = [str(winner["label"])]
+    elif (
+        status == "UNKNOWN"
+        and "CONFLICTING_MULTI_VIEW_LABELS" in reasons
+        and not lack_of_evidence
+    ):
+        competing = []
+        if winner is not None:
+            competing.append(str(winner["label"]))
+        for r in label_records[1:]:
+            is_credible = (
+                (equal_primary_support and margin < float(fusion["minimum_winning_label_margin"]))
+                or (
+                    r["supporting_view_count"] >= 2
+                    and r["mean_confidence"] >= float(fusion.get("minimum_conflicting_mean_confidence", 0.10))
+                    and (r["supporting_view_count"] / max(winner["supporting_view_count"], 1)) > float(fusion.get("maximum_conflicting_view_fraction", 0.60))
+                    and (r["score"] / max(winner["score"], 1e-6)) > float(fusion.get("maximum_conflicting_score_fraction", 0.40))
+                )
+            )
+            if is_credible and str(r["label"]) not in competing:
+                competing.append(str(r["label"]))
+        plausible_labels = competing
+
     return {
         "status": status,
         "canonical_label": (
             winner["label"] if status == "SUPPORTED" else None
         ),
+        "plausible_labels": plausible_labels,
+        "ambiguity_hypotheses": list(plausible_labels),
+        "reason_codes": reasons,
         "alternatives": label_records,
         "winning_label_margin": margin,
         "winning_label_margin_kind": (

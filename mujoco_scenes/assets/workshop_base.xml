@@ -1,280 +1,422 @@
-<mujoco model="compact single arm workshop repair cell">
-  <compiler angle="radian"/>
+<mujoco model="integrated single arm workshop repair cell">
+  <compiler angle="radian" meshdir="workshop_realistic" texturedir="workshop_realistic"/>
   <option timestep="0.002" gravity="0 0 -9.81" integrator="implicitfast"/>
   <visual>
-    <global offwidth="1280" offheight="960"/>
+    <global offwidth="1920" offheight="1080"/>
     <quality shadowsize="4096"/>
-    <map znear="0.01" zfar="8"/>
-    <headlight ambient="0.24 0.24 0.24" diffuse="0.54 0.54 0.54"/>
+    <map znear="0.01" zfar="10"/>
+    <headlight ambient="0.32 0.32 0.32" diffuse="0.58 0.58 0.58" specular="0.15 0.15 0.15"/>
   </visual>
   <default>
     <geom condim="4" friction="1.0 0.03 0.01"/>
-    <joint damping="7"/>
+    <joint damping="6"/>
+    <default class="visual">
+      <geom contype="0" conaffinity="0" group="1"/>
+    </default>
+    <default class="collision">
+      <geom contype="1" conaffinity="1" group="3" rgba="0 0 0 0"/>
+    </default>
   </default>
 
   <asset>
-    <texture name="workshop_floor_tex" type="2d" builtin="checker"
-             rgb1="0.25 0.27 0.29" rgb2="0.18 0.20 0.22"
+    <!-- Environmental Textures and Materials -->
+    <texture name="shop_floor_tex" type="2d" builtin="checker"
+             rgb1="0.28 0.29 0.31" rgb2="0.22 0.23 0.25"
+             width="512" height="512" mark="none"/>
+    <texture name="shop_wall_tex" type="2d" builtin="gradient"
+             rgb1="0.82 0.85 0.88" rgb2="0.65 0.68 0.72"
              width="512" height="512"/>
-    <texture name="workshop_wall_tex" type="2d" builtin="gradient"
-             rgb1="0.72 0.78 0.82" rgb2="0.42 0.49 0.54"
-             width="512" height="512"/>
-    <material name="workshop_floor" texture="workshop_floor_tex"
-              texrepeat="8 8" reflectance="0.07"/>
-    <material name="workshop_wall" texture="workshop_wall_tex"
+    <material name="shop_floor" texture="shop_floor_tex"
+              texrepeat="12 12" reflectance="0.06"/>
+    <material name="shop_wall" texture="shop_wall_tex"
               texuniform="true"/>
-    <material name="bench_wood" rgba="0.36 0.20 0.10 1"/>
-    <material name="bench_edge" rgba="0.20 0.10 0.05 1"/>
-    <material name="cabinet_blue" rgba="0.08 0.24 0.36 1"/>
-    <material name="drawer_blue" rgba="0.12 0.38 0.55 1"/>
-    <material name="fixture_green" rgba="0.12 0.30 0.23 1"/>
-    <material name="pegboard" rgba="0.25 0.29 0.31 1"/>
-    <material name="tool_red" rgba="0.58 0.07 0.05 1"/>
-    <material name="tool_yellow" rgba="0.95 0.66 0.08 1"/>
-    <material name="tool_black" rgba="0.08 0.09 0.10 1"/>
-    <material name="steel" rgba="0.66 0.70 0.74 1" reflectance="0.22"/>
-    <material name="dark_steel" rgba="0.24 0.27 0.30 1" reflectance="0.12"/>
-    <material name="frame_wood" rgba="0.63 0.36 0.15 1"/>
-    <material name="rubber_mat" rgba="0.07 0.08 0.08 1"/>
-    <material name="staging_orange" rgba="0.70 0.27 0.06 1"/>
-    <material name="clear_polycarbonate" rgba="0.48 0.78 0.88 0.48"
-              reflectance="0.18"/>
+    <material name="cabinet_body_mat" rgba="0.18 0.22 0.26 1" reflectance="0.18"/>
+    <material name="cabinet_face_mat" rgba="0.22 0.28 0.35 1" reflectance="0.22"/>
+    <material name="cabinet_interior_mat" rgba="0.48 0.50 0.54 1"/>
+    <material name="fixture_anodized" rgba="0.18 0.20 0.23 1" reflectance="0.25"/>
+    <material name="fixture_clamp_mat" rgba="0.28 0.32 0.38 1" reflectance="0.30"/>
+    <material name="pegboard_mat" rgba="0.35 0.38 0.42 1"/>
+    <material name="shelf_wood" rgba="0.58 0.40 0.26 1"/>
+    <material name="wood_frame_mat" rgba="0.65 0.46 0.26 1"/>
+    <material name="dark_steel" rgba="0.18 0.20 0.22 1" reflectance="0.15"/>
+    <material name="target_hole_mat" rgba="0.05 0.05 0.06 1"/>
+    <material name="polished_steel" rgba="0.80 0.82 0.85 1" reflectance="0.45"/>
+    <material name="obstruction_case_mat" rgba="0.15 0.17 0.20 1" reflectance="0.15"/>
+
+    <!-- Mesh Assets from assets/workshop_realistic/ -->
+    <mesh name="workbench_mesh" file="wooden_table_02.obj"/>
+    <mesh name="tool_cart_mesh" file="tool_cart.obj"/>
+    <mesh name="parts_tray_mesh" file="workshop_parts_tray.obj"/>
+    <mesh name="hardware_bin_mesh" file="workshop_hardware_bin.obj"/>
+    <mesh name="long_driver_mesh" file="workshop_long_phillips_driver.obj"/>
+    <mesh name="stubby_driver_mesh" file="workshop_stubby_phillips_driver.obj"/>
+    <mesh name="flathead_driver_mesh" file="screwdriver.obj"/>
+    <mesh name="power_driver_mesh" file="Drill_01.obj"/>
+    <mesh name="wooden_hammer_mesh" file="wooden_hammer_01.obj"/>
+    <mesh name="pliers_mesh" file="pliers.obj"/>
+    <mesh name="combination_wrench_mesh" file="combination_wrench.obj"/>
+    <mesh name="medium_screw_mesh" file="workshop_medium_phillips_screw.obj"/>
+    <mesh name="short_screw_mesh" file="workshop_short_phillips_screw.obj"/>
+    <mesh name="hex_bolt_mesh" file="workshop_hex_bolt.obj"/>
+
+    <!-- Textures for realistic rendering -->
+    <texture name="workbench_tex" type="2d" file="wooden_table_02_diff.png"/>
+    <texture name="tool_cart_tex" type="2d" file="tool_cart_diff.png"/>
+    <texture name="parts_tray_tex" type="2d" file="workshop_parts_tray_diff.png"/>
+    <texture name="hardware_bin_tex" type="2d" file="workshop_hardware_bin_diff.png"/>
+    <texture name="screwdrivers_tex" type="2d" file="screwdrivers_02_diff.png"/>
+    <texture name="screwdriver_tex" type="2d" file="screwdriver_diff.png"/>
+    <texture name="drill_tex" type="2d" file="Drill_01_diff.png"/>
+    <texture name="wooden_hammer_tex" type="2d" file="wooden_hammer_01_diff.png"/>
+    <texture name="pliers_tex" type="2d" file="pliers_diff.png"/>
+    <texture name="wrench_tex" type="2d" file="combination_wrench_diff.png"/>
+
+    <material name="workbench_visual_mat" texture="workbench_tex"/>
+    <material name="tool_cart_visual_mat" texture="tool_cart_tex" specular="0.15" shininess="0.2"/>
+    <material name="parts_tray_visual_mat" texture="parts_tray_tex"/>
+    <material name="hardware_bin_visual_mat" texture="hardware_bin_tex"/>
+    <material name="screwdrivers_visual_mat" texture="screwdrivers_tex"/>
+    <material name="screwdriver_visual_mat" texture="screwdriver_tex"/>
+    <material name="drill_visual_mat" texture="drill_tex"/>
+    <material name="wooden_hammer_visual_mat" texture="wooden_hammer_tex"/>
+    <material name="pliers_visual_mat" texture="pliers_tex"/>
+    <material name="wrench_visual_mat" texture="wrench_tex"/>
   </asset>
 
   <worldbody>
-    <light name="workshop_main_light" pos="-1.2 -1.4 3.5" dir="0.25 0.35 -1"
-           directional="true" diffuse="0.92 0.87 0.79"/>
-    <light name="workshop_fill" pos="1.5 -0.1 2.7" dir="-0.4 0.1 -1"
-           directional="true" diffuse="0.52 0.64 0.78"/>
-    <light name="workshop_bench_light" pos="0 0.1 2.4"
-           diffuse="0.48 0.45 0.38"/>
+    <!-- Studio Workshop Key & Fill Lighting -->
+    <light name="workshop_main_light" pos="-1.2 -1.0 3.0" dir="0.35 0.35 -1"
+           directional="true" diffuse="0.88 0.86 0.82" specular="0.25 0.25 0.25" castshadow="true"/>
+    <light name="workshop_fill_light" pos="1.5 -0.6 2.6" dir="-0.4 0.2 -1"
+           directional="true" diffuse="0.52 0.58 0.68" specular="0.12 0.12 0.12"/>
+    <light name="workshop_bench_light" pos="0 0.35 2.2"
+           diffuse="0.68 0.65 0.58" specular="0.20 0.20 0.20"/>
 
-    <geom name="workshop_floor_geom" type="plane" size="2.2 2.0 0.05"
-          material="workshop_floor"/>
-    <geom name="workshop_north_wall" type="box" pos="0 1.55 1.3"
-          size="2.1 0.04 1.3" material="workshop_wall"/>
-    <geom name="workshop_west_wall" type="box" pos="-2.0 0 1.3"
-          size="0.04 1.55 1.3" material="workshop_wall"/>
-    <geom name="workshop_east_wall" type="box" pos="2.0 0 1.3"
-          size="0.04 1.55 1.3" material="workshop_wall"/>
+    <!-- Room Geometry -->
+    <geom name="workshop_floor_geom" type="plane" size="2.5 2.5 0.05"
+          material="shop_floor"/>
+    <geom name="workshop_north_wall" class="visual" type="box" pos="0 1.45 1.3"
+          size="2.4 0.04 1.3" material="shop_wall"/>
+    <geom name="workshop_west_wall" class="visual" type="box" pos="-2.2 0 1.3"
+          size="0.04 1.5 1.3" material="shop_wall"/>
+    <geom name="workshop_east_wall" class="visual" type="box" pos="2.2 0 1.3"
+          size="0.04 1.5 1.3" material="shop_wall"/>
 
-    <body name="workbench">
-      <geom name="workbench_top" type="box" pos="0 0.42 0.56"
-            size="1.12 0.43 0.06" material="bench_wood"/>
-      <geom name="workbench_front_edge" type="box" pos="0 -0.015 0.58"
-            size="1.14 0.025 0.08" material="bench_edge"/>
-      <geom name="workbench_left_cabinet" type="box" pos="-0.62 0.66 0.28"
-            size="0.43 0.18 0.28" material="cabinet_blue"/>
-      <geom name="workbench_right_cabinet" type="box" pos="0.62 0.66 0.28"
-            size="0.43 0.18 0.28" material="cabinet_blue"/>
-      <geom name="workbench_left_leg" type="box" pos="-0.94 0.16 0.27"
-            size="0.08 0.15 0.27" material="cabinet_blue"/>
-      <geom name="workbench_right_leg" type="box" pos="0.94 0.16 0.27"
-            size="0.08 0.15 0.27" material="cabinet_blue"/>
+    <!-- Realistic Heavy-Duty Workbench with Textured Mesh Visual + Invisible Collision Proxies -->
+    <body name="workbench" pos="0 0.38 0">
+      <!-- Visual Textured Workbench Mesh -->
+      <geom name="workbench_visual" class="visual" type="mesh" mesh="workbench_mesh"
+            material="workbench_visual_mat"/>
+      <!-- Invisible Physical Collision Proxies -->
+      <geom name="workbench_top_col" class="collision" type="box" pos="0 0 0.66"
+            size="0.60 0.325 0.02"/>
+      <geom name="workbench_leg_fl_col" class="collision" type="box" pos="-0.56 -0.28 0.32"
+            size="0.04 0.04 0.32"/>
+      <geom name="workbench_leg_fr_col" class="collision" type="box" pos="0.56 -0.28 0.32"
+            size="0.04 0.04 0.32"/>
+      <geom name="workbench_leg_bl_col" class="collision" type="box" pos="-0.56 0.28 0.32"
+            size="0.04 0.04 0.32"/>
+      <geom name="workbench_leg_br_col" class="collision" type="box" pos="0.56 0.28 0.32"
+            size="0.04 0.04 0.32"/>
     </body>
 
-    <!-- A shallow pegboard makes the cell read as a workshop without adding tasks. -->
-    <body name="workshop_pegboard" pos="0 0.82 1.30">
-      <geom name="pegboard_back" type="box" size="0.85 0.030 0.46"
-            material="pegboard"/>
-      <geom name="pegboard_top" type="box" pos="0 -0.040 0.43"
-            size="0.85 0.020 0.025" material="dark_steel"/>
-      <geom name="pegboard_bottom" type="box" pos="0 -0.040 -0.43"
-            size="0.85 0.020 0.025" material="dark_steel"/>
-      <geom name="pegboard_left" type="box" pos="-0.82 -0.040 0"
-            size="0.025 0.020 0.43" material="dark_steel"/>
-      <geom name="pegboard_right" type="box" pos="0.82 -0.040 0"
-            size="0.025 0.020 0.43" material="dark_steel"/>
-      <geom name="peg_hole_1" type="cylinder" pos="-0.55 -0.033 0.25"
-            quat="0.7071 0.7071 0 0" size="0.010 0.004" material="tool_black"/>
-      <geom name="peg_hole_2" type="cylinder" pos="0 -0.033 0.25"
-            quat="0.7071 0.7071 0 0" size="0.010 0.004" material="tool_black"/>
-      <geom name="peg_hole_3" type="cylinder" pos="0.55 -0.033 0.25"
-            quat="0.7071 0.7071 0 0" size="0.010 0.004" material="tool_black"/>
-      <geom name="peg_hole_4" type="cylinder" pos="-0.55 -0.033 0"
-            quat="0.7071 0.7071 0 0" size="0.010 0.004" material="tool_black"/>
-      <geom name="peg_hole_5" type="cylinder" pos="0 -0.033 0"
-            quat="0.7071 0.7071 0 0" size="0.010 0.004" material="tool_black"/>
-      <geom name="peg_hole_6" type="cylinder" pos="0.55 -0.033 0"
-            quat="0.7071 0.7071 0 0" size="0.010 0.004" material="tool_black"/>
-      <geom name="peg_hole_7" type="cylinder" pos="-0.55 -0.033 -0.25"
-            quat="0.7071 0.7071 0 0" size="0.010 0.004" material="tool_black"/>
-      <geom name="peg_hole_8" type="cylinder" pos="0 -0.033 -0.25"
-            quat="0.7071 0.7071 0 0" size="0.010 0.004" material="tool_black"/>
-      <geom name="peg_hole_9" type="cylinder" pos="0.55 -0.033 -0.25"
-            quat="0.7071 0.7071 0 0" size="0.010 0.004" material="tool_black"/>
+    <!-- Perforated Industrial Pegboard behind Workbench (Clean, proportionate background) -->
+    <body name="workshop_pegboard" pos="0 0.70 1.05">
+      <geom name="pegboard_back" class="visual" type="box" size="0.45 0.015 0.22"
+            material="pegboard_mat"/>
+      <geom name="pegboard_frame_top" class="visual" type="box" pos="0 -0.020 0.21"
+            size="0.45 0.012 0.012" material="dark_steel"/>
+      <geom name="pegboard_frame_bot" class="visual" type="box" pos="0 -0.020 -0.21"
+            size="0.45 0.012 0.012" material="dark_steel"/>
+      <geom name="pegboard_frame_l" class="visual" type="box" pos="-0.44 -0.020 0"
+            size="0.012 0.012 0.21" material="dark_steel"/>
+      <geom name="pegboard_frame_r" class="visual" type="box" pos="0.44 -0.020 0"
+            size="0.012 0.012 0.21" material="dark_steel"/>
     </body>
 
-    <!-- The fixture replaces the second hand: both frame pieces are immobile. -->
-    <body name="workshop_frame_fixture" pos="0.05 0.35 0.62">
-      <geom name="fixture_mat" type="box" pos="0 0 0.008"
-            size="0.58 0.31 0.008" material="rubber_mat"/>
-      <geom name="fixture_plate" type="box" pos="0 0.02 0.025"
-            size="0.50 0.25 0.016" material="fixture_green"/>
-      <geom name="fixture_stop_back" type="box" pos="0 0.245 0.070"
-            size="0.48 0.020 0.055" material="dark_steel"/>
-      <geom name="fixture_stop_left" type="box" pos="-0.47 0.02 0.070"
-            size="0.020 0.22 0.055" material="dark_steel"/>
-      <geom name="fixture_clamp_left" type="box" pos="-0.30 -0.13 0.115"
-            size="0.045 0.065 0.020" material="tool_red"/>
-      <geom name="fixture_clamp_right" type="box" pos="0.32 -0.13 0.115"
-            size="0.045 0.065 0.020" material="tool_red"/>
+    <!-- Rolling Industrial Tool Cart: Alternative Work Surface (WORK_SURFACE candidate) -->
+    <body name="workshop_tool_cart" pos="1.28 0.40 0">
+      <geom name="tool_cart_visual" class="visual" type="mesh" mesh="tool_cart_mesh"
+            material="tool_cart_visual_mat"/>
+      <geom name="tool_cart_top_col" class="collision" type="box" pos="0 0 0.80"
+            size="0.32 0.21 0.02"/>
+      <geom name="tool_cart_body_col" class="collision" type="box" pos="0 0 0.40"
+            size="0.30 0.20 0.38"/>
     </body>
 
-    <body name="workshop_frame_joint" pos="0.05 0.35 0.682">
-      <geom name="frame_horizontal_rail" type="box" pos="0 -0.10 0"
-            size="0.42 0.050 0.026" material="frame_wood"/>
-      <geom name="frame_vertical_rail" type="box" pos="-0.37 0.07 0"
-            size="0.050 0.22 0.026" material="frame_wood"/>
-      <geom name="frame_joint_face" type="box" pos="-0.37 -0.10 0.027"
-            size="0.052 0.052 0.004" material="steel"/>
-      <geom name="frame_target_hole" type="cylinder" pos="-0.37 -0.10 0.034"
-            size="0.013 0.004" material="tool_black"/>
-      <geom name="captive_guide_left" type="box" pos="-0.405 -0.10 0.055"
-            size="0.010 0.035 0.025" material="steel"/>
-      <geom name="captive_guide_right" type="box" pos="-0.335 -0.10 0.055"
-            size="0.010 0.035 0.025" material="steel"/>
-    </body>
+    <!-- Frame-joint station at the workbench's front-left working area. -->
+    <body name="workshop_frame_fixture" pos="-0.34 0.34 0.68">
+      <!-- Split fixture base visual: solid bottom slab (0..8mm) + hollow top slab (8..16mm) surrounding target hole -->
+      <geom name="fixture_base_bottom_vis" class="visual" type="box" pos="0 0 0.004"
+            size="0.16 0.10 0.004" material="fixture_anodized"/>
+      <geom name="fixture_base_top_l_vis" class="visual" type="box" pos="-0.131875 0 0.012"
+            size="0.028125 0.10 0.004" material="fixture_anodized"/>
+      <geom name="fixture_base_top_r_vis" class="visual" type="box" pos="0.031875 0 0.012"
+            size="0.128125 0.10 0.004" material="fixture_anodized"/>
+      <geom name="fixture_base_top_f_vis" class="visual" type="box" pos="-0.10 -0.061875 0.012"
+            size="0.00375 0.038125 0.004" material="fixture_anodized"/>
+      <geom name="fixture_base_top_b_vis" class="visual" type="box" pos="-0.10 0.041875 0.012"
+            size="0.00375 0.058125 0.004" material="fixture_anodized"/>
+      <!-- Split fixture base collision: solid bottom slab (0..8mm) + hollow top slab (8..16mm) -->
+      <geom name="fixture_base_bottom_col" class="collision" type="box" pos="0 0 0.004"
+            size="0.16 0.10 0.004"/>
+      <geom name="fixture_base_top_l_col" class="collision" type="box" pos="-0.131875 0 0.012"
+            size="0.028125 0.10 0.004"/>
+      <geom name="fixture_base_top_r_col" class="collision" type="box" pos="0.031875 0 0.012"
+            size="0.128125 0.10 0.004"/>
+      <geom name="fixture_base_top_f_col" class="collision" type="box" pos="-0.10 -0.061875 0.012"
+            size="0.00375 0.038125 0.004"/>
+      <geom name="fixture_base_top_b_col" class="collision" type="box" pos="-0.10 0.041875 0.012"
+            size="0.00375 0.058125 0.004"/>
 
-    <!-- Removable dust cover seated on the captive guide rails. -->
-    <body name="workshop_joint_seal" pos="-0.32 0.25 0.766">
-      <freejoint name="workshop_joint_seal_free"/>
-      <inertial pos="0 0 0.012" mass="0.16"
-                diaginertia="0.00035 0.00045 0.00055"/>
-      <geom name="joint_seal_clear_plate" type="box" pos="0 0 0.010"
-            size="0.075 0.060 0.006" material="clear_polycarbonate"/>
-      <geom name="joint_seal_gasket_left" type="box" pos="-0.035 0 0"
-            size="0.010 0.050 0.004" material="tool_black"/>
-      <geom name="joint_seal_gasket_right" type="box" pos="0.035 0 0"
-            size="0.010 0.050 0.004" material="tool_black"/>
-      <geom name="joint_seal_gasket_front" type="box" pos="0 -0.050 0"
-            size="0.045 0.010 0.004" material="tool_black"/>
-      <geom name="joint_seal_gasket_back" type="box" pos="0 0.050 0"
-            size="0.045 0.010 0.004" material="tool_black"/>
-      <geom name="joint_seal_pull_tab" type="capsule"
-            fromto="-0.035 0 0.036 0.035 0 0.036" size="0.012"
-            material="tool_yellow"/>
-    </body>
+      <geom name="fixture_clamp" class="visual" type="box" pos="0.10 -0.02 0.024"
+            size="0.025 0.035 0.012" material="fixture_clamp_mat"/>
+      <geom name="fixture_clamp_col" class="collision" type="box" pos="0.10 -0.02 0.024"
+            size="0.025 0.035 0.012"/>
 
-    <body name="workshop_staging_tray" pos="-0.84 0.19 0.632">
-      <geom name="staging_tray_base" type="box"
-            size="0.19 0.18 0.012" material="staging_orange"/>
-      <geom name="staging_tray_back" type="box" pos="0 0.17 0.035"
-            size="0.19 0.012 0.035" material="staging_orange"/>
-      <geom name="staging_tray_left" type="box" pos="-0.18 0 0.035"
-            size="0.012 0.18 0.035" material="staging_orange"/>
-      <geom name="staging_tray_right" type="box" pos="0.18 0 0.035"
-            size="0.012 0.18 0.035" material="staging_orange"/>
-    </body>
+      <!-- Immobilized Frame Joint Workpiece -->
+      <body name="workshop_frame_joint" pos="0 0 0.016">
+        <!-- Canonical repair landmarks.  The screw origin is its tip, so the
+             seated site is one 30 mm engagement depth below the entry. -->
+        <site name="workshop_target_hole_entry" pos="-0.10 -0.02 0.023"
+              size="0.0035 0.002" type="cylinder" rgba="0.15 0.75 1 0.35"/>
+        <site name="workshop_target_hole_seated_tip" pos="-0.10 -0.02 -0.007"
+              size="0.002 0.002" type="sphere" rgba="0.1 1 0.25 0.35"/>
+        <!-- Split horizontal wood rail visual surrounding the 7mm target hole at x=-0.10, y=-0.02 -->
+        <geom name="frame_h_rail_l_vis" class="visual" type="box" pos="-0.121875 -0.02 0.010"
+              size="0.018125 0.024 0.010" material="wood_frame_mat"/>
+        <geom name="frame_h_rail_r_vis" class="visual" type="box" pos="0.021875 -0.02 0.010"
+              size="0.118125 0.024 0.010" material="wood_frame_mat"/>
+        <geom name="frame_h_rail_f_vis" class="visual" type="box" pos="-0.10 -0.033875 0.010"
+              size="0.00375 0.010125 0.010" material="wood_frame_mat"/>
+        <geom name="frame_h_rail_b_vis" class="visual" type="box" pos="-0.10 -0.006125 0.010"
+              size="0.00375 0.010125 0.010" material="wood_frame_mat"/>
+        <!-- Split horizontal wood rail collision surrounding the 7mm target hole at x=-0.10, y=-0.02 -->
+        <geom name="frame_h_rail_l_col" class="collision" type="box" pos="-0.121875 -0.02 0.010"
+              size="0.018125 0.024 0.010"/>
+        <geom name="frame_h_rail_r_col" class="collision" type="box" pos="0.021875 -0.02 0.010"
+              size="0.118125 0.024 0.010"/>
+        <geom name="frame_h_rail_f_col" class="collision" type="box" pos="-0.10 -0.033875 0.010"
+              size="0.00375 0.010125 0.010"/>
+        <geom name="frame_h_rail_b_col" class="collision" type="box" pos="-0.10 -0.006125 0.010"
+              size="0.00375 0.010125 0.010"/>
 
-    <!-- Left drawer: compatible manual driver, but an unusably short screw. -->
-    <body name="left_tool_drawer" pos="-0.48 0.70 0.38">
-      <joint name="left_tool_drawer_slide" type="slide" axis="0 -1 0"
-             range="0 0.72" limited="true"/>
-      <geom name="left_drawer_floor" type="box" size="0.38 0.30 0.025"
-            material="drawer_blue" contype="0" conaffinity="0"/>
-      <geom name="left_drawer_front" type="box" pos="0 -0.31 0.09"
-            size="0.38 0.025 0.11" material="cabinet_blue"
-            contype="0" conaffinity="0"/>
-      <geom name="left_drawer_back" type="box" pos="0 0.29 0.07"
-            size="0.38 0.018 0.07" material="drawer_blue"
-            contype="0" conaffinity="0"/>
-      <geom name="left_drawer_side_l" type="box" pos="-0.37 0 0.07"
-            size="0.018 0.29 0.07" material="drawer_blue"
-            contype="0" conaffinity="0"/>
-      <geom name="left_drawer_side_r" type="box" pos="0.37 0 0.07"
-            size="0.018 0.29 0.07" material="drawer_blue"
-            contype="0" conaffinity="0"/>
+        <geom name="frame_vertical_rail" class="visual" type="box" pos="-0.10 0.04 0.010"
+              size="0.024 0.050 0.010" material="wood_frame_mat"/>
+        <geom name="frame_vertical_rail_col" class="collision" type="box" pos="-0.10 0.04 0.010"
+              size="0.024 0.050 0.010"/>
 
-      <body name="workshop_manual_driver" pos="-0.08 0.10 0.065">
-        <geom name="manual_driver_handle" type="capsule"
-              fromto="-0.16 0 0 0.03 0 0" size="0.038"
-              material="tool_yellow" contype="0" conaffinity="0"/>
-        <geom name="manual_driver_shaft" type="capsule"
-              fromto="0.03 0 0 0.25 0 0" size="0.008"
-              material="steel" contype="0" conaffinity="0"/>
-        <geom name="manual_driver_phillips_tip" type="box"
-              pos="0.255 0 0" size="0.010 0.003 0.003"
-              material="dark_steel" contype="0" conaffinity="0"/>
-      </body>
-      <body name="workshop_short_screw" pos="0.25 -0.12 0.065">
-        <geom name="short_screw_shank" type="cylinder"
-              quat="0.7071 0 0.7071 0" size="0.012 0.040"
-              material="steel" contype="0" conaffinity="0"/>
-        <geom name="short_screw_head" type="cylinder" pos="0.049 0 0"
-              quat="0.7071 0 0.7071 0" size="0.022 0.008"
-              material="tool_red" contype="0" conaffinity="0"/>
+        <!-- Split bracket visual surrounding the 7mm target hole at x=-0.10, y=-0.02 -->
+        <geom name="frame_bracket_l_vis" class="visual" type="box" pos="-0.116875 -0.02 0.021"
+              size="0.013125 0.030 0.002" material="dark_steel"/>
+        <geom name="frame_bracket_r_vis" class="visual" type="box" pos="-0.083125 -0.02 0.021"
+              size="0.013125 0.030 0.002" material="dark_steel"/>
+        <geom name="frame_bracket_f_vis" class="visual" type="box" pos="-0.10 -0.036875 0.021"
+              size="0.00375 0.013125 0.002" material="dark_steel"/>
+        <geom name="frame_bracket_b_vis" class="visual" type="box" pos="-0.10 -0.003125 0.021"
+              size="0.00375 0.013125 0.002" material="dark_steel"/>
+        <!-- Split bracket collision surrounding the 7mm target hole at x=-0.10, y=-0.02 -->
+        <geom name="frame_bracket_l_col" class="collision" type="box" pos="-0.116875 -0.02 0.021"
+              size="0.013125 0.030 0.002"/>
+        <geom name="frame_bracket_r_col" class="collision" type="box" pos="-0.083125 -0.02 0.021"
+              size="0.013125 0.030 0.002"/>
+        <geom name="frame_bracket_f_col" class="collision" type="box" pos="-0.10 -0.036875 0.021"
+              size="0.00375 0.013125 0.002"/>
+        <geom name="frame_bracket_b_col" class="collision" type="box" pos="-0.10 -0.003125 0.021"
+              size="0.00375 0.013125 0.002"/>
+
+        <!-- Clear recessed target screw hole: 7mm diameter (3.5mm radius), 30mm depth with dark bottom surface -->
+        <geom name="frame_target_hole_bottom" class="visual" type="cylinder" pos="-0.10 -0.02 -0.007"
+              size="0.0035 0.0005" material="target_hole_mat"/>
       </body>
     </body>
 
-    <!-- Closed tool cabinet: powered driver and feasible long screw. -->
-    <body name="tool_cabinet" pos="0.78 0.68 0.92">
-      <geom name="tool_cabinet_bottom" type="box" pos="0 0 -0.28"
-            size="0.30 0.19 0.020" material="cabinet_blue"/>
-      <geom name="tool_cabinet_top" type="box" pos="0 0 0.28"
-            size="0.30 0.19 0.020" material="cabinet_blue"/>
-      <geom name="tool_cabinet_left" type="box" pos="-0.28 0 0"
-            size="0.020 0.19 0.28" material="cabinet_blue"/>
-      <geom name="tool_cabinet_right" type="box" pos="0.28 0 0"
-            size="0.020 0.19 0.28" material="cabinet_blue"/>
-      <geom name="tool_cabinet_back" type="box" pos="0 0.18 0"
-            size="0.30 0.020 0.28" material="cabinet_blue"/>
-      <geom name="tool_cabinet_shelf" type="box" pos="0 0 0"
-            size="0.27 0.17 0.012" material="drawer_blue"/>
+    <!-- Parts Staging Tray: SMALL_PARTS_CONTAINER Candidate (Front-Left Tabletop) -->
+    <body name="workshop_parts_tray" pos="-0.42 0.22 0.68">
+      <geom name="parts_tray_visual" class="visual" type="mesh" mesh="parts_tray_mesh"
+            material="parts_tray_visual_mat"/>
+      <!-- Invisible hollow collision proxies -->
+      <geom name="parts_tray_base_col" class="collision" type="box" pos="0 0 0.004"
+            size="0.11 0.07 0.004"/>
+      <geom name="parts_tray_wall_l_col" class="collision" type="box" pos="-0.106 0 0.018"
+            size="0.004 0.07 0.014"/>
+      <geom name="parts_tray_wall_r_col" class="collision" type="box" pos="0.106 0 0.018"
+            size="0.004 0.07 0.014"/>
+      <geom name="parts_tray_wall_f_col" class="collision" type="box" pos="0 -0.066 0.018"
+            size="0.11 0.004 0.014"/>
+      <geom name="parts_tray_wall_b_col" class="collision" type="box" pos="0 0.066 0.018"
+            size="0.11 0.004 0.014"/>
+    </body>
 
-      <body name="workshop_power_driver" pos="-0.03 0.00 -0.16">
-        <geom name="power_driver_body" type="capsule"
-              fromto="-0.13 0 0 0.08 0 0" size="0.055"
-              material="tool_red" contype="0" conaffinity="0"/>
-        <geom name="power_driver_grip" type="capsule"
-              fromto="-0.03 0 -0.01 0.01 0 -0.10" size="0.032"
-              material="tool_black" contype="0" conaffinity="0"/>
-        <geom name="power_driver_chuck" type="cylinder" pos="0.12 0 0"
-              quat="0.7071 0 0.7071 0" size="0.032 0.035"
-              material="dark_steel" contype="0" conaffinity="0"/>
-        <geom name="power_driver_bit" type="capsule"
-              fromto="0.15 0 0 0.27 0 0" size="0.006"
-              material="steel" contype="0" conaffinity="0"/>
-      </body>
-      <body name="workshop_long_screw" pos="0.14 -0.04 0.10">
-        <geom name="long_screw_shank" type="cylinder"
-              quat="0.7071 0 0.7071 0" size="0.012 0.070"
-              material="steel" contype="0" conaffinity="0"/>
-        <geom name="long_screw_head" type="cylinder" pos="0.079 0 0"
-              quat="0.7071 0 0.7071 0" size="0.022 0.008"
-              material="tool_red" contype="0" conaffinity="0"/>
+    <!-- Small Hardware Storage Bin: SMALL_PARTS_CONTAINER Candidate (Back-Left Tabletop) -->
+    <body name="workshop_hardware_bin" pos="-0.44 0.52 0.68">
+      <geom name="hardware_bin_visual" class="visual" type="mesh" mesh="hardware_bin_mesh"
+            material="hardware_bin_visual_mat"/>
+      <!-- Invisible hollow collision proxies -->
+      <geom name="hardware_bin_base_col" class="collision" type="box" pos="0 0 0.003"
+            size="0.055 0.075 0.003"/>
+      <geom name="hardware_bin_wall_l_col" class="collision" type="box" pos="-0.052 0 0.03"
+            size="0.003 0.075 0.03"/>
+      <geom name="hardware_bin_wall_r_col" class="collision" type="box" pos="0.052 0 0.03"
+            size="0.003 0.075 0.03"/>
+      <geom name="hardware_bin_wall_b_col" class="collision" type="box" pos="0 0.072 0.04"
+            size="0.055 0.003 0.04"/>
+      <geom name="hardware_bin_wall_f_col" class="collision" type="box" pos="0 -0.072 0.019"
+            size="0.055 0.003 0.019"/>
+    </body>
+
+    <!-- Storage Regions 1-2: Kitchen-equivalent enclosed sliding drawers.
+         These are direct copies of the kitchen D1/D2 mechanism: a rigid
+         carcass, shallow tray, centered U-handle, and a 0.25 m pull-out. The
+         workshop palette is the only adaptation. -->
+    <body name="left_tool_drawer_frame" pos="-0.28 0.155 0.524">
+      <geom name="left_drawer_back" class="visual" type="box" size="0.18 0.005 0.06" pos="0 0.14 0" material="cabinet_body_mat"/>
+      <geom name="left_drawer_side_l" class="visual" type="box" size="0.005 0.14 0.06" pos="-0.18 0 0" material="cabinet_body_mat"/>
+      <geom name="left_drawer_side_r" class="visual" type="box" size="0.005 0.14 0.06" pos="0.18 0 0" material="cabinet_body_mat"/>
+      <geom name="left_drawer_shell_bottom" class="visual" type="box" size="0.18 0.14 0.005" pos="0 0 -0.06" material="cabinet_body_mat"/>
+      <geom name="left_drawer_shell_top" class="visual" type="box" size="0.18 0.14 0.008" pos="0 0 0.072" material="cabinet_body_mat"/>
+      <geom name="left_drawer_back_col" class="collision" type="box" size="0.18 0.005 0.06" pos="0 0.14 0"/>
+      <geom name="left_drawer_shell_side_l_col" class="collision" type="box" size="0.005 0.14 0.06" pos="-0.18 0 0"/>
+      <geom name="left_drawer_shell_side_r_col" class="collision" type="box" size="0.005 0.14 0.06" pos="0.18 0 0"/>
+      <geom name="left_drawer_shell_bottom_col" class="collision" type="box" size="0.18 0.14 0.005" pos="0 0 -0.06"/>
+      <geom name="left_drawer_shell_top_col" class="collision" type="box" size="0.18 0.14 0.008" pos="0 0 0.072"/>
+      <body name="left_tool_drawer" pos="0 0 0">
+        <joint name="left_tool_drawer_slide" type="slide" axis="0 -1 0" range="0 0.25" limited="true" damping="2"/>
+        <geom name="left_drawer_floor" class="visual" type="box" size="0.17 0.13 0.003" pos="0 0 -0.055" material="cabinet_interior_mat"/>
+        <geom name="left_drawer_tray_side_l" class="visual" type="box" size="0.004 0.13 0.03" pos="-0.166 0 -0.025" material="cabinet_interior_mat"/>
+        <geom name="left_drawer_tray_side_r" class="visual" type="box" size="0.004 0.13 0.03" pos="0.166 0 -0.025" material="cabinet_interior_mat"/>
+        <geom name="left_drawer_tray_back" class="visual" type="box" size="0.17 0.004 0.03" pos="0 0.126 -0.025" material="cabinet_interior_mat"/>
+        <geom name="left_drawer_front" class="visual" type="box" size="0.185 0.008 0.065" pos="0 -0.14 0" material="cabinet_face_mat"/>
+        <geom name="left_drawer_handle_left" class="visual" type="capsule" size="0.007" fromto="-0.075 -0.148 0 -0.075 -0.205 0" material="polished_steel"/>
+        <geom name="left_drawer_handle_right" class="visual" type="capsule" size="0.007" fromto="0.075 -0.148 0 0.075 -0.205 0" material="polished_steel"/>
+        <geom name="left_drawer_handle_bar" class="visual" type="capsule" size="0.008" fromto="-0.075 -0.205 0 0.075 -0.205 0" material="polished_steel"/>
+        <site name="left_drawer_handle_grasp" pos="0 -0.205 0" size="0.012" rgba="0 0 0 0" group="5"/>
+        <site name="left_drawer_interior" pos="0 0 -0.04" size="0.15 0.10 0.01" type="box" rgba="0 0 1 0.1" group="4"/>
+        <geom name="left_drawer_col_floor" class="collision" type="box" size="0.17 0.13 0.003" pos="0 0 -0.055"/>
+        <geom name="left_drawer_col_side_l" class="collision" type="box" size="0.004 0.13 0.03" pos="-0.166 0 -0.025"/>
+        <geom name="left_drawer_col_side_r" class="collision" type="box" size="0.004 0.13 0.03" pos="0.166 0 -0.025"/>
+        <geom name="left_drawer_col_front" class="collision" type="box" size="0.185 0.008 0.065" pos="0 -0.14 0"/>
+        <geom name="left_drawer_handle_left_col" class="collision" type="capsule" size="0.007" fromto="-0.075 -0.148 0 -0.075 -0.205 0"/>
+        <geom name="left_drawer_handle_right_col" class="collision" type="capsule" size="0.007" fromto="0.075 -0.148 0 0.075 -0.205 0"/>
+        <geom name="left_drawer_handle_col" class="collision" type="capsule" size="0.008" fromto="-0.075 -0.205 0 0.075 -0.205 0"/>
       </body>
     </body>
 
-    <body name="tool_cabinet_door" pos="0.48 0.48 0.92">
-      <joint name="tool_cabinet_door_hinge" type="hinge"
-             axis="0 0 -1" range="0 1.40" limited="true"
-             damping="4" armature="0.02"/>
-      <geom name="tool_cabinet_door_panel" type="box" pos="0.30 0 0"
-            size="0.30 0.022 0.28" material="drawer_blue"
-            contype="0" conaffinity="0"/>
-      <geom name="tool_cabinet_door_handle" type="capsule"
-            fromto="0.48 -0.055 -0.07 0.48 -0.055 0.07" size="0.018"
-            material="tool_black" contype="0" conaffinity="0"/>
+    <body name="right_tool_drawer_frame" pos="0.28 0.155 0.524">
+      <geom name="right_drawer_back" class="visual" type="box" size="0.18 0.005 0.06" pos="0 0.14 0" material="cabinet_body_mat"/>
+      <geom name="right_drawer_side_l" class="visual" type="box" size="0.005 0.14 0.06" pos="-0.18 0 0" material="cabinet_body_mat"/>
+      <geom name="right_drawer_side_r" class="visual" type="box" size="0.005 0.14 0.06" pos="0.18 0 0" material="cabinet_body_mat"/>
+      <geom name="right_drawer_shell_bottom" class="visual" type="box" size="0.18 0.14 0.005" pos="0 0 -0.06" material="cabinet_body_mat"/>
+      <geom name="right_drawer_shell_top" class="visual" type="box" size="0.18 0.14 0.008" pos="0 0 0.072" material="cabinet_body_mat"/>
+      <geom name="right_drawer_back_col" class="collision" type="box" size="0.18 0.005 0.06" pos="0 0.14 0"/>
+      <geom name="right_drawer_shell_side_l_col" class="collision" type="box" size="0.005 0.14 0.06" pos="-0.18 0 0"/>
+      <geom name="right_drawer_shell_side_r_col" class="collision" type="box" size="0.005 0.14 0.06" pos="0.18 0 0"/>
+      <geom name="right_drawer_shell_bottom_col" class="collision" type="box" size="0.18 0.14 0.005" pos="0 0 -0.06"/>
+      <geom name="right_drawer_shell_top_col" class="collision" type="box" size="0.18 0.14 0.008" pos="0 0 0.072"/>
+      <body name="right_tool_drawer" pos="0 0 0">
+        <joint name="right_tool_drawer_slide" type="slide" axis="0 -1 0" range="0 0.25" limited="true" damping="2"/>
+        <geom name="right_drawer_floor" class="visual" type="box" size="0.17 0.13 0.003" pos="0 0 -0.055" material="cabinet_interior_mat"/>
+        <geom name="right_drawer_tray_side_l" class="visual" type="box" size="0.004 0.13 0.03" pos="-0.166 0 -0.025" material="cabinet_interior_mat"/>
+        <geom name="right_drawer_tray_side_r" class="visual" type="box" size="0.004 0.13 0.03" pos="0.166 0 -0.025" material="cabinet_interior_mat"/>
+        <geom name="right_drawer_tray_back" class="visual" type="box" size="0.17 0.004 0.03" pos="0 0.126 -0.025" material="cabinet_interior_mat"/>
+        <geom name="right_drawer_front" class="visual" type="box" size="0.185 0.008 0.065" pos="0 -0.14 0" material="cabinet_face_mat"/>
+        <geom name="right_drawer_handle_left" class="visual" type="capsule" size="0.007" fromto="-0.075 -0.148 0 -0.075 -0.205 0" material="polished_steel"/>
+        <geom name="right_drawer_handle_right" class="visual" type="capsule" size="0.007" fromto="0.075 -0.148 0 0.075 -0.205 0" material="polished_steel"/>
+        <geom name="right_drawer_handle_bar" class="visual" type="capsule" size="0.008" fromto="-0.075 -0.205 0 0.075 -0.205 0" material="polished_steel"/>
+        <site name="right_drawer_handle_grasp" pos="0 -0.205 0" size="0.012" rgba="0 0 0 0" group="5"/>
+        <site name="right_drawer_interior" pos="0 0 -0.04" size="0.15 0.10 0.01" type="box" rgba="0 0 1 0.1" group="4"/>
+        <geom name="right_drawer_col_floor" class="collision" type="box" size="0.17 0.13 0.003" pos="0 0 -0.055"/>
+        <geom name="right_drawer_col_side_l" class="collision" type="box" size="0.004 0.13 0.03" pos="-0.166 0 -0.025"/>
+        <geom name="right_drawer_col_side_r" class="collision" type="box" size="0.004 0.13 0.03" pos="0.166 0 -0.025"/>
+        <geom name="right_drawer_col_front" class="collision" type="box" size="0.185 0.008 0.065" pos="0 -0.14 0"/>
+        <geom name="right_drawer_handle_left_col" class="collision" type="capsule" size="0.007" fromto="-0.075 -0.148 0 -0.075 -0.205 0"/>
+        <geom name="right_drawer_handle_right_col" class="collision" type="capsule" size="0.007" fromto="0.075 -0.148 0 0.075 -0.205 0"/>
+        <geom name="right_drawer_handle_col" class="collision" type="capsule" size="0.008" fromto="-0.075 -0.205 0 0.075 -0.205 0"/>
+      </body>
     </body>
 
-    <camera name="workshop_camera_left" pos="-1.35 -1.35 1.55"
-            xyaxes="0.75 -0.66 0 0.38 0.43 0.82" fovy="64"/>
-    <camera name="workshop_camera_right" pos="1.35 -1.35 1.55"
-            xyaxes="0.75 0.66 0 -0.38 0.43 0.82" fovy="64"/>
-    <camera name="workshop_camera_top" pos="0 0.30 3.15"
+    <!-- Storage Region 3: TOOL_CABINET (Compact Tabletop Cabinet placed neatly at Back-Right) -->
+    <body name="tool_cabinet" pos="0.44 0.56 0.68">
+      <geom name="cabinet_bottom" class="visual" type="box" pos="0 0 0.008"
+            size="0.22 0.10 0.008" material="cabinet_body_mat"/>
+      <geom name="cabinet_top" class="visual" type="box" pos="0 0 0.65"
+            size="0.22 0.10 0.008" material="cabinet_body_mat"/>
+      <geom name="cabinet_left" class="visual" type="box" pos="-0.215 0 0.325"
+            size="0.008 0.10 0.325" material="cabinet_body_mat"/>
+      <geom name="cabinet_right" class="visual" type="box" pos="0.215 0 0.325"
+            size="0.008 0.10 0.325" material="cabinet_body_mat"/>
+      <geom name="cabinet_back" class="visual" type="box" pos="0 0.092 0.325"
+            size="0.215 0.008 0.325" material="cabinet_body_mat"/>
+      <geom name="cabinet_shelf" class="visual" type="box" pos="0 0.01 0.08"
+            size="0.208 0.075 0.006" material="cabinet_interior_mat"/>
+      <!-- Invisible collision proxies -->
+      <geom name="cabinet_col_bottom" class="collision" type="box" pos="0 0 0.008"
+            size="0.22 0.10 0.008"/>
+      <geom name="cabinet_col_top" class="collision" type="box" pos="0 0 0.65"
+            size="0.22 0.10 0.008"/>
+      <geom name="cabinet_col_left" class="collision" type="box" pos="-0.215 0 0.325"
+            size="0.008 0.10 0.325"/>
+      <geom name="cabinet_col_right" class="collision" type="box" pos="0.215 0 0.325"
+            size="0.008 0.10 0.325"/>
+      <geom name="cabinet_col_back" class="collision" type="box" pos="0 0.092 0.325"
+            size="0.215 0.008 0.325"/>
+      <geom name="cabinet_shelf_col" class="collision" type="box" pos="0 0.01 0.08"
+            size="0.208 0.075 0.006"/>
+
+      <!-- Hinged Cabinet Door opening outward to the right -->
+      <body name="tool_cabinet_door" pos="0.215 -0.10 0.325">
+        <joint name="tool_cabinet_door_hinge" type="hinge" axis="0 0 1"
+               range="0 1.57" limited="true" damping="4"/>
+        <geom name="tool_cabinet_door_panel" class="visual" type="box" pos="-0.21 0 0"
+              size="0.21 0.006 0.305" material="cabinet_face_mat"/>
+        <geom name="tool_cabinet_door_col" class="collision" type="box" pos="-0.21 0 0"
+              size="0.20 0.005 0.295"/>
+        <geom name="tool_cabinet_door_handle" class="visual" type="capsule"
+              fromto="-0.32 -0.02 -0.03 -0.32 -0.02 0.03" size="0.005"
+              material="polished_steel"/>
+        <geom name="tool_cabinet_door_handle_col" class="collision" type="capsule"
+              fromto="-0.32 -0.02 -0.03 -0.32 -0.02 0.03" size="0.005"/>
+        <site name="tool_cabinet_door_handle_grasp" pos="-0.32 -0.02 0"
+              size="0.004" rgba="0 0 0 0"/>
+      </body>
+    </body>
+
+    <!-- 5 Calibrated Workshop Cameras -->
+    <camera name="workshop_camera_left" pos="-1.30 -0.85 1.50"
+            xyaxes="0.78 -0.62 0 0.34 0.43 0.83" fovy="62"/>
+    <camera name="workshop_camera_right" pos="1.30 -0.85 1.50"
+            xyaxes="0.78 0.62 0 -0.34 0.43 0.83" fovy="62"/>
+    <camera name="workshop_camera_top" pos="0 0.28 2.20"
             xyaxes="1 0 0 0 1 0" fovy="64"/>
-    <camera name="workshop_camera_front" pos="0 -1.70 1.30"
-            xyaxes="1 0 0 0 0.43 0.90" fovy="64"/>
-    <camera name="workshop_camera_close" pos="0.82 -0.78 1.42"
-            xyaxes="0.78 0.62 0 -0.44 0.55 0.71" fovy="60"/>
+    <camera name="workshop_camera_front" pos="0.0 -1.50 1.60"
+            xyaxes="1 0 0 0 0.58 0.81" fovy="60"/>
+    <camera name="workshop_camera_close" pos="-0.10 -0.15 1.15"
+            xyaxes="0.95 0.30 0 -0.20 0.65 0.73" fovy="56"/>
+    <!-- Action-detail cameras used in the fifth video tile.  Target-body mode
+         keeps the relevant mechanism centered as drawers and doors move. -->
+    <camera name="workshop_camera_left_drawer_detail" mode="targetbody"
+            target="left_tool_drawer" pos="-0.72 -0.72 0.82" fovy="48"/>
+    <camera name="workshop_camera_right_drawer_detail" mode="targetbody"
+            target="right_tool_drawer" pos="0.72 -0.72 0.82" fovy="48"/>
+    <camera name="workshop_camera_cabinet_detail" pos="0.15 -0.15 1.05"
+            xyaxes="0.92575 -0.37813 0 0.10426 0.25526 0.96123" fovy="42"/>
+    <camera name="workshop_camera_cabinet_detail_swapped" pos="-0.20 -0.15 1.05"
+            xyaxes="0.92575 0.37813 0 -0.10426 0.25526 0.96123" fovy="42"/>
+    <camera name="workshop_camera_repair_detail" pos="-0.55 0.10 0.85"
+            xyaxes="0.78488 -0.61964 0 0.16643 0.21081 0.96325" fovy="28"/>
   </worldbody>
+
+  <contact>
+    <exclude body1="left_tool_drawer_frame" body2="left_tool_drawer"/>
+    <exclude body1="right_tool_drawer_frame" body2="right_tool_drawer"/>
+  </contact>
 
   <actuator>
     <position name="left_tool_drawer_actuator"
-              joint="left_tool_drawer_slide" kp="300" ctrlrange="0 0.72"/>
+              joint="left_tool_drawer_slide" kp="10000" ctrlrange="0 0.25"/>
+    <position name="right_tool_drawer_actuator"
+              joint="right_tool_drawer_slide" kp="10000" ctrlrange="0 0.25"/>
     <position name="tool_cabinet_door_actuator"
-              joint="tool_cabinet_door_hinge" kp="120"
-              ctrlrange="0 1.40"/>
+              joint="tool_cabinet_door_hinge" kp="300" ctrlrange="0 1.57"/>
   </actuator>
 </mujoco>

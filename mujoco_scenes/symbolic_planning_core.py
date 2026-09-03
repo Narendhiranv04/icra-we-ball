@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from heapq import heappop, heappush
-import math
 import time
 from typing import Iterable
 
@@ -82,17 +81,7 @@ def applicable_actions(
 
 
 def _heuristic(problem: SymbolicProblem, state: frozenset[Atom]) -> int:
-    missing_count = len(problem.goal_atoms - state)
-    if not missing_count or not problem.actions:
-        return 0
-    maximum_goal_adds = max(
-        len(action.add_effects & problem.goal_atoms)
-        for action in problem.actions
-    )
-    if maximum_goal_adds == 0:
-        return 0
-    minimum_cost = min(action.cost for action in problem.actions)
-    return math.ceil(missing_count / maximum_goal_adds) * minimum_cost
+    return len(problem.goal_atoms - state)
 
 
 def deterministic_astar(problem: SymbolicProblem) -> SearchResult:

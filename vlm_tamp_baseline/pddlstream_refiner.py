@@ -345,6 +345,11 @@ class PDDLStreamProtocol:
             raise ValueError("PDDLStream algorithm and planner must not be empty")
 
 
+REFINABLE_PREDICATES = frozenset(
+    {"INSPECTED", "HOLDING", "PLACED", "POURED", "STIRRED"}
+)
+
+
 class PDDLStreamSubgoalRefiner:
     """Solve each formal subgoal with the paper's PDDLStream retry protocol."""
 
@@ -376,6 +381,17 @@ class PDDLStreamSubgoalRefiner:
     def refine(self, subgoal: Subgoal, observation: Observation) -> RefinementResult:
         if subgoal_satisfied(subgoal, observation):
             return RefinementResult()
+        if subgoal.predicate not in REFINABLE_PREDICATES:
+            # The observable subgoal catalogue can advertise a predicate this
+            # backend has no goal encoding for (living room offers CLEANED).
+            # That is a model-output failure to feed back, not a crash.
+            return RefinementResult(
+                failure=RefinementFailure(
+                    "unsupported_subgoal",
+                    f"No PDDLStream goal encoding for {subgoal.predicate}.",
+                    subgoal,
+                )
+            )
         if not self._dependency_activated:
             activate_pddlstream()
             self._dependency_activated = True
@@ -728,7 +744,9 @@ class PDDLStreamSubgoalRefiner:
             "STIRRED": ("Stirred", values.get("tool_id"), values.get("target_id")),
         }
         if subgoal.predicate not in goals:
-            raise ValueError(f"PDDLStream kitchen domain cannot refine {subgoal.predicate}")
+            raise ValueError(
+                f"PDDLStream domain cannot refine {subgoal.predicate}"
+            )
         return goals[subgoal.predicate]
 
     @staticmethod

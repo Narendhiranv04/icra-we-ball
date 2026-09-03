@@ -28,6 +28,13 @@ DOMAINS: dict[str, tuple[Operator, ...]] = {
         Operator("PICK", ("object",)),
         Operator("PLACE", ("object", "region")),
     ),
+    "workshop": (
+        Operator("INSPECT", ("inspectable_region",)),
+        Operator("PICK", ("object",)),
+        Operator("PLACE", ("object", "destination")),
+        Operator("INSERT", ("object", "object")),
+        Operator("FASTEN", ("object", "object", "object")),
+    ),
 }
 
 

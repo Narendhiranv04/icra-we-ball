@@ -1,10 +1,11 @@
-"""Five-view RGB-D object point-cloud reconstruction for MuJoCo scenes."""
+"""Calibrated multi-view RGB-D object reconstruction for MuJoCo scenes."""
 
 from __future__ import annotations
 
 import json
 import math
 import time
+from copy import deepcopy
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Iterable, Sequence
@@ -13,14 +14,20 @@ import numpy as np
 import yaml
 from PIL import Image
 
-from mujoco_scenes.perception import ImageSegmenter, validate_segmentations
-
 try:
     import mujoco
 except ModuleNotFoundError:  # Allow the pure geometry helpers to be unit tested.
     mujoco = None
 
 
+CANONICAL_VIEWPOINT_ROLES = ("ISO_LEFT", "ISO_RIGHT", "DETAIL")
+KITCHEN_VIEWPOINT_ROLES = (
+    "inspection_left",
+    "inspection_right",
+    "inspection_top",
+    "inspection_front",
+    "inspection_close",
+)
 DEFAULT_FUSION_CAMERAS = (
     "left_shoulder_camera",
     "right_shoulder_camera",
@@ -118,7 +125,7 @@ class RegionInspection:
 
 @dataclass
 class PointCloudRun:
-    """Outputs and wall-clock timings from one five-view reconstruction."""
+    """Outputs and wall-clock timings from one multi-view reconstruction."""
 
     clouds: dict[str, ObjectPointCloud]
     cameras: tuple[str, ...]
@@ -159,6 +166,25 @@ def camera_intrinsics(fovy_degrees: float, width: int, height: int) -> np.ndarra
     )
 
 
+def scale_intrinsics(
+    intrinsics: np.ndarray,
+    *,
+    source_width: int,
+    source_height: int,
+    target_width: int,
+    target_height: int,
+) -> np.ndarray:
+    """Scale pinhole intrinsics to a resized, aligned RGB-D pixel grid."""
+    if min(source_width, source_height, target_width, target_height) <= 0:
+        raise ValueError("Image dimensions must be positive")
+    scaled = np.asarray(intrinsics, dtype=np.float64).copy()
+    scale_x = target_width / source_width
+    scale_y = target_height / source_height
+    scaled[0, 0] *= scale_x
+    scaled[0, 2] *= scale_x
+    scaled[1, 1] *= scale_y
+    scaled[1, 2] *= scale_y
+    return scaled
 
 
 def load_inspection_rig_config(
@@ -182,14 +208,18 @@ def load_inspection_rig_config(
             + ", ".join(sorted(missing))
         )
     camera_slots = config.get("camera_slots", {})
-    if len(camera_slots) != 5:
-        raise ValueError("Inspection rig must map exactly five camera slots")
+    if len(camera_slots) < 3 or len(set(camera_slots.values())) != len(
+        camera_slots
+    ):
+        raise ValueError(
+            "Inspection rig must map at least three distinct viewpoint roles"
+        )
     for region_id in required_regions:
         region = config["regions"][region_id]
         cameras = region.get("cameras", {})
         if set(cameras) != set(camera_slots):
             raise ValueError(
-                f"Region {region_id} must configure all five camera slots"
+                f"Region {region_id} must configure every canonical viewpoint role"
             )
         minimum = np.asarray(
             region["inspection_volume"]["minimum_world_m"], dtype=float
@@ -427,23 +457,9 @@ def gate_points_to_volume(
     boundary_margin_m: float,
 ) -> np.ndarray:
     """Return a mask selecting finite points inside one configured volume."""
-    samples = np.asarray(points, dtype=np.float64)
-    minimum = np.asarray(minimum_world_m, dtype=np.float64)
-    maximum = np.asarray(maximum_world_m, dtype=np.float64)
-    if samples.ndim != 2 or samples.shape[1] != 3:
-        raise ValueError("points must have shape (N, 3)")
-    if (
-        minimum.shape != (3,)
-        or maximum.shape != (3,)
-        or not np.all(np.isfinite(minimum))
-        or not np.all(np.isfinite(maximum))
-        or np.any(maximum <= minimum)
-    ):
-        raise ValueError("Volume bounds must be finite ordered 3-vectors")
-    if not math.isfinite(float(boundary_margin_m)) or boundary_margin_m < 0.0:
-        raise ValueError("boundary_margin_m must be finite and non-negative")
-    minimum = minimum - boundary_margin_m
-    maximum = maximum + boundary_margin_m
+    samples = np.asarray(points)
+    minimum = np.asarray(minimum_world_m, dtype=np.float64) - boundary_margin_m
+    maximum = np.asarray(maximum_world_m, dtype=np.float64) + boundary_margin_m
     return (
         np.all(np.isfinite(samples), axis=1)
         & np.all(samples >= minimum, axis=1)
@@ -514,7 +530,9 @@ def backproject_masked_depth(
         or intrinsics[0, 0] <= 0.0
         or intrinsics[1, 1] <= 0.0
     ):
-        raise ValueError("intrinsics must be a finite 3x3 matrix with positive focal lengths")
+        raise ValueError(
+            "intrinsics must be a finite 3x3 matrix with positive focal lengths"
+        )
     if (
         camera_position.shape != (3,)
         or camera_rotation.shape != (3, 3)
@@ -549,8 +567,8 @@ def backproject_masked_depth(
             -z,
         )
     )
-    world = local @ camera_rotation.T
-    world += camera_position
+    world = local @ np.asarray(camera_rotation, dtype=np.float64).T
+    world += np.asarray(camera_position, dtype=np.float64)
     pixels = np.column_stack((rows, cols)).astype(np.int32)
     return world.astype(np.float32), pixels
 
@@ -686,8 +704,11 @@ class GeometryChecker:
         height: int = 480,
         max_depth: float = 5.0,
         voxel_size: float = 0.003,
-        segmenter: ImageSegmenter | None = None,
+        segmenter: Any | None = None,
         semantic_prompts: Sequence[str] = (),
+        render_geom_groups: Iterable[int] | None = None,
+        instance_geom_groups: Iterable[int] | None = None,
+        allowed_geom_groups: Iterable[int] | None = None,
     ):
         if mujoco is None:
             raise RuntimeError("GeometryChecker requires the mujoco package")
@@ -722,22 +743,49 @@ class GeometryChecker:
             if cameras is not None
             else getattr(scene, "point_cloud_cameras", DEFAULT_FUSION_CAMERAS)
         )
-        if (
-            not self.cameras
-            or len(set(self.cameras)) != len(self.cameras)
-            or any(not isinstance(name, str) or not name for name in self.cameras)
-        ):
-            raise ValueError("cameras must contain unique non-empty camera names")
         self.width = width
         self.height = height
         self.max_depth = max_depth
         self.voxel_size = voxel_size
         self.segmenter = segmenter
         self.semantic_prompts = tuple(semantic_prompts)
+
+        if render_geom_groups is not None:
+            self.render_geom_groups: tuple[int, ...] | None = tuple(render_geom_groups)
+        elif hasattr(scene, "perception_render_geom_groups") and scene.perception_render_geom_groups is not None:
+            self.render_geom_groups = tuple(scene.perception_render_geom_groups)
+        elif allowed_geom_groups is not None:
+            self.render_geom_groups = tuple(allowed_geom_groups)
+        elif hasattr(scene, "perception_geom_groups") and scene.perception_geom_groups is not None:
+            self.render_geom_groups = tuple(scene.perception_geom_groups)
+        else:
+            self.render_geom_groups = None
+
+        if instance_geom_groups is not None:
+            self.instance_geom_groups: tuple[int, ...] | None = tuple(instance_geom_groups)
+        elif hasattr(scene, "perception_instance_geom_groups") and scene.perception_instance_geom_groups is not None:
+            self.instance_geom_groups = tuple(scene.perception_instance_geom_groups)
+        elif allowed_geom_groups is not None:
+            self.instance_geom_groups = tuple(allowed_geom_groups)
+        elif hasattr(scene, "perception_geom_groups") and scene.perception_geom_groups is not None:
+            self.instance_geom_groups = tuple(scene.perception_geom_groups)
+        else:
+            self.instance_geom_groups = None
+
+        self.allowed_geom_groups = self.instance_geom_groups
         self._camera_ids = {
             name: self._require_id(mujoco.mjtObj.mjOBJ_CAMERA, name)
             for name in self.cameras
         }
+
+    def _build_scene_option(self) -> mujoco.MjvOption:
+        vopt = mujoco.MjvOption()
+        if self.render_geom_groups is not None:
+            vopt.geomgroup[:] = 0
+            for g in self.render_geom_groups:
+                if 0 <= g < len(vopt.geomgroup):
+                    vopt.geomgroup[g] = 1
+        return vopt
 
     def _require_id(self, object_type, name: str) -> int:
         object_id = mujoco.mj_name2id(self.model, object_type, name)
@@ -746,15 +794,26 @@ class GeometryChecker:
         return object_id
 
     def _geom_ids_by_instance(
-        self, instance_names: Iterable[str]
+        self,
+        instance_names: Iterable[str],
+        allowed_geom_groups: Iterable[int] | None = None,
     ) -> dict[str, np.ndarray]:
         root_by_body: dict[int, str] = {}
         for name in instance_names:
             body_id = self._require_id(mujoco.mjtObj.mjOBJ_BODY, name)
             root_by_body[body_id] = name
 
+        groups = (
+            tuple(allowed_geom_groups)
+            if allowed_geom_groups is not None
+            else self.instance_geom_groups
+        )
+
         geom_ids: dict[str, list[int]] = {name: [] for name in instance_names}
         for geom_id, geom_body_id in enumerate(self.model.geom_bodyid):
+            if groups is not None:
+                if self.model.geom_group[geom_id] not in groups:
+                    continue
             body_id = int(geom_body_id)
             while body_id > 0:
                 instance_name = root_by_body.get(body_id)
@@ -770,15 +829,14 @@ class GeometryChecker:
         """Run one reconstruction over all currently visible object instances."""
         started = time.perf_counter()
         mujoco.mj_forward(self.model, self.data)
-        if self.segmenter is None:
-            visible = self.scene.get_visible_object_instances()
-            instance_kinds = {name: kind for name, kind in visible}
-            geom_ids = self._geom_ids_by_instance(instance_kinds)
+        if hasattr(self.scene, "privileged_get_visible_backend_instances"):
+            visible = self.scene.privileged_get_visible_backend_instances()
         else:
-            # The learned path discovers instances from RGB. It deliberately
-            # does not ask the scene controller which objects should exist.
-            instance_kinds = {}
-            geom_ids = {}
+            visible = self.scene.get_visible_object_instances()
+        instance_kinds = {name: kind for name, kind in visible}
+        geom_ids = self._geom_ids_by_instance(
+            instance_kinds, allowed_geom_groups=self.allowed_geom_groups
+        )
         identification_done = time.perf_counter()
 
         points: dict[str, list[np.ndarray]] = {name: [] for name in instance_kinds}
@@ -792,26 +850,22 @@ class GeometryChecker:
         renderer = mujoco.Renderer(
             self.model, height=self.height, width=self.width
         )
+        scene_option = self._build_scene_option()
         try:
             for camera_name in self.cameras:
                 camera_id = self._camera_ids[camera_name]
-                renderer.update_scene(self.data, camera=camera_id)
+                renderer.update_scene(
+                    self.data, camera=camera_id, scene_option=scene_option
+                )
 
                 render_started = time.perf_counter()
                 rgb = renderer.render().copy()
                 renderer.enable_depth_rendering()
                 depth = renderer.render().copy()
                 renderer.disable_depth_rendering()
-                if self.segmenter is None:
-                    renderer.enable_segmentation_rendering()
-                    segmentation = renderer.render().copy()
-                    renderer.disable_segmentation_rendering()
-                else:
-                    # Retain the capture field for debug compatibility without
-                    # requesting MuJoCo's ground-truth segmentation buffer.
-                    segmentation = np.full(
-                        (self.height, self.width, 2), -1, dtype=np.int32
-                    )
+                renderer.enable_segmentation_rendering()
+                segmentation = renderer.render().copy()
+                renderer.disable_segmentation_rendering()
                 render_seconds += time.perf_counter() - render_started
 
                 projection_started = time.perf_counter()
@@ -820,48 +874,13 @@ class GeometryChecker:
                 )
                 camera_position = self.data.cam_xpos[camera_id].copy()
                 camera_rotation = self.data.cam_xmat[camera_id].reshape(3, 3).copy()
-                if self.segmenter is None:
-                    is_geom = segmentation[:, :, 1] == int(
-                        mujoco.mjtObj.mjOBJ_GEOM
+                is_geom = segmentation[:, :, 1] == int(
+                    mujoco.mjtObj.mjOBJ_GEOM
+                )
+                for instance_name, ids in geom_ids.items():
+                    visible_instance_mask = is_geom & np.isin(
+                        segmentation[:, :, 0], ids
                     )
-                    frame_instances = (
-                        (
-                            instance_name,
-                            instance_kinds[instance_name],
-                            is_geom & np.isin(segmentation[:, :, 0], ids),
-                        )
-                        for instance_name, ids in geom_ids.items()
-                    )
-                else:
-                    segmented = validate_segmentations(
-                        self.segmenter.segment(
-                            rgb,
-                            camera_id=camera_name,
-                            prompts=self.semantic_prompts,
-                        ),
-                        image_shape=(self.height, self.width),
-                    )
-                    frame_instances = (
-                        (
-                            item.instance_id,
-                            item.label or "unknown",
-                            item.mask,
-                        )
-                        for item in segmented
-                    )
-                for instance_name, object_kind, visible_instance_mask in frame_instances:
-                    previous_kind = instance_kinds.setdefault(
-                        instance_name, object_kind
-                    )
-                    if previous_kind != object_kind:
-                        raise ValueError(
-                            f"segmentation label changed for {instance_name!r}: "
-                            f"{previous_kind!r} -> {object_kind!r}"
-                        )
-                    if instance_name not in points:
-                        points[instance_name] = []
-                        colors[instance_name] = []
-                        pixel_counts[instance_name] = {}
                     mask = visible_instance_mask
                     mask = reject_depth_discontinuities(
                         depth,
@@ -942,42 +961,39 @@ class GeometryChecker:
         stage_output_dir: str | Path | None = None,
         rig_config: str | Path | dict[str, Any] | None = None,
     ) -> PointCloudRun:
-        """Capture one fresh, region-facing five-view measurement stage.
+        """Capture one fresh, region-facing calibrated measurement stage.
 
         Unlike :meth:`run`, this path positions a virtual camera rig, validates
         every view, gates points to the requested region, and emits typed
         :class:`MeasurementEvidence` objects. It never reads a historical PLY.
         """
         started = time.perf_counter()
-        if isinstance(rig_config, (str, Path)):
-            configuration = load_inspection_rig_config(rig_config)
-        elif rig_config is not None:
-            configuration = rig_config
-        else:
-            configuration = load_inspection_rig_config(
+        configuration = (
+            load_inspection_rig_config(rig_config)
+            if isinstance(rig_config, (str, Path))
+            else rig_config
+            or load_inspection_rig_config(
                 getattr(
                     self.scene,
                     "inspection_rig_config_path",
                     INSPECTION_RIG_CONFIG_PATH,
                 )
             )
+        )
         if region_id not in configuration["regions"]:
             raise ValueError(f"No inspection rig configured for {region_id}")
         region = configuration["regions"][region_id]
         settle_steps = int(region.get("settle_steps", 0))
         for _ in range(max(0, settle_steps)):
             mujoco.mj_step(self.model, self.data)
-        mujoco.mj_forward(self.model, self.data)
-
-        if self.segmenter is None:
-            visible = self.scene.get_visible_object_instances()
-            instance_kinds = {name: kind for name, kind in visible}
-            geom_ids = self._geom_ids_by_instance(instance_kinds)
+        if hasattr(self.scene, "privileged_get_visible_backend_instances"):
+            visible = self.scene.privileged_get_visible_backend_instances()
         else:
-            # Learned perception sees only the rendered RGB frames. Region
-            # contents and simulator instance names are not queried here.
-            instance_kinds = {}
-            geom_ids = {}
+            visible = self.scene.get_visible_object_instances()
+        instance_kinds = {name: kind for name, kind in visible}
+        geom_ids = self._geom_ids_by_instance(
+            instance_kinds, allowed_geom_groups=self.allowed_geom_groups
+        )
         identification_done = time.perf_counter()
 
         camera_slots = configuration["camera_slots"]
@@ -1066,33 +1082,25 @@ class GeometryChecker:
         )
         margin = float(region.get("boundary_margin_m", 0.0))
         validation_config = configuration.get("view_validation", {})
-        external_track_centroids: dict[str, np.ndarray] = {}
-        external_track_labels: dict[str, str] = {}
-        external_track_observations: dict[str, int] = {}
-        association_distance = float(
-            processing.get("external_association_max_distance_m", 0.12)
-        )
 
         renderer = mujoco.Renderer(
             self.model, height=self.height, width=self.width
         )
+        scene_option = self._build_scene_option()
         try:
             for logical_name, model_camera_name in camera_slots.items():
                 camera_id = camera_ids[logical_name]
-                renderer.update_scene(self.data, camera=camera_id)
+                renderer.update_scene(
+                    self.data, camera=camera_id, scene_option=scene_option
+                )
                 render_started = time.perf_counter()
                 rgb = renderer.render().copy()
                 renderer.enable_depth_rendering()
                 depth = renderer.render().copy()
                 renderer.disable_depth_rendering()
-                if self.segmenter is None:
-                    renderer.enable_segmentation_rendering()
-                    segmentation = renderer.render().copy()
-                    renderer.disable_segmentation_rendering()
-                else:
-                    segmentation = np.full(
-                        (self.height, self.width, 2), -1, dtype=np.int32
-                    )
+                renderer.enable_segmentation_rendering()
+                segmentation = renderer.render().copy()
+                renderer.disable_segmentation_rendering()
                 render_seconds += time.perf_counter() - render_started
                 intrinsics = camera_intrinsics(
                     float(self.model.cam_fovy[camera_id]),
@@ -1157,41 +1165,20 @@ class GeometryChecker:
                     continue
 
                 projection_started = time.perf_counter()
-                if self.segmenter is None:
-                    is_geom = segmentation[:, :, 1] == int(
-                        mujoco.mjtObj.mjOBJ_GEOM
+                is_geom = segmentation[:, :, 1] == int(
+                    mujoco.mjtObj.mjOBJ_GEOM
+                )
+                for instance_name, ids in geom_ids.items():
+                    visible_instance_mask = is_geom & np.isin(
+                        segmentation[:, :, 0], ids
                     )
-                    frame_instances = (
-                        (
-                            instance_name,
-                            instance_kinds[instance_name],
-                            is_geom & np.isin(segmentation[:, :, 0], ids),
-                        )
-                        for instance_name, ids in geom_ids.items()
+                    # Preserve the visible, unprocessed instance pixels for the
+                    # independent RGB detector-to-instance association path.
+                    # Geometry filtering below must not alter the association
+                    # mask or leak into semantic inference.
+                    capture.instance_masks[instance_name] = (
+                        visible_instance_mask.copy()
                     )
-                else:
-                    segmented = validate_segmentations(
-                        self.segmenter.segment(
-                            rgb,
-                            camera_id=logical_name,
-                            prompts=self.semantic_prompts,
-                        ),
-                        image_shape=(self.height, self.width),
-                    )
-                    frame_instances = (
-                        (
-                            item.instance_id,
-                            item.label or "unknown",
-                            item.mask,
-                        )
-                        for item in segmented
-                    )
-                used_external_tracks: set[str] = set()
-                for (
-                    source_id,
-                    object_kind,
-                    visible_instance_mask,
-                ) in frame_instances:
                     mask = visible_instance_mask
                     mask = erode_binary_mask(mask, erosion_pixels)
                     mask = reject_depth_discontinuities(
@@ -1217,39 +1204,6 @@ class GeometryChecker:
                     )
                     inside_points = world_points[inside_mask]
                     inside_pixels = pixels[inside_mask]
-                    if self.segmenter is None:
-                        instance_name = source_id
-                    else:
-                        association_points = (
-                            inside_points if len(inside_points) else world_points
-                        )
-                        if not len(association_points):
-                            continue
-                        instance_name = associate_segmented_centroid(
-                            object_kind,
-                            np.median(association_points, axis=0),
-                            track_centroids=external_track_centroids,
-                            track_labels=external_track_labels,
-                            track_observations=external_track_observations,
-                            used_track_ids=used_external_tracks,
-                            maximum_distance_m=association_distance,
-                        )
-                    previous_kind = instance_kinds.setdefault(
-                        instance_name, object_kind
-                    )
-                    if previous_kind != object_kind:
-                        raise ValueError(
-                            f"segmentation label changed for {instance_name!r}: "
-                            f"{previous_kind!r} -> {object_kind!r}"
-                        )
-                    if instance_name not in raw_points:
-                        raw_points[instance_name] = {"inside": [], "all": []}
-                        raw_colors[instance_name] = {"inside": [], "all": []}
-                        points_by_camera[instance_name] = {}
-                        pixel_counts[instance_name] = {}
-                    capture.instance_masks[instance_name] = (
-                        visible_instance_mask.copy()
-                    )
                     all_colors = (
                         rgb[pixels[:, 0], pixels[:, 1]].astype(np.uint8)
                         if len(pixels)
@@ -1297,7 +1251,9 @@ class GeometryChecker:
             if capture.validation.get("usable", False)
         )
         minimum_rig_cameras = int(
-            validation_config.get("minimum_valid_rig_cameras", 5)
+            validation_config.get(
+                "minimum_valid_rig_cameras", len(CANONICAL_VIEWPOINT_ROLES)
+            )
         )
         minimum_object_cameras = int(
             validation_config.get("minimum_object_camera_count", 2)
@@ -1461,22 +1417,17 @@ class GeometryChecker:
                 )
         fusion_seconds = time.perf_counter() - fusion_started
 
+        region_state = (
+            {"region_id": "INITIAL", "open": True, "inspected": True}
+            if region_id == "INITIAL"
+            else deepcopy(
+                self.scene.get_region_observation_states().get(region_id, {})
+            )
+        )
         metadata = {
             "region_id": region_id,
-            "perception_mode": (
-                "mujoco_oracle"
-                if self.segmenter is None
-                else str(self.segmenter.name)
-            ),
-            "region_open": (
-                True
-                if region_id == "INITIAL"
-                else bool(
-                    self.scene.get_region_observation_states()
-                    .get(region_id, {})
-                    .get("open", False)
-                )
-            ),
+            "region_open": bool(region_state.get("open", False)),
+            "region_state": region_state,
             "rig_pose": {
                 "position_world_m": rig_position.tolist(),
                 "target_world_m": target_base.tolist(),
@@ -1610,25 +1561,6 @@ class GeometryChecker:
             Image.fromarray(segmentation_rgb).save(
                 directory / "segmentation.png"
             )
-            mask_overlay = capture.rgb.astype(np.float32).copy()
-            palette = (
-                (239, 83, 80),
-                (66, 165, 245),
-                (102, 187, 106),
-                (255, 202, 40),
-                (171, 71, 188),
-                (255, 112, 67),
-            )
-            for index, mask in enumerate(capture.instance_masks.values()):
-                color = np.asarray(
-                    palette[index % len(palette)], dtype=np.float32
-                )
-                mask_overlay[mask] = (
-                    0.55 * mask_overlay[mask] + 0.45 * color
-                )
-            Image.fromarray(mask_overlay.astype(np.uint8)).save(
-                directory / "masks_overlay.png"
-            )
             camera_points = [
                 points
                 for points in capture.object_points.values()
@@ -1669,7 +1601,6 @@ class GeometryChecker:
                         "intrinsics": capture.intrinsics.tolist(),
                         "resolution": [run.width, run.height],
                         "depth_png_unit": "mm",
-                        "detected_mask_count": len(capture.instance_masks),
                         "validation": capture.validation,
                     },
                     indent=2,

@@ -24,7 +24,11 @@ REGION_DESTINATIONS = {
     "D2": "home",
     "B1": "box",
 }
-INTERFERING_OPEN_REGIONS = {"C2": "B1", "B1": "C2"}
+# C2 and B1 have an order-dependent articulation interaction.  The supported
+# execution order is C2 first, then B1.  Therefore B1 is only a conflict when
+# C2 itself is being opened; opening B1 after an already-open C2 must leave C2
+# open rather than silently inserting a CLOSE(C2) side effect.
+INTERFERING_OPEN_REGIONS = {"C2": "B1"}
 # The position actuators reach their configured open/closed targets within
 # this deterministic window. Running the free-object scene for the historical
 # 1000-step default unnecessarily ejects light drawer contents before the
@@ -96,8 +100,9 @@ class SequentialInspectionAdapter:
             conflicting is not None
             and self.scene.state.container_open_state.get(conflicting, False)
         ):
-            # C2's door and B1's lid share physical sweep volume. Closing the
-            # previously inspected mechanism preserves deterministic opening.
+            # Enforce the supported order without making OPEN(B1) implicitly
+            # close C2.  If B1 was opened first, close it before opening C2;
+            # once C2 is open, a subsequent B1 open leaves C2 untouched.
             self.scene.close_container(
                 conflicting, steps=DIRECT_ACTUATION_STEPS
             )
@@ -113,6 +118,16 @@ def _witness_status(session: ObservedStateRun) -> str:
     return str(witness.get("status", "INCOMPLETE"))
 
 
+def _existing_representative_rgb_path(cloud_run: Any, stage_dir: Path) -> str | None:
+    """Return path to first existing raw camera RGB capture from PointCloudRun cameras, or None."""
+    if cloud_run is not None and getattr(cloud_run, "cameras", None):
+        for camera_id in cloud_run.cameras:
+            rgb_path = stage_dir / "cameras" / str(camera_id) / "rgb.png"
+            if rgb_path.is_file():
+                return str(rgb_path)
+    return None
+
+
 def run_fixed_order_inspection(
     scene,
     session: ObservedStateRun,
@@ -122,13 +137,23 @@ def run_fixed_order_inspection(
     observe: Callable[[str, str | None], tuple[Any, Path]],
     stop_on_complete: bool,
     completion_predicate: Callable[[ObservedStateRun], bool] | None = None,
+    observer: Any = None,
 ) -> ObservedStateRun:
     """Run the common closed-initial, fixed-order observation loop."""
     sequence = tuple(sequence)
+    actually_inspected: list[str] = []
     print("\n[OBSERVED STATE] Stage 000: closed initial observation")
     _cloud_run, stage_dir = observe("initial", None)
     print(f"  Witness: {_witness_status(session)}")
     print(f"  Saved: {stage_dir}")
+    if observer is not None:
+        frame_path_str = _existing_representative_rgb_path(_cloud_run, stage_dir)
+        observer("observation_updated", {
+            "stage": "initial",
+            "stage_dir": str(stage_dir),
+            "frame_path": frame_path_str,
+            "inspected_regions": [],
+        })
 
     complete = completion_predicate or (
         lambda current: _witness_status(current) == "COMPLETE"
@@ -162,7 +187,20 @@ def run_fixed_order_inspection(
             f"[OBSERVED STATE] Stage {session.next_stage:03d}: "
             f"inspect {region_id}"
         )
+        if observer is not None:
+            observer("search_region_selected", {
+                "region": region_id,
+                "index": sequence_index,
+                "total_regions": len(sequence),
+            })
         adapter.inspect(region_id)
+        actually_inspected.append(region_id)
+        if observer is not None:
+            observer("search_region_opened", {
+                "region": region_id,
+                "success": True,
+                "exploratory": True,
+            })
         cloud_run, stage_dir = observe(f"after_{region_id}", region_id)
         print(
             f"  Registry objects: {len(session.registry['objects'])}; "
@@ -170,6 +208,14 @@ def run_fixed_order_inspection(
         )
         print(f"  Witness: {_witness_status(session)}")
         print(f"  Saved: {stage_dir}")
+        if observer is not None:
+            frame_path_str = _existing_representative_rgb_path(cloud_run, stage_dir)
+            observer("observation_updated", {
+                "stage": f"after_{region_id}",
+                "stage_dir": str(stage_dir),
+                "frame_path": frame_path_str,
+                "inspected_regions": list(actually_inspected),
+            })
         if stop_on_complete and complete(session):
             remaining = list(sequence[sequence_index + 1:])
             session.append_event(
@@ -223,22 +269,23 @@ def run_sequential_inspection(
     semantic_vocabulary_path: str | Path | None = None,
     semantic_confidence_threshold: float | None = None,
     semantic_min_supporting_views: int | None = None,
+    semantic_minimum_mean_confidence: float | None = None,
+    semantic_maximum_conflicting_view_fraction: float | None = None,
+    semantic_winner_policy: str | None = None,
+    semantic_device: str | None = None,
     grounding_mode: str = "auto",
     pairing_strategy: str | None = None,
     save_semantic_overlays: bool = False,
     completion_predicate: Callable[[ObservedStateRun], bool] | None = None,
     record_oracle_diagnostics: bool = True,
+    observer: Any = None,
 ) -> ObservedStateRun:
     """Observe closed reset, then inspect and persist one region at a time."""
     available_regions = tuple(scene.get_region_observation_states().keys())
     default_sequence = tuple(
         getattr(scene, "default_inspection_order", DEFAULT_INSPECTION_ORDER)
     )
-    sequence = tuple(default_sequence if sequence is None else sequence)
-    if any(not isinstance(region, str) or not region for region in sequence):
-        raise ValueError("Inspection sequence must contain non-empty region names")
-    if len(sequence) != len(set(sequence)):
-        raise ValueError("Inspection sequence contains duplicate regions")
+    sequence = tuple(sequence or default_sequence)
     unknown = [region for region in sequence if region not in available_regions]
     if unknown:
         raise ValueError(
@@ -264,10 +311,7 @@ def run_sequential_inspection(
                 "strategy", "semantic_role_scoped"
             )
         )
-    )
-    if not isinstance(pairing_strategy, str) or not pairing_strategy.strip():
-        raise ValueError("pairing_strategy must be a non-empty string")
-    pairing_strategy = pairing_strategy.strip().replace("-", "_")
+    ).replace("-", "_")
     semantic_config = load_semantic_config(
         semantic_config_path
         if semantic_config_path is not None
@@ -279,17 +323,21 @@ def run_sequential_inspection(
         vocabulary_path=semantic_vocabulary_path,
     )
     if semantic_min_supporting_views is not None:
-        if (
-            isinstance(semantic_min_supporting_views, bool)
-            or not isinstance(semantic_min_supporting_views, int)
-            or semantic_min_supporting_views <= 0
-        ):
-            raise ValueError(
-                "semantic_min_supporting_views must be a positive integer"
-            )
-        semantic_config["fusion"]["minimum_supporting_views"] = (
+        semantic_config["fusion"]["minimum_supporting_views"] = int(
             semantic_min_supporting_views
         )
+    if semantic_minimum_mean_confidence is not None:
+        semantic_config["fusion"]["minimum_mean_confidence"] = float(
+            semantic_minimum_mean_confidence
+        )
+    if semantic_maximum_conflicting_view_fraction is not None:
+        semantic_config["fusion"][
+            "maximum_conflicting_view_fraction"
+        ] = float(semantic_maximum_conflicting_view_fraction)
+    if semantic_winner_policy is not None:
+        semantic_config["fusion"]["winner_policy"] = semantic_winner_policy
+    if semantic_device is not None:
+        semantic_config["detector"]["device"] = semantic_device
     if semantic_detector is None:
         semantic_detector = create_semantic_detector(
             semantic_config,
@@ -375,6 +423,16 @@ def run_sequential_inspection(
                     "minimum_supporting_views"
                 ]
             ),
+            "semantic_minimum_mean_confidence": semantic_config["fusion"][
+                "minimum_mean_confidence"
+            ],
+            "semantic_maximum_conflicting_view_fraction": semantic_config[
+                "fusion"
+            ].get("maximum_conflicting_view_fraction"),
+            "semantic_winner_policy": semantic_config["fusion"].get(
+                "winner_policy"
+            ),
+            "semantic_device": semantic_config["detector"].get("device"),
             "save_semantic_overlays": save_semantic_overlays,
         },
     )
@@ -405,6 +463,7 @@ def run_sequential_inspection(
         observe=observe,
         stop_on_complete=stop_on_complete,
         completion_predicate=completion_predicate,
+        observer=observer,
     )
     print(f"[OBSERVED STATE] Run complete: {session.run_dir}\n")
     return session

@@ -28,6 +28,14 @@ views and an observable alias-to-ID map, while
 PDDLStream receives the private world model required to refine a grounded
 subgoal, as in the paper.
 
+On a recoverable physical or refinement failure, the next VLM request receives
+only a typed, concise failure record (for example, `grasp_failed` or
+`path_blocked`) plus the failed subgoal. Full controller and calibration
+diagnostics remain in the local episode artifact and are never inserted into a
+model prompt. Transport and server failures are recorded as `inference_failed`;
+`invalid_vlm_output` is reserved for a returned completion that violates the
+English-plan or formal-subgoal contract.
+
 The original paper used semantically named/annotated observations, so this
 adaptation exposes those names in the RGB annotations. MuJoCo instance
 segmentation supplies annotation geometry and persistent ID correspondence;
@@ -141,6 +149,27 @@ vocabulary comparison is retained, while the primary shared-task comparison
 normalizes `OPEN` to `INSPECT`, removes GT-only `CLOSE` cleanup, and normalizes
 `PLACE_SERVING_UTENSIL` to `PLACE`. Both comparisons are saved so the
 normalization is auditable.
+
+## Workshop: planning-only GT sequence benchmark
+
+W1--W10 use the same closed-cell visual input for both comparison methods: a
+labelled frame joint plus left drawer, right drawer, tool cabinet, and main
+workbench. Each variant's storage contents remain private until the symbolic
+`INSPECT` action succeeds. VLM-TAMP uses a Workshop PDDLStream domain for the
+symbolic refinement; it does not move MuJoCo. The GT comparison keeps raw
+traces for diagnostics and compares a causal task skeleton: inspection, the
+final pick before insertion/fastening, insertion, fastening, and the required
+final driver placement. Temporary single-arm workbench staging is excluded.
+
+```bash
+MUJOCO_GL=egl .venv/bin/python -m vlm_tamp_baseline.run_workshop \
+  --variant W1 \
+  --output-dir runs/vlm_tamp/workshop/W1/qwen35_seed_000 \
+  --seed 0
+```
+
+The default remains one two-stage VLM call. Use `--max-model-calls` greater
+than one only as a separately reported symbolic-reprompt condition.
 
 Run both baselines over a variant/seed grid with:
 

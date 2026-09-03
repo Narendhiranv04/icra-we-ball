@@ -10,6 +10,7 @@ from __future__ import annotations
 import base64
 from dataclasses import dataclass
 from io import BytesIO
+import json
 from pathlib import Path
 import time
 from typing import Any, Iterable, Mapping
@@ -139,6 +140,60 @@ def _goal_contract(bundle: KitchenExecutionBundle) -> "KitchenGoalContract":
         tuple(stir_targets),
         tuple(receptacle_requirements),
         labels,
+    )
+
+
+def goal_contract_from_expected_actions(
+    path: str | Path,
+    *,
+    generic_for_backend: Mapping[str, str],
+    object_labels: Mapping[str, str],
+) -> "KitchenGoalContract":
+    """Build a private outcome checker without exposing the GT plan to a model.
+
+    Only terminal task relations are retained. Navigation, inspection, picks,
+    and temporary countertop placements are deliberately excluded.
+    """
+    document = json.loads(Path(path).read_text(encoding="utf-8"))
+    if str(document.get("intended_outcome", "")).upper() != "FEASIBLE":
+        raise ValueError("Live discovery execution currently requires a FEASIBLE variant")
+    rows = document.get("actions")
+    if not isinstance(rows, list):
+        raise ValueError("Expected-action document must contain an actions array")
+
+    def public_id(value: object) -> str:
+        text = str(value)
+        return generic_for_backend.get(text, text)
+
+    required: list[str] = []
+    stir_targets: list[str] = []
+    for row in rows:
+        if not isinstance(row, Mapping):
+            continue
+        operator = str(row.get("operator", "")).upper()
+        arguments = row.get("arguments", ())
+        if not isinstance(arguments, list):
+            continue
+        values = tuple(public_id(value) for value in arguments)
+        effect = None
+        if operator == "POUR" and len(values) == 2:
+            effect = _effect("poured", *values)
+        elif operator == "STIR" and len(values) == 2:
+            if values[1] not in stir_targets:
+                stir_targets.append(values[1])
+        elif operator == "PLACE" and len(values) == 2 and values[1] == "serving_area":
+            effect = _effect("placed", *values)
+        elif operator == "PLACE_SERVING_UTENSIL" and len(values) == 2:
+            effect = _effect("placed", *values)
+        if effect is not None and effect not in required:
+            required.append(effect)
+    if not required and not stir_targets:
+        raise ValueError("Expected-action document contains no terminal goal relations")
+    return KitchenGoalContract(
+        tuple(required),
+        tuple(stir_targets),
+        (),
+        dict(object_labels),
     )
 
 
@@ -344,6 +399,10 @@ class BaselineKitchenRuntime:
         self.capture_index = 0
         self._cached_fingerprint: tuple[Any, ...] | None = None
         self._cached_images: tuple[dict[str, str], ...] = ()
+        self.latest_annotation_manifest: dict[str, Any] = {
+            "schema_version": 1,
+            "cameras": {},
+        }
         self._latest_visible_object_ids: frozenset[str] = frozenset()
 
         self.phase_b = KitchenPhaseBExecutionDispatcher(
@@ -469,6 +528,8 @@ class BaselineKitchenRuntime:
         cls,
         variant: str,
         output_dir: str | Path,
+        *,
+        expected_actions: str | Path | None = None,
         **kwargs: Any,
     ) -> "BaselineKitchenRuntime":
         """Build an anonymous-ID benchmark observation without Phase-1 semantics.
@@ -566,7 +627,15 @@ class BaselineKitchenRuntime:
             str(row["generic_object_id"]): str(row.get("semantic_label", "unknown"))
             for row in accepted
         }
-        contract = KitchenGoalContract(("__planning_goal_unset__",), (), (), labels)
+        contract = (
+            goal_contract_from_expected_actions(
+                expected_actions,
+                generic_for_backend=generic_for_backend,
+                object_labels=labels,
+            )
+            if expected_actions is not None
+            else KitchenGoalContract(("__planning_goal_unset__",), (), (), labels)
+        )
         runtime = cls(bundle, output, goal_contract=contract, **kwargs)
         write_json(
             output / "_private_evaluation" / "variant_adapter.json",
@@ -575,6 +644,9 @@ class BaselineKitchenRuntime:
                 "internal_variant": internal,
                 "generic_for_backend": generic_for_backend,
                 "model_visible": False,
+                "private_goal_evaluator": str(Path(expected_actions).resolve())
+                if expected_actions is not None
+                else None,
             },
         )
         return runtime
@@ -1074,6 +1146,7 @@ class BaselineKitchenRuntime:
                 }
             )
         write_json(frame_dir / "annotations.json", annotation_manifest)
+        self.latest_annotation_manifest = annotation_manifest
         if not images:
             raise RuntimeError("No configured kitchen camera could be rendered")
         self._cached_fingerprint = fingerprint

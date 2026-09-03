@@ -1,0 +1,15 @@
+{
+  "scenes": {
+    "kitchen": {
+      "INSPECT": {"description": "Inspect one known region and update visible observations.", "arguments": {"region_id": "region"}},
+      "PICK": {"description": "Pick one currently visible object.", "arguments": {"object_id": "object"}},
+      "PLACE": {"description": "Place the held object in or on a visible object or known region.", "arguments": {"object_id": "object", "region_id": "destination"}},
+      "POUR": {"description": "Pour from the held source into a visible target object.", "arguments": {"source_id": "object", "target_id": "object"}},
+      "STIR": {"description": "Stir a visible target using the held tool.", "arguments": {"tool_id": "object", "target_id": "object"}}
+    },
+    "living_room": {
+      "PICK": {"description": "Pick one currently visible rigid object.", "arguments": {"object_id": "object"}},
+      "PLACE": {"description": "Place the held object on a visible support region.", "arguments": {"object_id": "object", "region_id": "region"}}
+    }
+  }
+}

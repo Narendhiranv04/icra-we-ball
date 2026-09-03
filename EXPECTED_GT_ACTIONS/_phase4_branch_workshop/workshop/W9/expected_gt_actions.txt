@@ -1,0 +1,10 @@
+Environment: workshop
+Variant: W9
+Internal variant: I0_NO_DRIVER
+Intended outcome: INFEASIBLE
+Description: Screw and hammer present; both compatible drivers absent.
+Expected GT actions: 3
+
+001. OPEN(LEFT_DRAWER)  # Open this storage region once for inspection; it remains open.
+002. OPEN(RIGHT_DRAWER)  # Open this storage region once for inspection; it remains open.
+003. OPEN(TOOL_CABINET)  # Open this storage region once for inspection; it remains open.

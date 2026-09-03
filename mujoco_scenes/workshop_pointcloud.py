@@ -1,4 +1,4 @@
-"""Capture the workshop with the shared five-view RGB-D pipeline."""
+"""Capture the workshop with the canonical three-view RGB-D pipeline."""
 
 from __future__ import annotations
 
@@ -21,16 +21,19 @@ from mujoco_scenes.workshop_scene import WorkshopScene
 
 
 DEFAULT_PROMPTS = (
-    "protective plate",
     "screwdriver",
     "powered screwdriver",
     "screw",
+    "wrench",
+    "pliers",
     "wooden frame",
+    "parts tray",
 )
 STAGES = (
     ("INITIAL", "000_initial"),
     ("LEFT_DRAWER", "001_left_drawer"),
-    ("TOOL_CABINET", "002_tool_cabinet"),
+    ("RIGHT_DRAWER", "002_right_drawer"),
+    ("TOOL_CABINET", "003_tool_cabinet"),
 )
 
 
@@ -41,7 +44,9 @@ def _write_json(path: Path, value: Any) -> None:
     )
 
 
-def _export_fused_clouds(run: PointCloudRun, output_dir: Path) -> dict[str, Any]:
+def _export_fused_clouds(
+    run: PointCloudRun, output_dir: Path, scene: WorkshopScene | None = None
+) -> dict[str, Any]:
     fused_dir = output_dir / "fused"
     fused_dir.mkdir(parents=True, exist_ok=True)
     all_points = []
@@ -53,9 +58,15 @@ def _export_fused_clouds(run: PointCloudRun, output_dir: Path) -> dict[str, Any]
         if len(cloud.points):
             all_points.append(cloud.points)
             all_colors.append(cloud.colors)
+        generic_id = (
+            scene.privileged_instance_id_for_backend(instance_id)
+            if scene is not None
+            else f"object_{index:04d}"
+        )
         objects.append(
             {
-                "debug_instance_id": instance_id,
+                "instance_id": generic_id,
+                "debug_backend_identity": instance_id,
                 "object_kind": cloud.object_kind,
                 "point_count": len(cloud.points),
                 "contributing_camera_count": sum(
@@ -88,6 +99,7 @@ def run_workshop_pointcloud(
     output_dir: str | Path,
     *,
     robot: str = "google",
+    variant: str = "F0_MANUAL_FIRST_ONE_REGION",
     width: int = 640,
     height: int = 480,
     segmentation: str = "oracle",
@@ -101,7 +113,7 @@ def run_workshop_pointcloud(
         raise FileExistsError(f"Workshop point-cloud run already exists: {output}")
     output.mkdir(parents=True, exist_ok=True)
 
-    scene = WorkshopScene(robot)
+    scene = WorkshopScene(robot=robot, variant=variant)
     checker = GeometryChecker(
         scene,
         width=width,
@@ -118,6 +130,7 @@ def run_workshop_pointcloud(
             run = checker.run_region_inspection(
                 region_id,
                 stage_output_dir=stage_dir,
+                rig_config=scene.inspection_rig_config,
             )
         finally:
             if region_id != "INITIAL":
@@ -125,7 +138,7 @@ def run_workshop_pointcloud(
         stage_record = {
             "region_id": region_id,
             "directory": directory_name,
-            **_export_fused_clouds(run, stage_dir),
+            **_export_fused_clouds(run, stage_dir, scene=scene),
         }
         _write_json(stage_dir / "stage_summary.json", stage_record)
         stage_records.append(stage_record)
@@ -134,6 +147,7 @@ def run_workshop_pointcloud(
     manifest = {
         "schema_version": 1,
         "scene": scene.scene_name,
+        "variant": variant,
         "robot": robot,
         "segmentation": segmentation,
         "segmentation_scope": (
@@ -158,6 +172,7 @@ def run_workshop_pointcloud(
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--robot", choices=("google", "none"), default="google")
+    parser.add_argument("--variant", default="F0_BASE")
     parser.add_argument("--segmentation", choices=("oracle", "sam3"), default="oracle")
     parser.add_argument("--prompt", action="append", dest="prompts")
     parser.add_argument("--width", type=int, default=640)
@@ -181,6 +196,7 @@ def main() -> None:
     scene, manifest = run_workshop_pointcloud(
         output,
         robot=arguments.robot,
+        variant=arguments.variant,
         width=arguments.width,
         height=arguments.height,
         segmentation=arguments.segmentation,

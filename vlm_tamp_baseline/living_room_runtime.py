@@ -187,6 +187,8 @@ class LivingRoomPlanningRuntime:
         image_width: int = 960,
         image_height: int = 540,
         camera_count: int = 5,
+        robot: str = "none",
+        physical_execution: bool = False,
     ):
         internal = resolve_variant_name("living_room", variant)
         contract = load_living_room_variant_contract()
@@ -203,7 +205,7 @@ class LivingRoomPlanningRuntime:
             raise ValueError("GT variant does not match the requested scene")
         self.payload_registry = _read(self.phase1_dir / "payload_registry.json")
         self.region_registry = _read(self.phase1_dir / "region_registry.json")
-        self.scene = L2LivingRoomRegionScene(scene_name(internal), robot="none")
+        self.scene = L2LivingRoomRegionScene(scene_name(internal), robot=robot)
         if camera_count not in LIVING_ROOM_CAMERA_SUBSETS:
             raise ValueError("Living Room camera_count must be one of 1, 3, or 5")
         self.camera_count = camera_count
@@ -311,7 +313,7 @@ class LivingRoomPlanningRuntime:
                 "rgb_annotation": "UNIQUE_SEMANTIC_ALIASES_ONLY",
                 "semantic_labels_exposed": True,
                 "alias_to_planning_id_map_exposed": True,
-                "physical_execution": False,
+                "physical_execution": bool(physical_execution),
             },
         )
         write_json(
@@ -538,7 +540,7 @@ class LivingRoomPlanningRuntime:
                     "id": region_id,
                     "semantic_label": role,
                     "bbox_xyxy": list(box[:4]),
-                    "pixels": box[4],
+                    "pixel_count": box[4],
                 }
             )
         for object_id, box in object_rows:
@@ -555,7 +557,7 @@ class LivingRoomPlanningRuntime:
                     "id": object_id,
                     "semantic_label": role,
                     "bbox_xyxy": list(box[:4]),
-                    "pixels": box[4],
+                    "pixel_count": box[4],
                 }
             )
         return image, manifest
@@ -598,7 +600,15 @@ class LivingRoomPlanningRuntime:
             )
         write_json(directory / "annotations.json", manifest)
         self._images_cache = tuple(images)
+        self.latest_annotation_manifest = manifest
         return self._images_cache
+
+    def invalidate_images(self) -> None:
+        """Force fresh rendered evidence after physical state changes."""
+        self._images_cache = None
+        if self.renderer is not None:
+            self.renderer.close()
+            self.renderer = None
 
     def close(self) -> None:
         if self.renderer is not None:

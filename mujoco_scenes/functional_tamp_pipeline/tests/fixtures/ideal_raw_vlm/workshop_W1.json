@@ -1,0 +1,111 @@
+{
+  "status": "SUPPORTED",
+  "task_summary": "Repair the loose frame joint using a compatible screw and a tool capable of driving it into the joint.",
+  "functional_roles": [
+    {
+      "id": "role_1",
+      "entity_kind": "OBJECT",
+      "function": "drive screw",
+      "description": "Tool capable of driving a screw into the frame joint",
+      "required_count": 1,
+      "binding_policy": "DISTINCT",
+      "candidate_categories": [
+        "power driver",
+        "cordless power drill",
+        "Phillips screwdriver"
+      ],
+      "visible_candidates": [],
+      "required_properties": []
+    },
+    {
+      "id": "role_2",
+      "entity_kind": "OBJECT",
+      "function": "fasten joint",
+      "description": "Threaded fastener capable of securing the frame joint hole",
+      "required_count": 1,
+      "binding_policy": "DISTINCT",
+      "candidate_categories": [
+        "Phillips screw",
+        "screw",
+        "threaded screw"
+      ],
+      "visible_candidates": [],
+      "required_properties": []
+    },
+    {
+      "id": "role_3",
+      "entity_kind": "FIXED_TARGET",
+      "function": "frame joint repair target",
+      "description": "Target joint hole on the loose frame structure",
+      "required_count": 1,
+      "binding_policy": "DISTINCT",
+      "candidate_categories": [
+        "frame joint",
+        "screw hole",
+        "repair joint"
+      ],
+      "visible_candidates": [],
+      "required_properties": []
+    }
+  ],
+  "functional_relations": [
+    {
+      "subject_role": "role_1",
+      "relation": "compatible with",
+      "object_role": "role_2"
+    },
+    {
+      "subject_role": "role_1",
+      "relation": "reaches target",
+      "object_role": "role_3"
+    },
+    {
+      "subject_role": "role_2",
+      "relation": "compatible with target",
+      "object_role": "role_3"
+    }
+  ],
+  "interaction_groups": [
+    {
+      "id": "group_1",
+      "function": "drive screw into joint target",
+      "tool_role": "role_1",
+      "target_role": "role_2",
+      "required_target_count": 1,
+      "usage_policy": "DEDICATED_PER_TARGET",
+      "required_relations": [
+        "compatible with"
+      ],
+      "context_role": "role_3",
+      "context_relations": [
+        "reaches target"
+      ]
+    }
+  ],
+  "inspectable_regions": [
+    {
+      "id": "search_1",
+      "label": "left storage drawer",
+      "visual_description": "left storage drawer beneath the workbench",
+      "reason": "May contain screws or fasteners"
+    },
+    {
+      "id": "search_2",
+      "label": "right storage drawer",
+      "visual_description": "right storage drawer beneath the workbench",
+      "reason": "May contain screwdrivers or power drills"
+    },
+    {
+      "id": "search_3",
+      "label": "tall tool cabinet",
+      "visual_description": "tall tool cabinet beside the workbench",
+      "reason": "May contain additional tools and hardware"
+    }
+  ],
+  "inspection_order": [
+    "search_1",
+    "search_2",
+    "search_3"
+  ],
+  "unsupported_reason": ""
+}

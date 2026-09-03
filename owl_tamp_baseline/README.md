@@ -39,6 +39,40 @@ the geometric certificate. Kitchen uses measured visible geometry and Living
 Room uses observed payload/support footprints. The experiment remains
 planning-only and scores plan-to-GT sequence agreement.
 
+### Receding-horizon condition
+
+The paper analyzes OWL-TAMP as a single-shot planner in simulation, but its
+real-robot appendix describes a policy that repeatedly observes, plans, and
+executes. The runners additionally support that separately named condition:
+
+```bash
+--protocol receding_horizon --max-replans 8 --max-total-actions 48
+```
+
+It runs a complete native OWL-TAMP sketch-and-constraint cycle, applies one
+action through the planning-only symbolic executor, then obtains a fresh
+observable state before the next decision. A replan is every planning cycle
+after the first; the sketch and per-action constraint calls within one cycle
+are not replans. This condition does not add a failure-feedback prompt or
+privileged state.
+
+Because exactly one action is applied per cycle, the executed-action count can
+never exceed `--max-replans + 1`, so the replan budget, not
+`--max-total-actions`, is the binding limit. With the default `--max-replans 8`
+an episode stops after nine actions, and Kitchen tasks whose expected sequences
+are longer (K1 expects 24 actions) therefore terminate in
+`REPLAN_BUDGET_EXHAUSTED` rather than completing. That is a budget limit, not
+a capability result: report such episodes as budget-terminated, and raise
+`--max-replans` above the expected action count before making any claim about
+whether the method can finish the task. Each additional cycle costs one sketch
+request plus one constraint request per sketch action.
+
+This is **not physical Google-robot execution**: the current baseline adapters
+use symbolic action application and are suitable only for closed-loop planning
+and sequence-to-GT analyses. A future physical condition must use the shared
+MuJoCo skill dispatcher, re-render the changed scene, and be reported as a
+separate execution experiment.
+
 ## Start the model server
 
 Server (fish):
@@ -88,6 +122,22 @@ The variant scene is constructed directly. Anonymous IDs come from MuJoCo
 instance segmentation; no proposed-framework Phase-1 registry or semantic
 detector output is consumed. The variant selects private expected actions only
 after planning.
+
+## Run Workshop
+
+```bash
+MUJOCO_GL=egl .venv/bin/python -m owl_tamp_baseline.run_workshop \
+  --variant W1 \
+  --output-dir runs/owl_tamp/workshop/W1/qwen35_seed001 \
+  --seed 1
+```
+
+W1--W10 begin with all storage closed. The common input contains only the
+annotated RGB views, the goal, and the observable alias-to-ID map; it does not
+contain storage contents, the compatible pair, expected actions, or a
+compatibility oracle. OWL-TAMP can select `INSPECT`, but this planning-only
+single-observation condition does not silently expose contents or add an
+automatic inspection policy.
 
 ## Evidence
 

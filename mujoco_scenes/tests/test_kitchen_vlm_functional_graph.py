@@ -1,4 +1,4 @@
-"""Regression tests for the one-call, no-reviewed-contract Kitchen VLM path."""
+"""Regression tests for the natural-language Kitchen VLM functional specification path."""
 
 from __future__ import annotations
 
@@ -8,37 +8,41 @@ import json
 from pathlib import Path
 
 import pytest
+from mujoco_scenes.functional_tamp_pipeline.errors import VLMSpecificationError
 from mujoco_scenes.kitchen_vlm_functional_graph import (
     compile_vlm_functional_graph,
+    resolve_kitchen_region_proposal,
+    map_unary_property,
+    map_binary_relation,
 )
-from mujoco_scenes.workshop_phase1.fm_adapter import FMAdapter
+from mujoco_scenes.workshop_phase1.fm_adapter import (
+    FMAdapter,
+    FMResponseValidationError,
+    validate_kitchen_functional_specification,
+)
+from mujoco_scenes.functional_tamp_pipeline.vlm_spec_provider import VLMSpecProvider
 
 
 PNG_1X1 = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
 )
-REGIONS = {"D1": "upper drawer", "C2": "closed cupboard"}
+REGIONS = ("D1", "D2", "C2", "B1", "C1")
 
 
-def qwen_graph() -> dict:
-    category = lambda label, *phrases: {
-        "canonical_label": label,
-        "detector_phrases": list(phrases) or [label.replace("_", " ")],
-    }
+def natural_kitchen_spec() -> dict:
     return {
         "status": "SUPPORTED",
-        "task_summary": "Prepare two coffees and two soups.",
-        "roles": [
+        "task_summary": "Prepare two coffees and two soups using available kitchenware.",
+        "functional_roles": [
             {
                 "id": "drink_receptacle",
                 "entity_kind": "OBJECT",
                 "function": "contain one coffee serving",
                 "required_count": 2,
                 "binding_policy": "DISTINCT",
-                "verification_mode": "SEMANTIC_AND_GEOMETRIC",
-                "candidate_categories": [category("cup", "cup", "coffee mug")],
-                "unary_properties": [{"predicate": "OPEN_CAVITY", "expected": True}],
-                "numeric_properties": [],
+                "candidate_categories": ["cup", "coffee mug"],
+                "visible_candidates": [],
+                "required_properties": ["open cavity", "capable of containing liquid"],
             },
             {
                 "id": "soup_receptacle",
@@ -46,10 +50,9 @@ def qwen_graph() -> dict:
                 "function": "contain one soup serving",
                 "required_count": 2,
                 "binding_policy": "DISTINCT",
-                "verification_mode": "SEMANTIC_AND_GEOMETRIC",
-                "candidate_categories": [category("bowl", "soup bowl")],
-                "unary_properties": [{"predicate": "OPEN_CAVITY", "expected": True}],
-                "numeric_properties": [],
+                "candidate_categories": ["bowl", "soup bowl"],
+                "visible_candidates": [],
+                "required_properties": ["open cavity", "holds liquid"],
             },
             {
                 "id": "mixing_implement",
@@ -57,17 +60,9 @@ def qwen_graph() -> dict:
                 "function": "stir coffee",
                 "required_count": 1,
                 "binding_policy": "REUSABLE",
-                "verification_mode": "SEMANTIC_AND_GEOMETRIC",
-                "candidate_categories": [category("spoon", "metal spoon")],
-                "unary_properties": [{"predicate": "ELONGATED_OBJECT", "expected": True}],
-                "numeric_properties": [
-                    {
-                        "property": "usable_length_m",
-                        "operator": ">=",
-                        "value": 0.08,
-                        "unit": "m",
-                    }
-                ],
+                "candidate_categories": ["spoon", "metal spoon"],
+                "visible_candidates": [],
+                "required_properties": ["elongated", "slender"],
             },
             {
                 "id": "soup_implement",
@@ -75,10 +70,9 @@ def qwen_graph() -> dict:
                 "function": "serve with soup",
                 "required_count": 2,
                 "binding_policy": "DISTINCT",
-                "verification_mode": "SEMANTIC_AND_GEOMETRIC",
-                "candidate_categories": [category("soup_spoon", "soup spoon")],
-                "unary_properties": [{"predicate": "ELONGATED_OBJECT", "expected": True}],
-                "numeric_properties": [],
+                "candidate_categories": ["soup_spoon", "soup spoon"],
+                "visible_candidates": [],
+                "required_properties": ["elongated object"],
             },
             {
                 "id": "water_source",
@@ -86,10 +80,9 @@ def qwen_graph() -> dict:
                 "function": "provide water for coffee",
                 "required_count": 1,
                 "binding_policy": "REUSABLE",
-                "verification_mode": "SEMANTIC_ONLY",
-                "candidate_categories": [category("kettle", "kettle", "water jug")],
-                "unary_properties": [],
-                "numeric_properties": [],
+                "candidate_categories": ["kettle", "water jug"],
+                "visible_candidates": [],
+                "required_properties": [],
             },
             {
                 "id": "coffee_source",
@@ -97,33 +90,24 @@ def qwen_graph() -> dict:
                 "function": "provide coffee material",
                 "required_count": 1,
                 "binding_policy": "REUSABLE",
-                "verification_mode": "SEMANTIC_ONLY",
-                "candidate_categories": [category("coffee_jar", "coffee jar")],
-                "unary_properties": [],
-                "numeric_properties": [],
+                "candidate_categories": ["coffee_jar", "coffee jar"],
+                "visible_candidates": [],
+                "required_properties": [],
             },
         ],
-        "relations": [
+        "functional_relations": [
             {
-                "predicate": "INSERTABLE_IN",
                 "subject_role": "mixing_implement",
+                "relation": "reaches bottom",
                 "object_role": "drink_receptacle",
-                "expected": True,
             },
             {
-                "predicate": "REACHES_BOTTOM",
-                "subject_role": "mixing_implement",
-                "object_role": "drink_receptacle",
-                "expected": True,
-            },
-            {
-                "predicate": "INSERTABLE_IN",
                 "subject_role": "soup_implement",
+                "relation": "fits into",
                 "object_role": "soup_receptacle",
-                "expected": True,
             },
         ],
-        "operation_groups": [
+        "interaction_groups": [
             {
                 "id": "mix_drinks",
                 "function": "stir",
@@ -131,7 +115,7 @@ def qwen_graph() -> dict:
                 "target_role": "drink_receptacle",
                 "required_target_count": 2,
                 "usage_policy": "SEQUENTIAL_REUSE_ALLOWED",
-                "required_relations": ["INSERTABLE_IN", "REACHES_BOTTOM"],
+                "required_relations": ["fits inside", "reaches bottom"],
             },
             {
                 "id": "equip_soups",
@@ -140,52 +124,30 @@ def qwen_graph() -> dict:
                 "target_role": "soup_receptacle",
                 "required_target_count": 2,
                 "usage_policy": "DEDICATED_PER_TARGET",
-                "required_relations": ["INSERTABLE_IN"],
+                "required_relations": ["fits inside"],
             },
         ],
         "cross_group_reuse_allowed": False,
-        "planning": {
-            "contents": ["coffee", "water", "soup"],
-            "source_roles": [
-                {
-                    "id": "water_provider",
-                    "provides": "water",
-                    "witness_role": "water_source",
-                },
-                {
-                    "id": "coffee_provider",
-                    "provides": "coffee",
-                    "witness_role": "coffee_source",
-                },
-            ],
-            "target_requirements": [
-                {
-                    "content": "coffee",
-                    "witness_role": "drink_receptacle",
-                    "required_contents": ["water", "coffee"],
-                    "initial_contents": [],
-                    "operation_group": "mix_drinks",
-                    "final_goal": "filled and stirred",
-                },
-                {
-                    "content": "soup",
-                    "witness_role": "soup_receptacle",
-                    "required_contents": ["soup"],
-                    "initial_contents": ["soup"],
-                    "operation_group": "equip_soups",
-                    "final_goal": "served with utensil",
-                },
-            ],
-        },
-        "candidate_regions": [
-            {"region_id": "C2", "reason": "may hold vessels"},
-            {"region_id": "D1", "reason": "may hold utensils"},
+        "inspectable_regions": [
+            {
+                "id": "reg_1",
+                "label": "upper wall cupboard",
+                "visual_description": "cupboard above counter",
+                "reason": "may hold vessels",
+            },
+            {
+                "id": "reg_2",
+                "label": "upper drawer",
+                "visual_description": "top drawer below counter",
+                "reason": "may hold utensils",
+            },
         ],
-        "inspection_order": ["C2", "D1"],
-        "initial_satisfaction_assessment": False,
-        "initial_satisfaction_reason": "Not all roles are visibly satisfied.",
+        "inspection_order": ["reg_1", "reg_2"],
         "unsupported_reason": "",
     }
+
+
+qwen_graph = natural_kitchen_spec
 
 
 class FakeTransport:
@@ -198,81 +160,205 @@ class FakeTransport:
         return {"choices": [{"message": {"content": json.dumps(self.document)}}]}
 
 
-def test_exact_qwen_graph_is_preserved_without_reviewed_role_or_predicate_mapping():
+def test_natural_kitchen_spec_canonicalizes_properties_and_regions():
     contract, vocabularies, trace = compile_vlm_functional_graph(
-        qwen_graph(),
+        natural_kitchen_spec(),
         task_instruction="Prepare two coffees and two soups.",
-        observable_regions=tuple(REGIONS),
+        observable_regions=REGIONS,
     )
 
     assert set(contract["roles"]) == {
-        "drink_receptacle", "soup_receptacle", "mixing_implement", "soup_implement",
+        "coffee_container", "soup_container", "coffee_stirrer", "soup_eating_utensil",
         "water_source", "coffee_source",
     }
-    assert contract["specification_source"] == "qwen_vlm_single_call_exact_graph"
-    assert contract["symbolic_task"]["target_requirements"]["coffee"][
-        "witness_role"
-    ] == "drink_receptacle"
-    assert contract["relations"][0]["predicate"] == "INSERTABLE_IN"
-    assert contract["roles"]["mixing_implement"]["unary_geometry"][1] == {
-        "property": "usable_length_m",
-        "operator": ">=",
-        "value": 0.08,
-        "unit": "m",
+    assert contract["specification_source"] == "qwen_vlm_natural_language_specification"
+    assert contract["roles"]["coffee_container"]["unary_geometry"][0]["predicate"] == "OPEN_CAVITY"
+    assert contract["roles"]["coffee_stirrer"]["unary_geometry"][0]["predicate"] == "ELONGATED_OBJECT"
+
+    # Check relations are canonicalized
+    rel_preds = [r["predicate"] for r in contract["relations"]]
+    assert "INSERTABLE_IN" in rel_preds
+    assert "REACHES_BOTTOM" in rel_preds
+
+    # Check candidate regions contain ONLY resolved regions
+    assert trace["candidate_regions"] == ["C2", "D1"]
+    assert trace["inspection_order"] == ["C2", "D1"]
+
+
+def test_local_id_collision_independence():
+    """VLM local ID 'c2' must not trick the resolver if visual label says 'upper drawer'."""
+    proposal = {
+        "id": "c2",
+        "label": "upper drawer",
+        "visual_description": "top drawer below counter",
+        "reason": "storage",
     }
-    assert trace["transformation"] == "STRUCTURAL_ONLY_NO_ROLE_OR_PROPERTY_ALIAS_MAPPING"
-    assert trace["added_task_requirements"] == []
-    assert contract["symbolic_task"]["source_roles"]["water_provider"][
-        "witness_role"
-    ] == "water_source"
-    assert "water jug" in vocabularies["object"]["canonical_labels"]["kettle"]
+    resolved = resolve_kitchen_region_proposal(proposal)
+    assert resolved == "D1", f"Expected D1 (from label), got {resolved} (confused by id: c2)"
 
 
-def test_adapter_makes_one_call_with_goal_images_regions_and_checker_api(tmp_path):
+def test_binding_policy_preservation():
+    """Raw VLM binding_policy must be preserved into G_F without modification."""
+    spec = natural_kitchen_spec()
+    spec["functional_roles"][0]["binding_policy"] = "DISTINCT"
+    spec["functional_roles"][2]["binding_policy"] = "REUSABLE"
+
+    contract, vocabularies, trace = compile_vlm_functional_graph(
+        spec,
+        task_instruction="Prepare two coffees and two soups.",
+        observable_regions=REGIONS,
+    )
+    assert contract["roles"]["coffee_container"]["vlm_binding_policy"] == "DISTINCT"
+    assert contract["roles"]["coffee_stirrer"]["vlm_binding_policy"] == "REUSABLE"
+
+
+def test_entity_kind_preservation():
+    """Raw VLM entity_kind must be preserved without coercion."""
+    spec = natural_kitchen_spec()
+    contract, vocabularies, trace = compile_vlm_functional_graph(
+        spec,
+        task_instruction="Prepare two coffees and two soups.",
+        observable_regions=REGIONS,
+    )
+    assert contract["roles"]["coffee_container"]["entity_kind"] == "OBJECT"
+
+
+def test_object_nouns_do_not_prove_geometry():
+    """Object nouns like 'spoon' or 'cup' in required_properties must not map to physical geometry."""
+    spec = natural_kitchen_spec()
+    spec["functional_roles"][2]["required_properties"] = ["spoon", "metal spoon"]
+    with pytest.raises(
+        VLMSpecificationError,
+        match="cannot be mapped to any active physical unary property",
+    ) as failure:
+        compile_vlm_functional_graph(
+            spec,
+            task_instruction="Prepare two coffees and two soups.",
+            observable_regions=REGIONS,
+        )
+    assert failure.value.category == "UNMAPPED_FUNCTIONAL_CONCEPT"
+
+
+def test_unique_property_mapping():
+    """Ambiguous or unmapped properties must fail closed."""
+    assert map_unary_property("open cavity") == "OPEN_CAVITY"
+    assert map_unary_property("elongated object") == "ELONGATED_OBJECT"
+    assert map_unary_property("completely unmapped non-physical concept") is None
+
+
+def test_inspection_order_resolves_through_local_id_map():
+    spec = natural_kitchen_spec()
+    spec["inspectable_regions"] = [
+        {"id": "loc_cupboard", "label": "upper wall cupboard", "visual_description": "cupboard above counter", "reason": "cups"},
+        {"id": "loc_drawer", "label": "upper drawer", "visual_description": "top drawer below counter", "reason": "spoons"},
+    ]
+    spec["inspection_order"] = ["loc_drawer", "loc_cupboard"]
+
+    contract, vocabularies, trace = compile_vlm_functional_graph(
+        spec,
+        task_instruction="Prepare two coffees and two soups.",
+        observable_regions=REGIONS,
+    )
+    assert trace["inspection_order"] == ["D1", "C2"]
+
+
+def test_adapter_outgoing_payload_has_zero_checker_and_region_leaks(tmp_path):
     image = tmp_path / "initial.png"
     image.write_bytes(PNG_1X1)
-    transport = FakeTransport(qwen_graph())
+    transport = FakeTransport(natural_kitchen_spec())
     adapter = FMAdapter(model="qwen", transport=transport)
 
     result = adapter.generate_kitchen_functional_graph(
-        "Prepare two coffees and two soups.", REGIONS, observation_images=[image]
+        "Prepare two coffees and two soups.", observation_images=[image]
     )
 
-    assert result == qwen_graph()
+    assert result == natural_kitchen_spec()
     assert adapter.metrics.total_calls == 1
     assert len(transport.payloads) == 1
-    payload_text = transport.payloads[0]["messages"][1]["content"][0]["text"]
-    prompt = json.loads(payload_text)
-    assert prompt["task_instruction"] == "Prepare two coffees and two soups."
-    assert prompt["verifier_interface"]["binary_predicates"] == [
-        "INSERTABLE_IN", "REACHES_BOTTOM"
+
+    payload_json = json.dumps(transport.payloads[0])
+
+    # Assert NO checker names in payload
+    forbidden_checkers = [
+        "OPEN_CAVITY", "ELONGATED_OBJECT", "INSERTABLE_IN", "REACHES_BOTTOM",
+        "PLANAR_SUPPORT", "CAN_DRIVE_SCREW", "CAN_FASTEN", "total_length_m", "cavity_depth_m"
     ]
-    assert {row["region_id"] for row in prompt["observable_closed_storage_regions"]} == {
-        "D1", "C2"
-    }
-    assert "hidden" not in prompt
-    assert adapter.last_raw_kitchen_graph_response == qwen_graph()
+    for checker in forbidden_checkers:
+        assert checker not in payload_json, f"Information leak detected: {checker} in payload"
+
+    # Assert NO canonical region IDs in payload
+    forbidden_regions = ["D1", "D2", "C2", "B1", "C1", "LEFT_DRAWER", "RIGHT_DRAWER", "TOOL_CABINET"]
+    for reg in forbidden_regions:
+        assert f'"{reg}"' not in payload_json, f"Information leak detected: region {reg} in payload"
 
 
-def test_unknown_vlm_predicate_is_rejected_instead_of_alias_mapped():
-    graph = deepcopy(qwen_graph())
-    graph["relations"][0]["predicate"] = "FITS_INSIDE"
+def test_unsupported_task_fails_closed():
+    spec = natural_kitchen_spec()
+    spec["status"] = "UNSUPPORTED"
+    spec["unsupported_reason"] = "Cannot serve food without ingredients"
+    spec["functional_roles"] = []
+    spec["functional_relations"] = []
+    spec["interaction_groups"] = []
+    spec["inspectable_regions"] = []
+    spec["inspection_order"] = []
 
-    with pytest.raises(ValueError, match="no exact checker exists"):
+    with pytest.raises(VLMSpecificationError, match="VLM marked task unsupported"):
         compile_vlm_functional_graph(
-            graph,
+            spec,
             task_instruction="Prepare two coffees and two soups.",
-            observable_regions=tuple(REGIONS),
+            observable_regions=REGIONS,
         )
 
 
-def test_integrated_runner_has_no_reviewed_provider_or_normalization_dependency():
-    source = (
-        Path(__file__).resolve().parents[1] / "run_kitchen_vlm_pipeline.py"
-    ).read_text(encoding="utf-8")
+def test_inconsistent_role_count_fails_closed():
+    spec = natural_kitchen_spec()
+    # Mismatch: role count is 1, but operation requires 2
+    spec["functional_roles"][0]["required_count"] = 1
+    spec["interaction_groups"][0]["required_target_count"] = 2
 
-    assert "EnvironmentVLMRequirementProvider" not in source
-    assert "run_environment_vlm_requirements" not in source
-    assert "kitchen_living_room_vlm_normalization" not in source
-    assert "generate_task_requirements(" not in source
-    assert "generate_inspection_priors(" not in source
+    with pytest.raises(VLMSpecificationError, match="has required_count 1, but group requires 2"):
+        compile_vlm_functional_graph(
+            spec,
+            task_instruction="Prepare two coffees and two soups.",
+            observable_regions=REGIONS,
+        )
+
+
+def test_unresolved_region_proposal_excluded_from_candidate_regions():
+    spec = natural_kitchen_spec()
+    spec["inspectable_regions"] = [
+        {"id": "reg_1", "label": "upper wall cupboard", "visual_description": "cupboard", "reason": "storage"},
+        {"id": "reg_2", "label": "bookshelf in bedroom", "visual_description": "bookshelf", "reason": "storage"},
+    ]
+    spec["inspection_order"] = ["reg_1", "reg_2"]
+
+    contract, vocabularies, trace = compile_vlm_functional_graph(
+        spec,
+        task_instruction="Prepare two coffees and two soups.",
+        observable_regions=REGIONS,
+    )
+
+    # Only C2 should be in candidate_regions
+    assert trace["candidate_regions"] == ["C2"]
+    assert trace["inspection_order"] == ["C2"]
+    assert len(trace["unresolved_proposals"]) == 1
+    assert trace["unresolved_proposals"][0]["label"] == "bookshelf in bedroom"
+
+
+def test_no_full_catalog_fallback():
+    spec = natural_kitchen_spec()
+    # VLM proposes only 1 region
+    spec["inspectable_regions"] = [
+        {"id": "reg_1", "label": "upper wall cupboard", "visual_description": "cupboard", "reason": "storage"},
+    ]
+    spec["inspection_order"] = ["reg_1"]
+
+    contract, vocabularies, trace = compile_vlm_functional_graph(
+        spec,
+        task_instruction="Prepare two coffees and two soups.",
+        observable_regions=REGIONS,
+    )
+
+    # Must NOT fall back to all 5 regions
+    assert trace["candidate_regions"] == ["C2"]
+    assert len(trace["candidate_regions"]) == 1

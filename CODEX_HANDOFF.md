@@ -1,13 +1,91 @@
 # Codex Project Handoff
 
-Updated: 2026-08-26 (Asia/Kolkata)
+Updated: 2026-08-31 (Asia/Kolkata)
 
 This file is the working context for continuing the project from another Codex
 session after SSHing into this machine. Start the next session by asking Codex
 to read this file, inspect the current worktree, and continue without resetting
 or discarding uncommitted changes.
 
-## Latest change: 1/3/5-camera baseline benchmark
+## Latest change: OWL-TAMP receding-horizon planning condition
+
+- Added `owl_tamp_baseline/receding_horizon.py`: a complete native OWL-TAMP
+  sketch-and-constraint cycle is run from the current observation, one action
+  is applied, and the next decision receives a fresh observable state. The
+  controller never adds an invented failure-feedback prompt or private state.
+- Kitchen, Living Room, and Workshop OWL launchers now accept
+  `--protocol receding_horizon --max-replans 8 --max-total-actions 48`.
+  The existing `native` mode remains the paper's single-shot simulation
+  condition; `single_call` remains a clearly marked sketch-only ablation.
+- This new condition is strictly planning-only: actions are applied by the
+  symbolic baseline executors, not by the Google robot. It must not be used to
+  populate physical-execution success or timing columns. The paper's
+  real-robot deployment describes a receding-horizon policy, but no author
+  code is available, so report this as a paper-derived symbolic adaptation.
+- Each receding run writes `receding_horizon_trace.json` with per-round
+  observations, model traces, action results, raw VLM request count, and true
+  high-level replan count. `replans = planning_rounds - 1`.
+- Focused validation:
+  `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/python -m pytest -q owl_tamp_baseline/tests`
+  -> 11 passed.
+
+## Latest change: discovery-based MuJoCo replanning
+
+- Added separate, observation-bounded live Kitchen and Living Room runners:
+  `python -m mujoco_scenes.run_kitchen_discovery_replanning ...` and
+  `python -m mujoco_scenes.run_living_room_discovery_replanning ...`.
+- The runner now creates controlled Kitchen variants directly (`--variant K1`
+  through `K6`) instead of requiring a COMPLETE Phase-1 witness from the
+  functional-search framework.
+- Final success uses a private terminal-relation evaluator derived from
+  `EXPECTED_GT_ACTIONS`. The expected sequence, backend bindings, and evaluator
+  are never included in the VLM request.
+- Startup checks the OpenAI-compatible endpoint/model before constructing the
+  MuJoCo scene. Accepted plans, skill starts/results, discoveries, and replans
+  are printed in the terminal during live execution.
+- The segmentation bridge now persists previously observed IDs when the camera
+  rig moves to an inspected region; a real K2 headless smoke went from 8 known
+  objects to 9 after opening C2 and detecting the hidden mug.
+- Fixed `ProfiledIK` to expose its solver joint bounds. This removed the
+  articulation crash in the C2 inspection path; the physical OPEN now succeeds.
+- Each VLM call saves its text prompts, camera names, response, latency, and
+  error under `model_calls/`, without base64 frames or private GT data.
+- `mujoco_scenes/tamp/discovery_replanning.py` runs direct VLM task plans,
+  invokes physical MuJoCo skills, and replans only after a recoverable failure,
+  genuinely new visibility, or an observed incomplete goal. Discoveries are
+  deferred while carrying an object.
+- `mujoco_scenes/tamp/discovery_planner.py` sends only current bounded state,
+  current RGB views, completed actions, and an optional structured event to an
+  OpenAI-compatible VLM. Hidden objects, GT plans, and unexecuted old plans
+  are excluded; all model references are validated against visible IDs before
+  physical execution.
+- The Kitchen bridge now filters planner-visible objects by positive
+  screen-space instance-segmentation evidence across the selected camera
+  views. It deliberately retains a held object through robot state. This
+  matches the original CoppeliaSim discovery framework's segmentation/tracking
+  observation boundary; it is intentionally separate from semantic grounding.
+- Invalid/malformed model plans and invalid symbolic action ordering are
+  recoverable planning events and are reprompted from fresh observations,
+  matching the older pipeline rather than terminating the episode.
+- Every planned primitive is now rechecked against the newest bounded state
+  immediately before dispatch. A stale object, unavailable held object, or
+  unknown destination is rejected without moving the robot and becomes a
+  recoverable replan event.
+- `mujoco_scenes/DISCOVERY_REPLANNING.md` has the launch procedure. Focused
+  discovery and prompt-boundary tests are in `mujoco_scenes/tests/`.
+- The Living Room adapter uses L1-L6 directly with the Google robot, five
+  fixed cameras, semantic aliases, persistent screen-space segmentation, and
+  direct VLM `PICK`/`PLACE` plans. Its physical adapter selects collision-checked
+  base stances and verifies each release against support/contact/settling checks.
+  Its benchmark variants have no closed regions, so `INSPECT` is not exposed.
+- A real EGL L1 smoke completed a physical pick and a strict verified place of
+  `cup_1` onto the left personal table. The Living Room VLM prompt was checked
+  to contain only generic object/region IDs plus aliases; it had no backend or
+  expected-GT action leakage.
+- This remains intentionally separate from VLM-TAMP/OWL-TAMP benchmarking and
+  functional-search/proposed-framework planning.
+
+## Previous change: 1/3/5-camera baseline benchmark
 
 - VLM-TAMP and OWL-TAMP Kitchen/Living Room runners accept
   `--camera-count {1,3,5}`. The nested fixed subsets are top; left/right/top;
@@ -1407,3 +1485,285 @@ Goal Completion, Placement Correctness (precision), Required Placement Coverage
 Living-Room task, it evaluates the final cup/saucer-to-personal-table and
 remote-to-shared-table relations after symbolically applying planned PLACE
 effects, so planning-only OWL-TAMP is evaluated without physical execution.
+
+## Workshop VLM-TAMP and OWL-TAMP planning checks (2026-08-29)
+
+Workshop W1--W10 is now available to the same planning-only baseline harness.
+`mujoco_scenes/configs/workshop_variants.yaml` contains the private
+position/presence variants. `vlm_tamp_baseline.workshop_runtime` renders a
+closed, labelled three-storage workcell through nested 1/3/5 camera subsets;
+only the frame joint and storage regions are model-visible. A symbolic
+`INSPECT` action reveals just that region's private contents in the local
+rollout. For VLM-TAMP runs with more than one model call, it also invalidates
+the image cache and writes a fresh revision of the annotated RGB views, so the
+next VLM call sees precisely those newly inspected items. Neither baseline
+prompt receives the variant storage inventory, compatibility result, expected
+GT, or proposed-framework search output.
+
+Use `vlm_tamp_baseline.run_workshop` for the two-stage VLM-TAMP plus
+PDDLStream symbolic-refinement condition, and
+`owl_tamp_baseline.run_workshop` for the independent OWL-TAMP sketch/constraint
+condition. `baseline_common.run_plan_gt_batch --environment workshop` supports
+W1--W10, 1/3/5 cameras, and seeds. Workshop GT comparison preserves raw action
+diagnostics and compares a causal task skeleton instead of temporary
+single-arm workbench staging. The symbolic terminal state requires both a
+fastened joint and the selected driver returned to the main workbench. The
+PDDLStream and OWL feasibility checks reject non-screw fasteners and non-driver
+tools. All W1--W10 layouts were swept: W1--W8 admit the repair tuple; W9--W10
+do not. Workshop labels are collision-aware across object and region boxes;
+an uninspected `NO_VALID_SUBGOALS`/`NO_PLAN` result is reported as
+`UNRESOLVED`, not as a false infeasibility decision. The baseline suite passed
+under EGL: `76 passed`.
+
+## Workshop batch audit and grounding correction (2026-08-30)
+
+The first full Workshop batch is structurally complete: 600/600 requested
+episodes, zero subprocess errors, and zero missing GT comparisons. It is not a
+final result set. All 300 OWL-TAMP trials returned `NO_PLAN`; all 300 VLM-TAMP
+trials exhausted the one-call budget. The audit found two shared-input defects:
+the permanently visible main workbench was marked `inspected: false`, and
+OWL-TAMP relaxed grounding treated the fixed frame joint as a movable object,
+creating invalid pick/place/fasten candidates. The workbench is now open and
+inspected in the observable state, and the Workshop OWL adapter excludes the
+fixed joint from its movable-object grounding without exposing hidden storage
+contents. Focused Workshop/VLM/OWL validation passes: `25 passed`. Discard the
+old `runs/baseline_camera_ablation/workshop` metrics and rerun into a fresh
+output root.
+
+The discovery execution runners now also accept `--max-model-calls 1` as an
+explicit initial-plan-only comparison condition. They execute the accepted
+initial plan normally, record the exact model-call count, and terminate rather
+than querying again when discovery, failure, or incomplete-goal checking would
+cause a replan. Normal discovery replanning remains the default.
+
+## Native versus minimum-call benchmark protocols (2026-08-30)
+
+`docs/BENCHMARK_PROTOCOLS.md` defines two non-pooled conditions. `native`
+preserves each method's request structure; `single_call` caps Discovery at one
+raw request and runs OWL-TAMP as a clearly marked sketch-only ablation.
+VLM-TAMP retains its indivisible two-stage round and therefore reports two raw
+requests even in the minimum-call condition. `run_plan_gt_batch` records the
+protocol and writes a protocol manifest. The planning summary now keeps
+protocols separate and reports planning rounds, raw requests, and planning
+latency. `run_discovery_execution_batch` runs physical Kitchen/Living-Room
+grids, while `summarize_execution_batch` reports task success, actions, model
+requests, replans, VLM latency, and elapsed time. It also accepts a proposed
+framework `benchmark_execution_result.json` using the documented common
+schema. Focused protocol/baseline/discovery validation passes: `64 passed`.
+
+The planning summarizer now matches moved/organized episodes by trial identity
+instead of stale absolute paths retained in old batch manifests. This removes
+the false 100 missing Living-Room OWL trials. It also infers legacy VLM-TAMP
+resource accounting from `result.model_calls` (one round, two raw requests).
+The current native planning corpus is complete with no missing trials: Kitchen
+120 trials per method/camera, Living Room 100, and Workshop 100. The explicit
+OWL `single_call` sketch-only ablation has not yet been batch-run.
+
+OWL `single_call` now caps the requested completion budget at 2,048 tokens in
+all three scene runners. This prevents the Kitchen prompt (about 8.4k tokens)
+plus an 8,192-token completion request from exceeding Qwen's 16,384-token
+context. The interrupted Kitchen attempts produced no `episode_result.json`
+and are infrastructure failures, not benchmark outcomes; rerun them into a
+fresh output root. Focused OWL and batch tests pass: `12 passed`.
+
+## GT execution and evidence ablations (2026-08-30)
+
+The `naren/pipeline_check` source implementation is integrated without its
+generated reports or videos. Ground-truth action executors are available for
+all Kitchen, Living Room, and Workshop variants. Kitchen F0 completed the
+assignment/planning smoke check (24 actions and symbolic preflight pass), and
+Living Room F0 completed its planning-only dry run.
+
+`mujoco_scenes.functional_tamp_pipeline.run` and
+`scripts/evaluate_functional_tamp_variants.py` now accept
+`--evidence-mode {semantic_only,geometric_only,joint}`. The mode is written to
+both the functional specification metadata and the run manifest. It changes
+only grounding evidence: semantic-only ignores geometric predicates and
+relations; geometric-only ignores semantic labels; joint checks both. These are
+planning/grounding ablations. Physical GT execution remains intentionally
+separate through the dedicated ground-truth executors until the functional
+pipeline-to-executor handoff is frozen.
+
+Run commands are kept in `docs/GT_EXECUTION_AND_ABLATIONS.md`.
+
+Follow-up merge audit found that the branch's updated Kitchen GT tests had
+initially been ported without the matching `kitchen_object_manipulation.py`
+runtime changes. The missing source diff is now integrated. This restores the
+constant-height C2 vessel retreat and the bounded four-candidate drawer spoon
+grasp family. The combined Kitchen, Living Room, and Workshop GT execution
+suite now passes completely: `52 passed`.
+
+The same audit found omitted VLM normalization, semantic-grounding, and test
+dependency updates. Those branch diffs are now integrated. The generic VLM
+validator also accepts an omitted `interaction_groups` field as an empty list,
+which is required for valid tasks without repeated tool-target operations. The
+focused functional/VLM suite now passes completely: `116 passed`.
+
+## Privileged semantic/geometric grounding ablation (2026-08-31)
+
+`mujoco_scenes.run_gt_evidence_ablation` now evaluates each Kitchen, Living
+Room, and Workshop variant against one complete simulator-derived observed
+graph in three conditions: `semantic_only`, `geometric_only`, and `joint`.
+This is deliberately an offline grounding experiment: no VLM, YOLO, point
+cloud, region search, symbolic planning, or physical execution participates.
+It writes one JSON artifact per condition and a compact CSV/JSON summary with
+outcome agreement, feasible completion, infeasible rejection, false
+completion, GT-valid selection, role/pair validity, and grounding runtime.
+
+The initial all-domain smoke run passed. Joint evidence matches every GT
+feasible/infeasible label. Geometric-only has the expected Kitchen false
+completions when source semantics are withheld (missing kettle/coffee source),
+and Living Room shows false completions when semantic or geometry/context is
+withheld. The present Kitchen suite has no standalone geometry-trap variant
+that semantic-only accepts but joint rejects; add one before treating the
+semantic-only condition as a strong geometry ablation result.
+
+## Table-readiness audit (2026-08-31)
+
+The benchmark code has been checked end-to-end at the artifact-contract level.
+`331` focused tests pass across common batch/summarizer code, VLM-TAMP,
+OWL-TAMP, functional grounding, and Kitchen/Living-Room/Workshop adapters.
+Kitchen ground-truth preflight passes `12/12` variants; Workshop passes
+`10/10`; Living Room F0 planning-only preflight passes. The audit fixed three
+integration failures: absent Living-Room supports are excluded from adapter
+resolution, Workshop baseline XML now finds nested drawers and supplies its
+mesh/texture assets, and pre-evidence-mode joint manifests remain valid for
+offline evaluation.
+
+`docs/BENCHMARK_PROTOCOLS.md` explicitly separates baseline planning-to-GT,
+privileged grounding ablation, and physical execution. Baseline and proposed
+framework results must not be called end-to-end task success until they run a
+common physical adapter and write `benchmark_execution_result.json`; Discovery
+execution already has that path for Kitchen and Living Room. This prevents
+mixing symbolic goal coverage with MuJoCo task success in paper tables.
+
+## Critical no-overclaim audit (2026-08-31)
+
+The earlier readiness wording was too broad. A repository-wide test initially
+failed during collection because integration had removed six still-required
+helpers/constants. After restoring the repository's own verified
+implementations, replacing the obsolete pre-redesign Workshop scene test with
+current fixed-pair scene contracts, restoring validation/error boundaries, and
+fixing the obsolete Workshop point-cloud default variant, the complete
+headless suite passes: `877 passed, 4 skipped` in 290.58 s. This validates code
+contracts only; it is not experimental evidence of physical success.
+
+The retained artifacts contain zero `benchmark_execution_result.json` and
+zero `discovery_replanning_result.json`, so no physical or end-to-end table row
+is currently defensible. `runs/baselines` contains 720 Kitchen and 600 Living
+Room planning episodes; Workshop runs exist elsewhere but are not part of that
+retained final corpus. The baseline summarizer explicitly replays final
+placement relations only for Living Room. Kitchen and Workshop currently read
+`goal_satisfied` from a pre-execution observation, so their
+`goal_completion_percent` is not a valid planned-final-state metric yet.
+Feasibility and ordered-action comparison remain usable. The GT evidence
+ablation is an oracle-only grounding diagnostic and must not be described as
+the proposed live framework, VLM performance, TAMP performance, or execution.
+
+## Fine-grained grounding-component ablation (2026-09-01)
+
+The canonical functional pipeline now has an explicit independent evidence
+mask: `semantic`, `unary`, and `binary`. `--evidence-components` overrides the
+legacy three-way `--evidence-mode`, is stored in the functional graph and run
+manifest, and is consumed at the grounding boundary. Semantic controls role
+category compatibility; unary controls predicates/numeric geometry; binary
+controls operation-group and directed relation checks. This supports the
+primary leave-one-out conditions `full`, `no_semantic`, `no_unary`, and
+`no_binary`, plus diagnostic single-component conditions.
+
+`mujoco_scenes.run_gt_evidence_ablation --component-masks all` writes separate
+GT-oracle artifacts for all seven non-empty masks. The direct pipeline command
+also accepts `--evidence-components semantic,unary,binary`. These tests cover
+grounding/search/planning and exploratory region opening only; the functional
+pipeline still stops at an action sequence, so none of these mask results are
+physical final-task-execution claims. Focused evidence tests pass (`8 passed`)
+and the four-condition Kitchen oracle smoke run completed.
+
+## P3-G Workshop canonicalizer port (2026-09-01)
+
+The P3-G canonicalizer from `origin/naren/pipeline_check` commit `579d2e8` is
+now integrated with its strict runtime G_F validator, predicate/context
+registries, shared Kitchen/Living-Room VLM canonicalization interfaces, and
+offline reference evaluator. Workshop now expresses the canonical task through
+the three relational checks `COMPATIBLE_WITH`, `REACHES_TARGET`, and
+`COMPATIBLE_WITH_TARGET`; the legacy unary markers `CAN_DRIVE_SCREW` and
+`CAN_FASTEN` are no longer emitted in either GT or VLM Workshop G_Fs. The
+canonical role set is `driver`, `fastener`, and fixed `repair_target`.
+
+Focused regression coverage passes (`85 passed`, `2 deselected`). The two
+deselected fixture-dependent tests require `jsonschema`; the pinned dependency
+is recorded in the newly added root `requirements-test.txt` but is not installed
+in the current environment.
+
+A broader post-port verification found and repaired one stale pre-P3-G test
+fixture in `test_live_visualizer.py` (`TOOL_HEAD_MATCH`, `NEAR_TARGET`, and the
+old drawer name). The canonicalizer/validator/reference suite now passes
+`273 passed, 3 skipped, 2 deselected`; the Workshop scene and ground-truth
+executor suite passes `16 passed`. The four-mask Workshop oracle smoke run also
+completes for all ten variants. The canonicalizer port is therefore internally
+consistent.
+
+## Exact Workshop GT geometry oracle (2026-09-01)
+
+Workshop GT relations no longer depend on semantic categories. The privileged
+oracle now instantiates the requested MuJoCo variant and evaluates driver reach,
+driver-tip/fastener-recess profile and width compatibility, and fastener
+length/shaft fit against the target-hole depth, opening, and radial clearance.
+Every relation artifact records its measurements, individual checks, signed
+margins, method, and `semantic_category_used: false`. Focused oracle tests pass
+(`10 passed`), including negative checks for the stubby Phillips driver,
+flathead driver, short Phillips screw, and oversized hex bolt. The complete
+four-mask sweep also runs for all ten variants.
+
+All current Workshop variants still contain either geometrically compatible
+parts or a missing required category. The exact oracle therefore still reports
+the same aggregate outcome for full and geometry-removed masks. Geometry-trap
+variants must be added before this domain can demonstrate an ablation gap.
+
+## Kitchen baseline physical-adapter start (2026-09-01)
+
+`baseline_common.physical_benchmark.write_execution_result` now defines the
+shared `benchmark_execution_result.json` artifact used by physical benchmark
+summaries. VLM-TAMP Kitchen physical mode writes this artifact for both a
+Phase-1 scene and the new direct `--physical-variant K1..K12` path. The latter
+constructs one Google-Robot Kitchen variant and retains expected GT only inside
+the final private effect evaluator.
+
+OWL-TAMP Kitchen now accepts `--physical-execution`: native/single-call runs
+execute the returned OWL plan through the common skill dispatcher, while
+`--protocol receding_horizon` re-observes and physically executes one OWL
+action per planning round. `baseline_common.run_baseline_execution_batch`
+launches the Kitchen VLM-TAMP/OWL-TAMP physical grid and refuses unsupported
+Living-Room/Workshop combinations. Those two baseline adapters remain
+planning-only because their current render/proxy runtime is not the same live
+MuJoCo instance as their strict physical executors; using the GT executor there
+would invalidate the comparison.
+
+Focused adapter checks pass: `22 passed`; a direct EGL Kitchen physical-runtime
+construction/render smoke passed. No VLM server episode or physical robot
+trajectory has been run after this wiring, so no success-rate claim is ready.
+
+## VLM-TAMP compact failure feedback (2026-09-01)
+
+The first live K1 VLM-TAMP physical episode completed three planning rounds
+and failed. Its initial VLM plan incorrectly represented coffee preparation as
+`HOLDING`/`PLACED` subgoals instead of `POURED`/`STIRRED`; after a successful
+pick/place cycle, re-picking the relocated coffee jar failed. The next two VLM
+rounds returned `NO_VALID_SUBGOALS`, consuming the configured three-round
+budget. This is a valid failed baseline trial, not a timeout or token-limit
+failure. It is stored at
+`runs/execution_smoke/vlm_tamp/K1_20260901_165927`.
+
+`vlm_tamp_baseline.failure_feedback` now removes verbose controller,
+calibration, collision, and private telemetry from every VLM-visible replan
+payload. The model receives only a fixed typed failure code, a concise generic
+message, and the failed formal subgoal when available. Failed action history
+is also reduced to action identity, success state, and the same typed failure.
+The original raw message and diagnostics remain in `episode_result.json` and
+physical telemetry. Prompt version is now 9.
+
+The inference error boundary is typed separately. HTTP errors, connection
+failures, timeouts, and malformed server envelopes are `inference_failed`.
+Only a returned completion with missing/non-JSON content, an invalid English or
+formal-subgoal schema, unknown IDs/predicates, or a false `GOAL_COMPLETE` claim
+is `invalid_vlm_output`. Focused checks pass (`41 passed`).

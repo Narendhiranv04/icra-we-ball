@@ -4,12 +4,18 @@ from __future__ import annotations
 
 import json
 import time
+from collections.abc import Callable, Mapping
 from pathlib import Path
 
 
 class EventLog:
-    def __init__(self, path: Path | None = None):
+    def __init__(
+        self,
+        path: Path | None = None,
+        sink: Callable[[Mapping[str, object]], None] | None = None,
+    ):
         self.path = path
+        self.sink = sink
         self.events: list[dict[str, object]] = []
         self._stream = None
         if path is not None:
@@ -24,6 +30,8 @@ class EventLog:
         }
         encoded = json.dumps(record, allow_nan=False, separators=(",", ":"))
         self.events.append(json.loads(encoded))
+        if self.sink is not None:
+            self.sink(self.events[-1])
         if self._stream is not None:
             self._stream.write(encoded + "\n")
             self._stream.flush()

@@ -1,0 +1,84 @@
+schema_version: 1
+description: >-
+  Separate close-range five-view Workshop rig for YOLO-World L detector
+  calibration. The canonical three-view Workshop rig remains unchanged.
+inspection_sequence: [LEFT_DRAWER, RIGHT_DRAWER, TOOL_CABINET]
+camera_slots:
+  LEFT: workshop_camera_left
+  RIGHT: workshop_camera_right
+  TOP: workshop_camera_top
+  FRONT: workshop_camera_front
+  CLOSE: workshop_camera_close
+view_validation:
+  minimum_valid_rig_cameras: 5
+  minimum_object_camera_count: 2
+  maximum_target_angle_degrees: 12.0
+  minimum_valid_depth_pixels: 150
+distance_calibration:
+  candidate_target_standoff_m: [0.40, 0.50, 0.60, 0.75]
+  selected_drawer_minimum_camera_target_distance_m: 0.39
+  selected_cabinet_minimum_camera_target_distance_m: 0.30
+  note: >-
+    Selected poses prioritize object pixel area while retaining the complete
+    search volume. Detection-based validation is intentionally pending while
+    the host is reserved for another heavy workload.
+regions:
+  INITIAL:
+    region_geometry: GENERAL
+    target_world_m: [0.0, 0.35, 0.86]
+    rig_position_world_m: [0.0, -0.82, 1.24]
+    up_world: [0.0, 0.0, 1.0]
+    near_depth_m: 0.10
+    far_depth_m: 2.10
+    settle_steps: 50
+    boundary_margin_m: 0.025
+    inspection_volume: {minimum_world_m: [-1.20, -0.15, 0.35], maximum_world_m: [1.20, 1.20, 1.50]}
+    cameras:
+      LEFT: {position_offset_m: [-0.34, 0.00, 0.10], look_at_offset_m: [-0.08, 0.00, 0.00], fovy_degrees: 72.0}
+      RIGHT: {position_offset_m: [0.34, 0.00, 0.10], look_at_offset_m: [0.08, 0.00, 0.00], fovy_degrees: 72.0}
+      TOP: {position_offset_m: [0.00, 0.18, 0.52], look_at_offset_m: [0.00, 0.00, -0.05], fovy_degrees: 74.0}
+      FRONT: {position_offset_m: [-0.14, 0.04, 0.12], look_at_offset_m: [-0.04, 0.00, 0.00], fovy_degrees: 68.0}
+      CLOSE: {position_offset_m: [0.14, 0.08, 0.18], look_at_offset_m: [0.04, 0.00, 0.00], fovy_degrees: 66.0}
+  LEFT_DRAWER:
+    region_geometry: HORIZONTAL_OPEN_TOP
+    target_world_m: [-0.28, -0.04, 0.48]
+    rig_position_world_m: [-0.28, -0.30, 0.62]
+    up_world: [1.0, 0.0, 0.0]
+    near_depth_m: 0.04
+    far_depth_m: 0.85
+    settle_steps: 80
+    boundary_margin_m: 0.025
+    inspection_volume: {minimum_world_m: [-0.55, -0.30, 0.35], maximum_world_m: [-0.05, 0.45, 0.65]}
+    cameras: &drawer_close_views
+      LEFT: {position_offset_m: [-0.16, 0.00, 0.14], look_at_offset_m: [-0.04, 0.00, 0.00], fovy_degrees: 64.0}
+      RIGHT: {position_offset_m: [0.16, 0.00, 0.14], look_at_offset_m: [0.04, 0.00, 0.00], fovy_degrees: 64.0}
+      TOP: {position_offset_m: [0.00, 0.10, 0.32], look_at_offset_m: [0.00, 0.00, 0.00], fovy_degrees: 66.0}
+      FRONT: {position_offset_m: [-0.06, -0.02, 0.12], look_at_offset_m: [-0.02, 0.00, 0.00], fovy_degrees: 62.0}
+      CLOSE: {position_offset_m: [0.07, 0.04, 0.18], look_at_offset_m: [0.02, 0.00, 0.00], fovy_degrees: 62.0}
+  RIGHT_DRAWER:
+    region_geometry: HORIZONTAL_OPEN_TOP
+    target_world_m: [0.28, -0.04, 0.48]
+    rig_position_world_m: [0.28, -0.30, 0.62]
+    up_world: [1.0, 0.0, 0.0]
+    near_depth_m: 0.04
+    far_depth_m: 0.85
+    settle_steps: 80
+    boundary_margin_m: 0.025
+    inspection_volume: {minimum_world_m: [0.05, -0.30, 0.35], maximum_world_m: [0.55, 0.45, 0.65]}
+    cameras: *drawer_close_views
+  TOOL_CABINET:
+    region_geometry: VERTICAL_FRONT_ACCESS
+    target_world_m: [0.40, 0.53, 0.79]
+    rig_position_world_m: [0.40, 0.22, 0.86]
+    up_world: [0.0, 0.0, 1.0]
+    near_depth_m: 0.04
+    far_depth_m: 0.85
+    settle_steps: 80
+    boundary_margin_m: 0.025
+    inspection_volume: {minimum_world_m: [0.20, 0.35, 0.60], maximum_world_m: [0.70, 0.78, 1.14]}
+    cameras: &cabinet_close_views
+      LEFT: {position_offset_m: [-0.16, -0.02, 0.07], look_at_offset_m: [-0.05, 0.00, 0.00], fovy_degrees: 60.0}
+      RIGHT: {position_offset_m: [0.16, -0.02, 0.07], look_at_offset_m: [0.05, 0.00, 0.00], fovy_degrees: 60.0}
+      TOP: {position_offset_m: [0.00, 0.24, 0.32], look_at_offset_m: [0.00, 0.00, 0.02], fovy_degrees: 58.0}
+      FRONT: {position_offset_m: [-0.05, -0.05, 0.02], look_at_offset_m: [-0.02, 0.00, 0.00], fovy_degrees: 56.0}
+      CLOSE: {position_offset_m: [0.06, 0.05, 0.07], look_at_offset_m: [0.02, 0.00, 0.00], fovy_degrees: 54.0}

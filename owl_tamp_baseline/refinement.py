@@ -89,13 +89,25 @@ def _transition(state: _State, action: Action, sketch: Sequence[Action]) -> _Sta
         facts.discard(f"holding({args[0]})")
         facts.add(f"at({args[0]},{args[1]})")
         facts.add(f"served_with({args[1]},{args[0]})")
-    elif name == "OPEN":
+    elif name in {"OPEN", "INSPECT"}:
         if args[0] in state.opened:
             return None
+        if holding is not None:
+            return None
+    elif name == "INSERT":
+        if holding != args[0] or args[1] not in locations:
+            return None
+        holding = None
+        facts.discard(f"holding({args[0]})")
+        facts.add(f"inserted({args[0]},{args[1]})")
+    elif name == "FASTEN":
+        if holding != args[0] or f"inserted({args[1]},{args[2]})" not in facts:
+            return None
+        facts.add(f"fastened({args[0]},{args[1]},{args[2]})")
     else:
         return None
-    opened = state.opened | ({args[0]} if name == "OPEN" else set())
-    if name == "OPEN":
+    opened = state.opened | ({args[0]} if name in {"OPEN", "INSPECT"} else set())
+    if name in {"OPEN", "INSPECT"}:
         facts.add(f"open({args[0]})")
     executed = state.executed
     if executed < len(sketch) and action == sketch[executed]:
@@ -117,6 +129,8 @@ _PREDICATE_ARITY = {
     "poured": 2,
     "stirred": 2,
     "served_with": 2,
+    "inserted": 2,
+    "fastened": 3,
 }
 
 

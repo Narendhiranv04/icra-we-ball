@@ -1,0 +1,83 @@
+# Rendering-only profile for the close-range YOLO-World L Workshop benchmark.
+# It uses category-correct target appearances while leaving collision geometry
+# and all functional dimensions unchanged.
+schema_version: 1
+profile_name: yoloworld_l_bright_neutral
+lighting:
+  disable_cast_shadows: true
+  headlight:
+    ambient: [0.34, 0.34, 0.34]
+    diffuse: [0.56, 0.56, 0.56]
+    specular: [0.05, 0.05, 0.05]
+  lights:
+    workshop_main_light:
+      diffuse: [0.62, 0.64, 0.68]
+      specular: [0.05, 0.05, 0.05]
+    workshop_fill_light:
+      diffuse: [0.40, 0.43, 0.48]
+      specular: [0.03, 0.03, 0.03]
+    workshop_bench_light:
+      diffuse: [0.46, 0.46, 0.44]
+      specular: [0.04, 0.04, 0.04]
+materials:
+  # Pale matte storage interiors provide separation from dark shafts/handles.
+  cabinet_interior_mat:
+    rgba: [0.70, 0.74, 0.78, 1.0]
+    specular: 0.02
+    shininess: 0.05
+    reflectance: 0.02
+  cabinet_body_mat:
+    rgba: [0.42, 0.52, 0.62, 1.0]
+    specular: 0.04
+    shininess: 0.08
+    reflectance: 0.03
+  cabinet_face_mat:
+    rgba: [0.32, 0.48, 0.64, 1.0]
+    specular: 0.05
+    shininess: 0.10
+    reflectance: 0.04
+  dark_steel:
+    rgba: [0.42, 0.45, 0.49, 1.0]
+    specular: 0.08
+    reflectance: 0.04
+  pegboard_mat:
+    rgba: [0.72, 0.75, 0.78, 1.0]
+    specular: 0.02
+  obstruction_case_mat:
+    rgba: [0.76, 0.34, 0.28, 1.0]
+    specular: 0.03
+geoms:
+  # A very light cabinet back prevents the long driver and screw from blending
+  # into the formerly dark blue-gray backing. Target geoms are not overridden.
+  cabinet_back:
+    rgba: [0.65, 0.68, 0.64, 1.0]
+  cabinet_shelf:
+    rgba: [0.62, 0.66, 0.70, 1.0]
+  # The base XML historically assigned the wood-handled screwdriver texture to
+  # every fastener. Restore category-correct metallic appearances here.
+  workshop_medium_phillips_screw_vis:
+    rgba: [0.0, 0.0, 0.0, 0.0]
+    optional: true
+  workshop_short_phillips_screw_vis:
+    rgba: [0.0, 0.0, 0.0, 0.0]
+    optional: true
+  workshop_hex_bolt_vis:
+    rgba: [0.0, 0.0, 0.0, 0.0]
+    optional: true
+  workshop_hex_bolt_col_shaft:
+    rgba: [0.24, 0.27, 0.31, 1.0]
+    group: 1
+    optional: true
+  workshop_hex_bolt_col_head:
+    rgba: [0.24, 0.27, 0.31, 1.0]
+    group: 1
+    optional: true
+geom_prefixes:
+  workshop_medium_phillips_screw_profile_:
+    rgba: [0.24, 0.27, 0.31, 1.0]
+    group: 1
+    optional: true
+  workshop_short_phillips_screw_profile_:
+    rgba: [0.24, 0.27, 0.31, 1.0]
+    group: 1
+    optional: true

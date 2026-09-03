@@ -1,0 +1,35 @@
+schema_version: 2
+task_id: w2_fixed_pair_position_presence_fastening
+goal_instruction: >-
+  Find the compatible screw and first compatible driver encountered in the
+  fixed storage search order. Insert the screw tip-down with its head on top,
+  then drive it fully into the workbench repair hole.
+specification_source: manual_future_fm_contract
+generated_from_foundation_model: false
+
+max_ranked_alternatives: 3
+region_policy:
+  candidates: [LEFT_DRAWER, RIGHT_DRAWER, TOOL_CABINET]
+  stop_when_a_valid_method_is_observed: true
+
+functional_methods:
+  screw:
+    tool_function: can_drive_screw
+    fastener_function: can_fasten
+    geometric_checks: [fits_hole, reaches_joint, tool_mates]
+    allowed_driver_instances: [workshop_long_phillips_driver, workshop_power_driver]
+    required_fastener_instance: workshop_medium_phillips_screw
+    distractor_instances: [workshop_wooden_hammer]
+    selection_rule: first_compatible_driver_observed
+    region_checks: [fixed_main_workbench_access]
+
+evidence_contract:
+  semantic_functions_source: foundation_model_visible_state_only
+  dimensions_source: observed_point_cloud
+  hidden_scene_inventory_allowed: false
+  simulator_names_allowed_in_model_prompt: false
+
+selection:
+  source: foundation_model_ranked_visible_candidates
+  deterministic_stage: validate_in_rank_order
+  terminate_on_first_valid: true

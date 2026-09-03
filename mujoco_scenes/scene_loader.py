@@ -8,12 +8,12 @@ an API for opening/closing containers and querying visibility.
 
 import yaml
 import copy
-import math
 import os
 import time
 import xml.etree.ElementTree as ET
 from collections import Counter
 from collections.abc import Mapping
+from importlib.util import find_spec
 from pathlib import Path
 from dataclasses import dataclass, field
 import random
@@ -35,17 +35,74 @@ KITCHEN_FEASIBILITY_VARIANTS = (
     CONFIGS_DIR / "kitchen_feasibility_variants.yaml"
 )
 
+ROBOT_FETCH = "fetch"
 ROBOT_GOOGLE = "google"
 ROBOT_NONE = "none"
+# Google Robot is the sole interactive robot backend on the integration
+# branch.  Fetch composition remains internal temporarily so historical
+# motion tests and old saved experiments can still be audited, but it is not
+# exposed by the production CLI or selected by default.
 ROBOT_CHOICES = (ROBOT_GOOGLE, ROBOT_NONE)
 
 
+# ── Fetch mobile manipulator ─────────────────────────────────────────────
+# The visual/collision meshes and kinematic tree come from the maintained
+# Gymnasium-Robotics Fetch assets. We adapt its benchmark-fixed base to three
+# controllable planar joints and use position actuators for the arm/gripper.
+FETCH_PACKAGE = "gymnasium_robotics"
+FETCH_ASSET_SUBDIR = Path("envs") / "assets" / "fetch"
+FETCH_BASE_POSE = {
+    # Start behind the centered serving table with symmetric left/right routes
+    # to the workstation manipulation poses.
+    "pos": "0 -1.10 0",
+    # Fetch's local +X (arm-forward direction) faces world +Y toward the table.
+    "quat": "0.7071068 0 0 0.7071068",
+}
+
+FETCH_HOME_QPOS = {
+    "robot0:base_forward_joint": 0.0,
+    "robot0:base_lateral_joint": 0.0,
+    "robot0:base_yaw_joint": 0.0,
+    "robot0:torso_lift_joint": 0.20,
+    "robot0:head_pan_joint": 0.0,
+    "robot0:head_tilt_joint": 0.35,
+    # Relaxed navigation pose: the arm is compactly tucked against the torso,
+    # leaving the head camera and both side-navigation corridors unobstructed.
+    "robot0:shoulder_pan_joint": 1.32,
+    "robot0:shoulder_lift_joint": 1.40,
+    "robot0:upperarm_roll_joint": -0.20,
+    "robot0:elbow_flex_joint": 1.72,
+    "robot0:forearm_roll_joint": 0.0,
+    "robot0:wrist_flex_joint": 1.66,
+    "robot0:wrist_roll_joint": 0.0,
+    "robot0:r_gripper_finger_joint": 0.035,
+    "robot0:l_gripper_finger_joint": 0.035,
+}
+
+FETCH_ACTUATORS = (
+    # name, joint, kp, ctrl_min, ctrl_max
+    ("robot0:base_forward_actuator", "robot0:base_forward_joint", 6000, -1.0, 1.0),
+    ("robot0:base_lateral_actuator", "robot0:base_lateral_joint", 6000, -1.5, 1.5),
+    ("robot0:base_yaw_actuator", "robot0:base_yaw_joint", 3500, -3.14, 3.14),
+    ("robot0:torso_lift_actuator", "robot0:torso_lift_joint", 3000, 0.0386, 0.3861),
+    ("robot0:head_pan_actuator", "robot0:head_pan_joint", 100, -1.57, 1.57),
+    ("robot0:head_tilt_actuator", "robot0:head_tilt_joint", 100, -0.76, 1.45),
+    ("robot0:shoulder_pan_actuator", "robot0:shoulder_pan_joint", 650, -1.6056, 1.6056),
+    ("robot0:shoulder_lift_actuator", "robot0:shoulder_lift_joint", 650, -1.221, 1.518),
+    ("robot0:upperarm_roll_actuator", "robot0:upperarm_roll_joint", 350, -3.14, 3.14),
+    ("robot0:elbow_flex_actuator", "robot0:elbow_flex_joint", 650, -2.251, 2.251),
+    ("robot0:forearm_roll_actuator", "robot0:forearm_roll_joint", 350, -3.14, 3.14),
+    ("robot0:wrist_flex_actuator", "robot0:wrist_flex_joint", 350, -2.16, 2.16),
+    ("robot0:wrist_roll_actuator", "robot0:wrist_roll_joint", 250, -3.14, 3.14),
+    ("robot0:r_gripper_finger_actuator", "robot0:r_gripper_finger_joint", 1000, 0.0, 0.05),
+    ("robot0:l_gripper_finger_actuator", "robot0:l_gripper_finger_joint", 1000, 0.0, 0.05),
+)
 
 
 # ── Google Robot mobile manipulator ─────────────────────────────────────
 # The kinematic tree and meshes come from MuJoCo Menagerie. Its published
-# model fixes the base, so the kitchen adapter adds ideal planar planning
-# joints. Menagerie itself remains outside this Git
+# model fixes the base, so the kitchen adapter adds the same ideal planar
+# planning joints used by Fetch. Menagerie itself remains outside this Git
 # repository and is located through MUJOCO_MENAGERIE_PATH or the workspace's
 # default third_party checkout.
 GOOGLE_BASE_POSE = {
@@ -102,18 +159,69 @@ GOOGLE_FORCE_RANGES = {
 }
 
 ROBOT_HOME_QPOS = {
+    ROBOT_FETCH: FETCH_HOME_QPOS,
     ROBOT_GOOGLE: GOOGLE_HOME_QPOS,
 }
 ROBOT_ACTUATORS = {
+    ROBOT_FETCH: FETCH_ACTUATORS,
     ROBOT_GOOGLE: GOOGLE_ACTUATORS,
 }
 ROBOT_BASE_JOINTS = {
+    ROBOT_FETCH: (
+        "robot0:base_forward_joint",
+        "robot0:base_lateral_joint",
+        "robot0:base_yaw_joint",
+    ),
     ROBOT_GOOGLE: (
         "google:base_forward_joint",
         "google:base_lateral_joint",
         "google:base_yaw_joint",
     ),
 }
+
+
+def _validate_step_count(steps: int) -> int:
+    """Return a valid positive MuJoCo step count."""
+    if isinstance(steps, bool) or not isinstance(steps, int) or steps <= 0:
+        raise ValueError("steps must be a positive integer")
+    return steps
+
+
+def _validate_render_dimensions(width: int, height: int) -> tuple[int, int]:
+    """Return valid positive fixed-frame render dimensions."""
+    for name, value in (("width", width), ("height", height)):
+        if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+            raise ValueError(f"{name} must be a positive integer")
+    return width, height
+
+
+def _apply_robot_home_pose(
+    model: mujoco.MjModel,
+    data: mujoco.MjData,
+    *,
+    robot_name: str,
+    home_qpos: Mapping[str, float],
+    actuators: tuple,
+) -> None:
+    """Apply one robot profile's reset joints and position-control targets."""
+    for joint_name, value in home_qpos.items():
+        joint_id = mujoco.mj_name2id(
+            model, mujoco.mjtObj.mjOBJ_JOINT, joint_name
+        )
+        if joint_id < 0:
+            raise RuntimeError(f"{robot_name} joint missing: {joint_name}")
+        data.qpos[model.jnt_qposadr[joint_id]] = float(value)
+    for actuator_name, joint_name, _kp, _lower, _upper in actuators:
+        if joint_name not in home_qpos:
+            raise RuntimeError(
+                f"{robot_name} home pose is missing actuator joint {joint_name}"
+            )
+        actuator_id = mujoco.mj_name2id(
+            model, mujoco.mjtObj.mjOBJ_ACTUATOR, actuator_name
+        )
+        if actuator_id < 0:
+            raise RuntimeError(f"{robot_name} actuator missing: {actuator_name}")
+        data.ctrl[actuator_id] = float(home_qpos[joint_name])
 
 
 # ── physically supported object placement ────────────────────────────────
@@ -456,7 +564,7 @@ CONTAINER_SLOTS = {
 
 # Countertop spots contain (x, y, support_z) world coordinates.
 COUNTER_SPOTS = {
-    # Negative Y is the robot side of the worktop. Keep the primary
+    # Negative Y is the Fetch side of the worktop. Keep the primary
     # ingredients away from the upper cabinets and within an easy frontal
     # gripper approach corridor.
     "counter_spot_1": (-0.35, -0.32, 0.580),
@@ -587,6 +695,7 @@ class SceneConfig:
     optimal_search_order: list
     optimal_inspections: int
     notes: str = ""
+    container_slot_overrides: dict = field(default_factory=dict)
 
 
 INTEGRATED_PRIMARY_SCENE = "S1_integrated_kitchen_object_function_primary"
@@ -768,134 +877,34 @@ class SceneState:
 
 def load_all_configs() -> dict[str, SceneConfig]:
     """Load all scene configurations from YAML."""
-    raw = yaml.safe_load(SCENE_CONFIGS.read_text(encoding="utf-8"))
-    if not isinstance(raw, Mapping):
-        raise ValueError(f"{SCENE_CONFIGS} must contain a YAML mapping")
-    raw_scenes = raw.get("scenes")
-    if not isinstance(raw_scenes, Mapping) or not raw_scenes:
-        raise ValueError(f"{SCENE_CONFIGS} must define a non-empty 'scenes' mapping")
+    with open(SCENE_CONFIGS) as f:
+        raw = yaml.safe_load(f)
 
     configs = {}
-    for name, cfg in raw_scenes.items():
-        if not isinstance(name, str) or not name.strip():
-            raise ValueError("Scene names must be non-empty strings")
-        if not isinstance(cfg, Mapping):
-            raise ValueError(f"Scene {name!r} must be a mapping")
-        goal = cfg.get("goal")
-        if not isinstance(goal, str) or not goal.strip():
-            raise ValueError(f"Scene {name!r} must define a non-empty goal")
-
-        mapping_fields = (
-            "countertop_objects", "container_contents", "substitution_map"
-        )
-        for field_name in mapping_fields:
-            value = cfg.get(field_name, {})
-            if not isinstance(value, Mapping):
-                raise ValueError(
-                    f"Scene {name!r} field {field_name!r} must be a mapping"
-                )
-        list_fields = ("required_objects", "optimal_search_order")
-        for field_name in list_fields:
-            value = cfg.get(field_name, [])
-            if not isinstance(value, list):
-                raise ValueError(
-                    f"Scene {name!r} field {field_name!r} must be a list"
-                )
-            if any(not isinstance(item, str) or not item for item in value):
-                raise ValueError(
-                    f"Scene {name!r} field {field_name!r} must contain "
-                    "non-empty strings"
-                )
-        countertop_objects = cfg.get("countertop_objects", {})
-        if any(
-            not isinstance(spot, str) or not spot
-            or not isinstance(object_id, str) or not object_id
-            for spot, object_id in countertop_objects.items()
-        ):
-            raise ValueError(
-                f"Scene {name!r} countertop_objects must map non-empty strings"
-            )
-        container_contents = cfg.get("container_contents", {})
-        for region, items in container_contents.items():
-            if not isinstance(region, str) or not region or not isinstance(items, list):
-                raise ValueError(
-                    f"Scene {name!r} container_contents must map region names to lists"
-                )
-            if any(not isinstance(item, str) or not item for item in items):
-                raise ValueError(
-                    f"Scene {name!r} container {region!r} contains an invalid object"
-                )
-        substitution_map = cfg.get("substitution_map", {})
-        for requirement, alternatives in substitution_map.items():
-            if (
-                not isinstance(requirement, str) or not requirement
-                or not isinstance(alternatives, list)
-                or any(
-                    not isinstance(alternative, str) or not alternative
-                    for alternative in alternatives
-                )
-            ):
-                raise ValueError(
-                    f"Scene {name!r} substitution_map must map non-empty "
-                    "requirements to lists of non-empty strings"
-                )
-        notes = cfg.get("notes", "")
-        if not isinstance(notes, str):
-            raise ValueError(f"Scene {name!r} notes must be a string")
-        optimal_inspections = cfg.get("optimal_inspections", 0)
-        if (
-            isinstance(optimal_inspections, bool)
-            or not isinstance(optimal_inspections, int)
-            or optimal_inspections < 0
-        ):
-            raise ValueError(
-                f"Scene {name!r} optimal_inspections must be a non-negative integer"
-            )
+    for name, cfg in raw.get("scenes", {}).items():
         sc = SceneConfig(
             name=name,
-            goal=goal.strip(),
-            countertop_objects=dict(countertop_objects),
-            container_contents={
-                region: list(items)
-                for region, items in container_contents.items()
-            },
-            required_objects=list(cfg.get("required_objects", [])),
-            substitution_map={
-                requirement: list(alternatives)
-                for requirement, alternatives in substitution_map.items()
-            },
-            optimal_search_order=list(cfg.get("optimal_search_order", [])),
-            optimal_inspections=optimal_inspections,
-            notes=notes,
+            goal=cfg["goal"],
+            countertop_objects=cfg.get("countertop_objects", {}),
+            container_contents=cfg.get("container_contents", {}),
+            required_objects=cfg.get("required_objects", []),
+            substitution_map=cfg.get("substitution_map", {}),
+            optimal_search_order=cfg.get("optimal_search_order", []),
+            optimal_inspections=cfg.get("optimal_inspections", 0),
+            notes=cfg.get("notes", ""),
+            container_slot_overrides=copy.deepcopy(
+                cfg.get("container_slot_overrides", {})
+            ),
         )
         configs[name] = sc
     if KITCHEN_FEASIBILITY_VARIANTS.exists():
         benchmark = yaml.safe_load(
             KITCHEN_FEASIBILITY_VARIANTS.read_text(encoding="utf-8")
         ) or {}
-        if not isinstance(benchmark, Mapping):
-            raise ValueError(
-                f"{KITCHEN_FEASIBILITY_VARIANTS} must contain a YAML mapping"
-            )
-        variants = benchmark.get("variants", {})
-        if not isinstance(variants, Mapping):
-            raise ValueError(
-                f"{KITCHEN_FEASIBILITY_VARIANTS} 'variants' must be a mapping"
-            )
         expected_goal = benchmark.get("goal_instruction")
-        for variant_id, variant in variants.items():
-            if not isinstance(variant, Mapping):
-                raise ValueError(f"Feasibility variant {variant_id} must be a mapping")
-            scene_name = variant.get("scene_name")
-            base_name = variant.get("base_scene")
-            if not isinstance(scene_name, str) or not scene_name.strip():
-                raise ValueError(
-                    f"Feasibility variant {variant_id} has no valid scene_name"
-                )
-            if not isinstance(base_name, str) or not base_name.strip():
-                raise ValueError(
-                    f"Feasibility variant {variant_id} has no valid base_scene"
-                )
+        for variant_id, variant in benchmark.get("variants", {}).items():
+            scene_name = variant["scene_name"]
+            base_name = variant["base_scene"]
             if base_name not in configs:
                 raise ValueError(
                     f"Feasibility variant {variant_id} has unknown base "
@@ -908,135 +917,43 @@ def load_all_configs() -> dict[str, SceneConfig]:
                     f"Feasibility variant {variant_id} changed the goal"
                 )
             if "countertop_objects" in variant:
-                if not isinstance(variant["countertop_objects"], Mapping):
-                    raise ValueError(
-                        f"Feasibility variant {variant_id} countertop_objects "
-                        "must be a mapping"
-                    )
                 derived.countertop_objects = dict(
                     variant["countertop_objects"]
                 )
             else:
-                removals = variant.get("countertop_remove", [])
-                additions = variant.get("countertop_set", {})
-                if not isinstance(removals, list) or not isinstance(additions, Mapping):
-                    raise ValueError(
-                        f"Feasibility variant {variant_id} has malformed countertop edits"
-                    )
-                for spot in removals:
+                for spot in variant.get("countertop_remove", []):
                     derived.countertop_objects.pop(spot, None)
-                derived.countertop_objects.update(additions)
-            if any(
-                not isinstance(spot, str) or not spot
-                or not isinstance(object_id, str) or not object_id
-                for spot, object_id in derived.countertop_objects.items()
-            ):
-                raise ValueError(
-                    f"Feasibility variant {variant_id} has invalid countertop objects"
+                derived.countertop_objects.update(
+                    variant.get("countertop_set", {})
                 )
             if "container_contents" in variant:
-                if not isinstance(variant["container_contents"], Mapping):
-                    raise ValueError(
-                        f"Feasibility variant {variant_id} container_contents "
-                        "must be a mapping"
-                    )
-                raw_container_contents = variant["container_contents"]
-                for region, items in raw_container_contents.items():
-                    if (
-                        not isinstance(region, str) or not region
-                        or not isinstance(items, list)
-                        or any(not isinstance(item, str) or not item for item in items)
-                    ):
-                        raise ValueError(
-                            f"Feasibility variant {variant_id} has invalid "
-                            "container contents"
-                        )
                 derived.container_contents = {
                     region: list(items)
-                    for region, items in raw_container_contents.items()
+                    for region, items in variant[
+                        "container_contents"
+                    ].items()
                 }
-            for region, items in derived.container_contents.items():
-                if (
-                    not isinstance(region, str) or not region
-                    or not isinstance(items, list)
-                    or any(not isinstance(item, str) or not item for item in items)
-                ):
-                    raise ValueError(
-                        f"Feasibility variant {variant_id} has invalid container contents"
-                    )
-            inspection_order = benchmark.get(
-                "inspection_order", derived.optimal_search_order
-            )
-            if not isinstance(inspection_order, list) or any(
-                not isinstance(region, str) or not region
-                for region in inspection_order
-            ):
-                raise ValueError("Feasibility inspection_order must be a string list")
-            derived.optimal_search_order = list(inspection_order)
-            expected_inspections = variant.get(
-                "expected_inspections",
-                len(derived.optimal_search_order),
-            )
-            if (
-                isinstance(expected_inspections, bool)
-                or not isinstance(expected_inspections, int)
-                or expected_inspections < 0
-            ):
-                raise ValueError(
-                    f"Feasibility variant {variant_id} expected_inspections "
-                    "must be a non-negative integer"
+            if "container_slot_overrides" in variant:
+                derived.container_slot_overrides = copy.deepcopy(
+                    variant["container_slot_overrides"]
                 )
-            derived.optimal_inspections = expected_inspections
+            derived.optimal_search_order = list(
+                benchmark.get(
+                    "inspection_order", derived.optimal_search_order
+                )
+            )
+            derived.optimal_inspections = int(
+                variant.get(
+                    "expected_inspections",
+                    len(derived.optimal_search_order),
+                )
+            )
             derived.notes = (
                 f"Controlled task-feasibility benchmark variant {variant_id}. "
                 + str(variant.get("description", ""))
             )
             configs[scene_name] = derived
     return configs
-
-
-def _validate_step_count(steps: int) -> int:
-    """Return a valid positive MuJoCo step count."""
-    if isinstance(steps, bool) or not isinstance(steps, int) or steps <= 0:
-        raise ValueError("steps must be a positive integer")
-    return steps
-
-
-def _validate_render_dimensions(width: int, height: int) -> tuple[int, int]:
-    """Return valid positive fixed-frame render dimensions."""
-    for name, value in (("width", width), ("height", height)):
-        if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
-            raise ValueError(f"{name} must be a positive integer")
-    return width, height
-
-
-def _apply_robot_home_pose(
-    model: mujoco.MjModel,
-    data: mujoco.MjData,
-    *,
-    robot_name: str,
-    home_qpos: Mapping[str, float],
-    actuators: tuple,
-) -> None:
-    """Apply one robot profile's reset joints and position-control targets."""
-    for joint_name, value in home_qpos.items():
-        joint_id = mujoco.mj_name2id(
-            model, mujoco.mjtObj.mjOBJ_JOINT, joint_name
-        )
-        if joint_id < 0:
-            raise RuntimeError(f"{robot_name} joint missing: {joint_name}")
-        data.qpos[model.jnt_qposadr[joint_id]] = float(value)
-    for actuator_name, joint_name, _kp, _lower, _upper in actuators:
-        if joint_name not in home_qpos:
-            raise RuntimeError(
-                f"{robot_name} home pose is missing actuator joint {joint_name}"
-            )
-        actuator_id = mujoco.mj_name2id(
-            model, mujoco.mjtObj.mjOBJ_ACTUATOR, actuator_name
-        )
-        if actuator_id < 0:
-            raise RuntimeError(f"{robot_name} actuator missing: {actuator_name}")
-        data.ctrl[actuator_id] = float(home_qpos[joint_name])
 
 
 def _parse_object_library() -> tuple[dict[str, ET.Element], list[ET.Element]]:
@@ -1051,6 +968,21 @@ def _parse_object_library() -> tuple[dict[str, ET.Element], list[ET.Element]]:
     return objects, assets
 
 
+def _fetch_asset_dir() -> Path:
+    """Return the Fetch asset directory installed by Gymnasium-Robotics."""
+    package_spec = find_spec(FETCH_PACKAGE)
+    if package_spec is None or not package_spec.submodule_search_locations:
+        raise RuntimeError(
+            "Fetch robot assets are unavailable. Install dependencies with "
+            "`pip install -r mujoco_scenes/requirements.txt` or use the Docker image."
+        )
+
+    package_dir = Path(next(iter(package_spec.submodule_search_locations))).resolve()
+    asset_dir = package_dir / FETCH_ASSET_SUBDIR
+    required = (asset_dir / "shared.xml", asset_dir / "robot.xml")
+    if not all(path.exists() for path in required):
+        raise RuntimeError(f"Incomplete Fetch model installation at: {asset_dir}")
+    return asset_dir
 
 
 def _selected_robot(include_robot: bool, robot: str | None) -> str:
@@ -1096,6 +1028,181 @@ def _remove_named_body(parent: ET.Element, body_name: str) -> None:
             parent.remove(body)
 
 
+def _inject_fetch_robot(root: ET.Element, fetch_dir: Path) -> None:
+    """Merge and adapt Farama's Fetch MJCF into the kitchen model."""
+    shared_root = ET.parse(fetch_dir / "shared.xml").getroot()
+    robot_root = ET.parse(fetch_dir / "robot.xml").getroot()
+
+    asset = root.find("asset")
+    default = root.find("default")
+    worldbody = root.find("worldbody")
+    contact = root.find("contact")
+    actuator = root.find("actuator")
+
+    # Only Fetch-specific materials and meshes are required. The benchmark's
+    # skybox, floor, table and block materials belong to its original task.
+    shared_asset = shared_root.find("asset")
+    for element in shared_asset:
+        name = element.get("name", "")
+        if element.tag == "mesh" or name.startswith("robot0:"):
+            asset.append(copy.deepcopy(element))
+
+    fetch_defaults = shared_root.find("default/default")
+    default.append(copy.deepcopy(fetch_defaults))
+
+    for exclusion in shared_root.findall("contact/exclude"):
+        contact.append(copy.deepcopy(exclusion))
+
+    robot_body = None
+    for body in robot_root.findall("body"):
+        if body.get("name") == "robot0:base_link":
+            robot_body = copy.deepcopy(body)
+            break
+    if robot_body is None:
+        raise RuntimeError("Fetch robot.xml does not contain robot0:base_link")
+
+    robot_body.set("pos", FETCH_BASE_POSE["pos"])
+    robot_body.set("quat", FETCH_BASE_POSE["quat"])
+
+    # Keep the high-detail base mesh visual-only and use a smooth collision
+    # proxy. condim=1 removes artificial floor drag from the holonomic planar
+    # joints while retaining normal collision with furniture and obstacles.
+    base_visual = robot_body.find("geom[@name='robot0:base_link']")
+    if base_visual is not None:
+        base_visual.set("contype", "0")
+        base_visual.set("conaffinity", "0")
+        base_visual.set("group", "1")
+    ET.SubElement(
+        robot_body,
+        "geom",
+        {
+            "name": "robot0:base_collision_proxy",
+            "type": "cylinder",
+            "size": "0.27 0.18",
+            "pos": "0 0 0.18",
+            "condim": "1",
+            "priority": "2",
+            "friction": "0 0 0",
+            "contype": "1",
+            "conaffinity": "1",
+            "rgba": "0 0 0 0",
+            "group": "3",
+        },
+    )
+
+    # Convert the benchmark's locked XYZ base into a planar mobile base.
+    base_joints = robot_body.findall("joint")[:3]
+    if len(base_joints) != 3:
+        raise RuntimeError("Unexpected Fetch base joint layout")
+    joint_specs = (
+        ("robot0:base_forward_joint", "slide", "1 0 0", "-1 1", "500"),
+        ("robot0:base_lateral_joint", "slide", "0 1 0", "-1.5 1.5", "500"),
+        ("robot0:base_yaw_joint", "hinge", "0 0 1", "-3.14 3.14", "100"),
+    )
+    for joint, (name, joint_type, axis, joint_range, damping) in zip(base_joints, joint_specs):
+        joint.attrib.clear()
+        joint.set("name", name)
+        joint.set("type", joint_type)
+        joint.set("axis", axis)
+        joint.set("range", joint_range)
+        joint.set("limited", "true")
+        joint.set("damping", damping)
+        joint.set("armature", "0.1")
+
+    # Remove task-only external camera. The head camera stays, and the original
+    # gripper RGB camera becomes the requested wrist camera.
+    _remove_named_body(robot_body, "robot0:external_camera_body_0")
+    for camera in robot_body.iter("camera"):
+        if camera.get("name") == "gripper_camera_rgb":
+            camera.set("name", "robot0:gripper_camera_rgb_legacy")
+
+    gripper_body = None
+    for body in robot_body.iter("body"):
+        if body.get("name") == "robot0:gripper_link":
+            gripper_body = body
+            break
+    if gripper_body is None:
+        raise RuntimeError("Fetch gripper body missing from robot.xml")
+
+    # Keep the stock finger boxes as visuals, but use collision fingertips
+    # that end 10 mm beyond robot0:grip instead of 18.5 mm. The original long
+    # collision boxes make a vertical pinch of a flat utensil mathematically
+    # require penetrating the tabletop.
+    for side, lateral in (("r", -0.008), ("l", 0.008)):
+        finger_name = f"robot0:{side}_gripper_finger_link"
+        finger_body = next(
+            body for body in gripper_body.iter("body")
+            if body.get("name") == finger_name
+        )
+        visual = finger_body.find(f"geom[@name='{finger_name}']")
+        if visual is None:
+            raise RuntimeError(f"Fetch finger geometry missing: {finger_name}")
+        visual.set("name", f"{finger_name}_visual")
+        visual.set("contype", "0")
+        visual.set("conaffinity", "0")
+        ET.SubElement(
+            finger_body,
+            "geom",
+            {
+                "name": finger_name,
+                "type": "box",
+                "pos": f"-0.00425 {lateral} 0",
+                "size": "0.03425 0.007 0.0135",
+                "condim": "4",
+                "friction": "1 0.05 0.01",
+                "rgba": "0 0 0 0",
+                "group": "3",
+            },
+        )
+    ET.SubElement(
+        gripper_body,
+        "camera",
+        {
+            "name": "wrist_camera",
+            "pos": "0.03 0 0.04",
+            # Look forward and slightly down from the home gripper pose.
+            "xyaxes": "0 -1 0 -0.7936 0 0.6085",
+            "fovy": "65",
+        },
+    )
+
+    # Gravity compensation keeps the initial arm pose stable until a planner
+    # starts commanding the joint-space position actuators.
+    for body in robot_body.iter("body"):
+        if body.find("inertial") is not None:
+            body.set("gravcomp", "1")
+    for joint in robot_body.iter("joint"):
+        name = joint.get("name", "")
+        if name.startswith("robot0:") and "base_" not in name:
+            if "torso_lift" in name:
+                damping, armature = "50", "1"
+            elif "gripper_finger" in name:
+                damping, armature = "20", "0.2"
+            elif "head_" in name:
+                damping, armature = "5", "0.1"
+            else:
+                damping, armature = "10", "0.5"
+            joint.set("damping", damping)
+            joint.set("armature", armature)
+            joint.attrib.pop("stiffness", None)
+
+    # The kitchen's temporary wrist camera is replaced by the real Fetch wrist
+    # camera at the gripper link.
+    _remove_named_body(worldbody, "wrist_camera_mount")
+    worldbody.append(robot_body)
+
+    for name, joint, kp, ctrl_min, ctrl_max in FETCH_ACTUATORS:
+        ET.SubElement(
+            actuator,
+            "position",
+            {
+                "name": name,
+                "joint": joint,
+                "kp": str(kp),
+                "ctrllimited": "true",
+                "ctrlrange": f"{ctrl_min} {ctrl_max}",
+            },
+        )
 
 
 def _prefix_google_robot(robot_root: ET.Element) -> None:
@@ -1158,7 +1265,11 @@ def _prefix_google_robot(robot_root: ET.Element) -> None:
             element.set("material", material_names[material])
 
 
-def _inject_google_robot(root: ET.Element, google_dir: Path) -> None:
+def _inject_google_robot(
+    root: ET.Element,
+    google_dir: Path,
+    base_pose: dict[str, str] | None = None,
+) -> None:
     """Merge and adapt Menagerie's Google Robot into the kitchen model."""
     robot_root = ET.parse(google_dir / "robot.xml").getroot()
     _prefix_google_robot(robot_root)
@@ -1177,8 +1288,9 @@ def _inject_google_robot(root: ET.Element, google_dir: Path) -> None:
     if robot_body is None:
         raise RuntimeError("Menagerie Google Robot base_link body is missing")
     robot_body = copy.deepcopy(robot_body)
-    robot_body.set("pos", GOOGLE_BASE_POSE["pos"])
-    robot_body.set("quat", GOOGLE_BASE_POSE["quat"])
+    resolved_base_pose = GOOGLE_BASE_POSE if base_pose is None else base_pose
+    robot_body.set("pos", resolved_base_pose["pos"])
+    robot_body.set("quat", resolved_base_pose["quat"])
 
     joint_specs = (
         ("google:base_forward_joint", "slide", "1 0 0", "-1 1.25", "750"),
@@ -1310,6 +1422,18 @@ def _inject_google_robot(root: ET.Element, google_dir: Path) -> None:
         ET.SubElement(actuator, "position", attributes)
 
 
+def _load_fetch_binary_assets(fetch_dir: Path) -> dict[str, bytes]:
+    """Load mesh/texture bytes for MjModel.from_xml_string()."""
+    supported = {".stl", ".obj", ".png", ".jpg", ".jpeg"}
+    source_dirs = (fetch_dir, fetch_dir.parent / "stls" / "fetch")
+    assets = {}
+    for source_dir in source_dirs:
+        if not source_dir.exists():
+            continue
+        for path in source_dir.iterdir():
+            if path.is_file() and path.suffix.lower() in supported:
+                assets[path.name] = path.read_bytes()
+    return assets
 
 
 def _load_google_binary_assets(google_dir: Path) -> dict[str, bytes]:
@@ -1351,7 +1475,9 @@ def build_scene_xml(
     for element in object_assets:
         asset_root.append(copy.deepcopy(element))
 
-    if robot_name == ROBOT_GOOGLE:
+    if robot_name == ROBOT_FETCH:
+        _inject_fetch_robot(root, _fetch_asset_dir())
+    elif robot_name == ROBOT_GOOGLE:
         _inject_google_robot(root, _google_robot_dir())
 
     # Track unique instance counters for duplicates
@@ -1641,10 +1767,23 @@ def build_scene_xml(
                 print(f"  [WARNING] Container {container_id} full, cannot place {obj_name}.")
                 continue
             slot_rel_pos = np.array(allocated_slots[i], dtype=float)
+            configured_slot = (
+                config.container_slot_overrides
+                .get(container_id, {})
+                .get(obj_name)
+            )
+            if configured_slot is not None:
+                if len(configured_slot) != 3:
+                    raise ValueError(
+                        "Container slot override must be [x, y, support_z]: "
+                        f"{container_id}/{obj_name}={configured_slot}"
+                    )
+                slot_rel_pos = np.asarray(configured_slot, dtype=float)
             if (
                 is_integrated_kitchen_scene(config.name)
                 and container_id == "C2"
                 and obj_name != "s1i_c2_soup_spoon"
+                and configured_slot is None
             ):
                 # Reserve the left half of C2's shelf for the vessel so the
                 # upright utensil has a separate, unobstructed central-right
@@ -1792,11 +1931,16 @@ def build_scene_xml(
                 }
                 ET.SubElement(equality, "weld", fixture_attributes)
 
-    if robot_name == ROBOT_GOOGLE:
+    if robot_name in {ROBOT_FETCH, ROBOT_GOOGLE}:
         equality = root.find("equality")
         if equality is None:
             equality = ET.SubElement(root, "equality")
-        gripper_body_name = "google:link_gripper"
+        equality_prefix = "google" if robot_name == ROBOT_GOOGLE else "robot0"
+        gripper_body_name = (
+            "google:link_gripper"
+            if robot_name == ROBOT_GOOGLE
+            else "robot0:gripper_link"
+        )
         supported_objects = {
             "kettle", "coffee_jar", "sugar_jar", "spoon", "fork",
             "mug", "cup", "bowl",
@@ -1811,7 +1955,7 @@ def build_scene_xml(
                 equality,
                 "weld",
                 {
-                    "name": f"google:pick_weld_{instance_name}",
+                    "name": f"{equality_prefix}:pick_weld_{instance_name}",
                     "body1": gripper_body_name,
                     "body2": instance_name,
                     "active": "false",
@@ -1827,7 +1971,7 @@ def build_scene_xml(
                     equality,
                     "connect",
                     {
-                        "name": f"google:pick_pivot_{instance_name}",
+                        "name": f"{equality_prefix}:pick_pivot_{instance_name}",
                         "body1": gripper_body_name,
                         "body2": instance_name,
                         "anchor": "0 0 0",
@@ -1859,6 +2003,51 @@ def build_scene_xml(
                         "solref": "0.01 1",
                     },
                 )
+    if robot_name == ROBOT_FETCH:
+        contact = root.find("contact")
+        if contact is None:
+            contact = ET.SubElement(root, "contact")
+        ET.SubElement(
+            contact,
+            "exclude",
+            {
+                "body1": "robot0:torso_lift_link",
+                "body2": "robot0:shoulder_lift_link",
+            },
+        )
+        equality = root.find("equality")
+        if equality is None:
+            equality = ET.SubElement(root, "equality")
+        # Activated only after both fingers contact the box-lid handle. The
+        # live relative pose is filled by the physical open action, allowing
+        # the arm and the real hinge joint to follow one consistent arc.
+        ET.SubElement(
+            equality,
+            "weld",
+            {
+                "name": "robot0:open_weld_B1_lid",
+                "body1": "robot0:gripper_link",
+                "body2": "B1_lid",
+                "active": "false",
+                "solref": "0.01 1",
+            },
+        )
+        for drawer_name in ("D1", "D2"):
+            # A live point constraint preserves the finger-confirmed handle
+            # contact while allowing the wrist to yaw naturally during the
+            # straight drawer pull.
+            ET.SubElement(
+                equality,
+                "connect",
+                {
+                    "name": f"robot0:open_connect_{drawer_name}",
+                    "body1": "robot0:gripper_link",
+                    "body2": f"drawer_{drawer_name}_tray",
+                    "anchor": "0 0 0",
+                    "active": "false",
+                    "solref": "0.01 1",
+                },
+            )
 
     return ET.tostring(root, encoding="unicode")
 
@@ -1901,7 +2090,9 @@ class KitchenScene:
         print(f"  Goal: {self.config.goal}")
         xml_str = build_scene_xml(self.config, robot=self.robot_name)
         model_assets = _load_object_binary_assets()
-        if self.robot_name == ROBOT_GOOGLE:
+        if self.robot_name == ROBOT_FETCH:
+            model_assets.update(_load_fetch_binary_assets(_fetch_asset_dir()))
+        elif self.robot_name == ROBOT_GOOGLE:
             model_assets.update(_load_google_binary_assets(_google_robot_dir()))
         self.model = mujoco.MjModel.from_xml_string(xml_str, assets=model_assets)
         self.data = mujoco.MjData(self.model)
@@ -1958,13 +2149,29 @@ class KitchenScene:
 
     def _set_robot_home_pose(self):
         """Apply deterministic robot joint positions and controller targets."""
-        _apply_robot_home_pose(
-            self.model,
-            self.data,
-            robot_name=self.robot_name,
-            home_qpos=self.robot_home_qpos,
-            actuators=self.robot_actuators,
-        )
+        for joint_name, value in self.robot_home_qpos.items():
+            joint_id = mujoco.mj_name2id(
+                self.model, mujoco.mjtObj.mjOBJ_JOINT, joint_name
+            )
+            if joint_id < 0:
+                raise RuntimeError(
+                    f"{self.robot_name} joint missing from composed model: "
+                    f"{joint_name}"
+                )
+            qpos_adr = self.model.jnt_qposadr[joint_id]
+            self.data.qpos[qpos_adr] = value
+
+        for actuator_name, joint_name, _kp, _lo, _hi in self.robot_actuators:
+            actuator_id = mujoco.mj_name2id(
+                self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, actuator_name
+            )
+            if actuator_id < 0:
+                raise RuntimeError(
+                    f"{self.robot_name} actuator missing from composed model: "
+                    f"{actuator_name}"
+                )
+            self.data.ctrl[actuator_id] = self.robot_home_qpos[joint_name]
+
         mujoco.mj_forward(self.model, self.data)
 
     def get_robot_joint_positions(self) -> dict[str, float]:
@@ -1985,9 +2192,6 @@ class KitchenScene:
         """Command named robot position actuators and advance the simulation."""
         if not self.has_robot:
             raise RuntimeError("This scene was created without a robot")
-        if not isinstance(targets, Mapping):
-            raise TypeError("targets must be a mapping of joint names to positions")
-        steps = _validate_step_count(steps)
         actuator_by_joint = {
             joint: (name, lo, hi)
             for name, joint, _kp, lo, hi in self.robot_actuators
@@ -1997,15 +2201,6 @@ class KitchenScene:
                 raise ValueError(
                     f"Unknown or unactuated {self.robot_name} joint: {joint_name}"
                 )
-            if (
-                isinstance(target, bool)
-                or not isinstance(target, (int, float, np.integer, np.floating))
-                or not math.isfinite(float(target))
-            ):
-                raise ValueError(
-                    f"Target for {joint_name} must be a finite number"
-                )
-            target = float(target)
             actuator_name, lower, upper = actuator_by_joint[joint_name]
             if not lower <= target <= upper:
                 raise ValueError(
@@ -2099,7 +2294,6 @@ class KitchenScene:
         """
         if container_id not in CONTAINER_JOINTS:
             raise ValueError(f"Unknown container: {container_id}")
-        steps = _validate_step_count(steps)
 
         if self.state.container_open_state[container_id]:
             print(f"  [INFO] {container_id} already open.")
@@ -2196,7 +2390,6 @@ class KitchenScene:
         """Close a previously opened container."""
         if container_id not in CONTAINER_JOINTS:
             raise ValueError(f"Unknown container: {container_id}")
-        steps = _validate_step_count(steps)
 
         cinfo = CONTAINER_JOINTS[container_id]
         actuator_id = mujoco.mj_name2id(
@@ -2304,8 +2497,6 @@ class KitchenScene:
                      width: int = 1280, height: int = 720) -> np.ndarray:
         """Render a single frame from the given camera."""
         width, height = _validate_render_dimensions(width, height)
-        if not isinstance(camera, str) or not camera.strip():
-            raise ValueError("camera must be a non-empty string")
         cam_id = mujoco.mj_name2id(
             self.model, mujoco.mjtObj.mjOBJ_CAMERA, camera
         )
@@ -2315,7 +2506,7 @@ class KitchenScene:
         try:
             mujoco.mj_forward(self.model, self.data)
             renderer.update_scene(self.data, camera=cam_id)
-            return np.array(renderer.render(), copy=True)
+            return renderer.render().copy()
         finally:
             renderer.close()
 

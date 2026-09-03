@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+from mujoco_scenes.geometry_relations import evaluate_insertable_in, evaluate_reaches_bottom
 import yaml
 
 from mujoco_scenes.geometry_checker import (
@@ -988,12 +989,9 @@ def pairwise_relation_evaluation(
             reason = "REQUIRED_MEASUREMENT_MISSING"
             pass_margin = None
         else:
-            pass_margin = opening_width - (cross_section + clearance)
-            status = (
-                "TRUE"
-                if pass_margin > 0.0
-                else "FALSE"
-            )
+            relation = evaluate_insertable_in(cross_section, opening_width, clearance)
+            pass_margin = relation["pass_margin_m"]
+            status = relation["status"]
             reason = None
         return {
             "status": status,
@@ -1018,12 +1016,9 @@ def pairwise_relation_evaluation(
             reason = "REQUIRED_MEASUREMENT_MISSING"
             pass_margin = None
         else:
-            pass_margin = usable_length - grip - cavity_depth
-            status = (
-                "TRUE"
-                if pass_margin >= 0.0
-                else "FALSE"
-            )
+            relation = evaluate_reaches_bottom(usable_length, cavity_depth, grip)
+            pass_margin = relation["pass_margin_m"]
+            status = relation["status"]
             reason = None
         return {
             "status": status,
@@ -1039,3 +1034,18 @@ def pairwise_relation_evaluation(
             **provenance,
         }
     raise ValueError(f"Unsupported pairwise relation: {relation}")
+
+
+def pairwise_relation_status(
+    relation: str,
+    source_properties: dict[str, Any],
+    target_properties: dict[str, Any],
+    config: dict[str, Any],
+) -> str:
+    """Compatibility wrapper returning only the tri-state result."""
+    return pairwise_relation_evaluation(
+        relation,
+        source_properties,
+        target_properties,
+        config,
+    )["status"]

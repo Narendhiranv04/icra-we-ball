@@ -1,3 +1,5 @@
+import json
+
 import mujoco
 import numpy as np
 
@@ -9,6 +11,7 @@ from mujoco_scenes.baseline_kitchen_runtime import (
     PUBLIC_REGIONS,
     STATIC_REGION_GEOMS,
     _public_region_reference,
+    goal_contract_from_expected_actions,
 )
 from mujoco_scenes.kitchen_execution_policy import (
     KitchenWorkspace,
@@ -33,6 +36,32 @@ def test_goal_contract_accepts_functionally_equivalent_spoon_instances():
     ledger.accept(("placed(spoon_a,bowl)",))
     ledger.accept(("placed(cup,serving_area)",))
     assert ledger.goal_satisfied
+
+
+def test_expected_actions_compile_only_private_terminal_relations(tmp_path):
+    path = tmp_path / "expected.json"
+    path.write_text(json.dumps({
+        "intended_outcome": "FEASIBLE",
+        "actions": [
+            {"operator": "PICK", "arguments": ["jar"]},
+            {"operator": "POUR", "arguments": ["jar", "cup"]},
+            {"operator": "PLACE", "arguments": ["jar", "countertop"]},
+            {"operator": "STIR", "arguments": ["spoon", "cup"]},
+            {"operator": "PLACE", "arguments": ["cup", "serving_area"]},
+        ],
+    }))
+
+    compiled = goal_contract_from_expected_actions(
+        path,
+        generic_for_backend={"jar": "object_1", "cup": "object_2", "spoon": "object_3"},
+        object_labels={"object_1": "jar", "object_2": "cup", "object_3": "spoon"},
+    )
+
+    assert compiled.required_effects == (
+        "poured(object_1,object_2)",
+        "placed(object_2,serving_area)",
+    )
+    assert compiled.stir_targets == ("object_2",)
 
 
 def test_moving_an_object_replaces_its_previous_place_effect():

@@ -1,0 +1,48 @@
+# Workshop Phase 1 Grounding Configuration
+schema_version: 1
+
+pipeline:
+  mask_backend: "production"  # options: production, oracle, connected_component
+  semantic_backend: "production"  # options: production, oracle, deterministic_test
+  fm_contract_path: "mujoco_scenes/configs/workshop_phase1_fm_contract.yaml"
+  geometry_config_path: "mujoco_scenes/configs/workshop_geometry_inference.yaml"
+  requirements_source: "static"  # options: static, fm
+  inspection_policy: "fixed"  # options: fixed, fm_ranked, oracle_greedy
+  ablation: "none"  # options: none, semantic_only, no_geometry, no_joint_coupling, no_persistence, single_view, single_front_view, oracle_mask, oracle_semantics
+  image_width: 1280
+  image_height: 720
+
+perception:
+  max_detector_vocabulary_size: 32
+  detector:
+    checkpoint: "mujoco_scenes/yolov8s-worldv2.pt"
+    confidence_threshold: 0.075
+    nms_iou_threshold: 0.35
+    inference_size: 1280
+    device: "cpu"
+    max_detections: 50
+  volume_margin_m: 0.08
+  min_points_per_mask: 8
+  multi_scale:
+    full_frame: true
+    stage_crop: true
+    stage_tiles: false
+    tile_overlap_fraction: 0.15
+  duplicate_suppression:
+    box_iou_threshold: 0.65
+    mask_overlap_threshold: 0.72
+    centroid_distance_m: 0.018
+    aabb_overlap_threshold: 0.45
+
+tracking:
+  cluster_distance_threshold_m: 0.040
+  track_match_distance_threshold_m: 0.045
+  voxel_size_m: 0.003
+  min_cluster_points: 10
+
+inspection:
+  sequence:
+    - "LEFT_DRAWER"
+    - "RIGHT_DRAWER"
+    - "TOOL_CABINET"
+  early_stop: true

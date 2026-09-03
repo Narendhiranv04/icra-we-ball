@@ -177,10 +177,12 @@ class SequentialWitnessTests(unittest.TestCase):
 
         scene.state.container_open_state["C2"] = True
         adapter.inspect("B1")
+        # Interference is asymmetric since phase4 commit 34ef7de: opening C2
+        # still closes B1, but opening B1 must leave C2 open.
         self.assertEqual(
             scene.calls[-2:],
             [
-                ("close", "C2", DIRECT_ACTUATION_STEPS),
+                ("open", "C2", DIRECT_ACTUATION_STEPS),
                 ("open", "B1", DIRECT_ACTUATION_STEPS),
             ],
         )

@@ -77,7 +77,7 @@ class RobotProfileTests(unittest.TestCase):
         self.assertGreater(INTERMEDIATE_TRACKING_TOLERANCE, JOINT_WAYPOINT_TOLERANCE)
         self.assertEqual(WAYPOINT_HOLD_TICKS, 4)
         self.assertEqual(MANIPULATION_BASE_LINEAR_DAMPING, 2000.0)
-        self.assertEqual(KITCHEN_ARM_COMMAND_SPEED, 0.85)
+        self.assertEqual(KITCHEN_ARM_COMMAND_SPEED, 0.60)
         self.assertLess(KITCHEN_ARM_COMMAND_SPEED, ARM_COMMAND_SPEED)
 
     def test_google_requires_named_contacts_from_both_fingers(self):

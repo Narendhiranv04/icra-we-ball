@@ -437,6 +437,11 @@ class ProfiledIK:
             self.backend_name = "legacy"
 
         self.data = self._solver.data
+        # Motion planners sample deterministic alternative IK seeds through
+        # this wrapper. Keep the solver's authoritative padded joint bounds
+        # available at the public ProfiledIK boundary.
+        self.lower = self._solver.lower
+        self.upper = self._solver.upper
 
     def solve(
         self,

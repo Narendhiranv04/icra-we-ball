@@ -62,25 +62,7 @@ def _validated_label(record: dict[str, Any]) -> tuple[str | None, float]:
     label = semantic.get("canonical_label")
     if not isinstance(label, str) or not label:
         return None, -math.inf
-    try:
-        confidence = float(semantic.get("mean_confidence") or 0.0)
-    except (TypeError, ValueError):
-        return None, -math.inf
-    if not math.isfinite(confidence) or not 0.0 <= confidence <= 1.0:
-        return None, -math.inf
-    return label.strip().lower(), confidence
-
-
-def _contains_key_fragment(value: Any, fragment: str) -> bool:
-    if isinstance(value, dict):
-        return any(
-            fragment in str(key).lower()
-            or _contains_key_fragment(child, fragment)
-            for key, child in value.items()
-        )
-    if isinstance(value, (list, tuple)):
-        return any(_contains_key_fragment(child, fragment) for child in value)
-    return False
+    return label.strip().lower(), float(semantic.get("mean_confidence") or 0.0)
 
 
 def ground_symbolic_sources(
@@ -275,7 +257,18 @@ def compile_observed_symbolic_state(
             raise SymbolicCompilationError(
                 "Source bindings must come from frozen RGB source grounding"
             )
-        if _contains_key_fragment(source_payload, "oracle"):
+        def contains_oracle_key(value: Any) -> bool:
+            if isinstance(value, dict):
+                return any(
+                    "oracle" in str(key).lower()
+                    or contains_oracle_key(nested)
+                    for key, nested in value.items()
+                )
+            if isinstance(value, (list, tuple)):
+                return any(contains_oracle_key(item) for item in value)
+            return False
+
+        if contains_oracle_key(source_payload):
             raise SymbolicCompilationError("Oracle source data is forbidden")
         source_semantics = source_payload.get("objects", {})
     else:
@@ -340,7 +333,7 @@ def compile_observed_symbolic_state(
     source_capabilities: dict[str, str] = {}
     used_sources: set[str] = set()
     for role, requirement in symbolic.get("source_roles", {}).items():
-        witness_role = requirement.get("witness_role")
+        witness_role = requirement.get("witness_role") or (role if role in selected else None)
         if isinstance(witness_role, str) and witness_role:
             candidates = list(selected.get(witness_role, []))
             if len(candidates) != int(requirement.get("count", 1)):
@@ -608,12 +601,20 @@ class KitchenSymbolicProblem:
             locations.get(target) != self.serving_destination
             for target in self.coffee_targets | self.soup_targets
         )
+        missing_staging = sum(
+            locations.get(target) != self.home
+            for target in self.coffee_targets
+            if (target, "coffee") not in state.contents
+            or (target, "water") not in state.contents
+            or target not in state.stirred
+        )
         # Each unsatisfied placement requires PICK+PLACE, while contents/stir
         # need at least one transition. This is deterministic guidance, not a
         # claim of optimality.
         return (
             missing_contents + missing_stir
             + 2 * missing_utensils + 2 * missing_served
+            + 2 * missing_staging
         )
 
     def _allowed_destinations(self, object_id: str) -> set[str]:
@@ -648,6 +649,15 @@ class KitchenSymbolicProblem:
             if locations.get(tool) != target
         )
         needed.update(
+            target for target in self.coffee_targets
+            if locations.get(target) != self.home
+            and (
+                (target, "coffee") not in state.contents
+                or (target, "water") not in state.contents
+                or target not in state.stirred
+            )
+        )
+        needed.update(
             target for target in self.coffee_targets | self.soup_targets
             if locations.get(target) != self.serving_destination
             and (
@@ -677,12 +687,15 @@ class KitchenSymbolicProblem:
                 content = self.source_contents[held]
                 targets = self.soup_targets if content == "soup" else self.coffee_targets
                 for target in sorted(targets):
-                    if (target, content) not in state.contents:
+                    if (target, content) not in state.contents and locations.get(target) == self.home:
                         productive.append(GroundAction("pour", (held, target)))
             for tool, target in sorted(self.can_stir):
-                if tool == held and target not in state.stirred and {
-                    (target, "coffee"), (target, "water")
-                } <= state.contents:
+                if (
+                    tool == held
+                    and target not in state.stirred
+                    and locations.get(target) == self.home
+                    and {(target, "coffee"), (target, "water")} <= state.contents
+                ):
                     productive.append(GroundAction("stir", (tool, target)))
             if productive:
                 return sorted(
@@ -696,6 +709,17 @@ class KitchenSymbolicProblem:
                     and (destination, "soup") not in state.contents
                 ):
                     continue
+                if destination == self.serving_destination:
+                    if held in self.coffee_targets:
+                        if held not in state.stirred or not {(held, "coffee"), (held, "water")} <= state.contents:
+                            continue
+                    elif held in self.soup_targets:
+                        if (held, "soup") not in state.contents or not any(
+                            locations.get(tool) == held
+                            for tool, assigned in self.soup_assignments
+                            if assigned == held
+                        ):
+                            continue
                 actions.append(GroundAction("place", (held, destination)))
             return sorted(set(actions), key=lambda item: (item.name, item.arguments))
 
@@ -722,6 +746,26 @@ class KitchenSymbolicProblem:
                     (object_id, destination) in self.soup_assignments
                     and (destination, "soup") not in state.contents
                 )
+                or (
+                    destination == self.serving_destination
+                    and object_id in self.coffee_targets
+                    and (
+                        object_id not in state.stirred
+                        or not {(object_id, "coffee"), (object_id, "water")} <= state.contents
+                    )
+                )
+                or (
+                    destination == self.serving_destination
+                    and object_id in self.soup_targets
+                    and (
+                        (object_id, "soup") not in state.contents
+                        or not any(
+                            locations.get(tool) == object_id
+                            for tool, assigned in self.soup_assignments
+                            if assigned == object_id
+                        )
+                    )
+                )
             ):
                 raise ValueError("PLACE precondition failed")
             locations[object_id] = destination
@@ -732,13 +776,20 @@ class KitchenSymbolicProblem:
             accepted_targets = (
                 self.soup_targets if content == "soup" else self.coffee_targets
             )
-            if state.held != source or content is None or target not in accepted_targets:
+            if (
+                state.held != source
+                or content is None
+                or target not in accepted_targets
+                or locations.get(target) != self.home
+            ):
                 raise ValueError("POUR precondition failed")
             return replace(state, contents=state.contents | {(target, content)})
         if name == "stir":
             tool, target = args
             if (
-                state.held != tool or (tool, target) not in self.can_stir
+                state.held != tool
+                or (tool, target) not in self.can_stir
+                or locations.get(target) != self.home
                 or not {(target, "coffee"), (target, "water")} <= state.contents
             ):
                 raise ValueError("STIR precondition failed")
@@ -861,6 +912,8 @@ def validate_symbolic_plan(
                 failed.append(f"provides({source}, content)")
             if target not in valid_targets:
                 failed.append(f"accepts_content({target}, {content})")
+            if locations.get(target) != problem.home:
+                failed.append(f"at({target}, {problem.home})")
             if not failed:
                 state = replace(state, contents=state.contents | {(target, content)})
                 added.append(("contains", target, content))
@@ -873,6 +926,8 @@ def validate_symbolic_plan(
             for content in ("coffee", "water"):
                 if (target, content) not in state.contents:
                     failed.append(f"contains({target}, {content})")
+            if locations.get(target) != problem.home:
+                failed.append(f"at({target}, {problem.home})")
             if not failed:
                 state = replace(state, stirred=state.stirred | {target})
                 added.append(("stirred", target))
@@ -889,8 +944,10 @@ def validate_symbolic_plan(
                 "steps": steps,
             }
         locations = state.location_map()
+        if len(locations) != len(set(locations)):
+            raise AssertionError("An object has multiple symbolic locations")
         if state.held is not None and state.held in locations:
-            raise RuntimeError("Planner invariant violated: held object has a location")
+            raise AssertionError("Held object also has a location")
         steps.append({
             "step": index,
             "action": action.render(),
@@ -958,11 +1015,11 @@ def render_domain_pddl() -> str:
     :effect (and (at ?o ?destination) (handempty) (not (holding ?o))))
   (:action pour :parameters (?source ?target ?content)
     :precondition (and (holding ?source) (provides ?source ?content)
-      (accepts_content ?target ?content))
+      (accepts_content ?target ?content) (at ?target countertop))
     :effect (contains ?target ?content))
   (:action stir :parameters (?tool ?target)
     :precondition (and (holding ?tool) (stirrer_for ?tool ?target)
-      (contains ?target coffee) (contains ?target water))
+      (contains ?target coffee) (contains ?target water) (at ?target countertop))
     :effect (stirred ?target))
 )\n"""
 
@@ -1127,7 +1184,7 @@ def _scientific_validation(
             "planner_entry_point": (
                 "mujoco_scenes.symbolic_planning.plan_symbolic_task"
             ),
-            "algorithm": "deterministic_astar_symbolic_state_search",
+            "algorithm": "deterministic_best_first_classical_state_space_search",
             "renderer_role": "serialization_only_after_planner_returns",
             "action_count": len(plan_records),
             "plan_steps_well_formed": plan_steps_match,
