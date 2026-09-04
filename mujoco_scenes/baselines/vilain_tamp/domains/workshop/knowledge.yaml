@@ -1,0 +1,29 @@
+domain_name: vilain-workshop
+descriptions:
+  domain: Insert an observed fastener and drive it with an observed compatible driver.
+  fixed_knowledge: Fastening physics and type meanings are fixed; tools, fasteners, storage locations, compatibility, reachability, and goals are generated from observations.
+types:
+  movable: null
+  driver: movable
+  fastener: movable
+  location: null
+  storage: location
+  surface: location
+  target: location
+predicates:
+  at: {parameters: [movable, location], description: A movable object is at one location.}
+  holding: {parameters: [movable], description: The robot is holding an object.}
+  handempty: {parameters: [], description: The robot hand is empty.}
+  accessible: {parameters: [location], description: A location can currently be accessed.}
+  open: {parameters: [storage], description: A storage location is open.}
+  driver-compatible: {parameters: [driver, fastener], description: A driver is believed compatible with a fastener.}
+  fits: {parameters: [fastener, target], description: A fastener is believed to fit a target.}
+  can-reach: {parameters: [driver, target], description: A driver is believed usable at a target.}
+  inserted: {parameters: [fastener, target], description: A fastener has been inserted into a target.}
+  fastened: {parameters: [fastener, target], description: A fastener has been driven into a target.}
+actions:
+  open-storage: {parameters: [storage], description: Open a storage location and make it accessible.}
+  pick-from: {parameters: [movable, location], description: Pick an accessible object from its location.}
+  insert: {parameters: [fastener, target], description: Insert a fitting held fastener into a target.}
+  drive: {parameters: [driver, fastener, target], description: Drive an inserted fastener with a compatible reachable driver.}
+  place-on: {parameters: [movable, surface], description: Place a held object on an accessible surface.}

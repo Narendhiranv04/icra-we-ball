@@ -1,0 +1,24 @@
+domain_name: vilain-living-room
+descriptions:
+  domain: Arrange observed cups, saucers, and a remote on visible living-room supports.
+  fixed_knowledge: Placement physics and type meanings are fixed; payloads, support presence, relations, locations, and goals are generated from observations.
+types:
+  movable: null
+  cup: movable
+  saucer: movable
+  remote: movable
+  location: null
+  support: location
+  seat: null
+predicates:
+  at: {parameters: [movable, location], description: A movable object is at one location.}
+  holding: {parameters: [movable], description: The robot is holding an object.}
+  handempty: {parameters: [], description: The robot hand is empty.}
+  present: {parameters: [location], description: A location or support is observed to exist.}
+  accessible: {parameters: [location], description: A location can currently be accessed.}
+  supports: {parameters: [support, movable], description: A support physically carries a movable object.}
+  personal-to: {parameters: [support, seat], description: A support is associated with one seating position.}
+  shared: {parameters: [support], description: A support is shared between seating positions.}
+actions:
+  pick-from: {parameters: [movable, location], description: Pick an accessible object from a present location.}
+  place-on: {parameters: [movable, support], description: Place a held object on a present accessible support.}

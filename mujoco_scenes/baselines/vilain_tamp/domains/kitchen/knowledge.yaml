@@ -1,0 +1,33 @@
+domain_name: vilain-kitchen
+descriptions:
+  domain: Prepare and serve beverages and soup using visually observed kitchen objects.
+  fixed_knowledge: Action physics and type meanings are fixed; object existence, locations, capabilities, compatibility, and goals are generated from observations.
+types:
+  entity: null
+  movable: entity
+  vessel: movable
+  source: movable
+  utensil: movable
+  content: null
+  location: null
+  surface: location
+  storage: location
+predicates:
+  at: {parameters: [movable, location], description: A movable object is at one location.}
+  holding: {parameters: [movable], description: The robot is holding an object.}
+  handempty: {parameters: [], description: The robot hand is empty.}
+  accessible: {parameters: [location], description: A location can currently be accessed.}
+  open: {parameters: [storage], description: A storage location is open.}
+  contains: {parameters: [vessel, content], description: A vessel contains a content.}
+  can-dispense: {parameters: [source, content], description: A source can dispense a content.}
+  can-stir: {parameters: [utensil, vessel], description: A utensil is believed suitable for stirring a vessel.}
+  can-serve-with: {parameters: [utensil, vessel], description: A utensil is believed suitable for serving with a vessel.}
+  inside: {parameters: [utensil, vessel], description: A utensil has been placed inside a vessel.}
+  stirred: {parameters: [vessel], description: A vessel has been stirred.}
+actions:
+  open-storage: {parameters: [storage], description: Open a storage location and make it accessible.}
+  pick-from: {parameters: [movable, location], description: Pick an accessible movable object from its location.}
+  place-on: {parameters: [movable, surface], description: Place a held object on an accessible surface.}
+  pour: {parameters: [source, vessel, content], description: Pour a supported content from a held source into a vessel.}
+  stir: {parameters: [utensil, vessel], description: Stir a vessel with a suitable held utensil.}
+  place-in: {parameters: [utensil, vessel], description: Place a suitable held utensil inside a vessel.}
