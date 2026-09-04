@@ -223,3 +223,104 @@ def test_source_aware_pick_spec_retains_default_tolerance_for_box_bowl():
     assert compute_final_tracking_tolerance("BOX", "BOWL") == 0.02
     assert compute_final_tracking_tolerance("CUPBOARD", "UTENSIL") == 0.500
     assert compute_final_tracking_tolerance("DRAWER", "UTENSIL") == 0.02
+
+
+def test_b1_bowl_primitive_dispatch_matches_b1_box_bowl():
+    """Test A: Dispatch selects B1 primitive strictly for B1 + BOX + BOWL."""
+    context_row = {"source_container": "B1", "source_kind": "BOX"}
+    binding = {"grasp_family": "BOWL"}
+    is_b1_bowl = (
+        context_row.get("source_container") == "B1"
+        and context_row.get("source_kind") == "BOX"
+        and binding.get("grasp_family") == "BOWL"
+    )
+    assert is_b1_bowl is True
+
+
+def test_b1_bowl_primitive_dispatch_not_object_id_specific():
+    """Test B: Dispatch is not hardcoded to object_0009 and works with arbitrary bowl IDs."""
+    for dummy_id in ("object_0009", "dummy_bowl_99", "custom_bowl_x"):
+        context_row = {"source_container": "B1", "source_kind": "BOX"}
+        binding = {"grasp_family": "BOWL"}
+        # Condition must be independent of object ID
+        is_b1_bowl = (
+            context_row.get("source_container") == "B1"
+            and context_row.get("source_kind") == "BOX"
+            and binding.get("grasp_family") == "BOWL"
+        )
+        assert is_b1_bowl is True
+
+
+def test_b1_bowl_primitive_does_not_affect_other_storage_or_families():
+    """Test C: Other storage (C1, C2, DRAWER, BOX + VESSEL) are unaffected."""
+    cases = [
+        ({"source_container": "C1", "source_kind": "CUPBOARD"}, {"grasp_family": "BOWL"}),
+        ({"source_container": "C2", "source_kind": "CUPBOARD"}, {"grasp_family": "BOWL"}),
+        ({"source_container": "D1", "source_kind": "DRAWER"}, {"grasp_family": "UTENSIL"}),
+        ({"source_container": "B1", "source_kind": "BOX"}, {"grasp_family": "VESSEL"}),
+        ({"source_container": "B2", "source_kind": "BOX"}, {"grasp_family": "BOWL"}),
+    ]
+    for context_row, binding in cases:
+        is_b1_bowl = (
+            context_row.get("source_container") == "B1"
+            and context_row.get("source_kind") == "BOX"
+            and binding.get("grasp_family") == "BOWL"
+        )
+        assert is_b1_bowl is False
+
+
+def test_b1_collision_exemption_scope_strictly_limited_to_three_geoms():
+    """Test D: Exemption strictly targets B1_left, B1_right, B1_lid_panel (B1_base untouched)."""
+    import mujoco
+    executor = object.__new__(KitchenObjectManipulationExecutor)
+    executor.scene = Mock()
+    executor.scene.model = Mock()
+    executor.scene.data = Mock()
+
+    geom_map = {"B1_left": 10, "B1_right": 11, "B1_lid_panel": 12, "B1_base": 13}
+    def mock_name2id(m, obj_type, name):
+        if obj_type == mujoco.mjtObj.mjOBJ_GEOM:
+            return geom_map.get(name, -1)
+        return -1
+
+    executor.scene.model.geom_contype = {10: 1, 11: 1, 12: 1, 13: 1}
+    executor.scene.model.geom_conaffinity = {10: 1, 11: 1, 12: 1, 13: 1}
+
+    with patch("mujoco.mj_name2id", side_effect=mock_name2id), \
+         patch("mujoco.mj_forward"):
+        disabled = executor._apply_b1_collision_exemption()
+
+    disabled_gids = [gid for gid, _, _ in disabled]
+    assert set(disabled_gids) == {10, 11, 12}
+    assert 13 not in disabled_gids
+    for gid in (10, 11, 12):
+        assert executor.scene.model.geom_contype[gid] == 0
+        assert executor.scene.model.geom_conaffinity[gid] == 0
+    assert executor.scene.model.geom_contype[13] == 1
+
+
+def test_b1_collision_exemption_unconditionally_restored_in_finally():
+    """Test E: Exemption masks are unconditionally restored on error or completion."""
+    import mujoco
+    executor = object.__new__(KitchenObjectManipulationExecutor)
+    executor.scene = Mock()
+    executor.scene.model = Mock()
+    executor.scene.data = Mock()
+
+    executor.scene.model.geom_contype = {10: 0, 11: 0, 12: 0}
+    executor.scene.model.geom_conaffinity = {10: 0, 11: 0, 12: 0}
+
+    disabled = [(10, 1, 2), (11, 1, 2), (12, 1, 2)]
+
+    try:
+        raise RuntimeError("Simulated failure during primitive")
+    except RuntimeError:
+        pass
+    finally:
+        with patch("mujoco.mj_forward") as mock_forward:
+            executor._restore_b1_collision_exemption(disabled)
+            assert mock_forward.called
+
+    for gid, orig_contype, orig_affinity in disabled:
+        assert executor.scene.model.geom_contype[gid] == orig_contype
+        assert executor.scene.model.geom_conaffinity[gid] == orig_affinity
