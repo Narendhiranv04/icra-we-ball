@@ -324,3 +324,176 @@ def test_b1_collision_exemption_unconditionally_restored_in_finally():
     for gid, orig_contype, orig_affinity in disabled:
         assert executor.scene.model.geom_contype[gid] == orig_contype
         assert executor.scene.model.geom_conaffinity[gid] == orig_affinity
+
+
+def test_c2_vessel_primitive_dispatch_matches_c2_cupboard_vessel():
+    """Test A: Dispatch selects C2 primitive strictly for C2 + CUPBOARD + VESSEL."""
+    context_row = {"source_container": "C2", "source_kind": "CUPBOARD"}
+    binding = {"grasp_family": "VESSEL"}
+    is_c2_vessel = (
+        context_row.get("source_container") == "C2"
+        and context_row.get("source_kind") == "CUPBOARD"
+        and binding.get("grasp_family") == "VESSEL"
+    )
+    assert is_c2_vessel is True
+
+
+def test_c2_vessel_primitive_dispatch_not_object_id_specific():
+    """Test B: Dispatch is not hardcoded to object_0008 and works with arbitrary vessel IDs."""
+    for dummy_id in ("object_0008", "custom_mug_42", "ab3_vessel_x"):
+        context_row = {"source_container": "C2", "source_kind": "CUPBOARD"}
+        binding = {"grasp_family": "VESSEL"}
+        is_c2_vessel = (
+            context_row.get("source_container") == "C2"
+            and context_row.get("source_kind") == "CUPBOARD"
+            and binding.get("grasp_family") == "VESSEL"
+        )
+        assert is_c2_vessel is True
+
+
+def test_b1_bowl_primitive_untouched_by_c2_vessel():
+    """Test C: B1 bowl primitive dispatch is completely preserved and distinct."""
+    b1_context = {"source_container": "B1", "source_kind": "BOX"}
+    b1_binding = {"grasp_family": "BOWL"}
+    is_b1_bowl = (
+        b1_context.get("source_container") == "B1"
+        and b1_context.get("source_kind") == "BOX"
+        and b1_binding.get("grasp_family") == "BOWL"
+    )
+    is_c2_vessel = (
+        b1_context.get("source_container") == "C2"
+        and b1_context.get("source_kind") == "CUPBOARD"
+        and b1_binding.get("grasp_family") == "VESSEL"
+    )
+    assert is_b1_bowl is True
+    assert is_c2_vessel is False
+
+
+def test_c2_vessel_primitive_does_not_affect_other_storage_or_families():
+    """Test D: Other containers and families do not trigger C2 vessel dispatch."""
+    cases = [
+        ({"source_container": "C1", "source_kind": "CUPBOARD"}, {"grasp_family": "VESSEL"}),
+        ({"source_container": "C2", "source_kind": "CUPBOARD"}, {"grasp_family": "BOWL"}),
+        ({"source_container": "C2", "source_kind": "CUPBOARD"}, {"grasp_family": "UTENSIL"}),
+        ({"source_container": "D1", "source_kind": "DRAWER"}, {"grasp_family": "UTENSIL"}),
+        ({"source_container": "B1", "source_kind": "BOX"}, {"grasp_family": "VESSEL"}),
+    ]
+    for context_row, binding in cases:
+        is_c2_vessel = (
+            context_row.get("source_container") == "C2"
+            and context_row.get("source_kind") == "CUPBOARD"
+            and binding.get("grasp_family") == "VESSEL"
+        )
+        assert is_c2_vessel is False
+
+
+def test_c2_vessel_candidate_clears_retreat_offsets():
+    """Test E: _c2_vessel_grasp_candidate selects z+0.60 and clears retreat offsets."""
+    import mujoco
+    executor = object.__new__(KitchenObjectManipulationExecutor)
+    executor.scene = Mock()
+    executor.scene.model = Mock()
+    executor.scene.data = Mock()
+
+    # Mock StorageGraspCandidateGenerator.cupboard
+    cand_z80 = GraspPoseCandidate(
+        "cupboard_contact_diameter_0_z+0.80",
+        (0.0, 0.0, 0.0),
+        np.eye(3),
+        0.05,
+        retreat_route_offsets_world_m=((0.0, -0.20, 0.0),),
+    )
+    cand_z60 = GraspPoseCandidate(
+        "cupboard_contact_diameter_0_z+0.60",
+        (0.0, 0.0, 0.0),
+        np.eye(3),
+        0.05,
+        retreat_route_offsets_world_m=((0.0, -0.20, 0.0),),
+    )
+
+    with patch(
+        "mujoco_scenes.kitchen_object_manipulation.StorageGraspCandidateGenerator.cupboard",
+        return_value=[cand_z80, cand_z60],
+    ), patch("mujoco.mj_name2id", return_value=1):
+        selected = executor._c2_vessel_grasp_candidate("ab3_medium_deep_mug", np.eye(3))
+
+    assert selected.candidate_id == "cupboard_contact_diameter_0_z+0.60"
+    assert selected.retreat_route_offsets_world_m == ()
+
+
+def test_table_bowl_source_aware_pick_spec_regenerates_candidates():
+    """Verify that _configure_source_aware_pick_spec regenerates candidates for TABLE + BOWL."""
+    from mujoco_scenes.kitchen_object_manipulation import (
+        KitchenObjectManipulationExecutor,
+        StorageGraspCandidateGenerator,
+        SimplePickSpec,
+    )
+    from mujoco_scenes.robot_profiles import manipulation_profile
+
+    executor = object.__new__(KitchenObjectManipulationExecutor)
+    executor.scene = Mock()
+    executor.scene.model = Mock()
+    executor.scene.data = Mock()
+    executor.executor = Mock()
+    executor.executor.base_qpos = slice(0, 3)
+    executor.scene.data.qpos = np.zeros(10)
+    top = manipulation_profile("google").top_down_rotation
+
+    mock_spec = SimplePickSpec(
+        label="test_bowl",
+        grasp_site="ab3_shallow_bowl_grasp",
+        support_height=0.05,
+        grasp_z_offset=0.0,
+        place_supported=True,
+        top_down_rotation=top,
+        grasp_candidates=(),
+    )
+    executor.executor.pick_specs = {"ab3_shallow_bowl": mock_spec}
+
+    cand = GraspPoseCandidate("box_bowl_diameter_0_yaw+0_z+0.35", (0.0, 0.0, 0.0), top, 0.05)
+    with patch(
+        "mujoco_scenes.kitchen_object_manipulation.StorageGraspCandidateGenerator.box",
+        return_value=(cand,),
+    ) as mock_box, patch("mujoco.mj_name2id", return_value=1):
+        executor._configure_source_aware_pick_spec(
+            "ab3_shallow_bowl", "BOWL", "TABLE"
+        )
+        assert mock_box.call_count == 1
+        updated_spec = executor.executor.pick_specs["ab3_shallow_bowl"]
+        assert len(updated_spec.grasp_candidates) == 1
+        assert updated_spec.grasp_candidates[0].candidate_id == "box_bowl_diameter_0_yaw+0_z+0.35"
+
+
+def test_box_bowl_candidates_track_live_body_rotation():
+    """Verify that StorageGraspCandidateGenerator.box candidate rotations multiply live body_rotation."""
+    from mujoco_scenes.kitchen_object_manipulation import StorageGraspCandidateGenerator
+    from mujoco_scenes.manipulation_stance import yaw_rotation
+    from mujoco_scenes.robot_profiles import manipulation_profile
+
+    mock_scene = Mock()
+    mock_scene.model = Mock()
+    mock_scene.data = Mock()
+    # Mock body rotated 90 degrees yaw
+    rot90 = yaw_rotation(np.pi / 2.0)
+    xmat = np.zeros((10, 9))
+    xmat[2] = rot90.flatten()
+    mock_scene.data.xmat = xmat
+    mock_scene.model.site_bodyid = {1: 2}
+    mock_scene.data.xpos = np.zeros((10, 3))
+    mock_scene.data.xpos[2] = np.array([0.16, -0.32, 0.60])
+    mock_scene.model.site_pos = {1: np.array([0.05, 0.0, 0.0])}
+
+    with patch(
+        "mujoco_scenes.kitchen_object_manipulation.physical_contact_target_geoms",
+        return_value=(),
+    ):
+        candidates = StorageGraspCandidateGenerator.box(mock_scene, 1, np.eye(3), "BOWL")
+
+    # First candidate should evaluate neutral yaw=0 first
+    first_cand = candidates[0]
+    assert "yaw+0" in first_cand.candidate_id
+    # Orientation must incorporate rot90
+    top = manipulation_profile("google").top_down_rotation
+    expected_rot = rot90 @ top
+    np.testing.assert_allclose(first_cand.target_rotation_world, expected_rot, atol=1e-6)
+

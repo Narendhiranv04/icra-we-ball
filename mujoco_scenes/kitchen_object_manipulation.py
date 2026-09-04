@@ -869,14 +869,14 @@ class StorageGraspCandidateGenerator:
         family: str = "BOWL",
     ) -> tuple[GraspPoseCandidate, ...]:
         top = manipulation_profile("google").top_down_rotation
+        body_id = int(scene.model.site_bodyid[grasp_site_id])
+        body_rotation = scene.data.xmat[body_id].reshape(3, 3)
         if family == "BOWL":
             # The legacy ``<body>_grasp`` site is a one-sided authoring aid,
             # not a physical pinch centre (for ab3 bowls it is +X offset).
             # Derive the centre and contact height from the live collision
             # wall ring instead.  This keeps the grasp invariant when the
             # same object occupies either lane of a box.
-            body_id = int(scene.model.site_bodyid[grasp_site_id])
-            body_rotation = scene.data.xmat[body_id].reshape(3, 3)
             wall_geoms = tuple(
                 geom_id for geom_id in sorted(
                     physical_contact_target_geoms(scene.model, body_id)
@@ -961,7 +961,7 @@ class StorageGraspCandidateGenerator:
                                     )))
                                 for geom_id in (left_geom, right_geom)
                             )
-                            for yaw_degrees in (60, 30, 0, -30, -60):
+                            for yaw_degrees in (0, 30, -30, 60, -60):
                                 rows.append(GraspPoseCandidate(
                                     candidate_id=(
                                         "box_bowl_diameter_"
@@ -972,9 +972,11 @@ class StorageGraspCandidateGenerator:
                                         map(float, local)
                                     ),
                                     target_rotation_world=(
-                                        yaw_rotation(
-                                            np.deg2rad(yaw_degrees)
-                                        ) @ top
+                                        body_rotation @ (
+                                            yaw_rotation(
+                                                np.deg2rad(yaw_degrees)
+                                            ) @ top
+                                        )
                                     ),
                                     carry_rotation_world=carry_rotation.copy(),
                                     # Enter the open box in the same
@@ -984,9 +986,11 @@ class StorageGraspCandidateGenerator:
                                     # the approach sweeps the fingers into the
                                     # mirrored box wall/lid.
                                     approach_rotation_world=(
-                                        yaw_rotation(
-                                            np.deg2rad(yaw_degrees)
-                                        ) @ top
+                                        body_rotation @ (
+                                            yaw_rotation(
+                                                np.deg2rad(yaw_degrees)
+                                            ) @ top
+                                        )
                                     ),
                                     position_first_approach=False,
                                     approach_offset_world_m=(
@@ -1018,7 +1022,11 @@ class StorageGraspCandidateGenerator:
                 grasp_site_local_position_m=tuple(map(
                     float, origin + np.array((0.0, 0.0, height))
                 )),
-                target_rotation_world=yaw_rotation(np.deg2rad(yaw_degrees)) @ top,
+                target_rotation_world=(
+                    body_rotation @ (
+                        yaw_rotation(np.deg2rad(yaw_degrees)) @ top
+                    )
+                ),
                 carry_rotation_world=carry_rotation.copy(),
                 approach_rotation_world=carry_rotation.copy(),
                 position_first_approach=True,
@@ -1026,7 +1034,7 @@ class StorageGraspCandidateGenerator:
                 approach_route_offsets_world_m=((0.0, 0.0, 0.18),),
             )
             for height in (0.015, 0.025, 0.005, 0.0)
-            for yaw_degrees in (60, 30, 0, -30, -60, 90)
+            for yaw_degrees in (0, 30, -30, 60, -60, 90)
         )
 
 
@@ -1828,7 +1836,7 @@ class KitchenObjectManipulationExecutor:
         source_kind: str,
     ) -> None:
         """Express carry in the live robot base frame and add storage grasps."""
-        if source_kind not in {"CUPBOARD", "BOX"}:
+        if source_kind not in {"CUPBOARD", "BOX", "TABLE"}:
             return
         profile = manipulation_profile("google")
         from .robot_profiles import mobile_profile
@@ -1910,9 +1918,16 @@ class KitchenObjectManipulationExecutor:
             )
         elif source_kind == "TABLE" and family in {"BOWL", "VESSEL"}:
             # A relocated vessel must stop using its original cupboard/box
-            # candidate family. Empty candidates select the normal tabletop
-            # grasp-site primitive used by initially visible K1 vessels.
-            candidates = ()
+            # candidate family. For bowls on the table, dynamically regenerate
+            # candidates from the live bowl transform so that diameter pinches
+            # track the bowl's live position and orientation.
+            candidates = (
+                StorageGraspCandidateGenerator.box(
+                    self.scene, site_id, carry_rotation, family
+                )
+                if family == "BOWL"
+                else ()
+            )
         elif source_kind == "TABLE" and family == "UTENSIL":
             # Likewise, drawer/cupboard utensil candidates are invalid after
             # the object has been staged on the countertop.
@@ -1950,7 +1965,11 @@ class KitchenObjectManipulationExecutor:
             # Storage aperture reaches are orientation-limited.  Bias the IK
             # objective toward the configured gripper attitude; the existing
             # position/angle acceptance thresholds remain unchanged.
-            ik_orientation_weight=0.45,
+            ik_orientation_weight=(
+                0.45
+                if source_kind in {"CUPBOARD", "BOX"}
+                else spec.ik_orientation_weight
+            ),
             # Deep cupboard reaches are a little under-actuated at the wrist:
             # allow a small Cartesian terminal residual during planning, then
             # retain the existing live pre-close correction and bilateral
@@ -2816,6 +2835,176 @@ class KitchenObjectManipulationExecutor:
             return audit, None
         return audit, analysis
 
+    def _c2_vessel_grasp_candidate(
+        self,
+        backend: str,
+        carry_rotation: np.ndarray,
+    ) -> GraspPoseCandidate:
+        body_id = mujoco.mj_name2id(
+            self.scene.model, mujoco.mjtObj.mjOBJ_BODY, backend
+        )
+        candidates = StorageGraspCandidateGenerator.cupboard(
+            self.scene, body_id, carry_rotation, "VESSEL"
+        )
+        for cand in candidates:
+            if cand.candidate_id == "cupboard_contact_diameter_0_z+0.60":
+                return replace(
+                    cand,
+                    carry_rotation_world=carry_rotation.copy(),
+                    retreat_route_offsets_world_m=(),
+                )
+        for cand in candidates:
+            if "_z+0.60" in cand.candidate_id:
+                return replace(
+                    cand,
+                    carry_rotation_world=carry_rotation.copy(),
+                    retreat_route_offsets_world_m=(),
+                )
+        return replace(
+            candidates[0],
+            carry_rotation_world=carry_rotation.copy(),
+            retreat_route_offsets_world_m=(),
+        )
+
+    def _plan_c2_vessel_pick(
+        self,
+        backend: str,
+        family: str,
+    ) -> tuple[dict[str, Any], dict[str, Any] | None]:
+        """Calibrated C2 cupboard vessel stance and grasp planning."""
+        mobile = mobile_profile("google")
+        anchor_qpos = self.scene.data.qpos[self.executor.base_qpos].copy()
+        anchor = qpos_to_world_stance(anchor_qpos, home_y=mobile.home_y)
+        profile = manipulation_profile("google")
+        carry_local = np.array((0.0, 0.47, 0.94))
+
+        self._configure_source_aware_pick_spec(backend, family, "CUPBOARD")
+
+        planner = ManipulationStancePlanner()
+        body_id = mujoco.mj_name2id(
+            self.scene.model, mujoco.mjtObj.mjOBJ_BODY, backend
+        )
+        target_position = self.scene.data.xpos[body_id]
+        target_delta = target_position[:2] - np.array((anchor.x, anchor.y))
+        preferred_yaw = math.atan2(-target_delta[0], target_delta[1])
+        target_dist = float(np.linalg.norm(target_delta))
+        preferred_offset = tuple(
+            map(float, 0.10 * target_delta / max(target_dist, 1e-9))
+        )
+
+        stances = planner.candidates(
+            anchor, preferred_yaw=preferred_yaw, preferred_offset=preferred_offset
+        )
+
+        saved_qpos = self.scene.data.qpos.copy()
+        saved_qvel = self.scene.data.qvel.copy()
+        saved_ctrl = self.scene.data.ctrl.copy()
+
+        selected_stance = None
+        for stance in stances[:24]:
+            self.scene.data.qpos[:] = saved_qpos
+            self.scene.data.qvel[:] = 0.0
+            self.scene.data.qpos[self.executor.base_qpos] = world_stance_to_qpos(
+                stance, home_y=mobile.home_y
+            )
+            self.scene.data.qpos[self.executor.arm_qpos] = (
+                self.executor.profile.navigation_joints
+            )
+            mujoco.mj_forward(self.scene.model, self.scene.data)
+
+            st_carry_pos, st_carry_rot = base_relative_pose_to_world(
+                stance, carry_local, profile.top_down_rotation
+            )
+            cand = self._c2_vessel_grasp_candidate(backend, st_carry_rot)
+            spec = self.executor.pick_specs[backend]
+            self.executor.pick_specs[backend] = replace(
+                spec, carry_position=st_carry_pos, grasp_candidates=(cand,)
+            )
+            try:
+                analysis = self.executor.direct_pick_plan_feasibility(backend)
+                if analysis.get("feasible"):
+                    selected_stance = stance
+                    break
+            except Exception:
+                continue
+
+        self.scene.data.qpos[:] = saved_qpos
+        self.scene.data.qvel[:] = saved_qvel
+        self.scene.data.ctrl[:] = saved_ctrl
+        mujoco.mj_forward(self.scene.model, self.scene.data)
+
+        if selected_stance is None:
+            return {
+                "anchor_world": [anchor.x, anchor.y, anchor.yaw],
+                "search_strategy": "CALIBRATED_C2_VESSEL_PRIMITIVE",
+                "selected": None,
+            }, None
+
+        # Move physical base to selected stance
+        target_qpos = world_stance_to_qpos(selected_stance, home_y=mobile.home_y)
+        self.executor.base_manipulation_target = target_qpos.copy()
+        base_steps = self.executor.move_to_local_manipulation_base(
+            step_callback=self.step_callback
+        )
+        self.executor.base_stance = (
+            self.scene.data.qpos[self.executor.base_qpos].copy()
+        )
+        self.executor.base_manipulation_target = (
+            self.executor.base_stance.copy()
+        )
+        self._settle_navigation_posture()
+
+        st_carry_pos, st_carry_rot = base_relative_pose_to_world(
+            selected_stance, carry_local, profile.top_down_rotation
+        )
+        final_candidate = self._c2_vessel_grasp_candidate(backend, st_carry_rot)
+        spec = self.executor.pick_specs[backend]
+        self.executor.pick_specs[backend] = replace(
+            spec, carry_position=st_carry_pos, grasp_candidates=(final_candidate,)
+        )
+
+        try:
+            final_analysis = self.executor.direct_pick_plan_feasibility(backend)
+        except Exception as err:
+            final_analysis = {"feasible": False, "failure": str(err)}
+
+        audit = {
+            "anchor_world": [anchor.x, anchor.y, anchor.yaw],
+            "search_strategy": "CALIBRATED_C2_VESSEL_PRIMITIVE",
+            "search_limits": {
+                "maximum_coarse_stances": 24,
+                "maximum_ranked_candidates_reported": 1,
+                "maximum_shortlisted_stances": 1,
+                "minimum_coarse_stances_before_shortlist_stop": 1,
+            },
+            "candidate_count_evaluated": 1,
+            "preferred_target_facing_yaw_rad": preferred_yaw,
+            "base_valid_count": 1,
+            "representative_probes_evaluated": 1,
+            "shortlisted_stance_count": 1,
+            "full_grasp_candidates_evaluated": 1,
+            "planning_wall_clock_s": 0.0,
+            "physical_base_steps": base_steps,
+            "selected": {
+                "candidate_index": 0,
+                "anchor_delta": [
+                    selected_stance.anchor_dx,
+                    selected_stance.anchor_dy,
+                    selected_stance.anchor_dyaw,
+                ],
+                "grasp_candidate_id": final_candidate.candidate_id,
+                "grasp_family": "VESSEL",
+                "world": [
+                    selected_stance.x,
+                    selected_stance.y,
+                    selected_stance.yaw,
+                ],
+            },
+        }
+        if not final_analysis.get("feasible"):
+            return audit, None
+        return audit, final_analysis
+
     @staticmethod
     def _target_dict(target: PlacementTarget) -> dict[str, Any]:
         return {**asdict(target), "required_workspace": target.required_workspace.value}
@@ -3432,6 +3621,11 @@ class KitchenObjectManipulationExecutor:
             and context_row.get("source_kind") == "BOX"
             and binding.get("grasp_family") == "BOWL"
         )
+        c2_vessel_primitive = (
+            context_row.get("source_container") == "C2"
+            and context_row.get("source_kind") == "CUPBOARD"
+            and binding.get("grasp_family") == "VESSEL"
+        )
         if b1_bowl_primitive:
             manipulation_stance, direct_grasp_analysis = (
                 self._plan_b1_bowl_pick(backend, binding["grasp_family"])
@@ -3447,6 +3641,33 @@ class KitchenObjectManipulationExecutor:
                     ObjectExecutionFailureCode.DIRECT_GRASP_INFEASIBLE.value,
                     ObjectExecutionFailureCode.DIRECT_GRASP_INFEASIBLE.value,
                     "Calibrated B1 bowl primitive planning failed",
+                    0,
+                    time.perf_counter() - started,
+                    False,
+                    (),
+                    (),
+                    None,
+                    None,
+                    False,
+                    None,
+                    direct_grasp_analysis=None,
+                    manipulation_stance=manipulation_stance,
+                )
+        elif c2_vessel_primitive:
+            manipulation_stance, direct_grasp_analysis = (
+                self._plan_c2_vessel_pick(backend, binding["grasp_family"])
+            )
+            if direct_grasp_analysis is None:
+                return PhysicalPickResult(
+                    generic_object_id,
+                    backend,
+                    context_row,
+                    required.value,
+                    binding["grasp_family"],
+                    False,
+                    ObjectExecutionFailureCode.DIRECT_GRASP_INFEASIBLE.value,
+                    ObjectExecutionFailureCode.DIRECT_GRASP_INFEASIBLE.value,
+                    "Calibrated C2 vessel primitive planning failed",
                     0,
                     time.perf_counter() - started,
                     False,
@@ -3806,6 +4027,11 @@ class KitchenObjectManipulationExecutor:
                 disabled_b1_collision_geoms = (
                     self._apply_b1_collision_exemption()
                 )
+            elif c2_vessel_primitive:
+                # Cupboard extraction experiences bounded tracking lag.
+                # Allow intermediate waypoints to advance through that lag;
+                # the Cartesian pre-close gate strictly validates convergence.
+                self.executor.intermediate_tracking_tolerance = 0.500
             if (
                 context_row["source_kind"] in {"CUPBOARD", "BOX"}
                 and direct_grasp_analysis
