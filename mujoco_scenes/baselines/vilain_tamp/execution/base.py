@@ -140,3 +140,33 @@ def project_plan(
         )
         for action in actions
     )
+
+
+def required_binding_ids(
+    domain: str,
+    actions: Sequence[SymbolicAction],
+) -> tuple[str, ...]:
+    """Return symbolic IDs that must resolve to controller-facing entities."""
+    domain_key = domain.strip().lower().replace("-", "_")
+    domain_rules = _RULES.get(domain_key)
+    if domain_rules is None:
+        raise ProjectionError(f"unsupported baseline domain {domain!r}")
+    required: set[str] = set()
+    for action in actions:
+        if not isinstance(action, SymbolicAction):
+            raise ProjectionError("projection requires SymbolicAction contracts")
+        operator = action.operator.strip().lower().replace("_", "-")
+        rule = domain_rules.get(operator)
+        if rule is None:
+            raise ProjectionError(
+                f"UNSUPPORTED_CONTROLLER_ACTION: {operator!r} in {domain_key!r}"
+            )
+        if len(action.arguments) != rule.arity:
+            raise ProjectionError(
+                f"{operator!r} expects {rule.arity} arguments, "
+                f"got {len(action.arguments)}"
+            )
+        required.update(
+            action.arguments[index] for index in rule.controller_argument_indices
+        )
+    return tuple(sorted(required))

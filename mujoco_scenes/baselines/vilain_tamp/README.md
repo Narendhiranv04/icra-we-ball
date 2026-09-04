@@ -137,6 +137,26 @@ This command makes one local object-estimation call and writes `request.json`,
 refinement, execution, or the simulator. Automated tests inject inert fake
 clients and never call either live model service.
 
+## Concrete TAMP attempts
+
+`attempt.py` supplies the `TAMPAttemptRunner` consumed directly by
+`CorrectivePlanningLoop`. Each attempt performs internal problem validation,
+Fast Downward translation/search, VAL validation, normalized symbolic-plan
+checking, baseline-only identity association, execution projection, and
+full-sequence geometric refinement in that order. The primary path accepts an
+external `FastDownwardPlanner`; it has no fallback to the repository’s common
+search implementation.
+
+Identity resolution is limited to controller-facing symbols referenced by the
+new symbolic plan. PDDL-only content symbols are not treated as scene bodies,
+unused visual estimates cannot block a plan, and public fixed-location bindings
+remain explicit. A successful attempt writes an immutable execution plan and
+projections for the runner. Internal-PDDL, translation, no-plan, VAL, identity,
+projection, refinement, timeout, and infrastructure failures are converted to
+the existing corrective-planning failure taxonomy and persisted in
+`attempt_outcome.json`. Stage 19 supplies orchestration only; concrete MuJoCo
+geometric stage backends remain Stage 20 work.
+
 ## Experimental command matrix
 
 First validate each resolved condition without loading any runtime:

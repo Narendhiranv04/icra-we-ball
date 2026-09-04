@@ -151,6 +151,38 @@ def validate_problem(
     )
 
 
+def initial_goal_is_satisfied(problem_text: str) -> bool:
+    """Evaluate a validated propositional goal against its initial atoms."""
+    problem = _parse_document(problem_text)
+    init_section = _find_child(problem, ":init")
+    goal_section = _find_child(problem, ":goal")
+    if len(goal_section) != 2:
+        raise PDDLStructureError("goal section must contain exactly one expression")
+    initial_atoms = {
+        tuple(str(value) for value in _as_list(atom, "initial atom"))
+        for atom in init_section[1:]
+    }
+
+    def evaluate(expression: SExpression) -> bool:
+        values = _as_list(expression, "goal expression")
+        if not values or not isinstance(values[0], str):
+            raise PDDLStructureError("goal expression is empty")
+        head = values[0]
+        if head == "and":
+            return all(evaluate(child) for child in values[1:])
+        if head == "or":
+            return any(evaluate(child) for child in values[1:])
+        if head == "not":
+            if len(values) != 2:
+                raise PDDLStructureError("not goal must contain exactly one atom")
+            return not evaluate(values[1])
+        if not all(isinstance(value, str) for value in values):
+            raise PDDLStructureError("goal atom must contain only symbols")
+        return tuple(str(value) for value in values) in initial_atoms
+
+    return evaluate(goal_section[1])
+
+
 def _validate_problem_document(problem: list[SExpression], schema: DomainSchema) -> None:
     _expect_head(problem, "define")
     declaration = _find_child(problem, "problem")
