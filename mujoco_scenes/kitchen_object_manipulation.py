@@ -1937,8 +1937,7 @@ class KitchenObjectManipulationExecutor:
             grasp_candidates=candidates,
             final_tracking_tolerance=(
                 0.500
-                if (source_kind == "CUPBOARD" and family == "UTENSIL")
-                or (source_kind == "BOX" and family == "BOWL")
+                if source_kind == "CUPBOARD" and family == "UTENSIL"
                 else spec.final_tracking_tolerance
             ),
             # Storage aperture reaches are orientation-limited.  Bias the IK
@@ -3536,15 +3535,6 @@ class KitchenObjectManipulationExecutor:
                     self.scene.model.geom_conaffinity[geom_id] = 3
                 mujoco.mj_forward(self.scene.model, self.scene.data)
             self.executor.drawer_pick_collision_exemption = drawer_pick_exemption
-            box_bowl_exemption = (
-                context_row["source_kind"] == "BOX"
-                and binding["grasp_family"] == "BOWL"
-            )
-            if box_bowl_exemption:
-                # Arm descent into the deep box experiences bounded tracking lag.
-                # Allow intermediate waypoints to advance through that lag;
-                # the Cartesian pre-close gate strictly validates convergence.
-                self.executor.intermediate_tracking_tolerance = 0.500
             if (
                 context_row["source_kind"] in {"CUPBOARD", "BOX"}
                 and direct_grasp_analysis

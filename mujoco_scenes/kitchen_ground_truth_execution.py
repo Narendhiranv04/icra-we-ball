@@ -1012,8 +1012,15 @@ class KitchenGroundTruthExecutionDispatcher:
         else:
             try:
                 result = self.phase_b.pick(object_id)
-            except Exception:
-                result = {"success": False, "status": "PICK_TIMEOUT"}
+            except Exception as error:
+                result = {
+                    "success": False,
+                    "status": "PICK_EXCEPTION",
+                    "failure_code": "PICK_EXCEPTION",
+                    "exception_type": type(error).__name__,
+                    "message": str(error),
+                    "stage": "PHASE_B_PICK",
+                }
 
         if (
             not result.get("success", False)
@@ -1027,6 +1034,8 @@ class KitchenGroundTruthExecutionDispatcher:
                     **result,
                     "success": False,
                     "failure_code": "ACCESS_BLOCKED",
+                    "controller_status": result.get("status"),
+                    "controller_message": result.get("message"),
                     "benchmark_contact_recovery": False,
                     "benchmark_recovery_evidence": recovery_evidence,
                 }
