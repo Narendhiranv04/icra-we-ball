@@ -1,11 +1,127 @@
 # Claude Project Handoff
 
-Updated: 2026-09-02 (Asia/Kolkata)
+Updated: 2026-09-04 (Asia/Kolkata)
 
 This is the current-state handoff for continuing work on this repository with
 Claude or another coding agent. Read this file before changing code. Then read
 the current Git status and the narrowly relevant runbook/source files. Do not
 assume that every older status statement in `CODEX_HANDOFF.md` is still true.
+
+## 0. Read first: state as of 2026-09-04
+
+This section supersedes any older statement in this file that conflicts with
+it. The rest of the document remains accurate about architecture, boundaries,
+and scene design, but its status claims predate the work below.
+
+### The worktree is no longer dirty
+
+Everything is committed. `MACHINE_HANDOFF.md` at the repo root covers setting
+this repository up on a new host and is the right starting point after a fresh
+clone. Sections 1's warnings about a dirty worktree are historical.
+
+```text
+dbf2556  Document the machine handoff and the truncation failure mode
+107f385  Track the workshop_realistic scene assets
+8ab22df  Record host provenance and generate the paper tables from artifacts
+66f6d27  Survive interruption and hangs in an unattended execution grid
+db0cf37  Treat truncated generation as a harness fault, not a planning failure
+70fd174  Execute the retrieval baseline and record execution provenance
+6853f3d  Hold decoding fixed across baselines and stop sketch degeneration
+ab3d6b1  Fix Living Room physical execution stranding, settling and grasp twist
+a73cc89  Port phase-4 execution layer and baseline comparison scaffolding
+```
+
+Branches `baseline_execution` and `phase4_integration` both point at `dbf2556`.
+Read each commit message before changing the areas they touch: each records the
+measurements that justify it.
+
+### Decisions the researcher has made; do not silently revert these
+
+- **Decoding is `model-native` for every model-driven method**, with thinking
+  enabled for both baselines. Sampling is Qwen3.5-9B's published thinking-mode
+  figures for precise coding, with `repetition_penalty` 1.05 as the single
+  documented deviation. Rationale and measurements are in
+  `BASELINE_FIDELITY.md` under "Decoding conditions". `--decoding paper`
+  reproduces each baseline's own published condition and is a reported
+  ablation, not the default.
+- **`--max-model-calls` is 10** for physical execution.
+- **Only GT-feasible variants (L1--L6) are being run** for now. Infeasible
+  variants are deferred until the scoring gap below is closed.
+- **The 12-degree placement yaw tolerance applies to every payload.** An
+  earlier exemption for round payloads was reverted once the grasp twist was
+  cancelled at its source; do not reintroduce the exemption.
+
+### Current experimental state
+
+- **Physical execution grid**: `runs/living_room/execution/feasible_20260904`,
+  Living Room L1--L6, three views, 10 seeds, methods vlm_tamp/owl_tamp/
+  retrieval. Was at 84/180 on the i5 host. The researcher is migrating to an
+  i9-12900HX and **re-running everything there**, so treat that run as
+  historical rather than resuming it: execution artifacts now record
+  `host_cpu`, and contact-rich stepping is host-sensitive.
+- **VLM-TAMP result so far**: 92.3% outcome-correct, 92.3% feasible success,
+  95.4% goal coverage, 3.6 raw requests, 1.0 replans over 52 episodes. The
+  gap between success and coverage means failures are near-misses.
+- **GT evidence ablation**: complete, `runs/gt_evidence_ablation/full_20260904`.
+  Full evidence is 100% on all three domains. Feasible completion is 100% in
+  every ablated condition, so all discrimination is in rejecting infeasible
+  tasks. Kitchen needs semantics alone; workshop is undiscriminating; Living
+  Room is the only domain requiring the semantic+binary conjunction.
+- **No runs of the proposed framework exist.** Only baselines have executed.
+- **Kitchen and Workshop have no execution data.**
+
+### Traps that have already cost time
+
+- **Run pytest with `env -u PYTHONPATH`.** With ROS sourced, its pytest plugin
+  hijacks collection and the suite **exits 0 having tested nothing**.
+- **Expect exactly 7 test failures** (Kitchen serving allocator, kitchen GT
+  execution, phase-4 kitchen inspection, robot-profile self-overlap). Any
+  other failure is a real problem. Do not "fix" the 7 without reading
+  `MACHINE_HANDOFF.md`.
+- **`[L2RegionScene]` and the `L2_` scene prefix are not variant L2.** Paper
+  labels map positionally to internal names: L1 to F0, L3 to F2, L7 to I0.
+- **Only one tunnel can bind port 18000.** A stale `ssh -N` silently blocks a
+  new forward.
+
+### Open items, highest value first
+
+1. **Infeasible variants cannot be scored.** `success` is physical goal
+   satisfaction, unachievable on an infeasible variant by construction, so a
+   method that correctly rejects the task scores identically to one that
+   blunders through it. `summarize_execution_batch` also pools all variants
+   into one success rate. Carry `outcome_match` into
+   `benchmark_execution_result.json` and partition feasible from infeasible
+   before running L7--L10.
+2. **Self-collision allowances were widened by the phase-4 port** from 2 pairs
+   to 5, adding `link_forearm`, `link_wrist`, `link_gripper` at -0.030 in
+   `mujoco_scenes/generic_manipulation.py`. This relaxes a physical validity
+   criterion on the Google robot used by every Living Room episode, and
+   `test_only_the_physical_shoulder_mount_has_a_self_overlap_allowance` still
+   asserts the old set. Undecided: confirm whether the widening is intended and
+   record it in `BASELINE_FIDELITY.md` either way.
+3. **Goal coverage is recomputed, not recorded.** `make_paper_tables` derives it
+   from `latest_observation.json` plus the private role map because the goal
+   verifier collapses a role-matching result to a boolean. Moving it into the
+   verifier would make it first-class.
+4. **OWL-TAMP truncation is still scored as a planning failure.** VLM-TAMP now
+   treats a token-ceiling truncation as a harness fault; OWL-TAMP surfaces the
+   same event as `INVALID_MODEL_OUTPUT` and spends its single planning call. If
+   truncation appears in OWL episodes, that column has the fairness problem
+   VLM-TAMP just had.
+5. **`reports/` and `FINAL_PAPER_GT_EXECUTIONS/` carry ~250 MB of generated
+   HTML and demo video inside committed history.** `reports/` is gitignored now
+   but was committed earlier. Cleaning it means rewriting shared history and
+   needs the collaborator's agreement; deferred deliberately.
+
+### Regenerating the paper tables
+
+```bash
+env -u PYTHONPATH .venv/bin/python -m baseline_common.make_paper_tables \
+  runs/living_room/execution/<grid>
+```
+
+It refuses to pool MuJoCo builds, warns when no GT-infeasible variant is
+present, and assigns each failed trial to exactly one failure category.
 
 ## 1. Immediate orientation
 
