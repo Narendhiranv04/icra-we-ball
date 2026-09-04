@@ -168,6 +168,8 @@ def emit_phase4_progress(
     success: bool | None = None,
     controller_status: str | None = None,
     failure_code: str | None = None,
+    controller_message: str | None = None,
+    exception_type: str | None = None,
 ) -> None:
     """Print stable 1-based progress without changing structured results."""
     rendered = f"{operator}({', '.join(arguments)})"
@@ -180,6 +182,10 @@ def emit_phase4_progress(
     if not success:
         if controller_status:
             print(f"  controller_status={controller_status}", flush=True)
+        if controller_message:
+            print(f"  controller_message={controller_message}", flush=True)
+        if exception_type:
+            print(f"  exception_type={exception_type}", flush=True)
         if failure_code:
             print(f"  failure_code={failure_code}", flush=True)
 
@@ -548,14 +554,15 @@ class Phase4Executor:
                     ),
                 }
             inspection_records.append(record)
+            controller_res = record.get("controller_result") or {}
             emit_phase4_progress(
                 "INSPECTION", inspection_index, inspection_total,
                 "OPEN", [region],
                 success=bool(record.get("success")),
-                controller_status=(
-                    (record.get("controller_result") or {}).get("status")
-                ),
+                controller_status=controller_res.get("status"),
                 failure_code=record.get("failure_code"),
+                controller_message=controller_res.get("controller_message") or controller_res.get("message"),
+                exception_type=controller_res.get("exception_type"),
             )
             if not record.get("success"):
                 break
@@ -607,14 +614,15 @@ class Phase4Executor:
                         ),
                     )
                 records.append(record.to_dict())
+                controller_res = record.controller_result or {}
                 emit_phase4_progress(
                     "TASK", record.action_index, len(self.handoff.actions),
                     record.operator, record.arguments,
                     success=record.success,
-                    controller_status=(
-                        (record.controller_result or {}).get("status")
-                    ),
+                    controller_status=controller_res.get("status"),
                     failure_code=record.failure_code,
+                    controller_message=controller_res.get("controller_message") or controller_res.get("message"),
+                    exception_type=controller_res.get("exception_type"),
                 )
                 if not record.success:
                     break

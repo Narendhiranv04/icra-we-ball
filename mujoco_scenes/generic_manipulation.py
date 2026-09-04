@@ -159,6 +159,14 @@ class GraspPoseCandidate:
     predicted_contact_geom_names: tuple[str, ...] = ()
     predicted_contact_points_world_m: tuple[tuple[float, float, float], ...] = ()
 
+    def __hash__(self) -> int:
+        return hash(self.candidate_id)
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, GraspPoseCandidate):
+            return False
+        return self.candidate_id == other.candidate_id
+
 
 GOOGLE_PICK_SPECS = {
     "sugar_jar": SimplePickSpec(

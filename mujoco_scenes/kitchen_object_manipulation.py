@@ -1095,7 +1095,13 @@ def storage_probe_candidates(
             for cand in rows:
                 if any(suffix in cand.candidate_id for suffix in ("_z+0.60", "_z+0.35")):
                     box_probes.append(cand)
-        selected = tuple(dict.fromkeys((*selected, *box_probes)))
+        seen_ids: set[str] = set()
+        deduped: list[GraspPoseCandidate] = []
+        for cand in (*selected, *box_probes):
+            if cand.candidate_id not in seen_ids:
+                seen_ids.add(cand.candidate_id)
+                deduped.append(cand)
+        selected = tuple(deduped)
     if (source_kind, family) == ("CUPBOARD", "VESSEL"):
         # Probe one highest-clearance pose from every distinct opposite-wall
         # pair.  Selecting several heights from the most frontal pair can
