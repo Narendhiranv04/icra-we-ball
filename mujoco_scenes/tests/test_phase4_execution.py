@@ -878,7 +878,7 @@ def test_living_pick_requires_held_postcondition_even_after_controller_success()
     assert result["failure_code"] == "ACCESS_BLOCKED"
 
 
-def test_kitchen_inspection_closes_interfering_region_and_preserves_history():
+def test_kitchen_inspection_does_not_close_other_regions_and_preserves_history():
     class Dispatcher:
         def __init__(self):
             self.open_regions = set()
@@ -901,9 +901,9 @@ def test_kitchen_inspection_closes_interfering_region_and_preserves_history():
     adapter.successful_inspection_history = []
     assert adapter.execute_inspection_open("C2")["success"]
     assert adapter.execute_inspection_open("B1")["success"]
-    assert adapter.dispatcher.closed == ["C2"]
+    assert adapter.dispatcher.closed == []
     assert adapter.successful_inspection_history == ["C2", "B1"]
-    assert adapter.dispatcher.physically_open_containers() == {"B1"}
+    assert adapter.dispatcher.physically_open_containers() == {"C2", "B1"}
     adapter.expected_inspected_regions = ("C2", "B1")
     adapter.expected_actions = []
     adapter.successful_actions = []
@@ -962,11 +962,11 @@ def test_kitchen_inspected_closed_pick_prepares_access_without_changing_plan():
     adapter.expected_actions = [dict(action)]
     result = adapter._prepare_pick_access(action)
     assert result["success"]
-    assert result["conflicting_region"] == "B1"
+    assert result["conflicting_region"] is None
     assert result["physical_close_verified"]
     assert result["physical_open_verified"]
     assert adapter.expected_actions == [action]
-    assert adapter.dispatcher.open_regions == {"C2"}
+    assert adapter.dispatcher.open_regions == {"B1", "C2"}
 
 
 def test_workshop_failed_physical_postcheck_does_not_apply_symbolic_state():

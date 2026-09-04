@@ -24,7 +24,6 @@ from .phase4_execution import (
     ResolvedEntity,
 )
 from .scene_loader import KitchenScene
-from .sequential_inspection import INTERFERING_OPEN_REGIONS
 
 
 REGION_IDS = frozenset({"countertop", "serving_area", "D1", "D2", "C1", "C2", "B1"})
@@ -321,42 +320,26 @@ class KitchenPhase4Adapter:
         }
 
     def _physically_prepare_region(self, region: str) -> dict[str, Any]:
-        """Close documented interference, then physically open ``region``."""
-        open_before = self.dispatcher.physically_open_containers()
-        conflicting = INTERFERING_OPEN_REGIONS.get(region)
-        conflicting_was_open = bool(conflicting and conflicting in open_before)
-        close_result = None
-        close_verified = True
-        if conflicting_was_open:
-            close_result = self.dispatcher.close_container(conflicting)
-            close_verified = bool(
-                close_result.get("success")
-                and conflicting not in self.dispatcher.physically_open_containers()
-            )
-        open_result = {"success": False, "status": "CONFLICT_CLOSE_FAILED"}
-        if close_verified:
-            open_result = self.dispatcher.open_container(region)
+        """Physically open ``region``."""
+        open_result = self.dispatcher.open_container(region)
         open_verified = bool(
             open_result.get("success")
             and region in self.dispatcher.physically_open_containers()
         )
         return {
-            "success": bool(close_verified and open_verified),
+            "success": open_verified,
             "source_region": region,
-            "conflicting_region": conflicting,
-            "conflicting_region_was_open": conflicting_was_open,
-            "physical_close_result": close_result,
-            "physical_close_verified": close_verified,
+            "conflicting_region": None,
+            "conflicting_region_was_open": False,
+            "physical_close_result": None,
+            "physical_close_verified": True,
             "physical_open_result": open_result,
             "physical_open_verified": open_verified,
             "failure_code": (
-                None if close_verified and open_verified else
+                None if open_verified else
                 normalize_planner_failure_code(
-                    (
-                        (close_result or {}).get("failure_code")
-                        if not close_verified else open_result.get("failure_code")
-                    ),
-                    str(close_result if not close_verified else open_result),
+                    open_result.get("failure_code"),
+                    str(open_result),
                     infrastructure_failure=ExecutionFailure.CONTROLLER_FAILURE.value,
                     operator="OPEN",
                 )
