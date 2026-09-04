@@ -267,6 +267,7 @@ class KitchenExecutionAdapter:
                 "action_instance_id": projection.action_instance_id,
                 "operator": projection.controller_operator,
                 "arguments": list(projection.controller_arguments),
+                "pddl_operator": projection.pddl_operator,
             }
             try:
                 controller_value = self.controller.execute_action(request)

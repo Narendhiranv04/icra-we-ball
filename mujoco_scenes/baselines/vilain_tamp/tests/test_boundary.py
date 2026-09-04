@@ -61,6 +61,7 @@ def test_only_live_adapter_may_import_simulator() -> None:
     for path in PRODUCTION_FILES:
         source = path.read_text(encoding="utf-8")
         if path.relative_to(PACKAGE_ROOT).as_posix() in {
+            "live_execution.py",
             "live_observations.py",
             "live_refinement.py",
         }:
