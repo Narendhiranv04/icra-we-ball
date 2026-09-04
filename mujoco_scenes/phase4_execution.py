@@ -395,7 +395,14 @@ def _validate_replay_evidence(
 def load_phase3_handoff(run_dir: Path) -> Phase3Handoff:
     """Load and fail-closed validate the immutable Phase-3 execution handoff."""
     run_dir = run_dir.resolve()
-    manifest = _read_json(run_dir / "run_manifest.json")
+    manifest_file = run_dir / "run_manifest.json"
+    if not manifest_file.is_file():
+        raise UpstreamPhase3Blocked(
+            f"Required Phase-3 handoff is missing at {run_dir}.\n\n"
+            "Generate it deterministically before Phase-4 execution with:\n"
+            "  python -m mujoco_scenes.prepare_phase4_handoff --domain <domain> --variant <variant> --mode <mode>"
+        )
+    manifest = _read_json(manifest_file)
     if manifest.get("terminal_status") != "ACTION_SEQUENCE_READY":
         raise UpstreamPhase3Blocked(
             "CURRENT_UPSTREAM_PHASE3_BLOCKED: Phase-3 terminal_status="
@@ -728,3 +735,8 @@ class Phase4Executor:
             "wall_duration_s": time.perf_counter() - started,
             "success": success,
         }
+
+
+if __name__ == "__main__":
+    from .run_phase4_execution import main
+    raise SystemExit(main())

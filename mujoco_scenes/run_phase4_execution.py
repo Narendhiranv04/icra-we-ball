@@ -193,6 +193,10 @@ def build_parser() -> argparse.ArgumentParser:
             "Task indices printed by this CLI are 1-based Phase-3 indices."
         ),
     )
+    parser.add_argument(
+        "--auto-prepare", action="store_true",
+        help="Automatically generate/reconstruct the Phase-3 GT handoff if missing."
+    )
     return parser
 
 
@@ -208,6 +212,34 @@ def main() -> int:
         "Phase-3 action sequence.",
         flush=True,
     )
+
+    manifest_path = run_dir / "run_manifest.json"
+    if not manifest_path.is_file():
+        if getattr(args, "auto_prepare", False) and args.domain == "kitchen" and args.mode == "gt":
+            print(
+                f"[Phase-4] Phase-3 GT handoff missing at {run_dir}. "
+                "Auto-preparing handoff deterministically...",
+                flush=True,
+            )
+            from .prepare_phase4_handoff import prepare_phase4_handoff
+            prepare_phase4_handoff(
+                domain=args.domain,
+                variant=args.variant.upper(),
+                mode=args.mode,
+                output_root=args.phase3_root,
+            )
+        else:
+            print(
+                f"\nERROR: Required Phase-3 GT handoff is missing for {args.domain}/{args.variant.upper()}.\n"
+                f"Expected directory:\n  {run_dir}\n\n"
+                "Generate it deterministically with:\n"
+                f"  python -m mujoco_scenes.prepare_phase4_handoff --domain {args.domain} --variant {args.variant.upper()} --mode {args.mode}\n\n"
+                "Or pass `--auto-prepare` to this CLI.\n",
+                file=sys.stderr,
+                flush=True,
+            )
+            return 1
+
     try:
         result = execute_phase3_run(
             run_dir, output_dir=output_dir, max_actions=args.max_actions,
