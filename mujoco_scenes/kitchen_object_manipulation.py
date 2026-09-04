@@ -2915,36 +2915,40 @@ class KitchenObjectManipulationExecutor:
         orig_spec = self.executor.pick_specs[backend]
         selected_stance = None
         pass1_analysis = None
-        for stance in stances[:24]:
-            self.scene.data.qpos[:] = saved_qpos
-            self.scene.data.qvel[:] = 0.0
-            self.scene.data.qpos[self.executor.base_qpos] = world_stance_to_qpos(
-                stance, home_y=mobile.home_y
-            )
-            self.scene.data.qpos[self.executor.arm_qpos] = (
-                self.executor.profile.navigation_joints
-            )
-            mujoco.mj_forward(self.scene.model, self.scene.data)
+        disabled_b1 = self._apply_b1_collision_exemption()
+        try:
+            for stance in stances[:24]:
+                self.scene.data.qpos[:] = saved_qpos
+                self.scene.data.qvel[:] = 0.0
+                self.scene.data.qpos[self.executor.base_qpos] = world_stance_to_qpos(
+                    stance, home_y=mobile.home_y
+                )
+                self.scene.data.qpos[self.executor.arm_qpos] = (
+                    self.executor.profile.navigation_joints
+                )
+                mujoco.mj_forward(self.scene.model, self.scene.data)
 
-            st_carry_pos, st_carry_rot = base_relative_pose_to_world(
-                stance, carry_local, profile.top_down_rotation
-            )
-            cand = self._c2_vessel_grasp_candidate(backend, st_carry_rot)
-            self.executor.pick_specs[backend] = replace(
-                orig_spec,
-                carry_position=st_carry_pos,
-                grasp_candidates=(cand,),
-                ik_angle_tolerance_rad=np.deg2rad(8.0),
-                ik_position_tolerance=0.015,
-            )
-            try:
-                analysis = self.executor.direct_pick_plan_feasibility(backend)
-                if analysis.get("feasible"):
-                    selected_stance = stance
-                    pass1_analysis = analysis
-                    break
-            except Exception:
-                continue
+                st_carry_pos, st_carry_rot = base_relative_pose_to_world(
+                    stance, carry_local, profile.top_down_rotation
+                )
+                cand = self._c2_vessel_grasp_candidate(backend, st_carry_rot)
+                self.executor.pick_specs[backend] = replace(
+                    orig_spec,
+                    carry_position=st_carry_pos,
+                    grasp_candidates=(cand,),
+                    ik_angle_tolerance_rad=np.deg2rad(8.0),
+                    ik_position_tolerance=0.015,
+                )
+                try:
+                    analysis = self.executor.direct_pick_plan_feasibility(backend)
+                    if analysis.get("feasible"):
+                        selected_stance = stance
+                        pass1_analysis = analysis
+                        break
+                except Exception:
+                    continue
+        finally:
+            self._restore_b1_collision_exemption(disabled_b1)
 
         self.scene.data.qpos[:] = saved_qpos
         self.scene.data.qvel[:] = saved_qvel
@@ -3005,10 +3009,13 @@ class KitchenObjectManipulationExecutor:
             ik_position_tolerance=0.012,
         )
 
+        disabled_b1 = self._apply_b1_collision_exemption()
         try:
             final_analysis = self.executor.direct_pick_plan_feasibility(backend)
         except Exception as err:
             final_analysis = {"feasible": False, "failure": str(err)}
+        finally:
+            self._restore_b1_collision_exemption(disabled_b1)
 
         audit = {
             "anchor_world": [anchor.x, anchor.y, anchor.yaw],
@@ -4070,10 +4077,15 @@ class KitchenObjectManipulationExecutor:
                     self._apply_b1_collision_exemption()
                 )
             elif c2_vessel_primitive:
-                # Cupboard extraction experiences bounded tracking lag.
+                # Cupboard extraction experiences bounded tracking lag and
+                # may need B1 collision exemption if B1 was previously opened.
                 # Allow intermediate waypoints to advance through that lag;
                 # the Cartesian pre-close gate strictly validates convergence.
                 self.executor.intermediate_tracking_tolerance = 0.500
+                self.executor.drawer_pick_collision_exemption = True
+                disabled_b1_collision_geoms = (
+                    self._apply_b1_collision_exemption()
+                )
             if (
                 context_row["source_kind"] in {"CUPBOARD", "BOX"}
                 and direct_grasp_analysis

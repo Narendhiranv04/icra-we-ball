@@ -542,3 +542,38 @@ def test_non_bowl_table_objects_unmutated_by_source_aware_config():
         assert executor.executor.pick_specs[backend].home_seed is None
 
 
+def test_c2_vessel_primitive_exemption_configuration():
+    """Verify that c2_vessel_primitive enables drawer pick exemption and exempts B1 collision geoms."""
+    import inspect
+    from mujoco_scenes.kitchen_object_manipulation import KitchenObjectManipulationExecutor
+
+    context_row = {"source_container": "C2", "source_kind": "CUPBOARD"}
+    binding = {"grasp_family": "VESSEL"}
+    c2_vessel_primitive = (
+        context_row.get("source_container") == "C2"
+        and context_row.get("source_kind") == "CUPBOARD"
+        and binding.get("grasp_family") == "VESSEL"
+    )
+    assert c2_vessel_primitive is True
+
+    pick_src = inspect.getsource(KitchenObjectManipulationExecutor.pick)
+    c2_section = pick_src[
+        pick_src.index("elif c2_vessel_primitive:"):pick_src.index("if (\n                context_row[\"source_kind\"]")
+    ]
+    assert "self.executor.intermediate_tracking_tolerance = 0.500" in c2_section
+    assert "self.executor.drawer_pick_collision_exemption = True" in c2_section
+    assert "_apply_b1_collision_exemption" in c2_section
+
+
+def test_plan_c2_vessel_pick_wraps_in_b1_exemption():
+    """Verify that _plan_c2_vessel_pick wraps stance search and final feasibility in B1 exemption."""
+    import inspect
+    from mujoco_scenes.kitchen_object_manipulation import KitchenObjectManipulationExecutor
+
+    plan_src = inspect.getsource(KitchenObjectManipulationExecutor._plan_c2_vessel_pick)
+    assert plan_src.count("self._apply_b1_collision_exemption()") == 2
+    assert plan_src.count("self._restore_b1_collision_exemption(") == 2
+
+
+
+
