@@ -23,6 +23,9 @@ from __future__ import annotations
 
 from typing import Any
 
+import mujoco
+import numpy as np
+
 from .kitchen_execution_entities import SourceKind
 from .kitchen_execution_policy import KitchenWorkspace
 from .kitchen_ground_truth_execution import KitchenGroundTruthExecutionDispatcher
@@ -45,7 +48,18 @@ def _storage_relative_workspace(
 ) -> tuple[KitchenWorkspace, str | None] | None:
     if destination not in dispatcher.binding_by_id:
         return None
+    resolver = getattr(
+        getattr(getattr(dispatcher, "phase_b", None), "manipulation", None),
+        "placement_resolver",
+        None,
+    )
+    if resolver is not None and destination in getattr(
+        resolver, "serving_placements", {}
+    ):
+        return None
     row = dispatcher.inventory_by_id.get(destination) or {}
+    if row.get("location") in {"serving_area", "countertop"}:
+        return None
     context = row.get("source_context") or {}
     if str(context.get("source_kind")) not in _STORAGE_SOURCE_KINDS:
         return None
@@ -122,6 +136,40 @@ def _patched_place(
     object_id: str,
     destination: str,
 ) -> dict[str, Any]:
+    row = self.inventory_by_id.get(object_id) or {}
+    source_context = row.get("source_context") or {}
+    is_drawer_spoon = (
+        str(source_context.get("source_kind")) == SourceKind.DRAWER.value
+        or str(source_context.get("source_container")) in ("D1", "D2")
+    )
+    low = self.phase_b.manipulation.executor
+    if is_drawer_spoon and self.current_workspace == KitchenWorkspace.HOME:
+        if float(np.linalg.norm(self.scene.data.qpos[low.base_qpos][:2] - low.base_stance[:2])) > 0.02:
+            print(
+                f"[P4-RELATIVE-STORAGE] transitioning drawer-held utensil {object_id} "
+                "base to canonical stance before placement",
+                flush=True,
+            )
+            low.base_manipulation_target = low.base_stance.copy()
+            for _ in range(900):
+                low._command_base(low.base_manipulation_target)
+                mujoco.mj_step(self.scene.model, self.scene.data)
+                if self.step_callback is not None:
+                    self.step_callback(self.scene)
+                if low._base_at_target(low.base_manipulation_target):
+                    break
+            else:
+                return {
+                    "action": "PLACE",
+                    "arguments": [object_id, destination],
+                    "success": False,
+                    "status": "DRAWER_CARRY_RETREAT_FAILED",
+                    "message": "Carrying base retreat from drawer did not converge",
+                    "direct_payload_pose_write": False,
+                }
+            low._restore_navigation_base_damping()
+            mujoco.mj_forward(self.scene.model, self.scene.data)
+
     route = _storage_relative_workspace(self, destination)
     if route is None:
         return _ORIGINAL_PLACE(self, object_id, destination)

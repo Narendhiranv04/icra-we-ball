@@ -71,10 +71,13 @@ class KitchenPlanningCompiler:
                     {("holding", obj)},
                     {("hand_empty",), ("at", obj, region)},
                 ))
+            initial_locations = dict(legacy.initial.locations)
             for destination in sorted(destinations):
                 preconditions = {("holding", obj)}
                 if (obj, destination) in legacy.soup_assignments:
                     preconditions.add(("contains", destination, "soup"))
+                    if initial_locations.get(destination) == "B1":
+                        preconditions.add(("at", destination, legacy.serving_destination))
                 if destination == legacy.serving_destination:
                     if obj in legacy.coffee_targets:
                         preconditions.add(("contains", obj, "coffee"))
@@ -82,9 +85,10 @@ class KitchenPlanningCompiler:
                         preconditions.add(("stirred", obj))
                     elif obj in legacy.soup_targets:
                         preconditions.add(("contains", obj, "soup"))
-                        for tool, assigned_target in legacy.soup_assignments:
-                            if assigned_target == obj:
-                                preconditions.add(("at", tool, obj))
+                        if initial_locations.get(obj) != "B1":
+                            for tool, assigned_target in legacy.soup_assignments:
+                                if assigned_target == obj:
+                                    preconditions.add(("at", tool, obj))
                 actions.append(_action(
                     "PLACE", (obj, destination), preconditions,
                     {("hand_empty",), ("at", obj, destination)},
