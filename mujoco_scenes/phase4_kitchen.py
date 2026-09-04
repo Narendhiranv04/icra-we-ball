@@ -148,6 +148,9 @@ class KitchenPhase4Adapter:
         step_callback: Any = None,
         record_video: Path | None = None,
         viewer: bool = False,
+        tile_width: int = 640,
+        tile_height: int = 360,
+        fps: int = 5,
     ):
         registry_path = (
             handoff.run_dir / "observed_search" / "phase1" / "object_registry.json"
@@ -182,9 +185,9 @@ class KitchenPhase4Adapter:
             self.recorder = KitchenGroundTruthRecorder(
                 self.scene,
                 output_path=record_video,
-                tile_width=320,
-                tile_height=180,
-                fps=5,
+                tile_width=tile_width,
+                tile_height=tile_height,
+                fps=fps,
                 show=viewer,
                 record=record_video is not None,
             )
