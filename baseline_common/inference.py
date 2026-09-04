@@ -50,6 +50,16 @@ class InvalidCompletionError(PlanningError):
     """The service responded, but the completion violates the output contract."""
 
 
+class TruncatedCompletionError(InvalidCompletionError):
+    """Generation hit the token ceiling before it finished its answer.
+
+    Distinguished from every other invalid completion because no answer was
+    produced: the caller's budget cut the model off mid-generation.  A caller
+    that charges its per-episode model-call budget for this would score its own
+    ceiling as the method's planning failure.
+    """
+
+
 class TransportConfig(Protocol):
     base_url: str
     api_key: str
@@ -140,8 +150,13 @@ def response_content(
         ) from error
     if isinstance(content, Mapping):
         return content
+    reason = str(choice.get("finish_reason", "unknown"))
     if content is None:
-        reason = choice.get("finish_reason", "unknown")
+        if reason == "length":
+            raise TruncatedCompletionError(
+                "Generation reached the token ceiling before emitting any "
+                "final JSON content"
+            )
         raise InvalidCompletionError(
             "Completion has no final JSON content "
             f"(finish_reason={reason}); increase the baseline token budget"
@@ -162,6 +177,11 @@ def response_content(
     try:
         result = json.loads(content)
     except json.JSONDecodeError as error:
+        if reason == "length":
+            raise TruncatedCompletionError(
+                "Generation reached the token ceiling part-way through its "
+                "JSON content"
+            ) from error
         raise InvalidCompletionError(
             "Completion content is not valid JSON"
         ) from error

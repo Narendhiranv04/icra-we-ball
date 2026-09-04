@@ -5,7 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Mapping, Protocol, Sequence
 
-from baseline_common.inference import ModelTransportError, PlanningError
+from baseline_common.inference import (
+    ModelTransportError,
+    PlanningError,
+    TruncatedCompletionError,
+)
 from baseline_common.models import Action, ActionResult, Observation
 
 from .models import ObjectReference, ObjectUniverse, RefinementFailure, Subgoal
@@ -98,6 +102,7 @@ class VLMTAMPExecutive:
         max_model_calls: int = 3,
         max_total_actions: int = 40,
         max_transport_retries: int = 2,
+        max_truncation_retries: int = 2,
     ):
         if any(
             isinstance(value, bool)
@@ -112,6 +117,12 @@ class VLMTAMPExecutive:
             or max_transport_retries < 0
         ):
             raise ValueError("max_transport_retries must be a non-negative integer")
+        if (
+            isinstance(max_truncation_retries, bool)
+            or not isinstance(max_truncation_retries, int)
+            or max_truncation_retries < 0
+        ):
+            raise ValueError("max_truncation_retries must be a non-negative integer")
         self.planner = planner
         self.observer = observer
         self.executor = executor
@@ -131,6 +142,7 @@ class VLMTAMPExecutive:
         self.max_model_calls = max_model_calls
         self.max_total_actions = max_total_actions
         self.max_transport_retries = max_transport_retries
+        self.max_truncation_retries = max_truncation_retries
 
     def run(self, goal: str) -> BaselineResult:
         succeeded: list[Subgoal] = []
@@ -140,6 +152,7 @@ class VLMTAMPExecutive:
         observed_objects: set[str] = set()
         model_call = 0
         transport_retries = 0
+        truncation_retries = 0
 
         while model_call < self.max_model_calls:
             frame = self.observer()
@@ -182,6 +195,25 @@ class VLMTAMPExecutive:
                         refined, executed, succeeded, history, failure,
                     )
                 transport_retries += 1
+                continue
+            except TruncatedCompletionError as error:
+                # Generation hit the token ceiling, so no plan was produced.
+                # Like a transport fault this is the harness's ceiling rather
+                # than a model call: charging the episode's call budget for it
+                # would report this method as having planned badly when it was
+                # never allowed to finish planning.  Observed on a replan
+                # prompt that ran to 24576 tokens nine times in a row while
+                # every completed call needed under 7400.
+                failure = RefinementFailure(
+                    "model_output_truncated",
+                    str(error),
+                )
+                if truncation_retries >= self.max_truncation_retries:
+                    return self._result(
+                        False, "MODEL_OUTPUT_TRUNCATED", model_call, attempted,
+                        refined, executed, succeeded, history, failure,
+                    )
+                truncation_retries += 1
                 continue
             except PlanningError as error:
                 model_call += 1

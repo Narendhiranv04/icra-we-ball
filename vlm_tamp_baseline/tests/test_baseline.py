@@ -4,7 +4,12 @@ import json
 
 import pytest
 
-from baseline_common.inference import ModelTransportError, PlanningError
+from baseline_common.inference import (
+    InvalidCompletionError,
+    ModelTransportError,
+    PlanningError,
+    TruncatedCompletionError,
+)
 from baseline_common.models import (
     Action,
     ActionResult,
@@ -951,3 +956,71 @@ def test_executive_reports_inference_failure_without_spending_model_calls():
     assert planner.attempts == 3
     assert result.terminal_failure is not None
     assert result.terminal_failure.code == "inference_failed"
+
+class AlwaysTruncatingPlanner(FakePlanner):
+    def __init__(self):
+        super().__init__([])
+        self.attempts = 0
+
+    def plan(self, *args, failure=None, **kwargs):
+        self.failures.append(failure)
+        self.attempts += 1
+        raise TruncatedCompletionError("token ceiling reached")
+
+
+def test_truncated_generation_does_not_spend_model_calls():
+    """A generation cut off by the token ceiling produced no plan.
+
+    Charging the episode's model-call budget for it would report the method as
+    having planned badly when it was never allowed to finish planning, and it
+    would burn the whole budget re-running the same runaway generation.
+    """
+    planner = AlwaysTruncatingPlanner()
+    world = FakeWorld()
+
+    result = VLMTAMPExecutive(
+        planner,
+        world.observe,
+        world,
+        refiner=CatalogSubgoalRefiner(),
+        max_model_calls=10,
+        max_truncation_retries=2,
+    ).run("Pick the mug")
+
+    assert not result.success
+    assert result.status == "MODEL_OUTPUT_TRUNCATED"
+    assert result.model_calls == 0
+    # Bounded by the truncation budget, not by max_model_calls.
+    assert planner.attempts == 3
+    assert result.terminal_failure is not None
+    assert result.terminal_failure.code == "model_output_truncated"
+
+
+class AlwaysInvalidPlanner(FakePlanner):
+    def __init__(self):
+        super().__init__([])
+        self.attempts = 0
+
+    def plan(self, *args, failure=None, **kwargs):
+        self.failures.append(failure)
+        self.attempts += 1
+        raise InvalidCompletionError("Completion content is not valid JSON")
+
+
+def test_invalid_output_still_spends_the_model_call_budget():
+    """Only truncation is exempt; unparseable output is a real model failure."""
+    planner = AlwaysInvalidPlanner()
+    world = FakeWorld()
+
+    result = VLMTAMPExecutive(
+        planner,
+        world.observe,
+        world,
+        refiner=CatalogSubgoalRefiner(),
+        max_model_calls=3,
+    ).run("Pick the mug")
+
+    assert result.status == "MODEL_CALL_BUDGET_EXHAUSTED"
+    assert result.model_calls == 3
+    assert planner.attempts == 3
+
