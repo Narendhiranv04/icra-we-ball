@@ -203,6 +203,15 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     args = build_parser().parse_args()
 
+    if getattr(args, "auto_prepare", False) and args.phase3_run is not None:
+        print(
+            "ERROR: --auto-prepare cannot be combined with --phase3-run.\n"
+            "Either omit --phase3-run or prepare the handoff explicitly first.",
+            file=sys.stderr,
+            flush=True,
+        )
+        return 2
+
     run_dir = args.phase3_run or (
         args.phase3_root / args.domain / args.variant.upper() / args.mode
     )

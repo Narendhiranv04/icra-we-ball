@@ -95,20 +95,128 @@ def test_k6_fresh_clone_reproducibility(tmp_path: Path):
     assert step_pick_b1_spoon < step_place_b1_spoon_in_bowl
 
 
-@pytest.mark.parametrize("variant,expected_len", [
-    ("K1", 24),
-    ("K2", 26),
-    ("K3", 24),
-    ("K5", 24),
-])
-def test_k1_k2_k3_k5_preservation(tmp_path: Path, variant: str, expected_len: int):
-    """Verify K1-K3 and K5 plans are preserved without unintended modifications."""
+EXPECTED_CANONICAL_ACTIONS: dict[str, tuple[tuple[str, tuple[str, ...]], ...]] = {
+    "K1": (
+        ("PICK", ("object_0006",)),
+        ("PLACE", ("object_0006", "object_0003")),
+        ("PICK", ("object_0003",)),
+        ("PLACE", ("object_0003", "serving_area")),
+        ("PICK", ("object_0007",)),
+        ("PLACE", ("object_0007", "object_0004")),
+        ("PICK", ("object_0004",)),
+        ("PLACE", ("object_0004", "serving_area")),
+        ("PICK", ("object_0008",)),
+        ("POUR", ("object_0008", "object_0001")),
+        ("POUR", ("object_0008", "object_0002")),
+        ("PLACE", ("object_0008", "countertop")),
+        ("PICK", ("object_0009",)),
+        ("POUR", ("object_0009", "object_0001")),
+        ("POUR", ("object_0009", "object_0002")),
+        ("PLACE", ("object_0009", "countertop")),
+        ("PICK", ("object_0005",)),
+        ("STIR", ("object_0005", "object_0001")),
+        ("STIR", ("object_0005", "object_0002")),
+        ("PLACE", ("object_0005", "countertop")),
+        ("PICK", ("object_0001",)),
+        ("PLACE", ("object_0001", "serving_area")),
+        ("PICK", ("object_0002",)),
+        ("PLACE", ("object_0002", "serving_area")),
+    ),
+    "K2": (
+        ("PICK", ("object_0005",)),
+        ("PLACE", ("object_0005", "object_0002")),
+        ("PICK", ("object_0002",)),
+        ("PLACE", ("object_0002", "serving_area")),
+        ("PICK", ("object_0006",)),
+        ("PLACE", ("object_0006", "object_0003")),
+        ("PICK", ("object_0003",)),
+        ("PLACE", ("object_0003", "serving_area")),
+        ("PICK", ("object_0009",)),
+        ("PLACE", ("object_0009", "countertop")),
+        ("PICK", ("object_0007",)),
+        ("POUR", ("object_0007", "object_0001")),
+        ("POUR", ("object_0007", "object_0009")),
+        ("PLACE", ("object_0007", "countertop")),
+        ("PICK", ("object_0008",)),
+        ("POUR", ("object_0008", "object_0001")),
+        ("POUR", ("object_0008", "object_0009")),
+        ("PLACE", ("object_0008", "countertop")),
+        ("PICK", ("object_0004",)),
+        ("STIR", ("object_0004", "object_0001")),
+        ("STIR", ("object_0004", "object_0009")),
+        ("PLACE", ("object_0004", "countertop")),
+        ("PICK", ("object_0001",)),
+        ("PLACE", ("object_0001", "serving_area")),
+        ("PICK", ("object_0009",)),
+        ("PLACE", ("object_0009", "serving_area")),
+    ),
+    "K3": (
+        ("PICK", ("object_0005",)),
+        ("PLACE", ("object_0005", "object_0003")),
+        ("PICK", ("object_0003",)),
+        ("PLACE", ("object_0003", "serving_area")),
+        ("PICK", ("object_0009",)),
+        ("PLACE", ("object_0009", "serving_area")),
+        ("PICK", ("object_0006",)),
+        ("PLACE", ("object_0006", "object_0009")),
+        ("PICK", ("object_0007",)),
+        ("POUR", ("object_0007", "object_0001")),
+        ("POUR", ("object_0007", "object_0002")),
+        ("PLACE", ("object_0007", "countertop")),
+        ("PICK", ("object_0008",)),
+        ("POUR", ("object_0008", "object_0001")),
+        ("POUR", ("object_0008", "object_0002")),
+        ("PLACE", ("object_0008", "countertop")),
+        ("PICK", ("object_0004",)),
+        ("STIR", ("object_0004", "object_0001")),
+        ("STIR", ("object_0004", "object_0002")),
+        ("PLACE", ("object_0004", "countertop")),
+        ("PICK", ("object_0001",)),
+        ("PLACE", ("object_0001", "serving_area")),
+        ("PICK", ("object_0002",)),
+        ("PLACE", ("object_0002", "serving_area")),
+    ),
+    "K5": (
+        ("PICK", ("object_0005",)),
+        ("PLACE", ("object_0005", "object_0003")),
+        ("PICK", ("object_0003",)),
+        ("PLACE", ("object_0003", "serving_area")),
+        ("PICK", ("object_0009",)),
+        ("PLACE", ("object_0009", "object_0004")),
+        ("PICK", ("object_0004",)),
+        ("PLACE", ("object_0004", "serving_area")),
+        ("PICK", ("object_0006",)),
+        ("POUR", ("object_0006", "object_0001")),
+        ("POUR", ("object_0006", "object_0002")),
+        ("PLACE", ("object_0006", "countertop")),
+        ("PICK", ("object_0007",)),
+        ("POUR", ("object_0007", "object_0001")),
+        ("POUR", ("object_0007", "object_0002")),
+        ("PLACE", ("object_0007", "countertop")),
+        ("PICK", ("object_0008",)),
+        ("STIR", ("object_0008", "object_0001")),
+        ("STIR", ("object_0008", "object_0002")),
+        ("PLACE", ("object_0008", "countertop")),
+        ("PICK", ("object_0001",)),
+        ("PLACE", ("object_0001", "serving_area")),
+        ("PICK", ("object_0002",)),
+        ("PLACE", ("object_0002", "serving_area")),
+    ),
+}
+
+
+@pytest.mark.parametrize("variant", ["K1", "K2", "K3", "K5"])
+def test_k1_k2_k3_k5_preservation(tmp_path: Path, variant: str):
+    """Verify K1-K3 and K5 plans are preserved with exact canonical operator/arguments."""
     handoff = prepare_kitchen_gt_handoff(variant, output_root=tmp_path)
-    assert len(handoff.actions) == expected_len
+    actual_seq = [(act["operator"], tuple(act["arguments"])) for act in handoff.actions]
+    expected_seq = list(EXPECTED_CANONICAL_ACTIONS[variant])
+    assert actual_seq == expected_seq
 
     run_dir = tmp_path / "kitchen" / variant / "gt"
     reloaded = load_phase3_handoff(run_dir)
-    assert len(reloaded.actions) == expected_len
+    reloaded_seq = [(act["operator"], tuple(act["arguments"])) for act in reloaded.actions]
+    assert reloaded_seq == expected_seq
 
 
 def test_prepare_phase4_handoff_cli_batch(tmp_path: Path):
@@ -122,3 +230,22 @@ def test_prepare_phase4_handoff_cli_batch(tmp_path: Path):
     assert len(results) == 3
     variants_prepared = [h.variant for h in results]
     assert variants_prepared == ["K4", "K5", "K6"]
+
+
+def test_auto_prepare_with_phase3_run_rejected(capsys, monkeypatch):
+    """Verify --auto-prepare cannot be combined with --phase3-run."""
+    from mujoco_scenes.run_phase4_execution import main
+
+    test_args = [
+        "run_phase4_execution.py",
+        "--domain", "kitchen",
+        "--variant", "K4",
+        "--auto-prepare",
+        "--phase3-run", "/tmp/explicit_run_path",
+    ]
+    monkeypatch.setattr("sys.argv", test_args)
+    ret = main()
+    assert ret == 2
+    captured = capsys.readouterr()
+    assert "--auto-prepare cannot be combined with --phase3-run" in captured.err
+    assert "Either omit --phase3-run or prepare the handoff explicitly first." in captured.err
