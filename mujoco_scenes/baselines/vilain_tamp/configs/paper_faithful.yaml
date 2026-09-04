@@ -1,0 +1,17 @@
+domain: kitchen
+observation_mode: initial_observation_only
+model_condition: paper_faithful
+max_cp_corrections: 3
+timeouts:
+  symbolic_seconds: 200
+  model_seconds: 120
+  refinement_seconds: 200
+output_root: runs/vilain_tamp
+external_tools:
+  fast_downward: null
+  val: null
+object_estimator_model: Qwen2.5-VL-7B-Instruct
+reasoning_model: gpt-4o-2024-08-06
+symbolic_planner: Fast Downward
+search_configuration: lama-first
+independent_model_calls: true
