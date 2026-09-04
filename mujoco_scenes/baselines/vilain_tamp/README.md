@@ -16,6 +16,16 @@ Geometric refinement is a MuJoCo cloned-scene sequence preflight,
 an adaptation of ViLaIn-TAMP's MoveIt Task Constructor refinement. It is not an
 exact MoveIt Task Constructor reproduction.
 
+The live observation boundary is implemented in `live_observations.py`. It
+constructs the requested benchmark variant but exposes only five canonical
+RGB-D views, metric camera calibration, and the fixed inspection order to the
+baseline. Kitchen and workshop storage is opened through each scene's generic
+`open_container` mechanism; the returned backend contents are discarded.
+Living-room full inspection is its canonical initial multiview because that
+domain has no closed storage. Variant IDs, simulator body identities,
+segmentation, functional search vocabulary, ranked regions, and early stopping
+are absent from the model-facing observation payload.
+
 ## Runner boundary
 
 `mujoco_scenes.run_vilain_tamp_baseline` is the baseline-native CLI. It defaults

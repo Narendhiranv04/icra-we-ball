@@ -57,7 +57,9 @@ def test_production_source_has_no_proposed_method_references() -> None:
     assert not violations, "forbidden source references:\n" + "\n".join(violations)
 
 
-def test_stage_one_production_has_no_simulator_imports() -> None:
+def test_only_live_adapter_may_import_simulator() -> None:
     for path in PRODUCTION_FILES:
         source = path.read_text(encoding="utf-8")
+        if path.relative_to(PACKAGE_ROOT).as_posix() == "live_observations.py":
+            continue
         assert "import mujoco" not in source
