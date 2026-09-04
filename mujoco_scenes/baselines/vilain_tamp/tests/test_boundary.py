@@ -60,6 +60,9 @@ def test_production_source_has_no_proposed_method_references() -> None:
 def test_only_live_adapter_may_import_simulator() -> None:
     for path in PRODUCTION_FILES:
         source = path.read_text(encoding="utf-8")
-        if path.relative_to(PACKAGE_ROOT).as_posix() == "live_observations.py":
+        if path.relative_to(PACKAGE_ROOT).as_posix() in {
+            "live_observations.py",
+            "live_refinement.py",
+        }:
             continue
         assert "import mujoco" not in source

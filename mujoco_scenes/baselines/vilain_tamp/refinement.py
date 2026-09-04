@@ -262,6 +262,9 @@ class MuJoCoSequenceRefiner:
 
         started = self.clock()
         planning_scene = planning_scene_factory()
+        configure_output = getattr(planning_scene, "set_refinement_output_root", None)
+        if output_root is not None and callable(configure_output):
+            configure_output(Path(output_root))
         predicted_state = dict(self.state_adapter.snapshot(planning_scene))
         action_certificates: list[ActionRefinementCertificate] = []
         for action, projection in zip(actions, projections):

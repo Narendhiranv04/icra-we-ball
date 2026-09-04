@@ -154,8 +154,24 @@ remain explicit. A successful attempt writes an immutable execution plan and
 projections for the runner. Internal-PDDL, translation, no-plan, VAL, identity,
 projection, refinement, timeout, and infrastructure failures are converted to
 the existing corrective-planning failure taxonomy and persisted in
-`attempt_outcome.json`. Stage 19 supplies orchestration only; concrete MuJoCo
-geometric stage backends remain Stage 20 work.
+`attempt_outcome.json`.
+
+## Live sequence refinement
+
+`live_refinement.py` supplies the Stage 20 planning-copy backends. Each attempt
+round-trips the compiled live model through MuJoCo's binary format and creates a
+separate `MjData`; model parameters and physical state in the scored scene are
+therefore never shared with refinement. PICK attaches a free body to the
+gripper in that copy, PLACE/INSERT release it at the predicted target, and OPEN
+advances the selected descendant hinge or slide. The next symbolic action is
+resolved against that updated physical state.
+
+Robot collision checks are supplemented by signed-distance checks for every
+collision-enabled carried-object geometry along the joint-space sweep. POUR,
+STIR, and DRIVE also require action-specific relative-pose, clearance,
+tilt/alignment, insertion/depth, radius, and approach/return certificates.
+These are planning-only envelopes: Stage 20 never invokes a controller or
+steps the scored scene.
 
 ## Experimental command matrix
 
