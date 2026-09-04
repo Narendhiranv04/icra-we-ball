@@ -105,6 +105,38 @@ artifacts. The optional model-matched condition similarly requires fresh,
 independent baseline calls and the placeholders in `model_matched.yaml` must be
 resolved before use.
 
+## Live model transports
+
+`live_fm.py` owns the concrete paper-faithful transports. Both are lazy: creating
+the clients does not import Transformers, load a checkpoint, or create an OpenAI
+client. A real call is rejected unless `.venv-vilain-tamp` is active. The local
+Qwen transport requires a full 40-character Hugging Face commit, resolves every
+image beneath the observation artifact root, and logs its model source, resolved
+revision, device, dtype, and token counts. The GPT transport accepts only
+`gpt-4o-2024-08-06`, checks that the provider returned that exact snapshot, and
+logs the provider model and system fingerprint. `RecordedFMClient` retains the
+sanitized request, raw generated text, and provider metadata for every call;
+credentials stay in the process environment and are never added to requests.
+
+Before connecting the full pipeline, make exactly one standalone object call
+from a previously captured baseline observation manifest:
+
+```bash
+. .venv-vilain-tamp/bin/activate
+python -m mujoco_scenes.baselines.vilain_tamp.live_fm \
+  --observation-manifest /absolute/run/observations/observation_manifest.json \
+  --task "Prepare the requested meal." \
+  --domain kitchen \
+  --model-source Qwen/Qwen2.5-VL-7B-Instruct \
+  --revision FULL_40_CHARACTER_HUGGING_FACE_COMMIT \
+  --output-directory /absolute/run/standalone_object_call
+```
+
+This command makes one local object-estimation call and writes `request.json`,
+`raw_response.txt`, and `model_metadata.json`. It does not invoke GPT, planning,
+refinement, execution, or the simulator. Automated tests inject inert fake
+clients and never call either live model service.
+
 ## Experimental command matrix
 
 First validate each resolved condition without loading any runtime:

@@ -53,6 +53,7 @@ class FMTransportResponse:
     model: str
     revision: str | None
     usage: Mapping[str, int | float]
+    provider_metadata: Mapping[str, Any] = field(default_factory=dict)
 
 
 class QwenObjectEstimatorTransport(Protocol):
@@ -127,6 +128,7 @@ class RecordedFMClient:
                 "model": response.model,
                 "revision": response.revision,
                 "usage": dict(response.usage),
+                "provider_metadata": redact_secrets(dict(response.provider_metadata)),
                 "latency_seconds": latency,
             },
         )
