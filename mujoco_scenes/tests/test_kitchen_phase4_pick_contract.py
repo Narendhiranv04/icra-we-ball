@@ -388,7 +388,7 @@ def test_c2_vessel_primitive_does_not_affect_other_storage_or_families():
 
 
 def test_c2_vessel_candidate_clears_retreat_offsets():
-    """Test E: _c2_vessel_grasp_candidate selects z+0.60 and clears retreat offsets."""
+    """Test E: _c2_vessel_grasp_candidate selects z+0.35 and clears retreat offsets."""
     import mujoco
     executor = object.__new__(KitchenObjectManipulationExecutor)
     executor.scene = Mock()
@@ -403,8 +403,8 @@ def test_c2_vessel_candidate_clears_retreat_offsets():
         0.05,
         retreat_route_offsets_world_m=((0.0, -0.20, 0.0),),
     )
-    cand_z60 = GraspPoseCandidate(
-        "cupboard_contact_diameter_0_z+0.60",
+    cand_z35 = GraspPoseCandidate(
+        "cupboard_contact_diameter_0_z+0.35",
         (0.0, 0.0, 0.0),
         np.eye(3),
         0.05,
@@ -413,11 +413,11 @@ def test_c2_vessel_candidate_clears_retreat_offsets():
 
     with patch(
         "mujoco_scenes.kitchen_object_manipulation.StorageGraspCandidateGenerator.cupboard",
-        return_value=[cand_z80, cand_z60],
+        return_value=[cand_z80, cand_z35],
     ), patch("mujoco.mj_name2id", return_value=1):
         selected = executor._c2_vessel_grasp_candidate("ab3_medium_deep_mug", np.eye(3))
 
-    assert selected.candidate_id == "cupboard_contact_diameter_0_z+0.60"
+    assert selected.candidate_id == "cupboard_contact_diameter_0_z+0.35"
     assert selected.retreat_route_offsets_world_m == ()
 
 
@@ -496,4 +496,49 @@ def test_box_bowl_candidates_track_live_body_rotation():
     top = manipulation_profile("google").top_down_rotation
     expected_rot = rot90 @ top
     np.testing.assert_allclose(first_cand.target_rotation_world, expected_rot, atol=1e-6)
+
+
+def test_non_bowl_table_objects_unmutated_by_source_aware_config():
+    """Verify that non-bowl TABLE objects (coffee jar, kettle, vessel, utensil) remain completely unmutated."""
+    from mujoco_scenes.kitchen_object_manipulation import (
+        KitchenObjectManipulationExecutor,
+        SimplePickSpec,
+    )
+    from mujoco_scenes.robot_profiles import manipulation_profile
+
+    executor = object.__new__(KitchenObjectManipulationExecutor)
+    executor.scene = Mock()
+    executor.scene.model = Mock()
+    executor.scene.data = Mock()
+    executor.executor = Mock()
+    executor.executor.base_qpos = slice(0, 3)
+    executor.scene.data.qpos = np.zeros(10)
+    top = manipulation_profile("google").top_down_rotation
+
+    test_cases = [
+        ("s1i_compact_coffee_jar", "JAR_SOURCE", np.array([0.20, -0.35, 0.90])),
+        ("s1i_compact_kettle", "KETTLE", None),
+        ("ab3_narrow_deep_cup", "VESSEL", None),
+        ("s1i_oversized_spoon", "UTENSIL", None),
+    ]
+
+    for backend, family, carry_pos in test_cases:
+        mock_spec = SimplePickSpec(
+            label=f"test_{backend}",
+            grasp_site=f"{backend}_grasp",
+            support_height=0.05,
+            grasp_z_offset=0.0,
+            place_supported=True,
+            top_down_rotation=top,
+            carry_position=carry_pos,
+            home_seed=None,
+            grasp_candidates=(),
+        )
+        executor.executor.pick_specs = {backend: mock_spec}
+        executor._configure_source_aware_pick_spec(backend, family, "TABLE")
+        # Must be the exact same object reference - 0 mutations
+        assert executor.executor.pick_specs[backend] is mock_spec
+        assert executor.executor.pick_specs[backend].carry_position is carry_pos
+        assert executor.executor.pick_specs[backend].home_seed is None
+
 

@@ -1836,7 +1836,30 @@ class KitchenObjectManipulationExecutor:
         source_kind: str,
     ) -> None:
         """Express carry in the live robot base frame and add storage grasps."""
-        if source_kind not in {"CUPBOARD", "BOX", "TABLE"}:
+        if source_kind not in {"CUPBOARD", "BOX"}:
+            if source_kind == "TABLE" and family == "BOWL":
+                # Free tabletop bowls need to regenerate grasp candidates
+                # from the live MuJoCo body transform, but should NOT undergo
+                # storage-specific reconfiguration (carry positions, home seed,
+                # storage tolerances).
+                site_id = mujoco.mj_name2id(
+                    self.scene.model, mujoco.mjtObj.mjOBJ_SITE, f"{backend}_grasp"
+                )
+                from .robot_profiles import mobile_profile
+                mobile = mobile_profile("google")
+                stance = qpos_to_world_stance(
+                    self.scene.data.qpos[self.executor.base_qpos],
+                    home_y=mobile.home_y,
+                )
+                profile = manipulation_profile("google")
+                carry_rotation = yaw_rotation(stance.yaw) @ profile.top_down_rotation
+                live_candidates = StorageGraspCandidateGenerator.box(
+                    self.scene, site_id, carry_rotation, family
+                )
+                self.executor.pick_specs[backend] = replace(
+                    self.executor.pick_specs[backend],
+                    grasp_candidates=live_candidates,
+                )
             return
         profile = manipulation_profile("google")
         from .robot_profiles import mobile_profile
@@ -1918,16 +1941,9 @@ class KitchenObjectManipulationExecutor:
             )
         elif source_kind == "TABLE" and family in {"BOWL", "VESSEL"}:
             # A relocated vessel must stop using its original cupboard/box
-            # candidate family. For bowls on the table, dynamically regenerate
-            # candidates from the live bowl transform so that diameter pinches
-            # track the bowl's live position and orientation.
-            candidates = (
-                StorageGraspCandidateGenerator.box(
-                    self.scene, site_id, carry_rotation, family
-                )
-                if family == "BOWL"
-                else ()
-            )
+            # candidate family. Empty candidates select the normal tabletop
+            # grasp-site primitive used by initially visible K1 vessels.
+            candidates = ()
         elif source_kind == "TABLE" and family == "UTENSIL":
             # Likewise, drawer/cupboard utensil candidates are invalid after
             # the object has been staged on the countertop.
@@ -1965,11 +1981,7 @@ class KitchenObjectManipulationExecutor:
             # Storage aperture reaches are orientation-limited.  Bias the IK
             # objective toward the configured gripper attitude; the existing
             # position/angle acceptance thresholds remain unchanged.
-            ik_orientation_weight=(
-                0.45
-                if source_kind in {"CUPBOARD", "BOX"}
-                else spec.ik_orientation_weight
-            ),
+            ik_orientation_weight=0.45,
             # Deep cupboard reaches are a little under-actuated at the wrist:
             # allow a small Cartesian terminal residual during planning, then
             # retain the existing live pre-close correction and bilateral
@@ -2847,14 +2859,14 @@ class KitchenObjectManipulationExecutor:
             self.scene, body_id, carry_rotation, "VESSEL"
         )
         for cand in candidates:
-            if cand.candidate_id == "cupboard_contact_diameter_0_z+0.60":
+            if cand.candidate_id == "cupboard_contact_diameter_0_z+0.35":
                 return replace(
                     cand,
                     carry_rotation_world=carry_rotation.copy(),
                     retreat_route_offsets_world_m=(),
                 )
         for cand in candidates:
-            if "_z+0.60" in cand.candidate_id:
+            if "_z+0.35" in cand.candidate_id:
                 return replace(
                     cand,
                     carry_rotation_world=carry_rotation.copy(),
@@ -2900,7 +2912,9 @@ class KitchenObjectManipulationExecutor:
         saved_qvel = self.scene.data.qvel.copy()
         saved_ctrl = self.scene.data.ctrl.copy()
 
+        orig_spec = self.executor.pick_specs[backend]
         selected_stance = None
+        pass1_analysis = None
         for stance in stances[:24]:
             self.scene.data.qpos[:] = saved_qpos
             self.scene.data.qvel[:] = 0.0
@@ -2916,14 +2930,18 @@ class KitchenObjectManipulationExecutor:
                 stance, carry_local, profile.top_down_rotation
             )
             cand = self._c2_vessel_grasp_candidate(backend, st_carry_rot)
-            spec = self.executor.pick_specs[backend]
             self.executor.pick_specs[backend] = replace(
-                spec, carry_position=st_carry_pos, grasp_candidates=(cand,)
+                orig_spec,
+                carry_position=st_carry_pos,
+                grasp_candidates=(cand,),
+                ik_angle_tolerance_rad=np.deg2rad(8.0),
+                ik_position_tolerance=0.015,
             )
             try:
                 analysis = self.executor.direct_pick_plan_feasibility(backend)
                 if analysis.get("feasible"):
                     selected_stance = stance
+                    pass1_analysis = analysis
                     break
             except Exception:
                 continue
@@ -2931,6 +2949,7 @@ class KitchenObjectManipulationExecutor:
         self.scene.data.qpos[:] = saved_qpos
         self.scene.data.qvel[:] = saved_qvel
         self.scene.data.ctrl[:] = saved_ctrl
+        self.executor.pick_specs[backend] = orig_spec
         mujoco.mj_forward(self.scene.model, self.scene.data)
 
         if selected_stance is None:
@@ -2954,13 +2973,36 @@ class KitchenObjectManipulationExecutor:
         )
         self._settle_navigation_posture()
 
+        # Pass 2: calibrate reach orientation to guarantee preclose convergence
+        final_wp_joints = np.asarray(
+            pass1_analysis["planned_waypoints"][-1]["joints"]
+        )
+        saved_arm = self.scene.data.qpos[self.executor.arm_qpos].copy()
+        self.scene.data.qpos[self.executor.arm_qpos] = final_wp_joints
+        mujoco.mj_forward(self.scene.model, self.scene.data)
+        actual_rot = self.scene.data.site_xmat[
+            self.executor.grip_site_id
+        ].reshape(3, 3).copy()
+        self.scene.data.qpos[self.executor.arm_qpos] = saved_arm
+        mujoco.mj_forward(self.scene.model, self.scene.data)
+
         st_carry_pos, st_carry_rot = base_relative_pose_to_world(
             selected_stance, carry_local, profile.top_down_rotation
         )
-        final_candidate = self._c2_vessel_grasp_candidate(backend, st_carry_rot)
-        spec = self.executor.pick_specs[backend]
+        base_cand = self._c2_vessel_grasp_candidate(backend, st_carry_rot)
+        calibrated_cand = replace(
+            base_cand,
+            target_rotation_world=actual_rot.copy(),
+            approach_rotation_world=actual_rot.copy(),
+            carry_rotation_world=st_carry_rot.copy(),
+            retreat_route_offsets_world_m=(),
+        )
         self.executor.pick_specs[backend] = replace(
-            spec, carry_position=st_carry_pos, grasp_candidates=(final_candidate,)
+            orig_spec,
+            carry_position=st_carry_pos,
+            grasp_candidates=(calibrated_cand,),
+            ik_angle_tolerance_rad=np.deg2rad(2.5),
+            ik_position_tolerance=0.012,
         )
 
         try:
@@ -2992,7 +3034,7 @@ class KitchenObjectManipulationExecutor:
                     selected_stance.anchor_dy,
                     selected_stance.anchor_dyaw,
                 ],
-                "grasp_candidate_id": final_candidate.candidate_id,
+                "grasp_candidate_id": calibrated_cand.candidate_id,
                 "grasp_family": "VESSEL",
                 "world": [
                     selected_stance.x,
