@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
+import subprocess
 from typing import Any, Iterable, Mapping
 
 
@@ -119,3 +120,90 @@ def write_manifest(
         path,
         build_manifest(artifacts, root=root, metadata=metadata),
     )
+
+
+def repository_provenance(repository_root: str | Path) -> dict[str, Any]:
+    """Capture the exact Git state without changing repository state."""
+    root = Path(repository_root).resolve()
+    head = _git_output(root, "rev-parse", "HEAD")
+    branch = _git_output(root, "branch", "--show-current")
+    status = _git_output(root, "status", "--porcelain=v1", "--untracked-files=all")
+    tracked_changes: list[str] = []
+    untracked_paths: list[str] = []
+    for line in status.splitlines():
+        if line.startswith("?? "):
+            untracked_paths.append(line[3:])
+        elif line:
+            tracked_changes.append(line)
+    return {
+        "repository_root": str(root),
+        "head": head,
+        "branch": branch,
+        "tracked_changes": tracked_changes,
+        "untracked_paths": untracked_paths,
+        "dirty": bool(tracked_changes or untracked_paths),
+    }
+
+
+def verify_repository_provenance(
+    expected: Mapping[str, Any],
+    current: Mapping[str, Any],
+    *,
+    required_branch: str,
+    allowed_untracked_paths: Iterable[str] = (),
+) -> None:
+    """Reject changed commits, branches, tracked files, or unknown local files."""
+    if current.get("head") != expected.get("head"):
+        raise ValueError("repository HEAD changed after the run started")
+    if current.get("branch") != required_branch:
+        raise ValueError(
+            f"execution requires branch {required_branch!r}; "
+            f"found {current.get('branch')!r}"
+        )
+    tracked = tuple(current.get("tracked_changes", ()))
+    if tracked:
+        raise ValueError("execution requires no tracked repository changes")
+    allowed = set(allowed_untracked_paths)
+    unexpected = set(current.get("untracked_paths", ())).difference(allowed)
+    if unexpected:
+        raise ValueError(
+            "execution found unexpected untracked paths: "
+            + ", ".join(sorted(unexpected))
+        )
+
+
+def verify_artifact_manifest(
+    entries: Iterable[Mapping[str, Any]], *, root: str | Path
+) -> None:
+    """Verify that locked artifacts still exist with their recorded hashes."""
+    artifact_root = Path(root).resolve()
+    for entry in entries:
+        relative = entry.get("path")
+        expected_hash = entry.get("sha256")
+        if not isinstance(relative, str) or not relative:
+            raise ValueError("artifact manifest entry has no path")
+        if not isinstance(expected_hash, str) or not expected_hash:
+            raise ValueError(f"artifact manifest entry has no hash: {relative}")
+        artifact = (artifact_root / relative).resolve()
+        try:
+            artifact.relative_to(artifact_root)
+        except ValueError as error:
+            raise ValueError(f"artifact escapes run root: {relative}") from error
+        if not artifact.is_file():
+            raise ValueError(f"required artifact is missing: {relative}")
+        if sha256_file(artifact) != expected_hash:
+            raise ValueError(f"required artifact hash changed: {relative}")
+
+
+def _git_output(repository_root: Path, *arguments: str) -> str:
+    completed = subprocess.run(
+        ("git", "-C", str(repository_root), *arguments),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or completed.stdout.strip()
+        raise ValueError(f"unable to inspect repository provenance: {detail}")
+    return completed.stdout.strip()

@@ -75,6 +75,8 @@ class BaselineConfig:
     symbolic_planner: str
     search_configuration: str
     independent_model_calls: bool = True
+    execute_by_default: bool = False
+    require_clean_execution_provenance: bool = True
 
     def __post_init__(self) -> None:
         if not 0 <= self.max_cp_corrections <= 3:
@@ -91,6 +93,8 @@ class BaselineConfig:
                 raise ValueError(f"{name} must not be empty")
         if not self.independent_model_calls:
             raise ValueError("baseline model calls must be independent")
+        if self.execute_by_default:
+            raise ValueError("baseline configuration must default to planning-only")
 
     @classmethod
     def from_mapping(cls, data: Mapping[str, Any]) -> BaselineConfig:
@@ -123,6 +127,10 @@ class BaselineConfig:
             symbolic_planner=str(data["symbolic_planner"]),
             search_configuration=str(data["search_configuration"]),
             independent_model_calls=bool(data.get("independent_model_calls", True)),
+            execute_by_default=bool(data.get("execute_by_default", False)),
+            require_clean_execution_provenance=bool(
+                data.get("require_clean_execution_provenance", True)
+            ),
         )
 
     @classmethod
