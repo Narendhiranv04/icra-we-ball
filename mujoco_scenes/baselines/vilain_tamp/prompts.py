@@ -114,10 +114,15 @@ def build_corrective_planning_prompt(
     initial_problem: str,
     current_problem: str,
     current_failure: Mapping[str, Any],
-    prior_problem_hashes: Sequence[str],
-    prior_error_summaries: Sequence[str],
+    correction_history: Sequence[Mapping[str, Any]] = (),
+    prior_problem_hashes: Sequence[str] = (),
+    prior_error_summaries: Sequence[str] = (),
 ) -> PromptBundle:
+    _reject_evaluator_context(current_failure)
+    for entry in correction_history:
+        _reject_evaluator_context(entry)
     history = {
+        "complete_correction_records": [dict(item) for item in correction_history],
         "prior_problem_hashes": list(prior_problem_hashes),
         "prior_error_summaries": list(prior_error_summaries),
     }
@@ -159,3 +164,22 @@ def _domain_knowledge_text(domain: DomainDefinition) -> str:
 
 def _json(value: Any) -> str:
     return json.dumps(value, indent=2, sort_keys=True, ensure_ascii=False)
+
+
+def _reject_evaluator_context(value: Any) -> None:
+    forbidden_key_parts = (
+        "benchmark",
+        "ground_truth",
+        "actual_task_success",
+        "expected_answer",
+        "feasibility_label",
+    )
+    if isinstance(value, Mapping):
+        for key, item in value.items():
+            normalized = str(key).lower()
+            if any(part in normalized for part in forbidden_key_parts):
+                raise ValueError("benchmark evaluator data is forbidden in CP prompts")
+            _reject_evaluator_context(item)
+    elif isinstance(value, (tuple, list)):
+        for item in value:
+            _reject_evaluator_context(item)

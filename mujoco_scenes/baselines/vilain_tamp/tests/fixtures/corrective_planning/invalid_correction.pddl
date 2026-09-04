@@ -1,0 +1,6 @@
+(define (problem vilain-kitchen-invalid-correction)
+  (:domain vilain-kitchen)
+  (:objects mug_1 - vessel)
+  (:init (handempty) (invented-predicate mug_1))
+  (:goal (and (stirred mug_1)))
+)

@@ -1,0 +1,6 @@
+(define (problem vilain-kitchen-correction-03)
+  (:domain vilain-kitchen)
+  (:objects mug_1 - vessel coffee_source_1 - source spoon_1 - utensil coffee - content counter - surface)
+  (:init (handempty) (accessible counter) (at mug_1 counter) (at coffee_source_1 counter) (at spoon_1 counter) (can-dispense coffee_source_1 coffee) (can-stir spoon_1 mug_1))
+  (:goal (and (stirred mug_1)))
+)
