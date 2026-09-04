@@ -1,0 +1,18 @@
+{
+  "objects": [
+    {
+      "label": "screw",
+      "pddl_type": "fastener",
+      "description": "metal screw",
+      "status": "OBSERVED",
+      "detections": [{"stage_id": "000_initial", "camera_id": "front", "xyxy": [2, 0, 4, 2], "confidence": 0.91}]
+    },
+    {
+      "label": "screwdriver",
+      "pddl_type": "driver",
+      "description": "manual screwdriver",
+      "status": "OBSERVED",
+      "detections": [{"stage_id": "000_initial", "camera_id": "front", "xyxy": [0, 0, 2, 2], "confidence": 0.94}]
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+(define (problem vilain-living_room-attempt-00)
+  (:domain vilain-living-room)
+  (:objects cup_1 - cup side_table_1 - support staging - location seat_1 - seat)
+  (:init (handempty) (present staging) (accessible staging) (present side_table_1) (accessible side_table_1) (personal-to side_table_1 seat_1) (at cup_1 staging))
+  (:goal (supports side_table_1 cup_1))
+)

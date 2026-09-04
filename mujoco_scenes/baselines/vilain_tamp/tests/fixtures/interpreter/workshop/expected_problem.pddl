@@ -1,0 +1,6 @@
+(define (problem vilain-workshop-attempt-00)
+  (:domain vilain-workshop)
+  (:objects screwdriver_1 - driver screw_1 - fastener drawer - storage bench - surface repair_target - target)
+  (:init (handempty) (accessible drawer) (accessible bench) (at screwdriver_1 drawer) (at screw_1 drawer) (driver-compatible screwdriver_1 screw_1) (fits screw_1 repair_target) (can-reach screwdriver_1 repair_target))
+  (:goal (fastened screw_1 repair_target))
+)

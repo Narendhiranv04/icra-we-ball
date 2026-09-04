@@ -1,0 +1,25 @@
+{
+  "objects": [
+    {
+      "label": "spoon",
+      "pddl_type": "utensil",
+      "description": "metal spoon",
+      "status": "OBSERVED",
+      "detections": [{"stage_id": "000_initial", "camera_id": "front", "xyxy": [2, 0, 4, 2], "confidence": 0.90}]
+    },
+    {
+      "label": "mug",
+      "pddl_type": "vessel",
+      "description": "ceramic mug",
+      "status": "OBSERVED",
+      "detections": [{"stage_id": "000_initial", "camera_id": "front", "xyxy": [0, 0, 2, 2], "confidence": 0.95}]
+    },
+    {
+      "label": "coffee source",
+      "pddl_type": "source",
+      "description": "container marked coffee",
+      "status": "OBSERVED",
+      "detections": [{"stage_id": "000_initial", "camera_id": "front", "xyxy": [0, 2, 2, 4], "confidence": 0.92}]
+    }
+  ]
+}

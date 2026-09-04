@@ -1,0 +1,18 @@
+{
+  "objects": [
+    {
+      "label": "side table",
+      "pddl_type": "support",
+      "description": "small table beside a seat",
+      "status": "OBSERVED",
+      "detections": [{"stage_id": "000_initial", "camera_id": "front", "xyxy": [2, 0, 4, 2], "confidence": 0.93}]
+    },
+    {
+      "label": "cup",
+      "pddl_type": "cup",
+      "description": "drinking cup",
+      "status": "OBSERVED",
+      "detections": [{"stage_id": "000_initial", "camera_id": "front", "xyxy": [0, 0, 2, 2], "confidence": 0.96}]
+    }
+  ]
+}
