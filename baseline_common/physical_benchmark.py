@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import platform
+import re
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -15,6 +17,17 @@ from .artifacts import write_json
 # terminal_status, and a second spelling of success would split one outcome
 # across two rows of that table.
 GOAL_COMPLETE_STATUS = "GOAL_COMPLETE"
+
+
+def _cpu_model() -> str:
+    """Best-effort CPU identifier for execution provenance."""
+    try:
+        for line in Path("/proc/cpuinfo").read_text(encoding="utf-8").splitlines():
+            if line.startswith("model name"):
+                return line.split(":", 1)[1].strip()
+    except OSError:
+        pass
+    return platform.processor() or platform.machine() or "unknown"
 
 
 def physical_terminal_status(
@@ -104,6 +117,13 @@ def write_execution_result(
         # is part of the result.  Episodes produced by different MuJoCo
         # versions are not interchangeable and must not be pooled in one table.
         "mujoco_version": str(mujoco.__version__),
+        # Contact-rich MuJoCo stepping is sensitive to the floating-point
+        # behaviour of the host, so the machine is part of an episode's
+        # provenance.  Episodes from different hosts are comparable only if
+        # this is recorded; a grid split across machines can then be audited
+        # rather than silently assumed reproducible.
+        "host_cpu": _cpu_model(),
+        "host_platform": platform.platform(),
     }
     write_json(Path(output_dir) / "benchmark_execution_result.json", payload)
     return payload
