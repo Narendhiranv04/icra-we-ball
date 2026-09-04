@@ -59,11 +59,23 @@ class SerializableContract:
 
 
 @dataclass(frozen=True)
+class CameraFrameArtifacts(SerializableContract):
+    camera_id: str
+    view_description: str
+    rgb_path: str
+    depth_path: str
+    calibration_path: str
+    rgb_sha256: str
+    depth_sha256: str
+    calibration_sha256: str
+
+
+@dataclass(frozen=True)
 class ViLaInObservation(SerializableContract):
     domain: str
     observation_mode: str
     stage_id: str
-    camera_frames: tuple[Mapping[str, Any], ...]
+    camera_frames: tuple[CameraFrameArtifacts, ...]
     opened_region_id: str | None
     capture_timestamp: str
     inspection_ordinal: int | None
