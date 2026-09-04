@@ -9,7 +9,9 @@ timeouts:
 output_root: runs/vilain_tamp
 external_tools:
   fast_downward: null
+  fast_downward_version: "24.06"
   val: null
+  val_version: null
 object_estimator_model: SET_INDEPENDENT_MODEL_MATCHED_CHECKPOINT
 reasoning_model: SET_INDEPENDENT_MODEL_MATCHED_SNAPSHOT
 symbolic_planner: Fast Downward

@@ -9,7 +9,9 @@ timeouts:
 output_root: runs/vilain_tamp
 external_tools:
   fast_downward: null
+  fast_downward_version: "24.06"
   val: null
+  val_version: null
 object_estimator_model: Qwen2.5-VL-7B-Instruct
 reasoning_model: gpt-4o-2024-08-06
 symbolic_planner: Fast Downward

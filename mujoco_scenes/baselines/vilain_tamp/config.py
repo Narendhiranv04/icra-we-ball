@@ -46,11 +46,19 @@ class TimeoutConfig:
 class ExternalToolPaths:
     fast_downward: Path | None
     val: Path | None
+    fast_downward_version: str | None = "24.06"
+    val_version: str | None = None
 
     def __post_init__(self) -> None:
         for name, value in (("fast_downward", self.fast_downward), ("val", self.val)):
             if value is not None and not value.is_absolute():
                 raise ValueError(f"external_tools.{name} must be an absolute path")
+        for name, value in (
+            ("fast_downward_version", self.fast_downward_version),
+            ("val_version", self.val_version),
+        ):
+            if value is not None and not value.strip():
+                raise ValueError(f"external_tools.{name} must not be empty")
 
 
 @dataclass(frozen=True)
@@ -105,6 +113,10 @@ class BaselineConfig:
             external_tools=ExternalToolPaths(
                 fast_downward=_optional_path(tools.get("fast_downward")),
                 val=_optional_path(tools.get("val")),
+                fast_downward_version=_optional_text(
+                    tools.get("fast_downward_version", "24.06")
+                ),
+                val_version=_optional_text(tools.get("val_version")),
             ),
             object_estimator_model=str(data["object_estimator_model"]),
             reasoning_model=str(data["reasoning_model"]),
@@ -133,3 +145,10 @@ def _optional_path(value: Any) -> Path | None:
     if value is None or str(value).strip() == "":
         return None
     return Path(str(value))
+
+
+def _optional_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    rendered = str(value).strip()
+    return rendered or None
