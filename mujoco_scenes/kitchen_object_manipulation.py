@@ -1062,8 +1062,13 @@ def storage_probe_candidates(
             "cupboard_front_rim_2_jawroll+0_wrist0",
         ),
         ("BOX", "BOWL"): (
-            # Probe both mirrored wrist signs (and a neutral branch) before
-            # fine stance ranking.  The full candidate set remains bounded.
+            # Probe both mirrored wrist signs (and a neutral branch) across
+            # both clearance heights before fine stance ranking.
+            "box_bowl_diameter_0_yaw+60_z+0.60",
+            "box_bowl_diameter_0_yaw+30_z+0.60",
+            "box_bowl_diameter_0_yaw+0_z+0.60",
+            "box_bowl_diameter_0_yaw-30_z+0.60",
+            "box_bowl_diameter_0_yaw-60_z+0.60",
             "box_bowl_diameter_0_yaw+60_z+0.35",
             "box_bowl_diameter_0_yaw+30_z+0.35",
             "box_bowl_diameter_0_yaw+0_z+0.35",
@@ -1076,6 +1081,21 @@ def storage_probe_candidates(
     }.get((source_kind, family), ())
     by_id = {candidate.candidate_id: candidate for candidate in candidates}
     selected = tuple(by_id[item] for item in identifiers if item in by_id)
+    if (source_kind, family) == ("BOX", "BOWL"):
+        # Probe reachable clearance heights across all distinct opposite-wall
+        # pairs rather than only diameter 0.
+        contact_by_pair: dict[str, list[GraspPoseCandidate]] = {}
+        for candidate in candidates:
+            if "box_bowl_diameter" not in candidate.candidate_id:
+                continue
+            pair_id = candidate.candidate_id.split("_yaw", 1)[0]
+            contact_by_pair.setdefault(pair_id, []).append(candidate)
+        box_probes: list[GraspPoseCandidate] = []
+        for _, rows in sorted(contact_by_pair.items()):
+            for cand in rows:
+                if any(suffix in cand.candidate_id for suffix in ("_z+0.60", "_z+0.35")):
+                    box_probes.append(cand)
+        selected = tuple(dict.fromkeys((*selected, *box_probes)))
     if (source_kind, family) == ("CUPBOARD", "VESSEL"):
         # Probe one highest-clearance pose from every distinct opposite-wall
         # pair.  Selecting several heights from the most frontal pair can
@@ -1917,7 +1937,8 @@ class KitchenObjectManipulationExecutor:
             grasp_candidates=candidates,
             final_tracking_tolerance=(
                 0.500
-                if source_kind == "CUPBOARD" and family == "UTENSIL"
+                if (source_kind == "CUPBOARD" and family == "UTENSIL")
+                or (source_kind == "BOX" and family == "BOWL")
                 else spec.final_tracking_tolerance
             ),
             # Storage aperture reaches are orientation-limited.  Bias the IK
@@ -3515,6 +3536,15 @@ class KitchenObjectManipulationExecutor:
                     self.scene.model.geom_conaffinity[geom_id] = 3
                 mujoco.mj_forward(self.scene.model, self.scene.data)
             self.executor.drawer_pick_collision_exemption = drawer_pick_exemption
+            box_bowl_exemption = (
+                context_row["source_kind"] == "BOX"
+                and binding["grasp_family"] == "BOWL"
+            )
+            if box_bowl_exemption:
+                # Arm descent into the deep box experiences bounded tracking lag.
+                # Allow intermediate waypoints to advance through that lag;
+                # the Cartesian pre-close gate strictly validates convergence.
+                self.executor.intermediate_tracking_tolerance = 0.500
             if (
                 context_row["source_kind"] in {"CUPBOARD", "BOX"}
                 and direct_grasp_analysis
