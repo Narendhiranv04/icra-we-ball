@@ -261,6 +261,17 @@ verifier, so these are part of the result definition and not incidental tuning:
   The repository pins `mujoco==3.3.6`.
 - Every method reports a satisfied goal as terminal_status `GOAL_COMPLETE`, so
   failure-mode breakdowns keyed on that column stay comparable.
+- A generation cut off by the token ceiling is reported as
+  `MODEL_OUTPUT_TRUNCATED` and does not consume the episode's model-call
+  budget. No plan was produced, so charging the budget would score the
+  harness's ceiling as the method's planning failure: measured on a Living
+  Room replan prompt, thinking-mode generation ran to the full 24576 tokens
+  nine times in a row without closing its JSON, while every call that did
+  complete needed under 7400. Truncation draws on its own bounded retry budget,
+  in the same way a transport fault already did. These episodes are recorded,
+  not dropped -- runaway reasoning on replan prompts is a real property of the
+  checkpoint -- but they are a distinct failure mode and must not be pooled
+  into a method's planning-failure count.
 
 ## Fair comparison controls
 
