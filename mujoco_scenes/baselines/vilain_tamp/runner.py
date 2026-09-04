@@ -8,6 +8,7 @@ import time
 from typing import Any, Callable, Mapping, Protocol, Sequence
 
 from .artifacts import (
+    append_jsonl,
     artifact_manifest_entry,
     atomic_write_json,
     build_manifest,
@@ -220,12 +221,30 @@ class BaselineRunner:
                 "material_artifacts": [],
             },
         )
+        events_path = run_root / "events.jsonl"
+        event_index = 0
+
+        def record_event(event: str, **details: Any) -> None:
+            nonlocal event_index
+            append_jsonl(
+                events_path,
+                {
+                    "event_index": event_index,
+                    "event": event,
+                    "elapsed_seconds": self.clock() - started,
+                    **details,
+                },
+            )
+            event_index += 1
+
+        record_event("RUN_STARTED", domain=options.domain.value, variant=options.variant)
 
         stage_times: dict[str, float] = {}
         stage_started = self.clock()
         observation = components.observation.acquire()
         stage_times["observation_seconds"] = self.clock() - stage_started
         self._validate_observation_result(observation, run_root)
+        record_event("OBSERVATION_COMPLETE")
 
         stage_started = self.clock()
         interpretation = components.interpreter.interpret(
@@ -237,6 +256,7 @@ class BaselineRunner:
         )
         stage_times["interpretation_seconds"] = self.clock() - stage_started
         self._validate_interpretation(interpretation, domain)
+        record_event("INTERPRETATION_COMPLETE")
 
         stage_started = self.clock()
         planning = components.corrective_planning.run(
@@ -253,6 +273,7 @@ class BaselineRunner:
             raise RunnerContractError(
                 "corrective-planning stage returned an invalid result"
             )
+        record_event("PLANNING_COMPLETE", status=planning.status.value)
 
         artifact_paths: dict[str, str] = {
             "baseline_manifest": str(manifest_path),
@@ -283,6 +304,7 @@ class BaselineRunner:
                 final_action_plan=str(final_plan_path),
                 execution_projection=str(projection_path),
             )
+            record_event("PROJECTION_COMPLETE")
 
         generated_goal_status = "NOT_EVALUATED"
         benchmark_status = "NOT_EVALUATED"
@@ -319,6 +341,7 @@ class BaselineRunner:
                 )
                 stage_times["execution_seconds"] = self.clock() - stage_started
                 _validate_execution_result(execution_result, options.domain)
+                record_event("EXECUTION_COMPLETE", status=execution_result.status)
                 execution_status = execution_result.status
                 artifact_paths.update(execution_result.artifact_paths)
                 generated_goal_evaluation = (
@@ -373,8 +396,10 @@ class BaselineRunner:
                 benchmark_evaluation.to_dict(),
             )
             artifact_paths["benchmark_goal_evaluation"] = str(hidden_path)
+            record_event("BENCHMARK_EVALUATION_COMPLETE", status=benchmark_status)
 
         metrics = self._metrics(
+            observation=observation,
             interpretation=interpretation,
             planning=planning,
             execution=execution_result,
@@ -385,6 +410,7 @@ class BaselineRunner:
         )
         metrics_path = atomic_write_json(run_root / "metrics.json", metrics)
         artifact_paths["metrics"] = str(metrics_path)
+        artifact_paths["events"] = str(events_path)
         result_path = run_root / "baseline_run_result.json"
         artifact_paths["baseline_run_result"] = str(result_path)
         run_result = BaselineRunResult(
@@ -410,6 +436,7 @@ class BaselineRunner:
             metrics=metrics,
         )
         atomic_write_json(result_path, run_result.to_dict())
+        record_event("RUN_COMPLETE", status=run_result.run_status)
         material_entries = self._material_artifacts(run_root, artifact_paths)
         atomic_write_json(
             manifest_path,
@@ -510,17 +537,24 @@ class BaselineRunner:
     def _material_artifacts(
         run_root: Path, artifact_paths: Mapping[str, str]
     ) -> list[Mapping[str, Any]]:
-        files = []
+        manifest_path = (run_root / "baseline_manifest.json").resolve()
         for label, path in artifact_paths.items():
             candidate = Path(path)
             if not candidate.is_file():
                 raise RunnerContractError(
                     f"required run artifact is missing ({label}): {candidate}"
                 )
-            if candidate.resolve() != (
-                run_root / "baseline_manifest.json"
-            ).resolve():
-                files.append(candidate)
+            try:
+                candidate.resolve().relative_to(run_root.resolve())
+            except ValueError as error:
+                raise RunnerContractError(
+                    f"run artifact is outside its run root ({label}): {candidate}"
+                ) from error
+        files = sorted(
+            path
+            for path in run_root.rglob("*")
+            if path.is_file() and path.resolve() != manifest_path
+        )
         return build_manifest(files, root=run_root)["artifacts"]
 
     def _run_configuration(self, options: RunOptions) -> Mapping[str, Any]:
@@ -549,6 +583,7 @@ class BaselineRunner:
     @staticmethod
     def _metrics(
         *,
+        observation: ObservationAcquisitionResult,
         interpretation: InterpretationResult,
         planning: CorrectivePlanningResult,
         execution: ExecutionStageResult | None,
@@ -558,19 +593,62 @@ class BaselineRunner:
         total_seconds: float,
     ) -> Mapping[str, Any]:
         usage: dict[str, float] = {}
+        call_counts = {
+            "object_estimation": 0,
+            "initial_state": 0,
+            "goal_state": 0,
+            "corrective_planning": len(planning.corrections),
+        }
+        fm_latency_seconds = 0.0
         for call in interpretation.calls:
+            call_counts[call.call_type.value.lower()] = (
+                call_counts.get(call.call_type.value.lower(), 0) + 1
+            )
+            fm_latency_seconds += call.latency_seconds
             for key, value in call.usage.items():
                 if isinstance(value, (int, float)):
                     usage[key] = usage.get(key, 0.0) + float(value)
+        for correction in planning.corrections:
+            for key in ("input_tokens", "output_tokens"):
+                value = correction.latency_and_usage.get(key)
+                if isinstance(value, (int, float)):
+                    usage[key] = usage.get(key, 0.0) + float(value)
+        inspection_seconds = sum(
+            float(row.get("duration_seconds", 0.0))
+            for row in observation.inspection_trace
+        )
+        execution_metrics = dict(execution.metrics) if execution else {}
         return {
             **stage_times,
+            "execution_seconds": stage_times.get("execution_seconds", 0.0),
             "end_to_end_seconds": total_seconds,
             "pddl_valid": interpretation.validation.valid,
+            "pddl_extraction_valid": interpretation.validation.valid,
+            "translation_valid": _attempt_metric(planning, "translation_valid"),
+            "plannable": _attempt_metric(planning, "plannable"),
+            "val_plan_valid": _attempt_metric(planning, "val_plan_valid"),
+            "refinement_success": planning.status is CorrectiveRunStatus.SUCCESS,
+            "failure_stage_distribution": _failure_stage_distribution(planning),
             "planning_status": planning.status.value,
             "cp_calls": len(planning.corrections),
             "attempt_count": len(planning.tamp_attempts),
             "model_call_count": len(interpretation.calls) + len(planning.corrections),
+            "model_calls_by_type": call_counts,
             "model_usage": usage,
+            "api_cost": sum(
+                float(correction.latency_and_usage.get("cost", 0.0))
+                for correction in planning.corrections
+            ),
+            "fm_latency_seconds": fm_latency_seconds
+            + sum(
+                float(correction.latency_and_usage.get("latency_seconds", 0.0))
+                for correction in planning.corrections
+            ),
+            "success_by_cp_iteration": (
+                planning.selected_problem.attempt_index
+                if planning.selected_problem is not None
+                else None
+            ),
             "execution_success": execution.success if execution else None,
             "generated_goal_status": (
                 generated_goal.get("status") if generated_goal else None
@@ -586,8 +664,52 @@ class BaselineRunner:
                 if benchmark
                 else None
             ),
-            "execution_metrics": dict(execution.metrics) if execution else {},
+            "execution_metrics": execution_metrics,
+            "symbolic_planning_seconds": _attempt_metric(
+                planning, "symbolic_planning_seconds"
+            ),
+            "geometric_refinement_seconds": _attempt_metric(
+                planning, "geometric_refinement_seconds"
+            ),
+            "execution_action_failures": execution_metrics.get(
+                "execution_action_failures", 0
+            ),
+            "physical_postcondition_failures": execution_metrics.get(
+                "physical_postcondition_failures", 0
+            ),
+            "entity_resolution_failures": execution_metrics.get(
+                "entity_resolution_failures", 0
+            ),
+            "symbolic_plan_length": _attempt_metric(planning, "symbolic_plan_length"),
+            "controller_action_count": (
+                execution.metrics.get("controller_action_count") if execution else 0
+            ),
+            "inspected_region_count": len(observation.inspection_trace),
+            "inspection_opening_seconds": inspection_seconds,
+            "inspection_travel_seconds": None,
         }
+
+
+def _attempt_metric(
+    planning: CorrectivePlanningResult, key: str, *, default: Any = None
+) -> Any:
+    for attempt in reversed(planning.tamp_attempts):
+        metrics = attempt.result_payload.get("metrics", {})
+        if isinstance(metrics, Mapping) and key in metrics:
+            return metrics[key]
+    return default
+
+
+def _failure_stage_distribution(
+    planning: CorrectivePlanningResult,
+) -> Mapping[str, int]:
+    distribution: dict[str, int] = {}
+    for attempt in planning.tamp_attempts:
+        if attempt.failure is None:
+            continue
+        stage = str(attempt.failure.details.get("stage", attempt.failure.kind.value))
+        distribution[stage] = distribution.get(stage, 0) + 1
+    return distribution
 
 
 def _selected_attempt_payload(

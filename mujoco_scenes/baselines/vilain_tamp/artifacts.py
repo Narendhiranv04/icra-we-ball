@@ -70,6 +70,16 @@ def atomic_write_json(path: str | Path, value: Any) -> Path:
     return atomic_write_text(path, rendered + "\n")
 
 
+def append_jsonl(path: str | Path, value: Any) -> Path:
+    """Append one secret-redacted JSON event using an atomic replacement."""
+    destination = Path(path)
+    existing = destination.read_text(encoding="utf-8") if destination.exists() else ""
+    rendered = json.dumps(
+        redact_secrets(value), sort_keys=True, ensure_ascii=False, separators=(",", ":")
+    )
+    return atomic_write_text(destination, existing + rendered + "\n")
+
+
 def redact_secrets(value: Any) -> Any:
     if isinstance(value, Mapping):
         return {
