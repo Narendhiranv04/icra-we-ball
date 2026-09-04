@@ -119,7 +119,7 @@ class WorkshopPhase4Adapter:
             from .workshop_ground_truth_recorder import WorkshopRecorder
 
             self.recorder = WorkshopRecorder(
-                self.scene, record_video, width=320, height=180, fps=5,
+                self.scene, record_video, width=640, height=360, fps=5,
                 show=viewer,
             )
             recorder_callback = self.recorder.capture

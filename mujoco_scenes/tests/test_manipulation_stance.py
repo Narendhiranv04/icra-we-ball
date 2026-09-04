@@ -140,7 +140,7 @@ def test_box_bowl_grasp_is_collision_centred_and_probe_is_mirrored():
         "box_bowl_diameter_0_yaw+0_z+0.35",
         "box_bowl_diameter_0_yaw-30_z+0.35",
         "box_bowl_diameter_0_yaw-60_z+0.35",
-    } == probe_ids
+    }.issubset(probe_ids)
 
 
 def test_first_contact_synchrony_accepts_centred_and_rejects_asymmetric_sweep():

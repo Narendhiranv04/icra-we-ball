@@ -188,6 +188,33 @@ class KitchenPhaseBExecutionDispatcher:
             self.manipulation.sync_workspace(workspace)
         return record
 
+    def _prepare_open_storage_container(
+        self, container: str, record: dict[str, Any]
+    ) -> None:
+        # Most fixtures preserve authored storage poses only through
+        # opening.  C2 retains presentation support through collision/IK
+        # approach, then the low-level executor releases it immediately
+        # before Cartesian pre-close and live bilateral contact.
+        # Keep storage support active while planning a tight aperture
+        # grasp. The manipulation executor releases the matching fixture
+        # immediately before live pre-close/contact, so drawer utensils
+        # do not drift for 120 physics steps before the robot reaches the
+        # pose that was planned from their observed location.
+        defer_fixture_release = container in {"C2", "D1", "D2"}
+        record["storage_fixture_release_deferred_to_manipulation_stance"] = (
+            defer_fixture_release
+        )
+        record["storage_fixture_released"] = bool(
+            False if defer_fixture_release
+            else self.scene.release_storage_fixture(container)
+        )
+        record["storage_fixture_active_before_grasp_planning"] = bool(
+            defer_fixture_release
+        )
+        if record["storage_fixture_released"]:
+            for _ in range(120):
+                mujoco.mj_step(self.scene.model, self.scene.data)
+
     def pick(self, object_id: str) -> dict[str, Any]:
         started = time.perf_counter()
         record: dict[str, Any] = {
@@ -216,31 +243,10 @@ class KitchenPhaseBExecutionDispatcher:
             if not opened["success"]:
                 record.update(success=False, status="CONTAINER_OPEN_FAILED")
                 return record
-            # Most fixtures preserve authored storage poses only through
-            # opening.  C2 retains presentation support through collision/IK
-            # approach, then the low-level executor releases it immediately
-            # before Cartesian pre-close and live bilateral contact.
-            # Keep storage support active while planning a tight aperture
-            # grasp. The manipulation executor releases the matching fixture
-            # immediately before live pre-close/contact, so drawer utensils
-            # do not drift for 120 physics steps before the robot reaches the
-            # pose that was planned from their observed location.
-            defer_fixture_release = container in {"C2", "D1", "D2"}
-            record["storage_fixture_release_deferred_to_manipulation_stance"] = (
-                defer_fixture_release
-            )
-            record["storage_fixture_released"] = bool(
-                False if defer_fixture_release
-                else self.scene.release_storage_fixture(container)
-            )
-            record["storage_fixture_active_before_grasp_planning"] = bool(
-                defer_fixture_release
-            )
-            if record["storage_fixture_released"]:
-                for _ in range(120):
-                    mujoco.mj_step(self.scene.model, self.scene.data)
+            self._prepare_open_storage_container(container, record)
         elif container:
             record["redundant_open_omitted"] = True
+            self._prepare_open_storage_container(container, record)
         result = self.manipulation.pick(
             object_id, self.current_workspace, self.physically_open_containers()
         )

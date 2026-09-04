@@ -53,6 +53,8 @@ def execute_phase3_run(
     max_actions: int | None = None,
     record_video: Path | None = None,
     viewer: bool = False,
+    camera_resolution: tuple[int, int] = (640, 360),
+    fps: int = 5,
 ) -> dict[str, Any]:
     require_supported_mujoco_runtime()
     handoff = load_phase3_handoff(run_dir)
@@ -129,7 +131,12 @@ def execute_phase3_run(
         from .phase4_kitchen import KitchenPhase4Adapter
 
         adapter = KitchenPhase4Adapter(
-            handoff, record_video=record_video, viewer=viewer
+            handoff,
+            record_video=record_video,
+            viewer=viewer,
+            tile_width=camera_resolution[0],
+            tile_height=camera_resolution[1],
+            fps=fps,
         )
         print("[Kitchen execution bindings]", flush=True)
         for planner_id, entity in sorted(adapter.by_id.items()):
@@ -171,6 +178,20 @@ def execute_phase3_run(
     return result
 
 
+def parse_resolution(res_str: str) -> tuple[int, int]:
+    """Parse 'WxH' string into (width, height) tuple."""
+    try:
+        parts = res_str.lower().split("x")
+        if len(parts) != 2:
+            raise ValueError()
+        w, h = int(parts[0]), int(parts[1])
+        return w, h
+    except Exception:
+        raise argparse.ArgumentTypeError(
+            f"Invalid resolution '{res_str}'. Expected format like '640x360' or '1280x720'"
+        )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Execute the exact persisted Phase-3 symbolic action sequence"
@@ -194,8 +215,20 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--camera-resolution",
+        type=parse_resolution,
+        default=(640, 360),
+        help="Per-camera tile resolution WxH (default: 640x360). Mosaic is 3x2 tiles.",
+    )
+    parser.add_argument(
+        "--fps",
+        type=int,
+        default=5,
+        help="Frame rate for video recording and live viewer (default: 5).",
+    )
+    parser.add_argument(
         "--auto-prepare", action="store_true",
-        help="Automatically generate/reconstruct the Phase-3 GT handoff if missing."
+        help="Automatically generate/reconstruct the Phase-3 GT handoff if missing.",
     )
     return parser
 
@@ -253,6 +286,7 @@ def main() -> int:
         result = execute_phase3_run(
             run_dir, output_dir=output_dir, max_actions=args.max_actions,
             record_video=args.record_video, viewer=args.viewer,
+            camera_resolution=args.camera_resolution, fps=args.fps,
         )
     except Exception as error:
         upstream_blocked = isinstance(error, UpstreamPhase3Blocked)

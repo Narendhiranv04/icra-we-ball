@@ -158,7 +158,7 @@ def execute_living_room_handoff(
         from .living_room_recorder import LivingRoomRecorder
 
         recorder = LivingRoomRecorder(
-            scene, output_path=None, tile_width=320, tile_height=180,
+            scene, output_path=None, tile_width=640, tile_height=360,
             fps=5, show=True, record=False,
         )
         live_recorders.append(recorder)

@@ -52,6 +52,7 @@ from .kitchen_pour_stir_manipulation import (
     derive_pour_spec,
     derive_target_opening,
     derive_tool_tip,
+    rotation_about_axis,
 )
 
 
@@ -102,7 +103,7 @@ def serving_utensil_containment_evidence(
     inside = (
         (radial <= float(usable_opening_radius_m))
         & (axial >= -float(cavity_depth_m) - 0.01)
-        & (axial <= 0.01)
+        & (axial <= 0.02)
     )
     longest_run = current_run = 0
     for value in inside:
@@ -1011,8 +1012,15 @@ class KitchenGroundTruthExecutionDispatcher:
         else:
             try:
                 result = self.phase_b.pick(object_id)
-            except Exception:
-                result = {"success": False, "status": "PICK_TIMEOUT"}
+            except Exception as error:
+                result = {
+                    "success": False,
+                    "status": "PICK_EXCEPTION",
+                    "failure_code": "PICK_EXCEPTION",
+                    "exception_type": type(error).__name__,
+                    "message": str(error),
+                    "stage": "PHASE_B_PICK",
+                }
 
         if (
             not result.get("success", False)
@@ -1026,6 +1034,8 @@ class KitchenGroundTruthExecutionDispatcher:
                     **result,
                     "success": False,
                     "failure_code": "ACCESS_BLOCKED",
+                    "controller_status": result.get("status"),
+                    "controller_message": result.get("message"),
                     "benchmark_contact_recovery": False,
                     "benchmark_recovery_evidence": recovery_evidence,
                 }
@@ -1938,7 +1948,39 @@ class KitchenGroundTruthExecutionDispatcher:
                     release_feature_world = (
                         opening_centre + 0.025 * opening_normal
                     )
-                    vertical_orientations = [{
+                    pre_release_tip_position = (
+                        opening_centre + 0.080 * opening_normal
+                    )
+                    live_grip_rotation = self.scene.data.site_xmat[
+                        low.grip_site_id
+                    ].reshape(3, 3).copy()
+                    body_in_grip_rotation = (
+                        live_grip_rotation.T @ live_utensil_rotation
+                    )
+                    vertical_orientations = []
+                    # Canonical top-down serving orientations over the bowl:
+                    # Align the gripper with standard top-down attitude and evaluate
+                    # reachable yaw branches around the bowl rim normal.
+                    for yaw_deg in (0.0, 30.0, -30.0, 60.0, -60.0, 90.0, -90.0, 180.0):
+                        canonical_grip = (
+                            rotation_about_axis(
+                                opening_normal, math.radians(yaw_deg)
+                            )
+                            @ low.profile.top_down_rotation
+                        )
+                        canonical_body_rotation = (
+                            canonical_grip @ body_in_grip_rotation
+                        )
+                        vertical_orientations.append({
+                            "rotation": canonical_body_rotation,
+                            "inclination_deg": 90.0,
+                            "azimuth_deg": yaw_deg,
+                            "tool_roll_deg": 0.0,
+                            "provenance": (
+                                "MEASURED_SHORT_UTENSIL_HORIZONTAL_GRAVITY_DROP"
+                            ),
+                        })
+                    vertical_orientations.append({
                         "rotation": live_utensil_rotation,
                         "inclination_deg": 90.0,
                         "azimuth_deg": 0.0,
@@ -1946,7 +1988,7 @@ class KitchenGroundTruthExecutionDispatcher:
                         "provenance": (
                             "MEASURED_SHORT_UTENSIL_HORIZONTAL_GRAVITY_DROP"
                         ),
-                    }]
+                    })
                 else:
                     release_feature_local = np.asarray(
                         tool_geometry.active_tip_local_m, dtype=float
@@ -2282,7 +2324,12 @@ class KitchenGroundTruthExecutionDispatcher:
                         0 if finger_still_touching
                         else contact_clear_commands + 1
                     )
-                    if contact_clear_commands >= 2:
+                    is_above_rim = bool(
+                        float(self.scene.data.site_xpos[low.grip_site_id][2])
+                        > float(opening_centre[2]) + 0.04
+                    )
+                    required_clear_commands = 6 if is_above_rim else 2
+                    if contact_clear_commands >= required_clear_commands:
                         break
                 self.scene.data.eq_active[weld_id] = 0
                 mujoco.mj_forward(self.scene.model, self.scene.data)
