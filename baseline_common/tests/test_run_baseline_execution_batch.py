@@ -70,10 +70,14 @@ def test_main_dispatches_every_requested_trial(tmp_path, monkeypatch):
     class Completed:
         returncode = 0
 
-    monkeypatch.setattr(
-        "subprocess.run",
-        lambda command, check=False: commands.append(command) or Completed(),
-    )
+    timeouts = []
+
+    def fake_run(command, check=False, timeout=None):
+        commands.append(command)
+        timeouts.append(timeout)
+        return Completed()
+
+    monkeypatch.setattr("subprocess.run", fake_run)
     monkeypatch.setattr(
         "sys.argv",
         [
@@ -90,6 +94,8 @@ def test_main_dispatches_every_requested_trial(tmp_path, monkeypatch):
     main()
 
     assert len(commands) == 8
+    # Every episode is bounded, so one hang cannot stall an unattended grid.
+    assert timeouts and all(value == 3600.0 for value in timeouts)
     summary = json.loads((tmp_path / "batch" / "batch_summary.json").read_text())
     assert len(summary["runs"]) == 8
 

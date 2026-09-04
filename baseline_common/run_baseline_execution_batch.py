@@ -76,9 +76,30 @@ def build_parser() -> argparse.ArgumentParser:
             "per repeat."
         ),
     )
+    parser.add_argument(
+        "--episode-timeout",
+        type=float,
+        default=3600.0,
+        help=(
+            "Seconds before an episode is abandoned and the batch moves on. "
+            "Without it a single hung episode stalls an unattended grid "
+            "indefinitely; the longest episode measured so far is well under "
+            "an hour."
+        ),
+    )
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--continue-on-error", action="store_true")
     return parser
+
+
+def _set_aside(output: Path) -> Path:
+    """Move a partially written episode directory out of the way."""
+    for index in range(1, 1000):
+        candidate = output.with_name(f"{output.name}.interrupted_{index:03d}")
+        if not candidate.exists():
+            output.rename(candidate)
+            return candidate
+    raise RuntimeError(f"Too many interrupted attempts for {output}")
 
 
 def _command(
@@ -212,20 +233,48 @@ def main() -> None:
                         rows[key] = _row(args.environment, method, variant, camera_count, seed, output, 0, result)
                         continue
                     if output.exists() and any(output.iterdir()):
-                        parser.error(f"incomplete output directory is not empty: {output}")
+                        if not args.resume:
+                            parser.error(
+                                f"incomplete output directory is not empty: {output}"
+                            )
+                        # An episode interrupted mid-write leaves a directory
+                        # with no result file.  Under --resume the whole point
+                        # is to carry on, so set the partial artifacts aside
+                        # and re-run the episode rather than aborting a grid of
+                        # hundreds because one was killed.  They are moved, not
+                        # deleted: a partial episode is still evidence about
+                        # why the run stopped.
+                        aside = _set_aside(output)
+                        print(
+                            f"[batch] re-running interrupted {method} "
+                            f"{args.environment} {variant} images={camera_count} "
+                            f"seed={seed}; partial artifacts moved to {aside.name}",
+                            flush=True,
+                        )
                     print(f"[baseline-execution] {method} {variant} images={camera_count} seed={seed}", flush=True)
-                    completed = subprocess.run(
-                        _command(method, variant, camera_count, seed, output, args),
-                        check=False,
-                    )
+                    try:
+                        return_code = subprocess.run(
+                            _command(method, variant, camera_count, seed, output, args),
+                            check=False,
+                            timeout=args.episode_timeout,
+                        ).returncode
+                    except subprocess.TimeoutExpired:
+                        # Abandon the episode rather than stall the grid.  The
+                        # partial directory is kept: a hang is worth diagnosing.
+                        return_code = 124
+                        print(
+                            f"[batch] TIMEOUT after {args.episode_timeout:.0f}s: "
+                            f"{method} {variant} images={camera_count} seed={seed}",
+                            flush=True,
+                        )
                     result = (
                         json.loads(result_path.read_text(encoding="utf-8"))
                         if result_path.is_file() else None
                     )
-                    rows[key] = _row(args.environment, method, variant, camera_count, seed, output, completed.returncode, result)
+                    rows[key] = _row(args.environment, method, variant, camera_count, seed, output, return_code, result)
                     write_json(summary_path, {"schema_version": 1, "runs": list(rows.values())})
-                    if result is None and completed.returncode and not args.continue_on_error:
-                        raise SystemExit(completed.returncode)
+                    if result is None and return_code and not args.continue_on_error:
+                        raise SystemExit(return_code)
     write_json(summary_path, {"schema_version": 1, "runs": list(rows.values())})
 
 
