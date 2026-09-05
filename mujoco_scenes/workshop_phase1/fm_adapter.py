@@ -116,49 +116,51 @@ Rules:
 - Infer the complete set of physical or spatial functional roles from the task
   instruction and initial multi-view RGB images yourself. The user will not supply
   expected roles, functions, object categories, or properties.
-- Declare functional roles for ALL physical items, regions, and fixed contextual references
-  that participate in the task:
-  * Every item to be manipulated, served, or used as a tool (e.g. containers, utensils, tools, fasteners, remotes) must be declared with entity_kind: OBJECT.
-  * Every support surface, placement area, or destination (e.g. tables, shelves) must be declared with entity_kind: REGION.
-  * Every fixed landmark or contextual reference participating in relations (e.g. seating positions, repair targets/holes) must be declared with entity_kind: FIXED_TARGET.
+- Create functional roles for scene assets whose identity, suitability, or
+  functional capability must be discovered or selected to accomplish the task.
+  Objects explicitly specified by the task as payloads or fixed contextual
+  entities need not be reintroduced as selectable functional roles unless their
+  functional suitability itself must be discovered.
+- Functional roles must describe capabilities rather than physical assignments.
+  Do not assign physical scene instance IDs to roles; describe required functional capabilities.
 - Use SHORT ATOMIC PHRASES for all functions, properties, and relations:
-  - Role function: describe what the physical candidate must be capable of doing for the specific task item (e.g. "contain coffee", "contain soup", "stir coffee", "provide utensil for soup", "source of coffee", "source of water", "drive fastener", "hold items for viewer"), rather than abstract workflow stages.
-  - Required properties: list only task-critical physical or geometric characteristics of this single role used to decide candidate suitability (e.g. open cavity, elongated shape, planar horizontal support). Do NOT include non-physical adjectives (e.g. good, useful, safe, edible, hot), task state descriptions, or semantic class labels already covered in candidate_categories.
-  - Functional relations: describe physical spatial or interface compatibility relations between roles (e.g. "fits into", "reaches into", "compatible with", "placed on", "near seat", "accessible from both seats", "reaches target", "compatible with target"). Do not format as dot-separated expressions.
+  - Role function: describe what the physical candidate must be capable of doing (e.g. "support payload", "contain item", "manipulate object"), rather than abstract workflow stages.
+  - Required properties: list only task-critical UNARY physical or geometric characteristics of this single role used to decide candidate suitability (e.g. "planar support", "open cavity", "elongated shape"). Leave empty ([]) if no special intrinsic physical property is required beyond semantic category. Never place binary relations, part names, or non-physical adjectives here.
+  - Functional relations: describe physical spatial or interface compatibility relations between roles (e.g. "compatible with", "fits inside", "placed on", "near anchor"). Both subject_role and object_role must reference declared role IDs.
   Do not write long narrative sentences. Do not use complex compound clauses.
 - Robot Verifier Capabilities:
   The robot is equipped with physical and geometric verifiers that can check concepts such as:
-  * Unary physical shapes: whether an object has an open/deep cavity or container volume; whether an object is elongated enough to serve as an implement; whether a surface is a flat/planar support.
+  * Unary physical shapes: whether an object has an open/deep cavity or container volume; whether an object is elongated enough to serve as an implement; whether a surface provides a planar support.
   * Spatial & container relations: whether one object/implement can fit into or enter another object's opening; whether an implement reaches sufficiently deep into a container; whether a region can support a payload.
-  * Seating & proximity relations: relative proximity or accessibility of support surfaces to seating/viewers; whether a support is accessible to multiple seating positions.
-  * Tool & fastener interfaces: interface compatibility between a tool/driver and a fastener; whether a tool reaches a target workpiece/hole; whether a fastener is compatible with a target opening.
-- Task Patterns:
-  * For assembly / repair / tool-use (workshop): all roles must have empty required_properties: []. Declare roles for the driving tool / driver (OBJECT, function: "drive fastener", required_properties: [], candidate_categories: ["driving tool", "power driver"]), fastener (OBJECT, function: "threaded fastener", required_properties: [], candidate_categories: ["threaded fastener", "screw"]), and repair target (FIXED_TARGET, function: "repair target", required_properties: [], candidate_categories: ["repair target", "recess"]). Declare relations for driver-fastener compatibility ("compatible with"), driver-target reachability ("reaches target"), and fastener-target compatibility ("compatible with target"). Declare an interaction group with function "drive fastener", tool driver, target fastener, required_target_count: 1, usage_policy: "DEDICATED_PER_TARGET", required_relations: ["compatible with"], context_role: repair target, context_relations: ["reaches target"].
-  * For living room tasks: ONLY REGION roles have required_properties (must be ["planar horizontal support"]). ALL OBJECT roles (e.g. "cup and saucer set", "remote") and FIXED_TARGET roles (e.g. "seating position", "paired seating positions") must have empty required_properties: []. Declare: a single combined role for "contain hot beverage and saucer" / "cup and saucer set" (required_count: 2, required_properties: [], candidate_categories: ["cup", "saucer", "cup saucer set"]), a role for "control television" / "remote" (required_count: 1, required_properties: [], candidate_categories: ["remote control", "tv remote"]), support surfaces (REGION: "personal cup and saucer support" with required_count: 2, binding_policy: "DISTINCT", and "shared remote support" with required_count: 1, binding_policy: "SHARED", required_properties: ["planar horizontal support"], candidate_categories: ["small table", "end table", "coffee table"]), and seating anchors (FIXED_TARGET: "viewer seating position" with required_count: 2, binding_policy: "DISTINCT", and "paired viewer seating area" with required_count: 1, binding_policy: "SHARED", required_properties: [], candidate_categories: ["armchair", "chair", "armchairs", "seating area"]). Declare relations for placement on supports ("can hold drinkware set" between personal support and cup and saucer set, "can hold remote" between shared support and remote) and proximity/accessibility to seats ("near seat" between personal support and viewer seating position, "accessible from both seats" between shared support and paired viewer seating area). Declare an interaction group with function "support drinkware set beside seat", tool_role: personal support, target_role: cup and saucer set, required_target_count: 2, usage_policy: "DEDICATED_PER_TARGET", required_relations: ["can hold drinkware set"], context_role: viewer seating position, context_relations: ["near seat"]. In functional_relations and interaction_groups, subject_role, object_role, tool_role, and context_role must match the exact declared role IDs (e.g. do not add numeric instance suffixes like _2 if only one role was declared).
-  * For beverage / food preparation: only declare selectable kitchenware items (entity_kind: OBJECT): container for coffee ("contain coffee", candidate_categories: ["coffee mug", "coffee cup", "mug", "cup"]), container for soup ("contain soup", candidate_categories: ["soup bowl", "bowl"]), coffee stirrer ("stir coffee", candidate_categories: ["coffee stirrer", "spoon"]), soup eating utensil ("provide utensil for soup", candidate_categories: ["soup spoon", "spoon"]), coffee source ("source of coffee", candidate_categories: ["coffee jar", "instant coffee jar", "coffee tin"]), and water source ("source of water", candidate_categories: ["kettle", "water kettle", "electric kettle"]). Do not use generic phrases like "coffee container" or "water container" as candidate categories. Do not combine different items into a single role. Do not declare furniture, tables, or storage containers as functional roles (closed storage units belong in inspectable_regions). When an instruction specifies for N people (e.g. for two people), this applies to all prepared beverage and food items: set required_count to N for both beverage (coffee) and food (soup) containers and their respective stirring/eating utensils. Set required_count to 1 for sources. Declare only implement-to-container interaction groups ("stir coffee" with tool stirrer and target coffee container; "provide utensil for soup" with tool utensil and target soup container) with required_target_count: N. For usage_policy in interaction groups: stirring implements may be reused across targets ("SEQUENTIAL_REUSE_ALLOWED"), whereas eating utensils for dining must be dedicated per person/bowl ("DEDICATED_PER_TARGET"). In relations and interaction groups, declare implement-to-container relations ("fits inside", "reaches the bottom").
+  * Proximity & accessibility relations: relative proximity or accessibility of support surfaces to observer or reference positions; whether a support is accessible to multiple positions.
+  * Mechanical & interface compatibility: interface compatibility between tools and components; whether an implement reaches a target feature; whether components are compatible with target openings.
+- When a role must be paired independently with multiple task targets or
+  contextual references, represent that dependency using an interaction group
+  rather than relying on an unconstrained many-to-many relation.
 - Set `entity_kind` to:
   - OBJECT: a selectable/manipulable physical item.
   - REGION: a selectable support surface, placement area, or spatial destination.
   - FIXED_TARGET: a non-selectable contextual reference or fixed target feature that participates in relations.
 - Set `binding_policy` to:
-  - DISTINCT: separate simultaneous physical items or individual personal regions are required.
+  - DISTINCT: separate simultaneous physical items or individual regions are required.
   - REUSABLE: one physical item may be reused sequentially across multiple targets.
   - SHARED: one physical region/entity intentionally serves multiple items/users.
 - `candidate_categories`: list open-vocabulary semantic search phrases that could satisfy the role, even if nothing is currently visible.
 - `visible_candidates`: list visually apparent items/regions in the initial RGB views.
   This array may be empty ([]).
-- `required_properties`: list UNARY-ONLY physical properties of this single role (e.g. "planar horizontal support" for REGION roles; for OBJECT roles in placement/serving tasks or FIXED_TARGET roles, leave required_properties empty ([]); for tool-use/kitchen objects, use "open cavity" or "elongated shape" as appropriate). Do not include part names (e.g. handle, spout, lid).
+- `required_properties`: list UNARY-ONLY physical properties of this single role.
   Never place binary relations or compatibility statements here.
 - `functional_relations`: list explicit role-to-role relations using `subject_role`, `relation`, and `object_role`.
   Both subject_role and object_role must reference declared role IDs. Use simple atomic phrases for relation.
 - `interaction_groups`: list structured interaction groups with tool_role, target_role, required_target_count, usage_policy, required_relations, and optional context_role/context_relations.
-- `inspectable_regions`: propose visible closed/storage regions in the initial images that could be inspected if required items are missing. Each physical storage unit must be proposed at most once; never propose duplicate regions or split a single drawer/cupboard across multiple entries. If all required items are visible or no closed storage search is required, leave inspectable_regions and inspection_order empty ([]). When proposing storage regions, use specific non-overlapping descriptors (for kitchen: at most one "upper drawer", at most one "lower drawer", at most one "upper cupboard", at most one "lower cupboard", and at most one "storage box"; for workshop: "left storage drawer", "right storage drawer", "tall tool cabinet").
+- `inspectable_regions`: propose visible closed/storage regions in the initial images that could be inspected if required items are missing. Each physical storage unit must be proposed at most once; never propose duplicate regions. If all required items are visible or no closed storage search is required, leave inspectable_regions and inspection_order empty ([]).
 - `inspection_order`: rank the proposed inspectable region IDs. If inspectable_regions is empty, leave inspection_order empty ([]).
 - Status semantics:
   - `SUPPORTED`: task can be represented with functional roles and relations. `functional_roles` must be non-empty, `unsupported_reason` must be empty ("").
   - `UNSUPPORTED`: use only when the task itself cannot be represented by this abstraction. `functional_roles`, `functional_relations`, `interaction_groups`, `inspectable_regions`, `inspection_order` must be empty ([]), and `unsupported_reason` must be a non-empty explanation.
   - Partial observability, missing visible candidates, unmeasured continuous geometry, or needing inspection/search are NOT reasons for UNSUPPORTED.
 """
+
 
 
 RESPONSE_SCHEMA: dict[str, Any] = {

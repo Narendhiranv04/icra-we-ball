@@ -159,8 +159,7 @@ class WorkshopDomainAdapter:
     """Run staged Workshop evidence acquisition without variant solution data."""
 
     task_instruction = (
-        "Find a compatible screw and driver, insert the screw tip-down into "
-        "the workbench repair hole, drive it fully, and return the driver safely."
+        "Identify compatible components needed for the repair, and complete the fastening at the marked workbench location"
     )
 
     def __init__(
