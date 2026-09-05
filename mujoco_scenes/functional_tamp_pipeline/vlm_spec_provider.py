@@ -103,7 +103,15 @@ class VLMSpecProvider(FunctionalSpecProvider):
                 expected=True,
             ))
 
-        detector_vocab = tuple(dict.fromkeys(provider.vlm_derived_detector_prompts))
+        vlm_prompts = list(dict.fromkeys(provider.vlm_derived_detector_prompts))
+        system_prompts: list[str] = []
+        for role_id, role_obj in nodes.items():
+            if role_obj.entity_kind == "OBJECT":
+                for cat in role_obj.semantic_categories:
+                    cat_disp = cat.replace("_", " ")
+                    if cat_disp not in system_prompts:
+                        system_prompts.append(cat_disp)
+        detector_vocab = tuple(dict.fromkeys(vlm_prompts + system_prompts))
 
         raw_resp = getattr(provider, "raw_vlm_response", None) or provider.raw_decomposition
         valid_spec = getattr(provider, "validated_vlm_specification", None) or provider.raw_decomposition

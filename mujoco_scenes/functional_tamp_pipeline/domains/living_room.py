@@ -20,8 +20,7 @@ from ..scene_graph import ObservedNode, ObservedObject, ObservedRelation, Observ
 
 
 TASK = (
-    "Prepare the living room for two people watching television: put one cup "
-    "and saucer on each personal support and the remote on a shared support."
+    "Assign refreshments and entertainment objects to suitable regions near two seating positions."
 )
 LOCAL_MODEL = Path(__file__).resolve().parents[3] / "semantic_model_cache/yolov8m-worldv2.pt"
 

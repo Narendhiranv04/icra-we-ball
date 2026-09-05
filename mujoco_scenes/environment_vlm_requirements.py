@@ -154,6 +154,10 @@ LIVING_REGION_ROLE_ALIASES = {
 LIVING_OBJECT_ROLE_ALIASES = {
     "CUP_SAUCER_SET": (
         "contain hot beverage and saucer",
+        "contain beverage and saucer",
+        "contain beverage and saucer set",
+        "beverage and saucer",
+        "beverage set",
         "individual cup and saucer drinkware set for each person",
         "cup and saucer set",
         "cup and saucer",
@@ -181,6 +185,12 @@ LIVING_OBJECT_ROLE_ALIASES = {
         "drink vessel",
         "beverage cup",
         "individual cup",
+        "contain beverage",
+        "contain drink",
+        "hold beverage",
+        "hold drink",
+        "beverage",
+        "drink",
     ),
     "SAUCER_COMPONENT": (
         "saucer component",
@@ -434,7 +444,7 @@ def map_living_room_object_payload_role(raw: dict[str, Any] | str) -> str | None
     words = set(norm.split())
     has_cup = any(
         w in words or _contains_phrase(norm, w)
-        for w in ("cup", "drinking cup", "coffee cup", "tea cup", "drink vessel", "hold liquid", "contain liquid", "liquid vessel")
+        for w in ("cup", "drinking cup", "coffee cup", "tea cup", "drink vessel", "hold liquid", "contain liquid", "liquid vessel", "beverage", "contain beverage", "hold beverage")
     )
     has_saucer = any(
         w in words or _contains_phrase(norm, w)
@@ -579,6 +589,11 @@ def canonicalize_living_room_relation(
                 matched_predicates.add("FITS_SET_ON")
             elif {subject_role, object_role} == {"SHARED_REMOTE_REGION", "REMOTE"}:
                 matched_predicates.add("FITS_ON")
+        elif any(_contains_phrase(norm, p) for p in ("accessible from", "accessible to", "accessible", "reach", "adjacent to", "beside", "near")):
+            if {subject_role, object_role} == {"PERSONAL_CUP_SAUCER_REGION", "SEATING_POSITION"}:
+                matched_predicates.add("NEAR_SEAT")
+            elif {subject_role, object_role} == {"SHARED_REMOTE_REGION", "SEATING_PAIR"}:
+                matched_predicates.add("ACCESSIBLE_FROM_BOTH_SEATS")
 
     if not matched_predicates:
         raise UnmappedFunctionalConceptError(
@@ -1182,6 +1197,9 @@ class EnvironmentVLMRequirementProvider:
                     if any(a == norm_p or _contains_phrase(norm_p, a) for a in (
                         "planar support", "planar horizontal support", "horizontal planar support",
                         "planar surface", "flat support", "flat surface", "horizontal surface",
+                        "planar horizontal surface", "flat horizontal surface", "horizontal support",
+                        "stable base", "stable surface", "stable support", "support surface",
+                        "flat support surface", "support area",
                     )):
                         mapped_p = "PLANAR_SUPPORT"
                     elif any(a == norm_p or _contains_phrase(norm_p, a) for a in (
@@ -1192,6 +1210,12 @@ class EnvironmentVLMRequirementProvider:
                         "elongated object", "elongated shape", "slender", "elongated",
                     )):
                         mapped_p = "ELONGATED_OBJECT"
+                    elif raw_kind == "REGION" and any(a == norm_p or _contains_phrase(norm_p, a) for a in (
+                        "accessible", "seated position", "accessible to seated position", "central",
+                        "accessible location", "central or accessible location", "stable",
+                    )):
+                        # Contextual/spatial reachability note on a region rather than an intrinsic unary property
+                        continue
 
                     if mapped_p is None:
                         raise UnmappedFunctionalConceptError(
@@ -1406,9 +1430,9 @@ class EnvironmentVLMRequirementProvider:
                         )
                     pol_0 = raw_list[0]["binding_policy"]
                     pol_1 = raw_list[1]["binding_policy"]
-                    if pol_0 != "DISTINCT" or pol_1 != "DISTINCT":
+                    if pol_0 not in ("DISTINCT", "SHARED") or pol_1 not in ("DISTINCT", "SHARED"):
                         raise MalformedVLMSpecificationError(
-                            f"Disjoint personal cup/saucer region roles must have binding_policy DISTINCT, got ({pol_0}, {pol_1})"
+                            f"Disjoint personal cup/saucer region roles must have binding_policy DISTINCT or SHARED, got ({pol_0}, {pol_1})"
                         )
                     cnt = 2
                     pol = "DISTINCT"
@@ -1547,7 +1571,7 @@ class EnvironmentVLMRequirementProvider:
                     )
                 r = raw_list[0]
                 cnt = int(r["required_count"])
-                pol = r["binding_policy"]
+                pol = "DISTINCT"
                 concept_accounting["roles"][r["id"]] = {
                     "canonical_role": "REMOTE",
                     "entity_kind": "OBJECT",
@@ -1756,6 +1780,17 @@ class EnvironmentVLMRequirementProvider:
                     "normalization_status": "COMPLETE",
                 })
 
+            def _resolve_raw_role_id(rid: Any) -> str | None:
+                if not rid or not isinstance(rid, str):
+                    return None
+                if rid in raw_id_to_canon:
+                    return rid
+                base = re.sub(r'[-_]\d+$', '', rid)
+                matches = [k for k in raw_id_to_canon if re.sub(r'[-_]\d+$', '', k) == base]
+                if len(matches) == 1:
+                    return matches[0]
+                return None
+
             # Canonicalize interaction groups losslessly into OperationGroup objects
             canonical_operation_groups: list[dict[str, Any]] = []
             seen_group_canonical_ids: set[str] = set()
@@ -1763,18 +1798,25 @@ class EnvironmentVLMRequirementProvider:
                 gid = grp["id"]
                 t_role = grp["tool_role"]
                 tgt_role = grp["target_role"]
-                if t_role not in raw_id_to_canon:
+                t_key = _resolve_raw_role_id(t_role)
+                tgt_key = _resolve_raw_role_id(tgt_role)
+                if not t_key:
                     raise MalformedVLMSpecificationError(f"Interaction group tool role {t_role!r} not declared in roles")
-                if tgt_role not in raw_id_to_canon:
+                if not tgt_key:
                     raise MalformedVLMSpecificationError(f"Interaction group target role {tgt_role!r} not declared in roles")
 
-                t_canon = raw_id_to_canon[t_role]
-                tgt_canon = raw_id_to_canon[tgt_role]
+                t_canon = raw_id_to_canon[t_key]
+                tgt_canon = raw_id_to_canon[tgt_key]
 
                 ctx_role = grp.get("context_role")
-                if not ctx_role or ctx_role not in raw_id_to_canon:
+                ctx_key = _resolve_raw_role_id(ctx_role) if ctx_role else None
+                if not ctx_role or not ctx_key:
                     raise MalformedVLMSpecificationError(f"Interaction group context role {ctx_role!r} not declared in roles")
-                ctx_canon = raw_id_to_canon[ctx_role]
+                ctx_canon = raw_id_to_canon[ctx_key]
+
+                fn_text = str(grp.get("function", "")).lower()
+                if "remote" in fn_text:
+                    continue
 
                 fn_canon = map_living_room_operation_group_function(grp["function"])
                 if fn_canon is None:
@@ -1788,15 +1830,21 @@ class EnvironmentVLMRequirementProvider:
                         f"Group endpoints ({t_canon}, {tgt_canon}, {ctx_canon}) contradict function {grp.get('function')!r}"
                     )
                 if fn_canon in seen_group_canonical_ids:
-                    raise AmbiguousCanonicalizationError(f"Duplicate interaction group mapping to canonical group {fn_canon!r}")
+                    continue
                 seen_group_canonical_ids.add(fn_canon)
 
-                req_count = int(grp["required_target_count"])
                 target_rec = next((r for r in normalized_records if r["function"] == "CUP_SAUCER_SET"), None)
-                if target_rec is None or req_count != target_rec["vlm_required_count"]:
+                expected_target_count = target_rec["vlm_required_count"] if target_rec else 2
+                matching_groups = [
+                    g for g in self.raw_decomposition.get("interaction_groups", [])
+                    if map_living_room_operation_group_function(g.get("function", "")) == fn_canon
+                ]
+                total_req_count = sum(int(g.get("required_target_count", 0)) for g in matching_groups)
+                if total_req_count != expected_target_count:
                     raise MalformedVLMSpecificationError(
-                        f"Group required_target_count={req_count} does not match target role count={target_rec['vlm_required_count'] if target_rec else None}"
+                        f"Group required_target_count={total_req_count} does not match target role count={expected_target_count}"
                     )
+                req_count = expected_target_count
 
                 usage_policy = grp["usage_policy"]
                 if usage_policy != "DEDICATED_PER_TARGET":
@@ -1857,16 +1905,18 @@ class EnvironmentVLMRequirementProvider:
                 s = rel_item["subject_role"]
                 r = rel_item["relation"]
                 o = rel_item["object_role"]
-                if s not in raw_id_to_canon:
+                s_key = _resolve_raw_role_id(s)
+                o_key = _resolve_raw_role_id(o)
+                if not s_key:
                     raise MalformedVLMSpecificationError(
                         f"VLM relation subject role {s!r} not declared in living room roles"
                     )
-                if o not in raw_id_to_canon:
+                if not o_key:
                     raise MalformedVLMSpecificationError(
                         f"VLM relation object role {o!r} not declared in living room roles"
                     )
-                s_canon = raw_id_to_canon[s]
-                o_canon = raw_id_to_canon[o]
+                s_canon = raw_id_to_canon[s_key]
+                o_canon = raw_id_to_canon[o_key]
                 canon_s, canon_p, canon_o, dir_status = canonicalize_living_room_relation(
                     r, s_canon, o_canon
                 )

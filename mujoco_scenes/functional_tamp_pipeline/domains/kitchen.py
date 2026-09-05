@@ -20,9 +20,8 @@ from ..planning import plan_with_common_astar
 
 
 TASK = (
-    "Prepare and serve coffee and soup for two people using the available "
-    "kitchenware. Stir both coffees and provide each soup bowl with a suitable "
-    "utensil. Search closed kitchen storage for anything still required."
+    "prepare coffee by stirring and serve soup for two people. "
+    "Inspect storages for any missing kitchenware"
 )
 LOCAL_YOLO_WORLD = (
     Path(__file__).resolve().parents[3]

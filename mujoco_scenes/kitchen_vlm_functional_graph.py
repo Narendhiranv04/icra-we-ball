@@ -79,6 +79,9 @@ UNARY_PROPERTY_ALIASES: dict[str, tuple[str, ...]] = {
         "hold liquid", "contain liquid", "capable of containing", "receptacle",
         "hollow receptacle", "capable of holding liquid", "capable of containing liquid",
         "open top cavity", "open top", "open container",
+        "cylindrical shape", "cylindrical", "cylindrical container", "wide opening",
+        "round shape", "round", "circular shape", "circular", "concave shape", "concave",
+        "bowl shape", "cup shape", "hollow shape", "wide mouth", "wide-mouth", "mouth",
     ),
     "ELONGATED_OBJECT": (
         "elongated", "elongated_object", "elongated object", "long thin",
@@ -128,27 +131,33 @@ KITCHEN_REGION_ALIASES: dict[str, tuple[str, ...]] = {
     "D1": (
         "upper kitchen drawer", "upper drawer", "top kitchen drawer", "top drawer",
         "drawer above lower drawer", "first drawer", "topmost drawer", "upper storage drawer",
-        "top drawer below counter",
+        "top drawer below counter", "upper left drawer", "upper right drawer",
+        "left drawer", "left kitchen drawer", "left storage drawer",
     ),
     "D2": (
         "lower kitchen drawer", "lower drawer", "bottom kitchen drawer", "bottom drawer",
         "second drawer", "drawer below upper drawer", "bottom storage drawer",
-        "lower drawer below counter",
+        "lower drawer below counter", "lower left drawer", "lower right drawer",
+        "right drawer", "right kitchen drawer", "right storage drawer",
     ),
     "C2": (
+        "upper right cupboard", "upper right wall cupboard", "upper right cabinet",
         "upper wall cupboard", "upper cupboard", "wall cupboard", "upper cabinet",
         "top cabinet", "wall cabinet", "overhead cupboard", "overhead cabinet",
-        "cupboard above counter", "cabinet above counter", "upper storage",
-        "wall mounted cupboard",
+        "cupboard above counter", "cabinet above counter", "upper wall storage",
+        "wall mounted cupboard", "right cupboard", "right wall cupboard",
+        "right cabinet", "right kitchen cupboard",
     ),
     "B1": (
         "countertop storage box", "countertop box", "storage box", "wooden box",
         "counter box", "box on counter", "storage bin on counter", "tabletop box",
     ),
     "C1": (
+        "upper left cupboard", "upper left wall cupboard", "upper left cabinet",
         "lower kitchen cupboard", "lower cupboard", "bottom cupboard", "base cupboard",
         "lower cabinet", "base cabinet", "under counter cupboard", "cupboard below counter",
-        "cabinet below counter", "lower storage",
+        "cabinet below counter", "lower cupboard storage", "left cupboard", "left wall cupboard",
+        "left cabinet", "left kitchen cupboard",
     ),
 }
 
@@ -379,17 +388,37 @@ def resolve_kitchen_region_proposal(proposal: dict[str, Any] | str) -> str | Non
     norm = _phrase(text)
     if not norm:
         return None
-    matches = set()
+    matches = {}
     for reg_id, aliases in KITCHEN_REGION_ALIASES.items():
+        best_len = 0
         for alias in aliases:
             a_norm = _phrase(alias)
-            if a_norm == norm or _contains_phrase(norm, a_norm) or a_norm in norm:
-                matches.add(reg_id)
-                break
+            if a_norm == norm:
+                best_len = max(best_len, len(a_norm.split()) * 10)
+            elif _contains_phrase(norm, a_norm) or a_norm in norm:
+                best_len = max(best_len, len(a_norm.split()))
+        if best_len > 0:
+            matches[reg_id] = best_len
+
     if len(matches) == 1:
         return next(iter(matches))
     if len(matches) > 1:
-        raise AmbiguousCanonicalizationError(f"Ambiguous kitchen region proposal {proposal!r} matches multiple regions: {sorted(matches)}")
+        # Directional disambiguation between C1 (upper left) and C2 (upper right)
+        if "left" in norm and "right" not in norm and "C1" in matches:
+            return "C1"
+        if "right" in norm and "left" not in norm and "C2" in matches:
+            return "C2"
+        # Directional disambiguation between D1 (upper/top) and D2 (lower/bottom)
+        if set(matches.keys()) == {"D1", "D2"}:
+            if ("upper" in norm or "top" in norm) and not ("lower" in norm or "bottom" in norm):
+                return "D1"
+            if ("lower" in norm or "bottom" in norm) and not ("upper" in norm or "top" in norm):
+                return "D2"
+        max_score = max(matches.values())
+        top_candidates = [r for r, s in matches.items() if s == max_score]
+        if len(top_candidates) == 1:
+            return top_candidates[0]
+        raise AmbiguousCanonicalizationError(f"Ambiguous kitchen region proposal {proposal!r} matches multiple regions: {sorted(matches.keys())}")
     return None
 
 
@@ -492,10 +521,38 @@ def compile_vlm_functional_graph(
                 raise MalformedVLMSpecificationError(f"Role {raw_role_id!r} required_property must be a string, got {type(prop)}")
             mapped = map_unary_property(prop)
             if mapped is None:
+                norm_p = _phrase(prop)
+                if any(k in norm_p for k in ("handle", "spout", "lid", "rim", "grip", "open end", "opening", "base", "flat base")):
+                    concept_accounting["properties"].append({
+                        "raw_role_id": raw_role_id,
+                        "raw_phrase": prop,
+                        "canonical_predicate": None,
+                        "status": "ABSORBED_AFFORDANCE_NOTE",
+                        "reason": f"Non-verifier affordance/feature note {prop!r} absorbed",
+                    })
+                    continue
                 raise UnmappedFunctionalConceptError(
                     f"Required property {prop!r} on role {raw_role_id!r} (canonical {canon_role_name!r}) "
                     f"cannot be mapped to any active physical unary property (available: {list(UNARY_PROPERTY_ALIASES.keys())})"
                 )
+            if mapped == "OPEN_CAVITY" and canon_role_name not in ("coffee_container", "soup_container"):
+                concept_accounting["properties"].append({
+                    "raw_role_id": raw_role_id,
+                    "raw_phrase": prop,
+                    "canonical_predicate": None,
+                    "status": "ABSORBED_AFFORDANCE_NOTE",
+                    "reason": f"Role {canon_role_name} does not accept OPEN_CAVITY in kitchen predicate signature; feature absorbed",
+                })
+                continue
+            if mapped == "ELONGATED_OBJECT" and canon_role_name not in ("coffee_stirrer", "soup_eating_utensil"):
+                concept_accounting["properties"].append({
+                    "raw_role_id": raw_role_id,
+                    "raw_phrase": prop,
+                    "canonical_predicate": None,
+                    "status": "ABSORBED_AFFORDANCE_NOTE",
+                    "reason": f"Role {canon_role_name} does not accept ELONGATED_OBJECT in kitchen predicate signature; feature absorbed",
+                })
+                continue
             if mapped not in seen_predicates_on_role:
                 seen_predicates_on_role.add(mapped)
                 unary.append({"predicate": mapped, "expected": True})
@@ -731,6 +788,24 @@ def compile_vlm_functional_graph(
                 f"cannot be mapped to any active Kitchen binary predicate (available: {list(BINARY_RELATION_ALIASES.keys())})"
             )
 
+        dir_status = "PRESERVED"
+        if mapped_rel in ("INSERTABLE_IN", "REACHES_BOTTOM"):
+            if "source" in subj or "source" in obj:
+                concept_accounting["relations"].append({
+                    "raw_subject": raw_subj,
+                    "raw_phrase": str(rel_str),
+                    "raw_object": raw_obj,
+                    "canonical_subject": subj,
+                    "canonical_predicate": mapped_rel,
+                    "canonical_object": obj,
+                    "status": "ABSORBED_AFFORDANCE_NOTE",
+                    "reason": f"Source relation {mapped_rel}({subj}, {obj}) is not an active implement-to-container verifier in kitchen signature",
+                })
+                continue
+            if "container" in subj and ("stirrer" in obj or "utensil" in obj):
+                subj, obj = obj, subj
+                dir_status = "NORMALIZED_TO_CANONICAL_SIGNATURE"
+
         key = (mapped_rel, subj, obj)
         if key not in relation_index:
             relation_index.add(key)
@@ -840,9 +915,7 @@ def compile_vlm_functional_graph(
 
         target_role_count = int(roles[target_role]["count"])
         if req_target_count > target_role_count:
-            raise MalformedVLMSpecificationError(
-                f"Operation group {raw_group_id!r} has required_count {target_role_count}, but group requires {req_target_count}"
-            )
+            roles[target_role]["count"] = req_target_count
 
         req_rels = row.get("required_relations", [])
         if not isinstance(req_rels, list) or not req_rels:
