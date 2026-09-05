@@ -1,0 +1,170 @@
+{
+  "actions": [
+    {
+      "action_index": 1,
+      "action_instance_id": "wact_001_open",
+      "arguments": [
+        "LEFT_DRAWER"
+      ],
+      "effects": [
+        "open(storage_region)",
+        "inspected(storage_region)"
+      ],
+      "operator": "OPEN",
+      "parameter_names": [
+        "storage_region"
+      ],
+      "preconditions": [
+        "closed(storage_region)",
+        "hand_empty"
+      ],
+      "reason": "Open this storage region once for inspection; it remains open."
+    },
+    {
+      "action_index": 2,
+      "action_instance_id": "wact_002_open",
+      "arguments": [
+        "RIGHT_DRAWER"
+      ],
+      "effects": [
+        "open(storage_region)",
+        "inspected(storage_region)"
+      ],
+      "operator": "OPEN",
+      "parameter_names": [
+        "storage_region"
+      ],
+      "preconditions": [
+        "closed(storage_region)",
+        "hand_empty"
+      ],
+      "reason": "Open this storage region once for inspection; it remains open."
+    },
+    {
+      "action_index": 3,
+      "action_instance_id": "wact_003_pick",
+      "arguments": [
+        "workshop_medium_phillips_screw",
+        "LEFT_DRAWER"
+      ],
+      "effects": [
+        "holding(object)",
+        "not_at(object",
+        "source)"
+      ],
+      "operator": "PICK",
+      "parameter_names": [
+        "object",
+        "source"
+      ],
+      "preconditions": [
+        "hand_empty",
+        "at(object",
+        "source)",
+        "accessible(object)"
+      ],
+      "reason": "Acquire the discovered compatible screw directly from its open source."
+    },
+    {
+      "action_index": 4,
+      "action_instance_id": "wact_004_place",
+      "arguments": [
+        "workshop_medium_phillips_screw",
+        "workshop_frame_joint"
+      ],
+      "effects": [
+        "hand_empty",
+        "at(object",
+        "destination)"
+      ],
+      "operator": "PLACE",
+      "parameter_names": [
+        "object",
+        "destination"
+      ],
+      "preconditions": [
+        "holding(object)",
+        "valid_destination(object",
+        "destination)"
+      ],
+      "reason": "Place the screw tip-down directly in the frame-joint hole."
+    },
+    {
+      "action_index": 5,
+      "action_instance_id": "wact_005_pick",
+      "arguments": [
+        "workshop_power_driver",
+        "RIGHT_DRAWER"
+      ],
+      "effects": [
+        "holding(object)",
+        "not_at(object",
+        "source)"
+      ],
+      "operator": "PICK",
+      "parameter_names": [
+        "object",
+        "source"
+      ],
+      "preconditions": [
+        "hand_empty",
+        "at(object",
+        "source)",
+        "accessible(object)"
+      ],
+      "reason": "Acquire the first compatible driver observed during inspection."
+    },
+    {
+      "action_index": 6,
+      "action_instance_id": "wact_006_screw",
+      "arguments": [
+        "workshop_power_driver",
+        "workshop_medium_phillips_screw",
+        "workshop_frame_joint"
+      ],
+      "effects": [
+        "repaired(target_joint)"
+      ],
+      "operator": "SCREW",
+      "parameter_names": [
+        "driver",
+        "fastener",
+        "target_joint"
+      ],
+      "preconditions": [
+        "holding(driver)",
+        "inserted(fastener",
+        "target_joint)",
+        "compatible(driver",
+        "fastener",
+        "target_joint)"
+      ],
+      "reason": "Drive the inserted screw with the selected power driver."
+    },
+    {
+      "action_index": 7,
+      "action_instance_id": "wact_007_place",
+      "arguments": [
+        "workshop_power_driver",
+        "MAIN_WORKBENCH_ZONE"
+      ],
+      "effects": [
+        "hand_empty",
+        "at(object",
+        "destination)"
+      ],
+      "operator": "PLACE",
+      "parameter_names": [
+        "object",
+        "destination"
+      ],
+      "preconditions": [
+        "holding(object)",
+        "valid_destination(object",
+        "destination)"
+      ],
+      "reason": "Return the used driver to the workbench after fastening."
+    }
+  ],
+  "total_actions": 7
+}

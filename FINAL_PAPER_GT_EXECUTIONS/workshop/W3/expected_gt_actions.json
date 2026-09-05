@@ -1,0 +1,66 @@
+{
+  "actions": [
+    {
+      "arguments": [
+        "LEFT_DRAWER"
+      ],
+      "operator": "OPEN",
+      "reason": "Open this storage region once for inspection; it remains open."
+    },
+    {
+      "arguments": [
+        "RIGHT_DRAWER"
+      ],
+      "operator": "OPEN",
+      "reason": "Open this storage region once for inspection; it remains open."
+    },
+    {
+      "arguments": [
+        "workshop_medium_phillips_screw",
+        "LEFT_DRAWER"
+      ],
+      "operator": "PICK",
+      "reason": "Acquire the discovered compatible screw directly from its open source."
+    },
+    {
+      "arguments": [
+        "workshop_medium_phillips_screw",
+        "workshop_frame_joint"
+      ],
+      "operator": "PLACE",
+      "reason": "Place the screw tip-down directly in the frame-joint hole."
+    },
+    {
+      "arguments": [
+        "workshop_long_phillips_driver",
+        "RIGHT_DRAWER"
+      ],
+      "operator": "PICK",
+      "reason": "Acquire the first compatible driver observed during inspection."
+    },
+    {
+      "arguments": [
+        "workshop_long_phillips_driver",
+        "workshop_medium_phillips_screw",
+        "workshop_frame_joint"
+      ],
+      "operator": "SCREW",
+      "reason": "Drive the inserted screw with the selected manual Phillips driver."
+    },
+    {
+      "arguments": [
+        "workshop_long_phillips_driver",
+        "MAIN_WORKBENCH_ZONE"
+      ],
+      "operator": "PLACE",
+      "reason": "Return the used driver to the workbench after fastening."
+    }
+  ],
+  "description": "Screw in the left drawer; the first driver found is the manual driver in the right drawer.",
+  "environment": "workshop",
+  "intended_outcome": "FEASIBLE",
+  "internal_variant": "F2_MANUAL_FIRST_TWO_REGIONS",
+  "schema_version": 1,
+  "total_actions": 7,
+  "variant": "W3"
+}

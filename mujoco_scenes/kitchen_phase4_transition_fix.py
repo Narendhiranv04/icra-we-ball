@@ -246,9 +246,11 @@ def _activate_initial_countertop_presentations(
     store = _presentation_store(dispatcher)
     for planner_id, row in dispatcher.inventory_by_id.items():
         context = row.get("source_context") or {}
-        if str(context.get("source_kind")) != "TABLE":
+        source_container = context.get("source_container")
+        source_kind = str(context.get("source_kind"))
+        if source_container in {"D1", "D2"}:
             continue
-        if context.get("source_container") is not None:
+        if source_kind != "TABLE" and source_container not in {"C2", "B1", "C1"}:
             continue
 
         binding = dispatcher.binding_by_id.get(planner_id) or {}

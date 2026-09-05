@@ -1,0 +1,12 @@
+Environment: workshop
+Variant: W4
+Internal variant: F3_POWER_FIRST_TWO_REGIONS
+Execution profile: PHYSICS_ASSISTED_GT_EXECUTION
+
+001. OPEN(LEFT_DRAWER)  # Open this storage region once for inspection; it remains open.
+002. OPEN(RIGHT_DRAWER)  # Open this storage region once for inspection; it remains open.
+003. PICK(workshop_medium_phillips_screw, LEFT_DRAWER)  # Acquire the discovered compatible screw directly from its open source.
+004. PLACE(workshop_medium_phillips_screw, workshop_frame_joint)  # Place the screw tip-down directly in the frame-joint hole.
+005. PICK(workshop_power_driver, RIGHT_DRAWER)  # Acquire the first compatible driver observed during inspection.
+006. SCREW(workshop_power_driver, workshop_medium_phillips_screw, workshop_frame_joint)  # Drive the inserted screw with the selected power driver.
+007. PLACE(workshop_power_driver, MAIN_WORKBENCH_ZONE)  # Return the used driver to the workbench after fastening.

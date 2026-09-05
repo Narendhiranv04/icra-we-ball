@@ -293,30 +293,50 @@ def _patched_place(
 ) -> dict[str, Any]:
     # The complete physical action remains the known-good original controller.
     result = _ORIGINAL_PLACE(self, object_id, destination)
-    if not result.get("success", False) or destination != "serving_area":
+    if not result.get("success", False):
         return result
 
-    tool_id = self.assignment.soup_utensils_by_target.get(object_id)
-    if not tool_id:
+    bowl_id = None
+    tool_id = None
+    if destination == "serving_area":
+        tool_id = self.assignment.soup_utensils_by_target.get(object_id)
+        if tool_id:
+            bowl_id = object_id
+    elif destination in self.assignment.soup_utensils_by_target:
+        bowl_dest = self.inventory_by_id.get(destination, {}).get("location")
+        if bowl_dest == "serving_area" and self.assignment.soup_utensils_by_target.get(destination) == object_id:
+            bowl_id = destination
+            tool_id = object_id
+
+    if not bowl_id or not tool_id:
         return result
 
-    pair_ids = (object_id, tool_id)
+    tool_loc = self.inventory_by_id.get(tool_id, {}).get("location")
+    tool_is_served = bool(tool_loc in (bowl_id, "serving_area"))
+    bowl_loc = self.inventory_by_id.get(bowl_id, {}).get("location")
+    bowl_is_served = bool(bowl_loc == "serving_area")
+
+    pair_ids = (bowl_id, tool_id)
     activated: list[str] = []
     try:
-        bowl_lock = _activate_static_component(
-            self,
-            object_id,
-            pair_ids=pair_ids,
-            role="SOUP_BOWL",
-        )
-        activated.append(object_id)
-        utensil_lock = _activate_static_component(
-            self,
-            tool_id,
-            pair_ids=pair_ids,
-            role="SOUP_UTENSIL",
-        )
-        activated.append(tool_id)
+        bowl_lock = None
+        if bowl_is_served:
+            bowl_lock = _activate_static_component(
+                self,
+                bowl_id,
+                pair_ids=pair_ids,
+                role="SOUP_BOWL",
+            )
+            activated.append(bowl_id)
+        utensil_lock = None
+        if tool_is_served:
+            utensil_lock = _activate_static_component(
+                self,
+                tool_id,
+                pair_ids=pair_ids,
+                role="SOUP_UTENSIL",
+            )
+            activated.append(tool_id)
     except Exception as error:
         # Never leave a half-latched pair if setup itself fails.
         for planner_id in reversed(activated):
@@ -333,7 +353,7 @@ def _patched_place(
 
     return {
         **result,
-        "served_terminal_state_latched": True,
+        "served_terminal_state_latched": bool(activated),
         "served_bowl_lock": bowl_lock,
         "served_utensil_lock": utensil_lock,
     }

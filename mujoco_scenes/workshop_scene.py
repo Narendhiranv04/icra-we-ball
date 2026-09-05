@@ -397,7 +397,8 @@ def _create_object_element(
 # ==============================================================================
 
 def _get_object_storage_pose(
-    obj_name: str, region_id: str, slot_idx: int, layout_swapped: bool = False
+    obj_name: str, region_id: str, slot_idx: int, layout_swapped: bool = False,
+    cabinet_front_access: bool = True,
 ) -> tuple[tuple[float, float, float], tuple[float, float, float, float], str]:
     """Return deterministic resting (pos, quat, parent_body) tailored for object physical geometry."""
     q_along_x = (0.7071, 0.0, 0.7071, 0.0)      # local Z -> world +X
@@ -418,7 +419,7 @@ def _get_object_storage_pose(
         # roof clearance admits the horizontal gripper/wrist around upright
         # tools while the powered driver still fits on the lower floor.
         shelf_z = 0.7660
-        floor_z = 0.6880
+        floor_z = 0.6960
         cab_slots_xy = [
             (cab_x, cab_y - 0.11),
             (cab_x, cab_y - 0.03),
@@ -451,15 +452,20 @@ def _get_object_storage_pose(
             return (base_x - 0.025, base_y, shelf_z + 0.009), q_along_x, "tool_cabinet"
         elif obj_name == "workshop_power_driver":
             if slot_idx == 0:
-                # A selected/sole power driver occupies the accessible centre
-                # of the upper shelf for a straight horizontal retrieval.
-                return (cab_x, cab_y - 0.03, shelf_z + 0.024), q_drill_side, "tool_cabinet"
+                if not cabinet_front_access:
+                    return (cab_x, cab_y - 0.03, shelf_z + 0.024), q_drill_side, "tool_cabinet"
+                # Stand on the handle foot, exposing the grasp below the
+                # motor housing. Casing X bounds are [.238, .402].
+                return (cab_x - 0.12, cab_y - 0.025, shelf_z + 0.001), q_flat, "tool_cabinet"
             # When it shares the cabinet with the target screw it is an
             # unselected alternative; park it separately on the lower floor
             # so it cannot obstruct the screw's gripper corridor.
-            return (cab_x + 0.12, cab_y - 0.03, floor_z + 0.024), q_drill_side, "tool_cabinet"
+            # The side-resting tool extends 165 mm along +Y. Its front must
+            # start at .474 to clear the back wall at .644 by 5 mm. The floor
+            # top is .696, not the floor geom centre (.688).
+            return (cab_x + 0.12, cab_y - 0.086, floor_z + 0.025), q_drill_side, "tool_cabinet"
         elif obj_name == "workshop_wooden_hammer":
-            return (cab_x, cab_y - 0.025, shelf_z + 0.001), q_flat, "tool_cabinet"
+            return (cab_x - (0.10 if cabinet_front_access else 0.0), cab_y - 0.025, shelf_z + 0.001), q_flat, "tool_cabinet"
         elif obj_name == "workshop_pliers":
             return (base_x - 0.095, base_y, shelf_z + 0.010), q_pliers_x, "tool_cabinet"
         elif obj_name == "workshop_combination_wrench":
@@ -757,7 +763,8 @@ def build_workshop_xml(
     for region_id, object_list in storage_contents.items():
         for idx, obj_name in enumerate(object_list):
             pos, quat, parent_body = _get_object_storage_pose(
-                obj_name, region_id, idx, layout_swapped=is_swapped
+                obj_name, region_id, idx, layout_swapped=is_swapped,
+                cabinet_front_access="TOOL_CABINET" in var_spec.get("expected_inspection_regions", []),
             )
 
             obj_elem = _create_object_element(obj_name, pos, quat)

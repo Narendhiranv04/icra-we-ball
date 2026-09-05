@@ -2401,40 +2401,45 @@ class CalibratedPickPlaceExecutor:
                 position_first_approach=spec.position_first_approach,
             ),
         )
+        original_site = self.model.site_pos[site_id].copy()
         failures = []
         selected = None
-        for candidate in candidates:
-            self.model.site_pos[site_id] = candidate.grasp_site_local_position_m
-            mujoco.mj_forward(self.model, self.data)
-            target = self.data.site_xpos[site_id].copy()
-            target[2] += spec.grasp_z_offset
-            candidate_spec = replace(
-                spec,
-                top_down_rotation=candidate.target_rotation_world,
-                approach_clearance_m=candidate.approach_clearance_m,
-                approach_offset_world_m=candidate.approach_offset_world_m,
-                approach_route_offsets_world_m=candidate.approach_route_offsets_world_m,
-                retreat_route_offsets_world_m=candidate.retreat_route_offsets_world_m,
-                approach_rotation_world=candidate.approach_rotation_world,
-                position_first_approach=candidate.position_first_approach,
-            )
-            self.pick_specs[self.target_object] = candidate_spec
-            try:
-                self.waypoints, self.retreat_waypoints = self._plan_to_grip(
-                    target,
-                    self.configuration_checker,
-                    allowed_bodies,
-                    candidate.target_rotation_world,
-                    self.profile.home_seed if spec.home_seed is None else spec.home_seed,
-                    self.profile.carry_position if spec.carry_position is None else spec.carry_position,
-                    candidate.carry_rotation_world,
-                    candidate.approach_rotation_world,
+        try:
+            for candidate in candidates:
+                self.model.site_pos[site_id] = candidate.grasp_site_local_position_m
+                mujoco.mj_forward(self.model, self.data)
+                target = self.data.site_xpos[site_id].copy()
+                target[2] += spec.grasp_z_offset
+                candidate_spec = replace(
+                    spec,
+                    top_down_rotation=candidate.target_rotation_world,
+                    approach_clearance_m=candidate.approach_clearance_m,
+                    approach_offset_world_m=candidate.approach_offset_world_m,
+                    approach_route_offsets_world_m=candidate.approach_route_offsets_world_m,
+                    retreat_route_offsets_world_m=candidate.retreat_route_offsets_world_m,
+                    approach_rotation_world=candidate.approach_rotation_world,
+                    position_first_approach=candidate.position_first_approach,
                 )
-            except RuntimeError as error:
-                failures.append(f"{candidate.candidate_id}: {error}")
-                continue
-            selected = candidate
-            break
+                self.pick_specs[self.target_object] = candidate_spec
+                try:
+                    self.waypoints, self.retreat_waypoints = self._plan_to_grip(
+                        target,
+                        self.configuration_checker,
+                        allowed_bodies,
+                        candidate.target_rotation_world,
+                        self.profile.home_seed if spec.home_seed is None else spec.home_seed,
+                        self.profile.carry_position if spec.carry_position is None else spec.carry_position,
+                        candidate.carry_rotation_world,
+                        candidate.approach_rotation_world,
+                    )
+                except RuntimeError as error:
+                    failures.append(f"{candidate.candidate_id}: {error}")
+                    continue
+                selected = candidate
+                break
+        finally:
+            self.model.site_pos[site_id] = original_site
+            mujoco.mj_forward(self.model, self.data)
         if selected is None:
             self.pick_specs[self.target_object] = spec
             raise RuntimeError("No collision-free grasp candidate; " + "; ".join(failures))

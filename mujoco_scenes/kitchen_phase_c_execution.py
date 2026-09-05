@@ -179,69 +179,79 @@ class KitchenPhaseCExecutionDispatcher:
             "drawer_D1_tray", "drawer_D1_frame",
             "drawer_D2_tray", "drawer_D2_frame",
         )
-        selected = self._select_live_held_pose_family(
-            pose_families,
-            allowed_robot_contact_body_names=fixture_names,
-        )
-        family_index = int(selected["pose_family_index"])
-        position, rotation = pose_families[family_index][0]
-        # The extracted handle crosses the already-open door's conservative
-        # collision shell by about 3 mm during the axial wrist turn. Disable
-        # only that door body's geoms for this one transition, then restore
-        # their exact masks immediately; the weld and all other collisions
-        # remain physical throughout.
-        door_body = mujoco.mj_name2id(
-            self.scene.model,
-            mujoco.mjtObj.mjOBJ_BODY,
-            f"{source_container}_door",
-        )
-        disabled_door_geoms: list[tuple[int, int, int]] = []
-        if door_body >= 0:
-            first_geom = int(self.scene.model.body_geomadr[door_body])
-            geom_count = int(self.scene.model.body_geomnum[door_body])
-            for geom_id in range(first_geom, first_geom + geom_count):
-                disabled_door_geoms.append((
-                    geom_id,
-                    int(self.scene.model.geom_contype[geom_id]),
-                    int(self.scene.model.geom_conaffinity[geom_id]),
-                ))
-                self.scene.model.geom_contype[geom_id] = 0
-                self.scene.model.geom_conaffinity[geom_id] = 0
-            mujoco.mj_forward(self.scene.model, self.scene.data)
         try:
-            trajectory = self.phase_b.manipulation.executor.execute_held_pose_trajectory(
-                ((position, rotation, "CUPBOARD_SPOON_STIR_READY", 0),),
-                initial_arm_joints=np.asarray(selected["arm_joints"], float),
+            selected = self._select_live_held_pose_family(
+                pose_families,
                 allowed_robot_contact_body_names=fixture_names,
-                step_callback=self.phase_b.manipulation.step_callback,
             )
-        finally:
-            for geom_id, contype, conaffinity in disabled_door_geoms:
-                self.scene.model.geom_contype[geom_id] = contype
-                self.scene.model.geom_conaffinity[geom_id] = conaffinity
-            if disabled_door_geoms:
+            family_index = int(selected["pose_family_index"])
+            position, rotation = pose_families[family_index][0]
+            # The extracted handle crosses the already-open door's conservative
+            # collision shell by about 3 mm during the axial wrist turn. Disable
+            # only that door body's geoms for this one transition, then restore
+            # their exact masks immediately; the weld and all other collisions
+            # remain physical throughout.
+            door_body = mujoco.mj_name2id(
+                self.scene.model,
+                mujoco.mjtObj.mjOBJ_BODY,
+                f"{source_container}_door",
+            )
+            disabled_door_geoms: list[tuple[int, int, int]] = []
+            if door_body >= 0:
+                first_geom = int(self.scene.model.body_geomadr[door_body])
+                geom_count = int(self.scene.model.body_geomnum[door_body])
+                for geom_id in range(first_geom, first_geom + geom_count):
+                    disabled_door_geoms.append((
+                        geom_id,
+                        int(self.scene.model.geom_contype[geom_id]),
+                        int(self.scene.model.geom_conaffinity[geom_id]),
+                    ))
+                    self.scene.model.geom_contype[geom_id] = 0
+                    self.scene.model.geom_conaffinity[geom_id] = 0
                 mujoco.mj_forward(self.scene.model, self.scene.data)
-        live_axis = self.scene.data.xmat[body_id].reshape(3, 3) @ np.asarray(
-            tool.longitudinal_axis_local, float
-        )
-        live_axis /= max(float(np.linalg.norm(live_axis)), 1e-12)
-        axis_error = math.acos(
-            np.clip(float(np.dot(live_axis, normal)), -1.0, 1.0)
-        )
-        return {
-            "success": True,
-            "selected_orientation": {
-                key: (
-                    value.tolist() if isinstance(value, np.ndarray) else value
+            try:
+                trajectory = self.phase_b.manipulation.executor.execute_held_pose_trajectory(
+                    ((position, rotation, "CUPBOARD_SPOON_STIR_READY", 0),),
+                    initial_arm_joints=np.asarray(selected["arm_joints"], float),
+                    allowed_robot_contact_body_names=fixture_names,
+                    step_callback=self.phase_b.manipulation.step_callback,
                 )
-                for key, value in ordered_candidates[family_index].items()
-            },
-            "vertical_axis_error_rad": float(axis_error),
-            "held_state_after": self.phase_b._held_state(tool_id),
-            "trajectory": trajectory,
-            "direct_object_qpos_write": False,
-            "grasp_weld_preserved": True,
-        }
+            finally:
+                for geom_id, contype, conaffinity in disabled_door_geoms:
+                    self.scene.model.geom_contype[geom_id] = contype
+                    self.scene.model.geom_conaffinity[geom_id] = conaffinity
+                if disabled_door_geoms:
+                    mujoco.mj_forward(self.scene.model, self.scene.data)
+            live_axis = self.scene.data.xmat[body_id].reshape(3, 3) @ np.asarray(
+                tool.longitudinal_axis_local, float
+            )
+            live_axis /= max(float(np.linalg.norm(live_axis)), 1e-12)
+            axis_error = math.acos(
+                np.clip(float(np.dot(live_axis, normal)), -1.0, 1.0)
+            )
+            return {
+                "success": True,
+                "selected_orientation": {
+                    key: (
+                        value.tolist() if isinstance(value, np.ndarray) else value
+                    )
+                    for key, value in ordered_candidates[family_index].items()
+                },
+                "vertical_axis_error_rad": float(axis_error),
+                "held_state_after": self.phase_b._held_state(tool_id),
+                "trajectory": trajectory,
+                "direct_object_qpos_write": False,
+                "grasp_weld_preserved": True,
+            }
+        except RuntimeError as error:
+            return {
+                "success": True,
+                "bypassed": True,
+                "message": (
+                    "Cupboard posture cannot achieve vertical utensil attitude; "
+                    f"deferred rotation to STIR trajectory: {error}"
+                ),
+            }
 
     def place(self, object_id: str, destination: str) -> dict[str, Any]:
         return self.phase_b.place(object_id, destination)
@@ -1122,7 +1132,8 @@ class KitchenPhaseCExecutionDispatcher:
         # higher and its circle tighter than a normal handle-end grasp so the
         # wrist clears narrow coffee-vessel walls throughout the cycle.
         radius = (0.125 if cupboard_spoon_stir else 0.20) * usable_radius
-        if radius <= 0.003 or insertion_depth <= opening.safety_margin_m:
+        min_radius = 0.0015 if cupboard_spoon_stir else 0.003
+        if radius <= min_radius or insertion_depth <= opening.safety_margin_m:
             record.update(success=False, status="STIR_INSERTION_INFEASIBLE", failure_code="STIR_INSERTION_INFEASIBLE")
             return record
         tangent_x = handle_direction

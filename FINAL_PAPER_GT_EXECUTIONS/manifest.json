@@ -4,7 +4,7 @@
   "environment_counts": {
     "kitchen": 6,
     "living_room": 7,
-    "workshop": 2
+    "workshop": 4
   },
   "purpose": "Final-paper natural-speed five-view GT robot executions",
   "records": [
@@ -417,27 +417,27 @@
         "environment": "workshop",
         "internal_variant": "F0_MANUAL_FIRST_ONE_REGION",
         "recorded_summary_reported_wall_s": null,
-        "recording_overhead_wall_s": 121.065063824,
+        "recording_overhead_wall_s": 0.44756060200001,
         "simulation_duration_s": null,
         "speed_policy": "NATURAL_SIMULATION_TIME_NO_POSTPROCESS_SPEEDUP",
         "unrecorded_summary_reported_wall_s": null,
         "variant": "W1",
-        "video_duration_s": 452.55,
+        "video_duration_s": 390.3,
         "video_fps": "20/1",
-        "with_recording_wall_s": 144.666518891,
-        "without_recording_wall_s": 23.601455067
+        "with_recording_wall_s": 391.464286409,
+        "without_recording_wall_s": 391.016725807
       },
       "variant": "W1",
       "video": "workshop/W1/robot_execution_5cam.mp4",
       "video_metadata": {
-        "duration_s": 452.55,
-        "frame_count": 9051,
+        "duration_s": 390.3,
+        "frame_count": 7806,
         "frame_rate": "20/1",
-        "height": 720,
-        "size_bytes": 167763779,
-        "width": 1920
+        "height": 1080,
+        "size_bytes": 260993981,
+        "width": 2880
       },
-      "video_sha256": "01ffdeafa57a176f95ce18c7a6f2cc3a2ca4bb29f8bd6dcfe9d9112a8a128670"
+      "video_sha256": "01b0342878b103d6cf61f13eaa8a8023ab3223bd99ea3b33eb05ea0ec77f9a56"
     },
     {
       "environment": "workshop",
@@ -448,29 +448,91 @@
         "environment": "workshop",
         "internal_variant": "F1_POWER_FIRST_ONE_REGION",
         "recorded_summary_reported_wall_s": null,
-        "recording_overhead_wall_s": 0.5984421040000143,
+        "recording_overhead_wall_s": 0.5268749570000182,
         "simulation_duration_s": null,
         "speed_policy": "NATURAL_SIMULATION_TIME_NO_POSTPROCESS_SPEEDUP",
         "unrecorded_summary_reported_wall_s": null,
         "variant": "W2",
-        "video_duration_s": 439.55,
+        "video_duration_s": 380.3,
         "video_fps": "20/1",
-        "with_recording_wall_s": 440.508411175,
-        "without_recording_wall_s": 439.909969071
+        "with_recording_wall_s": 381.446976038,
+        "without_recording_wall_s": 380.920101081
       },
       "variant": "W2",
       "video": "workshop/W2/robot_execution_5cam.mp4",
       "video_metadata": {
-        "duration_s": 439.55,
-        "frame_count": 8791,
+        "duration_s": 380.3,
+        "frame_count": 7606,
         "frame_rate": "20/1",
         "height": 1080,
-        "size_bytes": 292794678,
+        "size_bytes": 258986572,
         "width": 2880
       },
-      "video_sha256": "809068bac5bd8291e29c2a2835b8b3625496a9821e2401c1011f1100389e6087"
+      "video_sha256": "1578d82279a3c345d262b4a99a1e720897ee72a5f76fa55636656382e4c96fba"
+    },
+    {
+      "environment": "workshop",
+      "execution_success": true,
+      "gt_action_sequence_exact_match": true,
+      "source_variant": "F2_MANUAL_FIRST_TWO_REGIONS",
+      "timing": {
+        "environment": "workshop",
+        "internal_variant": "F2_MANUAL_FIRST_TWO_REGIONS",
+        "recorded_summary_reported_wall_s": null,
+        "recording_overhead_wall_s": 0.6020559800000456,
+        "simulation_duration_s": null,
+        "speed_policy": "NATURAL_SIMULATION_TIME_NO_POSTPROCESS_SPEEDUP",
+        "unrecorded_summary_reported_wall_s": null,
+        "variant": "W3",
+        "video_duration_s": 545.55,
+        "video_fps": "20/1",
+        "with_recording_wall_s": 546.630143375,
+        "without_recording_wall_s": 546.028087395
+      },
+      "variant": "W3",
+      "video": "workshop/W3/robot_execution_5cam.mp4",
+      "video_metadata": {
+        "duration_s": 545.55,
+        "frame_count": 10911,
+        "frame_rate": "20/1",
+        "height": 1080,
+        "size_bytes": 366449939,
+        "width": 2880
+      },
+      "video_sha256": "67e043d6e425c4834893335bad0a94ac08015acbbc2ab025d6d3b63a5e1b2ec7"
+    },
+    {
+      "environment": "workshop",
+      "execution_success": true,
+      "gt_action_sequence_exact_match": true,
+      "source_variant": "F3_POWER_FIRST_TWO_REGIONS",
+      "timing": {
+        "environment": "workshop",
+        "internal_variant": "F3_POWER_FIRST_TWO_REGIONS",
+        "recorded_summary_reported_wall_s": null,
+        "recording_overhead_wall_s": 1.0378922680000073,
+        "simulation_duration_s": null,
+        "speed_policy": "NATURAL_SIMULATION_TIME_NO_POSTPROCESS_SPEEDUP",
+        "unrecorded_summary_reported_wall_s": null,
+        "variant": "W4",
+        "video_duration_s": 499.3,
+        "video_fps": "20/1",
+        "with_recording_wall_s": 500.234488409,
+        "without_recording_wall_s": 499.196596141
+      },
+      "variant": "W4",
+      "video": "workshop/W4/robot_execution_5cam.mp4",
+      "video_metadata": {
+        "duration_s": 499.3,
+        "frame_count": 9986,
+        "frame_rate": "20/1",
+        "height": 1080,
+        "size_bytes": 344838638,
+        "width": 2880
+      },
+      "video_sha256": "21dcf86ef61f89f4a0d86933ec1a1704a07cb5b24bf24cb428f25f98866cf9c3"
     }
   ],
   "schema_version": 1,
-  "total_variants": 15
+  "total_variants": 17
 }

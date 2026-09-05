@@ -48,6 +48,20 @@ def _storage_relative_workspace(
 ) -> tuple[KitchenWorkspace, str | None] | None:
     if destination not in dispatcher.binding_by_id:
         return None
+    backend = dispatcher.binding_by_id.get(destination, {}).get(
+        "physical_backend_body", destination
+    )
+    body_id = mujoco.mj_name2id(
+        dispatcher.scene.model, mujoco.mjtObj.mjOBJ_BODY, backend
+    )
+    if body_id >= 0:
+        pos = dispatcher.scene.data.xpos[body_id]
+        # Serving table is at Y <= -0.35; countertop is at Y in [-0.25, 0.45] and Z >= 0.55.
+        # Any destination currently resting on serving table or countertop is outside storage.
+        if pos[1] < -0.35 or (pos[2] >= 0.55 and -0.85 <= pos[0] <= 0.85 and -0.25 <= pos[1] <= 0.45):
+            return None
+    if destination in getattr(dispatcher, "_phase4_served_terminal_latches", {}):
+        return None
     resolver = getattr(
         getattr(getattr(dispatcher, "phase_b", None), "manipulation", None),
         "placement_resolver",
@@ -237,9 +251,11 @@ def _patched_place(
 
 
 def install_patch() -> None:
-    global _PATCHED
+    global _PATCHED, _ORIGINAL_PLACE, _ORIGINAL_MOVE
     if _PATCHED:
         return
+    _ORIGINAL_MOVE = KitchenGroundTruthExecutionDispatcher.move
+    _ORIGINAL_PLACE = KitchenGroundTruthExecutionDispatcher.place
     KitchenGroundTruthExecutionDispatcher.move = _patched_move
     KitchenGroundTruthExecutionDispatcher.place = _patched_place
     _PATCHED = True
