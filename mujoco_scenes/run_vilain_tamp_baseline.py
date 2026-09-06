@@ -28,6 +28,7 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIGS = {
     ModelCondition.PAPER_FAITHFUL: PACKAGE_ROOT / "configs" / "paper_faithful.yaml",
     ModelCondition.MODEL_MATCHED: PACKAGE_ROOT / "configs" / "model_matched.yaml",
+    ModelCondition.QWEN_ONLY: PACKAGE_ROOT / "configs" / "qwen_only.yaml",
 }
 ComponentFactory = Callable[[BaselineConfig, RunOptions], RunnerComponents]
 
@@ -55,8 +56,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--model-condition",
         choices=tuple(item.value for item in ModelCondition),
-        default=ModelCondition.PAPER_FAITHFUL.value,
+        default=ModelCondition.QWEN_ONLY.value,
         help="Select the paper-faithful or optional model-matched condition.",
+    )
+    parser.add_argument(
+        "--live",
+        action="store_true",
+        help="Compose the baseline-owned live planning runtime.",
     )
     parser.add_argument(
         "--config",
@@ -197,10 +203,14 @@ def main(
     if args.dry_run:
         print(json.dumps(options.to_dict(), indent=2, sort_keys=True))
         return 0
+    if component_factory is None and args.live:
+        from .baselines.vilain_tamp.runtime import build_live_components
+
+        component_factory = build_live_components
     if component_factory is None:
         parser.error(
-            "runtime adapters are required; invoke main with a baseline-owned "
-            "component factory (offline fixtures are completed in Stage 15)"
+            "runtime adapters are required; pass --live or invoke main with a "
+            "baseline-owned component factory"
         )
     assert component_factory is not None
     components = component_factory(config, options)

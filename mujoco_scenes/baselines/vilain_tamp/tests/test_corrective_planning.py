@@ -35,6 +35,10 @@ from mujoco_scenes.baselines.vilain_tamp.planner import (
 from mujoco_scenes.baselines.vilain_tamp.prompts import (
     build_corrective_planning_prompt,
 )
+from mujoco_scenes.baselines.vilain_tamp.symbolic_contract import (
+    build_variant_action_contract,
+    enumerate_grounded_facts,
+)
 
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures"
@@ -212,6 +216,60 @@ def test_three_corrections_and_four_tamp_attempts_exhaust_the_budget(
     assert len(result.corrections) == 3
     assert len(result.tamp_attempts) == 4
     assert len(transport.requests) == 3
+
+
+def test_live_safe_cp_selects_fact_ids_and_never_accepts_raw_pddl(
+    tmp_path: Path,
+) -> None:
+    domain = load_domain("kitchen")
+    inventory = {
+        "counter": "surface",
+        "coffee": "content",
+        "coffee_source_1": "source",
+        "spoon_1": "utensil",
+    }
+    contract = build_variant_action_contract(
+        domain, "fixture", structural_inventory=inventory
+    )
+    facts = enumerate_grounded_facts(
+        {**inventory, "mug_1": "vessel"}, contract
+    )
+    by_literal = {fact.literal: fact.fact_id for fact in facts}
+    response = json.dumps(
+        {
+            "true_fact_ids": [
+                by_literal["(handempty)"],
+                by_literal["(accessible counter)"],
+                by_literal["(at mug_1 counter)"],
+                by_literal["(at coffee_source_1 counter)"],
+                by_literal["(can-dispense coffee_source_1 coffee)"],
+            ],
+            "goal_fact_ids": [by_literal["(contains mug_1 coffee)"],],
+        }
+    )
+    transport = FakeTransport([response])
+    runner = FakeTAMPAttemptRunner(success_attempt=1)
+    loop = CorrectivePlanningLoop(
+        fm_client=RecordedFMClient(transport),
+        attempt_runner=runner,
+        model="qwen35-9b",
+        max_corrections=1,
+        symbolic_contract=contract,
+    )
+
+    result = loop.run(
+        task_instruction="Make coffee.",
+        domain=domain,
+        object_estimates=_object_estimates(),
+        initial_problem=_initial_problem(),
+        output_root=tmp_path,
+    )
+
+    assert result.status is CorrectiveRunStatus.SUCCESS
+    assert transport.requests[0].response_format == "json"
+    assert not transport.requests[0].messages[1]["content"].endswith("PDDL")
+    assert result.selected_problem is not None
+    assert result.selected_problem.problem_text.startswith("(define")
 
 
 def test_identical_revision_terminates_without_another_tamp_attempt(

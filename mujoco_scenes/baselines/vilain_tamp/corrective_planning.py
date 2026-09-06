@@ -24,6 +24,11 @@ from .fm import (
     FMTransportError,
     RecordedFMClient,
 )
+from .fact_selection import (
+    FactSelectionError,
+    compile_problem,
+    parse_corrective_selection,
+)
 from .pddl import validate_problem
 from .planner import (
     NoPlanError,
@@ -33,7 +38,16 @@ from .planner import (
     PlanValidationError,
     TranslatorError,
 )
-from .prompts import build_corrective_planning_prompt
+from .prompts import (
+    build_corrective_fact_selection_prompt,
+    build_corrective_planning_prompt,
+)
+from .symbolic_contract import (
+    VariantActionContract,
+    enumerate_grounded_facts,
+    initial_state_diagnostics,
+    relaxed_goal_diagnostics,
+)
 
 
 class CorrectivePlanningContractError(ValueError):
@@ -140,6 +154,7 @@ class CorrectivePlanningLoop:
         model: str,
         model_revision: str | None = None,
         max_corrections: int = 3,
+        symbolic_contract: VariantActionContract | None = None,
     ) -> None:
         if not 0 <= max_corrections <= 3:
             raise ValueError("max_corrections must be between zero and three")
@@ -150,6 +165,7 @@ class CorrectivePlanningLoop:
         self.model = model
         self.model_revision = model_revision
         self.max_corrections = max_corrections
+        self.symbolic_contract = symbolic_contract
 
     def run(
         self,
@@ -183,6 +199,24 @@ class CorrectivePlanningLoop:
         corrections: list[CorrectionAttemptRecord] = []
         history: list[dict[str, Any]] = []
         seen_problem_hashes = {_canonical_problem_hash(initial_problem.problem_text)}
+        object_inventory: dict[str, str] = {}
+        fact_candidates = ()
+        if self.symbolic_contract is not None:
+            if self.symbolic_contract.domain != domain.key:
+                raise CorrectivePlanningContractError(
+                    "corrective symbolic contract domain mismatch"
+                )
+            object_inventory.update(self.symbolic_contract.structural_inventory)
+            object_inventory.update(
+                {item.object_id: item.pddl_type for item in object_estimates}
+            )
+            fact_candidates = enumerate_grounded_facts(
+                object_inventory, self.symbolic_contract
+            )
+            atomic_write_json(
+                destination / "corrective_fact_universe.json",
+                {"facts": [fact.to_dict() for fact in fact_candidates]},
+            )
 
         outcome = self._attempt(current_problem, destination)
         attempts.append(outcome)
@@ -224,19 +258,28 @@ class CorrectivePlanningLoop:
             history_error_hashes = tuple(
                 str(entry["trigger_failure_sha256"]) for entry in history
             )
-            prompt = build_corrective_planning_prompt(
-                task_instruction=task_instruction,
-                domain=domain,
-                object_estimates=object_estimates,
-                initial_problem=initial_problem.problem_text,
-                current_problem=current_problem.problem_text,
-                current_failure=failure.to_dict(),
-                correction_history=history,
-                prior_problem_hashes=history_problem_hashes,
-                prior_error_summaries=tuple(
-                    str(entry["trigger_failure"]["summary"]) for entry in history
-                ),
-            )
+            if self.symbolic_contract is not None:
+                prompt = build_corrective_fact_selection_prompt(
+                    task_instruction=task_instruction,
+                    domain=domain,
+                    current_problem=current_problem.problem_text,
+                    current_failure=failure.to_dict(),
+                    fact_candidates=fact_candidates,
+                )
+            else:
+                prompt = build_corrective_planning_prompt(
+                    task_instruction=task_instruction,
+                    domain=domain,
+                    object_estimates=object_estimates,
+                    initial_problem=initial_problem.problem_text,
+                    current_problem=current_problem.problem_text,
+                    current_failure=failure.to_dict(),
+                    correction_history=history,
+                    prior_problem_hashes=history_problem_hashes,
+                    prior_error_summaries=tuple(
+                        str(entry["trigger_failure"]["summary"]) for entry in history
+                    ),
+                )
             atomic_write_json(
                 correction_root / "history_manifest.json",
                 {
@@ -254,7 +297,9 @@ class CorrectivePlanningLoop:
                         model=self.model,
                         revision=self.model_revision,
                         messages=prompt.messages(),
-                        response_format="pddl",
+                        response_format=(
+                            "json" if self.symbolic_contract is not None else "pddl"
+                        ),
                         metadata={"correction_index": correction_index},
                     ),
                     correction_root,
@@ -273,14 +318,53 @@ class CorrectivePlanningLoop:
                     destination,
                 )
 
-            stripped_problem = response.raw_text.strip()
-            raw_problem = stripped_problem + "\n" if stripped_problem else ""
-            raw_hash = sha256_text(raw_problem)
+            raw_selection = response.raw_text.strip()
+            raw_hash = sha256_text(raw_selection)
+            selection_diagnostics: tuple[str, ...] = ()
+            if self.symbolic_contract is not None:
+                try:
+                    selected_initial, selected_goal = parse_corrective_selection(
+                        raw_selection, candidates=fact_candidates
+                    )
+                    semantic_diagnostics = list(
+                        initial_state_diagnostics(selected_initial)
+                    ) + list(
+                        relaxed_goal_diagnostics(
+                            selected_initial,
+                            selected_goal,
+                            object_inventory,
+                            self.symbolic_contract,
+                        )
+                    )
+                    if set(fact.fact_id for fact in selected_goal).issubset(
+                        fact.fact_id for fact in selected_initial
+                    ):
+                        semantic_diagnostics.append(
+                            {
+                                "code": "CP_GOAL_ALREADY_TRUE_IN_REVISED_INIT",
+                                "detail": "CP may not manufacture success by asserting its goal initially",
+                            }
+                        )
+                    if semantic_diagnostics:
+                        raise ValueError(json.dumps(semantic_diagnostics, sort_keys=True))
+                    raw_problem, _, _, _ = compile_problem(
+                        domain=domain,
+                        problem_name=f"vilain-{domain.key}-attempt-{correction_index:02d}",
+                        object_types=object_inventory,
+                        initial_facts=selected_initial,
+                        goal_facts=selected_goal,
+                    )
+                except (FactSelectionError, ValueError) as error:
+                    raw_problem = ""
+                    selection_diagnostics = (str(error),)
+            else:
+                raw_problem = raw_selection + "\n" if raw_selection else ""
             validation = validate_problem(
                 raw_problem,
                 domain,
                 expected_domain_sha256=initial_problem.domain_sha256,
             )
+            validation_diagnostics = selection_diagnostics + validation.diagnostics
             failure_hash = _failure_hash(failure)
             common_record = {
                 "correction_index": correction_index,
@@ -295,11 +379,11 @@ class CorrectivePlanningLoop:
                 "latency_and_usage": _call_metrics(call),
             }
 
-            if not validation.valid:
+            if selection_diagnostics or not validation.valid:
                 correction = CorrectionAttemptRecord(
                     **common_record,
                     revised_problem_sha256=None,
-                    validation_diagnostics=validation.diagnostics,
+                    validation_diagnostics=validation_diagnostics,
                     status="INVALID_CORRECTION",
                 )
                 corrections.append(correction)
@@ -312,13 +396,13 @@ class CorrectivePlanningLoop:
                         raw_revision=raw_problem,
                         raw_hash=raw_hash,
                         status=correction.status,
-                        diagnostics=validation.diagnostics,
+                        diagnostics=validation_diagnostics,
                     )
                 )
                 failure = CorrectiveFailure(
                     CorrectiveFailureKind.INVALID_CORRECTION,
                     "corrective response is not a valid replacement PDDL problem",
-                    {"diagnostics": validation.diagnostics, "raw_response_sha256": raw_hash},
+                    {"diagnostics": validation_diagnostics, "raw_response_sha256": raw_hash},
                 )
                 continue
 

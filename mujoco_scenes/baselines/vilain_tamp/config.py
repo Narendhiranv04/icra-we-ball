@@ -24,6 +24,7 @@ class ObservationMode(str, Enum):
 class ModelCondition(str, Enum):
     PAPER_FAITHFUL = "paper_faithful"
     MODEL_MATCHED = "model_matched"
+    QWEN_ONLY = "vilain_tamp_qwen"
 
 
 @dataclass(frozen=True)
@@ -74,6 +75,9 @@ class BaselineConfig:
     reasoning_model: str
     symbolic_planner: str
     search_configuration: str
+    model_endpoint: str | None = None
+    served_model_family: str | None = None
+    served_revision: str | None = None
     independent_model_calls: bool = True
     execute_by_default: bool = False
     require_clean_execution_provenance: bool = True
@@ -126,6 +130,9 @@ class BaselineConfig:
             reasoning_model=str(data["reasoning_model"]),
             symbolic_planner=str(data["symbolic_planner"]),
             search_configuration=str(data["search_configuration"]),
+            model_endpoint=_optional_text(data.get("model_endpoint")),
+            served_model_family=_optional_text(data.get("served_model_family")),
+            served_revision=_optional_text(data.get("served_revision")),
             independent_model_calls=bool(data.get("independent_model_calls", True)),
             execute_by_default=bool(data.get("execute_by_default", False)),
             require_clean_execution_provenance=bool(

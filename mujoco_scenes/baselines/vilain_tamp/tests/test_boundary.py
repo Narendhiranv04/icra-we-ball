@@ -64,6 +64,7 @@ def test_only_live_adapter_may_import_simulator() -> None:
             "live_execution.py",
             "live_observations.py",
             "live_refinement.py",
+            "runtime.py",
         }:
             continue
         assert "import mujoco" not in source

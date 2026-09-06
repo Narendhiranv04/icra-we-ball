@@ -133,6 +133,9 @@ class GeometricCandidate:
     target_rotation: tuple[tuple[float, float, float], ...]
     source: str
     skill_parameters: Mapping[str, float] = field(default_factory=dict)
+    carry_position_m: tuple[float, float, float] | None = None
+    carry_rotation: tuple[tuple[float, float, float], ...] | None = None
+    ik_seed: tuple[float, ...] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -142,6 +145,15 @@ class GeometricCandidate:
             "target_rotation": [list(row) for row in self.target_rotation],
             "source": self.source,
             "skill_parameters": dict(self.skill_parameters),
+            "carry_position_m": (
+                list(self.carry_position_m)
+                if self.carry_position_m is not None else None
+            ),
+            "carry_rotation": (
+                [list(row) for row in self.carry_rotation]
+                if self.carry_rotation is not None else None
+            ),
+            "ik_seed": list(self.ik_seed) if self.ik_seed is not None else None,
         }
 
 
@@ -167,6 +179,7 @@ class IKEvaluation:
     approach_angle_error_rad: float | None
     target_angle_error_rad: float | None
     error: str | None = None
+    carry_qpos: tuple[float, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -179,6 +192,7 @@ class IKEvaluation:
             "approach_angle_error_rad": self.approach_angle_error_rad,
             "target_angle_error_rad": self.target_angle_error_rad,
             "error": self.error,
+            "carry_qpos": list(self.carry_qpos),
         }
 
 
@@ -347,6 +361,12 @@ class MuJoCoGeometryKernel:
         entities = _required_workspace(workspace, "entities")
         primary = entities[0]
         operator = _operator(context.action)
+        if operator == "pick-from":
+            self._prepare_local_pick_stance(scene, primary, workspace)
+            physical_candidates = self._physical_pick_candidates(scene, primary)
+            if physical_candidates:
+                workspace["candidates"] = physical_candidates
+                return physical_candidates
         target = self._target_position(scene, operator, entities)
         positions = (
             self._named_grasp_positions(scene, primary.entity_name)
@@ -400,21 +420,87 @@ class MuJoCoGeometryKernel:
         solver = ik_factory(scene.model, scene.data, scene.profile)
         seed = np.asarray(scene.data.qpos[_arm_qpos_addresses(scene)], dtype=float)
         evaluations: list[IKEvaluation] = []
+        candidate_paths: dict[str, np.ndarray] = {}
+        reachable_count = 0
         for candidate in candidates:
             try:
                 rotation = np.asarray(candidate.target_rotation, dtype=float)
-                approach_qpos, approach_error, approach_angle = solver.solve(
-                    np.asarray(candidate.approach_position_m), seed, rotation
+                candidate_seed = (
+                    np.asarray(candidate.ik_seed, dtype=float)
+                    if candidate.ik_seed is not None else seed
                 )
-                target_qpos, target_error, target_angle = solver.solve(
-                    np.asarray(candidate.target_position_m), approach_qpos, rotation
+                carry_qpos: tuple[float, ...] = ()
+                approach_seed = candidate_seed
+                if candidate.carry_position_m is not None:
+                    carry_rotation = np.asarray(
+                        candidate.carry_rotation or candidate.target_rotation,
+                        dtype=float,
+                    )
+                    carry, carry_error, carry_angle = solver.solve(
+                        np.asarray(candidate.carry_position_m, dtype=float),
+                        candidate_seed,
+                        carry_rotation,
+                    )
+                    if (
+                        carry_error > self.thresholds.position_tolerance_m
+                        or carry_angle > self.thresholds.angle_tolerance_rad
+                    ):
+                        raise LiveRefinementError(
+                            "NO_IK_SOLUTION",
+                            "carry waypoint does not satisfy the IK tolerances",
+                            numeric_evidence={
+                                "carry_position_error_m": float(carry_error),
+                                "carry_angle_error_rad": float(carry_angle),
+                            },
+                        )
+                    approach_seed = carry
+                    carry_qpos = tuple(float(value) for value in carry)
+                approach_points = (
+                    _cartesian_interpolate(
+                        np.asarray(candidate.carry_position_m, dtype=float),
+                        np.asarray(candidate.approach_position_m, dtype=float),
+                        0.025,
+                    )
+                    if candidate.carry_position_m is not None
+                    else (np.asarray(candidate.approach_position_m, dtype=float),)
                 )
+                path_qpos: list[np.ndarray] = []
+                approach_qpos = approach_seed
+                approach_error = approach_angle = 0.0
+                for point in approach_points:
+                    approach_qpos, point_error, point_angle = solver.solve(
+                        point, approach_qpos, rotation
+                    )
+                    approach_error = max(approach_error, float(point_error))
+                    approach_angle = max(approach_angle, float(point_angle))
+                    path_qpos.append(np.asarray(approach_qpos, dtype=float).copy())
+                target_qpos = approach_qpos
+                target_error = target_angle = 0.0
+                for point in _cartesian_interpolate(
+                    np.asarray(candidate.approach_position_m, dtype=float),
+                    np.asarray(candidate.target_position_m, dtype=float),
+                    0.012,
+                ):
+                    target_qpos, point_error, point_angle = solver.solve(
+                        point, target_qpos, rotation
+                    )
+                    target_error = max(target_error, float(point_error))
+                    target_angle = max(target_angle, float(point_angle))
+                    path_qpos.append(np.asarray(target_qpos, dtype=float).copy())
                 reachable = bool(
                     approach_error <= self.thresholds.position_tolerance_m
                     and target_error <= self.thresholds.position_tolerance_m
                     and approach_angle <= self.thresholds.angle_tolerance_rad
                     and target_angle <= self.thresholds.angle_tolerance_rad
                 )
+                if reachable:
+                    leading = (
+                        [np.asarray(carry_qpos, dtype=float)]
+                        if carry_qpos else []
+                    )
+                    candidate_paths[candidate.candidate_id] = np.asarray(
+                        [*leading, *path_qpos], dtype=float
+                    )
                 evaluation = IKEvaluation(
                     candidate_id=candidate.candidate_id,
                     reachable=reachable,
@@ -424,6 +510,7 @@ class MuJoCoGeometryKernel:
                     target_position_error_m=float(target_error),
                     approach_angle_error_rad=float(approach_angle),
                     target_angle_error_rad=float(target_angle),
+                    carry_qpos=carry_qpos,
                 )
             except Exception as error:
                 evaluation = IKEvaluation(
@@ -438,6 +525,12 @@ class MuJoCoGeometryKernel:
                     f"{type(error).__name__}: {error}",
                 )
             evaluations.append(evaluation)
+            if evaluation.reachable:
+                reachable_count += 1
+                # Preserve several collision alternatives without spending a
+                # full IK solve on hundreds of near-duplicate handle heights.
+                if reachable_count >= 16:
+                    break
         reachable = [item for item in evaluations if item.reachable]
         if not reachable:
             finite_errors = [
@@ -463,6 +556,7 @@ class MuJoCoGeometryKernel:
             ),
         )
         workspace["ik_evaluations"] = tuple(evaluations)
+        workspace["candidate_arm_paths"] = candidate_paths
         workspace["chosen_ik"] = chosen
         return chosen, tuple(evaluations)
 
@@ -480,21 +574,58 @@ class MuJoCoGeometryKernel:
                 continue
             approach = np.asarray(evaluation.approach_qpos, dtype=float)
             target = np.asarray(evaluation.target_qpos, dtype=float)
+            planned_path = workspace.get("candidate_arm_paths", {}).get(
+                evaluation.candidate_id
+            )
+            if planned_path is not None and len(planned_path):
+                first = _interpolate(
+                    start,
+                    np.asarray(planned_path[0], dtype=float),
+                    self.thresholds.joint_interpolation_step_rad,
+                )
+                outbound = np.asarray(planned_path[1:], dtype=float)
+                contact_index = len(first) + len(outbound) - 1
+                return_path = np.asarray(planned_path[-2::-1], dtype=float)
+                candidate_trajectory = np.concatenate(
+                    (first, outbound, return_path), axis=0
+                )
+                if not np.all(np.isfinite(candidate_trajectory)):
+                    continue
+                trajectories[evaluation.candidate_id] = candidate_trajectory
+                contact_indices[evaluation.candidate_id] = contact_index
+                continue
+            carry = (
+                np.asarray(evaluation.carry_qpos, dtype=float)
+                if evaluation.carry_qpos else None
+            )
+            first_goal = carry if carry is not None else approach
             first = _interpolate(
-                start, approach, self.thresholds.joint_interpolation_step_rad
+                start, first_goal, self.thresholds.joint_interpolation_step_rad
+            )
+            approach_segment = (
+                _interpolate(
+                    carry, approach, self.thresholds.joint_interpolation_step_rad
+                )[1:]
+                if carry is not None else np.empty((0, len(start)))
             )
             second = _interpolate(
                 approach, target, self.thresholds.joint_interpolation_step_rad
             )[1:]
-            contact_index = len(first) + len(second) - 1
-            parts = (first, second)
+            contact_index = len(first) + len(approach_segment) + len(second) - 1
+            parts = (first, approach_segment, second)
             if _operator(context.action) in _BLACK_BOX_SKILLS or _operator(
                 context.action
             ) in {"pick-from", "place-on", "place-in", "insert"}:
                 retreat = _interpolate(
                     target, approach, self.thresholds.joint_interpolation_step_rad
                 )[1:]
-                parts = (first, second, retreat)
+                return_to_carry = (
+                    _interpolate(
+                        approach, carry, self.thresholds.joint_interpolation_step_rad
+                    )[1:]
+                    if carry is not None else np.empty((0, len(start)))
+                )
+                parts = (first, approach_segment, second, retreat, return_to_carry)
             candidate_trajectory = np.concatenate(parts, axis=0)
             if not np.all(np.isfinite(candidate_trajectory)):
                 continue
@@ -507,7 +638,10 @@ class MuJoCoGeometryKernel:
         trajectory = trajectories[chosen.candidate_id]
         operator = _operator(context.action)
         terminal = (
-            np.asarray(chosen.approach_qpos, dtype=float)
+            np.asarray(
+                chosen.carry_qpos or chosen.approach_qpos,
+                dtype=float,
+            )
             if operator in _BLACK_BOX_SKILLS
             or operator in {"pick-from", "place-on", "place-in", "insert"}
             else np.asarray(chosen.target_qpos, dtype=float)
@@ -771,6 +905,199 @@ class MuJoCoGeometryKernel:
             state["opened_entities"] = opened
         return state
 
+    def _prepare_local_pick_stance(
+        self,
+        scene: MuJoCoPlanningScene,
+        primary: EntityGeometry,
+        workspace: dict[str, Any],
+    ) -> None:
+        """Apply the controller's bounded, collision-checked mobile approach.
+
+        Mobile manipulation controllers first put the arm in its navigation
+        posture and move the base a short distance toward the observed body.
+        Arm-only IK from the navigation anchor is therefore not equivalent to
+        the physical controller's reachability problem.
+        """
+        robot_name = str(scene.profile.gripper_body).split(":", 1)[0]
+        try:
+            from mujoco_scenes.manipulation_stance import (
+                qpos_to_world_stance,
+                world_stance_to_qpos,
+            )
+            from mujoco_scenes.mobile_motion import MuJoCoBaseCollisionChecker
+            from mujoco_scenes.robot_profiles import mobile_profile
+
+            mobile = mobile_profile(robot_name)
+        except (ImportError, KeyError, ValueError):
+            return
+        joint_ids = np.asarray(
+            [
+                scene.mujoco.mj_name2id(
+                    scene.model, scene.mujoco.mjtObj.mjOBJ_JOINT, name
+                )
+                for name in mobile.base_joints
+            ],
+            dtype=int,
+        )
+        if np.any(joint_ids < 0):
+            return
+        addresses = np.asarray(scene.model.jnt_qposadr[joint_ids], dtype=int)
+        start_qpos = np.asarray(scene.data.qpos[addresses], dtype=float).copy()
+        anchor = qpos_to_world_stance(start_qpos, home_y=mobile.home_y)
+        yaw = float(anchor.yaw)
+        forward_axis = np.asarray((-math.sin(yaw), math.cos(yaw)))
+        lateral_axis = np.asarray((-math.cos(yaw), -math.sin(yaw)))
+        delta = np.asarray(primary.centroid_m[:2], dtype=float) - np.asarray(
+            (anchor.x, anchor.y), dtype=float
+        )
+        local_forward = float(np.dot(delta, forward_axis))
+        local_lateral = float(np.dot(delta, lateral_axis))
+        target_qpos = start_qpos + np.asarray(
+            (
+                float(np.clip(local_forward, 0.0, 0.20)),
+                float(np.clip(local_lateral, -0.18, 0.18)),
+                0.0,
+            )
+        )
+        target = qpos_to_world_stance(target_qpos, home_y=mobile.home_y)
+
+        reference = scene.mujoco.MjData(scene.model)
+        _copy_data_state(scene.data, reference)
+        arm_addresses = _arm_qpos_addresses(scene)
+        reference.qpos[arm_addresses] = np.asarray(
+            scene.profile.navigation_joints, dtype=float
+        )
+        reference.qvel[:] = 0.0
+        scene.mujoco.mj_forward(scene.model, reference)
+        checker = MuJoCoBaseCollisionChecker(scene.model, reference, mobile)
+        samples = tuple(
+            (
+                anchor.x + fraction * (target.x - anchor.x),
+                anchor.y + fraction * (target.y - anchor.y),
+                anchor.yaw + fraction * (target.yaw - anchor.yaw),
+            )
+            for fraction in np.linspace(0.0, 1.0, 8)
+        )
+        if not all(checker.is_pose_valid(*pose) for pose in samples):
+            raise LiveRefinementError(
+                "BASE_PATH_COLLISION",
+                "bounded mobile manipulation approach is not collision-free",
+                numeric_evidence={"base_path_samples": float(len(samples))},
+            )
+
+        scene.data.qpos[addresses] = target_qpos
+        scene.data.qpos[arm_addresses] = np.asarray(
+            scene.profile.navigation_joints, dtype=float
+        )
+        scene.data.qvel[:] = 0.0
+        scene.mujoco.mj_forward(scene.model, scene.data)
+        workspace["base_start_qpos"] = start_qpos
+        workspace["base_target_qpos"] = target_qpos
+        workspace["base_path_samples"] = samples
+        workspace["base_world_delta"] = np.asarray(
+            (target.x - anchor.x, target.y - anchor.y, 0.0), dtype=float
+        )
+
+    def _physical_pick_candidates(
+        self,
+        scene: MuJoCoPlanningScene,
+        primary: EntityGeometry,
+    ) -> tuple[GeometricCandidate, ...]:
+        """Resolve neutral body geometry to controller-equivalent pick poses."""
+        geom_object_type = getattr(scene.mujoco.mjtObj, "mjOBJ_GEOM", None)
+        if geom_object_type is None:
+            return ()
+        geom_names = tuple(
+            scene.mujoco.mj_id2name(
+                scene.model, geom_object_type, geom_id
+            )
+            or ""
+            for geom_id in range(scene.model.ngeom)
+            if int(scene.model.geom_bodyid[geom_id]) == primary.body_id
+        )
+        has_handle = any("handle_collision" in name for name in geom_names)
+        has_utensil_head = any(
+            token in name
+            for name in geom_names
+            for token in ("bowl_collision", "tine_collision")
+        )
+        has_kettle_shell = any("kettle_collision" in name for name in geom_names)
+        workspace = next(
+            reversed(scene.workspaces.values()),
+            {},
+        )
+        base_delta = np.asarray(workspace.get("base_world_delta", np.zeros(3)))
+        carry_position = np.asarray(scene.profile.carry_position, dtype=float) + base_delta
+        seed = tuple(float(value) for value in scene.profile.home_seed)
+
+        descriptors: list[tuple[str, np.ndarray, np.ndarray, np.ndarray]] = []
+        if has_handle and has_utensil_head:
+            # This generator is purely geometric: it derives handle-frame
+            # fractions and wrist branches from collision geometry, without
+            # task roles or benchmark assignments.
+            from mujoco_scenes.kitchen_object_manipulation import (
+                UtensilGraspCandidateGenerator,
+            )
+
+            for item in UtensilGraspCandidateGenerator.generate(
+                scene, primary.body_id, "TABLE"
+            ):
+                local = np.asarray(item.grasp_site_local_position_m, dtype=float)
+                target = np.asarray(scene.data.xpos[primary.body_id]) + np.asarray(
+                    scene.data.xmat[primary.body_id], dtype=float
+                ).reshape(3, 3) @ local
+                target[2] += 0.020
+                approach = target + np.asarray(
+                    item.approach_offset_world_m
+                    or (0.0, 0.0, item.approach_clearance_m),
+                    dtype=float,
+                )
+                descriptors.append(
+                    (
+                        item.candidate_id,
+                        target,
+                        approach,
+                        np.asarray(item.target_rotation_world, dtype=float),
+                    )
+                )
+        elif has_kettle_shell:
+            body_rotation = np.asarray(
+                scene.data.xmat[primary.body_id], dtype=float
+            ).reshape(3, 3)
+            target = np.asarray(scene.data.xpos[primary.body_id], dtype=float) + (
+                body_rotation @ np.asarray((0.0, 0.0, 0.040))
+            )
+            target[2] -= 0.020
+            yaw = math.radians(315.0)
+            cosine, sine = math.cos(yaw), math.sin(yaw)
+            rotation = np.asarray(
+                ((cosine, -sine, 0.0), (sine, cosine, 0.0), (0.0, 0.0, 1.0))
+            ) @ np.asarray(scene.profile.top_down_rotation, dtype=float)
+            descriptors.append(
+                (
+                    "upper_body_shell",
+                    target,
+                    target + np.asarray((0.0, 0.0, 0.120)),
+                    rotation,
+                )
+            )
+        else:
+            return ()
+
+        return tuple(
+            GeometricCandidate(
+                candidate_id=f"physical_{index:03d}_{identifier}",
+                target_position_m=_vector_tuple(target),
+                approach_position_m=_vector_tuple(approach),
+                target_rotation=_matrix_tuple(rotation),
+                source="PHYSICAL_MANIPULATION_DESCRIPTOR",
+                carry_position_m=_vector_tuple(carry_position),
+                carry_rotation=_matrix_tuple(rotation),
+                ik_seed=seed,
+            )
+            for index, (identifier, target, approach, rotation) in enumerate(descriptors)
+        )
+
     def _entity_geometry(
         self, scene: MuJoCoPlanningScene, entity_name: str
     ) -> EntityGeometry:
@@ -947,7 +1274,10 @@ class MuJoCoGeometryKernel:
         if operator == "pour":
             horizontal = position - target_center
             horizontal -= np.dot(horizontal, target_axis) * target_axis
-            source_half_height = 0.5 * float(np.max(source_dimensions))
+            # Candidate construction places the source using its world-Z
+            # extent.  Validate against the same physical axis; using the
+            # largest AABB dimension falsely rejects wide, low vessels.
+            source_half_height = 0.5 * float(source_dimensions[2])
             clearance = float(position[2] - source_half_height - target.aabb_max_m[2])
             return {
                 "horizontal_offset_m": float(np.linalg.norm(horizontal)),
@@ -1363,6 +1693,22 @@ def _interpolate(start: np.ndarray, goal: np.ndarray, resolution: float) -> np.n
         )
     steps = max(1, int(math.ceil(float(np.max(np.abs(goal - start))) / resolution)))
     return np.linspace(start, goal, steps + 1)
+
+
+def _cartesian_interpolate(
+    start: np.ndarray, goal: np.ndarray, resolution: float
+) -> tuple[np.ndarray, ...]:
+    if start.shape != (3,) or goal.shape != (3,):
+        raise LiveRefinementError(
+            "INVALID_TRAJECTORY", "Cartesian endpoints must be 3-D vectors"
+        )
+    count = max(
+        1, int(math.ceil(float(np.linalg.norm(goal - start)) / resolution))
+    )
+    return tuple(
+        start + fraction * (goal - start)
+        for fraction in np.linspace(0.0, 1.0, count + 1)[1:]
+    )
 
 
 def _yaw_variants(base: np.ndarray) -> tuple[np.ndarray, ...]:

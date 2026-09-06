@@ -1,5 +1,19 @@
 # ViLaIn-TAMP baseline
 
+## ViLaIn-TAMP-Qwen live condition
+
+The Stage-22 production runtime uses the remotely served Qwen model for four
+independent calls: object estimation, initial-state estimation, goal-state
+estimation, and Corrective Planning. The architectural and prompt boundaries
+remain separate. This is a Qwen-only reproduction of ViLaIn-TAMP and is not
+the original paper's exact Qwen/GPT-4o model allocation. The client is pinned
+to the localhost SSH-tunnel endpoint `http://127.0.0.1:18000/v1`; it never uses
+the OpenAI cloud endpoint and requires no `OPENAI_API_KEY`.
+The active server reports served ID `qwen35-9b` and family
+`Qwen/Qwen3.5-9B`; it does not expose an immutable revision, so live artifacts
+record the served revision as `unverified`. The historical Qwen2.5 revision is
+not attributed to this service.
+
 This package is a **parallel ViLaIn-TAMP baseline**. It owns its observations,
 PDDL problems, symbolic plans, refinement records, and execution projections.
 It does not run through `G_F`, `G_O`, `ground_graph()`, or `phi*`, and it does

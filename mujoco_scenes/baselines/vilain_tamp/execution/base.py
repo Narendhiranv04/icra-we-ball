@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import Any, Mapping, Sequence
 
 from ..contracts import ExecutionProjection, SymbolicAction
@@ -41,6 +42,25 @@ _RULES: dict[str, dict[str, _ProjectionRule]] = {
         "place-on": _ProjectionRule("PLACE", 2, (0, 1)),
     },
 }
+
+
+def controller_capabilities(domain: str) -> Mapping[str, tuple[str, tuple[int, ...]]]:
+    """Expose the neutral symbolic-to-controller vocabulary used at runtime.
+
+    This intentionally contains no entity choice, variant solution, trajectory,
+    or proposed-method artifact.  It is the single baseline-owned source used
+    by both action projection and the prompt-facing symbolic contract.
+    """
+    domain_key = domain.strip().lower().replace("-", "_")
+    rules = _RULES.get(domain_key)
+    if rules is None:
+        raise ProjectionError(f"unsupported baseline domain {domain!r}")
+    return MappingProxyType(
+        {
+            operator: (rule.controller_operator, rule.controller_argument_indices)
+            for operator, rule in rules.items()
+        }
+    )
 
 
 def project_action(

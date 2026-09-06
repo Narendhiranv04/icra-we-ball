@@ -208,6 +208,35 @@ def test_model_payload_excludes_variant_and_backend_identifiers(tmp_path: Path) 
     assert "body" not in payload.lower()
 
 
+def test_live_scene_factory_does_not_force_layout_seed(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_create_scene(domain, variant, *, robot, layout_seed):
+        captured.update(
+            domain=domain,
+            variant=variant,
+            robot=robot,
+            layout_seed=layout_seed,
+        )
+        return fake_scene(Domain.KITCHEN)
+
+    monkeypatch.setattr(
+        "mujoco_scenes.baselines.vilain_tamp.live_observations._create_scene",
+        fake_create_scene,
+    )
+    create_live_observation_runtime(
+        domain=Domain.KITCHEN,
+        variant="K1",
+        observation_mode=ObservationMode.INITIAL_ONLY,
+        output_root=tmp_path,
+        mujoco_module=FakeMujoco,
+    )
+
+    assert captured["layout_seed"] is None
+
+
 def test_opening_and_capture_reject_noncanonical_inputs() -> None:
     scene = fake_scene(Domain.KITCHEN)
     opener = SceneRegionOpeningBackend(domain=Domain.KITCHEN, scene=scene)

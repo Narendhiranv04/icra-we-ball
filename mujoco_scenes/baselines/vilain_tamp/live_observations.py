@@ -186,7 +186,7 @@ def create_live_observation_runtime(
     robot: str = "none",
     width: int = 640,
     height: int = 480,
-    layout_seed: int = 0,
+    layout_seed: int | None = None,
     scene: Any | None = None,
     mujoco_module: Any | None = None,
 ) -> LiveObservationRuntime:
@@ -236,7 +236,7 @@ def create_live_observation_runtime(
 
 
 def _create_scene(
-    domain: Domain, variant: str, *, robot: str, layout_seed: int
+    domain: Domain, variant: str, *, robot: str, layout_seed: int | None
 ) -> Any:
     from mujoco_scenes.final_paper_variant_labels import (
         VARIANT_LABELS,

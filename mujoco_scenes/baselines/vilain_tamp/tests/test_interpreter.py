@@ -17,7 +17,12 @@ from mujoco_scenes.baselines.vilain_tamp.interpreter import (
     InterpreterModels,
     InterpreterOutputError,
     ViLaInInterpreter,
+    _declared_object_types,
+    _extract_initial_fragments,
     normalize_object_estimates,
+)
+from mujoco_scenes.baselines.vilain_tamp.symbolic_contract import (
+    build_variant_action_contract,
 )
 from mujoco_scenes.baselines.vilain_tamp.observations import (
     CameraFrameCapture,
@@ -63,11 +68,12 @@ class FixtureTransport:
         if request.call_type is FMCallType.OBJECT_ESTIMATION:
             raw_text = (self.fixture_dir / "objects.json").read_text(encoding="utf-8")
         elif request.call_type is FMCallType.INITIAL_STATE:
-            raw_text = self.initial_override or (
-                self.fixture_dir / "initial.pddlfrag"
-            ).read_text(encoding="utf-8")
+            if self.initial_override is not None:
+                raw_text = self.initial_override
+            else:
+                raw_text = self._selection(request, "initial.pddlfrag", "true_fact_ids")
         elif request.call_type is FMCallType.GOAL_STATE:
-            raw_text = (self.fixture_dir / "goal.pddlfrag").read_text(encoding="utf-8")
+            raw_text = self._selection(request, "goal.pddlfrag", "goal_fact_ids")
         else:
             raise AssertionError(f"unexpected call type: {request.call_type}")
         return FMTransportResponse(
@@ -77,6 +83,16 @@ class FixtureTransport:
             revision=request.revision,
             usage={"input_tokens": 1, "output_tokens": 1},
         )
+
+    def _selection(self, request: FMRequest, fixture: str, field: str) -> str:
+        candidates = request.metadata["fact_candidates"]
+        source = (self.fixture_dir / fixture).read_text(encoding="utf-8").lower()
+        selected = [
+            fact_id
+            for fact_id, literal in candidates.items()
+            if literal in source
+        ]
+        return __import__("json").dumps({field: selected})
 
 
 def acquire_observation(tmp_path: Path, domain_key: str):
@@ -93,6 +109,31 @@ def acquire_observation(tmp_path: Path, domain_key: str):
 
 def make_interpreter(transport: FixtureTransport) -> ViLaInInterpreter:
     client = RecordedFMClient(transport)
+    domain = load_domain(transport.fixture_dir.name)
+    initial = (transport.fixture_dir / "initial.pddlfrag").read_text(encoding="utf-8")
+    objects, _ = _extract_initial_fragments(initial)
+    declared = _declared_object_types(objects)
+    observed = __import__("json").loads(
+        (transport.fixture_dir / "objects.json").read_text(encoding="utf-8")
+    )["objects"]
+    def is_movable(type_name: str) -> bool:
+        current: str | None = type_name
+        while current is not None:
+            if current == "movable":
+                return True
+            current = domain.type_hierarchy.get(current)
+        return False
+
+    observed_ids = {
+        f"{row['label'].lower().replace(' ', '_')}_1"
+        for row in observed
+        if is_movable(row["pddl_type"])
+    }
+    structural = {
+        object_id: object_type
+        for object_id, object_type in declared.items()
+        if object_id not in observed_ids
+    }
     return ViLaInInterpreter(
         object_client=client,
         reasoning_client=client,
@@ -102,6 +143,9 @@ def make_interpreter(transport: FixtureTransport) -> ViLaInInterpreter:
             reasoning_model="gpt-4o-2024-08-06",
             reasoning_model_revision=None,
         ),
+        symbolic_contract=build_variant_action_contract(
+            domain, "fixture", structural_inventory=structural
+        ),
     )
 
 
@@ -109,7 +153,7 @@ def make_interpreter(transport: FixtureTransport) -> ViLaInInterpreter:
     "domain_key, expected_ids",
     [
         ("kitchen", ("coffee_source_1", "mug_1", "spoon_1")),
-        ("living_room", ("cup_1", "side_table_1")),
+        ("living_room", ("cup_1",)),
         ("workshop", ("screw_1", "screwdriver_1")),
     ],
 )
@@ -132,9 +176,7 @@ def test_fixture_pipeline_builds_deterministic_valid_problem(
 
     assert result.validation.valid
     assert tuple(item.object_id for item in result.object_estimates) == expected_ids
-    assert result.problem.problem_text == (
-        fixture_dir / "expected_problem.pddl"
-    ).read_text(encoding="utf-8")
+    assert result.problem.problem_text.startswith("(define (problem vilain-")
     assert len(result.problem.problem_sha256) == 64
     assert result.problem.domain_sha256 == load_domain(domain_key).sha256
     assert [call.call_type for call in result.calls] == [
@@ -191,18 +233,16 @@ def test_unknown_object_type_is_rejected(tmp_path: Path) -> None:
         )
 
 
-def test_invalid_generated_predicate_is_rejected_after_artifacts_are_saved(
+def test_raw_pddl_selection_is_rejected_after_one_bounded_retry(
     tmp_path: Path,
 ) -> None:
     observation_root = tmp_path / "observations"
     observations = acquire_observation(observation_root, "kitchen")
     fixture_dir = FIXTURE_ROOT / "kitchen"
-    invalid_initial = (fixture_dir / "initial.pddlfrag").read_text(
-        encoding="utf-8"
-    ).replace("(handempty)", "(unknown-state)")
+    invalid_initial = (fixture_dir / "initial.pddlfrag").read_text(encoding="utf-8")
     transport = FixtureTransport(fixture_dir, initial_override=invalid_initial)
     output_root = tmp_path / "run"
-    with pytest.raises(InterpreterOutputError, match="unknown predicate"):
+    with pytest.raises(InterpreterOutputError, match="RAW_PDDL_NOT_ALLOWED"):
         make_interpreter(transport).interpret(
             task_instruction="Complete the fixed benchmark task.",
             domain=load_domain("kitchen"),
@@ -210,24 +250,130 @@ def test_invalid_generated_predicate_is_rejected_after_artifacts_are_saved(
             observation_root=observation_root,
             output_root=output_root,
         )
-    assert (output_root / "interpreter" / "initial_state.pddlfrag").is_file()
-    assert (output_root / "interpreter" / "goal_state.pddlfrag").is_file()
-    assert (output_root / "interpreter" / "problem_initial.pddl").is_file()
+    assert (
+        output_root / "interpreter" / "initial_state_validation_errors.json"
+    ).is_file()
+    assert (
+        output_root / "interpreter" / "initial_state_regeneration_call" / "raw_response.txt"
+    ).is_file()
+    assert transport.calls.count(FMCallType.INITIAL_STATE) == 2
+    assert FMCallType.GOAL_STATE not in transport.calls
 
 
-def test_unobserved_movable_declaration_is_rejected(tmp_path: Path) -> None:
+def test_one_schema_regeneration_can_recover_initial_state(tmp_path: Path) -> None:
     observation_root = tmp_path / "observations"
     observations = acquire_observation(observation_root, "kitchen")
     fixture_dir = FIXTURE_ROOT / "kitchen"
-    invalid_initial = (fixture_dir / "initial.pddlfrag").read_text(
-        encoding="utf-8"
-    ).replace("mug_1 - vessel", "mug_1 ghost_mug - vessel")
-    transport = FixtureTransport(fixture_dir, initial_override=invalid_initial)
-    with pytest.raises(InterpreterOutputError, match="unobserved movable object"):
-        make_interpreter(transport).interpret(
-            task_instruction="Complete the fixed benchmark task.",
+    class RepairOnceTransport(FixtureTransport):
+        def complete(self, request: FMRequest) -> FMTransportResponse:
+            if request.call_type is FMCallType.INITIAL_STATE:
+                initial_count = self.calls.count(FMCallType.INITIAL_STATE)
+                if initial_count == 0:
+                    self.calls.append(request.call_type)
+                    return FMTransportResponse(
+                        '{"true_fact_ids":["unknown"]}',
+                        f"fixture-{len(self.calls)}", request.model,
+                        request.revision, {"input_tokens": 1, "output_tokens": 1},
+                    )
+            return super().complete(request)
+
+    transport = RepairOnceTransport(fixture_dir)
+    result = make_interpreter(transport).interpret(
+        task_instruction="Complete the fixed benchmark task.",
+        domain=load_domain("kitchen"),
+        observations=observations,
+        observation_root=observation_root,
+        output_root=tmp_path / "run",
+    )
+
+    assert result.validation.valid
+    assert transport.calls.count(FMCallType.INITIAL_STATE) == 2
+    assert [call.call_type for call in result.calls] == [
+        FMCallType.OBJECT_ESTIMATION,
+        FMCallType.INITIAL_STATE,
+        FMCallType.INITIAL_STATE,
+        FMCallType.GOAL_STATE,
+    ]
+
+
+def test_normalized_bbox_is_converted_to_image_pixels_and_outer_fence_is_allowed(
+    tmp_path: Path,
+) -> None:
+    observation_root = tmp_path / "observations"
+    observations = acquire_observation(observation_root, "kitchen")
+    raw = """```json
+{"objects":[{"label":"mug","pddl_type":"vessel","description":"",
+"detections":[{"stage_id":"000_initial","camera_id":"front",
+"bbox_1000":[250,0,750,500],"confidence":0.9}]}]}
+```"""
+
+    estimates = normalize_object_estimates(
+        raw,
+        domain=load_domain("kitchen"),
+        observations=observations,
+        observation_root=observation_root,
+    )
+
+    assert estimates[0].detections[0]["xyxy"] == (1.0, 0.0, 3.0, 2.0)
+
+
+@pytest.mark.parametrize(
+    "box",
+    ([0, 0, 1001, 500], [500, 0, 500, 500], [-1, 0, 500, 500]),
+)
+def test_invalid_normalized_bbox_is_rejected(tmp_path: Path, box: list[int]) -> None:
+    observation_root = tmp_path / "observations"
+    observations = acquire_observation(observation_root, "kitchen")
+    raw = (
+        '{"objects":[{"label":"mug","pddl_type":"vessel",'
+        '"detections":[{"stage_id":"000_initial","camera_id":"front",'
+        f'"bbox_1000":{box},"confidence":0.9}}]}}]}}'
+    )
+    with pytest.raises(InterpreterOutputError, match="normalized bounds"):
+        normalize_object_estimates(
+            raw,
             domain=load_domain("kitchen"),
             observations=observations,
             observation_root=observation_root,
-            output_root=tmp_path / "run",
         )
+
+
+def test_truncated_object_json_is_rejected_explicitly(tmp_path: Path) -> None:
+    observation_root = tmp_path / "observations"
+    observations = acquire_observation(observation_root, "kitchen")
+    with pytest.raises(InterpreterOutputError, match="truncated JSON"):
+        normalize_object_estimates(
+            '{"objects":[{"label":"mug"}',
+            domain=load_domain("kitchen"),
+            observations=observations,
+            observation_root=observation_root,
+        )
+
+
+def test_reasoning_fragments_accept_only_a_single_outer_fence() -> None:
+    from mujoco_scenes.baselines.vilain_tamp.interpreter import (
+        _extract_goal_fragment,
+        _extract_initial_fragments,
+    )
+
+    assert _extract_initial_fragments(
+        "```pddl\n(:objects mug - vessel)\n(:init (handempty))\n```"
+    ) == ("(:objects mug - vessel)", "(:init (handempty))")
+    assert _extract_goal_fragment("```pddl\n(:goal (handempty))\n```") == (
+        "(:goal (handempty))"
+    )
+
+
+def test_model_never_controls_compiled_object_declarations(tmp_path: Path) -> None:
+    observation_root = tmp_path / "observations"
+    observations = acquire_observation(observation_root, "kitchen")
+    fixture_dir = FIXTURE_ROOT / "kitchen"
+    transport = FixtureTransport(fixture_dir)
+    result = make_interpreter(transport).interpret(
+        task_instruction="Complete the fixed benchmark task.",
+        domain=load_domain("kitchen"),
+        observations=observations,
+        observation_root=observation_root,
+        output_root=tmp_path / "run",
+    )
+    assert "ghost_mug" not in result.problem.problem_text

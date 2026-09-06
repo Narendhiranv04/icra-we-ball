@@ -27,6 +27,10 @@ from mujoco_scenes.baselines.vilain_tamp.prompts import (
     build_initial_state_prompt,
     build_object_estimation_prompt,
 )
+from mujoco_scenes.baselines.vilain_tamp.symbolic_contract import (
+    build_variant_action_contract,
+    enumerate_grounded_facts,
+)
 
 
 class FakeTransport:
@@ -87,6 +91,10 @@ def bundles() -> list[tuple[FMCallType, PromptBundle]]:
     task = "Prepare the requested meal."
     initial = "(:objects mug_1 - vessel) (:init (handempty))"
     problem = "(define (problem synthetic) (:domain vilain-kitchen))"
+    facts = enumerate_grounded_facts(
+        {"mug_1": "vessel"},
+        build_variant_action_contract(domain, "fixture"),
+    )
     return [
         (
             FMCallType.OBJECT_ESTIMATION,
@@ -99,7 +107,10 @@ def bundles() -> list[tuple[FMCallType, PromptBundle]]:
         (
             FMCallType.INITIAL_STATE,
             build_initial_state_prompt(
-                task_instruction=task, domain=domain, objects=(estimate,)
+                task_instruction=task,
+                domain=domain,
+                objects=(estimate,),
+                fact_candidates=facts,
             ),
         ),
         (
@@ -109,6 +120,7 @@ def bundles() -> list[tuple[FMCallType, PromptBundle]]:
                 domain=domain,
                 objects=(estimate,),
                 initial_state_fragment=initial,
+                fact_candidates=facts,
             ),
         ),
         (
@@ -164,10 +176,11 @@ def test_all_four_call_types_are_recorded_without_external_calls(tmp_path: Path)
         assert metadata["latency_seconds"] >= 0
 
 
-def test_pddl_stages_request_pddl_text_and_no_action_sequence() -> None:
+def test_state_and_goal_stages_request_fact_id_json_and_no_action_sequence() -> None:
     prompt_by_type = dict(bundles())
-    assert "Return only PDDL" in prompt_by_type[FMCallType.INITIAL_STATE].user_text
-    assert "PDDL `:goal`" in prompt_by_type[FMCallType.GOAL_STATE].user_text
+    assert "true_fact_ids" in prompt_by_type[FMCallType.INITIAL_STATE].user_text
+    assert "goal_fact_ids" in prompt_by_type[FMCallType.GOAL_STATE].user_text
+    assert "Return no raw PDDL" in prompt_by_type[FMCallType.INITIAL_STATE].user_text
     corrective = prompt_by_type[FMCallType.CORRECTIVE_PLANNING]
     assert "one complete replacement PDDL problem" in corrective.user_text
     assert "never output an action sequence" in corrective.system_text

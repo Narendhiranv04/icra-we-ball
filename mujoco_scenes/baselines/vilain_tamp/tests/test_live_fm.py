@@ -14,11 +14,14 @@ from mujoco_scenes.baselines.vilain_tamp.fm import (
     RecordedFMClient,
 )
 from mujoco_scenes.baselines.vilain_tamp.live_fm import (
+    DEFAULT_VLLM_BASE_URL,
     OpenAIReasoningTransport,
     PAPER_QWEN_MODEL,
     PAPER_REASONING_MODEL,
     QwenGeneration,
     QwenVLTransport,
+    VLLMQwenTransport,
+    build_qwen_only_clients,
     build_paper_faithful_clients,
     main,
     require_vilain_environment,
@@ -219,6 +222,109 @@ def test_live_environment_guard(monkeypatch: pytest.MonkeyPatch) -> None:
         require_vilain_environment()
     monkeypatch.setenv("VIRTUAL_ENV", "/tmp/.venv-vilain-tamp")
     require_vilain_environment()
+
+
+def test_vllm_transport_is_localhost_only_and_normalizes_multimodal_call(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    image = tmp_path / "frame.png"
+    image.write_bytes(b"\x89PNG\r\n\x1a\n")
+    fake = FakeOpenAIClient()
+    fake.create = lambda **kwargs: (
+        fake.calls.append(kwargs)
+        or type(
+            "Response",
+            (),
+            {
+                "id": "chatcmpl-vllm",
+                "model": "qwen35-9b",
+                "choices": [
+                    type(
+                        "Choice",
+                        (),
+                        {"message": type("Message", (), {"content": '{"objects": []}'})()},
+                    )()
+                ],
+                "usage": FakeUsage(),
+            },
+        )()
+    )
+    transport = VLLMQwenTransport(
+        image_root=tmp_path,
+        served_model_id="qwen35-9b",
+        base_url=DEFAULT_VLLM_BASE_URL,
+        client=fake,
+    )
+    request = FMRequest(
+        call_type=FMCallType.OBJECT_ESTIMATION,
+        model="qwen35-9b",
+        revision=None,
+        messages=(
+            {"role": "system", "content": "estimate"},
+            {"role": "user", "content": "return JSON"},
+        ),
+        image_artifacts=("frame.png",),
+    )
+    response = transport.complete(request)
+
+    assert response.model == "qwen35-9b"
+    content = fake.calls[0]["messages"][1]["content"]
+    assert content[0]["type"] == "image_url"
+    assert content[0]["image_url"]["url"].startswith("data:image/png;base64,")
+    assert content[-1] == {"type": "text", "text": "return JSON"}
+    assert response.provider_metadata["base_url"] == DEFAULT_VLLM_BASE_URL
+    assert "OPENAI_API_KEY" not in response.provider_metadata
+    with pytest.raises(ValueError, match="approved local tunnel"):
+        VLLMQwenTransport(
+            image_root=tmp_path,
+            served_model_id="qwen35-9b",
+            base_url="https://api.openai.com/v1",
+        )
+
+
+def test_vllm_transport_supports_text_reasoning_and_qwen_only_clients(
+    tmp_path: Path,
+) -> None:
+    fake = FakeOpenAIClient()
+    fake.create = lambda **kwargs: (
+        fake.calls.append(kwargs)
+        or type(
+            "Response",
+            (),
+            {
+                "id": "chatcmpl-vllm-text",
+                "model": "qwen35-9b",
+                "choices": [
+                    type(
+                        "Choice",
+                        (),
+                        {"message": type("Message", (), {"content": "(:goal (handempty))"})()},
+                    )()
+                ],
+                "usage": FakeUsage(),
+            },
+        )()
+    )
+    clients = build_qwen_only_clients(
+        image_root=tmp_path,
+        served_model_id="qwen35-9b",
+        client=fake,
+    )
+    response = clients.reasoning_client.transport.complete(
+        FMRequest(
+            call_type=FMCallType.GOAL_STATE,
+            model="qwen35-9b",
+            revision=None,
+            messages=({"role": "user", "content": "goal"},),
+        )
+    )
+
+    assert response.raw_text == "(:goal (handempty))"
+    assert fake.calls[0]["messages"] == [{"role": "user", "content": "goal"}]
+    assert clients.object_estimator_model == clients.reasoning_model == "qwen35-9b"
+    assert clients.object_estimator_revision is None
+    assert clients.reasoning_model_revision is None
 
 
 def test_standalone_object_call_uses_manifest_and_writes_raw_artifacts(

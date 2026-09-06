@@ -1,0 +1,24 @@
+domain: kitchen
+observation_mode: initial_observation_only
+model_condition: vilain_tamp_qwen
+max_cp_corrections: 3
+timeouts:
+  symbolic_seconds: 200
+  model_seconds: 300
+  refinement_seconds: 200
+output_root: runs/vilain_tamp_qwen
+external_tools:
+  fast_downward: /home/naren/fast-downward-24.06.1/fast-downward.py
+  fast_downward_version: "24.06"
+  val: /home/naren/VAL/build/vilain-release/bin/Validate
+  val_version: null
+object_estimator_model: qwen35-9b
+reasoning_model: qwen35-9b
+model_endpoint: http://127.0.0.1:18000/v1
+served_model_family: Qwen/Qwen3.5-9B
+served_revision: unverified
+symbolic_planner: Fast Downward
+search_configuration: lama-first
+independent_model_calls: true
+execute_by_default: false
+require_clean_execution_provenance: true

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import base64
 from dataclasses import dataclass
 import json
+import mimetypes
 import os
 from pathlib import Path
 import re
@@ -29,6 +31,7 @@ from .prompts import build_object_estimation_prompt
 PAPER_QWEN_MODEL = "Qwen2.5-VL-7B-Instruct"
 PAPER_QWEN_SOURCE = "Qwen/Qwen2.5-VL-7B-Instruct"
 PAPER_REASONING_MODEL = "gpt-4o-2024-08-06"
+DEFAULT_VLLM_BASE_URL = "http://127.0.0.1:18000/v1"
 _FULL_COMMIT = re.compile(r"^[0-9a-fA-F]{40}$")
 
 
@@ -60,9 +63,186 @@ class LiveModelClients:
     object_client: RecordedFMClient
     reasoning_client: RecordedFMClient
     object_estimator_model: str
-    object_estimator_revision: str
+    object_estimator_revision: str | None
     reasoning_model: str
-    reasoning_model_revision: str
+    reasoning_model_revision: str | None
+
+
+def build_qwen_only_clients(
+    *,
+    image_root: str | Path,
+    served_model_id: str,
+    reference_revision: str | None = None,
+    base_url: str = DEFAULT_VLLM_BASE_URL,
+    client: Any | None = None,
+    timeout_seconds: float = 120.0,
+) -> LiveModelClients:
+    """Build distinct object/reasoning clients backed by one local vLLM API."""
+    transport = VLLMQwenTransport(
+        image_root=image_root,
+        served_model_id=served_model_id,
+        reference_revision=reference_revision,
+        base_url=base_url,
+        client=client,
+        timeout_seconds=timeout_seconds,
+    )
+    return LiveModelClients(
+        object_client=RecordedFMClient(transport),
+        reasoning_client=RecordedFMClient(transport),
+        object_estimator_model=served_model_id,
+        object_estimator_revision=None,
+        reasoning_model=served_model_id,
+        reasoning_model_revision=None,
+    )
+
+
+class VLLMQwenTransport:
+    """OpenAI-compatible Qwen transport restricted to the local SSH tunnel."""
+
+    def __init__(
+        self,
+        *,
+        image_root: str | Path,
+        served_model_id: str,
+        reference_revision: str | None = None,
+        base_url: str = DEFAULT_VLLM_BASE_URL,
+        client: Any | None = None,
+        timeout_seconds: float = 120.0,
+        max_tokens: int = 8192,
+    ) -> None:
+        normalized_url = base_url.rstrip("/")
+        if normalized_url != DEFAULT_VLLM_BASE_URL:
+            raise ValueError(
+                f"vLLM base URL must be the approved local tunnel {DEFAULT_VLLM_BASE_URL}"
+            )
+        if not served_model_id.strip():
+            raise ValueError("served_model_id must not be empty")
+        if timeout_seconds <= 0:
+            raise ValueError("timeout_seconds must be positive")
+        if max_tokens <= 0:
+            raise ValueError("max_tokens must be positive")
+        self.image_root = Path(image_root).resolve()
+        self.served_model_id = served_model_id
+        self.reference_revision = reference_revision
+        self.base_url = normalized_url
+        self.timeout_seconds = timeout_seconds
+        self.max_tokens = max_tokens
+        self._client = client
+
+    def complete(self, request: FMRequest) -> FMTransportResponse:
+        if request.model != self.served_model_id:
+            raise FMTransportError(
+                f"request model {request.model!r} differs from served model "
+                f"{self.served_model_id!r}"
+            )
+        if request.revision is not None:
+            raise FMTransportError(
+                "the running vLLM server does not expose an immutable revision"
+            )
+        messages = self._messages(request)
+        client = self._client
+        if client is None:
+            require_vilain_environment()
+            try:
+                from openai import OpenAI
+            except ImportError as error:
+                raise FMTransportError(
+                    "OpenAI-compatible client dependency is unavailable"
+                ) from error
+            client = OpenAI(
+                base_url=self.base_url,
+                api_key="EMPTY",
+                timeout=self.timeout_seconds,
+                max_retries=0,
+            )
+            self._client = client
+        request_arguments: dict[str, Any] = {
+            "model": self.served_model_id,
+            "messages": messages,
+            "temperature": 0,
+            "max_tokens": self.max_tokens,
+            "extra_body": {"chat_template_kwargs": {"enable_thinking": False}},
+        }
+        if request.response_format == "json":
+            request_arguments["response_format"] = {"type": "json_object"}
+        response = client.chat.completions.create(
+            **request_arguments,
+        )
+        choices = getattr(response, "choices", ())
+        finish_reason = getattr(choices[0], "finish_reason", None) if choices else None
+        if finish_reason == "length":
+            raise FMTransportError("TRUNCATED_RESPONSE: vLLM reached max_tokens")
+        provider_model = str(getattr(response, "model", ""))
+        if provider_model != self.served_model_id:
+            raise FMTransportError(
+                f"vLLM returned unexpected served model {provider_model!r}"
+            )
+        usage = getattr(response, "usage", None)
+        call_id = str(getattr(response, "id", ""))
+        if not call_id:
+            raise FMTransportError("vLLM response has no call ID")
+        return FMTransportResponse(
+            raw_text=_openai_text(response),
+            call_id=call_id,
+            model=provider_model,
+            revision=None,
+            usage={
+                "input_tokens": int(getattr(usage, "prompt_tokens", 0) or 0),
+                "output_tokens": int(getattr(usage, "completion_tokens", 0) or 0),
+                "total_tokens": int(getattr(usage, "total_tokens", 0) or 0),
+            },
+            provider_metadata={
+                "provider": "local_vllm_openai_compatible",
+                "base_url": self.base_url,
+                "served_model_id": self.served_model_id,
+                "configured_reference_revision": self.reference_revision,
+                "served_revision_verified": False,
+                "temperature": 0,
+                "max_tokens": self.max_tokens,
+                "thinking_enabled": False,
+                "finish_reason": finish_reason,
+            },
+        )
+
+    def _messages(self, request: FMRequest) -> list[dict[str, Any]]:
+        rendered = [dict(message) for message in request.messages]
+        if request.call_type is not FMCallType.OBJECT_ESTIMATION:
+            if request.image_artifacts:
+                raise FMTransportError("reasoning calls must not contain images")
+            return rendered
+        if not request.image_artifacts:
+            raise FMTransportError("object estimation requires RGB images")
+        user_index = next(
+            (index for index, item in enumerate(rendered) if item.get("role") == "user"),
+            None,
+        )
+        if user_index is None:
+            raise FMTransportError("object estimation requires a user message")
+        text_content = str(rendered[user_index].get("content", ""))
+        content: list[dict[str, Any]] = [
+            {"type": "image_url", "image_url": {"url": self._data_url(path)}}
+            for path in request.image_artifacts
+        ]
+        content.append({"type": "text", "text": text_content})
+        rendered[user_index] = {"role": "user", "content": content}
+        return rendered
+
+    def _data_url(self, value: str) -> str:
+        candidate = Path(value)
+        resolved = (
+            candidate.resolve()
+            if candidate.is_absolute()
+            else (self.image_root / candidate).resolve()
+        )
+        try:
+            resolved.relative_to(self.image_root)
+        except ValueError as error:
+            raise FMTransportError(f"image escapes observation root: {value}") from error
+        if not resolved.is_file():
+            raise FMTransportError(f"object-estimation image is missing: {value}")
+        mime = mimetypes.guess_type(resolved.name)[0] or "image/png"
+        encoded = base64.b64encode(resolved.read_bytes()).decode("ascii")
+        return f"data:{mime};base64,{encoded}"
 
 
 def build_paper_faithful_clients(

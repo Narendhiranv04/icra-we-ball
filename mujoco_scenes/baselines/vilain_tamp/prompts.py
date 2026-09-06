@@ -11,6 +11,12 @@ import yaml
 from .contracts import ObjectEstimate, ViLaInObservation
 from .domains.registry import DomainDefinition
 from .observations import prompt_observation_payload
+from .symbolic_contract import (
+    GroundedFact,
+    VariantActionContract,
+    grouped_fact_payload,
+    object_type_table,
+)
 
 
 @dataclass(frozen=True)
@@ -47,15 +53,73 @@ def build_object_estimation_prompt(
         user_text=(
             f"Task instruction:\n{task_instruction}\n\n"
             f"Fixed domain knowledge:\n{_domain_knowledge_text(domain)}\n\n"
+            f"Legal type capability guide:\n{_type_capability_text(domain)}\n\n"
             "Observation ordering:\n"
             f"{_json(observation_payload)}\n\n"
-            "Return one JSON object with an `objects` array. Each object must "
-            "contain a concise visual label, PDDL type, description, and one "
-            "or more detections with camera ID, xyxy pixel box, and confidence. "
-            "Use stable provisional IDs; report ambiguity instead of inventing "
-            "an unseen object."
+            "Return JSON only: no Markdown fence, prose, or reasoning. Schema: "
+            "{\"objects\":[{\"label\":str,\"pddl_type\":str,"
+            "\"description\":str,\"detections\":[{\"stage_id\":str,"
+            "\"camera_id\":str,\"bbox_1000\":[x1,y1,x2,y2],"
+            "\"confidence\":number}]}]}. Use exactly one best-view detection per "
+            "object. Coordinates are normalized integers satisfying "
+            "0<=x1<x2<=1000 and 0<=y1<y2<=1000; do not emit pixel coordinates. "
+            "Use only listed stage/camera IDs and domain PDDL types. Keep "
+            "description empty unless needed to distinguish visually similar "
+            "objects. Inventory every clearly visible task-relevant manipulable "
+            "entity, including distinct objects with similar appearance. Assign "
+            "exactly one legal PDDL type to each entity. The domain type names "
+            "describe capabilities: use their fixed definitions, not an expected "
+            "answer. Do not omit a visible entity merely because its exact label "
+            "is uncertain; use a neutral visual label and describe the uncertainty. "
+            "Do not infer hidden entities. Report ambiguity instead of inventing "
+            "unseen objects. "
+            "Return only movable/manipulable entity types; fixed storage, surfaces, "
+            "supports, targets, seats, and the robot are supplied separately by the "
+            "public structural inventory and must not be returned as visual objects."
         ),
         image_artifacts=image_artifacts,
+    )
+
+
+def build_object_completeness_prompt(
+    *,
+    task_instruction: str,
+    domain: DomainDefinition,
+    observations: Sequence[ViLaInObservation],
+    existing_objects: Sequence[ObjectEstimate],
+    missing_types: Sequence[str],
+) -> PromptBundle:
+    """Request one same-image, type-capability inventory recheck."""
+    base = build_object_estimation_prompt(
+        task_instruction=task_instruction,
+        domain=domain,
+        observations=observations,
+    )
+    return PromptBundle(
+        system_text=base.system_text,
+        user_text=(
+            base.user_text
+            + "\n\nThis is the single bounded completeness recheck of the SAME "
+            "images. The first inventory contains:\n"
+            + _json(
+                [
+                    {"label": item.label, "pddl_type": item.pddl_type}
+                    for item in existing_objects
+                ]
+            )
+            + "\n\nNo observed entity can currently instantiate these fixed "
+            "domain capability types:\n"
+            + _json(list(missing_types))
+            + "\nRe-check all supplied views for clearly visible entities of only "
+            "those missing types. A returned entity may be a newly noticed object "
+            "or a visually supported reclassification of an item from the first "
+            "inventory; reuse its exact prior label in the latter case. Return only "
+            "missing-type candidates, not unchanged prior objects. Do not name a "
+            "required hidden object, "
+            "invent an object, or infer benchmark truth. If none is clearly "
+            "visible, return {\"objects\":[]}."
+        ),
+        image_artifacts=base.image_artifacts,
     )
 
 
@@ -64,7 +128,24 @@ def build_initial_state_prompt(
     task_instruction: str,
     domain: DomainDefinition,
     objects: Sequence[ObjectEstimate],
+    fact_candidates: Sequence[GroundedFact],
+    symbolic_contract: VariantActionContract | None = None,
 ) -> PromptBundle:
+    contract = symbolic_contract
+    type_table = (
+        object_type_table(
+            {item.object_id: item.pddl_type for item in objects}, contract
+        )
+        if contract is not None
+        else {}
+    )
+    contract_text = (
+        "Variant action contract (capabilities, not a plan):\n"
+        + _json(contract.to_dict())
+        + "\n\n"
+        if contract is not None
+        else ""
+    )
     return PromptBundle(
         system_text=(
             "Infer a PDDL initial state for ViLaIn-TAMP from the supplied "
@@ -72,12 +153,52 @@ def build_initial_state_prompt(
         ),
         user_text=(
             f"Task instruction:\n{task_instruction}\n\n"
-            f"Immutable domain PDDL:\n{domain.text}\n"
             f"Fixed domain knowledge:\n{_domain_knowledge_text(domain)}\n\n"
             f"Object estimates:\n{_json([item.to_dict() for item in objects])}\n\n"
-            "Return only PDDL object declarations followed by an `:init` "
-            "fragment. Use only declared domain types and predicates. Do not "
-            "return JSON, action schemas, a plan, or a goal."
+            f"Exact object ID/type table:\n{_json(dict(type_table))}\n\n"
+            f"{contract_text}"
+            "Legal positive grounded facts grouped by predicate:\n"
+            f"{_json(_plain_grouped_facts(fact_candidates))}\n\n"
+            "Select only facts that are true in the initial state from the "
+            "observation and public static structure. The task instruction states "
+            "desired outcomes, not facts already achieved. Be conservative: do not "
+            "mark goal effects such as stirred, fastened, inserted, supports, inside, "
+            "or contains as initially true unless the images directly establish them. "
+            "A single-gripper robot cannot be handempty and holding, cannot hold "
+            "multiple objects, and one object cannot be at multiple locations. Closed "
+            "storage is not open or accessible merely because its exterior is visible. "
+            "False facts are omitted. "
+            "Return compact JSON only with exactly this schema: "
+            '{"true_fact_ids":["f0001"]}. Use only listed IDs. Return no raw '
+            "PDDL, variables, negative literals, Markdown, explanation, plan, "
+            "or chain-of-thought."
+        ),
+    )
+
+
+def build_initial_consistency_prompt(
+    *,
+    task_instruction: str,
+    previous_fact_ids: Sequence[str],
+    diagnostics: Sequence[Mapping[str, Any]],
+    fact_candidates: Sequence[GroundedFact],
+) -> PromptBundle:
+    return PromptBundle(
+        system_text=(
+            "Correct one ViLaIn-TAMP initial fact selection using only generic "
+            "physical consistency rules. Never output a plan or PDDL."
+        ),
+        user_text=(
+            f"Task instruction (desired outcome, not current truth):\n"
+            f"{task_instruction}\n\n"
+            f"Previous true fact IDs:\n{_json(list(previous_fact_ids))}\n\n"
+            f"Physical consistency diagnostics:\n{_json(list(diagnostics))}\n\n"
+            f"Legal initial facts:\n{_json(_plain_grouped_facts(fact_candidates))}\n\n"
+            "Return a conservative, physically consistent initial state. Preserve "
+            "only facts supported by the observation or fixed public structure. "
+            "Desired task effects are not initially true merely because the task "
+            "requests them. Return exactly {\"true_fact_ids\":[...]} using listed "
+            "IDs only, with no PDDL, plan, explanation, or benchmark answer."
         ),
     )
 
@@ -88,7 +209,20 @@ def build_goal_state_prompt(
     domain: DomainDefinition,
     objects: Sequence[ObjectEstimate],
     initial_state_fragment: str,
+    fact_candidates: Sequence[GroundedFact],
+    declared_object_types: Mapping[str, str] | None = None,
+    symbolic_contract: VariantActionContract | None = None,
 ) -> PromptBundle:
+    type_table = dict(declared_object_types or {
+        item.object_id: item.pddl_type for item in objects
+    })
+    contract_text = (
+        "Variant action contract (capabilities, not a plan):\n"
+        + _json(symbolic_contract.to_dict())
+        + "\n\n"
+        if symbolic_contract is not None
+        else ""
+    )
     return PromptBundle(
         system_text=(
             "Infer the PDDL goal for ViLaIn-TAMP without changing the fixed "
@@ -96,12 +230,75 @@ def build_goal_state_prompt(
         ),
         user_text=(
             f"Task instruction:\n{task_instruction}\n\n"
-            f"Immutable domain PDDL:\n{domain.text}\n"
             f"Fixed domain knowledge:\n{_domain_knowledge_text(domain)}\n\n"
             f"Object estimates:\n{_json([item.to_dict() for item in objects])}\n\n"
-            f"Estimated initial state:\n{initial_state_fragment}\n\n"
-            "Return only one non-empty PDDL `:goal` fragment using declared "
-            "objects and known predicates. Do not return JSON or an action plan."
+            f"Exact declared object ID/type table:\n{_json(type_table)}\n\n"
+            f"Exact predicate signatures:\n"
+            f"{_json(dict(domain.predicate_signatures))}\n\n"
+            f"{contract_text}"
+            f"Selected initial facts:\n{initial_state_fragment}\n\n"
+            "Legal achievable grounded goal facts grouped by predicate:\n"
+            f"{_json(_plain_grouped_facts(fact_candidates, goal_only=True))}\n\n"
+            "Select the minimal set of facts required to make the task instruction "
+            "true. Every selected fact must be directly justified by the task. Do "
+            "not select extra desirable outcomes, maximize selected facts, require "
+            "every vessel to contain every content, or choose a fact merely because "
+            "it is legal. Return compact "
+            'JSON only with exactly this schema: {"goal_fact_ids":["f0001"]}. '
+            "Use only listed IDs. Return no raw PDDL, variables, Markdown, "
+            "explanation, plan, or chain-of-thought."
+        ),
+    )
+
+
+def build_goal_reachability_prompt(
+    *,
+    task_instruction: str,
+    previous_goal_ids: Sequence[str],
+    diagnostics: Sequence[Mapping[str, Any]],
+    fact_candidates: Sequence[GroundedFact],
+) -> PromptBundle:
+    return PromptBundle(
+        system_text=(
+            "Correct one ViLaIn-TAMP goal fact selection using only a generic "
+            "relaxed symbolic reachability diagnosis. Never output a plan or PDDL."
+        ),
+        user_text=(
+            f"Task instruction:\n{task_instruction}\n\n"
+            f"Previous goal fact IDs:\n{_json(list(previous_goal_ids))}\n\n"
+            f"Generic reachability diagnostics:\n{_json(list(diagnostics))}\n\n"
+            "Legal achievable grounded goal facts:\n"
+            f"{_json(_plain_grouped_facts(fact_candidates, goal_only=True))}\n\n"
+            "Select the minimal directly task-justified goal facts that are "
+            "symbolically achievable with the observed typed objects. Do not weaken "
+            "or replace the requested task merely to obtain a plan. Return exactly "
+            '{"goal_fact_ids":[...]} using listed IDs only.'
+        ),
+    )
+
+
+def build_schema_regeneration_prompt(
+    *,
+    module: str,
+    previous_output: str,
+    validation_errors: Sequence[Mapping[str, Any]],
+    valid_fact_ids: Sequence[str],
+) -> PromptBundle:
+    """Request one schema-only repair without supplying semantic answers."""
+    field = "true_fact_ids" if module == "initial_state" else "goal_fact_ids"
+    return PromptBundle(
+        system_text=(
+            "Repair one ViLaIn-TAMP fact-selection wire response. Return JSON "
+            "fact IDs only; do not infer or output an action sequence."
+        ),
+        user_text=(
+            f"Module: {module}\n\n"
+            f"Previous output:\n{previous_output}\n\n"
+            f"Structured wire/schema errors:\n{_json(list(validation_errors))}\n\n"
+            f"Valid fact IDs:\n{_json(list(valid_fact_ids))}\n\n"
+            f'Return exactly {{"{field}":[...]}} with only valid listed IDs. '
+            "Do not return PDDL, facts, object names, an explanation, a plan, a "
+            "preferred replacement fact, or a benchmark answer."
         ),
     )
 
@@ -149,6 +346,37 @@ def build_corrective_planning_prompt(
     )
 
 
+def build_corrective_fact_selection_prompt(
+    *,
+    task_instruction: str,
+    domain: DomainDefinition,
+    current_problem: str,
+    current_failure: Mapping[str, Any],
+    fact_candidates: Sequence[GroundedFact],
+) -> PromptBundle:
+    _reject_evaluator_context(current_failure)
+    return PromptBundle(
+        system_text=(
+            "Perform bounded ViLaIn-TAMP corrective planning by selecting from "
+            "a fixed legal grounded-fact universe. Never write PDDL or a plan."
+        ),
+        user_text=(
+            f"Task instruction:\n{task_instruction}\n\n"
+            f"Current deterministic problem:\n{current_problem}\n\n"
+            f"Current structured failure:\n{_json(dict(current_failure))}\n\n"
+            "Legal initial facts:\n"
+            f"{_json(_plain_grouped_facts(fact_candidates))}\n\n"
+            "Legal achievable goal facts:\n"
+            f"{_json(_plain_grouped_facts(fact_candidates, goal_only=True))}\n\n"
+            "Return compact JSON only with exactly two fields: "
+            '{"true_fact_ids":[...],"goal_fact_ids":[...]}. '
+            "Select only IDs from the corresponding list. Return no PDDL, "
+            "variables, action sequence, "
+            "explanation, preferred object, or benchmark answer."
+        ),
+    )
+
+
 def _domain_knowledge_text(domain: DomainDefinition) -> str:
     loaded = yaml.safe_load(domain.knowledge_path.read_text(encoding="utf-8"))
     if not isinstance(loaded, Mapping):
@@ -162,8 +390,49 @@ def _domain_knowledge_text(domain: DomainDefinition) -> str:
     return _json(public)
 
 
+def _type_capability_text(domain: DomainDefinition) -> str:
+    """Describe legal types from public PDDL capabilities, never scene truth."""
+    common = {
+        "movable": "a physically manipulable entity that can be picked",
+        "location": "a place from which an object can be picked or placed",
+        "storage": "an articulated location that can be opened",
+        "surface": "a support location on which an object can be placed",
+        "support": "a support location on which an object can be placed",
+        "vessel": "a receiving container that can contain material or accept a utensil",
+        "source": "a movable dispensing container whose contents can be poured into a vessel",
+        "utensil": "a movable implement usable for stirring or serving",
+        "driver": "a movable tool capable of driving a compatible fastener",
+        "fastener": "a movable fastening item that can be inserted and driven",
+        "target": "a fixed insertion or fastening target",
+        "cup": "a movable drinking cup",
+        "saucer": "a movable saucer",
+        "remote": "a movable remote-control device",
+        "seat": "a fixed seating entity used only for neutral support relations",
+        "content": "a symbolic material kind; do not visually detect it as an object",
+    }
+    return _json(
+        {
+            type_name: common.get(
+                type_name,
+                f"legal PDDL type with parent {parent or 'object'}",
+            )
+            for type_name, parent in domain.type_hierarchy.items()
+        }
+    )
+
+
 def _json(value: Any) -> str:
     return json.dumps(value, indent=2, sort_keys=True, ensure_ascii=False)
+
+
+def _plain_grouped_facts(
+    facts: Sequence[GroundedFact], *, goal_only: bool = False
+) -> dict[str, list[dict[str, Any]]]:
+    grouped = grouped_fact_payload(facts, goal_only=goal_only)
+    return {
+        predicate: [dict(item) for item in rows]
+        for predicate, rows in grouped.items()
+    }
 
 
 def _reject_evaluator_context(value: Any) -> None:

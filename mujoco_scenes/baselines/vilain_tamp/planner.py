@@ -367,25 +367,31 @@ def _probe_tool(
     resolved = executable.expanduser()
     if not resolved.is_absolute() or not resolved.is_file() or not os.access(resolved, os.X_OK):
         raise PlannerInfrastructureError(f"{label} executable is missing or not executable: {resolved}")
-    process = _run_process(
-        [str(resolved), "--version"],
-        output_root=output_root,
-        timeout_seconds=10.0,
-    )
-    rendered = "\n".join(
-        part.strip()
-        for part in (
-            process.stdout_path.read_text(encoding="utf-8"),
-            process.stderr_path.read_text(encoding="utf-8"),
+    if expected_version is None:
+        # VAL's Validate binary has no portable version flag. Its executable
+        # hash is still recorded, while the pinned source commit belongs in
+        # the run configuration/provenance report.
+        rendered = "unreported (sha256-only)"
+    else:
+        process = _run_process(
+            [str(resolved), "--version"],
+            output_root=output_root,
+            timeout_seconds=10.0,
         )
-        if part.strip()
-    )
-    if process.returncode != 0 or not rendered:
-        raise PlannerInfrastructureError(f"could not determine {label}")
-    if expected_version is not None and expected_version not in rendered:
-        raise PlannerInfrastructureError(
-            f"{label} mismatch: expected {expected_version!r}, got {rendered!r}"
+        rendered = "\n".join(
+            part.strip()
+            for part in (
+                process.stdout_path.read_text(encoding="utf-8"),
+                process.stderr_path.read_text(encoding="utf-8"),
+            )
+            if part.strip()
         )
+        if process.returncode != 0 or not rendered:
+            raise PlannerInfrastructureError(f"could not determine {label}")
+        if expected_version not in rendered:
+            raise PlannerInfrastructureError(
+                f"{label} mismatch: expected {expected_version!r}, got {rendered!r}"
+            )
     identity = ToolIdentity(resolved, rendered, sha256_file(resolved))
     atomic_write_json(
         output_root / "identity.json",

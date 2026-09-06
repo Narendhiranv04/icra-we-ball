@@ -531,3 +531,52 @@ def test_pick_prefers_named_grasp_site(tmp_path: Path) -> None:
         ).read_text()
     )
     assert all(item["source"] == "NAMED_GRASP_SITE" for item in trace["candidates"])
+
+
+def test_real_kitchen_kettle_pick_and_pour_use_controller_geometry(
+    tmp_path: Path,
+) -> None:
+    pytest.importorskip("mujoco")
+    from mujoco_scenes.baselines.vilain_tamp.config import Domain
+    from mujoco_scenes.baselines.vilain_tamp.live_observations import _create_scene
+
+    live = _create_scene(
+        Domain.KITCHEN,
+        "F0_ALL_VISIBLE",
+        robot="google",
+        layout_seed=None,
+    )
+    live_qpos = live.data.qpos.copy()
+    pick = _action(0, "pick-from", ("s1i_compact_kettle",))
+    pour = _action(1, "pour", ("s1i_compact_kettle", "ab3_shallow_bowl"))
+    runtime = create_live_refinement_runtime(live, robot_name="google")
+    result = runtime.refiner.refine(
+        attempt_index=0,
+        actions=(pick[0], pour[0]),
+        projections=(pick[1], pour[1]),
+        planning_scene_factory=runtime.planning_scene_factory,
+        output_root=tmp_path,
+    )
+
+    assert result.success
+    assert live.data.qpos == pytest.approx(live_qpos)
+    grasp = json.loads(
+        (
+            tmp_path
+            / "refinement_stages"
+            / pick[0].action_instance_id
+            / "grasp_generation.json"
+        ).read_text()
+    )["candidates"][0]
+    assert grasp["source"] == "PHYSICAL_MANIPULATION_DESCRIPTOR"
+    assert grasp["carry_position_m"] is not None
+    envelope = json.loads(
+        (
+            tmp_path
+            / "refinement_stages"
+            / pour[0].action_instance_id
+            / "skill_envelope.json"
+        ).read_text()
+    )["envelope"]
+    assert envelope["constraints"]["clearance"] is True
+    assert envelope["metrics"]["vertical_clearance_m"] == pytest.approx(0.03)

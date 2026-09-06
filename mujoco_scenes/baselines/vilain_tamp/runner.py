@@ -562,6 +562,9 @@ class BaselineRunner:
             **options.to_dict(),
             "object_estimator_model": self.config.object_estimator_model,
             "reasoning_model": self.config.reasoning_model,
+            "model_endpoint": self.config.model_endpoint,
+            "served_model_family": self.config.served_model_family,
+            "served_revision": self.config.served_revision,
             "symbolic_planner": self.config.symbolic_planner,
             "search_configuration": self.config.search_configuration,
             "fast_downward_version": (

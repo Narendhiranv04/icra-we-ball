@@ -2714,6 +2714,14 @@ assignments may be imported.
 Prove that real observation -> FM -> PDDL -> Fast Downward -> refinement works
 before physical scored execution.
 
+**Authorized runtime condition — ViLaIn-TAMP-Qwen:** The Stage-22 live
+implementation preserves ViLaIn-TAMP's separate object-estimation,
+initial-state, goal-state, and Corrective Planning modules, but uses the
+remotely hosted Qwen model for every FM call. Qwen remains the object estimator
+and replaces GPT-4o for initial-state estimation, goal-state estimation, and
+Corrective Planning. This is a Qwen-only reproduction of the ViLaIn
+architecture, not the exact model allocation used in the original paper.
+
 Run only one simple feasible/all-visible case per domain initially, in this
 order:
 
