@@ -313,6 +313,11 @@ def build_living_room_observed_scene_graph(run: Any) -> ObservedSceneGraph:
     return graph_o
 
 
+def _has_personal_payload_binding(assignment: dict[str, Any]) -> bool:
+    """A support-only partial graph cannot instantiate a placement action."""
+    return bool(assignment.get("CUP_SAUCER_SET"))
+
+
 def run_to_plan(
     *, variant_label: str, internal_variant: str, mode: str,
     specification: FunctionalSpecification, output_dir: Path,
@@ -484,7 +489,7 @@ def run_to_plan(
                     "semantic_role_status": sem_status,
                 },
             })
-    else:
+    elif _has_personal_payload_binding(ground_result.assignment):
         personal_regions = ground_result.assignment.get("PERSONAL_CUP_SAUCER_REGION", ground_result.assignment.get("PERSONAL_SUPPORT", []))
         if isinstance(personal_regions, str):
             personal_regions = [personal_regions]

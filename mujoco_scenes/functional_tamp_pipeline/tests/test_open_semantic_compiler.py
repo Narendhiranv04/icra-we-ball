@@ -287,3 +287,10 @@ def test_group_relations_project_directionally_into_kitchen_witness_contract():
         (item['predicate'], item['subject_role'], item['object_role'])
         for item in validated['relations']
     }
+
+
+def test_region_only_living_partial_graph_does_not_invent_payload_bindings():
+    from mujoco_scenes.functional_tamp_pipeline.domains.living_room import _has_personal_payload_binding
+    assert not _has_personal_payload_binding({
+        'PERSONAL_CUP_SAUCER_REGION': ['region_0001', 'region_0003']})
+    assert _has_personal_payload_binding({'CUP_SAUCER_SET': ['slot_1', 'slot_2']})
