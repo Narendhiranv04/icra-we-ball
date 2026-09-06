@@ -426,15 +426,15 @@ def evaluate_all_variants(
 
 | Metric | Kitchen | Living Room | Workshop | Overall |
 | :--- | ---: | ---: | ---: | ---: |
-| Raw VLM role recall | {diagnostic_rows[kitchen][raw_vlm_role_recall]} | {diagnostic_rows[living_room][raw_vlm_role_recall]} | {diagnostic_rows[workshop][raw_vlm_role_recall]} | {diagnostic_rows[Overall][raw_vlm_role_recall]} |
-| Runtime contract coverage | {diagnostic_rows[kitchen][runtime_contract_coverage]} | {diagnostic_rows[living_room][runtime_contract_coverage]} | {diagnostic_rows[workshop][runtime_contract_coverage]} | {diagnostic_rows[Overall][runtime_contract_coverage]} |
-| Canonicalization success | {diagnostic_rows[kitchen][canonicalization_success]} | {diagnostic_rows[living_room][canonicalization_success]} | {diagnostic_rows[workshop][canonicalization_success]} | {diagnostic_rows[Overall][canonicalization_success]} |
-| Candidate grounding success | {diagnostic_rows[kitchen][candidate_grounding_success]} | {diagnostic_rows[living_room][candidate_grounding_success]} | {diagnostic_rows[workshop][candidate_grounding_success]} | {diagnostic_rows[Overall][candidate_grounding_success]} |
-| Candidate plan rate | {diagnostic_rows[kitchen][candidate_plan_rate]} | {diagnostic_rows[living_room][candidate_plan_rate]} | {diagnostic_rows[workshop][candidate_plan_rate]} | {diagnostic_rows[Overall][candidate_plan_rate]} |
-| Partial-plan rate | {diagnostic_rows[kitchen][partial_plan_rate]} | {diagnostic_rows[living_room][partial_plan_rate]} | {diagnostic_rows[workshop][partial_plan_rate]} | {diagnostic_rows[Overall][partial_plan_rate]} |
-| Candidate goal coverage | {diagnostic_rows[kitchen][candidate_goal_coverage]} | {diagnostic_rows[living_room][candidate_goal_coverage]} | {diagnostic_rows[workshop][candidate_goal_coverage]} | {diagnostic_rows[Overall][candidate_goal_coverage]} |
-| Full-task success | {diagnostic_rows[kitchen][full_task_success]} | {diagnostic_rows[living_room][full_task_success]} | {diagnostic_rows[workshop][full_task_success]} | {diagnostic_rows[Overall][full_task_success]} |
-| Mean regions inspected | {diagnostic_rows[kitchen][mean_regions_inspected]} | {diagnostic_rows[living_room][mean_regions_inspected]} | {diagnostic_rows[workshop][mean_regions_inspected]} | {diagnostic_rows[Overall][mean_regions_inspected]} |
+| Raw VLM role recall | {diagnostic_rows['kitchen']['raw_vlm_role_recall']} | {diagnostic_rows['living_room']['raw_vlm_role_recall']} | {diagnostic_rows['workshop']['raw_vlm_role_recall']} | {diagnostic_rows['Overall']['raw_vlm_role_recall']} |
+| Runtime contract coverage | {diagnostic_rows['kitchen']['runtime_contract_coverage']} | {diagnostic_rows['living_room']['runtime_contract_coverage']} | {diagnostic_rows['workshop']['runtime_contract_coverage']} | {diagnostic_rows['Overall']['runtime_contract_coverage']} |
+| Canonicalization success | {diagnostic_rows['kitchen']['canonicalization_success']} | {diagnostic_rows['living_room']['canonicalization_success']} | {diagnostic_rows['workshop']['canonicalization_success']} | {diagnostic_rows['Overall']['canonicalization_success']} |
+| Candidate grounding success | {diagnostic_rows['kitchen']['candidate_grounding_success']} | {diagnostic_rows['living_room']['candidate_grounding_success']} | {diagnostic_rows['workshop']['candidate_grounding_success']} | {diagnostic_rows['Overall']['candidate_grounding_success']} |
+| Candidate plan rate | {diagnostic_rows['kitchen']['candidate_plan_rate']} | {diagnostic_rows['living_room']['candidate_plan_rate']} | {diagnostic_rows['workshop']['candidate_plan_rate']} | {diagnostic_rows['Overall']['candidate_plan_rate']} |
+| Partial-plan rate | {diagnostic_rows['kitchen']['partial_plan_rate']} | {diagnostic_rows['living_room']['partial_plan_rate']} | {diagnostic_rows['workshop']['partial_plan_rate']} | {diagnostic_rows['Overall']['partial_plan_rate']} |
+| Candidate goal coverage | {diagnostic_rows['kitchen']['candidate_goal_coverage']} | {diagnostic_rows['living_room']['candidate_goal_coverage']} | {diagnostic_rows['workshop']['candidate_goal_coverage']} | {diagnostic_rows['Overall']['candidate_goal_coverage']} |
+| Full-task success | {diagnostic_rows['kitchen']['full_task_success']} | {diagnostic_rows['living_room']['full_task_success']} | {diagnostic_rows['workshop']['full_task_success']} | {diagnostic_rows['Overall']['full_task_success']} |
+| Mean regions inspected | {diagnostic_rows['kitchen']['mean_regions_inspected']} | {diagnostic_rows['living_room']['mean_regions_inspected']} | {diagnostic_rows['workshop']['mean_regions_inspected']} | {diagnostic_rows['Overall']['mean_regions_inspected']} |
 """
     (output_root / "pipeline_diagnostic_table.md").write_text(diag_md, encoding="utf-8")
 
